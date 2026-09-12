@@ -17,10 +17,14 @@ interface MockSocket {
 interface MockRuntime {
 	dispatchCount: number;
 	disposeCount: number;
+	options: {
+		modules?: { path: string }[];
+	};
 }
 
 const lifecycle = vi.hoisted(() => ({
 	dispatchError: undefined as Error | undefined,
+	dispatchResponse: undefined as Response | undefined,
 	openError: undefined as Error | undefined,
 	miniflares: [] as MockRuntime[],
 	sockets: [] as MockSocket[],
@@ -33,7 +37,11 @@ vi.mock("miniflare", () => ({
 		dispatchCount = 0;
 		disposeCount = 0;
 
-		constructor(_options: unknown) {
+		constructor(
+			readonly options: {
+				modules?: { path: string }[];
+			}
+		) {
 			lifecycle.miniflares.push(this);
 		}
 
@@ -46,7 +54,7 @@ vi.mock("miniflare", () => ({
 			if (lifecycle.dispatchError !== undefined) {
 				throw lifecycle.dispatchError;
 			}
-			return new Response("ok");
+			return lifecycle.dispatchResponse ?? new Response("ok");
 		}
 
 		async dispose(): Promise<void> {
@@ -105,6 +113,7 @@ vi.mock("ws", async () => {
 describe("startup profile lifecycle", () => {
 	beforeEach(() => {
 		lifecycle.dispatchError = undefined;
+		lifecycle.dispatchResponse = undefined;
 		lifecycle.openError = undefined;
 		lifecycle.miniflares.length = 0;
 		lifecycle.sockets.length = 0;
@@ -146,6 +155,29 @@ describe("startup profile lifecycle", () => {
 		expect(miniflare.disposeCount).toBe(1);
 	});
 
+	it("keeps multipart binding parts available as importable modules", async ({
+		expect,
+	}) => {
+		const profile = { nodes: [], startTime: 1, endTime: 2 };
+		const result = analyseBundle(createWorkerBundleWithMultipartBindings());
+		const socket = await waitForCommandCount(1);
+		const miniflare = lifecycle.miniflares[0];
+		const modulePaths = miniflare.options.modules?.map(({ path }) => path);
+
+		expect(modulePaths).toContain("index.js");
+		// A multipart part may be both an env binding and an imported module.
+		expect(modulePaths).toContain("startup.txt");
+		expect(modulePaths).toContain("startup.bin");
+
+		socket.respond(1);
+		await waitForCommandCount(2);
+		socket.respond(2);
+		await waitForCommandCount(3);
+		socket.respond(3, { profile });
+
+		await expect(result).resolves.toEqual(profile);
+	});
+
 	it("disposes the runtime and inspector after a dispatch failure", async ({
 		expect,
 	}) => {
@@ -159,6 +191,44 @@ describe("startup profile lifecycle", () => {
 		socket.respond(2);
 
 		await expect(result).rejects.toThrow("deterministic dispatch failure");
+		expect(socket.terminated).toBe(true);
+		expect(miniflare.disposeCount).toBe(1);
+	});
+
+	it("sanitizes failed module evaluation and skips Profiler.stop", async ({
+		expect,
+	}) => {
+		const dispatchResponse = new Response(
+			"SECRET_VALUE\n/Users/example/private-worker/index.js",
+			{ status: 500 }
+		);
+		lifecycle.dispatchResponse = dispatchResponse;
+		const result = analyseBundle(createWorkerBundle());
+		const socket = await waitForCommandCount(1);
+		const miniflare = lifecycle.miniflares[0];
+
+		socket.respond(1);
+		await waitForCommandCount(2);
+		socket.respond(2);
+
+		const error = await result.then(
+			() => undefined,
+			(reason: unknown) => reason
+		);
+		expect(error).toBeInstanceOf(Error);
+		if (!(error instanceof Error)) {
+			throw new Error("Expected startup profiling to throw an Error");
+		}
+		expect(error.message).toBe(
+			"Worker startup profiling failed during module evaluation (status 500)."
+		);
+		expect(error.message).not.toContain("SECRET_VALUE");
+		expect(error.message).not.toContain("/Users/example");
+		expect(dispatchResponse.bodyUsed).toBe(true);
+		expect(socket.commands.map(({ method }) => method)).toEqual([
+			"Profiler.enable",
+			"Profiler.start",
+		]);
 		expect(socket.terminated).toBe(true);
 		expect(miniflare.disposeCount).toBe(1);
 	});
@@ -191,6 +261,40 @@ function createWorkerBundle(): FormData {
 			"index.js",
 			{ type: "application/javascript+module" }
 		)
+	);
+	return workerBundle;
+}
+
+function createWorkerBundleWithMultipartBindings(): FormData {
+	const workerBundle = createWorkerBundle();
+	workerBundle.set(
+		"metadata",
+		JSON.stringify({
+			main_module: "index.js",
+			compatibility_date: "2025-01-01",
+			bindings: [
+				{
+					name: "STARTUP_TEXT_BLOB",
+					type: "text_blob",
+					part: "startup.txt",
+				},
+				{
+					name: "STARTUP_DATA_BLOB",
+					type: "data_blob",
+					part: "startup.bin",
+				},
+			],
+		})
+	);
+	workerBundle.set(
+		"startup.txt",
+		new File(["startup text"], "startup.txt", { type: "text/plain" })
+	);
+	workerBundle.set(
+		"startup.bin",
+		new File([new Uint8Array([1, 2, 3])], "startup.bin", {
+			type: "application/octet-stream",
+		})
 	);
 	return workerBundle;
 }

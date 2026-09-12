@@ -81,6 +81,349 @@ describe("startup profile", () => {
 		expect(profile.nodes.length).toBeGreaterThan(0);
 	});
 
+	it("makes resource bindings available during module evaluation", async ({
+		expect,
+	}) => {
+		const source = /* javascript */ `
+			import { env } from "cloudflare:workers";
+			const expectedMethods = {
+				STARTUP_KV: "get",
+				STARTUP_D1: "prepare",
+				STARTUP_R2: "get",
+				STARTUP_QUEUE: "send",
+				STARTUP_SERVICE: "fetch",
+				STARTUP_RAW_KV: "fetch",
+			};
+			for (const [bindingName, methodName] of Object.entries(expectedMethods)) {
+				if (typeof env[bindingName]?.[methodName] !== "function") {
+					throw new Error(bindingName + " was not available");
+				}
+			}
+			export default { fetch() { return new Response("ok"); } };
+		`;
+		const workerBundle = new FormData();
+		workerBundle.set(
+			"metadata",
+			JSON.stringify({
+				main_module: "index.js",
+				bindings: [
+					{
+						name: "STARTUP_KV",
+						type: "kv_namespace",
+						namespace_id: "startup-kv",
+					},
+					{ name: "STARTUP_D1", type: "d1", id: "startup-d1" },
+					{
+						name: "STARTUP_R2",
+						type: "r2_bucket",
+						bucket_name: "startup-r2",
+					},
+					{
+						name: "STARTUP_QUEUE",
+						type: "queue",
+						queue_name: "startup-queue",
+					},
+					{
+						name: "STARTUP_SERVICE",
+						type: "service",
+						service: "startup-service",
+					},
+					{
+						name: "STARTUP_RAW_KV",
+						type: "kv_namespace",
+						namespace_id: "startup-raw-kv",
+						raw: true,
+					},
+				],
+			})
+		);
+		workerBundle.set(
+			"index.js",
+			new File([source], "index.js", {
+				type: "application/javascript+module",
+			})
+		);
+
+		const profile = await analyseBundle(workerBundle);
+
+		expect(profile.nodes.length).toBeGreaterThan(0);
+	});
+
+	it("makes representable product bindings available during module evaluation", async ({
+		expect,
+	}) => {
+		const bindingNames = [
+			"STARTUP_BROWSER",
+			"STARTUP_AI",
+			"STARTUP_IMAGES",
+			"STARTUP_STREAM",
+			"STARTUP_VERSION",
+			"STARTUP_AI_SEARCH_NAMESPACE",
+			"STARTUP_AI_SEARCH",
+			"STARTUP_WEBSEARCH",
+			"STARTUP_AGENT_MEMORY",
+			"STARTUP_MEDIA",
+			"STARTUP_EMAIL",
+			"STARTUP_VECTORIZE",
+			"STARTUP_ANALYTICS",
+			"STARTUP_DISPATCH",
+			"STARTUP_MTLS",
+			"STARTUP_PIPELINE",
+			"STARTUP_SECRET",
+			"STARTUP_ARTIFACTS",
+			"STARTUP_HELLO_WORLD",
+			"STARTUP_FLAGSHIP",
+			"STARTUP_RATELIMIT",
+			"STARTUP_VPC_SERVICE",
+			"STARTUP_VPC_NETWORK",
+			"STARTUP_WORKER_LOADER",
+			"STARTUP_ASSETS",
+		];
+		const source = /* javascript */ `
+			import { env } from "cloudflare:workers";
+			for (const bindingName of ${JSON.stringify(bindingNames)}) {
+				if (env[bindingName] === undefined) {
+					throw new Error(bindingName + " was not available");
+				}
+			}
+			export default { fetch() { return new Response("ok"); } };
+		`;
+		const workerBundle = new FormData();
+		workerBundle.set(
+			"metadata",
+			JSON.stringify({
+				main_module: "index.js",
+				compatibility_date: "2025-01-01",
+				bindings: [
+					{ name: "STARTUP_BROWSER", type: "browser" },
+					{ name: "STARTUP_AI", type: "ai" },
+					{ name: "STARTUP_IMAGES", type: "images" },
+					{ name: "STARTUP_STREAM", type: "stream" },
+					{ name: "STARTUP_VERSION", type: "version_metadata" },
+					{
+						name: "STARTUP_AI_SEARCH_NAMESPACE",
+						type: "ai_search_namespace",
+						namespace: "startup-namespace",
+					},
+					{
+						name: "STARTUP_AI_SEARCH",
+						type: "ai_search",
+						instance_name: "startup-instance",
+					},
+					{ name: "STARTUP_WEBSEARCH", type: "websearch" },
+					{
+						name: "STARTUP_AGENT_MEMORY",
+						type: "agent_memory",
+						namespace: "startup-memory",
+					},
+					{ name: "STARTUP_MEDIA", type: "media" },
+					{ name: "STARTUP_EMAIL", type: "send_email" },
+					{
+						name: "STARTUP_VECTORIZE",
+						type: "vectorize",
+						index_name: "startup-index",
+					},
+					{
+						name: "STARTUP_ANALYTICS",
+						type: "analytics_engine",
+						dataset: "startup-dataset",
+					},
+					{
+						name: "STARTUP_DISPATCH",
+						type: "dispatch_namespace",
+						namespace: "startup-dispatch",
+					},
+					{
+						name: "STARTUP_MTLS",
+						type: "mtls_certificate",
+						certificate_id: "startup-certificate",
+					},
+					{
+						name: "STARTUP_PIPELINE",
+						type: "pipelines",
+						pipeline: "startup-pipeline",
+					},
+					{
+						name: "STARTUP_SECRET",
+						type: "secrets_store_secret",
+						store_id: "startup-store",
+						secret_name: "startup-secret",
+					},
+					{
+						name: "STARTUP_ARTIFACTS",
+						type: "artifacts",
+						namespace: "startup-artifacts",
+					},
+					{ name: "STARTUP_HELLO_WORLD", type: "unsafe_hello_world" },
+					{
+						name: "STARTUP_FLAGSHIP",
+						type: "flagship",
+						app_id: "startup-app",
+					},
+					{
+						name: "STARTUP_RATELIMIT",
+						type: "ratelimit",
+						namespace_id: "startup-ratelimit",
+						simple: { limit: 10, period: 60 },
+					},
+					{
+						name: "STARTUP_VPC_SERVICE",
+						type: "vpc_service",
+						service_id: "startup-vpc-service",
+					},
+					{
+						name: "STARTUP_VPC_NETWORK",
+						type: "vpc_network",
+						network_id: "startup-vpc-network",
+					},
+					{ name: "STARTUP_WORKER_LOADER", type: "worker_loader" },
+					{ name: "STARTUP_ASSETS", type: "assets" },
+				],
+			})
+		);
+		workerBundle.set(
+			"index.js",
+			new File([source], "index.js", {
+				type: "application/javascript+module",
+			})
+		);
+
+		const profile = await analyseBundle(workerBundle);
+
+		expect(profile.nodes.length).toBeGreaterThan(0);
+	});
+
+	it("makes multipart blob bindings available during module evaluation", async ({
+		expect,
+	}) => {
+		const source = /* javascript */ `
+			import { env } from "cloudflare:workers";
+			if (env.STARTUP_TEXT_BLOB !== "startup text") {
+				throw new Error("STARTUP_TEXT_BLOB was not available");
+			}
+			if (new Uint8Array(env.STARTUP_DATA_BLOB).join(",") !== "1,2,3") {
+				throw new Error("STARTUP_DATA_BLOB was not available");
+			}
+			export default { fetch() { return new Response("ok"); } };
+		`;
+		const workerBundle = new FormData();
+		workerBundle.set(
+			"metadata",
+			JSON.stringify({
+				main_module: "index.js",
+				bindings: [
+					{
+						name: "STARTUP_TEXT_BLOB",
+						type: "text_blob",
+						part: "startup.txt",
+					},
+					{
+						name: "STARTUP_DATA_BLOB",
+						type: "data_blob",
+						part: "startup.bin",
+					},
+				],
+			})
+		);
+		workerBundle.set(
+			"index.js",
+			new File([source], "index.js", {
+				type: "application/javascript+module",
+			})
+		);
+		workerBundle.set(
+			"startup.txt",
+			new File(["startup text"], "startup.txt", { type: "text/plain" })
+		);
+		workerBundle.set(
+			"startup.bin",
+			new File([new Uint8Array([1, 2, 3])], "startup.bin", {
+				type: "application/octet-stream",
+			})
+		);
+		const profile = await analyseBundle(workerBundle);
+
+		expect(profile.nodes.length).toBeGreaterThan(0);
+	});
+
+	it("allows unused upload bindings whose runtime type cannot be reconstructed", async ({
+		expect,
+	}) => {
+		const workerBundle = new FormData();
+		workerBundle.set(
+			"metadata",
+			JSON.stringify({
+				main_module: "index.js",
+				bindings: [
+					{ name: "INHERITED", type: "inherit" },
+					{
+						name: "STARTUP_DO",
+						type: "durable_object_namespace",
+						class_name: "StartupDurableObject",
+					},
+					{
+						name: "STARTUP_WORKFLOW",
+						type: "workflow",
+						workflow_name: "startup-workflow",
+						class_name: "StartupWorkflow",
+					},
+					{
+						name: "STARTUP_WASM",
+						type: "wasm_module",
+						part: "startup.wasm",
+					},
+				],
+			})
+		);
+		workerBundle.set(
+			"index.js",
+			new File(
+				["export default { fetch() { return new Response('ok'); } };"],
+				"index.js",
+				{ type: "application/javascript+module" }
+			)
+		);
+		workerBundle.set(
+			"startup.wasm",
+			new File(
+				[new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])],
+				"startup.wasm",
+				{ type: "application/wasm" }
+			)
+		);
+
+		const profile = await analyseBundle(workerBundle);
+		expect(profile.nodes.length).toBeGreaterThan(0);
+	});
+
+	it("identifies unreconstructable bindings after module evaluation fails", async ({
+		expect,
+	}) => {
+		const workerBundle = new FormData();
+		workerBundle.set(
+			"metadata",
+			JSON.stringify({
+				main_module: "index.js",
+				bindings: [{ name: "INHERITED", type: "inherit" }],
+			})
+		);
+		workerBundle.set(
+			"index.js",
+			new File(
+				[
+					`import { env } from "cloudflare:workers";
+					if (env.INHERITED === undefined) throw new Error("missing binding");`,
+				],
+				"index.js",
+				{ type: "application/javascript+module" }
+			)
+		);
+
+		await expect(analyseBundle(workerBundle)).rejects.toThrow(
+			'The upload contains bindings that cannot be reproduced locally during startup profiling: "INHERITED" (inherit).'
+		);
+	});
+
 	it("rejects failed module evaluation", async ({ expect }) => {
 		const workerBundle = new FormData();
 		workerBundle.set("metadata", JSON.stringify({ main_module: "index.js" }));
