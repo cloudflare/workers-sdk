@@ -16,6 +16,7 @@ import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
+import { logger } from "../logger";
 import { clearOutputFilePath } from "../output";
 import * as user from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -1726,90 +1727,150 @@ describe("wrangler preview", () => {
 			expect(std.warn).not.toContain("ASSETS");
 		});
 
-		test("should output preview and deployment JSON with --json", async ({
+		test.for(["plain", "redirected", "assets", "redirected-assets"])(
+			"should output parseable preview and deployment JSON with --json (%s)",
+			async (project, { expect }) => {
+				const hasAssets = project.includes("assets");
+				if (hasAssets) {
+					mkdirSync("public", { recursive: true });
+					writeFileSync("public/index.html", "<h1>Hello</h1>");
+				}
+				if (project.includes("redirected")) {
+					writeRedirectedWranglerConfig({
+						name: "test-worker",
+						main: "../src/index.ts",
+						userConfigPath: "./wrangler.json",
+						assets: hasAssets ? { directory: "../public" } : undefined,
+					});
+				} else if (hasAssets) {
+					writeWranglerConfig(
+						{
+							name: "test-worker",
+							main: "src/index.ts",
+							assets: { directory: "public" },
+						},
+						"wrangler.json"
+					);
+				}
+				const configPath = project.includes("redirected")
+					? "dist/wrangler.json"
+					: "wrangler.json";
+				const config = JSON.parse(readFileSync(configPath, "utf8")) as Record<
+					string,
+					unknown
+				>;
+				writeFileSync(
+					configPath,
+					JSON.stringify({ ...config, unexpected_setting: true })
+				);
+				const outputFile = "./output.json";
+				msw.use(
+					http.post(
+						`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
+						() =>
+							HttpResponse.json({
+								success: true,
+								result: { buckets: [], jwt: "assets-jwt-from-session" },
+							})
+					),
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10025, message: "Preview not found" }],
+								},
+								{ status: 404 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "preview-id-json",
+										name: "test-preview",
+										slug: "test-preview",
+										urls: ["https://test-preview.test-worker.cloudflare.app"],
+										worker_name: "test-worker",
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "deployment-id-json",
+										preview_id: "preview-id-json",
+										preview_name: "test-preview",
+										urls: ["https://json123.test-worker.cloudflare.app"],
+										compatibility_date: "2025-01-01",
+										env: {},
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					)
+				);
+
+				await runWrangler("preview --name test-preview --json", {
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: outputFile,
+				});
+
+				expect(JSON.parse(std.out)).toMatchObject({
+					preview: { id: "preview-id-json" },
+					deployment: { id: "deployment-id-json" },
+				});
+				expect(std.info).toBe("");
+				expect(std.debug).toBe("");
+				expect(std.warn).toContain("unexpected_setting");
+
+				const outputEntries = readFileSync(outputFile, "utf8")
+					.split("\n")
+					.filter(Boolean)
+					.map((line) => JSON.parse(line)) as OutputEntry[];
+
+				expect(outputEntries).toContainEqual(
+					expect.objectContaining({
+						type: "preview",
+						version: 1,
+						worker_name: "test-worker",
+						preview_id: "preview-id-json",
+						preview_name: "test-preview",
+						preview_slug: "test-preview",
+						preview_urls: ["https://test-preview.test-worker.cloudflare.app"],
+						deployment_id: "deployment-id-json",
+						deployment_urls: ["https://json123.test-worker.cloudflare.app"],
+					})
+				);
+				logger.info("logging restored after preview");
+				expect(std.info).toBe("logging restored after preview");
+			}
+		);
+
+		test("should restore logging after a JSON-mode configuration failure", async ({
 			expect,
 		}) => {
-			const outputFile = "./output.json";
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
-					() =>
-						HttpResponse.json(
-							{
-								success: false,
-								result: null,
-								errors: [{ code: 10025, message: "Preview not found" }],
-							},
-							{ status: 404 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews`,
-					() =>
-						HttpResponse.json(
-							{
-								success: true,
-								result: {
-									id: "preview-id-json",
-									name: "test-preview",
-									slug: "test-preview",
-									urls: ["https://test-preview.test-worker.cloudflare.app"],
-									worker_name: "test-worker",
-									created_on: new Date().toISOString(),
-								},
-							},
-							{ status: 201 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-					() =>
-						HttpResponse.json(
-							{
-								success: true,
-								result: {
-									id: "deployment-id-json",
-									preview_id: "preview-id-json",
-									preview_name: "test-preview",
-									urls: ["https://json123.test-worker.cloudflare.app"],
-									compatibility_date: "2025-01-01",
-									env: {},
-									created_on: new Date().toISOString(),
-								},
-							},
-							{ status: 201 }
-						)
-				)
-			);
-
-			await runWrangler("preview --name test-preview --json", {
-				...process.env,
-				WRANGLER_OUTPUT_FILE_PATH: outputFile,
-			});
-
-			expect(std.out).toContain('"preview"');
-			expect(std.out).toContain('"deployment"');
-			expect(std.out).toContain('"id": "preview-id-json"');
-			expect(std.out).toContain('"id": "deployment-id-json"');
-
-			const outputEntries = readFileSync(outputFile, "utf8")
-				.split("\n")
-				.filter(Boolean)
-				.map((line) => JSON.parse(line)) as OutputEntry[];
-
-			expect(outputEntries).toContainEqual(
-				expect.objectContaining({
-					type: "preview",
-					version: 1,
-					worker_name: "test-worker",
-					preview_id: "preview-id-json",
-					preview_name: "test-preview",
-					preview_slug: "test-preview",
-					preview_urls: ["https://test-preview.test-worker.cloudflare.app"],
-					deployment_id: "deployment-id-json",
-					deployment_urls: ["https://json123.test-worker.cloudflare.app"],
-				})
-			);
+			writeFileSync("wrangler.json", JSON.stringify({ name: 123 }));
+			await expect(
+				runWrangler("preview --name test-preview --json")
+			).rejects.toThrow();
+			expect(std.out).toBe("");
+			expect(std.err).toContain("name");
+			logger.info("logging restored after failure");
+			expect(std.info).toBe("logging restored after failure");
 		});
 
 		test("should build correctly when using a redirected config", async ({

@@ -6,6 +6,7 @@ import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import { cleanupDestination } from "../deployment-bundle/merge-config-args";
+import { logger } from "../logger";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import { deployPreviewContainers, verifyContainersScope } from "./containers";
@@ -58,6 +59,7 @@ export const previewCommand = createCommand({
 		},
 	},
 	behaviour: {
+		overrideLogLevel: (args) => (args.json ? "warn" : undefined),
 		useConfigRedirectIfAvailable: true,
 		printBanner: (args) => args.json !== true,
 		suggestSkillsAfterHandler: (args) => args.json !== true,
@@ -108,6 +110,10 @@ export const previewCommand = createCommand({
 			}
 		);
 		cleanupDestination(destination);
+
+		if (args.json) {
+			logger.json({ preview: previewResource, deployment });
+		}
 
 		writeOutput({
 			type: "preview",

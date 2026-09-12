@@ -9,7 +9,12 @@ import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
 import type { Teams } from "./teams";
-import type { Config, FatalError, UserError } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	FatalError,
+	LoggerLevel,
+	UserError,
+} from "@cloudflare/workers-utils";
 import type Cloudflare from "cloudflare";
 import type {
 	ArgumentsCamelCase,
@@ -165,6 +170,11 @@ export type CommandDefinition<
 	 * This will allow wrangler commands to remain consistent and only diverge intentionally.
 	 */
 	behaviour?: {
+		/** Override logging for the command lifecycle, including configuration loading. */
+		overrideLogLevel?: (
+			args: HandlerArgs<NamedArgDefs>
+		) => LoggerLevel | undefined;
+
 		/**
 		 * By default, wrangler's version banner will be printed before the handler is executed.
 		 * Set this value to `false` to skip printing the banner.

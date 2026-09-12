@@ -939,11 +939,7 @@ export async function preview(
 		}
 	}
 
-	if (args.json) {
-		logger.log(
-			JSON.stringify({ preview: previewResource, deployment }, null, 2)
-		);
-	} else {
+	if (!args.json) {
 		logger.log(
 			formatPreviewDeploymentSummary(
 				config,
