@@ -247,7 +247,8 @@ export async function analyseBundle(
 					? ""
 					: ` The upload contains bindings that cannot be reproduced locally during startup profiling: ${convertedBindings.unsupportedBindings
 							.map(
-								(binding) => `${JSON.stringify(binding.name)} (${binding.type})`
+								(binding) =>
+									`${JSON.stringify(binding.name)} (${JSON.stringify(binding.type)})`
 							)
 							.join(", ")}.`;
 			throw new UserError(
@@ -387,7 +388,7 @@ async function convertWorkerBundleBindings(
 		}
 		const binding = value as WorkerMetadataBinding;
 		// Raw resource bindings expose a Fetcher instead of their product API.
-		if ("raw" in binding && binding.raw === true) {
+		if (isRawWorkerBinding(binding)) {
 			serviceBindings[binding.name] = createOfflineFetcherBinding();
 			continue;
 		}
@@ -619,6 +620,22 @@ async function convertWorkerBundleBindings(
 		},
 		unsupportedBindings,
 	};
+}
+
+function isRawWorkerBinding(binding: WorkerMetadataBinding): boolean {
+	switch (binding.type) {
+		case "browser":
+		case "ai":
+		case "images":
+		case "kv_namespace":
+		case "workflow":
+		case "queue":
+		case "r2_bucket":
+		case "d1":
+			return binding.raw === true;
+		default:
+			return false;
+	}
 }
 
 function isNamedWorkerBinding(

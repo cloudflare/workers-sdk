@@ -420,23 +420,47 @@ describe("startup profile", () => {
 		);
 
 		await expect(analyseBundle(workerBundle)).rejects.toThrow(
-			'The upload contains bindings that cannot be reproduced locally during startup profiling: "INHERITED" (inherit).'
+			'The upload contains bindings that cannot be reproduced locally during startup profiling: "INHERITED" ("inherit").'
 		);
 	});
 
 	it("rejects failed module evaluation", async ({ expect }) => {
+		const secret = "PRIVATE_STARTUP_VALUE";
 		const workerBundle = new FormData();
 		workerBundle.set("metadata", JSON.stringify({ main_module: "index.js" }));
 		workerBundle.set(
 			"index.js",
-			new File([`throw new Error("startup failed");`], "index.js", {
-				type: "application/javascript+module",
-			})
+			new File(
+				[`throw new Error("${secret} /private/index.js");`],
+				"index.js",
+				{
+					type: "application/javascript+module",
+				}
+			)
 		);
 
-		await expect(analyseBundle(workerBundle)).rejects.toThrow(
+		const error = await analyseBundle(workerBundle).then(
+			() => undefined,
+			(reason: unknown) => reason
+		);
+		expect(error).toBeInstanceOf(Error);
+		if (!(error instanceof Error)) {
+			throw new Error("Expected startup profiling to throw an Error");
+		}
+		expect(error.message).toContain(
 			"Worker startup profiling failed during module evaluation"
 		);
+		expect(error.message).not.toContain(secret);
+		expect(error.message).not.toContain("/private/index.js");
+		const consoleOutput = [
+			std.debug,
+			std.out,
+			std.info,
+			std.err,
+			std.warn,
+		].join("\n");
+		expect(consoleOutput).not.toContain(secret);
+		expect(consoleOutput).not.toContain("/private/index.js");
 	});
 
 	it("rejects service-worker format Workers", async ({ expect }) => {
