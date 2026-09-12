@@ -109,7 +109,8 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `CliDescriptor` (everything that varies per CLI: `cliName` (the executable),
   `displayName` (branded name used in prose), auth command names
   (`login` / `whoami` / `createProfile` / `deviceLogin`), `keyringServiceName`,
-  `clientId`, `consent`, `redirectUri`, `getConfigPath`, `fileFormat`,
+  `clientId`, `consent`, `redirectUri`, `useDeviceFlowByDefault`,
+  `getConfigPath`, `fileFormat`,
   `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
   `getDefaultScopeKeys`, …).
 - `file-storage.ts` (`createFileStorage(format, getPath)`), `auth-config-file.ts`
@@ -140,7 +141,8 @@ Each CLI is a thin **descriptor + entrypoint**:
   `~/.config/cloudflare`, the `"cloudflare"` keyring service, `CLOUDFLARE_CLIENT_ID`)
   - `createCfAuth(ctx)`. OAuth-app values (client ID `cbca97e7-…`, callback port
     8877, `cf-oauth-consent-*` pages, scoped-token-only auth) mirror the `cf`
-    CLI's registration. cf carries its own scope catalog (`src/cf/scopes.ts`) —
+    CLI's registration, and device authorization is its default interactive
+    login flow. cf carries its own scope catalog (`src/cf/scopes.ts`) —
     the full Cloudflare product surface as a flat list (no per-scope
     descriptions), distinct from wrangler's smaller `src/core/scopes.ts`
     key → description map — so it does not re-export `DefaultScopes`.

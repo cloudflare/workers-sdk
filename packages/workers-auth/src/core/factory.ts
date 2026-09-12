@@ -284,7 +284,7 @@ export function createCloudflareAuth(
 		return oauthFlow.requireApiToken();
 	}
 
-	function withDefaultScopes(
+	function withLoginDefaults(
 		complianceConfig: ComplianceConfig,
 		props: CloudflareLoginProps | undefined
 	): LoginProps {
@@ -295,7 +295,7 @@ export function createCloudflareAuth(
 			callbackHost: props?.callbackHost,
 			callbackPort: props?.callbackPort,
 			profile: props?.profile,
-			device: props?.device,
+			device: props?.device ?? descriptor.useDeviceFlowByDefault ?? false,
 		};
 	}
 
@@ -303,7 +303,7 @@ export function createCloudflareAuth(
 		complianceConfig: ComplianceConfig,
 		props?: CloudflareLoginProps
 	): Promise<boolean> {
-		return oauthFlow.login(withDefaultScopes(complianceConfig, props));
+		return oauthFlow.login(withLoginDefaults(complianceConfig, props));
 	}
 
 	async function logout(profile?: string): Promise<void> {
@@ -319,7 +319,7 @@ export function createCloudflareAuth(
 		}
 
 		return oauthFlow.loginOrRefreshIfRequired(
-			withDefaultScopes(complianceConfig, props)
+			withLoginDefaults(complianceConfig, props)
 		);
 	}
 
