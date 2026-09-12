@@ -51,7 +51,7 @@
 		"blake3-wasm": "2.1.5",
 		"chalk": "catalog:default",
 		"command-exists": "catalog:default",
-		"devtools-protocol": "^0.0.1182435",
+		"devtools-protocol": "0.0.1182435",
 		"dotenv": "catalog:default",
 		"miniflare": "workspace:*",
 		"p-queue": "9.0.0",
