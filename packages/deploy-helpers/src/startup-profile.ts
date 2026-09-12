@@ -632,6 +632,7 @@ function isRawWorkerBinding(binding: WorkerMetadataBinding): boolean {
 		case "queue":
 		case "r2_bucket":
 		case "d1":
+		case "vectorize":
 			return binding.raw === true;
 		default:
 			return false;
