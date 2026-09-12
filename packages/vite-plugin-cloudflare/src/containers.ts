@@ -1,16 +1,13 @@
-import path from "node:path";
 import {
 	configureOpenAPIForContainerPull,
-	getDevContainerImageName,
+	createContainerDevOptions,
 } from "@cloudflare/containers-shared";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getCloudflareApiBaseUrl,
-	isDockerfile,
-	isDurableObjectContainerApp,
-	resolveContainerClassName,
 } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
+import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
@@ -62,51 +59,12 @@ export function getContainerOptions(options: {
 	configPath?: string;
 }) {
 	const { containersConfig, exports, containerBuildId, configPath } = options;
-
-	if (!containersConfig?.length) {
-		return undefined;
-	}
-
-	return containersConfig
-		.map((container) => {
-			if (
-				isDurableObjectContainerApp(container) ||
-				container.image === undefined
-			) {
-				return undefined;
-			}
-
-			// A container is linked to its Durable Object either by its own `class_name`,
-			// or by the Durable Object's `exports` entry naming it via `container`.
-			// Config validation rejects containers with neither.
-			const className = resolveContainerClassName(container, exports);
-			if (className === undefined) {
-				return undefined;
-			}
-
-			const image_tag = getDevContainerImageName(className, containerBuildId);
-
-			if (isDockerfile(container.image, configPath)) {
-				return {
-					dockerfile: container.image,
-					image_build_context:
-						container.image_build_context ?? path.dirname(container.image),
-					image_vars: container.image_vars,
-					class_name: className,
-					image_tag,
-				};
-			} else {
-				return {
-					image_uri: container.image,
-					class_name: className,
-					image_tag,
-				};
-			}
-		})
-		.filter((container) => container !== undefined);
+	return createContainerDevOptions({
+		containers: containersConfig,
+		exports,
+		containerBuildId,
+		configPath,
+	});
 }
 
-export type ContainerTagToOptionsMap = Map<
-	string,
-	NonNullable<ReturnType<typeof getContainerOptions>>[number]
->;
+export type ContainerTagToOptionsMap = Map<string, ContainerDevOptions>;
