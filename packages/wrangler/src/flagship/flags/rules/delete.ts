@@ -1,8 +1,9 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
-import { getFlag, toFlagInput, updateFlag } from "../../client";
+import { toFlagInput } from "../../client";
 import { renderFlag } from "../../render";
+import { flagStoreArgDefinitions, withFlagStore } from "../../store";
 import { withoutRule } from "./shared";
 
 export const flagshipFlagsRulesDeleteCommand = createCommand({
@@ -35,6 +36,7 @@ export const flagshipFlagsRulesDeleteCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config }) {
@@ -44,11 +46,12 @@ export const flagshipFlagsRulesDeleteCommand = createCommand({
 			});
 		}
 		const { appId, key } = args;
-		const current = await getFlag(config, appId, key);
-		const rules = withoutRule(current.rules, args.priority);
-		const flag = await updateFlag(config, appId, key, {
-			...toFlagInput(current),
-			rules,
+		const flag = await withFlagStore(args, config, appId, async (store) => {
+			const current = await store.getFlag(key);
+			return store.updateFlag(key, {
+				...toFlagInput(current),
+				rules: withoutRule(current.rules, args.priority),
+			});
 		});
 		if (args.json) {
 			logger.json(flag);

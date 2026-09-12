@@ -1,6 +1,5 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { createFlag } from "../client";
 import { renderFlag } from "../render";
 import {
 	assertConsistentVariationTypes,
@@ -10,6 +9,7 @@ import {
 	parseRuleJson,
 	parseRules,
 } from "../shared";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 import type { FlagType } from "../client";
 
 export const flagshipFlagsCreateCommand = createCommand({
@@ -87,6 +87,7 @@ export const flagshipFlagsCreateCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config }) {
@@ -102,14 +103,16 @@ export const flagshipFlagsCreateCommand = createCommand({
 			...parseRuleJson(args.ruleJson ?? []),
 		]);
 		assertVariationsExist(variations, default_variation, rules);
-		const flag = await createFlag(config, appId, {
-			key,
-			description: args.description,
-			enabled: !args.disabled,
-			default_variation,
-			variations,
-			rules,
-		});
+		const flag = await withFlagStore(args, config, appId, (store) =>
+			store.createFlag({
+				key,
+				description: args.description,
+				enabled: !args.disabled,
+				default_variation,
+				variations,
+				rules,
+			})
+		);
 		if (args.json) {
 			logger.json(flag);
 			return;

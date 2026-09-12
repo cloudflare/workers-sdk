@@ -983,11 +983,31 @@ export function getGlobalServices({
 				});
 			}
 		}
+		// Only locally simulated Flagship apps have a store the explorer can
+		// read; remote bindings are served by the remote app.
+		const flagshipApps = new Map<string, string[]>();
+		for (const workerOpts of allWorkerOpts ?? []) {
+			for (const [name, binding] of getEnvBindingsOfType(
+				workerOpts.config,
+				"flagship"
+			)) {
+				if (
+					getRemoteProxyConnectionString(binding, workerOpts.dev) !== undefined
+				) {
+					continue;
+				}
+				flagshipApps.set(binding.id, [
+					...(flagshipApps.get(binding.id) ?? []),
+					name,
+				]);
+			}
+		}
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
 			allWorkerOpts ?? [],
 			proxyBindings,
 			durableObjectClassNames,
-			workflowOptions
+			workflowOptions,
+			flagshipApps
 		);
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
 

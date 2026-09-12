@@ -1,7 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { getFlag, updateFlag } from "../client";
 import { renderFlag } from "../render";
 import {
 	assertConsistentVariationTypes,
@@ -11,6 +10,7 @@ import {
 	parseRules,
 	parseVariations,
 } from "../shared";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 import type { FlagType, Rule } from "../client";
 
 export const flagshipFlagsUpdateCommand = createCommand({
@@ -123,77 +123,79 @@ export const flagshipFlagsUpdateCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config }) {
 		const { appId, key } = args;
-		const current = await getFlag(config, appId, key);
+		const flag = await withFlagStore(args, config, appId, async (store) => {
+			const current = await store.getFlag(key);
 
-		const variations = { ...current.variations };
-		for (const [name, value] of Object.entries(
-			parseVariations(args.setVariation ?? [], args.type as FlagType)
-		)) {
-			variations[name] = value;
-		}
-		for (const name of args.removeVariation ?? []) {
-			delete variations[name];
-		}
-		assertConsistentVariationTypes(variations);
+			const variations = { ...current.variations };
+			for (const [name, value] of Object.entries(
+				parseVariations(args.setVariation ?? [], args.type as FlagType)
+			)) {
+				variations[name] = value;
+			}
+			for (const name of args.removeVariation ?? []) {
+				delete variations[name];
+			}
+			assertConsistentVariationTypes(variations);
 
-		const replacementRules = [
-			...parseRules(args.rule ?? []),
-			...parseRuleJson(args.ruleJson ?? []),
-		];
-		const addedRules = [
-			...parseRules(args.addRule ?? []),
-			...parseRuleJson(args.addRuleJson ?? []),
-		];
-		if (
-			args.clearRules &&
-			(replacementRules.length > 0 || addedRules.length > 0)
-		) {
-			throw new UserError(
-				"Cannot use --clear-rules together with --rule, --rule-json, --add-rule, or --add-rule-json.",
-				{ telemetryMessage: "flagship update conflicting rule flags" }
-			);
-		}
-		if (replacementRules.length > 0 && addedRules.length > 0) {
-			throw new UserError(
-				"Cannot replace rules (--rule/--rule-json) and append rules (--add-rule/--add-rule-json) in the same command.",
-				{ telemetryMessage: "flagship update conflicting rule flags" }
-			);
-		}
-
-		let rules: Rule[] = current.rules;
-		if (args.clearRules) {
-			rules = [];
-		} else if (replacementRules.length > 0) {
-			rules = finalizeRules(replacementRules);
-		} else if (addedRules.length > 0) {
-			rules = [
-				...current.rules,
-				...finalizeRules(addedRules, { existing: current.rules }),
+			const replacementRules = [
+				...parseRules(args.rule ?? []),
+				...parseRuleJson(args.ruleJson ?? []),
 			];
-		}
+			const addedRules = [
+				...parseRules(args.addRule ?? []),
+				...parseRuleJson(args.addRuleJson ?? []),
+			];
+			if (
+				args.clearRules &&
+				(replacementRules.length > 0 || addedRules.length > 0)
+			) {
+				throw new UserError(
+					"Cannot use --clear-rules together with --rule, --rule-json, --add-rule, or --add-rule-json.",
+					{ telemetryMessage: "flagship update conflicting rule flags" }
+				);
+			}
+			if (replacementRules.length > 0 && addedRules.length > 0) {
+				throw new UserError(
+					"Cannot replace rules (--rule/--rule-json) and append rules (--add-rule/--add-rule-json) in the same command.",
+					{ telemetryMessage: "flagship update conflicting rule flags" }
+				);
+			}
 
-		const default_variation =
-			args.defaultVariation ?? current.default_variation;
-		assertVariationsExist(variations, default_variation, rules);
+			let rules: Rule[] = current.rules;
+			if (args.clearRules) {
+				rules = [];
+			} else if (replacementRules.length > 0) {
+				rules = finalizeRules(replacementRules);
+			} else if (addedRules.length > 0) {
+				rules = [
+					...current.rules,
+					...finalizeRules(addedRules, { existing: current.rules }),
+				];
+			}
 
-		const flag = await updateFlag(config, appId, key, {
-			key: current.key,
-			description:
-				args.description === undefined
-					? current.description
-					: args.description === ""
-						? null
-						: args.description,
-			enabled: args.enable ? true : args.disable ? false : current.enabled,
-			default_variation,
-			variations,
-			rules,
+			const default_variation =
+				args.defaultVariation ?? current.default_variation;
+			assertVariationsExist(variations, default_variation, rules);
+
+			return store.updateFlag(key, {
+				key: current.key,
+				description:
+					args.description === undefined
+						? current.description
+						: args.description === ""
+							? null
+							: args.description,
+				enabled: args.enable ? true : args.disable ? false : current.enabled,
+				default_variation,
+				variations,
+				rules,
+			});
 		});
-
 		if (args.json) {
 			logger.json(flag);
 			return;

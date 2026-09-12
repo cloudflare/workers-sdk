@@ -2441,6 +2441,548 @@
 				"summary": "Clear Observability Store",
 				"tags": ["Observability"]
 			}
+		},
+		"/flagship/apps": {
+			"get": {
+				"description": "Returns the Flagship apps bound for local development.",
+				"operationId": "flagship-list-apps",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/flagship_app"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Flagship Apps response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List Flagship Apps response failure."
+					}
+				},
+				"summary": "List Flagship Apps",
+				"tags": ["Flagship"]
+			}
+		},
+		"/flagship/apps/{app_id}/flags": {
+			"get": {
+				"description": "Returns the flags in a local Flagship app.",
+				"operationId": "flagship-list-flags",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "app_id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/flagship_flag"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Flagship Flags response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List Flagship Flags response failure."
+					}
+				},
+				"summary": "List Flagship Flags",
+				"tags": ["Flagship"]
+			},
+			"post": {
+				"description": "Creates a flag in a local Flagship app.",
+				"operationId": "flagship-create-flag",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "app_id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"required": ["key", "default_variation", "variations"],
+								"properties": {
+									"key": {
+										"description": "Flag key.",
+										"type": "string"
+									},
+									"description": {
+										"description": "Human readable description.",
+										"nullable": true,
+										"type": "string"
+									},
+									"enabled": {
+										"description": "Whether targeting rules are evaluated.",
+										"type": "boolean"
+									},
+									"default_variation": {
+										"description": "Variation served when no rule matches.",
+										"type": "string"
+									},
+									"variations": {
+										"additionalProperties": true,
+										"description": "Named values the flag can serve.",
+										"type": "object"
+									},
+									"rules": {
+										"description": "Targeting rules, in priority order.",
+										"items": {
+											"$ref": "#/components/schemas/flagship_rule"
+										},
+										"type": "array"
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/flagship_flag"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Create Flagship Flag response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Create Flagship Flag response failure."
+					}
+				},
+				"summary": "Create Flagship Flag",
+				"tags": ["Flagship"]
+			}
+		},
+		"/flagship/apps/{app_id}/flags/{flag_key}": {
+			"get": {
+				"description": "Returns a single flag from a local Flagship app.",
+				"operationId": "flagship-get-flag",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "app_id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "flag_key",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/flagship_flag"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Get Flagship Flag response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Get Flagship Flag response failure."
+					}
+				},
+				"summary": "Get Flagship Flag",
+				"tags": ["Flagship"]
+			},
+			"patch": {
+				"description": "Updates a flag. Omitted fields, including targeting rules, keep their current values.",
+				"operationId": "flagship-update-flag",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "app_id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "flag_key",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"description": {
+										"description": "Human readable description.",
+										"nullable": true,
+										"type": "string"
+									},
+									"enabled": {
+										"description": "Whether the flag is enabled.",
+										"type": "boolean"
+									},
+									"default_variation": {
+										"description": "The variation served when no targeting rule matches.",
+										"type": "string"
+									},
+									"variations": {
+										"additionalProperties": true,
+										"description": "Named values the flag can serve.",
+										"type": "object"
+									},
+									"rules": {
+										"description": "Targeting rules, in priority order. Replaces the existing rules.",
+										"items": {
+											"$ref": "#/components/schemas/flagship_rule"
+										},
+										"type": "array"
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/flagship_flag"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Update Flagship Flag response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Update Flagship Flag response failure."
+					}
+				},
+				"summary": "Update Flagship Flag",
+				"tags": ["Flagship"]
+			},
+			"delete": {
+				"description": "Deletes a flag from a local Flagship app.",
+				"operationId": "flagship-delete-flag",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "app_id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "flag_key",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"properties": {
+														"success": {
+															"type": "boolean"
+														}
+													},
+													"type": "object"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Delete Flagship Flag response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Delete Flagship Flag response failure."
+					}
+				},
+				"summary": "Delete Flagship Flag",
+				"tags": ["Flagship"]
+			}
+		},
+		"/flagship/apps/{app_id}/flags/{flag_key}/evaluate": {
+			"post": {
+				"description": "Evaluates a flag against an evaluation context, as a Worker binding would.",
+				"operationId": "flagship-evaluate-flag",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "app_id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "flag_key",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"description": "Worker whose local Flagship store should be used.",
+						"in": "query",
+						"name": "worker",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"context": {
+										"additionalProperties": true,
+										"description": "Attributes used for rule matching and rollout bucketing.",
+										"type": "object"
+									}
+								},
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/flagship_evaluation"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Evaluate Flagship Flag response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Evaluate Flagship Flag response failure."
+					}
+				},
+				"summary": "Evaluate Flagship Flag",
+				"tags": ["Flagship"]
+			}
 		}
 	},
 	"components": {
@@ -3329,6 +3871,145 @@
 				},
 				"type": "object"
 			},
+			"flagship_app": {
+				"type": "object",
+				"required": ["id", "bindings"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "The Flagship app id the bindings point at"
+					},
+					"bindings": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "Binding names in this instance using the app"
+					}
+				}
+			},
+			"flagship_rule": {
+				"type": "object",
+				"required": ["priority", "conditions", "serve_variation"],
+				"properties": {
+					"priority": {
+						"type": "integer",
+						"description": "Evaluation order, lowest first"
+					},
+					"conditions": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"additionalProperties": true
+						},
+						"description": "Conditions that must match for the rule to apply"
+					},
+					"serve_variation": {
+						"type": "string",
+						"description": "Variation served when the rule matches"
+					},
+					"rollout": {
+						"type": "object",
+						"required": ["percentage"],
+						"properties": {
+							"percentage": {
+								"type": "number",
+								"minimum": 0,
+								"maximum": 100
+							},
+							"attribute": {
+								"type": "string"
+							}
+						},
+						"description": "Percentage rollout applied to matching contexts"
+					}
+				}
+			},
+			"flagship_flag": {
+				"type": "object",
+				"required": [
+					"key",
+					"type",
+					"enabled",
+					"default_variation",
+					"variations",
+					"rules",
+					"updated_at"
+				],
+				"properties": {
+					"key": {
+						"type": "string",
+						"description": "Flag key"
+					},
+					"type": {
+						"type": "string",
+						"enum": ["boolean", "string", "number", "json"],
+						"description": "Type shared by the flag's variations"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true,
+						"description": "Human readable description"
+					},
+					"enabled": {
+						"type": "boolean",
+						"description": "Whether targeting rules are evaluated"
+					},
+					"default_variation": {
+						"type": "string",
+						"description": "Variation served when no rule matches"
+					},
+					"variations": {
+						"type": "object",
+						"additionalProperties": true,
+						"description": "Named values the flag can serve"
+					},
+					"rules": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_rule"
+						},
+						"description": "Targeting rules, in priority order"
+					},
+					"updated_at": {
+						"type": "string",
+						"description": "When the flag was last written locally"
+					}
+				}
+			},
+			"flagship_evaluation": {
+				"type": "object",
+				"required": ["flagKey", "value", "variant", "reason"],
+				"properties": {
+					"flagKey": {
+						"type": "string"
+					},
+					"value": {
+						"description": "The resolved flag value"
+					},
+					"variant": {
+						"type": "string",
+						"description": "Name of the variation served"
+					},
+					"reason": {
+						"type": "string",
+						"enum": [
+							"TARGETING_MATCH",
+							"DEFAULT",
+							"DISABLED",
+							"SPLIT",
+							"ERROR"
+						],
+						"description": "Why this value was served"
+					},
+					"errorCode": {
+						"type": "string"
+					},
+					"errorMessage": {
+						"type": "string"
+					}
+				}
+			},
 			"r2_object": {
 				"type": "object",
 				"properties": {
@@ -3589,6 +4270,13 @@
 							"$ref": "#/components/schemas/local-explorer_named-binding"
 						},
 						"description": "Send Email bindings"
+					},
+					"flagship": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_resource-binding"
+						},
+						"description": "Flagship app bindings"
 					}
 				}
 			},

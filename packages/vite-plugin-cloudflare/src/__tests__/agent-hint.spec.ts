@@ -63,12 +63,15 @@ describe("Local Explorer agent hint", () => {
 			"GET http://localhost:5173/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings"
 		);
 		expect(output).toContain(
+			"GET http://localhost:5173/cdn-cgi/local/explorer/api/flagship/apps - Flagship apps"
+		);
+		expect(output).toContain(
 			"POST http://localhost:5173/cdn-cgi/local/explorer/api/local/observability/query"
 		);
 		// The OpenAPI schema is listed last, as a fallback, so agents reach for the
 		// specific routes first.
 		expect(output.indexOf("- OpenAPI schema")).toBeGreaterThan(
-			output.indexOf("- Workflows")
+			output.indexOf("- Flagship apps")
 		);
 	});
 

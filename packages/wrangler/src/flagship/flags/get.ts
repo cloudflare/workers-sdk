@@ -1,7 +1,7 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { getFlag } from "../client";
 import { renderFlag } from "../render";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 
 export const flagshipFlagsGetCommand = createCommand({
 	metadata: {
@@ -28,10 +28,14 @@ export const flagshipFlagsGetCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
-	async handler({ appId, key, json }, { config }) {
-		const flag = await getFlag(config, appId, key);
+	async handler(args, { config }) {
+		const { appId, key, json } = args;
+		const flag = await withFlagStore(args, config, appId, (store) =>
+			store.getFlag(key)
+		);
 		if (json) {
 			logger.json(flag);
 			return;

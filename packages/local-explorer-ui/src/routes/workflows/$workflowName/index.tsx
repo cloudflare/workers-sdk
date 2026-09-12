@@ -38,10 +38,10 @@ import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { NotFound } from "../../../components/NotFound";
 import { ResourceError } from "../../../components/ResourceError";
 import { CreateWorkflowInstanceDialog } from "../../../components/workflows/CreateInstanceDialog";
-import { timeAgo } from "../../../components/workflows/helpers";
 import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
 import { getAvailableActions } from "../../../components/workflows/types";
 import { withMinimumDelay } from "../../../utils/async";
+import { timeAgo } from "../../../utils/time";
 import type { WorkflowsInstance } from "../../../api";
 import type { Action } from "../../../components/workflows/types";
 

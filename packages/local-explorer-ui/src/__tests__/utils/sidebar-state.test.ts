@@ -113,6 +113,7 @@ describe("sidebar-state", () => {
 				r2: false,
 				workflows: true,
 				email: false,
+				flagship: true,
 			};
 			storageStub.setItem(GROUPS_STORAGE_KEY, JSON.stringify(stored));
 			expect(loadGroupState()).toEqual(stored);
@@ -161,6 +162,7 @@ describe("sidebar-state", () => {
 				r2: true,
 				workflows: false,
 				email: true,
+				flagship: false,
 			};
 			saveGroupState(state);
 			const raw = storageStub.getItem(GROUPS_STORAGE_KEY);
@@ -188,6 +190,7 @@ describe("sidebar-state", () => {
 				r2: false,
 				workflows: true,
 				email: true,
+				flagship: true,
 			};
 			saveGroupState(state);
 			expect(loadGroupState()).toEqual(state);
