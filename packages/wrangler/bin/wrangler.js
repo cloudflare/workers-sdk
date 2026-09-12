@@ -1,9 +1,26 @@
 #!/usr/bin/env node
 const { spawn } = require("child_process");
+const { constants } = require("node:os");
 const path = require("path");
 
 const MIN_NODE_VERSION = "22.0.0";
 let wranglerProcess;
+
+/**
+ * Convert a child's exit result to the status expected by shell callers.
+ *
+ * @param {number | null | undefined} code
+ * @param {string | null} signal
+ * @returns {number}
+ */
+function getExitCode(code, signal) {
+	if (code !== undefined && code !== null) {
+		return code;
+	}
+
+	const signalNumber = signal && constants.signals[signal];
+	return signalNumber ? 128 + signalNumber : 1;
+}
 
 /**
  * Executes ../wrangler-dist/cli.js
@@ -33,9 +50,7 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 			stdio: ["inherit", "inherit", "inherit", "ipc"],
 		}
 	)
-		.on("exit", (code) =>
-			process.exit(code === undefined || code === null ? 0 : code)
-		)
+		.on("exit", (code, signal) => process.exit(getExitCode(code, signal)))
 		.on("message", (message) => {
 			if (process.send) {
 				process.send(message);
@@ -82,10 +97,9 @@ function semiver(a, b, bool) {
 
 if (module === require.main) {
 	wranglerProcess = runWrangler();
-	process.on("SIGINT", () => {
-		wranglerProcess && wranglerProcess.kill();
-	});
-	process.on("SIGTERM", () => {
-		wranglerProcess && wranglerProcess.kill();
-	});
+	for (const signal of ["SIGINT", "SIGTERM"]) {
+		process.on(signal, () => {
+			wranglerProcess && wranglerProcess.kill(signal);
+		});
+	}
 }
