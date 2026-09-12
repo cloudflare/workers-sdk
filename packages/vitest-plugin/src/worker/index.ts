@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import * as vm from "node:vm";
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
@@ -17,6 +18,23 @@ import {
 import { markCreateRequireUrl } from "../shared/module-path";
 
 type CreateRequire = (url: string) => (specifier: string) => unknown;
+
+interface InlinedModule {
+	id: string;
+	file?: string;
+}
+
+type RunInlinedModule = (
+	context: unknown,
+	code: string,
+	module: InlinedModule
+) => unknown;
+
+interface ModuleEvaluator {
+	createRequire?: CreateRequire;
+	runInlinedModule?: RunInlinedModule;
+	options?: { moduleExecutionInfo?: Map<string, unknown> };
+}
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -211,6 +229,8 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 
 		const { init, runBaseTests, setupEnvironment } =
 			await import("vitest/worker");
+		let v8CoverageEnabled = false;
+		const v8CoverageEvaluators = new WeakSet<ModuleEvaluator>();
 
 		poolSocket.accept();
 		// Sending over the runner's WebSocket from another Durable Object requires
@@ -267,8 +287,18 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					callback(structuredSerializableParse(m.data));
 				});
 			},
-			runTests: (state, traces) => runBaseTests("run", state, traces),
-			collectTests: (state, traces) => runBaseTests("collect", state, traces),
+			runTests: (state, traces) => {
+				v8CoverageEnabled =
+					state.ctx.config.coverage.enabled &&
+					state.ctx.config.coverage.provider === "v8";
+				return runBaseTests("run", state, traces);
+			},
+			collectTests: (state, traces) => {
+				v8CoverageEnabled =
+					state.ctx.config.coverage.enabled &&
+					state.ctx.config.coverage.provider === "v8";
+				return runBaseTests("collect", state, traces);
+			},
 			setup: setupEnvironment,
 			// Patch the module runner's transport so that `invoke()` calls always
 			// execute inside the Runner DO's I/O context. Without this, a dynamic
@@ -277,7 +307,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			// Durable Object". See: https://github.com/cloudflare/workers-sdk/issues/12924
 			onModuleRunner(moduleRunner: unknown) {
 				const runner = moduleRunner as {
-					evaluator?: { createRequire?: CreateRequire };
+					evaluator?: ModuleEvaluator;
 					options?: {
 						createImportMeta?: (
 							modulePath: string
@@ -328,6 +358,49 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 						"[vitest-plugin] Could not patch module runner transport. " +
 							"Dynamic import() inside entrypoint/DO handlers may fail."
 					);
+				}
+
+				const evaluator = runner.evaluator;
+				if (
+					v8CoverageEnabled &&
+					evaluator?.runInlinedModule !== undefined &&
+					!v8CoverageEvaluators.has(evaluator)
+				) {
+					v8CoverageEvaluators.add(evaluator);
+					const originalRunInlinedModule =
+						evaluator.runInlinedModule.bind(evaluator);
+					evaluator.runInlinedModule = async (context, code, module) => {
+						if (!v8CoverageEnabled) {
+							return originalRunInlinedModule(context, code, module);
+						}
+						const id = module.id;
+						const isWindowsDrivePath = /^[a-zA-Z]:[\\/]/.test(id);
+						if (
+							(!id.startsWith("/") && !isWindowsDrivePath) ||
+							id.includes("\0")
+						) {
+							return originalRunInlinedModule(context, code, module);
+						}
+
+						// V8 reports the evaluator filename as its script URL, and Vitest's
+						// V8 collector only retains file URLs.
+						const fileUrl = pathToFileURL(
+							isWindowsDrivePath ? `/${id.replaceAll("\\", "/")}` : id
+						).href;
+						try {
+							return await originalRunInlinedModule(context, code, {
+								...module,
+								id: fileUrl,
+							});
+						} finally {
+							// The collector looks up Vitest's wrapper offset by filesystem path.
+							const info = evaluator.options?.moduleExecutionInfo;
+							const filePath = fileURLToPath(fileUrl);
+							if (info?.has(fileUrl) && !info.has(filePath)) {
+								info.set(filePath, info.get(fileUrl));
+							}
+						}
+					};
 				}
 			},
 		});
