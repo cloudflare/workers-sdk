@@ -97,10 +97,9 @@ function semiver(a, b, bool) {
 
 if (module === require.main) {
 	wranglerProcess = runWrangler();
-	process.on("SIGINT", () => {
-		wranglerProcess && wranglerProcess.kill();
-	});
-	process.on("SIGTERM", () => {
-		wranglerProcess && wranglerProcess.kill();
-	});
+	for (const signal of ["SIGINT", "SIGTERM"]) {
+		process.on(signal, () => {
+			wranglerProcess && wranglerProcess.kill(signal);
+		});
+	}
 }
