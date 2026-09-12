@@ -9,39 +9,59 @@ const wranglerBin = path.resolve(
 	"../../../bin/wrangler.js"
 );
 
-describe("Wrangler executable", () => {
-	runInTempDir();
-
-	it("exits nonzero when its CLI child is killed by a signal", async ({
-		expect,
-	}) => {
-		mkdirSync("bin");
-		copyFileSync(wranglerBin, "bin/wrangler.js");
-		writeFileSync(
-			"mock-child-process.cjs",
-			`const { EventEmitter } = require("node:events");
+async function runWranglerWithSignal(
+	signal: "SIGINT" | "SIGTERM"
+): Promise<{ code: number | null; signal: NodeJS.Signals | null }> {
+	mkdirSync("bin");
+	copyFileSync(wranglerBin, "bin/wrangler.js");
+	writeFileSync(
+		"mock-child-process.cjs",
+		`const { EventEmitter } = require("node:events");
 const childProcess = require("node:child_process");
 
 childProcess.spawn = () => {
 	const child = new EventEmitter();
-	process.nextTick(() => child.emit("exit", null, "SIGTERM"));
+	child.kill = (signal) => {
+		process.nextTick(() => child.emit("exit", null, signal));
+	};
 	return child;
 };
-`
-		);
 
-		const result = await new Promise<{
-			code: number | null;
-			signal: NodeJS.Signals | null;
-		}>((resolve, reject) => {
-			const child = spawn(process.execPath, [
-				"--require",
-				path.resolve("mock-child-process.cjs"),
-				path.resolve("bin/wrangler.js"),
-			]);
-			child.on("error", reject);
-			child.on("exit", (code, signal) => resolve({ code, signal }));
-		});
+const originalProcessOn = process.on;
+process.on = function (eventName, listener) {
+	const result = originalProcessOn.call(this, eventName, listener);
+	if (eventName === "${signal}") {
+		setImmediate(listener);
+	}
+	return result;
+};
+`
+	);
+
+	return new Promise((resolve, reject) => {
+		const child = spawn(process.execPath, [
+			"--require",
+			path.resolve("mock-child-process.cjs"),
+			path.resolve("bin/wrangler.js"),
+		]);
+		child.on("error", reject);
+		child.on("exit", (code, childSignal) =>
+			resolve({ code, signal: childSignal })
+		);
+	});
+}
+
+describe("Wrangler executable", () => {
+	runInTempDir();
+
+	it("forwards SIGINT and exits with its shell status", async ({ expect }) => {
+		const result = await runWranglerWithSignal("SIGINT");
+
+		expect(result).toEqual({ code: 130, signal: null });
+	});
+
+	it("forwards SIGTERM and exits with its shell status", async ({ expect }) => {
+		const result = await runWranglerWithSignal("SIGTERM");
 
 		expect(result).toEqual({ code: 143, signal: null });
 	});
