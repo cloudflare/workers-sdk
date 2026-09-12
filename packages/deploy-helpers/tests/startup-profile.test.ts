@@ -13,6 +13,22 @@ import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { FormData, Request } from "undici";
 import { describe, it } from "vitest";
 
+// A fixed workload makes successful binding checks visible in the sampled
+// profile. Workerd freezes wall-clock time during JavaScript execution, so a
+// time-bounded loop could never finish.
+const PROFILE_MARKER_ITERATIONS = 10_000_000;
+const BINDINGS_AVAILABLE_FUNCTION = "markBindingsAvailable";
+const BINDINGS_AVAILABLE_PROFILE_MARKER = /* javascript */ `
+	function ${BINDINGS_AVAILABLE_FUNCTION}() {
+		let marker = 0;
+		for (let index = 0; index < ${PROFILE_MARKER_ITERATIONS}; index++) {
+			marker = Math.imul(marker ^ index, 0x45d9f3b);
+		}
+		return marker;
+	}
+	export const bindingsAvailableMarker = ${BINDINGS_AVAILABLE_FUNCTION}();
+`;
+
 describe("startup profile", () => {
 	const std = mockConsoleMethods();
 
@@ -56,6 +72,7 @@ describe("startup profile", () => {
 			if (env.STARTUP_JSON.enabled !== true) {
 				throw new Error("STARTUP_JSON was not available");
 			}
+			${BINDINGS_AVAILABLE_PROFILE_MARKER}
 			export default { fetch() { return new Response("ok"); } };
 		`;
 		const workerBundle = new FormData();
@@ -78,7 +95,9 @@ describe("startup profile", () => {
 
 		const profile = await analyseBundle(workerBundle);
 
-		expect(profile.nodes.length).toBeGreaterThan(0);
+		expect(
+			profile.nodes.map(({ callFrame }) => callFrame.functionName)
+		).toContain(BINDINGS_AVAILABLE_FUNCTION);
 	});
 
 	it("makes resource bindings available during module evaluation", async ({
@@ -100,6 +119,7 @@ describe("startup profile", () => {
 					throw new Error(bindingName + " was not available");
 				}
 			}
+			${BINDINGS_AVAILABLE_PROFILE_MARKER}
 			export default { fetch() { return new Response("ok"); } };
 		`;
 		const workerBundle = new FormData();
@@ -153,7 +173,9 @@ describe("startup profile", () => {
 
 		const profile = await analyseBundle(workerBundle);
 
-		expect(profile.nodes.length).toBeGreaterThan(0);
+		expect(
+			profile.nodes.map(({ callFrame }) => callFrame.functionName)
+		).toContain(BINDINGS_AVAILABLE_FUNCTION);
 	});
 
 	it("makes representable product bindings available during module evaluation", async ({
@@ -193,6 +215,7 @@ describe("startup profile", () => {
 					throw new Error(bindingName + " was not available");
 				}
 			}
+			${BINDINGS_AVAILABLE_PROFILE_MARKER}
 			export default { fetch() { return new Response("ok"); } };
 		`;
 		const workerBundle = new FormData();
@@ -297,7 +320,9 @@ describe("startup profile", () => {
 
 		const profile = await analyseBundle(workerBundle);
 
-		expect(profile.nodes.length).toBeGreaterThan(0);
+		expect(
+			profile.nodes.map(({ callFrame }) => callFrame.functionName)
+		).toContain(BINDINGS_AVAILABLE_FUNCTION);
 	});
 
 	it("makes multipart blob bindings available during module evaluation", async ({
@@ -311,6 +336,7 @@ describe("startup profile", () => {
 			if (new Uint8Array(env.STARTUP_DATA_BLOB).join(",") !== "1,2,3") {
 				throw new Error("STARTUP_DATA_BLOB was not available");
 			}
+			${BINDINGS_AVAILABLE_PROFILE_MARKER}
 			export default { fetch() { return new Response("ok"); } };
 		`;
 		const workerBundle = new FormData();
@@ -350,7 +376,9 @@ describe("startup profile", () => {
 		);
 		const profile = await analyseBundle(workerBundle);
 
-		expect(profile.nodes.length).toBeGreaterThan(0);
+		expect(
+			profile.nodes.map(({ callFrame }) => callFrame.functionName)
+		).toContain(BINDINGS_AVAILABLE_FUNCTION);
 	});
 
 	it("allows unused upload bindings whose runtime type cannot be reconstructed", async ({
@@ -431,14 +459,26 @@ describe("startup profile", () => {
 		);
 	});
 
-	it("rejects failed module evaluation", async ({ expect }) => {
+	it("profiles failed module evaluation without exposing its error", async ({
+		expect,
+	}) => {
 		const secret = "PRIVATE_STARTUP_VALUE";
+		const failureFunction = "failModuleEvaluation";
 		const workerBundle = new FormData();
 		workerBundle.set("metadata", JSON.stringify({ main_module: "index.js" }));
 		workerBundle.set(
 			"index.js",
 			new File(
-				[`throw new Error("${secret} /private/index.js");`],
+				[
+					`function ${failureFunction}() {
+						let marker = 0;
+						for (let index = 0; index < ${PROFILE_MARKER_ITERATIONS}; index++) {
+							marker = Math.imul(marker ^ index, 0x45d9f3b);
+						}
+						throw new Error("${secret} " + marker + " /private/index.js");
+					}
+					${failureFunction}();`,
+				],
 				"index.js",
 				{
 					type: "application/javascript+module",
@@ -446,19 +486,11 @@ describe("startup profile", () => {
 			)
 		);
 
-		const error = await analyseBundle(workerBundle).then(
-			() => undefined,
-			(reason: unknown) => reason
-		);
-		expect(error).toBeInstanceOf(Error);
-		if (!(error instanceof Error)) {
-			throw new Error("Expected startup profiling to throw an Error");
-		}
-		expect(error.message).toContain(
-			"Worker startup profiling failed during module evaluation"
-		);
-		expect(error.message).not.toContain(secret);
-		expect(error.message).not.toContain("/private/index.js");
+		const profile = await analyseBundle(workerBundle);
+
+		expect(
+			profile.nodes.map(({ callFrame }) => callFrame.functionName)
+		).toContain(failureFunction);
 		const consoleOutput = [
 			std.debug,
 			std.out,
