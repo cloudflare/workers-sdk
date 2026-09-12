@@ -13,6 +13,11 @@ export interface WrapperEnv {
 	/** Binding for evaluating code */
 	__VITE_UNSAFE_EVAL__: {
 		eval: (code: string, filename: string) => (...args: unknown[]) => unknown;
+		newFunction: (
+			code: string,
+			filename: string,
+			...args: string[]
+		) => (...args: unknown[]) => unknown;
 	};
 	/** User-defined env */
 	[key: string]: unknown;
