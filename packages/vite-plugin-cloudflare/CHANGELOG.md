@@ -1,5 +1,17 @@
 # @cloudflare/vite-plugin
 
+## 1.54.9
+
+### Patch Changes
+
+- [#15574](https://github.com/cloudflare/workers-sdk/pull/15574) [`164e4fb`](https://github.com/cloudflare/workers-sdk/commit/164e4fb11c32ae4ad255998bcdc17dc5a3a74ec6) Thanks [@RealBhupesh](https://github.com/RealBhupesh)! - Ignore `.wrangler` persistence writes in Vite's file watcher
+
+  Miniflare stores local D1, KV, R2, and observability state under `.wrangler/state`. Those writes were watched as source changes on Linux and Windows, which fired every plugin `hotUpdate` hook and could make page loads take seconds. The plugin now ignores `**/.wrangler/**` while preserving any `server.watch.ignored` patterns already set by the user.
+
+- Updated dependencies [[`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3)]:
+  - miniflare@5.20260911.1-alpha
+  - wrangler@4.131.2
+
 ## 1.54.8
 
 ### Patch Changes
