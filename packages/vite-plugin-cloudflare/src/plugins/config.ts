@@ -10,6 +10,7 @@ import {
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
+import { buildOutputContainers } from "../build-output-containers";
 import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
@@ -161,6 +162,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			order: "post",
 			async handler(builder) {
 				if (ctx.resolvedPluginConfig.type !== "workers") {
+					await buildOutputContainers(
+						ctx.resolvedPluginConfig,
+						builder.config.root
+					);
 					return;
 				}
 
@@ -271,6 +276,11 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						);
 					}
 				}
+
+				await buildOutputContainers(
+					ctx.resolvedPluginConfig,
+					builder.config.root
+				);
 			},
 		},
 	};

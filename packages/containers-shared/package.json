@@ -33,7 +33,9 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
+		"@cloudflare/build-output-utils": "workspace:*",
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*"
 	},
 	"devDependencies": {
