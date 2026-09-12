@@ -96,7 +96,8 @@ export type EvaluationReason =
 	| "TARGETING_MATCH"
 	| "DEFAULT"
 	| "DISABLED"
-	| "SPLIT";
+	| "SPLIT"
+	| "ERROR";
 
 export type EvaluationResult = {
 	flagKey: string;

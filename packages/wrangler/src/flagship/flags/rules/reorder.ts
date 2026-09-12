@@ -1,8 +1,9 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
-import { getFlag, toFlagInput, updateFlag } from "../../client";
+import { toFlagInput } from "../../client";
 import { renderFlag } from "../../render";
+import { flagStoreArgDefinitions, withFlagStore } from "../../store";
 import { sortedRules } from "./shared";
 import type { Rule } from "../../client";
 
@@ -45,15 +46,17 @@ export const flagshipFlagsRulesReorderCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config }) {
 		const { appId, key } = args;
-		const current = await getFlag(config, appId, key);
-		const rules = reorderRules(current.rules, args.order);
-		const flag = await updateFlag(config, appId, key, {
-			...toFlagInput(current),
-			rules,
+		const flag = await withFlagStore(args, config, appId, async (store) => {
+			const current = await store.getFlag(key);
+			return store.updateFlag(key, {
+				...toFlagInput(current),
+				rules: reorderRules(current.rules, args.order),
+			});
 		});
 		if (args.json) {
 			logger.json(flag);
