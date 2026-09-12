@@ -45,6 +45,57 @@ describe("startup profile", () => {
 		expect(std.out).not.toContain("__STARTUP_LOG__");
 	});
 
+	it("makes upload bindings available during module evaluation", async ({
+		expect,
+	}) => {
+		const source = /* javascript */ `
+			import { env } from "cloudflare:workers";
+			if (env.STARTUP_TEXT !== "available") {
+				throw new Error("STARTUP_TEXT was not available");
+			}
+			if (env.STARTUP_JSON.enabled !== true) {
+				throw new Error("STARTUP_JSON was not available");
+			}
+			export default { fetch() { return new Response("ok"); } };
+		`;
+		const workerBundle = new FormData();
+		workerBundle.set(
+			"metadata",
+			JSON.stringify({
+				main_module: "index.js",
+				bindings: [
+					{ name: "STARTUP_TEXT", type: "plain_text", text: "available" },
+					{ name: "STARTUP_JSON", type: "json", json: { enabled: true } },
+				],
+			})
+		);
+		workerBundle.set(
+			"index.js",
+			new File([source], "index.js", {
+				type: "application/javascript+module",
+			})
+		);
+
+		const profile = await analyseBundle(workerBundle);
+
+		expect(profile.nodes.length).toBeGreaterThan(0);
+	});
+
+	it("rejects failed module evaluation", async ({ expect }) => {
+		const workerBundle = new FormData();
+		workerBundle.set("metadata", JSON.stringify({ main_module: "index.js" }));
+		workerBundle.set(
+			"index.js",
+			new File([`throw new Error("startup failed");`], "index.js", {
+				type: "application/javascript+module",
+			})
+		);
+
+		await expect(analyseBundle(workerBundle)).rejects.toThrow(
+			"Worker startup profiling failed during module evaluation"
+		);
+	});
+
 	it("rejects service-worker format Workers", async ({ expect }) => {
 		const workerBundle = new FormData();
 		workerBundle.set("metadata", JSON.stringify({ body_part: "index.js" }));

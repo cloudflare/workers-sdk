@@ -10,7 +10,11 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { Response } from "undici";
 import { WebSocket } from "ws";
 import { fromMimeType } from "./deploy/helpers/create-worker-upload-form";
-import type { CfModuleType } from "@cloudflare/workers-utils";
+import type {
+	CfModuleType,
+	Json,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 import type { Protocol } from "devtools-protocol";
 import type { V4ModuleDefinition } from "miniflare";
 import type { FormData, FormDataEntryValue } from "undici";
@@ -160,6 +164,7 @@ export async function analyseBundle(
 			compatibilityFlags: Array.isArray(metadata.compatibility_flags)
 				? (metadata.compatibility_flags as string[])
 				: undefined,
+			bindings: convertWorkerBundleBindings(metadata.bindings),
 			modulesRoot: "/",
 			modules: [
 				{
@@ -231,7 +236,18 @@ export async function analyseBundle(
 			}),
 			abortController.signal
 		);
-		await waitForPromise(response.text(), abortController.signal);
+		const responseBody = await waitForPromise(
+			response.text(),
+			abortController.signal
+		);
+		if (!response.ok) {
+			throw new UserError(
+				`Worker startup profiling failed during module evaluation${responseBody === "" ? "." : `: ${responseBody}`}`,
+				{
+					telemetryMessage: "startup profiling module evaluation failed",
+				}
+			);
+		}
 
 		const stopResult = await sendInspectorCommand<{
 			profile: Protocol.Profiler.Profile;
@@ -260,6 +276,26 @@ export async function analyseBundle(
 			}
 		}
 	}
+}
+
+function convertWorkerBundleBindings(bindings: unknown): Record<string, Json> {
+	if (!Array.isArray(bindings)) {
+		return {};
+	}
+
+	const miniflareBindings: Record<string, Json> = {};
+	for (const binding of bindings as WorkerMetadataBinding[]) {
+		switch (binding.type) {
+			case "plain_text":
+			case "secret_text":
+				miniflareBindings[binding.name] = binding.text;
+				break;
+			case "json":
+				miniflareBindings[binding.name] = binding.json;
+				break;
+		}
+	}
+	return miniflareBindings;
 }
 
 async function waitForPromise<T>(
