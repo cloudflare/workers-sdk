@@ -72,7 +72,7 @@ export const CF_CLI: CliDescriptor = {
 		login: "cf auth login",
 		whoami: "cf auth whoami",
 		createProfile: "cf auth create",
-		deviceLogin: "cf auth login --device",
+		deviceLogin: "cf auth login",
 	},
 	keyringServiceName: CF_KEYRING_SERVICE_NAME,
 	clientId: getClientIdFromEnv,
