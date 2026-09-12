@@ -1216,9 +1216,27 @@ function validateRoutes(
 function normalizeAndValidatePlacement(
 	diagnostics: Diagnostics,
 	topLevelEnv: Environment | undefined,
-	rawEnv: RawEnvironment
+	rawEnv: RawEnvironment,
+	diagnosticField = "placement"
 ): Config["placement"] {
-	if (rawEnv.placement) {
+	if (rawEnv.placement !== undefined) {
+		if (
+			typeof rawEnv.placement !== "object" ||
+			rawEnv.placement === null ||
+			Array.isArray(rawEnv.placement)
+		) {
+			diagnostics.errors.push(
+				`The field "${diagnosticField}" should be an object but got ${JSON.stringify(rawEnv.placement)}.`
+			);
+			return inheritable(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				"placement",
+				() => true,
+				undefined
+			);
+		}
 		const placement = rawEnv.placement as Record<string, unknown>;
 
 		// Detect which format is being used
@@ -1231,7 +1249,7 @@ function normalizeAndValidatePlacement(
 		// Validate that formats aren't mixed
 		if (hasHint && hasTargetedFields) {
 			diagnostics.errors.push(
-				`"placement" cannot have both "hint" (smart format) and "region"/"host"/"hostname" (targeted format) fields`
+				`"${diagnosticField}" cannot have both "hint" (smart format) and "region"/"host"/"hostname" (targeted format) fields`
 			);
 			return inheritable(
 				diagnostics,
@@ -1247,7 +1265,7 @@ function normalizeAndValidatePlacement(
 		if (hasHint) {
 			validateRequiredProperty(
 				diagnostics,
-				"placement",
+				diagnosticField,
 				"mode",
 				placement.mode,
 				"string",
@@ -1260,12 +1278,12 @@ function normalizeAndValidatePlacement(
 			// Hint must be a string (if provided)
 			if (hint !== undefined && typeof hint !== "string") {
 				diagnostics.errors.push(
-					`"placement.hint" must be a string when "placement.mode" is "${mode}"`
+					`"${diagnosticField}.hint" must be a string when "${diagnosticField}.mode" is "${mode}"`
 				);
 			}
 			if (hint && mode !== "smart") {
 				diagnostics.errors.push(
-					`"placement.hint" can only be set when "placement.mode" is "smart"`
+					`"${diagnosticField}.hint" can only be set when "${diagnosticField}.mode" is "smart"`
 				);
 			}
 		}
@@ -1274,7 +1292,7 @@ function normalizeAndValidatePlacement(
 			// Mode is optional for new format, but if present must be "off" or "targeted"
 			validateOptionalProperty(
 				diagnostics,
-				"placement",
+				diagnosticField,
 				"mode",
 				placement.mode,
 				"string",
@@ -1285,7 +1303,7 @@ function normalizeAndValidatePlacement(
 			if (hasRegion) {
 				validateOptionalProperty(
 					diagnostics,
-					"placement",
+					diagnosticField,
 					"region",
 					placement.region,
 					"string"
@@ -1294,7 +1312,7 @@ function normalizeAndValidatePlacement(
 			if (hasHost) {
 				validateOptionalProperty(
 					diagnostics,
-					"placement",
+					diagnosticField,
 					"host",
 					placement.host,
 					"string"
@@ -1303,7 +1321,7 @@ function normalizeAndValidatePlacement(
 			if (hasHostname) {
 				validateOptionalProperty(
 					diagnostics,
-					"placement",
+					diagnosticField,
 					"hostname",
 					placement.hostname,
 					"string"
@@ -1324,7 +1342,7 @@ function normalizeAndValidatePlacement(
 					presentFields.push("hostname");
 				}
 				diagnostics.errors.push(
-					`"placement" fields ${presentFields.map((f) => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
+					`"${diagnosticField}" fields ${presentFields.map((f) => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
 				);
 			}
 		}
@@ -1332,7 +1350,7 @@ function normalizeAndValidatePlacement(
 		else {
 			validateRequiredProperty(
 				diagnostics,
-				"placement",
+				diagnosticField,
 				"mode",
 				placement.mode,
 				"string",
@@ -6171,6 +6189,7 @@ const validatePreviewsConfig =
 				"logpush",
 				"observability",
 				"limits",
+				"placement",
 				"cache",
 			]) && isValid;
 
@@ -6189,6 +6208,13 @@ const validatePreviewsConfig =
 				previews.define,
 				undefined
 			) && isValid;
+
+		normalizeAndValidatePlacement(
+			diagnostics,
+			undefined,
+			previews,
+			`${field}.placement`
+		);
 
 		isValid =
 			validateBindingsProperty(envName, validateDurableObjectBinding)(
