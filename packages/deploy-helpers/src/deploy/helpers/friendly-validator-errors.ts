@@ -79,15 +79,16 @@ export async function diagnoseStartupError(
 			"startup-profile",
 			false
 		);
-		const profile = path.relative(
+		const profilePath = path.join(tmpDir.path, "worker.cpuprofile");
+		const displayProfilePath = path.relative(
 			projectRoot ?? process.cwd(),
-			path.join(tmpDir.path, `worker.cpuprofile`)
+			profilePath
 		);
-		await writeFile(profile, JSON.stringify(cpuProfile));
+		await writeFile(profilePath, JSON.stringify(cpuProfile));
 
 		errorMessage += dedent`
 
-			A CPU Profile of your Worker's startup phase has been written to ${profile} - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`;
+			A CPU Profile of your Worker's startup phase has been written to ${displayProfilePath} - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`;
 	} catch (profilingError) {
 		logger.debug(
 			`An error occurred while trying to locally profile the Worker: ${profilingError}`

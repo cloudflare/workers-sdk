@@ -1,3 +1,5 @@
+import { mkdir, readFile, readdir } from "node:fs/promises";
+import path from "node:path";
 import { ParseError } from "@cloudflare/workers-utils";
 import {
 	normalizeString,
@@ -93,16 +95,18 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 		`);
 	});
 
-	it("includes profile information when bundle analysis succeeds", async ({
+	it("writes a profile for a nested project root when bundle analysis succeeds", async ({
 		expect,
 	}) => {
 		mockAnalyseBundle.mockResolvedValue({ nodes: [], samples: [] });
+		const projectRoot = path.join(process.cwd(), "apps", "api");
+		await mkdir(projectRoot, { recursive: true });
 
 		const message = await helpIfErrorIsSizeOrScriptStartup(
 			makeStartupError("Exceeded startup limits."),
 			{}, // no dependencies
 			new FormData(), // mock worker bundle
-			process.cwd(), // mock project root (the tmp dir)
+			projectRoot,
 			mockAnalyseBundle
 		);
 
@@ -126,6 +130,23 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			  "warn": "",
 			}
 		`);
+
+		const profileDirectories = await readdir(
+			path.join(projectRoot, ".wrangler", "tmp")
+		);
+		expect(profileDirectories).toHaveLength(1);
+		await expect(
+			readFile(
+				path.join(
+					projectRoot,
+					".wrangler",
+					"tmp",
+					profileDirectories[0],
+					"worker.cpuprofile"
+				),
+				"utf8"
+			)
+		).resolves.toBe(JSON.stringify({ nodes: [], samples: [] }));
 	});
 });
 
