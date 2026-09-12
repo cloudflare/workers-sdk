@@ -6,13 +6,14 @@ import type {
 	CfPlacement,
 	CfUserLimits,
 	Config,
+	Json,
 	Observability,
 } from "@cloudflare/workers-utils";
 
 export interface Binding {
 	type: string;
 	text?: string;
-	json?: unknown;
+	json?: Json;
 	namespace_id?: string;
 	workflow_name?: string;
 	destination_address?: string;
@@ -23,9 +24,12 @@ export interface Binding {
 	database_id?: string;
 	database_name?: string;
 	bucket_name?: string;
+	jurisdiction?: string;
 	index_name?: string;
 	id?: string;
 	service?: string;
+	environment?: string;
+	cross_account_grant?: string;
 	dataset?: string;
 	namespace?: string;
 	outbound?: {
@@ -123,7 +127,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	migrations?: CfWorkerInit["migrations"];
 	limits?: CfUserLimits;
-	placement?: CfPlacement;
+	placement?: CfPlacement | null;
 	cache?: CacheOptions;
 	env?: EnvBindings;
 	containers?: Array<{ class_name: string }>;
