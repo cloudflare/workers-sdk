@@ -241,16 +241,15 @@ export async function analyseBundle(
 			abortController.signal
 		);
 		await waitForPromise(response.text(), abortController.signal);
-		if (!response.ok) {
-			const unsupportedBindings =
-				convertedBindings.unsupportedBindings.length === 0
-					? ""
-					: ` The upload contains bindings that cannot be reproduced locally during startup profiling: ${convertedBindings.unsupportedBindings
-							.map(
-								(binding) =>
-									`${JSON.stringify(binding.name)} (${JSON.stringify(binding.type)})`
-							)
-							.join(", ")}.`;
+		// A module-evaluation failure is itself useful profile data. Only fail when
+		// local binding reconstruction could have caused it.
+		if (!response.ok && convertedBindings.unsupportedBindings.length > 0) {
+			const unsupportedBindings = ` The upload contains bindings that cannot be reproduced locally during startup profiling: ${convertedBindings.unsupportedBindings
+				.map(
+					(binding) =>
+						`${JSON.stringify(binding.name)} (${JSON.stringify(binding.type)})`
+				)
+				.join(", ")}.`;
 			throw new UserError(
 				`Worker startup profiling failed during module evaluation (status ${response.status}).${unsupportedBindings}`,
 				{

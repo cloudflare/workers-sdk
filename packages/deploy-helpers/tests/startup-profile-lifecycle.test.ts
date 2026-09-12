@@ -195,9 +195,10 @@ describe("startup profile lifecycle", () => {
 		expect(miniflare.disposeCount).toBe(1);
 	});
 
-	it("sanitizes failed module evaluation and skips Profiler.stop", async ({
+	it("drains a failed module evaluation response and stops the profiler", async ({
 		expect,
 	}) => {
+		const profile = { nodes: [], startTime: 1, endTime: 2 };
 		const dispatchResponse = new Response(
 			"SECRET_VALUE\n/Users/example/private-worker/index.js",
 			{ status: 500 }
@@ -210,24 +211,15 @@ describe("startup profile lifecycle", () => {
 		socket.respond(1);
 		await waitForCommandCount(2);
 		socket.respond(2);
+		await waitForCommandCount(3);
+		socket.respond(3, { profile });
 
-		const error = await result.then(
-			() => undefined,
-			(reason: unknown) => reason
-		);
-		expect(error).toBeInstanceOf(Error);
-		if (!(error instanceof Error)) {
-			throw new Error("Expected startup profiling to throw an Error");
-		}
-		expect(error.message).toBe(
-			"Worker startup profiling failed during module evaluation (status 500)."
-		);
-		expect(error.message).not.toContain("SECRET_VALUE");
-		expect(error.message).not.toContain("/Users/example");
+		await expect(result).resolves.toEqual(profile);
 		expect(dispatchResponse.bodyUsed).toBe(true);
 		expect(socket.commands.map(({ method }) => method)).toEqual([
 			"Profiler.enable",
 			"Profiler.start",
+			"Profiler.stop",
 		]);
 		expect(socket.terminated).toBe(true);
 		expect(miniflare.disposeCount).toBe(1);
