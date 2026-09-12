@@ -16,7 +16,7 @@ import type {
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 import type { Protocol } from "devtools-protocol";
-import type { V4ModuleDefinition } from "miniflare";
+import type { V4ModuleDefinition, V4WorkerOptionsShape } from "miniflare";
 import type { FormData, FormDataEntryValue } from "undici";
 import type { RawData } from "ws";
 
@@ -153,6 +153,10 @@ export async function analyseBundle(
 			}
 		);
 	}
+	const convertedBindings = await convertWorkerBundleBindings(
+		parsedWorkerBundle,
+		metadata.bindings
+	);
 
 	const mf = new Miniflare(
 		convertV4MiniflareOptions({
@@ -164,7 +168,7 @@ export async function analyseBundle(
 			compatibilityFlags: Array.isArray(metadata.compatibility_flags)
 				? (metadata.compatibility_flags as string[])
 				: undefined,
-			bindings: convertWorkerBundleBindings(metadata.bindings),
+			...convertedBindings.options,
 			modulesRoot: "/",
 			modules: [
 				{
@@ -236,13 +240,18 @@ export async function analyseBundle(
 			}),
 			abortController.signal
 		);
-		const responseBody = await waitForPromise(
-			response.text(),
-			abortController.signal
-		);
+		await waitForPromise(response.text(), abortController.signal);
 		if (!response.ok) {
+			const unsupportedBindings =
+				convertedBindings.unsupportedBindings.length === 0
+					? ""
+					: ` The upload contains bindings that cannot be reproduced locally during startup profiling: ${convertedBindings.unsupportedBindings
+							.map(
+								(binding) => `${JSON.stringify(binding.name)} (${binding.type})`
+							)
+							.join(", ")}.`;
 			throw new UserError(
-				`Worker startup profiling failed during module evaluation${responseBody === "" ? "." : `: ${responseBody}`}`,
+				`Worker startup profiling failed during module evaluation (status ${response.status}).${unsupportedBindings}`,
 				{
 					telemetryMessage: "startup profiling module evaluation failed",
 				}
@@ -278,13 +287,110 @@ export async function analyseBundle(
 	}
 }
 
-function convertWorkerBundleBindings(bindings: unknown): Record<string, Json> {
-	if (!Array.isArray(bindings)) {
-		return {};
-	}
+type MiniflareBindingOptions = Pick<
+	V4WorkerOptionsShape,
+	| "agentMemory"
+	| "ai"
+	| "aiSearchInstances"
+	| "aiSearchNamespaces"
+	| "analyticsEngineDatasets"
+	| "artifacts"
+	| "bindings"
+	| "browserRendering"
+	| "dataBlobBindings"
+	| "d1Databases"
+	| "dispatchNamespaces"
+	| "email"
+	| "flagship"
+	| "helloWorld"
+	| "images"
+	| "kvNamespaces"
+	| "media"
+	| "mtlsCertificates"
+	| "pipelines"
+	| "queueProducers"
+	| "r2Buckets"
+	| "ratelimits"
+	| "secretsStoreSecrets"
+	| "serviceBindings"
+	| "stream"
+	| "vectorize"
+	| "versionMetadata"
+	| "vpcNetworks"
+	| "vpcServices"
+	| "websearch"
+	| "workerLoaders"
+>;
 
+type MiniflareBindingOption<Name extends keyof V4WorkerOptionsShape> =
+	NonNullable<V4WorkerOptionsShape[Name]>;
+
+interface UnsupportedWorkerBinding {
+	name: string;
+	type: string;
+}
+
+interface ConvertedWorkerBundleBindings {
+	options: MiniflareBindingOptions;
+	unsupportedBindings: UnsupportedWorkerBinding[];
+}
+
+async function convertWorkerBundleBindings(
+	workerBundle: FormData,
+	bindings: unknown
+): Promise<ConvertedWorkerBundleBindings> {
+	const agentMemory: MiniflareBindingOption<"agentMemory"> = {};
+	let ai: MiniflareBindingOption<"ai"> | undefined;
+	const aiSearchInstances: MiniflareBindingOption<"aiSearchInstances"> = {};
+	const aiSearchNamespaces: MiniflareBindingOption<"aiSearchNamespaces"> = {};
+	const analyticsEngineDatasets: MiniflareBindingOption<"analyticsEngineDatasets"> =
+		{};
+	const artifacts: MiniflareBindingOption<"artifacts"> = {};
 	const miniflareBindings: Record<string, Json> = {};
-	for (const binding of bindings as WorkerMetadataBinding[]) {
+	let browserRendering: MiniflareBindingOption<"browserRendering"> | undefined;
+	const dataBlobBindings: Record<string, Uint8Array> = {};
+	const d1Databases: Record<string, { id: string }> = {};
+	const dispatchNamespaces: MiniflareBindingOption<"dispatchNamespaces"> = {};
+	const sendEmailBindings: NonNullable<
+		MiniflareBindingOption<"email">["send_email"]
+	> = [];
+	const flagship: MiniflareBindingOption<"flagship"> = {};
+	const helloWorld: MiniflareBindingOption<"helloWorld"> = {};
+	let images: MiniflareBindingOption<"images"> | undefined;
+	const kvNamespaces: Record<string, { id: string }> = {};
+	let media: MiniflareBindingOption<"media"> | undefined;
+	const mtlsCertificates: MiniflareBindingOption<"mtlsCertificates"> = {};
+	const pipelines: Record<string, { stream: string } | { pipeline: string }> =
+		{};
+	const queueProducers: Record<
+		string,
+		{ queueName: string; deliveryDelay?: number }
+	> = {};
+	const r2Buckets: Record<string, { id: string }> = {};
+	const ratelimits: MiniflareBindingOption<"ratelimits"> = {};
+	const secretsStoreSecrets: MiniflareBindingOption<"secretsStoreSecrets"> = {};
+	const serviceBindings: NonNullable<V4WorkerOptionsShape["serviceBindings"]> =
+		{};
+	let stream: MiniflareBindingOption<"stream"> | undefined;
+	const vectorize: MiniflareBindingOption<"vectorize"> = {};
+	let versionMetadata: string | undefined;
+	const vpcNetworks: MiniflareBindingOption<"vpcNetworks"> = {};
+	const vpcServices: MiniflareBindingOption<"vpcServices"> = {};
+	const websearch: MiniflareBindingOption<"websearch"> = {};
+	const workerLoaders: MiniflareBindingOption<"workerLoaders"> = {};
+	const unsupportedBindings: UnsupportedWorkerBinding[] = [];
+
+	for (const value of Array.isArray(bindings) ? bindings : []) {
+		if (!isNamedWorkerBinding(value)) {
+			unsupportedBindings.push({ name: "<unknown>", type: "unknown" });
+			continue;
+		}
+		const binding = value as WorkerMetadataBinding;
+		// Raw resource bindings expose a Fetcher instead of their product API.
+		if ("raw" in binding && binding.raw === true) {
+			serviceBindings[binding.name] = createOfflineFetcherBinding();
+			continue;
+		}
 		switch (binding.type) {
 			case "plain_text":
 			case "secret_text":
@@ -293,9 +399,278 @@ function convertWorkerBundleBindings(bindings: unknown): Record<string, Json> {
 			case "json":
 				miniflareBindings[binding.name] = binding.json;
 				break;
+			case "text_blob":
+				miniflareBindings[binding.name] = await getTextBindingPart(
+					workerBundle,
+					binding
+				);
+				break;
+			case "data_blob":
+				dataBlobBindings[binding.name] = await getBinaryBindingPart(
+					workerBundle,
+					binding
+				);
+				break;
+			case "kv_namespace":
+				kvNamespaces[binding.name] = { id: binding.namespace_id };
+				break;
+			case "d1":
+				d1Databases[binding.name] = { id: binding.id };
+				break;
+			case "r2_bucket":
+				r2Buckets[binding.name] = { id: binding.bucket_name };
+				break;
+			case "queue":
+				queueProducers[binding.name] = {
+					queueName: binding.queue_name,
+					deliveryDelay: binding.delivery_delay,
+				};
+				break;
+			case "service":
+				serviceBindings[binding.name] = createOfflineFetcherBinding();
+				unsupportedBindings.push(binding);
+				break;
+			case "assets":
+				serviceBindings[binding.name] = createOfflineFetcherBinding();
+				break;
+			case "browser":
+				browserRendering = { binding: binding.name };
+				break;
+			case "ai":
+				ai = { binding: binding.name };
+				break;
+			case "images":
+				images = { binding: binding.name };
+				break;
+			case "stream":
+				stream = { binding: binding.name };
+				break;
+			case "version_metadata":
+				versionMetadata = binding.name;
+				break;
+			case "ai_search_namespace":
+				aiSearchNamespaces[binding.name] = {
+					namespace: binding.namespace,
+				};
+				break;
+			case "ai_search":
+				aiSearchInstances[binding.name] = {
+					instance_name: binding.instance_name,
+				};
+				break;
+			case "websearch":
+				websearch[binding.name] = {};
+				break;
+			case "agent_memory":
+				agentMemory[binding.name] = { namespace: binding.namespace };
+				break;
+			case "media":
+				media = { binding: binding.name };
+				break;
+			case "send_email": {
+				const shared = {
+					name: binding.name,
+					allowed_sender_addresses: binding.allowed_sender_addresses,
+				};
+				if (binding.destination_address !== undefined) {
+					sendEmailBindings.push({
+						...shared,
+						destination_address: binding.destination_address,
+					});
+				} else if (binding.allowed_destination_addresses !== undefined) {
+					sendEmailBindings.push({
+						...shared,
+						allowed_destination_addresses:
+							binding.allowed_destination_addresses,
+					});
+				} else {
+					sendEmailBindings.push(shared);
+				}
+				break;
+			}
+			case "durable_object_namespace":
+			case "workflow":
+				// The profiler wrapper deliberately imports the user module only after
+				// profiling starts, so it cannot expose its class entrypoints up front.
+				unsupportedBindings.push(binding);
+				break;
+			case "vectorize":
+				vectorize[binding.name] = { index_name: binding.index_name };
+				break;
+			case "analytics_engine":
+				analyticsEngineDatasets[binding.name] = {
+					dataset: binding.dataset ?? "dataset",
+				};
+				break;
+			case "dispatch_namespace":
+				dispatchNamespaces[binding.name] = {
+					namespace: binding.namespace,
+				};
+				break;
+			case "mtls_certificate":
+				mtlsCertificates[binding.name] = {
+					certificate_id: binding.certificate_id,
+				};
+				break;
+			case "pipelines":
+				if (binding.stream !== undefined) {
+					pipelines[binding.name] = { stream: binding.stream };
+				} else if (binding.pipeline !== undefined) {
+					pipelines[binding.name] = { pipeline: binding.pipeline };
+				} else {
+					unsupportedBindings.push(binding);
+				}
+				break;
+			case "secrets_store_secret":
+				secretsStoreSecrets[binding.name] = {
+					store_id: binding.store_id,
+					secret_name: binding.secret_name,
+				};
+				break;
+			case "artifacts":
+				artifacts[binding.name] = { namespace: binding.namespace };
+				break;
+			case "unsafe_hello_world":
+				helloWorld[binding.name] = {
+					enable_timer: binding.enable_timer,
+				};
+				break;
+			case "flagship":
+				flagship[binding.name] = { app_id: binding.app_id };
+				break;
+			case "ratelimit":
+				ratelimits[binding.name] = {
+					namespace_id: binding.namespace_id,
+					simple: binding.simple,
+				};
+				break;
+			case "vpc_service":
+				vpcServices[binding.name] = { service_id: binding.service_id };
+				break;
+			case "vpc_network":
+				if (binding.tunnel_id !== undefined) {
+					vpcNetworks[binding.name] = { tunnel_id: binding.tunnel_id };
+				} else if (binding.network_id !== undefined) {
+					vpcNetworks[binding.name] = { network_id: binding.network_id };
+				} else {
+					unsupportedBindings.push(binding);
+				}
+				break;
+			case "worker_loader":
+				workerLoaders[binding.name] = {};
+				break;
+			case "inherit":
+				// Inheritance erases the original binding type from upload metadata.
+				unsupportedBindings.push(binding);
+				break;
+			case "wasm_module":
+				// workerd rejects Wasm env bindings for the module Workers profiled here.
+				unsupportedBindings.push(binding);
+				break;
+			case "hyperdrive":
+				// Upload metadata has an id, but local Hyperdrive needs a database URL.
+				unsupportedBindings.push(binding);
+				break;
+			case "logfwdr":
+				// Miniflare has no runtime binding option for log forwarders.
+				unsupportedBindings.push(binding);
+				break;
+			default: {
+				binding satisfies never;
+				const unknownBinding = binding as unknown as UnsupportedWorkerBinding;
+				unsupportedBindings.push(unknownBinding);
+			}
 		}
 	}
-	return miniflareBindings;
+
+	return {
+		options: {
+			agentMemory,
+			ai,
+			aiSearchInstances,
+			aiSearchNamespaces,
+			analyticsEngineDatasets,
+			artifacts,
+			bindings: miniflareBindings,
+			browserRendering,
+			dataBlobBindings,
+			d1Databases,
+			dispatchNamespaces,
+			email: { send_email: sendEmailBindings },
+			flagship,
+			helloWorld,
+			images,
+			kvNamespaces,
+			media,
+			mtlsCertificates,
+			pipelines,
+			queueProducers,
+			r2Buckets,
+			ratelimits,
+			secretsStoreSecrets,
+			serviceBindings,
+			stream,
+			vectorize,
+			versionMetadata,
+			vpcNetworks,
+			vpcServices,
+			websearch,
+			workerLoaders,
+		},
+		unsupportedBindings,
+	};
+}
+
+function isNamedWorkerBinding(
+	value: unknown
+): value is UnsupportedWorkerBinding {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"name" in value &&
+		typeof value.name === "string" &&
+		"type" in value &&
+		typeof value.type === "string"
+	);
+}
+
+function createOfflineFetcherBinding(): () => Response {
+	return () =>
+		new Response("Binding calls are unavailable during startup profiling.", {
+			status: 503,
+		});
+}
+
+async function getBinaryBindingPart(
+	workerBundle: FormData,
+	binding: Extract<WorkerMetadataBinding, { type: "data_blob" }>
+): Promise<Uint8Array> {
+	const part = getBindingPart(workerBundle, binding);
+	return part instanceof Blob
+		? new Uint8Array((await part.arrayBuffer()) as ArrayBuffer)
+		: new TextEncoder().encode(part);
+}
+
+async function getTextBindingPart(
+	workerBundle: FormData,
+	binding: Extract<WorkerMetadataBinding, { type: "text_blob" }>
+): Promise<string> {
+	const part = getBindingPart(workerBundle, binding);
+	return part instanceof Blob ? await part.text() : part;
+}
+
+function getBindingPart(
+	workerBundle: FormData,
+	binding: Extract<WorkerMetadataBinding, { type: "text_blob" | "data_blob" }>
+): FormDataEntryValue {
+	const part = workerBundle.get(binding.part);
+	if (part === null) {
+		throw new UserError(
+			`Startup profiling could not find multipart part ${JSON.stringify(binding.part)} for binding ${JSON.stringify(binding.name)}.`,
+			{ telemetryMessage: "startup profiling binding part missing" }
+		);
+	}
+	return part;
 }
 
 async function waitForPromise<T>(
