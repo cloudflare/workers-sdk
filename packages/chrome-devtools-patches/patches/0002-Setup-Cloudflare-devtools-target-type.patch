@@ -1,4 +1,4 @@
-From 0b2f719ec57d77ac8837ffa62293b3c1cb97551f Mon Sep 17 00:00:00 2001
+From e203327d849387af1d35e4f239f34f9c86ba9116 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:06:06 +0100
 Subject: [PATCH 2/8] Setup Cloudflare devtools target type
@@ -9,21 +9,21 @@ Subject: [PATCH 2/8] Setup Cloudflare devtools target type
  2 files changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/front_end/core/sdk/Target.ts b/front_end/core/sdk/Target.ts
-index 2437d6aac1..e9a3318268 100644
+index b36f74f402..0b0b6b51ce 100644
 --- a/front_end/core/sdk/Target.ts
 +++ b/front_end/core/sdk/Target.ts
-@@ -98,6 +98,10 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
+@@ -108,6 +108,10 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
          break;
        case Type.NODE_WORKER:
-         this.#capabilitiesMask = Capability.JS | Capability.NETWORK | Capability.TARGET;
+         this.#capabilitiesMask = Capability.JS | Capability.NETWORK | Capability.TARGET | Capability.IO;
 +        break;
 +      case Type.CLOUDFLARE:
 +        this.#capabilitiesMask = Capability.JS | Capability.NETWORK;
 +        break;
      }
-     this.#typeInternal = type;
-     this.#parentTargetInternal = parentTarget;
-@@ -298,6 +302,7 @@ export enum Type {
+     this.#type = type;
+     this.#parentTarget = parentTarget;
+@@ -297,6 +301,7 @@ export enum Type {
    AUCTION_WORKLET = 'auction-worklet',
    WORKLET = 'worklet',
    TAB = 'tab',
@@ -32,7 +32,7 @@ index 2437d6aac1..e9a3318268 100644
  }
  
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index 2dbb4eca42..814bc1fc70 100644
+index d5021969c1..3c0179b3ed 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
 @@ -61,7 +61,7 @@ export class JsMainImpl implements Common.Runnable.Runnable {
@@ -45,5 +45,5 @@ index 2dbb4eca42..814bc1fc70 100644
      }, Components.TargetDetachedDialog.TargetDetachedDialog.connectionLost);
    }
 -- 
-2.39.5 (Apple Git-154)
+2.50.1 (Apple Git-155)
 
