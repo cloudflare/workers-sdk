@@ -82,6 +82,7 @@
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
+		"node-hid": "3.4.0",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "catalog:default"
