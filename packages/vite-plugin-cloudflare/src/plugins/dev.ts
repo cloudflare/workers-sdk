@@ -115,16 +115,21 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					viteDevServer,
 					ctx.miniflare
 				);
-				const currentWorkerNameToExportTypesMap =
-					await getCurrentWorkerNameToExportTypesMap(
-						ctx.resolvedPluginConfig,
-						viteDevServer,
-						ctx.miniflare
+
+				const isMiddlewareMode = !viteDevServer.httpServer;
+				const currentWorkerNameToExportTypesMap = isMiddlewareMode
+					? ctx.workerNameToExportTypesMap
+					: await getCurrentWorkerNameToExportTypesMap(
+							ctx.resolvedPluginConfig,
+							viteDevServer,
+							ctx.miniflare
+						);
+				const hasChanged =
+					!isMiddlewareMode &&
+					compareWorkerNameToExportTypesMaps(
+						ctx.workerNameToExportTypesMap,
+						currentWorkerNameToExportTypesMap
 					);
-				const hasChanged = compareWorkerNameToExportTypesMaps(
-					ctx.workerNameToExportTypesMap,
-					currentWorkerNameToExportTypesMap
-				);
 
 				if (hasChanged) {
 					ctx.setWorkerNameToExportTypesMap(currentWorkerNameToExportTypesMap);
@@ -141,7 +146,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 				}
 
-				for (const environmentName of ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
+				const workerExportTypeEnvironmentNames: Iterable<string> =
+					isMiddlewareMode
+						? []
+						: ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys();
+				for (const environmentName of workerExportTypeEnvironmentNames) {
 					const environment = viteDevServer.environments[environmentName];
 					assert(
 						environment,
