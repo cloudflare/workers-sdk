@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { getEdgeKvUploadConcurrency } from "@cloudflare/deploy-helpers";
 import {
+	createDeferred,
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
@@ -1213,6 +1214,146 @@ describe("deploy", () => {
 				expect.any(Object)
 			);
 			sendMetricsEventSpy.mockRestore();
+		});
+
+		describe.each([
+			{ name: "legacy", useSingleAssetUpload: false },
+			{ name: "single-file", useSingleAssetUpload: true },
+		])("$name asset uploads", ({ useSingleAssetUpload }) => {
+			it("should only recover concurrency after post-throttle successes", async ({
+				expect,
+			}) => {
+				vi.stubEnv("WRANGLER_LOG", "debug");
+
+				const assets = Array.from({ length: 7 }, (_, index) => ({
+					filePath: `file-${index}.txt`,
+					content: `Content of file-${index}`,
+				}));
+				writeAssets(assets);
+				writeWranglerConfig({ assets: { directory: "assets" } });
+
+				const uploadJwt = createJwt({
+					wrangler_single_asset_uploads: useSingleAssetUpload,
+					edge_kv_upload_concurrency: 3,
+				});
+				const completionJwt = "<<aus-completion-token>>";
+				const assetIndexByHash = new Map<string, number>();
+				const uploadAttempts = Array.from({ length: assets.length }, () => 0);
+				const uploadGates = Array.from({ length: assets.length }, () =>
+					createDeferred<void>()
+				);
+
+				async function handleUpload(assetIndex: number | undefined) {
+					if (assetIndex === undefined) {
+						throw new Error("Unexpected asset hash");
+					}
+
+					uploadAttempts[assetIndex]++;
+					if (assetIndex === 0 && uploadAttempts[assetIndex] === 1) {
+						return HttpResponse.text("gateway timeout", { status: 524 });
+					}
+
+					await uploadGates[assetIndex].promise;
+					return HttpResponse.json(createFetchResult({ jwt: completionJwt }), {
+						status: 201,
+					});
+				}
+
+				msw.use(
+					http.post(
+						"*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session",
+						async ({ request }) => {
+							const { manifest } = (await request.json()) as {
+								manifest: AssetManifest;
+							};
+							const hashes = Object.entries(manifest)
+								.sort(([leftPath], [rightPath]) =>
+									leftPath.localeCompare(rightPath)
+								)
+								.map(([, entry], index) => {
+									assetIndexByHash.set(entry.hash, index);
+									return entry.hash;
+								});
+
+							return HttpResponse.json(
+								createFetchResult({
+									jwt: uploadJwt,
+									buckets: hashes.map((hash) => [hash]),
+								}),
+								{ status: 201 }
+							);
+						}
+					),
+					http.post(
+						"*/accounts/some-account-id/workers/assets/upload/:hash",
+						({ params }) =>
+							handleUpload(assetIndexByHash.get(String(params.hash)))
+					),
+					http.post(
+						"*/accounts/some-account-id/workers/assets/upload",
+						async ({ request }) => {
+							// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
+							const formData = await request.formData();
+							const [hash] = formData.keys();
+							return handleUpload(assetIndexByHash.get(hash));
+						}
+					)
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedAssets: { jwt: completionJwt, config: {} },
+					expectedType: "none",
+				});
+
+				const deployPromise = runWrangler("deploy");
+
+				try {
+					await vi.waitFor(() => {
+						expect(uploadAttempts.slice(0, 3)).toEqual([2, 1, 1]);
+					});
+					expect(uploadAttempts.slice(3)).toEqual([0, 0, 0, 0]);
+
+					// Completing requests that started before the gateway error must not
+					// restore concurrency or start more work.
+					uploadGates[1].resolve();
+					uploadGates[2].resolve();
+					await vi.waitFor(() => {
+						expect(std.info).toContain("Uploaded 2 of 7 assets");
+					});
+					await new Promise<void>((resolve) => setImmediate(resolve));
+					expect(uploadAttempts.slice(3)).toEqual([0, 0, 0, 0]);
+					expect(std.debug).not.toContain("Asset upload concurrency recovered");
+
+					// The retry started after the throttle, so its success restores one slot.
+					uploadGates[0].resolve();
+					await vi.waitFor(() => {
+						expect(uploadAttempts.slice(3, 5)).toEqual([1, 1]);
+					});
+					expect(uploadAttempts.slice(5)).toEqual([0, 0]);
+
+					// One more post-throttle success restores the configured concurrency.
+					uploadGates[3].resolve();
+					await vi.waitFor(() => {
+						expect(uploadAttempts.slice(5)).toEqual([1, 1]);
+					});
+				} finally {
+					for (const uploadGate of uploadGates) {
+						uploadGate.resolve();
+					}
+					await deployPromise;
+				}
+
+				expect(uploadAttempts).toEqual([2, 1, 1, 1, 1, 1, 1]);
+				expect(
+					std.debug.match(
+						/Asset upload concurrency (?:throttled to 1 after a gateway error|recovered to [23])\./g
+					)
+				).toEqual([
+					"Asset upload concurrency throttled to 1 after a gateway error.",
+					"Asset upload concurrency recovered to 2.",
+					"Asset upload concurrency recovered to 3.",
+				]);
+			});
 		});
 
 		it("should send bulk asset upload stats with deploy metrics", async ({
