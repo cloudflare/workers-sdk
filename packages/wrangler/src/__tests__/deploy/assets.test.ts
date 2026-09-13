@@ -1239,6 +1239,7 @@ describe("deploy", () => {
 				const completionJwt = "<<aus-completion-token>>";
 				const assetIndexByHash = new Map<string, number>();
 				const uploadAttempts = Array.from({ length: assets.length }, () => 0);
+				const gatewayResponseGate = createDeferred<void>();
 				const uploadGates = Array.from({ length: assets.length }, () =>
 					createDeferred<void>()
 				);
@@ -1250,6 +1251,7 @@ describe("deploy", () => {
 
 					uploadAttempts[assetIndex]++;
 					if (assetIndex === 0 && uploadAttempts[assetIndex] === 1) {
+						await gatewayResponseGate.promise;
 						return HttpResponse.text("gateway timeout", { status: 524 });
 					}
 
@@ -1310,11 +1312,17 @@ describe("deploy", () => {
 				try {
 					await vi.waitFor(
 						() => {
-							expect(uploadAttempts.slice(0, 3)).toEqual([2, 1, 1]);
+							expect(uploadAttempts.slice(0, 3)).toEqual([1, 1, 1]);
 						},
 						{ timeout: 10_000 }
 					);
 					expect(uploadAttempts.slice(3)).toEqual([0, 0, 0, 0]);
+					gatewayResponseGate.resolve();
+					await vi.waitFor(() => {
+						expect(std.debug).toContain(
+							"Asset upload concurrency throttled to 1 after a gateway error."
+						);
+					});
 
 					// Completing requests that started before the gateway error must not
 					// restore concurrency or start more work.
@@ -1322,6 +1330,7 @@ describe("deploy", () => {
 					uploadGates[2].resolve();
 					await vi.waitFor(() => {
 						expect(std.info).toContain("Uploaded 2 of 7 assets");
+						expect(uploadAttempts.slice(0, 3)).toEqual([2, 1, 1]);
 					});
 					await new Promise<void>((resolve) => setImmediate(resolve));
 					expect(uploadAttempts.slice(3)).toEqual([0, 0, 0, 0]);
@@ -1340,6 +1349,7 @@ describe("deploy", () => {
 						expect(uploadAttempts.slice(5)).toEqual([1, 1]);
 					});
 				} finally {
+					gatewayResponseGate.resolve();
 					for (const uploadGate of uploadGates) {
 						uploadGate.resolve();
 					}
