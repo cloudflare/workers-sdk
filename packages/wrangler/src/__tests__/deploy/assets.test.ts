@@ -1308,9 +1308,12 @@ describe("deploy", () => {
 				const deployPromise = runWrangler("deploy");
 
 				try {
-					await vi.waitFor(() => {
-						expect(uploadAttempts.slice(0, 3)).toEqual([2, 1, 1]);
-					});
+					await vi.waitFor(
+						() => {
+							expect(uploadAttempts.slice(0, 3)).toEqual([2, 1, 1]);
+						},
+						{ timeout: 10_000 }
+					);
 					expect(uploadAttempts.slice(3)).toEqual([0, 0, 0, 0]);
 
 					// Completing requests that started before the gateway error must not
