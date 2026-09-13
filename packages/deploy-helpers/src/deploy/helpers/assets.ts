@@ -66,6 +66,8 @@ const BULK_UPLOAD_CONCURRENCY = 3;
 const EDGE_KV_UPLOAD_CONCURRENCY = 50;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
+// Node clamps larger setTimeout delays to 1 ms, so long deadlines use slices.
+const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
 
 const MAX_DIFF_LINES = 100;
 
@@ -178,18 +180,84 @@ export const syncAssets = async (
 		logger.debug(`Edge KV asset upload concurrency: ${concurrency}`);
 	}
 	const queue = new PQueue({ concurrency });
+	const requestQueue = new PQueue({ concurrency });
 	const queuePromises: Array<Promise<void>> = [];
 	const start = Date.now();
 	let completionJwt = "";
 	let uploadedAssetsCount = 0;
 	let uploadedBytes = 0;
 	let concurrencyThrottleGeneration = 0;
+	let retryAfterDeadline = 0;
+	let retryAfterPauseGeneration = 0;
+	let retryAfterResumeTimeout: ReturnType<typeof setTimeout> | undefined;
+	let retryAfterGate = Promise.resolve();
+	let resolveRetryAfterGate: (() => void) | undefined;
+
+	function queueUploadRequest(
+		request: () => Promise<UploadResponse>
+	): Promise<{ response: UploadResponse; generation: number }> {
+		return requestQueue.add(async () => {
+			const generation = concurrencyThrottleGeneration;
+			return { response: await request(), generation };
+		});
+	}
+
+	// A Retry-After response from any bucket pauses the whole upload session.
+	// The generation guard prevents an older timer from resuming either queue
+	// after a later response has extended the shared deadline.
+	function scheduleRetryAfterResume(generation: number): void {
+		retryAfterResumeTimeout = setTimeout(
+			() => {
+				if (generation !== retryAfterPauseGeneration) {
+					return;
+				}
+
+				const remainingMs = retryAfterDeadline - Date.now();
+				if (remainingMs > 0) {
+					scheduleRetryAfterResume(generation);
+					return;
+				}
+
+				retryAfterResumeTimeout = undefined;
+				const resolveGate = resolveRetryAfterGate;
+				resolveRetryAfterGate = undefined;
+				resolveGate?.();
+				requestQueue.start();
+				queue.start();
+			},
+			Math.min(MAX_TIMER_DELAY_MS, Math.max(0, retryAfterDeadline - Date.now()))
+		);
+	}
+
+	function pauseUploadsForRetryAfter(retryAfterMs: number): boolean {
+		const requestedDeadline = Date.now() + retryAfterMs;
+		const extendsDeadline = requestedDeadline > retryAfterDeadline;
+		retryAfterDeadline = Math.max(retryAfterDeadline, requestedDeadline);
+		requestQueue.pause();
+		queue.pause();
+
+		if (resolveRetryAfterGate === undefined) {
+			retryAfterGate = new Promise<void>((resolvePromise) => {
+				resolveRetryAfterGate = resolvePromise;
+			});
+		}
+
+		retryAfterPauseGeneration++;
+		if (retryAfterResumeTimeout !== undefined) {
+			clearTimeout(retryAfterResumeTimeout);
+		}
+		scheduleRetryAfterResume(retryAfterPauseGeneration);
+
+		return extendsDeadline;
+	}
 
 	for (const [bucketIndex, bucket] of uploadBuckets.entries()) {
 		let attempts = 0;
 		let gatewayErrors = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
-			const uploadGeneration = concurrencyThrottleGeneration;
+			while (resolveRetryAfterGate !== undefined) {
+				await retryAfterGate;
+			}
 			const uploadedFiles: string[] = [];
 			for (const manifestEntry of bucket) {
 				uploadedFiles.push(manifestEntry[0]);
@@ -197,23 +265,28 @@ export const syncAssets = async (
 
 			try {
 				let res: UploadResponse;
+				let uploadGeneration: number;
 				if (useSingleAssetUpload) {
 					const manifestEntry = bucket[0];
 					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
 					const contentType = getContentType(absFilePath);
-					res = await fetchResult<UploadResponse>(
-						complianceConfig,
-						`/accounts/${accountId}/workers/assets/upload/${manifestEntry[1].hash}`,
-						{
-							method: "POST",
-							headers: {
-								Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
-								"Content-Type": contentType ?? "application/null",
-							},
-							body: createReadStream(absFilePath),
-							duplex: "half",
-						}
+					const upload = await queueUploadRequest(() =>
+						fetchResult<UploadResponse>(
+							complianceConfig,
+							`/accounts/${accountId}/workers/assets/upload/${manifestEntry[1].hash}`,
+							{
+								method: "POST",
+								headers: {
+									Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
+									"Content-Type": contentType ?? "application/null",
+								},
+								body: createReadStream(absFilePath),
+								duplex: "half",
+							}
+						)
 					);
+					res = upload.response;
+					uploadGeneration = upload.generation;
 				} else {
 					// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 					// This is so we don't run out of memory trying to upload the files.
@@ -236,17 +309,21 @@ export const syncAssets = async (
 							manifestEntry[1].hash
 						);
 					}
-					res = await fetchResult<UploadResponse>(
-						complianceConfig,
-						`/accounts/${accountId}/workers/assets/upload?base64=true`,
-						{
-							method: "POST",
-							headers: {
-								Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
-							},
-							body: payload,
-						}
+					const upload = await queueUploadRequest(() =>
+						fetchResult<UploadResponse>(
+							complianceConfig,
+							`/accounts/${accountId}/workers/assets/upload?base64=true`,
+							{
+								method: "POST",
+								headers: {
+									Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
+								},
+								body: payload,
+							}
+						)
 					);
+					res = upload.response;
+					uploadGeneration = upload.generation;
 				}
 				// Only requests started after the latest throttle may restore capacity.
 				// Otherwise, requests that were already in flight could immediately undo it.
@@ -254,9 +331,11 @@ export const syncAssets = async (
 					queue.concurrency < concurrency &&
 					uploadGeneration === concurrencyThrottleGeneration
 				) {
-					queue.concurrency++;
+					const recoveredConcurrency = queue.concurrency + 1;
+					requestQueue.concurrency = recoveredConcurrency;
+					queue.concurrency = recoveredConcurrency;
 					logger.debug(
-						`Asset upload concurrency recovered to ${queue.concurrency}.`
+						`Asset upload concurrency recovered to ${recoveredConcurrency}.`
 					);
 				}
 				uploadedAssetsCount += bucket.length;
@@ -272,33 +351,63 @@ export const syncAssets = async (
 				return res;
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					logger.info(
-						chalk.dim(
-							`Asset upload failed. Retrying... ${attempts + 1} of ${MAX_UPLOAD_ATTEMPTS} attempts.\n`
-						)
-					);
-					logger.debug(e);
-					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
-					await new Promise((resolvePromise) =>
-						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
-					);
-					if (e instanceof APIError && e.isGatewayError()) {
-						// Gateway problem, wait for some additional time and set concurrency to 1
+					const attemptNumber = attempts + 1;
+					const retryDelayMs = Math.pow(2, attempts) * 1000;
+					const isGatewayError = e instanceof APIError && e.isGatewayError();
+					let gatewayRetryDelayMs = 0;
+
+					if (isGatewayError) {
+						// Gateway problem, set concurrency to 1 before waiting.
 						concurrencyThrottleGeneration++;
+						requestQueue.concurrency = 1;
 						queue.concurrency = 1;
 						logger.debug(
 							"Asset upload concurrency throttled to 1 after a gateway error."
 						);
-						await new Promise((resolvePromise) =>
-							setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
-						);
+						gatewayRetryDelayMs = Math.pow(2, gatewayErrors) * 5000;
 						gatewayErrors++;
-						// only count as a failed attempt after a few initial gateway errors
+						// Only count as a failed attempt after a few initial gateway errors.
 						if (gatewayErrors >= MAX_UPLOAD_GATEWAY_ERRORS) {
 							attempts++;
 						}
 					} else {
 						attempts++;
+					}
+
+					const retryAfterMs =
+						e instanceof APIError &&
+						e.retryAfterMs !== undefined &&
+						Number.isFinite(e.retryAfterMs) &&
+						e.retryAfterMs >= 0
+							? e.retryAfterMs
+							: undefined;
+					if (
+						retryAfterMs !== undefined &&
+						pauseUploadsForRetryAfter(retryAfterMs)
+					) {
+						logger.info(
+							chalk.dim(
+								`Received a "Retry-After" header from the Cloudflare API. Waiting ${Math.ceil(retryAfterMs / 1000)} second(s) before retrying...`
+							)
+						);
+					}
+					logger.info(
+						chalk.dim(
+							`Asset upload failed. Retrying... ${attemptNumber} of ${MAX_UPLOAD_ATTEMPTS} attempts.\n`
+						)
+					);
+					logger.debug(e);
+					if (retryAfterMs === undefined) {
+						// Exponential backoff, 1 second first time, then 2 seconds,
+						// then 4 seconds, etc.
+						await new Promise((resolvePromise) =>
+							setTimeout(resolvePromise, retryDelayMs)
+						);
+						if (isGatewayError) {
+							await new Promise((resolvePromise) =>
+								setTimeout(resolvePromise, gatewayRetryDelayMs)
+							);
+						}
 					}
 					return doUpload();
 				} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
@@ -330,7 +439,15 @@ export const syncAssets = async (
 	});
 	// using Promise.all() here instead of queue.onIdle() to ensure
 	// we actually throw errors that occur within queued promises.
-	await Promise.all(queuePromises);
+	try {
+		await Promise.all(queuePromises);
+	} finally {
+		retryAfterPauseGeneration++;
+		if (retryAfterResumeTimeout !== undefined) {
+			clearTimeout(retryAfterResumeTimeout);
+			retryAfterResumeTimeout = undefined;
+		}
+	}
 
 	// if queue finishes without receiving JWT from asset upload service (AUS)
 	// AUS only returns this in the final bucket upload response
