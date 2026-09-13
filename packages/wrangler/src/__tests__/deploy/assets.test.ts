@@ -1542,7 +1542,7 @@ describe("deploy", () => {
 			}
 		});
 
-		it("should throttle simultaneous gateway retries after Retry-After", async ({
+		it("should pause a queued retry when another retry receives Retry-After", async ({
 			expect,
 		}) => {
 			vi.stubEnv("WRANGLER_LOG", "debug");
@@ -1616,6 +1616,15 @@ describe("deploy", () => {
 							retryOrder.push(assetIndex);
 							if (retryOrder.length === 1) {
 								await firstRetryResponseGate.promise;
+								return HttpResponse.json(
+									createFetchResult(null, false, [
+										{ code: 10013, message: "service unavailable" },
+									]),
+									{
+										status: 503,
+										headers: { "Retry-After": "120" },
+									}
+								);
 							}
 						}
 
@@ -1655,11 +1664,30 @@ describe("deploy", () => {
 
 				firstRetryResponseGate.resolve();
 				await vi.waitFor(() => {
+					expect(clock.controlledTimeouts.size).toBe(1);
+					expect(
+						std.info.match(/Asset upload failed\. Retrying/g)
+					).toHaveLength(3);
+					expect(
+						std.info.match(/Received a "Retry-After" header/g)
+					).toHaveLength(2);
+				});
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(retryOrder).toHaveLength(1);
+				expect(uploadAttempts.slice(0, 2).sort()).toEqual([1, 2]);
+
+				clock.advanceBy(retryAfterMs - 1);
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(retryOrder).toHaveLength(1);
+
+				clock.advanceBy(1);
+				await vi.waitFor(() => {
 					expect(retryOrder).toHaveLength(2);
 				});
 				await deployPromise;
 
-				expect(uploadAttempts).toEqual([2, 2, 1]);
+				expect(uploadAttempts.slice(0, 2).sort()).toEqual([2, 3]);
+				expect(uploadAttempts[2]).toBe(1);
 				expect(std.debug).toContain("Asset upload concurrency recovered to 2.");
 			} finally {
 				bothGatewayRequestsStarted.resolve();

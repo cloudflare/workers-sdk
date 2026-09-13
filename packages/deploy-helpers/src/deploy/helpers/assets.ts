@@ -192,13 +192,48 @@ export const syncAssets = async (
 	let retryAfterResumeTimeout: ReturnType<typeof setTimeout> | undefined;
 	let retryAfterGate = Promise.resolve();
 	let resolveRetryAfterGate: (() => void) | undefined;
+	const registeredRetryAfterErrors = new WeakMap<
+		APIError,
+		{ retryAfterMs: number; extendsDeadline: boolean }
+	>();
+
+	function getRetryAfterMs(error: unknown): number | undefined {
+		if (
+			!(error instanceof APIError) ||
+			error.retryAfterMs === undefined ||
+			!Number.isFinite(error.retryAfterMs) ||
+			error.retryAfterMs < 0
+		) {
+			return undefined;
+		}
+
+		return error.retryAfterMs;
+	}
 
 	function queueUploadRequest(
-		request: () => Promise<UploadResponse>
+		request: () => Promise<UploadResponse>,
+		canRetry: boolean
 	): Promise<{ response: UploadResponse; generation: number }> {
 		return requestQueue.add(async () => {
 			const generation = concurrencyThrottleGeneration;
-			return { response: await request(), generation };
+			try {
+				return { response: await request(), generation };
+			} catch (error) {
+				// Pause before this task rejects so the limiter cannot release its slot
+				// and start another request during the API's Retry-After window.
+				const retryAfterMs = getRetryAfterMs(error);
+				if (
+					canRetry &&
+					error instanceof APIError &&
+					retryAfterMs !== undefined
+				) {
+					registeredRetryAfterErrors.set(error, {
+						retryAfterMs,
+						extendsDeadline: pauseUploadsForRetryAfter(retryAfterMs),
+					});
+				}
+				throw error;
+			}
 		});
 	}
 
@@ -270,20 +305,22 @@ export const syncAssets = async (
 					const manifestEntry = bucket[0];
 					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
 					const contentType = getContentType(absFilePath);
-					const upload = await queueUploadRequest(() =>
-						fetchResult<UploadResponse>(
-							complianceConfig,
-							`/accounts/${accountId}/workers/assets/upload/${manifestEntry[1].hash}`,
-							{
-								method: "POST",
-								headers: {
-									Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
-									"Content-Type": contentType ?? "application/null",
-								},
-								body: createReadStream(absFilePath),
-								duplex: "half",
-							}
-						)
+					const upload = await queueUploadRequest(
+						() =>
+							fetchResult<UploadResponse>(
+								complianceConfig,
+								`/accounts/${accountId}/workers/assets/upload/${manifestEntry[1].hash}`,
+								{
+									method: "POST",
+									headers: {
+										Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
+										"Content-Type": contentType ?? "application/null",
+									},
+									body: createReadStream(absFilePath),
+									duplex: "half",
+								}
+							),
+						attempts < MAX_UPLOAD_ATTEMPTS
 					);
 					res = upload.response;
 					uploadGeneration = upload.generation;
@@ -309,18 +346,20 @@ export const syncAssets = async (
 							manifestEntry[1].hash
 						);
 					}
-					const upload = await queueUploadRequest(() =>
-						fetchResult<UploadResponse>(
-							complianceConfig,
-							`/accounts/${accountId}/workers/assets/upload?base64=true`,
-							{
-								method: "POST",
-								headers: {
-									Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
-								},
-								body: payload,
-							}
-						)
+					const upload = await queueUploadRequest(
+						() =>
+							fetchResult<UploadResponse>(
+								complianceConfig,
+								`/accounts/${accountId}/workers/assets/upload?base64=true`,
+								{
+									method: "POST",
+									headers: {
+										Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
+									},
+									body: payload,
+								}
+							),
+						attempts < MAX_UPLOAD_ATTEMPTS
 					);
 					res = upload.response;
 					uploadGeneration = upload.generation;
@@ -374,20 +413,14 @@ export const syncAssets = async (
 						attempts++;
 					}
 
-					const retryAfterMs =
-						e instanceof APIError &&
-						e.retryAfterMs !== undefined &&
-						Number.isFinite(e.retryAfterMs) &&
-						e.retryAfterMs >= 0
-							? e.retryAfterMs
+					const registeredRetryAfter =
+						e instanceof APIError
+							? registeredRetryAfterErrors.get(e)
 							: undefined;
-					if (
-						retryAfterMs !== undefined &&
-						pauseUploadsForRetryAfter(retryAfterMs)
-					) {
+					if (registeredRetryAfter?.extendsDeadline) {
 						logger.info(
 							chalk.dim(
-								`Received a "Retry-After" header from the Cloudflare API. Waiting ${Math.ceil(retryAfterMs / 1000)} second(s) before retrying...`
+								`Received a "Retry-After" header from the Cloudflare API. Waiting ${Math.ceil(registeredRetryAfter.retryAfterMs / 1000)} second(s) before retrying...`
 							)
 						);
 					}
@@ -397,7 +430,7 @@ export const syncAssets = async (
 						)
 					);
 					logger.debug(e);
-					if (retryAfterMs === undefined) {
+					if (registeredRetryAfter === undefined) {
 						// Exponential backoff, 1 second first time, then 2 seconds,
 						// then 4 seconds, etc.
 						await new Promise((resolvePromise) =>
