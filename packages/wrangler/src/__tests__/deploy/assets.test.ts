@@ -1701,6 +1701,147 @@ describe("deploy", () => {
 			}
 		});
 
+		it("should cancel pending retries after an upload fails", async ({
+			expect,
+		}) => {
+			const retryAfterMs = 120_000;
+			const retryDelayMs = 1_000;
+			const clock = controlLongTimeouts(500);
+			const assets = Array.from({ length: 4 }, (_, index) => ({
+				filePath: `file-${index}.txt`,
+				content: `Content of file-${index}`,
+			}));
+			writeAssets(assets);
+			writeWranglerConfig({ assets: { directory: "assets" } });
+
+			const uploadJwt = createJwt({
+				wrangler_single_asset_uploads: true,
+				edge_kv_upload_concurrency: 3,
+			});
+			const assetIndexByHash = new Map<string, number>();
+			const uploadAttempts = [0, 0, 0, 0];
+			const permanentFailureGate = createDeferred<void>();
+			const lateRequestStarted = createDeferred<void>();
+			const lateResponseGate = createDeferred<void>();
+			const lateResponseReturned = createDeferred<void>();
+			let lateRequest: Request | undefined;
+
+			msw.use(
+				http.post(
+					"*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session",
+					async ({ request }) => {
+						const { manifest } = (await request.json()) as {
+							manifest: AssetManifest;
+						};
+						const hashes = Object.entries(manifest)
+							.sort(([leftPath], [rightPath]) =>
+								leftPath.localeCompare(rightPath)
+							)
+							.map(([, entry], index) => {
+								assetIndexByHash.set(entry.hash, index);
+								return entry.hash;
+							});
+
+						return HttpResponse.json(
+							createFetchResult({
+								jwt: uploadJwt,
+								buckets: hashes.map((hash) => [hash]),
+							}),
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					"*/accounts/some-account-id/workers/assets/upload/:hash",
+					async ({ params, request }) => {
+						const assetIndex = assetIndexByHash.get(String(params.hash));
+						if (assetIndex === undefined) {
+							throw new Error("Unexpected asset hash");
+						}
+
+						uploadAttempts[assetIndex]++;
+						if (assetIndex === 0) {
+							await permanentFailureGate.promise;
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10013, message: "permanent upload failure" },
+								]),
+								{ status: 500, headers: { "Retry-After": "0" } }
+							);
+						}
+						if (assetIndex === 1 && uploadAttempts[assetIndex] === 1) {
+							lateRequest = request;
+							lateRequestStarted.resolve();
+							await lateResponseGate.promise;
+							lateResponseReturned.resolve();
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10013, message: "late Retry-After response" },
+								]),
+								{
+									status: 503,
+									headers: { "Retry-After": "120" },
+								}
+							);
+						}
+						if (assetIndex === 2 && uploadAttempts[assetIndex] === 1) {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10013, message: "retrying upload" },
+								]),
+								{ status: 500 }
+							);
+						}
+
+						return HttpResponse.json(
+							createFetchResult({ jwt: "<<aus-completion-token>>" }),
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			const deployPromise = runWrangler("deploy");
+
+			try {
+				// Hold one request open and one bucket in exponential backoff before
+				// allowing another bucket to exhaust its retries.
+				await lateRequestStarted.promise;
+				await vi.waitFor(() => {
+					expect(clock.controlledTimeouts.size).toBe(1);
+				});
+				permanentFailureGate.resolve();
+				await expect(deployPromise).rejects.toThrow(
+					"A request to the Cloudflare API"
+				);
+				expect(uploadAttempts).toEqual([6, 1, 1, 0]);
+				expect(lateRequest?.signal.aborted).toBe(true);
+				expect(clock.controlledTimeouts.size).toBe(0);
+
+				// A response that arrives after the deployment failed must not restart
+				// either the Retry-After timer or any cancelled bucket.
+				lateResponseGate.resolve();
+				await lateResponseReturned.promise;
+				await new Promise<void>((resolve) => setImmediate(resolve));
+
+				expect(clock.controlledTimeouts.size).toBe(0);
+				expect(uploadAttempts).toEqual([6, 1, 1, 0]);
+				expect(std.info.match(/Received a "Retry-After" header/g)).toHaveLength(
+					1
+				);
+
+				clock.advanceBy(retryDelayMs);
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(uploadAttempts).toEqual([6, 1, 1, 0]);
+			} finally {
+				permanentFailureGate.resolve();
+				lateResponseGate.resolve();
+				clock.advanceBy(Math.max(retryAfterMs, retryDelayMs));
+				await deployPromise.catch(() => undefined);
+				clock.restore();
+			}
+		});
+
 		it("should send bulk asset upload stats with deploy metrics", async ({
 			expect,
 		}) => {
