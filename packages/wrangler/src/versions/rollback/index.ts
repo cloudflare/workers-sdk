@@ -7,6 +7,7 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";
+import { durableObjectsHibernationTimeoutArg } from "../deployment-args";
 import type { VersionId } from "../types";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -14,6 +15,7 @@ export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
 
 export const versionsRollbackCommand = createCommand({
 	args: {
+		...durableObjectsHibernationTimeoutArg,
 		"version-id": {
 			describe: "The ID of the Worker Version to rollback to",
 			type: "string",
@@ -104,7 +106,9 @@ export const versionsRollbackCommand = createCommand({
 				accountId,
 				workerName,
 				rollbackTraffic,
-				message
+				message,
+				undefined,
+				args.durableObjectsHibernationTimeout
 			);
 		} catch (e) {
 			if (
@@ -134,7 +138,8 @@ export const versionsRollbackCommand = createCommand({
 						workerName,
 						rollbackTraffic,
 						message,
-						true
+						true,
+						args.durableObjectsHibernationTimeout
 					);
 				} else {
 					cli.cancel("Aborting rollback...");

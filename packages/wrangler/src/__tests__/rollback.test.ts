@@ -100,13 +100,20 @@ describe("rollback", () => {
 		);
 	}
 
-	function mockPostDeployment(expect: ExpectStatic, forced = false) {
+	function mockPostDeployment(
+		expect: ExpectStatic,
+		forced = false,
+		expectedTimeout = "5m"
+	) {
 		msw.use(
 			http.post(
 				`*/accounts/:accountId/workers/scripts/:scriptName/deployments${forced ? "?force=true" : ""}`,
-				async ({ params }) => {
+				async ({ params, request }) => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(params.scriptName).toEqual("script-name");
+					expect(await request.json()).toMatchObject({
+						durable_objects_rollout_grace_period: expectedTimeout,
+					});
 
 					return HttpResponse.json(createFetchResult({}));
 				},

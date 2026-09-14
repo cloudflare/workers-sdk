@@ -135,7 +135,8 @@ export async function createDeployment(
 	workerName: string,
 	versionTraffic: Map<VersionId, Percentage>,
 	message: string | undefined,
-	force: boolean | undefined
+	force: boolean | undefined,
+	durableObjectsHibernationTimeout?: string
 ) {
 	return await fetchResult<{ id: string }>(
 		complianceConfig,
@@ -152,6 +153,7 @@ export async function createDeployment(
 				annotations: {
 					"workers/message": message,
 				},
+				durable_objects_rollout_grace_period: durableObjectsHibernationTimeout,
 			}),
 		}
 	);

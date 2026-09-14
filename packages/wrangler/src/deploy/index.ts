@@ -33,6 +33,7 @@ import * as metrics from "../metrics";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
+import { durableObjectsHibernationTimeoutArg } from "../versions/deployment-args";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 import type { Config } from "@cloudflare/workers-utils";
@@ -48,6 +49,7 @@ export const deployCommand = createCommand({
 	args: {
 		...experimentalNewConfigArg,
 		...sharedDeployVersionsArgs,
+		...durableObjectsHibernationTimeoutArg,
 		triggers: {
 			describe: "cron schedules to attach",
 			alias: ["schedule", "schedules"],

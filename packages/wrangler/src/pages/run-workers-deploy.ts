@@ -55,6 +55,7 @@ export async function runPagesToWorkersDeploy(
 		oldAssetTtl: undefined,
 		dispatchNamespace: undefined,
 		containersRollout: undefined,
+		durableObjectsHibernationTimeout: "5m",
 		path: undefined,
 		script: undefined,
 		name: undefined,

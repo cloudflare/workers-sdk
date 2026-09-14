@@ -164,6 +164,12 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			expected: true,
 		},
 		{
+			label: "Durable Objects rollout grace period",
+			overrides: { durable_objects_rollout_grace_period: "0s" },
+			key: "durable_objects_rollout_grace_period",
+			expected: "0s",
+		},
+		{
 			label: "placement",
 			overrides: { placement: { mode: "smart" } },
 			key: "placement",
