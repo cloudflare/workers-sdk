@@ -3,6 +3,7 @@
 "miniflare": minor
 "@cloudflare/config": minor
 "@cloudflare/workers-utils": minor
+"@cloudflare/workers-auth": minor
 ---
 
 Remove the gated Web Search binding and Wrangler command
