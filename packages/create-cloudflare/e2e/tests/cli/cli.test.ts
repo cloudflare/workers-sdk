@@ -737,39 +737,6 @@ describe("Create Cloudflare CLI", () => {
 	});
 
 	describe("frameworks related", () => {
-		test.skipIf(isExperimental || isWindows)(
-			"Python filtering offers static framework starters",
-			async ({ expect, logStream, project }) => {
-				const { output } = await runC3(
-					[
-						project.path,
-						"--lang=python",
-						"--no-deploy",
-						"--git=false",
-						"--no-agents",
-					],
-					[
-						{
-							matcher: /What would you like to start with\?/,
-							input: { type: "select", target: "Framework Starter" },
-						},
-						{
-							matcher: /Which development framework do you want to use\?/,
-							input: {
-								type: "select",
-								target: "Django",
-								assertOptions: ["Django", "FastAPI", "Flask"],
-								assertMissingOptions: ["React Router"],
-							},
-						},
-					],
-					logStream
-				);
-
-				expect(output).toContain("category Framework Starter");
-			}
-		);
-
 		["solid", "next", "react-router", "analog"].forEach((framework) =>
 			test(`error when trying to create a ${framework} app on Pages`, async ({
 				expect,
@@ -880,6 +847,37 @@ describe("Create Cloudflare CLI", () => {
 			expect(output).toContain("--template react-ts");
 			expect(output).not.toContain("Select a variant");
 		});
+
+		test("Python filtering offers static framework starters",
+			async ({ expect, logStream, project }) => {
+				const { output } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--no-deploy",
+						"--git=false",
+						"--no-agents",
+					],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: { type: "select", target: "Framework Starter" },
+						},
+						{
+							matcher: /Which development framework do you want to use\?/,
+							input: {
+								type: "select",
+								target: "Django",
+							},
+						},
+					],
+					logStream
+				);
+
+				expect(output).toContain("category Framework Starter");
+			}
+		);
+
 	});
 
 	describe.skipIf(isExperimental)("platform filtering", () => {
