@@ -68,6 +68,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		durable_objects_rollout_grace_period,
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
@@ -904,6 +905,9 @@ export function createWorkerUploadForm(
 		...(observability && { observability }),
 		...(cache && { cache_options: cache }),
 		...(package_dependencies?.length && { package_dependencies }),
+		...(durable_objects_rollout_grace_period !== undefined && {
+			durable_objects_rollout_grace_period,
+		}),
 	};
 
 	if (options?.unsafe?.metadata !== undefined) {
@@ -911,7 +915,6 @@ export function createWorkerUploadForm(
 			metadata[key] = options.unsafe.metadata[key];
 		}
 	}
-
 	formData.set("metadata", JSON.stringify(metadata));
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {

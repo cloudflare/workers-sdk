@@ -173,6 +173,15 @@ export default async function deploy(
 	return result;
 }
 
+function toLegacyDurableObjectsRolloutGracePeriod(
+	strategy: DeployProps["durableObjectsCodeUpdateStrategy"]
+): string | undefined {
+	if (strategy === undefined) {
+		return undefined;
+	}
+	return strategy.mode === "immediate" ? "0s" : `${strategy.max_delay ?? 30}s`;
+}
+
 async function deployWorker(
 	props: DeployProps,
 	config: ContainerlessConfig,
@@ -454,6 +463,12 @@ async function deployWorker(
 		props.containers.source === undefined &&
 		// Rollout skip can recover Container metadata absent from local config.
 		containerMetadata === undefined;
+	if (!canUseNewVersionsDeploymentsApi) {
+		worker.durable_objects_rollout_grace_period =
+			toLegacyDurableObjectsRolloutGracePeriod(
+				props.durableObjectsCodeUpdateStrategy
+			);
+	}
 
 	let workerBundle: FormData;
 	const dockerPath = getDockerPath();
@@ -551,13 +566,20 @@ async function deployWorker(
 				// Deploy new version to 100%
 				const versionMap = new Map<VersionId, Percentage>();
 				versionMap.set(versionResult.id, 100);
+				const unsafeMetadata = config.unsafe?.metadata;
+				const codeUpdateStrategy =
+					unsafeMetadata !== undefined &&
+					"code_update_strategy" in unsafeMetadata
+						? unsafeMetadata.code_update_strategy
+						: props.durableObjectsCodeUpdateStrategy;
 				await createDeployment(
 					config,
 					accountId,
 					scriptName,
 					versionMap,
 					props.message,
-					undefined
+					undefined,
+					codeUpdateStrategy
 				);
 
 				// Update service and environment tags when using environments

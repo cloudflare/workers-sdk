@@ -9,6 +9,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { ApiDeployment } from "../versions/types";
+import type { DurableObjectCodeUpdateStrategy } from "@cloudflare/workers-utils";
 import type { ExpectStatic } from "vitest";
 
 describe("rollback", () => {
@@ -100,13 +101,27 @@ describe("rollback", () => {
 		);
 	}
 
-	function mockPostDeployment(expect: ExpectStatic, forced = false) {
+	function mockPostDeployment(
+		expect: ExpectStatic,
+		forced = false,
+		expectedCodeUpdateStrategy: DurableObjectCodeUpdateStrategy = {
+			mode: "deferred",
+			max_delay: 30,
+		}
+	) {
 		msw.use(
 			http.post(
 				`*/accounts/:accountId/workers/scripts/:scriptName/deployments${forced ? "?force=true" : ""}`,
-				async ({ params }) => {
+				async ({ params, request }) => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(params.scriptName).toEqual("script-name");
+					const body = (await request.json()) as {
+						code_update_strategy?: DurableObjectCodeUpdateStrategy;
+					};
+					expect(body.code_update_strategy).toEqual(expectedCodeUpdateStrategy);
+					expect(body).not.toHaveProperty(
+						"durable_objects_rollout_grace_period"
+					);
 
 					return HttpResponse.json(createFetchResult({}));
 				},
@@ -119,7 +134,7 @@ describe("rollback", () => {
 		mockGetDeployments(expect);
 		mockGetVersion(expect, "version-id-1");
 		mockGetVersion(expect, "rollback-version");
-		mockPostDeployment(expect);
+		mockPostDeployment(expect, false, { mode: "deferred", max_delay: 45 });
 
 		mockPrompt({
 			text: "Please provide an optional message for this rollback (120 characters max)",
@@ -132,7 +147,7 @@ describe("rollback", () => {
 		});
 
 		await runWrangler(
-			"rollback --name script-name --version-id rollback-version"
+			"rollback --name script-name --durable-objects-code-update-mode deferred 45s rollback-version"
 		);
 
 		// Unable to test stdout as the output has weird whitespace. Causing lint to fail with "no-irregular-whitespace"

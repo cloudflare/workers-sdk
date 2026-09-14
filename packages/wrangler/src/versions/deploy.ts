@@ -37,6 +37,10 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
+import {
+	durableObjectsCodeUpdateModeArg,
+	resolveDurableObjectsCodeUpdateStrategy,
+} from "./deployment-args";
 import type { Percentage, VersionCache, VersionId } from "./types";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
@@ -62,6 +66,7 @@ export const versionsDeployCommand = createCommand({
 
 	args: {
 		...experimentalNewConfigArg,
+		...durableObjectsCodeUpdateModeArg,
 		name: {
 			describe: "Name of the worker",
 			type: "string",
@@ -251,7 +256,12 @@ export const versionsDeployCommand = createCommand({
 						accountId,
 						workerName,
 						confirmedVersionTraffic,
-						message
+						message,
+						undefined,
+						resolveDurableObjectsCodeUpdateStrategy(
+							args.durableObjectsCodeUpdateMode,
+							config.durable_objects.code_update_strategy
+						)
 					);
 				},
 			});

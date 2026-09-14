@@ -164,6 +164,12 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			expected: true,
 		},
 		{
+			label: "legacy Durable Objects rollout grace period",
+			overrides: { durable_objects_rollout_grace_period: "0s" },
+			key: "durable_objects_rollout_grace_period",
+			expected: "0s",
+		},
+		{
 			label: "placement",
 			overrides: { placement: { mode: "smart" } },
 			key: "placement",
@@ -314,6 +320,22 @@ describe("createWorkerUploadForm — unsafe metadata", () => {
 		);
 		const metadata = getMetadata(form);
 		expect(metadata.custom_key).toBe("custom_value");
+	});
+
+	it("should preserve unsafe legacy rollout grace period overrides", ({
+		expect,
+	}) => {
+		const form = createWorkerUploadForm(
+			createEsmWorker({ durable_objects_rollout_grace_period: "30s" }),
+			{},
+			{
+				unsafe: {
+					metadata: { durable_objects_rollout_grace_period: "5m" },
+				},
+			}
+		);
+		const metadata = getMetadata(form);
+		expect(metadata.durable_objects_rollout_grace_period).toBe("5m");
 	});
 });
 

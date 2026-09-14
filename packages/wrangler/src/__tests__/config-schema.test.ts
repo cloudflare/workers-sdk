@@ -8,6 +8,22 @@ type WranglerSchema = {
 	allowTrailingCommas?: boolean;
 	definitions?: {
 		DurableObjectMigration?: { properties?: Record<string, unknown> };
+		RawDurableObjectsConfig?: {
+			properties?: Record<string, unknown>;
+			required?: string[];
+		};
+		DurableObjectCodeUpdateStrategy?: {
+			properties?: {
+				mode?: { enum?: string[] };
+				max_delay?: {
+					type?: string;
+					minimum?: number;
+					maximum?: number;
+					multipleOf?: number;
+				};
+			};
+			required?: string[];
+		};
 		ContainerApp?: {
 			properties?: {
 				images?: {
@@ -63,6 +79,24 @@ describe("config schema", () => {
 				"deleted_classes",
 			])
 		);
+	});
+
+	it("includes Durable Object code update strategy configuration", ({
+		expect,
+	}) => {
+		const schema = readSchema();
+		const durableObjects = schema.definitions?.RawDurableObjectsConfig;
+		const strategy = schema.definitions?.DurableObjectCodeUpdateStrategy;
+
+		expect(durableObjects?.properties).toHaveProperty("bindings");
+		expect(durableObjects?.properties).toHaveProperty("code_update_strategy");
+		expect(durableObjects?.required ?? []).not.toContain("bindings");
+		expect(strategy?.properties?.mode?.enum).toEqual(["immediate", "deferred"]);
+		expect(strategy?.properties?.max_delay?.type).toBe("number");
+		expect(strategy?.properties?.max_delay?.minimum).toBe(0);
+		expect(strategy?.properties?.max_delay?.maximum).toBe(300);
+		expect(strategy?.properties?.max_delay?.multipleOf).toBe(0.001);
+		expect(strategy?.required).toContain("mode");
 	});
 
 	it("includes Durable Object-managed container configuration", ({
