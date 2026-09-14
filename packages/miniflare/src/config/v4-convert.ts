@@ -441,7 +441,8 @@ function addDurableObjectExport(
 		storage: object.useSQLite ? "sqlite" : "legacy-kv",
 		unsafeUniqueKey: object.unsafeUniqueKey,
 		unsafePreventEviction: object.unsafePreventEviction,
-		unsafeUseIsolateNodePortScope: object.unsafeUseIsolateNodePortScope,
+		unsafeUseIsolateNodePortScopeForActor:
+			object.unsafeUseIsolateNodePortScopeForActor,
 		container: object.container,
 	};
 	exports[object.className] = exported as Exports[string];

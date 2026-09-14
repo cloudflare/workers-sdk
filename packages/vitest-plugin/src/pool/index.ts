@@ -502,8 +502,8 @@ async function buildProjectWorkerOptions(
 		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 		// User modules are evaluated in this artificial actor, but their
 		// handlers run in their real I/O contexts through SELF and exports. Keep
-		// Node server registrations visible in both contexts.
-		unsafeUseIsolateNodePortScope: true,
+		// this singleton's Node server registrations visible there.
+		unsafeUseIsolateNodePortScopeForActor: "singleton",
 	};
 
 	// Vite has its own define mechanism, but we can't control it from custom

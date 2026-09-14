@@ -3,6 +3,7 @@ import { Message } from "capnp-es";
 import { test } from "vitest";
 import { serializeConfig } from "../../src/runtime/config";
 import { Config as CapnpConfig } from "../../src/runtime/config/generated/workerd";
+import { kVoid } from "../../src/runtime/config/workerd";
 
 test("serializes Durable Object namespace options", ({ expect }) => {
 	const buffer = serializeConfig({
@@ -12,10 +13,14 @@ test("serializes Durable Object namespace options", ({ expect }) => {
 				worker: {
 					durableObjectNamespaces: [
 						{
+							className: "ExampleRunner",
+							ephemeralLocal: kVoid,
+							preventEviction: true,
+							unsafeUseIsolateNodePortScopeForActor: "singleton",
+						},
+						{
 							className: "ExampleContainer",
 							uniqueKey: "example",
-							preventEviction: true,
-							unsafeUseIsolateNodePortScope: true,
 							container: {
 								imageName: "example:latest",
 								images: [{ name: "sidecar", image: "sidecar:latest" }],
@@ -28,16 +33,20 @@ test("serializes Durable Object namespace options", ({ expect }) => {
 		],
 	});
 	const config = new Message(buffer, false).getRoot(CapnpConfig);
-	const namespace = config.services
-		.get(0)
-		.worker.durableObjectNamespaces.get(0);
-	const privileges = namespace.container.privileges;
+	const namespaces = config.services.get(0).worker.durableObjectNamespaces;
+	const runnerNamespace = namespaces.get(0);
+	const containerNamespace = namespaces.get(1);
+	const privileges = containerNamespace.container.privileges;
 	const device = privileges.devices.get(0);
 
-	expect(namespace.preventEviction).toBe(true);
-	expect(namespace.unsafeUseIsolateNodePortScope).toBe(true);
-	expect(namespace.container.images.get(0).name).toBe("sidecar");
-	expect(namespace.container.images.get(0).image).toBe("sidecar:latest");
+	expect(runnerNamespace.preventEviction).toBe(true);
+	expect(runnerNamespace.unsafeUseIsolateNodePortScopeForActor).toBe(
+		"singleton"
+	);
+	expect(containerNamespace.container.images.get(0).name).toBe("sidecar");
+	expect(containerNamespace.container.images.get(0).image).toBe(
+		"sidecar:latest"
+	);
 	expect(privileges.capabilities.get(0)).toBe("SYS_ADMIN");
 	expect(device.pathOnHost).toBe("/dev/fuse");
 	expect(device.pathInContainer).toBe("/dev/fuse");

@@ -365,7 +365,8 @@ function getDurableObjectClassNames(
 				enableSql: exported.storage === "sqlite",
 				unsafeUniqueKey: exported.unsafeUniqueKey,
 				unsafePreventEviction: exported.unsafePreventEviction,
-				unsafeUseIsolateNodePortScope: exported.unsafeUseIsolateNodePortScope,
+				unsafeUseIsolateNodePortScopeForActor:
+					exported.unsafeUseIsolateNodePortScopeForActor,
 				container: exported.container,
 			});
 		}

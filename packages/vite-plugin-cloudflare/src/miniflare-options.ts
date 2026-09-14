@@ -536,8 +536,8 @@ export async function getDevMiniflareOptions(
 											unsafePreventEviction: true,
 											// User modules are evaluated in this artificial actor, but
 											// their handlers run in the wrapper's real I/O context. Keep
-											// Node server registrations visible in both contexts.
-											unsafeUseIsolateNodePortScope: true,
+											// this singleton's Node server registrations visible there.
+											unsafeUseIsolateNodePortScopeForActor: "singleton",
 										},
 									},
 								} satisfies V4WorkerOptions,

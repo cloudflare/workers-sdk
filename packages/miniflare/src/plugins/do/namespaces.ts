@@ -51,7 +51,7 @@ export function getDurableObjectNamespaces(
 				enableSql,
 				unsafeUniqueKey,
 				unsafePreventEviction: preventEviction,
-				unsafeUseIsolateNodePortScope,
+				unsafeUseIsolateNodePortScopeForActor,
 				container,
 			},
 		]) => {
@@ -71,7 +71,7 @@ export function getDurableObjectNamespaces(
 						enableSql,
 						ephemeralLocal: kVoid,
 						preventEviction,
-						unsafeUseIsolateNodePortScope,
+						unsafeUseIsolateNodePortScopeForActor,
 						container: containerOptions,
 					}
 				: {
@@ -79,7 +79,7 @@ export function getDurableObjectNamespaces(
 						enableSql,
 						uniqueKey,
 						preventEviction,
-						unsafeUseIsolateNodePortScope,
+						unsafeUseIsolateNodePortScopeForActor,
 						container: containerOptions,
 					};
 		}

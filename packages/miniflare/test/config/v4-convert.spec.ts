@@ -1,6 +1,7 @@
 import path from "node:path";
 import { describe, test } from "vitest";
 import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
+import { kUnsafeEphemeralUniqueKey } from "../../src/plugins/shared/unsafe-unique-key";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
@@ -16,8 +17,12 @@ describe("convertV4MiniflareOptions", () => {
 					className: "LocalObject",
 					useSQLite: true,
 					unsafeUniqueKey: "local-key",
+				},
+				RUNNER: {
+					className: "RunnerObject",
+					unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 					unsafePreventEviction: true,
-					unsafeUseIsolateNodePortScope: true,
+					unsafeUseIsolateNodePortScopeForActor: "singleton",
 				},
 				SELF_EXPLICIT: {
 					className: "SelfExplicitObject",
@@ -39,6 +44,11 @@ describe("convertV4MiniflareOptions", () => {
 				worker: "worker",
 				exportName: "LocalObject",
 			},
+			RUNNER: {
+				type: "durable-object",
+				worker: "worker",
+				exportName: "RunnerObject",
+			},
 			EXTERNAL: {
 				type: "durable-object",
 				worker: "external-worker",
@@ -55,8 +65,13 @@ describe("convertV4MiniflareOptions", () => {
 				type: "durable-object",
 				storage: "sqlite",
 				unsafeUniqueKey: "local-key",
+			},
+			RunnerObject: {
+				type: "durable-object",
+				storage: "legacy-kv",
+				unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 				unsafePreventEviction: true,
-				unsafeUseIsolateNodePortScope: true,
+				unsafeUseIsolateNodePortScopeForActor: "singleton",
 			},
 			SelfExplicitObject: {
 				type: "durable-object",

@@ -1,6 +1,8 @@
 import { FUSE_CONTAINER_PRIVILEGES } from "@cloudflare/containers-shared";
 import { test } from "vitest";
 import { getDurableObjectNamespaces } from "../../../src/plugins/do/namespaces";
+import { kUnsafeEphemeralUniqueKey } from "../../../src/plugins/shared/unsafe-unique-key";
+import { kVoid } from "../../../src/runtime/config/workerd";
 import type { DurableObjectClassNames } from "../../../src/plugins/shared";
 
 type DurableObjectClasses = NonNullable<
@@ -50,15 +52,16 @@ test("builds Durable Object namespaces with detected container privileges", ({
 	expect(containerWithoutPrivileges?.container?.privileges).toBeUndefined();
 });
 
-test("configures isolate Node port scope per Durable Object namespace", ({
+test("configures isolate Node port scope for one ephemeral actor", ({
 	expect,
 }) => {
 	const classNames: DurableObjectClasses = new Map([
 		[
 			"RunnerObject",
 			{
+				unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 				unsafePreventEviction: true,
-				unsafeUseIsolateNodePortScope: true,
+				unsafeUseIsolateNodePortScopeForActor: "singleton",
 			},
 		],
 		["RegularObject", {}],
@@ -77,8 +80,9 @@ test("configures isolate Node port scope per Durable Object namespace", ({
 
 	expect(runnerObject).toMatchObject({
 		className: "RunnerObject",
+		ephemeralLocal: kVoid,
 		preventEviction: true,
-		unsafeUseIsolateNodePortScope: true,
+		unsafeUseIsolateNodePortScopeForActor: "singleton",
 	});
-	expect(regularObject?.unsafeUseIsolateNodePortScope).toBeUndefined();
+	expect(regularObject?.unsafeUseIsolateNodePortScopeForActor).toBeUndefined();
 });

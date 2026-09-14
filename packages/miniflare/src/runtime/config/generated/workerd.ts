@@ -2923,8 +2923,7 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespace",
 		id: "b429dd547d15747d",
-		size: new $.ObjectSize(8, 3),
-		defaultUnsafeUseIsolateNodePortScope: $.getBitMask(false, 2),
+		size: new $.ObjectSize(8, 4),
 	};
 	/**
 	 * Exported class name that implements the Durable Object.
@@ -3035,30 +3034,21 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
 	/**
-	 * Makes Node.js HTTP and TCP servers created by instances of this class share the worker
-	 * isolate's virtual port table instead of using a table scoped to each Durable Object instance.
+	 * Makes Node.js HTTP and TCP servers created by the ephemeral-local actor with this ID use the
+	 * worker isolate's virtual port table instead of a table scoped to that actor instance. Other
+	 * IDs in the namespace retain their actor-scoped port tables.
 	 *
-	 * This is a workerd-only escape hatch for pinned, singleton actors that local-development
-	 * tooling uses as an artificial module-evaluation context. It must not be enabled for user
-	 * Durable Objects: separate instances would otherwise bind and route through the same ports.
-	 * `preventEviction` must also be true so that handlers stored in the isolate table cannot
-	 * outlive the actor instance that created them.
+	 * This is a workerd-only escape hatch for the pinned singleton actor that local-development
+	 * tooling uses as an artificial module-evaluation context. At most one namespace in a worker
+	 * may set this option, and `preventEviction` must also be true so that handlers stored in the
+	 * isolate table cannot outlive the actor instance that created them.
 	 *
 	 */
-	get unsafeUseIsolateNodePortScope(): boolean {
-		return $.utils.getBit(
-			18,
-			this,
-			Worker_DurableObjectNamespace._capnp.defaultUnsafeUseIsolateNodePortScope
-		);
+	get unsafeUseIsolateNodePortScopeForActor(): string {
+		return $.utils.getText(3, this);
 	}
-	set unsafeUseIsolateNodePortScope(value: boolean) {
-		$.utils.setBit(
-			18,
-			value,
-			this,
-			Worker_DurableObjectNamespace._capnp.defaultUnsafeUseIsolateNodePortScope
-		);
+	set unsafeUseIsolateNodePortScopeForActor(value: string) {
+		$.utils.setText(3, value, this);
 	}
 	toString(): string {
 		return "Worker_DurableObjectNamespace_" + super.toString();

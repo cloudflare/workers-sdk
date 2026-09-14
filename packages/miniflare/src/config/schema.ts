@@ -349,21 +349,21 @@ const MiniflareBindingSchema = z.unknown().transform((value, ctx) => {
  * Extends live DO exports with miniflare-internal fields:
  * - `unsafeUniqueKey` — custom unique key for DO namespace identity
  * - `unsafePreventEviction` — prevents the DO from being evicted
- * - `unsafeUseIsolateNodePortScope` — shares Node.js server ports across the isolate
+ * - `unsafeUseIsolateNodePortScopeForActor` — shares one actor's Node.js server ports across the isolate
  * - `container` — container config for container-attached DOs
  */
 export const MiniflareDurableObjectExportSchema =
 	DurableObjectCreatedExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
-		unsafeUseIsolateNodePortScope: z.boolean().optional(),
+		unsafeUseIsolateNodePortScopeForActor: z.string().optional(),
 		container: z.custom<DOContainerOptions>().optional(),
 	});
 export const MiniflareDurableObjectExpectingTransferExportSchema =
 	DurableObjectExpectingTransferExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
-		unsafeUseIsolateNodePortScope: z.boolean().optional(),
+		unsafeUseIsolateNodePortScopeForActor: z.string().optional(),
 		container: z.custom<DOContainerOptions>().optional(),
 	});
 

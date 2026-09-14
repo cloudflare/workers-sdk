@@ -201,7 +201,7 @@ export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
 	enableSql?: boolean;
-	unsafeUseIsolateNodePortScope?: boolean;
+	unsafeUseIsolateNodePortScopeForActor?: string;
 	container?: Worker_DurableObjectNamespace_ContainerOptions;
 } & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
 
