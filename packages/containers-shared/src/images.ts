@@ -1,5 +1,5 @@
-import { UserError } from "@cloudflare/workers-utils";
-import { buildImage } from "./build";
+import { UserError } from "@cloudflare/workers-utils/errors";
+import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
@@ -16,7 +16,7 @@ import type {
 	ViteLogger,
 	WranglerLogger,
 } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
 
 export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
 	"cloudflare/proxy-everything:3cb1195@sha256:0ef6716c52430096900b150d84a3302057d6cd2319dae7987128c85d0733e3c8";
@@ -152,7 +152,17 @@ export async function prepareContainerImagesForDev(args: {
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
-			const build = await buildImage(dockerPath, options, false);
+			const build = await startContainerBuild({
+				pathToDocker: dockerPath,
+				verifyDockerIsRunning: false,
+				build: {
+					tag: options.image_tag,
+					pathToDockerfile: options.dockerfile,
+					buildContext: options.image_build_context,
+					args: options.image_vars,
+					platform: "linux/amd64",
+				},
+			});
 			onContainerImagePreparationStart({
 				containerOptions: options,
 				abort: () => {

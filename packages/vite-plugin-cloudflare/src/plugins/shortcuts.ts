@@ -60,19 +60,16 @@ export function addShortcuts(
 						workerConfig
 					);
 
-				wrangler.unstable_printBindings(
-					bindings,
-					workerConfig.tail_consumers,
-					workerConfig.streaming_tail_consumers,
-					workerConfig.containers,
-					{
-						warnIfNoBindings: true,
-						isMultiWorker: workerConfigs.length > 1,
-						name: workerConfig.name ?? "Your Worker",
-						registry: getWorkerRegistry(registryPath),
-						log: (message: string) => viteServer.config.logger.info(message),
-					}
-				);
+				wrangler.unstable_printBindings(bindings, {
+					tailConsumers: workerConfig.tail_consumers,
+					streamingTailConsumers: workerConfig.streaming_tail_consumers,
+					containers: workerConfig.containers,
+					warnIfNoBindings: true,
+					isMultiWorker: workerConfigs.length > 1,
+					name: workerConfig.name ?? "Your Worker",
+					registry: getWorkerRegistry(registryPath),
+					log: (message: string) => viteServer.config.logger.info(message),
+				});
 			}
 		},
 	} satisfies vite.CLIShortcut;

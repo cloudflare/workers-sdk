@@ -1,5 +1,50 @@
 # @cloudflare/workers-auth
 
+## 0.6.12
+
+### Patch Changes
+
+- Updated dependencies [[`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d)]:
+  - @cloudflare/workers-utils@0.38.1
+
+## 0.6.11
+
+### Patch Changes
+
+- Updated dependencies [[`36aed7f`](https://github.com/cloudflare/workers-sdk/commit/36aed7f0f2db5056af9df917cf6c22a2be950b1e), [`bff525d`](https://github.com/cloudflare/workers-sdk/commit/bff525d66dd3785481148353d782dd33c3a644ed)]:
+  - @cloudflare/workers-utils@0.38.0
+
+## 0.6.10
+
+### Patch Changes
+
+- Updated dependencies [[`a849e0d`](https://github.com/cloudflare/workers-sdk/commit/a849e0d6d2253034fc158d5442c5124e77a39bd9)]:
+  - @cloudflare/workers-utils@0.37.0
+
+## 0.6.9
+
+### Patch Changes
+
+- [#15547](https://github.com/cloudflare/workers-sdk/pull/15547) [`e3f2baf`](https://github.com/cloudflare/workers-sdk/commit/e3f2baf9929e15f0ab7a900d220f1a4e81544910) Thanks [@penalosa](https://github.com/penalosa)! - Fix `cf auth login` requesting unsupported email read scopes
+
+  The Cloudflare OAuth server does not define `email_routing:read` or `email_sending:read`. The `cf` CLI now requests only the registered write scopes for those products, preventing login from failing with an unknown OAuth scope error.
+
+## 0.6.8
+
+### Patch Changes
+
+- [#15477](https://github.com/cloudflare/workers-sdk/pull/15477) [`fca8abd`](https://github.com/cloudflare/workers-sdk/commit/fca8abdfddda2e42562f64766781b1a8b038392b) Thanks [@Skye-31](https://github.com/Skye-31)! - Add missing email_routing and email_sending auth scopes to CF cli
+
+- Updated dependencies [[`fd17fc5`](https://github.com/cloudflare/workers-sdk/commit/fd17fc5c5fb86423e37ff5b142391e03cd7dbf59)]:
+  - @cloudflare/workers-utils@0.36.0
+
+## 0.6.7
+
+### Patch Changes
+
+- Updated dependencies [[`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45), [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71), [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46)]:
+  - @cloudflare/workers-utils@0.35.0
+
 ## 0.6.6
 
 ### Patch Changes

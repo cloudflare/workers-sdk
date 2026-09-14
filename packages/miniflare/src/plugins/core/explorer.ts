@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import {
@@ -8,9 +7,13 @@ import {
 	type Worker_Module,
 } from "../../runtime";
 import { CoreBindings } from "../../workers";
+import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
+import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
+import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
 import {
-	extractObjectEntryId,
 	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
+	getStorageService,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
@@ -23,6 +26,7 @@ import {
 } from "./constants";
 import type {
 	DurableObjectClassNames,
+	ParsedInstanceOptions,
 	ParsedWorkerOptions,
 	WorkflowOption,
 } from "../shared";
@@ -46,6 +50,10 @@ export interface ExplorerServicesOptions {
 	};
 	/** Whether local observability is enabled — gates the collector binding. */
 	observabilityEnabled: boolean;
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>;
 }
 
 /**
@@ -63,11 +71,18 @@ export function getExplorerServices(
 		explorerWorkerOpts,
 		telemetry,
 		observabilityEnabled,
+		sharedOptions,
 	} = options;
+	const workflowProxyBindings = proxyBindings.filter((binding) =>
+		binding.name?.startsWith(
+			`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:workflows:`
+		)
+	);
 
 	const explorerBindings: Worker_Binding[] = [
-		// Gives explorer access to all user resource bindings
-		...proxyBindings,
+		// Workflow creation still uses the configured binding API. D1, KV and R2
+		// operations use the dedicated internal storage service bindings below.
+		...workflowProxyBindings,
 		{
 			name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
 			json: JSON.stringify(bindingIdMap),
@@ -84,6 +99,30 @@ export function getExplorerServices(
 		{
 			name: CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES,
 			json: JSON.stringify(workerNames),
+		},
+		{
+			name: CoreBindings.SERVICE_D1,
+			service: getStorageService(
+				D1_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
+		},
+		{
+			name: CoreBindings.SERVICE_KV,
+			service: getStorageService(
+				KV_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
+		},
+		{
+			name: CoreBindings.SERVICE_R2,
+			service: getStorageService(
+				R2_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
 		},
 		// Per-worker resource bindings for the /local/workers endpoint
 		{
@@ -178,10 +217,12 @@ export function getExplorerServices(
 }
 
 /**
- * Build binding ID map from proxyBindings, durableObjectClassNames, and workflow options.
+ * Build binding ID map from worker options, proxy bindings, Durable Object
+ * class names, and workflow options.
  * Maps resource IDs to binding information for the local explorer.
  */
 export function constructExplorerBindingMap(
+	allWorkerOpts: ParsedWorkerOptions[],
 	proxyBindings: Worker_Binding[],
 	durableObjectClassNames: DurableObjectClassNames,
 	workflowOptions?: Map<string, WorkflowOption>
@@ -194,80 +235,37 @@ export function constructExplorerBindingMap(
 		workflows: {},
 	};
 
-	for (const binding of proxyBindings) {
-		// D1 bindings: name = "MINIFLARE_PROXY:d1:worker-*:BINDING".
-		// Local databases share one entry service ("d1:db:entry") and carry their
-		// id in props; remote databases share one proxy service ("d1:db:remote").
-		if (
-			binding.name?.startsWith(
-				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`
-			) &&
-			"wrapped" in binding
-		) {
-			const [innerBinding] = binding.wrapped?.innerBindings ?? [];
-			assert(innerBinding && "service" in innerBinding);
-
-			const databaseId =
-				extractObjectEntryId(innerBinding.service?.props?.json) ??
-				innerBinding.service?.name?.replace(/^d1:db:/, "");
-			assert(databaseId);
-
-			// Remote databases share one proxy service ("d1:db:remote"). Remote
-			// resources aren't surfaced in the explorer, so skip them — otherwise
-			// they'd all collide under the literal id "remote".
-			if (databaseId !== "remote") {
-				IDToBindingName.d1[databaseId] = binding.name;
+	for (const workerOpts of allWorkerOpts) {
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"d1"
+		)) {
+			if (
+				getRemoteProxyConnectionString(binding, workerOpts.dev) === undefined
+			) {
+				IDToBindingName.d1[binding.id] = bindingName;
 			}
 		}
 
-		// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING".
-		// Local namespaces share one entry service ("kv:ns:entry") and carry their
-		// id in props; remote namespaces share one proxy service ("kv:ns:remote")
-		// and aren't surfaced in the explorer.
-		if (
-			binding.name?.startsWith(
-				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
-			) &&
-			"kvNamespace" in binding
-		) {
-			const namespaceId = extractObjectEntryId(
-				binding.kvNamespace?.props?.json
-			);
-			const fallbackNamespaceId = binding.kvNamespace?.name?.startsWith(
-				"kv:ns:"
-			)
-				? binding.kvNamespace.name.replace(/^kv:ns:/, "")
-				: undefined;
-			// Remote namespaces share one proxy service ("kv:ns:remote"). Remote
-			// resources aren't surfaced in the explorer, so skip them — otherwise
-			// they'd all collide under the literal id "remote".
-			const id = namespaceId ?? fallbackNamespaceId;
-			if (id !== undefined && id !== "remote") {
-				IDToBindingName.kv[id] = binding.name;
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"kv"
+		)) {
+			if (
+				getRemoteProxyConnectionString(binding, workerOpts.dev) === undefined
+			) {
+				IDToBindingName.kv[binding.id] = bindingName;
 			}
 		}
 
-		// R2 bindings: name = "MINIFLARE_PROXY:r2:worker:BINDING".
-		// Local buckets share one entry service ("r2:bucket:entry") and carry their
-		// id in props; remote buckets share one proxy service ("r2:bucket:remote").
-		if (
-			binding.name?.startsWith(
-				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:r2:`
-			) &&
-			"r2Bucket" in binding
-		) {
-			const bucketName = extractObjectEntryId(binding.r2Bucket?.props?.json);
-			const fallbackBucketName = binding.r2Bucket?.name?.startsWith(
-				"r2:bucket:"
-			)
-				? binding.r2Bucket.name.replace(/^r2:bucket:/, "")
-				: undefined;
-			// Remote buckets share one proxy service ("r2:bucket:remote"). Remote
-			// resources aren't surfaced in the explorer, so skip them — otherwise
-			// they'd all collide under the literal id "remote".
-			const name = bucketName ?? fallbackBucketName;
-			if (name !== undefined && name !== "remote") {
-				IDToBindingName.r2[name] = binding.name;
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"r2"
+		)) {
+			if (
+				getRemoteProxyConnectionString(binding, workerOpts.dev) === undefined
+			) {
+				IDToBindingName.r2[binding.name] = bindingName;
 			}
 		}
 	}

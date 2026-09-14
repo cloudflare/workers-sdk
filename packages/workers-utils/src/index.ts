@@ -14,10 +14,16 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
+	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
 } from "./config/containers";
+export type { DurableObjectContainerApp } from "./config/containers";
 export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
@@ -73,6 +79,7 @@ export const friendlyBindingNames = validation.friendlyBindingNames;
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
+	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
 
 export { validatePagesConfig } from "./config/validation-pages";
@@ -104,6 +111,15 @@ export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 export { constructWranglerConfig } from "./construct-wrangler-config";
+export {
+	convertConfigToBindings,
+	extractBindingsOfType,
+	getBindings,
+	isUnsafeBindingType,
+} from "./binding-utils";
+export type { ConvertBindingsOptions } from "./binding-utils";
+export { printBindings } from "./print-bindings";
+export type { PrintBindingsOptions } from "./print-bindings";
 
 export {
 	getBooleanEnvironmentVariableFactory,
@@ -148,7 +164,7 @@ export { MetricsRegistry } from "./prometheus-metrics";
 export type { Counter } from "./prometheus-metrics";
 
 export type { Tunnel, TunnelOptions } from "./tunnel";
-export { startTunnel } from "./tunnel";
+export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
 export * from "./cfetch";

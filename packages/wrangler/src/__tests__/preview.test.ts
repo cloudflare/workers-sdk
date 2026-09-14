@@ -4,11 +4,13 @@ import { stripVTControlCharacters } from "node:util";
 import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	extractConfigBindings,
+	formatNoActivePreviewUrlsMessage,
 	getBranchName,
 	getCommitSha,
 	getPullRequestMetadata,
 	getRepositoryUrl,
 	previewContainerAppName,
+	resolveWorkerName,
 } from "@cloudflare/deploy-helpers";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -27,7 +29,10 @@ import {
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
 import type { OutputEntry } from "../output";
-import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+import type { Config, PreviewsConfig, Route } from "@cloudflare/workers-utils";
+
+const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
+	"Note: This Preview deployment has no active URLs.";
 
 vi.mock("node:child_process", async () => {
 	const actual =
@@ -44,6 +49,31 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 		previews,
 	};
 }
+
+function configForUrlGuidance(config: Partial<Config>): Config {
+	return {
+		...defaultWranglerConfig,
+		configPath: "/test/wrangler.json",
+		...config,
+	};
+}
+
+const explicitlyEnabledPreviewRoute = {
+	pattern: "explicit.example.com",
+	custom_domain: true,
+	enabled: true,
+	previews_enabled: true,
+} satisfies Route;
+const existingRoutes = [
+	{ pattern: "shop.example.com", zone_id: "z1" },
+	{ pattern: "app.example.com", custom_domain: true, enabled: true },
+	{
+		pattern: "beta.example.com",
+		custom_domain: true,
+		enabled: false,
+		previews_enabled: true,
+	},
+] satisfies Route[];
 
 type PreviewDeploymentModulePart = {
 	name: string;
@@ -241,6 +271,239 @@ describe("wrangler preview", () => {
 		// restore that stub would outlive its test and silently grant the scope
 		// to every later test in the file.
 		vi.restoreAllMocks();
+	});
+
+	describe("resolveWorkerName", () => {
+		test("should prefer WRANGLER_CI_OVERRIDE_NAME over arguments and config", ({
+			expect,
+		}) => {
+			vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "ci-worker");
+
+			expect(
+				resolveWorkerName(
+					{ workerName: "argument-worker" },
+					{ ...defaultWranglerConfig, name: "config-worker" }
+				)
+			).toBe("ci-worker");
+		});
+	});
+
+	describe("formatNoActivePreviewUrlsMessage", () => {
+		test.for([
+			{
+				name: "a new Preview-only custom domain",
+				config: configForUrlGuidance({}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{
+							pattern: "previews.example.com",
+							custom_domain: true,
+							enabled: false,
+							previews_enabled: true,
+						},
+					],
+				},
+				expectedProductionStatus: "disabled",
+			},
+			{
+				name: "an existing implicitly enabled production domain",
+				config: configForUrlGuidance({
+					routes: [
+						{
+							pattern: "implicit.example.com",
+							custom_domain: true,
+						},
+					],
+				}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{
+							pattern: "implicit.example.com",
+							custom_domain: true,
+							previews_enabled: true,
+						},
+					],
+				},
+				expectedProductionStatus: "enabled (default)",
+			},
+			{
+				name: "an existing explicitly enabled production domain",
+				config: configForUrlGuidance({
+					routes: [explicitlyEnabledPreviewRoute],
+				}),
+				expectedCustomDomainConfig: {
+					routes: [explicitlyEnabledPreviewRoute],
+				},
+				expectedProductionStatus: "enabled",
+			},
+			{
+				name: "an existing multi-route config with a non-custom-domain and another custom-domain route",
+				config: configForUrlGuidance({ routes: existingRoutes }),
+				expectedCustomDomainConfig: { routes: existingRoutes },
+				expectedProductionStatus: "disabled",
+			},
+			{
+				name: "an existing singular non-custom-domain route",
+				config: configForUrlGuidance({
+					route: { pattern: "shop.example.com", zone_id: "z1" },
+				}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{ pattern: "shop.example.com", zone_id: "z1" },
+						{
+							pattern: "previews.example.com",
+							custom_domain: true,
+							enabled: false,
+							previews_enabled: true,
+						},
+					],
+				},
+				expectedProductionStatus: "disabled",
+			},
+		])(
+			"shows exact configuration for $name",
+			(
+				{ config, expectedCustomDomainConfig, expectedProductionStatus },
+				{ expect }
+			) => {
+				const message = formatNoActivePreviewUrlsMessage(config);
+
+				expect(message).toContain(
+					JSON.stringify({ preview_urls: true }, null, 2)
+				);
+				expect(message).toContain(
+					JSON.stringify(expectedCustomDomainConfig, null, 2)
+				);
+				expect(message).toContain(
+					`Resulting route behavior:\n  Production: ${expectedProductionStatus}\n  Previews: enabled`
+				);
+			}
+		);
+
+		test("preserves a singular non-custom-domain route in TOML guidance", ({
+			expect,
+		}) => {
+			const message = formatNoActivePreviewUrlsMessage({
+				...configForUrlGuidance({
+					route: { pattern: "shop.example.com", zone_id: "z1" },
+				}),
+				configPath: "/test/wrangler.toml",
+			});
+
+			expect(message).toContain('pattern = "shop.example.com"');
+			expect(message).toContain('zone_id = "z1"');
+			expect(message).toContain('pattern = "previews.example.com"');
+			expect(message).toContain(
+				"Replace `route` with this in your wrangler.toml"
+			);
+		});
+
+		test.for([
+			{
+				configPath: "/test/wrangler.json",
+				userConfigPath: undefined,
+				configName: "wrangler.json",
+				expectedWorkersDevConfig: JSON.stringify(
+					{ env: { staging: { preview_urls: true } } },
+					null,
+					2
+				),
+				expectedCustomDomainConfig: JSON.stringify(
+					{
+						env: {
+							staging: {
+								routes: [
+									{
+										pattern: "app.example.com",
+										custom_domain: true,
+										previews_enabled: true,
+									},
+								],
+							},
+						},
+					},
+					null,
+					2
+				),
+			},
+			{
+				configPath: "/test/wrangler.toml",
+				userConfigPath: undefined,
+				configName: "wrangler.toml",
+				expectedWorkersDevConfig: "[env.staging]\npreview_urls = true",
+				expectedCustomDomainConfig:
+					'[[env.staging.routes]]\npattern = "app.example.com"\ncustom_domain = true\npreviews_enabled = true',
+			},
+			{
+				configPath: "/test/generated/wrangler.json",
+				userConfigPath: "/test/wrangler.toml",
+				configName: "wrangler.toml",
+				expectedWorkersDevConfig: "[env.staging]\npreview_urls = true",
+				expectedCustomDomainConfig:
+					'[[env.staging.routes]]\npattern = "app.example.com"\ncustom_domain = true\npreviews_enabled = true',
+			},
+		])(
+			"scopes URL guidance to the selected environment in $configPath",
+			(
+				{
+					configPath,
+					userConfigPath,
+					configName,
+					expectedWorkersDevConfig,
+					expectedCustomDomainConfig,
+				},
+				{ expect }
+			) => {
+				const message = formatNoActivePreviewUrlsMessage({
+					...configForUrlGuidance({
+						preview_urls: false,
+						routes: [
+							{
+								pattern: "app.example.com",
+								custom_domain: true,
+								previews_enabled: false,
+							},
+						],
+					}),
+					configPath,
+					userConfigPath,
+					targetEnvironment: "staging",
+				});
+
+				expect(message).toContain(`Update this in your ${configName}`);
+				expect(message).toContain(expectedWorkersDevConfig);
+				expect(message).toContain(expectedCustomDomainConfig);
+			}
+		);
+
+		test("does not ask the user to commit a change when both settings are already present", ({
+			expect,
+		}) => {
+			const message = formatNoActivePreviewUrlsMessage(
+				configForUrlGuidance({
+					preview_urls: true,
+					routes: [
+						{
+							pattern: "app.example.com",
+							custom_domain: true,
+							previews_enabled: true,
+						},
+					],
+				})
+			);
+
+			expect(message).not.toContain("commit the configuration change");
+		});
+
+		test("tells the user to update, not add, an explicit preview_urls: false", ({
+			expect,
+		}) => {
+			const message = formatNoActivePreviewUrlsMessage(
+				configForUrlGuidance({ preview_urls: false })
+			);
+
+			expect(message).toContain("Update this in your wrangler.json");
+		});
 	});
 
 	describe("getBranchName", () => {
@@ -709,6 +972,20 @@ describe("wrangler preview", () => {
 			]);
 		});
 
+		test("should extract ai_search and ai_search_namespaces", ({ expect }) => {
+			const config = configWithPreviews({
+				ai_search_namespaces: [
+					{ binding: "AI_SEARCH", namespace: "preview-ns" },
+				],
+				ai_search: [{ binding: "SEARCH", instance_name: "preview-instance" }],
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				AI_SEARCH: { type: "ai_search_namespace", namespace: "preview-ns" },
+				SEARCH: { type: "ai_search", instance_name: "preview-instance" },
+			});
+		});
+
 		test("should extract additional supported preview binding types", ({
 			expect,
 		}) => {
@@ -819,7 +1096,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: {},
+							previews_base_config: {},
 						},
 					})
 				)
@@ -1189,7 +1466,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: {},
+							previews_base_config: {},
 						},
 					})
 				)
@@ -1282,7 +1559,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: {},
+							previews_base_config: {},
 						},
 					})
 				)
@@ -1377,6 +1654,535 @@ describe("wrangler preview", () => {
 			expect(std.warn).not.toContain("FLAGS");
 		});
 
+		test("should use ai_search bindings from local previews config", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					ai_search: [
+						{ binding: "SEARCH", instance_name: "production-instance" },
+					],
+					ai_search_namespaces: [
+						{ binding: "AI_SEARCH", namespace: "production-ns" },
+					],
+					previews: {
+						ai_search: [
+							{ binding: "SEARCH", instance_name: "preview-instance" },
+						],
+						ai_search_namespaces: [
+							{ binding: "AI_SEARCH", namespace: "preview-ns" },
+						],
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<
+							string,
+							{
+								type: string;
+								instance_name?: string;
+								namespace?: string;
+							}
+						>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-ai-search",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-ai-search",
+								preview_id: "preview-id-ai-search",
+								preview_name: "test-preview",
+								urls: ["https://aisearch123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.env?.SEARCH).toMatchObject({
+				type: "ai_search",
+				instance_name: "preview-instance",
+			});
+			expect(deploymentRequestBody?.env?.SEARCH).not.toMatchObject({
+				instance_name: "production-instance",
+			});
+			expect(deploymentRequestBody?.env?.AI_SEARCH).toMatchObject({
+				type: "ai_search_namespace",
+				namespace: "preview-ns",
+			});
+			expect(deploymentRequestBody?.env?.AI_SEARCH).not.toMatchObject({
+				namespace: "production-ns",
+			});
+			expect(std.warn).not.toContain("SEARCH");
+			expect(std.warn).not.toContain("AI_SEARCH");
+		});
+
+		test("should upload secrets from a JSON --secrets-file as secret_text bindings", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secrets.json",
+				JSON.stringify({ SECRET_A: "value-a", SECRET_B: "value-b" })
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; text?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-secrets",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-secrets",
+								preview_id: "preview-id-secrets",
+								preview_name: "test-preview",
+								urls: ["https://secrets123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json"
+			);
+
+			expect(deploymentRequestBody?.env?.SECRET_A).toEqual({
+				type: "secret_text",
+				text: "value-a",
+			});
+			expect(deploymentRequestBody?.env?.SECRET_B).toEqual({
+				type: "secret_text",
+				text: "value-b",
+			});
+			// Bindings from the previews config are still included alongside secrets
+			expect(deploymentRequestBody?.env?.ENVIRONMENT).toEqual({
+				type: "plain_text",
+				text: "preview",
+			});
+			// Secret values must never be logged
+			expect(std.out).not.toContain("value-a");
+			expect(std.out).not.toContain("value-b");
+		});
+
+		test("should fail on a bad --secrets-file before creating the preview or uploading assets", async ({
+			expect,
+		}) => {
+			let previewApiCalled = false;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => {
+						previewApiCalled = true;
+						return HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() => {
+						previewApiCalled = true;
+						return HttpResponse.json({ success: true, result: {} });
+					}
+				)
+			);
+
+			await expect(
+				runWrangler(
+					"preview --name test-preview --secrets-file does-not-exist.json"
+				)
+			).rejects.toThrow();
+			expect(previewApiCalled).toBe(false);
+		});
+
+		test("should upload --var values as plain_text bindings, overriding config vars but not secrets", async ({
+			expect,
+		}) => {
+			writeFileSync("secrets.json", JSON.stringify({ SHARED: "from-secrets" }));
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; text?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-vars",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-vars",
+								preview_id: "preview-id-vars",
+								preview_name: "test-preview",
+								urls: ["https://vars123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json " +
+					"--var API_URL:https://api.example.com --var ENVIRONMENT:overridden --var SHARED:from-var"
+			);
+
+			expect(deploymentRequestBody?.env?.API_URL).toEqual({
+				type: "plain_text",
+				text: "https://api.example.com",
+			});
+			// CLI vars override same-named vars from the previews config
+			expect(deploymentRequestBody?.env?.ENVIRONMENT).toEqual({
+				type: "plain_text",
+				text: "overridden",
+			});
+			// Secrets take precedence over CLI vars with the same name
+			expect(deploymentRequestBody?.env?.SHARED).toEqual({
+				type: "secret_text",
+				text: "from-secrets",
+			});
+		});
+
+		test("should not warn about top-level bindings that were supplied via --var or --secrets-file", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					vars: { API_URL: "https://prod.example.com", API_TOKEN: "token" },
+				})
+			);
+			writeFileSync("secrets.json", JSON.stringify({ API_TOKEN: "cli-token" }));
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-cli-bindings",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-cli-bindings",
+								preview_id: "preview-id-cli-bindings",
+								preview_name: "test-preview",
+								urls: ["https://clibindings.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						})
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --var API_URL:https://preview.example.com --secrets-file secrets.json"
+			);
+
+			expect(std.warn).not.toContain("API_URL");
+			expect(std.warn).not.toContain("API_TOKEN");
+		});
+
+		test("should redact secret values from --json output even if the API echoes them back", async ({
+			expect,
+		}) => {
+			writeFileSync("secrets.json", JSON.stringify({ SECRET_A: "value-a" }));
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-json-redact",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						const body = (await readPreviewDeploymentRequest(request)) as {
+							env?: Record<string, unknown>;
+						};
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-json-redact",
+								preview_id: "preview-id-json-redact",
+								preview_name: "test-preview",
+								urls: ["https://jsonredact.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: body.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json --json"
+			);
+
+			expect(std.out).not.toContain("value-a");
+			const output = JSON.parse(std.out) as {
+				deployment: {
+					env: Record<string, { type: string; text?: string }>;
+				};
+			};
+			expect(output.deployment.env.SECRET_A).toEqual({ type: "secret_text" });
+			// Non-secret bindings are unaffected
+			expect(output.deployment.env.ENVIRONMENT).toEqual({
+				type: "plain_text",
+				text: "preview",
+			});
+		});
+
+		test("should upload secrets from a .env format --secrets-file as secret_text bindings", async ({
+			expect,
+		}) => {
+			writeFileSync(".env.preview", "SECRET_A=value-a\nSECRET_B=value-b\n");
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; text?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-dotenv-secrets",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-dotenv-secrets",
+								preview_id: "preview-id-dotenv-secrets",
+								preview_name: "test-preview",
+								urls: ["https://dotenv123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file .env.preview"
+			);
+
+			expect(deploymentRequestBody?.env?.SECRET_A).toEqual({
+				type: "secret_text",
+				text: "value-a",
+			});
+			expect(deploymentRequestBody?.env?.SECRET_B).toEqual({
+				type: "secret_text",
+				text: "value-b",
+			});
+		});
+
 		test("should not warn about inheritable top-level bindings missing from previews", async ({
 			expect,
 		}) => {
@@ -1451,7 +2257,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: {},
+							previews_base_config: {},
 						},
 					})
 				)
@@ -1877,10 +2683,50 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Deployment URLs:");
 			expect(std.out).toContain("  https://dep-one.test-worker.cloudflare.app");
 			expect(std.out).toContain("  https://dep-two.test-worker.cloudflare.app");
-			expect(std.out).not.toContain("no active URLs");
+			expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 		});
 
-		test("should note when URL arrays are empty", async ({ expect }) => {
+		test.for<{
+			name: string;
+			previewUrls: string[];
+			deploymentUrls: string[];
+			shouldShowGuidance: boolean;
+		}>([
+			{
+				name: "both URL arrays are empty",
+				previewUrls: [],
+				deploymentUrls: [],
+				shouldShowGuidance: true,
+			},
+			{
+				name: "the Preview URL array is active",
+				previewUrls: ["https://empty-urls-preview.test-worker.workers.dev"],
+				deploymentUrls: [],
+				shouldShowGuidance: false,
+			},
+			{
+				name: "the deployment URL array is active",
+				previewUrls: [],
+				deploymentUrls: [
+					"https://deployment-id-empty-urls.test-worker.workers.dev",
+				],
+				shouldShowGuidance: false,
+			},
+		])("handles URL guidance when $name", async (testCase, { expect }) => {
+			writeWranglerConfig(
+				{
+					main: "src/index.ts",
+					routes: [
+						{
+							pattern: "previews.example.com",
+							custom_domain: true,
+							enabled: false,
+							previews_enabled: true,
+						},
+					],
+				},
+				"wrangler.json"
+			);
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -1904,7 +2750,7 @@ describe("wrangler preview", () => {
 									id: "preview-id-empty-urls",
 									name: "empty-urls-preview",
 									slug: "empty-urls-preview",
-									urls: [],
+									urls: testCase.previewUrls,
 									worker_name: "test-worker",
 									created_on: new Date().toISOString(),
 								},
@@ -1922,7 +2768,7 @@ describe("wrangler preview", () => {
 									id: "deployment-id-empty-urls",
 									preview_id: "preview-id-empty-urls",
 									preview_name: "empty-urls-preview",
-									urls: [],
+									urls: testCase.deploymentUrls,
 									compatibility_date: "2025-01-01",
 									env: {},
 									created_on: new Date().toISOString(),
@@ -1935,6 +2781,11 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --name empty-urls-preview");
 
+			if (!testCase.shouldShowGuidance) {
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				return;
+			}
+
 			const summaryLines = stripVTControlCharacters(std.out)
 				.split("\n")
 				.filter(
@@ -1944,9 +2795,8 @@ describe("wrangler preview", () => {
 				"Preview: empty-urls-preview (new)",
 				"Deployment ID: deployment-id-empty-urls",
 			]);
-			expect(std.out).toContain(
-				"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information"
-			);
+			expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+			expect(std.out).toContain('"preview_urls": true');
 		});
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
@@ -2021,7 +2871,7 @@ describe("wrangler preview", () => {
 			);
 		});
 
-		test("should work without preview_defaults", async ({ expect }) => {
+		test("should work without previews_base_config", async ({ expect }) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -2939,10 +3789,7 @@ describe("wrangler preview", () => {
 				);
 				await runWrangler("preview --name feature/my-branch");
 				expect(createdApplications).toHaveLength(1);
-				const configuration = createdApplications[0]?.configuration as
-					| { observability?: unknown }
-					| undefined;
-				expect(configuration?.observability).toEqual(expected);
+				expect(createdApplications[0]?.observability).toEqual(expected);
 			}
 		);
 
@@ -4976,7 +5823,10 @@ describe("wrangler preview", () => {
 					compatibility_date: "2025-01-01",
 					placement: { mode: "smart" },
 					previews: {
-						observability: { enabled: true },
+						observability: {
+							enabled: true,
+							redact_query_string: true,
+						},
 						vars: { TOP_LEVEL_PREVIEW: "top-value" },
 						kv_namespaces: [{ binding: "TOP_KV", id: "top-kv-id" }],
 					},
@@ -4988,7 +5838,10 @@ describe("wrangler preview", () => {
 
 			let createPreviewRequestBody:
 				| {
-						observability?: { enabled?: boolean };
+						observability?: {
+							enabled?: boolean;
+							redact_query_string?: boolean;
+						};
 				  }
 				| undefined;
 			let deploymentRequestBody:
@@ -5066,6 +5919,7 @@ describe("wrangler preview", () => {
 
 			expect(createPreviewRequestBody?.observability).toEqual({
 				enabled: true,
+				redact_query_string: true,
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
 			expect(deploymentRequestBody?.placement).toEqual({ mode: "smart" });

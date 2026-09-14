@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
+	convertConfigToBindings,
 	normalizeAndValidateConfig,
 	UserError,
 } from "@cloudflare/workers-utils";

@@ -1,10 +1,10 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	DEFAULT_COMPAT_DATE,
+	extractBindingsOfType,
 	formatConfigSnippet,
 	getDisableConfigWatching,
 	getDockerPath,
@@ -257,19 +257,18 @@ async function resolveBindings(
 
 	// Create a print function that captures the current bindings context
 	const printCurrentBindings = (registry: WorkerRegistry | null) => {
-		printBindings(
-			bindings,
-			input.tailConsumers ?? config.tail_consumers,
-			input.streamingTailConsumers ?? config.streaming_tail_consumers,
-			config.containers,
-			{
-				registry,
-				local: !input.dev?.remote,
-				isMultiWorker: getFlag("MULTIWORKER"),
-				remoteBindingsDisabled: input.dev?.remote === false,
-				name: config.name,
-			}
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: input.tailConsumers ?? config.tail_consumers,
+			streamingTailConsumers:
+				input.streamingTailConsumers ?? config.streaming_tail_consumers,
+			containers: config.containers,
+			registry,
+			local: !input.dev?.remote,
+			isMultiWorker: getFlag("MULTIWORKER"),
+			remoteBindingsDisabled: input.dev?.remote === false,
+			name: config.name,
+		});
 	};
 
 	// Print the initial bindings table
@@ -359,6 +358,18 @@ async function resolveConfig(
 	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
+	// A programmatic `input.build.custom` override takes precedence over the
+	// config file, same as the `build.custom` merge below.
+	const customBuildCommand =
+		input.build?.custom?.command ?? config.build?.command;
+	const customWatchDir = input.build?.custom?.watch ?? config.build?.watch_dir;
+	const customWorkingDirectory =
+		input.build?.custom?.workingDirectory ?? config.build?.cwd;
+
+	// `getEntry()` runs the custom build command once, before `BundlerController`
+	// ever sees this config; it must run the *effective* command above, not just
+	// what's in the config file. Otherwise a purely-programmatic custom build
+	// would never run on startup.
 	const entry = await getEntry(
 		{
 			script: input.entrypoint,
@@ -368,7 +379,15 @@ async function resolveConfig(
 			// the entire Assets object is fine.
 			assets: input?.assets,
 		},
-		config,
+		{
+			...config,
+			build: {
+				...config.build,
+				command: customBuildCommand,
+				watch_dir: customWatchDir,
+				cwd: customWorkingDirectory,
+			},
+		},
 		"dev"
 	);
 
@@ -436,10 +455,9 @@ async function resolveConfig(
 			keepNames: input.build?.keepNames ?? config.keep_names,
 			define: { ...config.define, ...input.build?.define },
 			custom: {
-				command: input.build?.custom?.command ?? config.build?.command,
-				watch: input.build?.custom?.watch ?? config.build?.watch_dir,
-				workingDirectory:
-					input.build?.custom?.workingDirectory ?? config.build?.cwd,
+				command: customBuildCommand,
+				watch: customWatchDir,
+				workingDirectory: customWorkingDirectory,
 			},
 			format: entry.format,
 			nodejsCompatMode: nodejsCompatMode ?? null,

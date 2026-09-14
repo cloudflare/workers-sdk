@@ -286,9 +286,12 @@ describe("the real workspace", () => {
 			  ],
 			  [
 			    "@cloudflare/autoconfig",
-			    "@cloudflare/deploy-helpers",
+			    "@cloudflare/containers-shared",
 			    "@cloudflare/vite-plugin",
 			    "@cloudflare/vitest-plugin",
+			  ],
+			  [
+			    "@cloudflare/deploy-helpers",
 			  ],
 			]
 		`);

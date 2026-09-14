@@ -1,5 +1,38 @@
 # @cloudflare/build-output-utils
 
+## 0.5.0
+
+### Minor Changes
+
+- [#15605](https://github.com/cloudflare/workers-sdk/pull/15605) [`c846bd8`](https://github.com/cloudflare/workers-sdk/commit/c846bd8f0f27da59a77406c516fab0431c38740e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for reading and writing Container configs in build output
+
+  Container configs can now be written to and read from the Build Output Specification.
+
+### Patch Changes
+
+- Updated dependencies [[`3f42b10`](https://github.com/cloudflare/workers-sdk/commit/3f42b10a40d2b3aae1d8d5142ea0bc3ac58fa954)]:
+  - @cloudflare/config@0.12.0
+
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`9c60d14`](https://github.com/cloudflare/workers-sdk/commit/9c60d14c0e4cd9306a58c830023f5b43fe6ed054)]:
+  - @cloudflare/config@0.11.0
+
+## 0.4.0
+
+### Minor Changes
+
+- [#15388](https://github.com/cloudflare/workers-sdk/pull/15388) [`10d6bfb`](https://github.com/cloudflare/workers-sdk/commit/10d6bfbaf0ab7466892f4d97af1301494ca71e37) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support partial manifests in the experimental Build Output Specification
+
+  Build output producers now declare whether their module inventory is complete. `readBuildOutput()` resolves partial manifests by discovering `.js`, `.mjs`, and `.map` files while preserving explicit module type overrides.
+
+### Patch Changes
+
+- Updated dependencies [[`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46), [`10d6bfb`](https://github.com/cloudflare/workers-sdk/commit/10d6bfbaf0ab7466892f4d97af1301494ca71e37)]:
+  - @cloudflare/config@0.10.0
+
 ## 0.3.1
 
 ### Patch Changes

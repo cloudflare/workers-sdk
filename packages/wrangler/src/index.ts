@@ -328,10 +328,6 @@ import { previewSecretBulkCommand } from "./preview/secrets/bulk";
 import { previewSecretDeleteCommand } from "./preview/secrets/delete";
 import { previewSecretListCommand } from "./preview/secrets/list";
 import { previewSecretPutCommand } from "./preview/secrets/put";
-import {
-	previewSettingsCommand,
-	previewSettingsUpdateCommand,
-} from "./preview/settings";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -541,8 +537,6 @@ import { vpcServiceGetCommand } from "./vpc/get";
 import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
 import { vpcServiceListCommand } from "./vpc/list";
 import { vpcServiceUpdateCommand } from "./vpc/update";
-import { websearchNamespace } from "./websearch/index";
-import { websearchSearchCommand } from "./websearch/search";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -917,14 +911,6 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler preview", definition: previewCommand },
 		{ command: "wrangler preview delete", definition: previewDeleteCommand },
-		{
-			command: "wrangler preview settings",
-			definition: previewSettingsCommand,
-		},
-		{
-			command: "wrangler preview settings update",
-			definition: previewSettingsUpdateCommand,
-		},
 		{ command: "wrangler preview secret", definition: previewSecretNamespace },
 		{
 			command: "wrangler preview secret put",
@@ -1854,16 +1840,6 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("ai-search");
-
-	// websearch
-	registry.define([
-		{ command: "wrangler websearch", definition: websearchNamespace },
-		{
-			command: "wrangler websearch search",
-			definition: websearchSearchCommand,
-		},
-	]);
-	registry.registerNamespace("websearch");
 
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([

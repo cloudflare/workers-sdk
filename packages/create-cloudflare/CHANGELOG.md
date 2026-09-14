@@ -1,5 +1,123 @@
 # create-cloudflare
 
+## 2.72.7
+
+### Patch Changes
+
+- [#15604](https://github.com/cloudflare/workers-sdk/pull/15604) [`9109a76`](https://github.com/cloudflare/workers-sdk/commit/9109a767a47defa3e060632b3e39f918ed628c27) Thanks [@dom96](https://github.com/dom96)! - Update the default compatibility date for newly created projects to 2026-09-11
+
+  The default compatibility date tracks the pinned `workerd` release, which was bumped to `1.20260911.1`. Releasing C3 ships the updated date to `npm create cloudflare` users, since it is bundled into the published package.
+
+## 2.72.6
+
+### Patch Changes
+
+- [#15528](https://github.com/cloudflare/workers-sdk/pull/15528) [`891eba9`](https://github.com/cloudflare/workers-sdk/commit/891eba926577edce31d666e4002ff98eb14049f0) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.19.4 | 0.19.5 |
+
+- [#15529](https://github.com/cloudflare/workers-sdk/pull/15529) [`5860df0`](https://github.com/cloudflare/workers-sdk/commit/5860df0ae1a47046d7406e4139a9cb2692265a5a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.3.3 | 16.3.4 |
+
+- [#15530](https://github.com/cloudflare/workers-sdk/pull/15530) [`ef15c4a`](https://github.com/cloudflare/workers-sdk/commit/ef15c4a1dfb4eaa1c84b1db85e9946d0f0fb3435) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.1.6 | 22.1.7 |
+
+- [#15531](https://github.com/cloudflare/workers-sdk/pull/15531) [`2520cbb`](https://github.com/cloudflare/workers-sdk/commit/2520cbba5db91377057f871936c6a7a51db00872) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.11.0 | 0.12.0 |
+
+- [#15532](https://github.com/cloudflare/workers-sdk/pull/15532) [`85faa62`](https://github.com/cloudflare/workers-sdk/commit/85faa6296c0330b9512e5c15523fca327b2497c5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.70.2 | 0.71.0 |
+
+## 2.72.5
+
+### Patch Changes
+
+- [#15426](https://github.com/cloudflare/workers-sdk/pull/15426) [`8b4eeaa`](https://github.com/cloudflare/workers-sdk/commit/8b4eeaab1ee570042c2c49fc432687e47d976863) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.7.0 | 2.7.1 |
+
+## 2.72.4
+
+### Patch Changes
+
+- [#15422](https://github.com/cloudflare/workers-sdk/pull/15422) [`4dfdf60`](https://github.com/cloudflare/workers-sdk/commit/4dfdf60b594a70a5aec0615bffc7e5524b8a8ed6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.677 | 0.0.681 |
+
+  Preserve framework-generated `dangerouslyAllowAllBuilds` settings instead of adding a conflicting pnpm `allowBuilds` configuration.
+
+- [#15423](https://github.com/cloudflare/workers-sdk/pull/15423) [`50f4368`](https://github.com/cloudflare/workers-sdk/commit/50f43685ecbf98e369923f0dc98002dda459a2be) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.2.3 | 5.2.4 |
+
+- [#15424](https://github.com/cloudflare/workers-sdk/pull/15424) [`bda1ccc`](https://github.com/cloudflare/workers-sdk/commit/bda1ccc903ee231cb6c029365ebaa4cb2a8fcf6d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 9.1.2 | 9.2.0 |
+
+- [#15425](https://github.com/cloudflare/workers-sdk/pull/15425) [`90b1d08`](https://github.com/cloudflare/workers-sdk/commit/90b1d08f049536b8425d6a3286576f5db75bf2e3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.3.2 | 16.3.3 |
+
+- [#15427](https://github.com/cloudflare/workers-sdk/pull/15427) [`efc01c7`](https://github.com/cloudflare/workers-sdk/commit/efc01c7c6e12e726d052e9a69ba8f87065263ded) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.3.0 | 8.3.1 |
+
+- [#15428](https://github.com/cloudflare/workers-sdk/pull/15428) [`c5982e5`](https://github.com/cloudflare/workers-sdk/commit/c5982e57cb3571832a413c457559db85b0b05a19) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.1.5 | 22.1.6 |
+
 ## 2.72.3
 
 ### Patch Changes

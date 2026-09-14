@@ -1,5 +1,6 @@
 import type {
 	CfUserLimits,
+	CfWorkerInit,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
@@ -47,6 +48,7 @@ export type ApiVersion = {
 			compatibility_flags?: string[];
 			usage_model: "bundled" | "unbound" | "standard";
 			limits: CfUserLimits;
+			containers?: CfWorkerInit["containers"];
 		};
 	};
 	startup_time_ms?: number;

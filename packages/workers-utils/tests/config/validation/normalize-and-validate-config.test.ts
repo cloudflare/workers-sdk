@@ -93,7 +93,6 @@ describe("normalizeAndValidateConfig()", () => {
 			text_blobs: undefined,
 			browser: undefined,
 			ai: undefined,
-			websearch: undefined,
 			version_metadata: undefined,
 			triggers: {
 				crons: undefined,
@@ -3540,50 +3539,6 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("[websearch]", () => {
-			it("should accept a valid websearch binding", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: { binding: "WEBSEARCH" } } as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(false);
-			});
-
-			it("should error if websearch is an array", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: [] } as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - The field "websearch" should be an object but got []."
-				`);
-			});
-
-			it("should error if websearch has no binding name", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: {} } as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - binding should have a string "binding" field."
-				`);
-			});
-		});
-
 		// Vectorize
 		describe("[vectorize]", () => {
 			it("should error if vectorize is an object", ({ expect }) => {
@@ -4619,6 +4574,501 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			});
 
+			it("should accept a Durable Object-managed container alongside migrations", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						durable_objects: {
+							bindings: [
+								{
+									name: "SANDBOX",
+									class_name: "Sandbox",
+								},
+							],
+						},
+						migrations: [
+							{
+								tag: "v1",
+								new_sqlite_classes: ["Sandbox"],
+							},
+						],
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								images: {
+									sandbox: {
+										dockerfile: "./Dockerfile",
+									},
+									tools: {
+										image:
+											"registry.cloudflare.com/account/tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.migrations).toEqual([
+					{
+						tag: "v1",
+						new_sqlite_classes: ["Sandbox"],
+					},
+				]);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "test-worker-name-sandbox",
+						scheduling_policy: "durable_object",
+						images: {
+							sandbox: {
+								dockerfile: "./Dockerfile",
+							},
+							tools: {
+								image:
+									"registry.cloudflare.com/account/tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+							},
+						},
+					},
+				]);
+			});
+
+			it("should preserve an explicit Durable Object-managed container name without named images", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								name: "sandbox-app",
+								scheduling_policy: "durable_object",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+					},
+				]);
+			});
+
+			it.for([
+				undefined,
+				[],
+				[
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+					},
+				],
+			])(
+				"reserves the experimental image binding name with containers %j",
+				(containers, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers,
+							vars: {
+								EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: "user value",
+							},
+						} as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(
+						"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES assigned to Environment Variable and Container images bindings"
+					);
+				}
+			);
+
+			it("does not reserve the former Container metadata binding name", ({
+				expect,
+			}) => {
+				const vars = {
+					EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES_METADATA: "user value",
+				};
+				const ordinary = normalizeAndValidateConfig(
+					{ vars },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				expect(ordinary.diagnostics.hasErrors()).toBe(false);
+				const managed = normalizeAndValidateConfig(
+					{
+						vars,
+						containers: [
+							{
+								name: "sandbox",
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				expect(managed.diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should append the environment to a generated Durable Object-managed container name", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						env: {
+							staging: {
+								containers: [
+									{
+										class_name: "Sandbox",
+										scheduling_policy: "durable_object",
+									},
+								],
+							},
+						},
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "test-worker-name-sandbox-staging",
+						scheduling_policy: "durable_object",
+					},
+				]);
+			});
+
+			it("should reject scheduler fields on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								image: "./Dockerfile",
+								max_instances: 5,
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Unsupported fields for Durable Object-managed Containers in containers: "image","max_instances"'
+				);
+			});
+
+			it("should require a class name for a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								scheduling_policy: "durable_object",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"containers.class_name" must be a non-empty string when "containers.scheduling_policy" is "durable_object".'
+				);
+			});
+
+			it("should reject malformed Durable Object-managed container images", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								images: {
+									missing: {},
+									docker: { dockerfile: "" },
+									remote: { image: "" },
+									both: {
+										dockerfile: "./Dockerfile",
+										image:
+											"registry.cloudflare.com/account/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				const errors = diagnostics.renderErrors();
+				expect(errors).toContain(
+					'"containers.images.missing" must specify exactly one of "dockerfile" or "image".'
+				);
+				expect(errors).toContain(
+					'"containers.images.docker.dockerfile" must be a non-empty string.'
+				);
+				expect(errors).toContain(
+					'"containers.images.remote.image" must be a non-empty string.'
+				);
+				expect(errors).toContain(
+					'"containers.images.both" must specify exactly one of "dockerfile" or "image".'
+				);
+			});
+
+			describe("Durable Object-managed image references", () => {
+				const digest = "a".repeat(64);
+				function containers(image: string): RawConfig["containers"] {
+					return [
+						{
+							name: "sandbox",
+							class_name: "Sandbox",
+							scheduling_policy: "durable_object",
+							images: { app: { image } },
+						},
+					];
+				}
+
+				it.for([
+					"registry.cloudflare.com/account/app:latest",
+					"registry.cloudflare.com/account/app",
+					`registry.cloudflare.com/account/app:latest@sha256:${digest}`,
+					"registry.cloudflare.com/account/app@sha256:abc",
+					`registry.cloudflare.com/account/app@sha256:${"g".repeat(64)}`,
+					`registry.cloudflare.com/account/app@sha256:${"A".repeat(64)}`,
+					`registry.cloudflare.com/account/app@sha256:${digest}a`,
+					`registry.cloudflare.com/account/app@sha512:${digest}`,
+					`docker.io/account/app@sha256:${digest}`,
+					`registry.cloudflare.com.evil.com/account/app@sha256:${digest}`,
+					`https://registry.cloudflare.com/account/app@sha256:${digest}`,
+					`registry.cloudflare.com/app@sha256:${digest}`,
+					`registry.cloudflare.com/account//app@sha256:${digest}`,
+					`registry.cloudflare.com/account/app@sha256:${digest}\n`,
+				])("rejects invalid image %s", (image, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ containers: containers(image) },
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.renderErrors()).toContain(
+						'"containers.images.app.image" must be a digest-pinned image in the managed registry'
+					);
+				});
+
+				it.for([
+					{ registry: "registry.cloudflare.com", staging: false, fed: false },
+					{
+						registry: "staging.registry.cloudflare.com",
+						staging: true,
+						fed: false,
+					},
+					{
+						registry: "registry.fed.cloudflare.com",
+						staging: false,
+						fed: true,
+					},
+					{
+						registry: "staging.registry.fed.cloudflare.com",
+						staging: true,
+						fed: true,
+					},
+				])(
+					"accepts a digest in $registry",
+					({ registry, staging, fed }, { expect }) => {
+						vi.stubEnv(
+							"WRANGLER_API_ENVIRONMENT",
+							staging ? "staging" : "production"
+						);
+						const { diagnostics } = normalizeAndValidateConfig(
+							{
+								compliance_region: fed ? "fedramp_high" : "public",
+								containers: containers(
+									`${registry}/account/nested/app__tools-1.0@sha256:${digest}`
+								),
+							},
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+						expect(diagnostics.hasErrors()).toBe(false);
+					}
+				);
+
+				it("inherits the compliance region in a named environment", ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "fedramp_high",
+							env: {
+								production: {
+									containers: containers(
+										`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+									),
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("uses a named environment's compliance region override", ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "public",
+							env: {
+								production: {
+									compliance_region: "fedramp_high",
+									containers: containers(
+										`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+									),
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("honors the compliance region environment variable", ({
+					expect,
+				}) => {
+					vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("honors an explicit registry override without interpreting it as a pattern", ({
+					expect,
+				}) => {
+					vi.stubEnv(
+						"CLOUDFLARE_CONTAINER_REGISTRY",
+						"registry.example.com:5000"
+					);
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registry.example.com:5000/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+					const invalid = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registryXexample.com:5000/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(invalid.diagnostics.hasErrors()).toBe(true);
+				});
+
+				it("rejects images from a different managed registry", ({ expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "fedramp_high",
+							containers: containers(
+								`registry.cloudflare.com/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.renderErrors()).toContain(
+						"registry.fed.cloudflare.com/<account-id>"
+					);
+				});
+			});
+
+			it("should reject named images on a scheduler-backed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "Sandbox",
+								image: "./Dockerfile",
+								images: {
+									sandbox: { dockerfile: "./Dockerfile" },
+								},
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in containers field: "images"'
+				);
+			});
+
 			it("should provide a name in a named environment that inherits the top level worker name", ({
 				expect,
 			}) => {
@@ -4756,6 +5206,345 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected "containers.image_vars" to be of type object but got "invalid".
 					  - Expected "containers.scheduling_policy" field to be one of ["regional","moon","default"] but got "invalid".
 					  - Expected "containers.instance_type" field to be one of ["lite","basic","standard-1","standard-2","standard-3","standard-4","dev","standard"] but got "invalid"."
+				`);
+			});
+
+			it("should allow shorthand container observability", ({ expect }) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.[0]?.observability).toEqual({
+					enabled: true,
+				});
+			});
+
+			it.for([
+				{ label: "an empty object", observability: {} },
+				{ label: "an empty logs object", observability: { logs: {} } },
+			])(
+				"should reject container observability with $label",
+				({ observability }, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "test-worker",
+							containers: [
+								{
+									name: "test-container",
+									class_name: "TestClass",
+									image: "registry.cloudflare.com/test:latest",
+									observability,
+								},
+							],
+						} satisfies RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+						"Processing wrangler configuration:
+						  - "containers.observability.enabled" or "containers.observability.logs.enabled" is required."
+					`);
+				}
+			);
+
+			it("should allow nested container observability logs and targeting", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									logs: {
+										enabled: true,
+									},
+									target_instance_count: 2,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.[0]?.observability).toEqual({
+					logs: { enabled: true },
+					target_instance_count: 2,
+				});
+			});
+
+			it("should preserve container observability as a full override of root observability", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						observability: {
+							enabled: true,
+						},
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: false,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.observability).toEqual({ enabled: true });
+				expect(config.containers?.[0]?.observability).toEqual({
+					enabled: false,
+				});
+			});
+
+			it("should explain that targeting requires container-level enablement", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						observability: { enabled: true },
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: { target_instance_count: 2 },
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.observability.target_instance_count" requires "containers.observability.enabled" or "containers.observability.logs.enabled" to be true because container observability overrides root observability."
+				`);
+			});
+
+			it("should error when container observability is not an object", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: "enabled",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.observability" should be an object but got "enabled"."
+				`);
+			});
+
+			it("should error on invalid nested container observability values", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: "true",
+									logs: "enabled",
+									target_instance_percentage: "10",
+									target_instance_count: 0.5,
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "containers.observability.enabled" to be of type boolean but got "true".
+					  - Expected "containers.observability.logs" to be of type object but got "enabled".
+					  - Expected "containers.observability.target_instance_percentage" to be of type number but got "10".
+					  - "containers.observability.target_instance_percentage" and "containers.observability.target_instance_count" cannot both be set.
+					  - "containers.observability.target_instance_count" must be a positive integer.
+					  - "containers.observability.target_instance_percentage" requires "containers.observability.enabled" or "containers.observability.logs.enabled" to be true because container observability overrides root observability.
+					  - "containers.observability.target_instance_count" requires "containers.observability.enabled" or "containers.observability.logs.enabled" to be true because container observability overrides root observability."
+				`);
+			});
+
+			it("should error when container observability enabled values conflict", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									logs: {
+										enabled: false,
+									},
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.observability.enabled" and "containers.observability.logs.enabled" cannot be set to different values."
+				`);
+			});
+
+			it("should error when container observability logs is an array", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									logs: [],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "containers.observability.logs" to be of type object but got []."
+				`);
+			});
+
+			it("should error when both container observability targeting fields are set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									target_instance_percentage: 10,
+									target_instance_count: 2,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.observability.target_instance_percentage" and "containers.observability.target_instance_count" cannot both be set."
+				`);
+			});
+
+			it("should warn on unsupported extra container observability keys", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									invalid_key: "nope",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in containers.observability field: "invalid_key""
 				`);
 			});
 
@@ -11642,6 +12431,7 @@ describe("normalizeAndValidateConfig()", () => {
 						observability: {
 							notEnabled: "true",
 							head_sampling_rate: true,
+							redact_query_string: "true",
 						},
 					} as unknown as RawConfig,
 					undefined,
@@ -11659,7 +12449,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
-					  - Expected "observability.head_sampling_rate" to be of type number but got true."
+					  - Expected "observability.head_sampling_rate" to be of type number but got true.
+					  - Expected "observability.redact_query_string" to be of type boolean but got "true"."
 				`);
 			});
 
@@ -11685,6 +12476,7 @@ describe("normalizeAndValidateConfig()", () => {
 						observability: {
 							enabled: true,
 							head_sampling_rate: 1,
+							redact_query_string: true,
 							logs: {
 								enabled: true,
 								head_sampling_rate: 1,
@@ -12710,6 +13502,31 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.ai_search and previews.ai_search_namespaces", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						ai_search_namespaces: [
+							{ binding: "AI_SEARCH", namespace: "preview-ns" },
+						],
+						ai_search: [
+							{ binding: "SEARCH", instance_name: "preview-instance" },
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
 			it("should accept previews.stream as a named simple binding", ({

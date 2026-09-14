@@ -35,20 +35,17 @@ export type {
 	StreamBinding,
 	TextBinding,
 	TypedAiBinding,
-	TypedDurableObjectBinding,
 	TypedKvBinding,
 	TypedPipelineBinding,
 	TypedQueueBinding,
-	TypedWorkerBinding,
-	TypedWorkflowBinding,
 	UnsafeBinding,
 	VectorizeBinding,
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
-	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
+	WorkerReference,
 	WorkflowBinding,
 } from "./bindings";
 export { bindings } from "./bindings";
@@ -79,15 +76,19 @@ export type {
 	UnwrapConfig,
 } from "./inference";
 export type { ConfigContext } from "./definition";
-export type { SettingsConfig, WorkerConfig } from "./types";
+export type { ContainerConfig, SettingsConfig, WorkerConfig } from "./types";
 export type {
-	TypedWorkerDefinition,
+	ContainerConfigExport,
+	ContainerConfigInput,
+} from "./container-definition";
+export { defineContainer } from "./container-definition";
+export type {
 	WorkerConfigExport,
 	WorkerConfigInput,
 } from "./worker-definition";
 export { defineWorker } from "./worker-definition";
 export type {
+	SettingsConfigExport,
 	SettingsConfigInput,
-	SettingsDefinition,
 } from "./settings-definition";
 export { defineSettings } from "./settings-definition";

@@ -7,6 +7,7 @@ import {
 	localWorkflowArgs,
 	type LocalWorkflow,
 } from "../local";
+import { jsonWorkflowArgs } from "../utils";
 import type { Workflow } from "../types";
 
 export const workflowsListCommand = createCommand({
@@ -17,6 +18,7 @@ export const workflowsListCommand = createCommand({
 	},
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		page: {
 			describe:
 				'Show a sepecific page from the listing, can configure page size using "per-page"',
@@ -28,12 +30,20 @@ export const workflowsListCommand = createCommand({
 			type: "number",
 		},
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	async handler(args, { config }) {
 		if (args.local) {
 			const workflows = await fetchLocalResult<LocalWorkflow[]>(
 				args.port,
 				"/workflows"
 			);
+
+			if (args.json) {
+				logger.json(workflows);
+				return;
+			}
 
 			if (workflows.length === 0) {
 				logger.warn("There are no Workflows in the local dev session");
@@ -68,6 +78,15 @@ export const workflowsListCommand = createCommand({
 				URLParams
 			);
 
+			const sortedWorkflows = workflows.sort((a, b) =>
+				b.created_on.localeCompare(a.created_on)
+			);
+
+			if (args.json) {
+				logger.json(sortedWorkflows);
+				return;
+			}
+
 			if (workflows.length === 0 && args.page === 1) {
 				logger.warn("There are no deployed Workflows in this account");
 				return;
@@ -84,15 +103,13 @@ export const workflowsListCommand = createCommand({
 				`Showing ${workflows.length} workflow${workflows.length > 1 ? "s" : ""} from page ${args.page}:`
 			);
 
-			const prettierWorkflows = workflows
-				.sort((a, b) => b.created_on.localeCompare(a.created_on))
-				.map((workflow) => ({
-					Name: workflow.name,
-					"Script name": workflow.script_name,
-					"Class name": workflow.class_name,
-					Created: new Date(workflow.created_on).toLocaleString(),
-					Modified: new Date(workflow.modified_on).toLocaleString(),
-				}));
+			const prettierWorkflows = sortedWorkflows.map((workflow) => ({
+				Name: workflow.name,
+				"Script name": workflow.script_name,
+				"Class name": workflow.class_name,
+				Created: new Date(workflow.created_on).toLocaleString(),
+				Modified: new Date(workflow.modified_on).toLocaleString(),
+			}));
 			logger.table(prettierWorkflows);
 		}
 	},

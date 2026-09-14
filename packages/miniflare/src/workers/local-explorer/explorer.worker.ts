@@ -84,6 +84,9 @@ export type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	// Worker names for this instance, used to filter self from dev registry during aggregation
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
+	[CoreBindings.SERVICE_D1]: Fetcher;
+	[CoreBindings.SERVICE_KV]: Fetcher;
+	[CoreBindings.SERVICE_R2]: Fetcher;
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
 	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
@@ -454,7 +457,9 @@ app.get("/api/local/workers", async (c) => {
 		const peerResults = await Promise.all(
 			peerUrls.map(async (url) => {
 				const peerResponse = await fetchFromPeer(url, "/local/workers");
-				if (!peerResponse?.ok) return [];
+				if (!peerResponse?.ok) {
+					return [];
+				}
 				try {
 					const data = (await peerResponse.json()) as {
 						result?: LocalExplorerWorker[];
