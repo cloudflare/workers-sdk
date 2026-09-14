@@ -1238,19 +1238,35 @@ describe("deploy", () => {
 				});
 				const completionJwt = "<<aus-completion-token>>";
 				const assetIndexByHash = new Map<string, number>();
-				const uploadAttempts = Array.from({ length: assets.length }, () => 0);
+				const assetHashByPath = new Map<string, string>();
+				const uploadAttemptsByHash = new Map<string, number>();
 				const gatewayResponseGate = createDeferred<void>();
 				const uploadGates = Array.from({ length: assets.length }, () =>
 					createDeferred<void>()
 				);
 
-				async function handleUpload(assetIndex: number | undefined) {
+				function expectUploadAttemptsByPath(
+					expectedAttemptsByPath: Record<string, number>
+				) {
+					const actualAttemptsByPath = Object.fromEntries(
+						Array.from(assetHashByPath, ([assetPath, assetHash]) => [
+							assetPath,
+							uploadAttemptsByHash.get(assetHash),
+						])
+					);
+					expect(actualAttemptsByPath).toMatchObject(expectedAttemptsByPath);
+				}
+
+				async function handleUpload(assetHash: string) {
+					const assetIndex = assetIndexByHash.get(assetHash);
 					if (assetIndex === undefined) {
 						throw new Error("Unexpected asset hash");
 					}
 
-					uploadAttempts[assetIndex]++;
-					if (assetIndex === 0 && uploadAttempts[assetIndex] === 1) {
+					const uploadAttemptCount =
+						(uploadAttemptsByHash.get(assetHash) ?? 0) + 1;
+					uploadAttemptsByHash.set(assetHash, uploadAttemptCount);
+					if (assetIndex === 0 && uploadAttemptCount === 1) {
 						await gatewayResponseGate.promise;
 						return HttpResponse.text("gateway timeout", { status: 524 });
 					}
@@ -1272,8 +1288,10 @@ describe("deploy", () => {
 								.sort(([leftPath], [rightPath]) =>
 									leftPath.localeCompare(rightPath)
 								)
-								.map(([, entry], index) => {
+								.map(([assetPath, entry], index) => {
 									assetIndexByHash.set(entry.hash, index);
+									assetHashByPath.set(assetPath, entry.hash);
+									uploadAttemptsByHash.set(entry.hash, 0);
 									return entry.hash;
 								});
 
@@ -1288,8 +1306,7 @@ describe("deploy", () => {
 					),
 					http.post(
 						"*/accounts/some-account-id/workers/assets/upload/:hash",
-						({ params }) =>
-							handleUpload(assetIndexByHash.get(String(params.hash)))
+						({ params }) => handleUpload(String(params.hash))
 					),
 					http.post(
 						"*/accounts/some-account-id/workers/assets/upload",
@@ -1297,7 +1314,7 @@ describe("deploy", () => {
 							// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 							const formData = await request.formData();
 							const [hash] = formData.keys();
-							return handleUpload(assetIndexByHash.get(hash));
+							return handleUpload(hash);
 						}
 					)
 				);
@@ -1312,11 +1329,20 @@ describe("deploy", () => {
 				try {
 					await vi.waitFor(
 						() => {
-							expect(uploadAttempts.slice(0, 3)).toEqual([1, 1, 1]);
+							expectUploadAttemptsByPath({
+								"/file-0.txt": 1,
+								"/file-1.txt": 1,
+								"/file-2.txt": 1,
+							});
 						},
 						{ timeout: 10_000 }
 					);
-					expect(uploadAttempts.slice(3)).toEqual([0, 0, 0, 0]);
+					expectUploadAttemptsByPath({
+						"/file-3.txt": 0,
+						"/file-4.txt": 0,
+						"/file-5.txt": 0,
+						"/file-6.txt": 0,
+					});
 					gatewayResponseGate.resolve();
 					await vi.waitFor(() => {
 						expect(std.debug).toContain(
@@ -1330,23 +1356,41 @@ describe("deploy", () => {
 					uploadGates[2].resolve();
 					await vi.waitFor(() => {
 						expect(std.info).toContain("Uploaded 2 of 7 assets");
-						expect(uploadAttempts.slice(0, 3)).toEqual([2, 1, 1]);
+						expectUploadAttemptsByPath({
+							"/file-0.txt": 2,
+							"/file-1.txt": 1,
+							"/file-2.txt": 1,
+						});
 					});
 					await new Promise<void>((resolve) => setImmediate(resolve));
-					expect(uploadAttempts.slice(3)).toEqual([0, 0, 0, 0]);
+					expectUploadAttemptsByPath({
+						"/file-3.txt": 0,
+						"/file-4.txt": 0,
+						"/file-5.txt": 0,
+						"/file-6.txt": 0,
+					});
 					expect(std.debug).not.toContain("Asset upload concurrency recovered");
 
 					// The retry started after the throttle, so its success restores one slot.
 					uploadGates[0].resolve();
 					await vi.waitFor(() => {
-						expect(uploadAttempts.slice(3, 5)).toEqual([1, 1]);
+						expectUploadAttemptsByPath({
+							"/file-3.txt": 1,
+							"/file-4.txt": 1,
+						});
 					});
-					expect(uploadAttempts.slice(5)).toEqual([0, 0]);
+					expectUploadAttemptsByPath({
+						"/file-5.txt": 0,
+						"/file-6.txt": 0,
+					});
 
 					// One more post-throttle success restores the configured concurrency.
 					uploadGates[3].resolve();
 					await vi.waitFor(() => {
-						expect(uploadAttempts.slice(5)).toEqual([1, 1]);
+						expectUploadAttemptsByPath({
+							"/file-5.txt": 1,
+							"/file-6.txt": 1,
+						});
 					});
 				} finally {
 					gatewayResponseGate.resolve();
@@ -1356,7 +1400,15 @@ describe("deploy", () => {
 					await deployPromise;
 				}
 
-				expect(uploadAttempts).toEqual([2, 1, 1, 1, 1, 1, 1]);
+				expectUploadAttemptsByPath({
+					"/file-0.txt": 2,
+					"/file-1.txt": 1,
+					"/file-2.txt": 1,
+					"/file-3.txt": 1,
+					"/file-4.txt": 1,
+					"/file-5.txt": 1,
+					"/file-6.txt": 1,
+				});
 				expect(
 					std.debug.match(
 						/Asset upload concurrency (?:throttled to 1 after a gateway error|recovered to [23])\./g
