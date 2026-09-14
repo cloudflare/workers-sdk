@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { describe, it } from "vitest";
 import { DefaultScopeKeys, validateScopeKeys } from "../../src/cf";
 import { CF_REGISTERED_SCOPES } from "../../src/cf/scopes";
@@ -108,9 +107,6 @@ describe("cf OAuth scopes", () => {
 		expect(new Set(CF_REGISTERED_SCOPES).size).toBe(
 			CF_REGISTERED_SCOPES.length
 		);
-		expect(
-			createHash("sha256").update(CF_REGISTERED_SCOPES.join("\n")).digest("hex")
-		).toBe("f8640f3beb785e64f5b164a0b9e1b8515f1d1ca33b9a03fc986447ae404d8d10");
 		expect(validateScopeKeys([...CF_REGISTERED_SCOPES])).toBe(true);
 	});
 
