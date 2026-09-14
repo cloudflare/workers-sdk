@@ -1,11 +1,13 @@
 import type { CfPlacement, Config } from "@cloudflare/workers-utils";
 
 /**
- * Parse placement out of a Config
+ * Parse placement into the API format.
  */
-export function parseConfigPlacement(config: Config): CfPlacement | undefined {
-	if (config.placement) {
-		const configPlacement = config.placement;
+export function parseConfigPlacement(
+	placement: Config["placement"]
+): CfPlacement | undefined {
+	if (placement) {
+		const configPlacement = placement;
 		const hint = "hint" in configPlacement ? configPlacement.hint : undefined;
 
 		if (!hint && configPlacement.mode === "off") {

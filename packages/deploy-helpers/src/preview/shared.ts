@@ -466,6 +466,7 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
+			environment: service.environment,
 			entrypoint: service.entrypoint,
 			...(crossAccountGrant !== undefined && {
 				cross_account_grant: crossAccountGrant,
