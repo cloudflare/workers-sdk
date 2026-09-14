@@ -124,20 +124,32 @@ describe("environment variable override", () => {
 });
 
 describe("cloudflared arg redaction", () => {
-	it("redacts --token and other sensitive values", ({ expect }) => {
-		const args = ["tunnel", "run", "--token", "SECRET_TOKEN"];
+	it("redacts separate sensitive argument values", ({ expect }) => {
+		const args = [
+			"tunnel",
+			"run",
+			"--token",
+			"SECRET_TOKEN",
+			"--allowed-mail",
+			"user@example.com,*@example.org",
+		];
 
 		expect(redactCloudflaredArgsForLogging(args)).toEqual([
 			"tunnel",
 			"run",
 			"--token",
 			"[REDACTED]",
+			"--allowed-mail",
+			"[REDACTED]",
 		]);
 	});
 
-	it("redacts --token=... style", ({ expect }) => {
-		expect(redactCloudflaredArgsForLogging(["--token=SECRET"])).toEqual([
-			"--token=[REDACTED]",
-		]);
+	it("redacts equals-style sensitive arguments", ({ expect }) => {
+		expect(
+			redactCloudflaredArgsForLogging([
+				"--token=SECRET",
+				"--allowed-mail=user@example.com",
+			])
+		).toEqual(["--token=[REDACTED]", "--allowed-mail=[REDACTED]"]);
 	});
 });

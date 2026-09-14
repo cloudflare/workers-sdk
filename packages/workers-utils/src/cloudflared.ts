@@ -314,13 +314,16 @@ function validateBinary(
 
 export function redactCloudflaredArgsForLogging(args: string[]): string[] {
 	const redacted = [...args];
+	const sensitiveArgs = ["--token", "--allowed-mail"];
 	for (let i = 0; i < redacted.length; i++) {
 		const arg = redacted[i];
-		if (arg === "--token" && i + 1 < redacted.length) {
-			redacted[i + 1] = "[REDACTED]";
-		}
-		if (arg.startsWith("--token=")) {
-			redacted[i] = "--token=[REDACTED]";
+		for (const sensitiveArg of sensitiveArgs) {
+			if (arg === sensitiveArg && i + 1 < redacted.length) {
+				redacted[i + 1] = "[REDACTED]";
+			}
+			if (arg.startsWith(`${sensitiveArg}=`)) {
+				redacted[i] = `${sensitiveArg}=[REDACTED]`;
+			}
 		}
 	}
 	return redacted;
