@@ -1,7 +1,7 @@
 import * as cli from "@cloudflare/cli-shared-helpers";
 import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { createCommand } from "../../core/create-command";
+import { createAlias, createCommand } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
@@ -12,6 +12,10 @@ import type { VersionId } from "../types";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
+
+export const rollbackCommandAlias = createAlias({
+	aliasOf: "wrangler versions rollback",
+});
 
 export const versionsRollbackCommand = createCommand({
 	args: {

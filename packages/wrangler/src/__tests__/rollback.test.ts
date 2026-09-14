@@ -122,6 +122,27 @@ describe("rollback", () => {
 		);
 	}
 
+	test("supports versions rollback with a custom hibernation timeout", async ({
+		expect,
+	}) => {
+		mockGetDeployments(expect);
+		mockGetVersion(expect, "version-id-1");
+		mockGetVersion(expect, "rollback-version");
+		mockPostDeployment(expect, false, "0s");
+		mockPrompt({
+			text: "Please provide an optional message for this rollback (120 characters max)",
+			result: "Test rollback",
+		});
+		mockConfirm({
+			text: "Are you sure you want to deploy this Worker Version to 100% of traffic?",
+			result: true,
+		});
+
+		await runWrangler(
+			"versions rollback rollback-version --name script-name --durable-objects-hibernation-timeout 0s"
+		);
+	});
+
 	test("can rollback to an earlier version", async ({ expect }) => {
 		mockGetDeployments(expect);
 		mockGetVersion(expect, "version-id-1");

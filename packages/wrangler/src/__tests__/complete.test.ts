@@ -41,6 +41,13 @@ describe("wrangler", () => {
 				expect(std.out).toContain("--ip\t");
 			});
 
+			test("should return flags for an aliased command", async ({ expect }) => {
+				await runWrangler("complete -- rollback --");
+
+				expect(std.out).toContain("--version-id\t");
+				expect(std.out).toContain("--durable-objects-hibernation-timeout\t");
+			});
+
 			test("should not include internal commands", async ({ expect }) => {
 				await runWrangler('complete -- ""');
 

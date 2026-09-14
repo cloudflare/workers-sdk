@@ -45,7 +45,6 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
-
 				  wrangler email                  Manage Cloudflare Email services [open beta]
 
 				ACCOUNT
@@ -71,12 +70,14 @@ describe("wrangler", () => {
 				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
+
+				                                  Alias for "wrangler versions rollback".
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
 				  wrangler setup                  🪄 Setup a project to work on Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler types [path]           📝 Generate types from your Worker configuration
-				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler versions               🫧 List, view, upload, deploy, and rollback Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
 				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
@@ -147,7 +148,6 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
-
 				  wrangler email                  Manage Cloudflare Email services [open beta]
 
 				ACCOUNT
@@ -173,12 +173,14 @@ describe("wrangler", () => {
 				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
+
+				                                  Alias for "wrangler versions rollback".
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
 				  wrangler setup                  🪄 Setup a project to work on Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler types [path]           📝 Generate types from your Worker configuration
-				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler versions               🫧 List, view, upload, deploy, and rollback Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
 				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows

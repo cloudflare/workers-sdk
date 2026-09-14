@@ -87,6 +87,16 @@ describe("experimental_getWranglerCommands", () => {
 		expect(docsCommand.definition.metadata?.status).toBeDefined();
 	});
 
+	test("resolves aliases to command definitions", ({ expect }) => {
+		const commandTree = experimental_getWranglerCommands().registry;
+		const rollbackCommand = commandTree.subtree.get("rollback");
+
+		assert(rollbackCommand?.definition?.type === "command");
+		expect(rollbackCommand.definition.args).toHaveProperty(
+			"durable-objects-hibernation-timeout"
+		);
+	});
+
 	test("includes nested commands", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
@@ -230,6 +240,7 @@ describe("experimental_getWranglerCommands", () => {
 			  "wrangler turnstile widget update",
 			  "wrangler versions deploy",
 			  "wrangler versions list",
+			  "wrangler versions rollback",
 			  "wrangler versions secret bulk",
 			  "wrangler versions secret delete",
 			  "wrangler versions secret list",

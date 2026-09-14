@@ -14,13 +14,14 @@ describe("versions --help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+			🫧 List, view, upload, deploy, and rollback Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
 			  wrangler versions list                      List the 10 most recent Versions of your Worker
 			  wrangler versions upload [path]             Uploads your Worker code and config as a new Version
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions
+			  wrangler versions rollback [version-id]     🔙 Rollback a deployment for a Worker
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
@@ -48,13 +49,14 @@ describe("versions subhelp", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+			🫧 List, view, upload, deploy, and rollback Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
 			  wrangler versions list                      List the 10 most recent Versions of your Worker
 			  wrangler versions upload [path]             Uploads your Worker code and config as a new Version
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions
+			  wrangler versions rollback [version-id]     🔙 Rollback a deployment for a Worker
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
@@ -68,4 +70,22 @@ describe("versions subhelp", () => {
 			  -v, --version         Show version number  [boolean]"
 		`);
 	});
+});
+
+describe("Durable Objects hibernation timeout help", () => {
+	const std = mockConsoleMethods();
+
+	for (const command of [
+		"deploy --help",
+		"versions deploy --help",
+		"rollback --help",
+		"versions rollback --help",
+	]) {
+		test(`shows the option for wrangler ${command}`, async ({ expect }) => {
+			await runWrangler(command);
+
+			expect(std.out).toContain("--durable-objects-hibernation-timeout");
+			expect(std.out).toContain('[string] [default: "5m"]');
+		});
+	}
 });
