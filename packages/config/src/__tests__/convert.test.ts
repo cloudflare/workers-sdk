@@ -159,7 +159,6 @@ describe("convertToWranglerConfig", () => {
 					MY_MEDIA: { type: "media" },
 					MY_STREAM: { type: "stream" },
 					MY_VM: { type: "version-metadata" },
-					MY_WEB_SEARCH: { type: "web-search" },
 				},
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI" });
@@ -168,7 +167,6 @@ describe("convertToWranglerConfig", () => {
 			expect(result.media).toEqual({ binding: "MY_MEDIA" });
 			expect(result.stream).toEqual({ binding: "MY_STREAM" });
 			expect(result.version_metadata).toEqual({ binding: "MY_VM" });
-			expect(result.websearch).toEqual({ binding: "MY_WEB_SEARCH" });
 		});
 
 		it("includes the remote flag on singletons that support it", ({
@@ -179,17 +177,6 @@ describe("convertToWranglerConfig", () => {
 				env: { MY_AI: { type: "ai", dev: { remote: true } } },
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI", remote: true });
-		});
-
-		it("includes the remote flag on web-search", ({ expect }) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				env: { MY_WS: { type: "web-search", dev: { remote: true } } },
-			});
-			expect(result.websearch).toEqual({
-				binding: "MY_WS",
-				remote: true,
-			});
 		});
 	});
 

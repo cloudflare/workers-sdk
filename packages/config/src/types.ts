@@ -40,7 +40,6 @@ import type {
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
-	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
 	// TODO: re-enable when workflow bindings return.
@@ -100,7 +99,6 @@ type Binding =
 	| VersionMetadataBinding
 	| VpcNetworkBinding
 	| VpcServiceBinding
-	| WebSearchBinding
 	| WorkerBinding
 	| WorkerLoaderBinding;
 // TODO: re-enable when workflow bindings return.
