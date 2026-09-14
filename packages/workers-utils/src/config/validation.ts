@@ -1691,18 +1691,22 @@ function normalizeAndValidateEnvironment(
 			validateDefines(envName),
 			{}
 		),
-		durable_objects: notInheritable(
-			diagnostics,
-			topLevelEnv,
-			rawConfig,
-			rawEnv,
-			envName,
-			"durable_objects",
-			validateBindingsProperty(envName, validateDurableObjectBinding),
-			{
-				bindings: [],
-			}
-		),
+		durable_objects: (() => {
+			const durableObjects = notInheritable(
+				diagnostics,
+				topLevelEnv,
+				rawConfig,
+				rawEnv,
+				envName,
+				"durable_objects",
+				validateDurableObjectsProperty(envName, true),
+				{ bindings: [] }
+			);
+			return {
+				...durableObjects,
+				bindings: durableObjects.bindings ?? [],
+			};
+		})(),
 		workflows: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2710,6 +2714,136 @@ const validateBindingsProperty =
 				}
 			}
 		}
+		return isValid;
+	};
+
+const DURABLE_OBJECTS_CODE_UPDATE_MAX_DELAY_SECONDS = 24 * 60 * 60;
+// Absorbs float64 error in the millisecond precision check. Near the 24-hour
+// maximum the error reaches ~1e-8 ms, so a tighter bound would reject valid
+// values such as 65536.001.
+const MILLISECOND_PRECISION_TOLERANCE = 1e-6;
+
+const validateDurableObjectsProperty =
+	(
+		envName: string,
+		allowMissingBindings = false,
+		allowCodeUpdateStrategy = true
+	): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (value === undefined) {
+			return true;
+		}
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(value)}.`
+			);
+			return false;
+		}
+
+		validateAdditionalProperties(
+			diagnostics,
+			fieldPath,
+			Object.keys(value),
+			allowCodeUpdateStrategy
+				? ["bindings", "code_update_strategy"]
+				: ["bindings"]
+		);
+
+		const bindingsContainer =
+			allowMissingBindings && !hasProperty(value, "bindings")
+				? { ...value, bindings: [] }
+				: value;
+		let isValid = validateBindingsProperty(
+			envName,
+			validateDurableObjectBinding
+		)(diagnostics, field, bindingsContainer, config);
+		if (!allowCodeUpdateStrategy) {
+			return isValid;
+		}
+
+		if (
+			!hasProperty(value, "code_update_strategy") ||
+			value.code_update_strategy === undefined
+		) {
+			return isValid;
+		}
+
+		const strategy = value.code_update_strategy;
+		const strategyPath = `${fieldPath}.code_update_strategy`;
+		if (
+			typeof strategy !== "object" ||
+			strategy === null ||
+			Array.isArray(strategy)
+		) {
+			diagnostics.errors.push(
+				`The field "${strategyPath}" should be an object but got ${JSON.stringify(strategy)}.`
+			);
+			return false;
+		}
+
+		validateAdditionalProperties(
+			diagnostics,
+			strategyPath,
+			Object.keys(strategy),
+			["mode", "max_delay"]
+		);
+		isValid =
+			validateRequiredProperty(
+				diagnostics,
+				strategyPath,
+				"mode",
+				hasProperty(strategy, "mode") ? strategy.mode : undefined,
+				"string",
+				["immediate", "deferred"]
+			) && isValid;
+
+		const maxDelay = hasProperty(strategy, "max_delay")
+			? strategy.max_delay
+			: undefined;
+		const maxDelayHasValidType = validateOptionalProperty(
+			diagnostics,
+			strategyPath,
+			"max_delay",
+			maxDelay,
+			"number"
+		);
+		isValid = maxDelayHasValidType && isValid;
+		if (
+			maxDelayHasValidType &&
+			typeof maxDelay === "number" &&
+			(!Number.isFinite(maxDelay) ||
+				maxDelay < 0 ||
+				maxDelay > DURABLE_OBJECTS_CODE_UPDATE_MAX_DELAY_SECONDS)
+		) {
+			diagnostics.errors.push(
+				`Expected "${strategyPath}.max_delay" to be between 0 and ${DURABLE_OBJECTS_CODE_UPDATE_MAX_DELAY_SECONDS} seconds but got ${JSON.stringify(maxDelay)}.`
+			);
+			isValid = false;
+		}
+		if (
+			maxDelayHasValidType &&
+			typeof maxDelay === "number" &&
+			Number.isFinite(maxDelay) &&
+			maxDelay >= 0 &&
+			maxDelay <= DURABLE_OBJECTS_CODE_UPDATE_MAX_DELAY_SECONDS
+		) {
+			const milliseconds = maxDelay * 1000;
+			const roundedMilliseconds = Math.round(milliseconds);
+			if (
+				(maxDelay > 0 && roundedMilliseconds === 0) ||
+				Math.abs(milliseconds - roundedMilliseconds) >
+					MILLISECOND_PRECISION_TOLERANCE
+			) {
+				diagnostics.errors.push(
+					`Expected "${strategyPath}.max_delay" to use millisecond precision but got ${JSON.stringify(maxDelay)}.`
+				);
+				isValid = false;
+			}
+		}
+
 		return isValid;
 	};
 
@@ -6284,7 +6418,7 @@ const validatePreviewsConfig =
 		);
 
 		isValid =
-			validateBindingsProperty(envName, validateDurableObjectBinding)(
+			validateDurableObjectsProperty(envName, false, false)(
 				diagnostics,
 				`${field}.durable_objects`,
 				previews.durable_objects,
