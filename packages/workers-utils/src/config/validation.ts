@@ -6145,6 +6145,8 @@ const validatePreviewsConfig =
 				"d1_databases",
 				"r2_buckets",
 				"vectorize",
+				"ai_search_namespaces",
+				"ai_search",
 				"hyperdrive",
 				"services",
 				"analytics_engine_datasets",
@@ -6250,6 +6252,22 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.vectorize`,
 				previews.vectorize,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAISearchNamespaceBinding)(
+				diagnostics,
+				`${field}.ai_search_namespaces`,
+				previews.ai_search_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAISearchBinding)(
+				diagnostics,
+				`${field}.ai_search`,
+				previews.ai_search,
 				undefined
 			) && isValid;
 
