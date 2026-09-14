@@ -42,6 +42,7 @@ export type DurableObjectClassNames = Map<
 			enableSql?: boolean;
 			unsafeUniqueKey?: UnsafeUniqueKey;
 			unsafePreventEviction?: boolean;
+			unsafeUseIsolateNodePortScope?: boolean;
 			container?: DOContainerOptions;
 		}
 	>

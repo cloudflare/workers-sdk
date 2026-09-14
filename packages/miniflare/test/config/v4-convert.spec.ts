@@ -17,6 +17,7 @@ describe("convertV4MiniflareOptions", () => {
 					useSQLite: true,
 					unsafeUniqueKey: "local-key",
 					unsafePreventEviction: true,
+					unsafeUseIsolateNodePortScope: true,
 				},
 				SELF_EXPLICIT: {
 					className: "SelfExplicitObject",
@@ -55,6 +56,7 @@ describe("convertV4MiniflareOptions", () => {
 				storage: "sqlite",
 				unsafeUniqueKey: "local-key",
 				unsafePreventEviction: true,
+				unsafeUseIsolateNodePortScope: true,
 			},
 			SelfExplicitObject: {
 				type: "durable-object",

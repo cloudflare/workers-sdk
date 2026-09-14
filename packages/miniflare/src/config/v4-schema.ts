@@ -244,6 +244,7 @@ const V4DurableObjectSchema = z.object({
 		])
 		.optional(),
 	unsafePreventEviction: z.boolean().optional(),
+	unsafeUseIsolateNodePortScope: z.boolean().optional(),
 	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
 	container: z.object({ imageName: z.string() }).optional(),
 });
@@ -743,6 +744,7 @@ export type V4DurableObject = {
 	useSQLite?: boolean;
 	unsafeUniqueKey?: string | symbol;
 	unsafePreventEviction?: boolean;
+	unsafeUseIsolateNodePortScope?: boolean;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
 	container?: { imageName: string };
 };

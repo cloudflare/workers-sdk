@@ -1,0 +1,8 @@
+{
+	"extends": "../../tsconfig.workerd.json",
+	"compilerOptions": {
+		"skipLibCheck": true,
+		"types": ["@cloudflare/workers-types/experimental", "@types/node"]
+	},
+	"include": ["./**/*.ts"]
+}

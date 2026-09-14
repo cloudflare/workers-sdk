@@ -500,6 +500,10 @@ async function buildProjectWorkerOptions(
 		className: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__",
 		unsafePreventEviction: true,
 		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+		// User modules are evaluated in this artificial actor, but their
+		// handlers run in their real I/O contexts through SELF and exports. Keep
+		// Node server registrations visible in both contexts.
+		unsafeUseIsolateNodePortScope: true,
 	};
 
 	// Vite has its own define mechanism, but we can't control it from custom

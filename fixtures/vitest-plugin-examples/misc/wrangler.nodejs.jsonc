@@ -1,5 +1,6 @@
 {
 	"$schema": "../node_modules/wrangler/config-schema.json",
+	"main": "src/cloudflare-node.ts",
 	// Pin a compatibility date from before `nodejs_compat` became enabled by
 	// default, so that this fixture keeps covering the explicit-flag path.
 	// Specifying the flag on a later date is a workerd validation error.

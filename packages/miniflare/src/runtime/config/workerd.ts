@@ -201,12 +201,19 @@ export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
 	enableSql?: boolean;
+	unsafeUseIsolateNodePortScope?: boolean;
 	container?: Worker_DurableObjectNamespace_ContainerOptions;
 } & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
 
 export interface Worker_DurableObjectNamespace_ContainerOptions {
 	imageName?: string;
 	privileges?: Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges;
+	images?: Worker_DurableObjectNamespace_ContainerOptions_NamedImage[];
+}
+
+export interface Worker_DurableObjectNamespace_ContainerOptions_NamedImage {
+	name?: string;
+	image?: string;
 }
 
 export interface Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges {

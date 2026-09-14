@@ -2608,6 +2608,33 @@ export class Worker_Binding extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Which;
 	}
 }
+export class Worker_DurableObjectNamespace_ContainerOptions_NamedImage
+	extends $.Struct
+{
+	static readonly _capnp = {
+		displayName: "NamedImage",
+		id: "ab54a21a8a2ec0c0",
+		size: new $.ObjectSize(0, 2),
+	};
+	get name(): string {
+		return $.utils.getText(0, this);
+	}
+	set name(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	get image(): string {
+		return $.utils.getText(1, this);
+	}
+	set image(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	toString(): string {
+		return (
+			"Worker_DurableObjectNamespace_ContainerOptions_NamedImage_" +
+			super.toString()
+		);
+	}
+}
 export class Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device
 	extends $.Struct
 {
@@ -2745,13 +2772,16 @@ export class Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges
 	}
 }
 export class Worker_DurableObjectNamespace_ContainerOptions extends $.Struct {
+	static readonly NamedImage =
+		Worker_DurableObjectNamespace_ContainerOptions_NamedImage;
 	static readonly ContainerPrivileges =
 		Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges;
 	static readonly _capnp = {
 		displayName: "ContainerOptions",
 		id: "a609621a4d236cd7",
-		size: new $.ObjectSize(0, 2),
+		size: new $.ObjectSize(0, 3),
 	};
+	static _Images: $.ListCtor<Worker_DurableObjectNamespace_ContainerOptions_NamedImage>;
 	/**
 	 * Image name to be used to create the container using supported provider.
 	 * By default, we pull the "latest" tag of this image.
@@ -2800,6 +2830,48 @@ export class Worker_DurableObjectNamespace_ContainerOptions extends $.Struct {
 		value: Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges
 	) {
 		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	_adoptImages(
+		value: $.Orphan<
+			$.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage>
+		>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownImages(): $.Orphan<
+		$.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage>
+	> {
+		return $.utils.disown(this.images);
+	}
+	/**
+	 * Named image references exposed to the Durable Object through ctx.container.images.
+	 * These do not change imageName, which remains the default when start() omits an image.
+	 *
+	 */
+	get images(): $.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage> {
+		return $.utils.getList(
+			2,
+			Worker_DurableObjectNamespace_ContainerOptions._Images,
+			this
+		);
+	}
+	_hasImages(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initImages(
+		length: number
+	): $.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage> {
+		return $.utils.initList(
+			2,
+			Worker_DurableObjectNamespace_ContainerOptions._Images,
+			length,
+			this
+		);
+	}
+	set images(
+		value: $.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage>
+	) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
 	toString(): string {
 		return "Worker_DurableObjectNamespace_ContainerOptions_" + super.toString();
@@ -2852,6 +2924,7 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 		displayName: "DurableObjectNamespace",
 		id: "b429dd547d15747d",
 		size: new $.ObjectSize(8, 3),
+		defaultUnsafeUseIsolateNodePortScope: $.getBitMask(false, 2),
 	};
 	/**
 	 * Exported class name that implements the Durable Object.
@@ -2960,6 +3033,32 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	}
 	set container(value: Worker_DurableObjectNamespace_ContainerOptions) {
 		$.utils.copyFrom(value, $.utils.getPointer(2, this));
+	}
+	/**
+	 * Makes Node.js HTTP and TCP servers created by instances of this class share the worker
+	 * isolate's virtual port table instead of using a table scoped to each Durable Object instance.
+	 *
+	 * This is a workerd-only escape hatch for pinned, singleton actors that local-development
+	 * tooling uses as an artificial module-evaluation context. It must not be enabled for user
+	 * Durable Objects: separate instances would otherwise bind and route through the same ports.
+	 * `preventEviction` must also be true so that handlers stored in the isolate table cannot
+	 * outlive the actor instance that created them.
+	 *
+	 */
+	get unsafeUseIsolateNodePortScope(): boolean {
+		return $.utils.getBit(
+			18,
+			this,
+			Worker_DurableObjectNamespace._capnp.defaultUnsafeUseIsolateNodePortScope
+		);
+	}
+	set unsafeUseIsolateNodePortScope(value: boolean) {
+		$.utils.setBit(
+			18,
+			value,
+			this,
+			Worker_DurableObjectNamespace._capnp.defaultUnsafeUseIsolateNodePortScope
+		);
 	}
 	toString(): string {
 		return "Worker_DurableObjectNamespace_" + super.toString();
@@ -4566,6 +4665,9 @@ Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges._Devices =
 	$.CompositeList(
 		Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device
 	);
+Worker_DurableObjectNamespace_ContainerOptions._Images = $.CompositeList(
+	Worker_DurableObjectNamespace_ContainerOptions_NamedImage
+);
 Worker._Modules = $.CompositeList(Worker_Module);
 Worker._Bindings = $.CompositeList(Worker_Binding);
 Worker._DurableObjectNamespaces = $.CompositeList(

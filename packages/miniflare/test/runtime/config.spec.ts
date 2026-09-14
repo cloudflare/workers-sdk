@@ -4,7 +4,7 @@ import { test } from "vitest";
 import { serializeConfig } from "../../src/runtime/config";
 import { Config as CapnpConfig } from "../../src/runtime/config/generated/workerd";
 
-test("serializes Durable Object container privileges", ({ expect }) => {
+test("serializes Durable Object namespace options", ({ expect }) => {
 	const buffer = serializeConfig({
 		services: [
 			{
@@ -14,8 +14,11 @@ test("serializes Durable Object container privileges", ({ expect }) => {
 						{
 							className: "ExampleContainer",
 							uniqueKey: "example",
+							preventEviction: true,
+							unsafeUseIsolateNodePortScope: true,
 							container: {
 								imageName: "example:latest",
+								images: [{ name: "sidecar", image: "sidecar:latest" }],
 								privileges: FUSE_CONTAINER_PRIVILEGES,
 							},
 						},
@@ -25,11 +28,16 @@ test("serializes Durable Object container privileges", ({ expect }) => {
 		],
 	});
 	const config = new Message(buffer, false).getRoot(CapnpConfig);
-	const privileges = config.services
+	const namespace = config.services
 		.get(0)
-		.worker.durableObjectNamespaces.get(0).container.privileges;
+		.worker.durableObjectNamespaces.get(0);
+	const privileges = namespace.container.privileges;
 	const device = privileges.devices.get(0);
 
+	expect(namespace.preventEviction).toBe(true);
+	expect(namespace.unsafeUseIsolateNodePortScope).toBe(true);
+	expect(namespace.container.images.get(0).name).toBe("sidecar");
+	expect(namespace.container.images.get(0).image).toBe("sidecar:latest");
 	expect(privileges.capabilities.get(0)).toBe("SYS_ADMIN");
 	expect(device.pathOnHost).toBe("/dev/fuse");
 	expect(device.pathInContainer).toBe("/dev/fuse");

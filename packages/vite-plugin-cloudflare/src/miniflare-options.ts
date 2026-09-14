@@ -534,6 +534,10 @@ export async function getDevMiniflareOptions(
 											className: "__VITE_RUNNER_OBJECT__",
 											unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 											unsafePreventEviction: true,
+											// User modules are evaluated in this artificial actor, but
+											// their handlers run in the wrapper's real I/O context. Keep
+											// Node server registrations visible in both contexts.
+											unsafeUseIsolateNodePortScope: true,
 										},
 									},
 								} satisfies V4WorkerOptions,

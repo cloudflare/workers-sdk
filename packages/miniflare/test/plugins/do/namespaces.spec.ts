@@ -25,7 +25,6 @@ test("builds Durable Object namespaces with detected container privileges", ({
 	const regularObject = namespaces.find(
 		({ className }) => className === "RegularObject"
 	);
-
 	expect(containerObject).toMatchObject({
 		className: "ContainerObject",
 		uniqueKey: "worker-ContainerObject",
@@ -49,4 +48,37 @@ test("builds Durable Object namespaces with detected container privileges", ({
 		"example:latest"
 	);
 	expect(containerWithoutPrivileges?.container?.privileges).toBeUndefined();
+});
+
+test("configures isolate Node port scope per Durable Object namespace", ({
+	expect,
+}) => {
+	const classNames: DurableObjectClasses = new Map([
+		[
+			"RunnerObject",
+			{
+				unsafePreventEviction: true,
+				unsafeUseIsolateNodePortScope: true,
+			},
+		],
+		["RegularObject", {}],
+	]);
+	const namespaces = getDurableObjectNamespaces(
+		classNames,
+		"worker",
+		undefined
+	);
+	const runnerObject = namespaces.find(
+		({ className }) => className === "RunnerObject"
+	);
+	const regularObject = namespaces.find(
+		({ className }) => className === "RegularObject"
+	);
+
+	expect(runnerObject).toMatchObject({
+		className: "RunnerObject",
+		preventEviction: true,
+		unsafeUseIsolateNodePortScope: true,
+	});
+	expect(regularObject?.unsafeUseIsolateNodePortScope).toBeUndefined();
 });
