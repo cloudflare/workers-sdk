@@ -13549,6 +13549,31 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should accept previews.ai_search and previews.ai_search_namespaces", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						ai_search_namespaces: [
+							{ binding: "AI_SEARCH", namespace: "preview-ns" },
+						],
+						ai_search: [
+							{ binding: "SEARCH", instance_name: "preview-instance" },
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
 			it("should accept previews.stream as a named simple binding", ({
 				expect,
 			}) => {

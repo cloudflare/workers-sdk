@@ -972,6 +972,20 @@ describe("wrangler preview", () => {
 			]);
 		});
 
+		test("should extract ai_search and ai_search_namespaces", ({ expect }) => {
+			const config = configWithPreviews({
+				ai_search_namespaces: [
+					{ binding: "AI_SEARCH", namespace: "preview-ns" },
+				],
+				ai_search: [{ binding: "SEARCH", instance_name: "preview-instance" }],
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				AI_SEARCH: { type: "ai_search_namespace", namespace: "preview-ns" },
+				SEARCH: { type: "ai_search", instance_name: "preview-instance" },
+			});
+		});
+
 		test("should extract additional supported preview binding types", ({
 			expect,
 		}) => {
@@ -1638,6 +1652,115 @@ describe("wrangler preview", () => {
 				app_id: "production-app-id",
 			});
 			expect(std.warn).not.toContain("FLAGS");
+		});
+
+		test("should use ai_search bindings from local previews config", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					ai_search: [
+						{ binding: "SEARCH", instance_name: "production-instance" },
+					],
+					ai_search_namespaces: [
+						{ binding: "AI_SEARCH", namespace: "production-ns" },
+					],
+					previews: {
+						ai_search: [
+							{ binding: "SEARCH", instance_name: "preview-instance" },
+						],
+						ai_search_namespaces: [
+							{ binding: "AI_SEARCH", namespace: "preview-ns" },
+						],
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<
+							string,
+							{
+								type: string;
+								instance_name?: string;
+								namespace?: string;
+							}
+						>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-ai-search",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-ai-search",
+								preview_id: "preview-id-ai-search",
+								preview_name: "test-preview",
+								urls: ["https://aisearch123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.env?.SEARCH).toMatchObject({
+				type: "ai_search",
+				instance_name: "preview-instance",
+			});
+			expect(deploymentRequestBody?.env?.SEARCH).not.toMatchObject({
+				instance_name: "production-instance",
+			});
+			expect(deploymentRequestBody?.env?.AI_SEARCH).toMatchObject({
+				type: "ai_search_namespace",
+				namespace: "preview-ns",
+			});
+			expect(deploymentRequestBody?.env?.AI_SEARCH).not.toMatchObject({
+				namespace: "production-ns",
+			});
+			expect(std.warn).not.toContain("SEARCH");
+			expect(std.warn).not.toContain("AI_SEARCH");
 		});
 
 		test("should not warn about inheritable top-level bindings missing from previews", async ({
