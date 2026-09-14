@@ -85,6 +85,26 @@ type Env = {
 	WORKFLOW3: Workflow;
 };
 
+// Deterministic ids are unique: create() throws once the instance exists, so
+// read the existing instance instead. Any other failure is real and surfaces.
+async function createOrGet(
+	workflow: Workflow,
+	options: WorkflowInstanceCreateOptions
+): Promise<WorkflowInstance> {
+	try {
+		return await workflow.create(options);
+	} catch (e) {
+		if (
+			options.id === undefined ||
+			!(e instanceof Error) ||
+			!e.message.includes("instance.already_exists")
+		) {
+			throw e;
+		}
+		return workflow.get(options.id);
+	}
+}
+
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(req: Request) {
 		const url = new URL(req.url);
@@ -109,7 +129,7 @@ export default class extends WorkerEntrypoint<Env> {
 			if (id === null) {
 				handle = await workflowToUse.create();
 			} else {
-				handle = await workflowToUse.create({ id });
+				handle = await createOrGet(workflowToUse, { id });
 			}
 		} else if (url.pathname === "/pause") {
 			handle = await workflowToUse.get(id);
