@@ -20,7 +20,10 @@ import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
 import astroTemplate from "templates/astro/c3";
 import commonTemplate from "templates/common/c3";
+import djangoTemplate from "templates/django/c3";
 import docusaurusTemplate from "templates/docusaurus/c3";
+import fastapiTemplate from "templates/fastapi/c3";
+import flaskTemplate from "templates/flask/c3";
 import gatsbyTemplate from "templates/gatsby/c3";
 import assetsOnlyTemplate from "templates/hello-world-assets-only/c3";
 import helloWorldWithDurableObjectAssetsTemplate from "templates/hello-world-durable-object-with-assets/c3";
@@ -244,7 +247,10 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			analog: analogTemplate,
 			angular: angularTemplate,
 			astro: astroTemplate,
+			django: djangoTemplate,
 			docusaurus: docusaurusTemplate,
+			fastapi: fastapiTemplate,
+			flask: flaskTemplate,
 			gatsby: gatsbyTemplate,
 			next: nextExperimentalTemplate,
 			nuxt: nuxtTemplate,
@@ -264,7 +270,10 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			analog: analogTemplate,
 			angular: angularTemplate,
 			astro: astroTemplate,
+			django: djangoTemplate,
 			docusaurus: docusaurusTemplate,
+			fastapi: fastapiTemplate,
+			flask: flaskTemplate,
 			gatsby: gatsbyTemplate,
 			hono: honoTemplate,
 			next: nextTemplate,

@@ -9,6 +9,7 @@ import { getAgentsMd } from "../agents-md";
 import {
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
+	getFrameworkMap,
 	updatePackageName,
 	writeAgentsMd,
 } from "../templates";
@@ -196,6 +197,27 @@ describe("deriveCorrelatedArgs", () => {
 		).toThrow(
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument"
 		);
+	});
+});
+
+describe("getFrameworkMap", () => {
+	test("includes workers-only Python framework templates in stable mode", ({
+		expect,
+	}) => {
+		const frameworkMap = getFrameworkMap({ experimental: false });
+
+		for (const [id, displayName] of [
+			["django", "Django"],
+			["fastapi", "FastAPI"],
+			["flask", "Flask"],
+		]) {
+			const config = frameworkMap[id];
+			expect(config).toMatchObject({ id, displayName, platform: "workers" });
+			expect("platformVariants" in config).toBe(false);
+			expect(config.copyFiles).toMatchObject({
+				variants: { python: { path: "./py" } },
+			});
+		}
 	});
 });
 

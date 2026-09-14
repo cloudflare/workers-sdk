@@ -1,0 +1,13 @@
+{
+	"name": "<PACKAGE_NAME>",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "uv run pywrangler deploy",
+		"dev": "uv run pywrangler dev",
+		"start": "uv run pywrangler dev"
+	},
+	"devDependencies": {
+		"wrangler": "^4.131.1"
+	}
+}

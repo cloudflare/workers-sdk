@@ -87,6 +87,22 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
 		},
 		{
+			name: "django",
+			argv: ["--lang", "python"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Django on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from Django on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
 			name: "docusaurus:pages",
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun"],
@@ -200,6 +216,38 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: false,
 			flags: ["--style", "sass"],
+		},
+		{
+			name: "fastapi",
+			argv: ["--lang", "python"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from FastAPI on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from FastAPI on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
+			name: "flask",
+			argv: ["--lang", "python"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Flask on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from Flask on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
 		},
 		{
 			name: "gatsby:pages",
