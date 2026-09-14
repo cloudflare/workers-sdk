@@ -1,5 +1,13 @@
 # miniflare
 
+## 5.20260911.1-alpha
+
+### Minor Changes
+
+- [#15441](https://github.com/cloudflare/workers-sdk/pull/15441) [`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Add experimental Workflow event subscriptions to local development
+
+  Local Workflow instances now implement `subscribe()`, returning a disposable RPC subscription that streams historical and live lifecycle events. Subscriptions support event cursors and type filters and include Workflow inputs, status transitions, step configuration, outputs, errors, retries, waits, and rollback activity where applicable.
+
 ## 5.20260911.0-alpha
 
 ### Patch Changes

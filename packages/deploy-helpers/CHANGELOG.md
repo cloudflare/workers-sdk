@@ -1,5 +1,17 @@
 # @cloudflare/deploy-helpers
 
+## 0.11.2
+
+### Patch Changes
+
+- [#15606](https://github.com/cloudflare/workers-sdk/pull/15606) [`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d) Thanks [@emily-shen](https://github.com/emily-shen)! - refactor: separate container config from worker/generic config access
+
+- Updated dependencies [[`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3), [`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d)]:
+  - miniflare@5.20260911.1-alpha
+  - @cloudflare/containers-shared@0.16.2
+  - @cloudflare/workers-utils@0.38.1
+  - @cloudflare/cli-shared-helpers@0.1.30
+
 ## 0.11.1
 
 ### Patch Changes
