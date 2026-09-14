@@ -106,6 +106,8 @@ async function getLatestVersion(
 /**
  * Pick the version to recommend from a packument.
  *
+ * @param packument - The package's abbreviated packument from the npm registry
+ * @param distTag - The dist tag whose version should be recommended
  * @returns The version behind `distTag`, unless it has been deprecated, in
  *   which case the newest non-deprecated stable release below it — or `null`
  *   when there is nothing suitable to recommend.
@@ -144,10 +146,7 @@ function pickLatestVersion(
 }
 
 async function fetchPackument(name: string): Promise<AbbreviatedPackument> {
-	const packageUrl = new URL(
-		encodeURIComponent(name).replace(/^%40/, "@"),
-		NPM_REGISTRY_URL
-	);
+	const packageUrl = new URL(encodeURIComponent(name), NPM_REGISTRY_URL);
 	const response = await fetch(packageUrl, {
 		headers: {
 			accept:
