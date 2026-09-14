@@ -56,7 +56,7 @@ describe("fetchLatestNpmVersion", () => {
 		mockAgent
 			.get(REGISTRY_ORIGIN)
 			.intercept({
-				path: `/${encodeURIComponent(name).replace(/^%40/, "@")}`,
+				path: `/${encodeURIComponent(name)}`,
 				method: "GET",
 			})
 			.reply(status, body)
