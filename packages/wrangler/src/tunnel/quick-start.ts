@@ -12,10 +12,11 @@ import { confirm } from "../dialogs";
  * without needing to create it via the API first.
  *
  * Uses the Try Cloudflare / Quick Tunnel feature:
- * https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/do-more-with-tunnels/trycloudflare/
+ * https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/
  *
  * Quick tunnels:
- * - Don't require a Cloudflare account or authentication
+ * - Don't require a Cloudflare account
+ * - Can optionally require email authentication
  * - Are temporary and expire when the process stops
  * - Get a random *.trycloudflare.com subdomain
  * - Include automatic HTTPS and DDoS protection
@@ -36,6 +37,13 @@ export const tunnelQuickStartCommand = createCommand({
 			demandOption: true,
 			description: "The local URL to expose (e.g., http://localhost:3000)",
 		},
+		"allowed-mail": {
+			type: "string",
+			array: true,
+			nargs: 1,
+			description:
+				"Require email authentication. Accepts an exact address or domain wildcard such as user@example.com or *@example.org. May be repeated or comma-separated.",
+		},
 		"log-level": {
 			type: "string",
 			default: "info",
@@ -49,8 +57,8 @@ export const tunnelQuickStartCommand = createCommand({
 		logger.log(`Starting Quick Tunnel (https://try.cloudflare.com)`);
 		logger.log(`Local URL: ${args.url}`);
 
-		// Build cloudflared command for quick tunnel
-		// Using the --url flag without authentication creates a temporary tunnel
+		// Build the cloudflared command for a temporary tunnel, optionally with
+		// email authentication.
 		const cloudflaredArgs = [
 			"tunnel",
 			"--no-autoupdate",
@@ -58,6 +66,10 @@ export const tunnelQuickStartCommand = createCommand({
 			args.url,
 			"--loglevel",
 			args.logLevel || "info",
+			...(args.allowedMail ?? []).flatMap((allowedMail) => [
+				"--allowed-mail",
+				allowedMail,
+			]),
 		];
 
 		logger.log(`\nStarting cloudflared...`);
