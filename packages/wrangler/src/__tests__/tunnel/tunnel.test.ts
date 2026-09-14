@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { UserError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -303,7 +304,7 @@ describe("tunnel commands", () => {
 			const [calledArgs] = vi.mocked(spawnCloudflared).mock.calls[0] as [
 				string[],
 			];
-			expect(calledArgs).toEqual([
+			assert.deepStrictEqual(calledArgs, [
 				"tunnel",
 				"--no-autoupdate",
 				"--url",
