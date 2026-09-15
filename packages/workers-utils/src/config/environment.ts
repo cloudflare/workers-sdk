@@ -106,6 +106,13 @@ export type DurableObjectContainerImage =
 			 * Path to the Dockerfile Wrangler builds and pushes.
 			 */
 			dockerfile: string;
+			/**
+			 * Build context, relative to the Wrangler configuration file.
+			 * Defaults to the Dockerfile's directory.
+			 */
+			build_context?: string;
+			/** Variables available to the image only while it is being built. */
+			build_vars?: Record<string, string>;
 			image?: never;
 	  }
 	| {
@@ -114,6 +121,8 @@ export type DurableObjectContainerImage =
 			 */
 			image: string;
 			dockerfile?: never;
+			build_context?: never;
+			build_vars?: never;
 	  };
 
 /**
@@ -206,6 +215,9 @@ export type ContainerApp = {
 	 * Specify the observability behavior of this container application.
 	 *
 	 * When set, this overrides the root `observability` config for this container.
+	 * Durable Object-managed Containers only support enabling or disabling logs.
+	 * Their settings are application-wide, and omitted settings preserve the
+	 * existing application rather than inheriting root Worker observability.
 	 */
 	observability?: ContainerObservability;
 
@@ -213,8 +225,8 @@ export type ContainerApp = {
 	 * The scheduling policy of the application
 	 * @optional
 	 * `"durable_object"` makes each Durable Object instance own its Container.
-	 * In that mode, only `name`, `class_name`, `scheduling_policy`, and `images` are
-	 * supported on this entry.
+	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`, and
+	 * application-wide log `observability` are supported on this entry.
 	 *
 	 * @default "default"
 	 */

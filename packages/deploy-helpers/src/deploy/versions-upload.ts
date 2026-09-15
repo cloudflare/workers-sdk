@@ -239,7 +239,8 @@ async function uploadWorkerVersion(
 	addContainerImagesBinding(
 		durableObjectContainerConfig,
 		bindings,
-		preparedContainerImages ?? {}
+		preparedContainerImages ?? {},
+		{ exports: config.exports }
 	);
 
 	const placement = parseConfigPlacement(config);
@@ -259,7 +260,8 @@ async function uploadWorkerVersion(
 		modules,
 		containers: getContainerMetadata(
 			props.containers.source,
-			preparedContainerImages
+			preparedContainerImages,
+			{ exports: config.exports }
 		),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
@@ -499,6 +501,7 @@ async function uploadWorkerVersion(
 				versionId,
 				accountId,
 				scriptName,
+				updateExisting: false,
 			}
 		);
 	}
