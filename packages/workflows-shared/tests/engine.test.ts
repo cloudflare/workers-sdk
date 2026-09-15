@@ -4,6 +4,7 @@ import { NonRetryableError } from "cloudflare:workflows";
 import { afterEach, describe, it, vi } from "vitest";
 import workerdUnsafe from "workerd:unsafe";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
+import { REDACTED_STEP_OUTPUT } from "../src/context";
 import { ABORT_REASONS, isAbortError } from "../src/lib/errors";
 import { setTestWorkflowCallback } from "./test-entry";
 import {
@@ -2406,6 +2407,46 @@ describe("Engine - getStepOutput", () => {
 		});
 	});
 
+	it("returns binary output without exposing sensitive output", async ({
+		expect,
+	}) => {
+		const engineStub = await runWorkflow(
+			"GET-STEP-OUTPUT-PERSISTED-BINARY",
+			async (_event, step) => {
+				await step.do("binary step", async () => new Uint8Array([1, 2, 255]));
+				await step.do("sensitive step", { sensitive: "output" }, async () => ({
+					token: "super-secret",
+				}));
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(log) => log.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			const step = await (engine as Engine).getStepOutput({
+				name: "binary step-1",
+				type: "step",
+			});
+			expect(step.output).toBeInstanceOf(Uint8Array);
+			expect(Array.from(step.output as Uint8Array)).toEqual([1, 2, 255]);
+
+			const sensitive = await (engine as Engine).getStepOutput({
+				name: "sensitive step-1",
+				type: "step",
+			});
+			expect(sensitive.output).toBe(REDACTED_STEP_OUTPUT);
+		});
+	});
+
 	it("throws step_not_found for an unknown step", async ({ expect }) => {
 		const engineStub = await runWorkflow(
 			"STREAM-GET-STEP-OUTPUT-MISSING",
@@ -2514,6 +2555,43 @@ describe("Engine - getStepOutput", () => {
 			expect(result.status).toBe("errored");
 			expect(result.output).toBeNull();
 			expect(result.error?.message).toContain("boom");
+		});
+	});
+
+	it("returns the latest attempt error while retrying", async ({ expect }) => {
+		const engineStub = await runWorkflow(
+			"GET-STEP-OUTPUT-RETRYING-ERROR",
+			async (_event, step) => {
+				await step.do(
+					"retrying step",
+					{ retries: { limit: 1, delay: "30 seconds" } },
+					async () => {
+						throw new Error("retryable boom");
+					}
+				);
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(log) => log.event === InstanceEvent.ATTEMPT_FAILURE
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			const result = await (engine as Engine).getStepOutput({
+				name: "retrying step-1",
+				type: "step",
+			});
+			expect(result).toEqual({
+				status: "running",
+				error: { name: "Error", message: "retryable boom" },
+				output: null,
+			});
 		});
 	});
 });

@@ -1666,7 +1666,7 @@ const config = {
 							name: "attempt",
 							schema: {
 								type: "integer",
-								exclusiveMinimum: 0,
+								minimum: 1,
 								description:
 									"Specific attempt number to retrieve output or error for.",
 							},

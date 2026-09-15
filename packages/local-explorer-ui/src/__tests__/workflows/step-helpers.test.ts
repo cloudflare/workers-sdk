@@ -1,5 +1,9 @@
 import { describe, test } from "vitest";
-import { isTruncatedStreamPreview } from "../../components/workflows/helpers";
+import {
+	decodeUtf8Preview,
+	isTruncatedStreamPreview,
+	readCapped,
+} from "../../components/workflows/helpers";
 import {
 	getStepDisplayName,
 	getStepKey,
@@ -149,5 +153,44 @@ describe("isTruncatedStreamPreview", () => {
 		expect(isTruncatedStreamPreview({ foo: "bar" })).toBe(false);
 		expect(isTruncatedStreamPreview(undefined)).toBe(false);
 		expect(isTruncatedStreamPreview(42)).toBe(false);
+	});
+});
+
+describe("decodeUtf8Preview", () => {
+	test("ignores an incomplete character at a truncation boundary", ({
+		expect,
+	}) => {
+		expect(decodeUtf8Preview(Uint8Array.of(0x61, 0xe2, 0x82), true)).toBe("a");
+	});
+
+	test("rejects invalid UTF-8 that is not caused by truncation", ({
+		expect,
+	}) => {
+		expect(() =>
+			decodeUtf8Preview(Uint8Array.of(0xe2, 0x28, 0xa1), true)
+		).toThrow();
+	});
+});
+
+describe("readCapped", () => {
+	test("detects bytes beyond the cap without returning them", async ({
+		expect,
+	}) => {
+		const createStream = (...chunks: Uint8Array[]) =>
+			new ReadableStream<Uint8Array>({
+				start(controller) {
+					for (const chunk of chunks) {
+						controller.enqueue(chunk);
+					}
+					controller.close();
+				},
+			});
+
+		await expect(
+			readCapped(createStream(Uint8Array.of(1, 2, 3)), 3)
+		).resolves.toEqual({ bytes: Uint8Array.of(1, 2, 3), truncated: false });
+		await expect(
+			readCapped(createStream(Uint8Array.of(1, 2), Uint8Array.of(3, 4)), 3)
+		).resolves.toEqual({ bytes: Uint8Array.of(1, 2, 3), truncated: true });
 	});
 });

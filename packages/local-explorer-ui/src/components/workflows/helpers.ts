@@ -68,6 +68,44 @@ export function isTruncatedStreamPreview(value: unknown): value is string {
 	);
 }
 
+export function decodeUtf8Preview(
+	bytes: Uint8Array,
+	truncated: boolean
+): string {
+	return new TextDecoder("utf-8", { fatal: true }).decode(bytes, {
+		stream: truncated,
+	});
+}
+
+export async function readCapped(
+	stream: ReadableStream<Uint8Array>,
+	cap: number
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+	const reader = stream.getReader();
+	const buffer = new Uint8Array(cap + 1);
+	let byteLength = 0;
+	try {
+		while (byteLength <= cap) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			const retainedByteLength = Math.min(
+				value.byteLength,
+				buffer.byteLength - byteLength
+			);
+			buffer.set(value.subarray(0, retainedByteLength), byteLength);
+			byteLength += retainedByteLength;
+		}
+	} finally {
+		void reader.cancel().catch(() => {});
+	}
+	return {
+		bytes: buffer.subarray(0, Math.min(byteLength, cap)),
+		truncated: byteLength > cap,
+	};
+}
+
 export function formatJson(value: unknown): string {
 	if (value === null || value === undefined) {
 		return "N/A";

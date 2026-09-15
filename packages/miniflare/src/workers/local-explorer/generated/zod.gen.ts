@@ -1437,7 +1437,7 @@ export const zWorkflowsGetStepOutputData = z.object({
 	query: z.object({
 		name: z.string().min(1),
 		type: z.enum(["step", "waitForEvent"]),
-		attempt: z.int().optional(),
+		attempt: z.int().gte(1).optional(),
 	}),
 });
 

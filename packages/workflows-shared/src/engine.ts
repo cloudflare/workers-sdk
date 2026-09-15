@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { Context } from "./context";
+import { Context, REDACTED_STEP_OUTPUT } from "./context";
 import {
 	INSTANCE_METADATA,
 	InstanceEvent,
@@ -40,6 +40,7 @@ import {
 	createReplayReadableStream,
 	getInvalidStoredStreamOutputError,
 	getStoredStreamOutputPreview,
+	getStreamOutputMetaKey,
 	MAX_OUTPUT_SHOWN_IN_LOGS,
 	StreamOutputState,
 } from "./lib/streams";
@@ -663,8 +664,18 @@ export class Engine extends DurableObject<Env> {
 				(r) => r.event === InstanceEvent.WAIT_COMPLETE
 			);
 			if (waitComplete) {
+				const persistedEvent = await this.ctx.storage.get<Event>(
+					`${groupKey}-value`
+				);
 				const meta = waitComplete.metadata as { payload?: unknown };
-				return { status: complete, error: null, output: meta.payload ?? null };
+				return {
+					status: complete,
+					error: null,
+					output:
+						persistedEvent !== undefined
+							? (persistedEvent.payload ?? null)
+							: (meta.payload ?? null),
+				};
 			}
 			const timedOut = rows.find(
 				(r) => r.event === InstanceEvent.WAIT_TIMED_OUT
@@ -687,6 +698,37 @@ export class Engine extends DurableObject<Env> {
 			(r) => r.event === InstanceEvent.STEP_SUCCESS
 		);
 		if (stepSuccess) {
+			if (stepSuccess.metadata.result === REDACTED_STEP_OUTPUT) {
+				return {
+					status: complete,
+					error: null,
+					output: REDACTED_STEP_OUTPUT,
+				};
+			}
+			const persistedStreamMeta = await this.ctx.storage.get<StreamOutputMeta>(
+				getStreamOutputMetaKey(groupKey)
+			);
+			if (persistedStreamMeta !== undefined) {
+				const stream = this.replayStreamFromMeta({
+					cacheKey: groupKey,
+					meta: persistedStreamMeta,
+				});
+				if (stream !== undefined) {
+					return { status: complete, error: null, output: stream };
+				}
+			}
+
+			const persistedResult = await this.ctx.storage.get<{ value: unknown }>(
+				`${groupKey}-value`
+			);
+			if (persistedResult !== undefined) {
+				return {
+					status: complete,
+					error: null,
+					output: persistedResult.value ?? null,
+				};
+			}
+
 			const streamOutput = stepSuccess.metadata.streamOutput as
 				| { cacheKey: string; meta: StreamOutputMeta }
 				| undefined;
@@ -703,19 +745,15 @@ export class Engine extends DurableObject<Env> {
 			};
 		}
 
+		const lastAttemptFailure = [...rows]
+			.reverse()
+			.find((r) => r.event === InstanceEvent.ATTEMPT_FAILURE);
 		const stepFailed = rows.some((r) => r.event === InstanceEvent.STEP_FAILURE);
-		if (stepFailed) {
-			const lastAttemptFailure = [...rows]
-				.reverse()
-				.find((r) => r.event === InstanceEvent.ATTEMPT_FAILURE);
-			return {
-				status: errored,
-				error: toStepError(lastAttemptFailure?.metadata.error),
-				output: null,
-			};
-		}
-
-		return { status: running, error: null, output: null };
+		return {
+			status: stepFailed ? errored : running,
+			error: toStepError(lastAttemptFailure?.metadata.error),
+			output: null,
+		};
 	}
 
 	async setStatus(

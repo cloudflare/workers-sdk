@@ -4,9 +4,11 @@ import { memo, useEffect, useState, type JSX } from "react";
 import { workflowsGetStepOutput } from "../../api";
 import { CopyButton } from "./CopyButton";
 import {
+	decodeUtf8Preview,
 	formatDuration,
 	formatJson,
 	isTruncatedStreamPreview,
+	readCapped,
 } from "./helpers";
 import { ScrollableCodeBlock } from "./ScrollableCodeBlock";
 import { Timestamp } from "./Timestamp";
@@ -230,42 +232,6 @@ const DISPLAY_CAP_BYTES = 2 * 1024 * 1024;
 const DOWNLOAD_HINT =
 	"download the full output with `wrangler workflows instances step … --output <file>`";
 
-/**
- * Read up to `cap` bytes from a stream, then cancel it (so the rest is never
- * transferred). `truncated` is true when there was more beyond the cap.
- */
-async function readCapped(
-	stream: ReadableStream<Uint8Array>,
-	cap: number
-): Promise<{ bytes: Uint8Array; truncated: boolean }> {
-	const reader = stream.getReader();
-	const chunks: Uint8Array[] = [];
-	let received = 0;
-	let truncated = false;
-	try {
-		while (received < cap) {
-			const { done, value } = await reader.read();
-			if (done) {
-				break;
-			}
-			chunks.push(value);
-			received += value.byteLength;
-		}
-		if (received >= cap) {
-			truncated = !(await reader.read()).done;
-		}
-	} finally {
-		await reader.cancel().catch(() => {});
-	}
-	const bytes = new Uint8Array(received);
-	let offset = 0;
-	for (const chunk of chunks) {
-		bytes.set(chunk, offset);
-		offset += chunk.byteLength;
-	}
-	return { bytes, truncated };
-}
-
 // Lazily fetch the full output when the inline value is only a truncated stream
 // preview. Streamed outputs come back as octet-stream bytes, else flat JSON.
 function useFullStepOutput(
@@ -306,9 +272,7 @@ function useFullStepOutput(
 				}
 				if (contentType.includes("application/octet-stream")) {
 					try {
-						const text = new TextDecoder("utf-8", { fatal: true }).decode(
-							bytes
-						);
+						const text = decodeUtf8Preview(bytes, truncated);
 						setState({
 							status: "loaded",
 							text,

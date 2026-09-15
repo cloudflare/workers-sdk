@@ -101,6 +101,21 @@ describe("Local Explorer API validation", () => {
 				],
 			});
 		});
+
+		test("rejects non-positive and fractional workflow step attempts", async ({
+			expect,
+		}) => {
+			for (const attempt of ["0", "-1", "1.5"]) {
+				const response = await mf.dispatchFetch(
+					`${BASE_URL}/workflows/test-workflow/instances/test-instance/step?name=test-step-1&type=step&attempt=${attempt}`
+				);
+
+				expect(response.status).toBe(400);
+				expect(await response.json()).toMatchObject({
+					success: false,
+				});
+			}
+		});
 	});
 
 	describe("request body validation", () => {

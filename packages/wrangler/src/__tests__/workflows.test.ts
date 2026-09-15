@@ -3261,6 +3261,7 @@ describe("wrangler workflows", () => {
 				const url = new URL(request.url);
 				expect(url.searchParams.get("name")).toBe("greet-1");
 				expect(url.searchParams.get("type")).toBe("step");
+				expect(url.searchParams.get("attempt")).toBe("2");
 				return HttpResponse.json({
 					success: true,
 					errors: [],
@@ -3274,7 +3275,7 @@ describe("wrangler workflows", () => {
 			}, expect);
 
 			await runWrangler(
-				"workflows instances step some-workflow inst-1 --step greet-1"
+				"workflows instances step some-workflow inst-1 --step greet-1 --attempt 2"
 			);
 			expect(std.out).toContain(`"hello": "world"`);
 		});
@@ -3352,6 +3353,49 @@ describe("wrangler workflows", () => {
 			expect(std.out).toContain("streamed text output");
 		});
 
+		it("rejects streamed output that exceeds the stdout display cap", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const output = new Uint8Array(2 * 1024 * 1024 + 1).fill(0x78);
+			output.set(new TextEncoder().encode("oversized-output-marker"));
+			mockStepOutput(
+				async () =>
+					new HttpResponse(output, {
+						headers: { "content-type": "application/octet-stream" },
+					}),
+				expect
+			);
+
+			await expect(
+				runWrangler(
+					"workflows instances step some-workflow inst-1 --step big-1"
+				)
+			).rejects.toThrow("exceeds the 2 MiB stdout display limit");
+			expect(std.out).not.toContain("oversized-output-marker");
+		});
+
+		it("rejects binary streamed output written to stdout", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			mockStepOutput(
+				async () =>
+					new HttpResponse(new Uint8Array([0xff, 0xfe, 0xfd]), {
+						headers: { "content-type": "application/octet-stream" },
+					}),
+				expect
+			);
+
+			await expect(
+				runWrangler(
+					"workflows instances step some-workflow inst-1 --step binary-1"
+				)
+			).rejects.toThrow(
+				'Step "binary-1" returned binary output (3 bytes). Re-run with --output <file> to save it.'
+			);
+		});
+
 		it("rejects streamed output with --json", async ({ expect }) => {
 			writeWranglerConfig();
 			mockStepOutput(
@@ -3380,11 +3424,14 @@ describe("wrangler workflows", () => {
 			).rejects.toThrow("'--output' cannot be used with '--json'");
 		});
 
-		it("streams output to a file with --output", async ({ expect }) => {
+		it("streams binary output byte-for-byte to a file with --output", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
+			const output = new Uint8Array([0x00, 0xff, 0xfe, 0x80, 0x0a]);
 			mockStepOutput(
 				async () =>
-					new HttpResponse("streamed to disk", {
+					new HttpResponse(output, {
 						headers: { "content-type": "application/octet-stream" },
 					}),
 				expect
@@ -3393,7 +3440,9 @@ describe("wrangler workflows", () => {
 			await runWrangler(
 				"workflows instances step some-workflow inst-1 --step big-1 --output out.bin"
 			);
-			expect(fs.readFileSync("out.bin", "utf8")).toBe("streamed to disk");
+			expect(Array.from(fs.readFileSync("out.bin"))).toEqual(
+				Array.from(output)
+			);
 		});
 
 		it("prints the error for a failed step", async ({ expect }) => {
@@ -3426,6 +3475,20 @@ describe("wrangler workflows", () => {
 					"workflows instances step some-workflow inst-1 --step evt-1 --type waitForEvent --attempt 1"
 				)
 			).rejects.toThrow(/not supported when '--type' is 'waitForEvent'/);
+		});
+
+		it("rejects non-positive and fractional --attempt values", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			for (const attempt of [0, -1, 1.5]) {
+				await expect(
+					runWrangler(
+						`workflows instances step some-workflow inst-1 --step greet-1 --attempt ${attempt}`
+					)
+				).rejects.toThrow("--attempt must be a positive integer");
+			}
 		});
 	});
 });

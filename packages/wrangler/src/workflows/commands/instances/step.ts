@@ -12,6 +12,7 @@ import {
 	localWorkflowArgs,
 } from "../../local";
 import { getInstanceIdFromArgs, jsonWorkflowArgs } from "../../utils";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import type { Response } from "undici";
 
 interface StepOutputResult {
@@ -19,6 +20,8 @@ interface StepOutputResult {
 	error: { name: string; message: string } | null;
 	output: unknown;
 }
+
+const STEP_OUTPUT_DISPLAY_CAP_BYTES = 2 * 1024 * 1024;
 
 export const workflowsInstancesStepCommand = createCommand({
 	metadata: {
@@ -71,6 +74,14 @@ export const workflowsInstancesStepCommand = createCommand({
 		if (args.json && args.output !== undefined) {
 			throw new UserError("'--output' cannot be used with '--json'.", {
 				telemetryMessage: "workflows step output file with json",
+			});
+		}
+		if (
+			args.attempt !== undefined &&
+			(!Number.isInteger(args.attempt) || args.attempt < 1)
+		) {
+			throw new UserError("--attempt must be a positive integer", {
+				telemetryMessage: "workflows step output invalid attempt",
 			});
 		}
 		if (args.attempt !== undefined && args.type === "waitForEvent") {
@@ -133,23 +144,33 @@ async function renderStepOutput(
 				{ telemetryMessage: "workflows step output stream with json" }
 			);
 		}
+		if (!response.body) {
+			throw new UserError("Step output response had no body.", {
+				telemetryMessage: "workflows step output empty body",
+			});
+		}
 		if (outputFile) {
-			if (!response.body) {
-				throw new UserError("Step output response had no body.", {
-					telemetryMessage: "workflows step output empty body",
-				});
-			}
 			// Stream to disk so arbitrarily large outputs never buffer in memory.
 			await pipeline(
-				Readable.fromWeb(
-					response.body as unknown as import("node:stream/web").ReadableStream
-				),
+				Readable.fromWeb(response.body as unknown as NodeReadableStream),
 				createWriteStream(outputFile)
 			);
 			logger.info(`Wrote step output to "${outputFile}"`);
 			return;
 		}
-		const bytes = new Uint8Array(await response.arrayBuffer());
+		const { bytes, exceededCap } = await readBodyWithDisplayCap(
+			response.body as unknown as NodeReadableStream<Uint8Array>,
+			STEP_OUTPUT_DISPLAY_CAP_BYTES
+		);
+		if (exceededCap) {
+			throw new UserError(
+				`Step "${stepName}" output exceeds the 2 MiB stdout display limit. Re-run with --output <file> to save the full output.`,
+				{
+					telemetryMessage:
+						"workflows step output exceeds stdout display limit",
+				}
+			);
+		}
 		try {
 			logger.log(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 		} catch {
@@ -197,4 +218,35 @@ async function renderStepOutput(
 		return;
 	}
 	logger.log(text);
+}
+
+async function readBodyWithDisplayCap(
+	body: NodeReadableStream<Uint8Array>,
+	capBytes: number
+): Promise<{ bytes: Uint8Array; exceededCap: boolean }> {
+	const reader = body.getReader();
+	const buffer = new Uint8Array(capBytes + 1);
+	let byteLength = 0;
+
+	try {
+		while (byteLength <= capBytes) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			const retainedByteLength = Math.min(
+				value.byteLength,
+				buffer.byteLength - byteLength
+			);
+			buffer.set(value.subarray(0, retainedByteLength), byteLength);
+			byteLength += retainedByteLength;
+		}
+	} finally {
+		void reader.cancel().catch(() => {});
+	}
+
+	return {
+		bytes: buffer.subarray(0, byteLength),
+		exceededCap: byteLength > capBytes,
+	};
 }
