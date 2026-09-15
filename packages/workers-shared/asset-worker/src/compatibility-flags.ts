@@ -1,4 +1,5 @@
 import type { AssetConfig } from "../../utils/types";
+import type { NormalizedAssetConfig } from "./types";
 
 interface CompatibilityFlag {
 	enable: `assets_${string}`;
@@ -46,7 +47,7 @@ export const resolveCompatibilityOptions = (configuration?: AssetConfig) => {
 };
 
 export const flagIsEnabled = (
-	configuration: Required<AssetConfig>,
+	configuration: NormalizedAssetConfig,
 	compatibilityFlag: (typeof COMPATIBILITY_FLAGS)[number]
 ) => {
 	return !!configuration.compatibility_flags.find(

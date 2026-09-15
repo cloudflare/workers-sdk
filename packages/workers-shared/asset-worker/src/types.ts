@@ -1,3 +1,7 @@
+import type { AssetConfig } from "../../utils/types";
+
+export type NormalizedAssetConfig = Required<AssetConfig>;
+
 export type Environment = "production" | "staging" | "fed-prod";
 
 export interface ReadyAnalytics {
