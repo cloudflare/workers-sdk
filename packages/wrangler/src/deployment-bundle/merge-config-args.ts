@@ -96,6 +96,11 @@ async function mergeSharedConfigArgs(
 		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
 		skipProvisioningConfigWriteback: false,
 		strict: args.strict ?? false,
+		containers: {
+			source: config.containers,
+			standard: { normalized: [], builtImages: [] },
+			durableObjects: { builtImages: [] },
+		},
 	};
 
 	const buildProps: BuildProps = {
@@ -138,7 +143,7 @@ export async function mergeDeployConfigArgs(
 	}));
 	const routes =
 		args.routes ?? config.routes ?? (config.route ? [config.route] : []);
-	const normalisedContainerConfig = await getNormalizedContainerOptions(
+	const normalizedContainerConfig = await getNormalizedContainerOptions(
 		config,
 		{
 			containersRollout: args.containersRollout,
@@ -162,8 +167,13 @@ export async function mergeDeployConfigArgs(
 			dispatchNamespace: args.dispatchNamespace,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
-			normalisedContainerConfig,
-			builtContainerDeployments: [],
+			containers: {
+				...shared.containers,
+				standard: {
+					normalized: normalizedContainerConfig,
+					builtImages: [],
+				},
+			},
 		},
 		buildProps: { ...buildProps, metafile: args.metafile },
 	};

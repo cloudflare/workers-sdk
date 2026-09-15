@@ -25,15 +25,13 @@ export type DockerfileContainerConfig = Exclude<
 	ImageURIConfig
 >;
 
-export type BuiltContainerImage = {
-	containerConfig: DockerfileContainerConfig;
+export type BuiltImage = {
 	localTag: string;
 	localTagCleaned?: boolean;
 };
 
-export type BuiltContainerDeployment = {
+export type BuiltContainerImage = BuiltImage & {
 	container: DockerfileContainerConfig;
-	builtImage: BuiltContainerImage;
 };
 
 export function isDockerfileContainerConfig(
@@ -251,7 +249,7 @@ async function tagAndPushImage({
 /**
  * Checks the remote manifest to see if there are changes, and only push if there are
  */
-async function pushImageIfChanged({
+export async function pushImageIfChanged({
 	pathToDocker,
 	sourceTag,
 	targetTag,
@@ -591,7 +589,7 @@ async function buildContainerImage(
 		});
 		await build.ready;
 
-		return { containerConfig, localTag };
+		return { container: containerConfig, localTag };
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message, {
@@ -617,19 +615,23 @@ export async function buildContainerImages(
 	containers: ContainerNormalizedConfig[],
 	pathToDocker: string,
 	verifyDockerIsRunning?: boolean
-): Promise<BuiltContainerDeployment[]> {
-	const builtContainerDeployments: BuiltContainerDeployment[] = [];
-	for (const container of containers.filter(isDockerfileContainerConfig)) {
-		builtContainerDeployments.push({
-			container,
-			builtImage: await buildContainerImage(
-				container,
-				pathToDocker,
-				verifyDockerIsRunning
-			),
-		});
+): Promise<BuiltContainerImage[]> {
+	const builtImages: BuiltContainerImage[] = [];
+	try {
+		for (const container of containers.filter(isDockerfileContainerConfig)) {
+			builtImages.push(
+				await buildContainerImage(
+					container,
+					pathToDocker,
+					verifyDockerIsRunning
+				)
+			);
+		}
+	} catch (error) {
+		await cleanupBuiltImages(builtImages, pathToDocker);
+		throw error;
 	}
-	return builtContainerDeployments;
+	return builtImages;
 }
 
 /**
@@ -653,8 +655,8 @@ export async function pushBuiltContainerImage(
 		const imageRef = await pushImageIfChanged({
 			pathToDocker,
 			sourceTag: builtImage.localTag,
-			targetTag: getContainerImageTag(builtImage.containerConfig, versionId),
-			containerConfig: builtImage.containerConfig,
+			targetTag: getContainerImageTag(builtImage.container, versionId),
+			containerConfig: builtImage.container,
 			accountId,
 			complianceConfig,
 			cleanupSourceTag: true,
@@ -675,31 +677,42 @@ export async function pushBuiltContainerImage(
 }
 
 /**
- * Removes local Docker image tags created while building container images for
- * deployment. Cleanup is best-effort so it does not hide the original deploy
- * failure that triggered it.
+ * Removes local Docker image tags created during a build.
+ * Shared tags are removed once, and cleanup recorded on any alias applies to all aliases.
  *
- * @param builtContainerDeployments - Built Dockerfile-based container images.
+ * @param builtImages - Built images to clean up.
  * @param pathToDocker - Path to the Docker CLI executable.
  */
-export async function cleanupBuiltContainerImages(
-	builtContainerDeployments: BuiltContainerDeployment[],
+export async function cleanupBuiltImages<T extends BuiltImage>(
+	builtImages: T[],
 	pathToDocker: string
 ): Promise<void> {
-	for (const { builtImage } of builtContainerDeployments) {
-		if (builtImage.localTagCleaned) {
-			continue;
+	const aliasesByTag = new Map<string, T[]>();
+	for (const builtImage of builtImages) {
+		const aliases = aliasesByTag.get(builtImage.localTag);
+		if (aliases) {
+			aliases.push(builtImage);
+		} else {
+			aliasesByTag.set(builtImage.localTag, [builtImage]);
 		}
-		try {
-			logger.debug(`Untagging built image: ${builtImage.localTag}.`);
-			await runDockerCmd(pathToDocker, ["image", "rm", builtImage.localTag]);
-			builtImage.localTagCleaned = true;
-		} catch (error) {
-			if (error instanceof Error) {
-				logger.debug(
-					`Cleaning up built image ${builtImage.localTag} failed with error: ${error.message}`
-				);
+	}
+
+	for (const [localTag, aliases] of aliasesByTag) {
+		if (!aliases.some((alias) => alias.localTagCleaned)) {
+			try {
+				logger.debug(`Untagging built image: ${localTag}.`);
+				await runDockerCmd(pathToDocker, ["image", "rm", localTag]);
+			} catch (error) {
+				if (error instanceof Error) {
+					logger.debug(
+						`Cleaning up built image ${localTag} failed with error: ${error.message}`
+					);
+				}
+				continue;
 			}
+		}
+		for (const alias of aliases) {
+			alias.localTagCleaned = true;
 		}
 	}
 }

@@ -389,6 +389,10 @@ export function getBindingValue(binding: Binding): string {
 			return String(binding.queue_name ?? "");
 		case "vectorize":
 			return String(binding.index_name ?? "");
+		case "ai_search_namespace":
+			return String(binding.namespace ?? "");
+		case "ai_search":
+			return String(binding.instance_name ?? "");
 		case "hyperdrive":
 			return String(binding.id ?? "");
 		case "analytics_engine":
@@ -512,6 +516,20 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[vectorize.binding] = {
 			type: "vectorize",
 			index_name: vectorize.index_name,
+		};
+	}
+
+	for (const ns of previews?.ai_search_namespaces ?? []) {
+		env[ns.binding] = {
+			type: "ai_search_namespace",
+			namespace: ns.namespace,
+		};
+	}
+
+	for (const search of previews?.ai_search ?? []) {
+		env[search.binding] = {
+			type: "ai_search",
+			instance_name: search.instance_name,
 		};
 	}
 

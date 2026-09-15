@@ -26,6 +26,7 @@ export interface Binding {
 	bucket_name?: string;
 	jurisdiction?: string;
 	index_name?: string;
+	instance_name?: string;
 	id?: string;
 	service?: string;
 	environment?: string;
@@ -116,6 +117,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	compatibility_date?: string;
 	compatibility_flags?: string[];
+	exports?: CfWorkerInit["exports"];
 	annotations?: {
 		"workers/commit_sha"?: string;
 		"workers/message"?: string;

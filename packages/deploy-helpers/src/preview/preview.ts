@@ -2,6 +2,7 @@ import path from "node:path";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	configFileName,
+	formatConfigSnippet,
 	getBindingTypeFriendlyName,
 	getDockerPath,
 	UserError,
@@ -9,6 +10,7 @@ import {
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
+import { parseBulkInputToObject } from "../deploy/helpers/parse-bulk-input";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
 import { confirm, logger } from "../shared/context";
@@ -50,7 +52,11 @@ import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	Config,
 	ContainerApp,
+	CustomDomainRoute,
+	Exports,
 	PreviewsConfig,
+	RawEnvironment,
+	Route,
 } from "@cloudflare/workers-utils";
 
 export type PreviewArgs = {
@@ -62,6 +68,9 @@ export type PreviewArgs = {
 	ignoreBaseConfig: boolean;
 	workerName?: string;
 	"worker-name"?: string;
+	secretsFile?: string;
+	/** Parsed `--var` args. CLI-only vars; config vars flow separately via `extractConfigBindings(config)`. */
+	cliVars?: Record<string, string>;
 };
 
 export type PreviewAssetsOptions = {
@@ -227,6 +236,21 @@ function buildPreviewContainerConfig(
 	};
 }
 
+function getPreviewExports(exports: Exports): Exports {
+	const previewExports = structuredClone(exports);
+	for (const configuredExport of Object.values(previewExports)) {
+		if (
+			configuredExport.type === "durable-object" &&
+			"container" in configuredExport
+		) {
+			// Preview containers link to Durable Objects by class name, not by the
+			// names used in the top level container config.
+			delete configuredExport.container;
+		}
+	}
+	return previewExports;
+}
+
 /**
  * Validate and normalise container config, and confirm Docker is installed
  * for any container built from a Dockerfile. Called before the preview
@@ -298,7 +322,119 @@ async function prepareContainersForPreview(
 }
 
 export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
+	"Note: This Preview deployment has no active URLs.";
+
+function isCustomDomainRoute(route: Route): route is CustomDomainRoute {
+	return typeof route === "object" && route.custom_domain === true;
+}
+
+function formatPreviewConfigUpdate(
+	config: Config,
+	update: RawEnvironment
+): string {
+	const configPath = config.userConfigPath ?? config.configPath;
+	if (!config.targetEnvironment) {
+		return formatConfigSnippet(update, configPath).trimEnd();
+	}
+
+	return formatConfigSnippet(
+		{ env: { [config.targetEnvironment]: update } },
+		configPath
+	).trimEnd();
+}
+
+export function formatNoActivePreviewUrlsMessage(config: Config): string {
+	const customDomainRouteEntries = (config.routes ?? [])
+		.filter(isCustomDomainRoute)
+		.map((route) => ({ route, singular: false }));
+	if (config.route && isCustomDomainRoute(config.route)) {
+		customDomainRouteEntries.push({ route: config.route, singular: true });
+	}
+	const customDomainRouteEntry =
+		customDomainRouteEntries.find(
+			({ route }) => route.previews_enabled === true
+		) ?? customDomainRouteEntries[0];
+	const customDomainRoute = customDomainRouteEntry?.route;
+	const customDomain = customDomainRoute?.pattern ?? "previews.example.com";
+	const configPath = config.userConfigPath ?? config.configPath;
+	const configName = configFileName(configPath);
+	const workersDevConfig = formatPreviewConfigUpdate(config, {
+		preview_urls: true,
+	});
+	const customDomainRouteConfig: CustomDomainRoute = {
+		...(customDomainRoute ?? {
+			pattern: customDomain,
+			custom_domain: true,
+			enabled: false,
+		}),
+		previews_enabled: true,
+	};
+	let customDomainConfigUpdate: RawEnvironment;
+	if (customDomainRouteEntry?.singular) {
+		customDomainConfigUpdate = { route: customDomainRouteConfig };
+	} else if (customDomainRoute) {
+		customDomainConfigUpdate = {
+			routes: (config.routes ?? []).map((route) =>
+				route === customDomainRoute ? customDomainRouteConfig : route
+			),
+		};
+	} else {
+		const routes = config.routes ?? (config.route ? [config.route] : []);
+		customDomainConfigUpdate = {
+			routes: [...routes, customDomainRouteConfig],
+		};
+	}
+	const customDomainConfig = formatPreviewConfigUpdate(
+		config,
+		customDomainConfigUpdate
+	);
+	let productionStatus = "disabled";
+	if (customDomainRoute?.enabled === true) {
+		productionStatus = "enabled";
+	} else if (customDomainRoute?.enabled === undefined && customDomainRoute) {
+		productionStatus = "enabled (default)";
+	}
+	const workersDevAlreadyConfigured = config.preview_urls === true;
+	const customDomainAlreadyConfigured =
+		customDomainRoute?.previews_enabled === true;
+	const cautionText =
+		workersDevAlreadyConfigured && customDomainAlreadyConfigured
+			? "Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again."
+			: "Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again.";
+	let workersDevInstruction = `Add this to your ${configName}:`;
+	if (config.preview_urls === true) {
+		workersDevInstruction = `Your ${configName} already contains:`;
+	} else if (config.preview_urls === false) {
+		workersDevInstruction = `Update this in your ${configName}:`;
+	}
+	let customDomainInstruction = `Add or update this route in your ${configName}:`;
+	if (customDomainRoute?.previews_enabled === true) {
+		customDomainInstruction = `Your ${configName} already contains:`;
+	} else if (customDomainRoute === undefined && config.route !== undefined) {
+		customDomainInstruction = `Replace \`route\` with this in your ${configName}:`;
+	}
+
+	return [
+		NO_ACTIVE_PREVIEW_URLS_MESSAGE,
+		"",
+		"For a Workers.dev URL such as:",
+		"  https://<preview-name>-<worker>.<subdomain>.workers.dev",
+		workersDevInstruction,
+		workersDevConfig,
+		"",
+		"For a custom-domain URL such as:",
+		`  https://<preview-name>.${customDomain}`,
+		customDomainInstruction,
+		customDomainConfig,
+		"Resulting route behavior:",
+		`  Production: ${productionStatus}`,
+		"  Previews: enabled",
+		"",
+		cautionText,
+		"",
+		"See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information.",
+	].join("\n");
+}
 
 function getPreviewMigrationsToUpload(
 	workerName: string,
@@ -411,6 +547,8 @@ async function assemblePreviewDeploymentSettings(
 		pullRequest?: PullRequestMetadata;
 		commitSha?: string;
 		assetsOptions?: PreviewAssetsOptions;
+		secrets?: Record<string, string>;
+		cliVars?: Record<string, string>;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -445,6 +583,9 @@ async function assemblePreviewDeploymentSettings(
 	}
 	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
 		request.compatibility_flags = config.compatibility_flags;
+	}
+	if (Object.keys(config.exports).length > 0) {
+		request.exports = getPreviewExports(config.exports);
 	}
 	const repositoryUrl = options.repositoryUrl;
 	const pullRequest = options.pullRequest;
@@ -550,6 +691,18 @@ async function assemblePreviewDeploymentSettings(
 	}
 
 	const env = extractConfigBindings(config);
+
+	// Vars from the CLI (--var) override same-named vars from the previews config
+	for (const [varName, varValue] of Object.entries(options.cliVars ?? {})) {
+		env[varName] = { type: "plain_text", text: varValue };
+	}
+
+	for (const [secretName, secretValue] of Object.entries(
+		options.secrets ?? {}
+	)) {
+		env[secretName] = { type: "secret_text", text: secretValue };
+	}
+
 	if (Object.keys(env).length > 0) {
 		request.env = env;
 	}
@@ -574,6 +727,7 @@ function formatUrlLines(label: string, urls: string[] | undefined): string[] {
 }
 
 function formatPreviewDeploymentSummary(
+	config: Config,
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
 	isNew: boolean,
@@ -600,7 +754,7 @@ function formatPreviewDeploymentSummary(
 				]
 			: []),
 		...formatUrlLines("Unique Deployment", deployment.urls),
-		...(hasActiveUrls ? [] : [NO_ACTIVE_PREVIEW_URLS_MESSAGE]),
+		...(hasActiveUrls ? [] : [formatNoActivePreviewUrlsMessage(config)]),
 	].join("\n");
 }
 
@@ -699,6 +853,13 @@ export async function preview(
 ): Promise<PreviewResult> {
 	const workerName = resolveWorkerName(args, config);
 
+	// Parse the secrets file up front so a bad path or malformed contents
+	// fails before the preview is created and assets are uploaded.
+	let secrets: Record<string, string> | undefined;
+	if (args.secretsFile) {
+		secrets = (await parseBulkInputToObject(args.secretsFile))?.content;
+	}
+
 	let previewName = args.name;
 	if (!previewName) {
 		previewName = getBranchName();
@@ -790,6 +951,8 @@ export async function preview(
 			pullRequest,
 			commitSha,
 			assetsOptions,
+			secrets,
+			cliVars: args.cliVars,
 		}
 	);
 	const deployment = await createPreviewDeployment(
@@ -799,6 +962,15 @@ export async function preview(
 		previewResource.id,
 		deploymentRequest
 	);
+	// The API may echo the uploaded env back on the deployment. Redact secret
+	// values as soon as it is received, before anything can log or return them
+	// (e.g. --json output) - matching `preview secret list`, which only ever
+	// outputs secret names and types.
+	for (const binding of Object.values(deployment.env ?? {})) {
+		if (binding.type === "secret_text") {
+			delete binding.text;
+		}
+	}
 
 	if (
 		normalisedContainerConfig.length > 0 &&
@@ -840,12 +1012,13 @@ export async function preview(
 			logMissingPreviewsBindingsWarning(
 				productionBindingsExpectedInPreview,
 				previewBaseConfig.env,
-				extractConfigBindings(config)
+				deploymentRequest.env ?? {}
 			);
 		}
 
 		logger.log(
 			formatPreviewDeploymentSummary(
+				config,
 				previewResource,
 				deployment,
 				isNewPreview,

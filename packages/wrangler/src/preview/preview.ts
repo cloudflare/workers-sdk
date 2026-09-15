@@ -8,6 +8,7 @@ import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import { cleanupDestination } from "../deployment-bundle/merge-config-args";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
+import { collectKeyValues } from "../utils/collectKeyValues";
 import { deployPreviewContainers, verifyContainersScope } from "./containers";
 import { ensurePreviewsConfig } from "./ensure-config";
 import { getProductionBindingsExpectedInPreview } from "./preview-config";
@@ -55,6 +56,18 @@ export const previewCommand = createCommand({
 		"worker-name": {
 			describe:
 				"Name of the Worker to target (defaults to the name in your local config file)",
+			type: "string",
+			requiresArg: true,
+		},
+		var: {
+			describe: "A key-value pair to be injected into the script as a variable",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		"secrets-file": {
+			describe:
+				"Path to a file containing secrets to upload with the Preview deployment (JSON or .env format)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -106,7 +119,7 @@ export const previewCommand = createCommand({
 
 		const { preview: previewResource, deployment } = await preview(
 			accountId,
-			args,
+			{ ...args, cliVars: collectKeyValues(args.var) },
 			previewConfig,
 			buildResult,
 			assetsOptions,

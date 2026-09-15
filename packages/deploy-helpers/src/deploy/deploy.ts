@@ -83,7 +83,11 @@ import {
 	patchNonVersionedScriptSettings,
 } from "./helpers/versions-api";
 import { addWorkersSitesBindings } from "./helpers/workers-sites-bindings";
-import type { DeployProps, WorkerBuildResult } from "../shared/types";
+import type {
+	ContainerlessConfig,
+	DeployProps,
+	WorkerBuildResult,
+} from "../shared/types";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
@@ -97,7 +101,6 @@ import type {
 	CfModule,
 	CfWorkerInit,
 	ComplianceConfig,
-	Config,
 	ExportsReconciliationResult,
 	LegacyAssetPaths,
 } from "@cloudflare/workers-utils";
@@ -123,9 +126,12 @@ export type DeployCallbacks = {
 				namespace: string | undefined;
 		  }>)
 		| undefined;
-	analyseBundle:
-		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
-		| undefined;
+	/**
+	 * @deprecated Startup profiling is provided by deploy-helpers automatically.
+	 */
+	analyseBundle?: (
+		workerBundle: string | FormData
+	) => Promise<Record<string, unknown>>;
 };
 
 type DeployResult = {
@@ -139,7 +145,7 @@ type DeployResult = {
 
 export default async function deploy(
 	props: DeployProps,
-	config: Config,
+	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
 	callbacks: DeployCallbacks
 ): Promise<DeployResult> {
@@ -169,7 +175,7 @@ export default async function deploy(
 
 async function deployWorker(
 	props: DeployProps,
-	config: Config,
+	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
 	callbacks: DeployCallbacks
 ): Promise<DeployResult> {
@@ -219,8 +225,11 @@ async function deployWorker(
 
 	const isDryRun = props.dryRun;
 
-	const normalisedContainerConfig = props.normalisedContainerConfig;
-	const builtContainerDeployments = props.builtContainerDeployments;
+	const normalisedContainerConfig = props.containers.standard.normalized;
+	const builtContainerImages = props.containers.standard.builtImages;
+	const durableObjectContainerConfig = getDurableObjectContainerApps(
+		props.containers.source
+	);
 	const shouldDeployContainers =
 		normalisedContainerConfig.length > 0 && props.containersRollout !== "none";
 	const {
@@ -234,25 +243,36 @@ async function deployWorker(
 	const skipContainerChanges = props.containersRollout === "none";
 	const preparedContainerImages = skipContainerChanges
 		? undefined
-		: await prepareDurableObjectContainerApplications(config, {
-				accountId,
-				dryRun: Boolean(isDryRun),
-				scriptName,
-				dispatchNamespace: props.dispatchNamespace,
-			});
+		: await prepareDurableObjectContainerApplications(
+				config,
+				durableObjectContainerConfig,
+				props.containers.durableObjects.builtImages,
+				{
+					accountId,
+					dryRun: Boolean(isDryRun),
+					scriptName,
+					dispatchNamespace: props.dispatchNamespace,
+				}
+			);
 	const rolloutSkipContainerState = skipContainerChanges
-		? await getContainerMetadataForRolloutSkip(config, {
-				accountId,
-				scriptName,
-				dispatchNamespace: props.dispatchNamespace,
-				workerExists,
-				latestDeployment,
-				dryRun: isDryRun,
-			})
+		? await getContainerMetadataForRolloutSkip(
+				config,
+				props.containers.source,
+				{
+					accountId,
+					scriptName,
+					dispatchNamespace: props.dispatchNamespace,
+					workerExists,
+					latestDeployment,
+					dryRun: isDryRun,
+				}
+			)
 		: undefined;
 	const containerMetadata = rolloutSkipContainerState
 		? rolloutSkipContainerState.containers
-		: getContainerMetadata(config, preparedContainerImages);
+		: getContainerMetadata(props.containers.source, preparedContainerImages, {
+				exports: config.exports,
+			});
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
 	const { migrations, exports } = await resolveExportsUploadPayload({
@@ -324,14 +344,25 @@ async function deployWorker(
 		workerExists,
 	});
 	if (!skipContainerChanges && keepVars && !isDryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(config, bindings, workerUrl);
+		await clearRemovedContainerImagesBindings(
+			config,
+			durableObjectContainerConfig,
+			bindings,
+			workerUrl
+		);
 	}
-	addContainerImagesBinding(config, bindings, preparedContainerImages ?? {}, {
-		preserveExisting: skipContainerChanges,
-		workerExists,
-		hasExistingBinding:
-			rolloutSkipContainerState?.hasExistingContainerImagesBinding,
-	});
+	addContainerImagesBinding(
+		durableObjectContainerConfig,
+		bindings,
+		preparedContainerImages ?? {},
+		{
+			preserveExisting: skipContainerChanges,
+			exports: config.exports,
+			workerExists,
+			hasExistingBinding:
+				rolloutSkipContainerState?.hasExistingContainerImagesBinding,
+		}
+	);
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
@@ -420,7 +451,7 @@ async function deployWorker(
 		migrations === undefined &&
 		!hasDurableObjectExports(config.exports) &&
 		!config.first_party_worker &&
-		config.containers === undefined &&
+		props.containers.source === undefined &&
 		// Rollout skip can recover Container metadata absent from local config.
 		containerMetadata === undefined;
 
@@ -446,7 +477,7 @@ async function deployWorker(
 			log: logger.log,
 			tailConsumers: config.tail_consumers,
 			streamingTailConsumers: config.streaming_tail_consumers,
-			containers: config.containers,
+			containers: props.containers.source,
 			warnIfNoBindings: true,
 			unsafeMetadata: config.unsafe?.metadata,
 		});
@@ -619,7 +650,7 @@ async function deployWorker(
 				log: logger.log,
 				tailConsumers: config.tail_consumers,
 				streamingTailConsumers: config.streaming_tail_consumers,
-				containers: config.containers,
+				containers: props.containers.source,
 				unsafeMetadata: config.unsafe?.metadata,
 			});
 			provisionBindingsResult?.warnOnSkippedProvisioning();
@@ -652,7 +683,7 @@ async function deployWorker(
 					log: logger.log,
 					tailConsumers: config.tail_consumers,
 					streamingTailConsumers: config.streaming_tail_consumers,
-					containers: config.containers,
+					containers: props.containers.source,
 					unsafeMetadata: config.unsafe?.metadata,
 				});
 			}
@@ -675,6 +706,7 @@ async function deployWorker(
 				dependencies,
 				workerBundle,
 				projectRoot,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
 				callbacks.analyseBundle
 			);
 			if (message !== null) {
@@ -759,17 +791,17 @@ async function deployWorker(
 		const containerDeployments: ResolvedContainerDeployment[] = [];
 		for (const container of normalisedContainerConfig) {
 			if ("dockerfile" in container) {
-				const builtContainerDeployment = builtContainerDeployments.find(
-					(deployment) => deployment.container === container
+				const builtImage = builtContainerImages.find(
+					(image) => image.container === container
 				);
 				assert(
-					builtContainerDeployment,
+					builtImage,
 					"Expected container image to be built before upload"
 				);
 				containerDeployments.push({
 					container,
 					imageRef: await pushBuiltContainerImage(
-						builtContainerDeployment.builtImage,
+						builtImage,
 						versionId,
 						dockerPath,
 						accountId,
@@ -790,21 +822,22 @@ async function deployWorker(
 			dispatchNamespace: props.dispatchNamespace,
 		});
 	}
-	if (
-		!skipContainerChanges &&
-		getDurableObjectContainerApps(config.containers).length > 0
-	) {
+	if (!skipContainerChanges && durableObjectContainerConfig.length > 0) {
 		assert(versionId && accountId);
 		try {
-			await deployDurableObjectContainerApplications(config, {
-				versionId,
-				accountId,
-				scriptName,
-				dispatchNamespace: props.dispatchNamespace,
-			});
+			await deployDurableObjectContainerApplications(
+				config,
+				durableObjectContainerConfig,
+				{
+					versionId,
+					accountId,
+					scriptName,
+					dispatchNamespace: props.dispatchNamespace,
+				}
+			);
 		} catch (error) {
 			throw new UserError(
-				"The Worker version was deployed, but Wrangler could not finish creating its Durable Object-managed Container applications. Re-run the same `wrangler deploy` command to retry the idempotent application creation and finish deployment.",
+				"The Worker version was deployed, but Wrangler could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command to retry and finish deployment.",
 				{
 					telemetryMessage:
 						"deploy durable object container application creation failed after deployment",
