@@ -132,7 +132,8 @@ export function receiveReply(
 	}
 	// Never yielded to the event loop here, and the caller is the only one with
 	// access to this port, so know this message is for this request
-	const message: WorkerResponse | undefined = receiveMessageOnPort(port)?.message;
+	const message: WorkerResponse | undefined =
+		receiveMessageOnPort(port)?.message;
 	assert(message?.id === id);
 	return message;
 }
@@ -180,11 +181,7 @@ export class SynchronousFetcher {
 			headers: init.headers,
 			body: init.body,
 		});
-		const message = receiveReply(
-			this.#notifyHandle,
-			this.#channel.port1,
-			id
-		);
+		const message = receiveReply(this.#notifyHandle, this.#channel.port1, id);
 		if ("response" in message) {
 			const { status, headers: rawHeaders, body } = message.response;
 			const headers = new Headers(rawHeaders);

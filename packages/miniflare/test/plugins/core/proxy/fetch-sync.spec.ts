@@ -84,8 +84,11 @@ test("receives a matching reply after its generation is published", async ({
 	expect,
 }) => {
 	const id = 0;
-	const { channel, exited, notifyHandle, staleWakes } =
-		await startReplyWorker(id, /* initialGeneration */ 0, /* staleWakeCount */ 0);
+	const { channel, exited, notifyHandle, staleWakes } = await startReplyWorker(
+		id,
+		/* initialGeneration */ 0,
+		/* staleWakeCount */ 0
+	);
 
 	const reply = receiveReply(notifyHandle, channel.port1, id);
 
@@ -106,8 +109,11 @@ test("absorbs stale notifications until the requested generation is published", 
 	expect,
 }) => {
 	const id = 1;
-	const { channel, exited, notifyHandle, staleWakes } =
-		await startReplyWorker(id, /* initialGeneration */ 0, /* staleWakeCount */ 2);
+	const { channel, exited, notifyHandle, staleWakes } = await startReplyWorker(
+		id,
+		/* initialGeneration */ 0,
+		/* staleWakeCount */ 2
+	);
 
 	// Regression for .changeset/quiet-otters-handshake.md: the first stale notify
 	// wakes receiveReply() with an empty queue. Requiring a second confirmed wake
