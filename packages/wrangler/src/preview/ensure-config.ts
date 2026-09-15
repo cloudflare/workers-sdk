@@ -38,8 +38,10 @@ function logConversionMessages(
 	messages: string[],
 	json: boolean | undefined
 ): void {
-	if (!json && messages.length > 0) {
-		logger.warn(messages.join("\n"));
+	if (!json) {
+		for (const message of messages) {
+			logger.warn(message);
+		}
 	}
 }
 

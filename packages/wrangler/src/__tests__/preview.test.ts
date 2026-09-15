@@ -16,6 +16,7 @@ import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
+import { logger } from "../logger";
 import { clearOutputFilePath } from "../output";
 import * as user from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -2103,8 +2104,12 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					kv_namespaces: [{ binding: "IMPORTANT_BINDING", id: "kv-id-123" }],
+					durable_objects: {
+						bindings: [{ name: "DO", class_name: "ProductionDO" }],
+					},
 				})
 			);
+			const warn = vi.spyOn(logger, "warn");
 
 			let thrown: unknown;
 			try {
@@ -2120,6 +2125,15 @@ describe("wrangler preview", () => {
 			expect(std.warn).toContain(
 				"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them."
 			);
+			const conversionWarnings = warn.mock.calls
+				.map(([message]) => message)
+				.filter(
+					(message) =>
+						typeof message === "string" &&
+						(message.startsWith("This Worker uses Durable Objects") ||
+							message.startsWith("Replace each <REPLACE_ME>"))
+				);
+			expect(conversionWarnings).toHaveLength(2);
 		});
 
 		test("emits one combined unsupported-settings warning", async ({
