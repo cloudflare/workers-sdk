@@ -8,9 +8,9 @@ import { blake3 } from "hash-wasm";
  * and instantiates its own WASM module behind a mutex while retaining its
  * file buffer.
  */
-export const initHash = async () => {
+export async function initHash() {
 	await blake3(new Uint8Array());
-};
+}
 
 export const hashFile = async (filepath: string) => {
 	const contents = readFileSync(filepath);
