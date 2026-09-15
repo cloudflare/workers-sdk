@@ -269,7 +269,7 @@ export const zWorkersKvBulkGetResult = z.object({
  */
 export const zWorkersKvKeyNameBulk = z.string().max(512);
 
-export const zWorkersKvBulkDelete = z.array(zWorkersKvKeyNameBulk);
+export const zWorkersKvBulkDelete = z.array(zWorkersKvKeyNameBulk).max(10000);
 
 export const zWorkersKvBulkResult = z.object({
 	successful_key_count: z.number().optional(),
@@ -283,16 +283,18 @@ export const zWorkersKvListMetadata = zWorkersKvAny.and(z.unknown());
  */
 export const zWorkersKvExpirationTtl = z.number().gte(60);
 
-export const zWorkersKvBulkWrite = z.array(
-	z.object({
-		base64: z.boolean().optional().default(false),
-		expiration: zWorkersKvExpiration.optional(),
-		expiration_ttl: zWorkersKvExpirationTtl.optional(),
-		key: zWorkersKvKeyNameBulk,
-		metadata: zWorkersKvListMetadata.optional(),
-		value: z.string().max(26214400),
-	})
-);
+export const zWorkersKvBulkWrite = z
+	.array(
+		z.object({
+			base64: z.boolean().optional().default(false),
+			expiration: zWorkersKvExpiration.optional(),
+			expiration_ttl: zWorkersKvExpirationTtl.optional(),
+			key: zWorkersKvKeyNameBulk,
+			metadata: zWorkersKvListMetadata.optional(),
+			value: z.string().max(26214400),
+		})
+	)
+	.max(10000);
 
 export const zWorkersKvMessages = z.array(
 	z.object({
@@ -728,7 +730,9 @@ export const zWorkersKvAnyWritable = z
 	])
 	.nullable();
 
-export const zWorkersKvBulkDeleteWritable = z.array(zWorkersKvKeyNameBulk);
+export const zWorkersKvBulkDeleteWritable = z
+	.array(zWorkersKvKeyNameBulk)
+	.max(10000);
 
 export const zWorkersKvListMetadataWritable = zWorkersKvAnyWritable.and(
 	z.unknown()

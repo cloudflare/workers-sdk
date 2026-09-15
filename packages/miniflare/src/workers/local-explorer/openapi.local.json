@@ -343,12 +343,13 @@
 		},
 		"/storage/kv/namespaces/{namespace_id}/bulk": {
 			"put": {
-				"description": "Write multiple keys and values at once. Body should be an array of up to 10,000 key-value pairs to be stored, along with optional expiration information. Existing values and expirations will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored. The entire request size must be 100 megabytes or less.",
 				"operationId": "workers-kv-namespace-write-multiple-key-value-pairs",
+				"summary": "Write multiple key-value pairs",
+				"description": "Write multiple keys and values at once. Body should be an array of up to 10,000 key-value pairs to be stored, along with optional expiration information. Existing values and expirations will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored. The entire request size must be 100 megabytes or less.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "namespace_id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
@@ -356,17 +357,18 @@
 					}
 				],
 				"requestBody": {
+					"required": true,
 					"content": {
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/workers-kv_bulk_write"
 							}
 						}
-					},
-					"required": true
+					}
 				},
 				"responses": {
 					"200": {
+						"description": "Write multiple key-value pairs response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -385,10 +387,10 @@
 									]
 								}
 							}
-						},
-						"description": "Write multiple key-value pairs response."
+						}
 					},
 					"4XX": {
+						"description": "Write multiple key-value pairs response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -407,22 +409,21 @@
 									]
 								}
 							}
-						},
-						"description": "Write multiple key-value pairs response failure."
+						}
 					}
 				},
-				"summary": "Write multiple key-value pairs",
 				"tags": ["Workers KV Namespace"]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/bulk/delete": {
 			"post": {
-				"description": "Remove multiple KV pairs from the namespace. Body should be an array of up to 10,000 keys to be removed.",
 				"operationId": "workers-kv-namespace-delete-multiple-key-value-pairs",
+				"summary": "Delete multiple key-value pairs",
+				"description": "Remove multiple KV pairs from the namespace. Body should be an array of up to 10,000 keys to be removed.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "namespace_id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
@@ -430,17 +431,18 @@
 					}
 				],
 				"requestBody": {
+					"required": true,
 					"content": {
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/workers-kv_bulk_delete"
 							}
 						}
-					},
-					"required": true
+					}
 				},
 				"responses": {
 					"200": {
+						"description": "Delete multiple key-value pairs response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -459,10 +461,10 @@
 									]
 								}
 							}
-						},
-						"description": "Delete multiple key-value pairs response."
+						}
 					},
 					"4XX": {
+						"description": "Delete multiple key-value pairs response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -481,11 +483,9 @@
 									]
 								}
 							}
-						},
-						"description": "Delete multiple key-value pairs response failure."
+						}
 					}
 				},
-				"summary": "Delete multiple key-value pairs",
 				"tags": ["Workers KV Namespace"]
 			}
 		},
@@ -3485,35 +3485,37 @@
 				"maxLength": 512
 			},
 			"workers-kv_bulk_delete": {
+				"type": "array",
 				"items": {
 					"$ref": "#/components/schemas/workers-kv_key_name_bulk"
 				},
-				"type": "array"
+				"maxItems": 10000
 			},
 			"workers-kv_bulk-result": {
+				"type": "object",
 				"properties": {
 					"successful_key_count": {
 						"description": "Number of keys successfully updated.",
-						"example": 100,
-						"type": "number"
+						"type": "number",
+						"example": 100
 					},
 					"unsuccessful_keys": {
 						"description": "Name of the keys that failed to be fully updated. They should be retried.",
+						"type": "array",
 						"items": {
 							"type": "string"
-						},
-						"type": "array"
+						}
 					}
-				},
-				"type": "object"
+				}
 			},
 			"workers-kv_bulk_write": {
+				"type": "array",
 				"items": {
 					"properties": {
 						"base64": {
-							"default": false,
 							"description": "Indicates whether or not the server should base64 decode the value before storing it. Useful for writing values that wouldn't otherwise be valid JSON strings, such as images.",
-							"type": "boolean"
+							"type": "boolean",
+							"default": false
 						},
 						"expiration": {
 							"$ref": "#/components/schemas/workers-kv_expiration"
@@ -3529,15 +3531,15 @@
 						},
 						"value": {
 							"description": "A UTF-8 encoded string to be stored, up to 25 MiB in length.",
+							"type": "string",
 							"example": "Some string",
-							"maxLength": 26214400,
-							"type": "string"
+							"maxLength": 26214400
 						}
 					},
 					"required": ["key", "value"],
 					"type": "object"
 				},
-				"type": "array"
+				"maxItems": 10000
 			},
 			"workers-kv_list_metadata": {
 				"allOf": [
@@ -3554,9 +3556,9 @@
 			},
 			"workers-kv_expiration_ttl": {
 				"description": "Expires the key after a number of seconds. Must be at least 60.",
+				"type": "number",
 				"example": 300,
-				"minimum": 60,
-				"type": "number"
+				"minimum": 60
 			},
 			"workers-kv_api-response-common-no-result": {
 				"allOf": [
