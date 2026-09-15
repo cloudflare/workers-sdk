@@ -1246,6 +1246,8 @@ export interface EnvironmentNonInheritable {
 		database_name?: string;
 		/** The UUID of this D1 database (not required). */
 		database_id?: string;
+		/** The jurisdiction where an automatically provisioned D1 database will be created. */
+		jurisdiction?: string;
 		/** The UUID of this D1 database for Wrangler Dev (if specified). */
 		preview_database_id?: string;
 		/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
