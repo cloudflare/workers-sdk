@@ -1,7 +1,6 @@
 import http from "node:http";
 import net from "node:net";
 import { DeferredPromise, Miniflare, Response } from "miniflare";
-import { WebSocketServer } from "ws";
 import {
 	afterEach,
 	assert,
@@ -12,6 +11,7 @@ import {
 	test,
 	vi,
 } from "vitest";
+import { WebSocketServer } from "ws";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
 
