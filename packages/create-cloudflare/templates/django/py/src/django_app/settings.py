@@ -1,6 +1,7 @@
 SECRET_KEY = ""
 DEBUG = False
-ALLOWED_HOSTS = []
+# Cloudflare routing validates the hostname before invoking this Worker.
+ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = []
 MIDDLEWARE = []
