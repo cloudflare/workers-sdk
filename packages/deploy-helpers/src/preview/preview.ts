@@ -2,7 +2,6 @@ import path from "node:path";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	configFileName,
-	getBindings,
 	getBindingTypeFriendlyName,
 	getDockerPath,
 	UserError,
@@ -102,6 +101,7 @@ export type PreviewResult = {
 // does need the deployment, since that's what resolves each container's DO
 // namespace_id, so it still runs after.
 export type PreviewCallbacks = {
+	productionBindingsExpectedInPreview?: Record<string, { type: string }>;
 	getNormalizedContainerOptions:
 		| ((
 				config: Config,
@@ -592,9 +592,6 @@ function formatPreviewDeploymentSummary(
 	return [
 		`${chalk.bold("Preview:")} ${previewResource.name} ${statusLabel}`,
 		...formatUrlLines("Preview", previewResource.urls),
-		"",
-		`${chalk.bold("Deployment ID:")} ${deployment.id}`,
-		...formatUrlLines("Deployment", deployment.urls),
 		...(pullRequestUrl || pullRequestNumber
 			? [
 					`${chalk.bold("Pull Request:")} ${
@@ -602,12 +599,13 @@ function formatPreviewDeploymentSummary(
 					}`,
 				]
 			: []),
+		...formatUrlLines("Unique Deployment", deployment.urls),
 		...(hasActiveUrls ? [] : [NO_ACTIVE_PREVIEW_URLS_MESSAGE]),
 	].join("\n");
 }
 
 function logMissingPreviewsBindingsWarning(
-	topLevelBindings: Record<string, { type: string }>,
+	productionBindingsExpectedInPreview: Record<string, { type: string }>,
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
 	localPreviewBindings: Record<string, Binding>
 ) {
@@ -615,27 +613,29 @@ function logMissingPreviewsBindingsWarning(
 		...Object.keys(remotePreviewDefaultBindings ?? {}),
 		...Object.keys(localPreviewBindings),
 	]);
-	const missingBindings = Object.fromEntries(
-		Object.entries(topLevelBindings).filter(
+	const missingPreviewBindings = Object.fromEntries(
+		Object.entries(productionBindingsExpectedInPreview).filter(
 			([name]) => !availableBindingNames.has(name)
 		)
 	);
 
-	if (Object.keys(missingBindings).length === 0) {
+	if (Object.keys(missingPreviewBindings).length === 0) {
 		return;
 	}
 
-	logger.warn(`Your configuration has diverged.
-The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker.
+	logger.warn(`These bindings are configured for your production Worker but not for Previews:
 
-${Object.entries(missingBindings)
+${Object.entries(missingPreviewBindings)
 	.map(
 		([name, binding]) =>
 			`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type as Parameters<typeof getBindingTypeFriendlyName>[0]))}`
 	)
 	.join("\n")}
 
-Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update the Previews settings of your Worker in the Cloudflare dashboard.`);
+Parts of your Worker that depend on these bindings may not work correctly in the Preview. If this is not intentional, add Preview-safe values to the ${chalk.cyan("previews")} field.
+
+Configuration: https://developers.cloudflare.com/workers/previews/configuration/
+Resources: https://developers.cloudflare.com/workers/previews/resources/`);
 }
 
 /**
@@ -829,6 +829,21 @@ export async function preview(
 			JSON.stringify({ preview: previewResource, deployment }, null, 2)
 		);
 	} else {
+		const productionBindingsExpectedInPreview =
+			callbacks.productionBindingsExpectedInPreview ?? {};
+		if (Object.keys(productionBindingsExpectedInPreview).length > 0) {
+			const previewBaseConfig = await getPreviewBaseConfig(
+				config,
+				accountId,
+				workerName
+			);
+			logMissingPreviewsBindingsWarning(
+				productionBindingsExpectedInPreview,
+				previewBaseConfig.env,
+				extractConfigBindings(config)
+			);
+		}
+
 		logger.log(
 			formatPreviewDeploymentSummary(
 				previewResource,
@@ -837,20 +852,6 @@ export async function preview(
 				pullRequest
 			)
 		);
-
-		const topLevelBindings = getBindings(config);
-		if (Object.keys(topLevelBindings).length > 0) {
-			const previewBaseConfig = await getPreviewBaseConfig(
-				config,
-				accountId,
-				workerName
-			);
-			logMissingPreviewsBindingsWarning(
-				topLevelBindings,
-				previewBaseConfig.env,
-				extractConfigBindings(config)
-			);
-		}
 	}
 
 	return { preview: previewResource, deployment, isNewPreview };
