@@ -1,6 +1,7 @@
 import http from "node:http";
 import net from "node:net";
 import { DeferredPromise, Miniflare, Response } from "miniflare";
+import { WebSocketServer } from "ws";
 import {
 	afterEach,
 	assert,
@@ -387,6 +388,9 @@ describe("handleWebSocket", () => {
 		const mf = await listen();
 
 		// Simulate Miniflare being disposed mid-upgrade: `dispatchFetch` rejects.
+		// No other `upgrade` listener claims the socket here, so the handler
+		// still tears it down (see below for the multi-listener case where it
+		// must not).
 		vi.spyOn(mf, "dispatchFetch").mockRejectedValue(
 			new Error("Cannot use disposed instance")
 		);
@@ -417,5 +421,67 @@ describe("handleWebSocket", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/15654
+	test("does not destroy WebSockets owned by another upgrade listener", async ({
+		expect,
+	}) => {
+		// Worker has no route for the DevTools path, so `dispatchFetch` yields
+		// no `webSocket` (404). The route owner is registered *after* the
+		// plugin handler, mirroring real dev server order (Vite HMR, plugin,
+		// DevTools). Node dispatches `upgrade` to every listener — the owner
+		// upgrades synchronously while the plugin is still awaiting
+		// `dispatchFetch`. The plugin must not destroy the socket it doesn't own.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				owner.handleUpgrade(request, socket, head, (ws) => {
+					owner.emit("connection", ws, request);
+				});
+			}
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Owner upgrades synchronously; the plugin's `dispatchFetch` round-trip
+		// completes after. Old code destroyed the socket here (client saw
+		// `onopen` then close `1006`).
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		// Give the plugin handler time to finish `dispatchFetch` and (incorrectly)
+		// destroy a socket it doesn't own.
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
 	});
 });
