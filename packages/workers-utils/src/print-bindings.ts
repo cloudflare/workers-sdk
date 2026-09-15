@@ -941,7 +941,7 @@ export function printBindings(
 			`${containersTitle}\n${containers
 				.map((container) =>
 					container.scheduling_policy === "durable_object"
-						? `- ${container.class_name} (durable_object)`
+						? `- ${container.class_name ?? container.name} (durable_object)`
 						: `- ${container.name} (${container.image})`
 				)
 				.join("\n")}`
