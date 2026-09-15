@@ -56,7 +56,6 @@ describe("cf-wrangler build", () => {
 			};`,
 			"index.html": "<h1>static</h1>",
 			".assetsignore": ".dev.vars*",
-			".cloudflare/custom.txt": "keep",
 		});
 
 		const exitCode = await runCfWranglerBuild({});
@@ -71,11 +70,6 @@ describe("cf-wrangler build", () => {
 		expect(fs.readFileSync(path.join(assetsDir, ".assetsignore"), "utf8")).toBe(
 			".dev.vars*"
 		);
-		expect(
-			fs.readFileSync(path.join(assetsDir, ".cloudflare/custom.txt"), "utf8")
-		).toBe("keep");
-		expect(fs.existsSync(path.join(assetsDir, ".cloudflare/output"))).toBe(
-			false
-		);
+		expect(fs.existsSync(path.join(assetsDir, ".cloudflare"))).toBe(false);
 	});
 });

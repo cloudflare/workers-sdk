@@ -109,62 +109,25 @@ async function writeAssets({
 	assetsOptions: AssetsOptions;
 }): Promise<void> {
 	const assetsDir = getWorkerAssetsDir(root);
-	await fsp.mkdir(assetsDir, { recursive: true });
-	const buildOutputDir = path.resolve(root, BUILD_OUTPUT_ROOT);
 
-	if (!isPathWithin(assetsOptions.directory, buildOutputDir)) {
+	if (path.resolve(assetsOptions.directory) !== path.resolve(root)) {
+		await fsp.mkdir(assetsDir, { recursive: true });
 		await fsp.cp(assetsOptions.directory, assetsDir, { recursive: true });
 		return;
 	}
 
-	await copyDirectoryExcluding(
-		assetsOptions.directory,
-		assetsDir,
-		buildOutputDir
-	);
-}
-
-/**
- * Copy a directory while omitting a nested directory that must not become part
- * of the copy. Ancestors of the excluded directory are traversed manually so
- * that other files alongside it are preserved.
- */
-async function copyDirectoryExcluding(
-	sourceDir: string,
-	destinationDir: string,
-	excludedDir: string
-): Promise<void> {
-	const entries = await fsp.readdir(sourceDir, { withFileTypes: true });
-
+	const entries = await fsp.readdir(assetsOptions.directory);
+	await fsp.mkdir(assetsDir, { recursive: true });
 	await Promise.all(
-		entries.map(async (entry) => {
-			const sourcePath = path.join(sourceDir, entry.name);
-			if (sourcePath === excludedDir) {
-				return;
-			}
-
-			const destinationPath = path.join(destinationDir, entry.name);
-			if (entry.isDirectory() && isPathWithin(sourcePath, excludedDir)) {
-				await copyDirectoryExcluding(sourcePath, destinationPath, excludedDir);
-				return;
-			}
-
-			await fsp.mkdir(path.dirname(destinationPath), { recursive: true });
-			await fsp.cp(sourcePath, destinationPath, { recursive: true });
-		})
-	);
-}
-
-/**
- * Check whether `candidatePath` is a strict descendant of `parentPath`.
- */
-function isPathWithin(parentPath: string, candidatePath: string): boolean {
-	const relativePath = path.relative(parentPath, candidatePath);
-	return (
-		relativePath !== "" &&
-		relativePath !== ".." &&
-		!relativePath.startsWith(`..${path.sep}`) &&
-		!path.isAbsolute(relativePath)
+		entries
+			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
+			.map((entry) =>
+				fsp.cp(
+					path.join(assetsOptions.directory, entry),
+					path.join(assetsDir, entry),
+					{ recursive: true }
+				)
+			)
 	);
 }
 
