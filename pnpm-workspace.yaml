@@ -102,6 +102,7 @@ patchedDependencies:
   "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
   "@netlify/build-info@10.5.1": "patches/@netlify__build-info@10.5.1.patch"
   "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
+  "vite@8.1.5": "patches/vite@8.1.5.patch"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Catalog
