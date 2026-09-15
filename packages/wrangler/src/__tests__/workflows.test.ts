@@ -2962,7 +2962,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "waitingForPause",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -2995,7 +2998,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "queued",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3029,7 +3035,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "terminated",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3060,7 +3069,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "terminated",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3142,7 +3154,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "queued",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3179,7 +3194,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "queued",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3323,7 +3341,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "waitingForPause",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3363,7 +3384,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "waitingForPause",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3374,7 +3398,10 @@ describe("wrangler workflows", () => {
 				);
 
 				expect(std.info).toMatchInlineSnapshot(`""`);
-				expect(JSON.parse(std.out)).toEqual({ success: true });
+				expect(JSON.parse(std.out)).toEqual({
+					status: "waitingForPause",
+					timestamp: "2026-01-01T00:00:00.000Z",
+				});
 			});
 		});
 	});
