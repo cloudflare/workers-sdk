@@ -1060,9 +1060,14 @@ export default {
 			});
 			useDispose(mf);
 
-			const { resultValue } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const response = await mf.dispatchFetch("https://localhost");
+			const responseText = await response.text();
+			if (!response.ok) {
+				throw new Error(responseText);
+			}
+			const { resultValue } = JSON.parse(responseText) as {
+				resultValue: number;
+			};
 
 			expect(resultValue).toBe(2);
 		}
