@@ -25,6 +25,18 @@ export async function applyMiddlewareLoaderFacade(
 	tmpDirPath: string,
 	middleware: MiddlewareLoader[]
 ): Promise<{ entry: Entry; inject?: string[] }> {
+	// Module middleware only wraps the default entrypoint. Named entrypoints are
+	// re-exported unchanged, so a module with only named exports has nothing to
+	// wrap. Skipping the facade also avoids generating an invalid default import.
+	// Synthesized module entries (eg pages) may have empty exports but still need middleware.
+	if (
+		entry.format === "modules" &&
+		entry.exports.length > 0 &&
+		!entry.exports.includes("default")
+	) {
+		return { entry };
+	}
+
 	// Firstly we need to insert the middleware array into the project,
 	// and then we load the middleware - this insertion and loading is
 	// different for each format.
