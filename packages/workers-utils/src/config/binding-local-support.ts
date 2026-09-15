@@ -38,7 +38,6 @@ const BINDING_LOCAL_SUPPORT: Record<
 	assets: "local-only",
 	unsafe_hello_world: "local-only",
 	durable_object_namespace: "local-only",
-	hyperdrive: "local-only",
 	fetcher: "local-only",
 	analytics_engine: "local-only",
 	secrets_store_secret: "local-only",
@@ -48,6 +47,9 @@ const BINDING_LOCAL_SUPPORT: Record<
 	kv_namespace: "local-and-remote",
 	r2_bucket: "local-and-remote",
 	d1: "local-and-remote",
+	// Hyperdrive has a local simulator (connects to a local database); `remote:
+	// true` opts into tunnelling to the deployed Hyperdrive config at the edge.
+	hyperdrive: "local-and-remote",
 	workflow: "local-only",
 	browser: "local-and-remote",
 	images: "local-and-remote",

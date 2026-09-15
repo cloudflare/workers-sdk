@@ -254,6 +254,7 @@ describe("proxy server creation", () => {
 					),
 				},
 			},
+			workerIndex: 0,
 			hyperdriveProxyController: controller,
 		} as unknown as Parameters<typeof HYPERDRIVE_PLUGIN.getServices>[0];
 	}
@@ -271,7 +272,7 @@ describe("proxy server creation", () => {
 		expect(controller.createProxyServer).not.toHaveBeenCalled();
 		expect(services).toEqual([
 			{
-				name: "hyperdrive:DB",
+				name: "hyperdrive:0:DB",
 				external: { address: "db.example.com:5432", tcp: {} },
 			},
 		]);
@@ -294,7 +295,7 @@ describe("proxy server creation", () => {
 		expect(controller.createProxyServer).not.toHaveBeenCalled();
 		expect(services).toEqual([
 			{
-				name: "hyperdrive:DB",
+				name: "hyperdrive:0:DB",
 				external: { address: "db.example.com:5432", tcp: {} },
 			},
 		]);
@@ -315,7 +316,7 @@ describe("proxy server creation", () => {
 		expect(controller.createProxyServer).not.toHaveBeenCalled();
 		expect(services).toEqual([
 			{
-				name: "hyperdrive:DB",
+				name: "hyperdrive:0:DB",
 				external: { address: "[::1]:5432", tcp: {} },
 			},
 		]);
@@ -336,7 +337,7 @@ describe("proxy server creation", () => {
 		expect(controller.createProxyServer).not.toHaveBeenCalled();
 		expect(services).toEqual([
 			{
-				name: "hyperdrive:DB",
+				name: "hyperdrive:0:DB",
 				external: { address: "db.example.com:3306", tcp: {} },
 			},
 		]);
@@ -356,7 +357,7 @@ describe("proxy server creation", () => {
 		);
 		expect(controller.createProxyServer).toHaveBeenCalledOnce();
 		expect(controller.createProxyServer).toHaveBeenCalledWith({
-			name: "DB",
+			name: "hyperdrive:0:DB",
 			targetHost: "db.example.com",
 			targetPort: "5432",
 			scheme: "postgres",
@@ -364,7 +365,7 @@ describe("proxy server creation", () => {
 		});
 		expect(services).toEqual([
 			{
-				name: "hyperdrive:DB",
+				name: "hyperdrive:0:DB",
 				external: { address: "127.0.0.1:12345", tcp: {} },
 			},
 		]);
@@ -384,7 +385,7 @@ describe("proxy server creation", () => {
 		);
 		expect(controller.createProxyServer).toHaveBeenCalledOnce();
 		expect(controller.createProxyServer).toHaveBeenCalledWith({
-			name: "DB",
+			name: "hyperdrive:0:DB",
 			targetHost: "db.example.com",
 			targetPort: "5432",
 			scheme: "postgres",
@@ -392,7 +393,7 @@ describe("proxy server creation", () => {
 		});
 		expect(services).toEqual([
 			{
-				name: "hyperdrive:DB",
+				name: "hyperdrive:0:DB",
 				external: { address: "127.0.0.1:12345", tcp: {} },
 			},
 		]);
@@ -412,7 +413,7 @@ describe("proxy server creation", () => {
 		);
 		expect(controller.createProxyServer).toHaveBeenCalledOnce();
 		expect(controller.createProxyServer).toHaveBeenCalledWith({
-			name: "DB",
+			name: "hyperdrive:0:DB",
 			targetHost: "db.example.com",
 			targetPort: "3306",
 			scheme: "mysql",
@@ -420,7 +421,7 @@ describe("proxy server creation", () => {
 		});
 		expect(services).toEqual([
 			{
-				name: "hyperdrive:DB",
+				name: "hyperdrive:0:DB",
 				external: { address: "127.0.0.1:12345", tcp: {} },
 			},
 		]);

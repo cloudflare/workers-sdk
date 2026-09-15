@@ -33,7 +33,10 @@ import type {
 	RawConfig,
 	RawEnvironment,
 } from "../../../../../workers-utils/src";
-import type { RemoteProxySession } from "../../remoteBindings";
+import type {
+	RemoteProxySession,
+	RemoteProxySessionData,
+} from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	RemoteProxyConnectionString,
@@ -180,21 +183,24 @@ export async function getPlatformProxy<
 		env,
 	});
 
-	let remoteProxySession: RemoteProxySession | undefined = undefined;
+	let remoteProxySessionData: RemoteProxySessionData | null = null;
 	if (config.configPath && options.remoteBindings !== false) {
-		remoteProxySession = (
+		remoteProxySessionData =
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,
 				environment: env,
-			})) ?? {}
-		).session;
+			})) ?? null;
 	}
+	const remoteProxySession: RemoteProxySession | undefined =
+		remoteProxySessionData?.session;
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig({
 		config,
 		options,
 		remoteProxyConnectionString:
 			remoteProxySession?.remoteProxyConnectionString,
+		hyperdriveConnectionStrings:
+			remoteProxySessionData?.hyperdriveConnectionStrings,
 	});
 
 	const mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
@@ -230,6 +236,11 @@ async function getMiniflareOptionsFromConfig(args: {
 	config: Config;
 	options: GetPlatformProxyOptions;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
+	/**
+	 * Edge credentials for remote Hyperdrive bindings, prepared once when the
+	 * remote proxy session started.
+	 */
+	hyperdriveConnectionStrings?: ReadonlyMap<string, string>;
 }): Promise<V4MiniflareOptions> {
 	const { config, options, remoteProxyConnectionString } = args;
 
@@ -299,7 +310,10 @@ async function getMiniflareOptionsFromConfig(args: {
 			containerBuildId: undefined,
 			enableContainers: config.dev.enable_containers,
 		},
-		remoteProxyConnectionString
+		remoteProxyConnectionString,
+		// Edge credentials for remote Hyperdrive bindings, prepared once when the
+		// remote proxy session started.
+		args.hyperdriveConnectionStrings
 	);
 
 	let processedAssetOptions: AssetsOptions | undefined;
@@ -401,6 +415,12 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		/**
+		 * Edge credentials for remote Hyperdrive bindings, prepared once when the
+		 * remote proxy session started (see `maybeStartOrUpdateRemoteProxySession`).
+		 * Without them a remote Hyperdrive binding cannot authenticate at the edge.
+		 */
+		hyperdriveConnectionStrings?: ReadonlyMap<string, string>;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -413,6 +433,12 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		/**
+		 * Edge credentials for remote Hyperdrive bindings, prepared once when the
+		 * remote proxy session started (see `maybeStartOrUpdateRemoteProxySession`).
+		 * Without them a remote Hyperdrive binding cannot authenticate at the edge.
+		 */
+		hyperdriveConnectionStrings?: ReadonlyMap<string, string>;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -426,6 +452,12 @@ export function unstable_getMiniflareWorkerOptions(
 	options?: {
 		envFiles?: string[];
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		/**
+		 * Edge credentials for remote Hyperdrive bindings, prepared once when the
+		 * remote proxy session started (see `maybeStartOrUpdateRemoteProxySession`).
+		 * Without them a remote Hyperdrive binding cannot authenticate at the edge.
+		 */
+		hyperdriveConnectionStrings?: ReadonlyMap<string, string>;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -478,7 +510,8 @@ export function unstable_getMiniflareWorkerOptions(
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
 		},
-		options?.remoteProxyConnectionString
+		options?.remoteProxyConnectionString,
+		options?.hyperdriveConnectionStrings
 	);
 
 	const sitesAssetPaths = getSiteAssetPaths(config);

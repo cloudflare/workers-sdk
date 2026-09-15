@@ -457,6 +457,8 @@ async function parseCustomPoolOptions(
 				},
 				remoteProxyConnectionString:
 					remoteProxySessionData?.session?.remoteProxyConnectionString,
+				hyperdriveConnectionStrings:
+					remoteProxySessionData?.hyperdriveConnectionStrings,
 			});
 
 		// If `main` wasn't explicitly configured, fall back to the config's entrypoint
