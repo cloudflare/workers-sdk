@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { startTunnel } from "@cloudflare/workers-utils";
+import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
 import { createDeferred } from "@cloudflare/workers-utils/test-helpers";
 import { createServer, preview } from "vite";
 import {
@@ -10,7 +10,6 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
-import * as wrangler from "wrangler";
 import { PluginContext } from "../context";
 import {
 	QUICK_TUNNEL_ALLOWED_HOST,
@@ -25,7 +24,17 @@ import type { TunnelConfig } from "../plugin-config";
 import type * as vite from "vite";
 
 vi.mock("@cloudflare/workers-utils");
-vi.mock("wrangler");
+vi.mock("../auth", () => ({
+	USER_AGENT: "vite-plugin/test",
+	createLogger: vi.fn(() => ({})),
+	createAuth: vi.fn(() => ({
+		requireAuth: vi.fn(
+			(options: { account_id?: string }) =>
+				options.account_id ?? "selected-account-id"
+		),
+		requireApiToken: vi.fn(() => ({ apiToken: "test-token" })),
+	})),
+}));
 
 function createMockPluginContext(options: {
 	type: "workers" | "preview";
@@ -290,6 +299,7 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: undefined,
 			complianceRegion: undefined,
+			profileDir: server.config.root,
 		});
 
 		await expect(
@@ -300,6 +310,7 @@ describe("tunnel plugin", () => {
 				allowedHosts: true,
 				accountId: undefined,
 				complianceRegion: undefined,
+				profileDir: server.config.root,
 			})
 		).rejects.toBe(disposeError);
 
@@ -499,7 +510,7 @@ describe("tunnel plugin", () => {
 	it("starts a named preview tunnel and keeps only allowed hosts", async ({
 		expect,
 	}) => {
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+		vi.mocked(resolveNamedTunnel).mockResolvedValue({
 			hostnames: [
 				"dev.example.com",
 				"preview.example.com",
@@ -534,12 +545,16 @@ describe("tunnel plugin", () => {
 
 		await setupPreviewTunnel(previewServer, ctx, tunnelManager);
 
-		expect(wrangler.unstable_resolveNamedTunnel).toHaveBeenCalledWith(
+		expect(resolveNamedTunnel).toHaveBeenCalledWith(
 			"my-tunnel",
 			expect.any(URL),
 			{
+				abortSignal: expect.any(AbortSignal),
 				accountId: "account-id",
+				apiToken: { apiToken: "test-token" },
 				complianceRegion: undefined,
+				logger: expect.any(Object),
+				userAgent: expect.stringMatching(/^vite-plugin\//),
 			}
 		);
 		expect(tunnelManager.publicUrls).toEqual([
@@ -551,7 +566,7 @@ describe("tunnel plugin", () => {
 	it("throws when no named preview tunnel hosts are allowed", async ({
 		expect,
 	}) => {
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+		vi.mocked(resolveNamedTunnel).mockResolvedValue({
 			hostnames: ["dev.example.com", "preview.example.com"],
 			token: "TOKEN",
 		});
@@ -589,15 +604,23 @@ describe("tunnel plugin", () => {
 		`);
 	});
 
-	it("cancels a named tunnel that is closed while still starting", async ({
+	it("cancels a named tunnel without clearing a replacement", async ({
 		expect,
 	}) => {
-		const namedTunnelDeferred = createDeferred<{
-			hostnames: string[];
-			token: string;
-		}>();
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
-			namedTunnelDeferred.promise
+		vi.mocked(resolveNamedTunnel).mockImplementation(
+			(_name, _origin, options) =>
+				new Promise((_resolve, reject) => {
+					const { abortSignal } = options;
+					if (abortSignal?.aborted) {
+						reject(abortSignal.reason);
+						return;
+					}
+					abortSignal?.addEventListener(
+						"abort",
+						() => reject(abortSignal.reason),
+						{ once: true }
+					);
+				})
 		);
 
 		const server = await createServer();
@@ -612,19 +635,29 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
+			profileDir: server.config.root,
 		});
 
 		expect(tunnelManager.isOpen()).toBe(true);
 		tunnelManager.dispose();
 
-		namedTunnelDeferred.resolve({
-			hostnames: ["dev.example.com"],
-			token: "TOKEN",
+		const replacementPromise = tunnelManager.startTunnel({
+			origin: "http://localhost:3001",
+			name: undefined,
+			mode: "dev",
+			allowedHosts: true,
+			accountId: "account-id",
+			complianceRegion: undefined,
+			profileDir: server.config.root,
 		});
 
 		await expect(startPromise).resolves.toBeNull();
-		expect(startTunnel).not.toHaveBeenCalled();
-		expect(tunnelManager.isOpen()).toBe(false);
+		await expect(replacementPromise).resolves.toEqual([
+			"https://example.trycloudflare.com/",
+		]);
+		expect(tunnelManager.isStarted("http://localhost:3001", undefined)).toBe(
+			true
+		);
 	});
 
 	it("logs tunnel closed only after tunnel startup begins", async ({
@@ -634,9 +667,7 @@ describe("tunnel plugin", () => {
 			hostnames: string[];
 			token: string;
 		}>();
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
-			namedTunnelDeferred.promise
-		);
+		vi.mocked(resolveNamedTunnel).mockReturnValue(namedTunnelDeferred.promise);
 
 		const server = await createServer();
 		const tunnelManager = new TunnelManager(server.config.logger);
@@ -660,6 +691,7 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
+			profileDir: server.config.root,
 		});
 
 		tunnelManager.dispose();
