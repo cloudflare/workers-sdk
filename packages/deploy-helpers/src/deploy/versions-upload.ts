@@ -70,6 +70,7 @@ import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
+/** Compatibility callback shape for existing deploy-helpers consumers. */
 export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
 type VersionsUploadResult = {
@@ -85,7 +86,7 @@ export default async function versionsUpload(
 	props: VersionsUploadProps,
 	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks
+	callbacks: VersionsUploadCallbacks = {}
 ): Promise<VersionsUploadResult> {
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
@@ -411,6 +412,7 @@ async function uploadWorkerVersion(
 				dependencies,
 				workerBundle,
 				projectRoot,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
 				callbacks.analyseBundle
 			);
 			if (message) {
