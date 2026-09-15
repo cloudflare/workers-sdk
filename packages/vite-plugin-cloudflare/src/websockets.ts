@@ -5,6 +5,7 @@ import { UNKNOWN_HOST } from "./shared";
 import { getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
+import type { Socket } from "node:net";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
 
@@ -78,7 +79,24 @@ export function handleWebSocket(
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
-					socket.destroy();
+					// Node dispatches `upgrade` to every registered listener, not just
+					// the first. Another listener (e.g. Vite DevTools at
+					// `/__devtools/__ws`, which uses no `vite`-prefixed subprotocol)
+					// may have already upgraded this socket while `dispatchFetch`
+					// was in flight. Destroying here would kill a socket we don't own
+					// (client sees `onopen` then close `1006`). If the Worker has no
+					// route, this upgrade isn't ours — just return and let the owner
+					// keep it.
+					// See https://github.com/cloudflare/workers-sdk/issues/15654
+					return;
+				}
+
+				// If another listener already claimed the socket while
+				// `dispatchFetch` was in flight (it already sent the 101 response),
+				// don't attempt a second upgrade — it would corrupt their connection.
+				// Likewise, the client may have disconnected in the meantime.
+				if (socket.destroyed || isSocketClaimed(socket)) {
+					workerResponseHeaders.delete(request);
 					return;
 				}
 
@@ -104,13 +122,30 @@ export function handleWebSocket(
 				// is still in flight (e.g. during dev server shutdown or restart).
 				// This listener is `async`, so an uncaught rejection here escapes as
 				// an unhandled rejection — which terminates the Node.js process on
-				// modern versions and leaks the client socket. Tear the socket down
-				// instead, mirroring the `!workerWebSocket` path above.
+				// modern versions and leaks the client socket.
+				// Only tear the socket down if no other listener claimed it in the
+				// meantime (see above) — otherwise we'd kill e.g. a DevTools
+				// connection that upgraded while we were awaiting `dispatchFetch`.
 				workerResponseHeaders.delete(request);
-				socket.destroy();
+				if (!socket.destroyed && !isSocketClaimed(socket)) {
+					socket.destroy();
+				}
 			}
 		}
 	);
+}
+
+/**
+ * Whether another `upgrade` listener has already claimed the socket by
+ * sending a response (e.g. the 101 Switching Protocols).
+ *
+ * Node emits `upgrade` to every listener; our handler awaits
+ * `dispatchFetch` (a `workerd` round-trip), so a synchronously-upgrading
+ * owner (e.g. Vite DevTools) will have non-zero `bytesWritten` by the time
+ * we resume. In that case we must neither destroy nor re-upgrade.
+ */
+function isSocketClaimed(socket: Duplex) {
+	return (socket as unknown as Socket).bytesWritten > 0;
 }
 
 /**
