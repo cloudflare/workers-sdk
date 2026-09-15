@@ -1,4 +1,5 @@
-import { execSync } from "child_process";
+import assert from "node:assert";
+import { execFileSync, spawnSync } from "node:child_process";
 import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import { createTestHarness } from "wrangler";
 
@@ -6,9 +7,9 @@ const isCINonLinux = process.platform !== "linux" && process.env.CI === "true";
 
 function isDockerRunning() {
 	try {
-		execSync("docker ps", { stdio: "ignore" });
+		execFileSync("docker", ["ps"], { stdio: "ignore" });
 		return true;
-	} catch (e) {
+	} catch {
 		return false;
 	}
 }
@@ -31,6 +32,7 @@ describe.skipIf(
 	const server = createTestHarness({
 		workers: [{ configPath: "./wrangler.jsonc" }],
 	});
+	let runtimeContainerIds: string[] = [];
 
 	beforeAll(async () => {
 		await server.listen();
@@ -38,6 +40,10 @@ describe.skipIf(
 
 	afterAll(async () => {
 		await server.close();
+		const remainingIds = runtimeContainerIds.filter(
+			(id) => spawnSync("docker", ["inspect", id]).status === 0
+		);
+		assert.deepStrictEqual(remainingIds, []);
 	});
 
 	test("starts and fetches from the container", async ({ expect }) => {
@@ -56,5 +62,15 @@ describe.skipIf(
 			},
 			{ interval: 500, timeout: 30_000 }
 		);
+
+		runtimeContainerIds = execFileSync(
+			"docker",
+			["ps", "-q", "--filter", "name=workerd-container-app"],
+			{ encoding: "utf8" }
+		)
+			.trim()
+			.split("\n")
+			.filter(Boolean);
+		expect(runtimeContainerIds).toHaveLength(2);
 	});
 });

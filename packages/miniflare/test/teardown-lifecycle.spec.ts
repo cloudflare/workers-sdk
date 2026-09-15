@@ -5,19 +5,41 @@ import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { singleModuleManifest } from "./test-shared";
 
-async function createReadyMiniflare(): Promise<Miniflare> {
+async function createReadyMiniflare(container = false): Promise<Miniflare> {
 	const mf = new Miniflare({
+		...(container
+			? {
+					containerEngine: {
+						localDocker: {
+							socketPath: "unix:///does-not-exist/miniflare-test.sock",
+						},
+					},
+				}
+			: {}),
 		workers: [
 			{
 				config: {
 					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
-					manifest: singleModuleManifest(`export default {
+					manifest: singleModuleManifest(`
+						export class ContainerObject {}
+						export default {
 						fetch() {
 							return new Response("ok");
 						}
 					}`),
+					...(container
+						? {
+								exports: {
+									ContainerObject: {
+										type: "durable-object" as const,
+										storage: "sqlite" as const,
+										container: { imageName: "example:latest" },
+									},
+								},
+							}
+						: {}),
 				},
 			},
 		],
@@ -26,14 +48,15 @@ async function createReadyMiniflare(): Promise<Miniflare> {
 	return mf;
 }
 
-function findKilledWorkerd(
-	kill: ReturnType<typeof vi.spyOn>
+function findSignalledWorkerd(
+	kill: ReturnType<typeof vi.spyOn>,
+	signal: NodeJS.Signals
 ): childProcess.ChildProcess | undefined {
 	for (let index = 0; index < kill.mock.calls.length; index++) {
-		const [signal] = kill.mock.calls[index];
+		const [calledSignal] = kill.mock.calls[index];
 		const child = kill.mock.contexts[index];
 		if (
-			signal === "SIGKILL" &&
+			calledSignal === signal &&
 			child instanceof childProcess.ChildProcess &&
 			path.basename(child.spawnfile).toLowerCase().startsWith("workerd")
 		) {
@@ -69,7 +92,7 @@ test("Miniflare: dispose requests workerd termination while proxy cleanup is pen
 	const disposePromise = mf.dispose();
 	try {
 		await proxyDisposeStarted;
-		expect(findKilledWorkerd(kill)).toBeDefined();
+		expect(findSignalledWorkerd(kill, "SIGKILL")).toBeDefined();
 	} finally {
 		releaseProxyDispose();
 		proxyDispose.mockRestore();
@@ -135,7 +158,7 @@ test("Miniflare: dispose waits for workerd exit and continues cleanup before ret
 		await runtimeExitObserved;
 		await new Promise<void>((resolve) => setImmediate(resolve));
 		expect(firstDisposeSettled).toBe(false);
-		expect(findKilledWorkerd(kill)).toBeDefined();
+		expect(findSignalledWorkerd(kill, "SIGKILL")).toBeDefined();
 
 		releaseRuntimeExit();
 		runtimeExitReleased = true;
@@ -155,4 +178,16 @@ test("Miniflare: dispose waits for workerd exit and continues cleanup before ret
 		await firstDisposeResult;
 		await mf.dispose().catch(() => {});
 	}
+});
+
+test("Miniflare: gracefully terminates workerd when the serialized config contains a container", async ({
+	expect,
+}) => {
+	const mf = await createReadyMiniflare(true);
+	const kill = vi.spyOn(childProcess.ChildProcess.prototype, "kill");
+
+	await mf.dispose();
+
+	expect(findSignalledWorkerd(kill, "SIGTERM")).toBeDefined();
+	expect(findSignalledWorkerd(kill, "SIGKILL")).toBeUndefined();
 });

@@ -51,6 +51,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		private numWorkers: number
 	) {
 		super(bus);
+		this.deferContainerCleanup = true;
 	}
 	// ******************
 	//   Event Handlers
@@ -386,8 +387,13 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}
 
-		await this.#mf?.dispose();
-		this.#mf = undefined;
+		try {
+			await this.#mf?.dispose();
+		} finally {
+			this.#mf = undefined;
+			process.off("exit", this.cleanupContainers);
+			this.cleanupContainers();
+		}
 
 		if (this.#remoteProxySessionsData.size > 0) {
 			logger.log(chalk.dim("⎔ Shutting down remote connections..."));

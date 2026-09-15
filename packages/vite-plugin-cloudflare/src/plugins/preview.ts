@@ -23,6 +23,8 @@ process.on("exit", () => {
  * Plugin to provide core preview functionality
  */
 export const previewPlugin = createPlugin("preview", (ctx) => {
+	let containerImageTags = new Set<string>();
+
 	return {
 		async configurePreviewServer(vitePreviewServer) {
 			assertIsPreview(ctx);
@@ -31,7 +33,23 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 			const closePreviewServer =
 				vitePreviewServer.close.bind(vitePreviewServer);
 			vitePreviewServer.close = async () => {
-				await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
+				try {
+					const [disposeResult, closeResult] = await Promise.allSettled([
+						ctx.disposeMiniflare(),
+						closePreviewServer(),
+					]);
+					if (disposeResult.status === "rejected") {
+						throw disposeResult.reason;
+					}
+					if (closeResult.status === "rejected") {
+						throw closeResult.reason;
+					}
+				} finally {
+					if (containerImageTags.size) {
+						cleanupContainers(getDockerPath(), containerImageTags);
+						containerImageTags.clear();
+					}
+				}
 			};
 
 			const { miniflareOptions, containerTagToOptionsMap } =
@@ -105,7 +123,7 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					complianceConfig: ctx.allWorkerConfigs[0],
 				});
 
-				const containerImageTags = new Set(containerTagToOptionsMap.keys());
+				containerImageTags = new Set(containerTagToOptionsMap.keys());
 				vitePreviewServer.config.logger.info(
 					colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 				);

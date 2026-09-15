@@ -268,6 +268,9 @@ export class LocalRuntimeController extends RuntimeController {
 	containerImageTagsSeen: Set<string> = new Set();
 	// Stored here, so it can be used in `cleanupContainers()`
 	dockerPath: string | undefined;
+	// MultiworkerRuntimeController owns a separate Miniflare instance and must
+	// defer container cleanup until that instance has shut down.
+	protected deferContainerCleanup = false;
 	// If this doesn't match what is in config, trigger a rebuild.
 	// Used for the rebuild hotkey
 	#currentContainerBuildId: string | undefined;
@@ -545,15 +548,20 @@ export class LocalRuntimeController extends RuntimeController {
 
 	#teardown = async (): Promise<void> => {
 		logger.debug("LocalRuntimeController teardown beginning...");
-		process.off("exit", this.cleanupContainers);
-		this.cleanupContainers();
 
 		if (this.#mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}
 
-		await this.#mf?.dispose();
-		this.#mf = undefined;
+		try {
+			await this.#mf?.dispose();
+		} finally {
+			this.#mf = undefined;
+			if (!this.deferContainerCleanup) {
+				process.off("exit", this.cleanupContainers);
+				this.cleanupContainers();
+			}
+		}
 
 		if (this.#remoteProxySessionData) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
