@@ -3,6 +3,7 @@ import { ReadableStream } from "node:stream/web";
 import {
 	MessageChannel,
 	receiveMessageOnPort,
+	type MessagePort,
 	Worker,
 } from "node:worker_threads";
 import { Headers } from "../../../http";
@@ -95,6 +96,28 @@ port.addEventListener("message", async (event) => {
 port.start();
 `;
 
+/**
+ * Blocks until the worker signals a reply, then receives and returns it.
+ *
+ * @param notifyHandle Shared notification flag set by the worker.
+ * @param port Port containing worker replies.
+ * @param id Request identifier whose reply should be received.
+ * @returns The matching worker reply.
+ */
+export function receiveReply(
+	notifyHandle: Int32Array,
+	port: MessagePort,
+	id: number
+): WorkerResponse {
+	// If index 0 contains value 0, block until wake-up notification
+	Atomics.wait(notifyHandle, /* index */ 0, /* value */ 0);
+	// Never yielded to the event loop here, and the caller is the only one with
+	// access to this port, so know this message is for this request
+	const message: WorkerResponse | undefined = receiveMessageOnPort(port)?.message;
+	assert(message?.id === id);
+	return message;
+}
+
 // Ideally we would just have a single, shared `unref()`ed `Worker`, and an
 // exported `fetchSync()` method. However, if a `ReadableStream` is transferred
 // from the worker, and not consumed, it will prevent the process from exiting.
@@ -139,14 +162,11 @@ export class SynchronousFetcher {
 			headers: init.headers,
 			body: init.body,
 		});
-		// If index 0 contains value 0, block until wake-up notification
-		Atomics.wait(this.#notifyHandle, /* index */ 0, /* value */ 0);
-		// Never yielded to the event loop here, and we're the only ones with access
-		// to port1, so know this message is for this request
-		const message: WorkerResponse | undefined = receiveMessageOnPort(
-			this.#channel.port1
-		)?.message;
-		assert(message?.id === id);
+		const message = receiveReply(
+			this.#notifyHandle,
+			this.#channel.port1,
+			id
+		);
 		if ("response" in message) {
 			const { status, headers: rawHeaders, body } = message.response;
 			const headers = new Headers(rawHeaders);
