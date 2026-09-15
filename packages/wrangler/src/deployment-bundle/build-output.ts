@@ -1,6 +1,7 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
+	BUILD_OUTPUT_ROOT,
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
@@ -108,10 +109,26 @@ async function writeAssets({
 	assetsOptions: AssetsOptions;
 }): Promise<void> {
 	const assetsDir = getWorkerAssetsDir(root);
+
+	if (path.resolve(assetsOptions.directory) !== path.resolve(root)) {
+		await fsp.mkdir(assetsDir, { recursive: true });
+		await fsp.cp(assetsOptions.directory, assetsDir, { recursive: true });
+		return;
+	}
+
+	const entries = await fsp.readdir(assetsOptions.directory);
 	await fsp.mkdir(assetsDir, { recursive: true });
-	await fsp.cp(assetsOptions.directory, assetsDir, {
-		recursive: true,
-	});
+	await Promise.all(
+		entries
+			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
+			.map((entry) =>
+				fsp.cp(
+					path.join(assetsOptions.directory, entry),
+					path.join(assetsDir, entry),
+					{ recursive: true }
+				)
+			)
+	);
 }
 
 async function writeBundleFile(
