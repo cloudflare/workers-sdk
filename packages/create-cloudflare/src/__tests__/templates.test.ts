@@ -198,6 +198,21 @@ describe("deriveCorrelatedArgs", () => {
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument"
 		);
 	});
+
+	test("derives the language for a single-language framework when accepting defaults", ({
+		expect,
+	}) => {
+		const args: Partial<C3Args> = {
+			acceptDefaults: true,
+			framework: "django",
+		};
+
+		deriveCorrelatedArgs(args);
+
+		expect(args.category).toBe("web-framework");
+		expect(args.type).toBe("web-framework");
+		expect(args.lang).toBe("python");
+	});
 });
 
 describe("getFrameworkMap", () => {
@@ -213,11 +228,23 @@ describe("getFrameworkMap", () => {
 		]) {
 			const config = frameworkMap[id];
 			expect(config).toMatchObject({ id, displayName, platform: "workers" });
-			expect("platformVariants" in config).toBe(false);
+			if (!config || "platformVariants" in config) {
+				throw new Error(`Expected ${id} to be a single-platform template`);
+			}
 			expect(config.copyFiles).toMatchObject({
 				variants: { python: { path: "./py" } },
 			});
 		}
+	});
+
+	test("excludes Python framework templates in experimental mode", ({
+		expect,
+	}) => {
+		const frameworkMap = getFrameworkMap({ experimental: true });
+
+		expect(frameworkMap).not.toHaveProperty("django");
+		expect(frameworkMap).not.toHaveProperty("fastapi");
+		expect(frameworkMap).not.toHaveProperty("flask");
 	});
 });
 

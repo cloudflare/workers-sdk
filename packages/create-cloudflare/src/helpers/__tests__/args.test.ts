@@ -73,6 +73,24 @@ describe("Cli", () => {
 			expect(result.args.additionalArgs).toEqual([]);
 		});
 
+		test("does not apply unrelated defaults to an explicit framework", async ({
+			expect,
+		}) => {
+			const result = await parseArgs([
+				"my-project",
+				"--framework",
+				"django",
+				"--accept-defaults",
+			]);
+
+			assert(result.type === "default");
+			expect(result.args.framework).toBe("django");
+			expect(result.args.category).toBeUndefined();
+			expect(result.args.type).toBeUndefined();
+			expect(result.args.lang).toBeUndefined();
+			expect(result.args.template).toBeUndefined();
+		});
+
 		test("parsing optional C3 arguments + additional arguments correctly", async ({
 			expect,
 		}) => {

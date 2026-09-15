@@ -88,7 +88,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "django",
-			argv: ["--lang", "python"],
+			argv: ["--accept-defaults"],
 			testCommitMessage: false,
 			verifyDeploy: {
 				route: "/",

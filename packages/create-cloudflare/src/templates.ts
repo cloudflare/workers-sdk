@@ -212,6 +212,28 @@ const templateSupportsLanguage = (
 	return true;
 };
 
+const getTemplateSupportedLanguages = (
+	config: TemplateConfig | MultiPlatformTemplateConfig,
+	platform?: C3Args["platform"]
+): string[] => {
+	const configs =
+		"platformVariants" in config
+			? platform
+				? [config.platformVariants[platform]]
+				: Object.values(config.platformVariants)
+			: [config];
+
+	return [
+		...new Set(
+			configs.flatMap(({ copyFiles }) =>
+				copyFiles && !isVariantInfo(copyFiles)
+					? Object.keys(copyFiles.variants)
+					: []
+			)
+		),
+	];
+};
+
 const filterTemplatesByLanguage = <
 	T extends TemplateConfig | MultiPlatformTemplateConfig,
 >(
@@ -247,10 +269,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			analog: analogTemplate,
 			angular: angularTemplate,
 			astro: astroTemplate,
-			django: djangoTemplate,
 			docusaurus: docusaurusTemplate,
-			fastapi: fastapiTemplate,
-			flask: flaskTemplate,
 			gatsby: gatsbyTemplate,
 			next: nextExperimentalTemplate,
 			nuxt: nuxtTemplate,
@@ -395,6 +414,26 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		}
 
 		args.lang = language;
+	}
+
+	// Derive language from the framework (ts, py)
+
+	if (
+		args.framework &&
+		args.lang === undefined &&
+		(args.acceptDefaults || args.wranglerDefaults)
+	) {
+		const frameworkConfig = getFrameworkMap({
+			experimental: args.experimental,
+		})[args.framework];
+		const supportedLanguages = frameworkConfig
+			? getTemplateSupportedLanguages(frameworkConfig, args.platform)
+			: [];
+
+		args.lang =
+			supportedLanguages.length === 1
+				? supportedLanguages[0]
+				: C3_DEFAULTS.lang;
 	}
 };
 
