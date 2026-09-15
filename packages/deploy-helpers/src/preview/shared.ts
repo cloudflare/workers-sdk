@@ -455,7 +455,11 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	for (const r2 of previews?.r2_buckets ?? []) {
-		env[r2.binding] = { type: "r2_bucket", bucket_name: r2.bucket_name };
+		env[r2.binding] = {
+			type: "r2_bucket",
+			bucket_name: r2.bucket_name,
+			jurisdiction: r2.jurisdiction,
+		};
 	}
 
 	for (const service of previews?.services ?? []) {
@@ -466,6 +470,7 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
+			environment: service.environment,
 			entrypoint: service.entrypoint,
 			...(crossAccountGrant !== undefined && {
 				cross_account_grant: crossAccountGrant,

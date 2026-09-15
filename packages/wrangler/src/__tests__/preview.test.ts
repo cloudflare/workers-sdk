@@ -16,6 +16,7 @@ import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
+import { logger } from "../logger";
 import { clearOutputFilePath } from "../output";
 import * as user from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -25,6 +26,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import {
+	readWranglerConfig,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
@@ -908,23 +910,43 @@ describe("wrangler preview", () => {
 
 		test("should extract r2_buckets", ({ expect }) => {
 			const config = configWithPreviews({
-				r2_buckets: [{ binding: "BUCKET", bucket_name: "my-bucket" }],
+				r2_buckets: [
+					{
+						binding: "BUCKET",
+						bucket_name: "my-bucket",
+						jurisdiction: "eu",
+					},
+				],
 			});
 			const bindings = extractConfigBindings(config);
 			expect(bindings).toMatchObject({
-				BUCKET: { type: "r2_bucket", bucket_name: "my-bucket" },
+				BUCKET: {
+					type: "r2_bucket",
+					bucket_name: "my-bucket",
+					jurisdiction: "eu",
+				},
 			});
 		});
 
 		test("should extract services", ({ expect }) => {
 			const config = configWithPreviews({
 				services: [
-					{ binding: "API", service: "api-worker", entrypoint: "default" },
+					{
+						binding: "API",
+						service: "api-worker",
+						environment: "staging",
+						entrypoint: "default",
+					},
 				],
 			});
 			const bindings = extractConfigBindings(config);
 			expect(bindings).toMatchObject({
-				API: { type: "service", service: "api-worker", entrypoint: "default" },
+				API: {
+					type: "service",
+					service: "api-worker",
+					environment: "staging",
+					entrypoint: "default",
+				},
 			});
 		});
 
@@ -1119,6 +1141,668 @@ describe("wrangler preview", () => {
 			);
 		});
 
+		describe("configuration onboarding", () => {
+			const { setIsTTY } = useMockIsTTY();
+			const addPreviewBaseConfigPrompt =
+				"Would you like Wrangler to add this configuration to your local configuration file?";
+			const namedEnvironmentsMessage =
+				"Wrangler found named environments in your configuration. Pass `--env <environment>` to target a named environment, or omit `--env` to target the top-level Worker.\nSee https://developers.cloudflare.com/workers/previews/compare-workflows/#wrangler-environments for more information.";
+			const previewBaseConfigMessage =
+				"Wrangler detected Preview configuration set via the Cloudflare Dashboard:";
+
+			test.for(["wrangler.json", "wrangler.toml"])(
+				"warns about named environments in $0 when --env is omitted",
+				async (configPath, { expect }) => {
+					writeWranglerConfig(
+						{
+							name: "test-worker",
+							main: "src/index.ts",
+							env: { staging: { vars: { API_HOST: "staging.example.com" } } },
+						},
+						configPath
+					);
+
+					await expect(
+						runWrangler(
+							`preview --name test-preview --config ${configPath} --ignore-base-config`
+						)
+					).rejects.toThrow("missing a `previews` block");
+
+					expect(
+						stripVTControlCharacters(std.warn).replace(/\s+/g, " ")
+					).toContain(namedEnvironmentsMessage.replace(/\s+/g, " "));
+				}
+			);
+
+			test("preserves environment diagnostics when --env is supplied", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						vars: { ENVIRONMENT: "production" },
+						env: { staging: {} },
+					},
+					"wrangler.json"
+				);
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --env staging --ignore-base-config"
+					)
+				).rejects.toThrow("missing a `previews` block");
+
+				expect(std.warn).toContain("env.staging");
+				expect(std.warn).toContain("not inherited by environments.");
+				expect(std.warn).not.toContain(namedEnvironmentsMessage);
+			});
+
+			test("does not emit human named-environment guidance in JSON mode", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						env: { staging: {} },
+					},
+					"wrangler.json"
+				);
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --json --ignore-base-config"
+					)
+				).rejects.toThrow("missing a `previews` block");
+
+				expect(std.warn).not.toContain(namedEnvironmentsMessage);
+			});
+
+			test.for(["wrangler.toml", "wrangler.json", "wrangler.jsonc"])(
+				"onboards a rich Preview Base into $0 and deploys it",
+				async (configPath, { expect }) => {
+					writeWranglerConfig(
+						{
+							name: "test-worker",
+							main: "src/index.ts",
+							compatibility_date: "2025-01-01",
+							vars: { ENVIRONMENT: "production" },
+							d1_databases: [
+								{
+									binding: "DB",
+									database_name: "production-database",
+									database_id: "production-database-id",
+								},
+							],
+						},
+						configPath
+					);
+					setIsTTY(true);
+					mockConfirm({
+						text: addPreviewBaseConfigPrompt,
+						options: { defaultValue: true },
+						result: true,
+					});
+					msw.use(
+						http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+							HttpResponse.json({
+								success: true,
+								result: {
+									previews_base_config: {
+										observability: {
+											enabled: true,
+											head_sampling_rate: 0.5,
+										},
+										logpush: true,
+										limits: { cpu_ms: 10, subrequests: 100 },
+										placement: { mode: "smart" },
+										cache: { enabled: true },
+										tail_consumers: [{ name: "tail-worker" }],
+										env: {
+											ENVIRONMENT: {
+												type: "plain_text",
+												text: "preview",
+											},
+											EMPTY_OBJECT: { type: "json", json: {} },
+											EMPTY_ARRAY: { type: "json", json: [] },
+											DB: { type: "d1", id: "preview-db-id" },
+											DB_CANONICAL: {
+												type: "d1",
+												database_id: "preview-db-canonical-id",
+												id: "preview-db-legacy-id",
+											},
+											AI: { type: "ai", staging: true },
+											SERVICE: {
+												type: "service",
+												service: "service-worker",
+												environment: "staging",
+												cross_account_grant: "must-not-be-printed",
+											},
+											OPAQUE: {
+												type: "custom_binding",
+												api_key: "must-not-be-printed",
+											},
+											PREVIEW_KEY: {
+												type: "secret_key",
+												key: "must-not-be-printed",
+											},
+										},
+									},
+								},
+							})
+						),
+						http.get(
+							`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+							() =>
+								HttpResponse.json({
+									success: true,
+									result: {
+										id: "preview-id",
+										name: "test-preview",
+										slug: "test-preview",
+										worker_name: "test-worker",
+										created_on: new Date().toISOString(),
+									},
+								})
+						),
+						http.patch(
+							`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+							async ({ request }) => {
+								expect(await request.json()).toEqual({
+									observability: {
+										enabled: true,
+										head_sampling_rate: 0.5,
+									},
+									logpush: true,
+									tail_consumers: [{ name: "tail-worker" }],
+								});
+								return HttpResponse.json({
+									success: true,
+									result: {
+										id: "preview-id",
+										name: "test-preview",
+										slug: "test-preview",
+										worker_name: "test-worker",
+										created_on: new Date().toISOString(),
+									},
+								});
+							}
+						),
+						http.post(
+							`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+							async ({ request }) => {
+								const deployment = await readPreviewDeploymentRequest(request);
+								expect(deployment).toMatchObject({
+									placement: { mode: "smart" },
+									limits: { cpu_ms: 10, subrequests: 100 },
+									cache: { enabled: true },
+									env: {
+										ENVIRONMENT: { type: "plain_text", text: "preview" },
+										EMPTY_OBJECT: { type: "json", json: {} },
+										EMPTY_ARRAY: { type: "json", json: [] },
+										DB: { type: "d1", database_id: "preview-db-id" },
+										DB_CANONICAL: {
+											type: "d1",
+											database_id: "preview-db-canonical-id",
+										},
+									},
+								});
+								expect(deployment.env).not.toHaveProperty("AI");
+								expect(deployment.env).not.toHaveProperty("SERVICE");
+								expect(JSON.stringify(deployment)).not.toContain(
+									"must-not-be-printed"
+								);
+								return HttpResponse.json({
+									success: true,
+									result: {
+										id: "deployment-id",
+										preview_id: "preview-id",
+										preview_name: "test-preview",
+										urls: [],
+										compatibility_date: "2025-01-01",
+										env: {
+											ENVIRONMENT: { type: "plain_text", text: "preview" },
+										},
+										created_on: new Date().toISOString(),
+									},
+								});
+							}
+						)
+					);
+
+					await runWrangler(
+						`preview --name test-preview --config ${configPath}`
+					);
+
+					expect(std.out).not.toContain("Deployment ID:");
+					expect(std.info).toContain(previewBaseConfigMessage);
+					expect(std.info).not.toContain("--ignore-base-config");
+					expect(std.info).not.toContain(
+						"The following remote values can be added"
+					);
+					expect(std.info).toContain("preview-db-id");
+					expect(std.info).not.toContain("production-database-id");
+					expect(std.warn).toContain(
+						"These settings have limitations in Worker Previews: Service Bindings."
+					);
+					expect(std.warn.replace(/\s+/g, " ")).toContain(
+						"Wrangler did not add them automatically. Review the limitations, then decide how you want to configure them for your Preview."
+					);
+					expect(`${std.out}${std.info}${std.warn}${std.err}`).not.toContain(
+						"must-not-be-printed"
+					);
+
+					expect(readWranglerConfig(configPath)).toMatchObject({
+						previews: {
+							observability: { enabled: true, head_sampling_rate: 0.5 },
+							logpush: true,
+							limits: { cpu_ms: 10, subrequests: 100 },
+							placement: { mode: "smart" },
+							cache: { enabled: true },
+							tail_consumers: [{ service: "tail-worker" }],
+							vars: {
+								ENVIRONMENT: "preview",
+								EMPTY_OBJECT: {},
+								EMPTY_ARRAY: [],
+							},
+							d1_databases: [
+								{ binding: "DB", database_id: "preview-db-id" },
+								{
+									binding: "DB_CANONICAL",
+									database_id: "preview-db-canonical-id",
+								},
+							],
+						},
+					});
+				}
+			);
+
+			test("shows and writes an environment-scoped Preview Base proposal", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						env: { staging: { name: "test-worker-staging" } },
+					},
+					"wrangler.json"
+				);
+				setIsTTY(true);
+				mockConfirm({
+					text: addPreviewBaseConfigPrompt,
+					options: { defaultValue: true },
+					result: true,
+				});
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								previews_base_config: {
+									observability: { enabled: true },
+								},
+							},
+						})
+					)
+				);
+				mockContainerPreview({ previewId: "preview-environment-base" });
+
+				await runWrangler(
+					"preview --name test-preview --config wrangler.json --env staging"
+				);
+
+				expect(std.info).toContain(previewBaseConfigMessage);
+				expect(std.info).toContain('"env": {');
+				expect(std.info).toContain('"staging": {');
+				expect(std.info).toContain('"previews": {');
+				expect(
+					readWranglerConfig("wrangler.json").env?.staging?.previews
+				).toEqual({ observability: { enabled: true } });
+			});
+
+			test.for(["wrangler.json", "wrangler.jsonc"])(
+				"onboards sparse Preview Base settings into $0",
+				async (configPath, { expect }) => {
+					writeWranglerConfig(
+						{
+							name: "test-worker",
+							main: "src/index.ts",
+							compatibility_date: "2025-01-01",
+							kv_namespaces: [
+								{
+									binding: "SESSIONS",
+									id: "production-kv-id",
+								},
+							],
+						},
+						configPath
+					);
+					setIsTTY(true);
+					mockConfirm({
+						text: addPreviewBaseConfigPrompt,
+						options: { defaultValue: true },
+						result: true,
+					});
+					msw.use(
+						http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+							HttpResponse.json({
+								success: true,
+								result: {
+									previews_base_config: {
+										limits: { subrequests: 100 },
+									},
+								},
+							})
+						)
+					);
+					mockContainerPreview({ previewId: "preview-sparse-base" });
+
+					await runWrangler(
+						`preview --name test-preview --config ${configPath}`
+					);
+
+					expect(readWranglerConfig(configPath).previews).toEqual({
+						limits: { subrequests: 100 },
+					});
+					expect(std.info).not.toContain("production-kv-id");
+					expect(std.warn).toContain(
+						"These bindings are configured for your production Worker but not for Previews:"
+					);
+					expect(std.warn).toContain("SESSIONS");
+					expect(std.warn).toContain(
+						"Parts of your Worker that depend on these bindings may not work correctly in the Preview."
+					);
+					expect(std.warn).toContain(
+						"https://developers.cloudflare.com/workers/previews/configuration/"
+					);
+					expect(std.warn).toContain(
+						"https://developers.cloudflare.com/workers/previews/resources/"
+					);
+					expect(`${std.out}${std.info}${std.warn}${std.err}`).not.toContain(
+						"production-kv-id"
+					);
+				}
+			);
+
+			test.for([
+				{
+					name: "empty limits",
+					baseConfig: { limits: {} },
+					expected: { limits: {} },
+				},
+				{
+					name: "empty tail consumers",
+					baseConfig: { tail_consumers: [] },
+					expected: { tail_consumers: [] },
+				},
+			])(
+				"onboards Preview Base $name",
+				async ({ baseConfig, expected }, { expect }) => {
+					writeWranglerConfig(
+						{
+							name: "test-worker",
+							main: "src/index.ts",
+							compatibility_date: "2025-01-01",
+						},
+						"wrangler.json"
+					);
+					setIsTTY(true);
+					mockConfirm({
+						text: addPreviewBaseConfigPrompt,
+						options: { defaultValue: true },
+						result: true,
+					});
+					msw.use(
+						http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+							HttpResponse.json({
+								success: true,
+								result: { previews_base_config: baseConfig },
+							})
+						)
+					);
+					mockContainerPreview({ previewId: "preview-empty-setting" });
+
+					await runWrangler(
+						"preview --name test-preview --config wrangler.json"
+					);
+
+					expect(readWranglerConfig("wrangler.json").previews).toEqual(
+						expected
+					);
+				}
+			);
+
+			test("falls back to guidance for commented TOML", async ({ expect }) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+					},
+					"wrangler.toml"
+				);
+				const originalConfig = `# Keep this comment.\n${readFileSync(
+					"wrangler.toml",
+					"utf8"
+				)}`;
+				writeFileSync("wrangler.toml", originalConfig);
+				setIsTTY(true);
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+						HttpResponse.json({
+							success: true,
+							result: { previews_base_config: { logpush: true } },
+						})
+					)
+				);
+				let deploymentRequests = 0;
+				mockContainerPreview({
+					previewId: "preview-commented-toml",
+					onCreateDeployment: () => deploymentRequests++,
+				});
+
+				await expect(
+					runWrangler("preview --name test-preview --config wrangler.toml")
+				).rejects.toThrow(
+					"Your Wrangler configuration is missing a `previews` block. Add the following to your configuration file:\n[previews]\nlogpush = true"
+				);
+
+				expect(readFileSync("wrangler.toml", "utf8")).toBe(originalConfig);
+				expect(deploymentRequests).toBe(0);
+			});
+
+			test("suggests an empty previews block for an empty Worker", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{ name: "test-worker", main: "src/index.ts" },
+					"wrangler.json"
+				);
+				const originalConfig = readFileSync("wrangler.json", "utf8");
+				let deploymentRequests = 0;
+				mockContainerPreview({
+					previewId: "preview-empty-base",
+					onCreateDeployment: () => deploymentRequests++,
+				});
+				setIsTTY(true);
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --json"
+					)
+				).rejects.toThrow(
+					'Your Wrangler configuration is missing a `previews` block to run this command. Add the following to your configuration file:\n{\n  "previews": {}\n}\nTo create or update a Preview with `npx wrangler preview`, your Wrangler configuration must include a `previews` block. The block can be empty. Assets, compatibility settings, migrations, and placement stay at the top level and do not need to be added to `previews`.\nLearn more: https://developers.cloudflare.com/workers/previews/configuration/#wrangler-configuration-file'
+				);
+
+				expect(deploymentRequests).toBe(0);
+				expect(std.out).toBe("");
+				expect(std.info).toBe("");
+				expect(readFileSync("wrangler.json", "utf8")).toBe(originalConfig);
+			});
+
+			test("keeps an explicit empty previews block without prompting", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{ name: "test-worker", main: "src/index.ts", previews: {} },
+					"wrangler.json"
+				);
+				let previewBaseRequests = 0;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						previewBaseRequests++;
+						return HttpResponse.json({
+							success: true,
+							result: { previews_base_config: { logpush: true } },
+						});
+					})
+				);
+				mockContainerPreview({ previewId: "preview-explicit-empty" });
+				setIsTTY(true);
+
+				await runWrangler("preview --name test-preview --config wrangler.json");
+
+				expect(previewBaseRequests).toBe(0);
+				expect(readWranglerConfig("wrangler.json").previews).toEqual({});
+			});
+
+			test("rejects generated placeholders before onboarding or deployment", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						previews: { vars: { API_URL: "<REPLACE_ME>" } },
+					},
+					"wrangler.json"
+				);
+				const originalConfig = readFileSync("wrangler.json", "utf8");
+				let previewBaseRequests = 0;
+				let deploymentRequests = 0;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						previewBaseRequests++;
+						return HttpResponse.json({ success: true, result: {} });
+					})
+				);
+				mockContainerPreview({
+					previewId: "preview-placeholder",
+					onCreateDeployment: () => deploymentRequests++,
+				});
+				setIsTTY(true);
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --json"
+					)
+				).rejects.toThrow("still contains <REPLACE_ME>");
+
+				expect(previewBaseRequests).toBe(0);
+				expect(deploymentRequests).toBe(0);
+				expect(std.out).toBe("");
+				expect(std.info).toBe("");
+				expect(readFileSync("wrangler.json", "utf8")).toBe(originalConfig);
+			});
+
+			test("rejects generated placeholder keys before deployment", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						previews: { vars: { "<REPLACE_ME>": "preview-safe-value" } },
+					},
+					"wrangler.json"
+				);
+				let previewBaseRequests = 0;
+				let deploymentRequests = 0;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						previewBaseRequests++;
+						return HttpResponse.json({ success: true, result: {} });
+					})
+				);
+				mockContainerPreview({
+					previewId: "preview-placeholder-key",
+					onCreateDeployment: () => deploymentRequests++,
+				});
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --json"
+					)
+				).rejects.toThrow("still contains <REPLACE_ME>");
+
+				expect(previewBaseRequests).toBe(0);
+				expect(deploymentRequests).toBe(0);
+			});
+
+			test("allows Preview values that only contain the placeholder text", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						previews: { vars: { API_URL: "prefix-<REPLACE_ME>" } },
+					},
+					"wrangler.json"
+				);
+				mockContainerPreview({ previewId: "preview-placeholder-substring" });
+
+				await runWrangler(
+					"preview --name test-preview --config wrangler.json --json"
+				);
+
+				expect(JSON.parse(std.out)).toMatchObject({
+					preview: { id: "preview-placeholder-substring" },
+				});
+			});
+
+			test("does not prompt, log, or mutate config for JSON onboarding", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{ name: "test-worker", main: "src/index.ts" },
+					"wrangler.json"
+				);
+				const originalConfig = readFileSync("wrangler.json", "utf8");
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								previews_base_config: {
+									env: {
+										API_URL: {
+											type: "plain_text",
+											text: "https://preview.example.com",
+										},
+										SECRET: { type: "secret_text" },
+									},
+								},
+							},
+						})
+					)
+				);
+				setIsTTY(true);
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --json"
+					)
+				).rejects.toThrow("missing a `previews` block");
+
+				expect(std.out).toBe("");
+				expect(std.info).toBe("");
+				expect(readFileSync("wrangler.json", "utf8")).toBe(originalConfig);
+			});
+		});
+
 		test("should create a new preview with defaults applied", async ({
 			expect,
 		}) => {
@@ -1197,9 +1881,12 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain(
 				"Preview URL: https://test-preview.test-worker.cloudflare.app"
 			);
-			expect(std.out).toContain("Deployment ID: deployment-id-123");
 			expect(std.out).toContain(
-				"Deployment URL: https://abc12345.test-worker.cloudflare.app"
+				"Unique Deployment URL: https://abc12345.test-worker.cloudflare.app"
+			);
+			expect(std.out).not.toContain("Deployment ID:");
+			expect(std.out.indexOf("Preview URL:")).toBeLessThan(
+				std.out.indexOf("Unique Deployment URL:")
 			);
 		});
 
@@ -1278,6 +1965,7 @@ describe("wrangler preview", () => {
 						name: "test-worker",
 						main: "src/index.ts",
 						workers_dev: true,
+						previews: {},
 					},
 					"wrangler.json"
 				);
@@ -1350,6 +2038,7 @@ describe("wrangler preview", () => {
 								workers_dev: workersDev,
 								route: "example.com/*",
 								triggers: { crons: ["0 * * * *"] },
+								previews: {},
 							},
 							"wrangler.json"
 						);
@@ -1405,7 +2094,7 @@ describe("wrangler preview", () => {
 			});
 		});
 
-		test("should warn about top-level bindings missing from preview settings", async ({
+		test("requires Preview-safe replacements for production bindings", async ({
 			expect,
 		}) => {
 			writeFileSync(
@@ -1418,79 +2107,127 @@ describe("wrangler preview", () => {
 				})
 			);
 
+			let thrown: unknown;
+			try {
+				await runWrangler("preview --name test-preview");
+			} catch (error) {
+				thrown = error;
+			}
+
+			expect(thrown).toBeInstanceOf(Error);
+			expect((thrown as Error).message).toContain("IMPORTANT_BINDING");
+			expect((thrown as Error).message).toContain('"id": "<REPLACE_ME>"');
+			expect((thrown as Error).message).not.toContain("kv-id-123");
+			expect(std.warn).toContain(
+				"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them."
+			);
+		});
+
+		test("emits one combined unsupported-settings warning", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "src/index.ts",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "production-workflow",
+							class_name: "Workflow",
+						},
+					],
+					services: [{ binding: "SERVICE", service: "production-service" }],
+					kv_namespaces: [{ binding: "KV", id: "production-kv" }],
+					queues: {
+						producers: [{ binding: "QUEUE", queue: "production-queue" }],
+						consumers: [{ queue: "production-queue" }],
+					},
+					triggers: { crons: ["0 * * * *"] },
+				},
+				"wrangler.json"
+			);
+			const warn = vi.spyOn(logger, "warn");
+
+			await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
+				"missing a `previews` block"
+			);
+
+			const warning = std.warn.replace(/\s+/g, " ");
+			expect(warning).toContain(
+				"These settings have limitations in Worker Previews: Service Bindings, Workflows, Queue consumers, Cron triggers."
+			);
+			expect(warning).toContain(
+				"Wrangler did not add them automatically. Review the limitations, then decide how you want to configure them for your Preview."
+			);
+			expect(
+				warning.match(/These settings have limitations in Worker Previews/g)
+			).toHaveLength(1);
+			const conversionWarnings = warn.mock.calls
+				.map(([message]) => message)
+				.filter(
+					(message) =>
+						typeof message === "string" &&
+						(message.startsWith(
+							"These settings have limitations in Worker Previews"
+						) ||
+							message.startsWith("Replace each <REPLACE_ME>"))
+				);
+			expect(conversionWarnings).toHaveLength(2);
+		});
+
+		test("does not let Preview Base suppress Durable Object guidance", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "src/index.ts",
+					durable_objects: {
+						bindings: [{ name: "DO", class_name: "ProductionDO" }],
+					},
+				},
+				"wrangler.json"
+			);
 			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
-					() =>
-						HttpResponse.json(
-							{
-								success: false,
-								result: null,
-								errors: [{ code: 10025, message: "Preview not found" }],
-							},
-							{ status: 404 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews`,
-					() =>
-						HttpResponse.json({
-							success: true,
-							result: {
-								id: "preview-id-warning",
-								name: "test-preview",
-								slug: "test-preview",
-								urls: ["https://test-preview.test-worker.cloudflare.app"],
-								worker_name: "test-worker",
-								created_on: new Date().toISOString(),
-							},
-						})
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-					() =>
-						HttpResponse.json({
-							success: true,
-							result: {
-								id: "deployment-id-warning",
-								preview_id: "preview-id-warning",
-								preview_name: "test-preview",
-								urls: ["https://warn123.test-worker.cloudflare.app"],
-								compatibility_date: "2025-01-01",
-								env: {},
-								created_on: new Date().toISOString(),
-							},
-						})
-				),
 				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
 					HttpResponse.json({
 						success: true,
 						result: {
-							previews_base_config: {},
+							previews_base_config: {
+								env: {
+									DO: {
+										type: "durable_object_namespace",
+										class_name: "PreviewDO",
+										script_name: "preview-do-worker",
+										environment: "staging",
+									},
+								},
+							},
 						},
 					})
 				)
 			);
+			let deploymentRequests = 0;
+			mockContainerPreview({
+				previewId: "preview-durable-object-blocked",
+				onCreateDeployment: () => deploymentRequests++,
+			});
 
-			await runWrangler("preview --name test-preview");
+			let thrown: unknown;
+			try {
+				await runWrangler("preview --name test-preview");
+			} catch (error) {
+				thrown = error;
+			}
 
-			const warningOutput = stripVTControlCharacters(std.warn);
-			const normalizedWarningOutput = warningOutput.replace(/\s+/g, " ");
-
-			expect(normalizedWarningOutput).toContain(
-				"Your configuration has diverged."
+			expect(thrown).toBeInstanceOf(Error);
+			expect((thrown as Error).message).toContain("needs a `previews` block");
+			expect((thrown as Error).message).not.toContain("durable_objects");
+			expect(std.warn.replace(/\s+/g, " ")).toContain(
+				"This Worker uses Durable Objects. They are not included in the suggested Preview configuration."
 			);
-			expect(normalizedWarningOutput).toContain(
-				"The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker."
-			);
-			expect(warningOutput).toContain("IMPORTANT_BINDING");
-			expect(warningOutput).toContain("KV Namespace");
-			expect(normalizedWarningOutput).toContain(
-				'Either include these bindings in the "previews" field of your Wrangler config'
-			);
-			expect(normalizedWarningOutput).toContain(
-				"or update the Previews settings of your Worker in the Cloudflare dashboard."
-			);
+			expect(deploymentRequests).toBe(0);
 		});
 
 		test("should not warn about top-level bindings when they are present in local previews config", async ({
@@ -1977,6 +2714,7 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					vars: { API_URL: "https://prod.example.com", API_TOKEN: "token" },
+					previews: {},
 				})
 			);
 			writeFileSync("secrets.json", JSON.stringify({ API_TOKEN: "cli-token" }));
@@ -2198,6 +2936,7 @@ describe("wrangler preview", () => {
 						binding: "ASSETS",
 						directory: "public",
 					},
+					previews: {},
 				})
 			);
 
@@ -2265,7 +3004,9 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --name test-preview");
 
-			expect(std.warn).not.toContain("Your configuration has diverged.");
+			expect(std.warn).not.toContain(
+				"These bindings are configured for your production Worker but not for Previews:"
+			);
 			expect(std.warn).not.toContain("ASSETS");
 		});
 
@@ -2383,6 +3124,7 @@ describe("wrangler preview", () => {
 				{
 					name: "test-worker",
 					main: "./src/index.ts",
+					previews: {},
 				},
 				"./wrangler.json"
 			);
@@ -2391,6 +3133,7 @@ describe("wrangler preview", () => {
 					name: "test-worker",
 					main: "../src/index.ts",
 					userConfigPath: "./wrangler.json",
+					previews: {},
 				},
 				"./dist/wrangler.json"
 			);
@@ -2497,6 +3240,7 @@ describe("wrangler preview", () => {
 					rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],
 					name: "entry-worker",
 					main: "entry.mjs",
+					previews: {},
 					triggers: {},
 					assets: { binding: "ASSETS", directory: "../client" },
 					vars: {},
@@ -2679,8 +3423,8 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Preview URLs:");
 			expect(std.out).toContain("  https://one.test-worker.cloudflare.app");
 			expect(std.out).toContain("  https://two.test-worker.cloudflare.app");
-			expect(std.out).toContain("Deployment ID: deployment-id-456");
-			expect(std.out).toContain("Deployment URLs:");
+			expect(std.out).not.toContain("Deployment ID:");
+			expect(std.out).toContain("Unique Deployment URLs:");
 			expect(std.out).toContain("  https://dep-one.test-worker.cloudflare.app");
 			expect(std.out).toContain("  https://dep-two.test-worker.cloudflare.app");
 			expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
@@ -2716,6 +3460,7 @@ describe("wrangler preview", () => {
 			writeWranglerConfig(
 				{
 					main: "src/index.ts",
+					previews: {},
 					routes: [
 						{
 							pattern: "previews.example.com",
@@ -2791,10 +3536,7 @@ describe("wrangler preview", () => {
 				.filter(
 					(line) => line.startsWith("Preview") || line.startsWith("Deployment")
 				);
-			expect(summaryLines).toEqual([
-				"Preview: empty-urls-preview (new)",
-				"Deployment ID: deployment-id-empty-urls",
-			]);
+			expect(summaryLines).toEqual(["Preview: empty-urls-preview (new)"]);
 			expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 			expect(std.out).toContain('"preview_urls": true');
 		});
@@ -2933,7 +3675,9 @@ describe("wrangler preview", () => {
 			);
 			await runWrangler("preview --name no-defaults-preview");
 			expect(std.out).toContain("Preview: no-defaults-preview (new)");
-			expect(std.out).toContain("Deployment ID: deployment-id-789");
+			expect(std.out).toContain(
+				"Unique Deployment URL: https://ghi12345.test-worker.cloudflare.app"
+			);
 		});
 
 		test("should show compact success output when observability is configured", async ({
@@ -3004,7 +3748,9 @@ describe("wrangler preview", () => {
 			);
 			await runWrangler("preview --name test-preview");
 			expect(std.out).toContain("Preview: test-preview (new)");
-			expect(std.out).toContain("Deployment ID: deployment-id-obs");
+			expect(std.out).toContain(
+				"Unique Deployment URL: https://obs12345.test-worker.cloudflare.app"
+			);
 		});
 
 		test("should include previews tail_consumers in the preview resource request", async ({
@@ -3129,6 +3875,7 @@ describe("wrangler preview", () => {
 						},
 					],
 					exports: configuredExports,
+					previews: {},
 				})
 			);
 
@@ -3201,7 +3948,9 @@ describe("wrangler preview", () => {
 				...configuredExports,
 				EcommerceAgent: { type: "durable-object", storage: "sqlite" },
 			});
-			expect(std.out).toContain("Deployment ID: deployment-id-compat");
+			expect(std.out).toContain(
+				"Unique Deployment URL: https://compat12345.test-worker.cloudflare.app"
+			);
 		});
 
 		test("should pass ignore_base_config query param when creating a Preview with --ignore-base-config", async ({
@@ -3283,6 +4032,7 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					assets: { directory: "public", run_worker_first: true },
+					previews: {},
 				})
 			);
 			let deploymentRequestBody: Record<string, unknown> | undefined;
@@ -3386,6 +4136,7 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					assets: { directory: "public", binding: "MY_ASSETS" },
+					previews: {},
 				})
 			);
 			let deploymentRequestBody: Record<string, unknown> | undefined;
@@ -5108,6 +5859,7 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					upload_source_maps: true,
+					previews: {},
 				})
 			);
 
@@ -5478,6 +6230,7 @@ describe("wrangler preview", () => {
 							renamed_classes: [{ from: "Counter", to: "CounterV2" }],
 						},
 					],
+					previews: {},
 				})
 			);
 
@@ -5587,6 +6340,7 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					migrations: [{ tag: "v1", new_classes: ["Counter"] }],
+					previews: {},
 				})
 			);
 
@@ -5869,7 +6623,7 @@ describe("wrangler preview", () => {
 			vi.unstubAllEnvs();
 		});
 
-		test("should inherit top-level previews config into an environment when env.previews is absent", async ({
+		test("should disable placement when previews placement is off", async ({
 			expect,
 		}) => {
 			writeFileSync(
@@ -5880,6 +6634,7 @@ describe("wrangler preview", () => {
 					compatibility_date: "2025-01-01",
 					placement: { mode: "smart" },
 					previews: {
+						placement: { mode: "off" },
 						observability: {
 							enabled: true,
 							redact_query_string: true,
@@ -5904,7 +6659,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						compatibility_date?: string;
-						placement?: { mode?: string };
+						placement?: { mode?: string } | null;
 						env?: Record<
 							string,
 							{ type: string; text?: string; namespace_id?: string }
@@ -5979,7 +6734,7 @@ describe("wrangler preview", () => {
 				redact_query_string: true,
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
-			expect(deploymentRequestBody?.placement).toEqual({ mode: "smart" });
+			expect(deploymentRequestBody?.placement).toBeNull();
 			expect(deploymentRequestBody?.env).toMatchObject({
 				TOP_LEVEL_PREVIEW: { type: "plain_text", text: "top-value" },
 				TOP_KV: { type: "kv_namespace", namespace_id: "top-kv-id" },
@@ -5996,6 +6751,7 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					limits: { cpu_ms: 100, subrequests: 200 },
+					placement: { mode: "smart" },
 					previews: {
 						observability: { enabled: true },
 						vars: { TOP_LEVEL_PREVIEW: "top-value" },
@@ -6006,6 +6762,7 @@ describe("wrangler preview", () => {
 						staging: {
 							previews: {
 								observability: { enabled: false },
+								placement: { mode: "targeted", region: "WEU" },
 								vars: { STAGE_PREVIEW: "stage-value" },
 								queues: {
 									producers: [{ binding: "STAGE_QUEUE", queue: "jobs" }],
@@ -6026,6 +6783,7 @@ describe("wrangler preview", () => {
 				| {
 						compatibility_date?: string;
 						limits?: { cpu_ms?: number; subrequests?: number };
+						placement?: { mode?: string; region?: string } | null;
 						env?: Record<
 							string,
 							{
@@ -6105,6 +6863,10 @@ describe("wrangler preview", () => {
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
 			expect(deploymentRequestBody?.limits).toEqual({ subrequests: 50 });
+			expect(deploymentRequestBody?.placement).toEqual({
+				mode: "targeted",
+				region: "WEU",
+			});
 			expect(deploymentRequestBody?.env).toMatchObject({
 				STAGE_PREVIEW: { type: "plain_text", text: "stage-value" },
 				STAGE_QUEUE: { type: "queue", queue_name: "jobs" },
@@ -6297,6 +7059,7 @@ describe("wrangler preview", () => {
 					env: {
 						staging: {
 							name: "staging-worker",
+							previews: {},
 						},
 					},
 				})
