@@ -1,4 +1,4 @@
-SECRET_KEY = ""
+SECRET_KEY = "test-secret-key-please-update"
 DEBUG = False
 # Cloudflare routing validates the hostname before invoking this Worker.
 ALLOWED_HOSTS = ["*"]
