@@ -37,9 +37,9 @@ describe("parseStaticRouting", () => {
 		];
 		expect(() => parseStaticRouting(rulesWithRemovableDuplicates))
 			.toThrowErrorMatchingInlineSnapshot(`
-			[Error: Too many \`run_worker_first\` rules were provided; 104 rules provided (99 distinct, 5 duplicate entries) exceeds max of 100. Duplicate entries count toward the limit.
+			[Error: Too many \`run_worker_first\` rules were provided; 104 rules provided (99 distinct, 5 duplicate entries) exceeds max of 100. Note: duplicate entries count towards the route limit. Ensure that no duplicate rules are present in your \`run_worker_first\` configuration.
 
-			Duplicated rules:
+			The duplicated rules found are:
 			- "/rule/0"]
 		`);
 
@@ -52,9 +52,9 @@ describe("parseStaticRouting", () => {
 		];
 		expect(() => parseStaticRouting(rulesWithRemainingExcess))
 			.toThrowErrorMatchingInlineSnapshot(`
-			[Error: Too many \`run_worker_first\` rules were provided; 104 rules provided (102 distinct, 2 duplicate entries) exceeds max of 100. Duplicate entries count toward the limit.
+			[Error: Too many \`run_worker_first\` rules were provided; 104 rules provided (102 distinct, 2 duplicate entries) exceeds max of 100. Note: duplicate entries count towards the route limit. Ensure that no duplicate rules are present in your \`run_worker_first\` configuration.
 
-			Duplicated rules:
+			The duplicated rules found are:
 			- "/api/*"
 			- "!/assets/*"]
 		`);
@@ -63,17 +63,18 @@ describe("parseStaticRouting", () => {
 			{ length: MAX_ROUTES_RULES + 1 },
 			(_, i) => `/duplicated/${i}`
 		);
-		const reportedDuplicatedRules = duplicatedRules
-			.slice(0, 5)
-			.map((rule) => `- ${JSON.stringify(rule)}`)
-			.join("\n");
-		expect(() =>
-			parseStaticRouting([...duplicatedRules, ...duplicatedRules])
-		).toThrow(
-			new Error(
-				`Too many \`run_worker_first\` rules were provided; 202 rules provided (101 distinct, 101 duplicate entries) exceeds max of 100. Duplicate entries count toward the limit.\n\nDuplicated rules:\n${reportedDuplicatedRules}\n...and 96 more duplicated rules.`
-			)
-		);
+		expect(() => parseStaticRouting([...duplicatedRules, ...duplicatedRules]))
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Too many \`run_worker_first\` rules were provided; 202 rules provided (101 distinct, 101 duplicate entries) exceeds max of 100. Note: duplicate entries count towards the route limit. Ensure that no duplicate rules are present in your \`run_worker_first\` configuration.
+
+			The duplicated rules found are:
+			- "/duplicated/0"
+			- "/duplicated/1"
+			- "/duplicated/2"
+			- "/duplicated/3"
+			- "/duplicated/4"
+			...and 96 more duplicated rules.]
+		`);
 	});
 
 	it("throws when a rule is too long", ({ expect }) => {

@@ -37,7 +37,7 @@ export function parseStaticRouting(input: string[]): StaticRouting {
 					: "";
 
 			throw new Error(
-				`Too many \`run_worker_first\` rules were provided; ${input.length} rules provided (${seenRules.size} distinct, ${duplicateEntryCount} duplicate ${duplicateEntryCount === 1 ? "entry" : "entries"}) exceeds max of ${MAX_ROUTES_RULES}. Duplicate entries count toward the limit.\n\nDuplicated rules:\n${reportedDuplicatedRules.map((rule) => `- ${JSON.stringify(rule)}`).join("\n")}${unreportedDuplicatedRulesMessage}`
+				`Too many \`run_worker_first\` rules were provided; ${input.length} rules provided (${seenRules.size} distinct, ${duplicateEntryCount} duplicate ${duplicateEntryCount === 1 ? "entry" : "entries"}) exceeds max of ${MAX_ROUTES_RULES}. Note: duplicate entries count towards the route limit. Ensure that no duplicate rules are present in your \`run_worker_first\` configuration.\n\nThe duplicated rules found are:\n${reportedDuplicatedRules.map((rule) => `- ${JSON.stringify(rule)}`).join("\n")}${unreportedDuplicatedRulesMessage}`
 			);
 		}
 
