@@ -301,6 +301,28 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 		const metadata = getMetadata(form);
 		expect(metadata.containers).toEqual([{ class_name: "MyContainer" }]);
 	});
+
+	it("should include retention inside assets metadata when specified", ({
+		expect,
+	}) => {
+		const form = createWorkerUploadForm(
+			createEsmWorker({
+				assets: {
+					routerConfig: { has_user_worker: true },
+					jwt: "test-jwt",
+					retention: { enabled: true },
+					assetConfig: {
+						html_handling: "auto-trailing-slash",
+						not_found_handling: "none",
+					},
+				} as CfWorkerInit["assets"],
+			}),
+			{}
+		);
+		const metadata = getMetadata(form);
+		const assets = metadata.assets as Record<string, unknown>;
+		expect(assets.retention).toEqual({ enabled: true });
+	});
 });
 
 describe("createWorkerUploadForm — unsafe metadata", () => {
@@ -360,5 +382,25 @@ describe("createWorkerUploadForm — static assets only", () => {
 		const metadata = getMetadata(form);
 		expect(metadata.compatibility_date).toBe("2024-06-01");
 		expect(metadata.compatibility_flags).toEqual(["nodejs_compat"]);
+	});
+
+	it("should include retention inside assets metadata when specified", ({
+		expect,
+	}) => {
+		const worker = createEsmWorker({
+			assets: {
+				routerConfig: { has_user_worker: false },
+				jwt: "test-jwt",
+				retention: { enabled: true },
+				assetConfig: {
+					html_handling: "auto-trailing-slash",
+					not_found_handling: "none",
+				},
+			} as CfWorkerInit["assets"],
+		});
+		const form = createWorkerUploadForm(worker, {});
+		const metadata = getMetadata(form);
+		const assets = metadata.assets as Record<string, unknown>;
+		expect(assets.retention).toEqual({ enabled: true });
 	});
 });

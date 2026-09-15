@@ -19,6 +19,7 @@ export const AssetsSchema = z.strictObject({
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
+	retention: z.strictObject({ enabled: z.boolean() }).optional(),
 });
 
 export const BrowserBindingSchema = z.strictObject({
