@@ -35,14 +35,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -1074,6 +1066,9 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
+			// The startup profiler runs Miniflare, whose HTTP server expects real
+			// Node.js timeout handles (including `unref()`).
+			vi.unstubAllGlobals();
 			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{

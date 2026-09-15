@@ -1,13 +1,17 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
+import { KVLimits } from "../../../src/workers/kv/constants";
 import {
 	zWorkersKvNamespaceDeleteKeyValuePairResponse,
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsResponse,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
 	zWorkersKvNamespaceListANamespaceSKeysResponse,
 	zWorkersKvNamespaceListNamespacesResponse,
 	zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse,
+	zWorkersKvNamespaceWriteMultipleKeyValuePairsResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
+import { executeKVBulkOperations } from "../../../src/workers/local-explorer/resources/kv-bulk";
 import {
 	dispatchFetchWithRetry,
 	disposeWithRetry,
@@ -448,6 +452,421 @@ describe("KV API", () => {
 		});
 	});
 
+	describe("bulk operation execution", () => {
+		test("runs concurrently and reports sorted failures", async ({
+			expect,
+		}) => {
+			let activeOperations = 0;
+			let maxActiveOperations = 0;
+			const execution = await executeKVBulkOperations(
+				[
+					{ key: "z-fails" },
+					{ key: "first" },
+					{ key: "a-fails" },
+					{ key: "last" },
+				],
+				async ({ key }) => {
+					activeOperations++;
+					maxActiveOperations = Math.max(maxActiveOperations, activeOperations);
+					await new Promise((resolve) => setTimeout(resolve, 1));
+					activeOperations--;
+					if (key.endsWith("fails")) {
+						throw new Error("storage failure");
+					}
+				}
+			);
+
+			expect(maxActiveOperations).toBe(4);
+			expect(execution.result).toEqual({
+				successful_key_count: 2,
+				unsuccessful_keys: ["a-fails", "z-fails"],
+			});
+			expect(execution.error).toEqual(expect.any(Error));
+		});
+	});
+
+	describe("PUT /storage/kv/namespaces/:namespaceId/bulk", () => {
+		test("writes production value forms and reports the result", async ({
+			expect,
+		}) => {
+			const expiration = Math.floor(Date.now() / 1000) + 120;
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "bulk-text", value: "hello" },
+						{
+							key: "bulk-binary",
+							value: "AAECf4D+/w==",
+							base64: true,
+						},
+						{
+							key: "bulk-metadata",
+							value: "with metadata",
+							metadata: { source: "bulk" },
+						},
+						{ key: "bulk-expiration", value: "absolute", expiration },
+						{ key: "bulk-ttl", value: "ttl", expiration_ttl: 120 },
+						{
+							key: "bulk-ttl-precedence",
+							value: "ttl wins",
+							expiration: 1,
+							expiration_ttl: 120,
+						},
+					]),
+				}
+			);
+
+			const data = await expectValidResponse(
+				response,
+				zWorkersKvNamespaceWriteMultipleKeyValuePairsResponse,
+				expect
+			);
+			expect(data.result).toEqual({
+				successful_key_count: 6,
+				unsuccessful_keys: [],
+			});
+
+			const kv = await mf.getKVNamespace("TEST_KV");
+			expect(await kv.get("bulk-text")).toBe("hello");
+			const binary = await kv.get("bulk-binary", { type: "arrayBuffer" });
+			expect(new Uint8Array(binary ?? new ArrayBuffer(0))).toEqual(
+				Uint8Array.from([0, 1, 2, 127, 128, 254, 255])
+			);
+			const withMetadata = await kv.getWithMetadata("bulk-metadata");
+			expect(withMetadata).toMatchObject({
+				value: "with metadata",
+				metadata: { source: "bulk" },
+			});
+			const listed = await kv.list();
+			expect(
+				listed.keys.find(({ name }) => name === "bulk-expiration")
+			).toMatchObject({ expiration });
+			expect(
+				listed.keys.find(({ name }) => name === "bulk-ttl")?.expiration
+			).toBeGreaterThan(Math.floor(Date.now() / 1000) + 50);
+			expect(
+				listed.keys.find(({ name }) => name === "bulk-ttl-precedence")
+					?.expiration
+			).toBeGreaterThan(Math.floor(Date.now() / 1000) + 50);
+		});
+
+		test("returns a failure envelope containing the partial result", async ({
+			expect,
+		}) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			const oversizedValue = "é".repeat(KVLimits.MAX_VALUE_SIZE_BYTES / 2 + 1);
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "partial-success-one", value: "one" },
+						{ key: "partial-too-large", value: oversizedValue },
+						{ key: "partial-success-two", value: "two" },
+					]),
+				}
+			);
+
+			const status = response.status;
+			const data = await response.json();
+			expect(status).toBe(413);
+			expect(data).toMatchObject({
+				success: false,
+				errors: [{ code: 10001 }],
+				result: {
+					successful_key_count: 2,
+					unsuccessful_keys: ["partial-too-large"],
+				},
+			});
+			expect(await kv.get("partial-success-one")).toBe("one");
+			expect(await kv.get("partial-success-two")).toBe("two");
+			expect(await kv.get("partial-too-large")).toBeNull();
+		});
+
+		test("collapses equivalent duplicate writes after decoding", async ({
+			expect,
+		}) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{
+							key: "equivalent-duplicate",
+							value: "hello",
+							metadata: { first: 1, second: 2 },
+						},
+						{
+							key: "equivalent-duplicate",
+							value: "aGVsbG8=",
+							base64: true,
+							metadata: { second: 2, first: 1 },
+						},
+					]),
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: { successful_key_count: 1, unsuccessful_keys: [] },
+			});
+			const kv = await mf.getKVNamespace("TEST_KV");
+			expect(await kv.get("equivalent-duplicate")).toBe("hello");
+		});
+
+		test("rejects duplicate keys with different values", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "conflicting-duplicate", value: "first" },
+						{ key: "conflicting-duplicate", value: "second" },
+					]),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({ success: false });
+			const kv = await mf.getKVNamespace("TEST_KV");
+			expect(await kv.get("conflicting-duplicate")).toBeNull();
+		});
+
+		test("preserves explicit null metadata", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "bulk-null-metadata", value: "value", metadata: null },
+					]),
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
+
+			const listResponse = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?prefix=bulk-null-metadata`
+			);
+			expect(await listResponse.json()).toMatchObject({
+				result: [{ name: "bulk-null-metadata", metadata: null }],
+			});
+		});
+
+		test("preflights every item before writing", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "must-not-be-written", value: "value" },
+						{ key: ".", value: "invalid" },
+					]),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({
+				success: false,
+				errors: [expect.objectContaining({ code: 10001 })],
+			});
+			const kv = await mf.getKVNamespace("TEST_KV");
+			expect(await kv.get("must-not-be-written")).toBeNull();
+		});
+
+		test("rejects invalid base64", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "invalid-base64", value: "not base64!", base64: true },
+					]),
+				}
+			);
+
+			expect({
+				status: response.status,
+				body: await response.json(),
+			}).toMatchObject({ status: 400, body: { success: false } });
+		});
+
+		test("rejects malformed JSON", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: "{",
+				}
+			);
+
+			expect({
+				status: response.status,
+				body: await response.json(),
+			}).toMatchObject({ status: 400, body: { success: false } });
+		});
+
+		test("enforces deterministic item constraints", async ({ expect }) => {
+			const cases = [
+				{
+					item: { key: "é".repeat(257), value: "value" },
+					status: 414,
+				},
+				{
+					item: {
+						key: "oversized-metadata",
+						value: "value",
+						metadata: { value: "x".repeat(1024) },
+					},
+					status: 413,
+				},
+				{
+					item: {
+						key: "invalid-expiration",
+						value: "value",
+						expiration_ttl: 59,
+					},
+					status: 400,
+				},
+			];
+
+			for (const { item, status } of cases) {
+				const response = await mf.dispatchFetch(
+					`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+					{
+						method: "PUT",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify([item]),
+					}
+				);
+
+				expect(response.status).toBe(status);
+				expect(await response.json()).toMatchObject({ success: false });
+			}
+		});
+
+		test("writes to an unlisted namespace", async ({ expect }) => {
+			const namespaceUrl = `${BASE_URL}/storage/kv/namespaces/unlisted-bulk-write`;
+			const response = await mf.dispatchFetch(`${namespaceUrl}/bulk`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify([{ key: "key", value: "value" }]),
+			});
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: { successful_key_count: 1, unsuccessful_keys: [] },
+			});
+			const getResponse = await mf.dispatchFetch(`${namespaceUrl}/values/key`);
+			expect(await getResponse.text()).toBe("value");
+		});
+	});
+
+	describe("POST /storage/kv/namespaces/:namespaceId/bulk/delete", () => {
+		test("deletes production key arrays and treats missing keys as success", async ({
+			expect,
+		}) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("bulk-delete-one", "one");
+			await kv.put("bulk-delete-two", "two");
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/delete`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						"bulk-delete-one",
+						"bulk-delete-one",
+						"bulk-delete-missing",
+						"bulk-delete-two",
+					]),
+				}
+			);
+
+			const data = await expectValidResponse(
+				response,
+				zWorkersKvNamespaceDeleteMultipleKeyValuePairsResponse,
+				expect
+			);
+			expect(data.result).toEqual({
+				successful_key_count: 3,
+				unsuccessful_keys: [],
+			});
+			expect(await kv.get("bulk-delete-one")).toBeNull();
+			expect(await kv.get("bulk-delete-two")).toBeNull();
+		});
+
+		test("rejects Wrangler object input", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/delete`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([{ name: "key" }]),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({ success: false });
+		});
+
+		test("preflights every key before deleting", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("must-not-be-deleted", "value");
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/delete`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(["must-not-be-deleted", ".."]),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({ success: false });
+			expect(await kv.get("must-not-be-deleted")).toBe("value");
+		});
+
+		test("deletes from an unlisted namespace", async ({ expect }) => {
+			const namespaceUrl = `${BASE_URL}/storage/kv/namespaces/unlisted-bulk-delete`;
+			const seedResponse = await mf.dispatchFetch(
+				`${namespaceUrl}/values/key`,
+				{
+					method: "PUT",
+					body: "value",
+				}
+			);
+			await seedResponse.json();
+			const response = await mf.dispatchFetch(`${namespaceUrl}/bulk/delete`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(["key"]),
+			});
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: { successful_key_count: 1, unsuccessful_keys: [] },
+			});
+			const getResponse = await mf.dispatchFetch(`${namespaceUrl}/values/key`);
+			expect(getResponse.status).toBe(404);
+			await getResponse.json();
+		});
+	});
+
 	describe("POST /storage/kv/namespaces/:namespaceId/bulk/get", () => {
 		test("returns multiple key-value pairs and null for non-existing keys", async ({
 			expect,
@@ -575,6 +994,53 @@ test("routes arbitrary namespace IDs through the shared-storage owner", async ({
 		const getResponse = await dispatchFetchWithRetry(owner, valueUrl);
 		expect(getResponse.status).toBe(200);
 		expect(await getResponse.text()).toBe("written-through-client");
+
+		const namespaceUrl = `${BASE_URL}/storage/kv/namespaces/arbitrary-namespace`;
+		const bulkWriteResponse = await dispatchFetchWithRetry(
+			client,
+			`${namespaceUrl}/bulk`,
+			{
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify([
+					{ key: "shared-bulk-one", value: "one" },
+					{ key: "shared-bulk-two", value: "two" },
+				]),
+			}
+		);
+		expect(bulkWriteResponse.status).toBe(200);
+		expect(await bulkWriteResponse.json()).toMatchObject({
+			success: true,
+			result: { successful_key_count: 2, unsuccessful_keys: [] },
+		});
+
+		const ownerBulkValueUrl = `${namespaceUrl}/values/shared-bulk-one`;
+		const ownerBulkValueResponse = await dispatchFetchWithRetry(
+			owner,
+			ownerBulkValueUrl
+		);
+		expect(await ownerBulkValueResponse.text()).toBe("one");
+
+		const bulkDeleteResponse = await dispatchFetchWithRetry(
+			client,
+			`${namespaceUrl}/bulk/delete`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(["shared-bulk-one", "shared-bulk-two"]),
+			}
+		);
+		expect(bulkDeleteResponse.status).toBe(200);
+		expect(await bulkDeleteResponse.json()).toMatchObject({
+			success: true,
+			result: { successful_key_count: 2, unsuccessful_keys: [] },
+		});
+		const deletedResponse = await dispatchFetchWithRetry(
+			owner,
+			ownerBulkValueUrl
+		);
+		expect(deletedResponse.status).toBe(404);
+		await deletedResponse.json();
 	} finally {
 		await Promise.all([disposeWithRetry(client), disposeWithRetry(owner)]);
 	}
