@@ -475,20 +475,7 @@ export class ProxyController extends Controller {
 
 				break;
 			case "error":
-				// Requests can still fail while the ProxyWorker is being disposed;
-				// don't surface those as errors on a normal shutdown.
-				if (this._torndown) {
-					return;
-				}
-
-				logger.error(
-					"Error proxying request to the local Worker:",
-					message.error.message
-				);
-				// The stack and cause are only useful when debugging, but they're
-				// the only clue to *why* the connection was lost, so keep them
-				// reachable via `--log-level debug`.
-				logger.debug("ProxyWorker request error details:", message.error);
+				this.emitErrorEvent("Error inside ProxyWorker", message.error);
 
 				break;
 			case "debug-log":

@@ -2,4 +2,6 @@
 "wrangler": patch
 ---
 
-Keep the local development server running when proxying an individual request fails.
+Show the stack and cause of failed proxied requests in `wrangler dev` debug logs
+
+When a request proxied to the local Worker fails, running with `--log-level debug` now shows the underlying error's stack and cause chain.
