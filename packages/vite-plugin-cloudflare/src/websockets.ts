@@ -46,6 +46,16 @@ export function handleWebSocket(
 			// Socket errors crash Node.js if unhandled
 			socket.on("error", () => socket.destroy());
 
+			// Baseline for detecting whether another `upgrade` listener claims
+			// the socket while `dispatchFetch` is in flight. `bytesWritten`
+			// counts the socket's lifetime, so a keep-alive connection may
+			// already be non-zero from earlier responses — only an increase
+			// during this upgrade means someone sent the 101.
+			const bytesWrittenAtStart =
+				(socket as unknown as Socket).bytesWritten ?? 0;
+			const isClaimed = () =>
+				(socket as unknown as Socket).bytesWritten > bytesWrittenAtStart;
+
 			try {
 				const rawHost = request.headers.host ?? UNKNOWN_HOST;
 				// Honor `X-Forwarded-Proto` so that the upgrade URL reflects the
@@ -85,9 +95,19 @@ export function handleWebSocket(
 					// may have already upgraded this socket while `dispatchFetch`
 					// was in flight. Destroying here would kill a socket we don't own
 					// (client sees `onopen` then close `1006`). If the Worker has no
-					// route, this upgrade isn't ours — just return and let the owner
-					// keep it.
+					// route, this upgrade isn't ours — let the owner keep it.
+					// But if no listener claims it, tear it down (deferred by a
+					// tick so async owners still get a chance) rather than leaving
+					// unclaimed upgrades hanging forever.
 					// See https://github.com/cloudflare/workers-sdk/issues/15654
+					if (socket.destroyed || isClaimed()) {
+						return;
+					}
+					setImmediate(() => {
+						if (!socket.destroyed && !isClaimed()) {
+							socket.destroy();
+						}
+					});
 					return;
 				}
 
@@ -95,7 +115,7 @@ export function handleWebSocket(
 				// `dispatchFetch` was in flight (it already sent the 101 response),
 				// don't attempt a second upgrade — it would corrupt their connection.
 				// Likewise, the client may have disconnected in the meantime.
-				if (socket.destroyed || isSocketClaimed(socket)) {
+				if (socket.destroyed || isClaimed()) {
 					workerResponseHeaders.delete(request);
 					return;
 				}
@@ -127,25 +147,12 @@ export function handleWebSocket(
 				// meantime (see above) — otherwise we'd kill e.g. a DevTools
 				// connection that upgraded while we were awaiting `dispatchFetch`.
 				workerResponseHeaders.delete(request);
-				if (!socket.destroyed && !isSocketClaimed(socket)) {
+				if (!socket.destroyed && !isClaimed()) {
 					socket.destroy();
 				}
 			}
 		}
 	);
-}
-
-/**
- * Whether another `upgrade` listener has already claimed the socket by
- * sending a response (e.g. the 101 Switching Protocols).
- *
- * Node emits `upgrade` to every listener; our handler awaits
- * `dispatchFetch` (a `workerd` round-trip), so a synchronously-upgrading
- * owner (e.g. Vite DevTools) will have non-zero `bytesWritten` by the time
- * we resume. In that case we must neither destroy nor re-upgrade.
- */
-function isSocketClaimed(socket: Duplex) {
-	return (socket as unknown as Socket).bytesWritten > 0;
 }
 
 /**
