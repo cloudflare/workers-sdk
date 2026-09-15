@@ -229,7 +229,9 @@ export async function launchBrowser({
 		const browserProcess = launch({
 			executablePath: installed.executablePath,
 			args: process.env.CI ? [...launchArgs, "--no-sandbox"] : launchArgs,
+			handleSIGINT: false,
 			handleSIGTERM: false,
+			handleSIGHUP: false,
 			dumpio: false,
 			pipe: false,
 			onExit: async () => {
