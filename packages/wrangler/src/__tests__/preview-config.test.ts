@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { describe, test } from "vitest";
 import {
 	convertBinding,
@@ -87,7 +88,9 @@ describe("Preview configuration conversion", () => {
 					logs: { destinations: ["production-log-destination"] },
 				},
 				placement: { mode: "smart", hint: "production-hint" },
-				tail_consumers: [{ service: "production-tail" }],
+				tail_consumers: [
+					{ service: "production-tail", environment: "production" },
+				],
 			}),
 			true
 		);
@@ -120,7 +123,6 @@ describe("Preview configuration conversion", () => {
 			"vpc_services",
 			"worker_loaders",
 			"define",
-			"observability",
 			"placement",
 			"tail_consumers",
 		]);
@@ -139,7 +141,9 @@ describe("Preview configuration conversion", () => {
 			},
 			define: { API_URL: "<REPLACE_ME>" },
 			placement: { mode: "smart", hint: "<REPLACE_ME>" },
-			tail_consumers: [{ service: "<REPLACE_ME>" }],
+			tail_consumers: [
+				{ service: "<REPLACE_ME>", environment: "<REPLACE_ME>" },
+			],
 		});
 		expect(JSON.stringify(result)).not.toContain("production");
 	});
@@ -255,6 +259,21 @@ describe("Preview configuration conversion", () => {
 		});
 	});
 
+	test("inherits production observability", ({ expect }) => {
+		expect(
+			convertTopLevelSetting(
+				topLevelSettings({
+					observability: {
+						enabled: true,
+						logs: { destinations: ["production-log-destination"] },
+					},
+				}),
+				"observability",
+				true
+			)
+		).toEqual({ blocksDeployment: false });
+	});
+
 	test("aggregates config, deduplicates messages, and preserves blocking", ({
 		expect,
 	}) => {
@@ -322,7 +341,7 @@ describe("Preview configuration conversion", () => {
 	});
 
 	test("rejects duplicate singleton bindings", ({ expect }) => {
-		expect(() =>
+		const convertDuplicates = () =>
 			convertPreviewSettings(
 				{
 					FIRST_BROWSER: { type: "browser" },
@@ -330,8 +349,12 @@ describe("Preview configuration conversion", () => {
 				},
 				topLevelSettings(),
 				false
-			)
-		).toThrow("Preview browser binding is defined more than once");
+			);
+
+		expect(convertDuplicates).toThrow(UserError);
+		expect(convertDuplicates).toThrow(
+			"Preview browser binding is defined more than once. Rename one of the bindings so each Preview setting is produced only once."
+		);
 	});
 
 	test("production conversion never serializes unsupported values", ({
