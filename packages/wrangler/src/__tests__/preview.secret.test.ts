@@ -21,7 +21,7 @@ const BRANCH_ENV_VARS = [
 	"CI_COMMIT_REF_NAME",
 ] as const;
 const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
+	"Note: This Preview deployment has no active URLs.";
 
 async function withoutBranchEnvVars<T>(callback: () => Promise<T>): Promise<T> {
 	const originalBranchEnv = Object.fromEntries(
@@ -188,6 +188,7 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain(
 					"is now live at https://test-preview.example.workers.dev"
 				);
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 				expect(std.out).not.toContain("preview-secret");
 			});
 
@@ -203,6 +204,15 @@ describe("wrangler preview", () => {
 
 				expect(std.out).toContain("Created Preview deployment deployment-1");
 				expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				expect(std.out).toContain(
+					"https://<preview-name>.previews.example.com"
+				);
+				expect(std.out).toContain('"preview_urls": true');
+				expect(std.out).toContain('"enabled": false');
+				expect(std.out).toContain('"previews_enabled": true');
+				expect(std.out).toContain(
+					"run `wrangler deploy` from a clean checkout of your production branch"
+				);
 				expect(std.out).not.toContain("is now live at");
 			});
 
@@ -365,10 +375,10 @@ describe("wrangler preview", () => {
 			test("creates a new Preview deployment removing the secret", async ({
 				expect,
 			}) => {
-				let patchedPreviewDefaults = false;
+				let patchedBaseConfig = false;
 				msw.use(
 					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
-						patchedPreviewDefaults = true;
+						patchedBaseConfig = true;
 						return HttpResponse.json({ success: true, result: {} });
 					})
 				);
@@ -387,13 +397,14 @@ describe("wrangler preview", () => {
 					"/workers/workers/test-worker/previews/test-preview/deployments/latest"
 				);
 				expect(requestBody?.env).toEqual({ REMOVE_ME: null });
-				expect(patchedPreviewDefaults).toBe(false);
+				expect(patchedBaseConfig).toBe(false);
 				expect(std.out).toContain('Preview "test-preview"');
 				expect(std.out).toContain("test-worker");
 				expect(std.out).toContain("Preview deployment");
 				expect(std.out).toContain(
 					"is now live at https://test-preview.example.workers.dev"
 				);
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 			});
 
 			test("notes when the new Preview deployment has no active URLs", async ({
@@ -631,6 +642,7 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain(
 					"is now live at https://test-preview.example.workers.dev"
 				);
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 				expect(std.out).not.toContain("one");
 				expect(std.out).not.toContain("two");
 			});

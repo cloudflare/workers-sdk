@@ -434,7 +434,6 @@ type WorkerOptionsBindings = Pick<
 	| "ai"
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
-	| "websearch"
 	| "agentMemory"
 	| "textBlobBindings"
 	| "dataBlobBindings"
@@ -556,7 +555,6 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
-	const websearchBindings = extractBindingsOfType("websearch", bindings);
 	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
@@ -691,10 +689,6 @@ export function buildMiniflareBindingOptions(
 		validateBindingRemoteSetting("ai_search", inst.remote, logger.warn);
 	}
 
-	for (const ws of websearchBindings) {
-		validateBindingRemoteSetting("websearch", ws.remote, logger.warn);
-	}
-
 	for (const memory of agentMemoryBindings) {
 		validateBindingRemoteSetting("agent_memory", memory.remote, logger.warn);
 	}
@@ -815,15 +809,6 @@ export function buildMiniflareBindingOptions(
 				inst.binding,
 				{
 					instance_name: inst.instance_name,
-					remoteProxyConnectionString,
-				},
-			])
-		),
-
-		websearch: Object.fromEntries(
-			websearchBindings.map((ws) => [
-				ws.binding,
-				{
 					remoteProxyConnectionString,
 				},
 			])

@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "5.20260903.0-alpha",
+	"version": "5.20260911.1-alpha",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -46,7 +46,7 @@
 	},
 	"dependencies": {
 		"@cspotcode/source-map-support": "0.8.1",
-		"sharp": "0.35.2",
+		"sharp": "0.35.4",
 		"undici": "catalog:default",
 		"workerd": "catalog:default",
 		"ws": "catalog:default",

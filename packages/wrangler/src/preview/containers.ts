@@ -1,14 +1,23 @@
 import { getLogLevel, setLogLevel } from "@cloudflare/cli-shared-helpers";
+import {
+	apply,
+	buildAndMaybePush,
+	initContainersSharedContext,
+	listDurableObjects,
+} from "@cloudflare/containers-shared";
 import { getDockerPath, UserError } from "@cloudflare/workers-utils";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
-import { buildContainer } from "../containers/build";
-import { apply, listDurableObjects } from "../containers/deploy";
-import { runWithLogLevel } from "../logger";
-import type { DurableObjectNamespace } from "../containers/deploy";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
+import { logger, runWithLogLevel } from "../logger";
+import type {
+	ContainerNormalizedConfig,
+	DurableObjectNamespace,
+	ImageRef,
+	ImageURIConfig,
+} from "@cloudflare/containers-shared";
 import type { DeploymentResource } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 /**
  * Confirm the API token carries the `containers` scope. `applyPreviewContainers`
@@ -88,6 +97,7 @@ async function applyPreviewContainers(
 	deployment: DeploymentResource,
 	accountId: string
 ): Promise<void> {
+	initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
 	await fillOpenAPIConfiguration(scopedConfig, containersScope);
 	const dockerPath = getDockerPath();
 
@@ -97,7 +107,7 @@ async function applyPreviewContainers(
 	// class name both locally and cross-script, and since this map is keyed on
 	// class name alone, an unfiltered cross-script entry could overwrite the
 	// preview's own namespace_id and attach the container to the wrong storage.
-	// `wrangler deploy` applies the same restriction (see containers/deploy.ts).
+	// `wrangler deploy` applies the same restriction.
 	const classNameToNamespaceId = new Map<string, string>();
 	for (const binding of Object.values(deployment.env ?? {})) {
 		if (
@@ -164,7 +174,34 @@ async function applyPreviewContainers(
 		await apply(
 			{ imageRef, durable_object_namespace_id: namespaceId },
 			container,
-			scopedConfig
+			scopedConfig,
+			accountId
 		);
 	}
+}
+
+async function buildContainer(
+	containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
+	imageTag: string,
+	dryRun: boolean,
+	pathToDocker: string,
+	verifyDockerIsRunning: boolean,
+	complianceConfig?: ComplianceConfig
+): Promise<ImageRef> {
+	const imageFullName = `${containerConfig.name}:${imageTag.split("-")[0]}`;
+	logger.log("Building image", imageFullName);
+
+	return await buildAndMaybePush(
+		{
+			tag: imageFullName,
+			pathToDockerfile: containerConfig.dockerfile,
+			buildContext: containerConfig.image_build_context,
+			args: containerConfig.image_vars,
+		},
+		pathToDocker,
+		!dryRun,
+		containerConfig,
+		verifyDockerIsRunning,
+		complianceConfig
+	);
 }

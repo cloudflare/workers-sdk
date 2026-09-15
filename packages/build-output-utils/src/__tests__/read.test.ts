@@ -1,17 +1,27 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { InputSettingsSchema, InputWorkerSchema } from "@cloudflare/config";
+import {
+	InputSettingsSchema,
+	InputWorkerSchema,
+	OutputContainerSchema,
+} from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { BuildOutputError } from "../errors";
 import {
 	getSettingsConfigPath,
+	getContainerConfigPath,
+	getContainerDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
 } from "../paths";
 import { readBuildOutput } from "../read";
-import { writeSettingsConfig, writeWorkerConfig } from "../write";
+import {
+	writeContainerConfig,
+	writeSettingsConfig,
+	writeWorkerConfig,
+} from "../write";
 import type { ParsedOutputWorkerConfig } from "@cloudflare/config";
 
 const completeManifest: ParsedOutputWorkerConfig["manifest"] = {
@@ -24,6 +34,21 @@ const parsedSettingsConfig = InputSettingsSchema.parse({
 	type: "settings",
 	accountId: "1234567890",
 	complianceRegion: "public",
+});
+
+const parsedStandardContainerConfig = OutputContainerSchema.parse({
+	type: "container",
+	name: "api-container",
+	image: { reference: "registry.example.com/api:latest" },
+});
+
+const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
+	type: "container",
+	name: "session-container",
+	schedulingPolicy: "durable-object",
+	images: {
+		default: { localReference: "session-container:latest" },
+	},
 });
 
 function inputWorkerConfig(name: string) {
@@ -76,7 +101,7 @@ async function seedWorker(
 		root,
 		config: inputWorkerConfig(name),
 		manifest: hasBundle ? completeManifest : undefined,
-		workerDirectoryName,
+		directoryName: workerDirectoryName,
 	});
 	if (bundleDir) {
 		await fsp.mkdir(getWorkerBundleDir(root, workerDirectoryName), {
@@ -126,6 +151,95 @@ describe("readBuildOutput", () => {
 		expect(workers.additional?.config.name).toBe("additional-worker");
 		expect(workers.additional?.bundleDir).toBe(
 			getWorkerBundleDir(root, "additional")
+		);
+	});
+
+	it("reads Containers keyed by directory name", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeContainerConfig({
+			root,
+			config: parsedDurableObjectContainerConfig,
+			directoryName: "session",
+		});
+		await writeContainerConfig({
+			root,
+			config: parsedStandardContainerConfig,
+			directoryName: "api",
+		});
+
+		const { containers } = await readBuildOutput(root);
+
+		expect(Object.keys(containers)).toEqual(["api", "session"]);
+		expect(containers.api).toEqual({
+			configPath: getContainerConfigPath(root, "api"),
+			config: parsedStandardContainerConfig,
+		});
+		expect(containers.session).toEqual({
+			configPath: getContainerConfigPath(root, "session"),
+			config: parsedDurableObjectContainerConfig,
+		});
+	});
+
+	it("returns no Containers when the Containers directory is absent", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+
+		const { containers } = await readBuildOutput(root);
+
+		expect(containers).toEqual({});
+	});
+
+	it("still requires the default Worker when Containers are present", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await writeContainerConfig({
+			root,
+			config: parsedStandardContainerConfig,
+			directoryName: "api",
+		});
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/no Worker config found/
+		);
+	});
+
+	it("throws when a Container config is missing", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+
+		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/no Container config found/
+		);
+	});
+
+	it("throws when a Container config is not valid JSON", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+		await fsp.writeFile(getContainerConfigPath(root, "api"), "{ not json");
+
+		await expect(readBuildOutput(root)).rejects.toThrow(/could not parse JSON/);
+	});
+
+	it("throws when a Container config fails schema validation", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+		await fsp.writeFile(
+			getContainerConfigPath(root, "api"),
+			JSON.stringify({ type: "container", name: "api-container" })
+		);
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/invalid Container config/
 		);
 	});
 

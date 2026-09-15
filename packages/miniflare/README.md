@@ -690,6 +690,15 @@ defined at the top-level.
   no need to do that yourself first. Additionally, the host of the request's URL
   is always ignored and replaced with the `workerd` server's.
 
+- `dispatchConnect(options?: { workerName?: string; port?: number }): Promise<net.Socket>`
+
+  Opens a TCP connection to a Worker's `connect()` trigger and returns a Node.js
+  `net.Socket`. This implicitly waits for the runtime to start and connects to
+  the trigger's allocated port when its configured port is `0`. If `workerName`
+  is omitted, the entrypoint Worker is selected. If `port` is omitted, the
+  selected Worker must have exactly one TCP trigger. Calling `dispose()` destroys
+  any sockets opened by this method.
+
 - `getBindings<Env extends Record<string, unknown> = Record<string, unknown>>(workerName?: string): Promise<Env>`
 
   Returns a `Promise` that resolves with a record mapping binding names to

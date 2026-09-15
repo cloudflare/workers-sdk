@@ -4,6 +4,8 @@ import { removeDir } from "@cloudflare/workers-utils";
 import {
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getBuildOutputDir,
+	getContainerConfigPath,
+	getContainerDir,
 	getSettingsConfigPath,
 	getWorkerConfigPath,
 	getWorkerDir,
@@ -11,6 +13,7 @@ import {
 import type {
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
+	ParsedOutputContainerConfig,
 	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
@@ -26,7 +29,7 @@ export interface WriteWorkerConfigOptions {
 	root: string;
 	config: ParsedInputWorkerConfig;
 	manifest?: ParsedOutputWorkerConfig["manifest"];
-	workerDirectoryName?: string;
+	directoryName?: string;
 }
 
 /**
@@ -39,14 +42,41 @@ export async function writeWorkerConfig({
 	root,
 	config,
 	manifest,
-	workerDirectoryName = DEFAULT_WORKER_DIRECTORY_NAME,
+	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
 }: WriteWorkerConfigOptions): Promise<void> {
 	const { entrypoint: _entrypoint, ...rest } = config;
 	const outputConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
-	await fsp.mkdir(getWorkerDir(root, workerDirectoryName), { recursive: true });
+	await fsp.mkdir(getWorkerDir(root, directoryName), { recursive: true });
 	await fsp.writeFile(
-		getWorkerConfigPath(root, workerDirectoryName),
+		getWorkerConfigPath(root, directoryName),
 		JSON.stringify(outputConfig)
+	);
+}
+
+export interface WriteContainerConfigOptions {
+	root: string;
+	config: ParsedOutputContainerConfig;
+	directoryName: string;
+}
+
+/**
+ * Write an output Container `config.json` to the Build Output Specification
+ * tree.
+ *
+ * Local Dockerfiles must already have been built and represented by a
+ * `localReference` in the output config.
+ */
+export async function writeContainerConfig({
+	root,
+	config,
+	directoryName,
+}: WriteContainerConfigOptions): Promise<void> {
+	await fsp.mkdir(getContainerDir(root, directoryName), {
+		recursive: true,
+	});
+	await fsp.writeFile(
+		getContainerConfigPath(root, directoryName),
+		JSON.stringify(config)
 	);
 }
 

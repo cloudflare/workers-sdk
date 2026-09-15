@@ -1,11 +1,17 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { OutputSettingsSchema, OutputWorkerSchema } from "@cloudflare/config";
+import {
+	OutputContainerSchema,
+	OutputSettingsSchema,
+	OutputWorkerSchema,
+} from "@cloudflare/config";
 import { BuildOutputError } from "./errors";
 import {
 	BUILD_OUTPUT_VERSION,
 	DEFAULT_WORKER_DIRECTORY_NAME,
+	getContainerConfigPath,
+	getContainersDir,
 	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
@@ -14,6 +20,7 @@ import {
 } from "./paths";
 import type {
 	ModuleType,
+	ParsedOutputContainerConfig,
 	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
@@ -72,6 +79,17 @@ export type BuildOutputWorkers = Record<string, BuildOutputWorker> & {
 	default: BuildOutputWorker;
 };
 
+/** A Container found in the Build Output Specification tree. */
+export interface BuildOutputContainer {
+	/** Absolute path to the Container's `config.json`. */
+	configPath: string;
+	/** The parsed, schema-validated Container config. */
+	config: ParsedOutputContainerConfig;
+}
+
+/** Containers keyed by their output directory names. */
+export type BuildOutputContainers = Record<string, BuildOutputContainer>;
+
 /**
  * The result of reading a Build Output Specification tree.
  */
@@ -92,6 +110,12 @@ export interface BuildOutput {
 	 * their directory names. Guaranteed to contain the `default` Worker.
 	 */
 	workers: BuildOutputWorkers;
+	/**
+	 * The Containers found under
+	 * `<root>/.cloudflare/output/v0/containers/`, keyed by their directory
+	 * names.
+	 */
+	containers: BuildOutputContainers;
 }
 
 /**
@@ -99,12 +123,13 @@ export interface BuildOutput {
  * `<root>/.cloudflare/output/v0/`.
  *
  * Reads the optional top-level settings `config.json`, then reads and
- * schema-validates the Worker's `config.json` and resolves its
- * `bundle/` / `assets/` directories. Partial manifests are resolved into
- * complete manifests using the files in `bundle/`.
+ * schema-validates each Worker and Container `config.json`, and resolves each
+ * Worker's `bundle/` / `assets/` directories. Partial manifests are resolved
+ * into complete manifests using the files in `bundle/`.
  *
  * @throws {BuildOutputError} if the top-level `config.json` is invalid, or if
- * the Worker config is missing, is not valid JSON, or fails schema validation.
+ * a Worker or Container config is missing, is not valid JSON, or fails schema
+ * validation.
  */
 export async function readBuildOutput(root: string): Promise<BuildOutput> {
 	const settings = await readSettings(root);
@@ -133,8 +158,65 @@ export async function readBuildOutput(root: string): Promise<BuildOutput> {
 		default: defaultWorker,
 		...Object.fromEntries(additionalWorkers),
 	};
+	const containers = await readContainers(root);
 
-	return { root, version: BUILD_OUTPUT_VERSION, settings, workers };
+	return {
+		root,
+		version: BUILD_OUTPUT_VERSION,
+		settings,
+		workers,
+		containers,
+	};
+}
+
+/** Read and schema-validate all Container configs, if any. */
+async function readContainers(root: string): Promise<BuildOutputContainers> {
+	const containersDir = getContainersDir(root);
+	if (!fs.existsSync(containersDir)) {
+		return {};
+	}
+
+	const containerDirectoryNames = (
+		await fsp.readdir(containersDir, { withFileTypes: true })
+	)
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => entry.name)
+		.sort();
+	const containers = await Promise.all(
+		containerDirectoryNames.map(
+			async (containerDirectoryName) =>
+				[
+					containerDirectoryName,
+					await readContainer(root, containerDirectoryName),
+				] as const
+		)
+	);
+
+	return Object.fromEntries(containers);
+}
+
+/** Read and schema-validate one Container config. */
+async function readContainer(
+	root: string,
+	containerDirectoryName: string
+): Promise<BuildOutputContainer> {
+	const configPath = getContainerConfigPath(root, containerDirectoryName);
+
+	if (!fs.existsSync(configPath)) {
+		throw new BuildOutputError(`no Container config found at ${configPath}.`);
+	}
+
+	const contents = await fsp.readFile(configPath, "utf-8");
+	const result = OutputContainerSchema.safeParse(
+		parseJson(contents, configPath)
+	);
+	if (!result.success) {
+		throw new BuildOutputError(
+			`invalid Container config at ${configPath}.\n${result.error.message}`
+		);
+	}
+
+	return { configPath, config: result.data };
 }
 
 /**

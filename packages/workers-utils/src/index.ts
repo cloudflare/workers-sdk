@@ -14,10 +14,16 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
+	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
 } from "./config/containers";
+export type { DurableObjectContainerApp } from "./config/containers";
 export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
@@ -158,7 +164,7 @@ export { MetricsRegistry } from "./prometheus-metrics";
 export type { Counter } from "./prometheus-metrics";
 
 export type { Tunnel, TunnelOptions } from "./tunnel";
-export { startTunnel } from "./tunnel";
+export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
 export * from "./cfetch";

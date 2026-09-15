@@ -2,12 +2,13 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { showCursor } from "@cloudflare/cli-shared-helpers";
 import { bold } from "@cloudflare/cli-shared-helpers/colors";
-import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
-import { WebSocket } from "ws";
 import {
-	fillOpenAPIConfiguration,
+	ApiError,
+	DeploymentsService,
 	promiseSpinner,
-} from "../cloudchamber/common";
+} from "@cloudflare/containers-shared";
+import { WebSocket } from "ws";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { containersScope } from "./index";

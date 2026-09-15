@@ -41,10 +41,16 @@ export type {
 export { partitionExports } from "./exports";
 export type { ExportType, PartitionedExports } from "./exports";
 export {
+	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
 } from "./containers";
+export type { DurableObjectContainerApp } from "./containers";
 
 export function configFormat(
 	configPath: string | undefined

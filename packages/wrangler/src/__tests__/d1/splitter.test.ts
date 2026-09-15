@@ -1,3 +1,4 @@
+import { performance } from "node:perf_hooks";
 import { describe, it } from "vitest";
 import {
 	mayContainMultipleStatements,
@@ -454,5 +455,51 @@ describe("splitSqlQuery()", () => {
 						END ; END",
 			]
 		`);
+	});
+
+	describe("performance tests", () => {
+		it("should split a file with a lot of commands", ({ expect }) => {
+			const sql = "INSERT INTO blobs (id, data) VALUES (1, 'xxx');\n".repeat(
+				5 * 1024
+			);
+
+			const startedAt = performance.now();
+			const statements = splitSqlQuery(sql);
+			const elapsedMs = performance.now() - startedAt;
+
+			expect(statements).toHaveLength(5 * 1024);
+			expect(statements[0]).toBe(
+				"INSERT INTO blobs (id, data) VALUES (1, 'xxx')"
+			);
+			expect(elapsedMs).toBeLessThan(1000);
+		});
+
+		it("should split a file with a large quoted value quickly", ({
+			expect,
+		}) => {
+			const largeValue = "x".repeat(256 * 1024);
+			const sql = `INSERT INTO blobs (id, data) VALUES (1, '${largeValue}');\nSELECT count(*) FROM blobs;`;
+
+			const startedAt = performance.now();
+			const statements = splitSqlQuery(sql);
+			const elapsedMs = performance.now() - startedAt;
+
+			expect(statements).toEqual([
+				`INSERT INTO blobs (id, data) VALUES (1, '${largeValue}')`,
+				"SELECT count(*) FROM blobs",
+			]);
+			expect(elapsedMs).toBeLessThan(1000);
+		});
+
+		it("should split a file with very long comments quickly", ({ expect }) => {
+			const sql = "SELECT 1; -- " + "c".repeat(256 * 1024) + "\nSELECT 2;";
+
+			const startedAt = performance.now();
+			const statements = splitSqlQuery(sql);
+			const elapsedMs = performance.now() - startedAt;
+
+			expect(statements).toEqual(["SELECT 1", "SELECT 2"]);
+			expect(elapsedMs).toBeLessThan(1000);
+		});
 	});
 });

@@ -41,6 +41,27 @@ describe("getContainerOptions", () => {
 		]);
 	});
 
+	test("skips Durable Object-managed containers", ({ expect }) => {
+		const containersConfig: Containers = [
+			{
+				name: "managed-container",
+				class_name: "ManagedDO",
+				scheduling_policy: "durable_object",
+				images: {
+					app: { dockerfile: "./Dockerfile" },
+				},
+			},
+		];
+
+		expect(
+			getContainerOptions({
+				containersConfig,
+				exports: {},
+				containerBuildId: "build-id",
+			})
+		).toEqual([]);
+	});
+
 	test("resolves class_name from a durable object export that references the container", ({
 		expect,
 	}) => {
