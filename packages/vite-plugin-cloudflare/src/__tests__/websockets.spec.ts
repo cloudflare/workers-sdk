@@ -540,4 +540,59 @@ describe("handleWebSocket", () => {
 		expect(closed).toBe(false);
 		socket.destroy();
 	});
+
+	test("does not destroy sockets owned by an earlier listener on malformed host", async ({
+		expect,
+	}) => {
+		// The plugin listener is prepended, so its synchronous preamble runs
+		// before previously registered owners. A malformed `Host` makes
+		// `new URL()` throw before `dispatchFetch` — that must not destroy
+		// the socket, or the earlier owner's valid handshake fails.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url === "/custom") {
+				owner.handleUpgrade(request, socket, head, (ws) => {
+					owner.emit("connection", ws, request);
+				});
+			}
+		});
+
+		await listen();
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /custom HTTP/1.1\r\n" +
+				"Host: not a host\r\n" +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
 });
