@@ -40,7 +40,13 @@ export function handleWebSocket(
 		}
 	);
 
-	httpServer.on(
+	// Prepend so our `bytesWritten` baseline is captured before any other
+	// `upgrade` listener can write its 101 response. Node invokes `upgrade`
+	// listeners synchronously in registration order — with `on()`, an owner
+	// registered before us would already have completed its handshake before
+	// our callback runs, making its bytes indistinguishable from keep-alive
+	// bytes and breaking `isClaimed()` below.
+	httpServer.prependListener(
 		"upgrade",
 		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
 			// Socket errors crash Node.js if unhandled
@@ -92,29 +98,23 @@ export function handleWebSocket(
 					// Node dispatches `upgrade` to every registered listener, not just
 					// the first. Another listener (e.g. Vite DevTools at
 					// `/__devtools/__ws`, which uses no `vite`-prefixed subprotocol)
-					// may have already upgraded this socket while `dispatchFetch`
-					// was in flight. Destroying here would kill a socket we don't own
-					// (client sees `onopen` then close `1006`). If the Worker has no
-					// route, this upgrade isn't ours — let the owner keep it.
-					// But if no listener claims it, tear it down (deferred by a
-					// tick so async owners still get a chance) rather than leaving
-					// unclaimed upgrades hanging forever.
+					// may upgrade this socket while `dispatchFetch` is in flight —
+					// synchronously or asynchronously (e.g. after auth/setup).
+					// Destroying here (even deferred by a tick) would kill a socket
+					// we don't own (client sees `onopen` then close `1006`), and no
+					// deadline can distinguish a slow async owner from a declined
+					// upgrade. If the Worker has no route, this upgrade isn't ours —
+					// leave the socket untouched for its owner.
 					// See https://github.com/cloudflare/workers-sdk/issues/15654
-					if (socket.destroyed || isClaimed()) {
-						return;
-					}
-					setImmediate(() => {
-						if (!socket.destroyed && !isClaimed()) {
-							socket.destroy();
-						}
-					});
 					return;
 				}
 
-				// If another listener already claimed the socket while
-				// `dispatchFetch` was in flight (it already sent the 101 response),
-				// don't attempt a second upgrade — it would corrupt their connection.
-				// Likewise, the client may have disconnected in the meantime.
+				// If another listener claimed the socket while `dispatchFetch` was
+				// in flight (it already sent the 101 response), don't attempt a
+				// second upgrade — it would corrupt their connection. Likewise,
+				// the client may have disconnected in the meantime. This listener
+				// is prepended above, so the baseline was captured before any
+				// other owner could write.
 				if (socket.destroyed || isClaimed()) {
 					workerResponseHeaders.delete(request);
 					return;
