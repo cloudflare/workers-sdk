@@ -3092,12 +3092,50 @@ describe("wrangler preview", () => {
 			]);
 		});
 
-		test("should include compatibility_date in the deployment request", async ({
+		test("should include version settings in the deployment request", async ({
 			expect,
 		}) => {
+			writeFileSync(
+				"src/index.ts",
+				`import { WorkerEntrypoint } from "cloudflare:workers";
+				export class CachedBackend extends WorkerEntrypoint { fetch() { return new Response("cached"); } }
+				export class UnCachedBackend extends WorkerEntrypoint { fetch() { return new Response("uncached"); } }
+				export class EcommerceAgent { fetch() { return new Response("agent"); } }
+				export default { fetch() { return new Response("default"); } };`
+			);
+			const configuredExports = {
+				default: { type: "worker", cache: { enabled: false } },
+				CachedBackend: {
+					type: "worker",
+					cache: { enabled: true },
+				},
+				UnCachedBackend: { type: "worker", cache: { enabled: false } },
+				EcommerceAgent: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "ecommerce-agent",
+				},
+			};
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					containers: [
+						{
+							name: "ecommerce-agent",
+							image: "registry.cloudflare.com/some-account-id/test:latest",
+						},
+					],
+					exports: configuredExports,
+				})
+			);
+
 			let deploymentRequestBody:
 				| {
 						compatibility_date?: string;
+						exports?: Record<string, unknown>;
 				  }
 				| undefined;
 
@@ -3159,6 +3197,10 @@ describe("wrangler preview", () => {
 			);
 			await runWrangler("preview --name test-preview");
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
+			expect(deploymentRequestBody?.exports).toEqual({
+				...configuredExports,
+				EcommerceAgent: { type: "durable-object", storage: "sqlite" },
+			});
 			expect(std.out).toContain("Deployment ID: deployment-id-compat");
 		});
 
@@ -3805,8 +3847,18 @@ describe("wrangler preview", () => {
 			{
 				label: "exports",
 				declaration: {
+					containers: [
+						{
+							name: "production-container",
+							image: "registry.cloudflare.com/some-account-id/test:latest",
+						},
+					],
 					exports: {
-						MyContainer: { type: "durable-object", storage: "sqlite" },
+						MyContainer: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "production-container",
+						},
 					},
 				},
 			},
@@ -3958,6 +4010,11 @@ describe("wrangler preview", () => {
 				expect(deploymentRequest.containers).toEqual([
 					{ class_name: "MyContainer" },
 				]);
+				if ("exports" in declaration) {
+					expect(deploymentRequest.exports).toEqual({
+						MyContainer: { type: "durable-object", storage: "sqlite" },
+					});
+				}
 			}
 		);
 
