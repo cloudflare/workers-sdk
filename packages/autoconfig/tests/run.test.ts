@@ -56,7 +56,10 @@ describe("runAutoConfig()", () => {
 			.mockResolvedValue();
 		const packageJson = {
 			name: "my-static-app",
-			scripts: { build: "generate && vite build" },
+			scripts: {
+				build: "generate && vite build",
+				preview: "vite preview",
+			},
 		};
 		await seed({
 			"package.json": JSON.stringify(packageJson),
@@ -110,7 +113,7 @@ describe("runAutoConfig()", () => {
 			scripts: {
 				build: "generate && vite build",
 				deploy: "cf deploy",
-				preview: "cf dev",
+				preview: "vite preview",
 			},
 		});
 	});
