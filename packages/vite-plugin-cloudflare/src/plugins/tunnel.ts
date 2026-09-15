@@ -110,8 +110,9 @@ export class TunnelManager {
 		allowedHosts: true | string[] | undefined;
 		accountId: string | undefined;
 		complianceRegion: Config["compliance_region"];
-		profileDir?: string;
+		profileDir: string;
 	}): Promise<string[] | null> {
+		const abortController = new AbortController();
 		try {
 			const previousTunnel = this.#tunnel;
 
@@ -119,7 +120,6 @@ export class TunnelManager {
 				this.dispose();
 			}
 
-			const abortController = new AbortController();
 			this.#abortController = abortController;
 			this.#origin = options.origin;
 			this.#requestedTunnel = options.name;
@@ -137,7 +137,7 @@ export class TunnelManager {
 			let namedTunnel;
 			if (options.name !== undefined) {
 				const logger = createLogger(this.#logger);
-				const auth = createAuth(options.profileDir ?? process.cwd(), logger);
+				const auth = createAuth(options.profileDir, logger);
 				const accountId = await auth.requireAuth({
 					...(options.accountId ? { account_id: options.accountId } : {}),
 					...(options.complianceRegion
@@ -215,9 +215,15 @@ export class TunnelManager {
 
 			return await this.#waitForPublicUrls(tunnel);
 		} catch (error) {
-			this.#origin = undefined;
-			this.#publicUrls = undefined;
-			this.#requestedTunnel = undefined;
+			if (abortController.signal.aborted) {
+				return null;
+			}
+
+			if (this.#abortController === abortController) {
+				this.#origin = undefined;
+				this.#publicUrls = undefined;
+				this.#requestedTunnel = undefined;
+			}
 
 			throw error;
 		}

@@ -5,20 +5,16 @@ import {
 	createCfAuth,
 	createCfProfileStore,
 } from "@cloudflare/workers-auth/cf";
-import {
-	createWranglerAuth,
-	createWranglerProfileStore,
-} from "@cloudflare/workers-auth/wrangler";
-import { isNonInteractiveOrCI, UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { debuglog } from "./utils";
 import type { Logger } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
-class NoDefaultValueProvided extends UserError {
+class AccountSelectionUnavailable extends Error {
 	constructor() {
-		super("This command cannot be run in a non-interactive context", {
-			telemetryMessage: "vite auth prompt default missing",
-		});
+		super(
+			"Cannot select an account while Vite is running in a non-interactive context."
+		);
 	}
 }
 
@@ -29,8 +25,7 @@ const { version: packageVersion } = createRequire(import.meta.url)(
 export const USER_AGENT = `vite-plugin/${packageVersion}`;
 
 /**
- * Use the same auth selection and profile setup as remote bindings so Vite
- * features share credentials regardless of how Vite was started.
+ * Set up cf authentication using the profile associated with the Vite project.
  */
 export function createAuth(profileDir: string, logger: Logger) {
 	const context = {
@@ -38,7 +33,7 @@ export function createAuth(profileDir: string, logger: Logger) {
 		userAgent: USER_AGENT,
 		async prompt(question: string) {
 			if (isNonInteractiveOrCI()) {
-				throw new NoDefaultValueProvided();
+				throw new AccountSelectionUnavailable();
 			}
 			return inputPrompt<string>({
 				type: "text",
@@ -52,7 +47,7 @@ export function createAuth(profileDir: string, logger: Logger) {
 			options: { choices: { title: string; value: string }[] }
 		) {
 			if (isNonInteractiveOrCI()) {
-				throw new NoDefaultValueProvided();
+				throw new AccountSelectionUnavailable();
 			}
 			return inputPrompt<string>({
 				type: "select",
@@ -66,13 +61,10 @@ export function createAuth(profileDir: string, logger: Logger) {
 			});
 		},
 		isNoDefaultValueProvidedError: (error: unknown) =>
-			error instanceof NoDefaultValueProvided,
+			error instanceof AccountSelectionUnavailable,
 	};
-	const useCfAuth = "CLOUDFLARE_CF_AUTH" in process.env;
-	const auth = useCfAuth ? createCfAuth(context) : createWranglerAuth(context);
-	const profileStore = useCfAuth
-		? createCfProfileStore({ logger })
-		: createWranglerProfileStore({ logger });
+	const auth = createCfAuth(context);
+	const profileStore = createCfProfileStore({ logger });
 	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
 	return auth;
 }

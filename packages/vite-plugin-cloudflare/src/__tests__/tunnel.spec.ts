@@ -299,6 +299,7 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: undefined,
 			complianceRegion: undefined,
+			profileDir: server.config.root,
 		});
 
 		await expect(
@@ -309,6 +310,7 @@ describe("tunnel plugin", () => {
 				allowedHosts: true,
 				accountId: undefined,
 				complianceRegion: undefined,
+				profileDir: server.config.root,
 			})
 		).rejects.toBe(disposeError);
 
@@ -602,14 +604,24 @@ describe("tunnel plugin", () => {
 		`);
 	});
 
-	it("cancels a named tunnel that is closed while still starting", async ({
+	it("cancels a named tunnel without clearing a replacement", async ({
 		expect,
 	}) => {
-		const namedTunnelDeferred = createDeferred<{
-			hostnames: string[];
-			token: string;
-		}>();
-		vi.mocked(resolveNamedTunnel).mockReturnValue(namedTunnelDeferred.promise);
+		vi.mocked(resolveNamedTunnel).mockImplementation(
+			(_name, _origin, options) =>
+				new Promise((_resolve, reject) => {
+					const { abortSignal } = options;
+					if (abortSignal?.aborted) {
+						reject(abortSignal.reason);
+						return;
+					}
+					abortSignal?.addEventListener(
+						"abort",
+						() => reject(abortSignal.reason),
+						{ once: true }
+					);
+				})
+		);
 
 		const server = await createServer();
 		const tunnelManager = new TunnelManager(server.config.logger);
@@ -623,19 +635,29 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
+			profileDir: server.config.root,
 		});
 
 		expect(tunnelManager.isOpen()).toBe(true);
 		tunnelManager.dispose();
 
-		namedTunnelDeferred.resolve({
-			hostnames: ["dev.example.com"],
-			token: "TOKEN",
+		const replacementPromise = tunnelManager.startTunnel({
+			origin: "http://localhost:3001",
+			name: undefined,
+			mode: "dev",
+			allowedHosts: true,
+			accountId: "account-id",
+			complianceRegion: undefined,
+			profileDir: server.config.root,
 		});
 
 		await expect(startPromise).resolves.toBeNull();
-		expect(startTunnel).not.toHaveBeenCalled();
-		expect(tunnelManager.isOpen()).toBe(false);
+		await expect(replacementPromise).resolves.toEqual([
+			"https://example.trycloudflare.com/",
+		]);
+		expect(tunnelManager.isStarted("http://localhost:3001", undefined)).toBe(
+			true
+		);
 	});
 
 	it("logs tunnel closed only after tunnel startup begins", async ({
@@ -669,6 +691,7 @@ describe("tunnel plugin", () => {
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
+			profileDir: server.config.root,
 		});
 
 		tunnelManager.dispose();
