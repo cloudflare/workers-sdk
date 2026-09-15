@@ -5,6 +5,7 @@ import type {
 	InstanceStatusAndLogs,
 	WorkflowInstanceRestartFrom,
 } from "./types";
+import type { LocalExplorerWorkflowInstanceStatus } from "miniflare";
 
 const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/local/explorer/api";
 const DEFAULT_LOCAL_PORT = 8787;
@@ -148,14 +149,14 @@ export async function updateLocalInstanceStatus(
 	port: number,
 	workflowName: string,
 	instanceId: string,
-	action: "pause" | "resume" | "restart" | "terminate",
+	status: LocalExplorerWorkflowInstanceStatus,
 	from?: WorkflowInstanceRestartFrom,
 	rollback?: boolean
 ): Promise<{ success: boolean }> {
 	const body = {
-		status: action,
+		status,
 		...(from ? { from } : {}),
-		...(action === "terminate" && rollback === true ? { rollback: true } : {}),
+		...(status === "terminate" && rollback === true ? { rollback: true } : {}),
 	};
 
 	return fetchLocalResult<{ success: boolean }>(

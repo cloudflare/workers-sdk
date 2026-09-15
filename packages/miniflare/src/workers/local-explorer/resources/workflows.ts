@@ -972,7 +972,7 @@ export async function changeWorkflowInstanceStatus(
 			restart: "queued",
 			resume: "queued",
 			terminate: "terminated",
-		} as const;
+		} as const satisfies Record<typeof status, string>;
 		return c.json(
 			wrapResponse({
 				status: responseStatus[status],
