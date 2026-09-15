@@ -1,0 +1,74 @@
+name: Publish Vite plugin v2 alpha
+
+on:
+  push:
+    branches:
+      - vite-plugin-v2
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  # This workflow only builds and publishes — it never runs Playwright tests.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+jobs:
+  publish:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Publish @cloudflare/vite-plugin@v2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check runtime workspace dependencies
+        run: |
+          git fetch --no-tags origin main
+          git diff --exit-code origin/main...HEAD -- \
+            packages/config \
+            packages/wrangler \
+            packages/miniflare \
+            packages/unenv-preset
+
+      - name: Install Dependencies
+        # Defense in depth: do not pass Turbo remote cache credentials and
+        # disable the pnpm store cache so release builds always resolve
+        # packages from the registry and rebuild every task from source.
+        uses: ./.github/actions/install-dependencies
+        with:
+          node-version: 24.18.0
+          disable-cache: "true"
+
+      - name: Check npm version
+        run: node -r esbuild-register tools/deployments/check-npm-version.ts
+
+      - name: Set alpha version
+        run: npm version "2.0.0-alpha.sha-${GITHUB_SHA:0:9}" --no-git-tag-version
+        working-directory: packages/vite-plugin-cloudflare
+
+      - name: Build
+        run: pnpm build --filter @cloudflare/vite-plugin
+        env:
+          CI_OS: ${{ runner.os }}
+          NODE_ENV: production
+
+      - name: Verify package dependencies
+        run: |
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+          mkdir "$RUNNER_TEMP/vite-plugin-install-test"
+          cd "$RUNNER_TEMP/vite-plugin-install-test"
+          npm init --yes
+          npm install --ignore-scripts --package-lock-only "$RUNNER_TEMP"/cloudflare-vite-plugin-*.tgz
+        working-directory: packages/vite-plugin-cloudflare
+
+      - name: Publish @cloudflare/vite-plugin@v2
+        run: pnpm publish --tag v2 --access public --no-git-checks
+        working-directory: packages/vite-plugin-cloudflare
