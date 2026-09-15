@@ -2104,12 +2104,8 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					kv_namespaces: [{ binding: "IMPORTANT_BINDING", id: "kv-id-123" }],
-					durable_objects: {
-						bindings: [{ name: "DO", class_name: "ProductionDO" }],
-					},
 				})
 			);
-			const warn = vi.spyOn(logger, "warn");
 
 			let thrown: unknown;
 			try {
@@ -2125,15 +2121,6 @@ describe("wrangler preview", () => {
 			expect(std.warn).toContain(
 				"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them."
 			);
-			const conversionWarnings = warn.mock.calls
-				.map(([message]) => message)
-				.filter(
-					(message) =>
-						typeof message === "string" &&
-						(message.startsWith("This Worker uses Durable Objects") ||
-							message.startsWith("Replace each <REPLACE_ME>"))
-				);
-			expect(conversionWarnings).toHaveLength(2);
 		});
 
 		test("emits one combined unsupported-settings warning", async ({
@@ -2151,6 +2138,7 @@ describe("wrangler preview", () => {
 						},
 					],
 					services: [{ binding: "SERVICE", service: "production-service" }],
+					kv_namespaces: [{ binding: "KV", id: "production-kv" }],
 					queues: {
 						producers: [{ binding: "QUEUE", queue: "production-queue" }],
 						consumers: [{ queue: "production-queue" }],
@@ -2159,6 +2147,7 @@ describe("wrangler preview", () => {
 				},
 				"wrangler.json"
 			);
+			const warn = vi.spyOn(logger, "warn");
 
 			await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
 				"missing a `previews` block"
@@ -2174,6 +2163,17 @@ describe("wrangler preview", () => {
 			expect(
 				warning.match(/These settings have limitations in Worker Previews/g)
 			).toHaveLength(1);
+			const conversionWarnings = warn.mock.calls
+				.map(([message]) => message)
+				.filter(
+					(message) =>
+						typeof message === "string" &&
+						(message.startsWith(
+							"These settings have limitations in Worker Previews"
+						) ||
+							message.startsWith("Replace each <REPLACE_ME>"))
+				);
+			expect(conversionWarnings).toHaveLength(2);
 		});
 
 		test("does not let Preview Base suppress Durable Object guidance", async ({
