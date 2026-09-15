@@ -11,7 +11,15 @@ import type { Plugin } from "../shared";
 
 // Options for a container attached to the DO
 export const DOContainerOptionsSchema = z.object({
-	imageName: z.string(),
+	imageName: z.string().optional(),
+	images: z
+		.array(
+			z.object({
+				name: z.string(),
+				image: z.string(),
+			})
+		)
+		.optional(),
 });
 export type DOContainerOptions = z.infer<typeof DOContainerOptionsSchema>;
 

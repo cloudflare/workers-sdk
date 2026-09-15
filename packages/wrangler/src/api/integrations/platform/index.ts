@@ -1,8 +1,8 @@
 import path from "node:path";
+import { createContainerDevPlan } from "@cloudflare/containers-shared";
 import {
 	DEFAULT_COMPAT_DATE,
 	extractBindingsOfType,
-	getContainerDurableObjectClassNames,
 	getRegistryPath,
 } from "@cloudflare/workers-utils";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -34,6 +34,7 @@ import type {
 	RawEnvironment,
 } from "../../../../../workers-utils/src";
 import type { RemoteProxySession } from "../../remoteBindings";
+import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	RemoteProxyConnectionString,
@@ -292,12 +293,8 @@ async function getMiniflareOptionsFromConfig(args: {
 			exports: config.exports,
 			tails: [],
 			streamingTails: [],
-			containerDOClassNames: getContainerDurableObjectClassNames(
-				config.containers,
-				config.exports
-			),
-			containerBuildId: undefined,
-			enableContainers: config.dev.enable_containers,
+			// Platform proxy does not prepare local Container images.
+			enableContainers: false,
 		},
 		remoteProxyConnectionString
 	);
@@ -394,6 +391,8 @@ export interface Unstable_MiniflareWorkerOptions {
 	define: Record<string, string>;
 	main?: string;
 	externalWorkers: V4WorkerOptions[];
+	/** Images the caller must build or pull before starting Miniflare. */
+	containerDevOptions?: ContainerDevOptions[];
 }
 
 export function unstable_getMiniflareWorkerOptions(
@@ -446,10 +445,18 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
-	const containerDOClassNames = getContainerDurableObjectClassNames(
-		config.containers,
-		config.exports
-	);
+	const enableContainers =
+		options?.overrides?.enableContainers !== undefined
+			? options.overrides.enableContainers
+			: config.dev.enable_containers;
+	const containerPlan = enableContainers
+		? createContainerDevPlan({
+				containers: config.containers,
+				exports: config.exports,
+				containerBuildId: options?.containerBuildId,
+				configPath: config.configPath,
+			})
+		: undefined;
 	const bindings = getBindings(
 		config,
 		env,
@@ -458,11 +465,6 @@ export function unstable_getMiniflareWorkerOptions(
 		undefined,
 		undefined
 	);
-
-	const enableContainers =
-		options?.overrides?.enableContainers !== undefined
-			? options?.overrides?.enableContainers
-			: config.dev.enable_containers;
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
@@ -474,8 +476,7 @@ export function unstable_getMiniflareWorkerOptions(
 			exports: config.exports,
 			tails: config.tail_consumers,
 			streamingTails: config.streaming_tail_consumers,
-			containerDOClassNames,
-			containerBuildId: options?.containerBuildId,
+			containerRuntimeOptions: containerPlan?.containerRuntimeOptions,
 			enableContainers,
 		},
 		options?.remoteProxyConnectionString
@@ -525,5 +526,6 @@ export function unstable_getMiniflareWorkerOptions(
 		define: config.define,
 		main: config.main,
 		externalWorkers,
+		containerDevOptions: containerPlan?.containerOptions,
 	};
 }

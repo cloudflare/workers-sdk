@@ -9,7 +9,6 @@ import { logger } from "../../logger";
 import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
-	getContainerDevOptions,
 	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
@@ -95,7 +94,9 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	// If this doesn't match what is in config, trigger a rebuild.
 	// Used for the rebuild hotkey
-	#currentContainerBuildId: string | undefined;
+	#currentContainerBuildIds = new Map<string, string>();
+	// Tags referenced by each Worker's latest successful image preparation.
+	#currentContainerImageTags = new Map<string, Set<string>>();
 
 	#canStartMiniflare() {
 		return (
@@ -173,27 +174,38 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			}
 
 			if (
-				data.config.containers?.length &&
-				this.#currentContainerBuildId !== data.config.dev.containerBuildId
+				data.config.containerDevPlan?.containerOptions.length &&
+				this.#currentContainerBuildIds.get(workerName) !==
+					data.config.dev.containerBuildId
 			) {
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
 				// Assemble container options and build if necessary
 				assert(
 					data.config.dev.containerBuildId,
-					"Build ID should be set if containers are enabled and defined"
+					"Build ID should be set when Container images require preparation"
 				);
-				const containerOptions = await getContainerDevOptions(
-					data.config.containers,
-					data.config.dev.containerBuildId
-				);
+				const containerOptions = data.config.containerDevPlan.containerOptions;
 				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
-				// keep track of them so we can clean up later
-				for (const container of containerOptions ?? []) {
+				// Each Worker's images are prepared independently. Duplicate cleanup
+				// keeps the tags currently used by every other Worker.
+				const activeImageTags = new Set<string>();
+				for (const [name, imageTags] of this.#currentContainerImageTags) {
+					if (name !== workerName) {
+						for (const imageTag of imageTags) {
+							activeImageTags.add(imageTag);
+						}
+					}
+				}
+				const nextContainerImageTags = new Set<string>();
+				// Session-wide history is used to remove descendant containers on teardown.
+				for (const container of containerOptions) {
+					nextContainerImageTags.add(container.image_tag);
 					this.containerImageTagsSeen.add(container.image_tag);
 				}
 				await prepareContainerImagesForDev({
 					dockerPath: this.dockerPath,
 					containerOptions,
+					activeImageTags,
 					onContainerImagePreparationStart: (buildStartEvent) => {
 						this.containerBeingBuilt = {
 							...buildStartEvent,
@@ -212,7 +224,11 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					this.containerBeingBuilt.abortRequested = false;
 				}
 
-				this.#currentContainerBuildId = data.config.dev.containerBuildId;
+				this.#currentContainerImageTags.set(workerName, nextContainerImageTags);
+				this.#currentContainerBuildIds.set(
+					workerName,
+					data.config.dev.containerBuildId
+				);
 				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
 				// The actual user worker's miniflare instance is blocked until the containers are built
 				logger.log(chalk.dim("⎔ Container image(s) ready"));

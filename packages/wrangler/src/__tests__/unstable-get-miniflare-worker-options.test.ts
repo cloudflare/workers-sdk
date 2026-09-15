@@ -334,4 +334,118 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			).toBeUndefined();
 		});
 	});
+
+	describe("Durable Object-managed Containers", () => {
+		it("returns the named-image plan for Miniflare and image preparation", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2026-09-05",
+					containers: [
+						{
+							name: "managed-container",
+							scheduling_policy: "durable_object",
+							images: {
+								app: { dockerfile: "./Dockerfile" },
+							},
+						},
+					],
+					exports: {
+						ManagedDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "managed-container",
+						},
+					},
+					durable_objects: {
+						bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+					},
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions, containerDevOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json", undefined, {
+					containerBuildId: "build-id",
+				});
+			const durableObject = asRecord(
+				asRecord(workerOptions.durableObjects)?.MANAGED
+			);
+			const container = asRecord(durableObject?.container);
+			const images = asArray(container?.images);
+			const appTag = containerDevOptions?.[0]?.image_tag;
+			expect(appTag).toMatch(
+				/^cloudflare-dev\/manageddo-app-[a-f0-9]{12}:build-id$/
+			);
+
+			expect(containerDevOptions).toEqual([
+				expect.objectContaining({
+					class_name: "ManagedDO",
+					image_name: "app",
+					image_tag: appTag,
+				}),
+			]);
+			expect(images).toEqual([
+				{
+					name: "app",
+					image: appTag,
+				},
+			]);
+			expect(container).not.toHaveProperty("imageName");
+
+			expect(() =>
+				unstable_getMiniflareWorkerOptions("./wrangler.json")
+			).toThrow(
+				/Build ID should be set when a Container image requires preparation/
+			);
+
+			// enableContainers: false skips image preparation and Container attachments.
+			const disabled = unstable_getMiniflareWorkerOptions(
+				"./wrangler.json",
+				undefined,
+				{ overrides: { enableContainers: false } }
+			);
+			const disabledDurableObject = asRecord(
+				asRecord(disabled.workerOptions.durableObjects)?.MANAGED
+			);
+			expect(disabledDurableObject?.container).toBeUndefined();
+			expect(disabled.containerDevOptions).toBeUndefined();
+		});
+
+		it("attaches an empty Container configuration when no images are configured", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2026-09-05",
+					containers: [
+						{
+							name: "managed-container",
+							class_name: "ManagedDO",
+							scheduling_policy: "durable_object",
+						},
+					],
+					durable_objects: {
+						bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+					},
+					migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions, containerDevOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			const durableObject = asRecord(
+				asRecord(workerOptions.durableObjects)?.MANAGED
+			);
+
+			expect(durableObject?.container).toEqual({});
+			expect(containerDevOptions).toEqual([]);
+		});
+	});
 });

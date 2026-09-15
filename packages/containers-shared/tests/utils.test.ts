@@ -69,6 +69,20 @@ describe("checkExposedPorts", () => {
 				]
 			`);
 	});
+
+	it("identifies the named image that does not expose ports", async ({
+		expect,
+	}) => {
+		docketImageInspectResult = "0";
+		await expect(
+			checkExposedPorts("docker", {
+				...containerConfig,
+				image_name: "app",
+			})
+		).rejects.toThrow(
+			'The container "MyContainer.app" does not expose any ports'
+		);
+	});
 });
 
 describe("cleanupDuplicateImageTags", () => {
@@ -78,11 +92,12 @@ describe("cleanupDuplicateImageTags", () => {
 		vi.mocked(execFileSync).mockReturnValue("");
 	});
 
-	it("does not remove sibling container tags from the same dev session", async ({
+	it("leaves tags in other image repositories untouched", async ({
 		expect,
 	}) => {
 		docketImageInspectResult = [
 			"cloudflare-dev/egresstestcontainer:build-123",
+			"cloudflare-dev/egresstestcontainer:build-122",
 			"cloudflare-dev/egresstest1container:build-123",
 		].join("\n");
 
@@ -94,25 +109,29 @@ describe("cleanupDuplicateImageTags", () => {
 		expect(execFileSync).not.toHaveBeenCalled();
 	});
 
-	it("removes stale cloudflare-dev tags from previous dev sessions", async ({
+	it("removes unused same-image tags and keeps active ones", async ({
 		expect,
 	}) => {
 		docketImageInspectResult = [
-			"cloudflare-dev/egresstestcontainer:build-123",
-			"cloudflare-dev/egresstest1container:build-123",
-			"cloudflare-dev/egresstestcontainer:build-122",
+			"cloudflare-dev/egresstest1container:worker-a",
+			"cloudflare-dev/egresstest1container:worker-b",
+			"cloudflare-dev/egresstest1container:stale",
 			"user/image:latest",
 		].join("\n");
 
 		await cleanupDuplicateImageTags(
 			"docker",
-			"cloudflare-dev/egresstest1container:build-123"
+			"cloudflare-dev/egresstest1container:worker-b",
+			new Set([
+				"cloudflare-dev/egresstest1container:worker-a",
+				"cloudflare-dev/egresstest1container:worker-b",
+			])
 		);
 
 		expect(execFileSync).toHaveBeenCalledOnce();
 		expect(execFileSync).toHaveBeenCalledWith(
 			"docker",
-			["rmi", "cloudflare-dev/egresstestcontainer:build-122"],
+			["rmi", "cloudflare-dev/egresstest1container:stale"],
 			{ encoding: "utf8" }
 		);
 	});

@@ -118,6 +118,8 @@ export async function pullImage(
 export async function prepareContainerImagesForDev(args: {
 	dockerPath: string;
 	containerOptions: ContainerDevOptions[];
+	/** Tags prepared outside this batch that must remain available. */
+	activeImageTags?: ReadonlySet<string>;
 	onContainerImagePreparationStart: (args: {
 		containerOptions: ContainerDevOptions;
 		abort: () => void;
@@ -150,6 +152,10 @@ export async function prepareContainerImagesForDev(args: {
 				: "the configured image",
 		hint: "To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or pass --enable-containers=false.",
 	});
+	const activeImageTags = new Set(args.activeImageTags ?? []);
+	for (const { image_tag } of containerOptions) {
+		activeImageTags.add(image_tag);
+	}
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
 			const build = await startContainerBuild({
@@ -195,8 +201,12 @@ export async function prepareContainerImagesForDev(args: {
 			});
 		}
 		if (!aborted) {
-			// Clean up duplicate image tags. This is scoped to cloudflare-dev only
-			await cleanupDuplicateImageTags(dockerPath, options.image_tag);
+			// Remove unused tags for this cloudflare-dev image repository.
+			await cleanupDuplicateImageTags(
+				dockerPath,
+				options.image_tag,
+				activeImageTags
+			);
 
 			await checkExposedPorts(dockerPath, options);
 		}

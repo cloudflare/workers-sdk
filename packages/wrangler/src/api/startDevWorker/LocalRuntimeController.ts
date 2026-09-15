@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
 	cleanupContainers,
-	getDevContainerImageName,
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
@@ -214,10 +213,8 @@ export async function convertToConfigBundle(
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
 		streamingTails: event.config.streamingTailConsumers,
-		containerDOClassNames: new Set(
-			event.config.containers?.map((c) => c.class_name)
-		),
-		containerBuildId: event.config.dev?.containerBuildId,
+		containerRuntimeOptions:
+			event.config.containerDevPlan?.containerRuntimeOptions,
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
 		zone: getZoneForCfWorkerHeader(event.config),
@@ -271,6 +268,7 @@ export class LocalRuntimeController extends RuntimeController {
 	// If this doesn't match what is in config, trigger a rebuild.
 	// Used for the rebuild hotkey
 	#currentContainerBuildId: string | undefined;
+	#currentContainerImageTags = new Set<string>();
 
 	// Used to store the information and abort handle for the
 	// current container that is being built
@@ -345,31 +343,30 @@ export class LocalRuntimeController extends RuntimeController {
 			// Assemble container options and build if necessary
 
 			if (
-				data.config.containers?.length &&
+				data.config.containerDevPlan?.containerOptions.length &&
 				data.config.dev.enableContainers &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
 				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
 				assert(
 					data.config.dev.containerBuildId,
-					"Build ID should be set if containers are enabled and defined"
+					"Build ID should be set when Container images require preparation"
 				);
-				const containerDevOptions = await getContainerDevOptions(
-					data.config.containers,
-					data.config.dev.containerBuildId
-				);
+				const containerDevOptions =
+					data.config.containerDevPlan.containerOptions;
 
-				for (const container of containerDevOptions) {
-					// if this was triggered by the rebuild hotkey, delete the old image
-					if (this.#currentContainerBuildId !== undefined) {
-						runDockerCmdWithOutput(this.dockerPath, [
-							"rmi",
-							getDevContainerImageName(
-								container.class_name,
-								this.#currentContainerBuildId
-							),
-						]);
+				// A changed build ID means the rebuild hotkey fired; remove the tags
+				// from the previous build.
+				if (this.#currentContainerBuildId !== undefined) {
+					for (const previousImageTag of this.#currentContainerImageTags) {
+						runDockerCmdWithOutput(this.dockerPath, ["rmi", previousImageTag]);
 					}
+					this.#currentContainerImageTags.clear();
+				}
+
+				const nextContainerImageTags = new Set<string>();
+				for (const container of containerDevOptions) {
+					nextContainerImageTags.add(container.image_tag);
 					this.containerImageTagsSeen.add(container.image_tag);
 				}
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
@@ -394,6 +391,7 @@ export class LocalRuntimeController extends RuntimeController {
 					this.containerBeingBuilt.abortRequested = false;
 				}
 
+				this.#currentContainerImageTags = nextContainerImageTags;
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
 				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
 				// The actual user worker's miniflare instance is blocked until the containers are built
@@ -582,40 +580,4 @@ export class LocalRuntimeController extends RuntimeController {
 	emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
 		this.bus.dispatch(data);
 	}
-}
-
-/**
- * @returns Container options suitable for building or pulling images,
- * with image tag set to well-known dev format.
- * Undefined if containers are not enabled or not configured.
- */
-export async function getContainerDevOptions(
-	containersConfig: NonNullable<BundleCompleteEvent["config"]["containers"]>,
-	containerBuildId: string
-) {
-	const containers: ContainerDevOptions[] = [];
-	for (const container of containersConfig) {
-		if ("image_uri" in container) {
-			containers.push({
-				image_uri: container.image_uri,
-				class_name: container.class_name,
-				image_tag: getDevContainerImageName(
-					container.class_name,
-					containerBuildId
-				),
-			});
-		} else {
-			containers.push({
-				dockerfile: container.dockerfile,
-				image_build_context: container.image_build_context,
-				image_vars: container.image_vars,
-				class_name: container.class_name,
-				image_tag: getDevContainerImageName(
-					container.class_name,
-					containerBuildId
-				),
-			});
-		}
-	}
-	return containers;
 }

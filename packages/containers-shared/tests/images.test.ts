@@ -1,14 +1,24 @@
-import { beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { ExternalRegistryKind } from "../src/client/models/ExternalRegistryKind";
 import {
-	getEgressInterceptorPlatform,
-	pullEgressInterceptorImage,
 	getAndValidateRegistryType,
+	getEgressInterceptorPlatform,
+	prepareContainerImagesForDev,
+	pullEgressInterceptorImage,
 	validateAndEncodeGarKey,
 } from "../src/images";
-import { runDockerCmd } from "../src/utils";
+import { cleanupDuplicateImageTags, runDockerCmd } from "../src/utils";
+
+vi.mock("../src/build", () => ({
+	startContainerBuild: vi.fn(() => ({
+		abort: vi.fn(),
+		ready: Promise.resolve(),
+	})),
+}));
 
 vi.mock("../src/utils", () => ({
+	checkExposedPorts: vi.fn(),
+	cleanupDuplicateImageTags: vi.fn(),
 	runDockerCmd: vi.fn(() => ({
 		abort: vi.fn(),
 		ready: Promise.resolve({ aborted: false }),
@@ -16,7 +26,46 @@ vi.mock("../src/utils", () => ({
 			resolve();
 		},
 	})),
+	verifyDockerInstalled: vi.fn(),
 }));
+
+describe("prepareContainerImagesForDev", () => {
+	beforeEach(() => {
+		vi.spyOn(process, "platform", "get").mockReturnValue("linux");
+		vi.mocked(cleanupDuplicateImageTags).mockClear();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("keeps active tags prepared by another batch", async ({ expect }) => {
+		const currentTag = "cloudflare-dev/example:worker-b";
+		const siblingTag = "cloudflare-dev/example:worker-a";
+
+		await prepareContainerImagesForDev({
+			dockerPath: "docker",
+			containerOptions: [
+				{
+					dockerfile: "Dockerfile",
+					image_build_context: ".",
+					class_name: "ExampleContainer",
+					image_tag: currentTag,
+				},
+			],
+			activeImageTags: new Set([siblingTag]),
+			onContainerImagePreparationStart: vi.fn(),
+			onContainerImagePreparationEnd: vi.fn(),
+			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+		});
+
+		expect(cleanupDuplicateImageTags).toHaveBeenCalledWith(
+			"docker",
+			currentTag,
+			new Set([siblingTag, currentTag])
+		);
+	});
+});
 
 describe("getEgressInterceptorPlatform", () => {
 	beforeEach(() => {

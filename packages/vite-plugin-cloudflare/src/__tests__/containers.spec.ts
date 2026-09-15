@@ -1,145 +1,16 @@
+import fs from "node:fs";
+import path from "node:path";
 import { OpenAPI } from "@cloudflare/containers-shared";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { resolveConfig } from "vite";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import { configureContainerPull, getContainerOptions } from "../containers";
-import type { ResolvedWorkerConfig } from "../plugin-config";
-
-type Containers = ResolvedWorkerConfig["containers"];
-type Exports = ResolvedWorkerConfig["exports"];
-
-describe("getContainerOptions", () => {
-	test("returns undefined when no containers are configured", ({ expect }) => {
-		expect(
-			getContainerOptions({
-				containersConfig: undefined,
-				exports: {},
-				containerBuildId: "build-id",
-			})
-		).toBeUndefined();
-	});
-
-	test("uses the container's own class_name when set", ({ expect }) => {
-		const containersConfig: Containers = [
-			{
-				name: "my-container",
-				class_name: "MyDO",
-				image: "registry.cloudflare.com/hello:world",
-			},
-		];
-
-		expect(
-			getContainerOptions({
-				containersConfig,
-				exports: {},
-				containerBuildId: "build-id",
-			})
-		).toEqual([
-			{
-				image_uri: "registry.cloudflare.com/hello:world",
-				class_name: "MyDO",
-				image_tag: "cloudflare-dev/mydo:build-id",
-			},
-		]);
-	});
-
-	test("skips Durable Object-managed containers", ({ expect }) => {
-		const containersConfig: Containers = [
-			{
-				name: "managed-container",
-				class_name: "ManagedDO",
-				scheduling_policy: "durable_object",
-				images: {
-					app: { dockerfile: "./Dockerfile" },
-				},
-			},
-		];
-
-		expect(
-			getContainerOptions({
-				containersConfig,
-				exports: {},
-				containerBuildId: "build-id",
-			})
-		).toEqual([]);
-	});
-
-	test("resolves class_name from a durable object export that references the container", ({
-		expect,
-	}) => {
-		const containersConfig: Containers = [
-			{ name: "my-container", image: "registry.cloudflare.com/hello:world" },
-		];
-		const exports: Exports = {
-			MyContainerDO: {
-				type: "durable-object",
-				storage: "sqlite",
-				container: "my-container",
-			},
-		};
-
-		expect(
-			getContainerOptions({
-				containersConfig,
-				exports,
-				containerBuildId: "build-id",
-			})
-		).toEqual([
-			{
-				image_uri: "registry.cloudflare.com/hello:world",
-				class_name: "MyContainerDO",
-				image_tag: "cloudflare-dev/mycontainerdo:build-id",
-			},
-		]);
-	});
-
-	test("skips containers that are not linked to a durable object", ({
-		expect,
-	}) => {
-		const containersConfig: Containers = [
-			{ name: "linked", image: "registry.cloudflare.com/hello:world" },
-			{ name: "unlinked", image: "registry.cloudflare.com/goodbye:world" },
-		];
-		const exports: Exports = {
-			MyContainerDO: {
-				type: "durable-object",
-				storage: "sqlite",
-				container: "linked",
-			},
-		};
-
-		expect(
-			getContainerOptions({
-				containersConfig,
-				exports,
-				containerBuildId: "build-id",
-			})
-		).toEqual([
-			{
-				image_uri: "registry.cloudflare.com/hello:world",
-				class_name: "MyContainerDO",
-				image_tag: "cloudflare-dev/mycontainerdo:build-id",
-			},
-		]);
-	});
-
-	// Config validation rejects a container that is linked to nothing, so this is
-	// only reachable defensively. `undefined` and `[]` both mean there is nothing
-	// to build or pull, and both call sites iterate `options ?? []`.
-	test("returns an empty array when no container is linked to a durable object", ({
-		expect,
-	}) => {
-		const containersConfig: Containers = [
-			{ name: "my-container", image: "registry.cloudflare.com/hello:world" },
-		];
-
-		expect(
-			getContainerOptions({
-				containersConfig,
-				exports: {},
-				containerBuildId: "build-id",
-			})
-		).toEqual([]);
-	});
-});
+import * as wrangler from "wrangler";
+import { configureContainerPull } from "../containers";
+import { getPreviewMiniflareOptions } from "../miniflare-options";
+import type { PreviewPluginContext } from "../context";
+import type { PreviewResolvedConfig } from "../plugin-config";
+import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
 
 describe("configureContainerPull", () => {
 	beforeEach(() => {
@@ -191,6 +62,93 @@ describe("configureContainerPull", () => {
 
 		expect(OpenAPI.BASE).toBe(
 			"https://api.example.com/client/v4/accounts/abc123/containers"
+		);
+	});
+});
+
+describe("Container image planning", () => {
+	runInTempDir();
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	test("uses independent image tags for each preview Worker", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_DOCKER_HOST", "unix:///test/docker.sock");
+
+		function createWorkerConfig(name: string): Unstable_Config {
+			const directory = path.resolve(name);
+			fs.mkdirSync(directory);
+			fs.writeFileSync(path.join(directory, "index.js"), "export default {};");
+			fs.writeFileSync(path.join(directory, "Dockerfile"), `FROM ${name}`);
+			const configPath = path.join(directory, "wrangler.jsonc");
+			fs.writeFileSync(
+				configPath,
+				JSON.stringify({
+					name,
+					main: "./index.js",
+					compatibility_date: "2026-09-05",
+					containers: [
+						{
+							name: "managed-container",
+							class_name: "ContainerDO",
+							scheduling_policy: "durable_object",
+							images: { app: { dockerfile: "./Dockerfile" } },
+						},
+					],
+					durable_objects: {
+						bindings: [{ name: "CONTAINER", class_name: "ContainerDO" }],
+					},
+					migrations: [{ tag: "v1", new_sqlite_classes: ["ContainerDO"] }],
+				})
+			);
+			return wrangler.unstable_readConfig({ config: configPath });
+		}
+
+		const resolvedViteConfig = await resolveConfig(
+			{ logLevel: "silent", root: process.cwd() },
+			"serve"
+		);
+		const resolvedPluginConfig: PreviewResolvedConfig = {
+			type: "preview",
+			workers: ["first", "second"].map((name) => ({
+				source: "legacy",
+				config: createWorkerConfig(name),
+			})),
+			persistState: false,
+			inspectorPort: false,
+			experimental: { headersAndRedirectsDevModeSupport: false },
+			remoteBindings: false,
+			tunnel: { autoStart: false },
+		};
+		const ctx = {
+			resolvedPluginConfig,
+			resolvedViteConfig,
+		} as PreviewPluginContext;
+		const vitePreviewServer = {
+			config: resolvedViteConfig,
+		} as vite.PreviewServer;
+
+		const { containerTagToOptionsMap } = await getPreviewMiniflareOptions(
+			ctx,
+			vitePreviewServer
+		);
+
+		expect(containerTagToOptionsMap.size).toBe(2);
+		expect(new Set(containerTagToOptionsMap.keys()).size).toBe(2);
+		expect(
+			new Set(
+				[...containerTagToOptionsMap.values()].map((option) =>
+					"dockerfile" in option ? option.dockerfile : undefined
+				)
+			)
+		).toEqual(
+			new Set([
+				path.resolve("first/Dockerfile"),
+				path.resolve("second/Dockerfile"),
+			])
 		);
 	});
 });

@@ -1,8 +1,9 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { MultiworkerRuntimeController } from "../../../api/startDevWorker/MultiworkerRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { FakeBus } from "../../helpers/fake-bus";
@@ -10,6 +11,12 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
 import type { Bundle, StartDevWorkerOptions } from "../../../api";
+
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
+	const original =
+		await importOriginal<typeof import("@cloudflare/containers-shared")>();
+	return { ...original, prepareContainerImagesForDev: vi.fn() };
+});
 
 function makeEsbuildBundle(testBundle: string): Bundle {
 	return {
@@ -67,6 +74,87 @@ describe("MultiworkerRuntimeController", () => {
 	mockConsoleMethods();
 	runInTempDir();
 	const teardown = useTeardown();
+
+	beforeEach(() => {
+		vi.mocked(prepareContainerImagesForDev).mockReset();
+		vi.mocked(prepareContainerImagesForDev).mockResolvedValue();
+	});
+
+	it("keeps only other Workers' current image tags active", async ({
+		expect,
+	}) => {
+		const bus = new FakeBus();
+		const controller = new MultiworkerRuntimeController(bus, 2);
+		teardown(async () => {
+			// Image preparation is mocked, but teardown's Container cleanup is not.
+			controller.containerImageTagsSeen.clear();
+			await controller.teardown();
+		});
+
+		function makeWorkerConfig(
+			name: string,
+			primary: boolean,
+			imageTag: string
+		): StartDevWorkerOptions {
+			return configDefaults({
+				name,
+				containerDevPlan: {
+					containerOptions: [
+						{
+							image_uri: "example.invalid/image@sha256:1234",
+							class_name: "SharedContainer",
+							image_tag: imageTag,
+						},
+					],
+					containerRuntimeOptions: new Map(),
+				},
+				dev: {
+					persist: "./persist",
+					remote: false,
+					multiworkerPrimary: primary,
+					containerBuildId: imageTag,
+					dockerPath: "docker",
+				},
+			});
+		}
+
+		const firstTag = "cloudflare-dev/sharedcontainer-app:worker-a";
+		const secondTag = "cloudflare-dev/sharedcontainer-app:worker-b";
+		const replacementTag = "cloudflare-dev/sharedcontainer-app:worker-a-next";
+		const firstConfig = makeWorkerConfig("worker-a", true, firstTag);
+		const secondConfig = makeWorkerConfig("worker-b", false, secondTag);
+
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: firstConfig,
+			bundle: makeEsbuildBundle("export default {}"),
+		});
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: secondConfig,
+			bundle: makeEsbuildBundle("export default {}"),
+		});
+
+		await vi.waitFor(() => {
+			expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
+		});
+		const secondWorkerActiveTags = vi.mocked(prepareContainerImagesForDev).mock
+			.calls[1][0].activeImageTags;
+		expect(secondWorkerActiveTags?.has(firstTag)).toBe(true);
+
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: makeWorkerConfig("worker-a", true, replacementTag),
+			bundle: makeEsbuildBundle("export default {}"),
+		});
+
+		await vi.waitFor(() => {
+			expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(3);
+		});
+		const replacementActiveTags = vi.mocked(prepareContainerImagesForDev).mock
+			.calls[2][0].activeImageTags;
+		expect(replacementActiveTags).toEqual(new Set([secondTag]));
+	});
 
 	describe("stale bundle bail-out", () => {
 		it("should not bail out when different workers submit bundles", async ({
