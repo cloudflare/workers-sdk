@@ -523,7 +523,10 @@ import { deploymentsListCommand } from "./versions/deployments/list";
 import { deploymentsStatusCommand } from "./versions/deployments/status";
 import { deploymentsViewCommand } from "./versions/deployments/view";
 import { versionsListCommand } from "./versions/list";
-import { versionsRollbackCommand } from "./versions/rollback";
+import {
+	rollbackCommandAlias,
+	versionsRollbackCommand,
+} from "./versions/rollback";
 import { versionsSecretNamespace } from "./versions/secrets";
 import { versionsSecretBulkCommand } from "./versions/secrets/bulk";
 import { versionsSecretDeleteCommand } from "./versions/secrets/delete";
@@ -752,28 +755,58 @@ export function createCLIParser(argv: string[]) {
 		const commandLines = lines.slice(commandsHeaderIndex + 1, globalFlagsIndex);
 		const afterCommands = lines.slice(globalFlagsIndex);
 
-		// Separate regular commands from categorized commands
-		const regularCommandLines = new Array<string>();
-		const categoryCommandLines = new Map<string, Array<string>>();
+		// Keep multi-line descriptions attached to their command while regrouping.
+		type CommandBlock = { commandName?: string; lines: string[] };
+		const commandBlocks = new Array<CommandBlock>();
+		let currentCommandBlock: CommandBlock | undefined;
 		for (const line of commandLines) {
-			// Extract command name from line (e.g., "  wrangler r2  " -> "r2")
 			const match = line.match(/^\s*wrangler\s+(\S+)/);
 			if (match) {
-				const cmdName = match[1];
+				currentCommandBlock = { commandName: match[1], lines: [line] };
+				commandBlocks.push(currentCommandBlock);
+			} else if (line.trim() !== "" && currentCommandBlock) {
+				const precedingBlock = commandBlocks.at(-1);
+				if (
+					precedingBlock &&
+					precedingBlock !== currentCommandBlock &&
+					precedingBlock.commandName === undefined &&
+					precedingBlock.lines.every(
+						(precedingLine) => precedingLine.trim() === ""
+					)
+				) {
+					currentCommandBlock.lines.push(...precedingBlock.lines);
+					commandBlocks.pop();
+				}
+				currentCommandBlock.lines.push(line);
+			} else if (currentCommandBlock && currentCommandBlock.lines.length > 1) {
+				currentCommandBlock.lines.push(line);
+			} else {
+				commandBlocks.push({ lines: [line] });
+			}
+		}
+
+		// Separate regular commands from categorized commands
+		const regularCommandLines = new Array<string>();
+		const categoryCommandBlocks = new Map<string, Array<CommandBlock>>();
+		for (const block of commandBlocks) {
+			if (block.commandName) {
 				const [foundCategory] = Array.from(
 					registry.orderedCategories.entries()
-				).find(([_, commands]) => commands.includes(cmdName)) ?? [null];
+				).find(([_, commands]) =>
+					commands.includes(block.commandName ?? "")
+				) ?? [null];
 
 				if (foundCategory) {
-					const existing = categoryCommandLines.get(foundCategory) ?? [];
-					existing.push(line);
-					categoryCommandLines.set(foundCategory, existing);
+					const existing = categoryCommandBlocks.get(foundCategory) ?? [];
+					existing.push(block);
+					categoryCommandBlocks.set(foundCategory, existing);
 				} else {
-					regularCommandLines.push(line);
+					regularCommandLines.push(...block.lines);
 				}
 			} else {
-				// Empty lines or other content - keep with regular commands
-				regularCommandLines.push(line);
+				regularCommandLines.push(
+					...block.lines.filter((line) => line.trim() !== "")
+				);
 			}
 		}
 
@@ -791,27 +824,22 @@ export function createCLIParser(argv: string[]) {
 			...trimmedRegularCommandLines,
 		] satisfies Array<string>;
 		for (const category of registry.orderedCategories.keys()) {
-			const cmdLines = categoryCommandLines.get(category);
-			if (!cmdLines || cmdLines.length <= 0) {
+			const blocks = categoryCommandBlocks.get(category);
+			if (!blocks || blocks.length <= 0) {
 				continue;
 			}
 
 			outputLines.push(""); // Empty line before category
 			outputLines.push(chalk.bold(category.toUpperCase()));
 
-			// Sort command lines alphabetically by command name
-			const sortedCmdLines = Array.from(cmdLines).sort((a, b) => {
-				const matchA = a.match(/^\s*wrangler\s+(\S+)/);
-				const matchB = b.match(/^\s*wrangler\s+(\S+)/);
-				const cmdA = matchA ? matchA[1] : "";
-				const cmdB = matchB ? matchB[1] : "";
-				return cmdA.localeCompare(cmdB);
-			});
-			outputLines.push(...sortedCmdLines);
+			const sortedBlocks = Array.from(blocks).sort((a, b) =>
+				(a.commandName ?? "").localeCompare(b.commandName ?? "")
+			);
+			outputLines.push(...sortedBlocks.flatMap((block) => block.lines));
 		}
 
 		// Ensure empty line before `GLOBAL FLAGS` if we added categories
-		if (categoryCommandLines.size > 0) {
+		if (categoryCommandBlocks.size > 0) {
 			outputLines.push("");
 		}
 
@@ -981,11 +1009,7 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("deployments");
 
 	registry.define([
-		{ command: "wrangler rollback", definition: versionsRollbackCommand },
-	]);
-	registry.registerNamespace("rollback");
-
-	registry.define([
+		{ command: "wrangler rollback", definition: rollbackCommandAlias },
 		{
 			command: "wrangler versions",
 			definition: versionsNamespace,
@@ -1005,6 +1029,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler versions deploy",
 			definition: versionsDeployCommand,
+		},
+		{
+			command: "wrangler versions rollback",
+			definition: versionsRollbackCommand,
 		},
 		{
 			command: "wrangler versions secret",
@@ -1028,6 +1056,7 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("versions");
+	registry.registerNamespace("rollback");
 
 	registry.define([
 		{ command: "wrangler triggers", definition: triggersNamespace },

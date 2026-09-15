@@ -261,6 +261,22 @@ describe("versions deploy", () => {
 	});
 
 	describe("legacy deploy", () => {
+		test("passes the Durable Objects hibernation timeout from top-level deploy", async () => {
+			writeWranglerConfig();
+			writeWorkerSource({ type: "sw" });
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				useOldUploadApi: true,
+				expectedDurableObjectsHibernationTimeout: "0s",
+			});
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy ./index --durable-objects-hibernation-timeout 0s"
+			);
+		});
+
 		test("should warn user when worker has deployment with multiple versions", async ({
 			expect,
 		}) => {
@@ -298,6 +314,43 @@ describe("versions deploy", () => {
 			`);
 		});
 	});
+
+	for (const { name, flag, expected } of [
+		{
+			name: "uses the default Durable Objects hibernation timeout",
+			flag: "",
+			expected: "5m",
+		},
+		{
+			name: "passes a custom Durable Objects hibernation timeout",
+			flag: "--durable-objects-hibernation-timeout 0s",
+			expected: "0s",
+		},
+	]) {
+		test(name, async ({ expect }) => {
+			let deploymentBody: unknown;
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:workerName/deployments",
+					async ({ request }) => {
+						deploymentBody = await request.json();
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-deployment-id" })
+						);
+					}
+				)
+			);
+			writeWranglerConfig();
+
+			await runWrangler(
+				`versions deploy 10000000-0000-0000-0000-000000000000 --yes ${flag}`
+			);
+
+			expect(deploymentBody).toMatchObject({
+				durable_objects_rollout_grace_period: expected,
+			});
+		});
+	}
 
 	describe("without wrangler.toml", () => {
 		test("succeeds with --name arg", async ({ expect }) => {

@@ -12,5 +12,5 @@ export function experimental_getWranglerCommands(): {
 	globalFlags: ReturnType<typeof createCLIParser>["globalFlags"];
 } {
 	const { registry, globalFlags } = createCLIParser([]);
-	return { registry: registry.getDefinitionTreeRoot(), globalFlags };
+	return { registry: registry.getResolvedDefinitionTreeRoot(), globalFlags };
 }

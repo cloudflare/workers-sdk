@@ -68,6 +68,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		durable_objects_rollout_grace_period,
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
@@ -882,6 +883,9 @@ export function createWorkerUploadForm(
 			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
+		...(durable_objects_rollout_grace_period !== undefined && {
+			durable_objects_rollout_grace_period,
+		}),
 		...(configuredExports &&
 			Object.keys(configuredExports).length > 0 && {
 				exports: configuredExports,

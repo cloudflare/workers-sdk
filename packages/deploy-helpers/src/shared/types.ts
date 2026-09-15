@@ -157,6 +157,8 @@ export type DeployProps = SharedDeployVersionsProps & {
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/** Maximum time to wait for Durable Objects to hibernate before updating their code. */
+	durableObjectsHibernationTimeout: string;
 	/**
 	 * When true, an existing Worker with the same name aborts the deploy instead
 	 * of updating it, because this run cannot confirm the local project owns the

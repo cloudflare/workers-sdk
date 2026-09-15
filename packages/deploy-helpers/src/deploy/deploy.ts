@@ -454,6 +454,10 @@ async function deployWorker(
 		props.containers.source === undefined &&
 		// Rollout skip can recover Container metadata absent from local config.
 		containerMetadata === undefined;
+	if (!canUseNewVersionsDeploymentsApi) {
+		worker.durable_objects_rollout_grace_period =
+			props.durableObjectsHibernationTimeout;
+	}
 
 	let workerBundle: FormData;
 	const dockerPath = getDockerPath();
@@ -557,7 +561,8 @@ async function deployWorker(
 					scriptName,
 					versionMap,
 					props.message,
-					undefined
+					undefined,
+					props.durableObjectsHibernationTimeout
 				);
 
 				// Update service and environment tags when using environments

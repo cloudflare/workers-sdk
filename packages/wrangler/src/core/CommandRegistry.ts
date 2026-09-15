@@ -106,6 +106,26 @@ export class CommandRegistry {
 		return this.#DefinitionTreeRoot;
 	}
 
+	getResolvedDefinitionTreeRoot(): DefinitionTreeNode {
+		const resolveNode = (node: DefinitionTreeNode): DefinitionTreeNode => {
+			const resolved = node.definition
+				? this.#resolveDefinitionNode(node)
+				: { definition: undefined, subtree: node.subtree };
+
+			return {
+				definition: resolved.definition,
+				subtree: new Map(
+					Array.from(resolved.subtree, ([segment, child]) => [
+						segment,
+						resolveNode(child),
+					])
+				),
+			};
+		};
+
+		return resolveNode(this.#DefinitionTreeRoot);
+	}
+
 	/**
 	 * Registers all commands in the command registry, walking through the definition tree.
 	 */
@@ -609,6 +629,7 @@ export class CommandRegistry {
 
 		const aliasOf = node.definition.type === "alias" && node.definition.aliasOf;
 		const { definition: def, subtree } = this.#resolveDefinitionNode(node);
+		this.#trackCategory(def.command, def.metadata.category);
 
 		if (aliasOf) {
 			def.metadata.description += `\n\nAlias for "${aliasOf}".`;

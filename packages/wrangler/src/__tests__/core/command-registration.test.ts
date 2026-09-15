@@ -137,6 +137,36 @@ describe("CommandRegistry", () => {
 		expect(def.aliasOf).toBe("wrangler my-test-command");
 	});
 
+	test("inherits the category for a top-level alias", ({ expect }) => {
+		registry.define([
+			{
+				command: "wrangler my-test-command",
+				definition: createCommand({
+					metadata: {
+						description: "My test command",
+						owner: "Workers: Authoring and Testing",
+						status: "stable",
+						category: "Compute & AI",
+					},
+					handler: () => {},
+				}),
+			},
+			{
+				command: "wrangler my-test-alias",
+				definition: createAlias({
+					aliasOf: "wrangler my-test-command",
+				}),
+			},
+		]);
+
+		registry.registerAll();
+
+		expect(registry.orderedCategories.get("Compute & AI")).toEqual([
+			"my-test-alias",
+			"my-test-command",
+		]);
+	});
+
 	test("throws on alias to undefined command", ({ expect }) => {
 		registry.define([
 			{

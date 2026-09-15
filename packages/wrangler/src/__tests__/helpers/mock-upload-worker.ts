@@ -73,6 +73,7 @@ export function mockUploadWorkerRequest(
 		}[];
 		expectedAnnotations?: Record<string, string | undefined>;
 		expectedDeploymentMessage?: string;
+		expectedDurableObjectsHibernationTimeout?: string;
 		expectedBindingsInherit?: "strict";
 	} = {}
 ) {
@@ -177,6 +178,14 @@ export function mockUploadWorkerRequest(
 		if ("expectedAnnotations" in options) {
 			expect(metadata.annotations).toEqual(expectedAnnotations);
 		}
+		if (
+			useOldUploadApi &&
+			"expectedDurableObjectsHibernationTimeout" in options
+		) {
+			expect(metadata.durable_objects_rollout_grace_period).toEqual(
+				expectedDurableObjectsHibernationTimeout
+			);
+		}
 
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
@@ -253,6 +262,7 @@ export function mockUploadWorkerRequest(
 		expectedObservability,
 		expectedSettingsPatch,
 		expectedDeploymentMessage,
+		expectedDurableObjectsHibernationTimeout,
 	} = options;
 
 	const expectedScriptName =
@@ -281,13 +291,24 @@ export function mockUploadWorkerRequest(
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
 				async ({ request }) => {
-					if ("expectedDeploymentMessage" in options) {
+					if (
+						"expectedDeploymentMessage" in options ||
+						"expectedDurableObjectsHibernationTimeout" in options
+					) {
 						const body = (await request.json()) as {
 							annotations?: { "workers/message"?: string };
+							durable_objects_rollout_grace_period?: string;
 						};
-						expect(body.annotations?.["workers/message"]).toEqual(
-							expectedDeploymentMessage
-						);
+						if ("expectedDeploymentMessage" in options) {
+							expect(body.annotations?.["workers/message"]).toEqual(
+								expectedDeploymentMessage
+							);
+						}
+						if ("expectedDurableObjectsHibernationTimeout" in options) {
+							expect(body.durable_objects_rollout_grace_period).toEqual(
+								expectedDurableObjectsHibernationTimeout
+							);
+						}
 					}
 					return HttpResponse.json(createFetchResult({ id: "Deployment-ID" }));
 				}

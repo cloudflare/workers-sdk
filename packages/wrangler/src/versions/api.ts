@@ -103,7 +103,8 @@ export async function createDeployment(
 	workerName: string,
 	versionTraffic: Map<VersionId, Percentage>,
 	message: string | undefined,
-	force?: boolean
+	force?: boolean,
+	durableObjectsHibernationTimeout?: string
 ) {
 	return createDeploymentBase(
 		complianceConfig,
@@ -111,7 +112,8 @@ export async function createDeployment(
 		workerName,
 		versionTraffic,
 		message,
-		force
+		force,
+		durableObjectsHibernationTimeout
 	);
 }
 

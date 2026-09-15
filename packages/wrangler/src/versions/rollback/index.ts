@@ -1,19 +1,25 @@
 import * as cli from "@cloudflare/cli-shared-helpers";
 import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { createCommand } from "../../core/create-command";
+import { createAlias, createCommand } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";
+import { durableObjectsHibernationTimeoutArg } from "../deployment-args";
 import type { VersionId } from "../types";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
 
+export const rollbackCommandAlias = createAlias({
+	aliasOf: "wrangler versions rollback",
+});
+
 export const versionsRollbackCommand = createCommand({
 	args: {
+		...durableObjectsHibernationTimeoutArg,
 		"version-id": {
 			describe: "The ID of the Worker Version to rollback to",
 			type: "string",
@@ -104,7 +110,9 @@ export const versionsRollbackCommand = createCommand({
 				accountId,
 				workerName,
 				rollbackTraffic,
-				message
+				message,
+				undefined,
+				args.durableObjectsHibernationTimeout
 			);
 		} catch (e) {
 			if (
@@ -134,7 +142,8 @@ export const versionsRollbackCommand = createCommand({
 						workerName,
 						rollbackTraffic,
 						message,
-						true
+						true,
+						args.durableObjectsHibernationTimeout
 					);
 				} else {
 					cli.cancel("Aborting rollback...");

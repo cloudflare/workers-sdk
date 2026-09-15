@@ -167,6 +167,7 @@ export async function mergeDeployConfigArgs(
 			dispatchNamespace: args.dispatchNamespace,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
+			durableObjectsHibernationTimeout: args.durableObjectsHibernationTimeout,
 			containers: {
 				...shared.containers,
 				standard: {
