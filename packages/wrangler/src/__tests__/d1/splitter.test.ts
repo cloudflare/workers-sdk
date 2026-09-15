@@ -376,6 +376,48 @@ describe("splitSqlQuery()", () => {
 		]);
 	});
 
+	it("should not treat qualified keyword identifiers as compound statement markers", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER t AFTER INSERT ON items
+    BEGIN
+        INSERT INTO audit (old_value, new_value) VALUES (old.end, new.end);
+        INSERT INTO audit (old_value, new_value) VALUES (old.begin, new.begin);
+    END;
+    SELECT 1;`)
+		).toEqual([
+			`CREATE TRIGGER t AFTER INSERT ON items
+    BEGIN
+        INSERT INTO audit (old_value, new_value) VALUES (old.end, new.end);
+        INSERT INTO audit (old_value, new_value) VALUES (old.begin, new.begin);
+    END`,
+			"SELECT 1",
+		]);
+	});
+
+	it("should not treat named parameters as compound statement markers", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER t AFTER INSERT ON items
+    BEGIN
+        INSERT INTO audit (value) VALUES (:end);
+        INSERT INTO audit (value) VALUES (:begin);
+    END;
+    SELECT 1;`)
+		).toEqual([
+			`CREATE TRIGGER t AFTER INSERT ON items
+    BEGIN
+        INSERT INTO audit (value) VALUES (:end);
+        INSERT INTO audit (value) VALUES (:begin);
+    END`,
+			"SELECT 1",
+		]);
+	});
+
 	it("should not treat a bracket-quoted identifier as a compound statement marker", ({
 		expect,
 	}) => {

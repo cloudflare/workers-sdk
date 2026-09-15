@@ -260,26 +260,19 @@ function isDollarQuoteIdentifier(str: string) {
 }
 
 /**
- * Compound statement markers only need to be delimited from surrounding
- * identifiers, not padded with whitespace: SQLite accepts `WHEN (1=1)BEGIN` and
- * `INSERT ...;END;`. The lookbehind keeps identifiers that merely end in the
- * keyword, such as a `weekend` column, from matching; identifier characters
- * include letters with diacritical marks, as in `isDollarQuoteIdentifier()`,
- * so a `néend` column does not match either.
- */
-const COMPOUND_STATEMENT_START = /(?<![\p{L}\p{M}\p{N}_$])(BEGIN|CASE)\s$/iu;
-const COMPOUND_STATEMENT_END = /(?<![\p{L}\p{M}\p{N}_$])END[^\p{L}\p{M}\p{N}_$]$/iu;
-
-/**
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
+ * Markers may follow punctuation, as in `WHEN (1=1)BEGIN`, but not a qualification
+ * operator or named-parameter prefix, where SQLite permits keyword identifiers.
  */
 function isCompoundStatementStart(str: string) {
-	return COMPOUND_STATEMENT_START.test(str);
+	return /(?<![\p{L}\p{M}\p{N}_$.:])(BEGIN|CASE)\s$/iu.test(str);
 }
 
 /**
  * Returns true if the `str` ends with a compound statement `END` marker.
+ * Markers may precede punctuation, as in `END;`, but must not be qualified
+ * identifiers or named parameters such as `new.end` or `:end`.
  */
 function isCompoundStatementEnd(str: string) {
-	return COMPOUND_STATEMENT_END.test(str);
+	return /(?<![\p{L}\p{M}\p{N}_$.:])END[^\p{L}\p{M}\p{N}_$]$/iu.test(str);
 }
