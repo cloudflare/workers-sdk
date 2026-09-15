@@ -76,16 +76,18 @@ describe("ProxyController", () => {
 		expect(std.err).toBe("");
 	});
 
-	test("ProxyWorker error reports preserve message/name/stack across the JSON channel", async ({
+	test("ProxyWorker error reports preserve message/stack across the JSON channel", ({
 		expect,
+		onTestFinished,
 	}) => {
 		// Regression test for https://github.com/cloudflare/workers-sdk/issues/14641:
 		// the ProxyWorker's error reports arrive as JSON-serialized plain objects,
-		// and used to be re-wrapped in a message-less Error, so the resulting
-		// fatal log was an empty `✘ [ERROR]` with no clue about the failure.
+		// and used to lose their message, leaving an empty `✘ [ERROR]` log with
+		// no clue about the failure.
 		const bus = new FakeBus();
 		const controller = new ProxyController(bus);
-		const waited = bus.waitFor("error");
+		logger.loggerLevel = "debug";
+		onTestFinished(() => logger.resetLoggerLevel());
 
 		const original = new Error("Network connection lost.");
 		const serialized = JSON.parse(
@@ -93,12 +95,11 @@ describe("ProxyController", () => {
 		) as SerializedError;
 		controller.onProxyWorkerMessage({ type: "error", error: serialized });
 
-		const event = await waited;
-		expect(event.source).toBe("ProxyController");
-		expect(event.reason).toBe("Error inside ProxyWorker");
-		expect(event.cause).toBeInstanceOf(Error);
-		expect(event.cause.message).toBe("Network connection lost.");
-		expect(event.cause.stack).toBe(original.stack);
+		expect(bus.events).toEqual([]);
+		expect(std.err).toContain(
+			"Error proxying request to the local Worker: Network connection lost."
+		);
+		expect(std.debug).toContain("stack: 'Error: Network connection lost.");
 	});
 
 	test("Runtime.exceptionThrown dispatches a typed runtimeError event", async ({
