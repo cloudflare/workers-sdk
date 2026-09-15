@@ -1,8 +1,7 @@
 ---
-"@cloudflare/autoconfig": minor
 "wrangler": minor
 ---
 
 Fix cf builds for static projects that serve assets from the project root
 
-Autoconfig now recognizes relative root paths when adding safeguards for sensitive Wrangler files. The experimental Build Output path also omits the reserved `.cloudflare` directory while preserving the project's other root assets and `.assetsignore` semantics.
+The experimental Build Output path now omits the reserved `.cloudflare` directory when the project root is used for static assets. Other root assets and `.assetsignore` semantics are preserved, while non-root asset directories retain their existing copy behaviour.
