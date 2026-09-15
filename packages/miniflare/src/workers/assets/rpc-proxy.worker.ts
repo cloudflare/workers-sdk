@@ -30,7 +30,7 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 	// any scheduled logic; it just dispatches a real scheduled event to the user
 	// worker via the Fetcher built-in, then propagates the user worker's noRetry
 	// decision back onto this controller so the outcome surfaces correctly to
-	// the caller (e.g. the entry worker's `/cdn-cgi/handler/scheduled` handler).
+	// the caller (e.g. the entry worker's `/cdn-cgi/local/scheduled` handler).
 	async scheduled(controller: ScheduledController) {
 		const result = await this.env.USER_WORKER.scheduled?.({
 			cron: controller.cron,

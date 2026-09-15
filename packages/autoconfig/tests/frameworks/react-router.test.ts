@@ -33,6 +33,7 @@ const context = createMockContext();
 
 function getBaseOptions() {
 	return {
+		target: "cf" as const,
 		projectPath: process.cwd(),
 		outputDir: "build/",
 		workerName: "my-react-router-app",
@@ -422,8 +423,8 @@ describe("React Router framework configure()", () => {
 				dryRun: true,
 			});
 
-			expect(result.wranglerConfig).toEqual({
-				main: "./workers/app.ts",
+			expect(result.workerConfig).toEqual({
+				entrypoint: "./workers/app.ts",
 			});
 			expect(existsSync(resolve("workers/app.ts"))).toBe(false);
 			expect(existsSync(resolve("app/entry.server.tsx"))).toBe(false);
@@ -444,8 +445,8 @@ describe("React Router framework configure()", () => {
 			const framework = createFramework("7.16.0");
 			const result = await framework.configure(getBaseOptions());
 
-			expect(result.wranglerConfig).toEqual({
-				main: "./workers/app.ts",
+			expect(result.workerConfig).toEqual({
+				entrypoint: "./workers/app.ts",
 			});
 		});
 	});

@@ -7,7 +7,8 @@ on:
       - "pnpm-workspace.yaml"
 
 permissions:
-  # content:write permission needed to update add changesets to dependabot PRs
+  # content:write permission needed to update add changesets to dependabot PRs,
+  # and to refresh the default compatibility date on workerd bumps
   # (see tools/dependabot/generate-dependabot-pr-changesets.ts)
   contents: write
 
@@ -36,6 +37,10 @@ jobs:
           git config --global user.name 'Wrangler automated PR updater'
 
       - name: Generate Miniflare changesets
+        # Also refreshes DEFAULT_COMPAT_DATE when this PR bumps workerd, since
+        # the default compatibility date is derived from the pinned workerd
+        # release and `pnpm check:compat-date` enforces that they match.
+        #
         # The paremeters to the script are:
         # - PR: The number of the current Dependabot PR
         # - Packages: Coma-separated names of the workers-sdk packages whose dependencies are being updated

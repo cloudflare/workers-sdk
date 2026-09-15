@@ -1,25 +1,16 @@
-import fs from "node:fs/promises";
 import { CERT, KEY } from "./cert";
-import type { CORE_PLUGIN } from "../plugins";
+import type { ParsedInstanceOptions } from "../config/schema";
 import type { HttpOptions, Socket_Https } from "../runtime";
-import type { Awaitable } from "../workers";
-import type { z } from "zod";
 
 export async function getEntrySocketHttpOptions(
-	coreOpts: z.infer<typeof CORE_PLUGIN.sharedOptions>
+	coreOpts: ParsedInstanceOptions
 ): Promise<{ http: HttpOptions } | { https: Socket_Https }> {
 	let privateKey: string | undefined = undefined;
 	let certificateChain: string | undefined = undefined;
 
-	if (
-		(coreOpts.httpsKey || coreOpts.httpsKeyPath) &&
-		(coreOpts.httpsCert || coreOpts.httpsCertPath)
-	) {
-		privateKey = await valueOrFile(coreOpts.httpsKey, coreOpts.httpsKeyPath);
-		certificateChain = await valueOrFile(
-			coreOpts.httpsCert,
-			coreOpts.httpsCertPath
-		);
+	if (coreOpts.httpsKey && coreOpts.httpsCert) {
+		privateKey = coreOpts.httpsKey;
+		certificateChain = coreOpts.httpsCert;
 	} else if (coreOpts.https) {
 		privateKey = KEY;
 		certificateChain = CERT;
@@ -39,11 +30,4 @@ export async function getEntrySocketHttpOptions(
 	} else {
 		return { http: {} };
 	}
-}
-
-function valueOrFile(
-	value?: string,
-	filePath?: string
-): Awaitable<string | undefined> {
-	return value ?? (filePath && fs.readFile(filePath, "utf8"));
 }

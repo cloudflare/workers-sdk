@@ -52,9 +52,13 @@ export const compressedByCloudflareFL = new Set([
 export function isCompressedByCloudflareFL(
 	contentTypeHeader: string | undefined | null
 ) {
-	if (!contentTypeHeader) return true; // Content-Type inferred as text/plain
+	if (!contentTypeHeader) {
+		return true;
+	} // Content-Type inferred as text/plain
 
 	const [contentType] = contentTypeHeader.split(";");
 
-	return compressedByCloudflareFL.has(contentType);
+	// Media types are case-insensitive and may carry whitespace before the
+	// parameter separator, e.g. `Text/HTML ; charset=utf-8`.
+	return compressedByCloudflareFL.has(contentType.trim().toLowerCase());
 }

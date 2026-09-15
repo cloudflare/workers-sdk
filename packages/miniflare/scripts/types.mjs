@@ -184,6 +184,12 @@ const extractorCfgObject = {
 		extractorMessageReporting: {
 			default: { logLevel: "warning" },
 			"ae-missing-release-tag": { logLevel: "none" },
+			// Our public config types transitively reference `@cloudflare/workers-shared`
+			// (via `@cloudflare/config` -> `@cloudflare/workers-utils`), which has no
+			// `exports`/`types` map, so bare imports resolve to its `.ts` source rather
+			// than a `.d.ts`. API Extractor never surfaces those types in the rollup, so
+			// this is a false positive we can safely ignore.
+			"ae-wrong-input-file-type": { logLevel: "none" },
 		},
 	},
 };

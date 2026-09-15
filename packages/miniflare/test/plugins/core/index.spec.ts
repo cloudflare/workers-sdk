@@ -8,7 +8,7 @@ import tls from "node:tls";
 import stoppable from "stoppable";
 import { onTestFinished, test } from "vitest";
 import which from "which";
-import { useTmp } from "../../test-shared";
+import { singleModuleManifest, useTmp } from "../../test-shared";
 import type { AddressInfo } from "node:net";
 
 const opensslInstalled = which.sync("openssl", { nothrow: true });
@@ -58,6 +58,11 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 	// Start Miniflare with NODE_EXTRA_CA_CERTS environment variable
 	// (cannot use sync process methods here as that would block HTTPS server)
 	const miniflarePath = require.resolve("miniflare");
+	const manifest = singleModuleManifest(`export default {
+          fetch() {
+            return fetch(${JSON.stringify(url)});
+          }
+        }`);
 	const result = childProcess.spawn(
 		process.execPath,
 		[
@@ -65,12 +70,16 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 			`
       const { Miniflare } = require(${JSON.stringify(miniflarePath)});
       const mf = new Miniflare({
-        modules: true,
-        script: \`export default {
-          fetch() {
-            return fetch(${JSON.stringify(url)});
-          }
-        }\`
+        workers: [
+          {
+            config: {
+              type: "worker",
+              name: "",
+              compatibilityDate: "2025-05-01",
+              manifest: ${JSON.stringify(manifest)},
+            },
+          },
+        ],
       });
       (async () => {
         const res = await mf.dispatchFetch("http://placeholder/");

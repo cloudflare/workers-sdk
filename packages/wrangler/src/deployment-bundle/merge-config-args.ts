@@ -1,8 +1,8 @@
 import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
 import {
+	DEFAULT_COMPAT_DATE,
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
-	getTodaysCompatDate,
 	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -11,6 +11,7 @@ import {
 	validateAssetsArgsAndConfig,
 	validateAssetsOptions,
 } from "../assets";
+import { getNormalizedContainerOptions } from "../containers/config";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -57,7 +58,7 @@ async function mergeSharedConfigArgs(
 	}
 
 	const compatibilityDate = args.latest
-		? getTodaysCompatDate()
+		? DEFAULT_COMPAT_DATE
 		: (args.compatibilityDate ?? config.compatibility_date);
 
 	const compatibilityFlags =
@@ -95,6 +96,11 @@ async function mergeSharedConfigArgs(
 		resourcesProvision: getFlag("RESOURCES_PROVISION") ?? false,
 		skipProvisioningConfigWriteback: false,
 		strict: args.strict ?? false,
+		containers: {
+			source: config.containers,
+			standard: { normalized: [], builtImages: [] },
+			durableObjects: { builtImages: [] },
+		},
 	};
 
 	const buildProps: BuildProps = {
@@ -137,6 +143,13 @@ export async function mergeDeployConfigArgs(
 	}));
 	const routes =
 		args.routes ?? config.routes ?? (config.route ? [config.route] : []);
+	const normalizedContainerConfig = await getNormalizedContainerOptions(
+		config,
+		{
+			containersRollout: args.containersRollout,
+			dryRun: shared.dryRun,
+		}
+	);
 
 	return {
 		props: {
@@ -154,6 +167,13 @@ export async function mergeDeployConfigArgs(
 			dispatchNamespace: args.dispatchNamespace,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
+			containers: {
+				...shared.containers,
+				standard: {
+					normalized: normalizedContainerConfig,
+					builtImages: [],
+				},
+			},
 		},
 		buildProps: { ...buildProps, metafile: args.metafile },
 	};

@@ -1,0 +1,80 @@
+import { once } from "node:events";
+import { onTestFinished, test, vi } from "vitest";
+import { WebSocketServer } from "ws";
+import {
+	BrowserStartupError,
+	closeBrowserProcess,
+} from "../../../src/plugins/browser-rendering/process";
+
+test("gracefully closes Chrome over CDP", async ({ expect }) => {
+	const closed = Promise.withResolvers<void>();
+	const browserProcess = {
+		hasClosed: vi.fn(() => closed.promise),
+		kill: vi.fn(),
+	};
+	const server = new WebSocketServer({ port: 0 });
+	onTestFinished(
+		() => new Promise<void>((resolve) => server.close(() => resolve()))
+	);
+	await once(server, "listening");
+	const address = server.address();
+	if (typeof address === "string" || address === null) {
+		throw new Error("Expected WebSocket server to listen on a TCP port");
+	}
+	server.on("connection", (socket) => {
+		socket.once("message", (data) => {
+			expect(JSON.parse(data.toString())).toEqual({
+				id: 1,
+				method: "Browser.close",
+			});
+			closed.resolve();
+		});
+	});
+
+	await closeBrowserProcess(
+		browserProcess,
+		`ws://127.0.0.1:${address.port}`,
+		// Leave enough time for the WebSocket handshake when the suite is busy under macOS load
+		1_000
+	);
+
+	expect(browserProcess.kill).not.toHaveBeenCalled();
+});
+
+test("force kills Chrome when graceful close times out", async ({ expect }) => {
+	const closed = Promise.withResolvers<void>();
+	const browserProcess = {
+		hasClosed: vi.fn(() => closed.promise),
+		kill: vi.fn(),
+	};
+	const server = new WebSocketServer({ port: 0 });
+	onTestFinished(
+		() => new Promise<void>((resolve) => server.close(() => resolve()))
+	);
+	await once(server, "listening");
+	const address = server.address();
+	if (typeof address === "string" || address === null) {
+		throw new Error("Expected WebSocket server to listen on a TCP port");
+	}
+
+	await closeBrowserProcess(
+		browserProcess,
+		`ws://127.0.0.1:${address.port}`,
+		10
+	);
+
+	expect(browserProcess.kill).toHaveBeenCalledOnce();
+});
+
+test("BrowserStartupError preserves the underlying message", ({ expect }) => {
+	// The install-recovery path keys off this error type, and both the CI retry
+	// condition and the loopback response match on the message text, so
+	// wrapping must not obscure it.
+	const cause = new Error("Failed to launch the browser process! undefined");
+
+	const wrapped = new BrowserStartupError(cause);
+
+	expect(wrapped.message).toBe(cause.message);
+	expect(wrapped.cause).toBe(cause);
+	expect(wrapped.name).toBe("BrowserStartupError");
+});

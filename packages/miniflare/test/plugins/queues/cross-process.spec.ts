@@ -1,6 +1,6 @@
 import { Miniflare, Response } from "miniflare";
 import { describe, test, vi } from "vitest";
-import { useDispose, useTmp } from "../../test-shared";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 
 // A consumer Miniflare instance whose `queue()` handler reports each batch's
 // message bodies back to the Node-side `received` array via a local service
@@ -12,39 +12,59 @@ function createConsumer(
 	{ name = "consumer", queueName = "my-queue" } = {}
 ): Miniflare {
 	return new Miniflare({
-		name,
 		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		queueConsumers: {
-			// Flush immediately so delivery is deterministic.
-			[queueName]: { maxBatchSize: 1, maxBatchTimeout: 0 },
-		},
-		serviceBindings: {
-			async REPORTER(request) {
-				received.push((await request.json()) as unknown[]);
-				return new Response();
-			},
-		},
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				dev: { unsafeRegisterWorker: true },
+				config: {
+					type: "worker",
+					name,
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					env: {
+						REPORTER: {
+							type: "fetcher",
+							handler: async (request) => {
+								received.push((await request.json()) as unknown[]);
+								return new Response();
+							},
+						},
+					},
+					triggers: [
+						// Flush immediately so delivery is deterministic.
+						{
+							type: "queue",
+							name: queueName,
+							maxBatchSize: 1,
+							maxBatchTimeout: 0,
+						},
+					],
+					manifest: singleModuleManifest(`export default {
 			async queue(batch, env) {
 				await env.REPORTER.fetch("http://localhost", {
 					method: "POST",
 					body: JSON.stringify(batch.messages.map((m) => m.body)),
 				});
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 }
 
 function createProducer(unsafeDevRegistryPath: string): Miniflare {
 	return new Miniflare({
-		name: "producer",
 		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		queueProducers: { QUEUE: { queueName: "my-queue" } },
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "producer",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					env: { QUEUE: { type: "queue", name: "my-queue" } },
+					manifest: singleModuleManifest(`export default {
 			async fetch(request, env) {
 				const body = await request.json();
 				const url = new URL(request.url);
@@ -55,7 +75,10 @@ function createProducer(unsafeDevRegistryPath: string): Miniflare {
 				}
 				return new Response(null, { status: 204 });
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 }
 
@@ -170,20 +193,27 @@ describe.sequential("cross-process queues", () => {
 		// This process produces and consumes "my-queue", always failing, so every
 		// message moves to "my-dlq", whose consumer lives in the other process.
 		const failingConsumer = new Miniflare({
-			name: "failing-consumer",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			queueProducers: { QUEUE: { queueName: "my-queue" } },
-			queueConsumers: {
-				"my-queue": {
-					maxBatchSize: 1,
-					maxBatchTimeout: 0,
-					maxRetries: 0,
-					deadLetterQueue: "my-dlq",
-				},
-			},
-			modules: true,
-			script: `export default {
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "failing-consumer",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						env: { QUEUE: { type: "queue", name: "my-queue" } },
+						triggers: [
+							{
+								type: "queue",
+								name: "my-queue",
+								maxBatchSize: 1,
+								maxBatchTimeout: 0,
+								maxRetries: 0,
+								deadLetterQueue: "my-dlq",
+							},
+						],
+						manifest: singleModuleManifest(`export default {
 				async fetch(request, env) {
 					await env.QUEUE.send(await request.json());
 					return new Response(null, { status: 204 });
@@ -191,7 +221,10 @@ describe.sequential("cross-process queues", () => {
 				async queue() {
 					throw new Error("consumer always fails");
 				}
-			}`,
+			}`),
+					},
+				},
+			],
 		});
 		useDispose(failingConsumer);
 		await failingConsumer.ready;

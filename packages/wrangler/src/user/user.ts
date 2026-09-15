@@ -180,6 +180,11 @@ type WranglerLoginProps = {
 	callbackHost?: string;
 	callbackPort?: number;
 	profile?: string;
+	/**
+	 * When `true`, use the OAuth 2.0 Device Authorization Grant (RFC 8628)
+	 * instead of the authorization-code-with-PKCE flow.
+	 */
+	device?: boolean;
 };
 
 export async function login(

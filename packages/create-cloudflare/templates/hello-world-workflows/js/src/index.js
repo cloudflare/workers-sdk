@@ -23,13 +23,6 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 
 export class MyWorkflow extends WorkflowEntrypoint {
 	/**
-	 * @param {Env} env
-	 */
-	constructor(env) {
-		this.env = env;
-	}
-
-	/**
 	 * @param {WorkflowEvent<Params>} event
 	 * @param {WorkflowStep} step
 	 */

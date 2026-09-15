@@ -45,59 +45,70 @@ export function handleWebSocket(
 			// Socket errors crash Node.js if unhandled
 			socket.on("error", () => socket.destroy());
 
-			const rawHost = request.headers.host ?? UNKNOWN_HOST;
-			// Honor `X-Forwarded-Proto` so that the upgrade URL reflects the
-			// protocol the original client used (e.g. behind a TLS-terminating
-			// reverse proxy or tunnel). Matches `createRequestHandler` in utils.ts.
-			const protocol = getForwardedProto(request) ?? "http:";
-			const base = /^https?:\/\//i.test(rawHost)
-				? rawHost
-				: `${protocol}//${rawHost}`;
-			const url = new URL(request.url ?? "", base);
+			try {
+				const rawHost = request.headers.host ?? UNKNOWN_HOST;
+				// Honor `X-Forwarded-Proto` so that the upgrade URL reflects the
+				// protocol the original client used (e.g. behind a TLS-terminating
+				// reverse proxy or tunnel). Matches `createRequestHandler` in utils.ts.
+				const protocol = getForwardedProto(request) ?? "http:";
+				const base = /^https?:\/\//i.test(rawHost)
+					? rawHost
+					: `${protocol}//${rawHost}`;
+				const url = new URL(request.url ?? "", base);
 
-			const isViteRequest =
-				request.headers["sec-websocket-protocol"]?.startsWith("vite");
-			const isSandboxRequest = hasSandboxOrigin(url.origin);
+				const isViteRequest =
+					request.headers["sec-websocket-protocol"]?.startsWith("vite");
+				const isSandboxRequest = hasSandboxOrigin(url.origin);
 
-			// Ignore Vite HMR WebSockets but forward on all sandbox requests.
-			if (isViteRequest && !isSandboxRequest) {
-				return;
-			}
-
-			const headers = createHeaders(request);
-
-			if (entryWorkerName) {
-				headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
-			}
-
-			const response = await miniflare.dispatchFetch(url, {
-				headers: headers as unknown as Headers,
-				method: request.method,
-			});
-			const workerWebSocket = response.webSocket;
-
-			if (!workerWebSocket) {
-				socket.destroy();
-				return;
-			}
-
-			// Forward response headers (e.g. Set-Cookie, custom auth headers) from
-			// the Worker's 101 response onto the upgrade response sent to the
-			// client. Without this, headers set on a `new Response(null, { status:
-			// 101, webSocket, headers })` are silently dropped during `vite dev`,
-			// even though they are delivered correctly by `wrangler dev`.
-			// See cloudflare/workers-sdk#10390.
-			workerResponseHeaders.set(request, response.headers);
-
-			nodeWebSocket.handleUpgrade(
-				request,
-				socket,
-				head,
-				async (clientWebSocket) => {
-					void coupleWebSocket(clientWebSocket, workerWebSocket);
-					nodeWebSocket.emit("connection", clientWebSocket, request);
+				// Ignore Vite HMR WebSockets but forward on all sandbox requests.
+				if (isViteRequest && !isSandboxRequest) {
+					return;
 				}
-			);
+
+				const headers = createHeaders(request);
+
+				if (entryWorkerName) {
+					headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+				}
+
+				const response = await miniflare.dispatchFetch(url, {
+					headers: headers as unknown as Headers,
+					method: request.method,
+				});
+				const workerWebSocket = response.webSocket;
+
+				if (!workerWebSocket) {
+					socket.destroy();
+					return;
+				}
+
+				// Forward response headers (e.g. Set-Cookie, custom auth headers) from
+				// the Worker's 101 response onto the upgrade response sent to the
+				// client. Without this, headers set on a `new Response(null, { status:
+				// 101, webSocket, headers })` are silently dropped during `vite dev`,
+				// even though they are delivered correctly by `wrangler dev`.
+				// See cloudflare/workers-sdk#10390.
+				workerResponseHeaders.set(request, response.headers);
+
+				nodeWebSocket.handleUpgrade(
+					request,
+					socket,
+					head,
+					async (clientWebSocket) => {
+						void coupleWebSocket(clientWebSocket, workerWebSocket);
+						nodeWebSocket.emit("connection", clientWebSocket, request);
+					}
+				);
+			} catch {
+				// `dispatchFetch` rejects if Miniflare is disposed while an upgrade
+				// is still in flight (e.g. during dev server shutdown or restart).
+				// This listener is `async`, so an uncaught rejection here escapes as
+				// an unhandled rejection — which terminates the Node.js process on
+				// modern versions and leaks the client socket. Tear the socket down
+				// instead, mirroring the `!workerWebSocket` path above.
+				workerResponseHeaders.delete(request);
+				socket.destroy();
+			}
 		}
 	);
 }

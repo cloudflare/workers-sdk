@@ -1,34 +1,188 @@
 import {
 	UserError,
 	type RawConfig,
+	type ContainerApp,
 	type Exports,
 } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
-import type { ParsedInputWorkerConfig } from "./schema";
+import type {
+	ParsedInputContainerConfig,
+	ParsedInputSettingsConfig,
+	ParsedInputWorkerConfig,
+} from "./schema";
 import type { Json } from "./utils";
+
+const ROLLOUT_KIND_MAP = {
+	"full-auto": "full_auto",
+	"full-manual": "full_manual",
+	none: "none",
+} as const;
 
 /**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
  *
- * The caller is responsible for unwrapping any function/promise wrapper around
- * the config and validating it against `InputWorkerSchema` before passing it in.
+ * The caller is responsible for unwrapping any function/promise wrappers and
+ * validating the configs against their corresponding input schemas before
+ * passing them in.
  *
- * @param config The parsed (post-validation) config.
+ * @param workerConfig The parsed (post-validation) Worker config.
+ * @param settingsConfig The optional parsed settings config, whose fields
+ * are merged onto the result.
+ * @param containerExports The parsed Container exports to include in the
+ * result.
  * @returns The corresponding Wrangler `RawConfig`.
  */
 export function convertToWranglerConfig(
-	config: ParsedInputWorkerConfig
+	workerConfig: ParsedInputWorkerConfig,
+	settingsConfig?: ParsedInputSettingsConfig,
+	containerExports: ParsedInputContainerConfig[] = []
 ): RawConfig {
 	const result: RawConfig = {};
 
-	convertTopLevel(config, result);
-	convertBindingsAndAssets(config, result);
-	convertExports(config, result);
-	convertDomains(config, result);
-	convertTriggers(config, result);
-	convertTailConsumers(config, result);
+	convertTopLevel(workerConfig, result);
+	convertBindingsAndAssets(workerConfig, result);
+	convertExports(workerConfig, result);
+	convertDomains(workerConfig, result);
+	convertTriggers(workerConfig, result);
+	convertTailConsumers(workerConfig, result);
+
+	if (settingsConfig !== undefined) {
+		convertSettings(settingsConfig, result);
+	}
+	if (containerExports.length > 0) {
+		result.containers = containerExports.map((container) =>
+			convertContainer(container)
+		);
+	}
 
 	return result;
+}
+
+function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
+	if (container.schedulingPolicy === "durable-object") {
+		throw new UserError(
+			"Durable Object-managed Containers are not currently supported by `convertToWranglerConfig()`.",
+			{ telemetryMessage: false }
+		);
+	}
+
+	const converted: ContainerApp = {
+		name: container.name,
+	};
+
+	if (container.observability !== undefined) {
+		converted.observability = convertContainerObservability(
+			container.observability
+		);
+	}
+	if (container.unsafe !== undefined) {
+		converted.unsafe = container.unsafe;
+	}
+
+	converted.image =
+		"dockerfile" in container.image
+			? container.image.dockerfile
+			: container.image.reference;
+	converted.max_instances = container.maxInstances;
+	if ("dockerfile" in container.image) {
+		if (container.image.buildContext !== undefined) {
+			converted.image_build_context = container.image.buildContext;
+		}
+		if (container.image.buildVars !== undefined) {
+			converted.image_vars = container.image.buildVars;
+		}
+	}
+	if (container.instanceType !== undefined) {
+		if (typeof container.instanceType === "string") {
+			converted.instance_type = container.instanceType;
+		} else {
+			const instanceType: Exclude<
+				NonNullable<ContainerApp["instance_type"]>,
+				string
+			> = {};
+			if (container.instanceType.vcpu !== undefined) {
+				instanceType.vcpu = container.instanceType.vcpu;
+			}
+			if (container.instanceType.memoryMib !== undefined) {
+				instanceType.memory_mib = container.instanceType.memoryMib;
+			}
+			if (container.instanceType.diskMb !== undefined) {
+				instanceType.disk_mb = container.instanceType.diskMb;
+			}
+			converted.instance_type = instanceType;
+		}
+	}
+	if (container.schedulingPolicy !== undefined) {
+		converted.scheduling_policy = container.schedulingPolicy;
+	}
+	if (container.ssh !== undefined) {
+		converted.ssh = container.ssh;
+	}
+	if (container.authorizedKeys !== undefined) {
+		converted.authorized_keys = container.authorizedKeys.map(
+			({ name, publicKey }) => ({ name, public_key: publicKey })
+		);
+	}
+	if (container.constraints !== undefined) {
+		converted.constraints = container.constraints;
+	}
+	if (container.rollout !== undefined) {
+		if (container.rollout.kind !== undefined) {
+			converted.rollout_kind = ROLLOUT_KIND_MAP[container.rollout.kind];
+		}
+		if (container.rollout.stepPercentage !== undefined) {
+			converted.rollout_step_percentage = container.rollout.stepPercentage;
+		}
+		if (container.rollout.activeGracePeriod !== undefined) {
+			converted.rollout_active_grace_period =
+				container.rollout.activeGracePeriod;
+		}
+	}
+
+	return converted;
+}
+
+function convertContainerObservability(
+	observability: NonNullable<ParsedInputContainerConfig["observability"]>
+): NonNullable<ContainerApp["observability"]> {
+	const converted: NonNullable<ContainerApp["observability"]> = {};
+	if (observability.enabled !== undefined) {
+		converted.enabled = observability.enabled;
+	}
+	if (observability.logs !== undefined) {
+		converted.logs = observability.logs;
+	}
+	if (
+		"targetInstancePercentage" in observability &&
+		observability.targetInstancePercentage !== undefined
+	) {
+		converted.target_instance_percentage =
+			observability.targetInstancePercentage;
+	}
+	if (
+		"targetInstanceCount" in observability &&
+		observability.targetInstanceCount !== undefined
+	) {
+		converted.target_instance_count = observability.targetInstanceCount;
+	}
+	return converted;
+}
+
+/**
+ * Merge a parsed settings config's fields (`account_id`, `compliance_region`)
+ * onto an existing Wrangler `RawConfig`.
+ */
+function convertSettings(
+	settings: ParsedInputSettingsConfig,
+	result: RawConfig
+): void {
+	if (settings.accountId !== undefined) {
+		result.account_id = settings.accountId;
+	}
+	if (settings.complianceRegion !== undefined) {
+		result.compliance_region =
+			settings.complianceRegion === "fedramp-high" ? "fedramp_high" : "public";
+	}
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -45,9 +199,6 @@ function convertTopLevel(
 	if (typeof config.entrypoint === "string") {
 		result.main = config.entrypoint;
 	}
-	if (config.accountId !== undefined) {
-		result.account_id = config.accountId;
-	}
 	if (config.compatibilityDate !== undefined) {
 		result.compatibility_date = config.compatibilityDate;
 	}
@@ -62,10 +213,6 @@ function convertTopLevel(
 	}
 	if (config.logpush !== undefined) {
 		result.logpush = config.logpush;
-	}
-	if (config.complianceRegion !== undefined) {
-		result.compliance_region =
-			config.complianceRegion === "fedramp-high" ? "fedramp_high" : "public";
 	}
 	if (config.firstPartyWorker !== undefined) {
 		result.first_party_worker = config.firstPartyWorker;
@@ -111,6 +258,9 @@ function convertObservability(
 	}
 	if (observability.headSamplingRate !== undefined) {
 		out.head_sampling_rate = observability.headSamplingRate;
+	}
+	if (observability.redactQueryString !== undefined) {
+		out.redact_query_string = observability.redactQueryString;
 	}
 	if (observability.logs !== undefined) {
 		const logs: NonNullable<NonNullable<RawConfig["observability"]>["logs"]> =
@@ -244,13 +394,16 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						namespace: binding.namespace,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
 			}
 			case "ai": {
-				result.ai = omitUndefined({ binding: name, remote: binding.remote });
+				result.ai = omitUndefined({
+					binding: name,
+					remote: binding.dev?.remote,
+				});
 				break;
 			}
 			case "ai-search": {
@@ -258,7 +411,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						instance_name: binding.name,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -268,7 +421,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						namespace: binding.namespace,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -284,7 +437,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						namespace: binding.namespace,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -296,7 +449,7 @@ function convertBindingsAndAssets(
 			case "browser": {
 				result.browser = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -306,7 +459,7 @@ function convertBindingsAndAssets(
 						binding: name,
 						database_id: binding.id,
 						database_name: binding.name,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -318,12 +471,12 @@ function convertBindingsAndAssets(
 				};
 				if (binding.outbound) {
 					entry.outbound = omitUndefined({
-						service: binding.outbound.workerName,
+						service: binding.outbound.worker,
 						parameters: binding.outbound.parameters,
 					});
 				}
-				if (binding.remote !== undefined) {
-					entry.remote = binding.remote;
+				if (binding.dev?.remote !== undefined) {
+					entry.remote = binding.dev.remote;
 				}
 				dispatchNamespaces.push(entry);
 				break;
@@ -332,7 +485,7 @@ function convertBindingsAndAssets(
 				durableObjectBindings.push({
 					name,
 					class_name: binding.exportName,
-					script_name: binding.workerName,
+					script_name: binding.worker,
 				});
 				break;
 			}
@@ -341,7 +494,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						app_id: binding.id,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -351,7 +504,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
-						localConnectionString: binding.localConnectionString,
+						localConnectionString: binding.dev?.connectionString,
 					})
 				);
 				break;
@@ -359,7 +512,7 @@ function convertBindingsAndAssets(
 			case "images": {
 				result.images = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -372,7 +525,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -384,7 +537,7 @@ function convertBindingsAndAssets(
 			case "media": {
 				result.media = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -393,7 +546,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						certificate_id: binding.id,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -403,7 +556,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						stream: binding.name,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -414,7 +567,7 @@ function convertBindingsAndAssets(
 						binding: name,
 						queue: binding.name,
 						delivery_delay: binding.deliveryDelay,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -428,12 +581,20 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "r2": {
+				const experimentalS3Credentials =
+					binding.dev?.experimentalS3Credentials;
 				r2Buckets.push(
 					omitUndefined({
 						binding: name,
 						bucket_name: binding.name,
 						jurisdiction: binding.jurisdiction,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
+						local_dev:
+							experimentalS3Credentials === undefined
+								? undefined
+								: {
+										experimental_s3_credentials: experimentalS3Credentials,
+									},
 					})
 				);
 				break;
@@ -457,7 +618,7 @@ function convertBindingsAndAssets(
 						destination_address: binding.destinationAddress,
 						allowed_destination_addresses: binding.allowedDestinationAddresses,
 						allowed_sender_addresses: binding.allowedSenderAddresses,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -465,7 +626,7 @@ function convertBindingsAndAssets(
 			case "stream": {
 				result.stream = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -478,7 +639,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						index_name: binding.name,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -492,7 +653,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						service_id: binding.id,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -506,7 +667,7 @@ function convertBindingsAndAssets(
 						omitUndefined({
 							binding: name,
 							tunnel_id: binding.tunnelId,
-							remote: binding.remote,
+							remote: binding.dev?.remote,
 						})
 					);
 				} else if (binding.networkId !== undefined) {
@@ -514,27 +675,20 @@ function convertBindingsAndAssets(
 						omitUndefined({
 							binding: name,
 							network_id: binding.networkId,
-							remote: binding.remote,
+							remote: binding.dev?.remote,
 						})
 					);
 				}
-				break;
-			}
-			case "web-search": {
-				result.websearch = omitUndefined({
-					binding: name,
-					remote: binding.remote,
-				});
 				break;
 			}
 			case "worker": {
 				services.push(
 					omitUndefined({
 						binding: name,
-						service: binding.workerName,
+						service: binding.worker,
 						entrypoint: binding.exportName,
 						props: binding.props,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -549,8 +703,7 @@ function convertBindingsAndAssets(
 			// 		omitUndefined({
 			// 			binding: name,
 			// 			class_name: binding.exportName,
-			// 			script_name: binding.workerName,
-			// 			remote: binding.remote,
+			// 			script_name: binding.worker,
 			// 		})
 			// 	);
 			// 	break;
@@ -694,6 +847,8 @@ function convertExports(
 				converted[exportName] = {
 					type: "durable-object",
 					storage: value.storage,
+					...(value.storage === "sqlite" &&
+						value.container !== undefined && { container: value.container }),
 				};
 				break;
 			}
@@ -726,6 +881,8 @@ function convertExports(
 					state: "expecting-transfer",
 					storage: value.storage,
 					transfer_from: value.transferFrom,
+					...(value.storage === "sqlite" &&
+						value.container !== undefined && { container: value.container }),
 				};
 				break;
 			}
@@ -749,7 +906,7 @@ function convertExports(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRIGGERS (scheduled + fetch + queue consumer + email)
+// TRIGGERS (scheduled + fetch + queue consumer + email + connect)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertTriggers(
@@ -768,11 +925,15 @@ function convertTriggers(
 	const queueConsumers: NonNullable<
 		NonNullable<RawConfig["queues"]>["consumers"]
 	> = result.queues?.consumers ? [...result.queues.consumers] : [];
-	const addresses: string[] = result.addresses ? [...result.addresses] : [];
+	const connectHandlers: NonNullable<RawConfig["connect"]> = result.connect
+		? [...result.connect]
+		: [];
+	let addresses: string[] | undefined;
 
 	for (const trigger of triggers) {
 		switch (trigger.type) {
 			case "email": {
+				addresses ??= [];
 				addresses.push(...trigger.addresses);
 				break;
 			}
@@ -805,6 +966,16 @@ function convertTriggers(
 				);
 				break;
 			}
+			case "connect": {
+				connectHandlers.push(
+					omitUndefined({
+						protocol: trigger.protocol,
+						port: trigger.port,
+						address: trigger.address,
+					})
+				);
+				break;
+			}
 		}
 	}
 
@@ -817,7 +988,11 @@ function convertTriggers(
 	if (queueConsumers.length) {
 		result.queues = { ...(result.queues ?? {}), consumers: queueConsumers };
 	}
-	if (addresses.length) {
+	if (connectHandlers.length) {
+		result.connect = connectHandlers;
+	}
+	// An empty array removes managed addresses; undefined means no email trigger.
+	if (addresses !== undefined) {
 		result.addresses = addresses;
 	}
 }
@@ -858,9 +1033,9 @@ function convertTailConsumers(
 	const streaming: NonNullable<RawConfig["streaming_tail_consumers"]> = [];
 	for (const consumer of consumers) {
 		if (consumer.streaming) {
-			streaming.push({ service: consumer.workerName });
+			streaming.push({ service: consumer.worker });
 		} else {
-			tail.push({ service: consumer.workerName });
+			tail.push({ service: consumer.worker });
 		}
 	}
 	if (tail.length) {

@@ -6,6 +6,7 @@ import {
 	DEFAULT_RETRY_DELAY_MS,
 	DELAY_FUNCTION_TIMEOUT_MS,
 	invokeDelayFunction,
+	raceAgainstAbort,
 } from "./lib/delay";
 import {
 	ABORT_REASONS,
@@ -25,6 +26,7 @@ import {
 	parseRollbackOptions,
 	ROLLBACK_CACHE_KEY_PREFIX,
 } from "./lib/rollback";
+import { normalizeForStorage } from "./lib/serialization";
 import {
 	cleanupPendingStreamOutput,
 	createReplayReadableStream,
@@ -39,6 +41,7 @@ import {
 	isValidStepConfig,
 	isValidStepName,
 	MAX_STEP_NAME_LENGTH,
+	SENSITIVE_STEP_OUTPUT,
 } from "./lib/validators";
 import { MODIFIER_KEYS } from "./modifier";
 import type { Engine } from "./engine";
@@ -67,6 +70,8 @@ export type Event = {
 // execution.
 const SERIALIZABLE_DELAY_MARKER = "[dynamic]";
 type SerializableDelayMarker = typeof SERIALIZABLE_DELAY_MARKER;
+
+export const REDACTED_STEP_OUTPUT = "[REDACTED]";
 
 // The persisted, fully-merged config. A dynamic delay is stored as the marker.
 export type ResolvedStepConfig = {
@@ -137,103 +142,6 @@ const defaultConfig: ResolvedStepConfig = {
 	},
 	timeout: "10 minutes",
 };
-
-/**
- * Returns a copy of `value` that is safe to persist via Durable Object SQL
- * storage without dragging unrelated bytes along with typed-array views.
- *
- * Background: workerd's `v8::ValueSerializer` writes the entire backing
- * `ArrayBuffer` for typed-array views, not just `byteLength` bytes. A view
- * sliced from a much larger buffer (`crypto.getRandomValues`, `arr.slice(...)`,
- * fetch-stream copies) blows up the wire size by a factor of
- * (backing-size / view-size) and can hit `SQLITE_TOOBIG` at view sizes well
- * below the documented 1MiB step-output limit (see issue #14101). Copying the
- * view's bytes into a tight backing buffer before persistence brings local
- * `wrangler dev` behaviour in line with production.
- *
- * The walk is recursive (cycle-safe via a `WeakMap`) so views nested inside
- * objects, arrays, Maps, and Sets are also compacted. View types are preserved
- * (`Uint8Array` stays `Uint8Array`, `Int16Array` stays `Int16Array`, etc.) so
- * the persisted shape matches the live shape — cached replays observe the
- * same constructor type the step originally returned. Class instances and
- * host objects (`Date`, `RegExp`, raw `ArrayBuffer`, streams, `Blob`, …) are
- * passed through unchanged — recursing into them would either fail to
- * reconstruct the original type or trigger their own structured-clone path.
- */
-function normalizeForStorage(
-	value: unknown,
-	seen: WeakMap<object, unknown> = new WeakMap()
-): unknown {
-	// Primitives: nothing to do.
-	if (value === null || typeof value !== "object") {
-		return value;
-	}
-
-	// Already visited (cycle): return the previously-built copy so the result
-	// graph mirrors the original's cycle topology.
-	if (seen.has(value)) {
-		return seen.get(value);
-	}
-
-	// Typed-array views (TypedArray + DataView): copy bytes into a tight
-	// backing buffer, preserving the original view constructor.
-	if (ArrayBuffer.isView(value)) {
-		return buildCompactView(value);
-	}
-
-	if (Array.isArray(value)) {
-		const result: unknown[] = [];
-		seen.set(value, result);
-		for (const item of value) {
-			result.push(normalizeForStorage(item, seen));
-		}
-		return result;
-	}
-
-	if (value instanceof Map) {
-		const result = new Map();
-		seen.set(value, result);
-		for (const [k, v] of value) {
-			result.set(normalizeForStorage(k, seen), normalizeForStorage(v, seen));
-		}
-		return result;
-	}
-
-	if (value instanceof Set) {
-		const result = new Set();
-		seen.set(value, result);
-		for (const v of value) {
-			result.add(normalizeForStorage(v, seen));
-		}
-		return result;
-	}
-
-	// Plain objects (Object literals and null-prototype objects). Class
-	// instances and host objects fall through to the pass-through below.
-	const proto = Object.getPrototypeOf(value);
-	if (proto === Object.prototype || proto === null) {
-		const result: Record<string, unknown> = {};
-		seen.set(value, result);
-		for (const key of Object.keys(value)) {
-			result[key] = normalizeForStorage(
-				(value as Record<string, unknown>)[key],
-				seen
-			);
-		}
-		return result;
-	}
-
-	return value;
-}
-
-type ViewCtor = new (buffer: ArrayBufferLike) => ArrayBufferView;
-function buildCompactView(view: ArrayBufferView): ArrayBufferView {
-	const tightBuffer = view.buffer.slice(
-		view.byteOffset,
-		view.byteOffset + view.byteLength
-	);
-	return new (view.constructor as ViewCtor)(tightBuffer);
-}
 
 export interface UserErrorField {
 	isUserError?: boolean;
@@ -1193,26 +1101,14 @@ export class Context extends RpcTarget {
 					// takes effect immediately during retries
 					{
 						const retryPauseSignal = this.#engine.pauseController.signal;
-						let pausedDuringRetry = false;
-						await Promise.race([
+						await raceAgainstAbort(
 							scheduler.wait(effectiveDuration),
-							new Promise<void>((resolve) => {
-								if (retryPauseSignal.aborted) {
-									resolve();
-									return;
-								}
-								retryPauseSignal.addEventListener("abort", () => resolve(), {
-									once: true,
-								});
-							}),
-						]);
+							retryPauseSignal
+						);
 						const retryStatus = await this.#engine.getStatus();
-						if (
+						const pausedDuringRetry =
 							retryStatus === InstanceStatus.Paused ||
-							retryStatus === InstanceStatus.WaitingForPause
-						) {
-							pausedDuringRetry = true;
-						}
+							retryStatus === InstanceStatus.WaitingForPause;
 						if (pausedDuringRetry) {
 							throw new Error(ABORT_REASONS.USER_PAUSE);
 						}
@@ -1257,12 +1153,18 @@ export class Context extends RpcTarget {
 				}
 			}
 
+			const redactOutput = config.sensitive === SENSITIVE_STEP_OUTPUT;
 			this.#engine.writeLog(events.success, cacheKey, stepNameWithCounter, {
 				// TODO (WOR-86): Add limits, figure out serialization
-				result: lastStreamMeta ? undefined : result,
-				...(lastStreamMeta && {
-					streamOutput: { cacheKey, meta: lastStreamMeta },
-				}),
+				result: redactOutput
+					? REDACTED_STEP_OUTPUT
+					: lastStreamMeta
+						? undefined
+						: result,
+				...(!redactOutput &&
+					lastStreamMeta && {
+						streamOutput: { cacheKey, meta: lastStreamMeta },
+					}),
 				...(!isRollback && rollbackFn ? { hasRollback: true } : {}),
 			});
 			this.#registerRollback({
@@ -1373,28 +1275,13 @@ export class Context extends RpcTarget {
 		const pauseSignal = this.#engine.pauseController.signal;
 		const sleepDuration = disableSleep ? 0 : duration;
 
-		let pausedDuringSleep = false;
-		await Promise.race([
-			scheduler.wait(sleepDuration),
-			new Promise<void>((resolve) => {
-				if (pauseSignal.aborted) {
-					resolve();
-					return;
-				}
-				pauseSignal.addEventListener("abort", () => resolve(), {
-					once: true,
-				});
-			}),
-		]);
+		await raceAgainstAbort(scheduler.wait(sleepDuration), pauseSignal);
 
 		// Check if we were paused during the sleep
 		const statusAfterSleep = await this.#engine.getStatus();
-		if (
+		const pausedDuringSleep =
 			statusAfterSleep === InstanceStatus.Paused ||
-			statusAfterSleep === InstanceStatus.WaitingForPause
-		) {
-			pausedDuringSleep = true;
-		}
+			statusAfterSleep === InstanceStatus.WaitingForPause;
 
 		if (pausedDuringSleep) {
 			// Throw pause error
@@ -1584,26 +1471,17 @@ export class Context extends RpcTarget {
 			this.#engine.waiters.set(options.type, callbacks);
 		});
 
-		// Race event, timeout, and pause signal. The pause promise resolves
-		// when the race settles via event/timeout before the pause signal fires
+		// Race event and timeout against the pause signal.
 		const pauseSignal = this.#engine.pauseController.signal;
-		const pausePromise = new Promise<void>((resolve) => {
-			if (pauseSignal.aborted) {
-				resolve();
-				return;
-			}
-			pauseSignal.addEventListener("abort", () => resolve(), {
-				once: true,
-			});
-		});
-
-		const raceResult = await Promise.race([
-			eventPromise,
-			timeoutEntryPQ !== undefined
-				? timeoutPromise(timeoutEntryPQ.targetTimestamp - Date.now(), false)
-				: timeoutPromise(ms(options.timeout), true),
-			pausePromise,
-		]).catch(async (error) => {
+		const raceResult = await raceAgainstAbort(
+			Promise.race([
+				eventPromise,
+				timeoutEntryPQ !== undefined
+					? timeoutPromise(timeoutEntryPQ.targetTimestamp - Date.now(), false)
+					: timeoutPromise(ms(options.timeout), true),
+			]),
+			pauseSignal
+		).catch(async (error) => {
 			const callbacks = this.#engine.waiters.get(options.type);
 			if (callbacks) {
 				const idx = callbacks.findIndex(([key]) => key === cacheKey);
@@ -1623,18 +1501,19 @@ export class Context extends RpcTarget {
 		});
 
 		// Pause signal won the race — throw to stop the workflow
-		if (raceResult === undefined) {
+		if (raceResult.aborted) {
 			throw new Error(ABORT_REASONS.USER_PAUSE);
 		}
+		const event = raceResult.value;
 
 		this.#engine.writeLog(
 			InstanceEvent.WAIT_COMPLETE,
 			cacheKey,
 			waitForEventNameWithCounter,
-			raceResult as Event
+			event
 		);
-		await this.#state.storage.put(waitForEventKey, raceResult);
+		await this.#state.storage.put(waitForEventKey, event);
 
-		return raceResult as WorkflowStepEvent<T>;
+		return event as WorkflowStepEvent<T>;
 	}
 }

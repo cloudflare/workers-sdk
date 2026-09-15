@@ -8,10 +8,10 @@ import { text } from "node:stream/consumers";
 import { Headers, Miniflare, R2_PLUGIN_NAME } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
-	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
+	singleModuleManifest,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
@@ -59,8 +59,16 @@ interface Context extends MiniflareTestContext {
 }
 
 const opts: Partial<MiniflareOptions> = {
-	r2Buckets: { BUCKET: "bucket" },
-	compatibilityFlags: ["r2_list_honor_include"],
+	workers: [
+		{
+			config: {
+				type: "worker",
+				name: "",
+				compatibilityDate: "2025-05-01",
+				env: { BUCKET: { type: "r2", name: "bucket" } },
+			},
+		},
+	],
 };
 const ctx = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 	opts,
@@ -146,6 +154,28 @@ test("head: returns metadata for existing keys", async ({ expect }) => {
 
 	// Test proxying of `writeHttpMetadata()`
 	const headers = new Headers({ "X-Key": "value" });
+	expect(object.writeHttpMetadata(headers)).toBeUndefined();
+	expect(headers.get("Content-Type")).toBe("text/plain");
+	expect(headers.get("X-Key")).toBe("value");
+});
+test("head: writeHttpMetadata() accepts a `Headers` instance from another realm", async ({
+	expect,
+}) => {
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/6047:
+	// user code (e.g. inside Next.js, Astro, or SvelteKit) typically constructs
+	// `Headers` using the platform global, which is backed by a different
+	// `Headers` implementation than the `undici` copy Miniflare uses
+	// internally. This previously caused a `DevalueError` when serialising the
+	// argument to send across the proxy.
+	const { r2 } = ctx;
+	await r2.put("key", "value", {
+		httpMetadata: { contentType: "text/plain" },
+	});
+	const object = await r2.head("key");
+	assert(object !== null);
+
+	const headers = new globalThis.Headers({ "X-Key": "value" });
+	expect(headers).not.toBeInstanceOf(Headers);
 	expect(object.writeHttpMetadata(headers)).toBeUndefined();
 	expect(headers.get("Content-Type")).toBe("text/plain");
 	expect(headers.get("X-Key")).toBe("value");
@@ -541,9 +571,14 @@ test("put: validates metadata size", async ({ expect }) => {
 });
 test("put: can copy values", async ({ expect }) => {
 	const mf = new Miniflare({
-		r2Buckets: ["BUCKET"],
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					manifest: singleModuleManifest(`export default {
       async fetch(request, env, ctx) {
         await env.BUCKET.put("key", "0123456789");
 
@@ -571,7 +606,10 @@ test("put: can copy values", async ({ expect }) => {
 
         return Response.json({ copy, copyRange1, copyRange2, copyRange3, copyRange4 });
       }
-    }`,
+    }`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
@@ -635,8 +673,9 @@ async function testList(
 	const { r2, ns } = ctx;
 
 	// Seed bucket
-	for (let i = 0; i < opts.keys.length; i++)
+	for (let i = 0; i < opts.keys.length; i++) {
 		await r2.put(opts.keys[i], `value${i}`);
+	}
 
 	let lastCursor: string | undefined;
 	for (let pageIndex = 0; pageIndex < opts.pages.length; pageIndex++) {
@@ -913,7 +952,9 @@ test("list: returns correct delimitedPrefixes for delimiter and prefix", async (
 		file9: "value9",
 	};
 	const allKeys = Object.keys(values);
-	for (const [key, value] of Object.entries(values)) await r2.put(key, value);
+	for (const [key, value] of Object.entries(values)) {
+		await r2.put(key, value);
+	}
 
 	const keys = (result: Awaited<ReturnType<typeof r2.list>>) =>
 		result.objects.map(({ key }) => key.substring(ns.length));
@@ -997,10 +1038,18 @@ test("operations permit empty key", async ({ expect }) => {
 test("operations persist stored data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const persistOpts: MiniflareOptions = {
-		modules: true,
-		script: "",
-		r2Buckets: { BUCKET: "bucket" },
-		r2Persist: tmp,
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+					env: { BUCKET: { type: "r2", name: "bucket" } },
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
@@ -1013,8 +1062,8 @@ test("operations persist stored data", async ({ expect }) => {
 	let object = await r2.head("key");
 	expect(object?.size).toBe(5);
 
-	// Check directory created for namespace
-	const names = await fs.readdir(tmp);
+	// Check directory created for namespace under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, R2_PLUGIN_NAME));
 	expect(names.includes("miniflare-R2BucketObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data
@@ -1052,7 +1101,18 @@ test("operations permit strange bucket names", async ({ expect }) => {
 
 	// Set option, then reset after test
 	const id = "my/ Bucket";
-	await ctx.setOptions({ ...opts, r2Buckets: { BUCKET: id } });
+	await ctx.setOptions({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: id } },
+				},
+			},
+		],
+	});
 	onTestFinished(() => ctx.setOptions(opts));
 	const r2 = namespace(ns, await mf.getR2Bucket("BUCKET"));
 
@@ -1159,8 +1219,9 @@ test("abortMultipartUpload", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload1.uploadId)).length).toBe(0);
 	// Check blobs deleted
 	await object.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await object.getBlob(part.blob_id)).toBe(null);
+	}
 
 	// Check cannot upload after abort
 	await expect(upload1.uploadPart(4, "value4")).rejects.toThrow(
@@ -1247,8 +1308,9 @@ test("completeMultipartUpload", async ({ expect }) => {
 	expect(object.etag).toBe("46d1741e8075da4ac72c71d8130fcb71-1");
 	// Check previous multipart uploads blobs deleted
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 
 	// Check completing multiple uploads overrides existing, deleting all parts
 	expect((await stmts.getPartsByUploadId(upload1.uploadId)).length).toBe(0);
@@ -1519,8 +1581,9 @@ test("put: is multipart aware", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(0);
 	// Check deletes all previous blobs
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("delete: is multipart aware", async ({ expect }) => {
 	const { r2, object: objectStub } = ctx;
@@ -1542,8 +1605,9 @@ test("delete: is multipart aware", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(0);
 	// Check deletes all previous blobs
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("delete: waits for in-progress multipart gets before deleting part blobs", async ({
 	expect,
@@ -1570,8 +1634,9 @@ test("delete: waits for in-progress multipart gets before deleting part blobs", 
 	);
 
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("list: is multipart aware", async ({ expect }) => {
 	const { r2, ns } = ctx;
@@ -1607,25 +1672,4 @@ test("list: is multipart aware", async ({ expect }) => {
 	expect(object?.checksums.toJSON()).toEqual({});
 	expect(object?.customMetadata).toEqual({ key: "value" });
 	expect(object?.httpMetadata).toEqual({ contentType: "text/plain" });
-});
-
-test("migrates database to new location", async ({ expect }) => {
-	// Copy legacy data to temporary directory
-	const tmp = await useTmp();
-	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
-	const r2Persist = path.join(tmp, "r2");
-	await fs.cp(path.join(persistFixture, "r2"), r2Persist, { recursive: true });
-
-	// Implicitly migrate data
-	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		r2Buckets: ["BUCKET"],
-		r2Persist,
-	});
-	useDispose(mf);
-
-	const bucket = await mf.getR2Bucket("BUCKET");
-	const object = await bucket.get("key");
-	expect(await object?.text()).toBe("value");
 });

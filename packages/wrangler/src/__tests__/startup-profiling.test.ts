@@ -33,6 +33,13 @@ describe("wrangler check startup", () => {
 		expect(std.out).toContain(
 			`CPU Profile has been written to worker-startup.cpuprofile`
 		);
+		expect(std.out).toMatch(/Bundle: \d+\.\d{2} KiB \/ gzip: \d+\.\d{2} KiB/);
+		expect(std.out).toContain("Local startup profile:");
+		expect(std.out).toContain("Profile window:");
+		expect(std.out).toContain("Sampled time:");
+		expect(std.out).toContain("Active:");
+		expect(std.out).toContain("Idle:");
+		expect(std.out).toContain("Samples:");
 
 		await expect(
 			readFile("worker-startup.cpuprofile", "utf8")

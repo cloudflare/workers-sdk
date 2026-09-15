@@ -5,9 +5,9 @@ import { dedent } from "ts-dedent";
 import { defineConfig } from "vitest/config";
 import type { PluginOption } from "vite";
 
-const TEMPLATES_DIR = path.join(__dirname, "templates");
+const TEMPLATES_DIR = path.join(import.meta.dirname, "templates");
 
-const OUTDIR = path.resolve(__dirname, "./.tmp/vitest-workers");
+const OUTDIR = path.resolve(import.meta.dirname, "./.tmp/vitest-workers");
 function embedWorkersPlugin() {
 	return {
 		name: "embed-workers",
@@ -42,7 +42,7 @@ function embedWorkersPlugin() {
 			);
 			assert(scriptPath);
 			const absoluteScriptPath = JSON.stringify(
-				path.resolve(__dirname, scriptPath)
+				path.resolve(import.meta.dirname, scriptPath)
 			);
 
 			for (const file of watchFiles) {
@@ -65,8 +65,14 @@ export default defineConfig({
 		include: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
 		// eslint-disable-next-line turbo/no-undeclared-env-vars -- TEST_REPORT_PATH is optionally set by CI
 		outputFile: process.env.TEST_REPORT_PATH ?? ".e2e-test-report/index.html",
-		setupFiles: path.resolve(__dirname, "src/__tests__/vitest.setup.ts"),
-		globalSetup: path.resolve(__dirname, "src/__tests__/vitest.global.ts"),
+		setupFiles: path.resolve(
+			import.meta.dirname,
+			"src/__tests__/vitest.setup.ts"
+		),
+		globalSetup: path.resolve(
+			import.meta.dirname,
+			"src/__tests__/vitest.global.ts"
+		),
 		reporters: ["default", "html"],
 		globals: true,
 		unstubEnvs: true,

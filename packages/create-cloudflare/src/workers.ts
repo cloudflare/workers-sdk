@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { warn } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { resolveNodejsCompat } from "@cloudflare/workers-utils";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -69,14 +70,22 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
 		parsedConfig = TOML.parse(wranglerTomlStr);
 	}
 
-	const compatibilityFlags = Array.isArray(parsedConfig["compatibility_flags"])
+	const compatibilityFlags: string[] = Array.isArray(
+		parsedConfig["compatibility_flags"]
+	)
 		? parsedConfig["compatibility_flags"]
 		: [];
+	const compatibilityDate =
+		typeof parsedConfig["compatibility_date"] === "string"
+			? parsedConfig["compatibility_date"]
+			: "";
 
-	if (
-		compatibilityFlags.includes("nodejs_compat") ||
-		compatibilityFlags.includes("nodejs_compat_v2")
-	) {
+	// The flags alone are not enough to tell: a recent enough compatibility date
+	// enables Node.js compatibility without them being present at all.
+	const { isNodejsCompatEnabled, isNodejsCompatV2Enabled } =
+		resolveNodejsCompat(compatibilityDate, compatibilityFlags);
+
+	if (isNodejsCompatEnabled || isNodejsCompatV2Enabled) {
 		await installPackages(["@types/node"], {
 			dev: true,
 			startText: "Installing @types/node",

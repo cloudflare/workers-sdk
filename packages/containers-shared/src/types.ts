@@ -31,8 +31,6 @@ export type BuildArgs = {
 	args?: Record<string, string>;
 	/** platform to build for. defaults to linux/amd64 */
 	platform?: string;
-	/** sets --network=host at build time. only used by workers CI. */
-	setNetworkToHost?: boolean;
 };
 
 export type ContainerNormalizedConfig = SharedContainerConfig &
@@ -91,7 +89,11 @@ export type SharedContainerConfig = {
 		colocation?: ApplicationAffinityColocation;
 		hardware_generation?: ApplicationAffinityHardwareGeneration;
 	};
-	observability: { logs_enabled: boolean };
+	observability: {
+		logs_enabled: boolean;
+		target_instance_percentage?: number;
+		target_instance_count?: number;
+	};
 } & InstanceTypeOrLimits;
 
 /** build/pull agnostic container options */

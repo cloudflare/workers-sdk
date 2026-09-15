@@ -39,7 +39,7 @@ const LOCAL_EXPLORER_INFO = {
 const LOCAL_EXPLORER_SERVERS = [
 	{
 		description: "Local Explorer",
-		url: "/cdn-cgi/explorer/api",
+		url: "/cdn-cgi/local/explorer/api",
 	},
 ];
 

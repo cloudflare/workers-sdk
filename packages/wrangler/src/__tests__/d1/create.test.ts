@@ -30,6 +30,13 @@ describe("create", () => {
 		);
 	});
 
+	it("should show all supported jurisdictions in help", async ({ expect }) => {
+		await runWrangler("d1 create --help");
+
+		expect(std.out).toContain('[choices: "eu", "fedramp", "us"]');
+		expect(std.out).toContain("us: The United States");
+	});
+
 	it("should throw if location flag isn't in the list", async ({ expect }) => {
 		setIsTTY(false);
 		msw.use(
@@ -95,7 +102,7 @@ describe("create", () => {
 		await expect(runWrangler("d1 create test --jurisdiction something")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: Invalid values:
-			  Argument: jurisdiction, Given: "something", Choices: "eu", "fedramp"]
+			  Argument: jurisdiction, Given: "something", Choices: "eu", "fedramp", "us"]
 		`);
 	});
 
@@ -115,7 +122,7 @@ describe("create", () => {
 						uuid: "51e7c314-456e-4167-b6c3-869ad188fc23",
 						name: "test",
 						created_in_region: "WEUR",
-						jurisdiction: "eu",
+						jurisdiction: "us",
 					},
 					success: true,
 					errors: [],
@@ -123,7 +130,7 @@ describe("create", () => {
 				});
 			})
 		);
-		await runWrangler("d1 create test --jurisdiction eu --binding MY_TEST_DB");
+		await runWrangler("d1 create test --jurisdiction us --binding MY_TEST_DB");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
@@ -175,8 +182,14 @@ describe("create", () => {
 		await expect(runWrangler("d1 create test")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: You have reached the maximum number of D1 databases for your account.
-			Please consider deleting unused databases, or visit the D1 documentation to learn more: https://developers.cloudflare.com/d1/
 
+			On the Workers Free plan? Upgrade to create more:
+			https://dash.cloudflare.com/1701/workers/plans
+
+			Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
+			https://developers.cloudflare.com/d1/
+
+			Or free up space:
 			To list your existing databases, run: wrangler d1 list
 			To delete a database, run: wrangler d1 delete <database-name>]
 		`);

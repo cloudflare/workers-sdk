@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import test, { after, before, describe } from "node:test";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 
 describe("worker", () => {
 	/**
@@ -9,18 +9,20 @@ describe("worker", () => {
 	let worker;
 
 	before(async () => {
-		worker = new Miniflare({
-			modules: [
-				{
-					type: "ESModule",
-					path: "src/index.js",
+		worker = new Miniflare(
+			convertV4MiniflareOptions({
+				modules: [
+					{
+						type: "ESModule",
+						path: "src/index.js",
+					},
+				],
+				bindings: {
+					FOO: "Hello Bindings",
 				},
-			],
-			bindings: {
-				FOO: "Hello Bindings",
-			},
-			kvNamespaces: ["KV"],
-		});
+				kvNamespaces: ["KV"],
+			})
+		);
 		await worker.ready;
 	});
 

@@ -7,6 +7,8 @@ export function getSourceType(source: EventSource): string {
 
 export function getSourceResource(source: EventSource): string {
 	switch (source.type) {
+		case EventSourceType.EMAIL_SENDING:
+			return source.domain;
 		case EventSourceType.WORKERS_AI_MODEL:
 			return source.model_name;
 		case EventSourceType.WORKERS_BUILDS_WORKER:

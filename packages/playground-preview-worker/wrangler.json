@@ -14,10 +14,18 @@
 		"SENTRY_DSN": "https://0ff0cac6ca8b492d8b551626a7b9670c@sentry10.cfdata.org/978",
 		"workersDev": "workers-playground-users.workers.dev"
 	},
+	"secrets": {
+		"required": [
+			"API_TOKEN",
+			"PROMETHEUS_TOKEN",
+			"SENTRY_ACCESS_CLIENT_SECRET",
+			"SENTRY_ACCESS_CLIENT_ID"
+		]
+	},
 
 	"define": {
 		"ROOT": "'playground/devprod/cloudflare/dev'",
-		"PREVIEW": "':any/cloudflarepreviews/com'"
+		"PREVIEW": "'cloudflarepreviews.com'"
 	},
 
 	"routes": [
@@ -41,6 +49,15 @@
 			"new_classes": ["UserSession"]
 		}
 	],
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "WSHIM_SOCKET",
+				"type": "internal_service_http",
+				"service": "wshim"
+			}
+		]
+	},
 
 	"observability": {
 		"enabled": true
@@ -53,10 +70,18 @@
 				"SENTRY_DSN": "https://0ff0cac6ca8b492d8b551626a7b9670c@sentry10.cfdata.org/978",
 				"workersDev": "workers-playground-users.workers.dev"
 			},
+			"secrets": {
+				"required": [
+					"API_TOKEN",
+					"PROMETHEUS_TOKEN",
+					"SENTRY_ACCESS_CLIENT_SECRET",
+					"SENTRY_ACCESS_CLIENT_ID"
+				]
+			},
 
 			"define": {
 				"ROOT": "'playground-testing/devprod/cloudflare/dev'",
-				"PREVIEW": "':any/playground-testing/devprod/cloudflare/dev'"
+				"PREVIEW": "'playground-testing.devprod.cloudflare.dev'"
 			},
 
 			"routes": [
@@ -79,7 +104,16 @@
 					"tag": "v1",
 					"new_classes": ["UserSession"]
 				}
-			]
+			],
+			"unsafe": {
+				"bindings": [
+					{
+						"name": "WSHIM_SOCKET",
+						"type": "internal_service_http",
+						"service": "wshim"
+					}
+				]
+			}
 		}
 	}
 }

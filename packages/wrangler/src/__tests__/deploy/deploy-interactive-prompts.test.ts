@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -7,6 +8,7 @@ import {
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { clearOutputFilePath } from "../../output";
+import { detectAgent } from "../../utils/detect-agent";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -23,14 +25,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -76,15 +70,15 @@ describe("deploy: interactive deploy config prompts", () => {
 	});
 
 	afterEach(() => {
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 		vi.unstubAllGlobals();
 		clearDialogs();
 		clearOutputFilePath();
 	});
 
-	it("should prompt and use today's date when user confirms", async ({
+	it("should prompt and use the default compatibility date when user confirms", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		writeWranglerConfig(
@@ -92,7 +86,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			"./wrangler.toml"
 		);
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 
@@ -103,7 +97,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should error when user declines the compatibility date prompt", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		writeWranglerConfig(
@@ -111,7 +104,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			"./wrangler.toml"
 		);
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: false,
 		});
 
@@ -138,7 +131,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should not show config-write prompt when config file already exists", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		writeWranglerConfig(
@@ -146,7 +138,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			"./wrangler.toml"
 		);
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 
@@ -178,7 +170,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should prompt for name, compat date, and offer to write config when no config file exists", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		// No writeWranglerConfig call — no config file exists
@@ -187,7 +178,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -203,7 +194,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 		});
 		expect(writtenConfig).not.toHaveProperty("assets");
@@ -216,7 +207,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should show suggested CLI flags when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		// No writeWranglerConfig call — no config file exists
@@ -225,7 +215,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -237,17 +227,16 @@ describe("deploy: interactive deploy config prompts", () => {
 		expect(std.out).toContain("--dry-run: exiting now.");
 		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
 		expect(std.out).toContain(
-			"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15"
+			`wrangler deploy ./index.js --name test-worker --compatibility-date ${DEFAULT_COMPAT_DATE}`
 		);
 		// Should not include --assets since no assets were used
 		expect(std.out).not.toContain("--assets");
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 
-	it("should write config with today's compat date when --latest is used and no config file exists", async ({
+	it("should write config with the default compat date when --latest is used and no config file exists", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		// No writeWranglerConfig call — no config file exists
@@ -263,13 +252,13 @@ describe("deploy: interactive deploy config prompts", () => {
 
 		await runWrangler("deploy ./index.js --latest --dry-run");
 		expect(std.out).toContain("--dry-run: exiting now.");
-		// Config file should include today's date even though --latest was used
+		// Config file should include the default date even though --latest was used
 		const writtenConfig = JSON.parse(
 			fs.readFileSync("wrangler.jsonc", "utf-8")
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 		});
 		expect(std.out).not.toContain("No compatibility date is set");
@@ -279,7 +268,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include compat date in suggested CLI command when --latest is used and config write declined", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		// No writeWranglerConfig call — no config file exists
@@ -298,7 +286,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
 		// Suggested command should include the resolved compat date
 		expect(std.out).toContain(
-			"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15"
+			`wrangler deploy ./index.js --name test-worker --compatibility-date ${DEFAULT_COMPAT_DATE}`
 		);
 		expect(std.out).not.toContain("No compatibility date is set");
 		expect(std.out).toContain("Proceeding with deployment...");
@@ -307,7 +295,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should prompt for name when config file exists but has no name", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		writeWranglerConfig({ name: undefined as unknown as string });
@@ -325,10 +312,35 @@ describe("deploy: interactive deploy config prompts", () => {
 		expect(std.out).not.toContain("Proceeding with deployment...");
 	});
 
+	it("should use the project name without prompting when run by an agent", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWorkerSource();
+		fs.writeFileSync(
+			"package.json",
+			JSON.stringify({ name: "agent-project-name" })
+		);
+		writeWranglerConfig({ name: undefined as unknown as string });
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+
+		await runWrangler("deploy ./index.js --dry-run");
+
+		expect(std.out).toContain(
+			'Using the project name "agent-project-name" as the Worker name.'
+		);
+		expect(std.out).toContain(
+			"set the `name` field in your Wrangler configuration file or pass `--name <name>`"
+		);
+		expect(std.out).not.toContain("What do you want to name your project?");
+	});
+
 	it("should not prompt for name when config file provides one", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		writeWranglerConfig({
@@ -336,7 +348,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			compatibility_date: undefined as unknown as string,
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 
@@ -349,7 +361,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include compatibility_flags in generated wrangler.jsonc when --compatibility-flags is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		// No writeWranglerConfig call — no config file exists
@@ -358,7 +369,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -375,7 +386,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			compatibility_flags: ["nodejs_compat"],
 		});
@@ -385,7 +396,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --compatibility-flags in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		// No writeWranglerConfig call — no config file exists
@@ -394,7 +404,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -409,7 +419,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
 		// Suggested command should include the compat flags
 		expect(std.out).toContain(
-			"wrangler deploy ./index.js --name test-worker --compatibility-date 2024-06-15 --compatibility-flags nodejs_compat disable_navigator_language"
+			`wrangler deploy ./index.js --name test-worker --compatibility-date ${DEFAULT_COMPAT_DATE} --compatibility-flags nodejs_compat disable_navigator_language`
 		);
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
@@ -417,7 +427,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include multiple --compatibility-flags in suggested CLI command and config file", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		// No writeWranglerConfig call — no config file exists
@@ -426,7 +435,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -443,7 +452,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			compatibility_flags: ["nodejs_compat", "url_standard"],
 		});
@@ -453,7 +462,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include routes in generated wrangler.jsonc when --routes is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -461,7 +469,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -478,7 +486,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			routes: ["example.com/*", "other.com/path"],
 		});
@@ -488,7 +496,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --routes in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -496,7 +503,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -516,7 +523,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include domains as custom_domain routes in generated wrangler.jsonc when --domains is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -524,7 +530,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -541,7 +547,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			routes: [
 				{ pattern: "api.example.com", custom_domain: true },
@@ -554,7 +560,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --domains in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -562,7 +567,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -582,7 +587,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should merge --routes and --domains into routes array in generated wrangler.jsonc", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -590,7 +594,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -607,7 +611,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			routes: [
 				"example.com/*",
@@ -620,7 +624,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include triggers in generated wrangler.jsonc when --triggers is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -628,7 +631,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -643,7 +646,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			triggers: { crons: ["*/5 * * * *"] },
 		});
@@ -653,7 +656,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --triggers in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -661,7 +663,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -679,7 +681,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include vars in generated wrangler.jsonc when --var is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -687,7 +688,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -704,7 +705,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			vars: { MY_VAR: "my-value", OTHER: "thing" },
 		});
@@ -714,7 +715,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --var in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -722,7 +722,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -742,7 +742,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include define in generated wrangler.jsonc when --define is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -750,7 +749,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -765,7 +764,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			define: { MY_CONST: "true" },
 		});
@@ -775,7 +774,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --define in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -783,7 +781,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -801,7 +799,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include alias in generated wrangler.jsonc when --alias is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -809,7 +806,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -826,7 +823,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			alias: { "some-module": "./aliased.js" },
 		});
@@ -836,7 +833,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include jsx_factory in generated wrangler.jsonc when --jsx-factory is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -844,7 +840,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -859,7 +855,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			jsx_factory: "h",
 		});
@@ -869,7 +865,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include jsx_fragment in generated wrangler.jsonc when --jsx-fragment is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -877,7 +872,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -892,7 +887,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			jsx_fragment: "Fragment",
 		});
@@ -902,7 +897,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include tsconfig in generated wrangler.jsonc when --tsconfig is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		fs.writeFileSync("tsconfig.custom.json", JSON.stringify({}));
@@ -911,7 +905,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -928,7 +922,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			tsconfig: "./tsconfig.custom.json",
 		});
@@ -938,7 +932,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include minify in generated wrangler.jsonc when --minify is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -946,7 +939,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -961,7 +954,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			minify: true,
 		});
@@ -971,7 +964,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --minify in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -979,7 +971,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -997,7 +989,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include upload_source_maps in generated wrangler.jsonc when --upload-source-maps is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -1005,7 +996,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -1020,7 +1011,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			upload_source_maps: true,
 		});
@@ -1030,7 +1021,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include no_bundle in generated wrangler.jsonc when --no-bundle is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -1038,7 +1028,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -1053,7 +1043,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			no_bundle: true,
 		});
@@ -1063,7 +1053,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include logpush in generated wrangler.jsonc when --logpush is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -1071,7 +1060,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -1086,7 +1075,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			logpush: true,
 		});
@@ -1096,7 +1085,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include keep_vars in generated wrangler.jsonc when --keep-vars is passed", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -1104,7 +1092,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -1119,7 +1107,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			keep_vars: true,
 		});
@@ -1129,7 +1117,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --keep-vars in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -1137,7 +1124,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -1155,7 +1142,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include --dispatch-namespace in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -1163,7 +1149,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -1183,7 +1169,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include multiple flags in generated wrangler.jsonc and suggested CLI command", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -1191,7 +1176,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({
@@ -1208,7 +1193,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		);
 		expect(writtenConfig).toEqual({
 			name: "test-worker",
-			compatibility_date: "2024-06-15",
+			compatibility_date: DEFAULT_COMPAT_DATE,
 			main: "./index.js",
 			compatibility_flags: ["nodejs_compat"],
 			routes: ["example.com/*"],
@@ -1222,7 +1207,6 @@ describe("deploy: interactive deploy config prompts", () => {
 	it("should include multiple flags in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {
-		vi.setSystemTime(new Date(2024, 5, 15));
 		setIsTTY(true);
 		writeWorkerSource();
 		mockPrompt({
@@ -1230,7 +1214,7 @@ describe("deploy: interactive deploy config prompts", () => {
 			result: "test-worker",
 		});
 		mockConfirm({
-			text: "No compatibility date is set. Would you like to use today's date (2024-06-15)?",
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 			result: true,
 		});
 		mockConfirm({

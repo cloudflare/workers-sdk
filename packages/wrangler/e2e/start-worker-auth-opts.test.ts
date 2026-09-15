@@ -190,7 +190,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 			const authErrors = emittedErrors.filter((e) =>
 				hasMatchingCauseMessage(
 					e,
-					/Failed to establish remote session due to an authentication issue/
+					/the remote session could not be authenticated./
 				)
 			);
 			expect(authErrors).toHaveLength(0);
@@ -211,7 +211,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 			const authErrors = emittedErrors.filter((e) =>
 				hasMatchingCauseMessage(
 					e,
-					/Failed to establish remote session due to an authentication issue/
+					/the remote session could not be authenticated./
 				)
 			);
 			expect(authErrors.length).toBeGreaterThan(0);

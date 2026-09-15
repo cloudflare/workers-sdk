@@ -1,12 +1,14 @@
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
 import { runWrangler } from "./../helpers/run-wrangler";
-import type { Project } from "./../../pages/types";
+import type { PagesConfigCache, Project } from "./../../pages/types";
 import type { ExpectStatic } from "vitest";
 
 describe("pages project list", () => {
@@ -83,16 +85,28 @@ describe("pages project list", () => {
 	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({
 		expect,
 	}) => {
-		vi.mock("getConfigCache", () => {
-			return {
-				account_id: "original-account-id",
-				project_name: "an-existing-project",
-			};
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "original-account-id",
+			project_name: "an-existing-project",
 		});
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
 		const requests = mockProjectListRequest(expect, [], "new-account-id");
 		await runWrangler("pages project list");
 		expect(requests.count).toBe(1);
+	});
+
+	it("should error before making a request when CLOUDFLARE_ACCOUNT_ID contains characters that are invalid in a URL", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "ваш-идентификатор-аккаунта");
+		const requests = mockProjectListRequest(expect, []);
+
+		await expect(runWrangler("pages project list")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Invalid account ID "ваш-идентификатор-аккаунта" set in the \`CLOUDFLARE_ACCOUNT_ID\` environment variable. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]
+		`);
+
+		expect(requests.count).toBe(0);
 	});
 
 	it("should return JSON output when --json flag is provided", async ({

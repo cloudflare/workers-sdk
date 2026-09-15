@@ -109,9 +109,16 @@ export async function fetchPagedListResult<ResponseType>(
 		queryParams = new URLSearchParams(queryParams);
 		queryParams.set("page", String(page));
 
-		const { response: json, status } = await fetchInternal<
-			FetchResult<ResponseType[]>
-		>(complianceConfig, resource, init, queryParams);
+		const {
+			response: json,
+			status,
+			retryAfterMs,
+		} = await fetchInternal<FetchResult<ResponseType[]>>(
+			complianceConfig,
+			resource,
+			init,
+			queryParams
+		);
 		if (json.success) {
 			results.push(...json.result);
 			if (hasMorePages(json.result_info)) {
@@ -120,7 +127,7 @@ export async function fetchPagedListResult<ResponseType>(
 				getMoreResults = false;
 			}
 		} else {
-			throwFetchError(resource, json, status);
+			throwFetchError(resource, json, status, retryAfterMs);
 		}
 	}
 	return results;
@@ -149,9 +156,16 @@ export async function fetchCursorPage<ResponseType>(
 			pageQueryParams.set("cursor", cursor);
 		}
 
-		const { response: json, status } = await fetchInternal<
-			FetchResult<ResponseType>
-		>(complianceConfig, resource, init, pageQueryParams);
+		const {
+			response: json,
+			status,
+			retryAfterMs,
+		} = await fetchInternal<FetchResult<ResponseType>>(
+			complianceConfig,
+			resource,
+			init,
+			pageQueryParams
+		);
 
 		if (json.success) {
 			if (currentPage === page) {
@@ -168,7 +182,7 @@ export async function fetchCursorPage<ResponseType>(
 				break;
 			}
 		} else {
-			throwFetchError(resource, json, status);
+			throwFetchError(resource, json, status, retryAfterMs);
 		}
 	}
 

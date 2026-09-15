@@ -592,6 +592,29 @@ describe("createWorkerUploadForm — bindings", () => {
 		});
 	});
 
+	describe("provisionable name-only bindings", () => {
+		it.for([
+			{ label: "Queue", input: { type: "queue" } as const },
+			{
+				label: "Dispatch Namespace",
+				input: { type: "dispatch_namespace" } as const,
+			},
+			{ label: "Flagship", input: { type: "flagship" } as const },
+		])(
+			"should inherit a draft $label binding during dry run",
+			({ input }, { expect }) => {
+				const bindings: StartDevWorkerInput["bindings"] = { RESOURCE: input };
+				const form = createWorkerUploadForm(createEsmWorker(), bindings, {
+					dryRun: true,
+				});
+				expect(getBindings(form)).toContainEqual({
+					name: "RESOURCE",
+					type: "inherit",
+				});
+			}
+		);
+	});
+
 	describe("multiple binding types together", () => {
 		it("should handle a worker with many different binding types", ({
 			expect,

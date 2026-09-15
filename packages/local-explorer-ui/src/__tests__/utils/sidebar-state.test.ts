@@ -106,11 +106,13 @@ describe("sidebar-state", () => {
 
 		test("respects all stored boolean values", ({ expect }) => {
 			const stored: SidebarGroupState = {
+				observability: true,
 				d1: false,
 				do: false,
 				kv: true,
 				r2: false,
 				workflows: true,
+				email: false,
 			};
 			storageStub.setItem(GROUPS_STORAGE_KEY, JSON.stringify(stored));
 			expect(loadGroupState()).toEqual(stored);
@@ -152,11 +154,13 @@ describe("sidebar-state", () => {
 	describe("saveGroupState", () => {
 		test("persists state to localStorage", ({ expect }) => {
 			const state: SidebarGroupState = {
+				observability: false,
 				d1: false,
 				do: true,
 				kv: false,
 				r2: true,
 				workflows: false,
+				email: true,
 			};
 			saveGroupState(state);
 			const raw = storageStub.getItem(GROUPS_STORAGE_KEY);
@@ -177,11 +181,13 @@ describe("sidebar-state", () => {
 			expect,
 		}) => {
 			const state: SidebarGroupState = {
+				observability: true,
 				d1: false,
 				do: false,
 				kv: true,
 				r2: false,
 				workflows: true,
+				email: true,
 			};
 			saveGroupState(state);
 			expect(loadGroupState()).toEqual(state);

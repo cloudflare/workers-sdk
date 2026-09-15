@@ -82,9 +82,16 @@ jobs:
       # @puppeteer/browsers at runtime. Caching the binary avoids repeat
       # downloads and reduces the chance of tests hanging while waiting for
       # the download to finish within their timeout window.
+      #
+      # Restore only, deliberately. This shares its key with `test-and-check.yml`,
+      # which saves the cache only once a `.miniflare-install-complete` marker
+      # proves Chrome actually launched from the install. Cache keys are
+      # write-once, so saving here too would let this workflow publish an
+      # unvalidated — possibly half-extracted — Chrome that the validated save
+      # could then never replace.
       - name: Restore Chrome browser cache (Browser Run)
         if: steps.should_run.outputs.result == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           key: chrome-${{ runner.os }}-${{ hashFiles('packages/miniflare/src/plugins/browser-rendering/browser-version.ts') }}
           path: |

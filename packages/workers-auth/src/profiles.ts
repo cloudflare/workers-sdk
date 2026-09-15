@@ -64,7 +64,7 @@ export function createProfileStore(args: {
 					throw new UserError(
 						`No profile is directly bound to "${formatDirectoryForUserError(normalizedDir)}". The active profile "${parentBinding.profile}" is bound at "${formatDirectoryForUserError(
 							parentBinding.dir
-						)}". Run \`wrangler auth deactivate\` from that directory instead.`,
+						)}". Run the deactivate command from that directory instead.`,
 						{ telemetryMessage: "auth deactivate wrong directory" }
 					);
 				}
@@ -151,7 +151,7 @@ export function createProfileStore(args: {
 export function validateProfileName(name: string): void {
 	if (RESERVED_PROFILE_NAMES.includes(name.toLowerCase())) {
 		throw new UserError(
-			`"${name}" is a reserved profile name. Use \`wrangler login\` and \`wrangler logout\` to manage the default profile, which applies as a global fallback.`,
+			`"${name}" is a reserved profile name. Use the login and logout commands to manage the default profile, which applies as a global fallback.`,
 			{ telemetryMessage: "auth profile reserved name" }
 		);
 	}

@@ -3,7 +3,9 @@
  * Order matters - more specific patterns must come first.
  */
 const ROUTE_PATTERNS: [RegExp, string][] = [
+	[/^\/storage\/kv\/namespaces\/[^/]+\/bulk\/delete$/, "kv.bulk_delete"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/bulk\/get$/, "kv.bulk_get"],
+	[/^\/storage\/kv\/namespaces\/[^/]+\/bulk$/, "kv.bulk_write"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/values\/[^/]+$/, "kv.value"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/keys$/, "kv.keys"],
 	[/^\/storage\/kv\/namespaces$/, "kv.namespaces"],
@@ -17,6 +19,10 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/r2\/buckets\/[^/]+$/, "r2.bucket"],
 	[/^\/r2\/buckets$/, "r2.buckets"],
 	[
+		/^\/workflows\/[^/]+\/instances\/batch\/delete$/,
+		"workflows.instances.batch_delete",
+	],
+	[
 		/^\/workflows\/[^/]+\/instances\/[^/]+\/events\/[^/]+$/,
 		"workflows.instance.event",
 	],
@@ -28,6 +34,11 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/workflows\/[^/]+\/instances$/, "workflows.instances"],
 	[/^\/workflows\/[^/]+$/, "workflows.details"],
 	[/^\/workflows$/, "workflows.list"],
+	[/^\/local\/observability\/query$/, "observability.query"],
+	[/^\/local\/observability\/clear$/, "observability.clear"],
+	[/^\/local\/email\/routing\/send$/, "email.routing.send"],
+	[/^\/local\/email\/routing$/, "email.routing.list"],
+	[/^\/local\/email\/sending$/, "email.sending.list"],
 	[/^\/local\/workers$/, "local.workers"],
 ];
 
@@ -36,8 +47,8 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
  * Strips IDs and converts to dot notation.
  */
 export function getRouteName(path: string): string {
-	// Remove /cdn-cgi/explorer/api prefix
-	const apiPath = path.replace(/^\/cdn-cgi\/explorer\/api/, "");
+	// Remove /cdn-cgi/local/explorer/api prefix
+	const apiPath = path.replace(/^\/cdn-cgi\/local\/explorer\/api/, "");
 
 	for (const [pattern, name] of ROUTE_PATTERNS) {
 		if (pattern.test(apiPath)) {

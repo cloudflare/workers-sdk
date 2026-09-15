@@ -11,7 +11,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -47,14 +47,6 @@ import {
 import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -336,16 +328,20 @@ describe.each([
 				expect(std.out).toContain("Uploaded test-name");
 			});
 
-			it("--latest sets compatibility date to today", async ({ expect }) => {
+			it("--latest sets compatibility date to the default", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({ compatibility_date: undefined });
 				writeWorkerSource();
-				// We can't assert the exact date easily, but we can verify it succeeds
-				// (it would fail with missing compat date otherwise)
-				mockUploadWorkerRequest();
+				mockUploadWorkerRequest({
+					expectedCompatibilityDate: DEFAULT_COMPAT_DATE,
+				});
 				mockSubDomainRequest();
 				await runWrangler("deploy ./index.js --latest");
 				expect(std.out).toContain("Uploaded test-name");
-				expect(std.warn).toContain("latest version of the Workers runtime");
+				expect(std.warn).toContain(
+					`Using the latest compatibility date supported by this version of Wrangler (${DEFAULT_COMPAT_DATE})`
+				);
 			});
 
 			it("errors when no compatibility_date from either source", async ({
@@ -353,14 +349,13 @@ describe.each([
 			}) => {
 				writeWranglerConfig({ compatibility_date: undefined });
 				writeWorkerSource();
-				const today = getTodaysCompatDate();
 				await expect(runWrangler("deploy ./index.js")).rejects
 					.toThrow(`A compatibility_date is required when uploading a Worker. Add the following to your wrangler.toml file:
     \`\`\`
-    compatibility_date = "${today}"
+    compatibility_date = "${DEFAULT_COMPAT_DATE}"
 
     \`\`\`
-    Or you could pass it in your terminal as \`--compatibility-date ${today}\`
+    Or you could pass it in your terminal as \`--compatibility-date ${DEFAULT_COMPAT_DATE}\`
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
 			});
 		});
@@ -426,17 +421,23 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect(metadata.compatibility_flags).toEqual(["nodejs_compat"]);
 			});
 
-			it("--latest sets compatibility date to today", async ({ expect }) => {
+			it("--latest sets compatibility date to the default", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					compatibility_date: undefined,
 					main: "./index.js",
 				});
 				writeWorkerSource();
 				mockGetScript();
-				mockUploadVersion();
+				const requests = mockUploadVersion();
 				await runWrangler("versions upload --latest");
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.compatibility_date).toEqual(DEFAULT_COMPAT_DATE);
 				expect(std.out).toContain("Uploaded test-name");
-				expect(std.warn).toContain("latest version of the Workers runtime");
+				expect(std.warn).toContain(
+					`Using the latest compatibility date supported by this version of Wrangler (${DEFAULT_COMPAT_DATE})`
+				);
 			});
 
 			it("errors when no compatibility_date from either source", async ({
@@ -1178,7 +1179,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	describe("keep_vars behavior", () => {
 		describe("deploy", () => {
-			beforeEach(setupDeployMocks);
+			beforeEach(() => {
+				setupDeployMocks();
+				mockGetSettings({ result: { bindings: [] } });
+			});
 
 			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
 				writeWranglerConfig();
@@ -1218,6 +1222,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		});
 
 		describe("versions upload", () => {
+			beforeEach(() => mockGetSettings({ result: { bindings: [] } }));
 			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
 				writeWranglerConfig({ main: "./index.js" });
 				writeWorkerSource();
@@ -1348,12 +1353,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect,
 			}) => {
 				writeWranglerConfig({
-					observability: { enabled: true },
+					observability: {
+						enabled: true,
+						redact_query_string: true,
+					},
 				});
 				writeWorkerSource();
 				mockUploadWorkerRequest({
 					expectedSettingsPatch: expect.objectContaining({
-						observability: { enabled: true },
+						observability: {
+							enabled: true,
+							redact_query_string: true,
+						},
 					}),
 				});
 				mockSubDomainRequest();

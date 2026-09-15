@@ -23,9 +23,10 @@ describe("findPackageNames()", () => {
 		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
 				"@cloudflare/autoconfig",
+				"@cloudflare/build-output-utils",
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli-shared-helpers",
-				"@cloudflare/codemod",
+				"@cloudflare/codemods",
 				"@cloudflare/config",
 				"@cloudflare/containers-shared",
 				"@cloudflare/deploy-helpers",
@@ -35,16 +36,19 @@ describe("findPackageNames()", () => {
 				"@cloudflare/format-errors",
 				"@cloudflare/kv-asset-handler",
 				"@cloudflare/local-explorer-ui",
+				"@cloudflare/pages-functions",
 				"@cloudflare/pages-shared",
 				"@cloudflare/playground-preview-worker",
 				"@cloudflare/quick-edit",
+				"@cloudflare/shared-ast-primitives",
 				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",
 				"@cloudflare/vite-plugin",
-				"@cloudflare/vitest-pool-workers",
+				"@cloudflare/vitest-plugin",
 				"@cloudflare/workers-auth",
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-playground",
+				"@cloudflare/workers-sdk-auto-triage",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
@@ -193,19 +197,35 @@ describe("validateChangesets()", () => {
 		expect(errors).toMatchInlineSnapshot(`[]`);
 	});
 
-	it("should report errors for major bump changesets", ({ expect }) => {
+	it("should report errors for disallowed major bumps", ({ expect }) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
-				["package-a", { name: "package-a" }],
+				["@cloudflare/vitest-plugin", { name: "@cloudflare/vitest-plugin" }],
+				[
+					"miniflare",
+					{
+						name: "miniflare",
+						"workers-sdk": { npmPrereleaseIdentifier: "alpha" },
+					},
+				],
 				["package-b", { name: "package-b" }],
 				["package-c", { name: "package-c" }],
 			]),
 			[
 				{
-					file: "patch-one.md",
+					file: "major-vitest-plugin.md",
 					contents: dedent`
 						---
-						"package-a": patch
+						"@cloudflare/vitest-plugin": major
+						---
+
+						Release v1`,
+				},
+				{
+					file: "major-one.md",
+					contents: dedent`
+						---
+						"miniflare": major
 						---
 	  				refactor: test`,
 				},

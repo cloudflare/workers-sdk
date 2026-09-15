@@ -154,13 +154,15 @@ export function mockCustomDomainLookup(origin: CustomDomain) {
 }
 
 export function mockCustomDomainsChangesetRequest({
-	originConflicts = [],
+	updatedDomains = [],
 	dnsRecordConflicts = [],
 	env = undefined,
+	changeset = {},
 }: {
-	originConflicts?: Array<CustomDomain>;
+	updatedDomains?: Array<CustomDomain>;
 	dnsRecordConflicts?: Array<CustomDomain>;
 	env?: string | undefined;
+	changeset?: Partial<CustomDomainChangeset>;
 }) {
 	msw.use(
 		http.post<{ accountId: string; scriptName: string; envName: string }>(
@@ -172,10 +174,14 @@ export function mockCustomDomainsChangesetRequest({
 				);
 
 				const domains = (await request.json()) as Array<
-					{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+					{
+						hostname: string;
+						enabled?: boolean;
+						previews_enabled?: boolean;
+					} & ({ zone_id?: string } | { zone_name?: string })
 				>;
 
-				const changeset: CustomDomainChangeset = {
+				const responseChangeset: CustomDomainChangeset = {
 					added: domains.map((domain) => {
 						return {
 							...domain,
@@ -184,22 +190,23 @@ export function mockCustomDomainsChangesetRequest({
 							environment: env ?? "",
 							zone_name: "",
 							zone_id: "",
-							enabled: true,
-							previews_enabled: false,
+							enabled: domain.enabled ?? true,
+							previews_enabled: domain.previews_enabled ?? false,
 						};
 					}),
 					removed: [],
 					updated:
-						originConflicts?.map((domain) => {
+						updatedDomains.map((domain) => {
 							return {
 								...domain,
 								modified: true,
 							};
 						}) ?? [],
 					conflicting: dnsRecordConflicts,
+					...changeset,
 				};
 
-				return HttpResponse.json(createFetchResult(changeset));
+				return HttpResponse.json(createFetchResult(responseChangeset));
 			},
 			{ once: true }
 		)
@@ -364,12 +371,13 @@ export function mockServiceScriptData(options: {
 							messages: [],
 							result: null,
 						});
-					},
-					{ once: true }
+					}
 				)
 			);
 			return;
 		}
+		// Dispatch script data may be fetched by both pre-upload checks and the
+		// Durable Object migrations flow during one deploy.
 		msw.use(
 			http.get(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
@@ -383,34 +391,12 @@ export function mockServiceScriptData(options: {
 						messages: [],
 						result: { script },
 					});
-				},
-				{ once: true }
+				}
 			)
 		);
 	} else {
-		const baseName = options.scriptName || "test-name";
-		const expectedScriptName = options.env
-			? `${baseName}-${options.env}`
-			: baseName;
-		// The Durable Object migrations flow (`getMigrationsToUpload`) lists all
-		// scripts and finds the deployed Worker by its (legacy) name.
-		msw.use(
-			http.get(
-				"*/accounts/:accountId/workers/scripts",
-				({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					return HttpResponse.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: script ? [{ ...script, id: expectedScriptName }] : [],
-					});
-				},
-				{ once: true }
-			)
-		);
-		// The CI tag match flow (`verifyWorkerMatchesCITag`) fetches the Worker's
-		// service metadata.
+		// Service metadata may be fetched by both pre-upload checks and the
+		// Durable Object migrations flow during one deploy.
 		msw.use(
 			http.get(
 				"*/accounts/:accountId/workers/services/:scriptName",
@@ -437,8 +423,7 @@ export function mockServiceScriptData(options: {
 							default_environment: { environment: "production", script },
 						},
 					});
-				},
-				{ once: true }
+				}
 			)
 		);
 	}

@@ -1,4 +1,9 @@
 import type {
+	BuiltContainerImage,
+	BuiltImage,
+	ContainerNormalizedConfig,
+} from "@cloudflare/containers-shared";
+import type {
 	ValidatedAssetsOptions,
 	LegacyAssetPaths,
 	CfModule,
@@ -12,6 +17,7 @@ import type {
 	Logger,
 	Route,
 	Entry,
+	ContainerApp,
 } from "@cloudflare/workers-utils";
 
 /**
@@ -44,6 +50,28 @@ export type DeployHelpersContext = {
 			fallbackOption?: number;
 		}
 	) => Promise<Values>;
+};
+
+export type ContainerlessConfig = Omit<Config, "containers">;
+
+export type BuiltDurableObjectContainerImage = BuiltImage & {
+	className: string;
+	imageName: string;
+};
+
+export type ContainerDeployConfig = {
+	/** Original resolved container configuration. */
+	source: ContainerApp[] | undefined;
+	standard: {
+		/** Normalized non-Durable-Object container applications. */
+		normalized: ContainerNormalizedConfig[];
+		/** Locally built images awaiting deployment or cleanup. */
+		builtImages: BuiltContainerImage[];
+	};
+	durableObjects: {
+		/** Locally built named images awaiting upload or cleanup. */
+		builtImages: BuiltDurableObjectContainerImage[];
+	};
 };
 
 /**
@@ -104,11 +132,17 @@ export type SharedDeployVersionsProps = {
 	skipProvisioningConfigWriteback: boolean;
 	/** From --strict arg. In strict mode, conflicting pre-upload checks abort instead of auto-continuing. */
 	strict: boolean;
+	/** Container configuration and locally built image state. */
+	containers: ContainerDeployConfig;
+	/** Whether the resolved Worker name differs from the pre-merge config/args name. */
+	workerNameOverridden?: boolean;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {
 	/** Discriminant for DeployProps vs VersionsUploadProps */
 	command: "deploy";
+	/** If set, automatically register this `workers.dev` account subdomain when the account has none. */
+	autoRegisterWorkersDevSubdomain?: string;
 	/** Merged from --site arg and config.site. */
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	/** Merged: --triggers arg ?? config.triggers.crons. */
@@ -154,15 +188,20 @@ export type WorkerBuildResult = {
 
 export interface TriggerDeployment {
 	targets: string[];
+	changed?: boolean;
+	category?: string;
+	resource?: string;
 	error?: Error;
 }
 
 export type TriggerProps = {
 	config: Config;
-	accountId: string;
+	accountId: string | undefined;
 	scriptName: string;
-	env: string | undefined;
+	workerTag?: string | null;
 	crons: string[] | undefined;
 	routes: Route[];
 	firstDeploy: boolean;
+	dryRun: boolean;
+	validated: boolean;
 };

@@ -43,7 +43,7 @@ describe("getModulesFromManifest", () => {
 		]);
 	});
 
-	test("translates Build Output API module types to Miniflare types", ({
+	test("translates Build Output Specification module types to Miniflare types", ({
 		expect,
 	}) => {
 		const result = getModulesFromManifest({

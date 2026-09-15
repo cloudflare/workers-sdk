@@ -1,34 +1,20 @@
-import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-const VectorizeSchema = z.object({
-	index_name: z.string(),
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
-});
-
-export const VectorizeOptionsSchema = z.object({
-	vectorize: z.record(VectorizeSchema).optional(),
-});
+import type { Plugin } from "../shared";
 
 export const VECTORIZE_PLUGIN_NAME = "vectorize";
+const VECTORIZE_REMOTE_SERVICE_NAME = `${VECTORIZE_PLUGIN_NAME}:remote`;
 
-export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
-	options: VectorizeOptionsSchema,
+export const VECTORIZE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Vectorize index",
 	async getBindings(options) {
-		if (!options.vectorize) {
-			return [];
-		}
-
-		return Object.entries(options.vectorize).map(
-			([name, { index_name, remoteProxyConnectionString }]) => {
+		return getEnvBindingsOfType(options.config, "vectorize").map(
+			([name, binding]) => {
 				return {
 					name,
 					wrapped: {
@@ -37,16 +23,16 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 							{
 								name: "fetcher",
 								service: {
-									name: getUserBindingServiceName(
-										VECTORIZE_PLUGIN_NAME,
-										name,
-										remoteProxyConnectionString
+									name: VECTORIZE_REMOTE_SERVICE_NAME,
+									props: buildRemoteProxyProps(
+										getRemoteProxyConnectionString(binding, options.dev),
+										name
 									),
 								},
 							},
 							{
 								name: "indexId",
-								text: index_name,
+								text: binding.name,
 							},
 							{
 								name: "indexVersion",
@@ -62,33 +48,24 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 			}
 		);
 	},
-	getNodeBindings(options: z.infer<typeof VectorizeOptionsSchema>) {
-		if (!options.vectorize) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.vectorize).map((name) => [
+			getEnvBindingsOfType(options.config, "vectorize").map(([name]) => [
 				name,
 				new ProxyNodeBinding(),
 			])
 		);
 	},
 	async getServices({ options }) {
-		if (!options.vectorize) {
+		if (getEnvBindingsOfType(options.config, "vectorize").length === 0) {
 			return [];
 		}
 
-		return Object.entries(options.vectorize).map(
-			([name, { remoteProxyConnectionString }]) => {
-				return {
-					name: getUserBindingServiceName(
-						VECTORIZE_PLUGIN_NAME,
-						name,
-						remoteProxyConnectionString
-					),
-					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
-				};
-			}
-		);
+		return [
+			{
+				name: VECTORIZE_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			},
+		];
 	},
 };

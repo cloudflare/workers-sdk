@@ -83,6 +83,12 @@ export const loginCommand = createCommand({
 			// touches the persisted preference when the user actually opts in
 			// or out.
 		},
+		device: {
+			describe:
+				"Use the OAuth 2.0 Device Authorization Grant (RFC 8628) instead of the localhost callback flow. Useful in containers, remote SSH sessions, or other environments where localhost:8976 is unreachable from your browser.",
+			type: "boolean",
+			default: false,
+		},
 	},
 	validateArgs(args) {
 		if (args.profile) {
@@ -90,6 +96,25 @@ export const loginCommand = createCommand({
 				"--profile cannot be used with the login command, as `wrangler login` is reserved for default, global auth. If you want to create or activate a named profile, run `wrangler auth create` or `wrangler auth activate`.",
 				{
 					telemetryMessage: "profile flag with login",
+				}
+			);
+		}
+
+		// `--callback-host` / `--callback-port` configure the temporary local
+		// callback server used by the authorization-code flow. The device
+		// authorization flow has no callback server, so the combination is
+		// invalid rather than merely ignored. This is validated here rather
+		// than in the handler so the command fails before `--use-keyring` /
+		// `--no-use-keyring` has persisted any credential-storage state.
+		if (
+			args.device &&
+			(args.callbackHost !== "localhost" || args.callbackPort !== 8976)
+		) {
+			throw new CommandLineArgsError(
+				"`--callback-host` and `--callback-port` cannot be used with `--device`; the device authorization flow does not use a local callback server.",
+				{
+					telemetryMessage:
+						"user login callback args incompatible with device flow",
 				}
 			);
 		}
@@ -121,6 +146,7 @@ export const loginCommand = createCommand({
 		// call (and a single `sendMetricsEvent("login user", ...)` site) between
 		// the scoped and unscoped paths.
 		let scopes: typeof DefaultScopeKeys | undefined;
+
 		if (args.scopes) {
 			if (args.scopes.length === 0) {
 				// don't allow no scopes to be passed, that would be weird
@@ -143,6 +169,7 @@ export const loginCommand = createCommand({
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
 			profile: "default",
+			device: args.device,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,

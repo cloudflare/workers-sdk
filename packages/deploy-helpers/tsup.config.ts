@@ -11,6 +11,9 @@ export default defineConfig(() => [
 		entry: {
 			index: "src/index.ts",
 			context: "src/shared/context.ts",
+			"create-worker-upload-form":
+				"src/deploy/helpers/create-worker-upload-form.ts",
+			"startup-profile": "src/startup-profile.ts",
 		},
 		platform: "node",
 		format: "esm",
@@ -19,10 +22,7 @@ export default defineConfig(() => [
 		tsconfig: "tsconfig.json",
 		metafile: true,
 		sourcemap: process.env.SOURCEMAPS !== "false",
-		noExternal: [
-			"@cloudflare/containers-shared",
-			/^@cloudflare\/workers-shared(\/.*)?$/,
-		],
+		noExternal: [/^@cloudflare\/workers-shared(\/.*)?$/],
 		external: [
 			/^@cloudflare\//,
 			"miniflare",
@@ -33,9 +33,7 @@ export default defineConfig(() => [
 			"dotenv",
 			"command-exists",
 			"esbuild",
-			// Keep zod external so wrangler (the only consumer) bundles a single
-			// shared copy rather than inlining one here.
-			/^zod(\/.*)?$/,
+			"ws",
 		],
 	},
 ]);

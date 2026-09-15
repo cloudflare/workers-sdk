@@ -81,6 +81,100 @@ describe("getNormalizedContainerOptions", () => {
 		);
 	});
 
+	it("should throw early when a Durable Object-managed container class is missing", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "MissingContainer",
+					name: "missing-container",
+					scheduling_policy: "durable_object",
+					images: {},
+				},
+			],
+			durable_objects: {
+				bindings: [],
+			},
+			migrations: [],
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, {})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container class_name MissingContainer does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.]`
+		);
+	});
+
+	it("should resolve class_name from a durable object export that references the container by name", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					image: "registry.cloudflare.com/hello:world",
+					name: "my-container",
+				},
+			],
+			exports: {
+				MyContainerDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "my-container",
+				},
+			},
+			durable_objects: {
+				bindings: [],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {
+			dryRun: true,
+		});
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			name: "my-container",
+			class_name: "MyContainerDO",
+		});
+	});
+
+	it("should throw error when a container is not linked to any durable object", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					image: "registry.cloudflare.com/hello:world",
+					name: "my-container",
+				},
+			],
+			exports: {
+				MyContainerDO: { type: "durable-object", storage: "sqlite" },
+			},
+			durable_objects: {
+				bindings: [],
+			},
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, { dryRun: true })
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container "my-container" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field.]`
+		);
+	});
+
 	it("should throw error when durable object has script_name defined", async ({
 		expect,
 	}) => {
@@ -115,6 +209,75 @@ describe("getNormalizedContainerOptions", () => {
 			getNormalizedContainerOptions(config, {})
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: The container test-container is referencing the durable object TestContainer, which appears to be defined on the other-script Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.]`
+		);
+	});
+
+	it("should throw early when a Durable Object-managed container uses an external class", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "ExternalContainer",
+					name: "external-container",
+					scheduling_policy: "durable_object",
+					images: {},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "EXTERNAL_DO",
+						class_name: "ExternalContainer",
+						script_name: "other-worker",
+					},
+				],
+			},
+			migrations: [],
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, {})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container external-container is referencing the durable object ExternalContainer, which appears to be defined on the other-worker Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.]`
+		);
+	});
+
+	it("should throw early when a Durable Object-managed container uses legacy storage", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "LegacyContainer",
+					name: "legacy-container",
+					scheduling_policy: "durable_object",
+					images: {},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "LEGACY_DO",
+						class_name: "LegacyContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_classes: ["LegacyContainer"] }],
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, {})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container legacy-container references Durable Object class LegacyContainer, which uses the legacy KV storage backend. Durable Object-managed Containers require SQLite-backed Durable Objects.]`
 		);
 	});
 
@@ -209,6 +372,40 @@ describe("getNormalizedContainerOptions", () => {
 			observability: {
 				logs_enabled: false,
 			},
+		});
+	});
+
+	it("should use the FedRAMP High registry from Wrangler config", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.jsonc",
+			topLevelName: "test-worker",
+			compliance_region: "fedramp_high",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: "test-image/test:latest",
+					name: "test-container",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result[0]).toMatchObject({
+			image_uri:
+				"registry.fed.cloudflare.com/some-account-id/test-image/test:latest",
 		});
 	});
 
@@ -502,6 +699,124 @@ describe("getNormalizedContainerOptions", () => {
 			observability: {
 				logs_enabled: true,
 			},
+		});
+	});
+
+	it("should let container observability override root observability", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			observability: {
+				enabled: true,
+			},
+			containers: [
+				{
+					name: "custom-name",
+					class_name: "TestContainer",
+					image: "registry.cloudflare.com/test:latest",
+					observability: {
+						enabled: false,
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result[0].observability).toEqual({
+			logs_enabled: false,
+		});
+	});
+
+	it("should normalize container observability targeting fields", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					name: "custom-name",
+					class_name: "TestContainer",
+					image: "registry.cloudflare.com/test:latest",
+					observability: {
+						logs: {
+							enabled: true,
+						},
+						target_instance_percentage: 25,
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result[0].observability).toEqual({
+			logs_enabled: true,
+			target_instance_percentage: 25,
+		});
+	});
+
+	it("should let root observability override enabled for logs fallback", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			observability: {
+				enabled: true,
+				logs: {
+					enabled: false,
+				},
+			},
+			containers: [
+				{
+					name: "custom-name",
+					class_name: "TestContainer",
+					image: "registry.cloudflare.com/test:latest",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result[0].observability).toEqual({
+			logs_enabled: false,
 		});
 	});
 

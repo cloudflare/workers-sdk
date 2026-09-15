@@ -14,6 +14,13 @@
 		"PREVIEW": "preview.cloudflarepreviews.com",
 		"RAW_HTTP": "rawhttp.cloudflarepreviews.com",
 	},
+	"secrets": {
+		"required": [
+			"PROMETHEUS_TOKEN",
+			"SENTRY_ACCESS_CLIENT_SECRET",
+			"SENTRY_ACCESS_CLIENT_ID",
+		],
+	},
 	"dev": {
 		"host": "preview.cloudflarepreviews.com",
 	},
@@ -24,6 +31,15 @@
 			"preview_id": "76afd4161617490b9d2addc59b1e22e4",
 		},
 	],
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "WSHIM_SOCKET",
+				"type": "internal_service_http",
+				"service": "wshim",
+			},
+		],
+	},
 	"observability": {
 		"enabled": true,
 	},

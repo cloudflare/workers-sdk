@@ -3,10 +3,12 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import {
+	CONTAINER_IMAGES_BINDING,
 	CommandLineArgsError,
 	configFileName,
 	experimental_readRawConfig,
 	FatalError,
+	getDurableObjectContainerApps,
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -39,6 +41,9 @@ import type {
 	RawConfig,
 	RawEnvironment,
 } from "@cloudflare/workers-utils";
+
+const CONTAINER_IMAGES_BINDING_TYPE =
+	"Readonly<Record<string, Readonly<Record<string, string>>>>";
 
 export interface GenerateTypesOptions {
 	/**
@@ -2017,12 +2022,19 @@ function collectAllVars(
  * @returns a string representing the types of such array
  *
  * @example
+ * `[]` => `unknown[]`
  * `[1, 2, 3]` => `number[]`
  * `[1, 2, 'three']` => `(number|string)[]`
  * `['false', true]` => `(string|boolean)[]`
  */
 function typeofArray(array: unknown[]): string {
 	const typesInArray = [...new Set(array.map((item) => typeof item))].sort();
+
+	if (typesInArray.length === 0) {
+		// An empty array tells us nothing about its element type, and joining an
+		// empty list below would emit `()[]`, which is not valid TypeScript.
+		return "unknown[]";
+	}
 
 	if (typesInArray.length === 1) {
 		return `${typesInArray[0]}[]`;
@@ -2434,20 +2446,6 @@ function collectCoreBindings(
 			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
 		}
 
-		if (env.websearch) {
-			if (!env.websearch.binding) {
-				throwMissingBindingError({
-					binding: env.websearch,
-					bindingType: "websearch",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-				});
-			} else {
-				addBinding(env.websearch.binding, "WebSearch", "websearch", envName);
-			}
-		}
-
 		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
 			if (!agentMemory.binding) {
 				throwMissingBindingError({
@@ -2565,6 +2563,15 @@ function collectCoreBindings(
 
 		if (env.assets?.binding) {
 			addBinding(env.assets.binding, "Fetcher", "assets", envName);
+		}
+
+		if (getDurableObjectContainerApps(env.containers).length > 0) {
+			addBinding(
+				CONTAINER_IMAGES_BINDING,
+				CONTAINER_IMAGES_BINDING_TYPE,
+				"container_images",
+				envName
+			);
 		}
 	}
 
@@ -3574,6 +3581,14 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		if (getDurableObjectContainerApps(env.containers).length > 0) {
+			bindings.push({
+				bindingCategory: "container_images",
+				name: CONTAINER_IMAGES_BINDING,
+				type: CONTAINER_IMAGES_BINDING_TYPE,
+			});
+		}
+
 		for (const [index, aiSearchNamespace] of (
 			env.ai_search_namespaces ?? []
 		).entries()) {
@@ -3612,24 +3627,6 @@ function collectCoreBindingsPerEnvironment(
 				name: aiSearch.binding,
 				type: "AiSearchInstance",
 			});
-		}
-
-		if (env.websearch) {
-			if (!env.websearch.binding) {
-				throwMissingBindingError({
-					binding: env.websearch,
-					bindingType: "websearch",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-				});
-			} else {
-				bindings.push({
-					bindingCategory: "websearch",
-					name: env.websearch.binding,
-					type: "WebSearch",
-				});
-			}
 		}
 
 		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {

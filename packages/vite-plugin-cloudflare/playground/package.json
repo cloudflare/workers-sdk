@@ -14,12 +14,15 @@
 		"test:serve": "pnpm test:ci:serve"
 	},
 	"devDependencies": {
+		"@aws-sdk/client-s3": "^3.721.0",
+		"@aws-sdk/s3-request-presigner": "^3.721.0",
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"playwright-chromium": "catalog:default",
 		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
+		"undici": "catalog:default",
 		"vitest": "catalog:default"
 	}
 }

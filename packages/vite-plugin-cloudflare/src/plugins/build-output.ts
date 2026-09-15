@@ -1,12 +1,15 @@
 import assert from "node:assert";
 import * as path from "node:path";
-import { writeOutputWorkerConfig } from "@cloudflare/config";
+import {
+	writeSettingsConfig,
+	writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
 
 /**
- * Build Output API plugin. Replaces `outputConfigPlugin` when
+ * Build Output Specification plugin. Replaces `outputConfigPlugin` when
  * `experimental.newConfig.cfBuildOutput` is set.
  */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
@@ -20,15 +23,29 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				ctx.resolvedPluginConfig.type === "assets-only" &&
 				this.environment.name === "client"
 			) {
-				const workerNewConfig = ctx.resolvedPluginConfig.parsedNewConfig;
+				const defaultExport = ctx.resolvedPluginConfig.parsedNewConfig?.default;
+				const workerNewConfig =
+					defaultExport?.type === "worker" ? defaultExport : undefined;
 				assert(
 					workerNewConfig,
-					"Expected parsedNewConfig on assets-only resolved config"
+					"Expected a default worker export on assets-only resolved config"
 				);
-				await writeOutputWorkerConfig(
-					ctx.resolvedViteConfig.root,
-					workerNewConfig
-				);
+				await writeWorkerConfig({
+					root: ctx.resolvedViteConfig.root,
+					config: workerNewConfig,
+				});
+				await writeSettings();
+				return;
+			}
+
+			// The Build Output Specification currently holds a single Worker in
+			// the `default` directory. Only the entry Worker is emitted;
+			// auxiliary Worker environments are ignored for now.
+			if (
+				ctx.resolvedPluginConfig.type === "workers" &&
+				this.environment.name !==
+					ctx.resolvedPluginConfig.entryWorkerEnvironmentName
+			) {
 				return;
 			}
 
@@ -69,16 +86,40 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				modules[fileName] = { type: detectModuleType(fileName) };
 			}
 
-			await writeOutputWorkerConfig(
-				ctx.resolvedViteConfig.root,
-				workerNewConfig,
-				{
+			await writeWorkerConfig({
+				root: ctx.resolvedViteConfig.root,
+				config: workerNewConfig,
+				manifest: {
+					type: "complete",
 					mainModule: entryChunk.fileName,
 					modules,
-				}
-			);
+				},
+			});
+			await writeSettings();
 		},
 	};
+
+	/**
+	 * Write the top-level `config.json`, recording the settings shared by every
+	 * Worker, including the Vite mode the build ran in.
+	 *
+	 * Written even when there is no `settings` export, so the mode is always
+	 * captured.
+	 */
+	async function writeSettings(): Promise<void> {
+		if (ctx.resolvedPluginConfig.type === "preview") {
+			return;
+		}
+		const settingsExport = ctx.resolvedPluginConfig.parsedNewConfig?.settings;
+		const settings =
+			settingsExport?.type === "settings" ? settingsExport : undefined;
+
+		await writeSettingsConfig(
+			ctx.resolvedViteConfig.root,
+			settings,
+			ctx.resolvedViteConfig.mode
+		);
+	}
 });
 
 /**

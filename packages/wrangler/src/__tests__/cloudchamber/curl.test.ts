@@ -232,6 +232,42 @@ describe("cloudchamber curl", () => {
 		`);
 	});
 
+	it("should preserve colons in header values", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		let locationHeader: string | null = null;
+		msw.use(
+			http.get("*/test", async ({ request }) => {
+				locationHeader = request.headers.get("location");
+				return HttpResponse.json(`{}`);
+			})
+		);
+		await runWrangler(
+			"cloudchamber curl /test --header location:https://example.com/a:b"
+		);
+		expect(locationHeader).toEqual("https://example.com/a:b");
+	});
+
+	it("should error for a header without a colon", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("cloudchamber curl /test --header something")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Invalid header "something". Headers must be in the form of --header <name>:<value>]`
+		);
+	});
+
+	it("should error for a header without a name", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("cloudchamber curl /test --header :here")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Invalid header ":here". Headers must be in the form of --header <name>:<value>]`
+		);
+	});
+
 	it("works", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});

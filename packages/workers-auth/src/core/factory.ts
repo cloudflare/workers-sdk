@@ -27,6 +27,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { formatDistanceToNowStrict } from "date-fns";
 import { dedent } from "ts-dedent";
+import { validateAccountId } from "../account-id";
 import { createCredentialStorageContext } from "../credential-store";
 import { getAuthFromEnv } from "../credentials";
 import { getCloudflareAccountIdFromEnv as getAccountIdFromEnv } from "../env-vars";
@@ -62,6 +63,13 @@ export interface CloudflareLoginProps {
 	callbackHost?: string;
 	callbackPort?: number;
 	profile?: string;
+	/**
+	 * When `true`, authenticate using the OAuth 2.0 Device Authorization Grant
+	 * (RFC 8628) instead of the authorization-code-with-PKCE callback flow. The
+	 * device flow does not start a local callback server, so `callbackHost` and
+	 * `callbackPort` are ignored when this is set.
+	 */
+	device?: boolean;
 }
 
 /** A Cloudflare CLI's auth layer, returned by {@link createCloudflareAuth}. */
@@ -235,6 +243,8 @@ export function createCloudflareAuth(
 		purgeOnLoginOrLogout: configCache.purgeConfigCaches,
 		clientId: descriptor.clientId,
 		consent: descriptor.consent,
+		displayName: descriptor.displayName,
+		deviceLoginCommand: descriptor.commands.deviceLogin,
 		redirectUri: descriptor.redirectUri,
 		storageFactory: credentialStorage.storageFactory,
 		allowGlobalAuthKey,
@@ -274,7 +284,7 @@ export function createCloudflareAuth(
 		return oauthFlow.requireApiToken();
 	}
 
-	function withDefaultScopes(
+	function withLoginDefaults(
 		complianceConfig: ComplianceConfig,
 		props: CloudflareLoginProps | undefined
 	): LoginProps {
@@ -285,6 +295,7 @@ export function createCloudflareAuth(
 			callbackHost: props?.callbackHost,
 			callbackPort: props?.callbackPort,
 			profile: props?.profile,
+			device: props?.device ?? descriptor.useDeviceFlowByDefault ?? false,
 		};
 	}
 
@@ -292,7 +303,7 @@ export function createCloudflareAuth(
 		complianceConfig: ComplianceConfig,
 		props?: CloudflareLoginProps
 	): Promise<boolean> {
-		return oauthFlow.login(withDefaultScopes(complianceConfig, props));
+		return oauthFlow.login(withLoginDefaults(complianceConfig, props));
 	}
 
 	async function logout(profile?: string): Promise<void> {
@@ -308,7 +319,7 @@ export function createCloudflareAuth(
 		}
 
 		return oauthFlow.loginOrRefreshIfRequired(
-			withDefaultScopes(complianceConfig, props)
+			withLoginDefaults(complianceConfig, props)
 		);
 	}
 
@@ -349,23 +360,15 @@ export function createCloudflareAuth(
 		).account;
 	}
 
-	// Ensure the user is logged in, then fetch every page of a paginated
-	// Cloudflare REST list resource. Uses `fetchInternalBase` directly with the
-	// token the flow already holds (no dependency back on wrangler's cfetch),
-	// preserving the login-triggering behaviour callers relied on.
+	// Fetch every page of a paginated Cloudflare REST list resource. Authentication
+	// is resolved once by `fetchAllAccounts` before its account and membership
+	// requests fan out, so both requests share the same credentials without
+	// starting concurrent login flows.
 	async function fetchAccountsPaged<ResponseType>(
 		complianceConfig: ComplianceConfig,
-		resource: string
+		resource: string,
+		credentials: ApiCredentials
 	): Promise<ResponseType[]> {
-		const result = await loginOrRefreshIfRequired(complianceConfig);
-		if (!result.loggedIn) {
-			throw new UserError(
-				`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[result.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
-				{ telemetryMessage: "cfetch auth login required" }
-			);
-		}
-		const credentials = requireApiToken();
-
 		const results: ResponseType[] = [];
 		let getMoreResults = true;
 		let page = 1;
@@ -405,12 +408,21 @@ export function createCloudflareAuth(
 		options: { throwOnEmpty?: boolean } = {}
 	): Promise<Account[]> {
 		const { throwOnEmpty = true } = options;
+		const loginResult = await loginOrRefreshIfRequired(complianceConfig);
+		if (!loginResult.loggedIn) {
+			throw new UserError(
+				`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[loginResult.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
+				{ telemetryMessage: "cfetch auth login required" }
+			);
+		}
+		const credentials = requireApiToken();
 
 		const [accountsRes, membershipsRes] = await Promise.allSettled([
-			fetchAccountsPaged<Account>(complianceConfig, `/accounts`),
+			fetchAccountsPaged<Account>(complianceConfig, `/accounts`, credentials),
 			fetchAccountsPaged<{ account: Account }>(
 				complianceConfig,
-				`/memberships`
+				`/memberships`,
+				credentials
 			),
 		]);
 
@@ -479,7 +491,10 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 		}
 
 		if (config.account_id) {
-			return config.account_id;
+			return validateAccountId(
+				config.account_id,
+				`set as \`account_id\` in your ${descriptor.getConfigFileLabel()} file`
+			);
 		}
 		const envAccountId = getAccountIdFromEnv();
 		if (envAccountId) {
@@ -554,6 +569,15 @@ ${accounts
 							"user temporary account unavailable in compliance region",
 					}
 				);
+			}
+
+			// This command run made this temporary account. It is not an earlier
+			// login, so use it again. Some commands call `requireAuth` more than
+			// one time, for example `d1 migrations apply --remote`. Without this
+			// check, the second call fails at the test below.
+			const latchedTemporaryAccount = oauthFlow.getActiveTemporaryAccount();
+			if (latchedTemporaryAccount) {
+				return latchedTemporaryAccount.account.id;
 			}
 
 			// `--temporary` is only for unauthenticated use. If any credentials are

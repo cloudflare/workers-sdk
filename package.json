@@ -11,8 +11,9 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:catalog && pnpm check:pinned-deps && pnpm check:deployments && pnpm check:workflows && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:catalog && pnpm check:pinned-deps && pnpm check:compat-date && pnpm check:deployments && pnpm check:workflows && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:catalog": "node -r esbuild-register tools/deployments/validate-catalog-usage.ts",
+		"check:compat-date": "node -r esbuild-register tools/deployments/update-default-compat-date.ts check",
 		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
 		"check:format": "oxfmt --check",
@@ -32,6 +33,7 @@
 		"test:e2e:wrangler": "dotenv -- node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
+		"update:compat-date": "node -r esbuild-register tools/deployments/update-default-compat-date.ts",
 		"deprecate-packages": "node -r esbuild-register tools/deployments/deprecate.ts"
 	},
 	"dependencies": {

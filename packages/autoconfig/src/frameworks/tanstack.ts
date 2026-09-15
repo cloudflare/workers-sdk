@@ -7,6 +7,10 @@ import type {
 } from "./framework-class";
 
 export class TanstackStart extends Framework {
+	readonly env = {
+		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+	} as const;
+
 	async configure({
 		dryRun,
 		projectPath,
@@ -24,8 +28,9 @@ export class TanstackStart extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "@tanstack/react-start/server-entry",
+			buildTool: "vite",
+			workerConfig: {
+				entrypoint: "@tanstack/react-start/server-entry",
 			},
 		};
 	}

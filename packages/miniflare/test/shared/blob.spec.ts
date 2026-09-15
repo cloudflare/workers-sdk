@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, test } from "vitest";
-import { useTmp } from "../test-shared";
+import { singleModuleManifest, useTmp } from "../test-shared";
 import type { InclusiveRange, Response } from "miniflare";
 import type { ReadableStream } from "node:stream/web";
 
@@ -59,15 +59,15 @@ beforeAll(async () => {
 	const tmp = await useTmp();
 	ctx.tmp = tmp;
 	ctx.mf = new Miniflare({
-		bindings: { NAMESPACE },
-		serviceBindings: { BLOBS: { disk: { path: tmp, writable: true } } },
-		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat"],
-		modules: [
+		workers: [
 			{
-				type: "ESModule",
-				path: "blob.js",
-				contents: `
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					compatibilityFlags: ["nodejs_compat"],
+					manifest: singleModuleManifest(
+						`
         import { BlobStore } from "miniflare:shared";
         export default {
           async fetch(request, env, ctx) {
@@ -96,6 +96,13 @@ beforeAll(async () => {
             }
           }
         }`,
+						{ mainModule: "blob.js" }
+					),
+					env: {
+						NAMESPACE: { type: "json", value: NAMESPACE },
+						BLOBS: { type: "disk", path: tmp, writable: true },
+					},
+				},
 			},
 		],
 	});

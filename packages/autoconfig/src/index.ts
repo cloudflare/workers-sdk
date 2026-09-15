@@ -1,5 +1,6 @@
 export type {
 	AutoConfigContext,
+	AutoConfigTarget,
 	AutoConfigLogger,
 	AutoConfigDialogs,
 } from "./context";
@@ -9,6 +10,7 @@ export { runAutoConfig, buildOperationsSummary } from "./run";
 
 export { Framework } from "./frameworks/framework-class";
 export type {
+	BuildConfig,
 	ConfigurationOptions,
 	ConfigurationResults,
 	PackageJsonScriptsOverrides,

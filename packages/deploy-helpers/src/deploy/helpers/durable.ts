@@ -5,7 +5,11 @@ import {
 } from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInit,
+	Config,
+	ServiceMetadataRes,
+} from "@cloudflare/workers-utils";
 
 /**
  * For a given Worker + migrations config, figure out which migrations
@@ -37,11 +41,15 @@ export async function getMigrationsToUpload(
 				suppressNotFoundError(err);
 			}
 		} else {
-			const scripts = await fetchResult<ScriptData[]>(
-				config,
-				`/accounts/${accountId}/workers/scripts`
-			);
-			script = scripts.find(({ id }) => id === scriptName);
+			try {
+				const serviceMetadata = await fetchResult<ServiceMetadataRes>(
+					config,
+					`/accounts/${accountId}/workers/services/${scriptName}`
+				);
+				script = serviceMetadata.default_environment.script;
+			} catch (err) {
+				suppressNotFoundError(err);
+			}
 		}
 
 		if (script?.migration_tag) {

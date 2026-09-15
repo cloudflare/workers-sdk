@@ -1,14 +1,16 @@
 import { existsSync } from "node:fs";
 import { mockSpinner } from "helpers/__tests__/mocks";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
-import { readFile, writeFile } from "helpers/files";
+import { readFile, usesTypescript, writeFile } from "helpers/files";
+import { installPackages } from "helpers/packages";
 import { beforeEach, describe, test, vi } from "vitest";
-import { updateTsConfig } from "../workers";
+import { addTypes, updateTsConfig } from "../workers";
 import { createTestContext } from "./helpers";
 import type { C3Context } from "types";
 
 vi.mock("helpers/files");
 vi.mock("helpers/compatDate");
+vi.mock("helpers/packages");
 vi.mock("fs");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
@@ -167,5 +169,96 @@ describe("updateTsConfig", () => {
 		);
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(writeFile).toHaveBeenCalled();
+	});
+});
+
+describe("addTypes", () => {
+	let ctx: C3Context;
+
+	beforeEach(() => {
+		ctx = createTestContext();
+		ctx.args.ts = true;
+		ctx.template.workersTypes = "installed";
+
+		vi.mocked(existsSync).mockImplementation(() => true);
+		vi.mocked(usesTypescript).mockReturnValue(true);
+		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(mockCompatDate);
+	});
+
+	function mockProjectConfig(wranglerConfig: Record<string, unknown>) {
+		vi.mocked(readFile).mockImplementation((path) =>
+			path.includes("tsconfig.json")
+				? `{ "compilerOptions": { "types": [] } }`
+				: JSON.stringify(wranglerConfig)
+		);
+	}
+
+	function writtenTsConfig() {
+		const call = vi
+			.mocked(writeFile)
+			.mock.calls.find(([path]) => path.includes("tsconfig.json"));
+		return call?.[1];
+	}
+
+	test("installs node types when nodejs_compat is set", async ({ expect }) => {
+		mockProjectConfig({
+			compatibility_date: "2025-01-01",
+			compatibility_flags: ["nodejs_compat"],
+		});
+
+		await addTypes(ctx);
+
+		expect(installPackages).toHaveBeenCalledWith(
+			["@types/node"],
+			expect.anything()
+		);
+		expect(writtenTsConfig()).toContain(`"node"`);
+	});
+
+	// The flag is redundant, and rejected by workerd, for these dates, so it is
+	// the compatibility date alone that tells us Node.js compatibility is on.
+	test("installs node types when the compatibility date enables nodejs_compat by default", async ({
+		expect,
+	}) => {
+		mockProjectConfig({ compatibility_date: "2026-08-04" });
+
+		await addTypes(ctx);
+
+		expect(installPackages).toHaveBeenCalledWith(
+			["@types/node"],
+			expect.anything()
+		);
+		expect(writtenTsConfig()).toContain(`"node"`);
+	});
+
+	test("does not install node types without Node.js compatibility", async ({
+		expect,
+	}) => {
+		mockProjectConfig({ compatibility_date: "2025-01-01" });
+
+		await addTypes(ctx);
+
+		expect(installPackages).not.toHaveBeenCalledWith(
+			["@types/node"],
+			expect.anything()
+		);
+		expect(writtenTsConfig()).not.toContain(`"node"`);
+	});
+
+	test("does not install node types when Node.js compatibility is opted out of", async ({
+		expect,
+	}) => {
+		mockProjectConfig({
+			compatibility_date: "2026-08-04",
+			compatibility_flags: ["no_nodejs_compat", "no_nodejs_compat_v2"],
+		});
+
+		await addTypes(ctx);
+
+		expect(installPackages).not.toHaveBeenCalledWith(
+			["@types/node"],
+			expect.anything()
+		);
+		expect(writtenTsConfig()).not.toContain(`"node"`);
 	});
 });

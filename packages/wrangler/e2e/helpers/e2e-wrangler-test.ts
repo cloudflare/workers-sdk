@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
-import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
 import { onTestFinished } from "vitest";
 import { E2E_ACCOUNT_WORKERS_DEV_DOMAIN } from "./account-id";
@@ -12,7 +11,7 @@ import {
 } from "./cert";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, removeFiles, seed } from "./setup";
-import { waitForLong } from "./wait-for";
+import { waitForWorkersDev } from "./wait-for-workers-dev";
 import {
 	MINIFLARE_IMPORT,
 	runWrangler,
@@ -299,13 +298,11 @@ export class WranglerE2ETestHelper {
 		await this.run(
 			`wrangler deploy ${entryPoint} --name ${workerName} ${configOption} --compatibility-date 2025-01-01`
 		);
-		await waitForLong(async () => {
-			const response = await fetch(deployedUrl);
-			assert(
-				response.status === 200,
-				`Expected status 200 but got ${response.status}`
-			);
-		});
+		const response = await waitForWorkersDev(deployedUrl);
+		assert(
+			response.status === 200,
+			`Expected status 200 but got ${response.status}`
+		);
 	}
 
 	/**
@@ -362,19 +359,6 @@ export class WranglerE2ETestHelper {
 		const deployedUrl = stdout.match(urlMatcher)?.groups?.url;
 		assert(deployedUrl, `Cannot find URL in ${JSON.stringify(stdout)}`);
 
-		// Wait a couple of seconds before we start blasting the worker with requests
-		// to allow it to complete deployment.
-		await setTimeout(2_000);
-
-		// Wait for the worker to become available
-		await waitForLong(async () => {
-			const response = await fetch(deployedUrl);
-			assert(
-				response.status === 200,
-				`Expected status 200 but got ${response.status}`
-			);
-		});
-
 		const cleanup = async () => {
 			await this.bestEffortRun(`wrangler delete --name ${workerName} --force`);
 		};
@@ -383,15 +367,30 @@ export class WranglerE2ETestHelper {
 			try {
 				this.onTeardown(cleanup, 15_000);
 			} catch (e) {
+				await cleanup();
 				throw new Error(
 					"Failed to register cleanup for worker.\nPerhaps you called this outside an `it` block?\nIf so, pass `cleanOnTestFinished: false` and then use the returned `cleanup` helper yourself",
 					{ cause: e }
 				);
 			}
-			return { deployedUrl, stdout };
-		} else {
-			return { deployedUrl, stdout, cleanup };
 		}
+
+		try {
+			const response = await waitForWorkersDev(deployedUrl);
+			assert(
+				response.status === 200,
+				`Expected status 200 but got ${response.status}`
+			);
+		} catch (error) {
+			if (!cleanOnTestFinished) {
+				await cleanup();
+			}
+			throw error;
+		}
+
+		return cleanOnTestFinished
+			? { deployedUrl, stdout }
+			: { deployedUrl, stdout, cleanup };
 	}
 
 	/** Create an AI Search instance (backed by an R2 bucket) in the default namespace and clean both up during tear-down. */

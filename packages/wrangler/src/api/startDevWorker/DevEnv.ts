@@ -26,8 +26,8 @@ import type {
 	ControllerEvent,
 	RuntimeController,
 } from "./BaseController";
-import type { ErrorEvent } from "./events";
-import type { StartDevWorkerInput, Worker } from "./types";
+import type { ErrorEvent, SerializedError } from "./events";
+import type { Worker, WranglerStartDevWorkerInput } from "./types";
 
 type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
 
@@ -37,7 +37,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
+	async startWorker(options: WranglerStartDevWorkerInput): Promise<Worker> {
 		initDeployHelpersContext({
 			logger,
 			fetchResult,
@@ -143,6 +143,12 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 				this.emit("reloadComplete", event);
 				break;
 
+			case "runtimeError":
+				// Re-emitted as an external EventEmitter event (like
+				// `reloadComplete`) so callers can observe runtime errors.
+				this.emit("runtimeError", event);
+				break;
+
 			case "devRegistryUpdate":
 				this.config.onDevRegistryUpdate(event);
 				break;
@@ -179,6 +185,28 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 				event.reason.startsWith("Could not connect to InspectorProxyWorker"))
 		) {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			logger.debug("=> Error contextual data:", event.data);
+		}
+		// A proxied request to the UserWorker failed while the UserWorker was NOT
+		// being reloaded — e.g. the UserWorker's HTTP server closed a reused
+		// keep-alive connection at the same moment the ProxyWorker wrote a
+		// request into it. The affected request has already failed (and the
+		// ProxyWorker retries GET/HEAD before reporting), but the dev session
+		// itself is healthy: tearing it down would turn one failed request into
+		// a dead dev server (see https://github.com/cloudflare/workers-sdk/issues/14926). Log it and keep serving.
+		else if (
+			event.source === "ProxyController" &&
+			event.reason.startsWith("Error inside ProxyWorker")
+		) {
+			// the ProxyWorker's report reaches us as JSON, so `castErrorCause` has
+			// wrapped it in a message-less Error carrying the detail on `.cause`
+			const detail =
+				event.cause.message ||
+				(event.cause.cause as SerializedError | undefined)?.message ||
+				"unknown error";
+			logger.error(
+				`${event.reason} (the affected request failed; the dev server continues): ${detail}`
+			);
 			logger.debug("=> Error contextual data:", event.data);
 		}
 		// Parse errors are recoverable by changing your Wrangler configuration file and saving

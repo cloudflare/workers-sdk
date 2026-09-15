@@ -1,6 +1,6 @@
 import { Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, test } from "vitest";
-import { useDispose } from "./test-shared";
+import { singleModuleManifest, useDispose } from "./test-shared";
 
 describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 	let originalEnabledEnv: string | undefined;
@@ -30,8 +30,16 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 		process.env.CLOUDFLARE_CF_FETCH_ENABLED = "false";
 
 		const mf = new Miniflare({
-			script: "",
-			modules: true,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(""),
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -49,8 +57,16 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 		process.env.CLOUDFLARE_CF_FETCH_ENABLED = "FALSE";
 
 		const mf = new Miniflare({
-			script: "",
-			modules: true,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(""),
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -68,9 +84,17 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 		process.env.CLOUDFLARE_CF_FETCH_ENABLED = "false";
 
 		const mf = new Miniflare({
-			script: "",
-			modules: true,
 			cf: { colo: "CUSTOM", country: "GB" },
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(""),
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -85,9 +109,17 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 		process.env.CLOUDFLARE_CF_FETCH_PATH = "/some/custom/path.json";
 
 		const mf = new Miniflare({
-			script: "",
-			modules: true,
 			cf: { colo: "CUSTOM", country: "GB" },
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(""),
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -103,8 +135,16 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 		process.env.CLOUDFLARE_CF_FETCH_PATH = "/some/custom/path.json";
 
 		const mf = new Miniflare({
-			script: "",
-			modules: true,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(""),
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -123,8 +163,16 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 		process.env.CLOUDFLARE_CF_FETCH_PATH = "";
 
 		const mf = new Miniflare({
-			script: "",
-			modules: true,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(""),
+					},
+				},
+			],
 		});
 		useDispose(mf);
 

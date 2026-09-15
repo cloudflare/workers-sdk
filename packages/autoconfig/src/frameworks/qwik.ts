@@ -5,7 +5,7 @@ import {
 	runCommand,
 } from "@cloudflare/cli-shared-helpers/command";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { transformFile } from "@cloudflare/codemod";
+import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import * as typescriptParser from "recast/parsers/typescript";
 import { usesTypescript } from "../uses-typescript";
@@ -40,14 +40,15 @@ export class Qwik extends Framework {
 			addBindingsProxy(projectPath);
 		}
 		return {
-			wranglerConfig: {
-				main: "./dist/_worker.js",
-				compatibility_flags: ["global_fetch_strictly_public"],
-				assets: {
-					binding: "ASSET",
-					directory: "./dist",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./dist/_worker.js",
+				compatibilityFlags: ["global_fetch_strictly_public"],
+				env: {
+					ASSET: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./dist" },
 			packageJsonScriptsOverrides: {
 				preview: `${packageManager.type} run build && wrangler dev`,
 				deploy: `${packageManager.type} run build && wrangler deploy`,

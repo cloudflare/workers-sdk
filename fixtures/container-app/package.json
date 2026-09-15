@@ -8,13 +8,17 @@
 		"dev": "wrangler dev",
 		"dev:registry": "wrangler dev -c ./wrangler.registry.jsonc",
 		"start": "wrangler dev",
-		"start:registry": "wrangler dev -c ./wrangler.registry.jsonc"
+		"start:registry": "wrangler dev -c ./wrangler.registry.jsonc",
+		"test:ci": "vitest run",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@types/node": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

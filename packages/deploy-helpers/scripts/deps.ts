@@ -8,8 +8,11 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Workspace packages kept external so consumers share a single copy of
 	// types and runtime code (e.g. ParseError instanceof checks).
 	"@cloudflare/cli-shared-helpers",
+	"@cloudflare/containers-shared",
 	"@cloudflare/workers-utils",
 	"miniflare",
+	// Public declaration files expose Chrome DevTools Protocol profile types.
+	"devtools-protocol",
 
 	// These are externalized to avoid duplication in wrangler's bundle,
 	// which already bundles these packages itself.
@@ -19,9 +22,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	"p-queue",
 	"pretty-bytes",
 	"undici",
-
-	// Externalized so wrangler bundles a single shared zod copy instead of
-	// inlining one via this package. Declared as a peerDependency (the
-	// consumer provides zod).
-	"zod",
+	// WebSocket client for the local workerd inspector used by startup profiling.
+	"ws",
 ];

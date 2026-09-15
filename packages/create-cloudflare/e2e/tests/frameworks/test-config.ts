@@ -345,8 +345,31 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "next",
+			// Default Next.js path: vinext via create-vinext-app.
+			argv: ["--variant", "vinext"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
+			// preview script is `build && start` (wrangler dev on build output).
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			verifyDeploy: {
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			nodeCompat: true,
+			unsupportedOSs: ["win32"],
+		},
+		{
+			name: "next:opennext",
+			// Opt-in OpenNext adapter path (previous C3 default).
+			argv: ["--variant", "opennext"],
+			timeout: LONG_TIMEOUT,
+			testCommitMessage: true,
+			expectFrameworkCli: false,
+			typesPath: "./cloudflare-env.d.ts",
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
 				route: "/",
@@ -361,6 +384,11 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "nuxt:pages",
+			// Quarantined: Nitro's Cloudflare preset adds `nodejs_compat` to the
+			// wrangler config it generates, but that flag is enabled by default —
+			// and therefore rejected by workerd — for compatibility dates from
+			// 2026-08-04, so the dev server never starts. See #15146.
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Would you like to .* install .*modules\?/,
@@ -370,11 +398,80 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
+			// yarn: nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18.
+			// npm: nuxt project creation fails on npm with "Cannot read properties of null (reading 'edgesOut')".
+			unsupportedPms: ["yarn", "npm"],
+			unsupportedOSs: ["win32"],
+			// The Nuxt `ui` template pins `packageManager: pnpm@11.9.0`, so run
+			// it only on pnpm 11+: under pnpm 10 the cross-version self-provision
+			// recurses and fails with ENAMETOOLONG.
+			unsupportedPmRanges: { pnpm: "<11.0.0" },
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Nuxt UI - Starter",
+			},
+			nodeCompat: false,
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			flags: ["--template", "ui"],
+		},
+		{
+			name: "nuxt:workers",
+			promptHandlers: [
+				{
+					matcher: /Would you like to .* install .*modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			// Quarantined for the same reason as `nuxt:pages` above. See #15146.
+			quarantine: true,
+			// yarn: nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18.
+			// npm: nuxt project creation fails on npm with "Cannot read properties of null (reading 'edgesOut')".
+			unsupportedPms: ["yarn", "npm"],
+			unsupportedOSs: ["win32"],
+			// See note on nuxt:pages above.
+			unsupportedPmRanges: { pnpm: "<11.0.0" },
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Nuxt UI - Starter",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			flags: ["--template", "ui"],
+		},
+		{
+			name: "nuxt:pages:minimal",
+			// Quarantined for the same reason as `nuxt:pages` above. See #15146.
+			quarantine: true,
+			promptHandlers: [
+				{
+					matcher: /Would you like to .* install .*modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "pages"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			// yarn: nitro requires youch which expects Node 20+, and yarn fails
+			// hard since we run on Node 18. npm: the `nuxt:pages` (ui) test
+			// already covers npm, so skip it here to avoid running Nuxt twice.
+			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
 			// Nuxt's deps trip `ERR_PNPM_IGNORED_BUILDS` on pnpm 11; the e2e
 			// harness has closed stdin by the time C3's recovery prompt fires
-			// (real-TTY users are unaffected).
+			// (real-TTY users are unaffected). The `nuxt:pages` (ui) test covers
+			// pnpm 11+, so this `minimal` variant runs on pnpm 10 to keep the
+			// pre-pnpm-11 install path (and the default template) under test.
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
@@ -389,7 +486,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			flags: ["--template", "minimal"],
 		},
 		{
-			name: "nuxt:workers",
+			name: "nuxt:workers:minimal",
 			promptHandlers: [
 				{
 					matcher: /Would you like to .* install .*modules\?/,
@@ -399,9 +496,11 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
+			// Quarantined for the same reason as `nuxt:pages` above. See #15146.
+			quarantine: true,
+			// See notes on nuxt:pages:minimal above.
+			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
-			// See note on nuxt:pages above.
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
@@ -820,8 +919,45 @@ function getExperimentalFrameworkTestConfig(
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
+			// Quarantined for the same reason as `nuxt:pages` in
+			// getFrameworkTestConfig. See #15146.
+			quarantine: true,
+			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
 			// See note on nuxt:pages above.
+			unsupportedPmRanges: { pnpm: "<11.0.0" },
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Nuxt UI - Starter",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+			flags: ["--template", "ui"],
+		},
+		{
+			name: "nuxt:workers:minimal",
+			promptHandlers: [
+				{
+					matcher: /Would you like to .* install .*modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			// Quarantined for the same reason as `nuxt:pages` in
+			// getFrameworkTestConfig. See #15146.
+			quarantine: true,
+			// See notes on nuxt:pages:minimal in getFrameworkTestConfig.
+			unsupportedPms: ["yarn", "npm"],
+			unsupportedOSs: ["win32"],
+			// The ui variant covers pnpm 11+ (see nuxt:pages:minimal in
+			// getFrameworkTestConfig); this variant runs on pnpm 10.
 			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
@@ -1009,8 +1145,7 @@ function getExperimentalFrameworkTestConfig(
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			unsupportedPms: ["npm", "yarn"],
-			// this test creates an R2 bucket, so it requires a Cloudflare API token
-			// and needs to be skipped on forks
+			// This test creates an R2 bucket, so it requires a Cloudflare API token.
 			quarantine: !CLOUDFLARE_API_TOKEN,
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
@@ -1071,7 +1206,10 @@ function getExperimentalFrameworkTestConfig(
  *
  * @param options - An object containing the following properties:
  *   - isExperimentalMode: A boolean indicating if experimental mode is enabled.
- *   - FrameworkTestFilter: A string that can be used to filter the tests by "name" or "name:(pages|workers)".
+ *   - FrameworkTestFilter: A string that can be used to filter the tests by
+ *     "name" (e.g. "nuxt"), "name:(pages|workers)" (e.g. "nuxt:pages"), or a
+ *     full variant name (e.g. "nuxt:pages:minimal"). A "name:platform" filter
+ *     also matches variant tests of the form "name:platform:variant".
  */
 export function getFrameworksTests(): NamedFrameworkTestConfig[] {
 	const packageManager = detectPackageManager();
@@ -1083,7 +1221,12 @@ export function getFrameworksTests(): NamedFrameworkTestConfig[] {
 			return true;
 		}
 		if (frameworkToTestFilter.includes(":")) {
-			return testConfig.name === frameworkToTestFilter;
+			// Match the exact name, and also treat a "name:platform" filter as a
+			// prefix so it includes variant tests like "name:platform:minimal".
+			return (
+				testConfig.name === frameworkToTestFilter ||
+				testConfig.name.startsWith(`${frameworkToTestFilter}:`)
+			);
 		}
 		return testConfig.name.split(":")[0] === frameworkToTestFilter;
 	});

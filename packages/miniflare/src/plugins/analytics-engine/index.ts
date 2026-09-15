@@ -1,40 +1,17 @@
 import ANALYTICS_ENGINE from "worker:analytics-engine/analytics-engine";
-import { z } from "zod";
-import { PersistenceSchema, ProxyNodeBinding } from "../shared";
+import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
 import type { Worker_Binding } from "../../runtime";
-import type { Plugin } from "../shared";
-
-const AnalyticsEngineSchema = z.record(
-	z.object({
-		dataset: z.string(),
-	})
-);
-
-export const AnalyticsEngineSchemaOptionsSchema = z.object({
-	analyticsEngineDatasets: AnalyticsEngineSchema.optional(),
-});
-
-export const AnalyticsEngineSchemaSharedOptionsSchema = z.object({
-	analyticsEngineDatasetsPersist: PersistenceSchema,
-});
+import type { ParsedWorkerOptions, Plugin } from "../shared";
 
 export const ANALYTICS_ENGINE_PLUGIN_NAME = "analytics-engine";
 
-export const ANALYTICS_ENGINE_PLUGIN: Plugin<
-	typeof AnalyticsEngineSchemaOptionsSchema,
-	typeof AnalyticsEngineSchemaSharedOptionsSchema
-> = {
-	options: AnalyticsEngineSchemaOptionsSchema,
-	sharedOptions: AnalyticsEngineSchemaSharedOptionsSchema,
+export const ANALYTICS_ENGINE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Analytics Engine dataset",
 	async getBindings(options) {
-		if (!options.analyticsEngineDatasets) {
-			return [];
-		}
-
-		const bindings = Object.entries(
-			options.analyticsEngineDatasets
-		).map<Worker_Binding>(([name, config]) => {
+		return getEnvBindingsOfType(
+			options.config,
+			"analytics-engine-dataset"
+		).map<Worker_Binding>(([name, binding]) => {
 			return {
 				name,
 				wrapped: {
@@ -42,30 +19,30 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 					innerBindings: [
 						{
 							name: "dataset",
-							json: JSON.stringify(config.dataset),
+							json: JSON.stringify(binding.name),
 						},
 					],
 				},
 			};
 		});
-		return bindings;
 	},
-	getNodeBindings(options: z.infer<typeof AnalyticsEngineSchemaOptionsSchema>) {
-		if (!options.analyticsEngineDatasets) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.analyticsEngineDatasets).map((name) => [
-				name,
-				new ProxyNodeBinding(),
-			])
+			getEnvBindingsOfType(options.config, "analytics-engine-dataset").map(
+				([name]) => [name, new ProxyNodeBinding()]
+			)
 		);
 	},
 	async getServices() {
 		return [];
 	},
-	getExtensions({ options }) {
-		if (!options.some((o) => o.analyticsEngineDatasets)) {
+	getExtensions({ options }: { options: ParsedWorkerOptions[] }) {
+		if (
+			!options.some(
+				(o) =>
+					getEnvBindingsOfType(o.config, "analytics-engine-dataset").length > 0
+			)
+		) {
 			return [];
 		}
 		return [

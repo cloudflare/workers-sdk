@@ -123,7 +123,11 @@ export async function fetchInternalBase<ResponseType>(
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
 	credentials?: ApiCredentials
-): Promise<{ response: ResponseType; status: number }> {
+): Promise<{
+	response: ResponseType;
+	status: number;
+	retryAfterMs?: number;
+}> {
 	const method = init.method ?? "GET";
 	const response = await performApiFetchBase(
 		complianceConfig,
@@ -145,6 +149,8 @@ export async function fetchInternalBase<ResponseType>(
 	logger.debugWithSanitization?.("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
 
+	const retryAfterMs = parseRetryAfterMs(response.headers);
+
 	if (!jsonText && (response.status === 204 || response.status === 205)) {
 		return {
 			response: {
@@ -154,6 +160,7 @@ export async function fetchInternalBase<ResponseType>(
 				messages: [],
 			} as ResponseType,
 			status: response.status,
+			retryAfterMs,
 		};
 	}
 
@@ -163,13 +170,14 @@ export async function fetchInternalBase<ResponseType>(
 			method,
 			resource,
 			response.status,
-			response.statusText
+			response.statusText,
+			retryAfterMs
 		);
 	}
 
 	try {
 		const json = parseJSON(jsonText) as ResponseType;
-		return { response: json, status: response.status };
+		return { response: json, status: response.status, retryAfterMs };
 	} catch {
 		const rayId = extractWAFBlockRayId(response.headers);
 
@@ -185,6 +193,7 @@ export async function fetchInternalBase<ResponseType>(
 				...(rayId ? [{ text: `Cloudflare Ray ID: ${rayId}` }] : []),
 			],
 			status: response.status,
+			retryAfterMs,
 			telemetryMessage: false,
 		});
 	}
@@ -200,9 +209,11 @@ export async function fetchResultBase<ResponseType>(
 	abortSignal?: AbortSignal,
 	credentials?: ApiCredentials
 ): Promise<ResponseType> {
-	const { response: json, status } = await fetchInternalBase<
-		FetchResult<ResponseType>
-	>(
+	const {
+		response: json,
+		status,
+		retryAfterMs,
+	} = await fetchInternalBase<FetchResult<ResponseType>>(
 		complianceConfig,
 		resource,
 		init,
@@ -215,7 +226,7 @@ export async function fetchResultBase<ResponseType>(
 	if (json.success) {
 		return json.result;
 	} else {
-		throwFetchError(resource, json, status);
+		throwFetchError(resource, json, status, retryAfterMs);
 	}
 }
 
@@ -236,9 +247,11 @@ export async function fetchListResultBase<ResponseType>(
 			queryParams = new URLSearchParams(queryParams);
 			queryParams.set("cursor", cursor);
 		}
-		const { response: json, status } = await fetchInternalBase<
-			FetchResult<ResponseType[]>
-		>(
+		const {
+			response: json,
+			status,
+			retryAfterMs,
+		} = await fetchInternalBase<FetchResult<ResponseType[]>>(
 			complianceConfig,
 			resource,
 			init,
@@ -256,7 +269,7 @@ export async function fetchListResultBase<ResponseType>(
 				getMoreResults = false;
 			}
 		} else {
-			throwFetchError(resource, json, status);
+			throwFetchError(resource, json, status, retryAfterMs);
 		}
 	}
 	return results;
@@ -272,6 +285,39 @@ export function truncate(text: string, maxLength: number): string {
 
 export function isWAFBlockResponse(headers: Headers): boolean {
 	return headers.get("cf-mitigated") === "challenge";
+}
+
+/**
+ * Parses a `Retry-After` header value (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After)
+ * into milliseconds to wait before retrying, or `undefined` if absent/unparsable.
+ *
+ * Per the HTTP spec, `Retry-After` may either be a number of delay-seconds,
+ * or an HTTP-date after which the request may be retried.
+ */
+export function parseRetryAfterValue(
+	retryAfter: string | null | undefined
+): number | undefined {
+	if (!retryAfter) {
+		return undefined;
+	}
+
+	// delta-seconds, e.g. "Retry-After: 120"
+	if (/^\d+$/.test(retryAfter.trim())) {
+		return Number(retryAfter) * 1000;
+	}
+
+	// HTTP-date, e.g. "Retry-After: Fri, 31 Dec 1999 23:59:59 GMT"
+	const retryAfterDate = new Date(retryAfter);
+	if (!Number.isNaN(retryAfterDate.getTime())) {
+		return Math.max(0, retryAfterDate.getTime() - Date.now());
+	}
+
+	return undefined;
+}
+
+/** Same as {@link parseRetryAfterValue}, reading the value from a `Headers` object. */
+export function parseRetryAfterMs(headers: Headers): number | undefined {
+	return parseRetryAfterValue(headers.get("Retry-After"));
 }
 
 export function extractWAFBlockRayId(headers: Headers): string | undefined {
@@ -400,7 +446,8 @@ function escapeCharacter(character: string): string {
 export function throwFetchError(
 	resource: string,
 	response: FetchResult<unknown>,
-	status: number
+	status: number,
+	retryAfterMs?: number
 ): never {
 	const errors = response.errors ?? [];
 	for (const error of errors) {
@@ -425,11 +472,20 @@ export function throwFetchError(
 			notes.push({ text: fallbackMessage });
 		}
 	}
+	if (retryAfterMs !== undefined) {
+		notes.push({
+			text: `The API responded with a "Retry-After" header indicating you should wait ${Math.ceil(retryAfterMs / 1000)} second(s) before retrying.`,
+		});
+	}
 
 	const error = new APIError({
 		text: `A request to the Cloudflare API (${resource}) failed.`,
 		notes,
 		status,
+		// hoist the parsed `Retry-After` header (if any) so consumers such as
+		// `retryOnAPIFailure()` can back off for the amount of time the API
+		// asked us to wait, e.g. when rate limited (HTTP 429).
+		retryAfterMs,
 		telemetryMessage: false,
 	});
 	// add the first error code directly to this error
@@ -454,7 +510,8 @@ function throwWAFBlockError(
 	method: string,
 	resource: string,
 	status: number,
-	statusText: string
+	statusText: string,
+	retryAfterMs?: number
 ): never {
 	const rayId = extractWAFBlockRayId(headers);
 	throw new APIError({
@@ -474,6 +531,7 @@ function throwWAFBlockError(
 			},
 		],
 		status,
+		retryAfterMs,
 		telemetryMessage: false,
 	});
 }

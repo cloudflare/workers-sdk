@@ -4,9 +4,8 @@ import { readFile, writeFile } from "./files";
 import { detectPackageManager } from "./packageManagers";
 
 // Build-script packages C3 pre-approves: wrangler depends on `esbuild` and
-// `workerd`, and (via miniflare) on `sharp`. Framework-introduced build
-// scripts are out of scope.
-const APPROVED_BUILDS = ["esbuild", "workerd", "sharp"] as const;
+// `workerd`. Framework-introduced build scripts are out of scope.
+const APPROVED_BUILDS = ["esbuild", "workerd"] as const;
 const APPROVED_BUILDS_SET = new Set<string>(APPROVED_BUILDS);
 
 /**
@@ -37,9 +36,9 @@ export const writePnpmBuildApprovals = (projectPath: string) => {
 
 const FRESH_HEADER = [
 	"# Pre-approve build scripts for the packages C3 itself installs that need",
-	"# them: `workerd` downloads the platform binary, `esbuild` and `sharp`",
-	"# (via miniflare) download/build native bindings. Without these, pnpm 11+",
-	"# aborts the install with ERR_PNPM_IGNORED_BUILDS.",
+	"# them: `workerd` downloads the platform binary and `esbuild` downloads/",
+	"# builds native bindings. Without these, pnpm 11+ aborts the install with",
+	"# ERR_PNPM_IGNORED_BUILDS.",
 ];
 
 // Quote scoped names (`@…`) so YAML 1.1 doesn't treat `@` as a node anchor.
@@ -59,6 +58,13 @@ const ALLOW_BUILDS_ENTRY = /^( {2})(['"]?)([^'":]+)\2:\s*(.*)$/;
 
 /** Exported for unit testing. */
 export const mergeAllowBuilds = (original: string): string => {
+	// A framework generator may explicitly opt into running all dependency
+	// build scripts. Adding `allowBuilds` would be redundant and pnpm rejects
+	// the combination as conflicting build policies.
+	if (/^dangerouslyAllowAllBuilds:[ \t]*true[ \t]*$/m.test(original)) {
+		return original;
+	}
+
 	const eol = detectEol(original);
 	const lines = original.split(/\r?\n/);
 

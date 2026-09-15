@@ -1,5 +1,0 @@
-{
-	"$schema": "../node_modules/wrangler/config-schema.json",
-	// don't provide compatibility_date so that vitest will infer the latest one
-	"compatibility_flags": ["nodejs_compat"],
-}

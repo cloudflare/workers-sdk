@@ -1,4 +1,4 @@
-import type { ZodIssue } from "zod";
+import type { z } from "zod";
 
 export class HttpError extends Error {
 	constructor(
@@ -55,7 +55,7 @@ export class ServiceWorkerNotSupported extends HttpError {
 }
 export class ZodSchemaError extends HttpError {
 	name = "ZodSchemaError";
-	constructor(private issues: ZodIssue[]) {
+	constructor(private issues: z.core.$ZodIssue[]) {
 		super("Something went wrong", 500, true);
 	}
 

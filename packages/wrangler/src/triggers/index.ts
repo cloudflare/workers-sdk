@@ -1,9 +1,7 @@
 import { triggersDeploy } from "@cloudflare/deploy-helpers";
 import { createCommand, createNamespace } from "../core/create-command";
 import { resolveTriggersInput } from "../deployment-bundle/resolve-config-args";
-import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { ensureQueuesExistByConfig } from "../queues/client";
 import { requireAuth } from "../user";
 
 export const triggersNamespace = createNamespace({
@@ -44,6 +42,7 @@ export const triggersDeployCommand = createCommand({
 		"dry-run": {
 			describe: "Don't actually deploy",
 			type: "boolean",
+			default: false,
 		},
 		"experimental-deploy-helpers": {
 			describe: "Experimental: Gates refactored deploy/upload path",
@@ -55,6 +54,7 @@ export const triggersDeployCommand = createCommand({
 	},
 	behaviour: {
 		supportTemporary: true,
+		useConfigRedirectIfAvailable: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},
@@ -63,21 +63,14 @@ export const triggersDeployCommand = createCommand({
 			sendMetrics: config.send_metrics,
 		});
 		const props = resolveTriggersInput(args, config);
-
-		if (args.dryRun) {
-			logger.log(`--dry-run: exiting now.`);
-			return;
-		}
-
-		// Any validation that requires auth goes below
-		const accountId = await requireAuth(config);
-		await ensureQueuesExistByConfig(config);
+		const accountId = args.dryRun ? undefined : await requireAuth(config);
 
 		await triggersDeploy({
 			config,
 			accountId,
-			env: args.env,
 			firstDeploy: false,
+			dryRun: args.dryRun,
+			validated: false,
 			...props,
 		});
 	},

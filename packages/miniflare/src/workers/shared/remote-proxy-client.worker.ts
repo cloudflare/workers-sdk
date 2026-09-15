@@ -3,44 +3,120 @@ import { SharedBindings } from "./constants";
 import {
 	makeFetch,
 	makeRemoteProxyStub,
+	pipeSocketOverWebSocket,
 	throwRemoteRequired,
 } from "./remote-bindings-utils";
-import type { RemoteBindingEnv } from "./remote-bindings-utils";
+import type {
+	RemoteBindingEnv,
+	RemoteBindingProps,
+} from "./remote-bindings-utils";
 
 /** Generic remote proxy client for bindings. */
-export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
+export default class Client extends WorkerEntrypoint<
+	RemoteBindingEnv,
+	RemoteBindingProps
+> {
 	fetch(request: Request): Promise<Response> {
 		return makeFetch(
-			this.env.remoteProxyConnectionString,
-			this.env.binding,
+			this.ctx.props.remoteProxyConnectionString,
+			this.ctx.props.binding,
 			undefined,
-			this.env.cfTraceId,
+			this.ctx.props.cfTraceId,
 			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
 		)(request);
 	}
 
-	constructor(ctx: ExecutionContext, env: RemoteBindingEnv) {
+	// Handles `binding.connect(address)` for raw TCP bindings (e.g. VPC networks).
+	// Only reachable when the worker is configured with the `experimental`
+	// compatibility flag, which enables inbound `connect` handlers (workerd#6059).
+	async connect(socket: Socket): Promise<void> {
+		const { remoteProxyConnectionString, binding, cfTraceId } = this.ctx.props;
+		if (!remoteProxyConnectionString) {
+			throwRemoteRequired(binding);
+		}
+
+		// The address passed to `binding.connect("host:port")` arrives verbatim as
+		// the inbound socket's `localAddress` on the service-binding path. See
+		// https://github.com/cloudflare/workerd/pull/6059.
+		const { localAddress } = await socket.opened;
+		if (!localAddress) {
+			throw new Error(
+				`Binding ${binding} received a connection without a target address`
+			);
+		}
+
+		const headers = new Headers({
+			Upgrade: "websocket",
+			"MF-Binding": binding,
+			"MF-Connect-Address": localAddress,
+		});
+		if (cfTraceId) {
+			headers.set("cf-trace-id", cfTraceId);
+		}
+
+		const response = await fetch(remoteProxyConnectionString, { headers });
+		const ws = response.webSocket;
+		if (!ws) {
+			throw new Error(
+				`Binding ${binding} failed to open a tunnel to ${localAddress} (status ${response.status})`
+			);
+		}
+		ws.accept();
+
+		await pipeSocketOverWebSocket(socket, ws);
+	}
+
+	constructor(
+		ctx: ExecutionContext<RemoteBindingProps>,
+		env: RemoteBindingEnv
+	) {
 		super(ctx, env);
 
-		const stub = env.remoteProxyConnectionString
-			? makeRemoteProxyStub(
-					env.remoteProxyConnectionString,
-					env.binding,
-					undefined,
-					env.cfTraceId,
-					env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
-				)
-			: undefined;
+		let stub: Fetcher | undefined;
+		function getStub() {
+			if (!ctx.props.remoteProxyConnectionString) {
+				throwRemoteRequired(ctx.props.binding);
+			}
+			stub ??= makeRemoteProxyStub(
+				ctx.props.remoteProxyConnectionString,
+				ctx.props.binding,
+				undefined,
+				ctx.props.cfTraceId,
+				env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
+			);
+			return stub;
+		}
 
 		return new Proxy(this, {
 			get: (target, prop) => {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
-				if (!stub) {
-					throwRemoteRequired(env.binding);
+				// workerd probes optional WorkerEntrypoint handlers during startup. Return
+				// a deferred RPC property so these probes and fetch-only bindings don't
+				// create an unused WebSocket RPC session. Cap'n Web properties are both
+				// callable and thenable, so forward invocation and property resolution.
+				let rpcProperty: unknown;
+				let isRpcPropertyResolved = false;
+				function getRpcProperty() {
+					if (!isRpcPropertyResolved) {
+						rpcProperty = Reflect.get(getStub(), prop);
+						isRpcPropertyResolved = true;
+					}
+					return rpcProperty;
 				}
-				return Reflect.get(stub, prop);
+				return new Proxy(
+					(...args: unknown[]) => {
+						const rpcMethod = getRpcProperty() as (
+							...args: unknown[]
+						) => unknown;
+						return Reflect.apply(rpcMethod, undefined, args);
+					},
+					{
+						get: (_target, rpcProp) =>
+							Reflect.get(getRpcProperty() as object, rpcProp),
+					}
+				);
 			},
 		});
 	}

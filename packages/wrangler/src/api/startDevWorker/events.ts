@@ -1,5 +1,6 @@
 import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
+import type Protocol from "devtools-protocol";
 import type { Miniflare, WorkerRegistry } from "miniflare";
 
 export type ErrorEvent =
@@ -33,10 +34,52 @@ export function castErrorCause(cause: unknown) {
 		return cause;
 	}
 
+	// Errors that cross a JSON channel (e.g. the ProxyWorker's and
+	// InspectorProxyWorker's error reports) arrive as SerializedError plain
+	// objects — rehydrate them so their message/name/stack are surfaced
+	// instead of an empty `new Error()`.
+	if (isSerializedError(cause)) {
+		const error = new Error(cause.message);
+		if (cause.name !== undefined) {
+			error.name = cause.name;
+		}
+		if (cause.stack !== undefined) {
+			error.stack = cause.stack;
+		}
+		if (cause.cause !== undefined) {
+			// Rehydrate serialized cause chains (serialiseError recurses) so the
+			// `instanceof Error` cause-chain classifiers in handle-errors.ts work
+			// across the channel; leave non-SerializedError causes untouched.
+			error.cause = isSerializedError(cause.cause)
+				? castErrorCause(cause.cause)
+				: cause.cause;
+		}
+		return error;
+	}
+
 	const error = new Error();
 	error.cause = cause;
 
 	return error;
+}
+
+const serializedErrorKeys = new Set(["message", "name", "stack", "cause"]);
+
+// Matches exactly the shape produced by serialiseError() and the
+// ProxyWorker's error reports. Kept strict (no extra keys) so that arbitrary
+// message-bearing objects passed to castErrorCause() are still preserved
+// verbatim as `cause` rather than lossily rehydrated.
+function isSerializedError(value: unknown): value is SerializedError {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+	const record = value as Record<string, unknown>;
+	return (
+		typeof record.message === "string" &&
+		(record.name === undefined || typeof record.name === "string") &&
+		(record.stack === undefined || typeof record.stack === "string") &&
+		Object.keys(record).every((key) => serializedErrorKeys.has(key))
+	);
 }
 
 // ConfigController
@@ -79,7 +122,25 @@ export type DevRegistryUpdateEvent = {
 	registry: WorkerRegistry;
 };
 
-// ProxyController
+// LocalRuntimeController (uncaught Worker exceptions, revived and
+// source-mapped by Miniflare's pretty-error path) and ProxyController
+// (inspector-relayed Runtime.exceptionThrown). The two sources are disjoint
+// for a given exception: the pretty-error path only sees exceptions the
+// runtime caught to build a 500 response — which therefore never reach the
+// inspector — while the inspector only reports exceptions the runtime did
+// not catch. `source` distinguishes them should that invariant ever change.
+export type RuntimeErrorEvent = {
+	type: "runtimeError";
+	source: "LocalRuntimeController" | "ProxyController";
+
+	/** The exception summary line. */
+	text: string;
+	/** The source-mapped stack. */
+	stack: string;
+	/** The raw Chrome DevTools Protocol exception details, when the event
+	 * came over the inspector. */
+	exceptionDetails?: Protocol.Runtime.ExceptionDetails;
+};
 export type PreviewTokenExpiredEvent = {
 	type: "previewTokenExpired";
 

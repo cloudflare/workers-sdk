@@ -1,16 +1,37 @@
-import { execFileSync, spawn } from "node:child_process";
+import {
+	execFile,
+	execFileSync,
+	spawn,
+	type ChildProcess,
+} from "node:child_process";
 import { EventEmitter } from "node:events";
-import { beforeEach, describe, it, vi } from "vitest";
+import { existsSync } from "node:fs";
+import { release } from "node:os";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	checkExposedPorts,
 	cleanupDuplicateImageTags,
+	containerPrivilegesAllowed,
 	verifyDockerInstalled,
 } from "./../src/utils";
 import type { ContainerDevOptions } from "../src/types";
 
+type DockerExecFile = (
+	file: string,
+	args: readonly string[],
+	options: object,
+	callback: (error: Error | null, stdout: string) => void
+) => ChildProcess;
+
+const dockerExecFile = execFile as DockerExecFile;
 let docketImageInspectResult = "0";
 
 vi.mock("node:child_process");
+vi.mock("node:fs");
+vi.mock("node:os", async (importOriginal) => ({
+	...(await importOriginal<typeof import("node:os")>()),
+	release: vi.fn(),
+}));
 
 vi.mock("../src/inspect", async (importOriginal) => {
 	const mod: object = await importOriginal();
@@ -94,6 +115,143 @@ describe("cleanupDuplicateImageTags", () => {
 			["rmi", "cloudflare-dev/egresstestcontainer:build-122"],
 			{ encoding: "utf8" }
 		);
+	});
+});
+
+describe("containerPrivilegesAllowed", () => {
+	let commandError: Error | null;
+	let rawResponse: string | undefined;
+	let securityOptions: unknown;
+
+	beforeEach(() => {
+		commandError = null;
+		rawResponse = undefined;
+		securityOptions = ["name=seccomp"];
+		vi.mocked(existsSync).mockReturnValue(true);
+		vi.mocked(release).mockReturnValue("linux");
+		vi.spyOn(process, "platform", "get").mockReturnValue("linux");
+		vi.mocked(dockerExecFile).mockReset();
+		vi.mocked(dockerExecFile).mockImplementation(
+			(_file, _args, _options, callback) => {
+				callback(commandError, rawResponse ?? JSON.stringify(securityOptions));
+				return new EventEmitter() as ChildProcess;
+			}
+		);
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("allows privileges with rootless Docker on Linux", async ({ expect }) => {
+		securityOptions = ["name=seccomp", "name=rootless"];
+
+		await expect(
+			containerPrivilegesAllowed("unix:///run/user/1000/docker.sock")
+		).resolves.toBe(true);
+		expect(dockerExecFile).toHaveBeenCalledWith(
+			"docker",
+			[
+				"--host",
+				"unix:///run/user/1000/docker.sock",
+				"info",
+				"--format",
+				"{{json .SecurityOptions}}",
+			],
+			{ encoding: "utf8", timeout: 5_000 },
+			expect.any(Function)
+		);
+	});
+
+	it("allows local VM-backed Docker engines on macOS", async ({ expect }) => {
+		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
+
+		await expect(
+			containerPrivilegesAllowed("unix:///var/run/docker.sock")
+		).resolves.toBe(true);
+	});
+
+	it("allows Colima-like Linux guests on macOS", async ({ expect }) => {
+		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
+		securityOptions = [];
+
+		await expect(
+			containerPrivilegesAllowed(
+				"unix:///Users/example/.colima/default/docker.sock"
+			)
+		).resolves.toBe(true);
+	});
+
+	it("blocks remote Docker engines", async ({ expect }) => {
+		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
+
+		await expect(
+			containerPrivilegesAllowed("tcp://docker.example.com:2375")
+		).resolves.toBe(false);
+		expect(dockerExecFile).not.toHaveBeenCalled();
+	});
+
+	it("blocks Windows until workerd supports named pipes", async ({
+		expect,
+	}) => {
+		vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+
+		await expect(
+			containerPrivilegesAllowed("//./pipe/docker_engine")
+		).resolves.toBe(false);
+	});
+
+	it("blocks unsupported hosts", async ({ expect }) => {
+		vi.spyOn(process, "platform", "get").mockReturnValue("freebsd");
+
+		await expect(
+			containerPrivilegesAllowed("unix:///var/run/docker.sock")
+		).resolves.toBe(false);
+	});
+
+	it("allows VM-backed Docker engines through WSL", async ({ expect }) => {
+		vi.mocked(release).mockReturnValue("6.6.87.2-microsoft-standard-WSL2");
+
+		await expect(
+			containerPrivilegesAllowed("unix:///var/run/docker.sock")
+		).resolves.toBe(true);
+	});
+
+	it("fails when Docker rejects the information request", async ({
+		expect,
+	}) => {
+		commandError = new Error("Docker is unavailable");
+
+		await expect(
+			containerPrivilegesAllowed("unix:///var/run/docker.sock")
+		).rejects.toThrow("Docker is unavailable");
+	});
+
+	it("fails when Docker returns malformed daemon information", async ({
+		expect,
+	}) => {
+		rawResponse = "not JSON";
+
+		await expect(
+			containerPrivilegesAllowed("unix:///var/run/docker.sock")
+		).rejects.toThrow();
+	});
+
+	it("blocks rootless Docker on Linux without /dev/fuse", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockReturnValue(false);
+		securityOptions = ["name=rootless"];
+
+		await expect(
+			containerPrivilegesAllowed("unix:///run/user/1000/docker.sock")
+		).resolves.toBe(false);
+	});
+
+	it("blocks rootful Docker on Linux", async ({ expect }) => {
+		await expect(
+			containerPrivilegesAllowed("unix:///var/run/docker.sock")
+		).resolves.toBe(false);
 	});
 });
 

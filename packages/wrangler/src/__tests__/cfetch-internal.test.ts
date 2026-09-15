@@ -6,9 +6,9 @@ import {
 } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
-import { fetchGraphqlResult } from "../cfetch";
+import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { msw } from "./helpers/msw";
+import { createFetchResult, msw } from "./helpers/msw";
 
 describe("isWAFBlockResponse", () => {
 	it("should detect a WAF-mitigated response", ({ expect }) => {
@@ -250,6 +250,76 @@ describe("fetchInternal WAF block detection", () => {
 				n.text.includes("Cloudflare Ray ID:")
 			);
 			expect(rayIdNote).toBeUndefined();
+		}
+	});
+});
+
+describe("fetchResult 429 Retry-After handling", () => {
+	mockAccountId({ accountId: null });
+	mockApiToken();
+
+	it("should hoist a delta-seconds Retry-After header onto the thrown APIError", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/some/resource",
+				() =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10013, message: "rate limited" },
+						]),
+						{ status: 429, headers: { "Retry-After": "42" } }
+					),
+				{ once: true }
+			)
+		);
+		try {
+			await fetchResult(COMPLIANCE_REGION_CONFIG_UNKNOWN, "/some/resource", {
+				method: "POST",
+			});
+			expect.unreachable("should have thrown");
+		} catch (e) {
+			const error = e as {
+				status?: number;
+				retryAfterMs?: number;
+				notes: { text: string }[];
+			};
+			expect(error.status).toBe(429);
+			expect(error.retryAfterMs).toBe(42_000);
+			const retryNote = error.notes.find((n) => n.text.includes("Retry-After"));
+			expect(retryNote?.text).toBe(
+				'The API responded with a "Retry-After" header indicating you should wait 42 second(s) before retrying.'
+			);
+		}
+	});
+
+	it("should leave retryAfterMs undefined when no Retry-After header is present", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/some/other-resource",
+				() =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10013, message: "rate limited" },
+						]),
+						{ status: 429 }
+					),
+				{ once: true }
+			)
+		);
+		try {
+			await fetchResult(
+				COMPLIANCE_REGION_CONFIG_UNKNOWN,
+				"/some/other-resource",
+				{ method: "POST" }
+			);
+			expect.unreachable("should have thrown");
+		} catch (e) {
+			const error = e as { retryAfterMs?: number };
+			expect(error.retryAfterMs).toBeUndefined();
 		}
 	});
 });

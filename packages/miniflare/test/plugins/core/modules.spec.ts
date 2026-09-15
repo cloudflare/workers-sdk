@@ -1,30 +1,92 @@
-import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
+import { Miniflare, MiniflareCoreError } from "miniflare";
 import { test } from "vitest";
-import { useCwd, useDispose, useTmp, utf8Encode } from "../../test-shared";
+import {
+	singleModuleManifest,
+	useCwd,
+	useDispose,
+	useTmp,
+	utf8Encode,
+} from "../../test-shared";
 
 const ROOT = path.resolve(__dirname, "../../fixtures/modules");
 
 test("Miniflare: accepts manually defined modules", async ({ expect }) => {
-	// Check with just `path`
+	// Check with just `path` (contents read from disk and inlined into the
+	// manifest). The manifest module names are the paths relative to the old
+	// `modulesRoot` (which is removed in the new format).
 	const mf = new Miniflare({
-		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat_v2"],
-		// TODO(soon): remove `modulesRoot` once https://github.com/cloudflare/workerd/issues/1101 fixed
-		//  and add separate test for that
-		modulesRoot: ROOT,
-		modules: [
-			{ type: "ESModule", path: path.join(ROOT, "index.mjs") },
-			{ type: "ESModule", path: path.join(ROOT, "blobs.mjs") },
-			{ type: "ESModule", path: path.join(ROOT, "blobs-indirect.mjs") },
-			{ type: "CommonJS", path: path.join(ROOT, "index.cjs") },
-			{ type: "CommonJS", path: path.join(ROOT, "index.node.cjs") },
-			// Testing modules in subdirectories
-			{ type: "Text", path: path.join(ROOT, "blobs", "text.txt") },
-			{ type: "Data", path: path.join(ROOT, "blobs", "data.bin") },
-			{ type: "CompiledWasm", path: path.join(ROOT, "add.wasm") },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					compatibilityFlags: ["nodejs_compat_v2"],
+					manifest: {
+						mainModule: "index.mjs",
+						modulesRoot: ROOT,
+						modules: {
+							"index.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "index.mjs"),
+									"utf8"
+								),
+							},
+							"blobs.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "blobs.mjs"),
+									"utf8"
+								),
+							},
+							"blobs-indirect.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "blobs-indirect.mjs"),
+									"utf8"
+								),
+							},
+							"index.cjs": {
+								type: "cjs",
+								contents: await fs.readFile(
+									path.join(ROOT, "index.cjs"),
+									"utf8"
+								),
+							},
+							"index.node.cjs": {
+								type: "cjs",
+								contents: await fs.readFile(
+									path.join(ROOT, "index.node.cjs"),
+									"utf8"
+								),
+							},
+							// Testing modules in subdirectories
+							"blobs/text.txt": {
+								type: "text",
+								contents: await fs.readFile(
+									path.join(ROOT, "blobs", "text.txt"),
+									"utf8"
+								),
+							},
+							"blobs/data.bin": {
+								type: "data",
+								contents: new Uint8Array(
+									await fs.readFile(path.join(ROOT, "blobs", "data.bin"))
+								),
+							},
+							"add.wasm": {
+								type: "wasm",
+								contents: new Uint8Array(
+									await fs.readFile(path.join(ROOT, "add.wasm"))
+								),
+							},
+						},
+					},
+				},
+			},
 		],
 	});
 	useDispose(mf);
@@ -41,24 +103,42 @@ test("Miniflare: accepts manually defined modules", async ({ expect }) => {
 	const subWasmModule =
 		"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABawsACgRuYW1lAgMBAAA=";
 	await mf.setOptions({
-		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat_v2"],
-		modules: [
-			{ type: "ESModule", path: path.join(ROOT, "index.mjs") },
+		workers: [
 			{
-				type: "ESModule",
-				path: path.join(ROOT, "blobs.mjs"),
-				contents: `
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					compatibilityFlags: ["nodejs_compat_v2"],
+					manifest: {
+						mainModule: "index.mjs",
+						modulesRoot: ROOT,
+						modules: {
+							"index.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "index.mjs"),
+									"utf8"
+								),
+							},
+							"blobs.mjs": {
+								type: "esm",
+								contents: `
         import rawText from "./blobs/text.txt";
         export const text = "blobs:" + rawText;
         export { default as data } from "./blobs/data.bin";
         `,
-			},
-			{ type: "ESModule", path: path.join(ROOT, "blobs-indirect.mjs") },
-			{
-				type: "CommonJS",
-				path: path.join(ROOT, "index.cjs"),
-				contents: `const cjsNode = require("./index.node.cjs");
+							},
+							"blobs-indirect.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "blobs-indirect.mjs"),
+									"utf8"
+								),
+							},
+							"index.cjs": {
+								type: "cjs",
+								contents: `const cjsNode = require("./index.node.cjs");
         module.exports = {
           base64Encode(data) {
             return "encoded:" + cjsNode + data;
@@ -68,26 +148,26 @@ test("Miniflare: accepts manually defined modules", async ({ expect }) => {
           }
         };
         `,
-			},
-			{
-				type: "CommonJS",
-				path: path.join(ROOT, "index.node.cjs"),
-				contents: `module.exports = "node:";`,
-			},
-			{
-				type: "Text",
-				path: path.join(ROOT, "blobs", "text.txt"),
-				contents: "text",
-			},
-			{
-				type: "Data",
-				path: path.join(ROOT, "blobs", "data.bin"),
-				contents: "data",
-			},
-			{
-				type: "CompiledWasm",
-				path: path.join(ROOT, "add.wasm"),
-				contents: Buffer.from(subWasmModule, "base64"),
+							},
+							"index.node.cjs": {
+								type: "cjs",
+								contents: `module.exports = "node:";`,
+							},
+							"blobs/text.txt": {
+								type: "text",
+								contents: "text",
+							},
+							"blobs/data.bin": {
+								type: "data",
+								contents: "data",
+							},
+							"add.wasm": {
+								type: "wasm",
+								contents: Buffer.from(subWasmModule, "base64"),
+							},
+						},
+					},
+				},
 			},
 		],
 	});
@@ -99,19 +179,80 @@ test("Miniflare: accepts manually defined modules", async ({ expect }) => {
 	});
 });
 test("Miniflare: automatically collects modules", async ({ expect }) => {
+	// NOTE: `modulesRoot`/`modulesRules` auto-collection is removed in the new
+	// format. The modules that would have been auto-collected from disk are
+	// inlined into the manifest with explicit names instead.
 	const mf = new Miniflare({
-		modules: true,
-		modulesRoot: ROOT,
-		modulesRules: [
-			// Implicitly testing default module rules for `ESModule`
-			{ type: "CommonJS", include: ["**/*.node.cjs", "**/*.cjs"] },
-			{ type: "Text", include: ["**/*.txt"] },
-			{ type: "Data", include: ["**/*.bin"] },
-			{ type: "CompiledWasm", include: ["**/*.wasm"] },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					compatibilityFlags: ["nodejs_compat_v2"],
+					manifest: {
+						mainModule: "index.mjs",
+						modulesRoot: ROOT,
+						modules: {
+							"index.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "index.mjs"),
+									"utf8"
+								),
+							},
+							"blobs.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "blobs.mjs"),
+									"utf8"
+								),
+							},
+							"blobs-indirect.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "blobs-indirect.mjs"),
+									"utf8"
+								),
+							},
+							"index.cjs": {
+								type: "cjs",
+								contents: await fs.readFile(
+									path.join(ROOT, "index.cjs"),
+									"utf8"
+								),
+							},
+							"index.node.cjs": {
+								type: "cjs",
+								contents: await fs.readFile(
+									path.join(ROOT, "index.node.cjs"),
+									"utf8"
+								),
+							},
+							"blobs/text.txt": {
+								type: "text",
+								contents: await fs.readFile(
+									path.join(ROOT, "blobs", "text.txt"),
+									"utf8"
+								),
+							},
+							"blobs/data.bin": {
+								type: "data",
+								contents: new Uint8Array(
+									await fs.readFile(path.join(ROOT, "blobs", "data.bin"))
+								),
+							},
+							"add.wasm": {
+								type: "wasm",
+								contents: new Uint8Array(
+									await fs.readFile(path.join(ROOT, "add.wasm"))
+								),
+							},
+						},
+					},
+				},
+			},
 		],
-		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat_v2"],
-		scriptPath: path.join(ROOT, "index.mjs"),
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
@@ -121,14 +262,29 @@ test("Miniflare: automatically collects modules", async ({ expect }) => {
 		number: 3,
 	});
 
-	// Check validates module rules
+	// Check validates module types. In the old format this exercised
+	// `modulesRules` validation; the closest faithful analog in the new format
+	// is validating the manifest module `type` enum.
 	let error: MiniflareCoreError | undefined = undefined;
 	try {
 		await mf.setOptions({
-			modules: true,
-			// @ts-expect-error intentionally testing incorrect types
-			modulesRules: [{ type: "PNG", include: ["**/*.png"] }],
-			script: "",
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2023-08-01",
+						manifest: {
+							mainModule: "index.mjs",
+							modulesRoot: ROOT,
+							modules: {
+								// @ts-expect-error intentionally testing incorrect types
+								"index.mjs": { type: "PNG", contents: "" },
+							},
+						},
+					},
+				},
+			],
 		});
 	} catch (e) {
 		error = e as MiniflareCoreError;
@@ -139,152 +295,57 @@ test("Miniflare: automatically collects modules", async ({ expect }) => {
 test("Miniflare: automatically collects modules with cycles", async ({
 	expect,
 }) => {
+	// Cyclic modules inlined into the manifest (auto-collection removed).
 	const mf = new Miniflare({
-		modules: true,
-		compatibilityDate: "2023-08-01",
-		scriptPath: path.join(ROOT, "cyclic", "index.mjs"),
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					manifest: {
+						mainModule: "index.mjs",
+						modulesRoot: path.join(ROOT, "cyclic"),
+						modules: {
+							"index.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "cyclic", "index.mjs"),
+									"utf8"
+								),
+							},
+							"cyclic1.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "cyclic", "cyclic1.mjs"),
+									"utf8"
+								),
+							},
+							"cyclic2.mjs": {
+								type: "esm",
+								contents: await fs.readFile(
+									path.join(ROOT, "cyclic", "cyclic2.mjs"),
+									"utf8"
+								),
+							},
+						},
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("pong");
 });
-test("Miniflare: includes location in parse errors when automatically collecting modules", async ({
-	expect,
-}) => {
-	const scriptPath = path.join(ROOT, "syntax-error", "index.mjs");
-	const mf = new Miniflare({
-		modules: true,
-		modulesRoot: ROOT,
-		compatibilityDate: "2023-08-01",
-		scriptPath,
-		script: `export default {\n  new Response("body")\n}`,
-	});
-	await expect(mf.ready).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_MODULE_PARSE",
-			`Unable to parse "syntax-error/index.mjs": Unexpected keyword 'new' (2:2)
-    at ${scriptPath}:2:2`
-		)
-	);
-});
-test("Miniflare: cannot automatically collect modules without script path", async ({
-	expect,
-}) => {
-	const script = `export default {
-    async fetch() {
-      return new Response("body");
-    }
-  }`;
-
-	// Check can use modules `script`...
-	const mf = new Miniflare({
-		modules: true,
-		compatibilityDate: "2023-08-01",
-		script,
-	});
-	useDispose(mf);
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe("body");
-
-	// ...but only if it doesn't import
-	await expect(
-		mf.setOptions({
-			modules: true,
-			compatibilityDate: "2023-08-01",
-			script: `import dep from "./dep.mjs"; ${script}`,
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_MODULE_STRING_SCRIPT",
-			'Unable to resolve "script-0" dependency: imports are unsupported in string `script` without defined `scriptPath`'
-		)
-	);
-});
-test("Miniflare: cannot automatically collect modules from dynamic import expressions", async ({
-	expect,
-}) => {
-	// Check with dynamic import
-	const scriptPath = path.join(ROOT, "index-dynamic.mjs");
-	let mf = new Miniflare({
-		modules: true,
-		modulesRoot: ROOT,
-		modulesRules: [
-			// Implicitly testing default module rules for `ESModule`
-			{ type: "CommonJS", include: ["**/*.node.cjs", "**/*.cjs"] },
-			{ type: "Text", include: ["**/*.txt"] },
-			{ type: "Data", include: ["**/*.bin"] },
-			{ type: "CompiledWasm", include: ["**/*.wasm"] },
-		],
-		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat_v2"],
-		scriptPath,
-	});
-
-	let error: Error | undefined;
-	try {
-		await mf.ready;
-	} catch (e) {
-		error = e as Error;
-	}
-	assert(error !== undefined);
-	// Check message includes currently collected modules
-	let referencingPath = path.relative("", scriptPath);
-	expect(stripAnsi(error.message))
-		.toBe(`Unable to resolve "${referencingPath}" dependency: dynamic module specifiers are unsupported.
-You must manually define your modules when constructing Miniflare:
-  new Miniflare({
-    ...,
-    modules: [
-      { type: "ESModule", path: "index-dynamic.mjs" },
-      { type: "ESModule", path: "blobs-indirect.mjs" },
-      { type: "ESModule", path: "blobs.mjs" },
-      { type: "Text", path: "blobs/text.txt" },
-      { type: "Data", path: "blobs/data.bin" },
-      { type: "CommonJS", path: "index.cjs" },
-      { type: "CommonJS", path: "index.node.cjs" },
-      { type: "CompiledWasm", path: "add.wasm" },
-      ...
-    ]
-  })
-    at ${scriptPath}:14:15`);
-
-	// Check with dynamic require
-	mf = new Miniflare({
-		modules: true,
-		modulesRoot: ROOT,
-		compatibilityDate: "2023-08-01",
-		scriptPath,
-		script: `import "./dynamic-require.cjs";
-    export default {
-      fetch() { return new Response(); }
-    }`,
-	});
-	try {
-		await mf.ready;
-	} catch (e) {
-		error = e as Error;
-	}
-	assert(error !== undefined);
-	// Check message includes currently collected modules
-	const depPath = path.join(ROOT, "dynamic-require.cjs");
-	referencingPath = path.relative("", depPath);
-	expect(stripAnsi(error.message))
-		.toBe(`Unable to resolve "${referencingPath}" dependency: dynamic module specifiers are unsupported.
-You must manually define your modules when constructing Miniflare:
-  new Miniflare({
-    ...,
-    modules: [
-      { type: "ESModule", path: "index-dynamic.mjs" },
-      { type: "CommonJS", path: "dynamic-require.cjs" },
-      ...
-    ]
-  })
-    at ${depPath}:2:8`);
-});
 test("Miniflare: collects modules outside of working directory", async ({
 	expect,
 }) => {
 	// https://github.com/cloudflare/workers-sdk/issues/4721
+	// NOTE: The original test exercised `modulesRoot: ".."` path resolution for
+	// modules outside the cwd, which is removed in the new format. The module
+	// contents are read and inlined into the manifest instead; the
+	// outside-cwd path-resolution behaviour is no longer exercised.
 	const tmp = await useTmp();
 	const child = path.join(tmp, "child");
 	await fs.mkdir(child);
@@ -295,63 +356,44 @@ test("Miniflare: collects modules outside of working directory", async ({
 	useCwd(child);
 
 	const mf = new Miniflare({
-		modules: true,
-		modulesRoot: "..",
-		scriptPath: "../worker.mjs",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						await fs.readFile(path.join(tmp, "worker.mjs"), "utf8")
+					),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("body");
 });
-test("Miniflare: suggests bundling on unknown module", async ({ expect }) => {
-	// Try with npm-package-like import
-	// (please don't try bundle `miniflare` into a Worker script, you'll hurt its feelings)
-	let mf = new Miniflare({
-		modules: true,
-		compatibilityDate: "2023-08-01",
-		scriptPath: "index.mjs",
-		script: `import { Miniflare } from "miniflare";`,
-	});
-	await expect(mf.ready).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_MODULE_RULE",
-			`Unable to resolve "index.mjs" dependency "miniflare": no matching module rules.
-If you're trying to import an npm package, you'll need to bundle your Worker first.`
-		)
-	);
-
-	// Try with Node built-in module and `nodejs_compat` disabled
-	mf = new Miniflare({
-		modules: true,
-		compatibilityDate: "2023-08-01",
-		scriptPath: "index.mjs",
-		script: `import assert from "node:assert";`,
-	});
-	let error: MiniflareCoreError | undefined = undefined;
-	try {
-		await mf.ready;
-	} catch (e) {
-		error = e as MiniflareCoreError;
-	}
-	expect(error?.code).toBe("ERR_MODULE_RULE");
-	expect(error?.message).toMatch(
-		/^Unable to resolve "index\.mjs" dependency "node:assert": no matching module rules\.\nIf you're trying to import a Node\.js built-in module, or an npm package that uses Node\.js built-ins, you'll either need to:/
-	);
-});
 test("Miniflare: parses scripts containing `using` declarations", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		compatibilityDate: "2023-08-01",
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					manifest: singleModuleManifest(`export default {
   async fetch() {
     using handle = { [Symbol.dispose]() {} };
     void handle;
     return new Response("using parsed successfully");
   }
-};`,
+};`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -362,15 +404,22 @@ test("Miniflare: parses scripts containing `await using` declarations", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		compatibilityDate: "2023-08-01",
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					manifest: singleModuleManifest(`export default {
   async fetch() {
     await using handle = { async [Symbol.asyncDispose]() {} };
     void handle;
     return new Response("await using parsed successfully");
   }
-};`,
+};`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -380,9 +429,11 @@ test("Miniflare: parses scripts containing `await using` declarations", async ({
 test("Miniflare: parses source phase imports without error", async ({
 	expect,
 }) => {
+	// NOTE: The original test used `modulesRoot`/`modulesRules` auto-collection
+	// to load the worker + wasm from disk. Auto-collection is removed, so both
+	// modules are inlined into the manifest instead.
 	const tmp = await useTmp();
 	const wasmPath = path.join(tmp, "module.wasm");
-	const workerPath = path.join(tmp, "index.mjs");
 
 	// Create a minimal wasm file
 	await fs.writeFile(
@@ -390,26 +441,38 @@ test("Miniflare: parses source phase imports without error", async ({
 		Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])
 	);
 
-	// Create a worker that uses source phase import syntax
-	await fs.writeFile(
-		workerPath,
-		`import source wasmModule from "./module.wasm";
-export default {
-  async fetch() {
-    return new Response("source phase import parsed successfully");
-  }
-};`
-	);
-
 	// Verify the worker can be loaded without parse errors
 	// Note: workerd doesn't actually support source phase imports at runtime,
 	// but we need to ensure the parser doesn't fail on the syntax
 	const mf = new Miniflare({
-		modules: true,
-		modulesRoot: tmp,
-		modulesRules: [{ type: "CompiledWasm", include: ["**/*.wasm"] }],
-		compatibilityDate: "2023-08-01",
-		scriptPath: workerPath,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					manifest: {
+						mainModule: "index.mjs",
+						modulesRoot: tmp,
+						modules: {
+							"index.mjs": {
+								type: "esm",
+								contents: `import source wasmModule from "./module.wasm";
+export default {
+  async fetch() {
+    return new Response("source phase import parsed successfully");
+  }
+};`,
+							},
+							"module.wasm": {
+								type: "wasm",
+								contents: new Uint8Array(await fs.readFile(wasmPath)),
+							},
+						},
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 

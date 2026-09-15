@@ -35,6 +35,7 @@ import type {
 	CreatePipelineRequest,
 	CreateSinkRequest,
 	CreateStreamRequest,
+	JsonFormat,
 	ParquetFormat,
 	SchemaField,
 	Sink,
@@ -175,7 +176,12 @@ function displayR2CredentialsInstructions(accountId: string): void {
 	);
 }
 
-const COMPRESSION_CHOICES = [
+const JSON_COMPRESSION_CHOICES = [
+	{ title: "uncompressed", value: "uncompressed" },
+	{ title: "gzip", value: "gzip" },
+] as const;
+
+const PARQUET_COMPRESSION_CHOICES = [
 	{ title: "uncompressed", value: "uncompressed" },
 	{ title: "snappy", value: "snappy" },
 	{ title: "gzip", value: "gzip" },
@@ -183,9 +189,21 @@ const COMPRESSION_CHOICES = [
 	{ title: "lz4", value: "lz4" },
 ] as const;
 
-async function promptCompression(): Promise<string> {
+async function promptJsonCompression(): Promise<
+	NonNullable<JsonFormat["compression"]>
+> {
 	return select("Compression:", {
-		choices: [...COMPRESSION_CHOICES],
+		choices: [...JSON_COMPRESSION_CHOICES],
+		defaultOption: 0, // uncompressed
+		fallbackOption: 0,
+	});
+}
+
+async function promptParquetCompression(): Promise<
+	NonNullable<ParquetFormat["compression"]>
+> {
+	return select("Compression:", {
+		choices: [...PARQUET_COMPRESSION_CHOICES],
 		defaultOption: 3, // zstd
 		fallbackOption: 3,
 	});
@@ -862,8 +880,10 @@ async function setupR2Sink(
 		fallbackOption: 0,
 	});
 
-	const compression =
-		format === "parquet" ? await promptCompression() : undefined;
+	const formatConfig: SinkFormat =
+		format === "json"
+			? { type: "json", compression: await promptJsonCompression() }
+			: { type: "parquet", compression: await promptParquetCompression() };
 	const rollingPolicy = await promptRollingPolicy();
 
 	const useOAuth = await confirm(
@@ -892,18 +912,6 @@ async function setupR2Sink(
 	} else {
 		displayR2CredentialsInstructions(accountId);
 		credentials = await promptR2Credentials(accountId, bucket);
-	}
-
-	let formatConfig: SinkFormat;
-	if (format === "json") {
-		formatConfig = { type: "json" };
-	} else {
-		formatConfig = {
-			type: "parquet",
-			...(compression && {
-				compression: compression as ParquetFormat["compression"],
-			}),
-		};
 	}
 
 	setupConfig.sinkConfig = {
@@ -963,7 +971,7 @@ async function setupDataCatalogSink(
 	displayCatalogTokenInstructions(accountId);
 	const token = await promptCatalogToken(config, accountId, bucket);
 
-	const compression = await promptCompression();
+	const compression = await promptParquetCompression();
 	// R2 Data Catalog sinks require minimum 60 second intervals to prevent compaction issues
 	const rollingPolicy = await promptRollingPolicy({
 		minIntervalSeconds: SINK_DEFAULTS.rolling_policy.min_interval_seconds,
@@ -974,7 +982,7 @@ async function setupDataCatalogSink(
 		type: "r2_data_catalog",
 		format: {
 			type: "parquet",
-			compression: compression as ParquetFormat["compression"],
+			compression,
 		},
 		config: {
 			bucket,
@@ -1139,10 +1147,7 @@ async function reviewAndCreateStreamSink(
 
 	if (setupConfig.sinkConfig.type === "r2") {
 		const format = setupConfig.sinkConfig.format?.type || "parquet";
-		const compression =
-			setupConfig.sinkConfig.format?.type === "parquet"
-				? (setupConfig.sinkConfig.format as ParquetFormat).compression || ""
-				: "";
+		const compression = setupConfig.sinkConfig.format?.compression || "";
 		logger.log(`  Sink      ${setupConfig.sinkName}`);
 		logger.log(
 			chalk.dim(

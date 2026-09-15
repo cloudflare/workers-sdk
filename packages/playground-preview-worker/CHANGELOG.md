@@ -1,5 +1,17 @@
 # playground-preview-worker
 
+## 0.3.4
+
+### Patch Changes
+
+- [#15588](https://github.com/cloudflare/workers-sdk/pull/15588) [`bb741ac`](https://github.com/cloudflare/workers-sdk/commit/bb741acc468666cc7bcec6b915ac115168b82d36) Thanks [@penalosa](https://github.com/penalosa)! - Preview updates
+
+## 0.3.3
+
+### Patch Changes
+
+- [#14707](https://github.com/cloudflare/workers-sdk/pull/14707) [`b38f494`](https://github.com/cloudflare/workers-sdk/commit/b38f494204e5e08e561b8f198ef928188e554868) Thanks [@emily-shen](https://github.com/emily-shen)! - Update zod to v4
+
 ## 0.3.2
 
 ### Patch Changes

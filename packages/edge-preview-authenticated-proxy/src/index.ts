@@ -2,6 +2,34 @@ import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import cookie from "cookie";
 import { Toucan } from "toucan-js";
 
+const PREVIEW_COOKIE_NAME = "__Host-token";
+
+interface PreviewTokenRecord {
+	token: string;
+	remote: string;
+	hostname: string;
+}
+
+async function pushMetrics(env: Env, metrics: string) {
+	try {
+		const response = await env.WSHIM_SOCKET.fetch(
+			"https://workers-logging.cfdata.org/prometheus",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
+				},
+				body: metrics,
+			}
+		);
+		if (!response.ok) {
+			console.error(`Failed to push metrics: ${response.status}`);
+		}
+	} catch (error) {
+		console.error("Failed to push metrics", error);
+	}
+}
+
 class HttpError extends Error {
 	constructor(
 		message: string,
@@ -59,6 +87,12 @@ class TokenUpdateFailed extends HttpError {
 	}
 }
 
+class InvalidPreviewHostname extends HttpError {
+	constructor() {
+		super("Preview token updates require a per-preview hostname", 400, false);
+	}
+}
+
 class RawHttpFailed extends HttpError {
 	constructor() {
 		super("Provide token, and remote", 400, false);
@@ -112,8 +146,26 @@ function isTokenExchangeRequest(request: Request, url: URL, env: Env) {
 function isPreviewUpdateRequest(request: Request, url: URL, env: Env) {
 	return (
 		request.method === "GET" &&
-		url.hostname.endsWith(env.PREVIEW) &&
+		(url.hostname === env.PREVIEW ||
+			url.hostname.endsWith(`.${env.PREVIEW}`)) &&
 		url.pathname === "/.update-preview-token"
+	);
+}
+
+function isPerPreviewHostname(hostname: string, previewHostname: string) {
+	return hostname.endsWith(`.${previewHostname}`);
+}
+
+function isPreviewTokenRecord(value: unknown): value is PreviewTokenRecord {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+
+	const record = value as Record<string, unknown>;
+	return (
+		typeof record.token === "string" &&
+		typeof record.remote === "string" &&
+		typeof record.hostname === "string"
 	);
 }
 
@@ -129,6 +181,9 @@ async function handleRequest(request: Request, env: Env) {
 	}
 
 	if (isPreviewUpdateRequest(request, url, env)) {
+		if (!isPerPreviewHostname(url.hostname, env.PREVIEW)) {
+			throw new InvalidPreviewHostname();
+		}
 		return await updatePreviewToken(url, env);
 	}
 
@@ -144,15 +199,19 @@ async function handleRequest(request: Request, env: Env) {
 	 */
 	const parsedCookies = cookie.parse(request.headers.get("Cookie") ?? "");
 
-	const tokenId = parsedCookies?.token;
+	const tokenId = parsedCookies[PREVIEW_COOKIE_NAME];
 
-	const { token, remote } = JSON.parse(
+	const tokenRecord: unknown = JSON.parse(
 		(await env.TOKEN_LOOKUP.get(tokenId)) ?? "{}"
 	);
-	if (!token || !remote) {
+	if (
+		!isPreviewTokenRecord(tokenRecord) ||
+		tokenRecord.hostname !== url.hostname
+	) {
 		// Report this error if a tokenId was provided
 		throw new PreviewRequestFailed(tokenId, !!tokenId);
 	}
+	const { token, remote } = tokenRecord;
 
 	const original = await fetch(
 		switchRemote(url, remote),
@@ -305,21 +364,25 @@ async function updatePreviewToken(url: URL, env: Env) {
 
 	const tokenId = crypto.randomUUID();
 
-	await env.TOKEN_LOOKUP.put(tokenId, JSON.stringify({ token, remote }), {
-		// A preview token should only be valid for an hour.
-		// Store it for 2 just in case
-		expirationTtl: 60 * 60 * 2,
-	});
+	await env.TOKEN_LOOKUP.put(
+		tokenId,
+		JSON.stringify({ token, remote, hostname: url.hostname }),
+		{
+			// A preview token should only be valid for an hour.
+			// Store it for 2 just in case
+			expirationTtl: 60 * 60 * 2,
+		}
+	);
 
 	return new Response(null, {
 		status: 307,
 		headers: {
 			Location: url.searchParams.get("suffix") ?? "/",
-			"Set-Cookie": cookie.serialize("token", tokenId, {
+			"Set-Cookie": cookie.serialize(PREVIEW_COOKIE_NAME, tokenId, {
 				secure: true,
 				sameSite: "none",
 				httpOnly: true,
-				domain: url.hostname,
+				path: "/",
 				partitioned: true,
 			}),
 		},
@@ -439,15 +502,7 @@ export default {
 				);
 			}
 		} finally {
-			ctx.waitUntil(
-				fetch("https://workers-logging.cfdata.org/prometheus", {
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
-					},
-					body: registry.metrics(),
-				})
-			);
+			ctx.waitUntil(pushMetrics(env, registry.metrics()));
 		}
 	},
 };

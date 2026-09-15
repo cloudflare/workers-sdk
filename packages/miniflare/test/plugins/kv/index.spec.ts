@@ -2,12 +2,10 @@ import assert from "node:assert";
 import { Blob } from "node:buffer";
 import fs from "node:fs/promises";
 import path from "node:path";
-import consumers from "node:stream/consumers";
 import { KV_PLUGIN_NAME, MAX_BULK_GET_KEYS, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, test } from "vitest";
 import {
 	createJunkStream,
-	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
@@ -50,7 +48,16 @@ interface Context extends MiniflareTestContext {
 }
 
 const opts: Partial<MiniflareOptions> = {
-	kvNamespaces: { NAMESPACE: "namespace" },
+	workers: [
+		{
+			config: {
+				type: "worker",
+				name: "",
+				compatibilityDate: "2025-05-01",
+				env: { NAMESPACE: { type: "kv", id: "namespace" } },
+			},
+		},
+	],
 };
 const ctx = miniflareTest<unknown, Context>(opts, async (global) => {
 	return new global.Response(null, { status: 404 });
@@ -332,6 +339,30 @@ test("put: puts empty value", async ({ expect }) => {
 	await kv.put("key", "");
 	const value = await kv.get("key");
 	expect(value).toBe("");
+});
+
+test("bulk get: check metadata for falsy values", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key1", "", { metadata: { testing: true } });
+
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "", metadata: { testing: true } }],
+	]);
+	expect(result).toEqual(expectedResult);
+});
+
+test("bulk get: check metadata for falsy json values", async ({ expect }) => {
+	const { kv } = ctx;
+	await kv.put("key1", "0", { metadata: { testing: "zero" } });
+	await kv.put("key2", "false", { metadata: { testing: "false" } });
+
+	const result: any = await kv.getWithMetadata(["key1", "key2"], "json");
+	const expectedResult: any = new Map([
+		["key1", { value: 0, metadata: { testing: "zero" } }],
+		["key2", { value: false, metadata: { testing: "false" } }],
+	]);
+	expect(result).toEqual(expectedResult);
 });
 test("put: overrides existing keys", async ({ expect }) => {
 	const { kv, ns, object } = ctx;
@@ -750,14 +781,32 @@ test("list: validates limit", async ({ expect }) => {
 
 test("persists in-memory between options reloads", async ({ expect }) => {
 	const opts = {
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: {
+						mainModule: "index.mjs",
+						modules: {
+							"index.mjs": {
+								type: "esm",
+								contents: `export default {
       async fetch(request, env) {
         return Response.json({ version: env.VERSION, key: await env.NAMESPACE.get("key") });
       }
     }`,
-		bindings: { VERSION: 1 },
-		kvNamespaces: { NAMESPACE: "namespace" },
+							},
+						},
+					},
+					env: {
+						VERSION: { type: "json", value: 1 },
+						NAMESPACE: { type: "kv", id: "namespace" },
+					},
+				},
+			},
+		],
 	} satisfies MiniflareOptions;
 	const mf1 = new Miniflare(opts);
 	useDispose(mf1);
@@ -767,13 +816,13 @@ test("persists in-memory between options reloads", async ({ expect }) => {
 	let res = await mf1.dispatchFetch("http://placeholder");
 	expect(await res.json()).toEqual({ version: 1, key: "value1" });
 
-	opts.bindings.VERSION = 2;
+	opts.workers[0].config.env.VERSION.value = 2;
 	await mf1.setOptions(opts);
 	res = await mf1.dispatchFetch("http://placeholder");
 	expect(await res.json()).toEqual({ version: 2, key: "value1" });
 
 	// Check a `new Miniflare()` instance has its own in-memory storage
-	opts.bindings.VERSION = 3;
+	opts.workers[0].config.env.VERSION.value = 3;
 	const mf2 = new Miniflare(opts);
 	useDispose(mf2);
 	const kv2 = await mf2.getKVNamespace("NAMESPACE");
@@ -787,10 +836,21 @@ test("persists in-memory between options reloads", async ({ expect }) => {
 test("persists on file-system", async ({ expect }) => {
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
-		modules: true,
-		script: "",
-		kvNamespaces: { NAMESPACE: "namespace" },
-		kvPersist: tmp,
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: {
+						mainModule: "index.mjs",
+						modules: { "index.mjs": { type: "esm", contents: "" } },
+					},
+					env: { NAMESPACE: { type: "kv", id: "namespace" } },
+				},
+			},
+		],
 	};
 	let mf = new Miniflare(opts);
 	useDispose(mf);
@@ -799,8 +859,8 @@ test("persists on file-system", async ({ expect }) => {
 	await kv.put("key", "value");
 	expect(await kv.get("key")).toBe("value");
 
-	// Check directory created for namespace
-	const names = await fs.readdir(tmp);
+	// Check directory created for namespace under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, KV_PLUGIN_NAME));
 	expect(names.includes("miniflare-KVNamespaceObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data
@@ -809,64 +869,4 @@ test("persists on file-system", async ({ expect }) => {
 	useDispose(mf);
 	kv = await mf.getKVNamespace("NAMESPACE");
 	expect(await kv.get("key")).toBe("value");
-});
-
-test("migrates database to new location", async ({ expect }) => {
-	// Copy legacy data to temporary directory
-	const tmp = await useTmp();
-	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
-	const kvPersist = path.join(tmp, "kv");
-	await fs.cp(path.join(persistFixture, "kv"), kvPersist, { recursive: true });
-
-	// Implicitly migrate data
-	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		kvNamespaces: ["NAMESPACE"],
-		kvPersist,
-	});
-	useDispose(mf);
-
-	const namespace = await mf.getKVNamespace("NAMESPACE");
-	expect(await namespace.get("key")).toBe("value");
-});
-
-test("sticky blobs never deleted", async ({ expect }) => {
-	// Checking regular behaviour that old blobs deleted in `put: overrides
-	// existing keys` test. Only testing sticky blobs for KV, as the blob store
-	// should only be constructed in the shared `MiniflareDurableObject` ABC.
-
-	// Create instance with sticky blobs enabled (can't use `ctx.mf`)
-	const mf = new Miniflare({
-		script: "",
-		modules: true,
-		kvNamespaces: ["NAMESPACE"],
-		unsafeStickyBlobs: true,
-	});
-	useDispose(mf);
-
-	// Create control stub for newly created instance's namespace
-	const objectNamespace = await mf._getInternalDurableObjectNamespace(
-		KV_PLUGIN_NAME,
-		"kv:ns",
-		"KVNamespaceObject"
-	);
-	const objectId = objectNamespace.idFromName("NAMESPACE");
-	const objectStub = objectNamespace.get(objectId);
-	const object = new MiniflareDurableObjectControlStub(objectStub);
-	await object.enableFakeTimers(secondsToMillis(TIME_NOW));
-	const stmts = sqlStmts(object);
-
-	// Store something in the namespace and get the blob ID
-	const ns = await mf.getKVNamespace("NAMESPACE");
-	await ns.put("key", "value 1");
-	const blobId = await stmts.getBlobIdByKey("key");
-	assert(blobId !== undefined);
-
-	// Override key and check we can still access the old blob
-	await ns.put("key", "value 2");
-	await object.waitForFakeTasks();
-	const blob = await object.getBlob(blobId);
-	assert(blob !== null);
-	expect(await consumers.text(blob)).toBe("value 1");
 });

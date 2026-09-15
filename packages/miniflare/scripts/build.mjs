@@ -97,6 +97,18 @@ const localExplorerWorkerPath = path.join(
 	"local-explorer",
 	"explorer.worker.ts"
 );
+const assetWorkerPaths = new Set([
+	path.join(workersRoot, "assets", "assets.worker.ts"),
+	path.join(workersRoot, "assets", "router.worker.ts"),
+]);
+const workersSharedSentryPath = path.join(
+	pkgRoot,
+	"..",
+	"workers-shared",
+	"utils",
+	"sentry.ts"
+);
+const noopSentryPath = path.join(workersRoot, "assets", "sentry-noop.ts");
 
 /**
  * Test fixtures that need to be transpiled by esbuild as part of the build.
@@ -104,6 +116,7 @@ const localExplorerWorkerPath = path.join(
  */
 const fixtureBuilds = [
 	path.join(pkgRoot, "test/fixtures/unsafe-plugin/index.ts"),
+	path.join(pkgRoot, "test/fixtures/echo-plugin/index.ts"),
 ];
 
 /**
@@ -123,6 +136,47 @@ const rewriteNodeToInternalPlugin = {
 			const module = args.path.substring("node:".length);
 			return { path: `node-internal:internal_${module}`, external: true };
 		});
+	},
+};
+
+/**
+ * Replaces the production Sentry setup used by the asset and router Workers.
+ * Miniflare never binds the required Sentry credentials, so the production
+ * implementation always returns before initialising Toucan.
+ *
+ * @type {esbuild.Plugin}
+ */
+const noopSentryPlugin = {
+	name: "noop-sentry",
+	setup(build) {
+		build.onResolve({ filter: /sentry(?:\.ts)?$/ }, (args) => {
+			const importPath = path.resolve(args.resolveDir, args.path);
+			if (
+				importPath === workersSharedSentryPath ||
+				`${importPath}.ts` === workersSharedSentryPath
+			) {
+				return { path: noopSentryPath };
+			}
+		});
+	},
+};
+
+/**
+ * esbuild plugin that redirects Zod imports to the shared workerd extension.
+ *
+ * Without this, every embedded worker importing Zod gets its own copy of the
+ * library. Keeping the rewrite here also covers imports from generated code and
+ * workspace packages bundled into Miniflare's workers.
+ *
+ * @type {esbuild.Plugin}
+ */
+const aliasZodToMiniflareExtensionPlugin = {
+	name: "alias-zod-to-miniflare-extension",
+	setup(build) {
+		build.onResolve({ filter: /^zod$/ }, () => ({
+			external: true,
+			path: "miniflare:zod",
+		}));
 	},
 };
 
@@ -197,12 +251,19 @@ const embedWorkersPlugin = {
 					minifySyntax: true,
 					outdir: build.initialOptions.outdir,
 					outbase: pkgRoot,
-					// Shared extension workers need node:* → node-internal:*
-					plugins:
-						args.path === miniflareSharedExtensionPath ||
+					plugins: [
+						// Shared extension workers need node:* → node-internal:*
+						...(args.path === miniflareSharedExtensionPath ||
 						args.path === miniflareZodExtensionPath
 							? [rewriteNodeToInternalPlugin]
-							: [],
+							: []),
+						...(assetWorkerPaths.has(args.path) ? [noopSentryPlugin] : []),
+						// The Zod extension must bundle the real package, while all other
+						// workers import that single shared copy.
+						...(args.path === miniflareZodExtensionPath
+							? []
+							: [aliasZodToMiniflareExtensionPlugin]),
+					],
 					// Inject SPARROW_SOURCE_KEY for the local explorer telemetry
 					define:
 						args.path === localExplorerWorkerPath

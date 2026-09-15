@@ -1,9 +1,11 @@
 import { describe, it } from "vitest";
 import {
+	isValidAddressableWorkflowInstanceId,
 	isValidStepConfig,
 	isValidStepName,
 	isValidWorkflowInstanceId,
 	isValidWorkflowName,
+	MAX_ADDRESSABLE_WORKFLOW_INSTANCE_ID_LENGTH,
 	MAX_STEP_NAME_LENGTH,
 	MAX_WORKFLOW_INSTANCE_ID_LENGTH,
 	MAX_WORKFLOW_NAME_LENGTH,
@@ -56,6 +58,30 @@ describe("Workflow instance ID validation", () => {
 	});
 });
 
+describe("Addressable Workflow instance ID validation", () => {
+	it.for([
+		"",
+		NaN,
+		undefined,
+		"w".repeat(MAX_ADDRESSABLE_WORKFLOW_INSTANCE_ID_LENGTH + 1),
+		"invalid!",
+		"0 0 * * MON?2-1786001400000",
+	])("should reject invalid IDs", (value, { expect }) => {
+		expect(isValidAddressableWorkflowInstanceId(value as string)).toBe(false);
+	});
+
+	it.for([
+		"abc",
+		"*/30 * * * *-1786001400000",
+		"0 0 * * MON#2-1786001400000",
+		"0 0 1,15 * *-1786001400000",
+		"NAME_123-/cron",
+		"w".repeat(MAX_ADDRESSABLE_WORKFLOW_INSTANCE_ID_LENGTH),
+	])("should accept valid IDs", (value, { expect }) => {
+		expect(isValidAddressableWorkflowInstanceId(value)).toBe(true);
+	});
+});
+
 describe("Workflow instance step name validation", () => {
 	it.for(["\x00", "w".repeat(MAX_STEP_NAME_LENGTH + 1)])(
 		"should reject invalid names",
@@ -96,6 +122,8 @@ describe("Workflow step config validation", () => {
 			retries: { limit: 3, delay: 10, backoff: "constant" },
 			timeout: 0,
 		},
+		{ timeout: "5 minutes", sensitive: "all" },
+		{ timeout: "5 minutes", sensitive: true },
 	])("should reject invalid step configs", (value, { expect }) => {
 		expect(isValidStepConfig(value)).toBe(false);
 	});
@@ -116,6 +144,11 @@ describe("Workflow step config validation", () => {
 		{
 			retries: { limit: 5, delay: 0, backoff: "constant" },
 			timeout: "2 minutes",
+		},
+		{
+			retries: { limit: 3, delay: 10, backoff: "constant" },
+			timeout: "2 minutes",
+			sensitive: "output",
 		},
 	])("should accept valid step configs", (value, { expect }) => {
 		expect(isValidStepConfig(value)).toBe(true);

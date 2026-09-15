@@ -5,6 +5,7 @@
 
 export type {
 	Bindings,
+	BindingDevOptions,
 	AgentMemoryBinding,
 	AiBinding,
 	AiSearchBinding,
@@ -34,25 +35,23 @@ export type {
 	StreamBinding,
 	TextBinding,
 	TypedAiBinding,
-	TypedDurableObjectBinding,
 	TypedKvBinding,
 	TypedPipelineBinding,
 	TypedQueueBinding,
-	TypedWorkerBinding,
-	TypedWorkflowBinding,
 	UnsafeBinding,
 	VectorizeBinding,
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
-	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
+	WorkerReference,
 	WorkflowBinding,
 } from "./bindings";
 export { bindings } from "./bindings";
 export type {
 	Triggers,
+	ConnectTrigger,
 	EmailTrigger,
 	FetchTrigger,
 	QueueConsumerTrigger,
@@ -76,10 +75,20 @@ export type {
 	InferMainModule,
 	UnwrapConfig,
 } from "./inference";
-export type { UserConfig } from "./types";
+export type { ConfigContext } from "./definition";
+export type { ContainerConfig, SettingsConfig, WorkerConfig } from "./types";
 export type {
-	ConfigContext,
-	TypedWorkerDefinition,
-	UserConfigExport,
+	ContainerConfigExport,
+	ContainerConfigInput,
+} from "./container-definition";
+export { defineContainer } from "./container-definition";
+export type {
+	WorkerConfigExport,
+	WorkerConfigInput,
 } from "./worker-definition";
 export { defineWorker } from "./worker-definition";
+export type {
+	SettingsConfigExport,
+	SettingsConfigInput,
+} from "./settings-definition";
+export { defineSettings } from "./settings-definition";

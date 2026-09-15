@@ -1,3 +1,4 @@
+import { FormData } from "undici";
 import { fetchResult } from "../shared/context";
 import type {
 	CfWorkerInit,
@@ -23,6 +24,7 @@ export interface Binding {
 	database_name?: string;
 	bucket_name?: string;
 	index_name?: string;
+	instance_name?: string;
 	id?: string;
 	service?: string;
 	dataset?: string;
@@ -79,17 +81,28 @@ export interface DeploymentResource {
 	limits?: CfUserLimits;
 	placement?: CfPlacement;
 	cache?: CacheOptions;
+	annotations?: {
+		"workers/commit_sha"?: string;
+		"workers/message"?: string;
+		"workers/pull_request_number"?: string;
+		"workers/pull_request_title"?: string;
+		"workers/pull_request_url"?: string;
+		"workers/repository_url"?: string;
+		"workers/tag"?: string;
+	};
 	env?: EnvBindings;
 	created_on: string;
 }
 
+export type PreviewDeploymentModule = {
+	name: string;
+	content_type: string;
+	content: string | Uint8Array;
+};
+
 export type CreatePreviewDeploymentRequestParams = {
 	main_module?: string;
-	modules?: Array<{
-		name: string;
-		content_type: string;
-		content_base64: string;
-	}>;
+	modules?: PreviewDeploymentModule[];
 	assets?: {
 		jwt: string;
 		config: {
@@ -100,8 +113,14 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	compatibility_date?: string;
 	compatibility_flags?: string[];
+	exports?: CfWorkerInit["exports"];
 	annotations?: {
+		"workers/commit_sha"?: string;
 		"workers/message"?: string;
+		"workers/pull_request_number"?: string;
+		"workers/pull_request_title"?: string;
+		"workers/pull_request_url"?: string;
+		"workers/repository_url"?: string;
 		"workers/tag"?: string;
 	};
 	migrations?: CfWorkerInit["migrations"];
@@ -109,6 +128,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	placement?: CfPlacement;
 	cache?: CacheOptions;
 	env?: EnvBindings;
+	containers?: Array<{ class_name: string }>;
 };
 
 export type CreatePreviewRequestParams = {
@@ -124,10 +144,10 @@ export type UpdatePreviewRequestParams = Omit<
 >;
 
 export type PreviewRequestOptions = {
-	ignoreDefaults?: boolean;
+	ignoreBaseConfig?: boolean;
 };
 
-export type PreviewDefaults = {
+export type PreviewBaseConfig = {
 	observability?: Observability;
 	logpush?: boolean;
 	limits?: CfUserLimits;
@@ -137,13 +157,34 @@ export type PreviewDefaults = {
 	env?: EnvBindings;
 };
 
-export type PreviewDefaultsPatch = Partial<Omit<PreviewDefaults, "env">> & {
+export type PreviewBaseConfigPatch = Partial<Omit<PreviewBaseConfig, "env">> & {
 	env?: Record<string, Binding | null>;
 };
 
-type WorkerPreviewDefaultsResource = {
-	preview_defaults?: PreviewDefaults;
+type WorkerPreviewBaseConfigResource = {
+	previews_base_config?: PreviewBaseConfig;
 };
+
+/** Create an undeployed Worker that can own Preview resources. */
+export async function createPreviewParentWorker(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	workersDevEnabled: boolean,
+	previewsEnabled: boolean
+): Promise<void> {
+	await fetchResult(config, `/accounts/${accountId}/workers/workers`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			name: workerName,
+			subdomain: {
+				enabled: workersDevEnabled,
+				previews_enabled: previewsEnabled,
+			},
+		}),
+	});
+}
 
 export async function getPreview(
 	config: Config,
@@ -166,8 +207,8 @@ export async function createPreview(
 	request: CreatePreviewRequestParams,
 	options?: PreviewRequestOptions
 ): Promise<PreviewResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
+	const queryParams = options?.ignoreBaseConfig
+		? new URLSearchParams({ ignore_base_config: "true" })
 		: undefined;
 
 	return fetchResult<PreviewResource>(
@@ -187,13 +228,8 @@ export async function editPreview(
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	request: UpdatePreviewRequestParams,
-	options?: PreviewRequestOptions
+	request: UpdatePreviewRequestParams
 ): Promise<PreviewResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
-		: undefined;
-
 	return fetchResult<PreviewResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
@@ -203,8 +239,7 @@ export async function editPreview(
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(request),
-		},
-		queryParams
+		}
 	);
 }
 
@@ -230,7 +265,7 @@ export async function getPreviewDeployment(
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	deploymentIdentifier: string
+	deploymentIdentifier = "latest"
 ): Promise<DeploymentResource> {
 	return fetchResult<DeploymentResource>(
 		config,
@@ -240,18 +275,33 @@ export async function getPreviewDeployment(
 	);
 }
 
+/**
+ * Encode preview deployment metadata and raw module files as multipart form data.
+ */
+export function createPreviewDeploymentForm(
+	request: Partial<CreatePreviewDeploymentRequestParams>
+): FormData {
+	const { modules, ...metadata } = request;
+	const formData = new FormData();
+	formData.set("metadata", JSON.stringify(metadata));
+
+	for (const module of modules ?? []) {
+		formData.append(
+			"files",
+			new File([module.content], module.name, { type: module.content_type })
+		);
+	}
+
+	return formData;
+}
+
 export async function createPreviewDeployment(
 	config: Config,
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	request: Partial<CreatePreviewDeploymentRequestParams>,
-	options?: PreviewRequestOptions
+	request: Partial<CreatePreviewDeploymentRequestParams>
 ): Promise<DeploymentResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
-		: undefined;
-
 	return fetchResult<DeploymentResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
@@ -259,40 +309,64 @@ export async function createPreviewDeployment(
 		)}/deployments`,
 		{
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(request),
-		},
-		queryParams
+			// Let undici set Content-Type with the generated multipart boundary.
+			body: createPreviewDeploymentForm(request),
+		}
 	);
 }
 
-export async function getWorkerPreviewDefaults(
-	config: Config,
-	accountId: string,
-	workerName: string
-): Promise<PreviewDefaults> {
-	const worker = await fetchResult<WorkerPreviewDefaultsResource>(
-		config,
-		`/accounts/${accountId}/workers/workers/${workerName}`
-	);
-	return worker.preview_defaults ?? {};
-}
-
-export async function editWorkerPreviewDefaults(
+export async function patchPreviewDeployment(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewDefaults: PreviewDefaultsPatch
-): Promise<PreviewDefaults> {
-	const worker = await fetchResult<WorkerPreviewDefaultsResource>(
+	previewIdentifier: string,
+	env: Record<string, Binding | null>,
+	annotations?: {
+		"workers/message"?: string;
+		"workers/tag"?: string;
+	},
+	deploymentIdentifier = "latest"
+): Promise<DeploymentResource> {
+	return fetchResult<DeploymentResource>(
+		config,
+		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
+			previewIdentifier
+		)}/deployments/${encodeURIComponent(deploymentIdentifier)}`,
+		{
+			method: "PATCH",
+			headers: { "Content-Type": "application/merge-patch+json" },
+			body: JSON.stringify({ env, annotations }),
+		}
+	);
+}
+
+export async function getPreviewBaseConfig(
+	config: Config,
+	accountId: string,
+	workerName: string
+): Promise<PreviewBaseConfig> {
+	const worker = await fetchResult<WorkerPreviewBaseConfigResource>(
+		config,
+		`/accounts/${accountId}/workers/workers/${workerName}`
+	);
+	return worker.previews_base_config ?? {};
+}
+
+export async function patchPreviewBaseConfig(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	previewBaseConfig: PreviewBaseConfigPatch
+): Promise<PreviewBaseConfig> {
+	const worker = await fetchResult<WorkerPreviewBaseConfigResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}`,
 		{
 			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ preview_defaults: previewDefaults }),
+			headers: { "Content-Type": "application/merge-patch+json" },
+			body: JSON.stringify({ previews_base_config: previewBaseConfig }),
 		}
 	);
 
-	return worker.preview_defaults ?? {};
+	return worker.previews_base_config ?? {};
 }

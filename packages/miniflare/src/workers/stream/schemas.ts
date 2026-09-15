@@ -1,3 +1,5 @@
+import { CorePaths } from "../core/constants";
+
 export const SQL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS _mf_stream_videos (
   id                      TEXT PRIMARY KEY,
@@ -130,7 +132,7 @@ export type DownloadRow = {
 
 export function rowToStreamVideo(row: VideoRow, entryUrl: URL): StreamVideo {
 	const placeholderUrl = `https://customer-placeholder.cloudflarestream.com/${row.id}`;
-	const videoUrl = `${entryUrl.origin}/cdn-cgi/mf/stream/${row.id}/watch`;
+	const videoUrl = `${entryUrl.origin}${CorePaths.STREAM_VIDEO}/${row.id}/watch`;
 	return {
 		id: row.id,
 		creator: row.creator,

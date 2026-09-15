@@ -1,4 +1,16 @@
-import type { WorkerOptions } from "./plugins";
+import type { V4SourceOptions, V4WorkerOptionsShape } from "./config/v4-schema";
+
+export type KnownKeys<T> = {
+	[K in keyof T as string extends K
+		? never
+		: number extends K
+			? never
+			: symbol extends K
+				? never
+				: K]: T[K];
+};
+export type LegacyWorkerOptions = KnownKeys<V4WorkerOptionsShape> &
+	V4SourceOptions;
 
 // https://github.com/Rich-Harris/devalue/blob/50af63e2b2c648f6e6ea29904a14faac25a581fc/src/utils.js#L31-L51
 const objectProtoNames = Object.getOwnPropertyNames(Object.prototype)
@@ -25,18 +37,21 @@ type ArrayRecordKeys<O extends object, K extends keyof O> = K extends unknown
 	: never;
 // "kvNamespaces" | "r2Buckets" | "queueProducers" | "queueConsumers" | ...
 type WorkerOptionsArrayRecordKeys = Exclude<
-	ArrayRecordKeys<WorkerOptions, keyof WorkerOptions>,
+	ArrayRecordKeys<LegacyWorkerOptions, keyof LegacyWorkerOptions>,
 	"unsafeBindings"
 >;
 // Get the record type that can be used for key `K` in `WorkerOptions`
 type WorkerOptionsRecord<K extends WorkerOptionsArrayRecordKeys> = Extract<
-	WorkerOptions[K],
+	LegacyWorkerOptions[K],
 	Record<string, unknown>
 >;
 /** Converts the array-form of key `K` in `WorkerOptions` to its object form */
 function convertWorkerOptionsArrayToObject<
 	K extends WorkerOptionsArrayRecordKeys,
->(key: K, array: Extract<WorkerOptions[K], unknown[]>): WorkerOptionsRecord<K> {
+>(
+	key: K,
+	array: Extract<LegacyWorkerOptions[K], unknown[]>
+): WorkerOptionsRecord<K> {
 	const _: string[] = array; // Static assert that `array` is a `string[]`
 	if (key === "queueConsumers") {
 		// Unfortunately, we can't just `return Object.fromEntries(...)` here, as
@@ -62,9 +77,9 @@ function convertWorkerOptionsArrayToObject<
  * will be overwritten.
  */
 export function mergeWorkerOptions(
-	/* mut */ a: Partial<WorkerOptions>,
-	b: Partial<WorkerOptions>
-): Partial<WorkerOptions> {
+	/* mut */ a: Partial<LegacyWorkerOptions>,
+	b: Partial<LegacyWorkerOptions>
+): Partial<LegacyWorkerOptions> {
 	const aRecord = a as Record<string, unknown>;
 	for (const [key, bValue] of Object.entries(b)) {
 		const aValue = aRecord[key];

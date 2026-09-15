@@ -133,6 +133,18 @@ describe("getAndValidateRegistryType - GAR", () => {
 	});
 });
 
+describe("getAndValidateRegistryType - Cloudflare managed registry", () => {
+	it("recognizes the FedRAMP High managed registry from Wrangler config", ({
+		expect,
+	}) => {
+		expect(
+			getAndValidateRegistryType("registry.fed.cloudflare.com", {
+				compliance_region: "fedramp_high",
+			}).type
+		).toBe("cloudflare");
+	});
+});
+
 describe("validateAndEncodeGarKey", () => {
 	it("base64-encodes a raw JSON key when the email matches", ({ expect }) => {
 		expect(validateAndEncodeGarKey(serviceAccountKey, clientEmail)).toBe(

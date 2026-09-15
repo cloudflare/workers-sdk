@@ -37,6 +37,98 @@ export function splitSqlQuery(sql: string): string[] {
 	}
 }
 
+/**
+ * Normalize structural CRLF line endings without changing quoted SQL values or
+ * identifiers.
+ */
+export function normalizeSqlLineEndings(sql: string): string {
+	let normalized = "";
+	let quoteEnd: "'" | '"' | "`" | "]" | undefined;
+	let inLineComment = false;
+	let inBlockComment = false;
+
+	for (let index = 0; index < sql.length; index++) {
+		const char = sql[index];
+		const nextChar = sql[index + 1];
+
+		if (quoteEnd !== undefined) {
+			normalized += char;
+			if (char === quoteEnd) {
+				if (nextChar === quoteEnd) {
+					normalized += nextChar;
+					index++;
+				} else {
+					quoteEnd = undefined;
+				}
+			}
+			continue;
+		}
+
+		if (inLineComment) {
+			if (char === "\r" && nextChar === "\n") {
+				normalized += "\n";
+				index++;
+				inLineComment = false;
+			} else {
+				normalized += char;
+				inLineComment = char !== "\n";
+			}
+			continue;
+		}
+
+		if (inBlockComment) {
+			if (char === "\r" && nextChar === "\n") {
+				normalized += "\n";
+				index++;
+			} else {
+				normalized += char;
+				if (char === "*" && nextChar === "/") {
+					normalized += nextChar;
+					index++;
+					inBlockComment = false;
+				}
+			}
+			continue;
+		}
+
+		if (char === "-" && nextChar === "-") {
+			normalized += "--";
+			index++;
+			inLineComment = true;
+			continue;
+		}
+
+		if (char === "/" && nextChar === "*") {
+			normalized += "/*";
+			index++;
+			inBlockComment = true;
+			continue;
+		}
+
+		if (char === "'" || char === '"' || char === "`") {
+			normalized += char;
+			quoteEnd = char;
+			continue;
+		}
+
+		if (char === "[") {
+			normalized += char;
+			quoteEnd = "]";
+			continue;
+		}
+
+		if (char === "\r" && nextChar === "\n") {
+			normalized += "\n";
+			index++;
+			continue;
+		}
+
+		normalized += char;
+	}
+
+	return normalized;
+}
+
 function splitSqlIntoStatements(sql: string): string[] {
 	const statements: string[] = [];
 	let str = "";
@@ -116,16 +208,20 @@ function splitSqlIntoStatements(sql: string): string[] {
 
 /**
  * Pulls characters from the string iterator while the predicate remains true.
+ * Only the bounded trailing window is passed to the predicate.
  */
 function consumeWhile(
 	iterator: Iterator<string>,
-	predicate: (str: string) => boolean
+	predicate: (str: string) => boolean,
+	window: number = 16
 ) {
 	let next = iterator.next();
 	let str = "";
+	let tail = "";
 	while (!next.done) {
 		str += next.value;
-		if (!predicate(str)) {
+		tail = (tail + next.value).slice(-window);
+		if (!predicate(tail)) {
 			break;
 		}
 		next = iterator.next();
@@ -137,7 +233,11 @@ function consumeWhile(
  * Pulls characters from the string iterator until the `endMarker` is found.
  */
 function consumeUntilMarker(iterator: Iterator<string>, endMarker: string) {
-	return consumeWhile(iterator, (str) => !str.endsWith(endMarker));
+	return consumeWhile(
+		iterator,
+		(str) => !str.endsWith(endMarker),
+		endMarker.length
+	);
 }
 
 /**
@@ -166,5 +266,5 @@ function isCompoundStatementStart(str: string) {
  * Returns true if the `str` ends with a compound statement `END` marker.
  */
 function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/.test(str);
+	return /\sEND[;\s]$/i.test(str);
 }

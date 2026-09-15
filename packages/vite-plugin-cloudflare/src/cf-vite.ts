@@ -9,7 +9,7 @@
  * Unknown/missing verbs exit 2 (also the parent's version-detection
  * signal).
  *
- * Every verb forces the experimental Build Output API on by default by
+ * Every verb forces the experimental Build Output Specification on by default by
  * setting `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` in `main()` before Vite
  * loads the user's config; the plugin reads it during config resolution
  * to enable `experimental.newConfig` + `experimental.newConfig.cfBuildOutput`.
@@ -128,7 +128,7 @@ async function main(): Promise<number> {
 	const verb = process.argv[2];
 	const userArgv = process.argv.slice(3);
 
-	// Force the experimental Build Output API on by default for every
+	// Force the experimental Build Output Specification on by default for every
 	// delegate verb. The plugin reads this during config resolution to
 	// enable `experimental.newConfig` + `.cfBuildOutput`. Set before Vite
 	// loads the user's `vite.config.ts`.

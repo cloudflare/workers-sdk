@@ -1,115 +1,134 @@
 import fs from "node:fs/promises";
 import SCRIPT_IMAGES_SERVICE from "worker:images/images";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
-import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
+	buildObjectEntryProps,
+	buildRemoteProxyProps,
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getRemoteProxyConnectionString,
+	getStorageService,
 	getUserBindingServiceName,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-const ImagesSchema = z.object({
-	binding: z.string(),
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
-});
-
-export const ImagesOptionsSchema = z.object({
-	images: ImagesSchema.optional(),
-});
-
-export const ImagesSharedOptionsSchema = z.object({
-	imagesPersist: PersistenceSchema,
-});
+import type { Plugin } from "../shared";
 
 export const IMAGES_PLUGIN_NAME = "images";
+const IMAGES_REMOTE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:remote`;
+const IMAGES_DATA_NAMESPACE = "images-data";
+const IMAGES_DATA_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:ns:data`;
 
-export const IMAGES_PLUGIN: Plugin<
-	typeof ImagesOptionsSchema,
-	typeof ImagesSharedOptionsSchema
-> = {
-	options: ImagesOptionsSchema,
-	sharedOptions: ImagesSharedOptionsSchema,
+export function getImagesBindingServiceName(name: string): string {
+	return getUserBindingServiceName(IMAGES_PLUGIN_NAME, `binding:${name}`);
+}
+
+export const IMAGES_PLUGIN: Plugin = {
 	bindingTypeDescription: "Images",
 	async getBindings(options) {
-		if (!options.images) {
-			return [];
-		}
-
-		return [
-			{
-				name: options.images.binding,
-				wrapped: {
-					moduleName: "cloudflare-internal:images-api",
-					innerBindings: [
-						{
-							name: "fetcher",
-							service: {
-								name: getUserBindingServiceName(
-									IMAGES_PLUGIN_NAME,
-									options.images.binding,
-									options.images.remoteProxyConnectionString
-								),
+		return getEnvBindingsOfType(options.config, "images").map(
+			([name, binding]) => {
+				const remoteProxyConnectionString = getRemoteProxyConnectionString(
+					binding,
+					options.dev
+				);
+				return {
+					name,
+					wrapped: {
+						moduleName: "cloudflare-internal:images-api",
+						innerBindings: [
+							{
+								name: "fetcher",
+								service: remoteProxyConnectionString
+									? {
+											name: IMAGES_REMOTE_SERVICE_NAME,
+											props: buildRemoteProxyProps(
+												remoteProxyConnectionString,
+												name
+											),
+										}
+									: {
+											name: getImagesBindingServiceName(name),
+										},
 							},
-						},
-					],
-				},
-			},
-		];
+						],
+					},
+				};
+			}
+		);
 	},
-	getNodeBindings(options: z.infer<typeof ImagesOptionsSchema>) {
-		if (!options.images) {
-			return {};
-		}
-		return {
-			[options.images.binding]: new ProxyNodeBinding(),
-		};
+	getNodeBindings(options) {
+		return Object.fromEntries(
+			getEnvBindingsOfType(options.config, "images").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
+		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
-		if (!options.images) {
-			return [];
-		}
+	async getServices({ options, tmpPath, sharedOptions }) {
+		const services: Service[] = [];
 
-		const serviceName = getUserBindingServiceName(
-			IMAGES_PLUGIN_NAME,
-			options.images.binding,
-			options.images.remoteProxyConnectionString
+		const imagesBindings = getEnvBindingsOfType(options.config, "images");
+		const hasLocalImages = imagesBindings.some(
+			([, binding]) =>
+				getRemoteProxyConnectionString(binding, options.dev) === undefined
 		);
 
-		if (options.images.remoteProxyConnectionString) {
-			return [
-				{
-					name: serviceName,
-					worker: remoteProxyClientWorker(
-						options.images.remoteProxyConnectionString,
-						options.images.binding
-					),
+		for (const [name, binding] of imagesBindings) {
+			const remoteProxyConnectionString = getRemoteProxyConnectionString(
+				binding,
+				options.dev
+			);
+
+			if (remoteProxyConnectionString) {
+				services.push({
+					name: IMAGES_REMOTE_SERVICE_NAME,
+					worker: remoteProxyClientWorker(),
+				});
+				continue;
+			}
+
+			const serviceName = getImagesBindingServiceName(name);
+			services.push({
+				name: serviceName,
+				worker: {
+					compatibilityDate: "2025-04-01",
+					modules: [
+						{
+							name: "images.worker.js",
+							esModule: SCRIPT_IMAGES_SERVICE(),
+						},
+					],
+					bindings: [
+						{
+							name: "IMAGES_STORE",
+							kvNamespace: getStorageService(
+								IMAGES_DATA_SERVICE_NAME,
+								buildObjectEntryProps(IMAGES_DATA_NAMESPACE),
+								sharedOptions
+							),
+						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
+					],
 				},
-			];
+			});
+		}
+
+		if (!hasLocalImages && !sharedOptions.unsafeEnableSharedStorage) {
+			return services;
 		}
 
 		const persistPath = getPersistPath(
 			IMAGES_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.imagesPersist
+			sharedOptions.resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -146,50 +165,21 @@ export const IMAGES_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;
 
 		const kvNamespaceService = {
-			name: `${IMAGES_PLUGIN_NAME}:ns:data`,
-			worker: objectEntryWorker(
-				{
-					serviceName: objectService.name,
-					className: KV_NAMESPACE_OBJECT_CLASS_NAME,
-				},
-				"images-data"
-			),
+			name: IMAGES_DATA_SERVICE_NAME,
+			worker: objectEntryWorker({
+				serviceName: objectService.name,
+				className: KV_NAMESPACE_OBJECT_CLASS_NAME,
+			}),
 		} satisfies Service;
 
-		const imagesService = {
-			name: serviceName,
-			worker: {
-				compatibilityDate: "2025-04-01",
-				modules: [
-					{
-						name: "images.worker.js",
-						esModule: SCRIPT_IMAGES_SERVICE(),
-					},
-				],
-				bindings: [
-					{
-						name: "IMAGES_STORE",
-						kvNamespace: { name: kvNamespaceService.name },
-					},
-					WORKER_BINDING_SERVICE_LOOPBACK,
-				],
-			},
-		} satisfies Service;
+		services.push(storageService, objectService, kvNamespaceService);
 
-		return [storageService, objectService, kvNamespaceService, imagesService];
-	},
-	getPersistPath({ imagesPersist }, tmpPath) {
-		return getPersistPath(
-			IMAGES_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			imagesPersist
-		);
+		return services;
 	},
 };

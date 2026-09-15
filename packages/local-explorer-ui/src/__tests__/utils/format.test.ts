@@ -1,5 +1,43 @@
 import { describe, test } from "vitest";
-import { formatDate } from "../../utils/format";
+import {
+	formatDate,
+	formatEmailAddress,
+	formatMessageId,
+} from "../../utils/format";
+
+describe("formatEmailAddress", () => {
+	test("removes surrounding angle brackets", ({ expect }) => {
+		expect(formatEmailAddress("<recipient@example.com>")).toBe(
+			"recipient@example.com"
+		);
+	});
+
+	test("removes angle brackets around an address with a display name", ({
+		expect,
+	}) => {
+		expect(formatEmailAddress('"Recipient" <recipient@example.com>')).toBe(
+			'"Recipient" recipient@example.com'
+		);
+	});
+
+	test("preserves an address without angle brackets", ({ expect }) => {
+		expect(formatEmailAddress("recipient@example.com")).toBe(
+			"recipient@example.com"
+		);
+	});
+});
+
+describe("formatMessageId", () => {
+	test("removes surrounding angle brackets", ({ expect }) => {
+		expect(formatMessageId("<message@example.com>")).toBe(
+			"message@example.com"
+		);
+	});
+
+	test("preserves an ID without angle brackets", ({ expect }) => {
+		expect(formatMessageId("message@example.com")).toBe("message@example.com");
+	});
+});
 
 describe("formatDate", () => {
 	test("`undefined` returns '-'", ({ expect }) => {

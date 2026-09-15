@@ -209,7 +209,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		await expect(
 			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
 		).rejects.toThrow(
-			/Child environments are not yet supported in the Build Output API/
+			/Child environments are not yet supported in the Build Output Specification/
 		);
 	});
 

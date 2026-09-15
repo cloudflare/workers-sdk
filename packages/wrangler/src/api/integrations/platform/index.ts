@@ -1,12 +1,11 @@
 import path from "node:path";
-import { resolveDockerHost } from "@cloudflare/containers-shared";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
-	getDockerPath,
+	DEFAULT_COMPAT_DATE,
+	extractBindingsOfType,
+	getContainerDurableObjectClassNames,
 	getRegistryPath,
-	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
@@ -37,10 +36,10 @@ import type {
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
-	MiniflareOptions,
-	ModuleRule,
 	RemoteProxyConnectionString,
-	WorkerOptions,
+	V4MiniflareOptions,
+	V4ModuleRule,
+	V4WorkerOptions,
 } from "miniflare";
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
@@ -48,10 +47,10 @@ export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
- * @deprecated Use today's date as the compatibility date instead.
+ * @deprecated Set a compatibility date explicitly instead.
  */
 export function unstable_getDevCompatibilityDate() {
-	return getTodaysCompatDate();
+	return DEFAULT_COMPAT_DATE;
 }
 
 /**
@@ -67,7 +66,7 @@ export function unstable_getDevCompatibilityDate() {
  *
  * `dev.host` is intentionally NOT consulted here: the `dev` config block is
  * specific to `wrangler dev` and should not influence behaviour under
- * `@cloudflare/vite-plugin`, `@cloudflare/vitest-pool-workers`, or
+ * `@cloudflare/vite-plugin`, `@cloudflare/vitest-plugin`, or
  * `getPlatformProxy`. Users who need a custom `CF-Worker` host in those
  * environments should configure a `route` instead.
  */
@@ -198,7 +197,7 @@ export async function getPlatformProxy<
 			remoteProxySession?.remoteProxyConnectionString,
 	});
 
-	const mf = new Miniflare(miniflareOptions);
+	const mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
 
 	const bindings: Env = await mf.getBindings();
 
@@ -231,7 +230,7 @@ async function getMiniflareOptionsFromConfig(args: {
 	config: Config;
 	options: GetPlatformProxyOptions;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
-}): Promise<MiniflareOptions> {
+}): Promise<V4MiniflareOptions> {
 	const { config, options, remoteProxyConnectionString } = args;
 
 	const bindings = getBindings(
@@ -293,8 +292,9 @@ async function getMiniflareOptionsFromConfig(args: {
 			exports: config.exports,
 			tails: [],
 			streamingTails: [],
-			containerDOClassNames: new Set(
-				config.containers?.map((c) => c.class_name)
+			containerDOClassNames: getContainerDurableObjectClassNames(
+				config.containers,
+				config.exports
 			),
 			containerBuildId: undefined,
 			enableContainers: config.dev.enable_containers,
@@ -321,13 +321,14 @@ async function getMiniflareOptionsFromConfig(args: {
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
-	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
+	const resourcePersistencePath = getMiniflarePersistRoot(options.persist);
 	const projectRoot = config.userConfigPath
 		? path.dirname(config.userConfigPath)
 		: process.cwd();
-	const defaultProjectTmpPath = getDefaultProjectTmpPath(projectRoot);
+	const resourceTmpPath = getDefaultProjectTmpPath(projectRoot);
 
-	const miniflareOptions: MiniflareOptions = {
+	const miniflareOptions: V4MiniflareOptions = {
+		rootPath: projectRoot,
 		workers: [
 			{
 				script: "",
@@ -339,8 +340,8 @@ async function getMiniflareOptionsFromConfig(args: {
 			},
 			...externalWorkers,
 		],
-		defaultPersistRoot,
-		defaultProjectTmpPath,
+		resourcePersistencePath,
+		resourceTmpPath,
 	};
 
 	return {
@@ -384,15 +385,15 @@ function deepFreeze<T extends Record<string | number | symbol, unknown>>(
 }
 
 export type SourcelessWorkerOptions = Omit<
-	WorkerOptions,
+	V4WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
-> & { modulesRules?: ModuleRule[] };
+> & { modulesRules?: V4ModuleRule[] };
 
 export interface Unstable_MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
-	externalWorkers: WorkerOptions[];
+	externalWorkers: V4WorkerOptions[];
 }
 
 export function unstable_getMiniflareWorkerOptions(
@@ -437,7 +438,7 @@ export function unstable_getMiniflareWorkerOptions(
 			? readConfig({ config: configOrConfigPath, env })
 			: configOrConfigPath;
 
-	const modulesRules: ModuleRule[] = config.rules
+	const modulesRules: V4ModuleRule[] = config.rules
 		.concat(DEFAULT_MODULE_RULES)
 		.map((rule) => ({
 			type: rule.type,
@@ -445,8 +446,9 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
-	const containerDOClassNames = new Set(
-		config.containers?.map((c) => c.class_name)
+	const containerDOClassNames = getContainerDurableObjectClassNames(
+		config.containers,
+		config.exports
 	);
 	const bindings = getBindings(
 		config,
@@ -481,6 +483,9 @@ export function unstable_getMiniflareWorkerOptions(
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
+	const projectRoot = config.userConfigPath
+		? path.dirname(config.userConfigPath)
+		: process.cwd();
 	// Only resolve assets if a directory is available (from config or overrides).
 	// When assets are configured without a directory (e.g. when using
 	// @cloudflare/vite-plugin, which handles asset serving independently),
@@ -502,16 +507,13 @@ export function unstable_getMiniflareWorkerOptions(
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
-	const useContainers =
-		config.dev?.enable_containers && config.containers?.length;
 	const workerOptions: SourcelessWorkerOptions = {
+		rootPath: projectRoot,
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
-		containerEngine: useContainers
-			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
-			: undefined,
 		zone: getZoneFromConfig(config),
+		access: config.access?.dev,
 
 		...bindingOptions,
 		...sitesOptions,

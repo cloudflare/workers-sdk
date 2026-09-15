@@ -82,6 +82,14 @@ Alternatively, you can set an environment variable:
 export CREATE_CLOUDFLARE_TELEMETRY_DISABLED=1
 ```
 
+Create Cloudflare also honors the `DO_NOT_TRACK` environment variable. Set it to `1` to disable telemetry:
+
+```sh
+export DO_NOT_TRACK=1
+```
+
+`DO_NOT_TRACK=1` takes precedence over all other telemetry settings.
+
 If you would like to re-enable telemetry, you can run:
 
 ```sh

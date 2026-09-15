@@ -5,8 +5,9 @@
 		"skipLibCheck": true,
 		"types": ["node", "vitest"],
 		"target": "ESNext",
-		"moduleResolution": "Node",
+		"moduleResolution": "bundler",
 		"module": "ESNext",
+		"noEmit": true,
 		"esModuleInterop": true,
 		"resolveJsonModule": true
 	}

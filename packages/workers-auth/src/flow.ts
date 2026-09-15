@@ -1,17 +1,3 @@
-/* Based heavily on code from https://github.com/BitySA/oauth2-auth-code-pkce
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 import {
 	getCloudflareComplianceRegion,
 	UserError,
@@ -20,6 +6,7 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { getOauthToken } from "./callback-server";
 import { getAPIToken, requireApiToken } from "./credentials";
+import { getOauthTokenViaDeviceFlow } from "./device-flow";
 import { getRevokeUrlFromEnv } from "./env-vars";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
@@ -84,6 +71,16 @@ export interface LoginProps {
 	 * Only for use by 'auth create', not exposed to the user
 	 */
 	profile?: string;
+	/**
+	 * When `true`, authenticate using the OAuth 2.0 Device Authorization Grant
+	 * (RFC 8628) instead of the authorization-code-with-PKCE callback flow. The
+	 * device flow does not start a local callback server and works in
+	 * environments where the consumer's loopback callback URL
+	 * ({@link OAuthFlowContext.redirectUri}) is unreachable from the user's
+	 * browser (containers, remote SSH sessions, Codespaces). `callbackHost` and
+	 * `callbackPort` are ignored when this is set.
+	 */
+	device?: boolean;
 }
 
 /**
@@ -265,23 +262,38 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			);
 		}
 
-		ctx.logger.log("Attempting to login via OAuth...");
+		let oauth;
+		if (props.device) {
+			ctx.logger.log(
+				"Attempting to login via OAuth Device Authorization Grant..."
+			);
+			oauth = await getOauthTokenViaDeviceFlow(
+				{
+					browser: props.browser ?? true,
+					scopes: props.scopes,
+					clientId: getClientId(),
+				},
+				ctx
+			);
+		} else {
+			ctx.logger.log("Attempting to login via OAuth...");
 
-		const oauth = await getOauthToken(
-			{
-				browser: props.browser ?? true,
-				scopes: props.scopes,
-				clientId: getClientId(),
-				redirectUri: ctx.redirectUri,
-				denied: consent.denied,
-				granted: consent.granted,
-				callbackHost: props.callbackHost ?? defaultCallbackHost,
-				callbackPort: props.callbackPort ?? defaultCallbackPort,
-			},
-			oauthFlowState,
-			ctx,
-			generators
-		);
+			oauth = await getOauthToken(
+				{
+					browser: props.browser ?? true,
+					scopes: props.scopes,
+					clientId: getClientId(),
+					redirectUri: ctx.redirectUri,
+					denied: consent.denied,
+					granted: consent.granted,
+					callbackHost: props.callbackHost ?? defaultCallbackHost,
+					callbackPort: props.callbackPort ?? defaultCallbackPort,
+				},
+				oauthFlowState,
+				ctx,
+				generators
+			);
+		}
 
 		getStorage(props.profile).write({
 			oauth_token: oauth.token?.value ?? "",

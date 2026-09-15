@@ -25,7 +25,10 @@ vi.mock("workerd", () => ({
 	version: "1.0.0-test",
 	default: "/fake/workerd",
 }));
-vi.mock("miniflare", () => ({ Miniflare: MiniflareMock }));
+vi.mock("miniflare", () => ({
+	Miniflare: MiniflareMock,
+	convertV4MiniflareOptions: vi.fn((options) => options),
+}));
 
 describe("generateRuntimeTypes", () => {
 	beforeEach(() => {
@@ -70,6 +73,21 @@ describe("generateRuntimeTypes", () => {
 				"flag_b",
 				"flag_a",
 			])
+		);
+	});
+
+	it("disables Node.js compatibility when it is enabled by the compatibility date", async ({
+		expect,
+	}) => {
+		const result = await generateRuntimeTypes({
+			compatibilityDate: "2026-08-04",
+		});
+
+		expect(dispatchFetchMock).toHaveBeenCalledWith(
+			"http://dummy.com/2026-08-04+no_nodejs_compat+no_nodejs_compat_v2"
+		);
+		expect(result.runtimeHeader).toBe(
+			getRuntimeHeader(WORKERD_VERSION, "2026-08-04", [])
 		);
 	});
 

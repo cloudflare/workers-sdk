@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import test, { after, before, describe } from "node:test";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 
 describe("worker", () => {
 	/**
@@ -9,11 +9,20 @@ describe("worker", () => {
 	let worker;
 
 	before(async () => {
-		worker = new Miniflare({
-			scriptPath: "src/index-with-imports.js",
-			modules: true,
-			modulesRules: [{ type: "ESModule", include: ["**/*.js"] }],
-		});
+		worker = new Miniflare(
+			convertV4MiniflareOptions({
+				modules: [
+					{
+						type: "ESModule",
+						path: "src/index-with-imports.js",
+					},
+					{
+						type: "ESModule",
+						path: "src/say-hello.js",
+					},
+				],
+			})
+		);
 		try {
 			await worker.ready;
 		} catch (e) {

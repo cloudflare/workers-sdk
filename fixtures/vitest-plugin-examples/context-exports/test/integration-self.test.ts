@@ -1,0 +1,89 @@
+import { exports } from "cloudflare:workers";
+import { it, vi } from "vitest";
+
+it("can use context exports on the main worker", async ({ expect }) => {
+	const response = await exports.default.fetch("http://example.com");
+	expect(await response.text()).toBe(
+		"👋 Hello MainWorker from Main NamedEntryPoint!"
+	);
+});
+
+it("can use context exports (parameterized with props) on the main worker", async ({
+	expect,
+}) => {
+	const response = await exports.default.fetch("http://example.com/props");
+	expect(await response.text()).toBe(
+		"👋 Hello MainWorker from Main NamedEntryPoint!\nAdditional props!!"
+	);
+});
+
+it("will warn on missing context exports on the main worker", async ({
+	expect,
+}) => {
+	// `mockImplementation` so the warning this test asserts on doesn't also get
+	// printed to the real console and pollute the test output.
+	const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+	const response = await exports.default.fetch(
+		"http://example.com/invalid-export"
+	);
+	expect(await response.text()).toMatchInlineSnapshot(`"👋 undefined"`);
+	expect(warnSpy).toHaveBeenCalledWith(
+		"Attempted to access 'ctx.exports.InvalidExport', which was not defined for the main Worker.\n" +
+			"Check that 'InvalidExport' is exported as an entry-point from the Worker.\n" +
+			"The '@cloudflare/vitest-plugin' integration tries to infer these exports by analyzing the source code of the main Worker.\n"
+	);
+});
+
+it("will warn on implicit re-exports that will exist in production but cannot not be guessed on the main worker", async ({
+	expect,
+}) => {
+	// In this test, we are trying to access an entry-point that is wildcard (*) re-exported from a virtual module.
+	// This virtual module is understood by Vitest and TypeScript but not the lightweight esbuild that we use to guess exports.
+	// `mockImplementation` so the warning this test asserts on doesn't also get
+	// printed to the real console and pollute the test output.
+	const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+	const response = await exports.default.fetch(
+		"http://example.com/virtual-implicit"
+	);
+	expect(await response.text()).toMatchInlineSnapshot(`"👋 undefined"`);
+	expect(warnSpy).toHaveBeenCalledWith(
+		"Attempted to access 'ctx.exports.ReexportedVirtualEntryPoint', which was not defined for the main Worker.\n" +
+			"Check that 'ReexportedVirtualEntryPoint' is exported as an entry-point from the Worker.\n" +
+			"The '@cloudflare/vitest-plugin' integration tries to infer these exports by analyzing the source code of the main Worker.\n"
+	);
+});
+
+it("will still guess re-exports on the main worker that cannot be fully analyzed by esbuild", async ({
+	expect,
+}) => {
+	// In this test, we are trying to access an entry-point that is explicitly re-exported from a virtual module.
+	// Although esbuild cannot really analyze what is being re-exported, it can at least see that something is being re-exported with that name.
+	const response = await exports.default.fetch(
+		"http://example.com/virtual-explicit"
+	);
+	expect(await response.text()).toBe(
+		"👋 Hello MainWorker from ExplicitVirtualEntryPoint!"
+	);
+});
+
+it("can access configured virtual entry points on the main worker that cannot be fully analyzed by esbuild", async ({
+	expect,
+}) => {
+	// In this test, we are trying to access an entry-point that is explicitly re-exported from a virtual module.
+	// Although esbuild cannot really analyze what is being re-exported, it can at least see that something is being re-exported with that name.
+	const response = await exports.default.fetch(
+		"http://example.com/virtual-configured"
+	);
+	expect(await response.text()).toBe(
+		"👋 Hello MainWorker from ConfiguredVirtualEntryPoint!"
+	);
+});
+
+it("can access imported context exports for the main worker", async ({
+	expect,
+}) => {
+	const msg = await exports.NamedEntryPoint.greet();
+	expect(msg).toMatchInlineSnapshot(
+		`"Hello MainWorker from Main NamedEntryPoint!"`
+	);
+});

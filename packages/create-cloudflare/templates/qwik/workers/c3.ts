@@ -5,7 +5,7 @@ import {
 	runCommand,
 } from "@cloudflare/cli-shared-helpers/command";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { transformFile } from "@cloudflare/codemod";
+import { transformFile } from "@cloudflare/shared-ast-primitives";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";

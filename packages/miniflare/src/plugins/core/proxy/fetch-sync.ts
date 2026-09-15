@@ -114,7 +114,9 @@ export class SynchronousFetcher {
 	}
 
 	#ensureWorker() {
-		if (this.#worker !== undefined) return;
+		if (this.#worker !== undefined) {
+			return;
+		}
 		this.#worker = new Worker(WORKER_SCRIPT, {
 			eval: true,
 			workerData: {

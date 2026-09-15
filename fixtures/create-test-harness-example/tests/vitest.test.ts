@@ -10,15 +10,22 @@ import {
 } from "vitest";
 import { createTestHarness } from "wrangler";
 
-// Point each worker to the Wrangler config you want to test.
+// Point each worker to its Wrangler config and previously built output.
 const server = createTestHarness({
 	workers: [
 		{
 			configPath: "./workers/web/wrangler.jsonc",
+			prebuiltWorkerDir: "./dist/wrangler/web",
 			bindingOverrides: { BROWSER: "mock-browser" },
 		},
-		{ configPath: "./workers/api/wrangler.jsonc" },
-		{ configPath: "./workers/mock-browser/wrangler.jsonc" },
+		{
+			configPath: "./workers/api/wrangler.jsonc",
+			prebuiltWorkerDir: "./dist/wrangler/api",
+		},
+		{
+			configPath: "./workers/mock-browser/wrangler.jsonc",
+			prebuiltWorkerDir: "./dist/wrangler/mock-browser",
+		},
 	],
 });
 

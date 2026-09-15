@@ -5,75 +5,58 @@ import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock `@cloudflare/config`'s `loadConfig`
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// `loadNewConfig` calls into `@cloudflare/config`'s `loadConfig`, which uses
-// `module.registerHooks` to register hooks for `.ts` files. That mechanism
-// does not run inside vitest's module runner, so we mock the loader and
-// `import()` the seeded file via a `data:` URL to keep ESM semantics.
-// ─────────────────────────────────────────────────────────────────────────────
-
 vi.mock("@cloudflare/config", async (importOriginal) => {
-	const actual = (await importOriginal()) as Record<string, unknown>;
-
-	async function loadConfig(configPath: string) {
-		const source = await fs.promises.readFile(configPath, "utf8");
-		const mod = (await import(
-			`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
-		)) as { default: unknown };
-		return {
-			config: mod.default,
-			dependencies: new Set<string>([path.resolve(configPath)]),
-		};
-	}
-
-	return {
-		...actual,
-		loadConfig,
-	};
+	const { createConfigMock } = await import("./helpers/mock-new-config");
+	return createConfigMock(importOriginal);
 });
 
 const WORKER_NAME = "build-output-test-worker";
 
+// The Build Output Specification holds a single Worker in the `default`
+// directory (the export name in `cloudflare.config.ts`), regardless of the
+// Worker's configured `name`. Resolve at call time — `runInTempDir` changes
+// the cwd after this module is imported.
+function workerDir(): string {
+	return path.resolve(".cloudflare/output/v0/workers", "default");
+}
+
 function readOutputConfig() {
-	const configPath = path.resolve(
-		".cloudflare/output/v0/workers",
-		WORKER_NAME,
-		"worker.config.json"
-	);
+	const configPath = path.join(workerDir(), "config.json");
 	return JSON.parse(fs.readFileSync(configPath, "utf8")) as Record<
 		string,
 		unknown
 	>;
 }
 
+function settingsConfigPath(): string {
+	return path.resolve(".cloudflare/output/v0", "config.json");
+}
+
+function readSettingsConfig() {
+	return JSON.parse(fs.readFileSync(settingsConfigPath(), "utf8")) as Record<
+		string,
+		unknown
+	>;
+}
+
 function bundlePath(...segments: string[]): string {
-	return path.resolve(
-		".cloudflare/output/v0/workers",
-		WORKER_NAME,
-		"bundle",
-		...segments
-	);
+	return path.join(workerDir(), "bundle", ...segments);
 }
 
 function assetsPath(...segments: string[]): string {
-	return path.resolve(
-		".cloudflare/output/v0/workers",
-		WORKER_NAME,
-		"assets",
-		...segments
-	);
+	return path.join(workerDir(), "assets", ...segments);
 }
 
 describe("wrangler build --experimental-cf-build-output", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("emits the Build Output API tree for a Worker", async ({ expect }) => {
+	it("emits the Build Output Specification tree for a Worker", async ({
+		expect,
+	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -92,10 +75,12 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect(config.compatibilityDate).toBe("2026-05-18");
 		expect(config.entrypoint).toBeUndefined();
 		const manifest = config.manifest as {
+			type: string;
 			mainModule: string;
 			modules: Record<string, { type: string }>;
 		};
 		expect(manifest).toBeDefined();
+		expect(manifest.type).toBe("complete");
 		expect(manifest.mainModule).toBe("index.js");
 		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
 
@@ -107,6 +92,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.ts",
@@ -122,10 +108,12 @@ describe("wrangler build --experimental-cf-build-output", () => {
 
 		const config = readOutputConfig();
 		const manifest = config.manifest as {
+			type: string;
 			mainModule: string;
 			modules: Record<string, { type: string }>;
 		};
 		expect(manifest).toBeDefined();
+		expect(manifest.type).toBe("complete");
 		expect(manifest.mainModule).toBe("index.js");
 		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
 		expect(fs.existsSync(bundlePath("index.js"))).toBe(true);
@@ -136,6 +124,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -174,6 +163,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -208,6 +198,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	it("copies the assets directory", async ({ expect }) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -247,6 +238,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 			};`,
@@ -273,6 +265,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -301,6 +294,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
@@ -320,6 +314,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
+				type: "worker",
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 			};`,
@@ -330,5 +325,89 @@ describe("wrangler build --experimental-cf-build-output", () => {
 				"build --experimental-new-config --experimental-cf-build-output"
 			)
 		).rejects.toThrow();
+	});
+
+	describe("top-level settings config.json", () => {
+		async function seedWorker(settingsExport = "") {
+			await seed({
+				"cloudflare.config.ts": `export default {
+					type: "worker",
+					name: "${WORKER_NAME}",
+					compatibilityDate: "2026-05-18",
+					entrypoint: "./src/index.js",
+				};
+				${settingsExport}`,
+				"src/index.js": `export default {
+					async fetch() { return new Response("hello"); }
+				};`,
+			});
+		}
+
+		it("is emitted even when there is no settings export", async ({
+			expect,
+		}) => {
+			await seedWorker();
+
+			await runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output"
+			);
+
+			expect(fs.existsSync(settingsConfigPath())).toBe(true);
+			expect(readSettingsConfig()).toEqual({ type: "settings" });
+		});
+
+		it("records the mode from --env", async ({ expect }) => {
+			await seedWorker();
+
+			await runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output --env staging"
+			);
+
+			expect(readSettingsConfig().mode).toBe("staging");
+		});
+
+		it("records the mode from CLOUDFLARE_ENV", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "preview");
+			await seedWorker();
+
+			await runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output"
+			);
+
+			expect(readSettingsConfig().mode).toBe("preview");
+		});
+
+		it("omits the mode when neither --env nor CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			await seedWorker();
+
+			await runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output"
+			);
+
+			expect(readSettingsConfig()).not.toHaveProperty("mode");
+		});
+
+		it("records the mode alongside the settings export", async ({ expect }) => {
+			await seedWorker(
+				`export const settings = {
+					type: "settings",
+					accountId: "acc-123",
+					complianceRegion: "public",
+				};`
+			);
+
+			await runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output --env staging"
+			);
+
+			expect(readSettingsConfig()).toEqual({
+				type: "settings",
+				accountId: "acc-123",
+				complianceRegion: "public",
+				mode: "staging",
+			});
+		});
 	});
 });

@@ -232,6 +232,11 @@ export async function generateHandler<
 
 	let assetEntry: AssetEntry | null;
 
+	function redirectToPath(path: string): Response {
+		const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+		return new PermanentRedirectResponse(`${encodedPath}${search}`);
+	}
+
 	async function generateResponse(): Promise<Response> {
 		const match =
 			staticRedirectsMatcher() || generateRedirectsMatcher()({ request })[0];
@@ -294,17 +299,13 @@ export async function generateHandler<
 			if ((assetEntry = await findAssetEntryForPath(`${pathname}index.html`))) {
 				return serveAsset(assetEntry);
 			} else if (pathname.endsWith("/index/")) {
-				return new PermanentRedirectResponse(
-					`/${pathname.slice(1, -"index/".length)}${search}`
-				);
+				return redirectToPath(`/${pathname.slice(1, -"index/".length)}`);
 			} else if (
 				(assetEntry = await findAssetEntryForPath(
 					`${pathname.replace(/\/$/, ".html")}`
 				))
 			) {
-				return new PermanentRedirectResponse(
-					`/${pathname.slice(1, -1)}${search}`
-				);
+				return redirectToPath(`/${pathname.slice(1, -1)}`);
 			} else {
 				return notFound();
 			}
@@ -317,30 +318,26 @@ export async function generateHandler<
 				// or if pathname is /.html
 				// FIXME: this doesn't handle files in directories ie: /foobar/.html
 				if (extensionlessPath.endsWith("/index")) {
-					return new PermanentRedirectResponse(
-						`${extensionlessPath.replace(/\/index$/, "/")}${search}`
-					);
+					return redirectToPath(extensionlessPath.replace(/\/index$/, "/"));
 				} else if (
 					(await findAssetEntryForPath(extensionlessPath)) ||
 					extensionlessPath === "/"
 				) {
 					return serveAsset(assetEntry);
 				} else {
-					return new PermanentRedirectResponse(`${extensionlessPath}${search}`);
+					return redirectToPath(extensionlessPath);
 				}
 			} else {
 				return serveAsset(assetEntry);
 			}
 		} else if (pathname.endsWith("/index")) {
-			return new PermanentRedirectResponse(
-				`/${pathname.slice(1, -"index".length)}${search}`
-			);
+			return redirectToPath(`/${pathname.slice(1, -"index".length)}`);
 		} else if ((assetEntry = await findAssetEntryForPath(`${pathname}.html`))) {
 			return serveAsset(assetEntry);
 		}
 
 		if ((assetEntry = await findAssetEntryForPath(`${pathname}/index.html`))) {
-			return new PermanentRedirectResponse(`${pathname}/${search}`);
+			return redirectToPath(`${pathname}/`);
 		} else {
 			return notFound();
 		}

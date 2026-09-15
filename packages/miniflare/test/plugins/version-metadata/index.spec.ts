@@ -1,22 +1,29 @@
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 
 test("version-metadata: provides id, tag, and timestamp", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		compatibilityDate: "2026-01-01",
-		versionMetadata: "CF_VERSION_METADATA",
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2026-01-01",
+					env: { CF_VERSION_METADATA: { type: "version-metadata" } },
+					manifest: singleModuleManifest(`
 			export default {
 				async fetch(request, env, ctx) {
 					const { id, tag, timestamp } = env.CF_VERSION_METADATA;
 					return Response.json({ id, tag, timestamp });
 				},
 			}
-		`,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -37,17 +44,24 @@ test("version-metadata: provides id, tag, and timestamp", async ({
 
 test("version-metadata: works with custom binding name", async ({ expect }) => {
 	const mf = new Miniflare({
-		compatibilityDate: "2026-01-01",
-		versionMetadata: "MY_VERSION",
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2026-01-01",
+					env: { MY_VERSION: { type: "version-metadata" } },
+					manifest: singleModuleManifest(`
 			export default {
 				async fetch(request, env, ctx) {
 					const { id, tag, timestamp } = env.MY_VERSION;
 					return Response.json({ id, tag, timestamp });
 				},
 			}
-		`,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -68,17 +82,24 @@ test("version-metadata: works with custom binding name", async ({ expect }) => {
 
 test("version-metadata: timestamp is valid ISO date", async ({ expect }) => {
 	const mf = new Miniflare({
-		compatibilityDate: "2026-01-01",
-		versionMetadata: "CF_VERSION_METADATA",
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2026-01-01",
+					env: { CF_VERSION_METADATA: { type: "version-metadata" } },
+					manifest: singleModuleManifest(`
 			export default {
 				async fetch(request, env, ctx) {
 					const { id, tag, timestamp } = env.CF_VERSION_METADATA;
 					return Response.json({ id, tag, timestamp });
 				},
 			}
-		`,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 

@@ -12,11 +12,18 @@ import {
 	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
+	zEmailListRoutingData,
+	zEmailListSendingData,
+	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
+	zObservabilityQueryData,
+	zWorkflowsBatchDeleteInstancesData,
 	zWorkflowsChangeInstanceStatusData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
@@ -24,13 +31,23 @@ import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
+	getReceivedEmail,
+	getSentEmail,
+	listReceivedEmails,
+	listSentEmails,
+	sendTestEmail,
+} from "./resources/email";
+import {
+	bulkDeleteKVValues,
 	bulkGetKVValues,
+	bulkWriteKVValues,
 	deleteKVValue,
 	getKVValue,
 	listKVKeys,
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
+import { clearTraces, runQuery } from "./resources/observability";
 import {
 	deleteR2Objects,
 	getR2Object,
@@ -43,6 +60,7 @@ import {
 	createWorkflowInstance,
 	deleteWorkflow,
 	deleteWorkflowInstance,
+	deleteWorkflowInstances,
 	getWorkflowDetails,
 	getWorkflowInstanceDetails,
 	listWorkflowInstances,
@@ -57,6 +75,7 @@ import type {
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { CoreBindings } from "../core";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
+import type { EmailStoreService } from "../email/storage";
 import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {
@@ -69,10 +88,18 @@ export type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	// Worker names for this instance, used to filter self from dev registry during aggregation
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
+	[CoreBindings.SERVICE_D1]: Fetcher;
+	[CoreBindings.SERVICE_KV]: Fetcher;
+	[CoreBindings.SERVICE_R2]: Fetcher;
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
 	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
 	[CoreBindings.DEV_REGISTRY_DEBUG_PORT]: WorkerdDebugPortConnector;
+	// Internal observability collector's read API — only bound when local
+	// observability is enabled (see getExplorerServices).
+	[CoreBindings.SERVICE_OBSERVABILITY_COLLECTOR]?: Fetcher;
+	// Email store RPC. Backs the Email tab's routing/sending views.
+	[CoreBindings.SERVICE_EMAIL_STORE]: EmailStoreService;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -212,6 +239,24 @@ app.delete("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
 	deleteKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
 
+app.put(
+	"/api/storage/kv/namespaces/:namespace_id/bulk",
+	validateRequestBody(
+		zWorkersKvNamespaceWriteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkWriteKVValues(c, c.req.valid("json"))
+);
+
+app.post(
+	"/api/storage/kv/namespaces/:namespace_id/bulk/delete",
+	validateRequestBody(
+		zWorkersKvNamespaceDeleteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkDeleteKVValues(c, c.req.valid("json"))
+);
+
 app.post(
 	"/api/storage/kv/namespaces/:namespace_id/bulk/get",
 	validateRequestBody(
@@ -310,6 +355,17 @@ app.post("/api/workflows/:workflow_name/instances", (c) =>
 	createWorkflowInstance(c, c.req.param("workflow_name"))
 );
 
+app.post(
+	"/api/workflows/:workflow_name/instances/batch/delete",
+	validateRequestBody(zWorkflowsBatchDeleteInstancesData.shape.body),
+	(c) =>
+		deleteWorkflowInstances(
+			c,
+			c.req.param("workflow_name"),
+			c.req.valid("json")
+		)
+);
+
 app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 	getWorkflowInstanceDetails(
 		c,
@@ -350,6 +406,51 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 );
 
 // ============================================================================
+// Observability Endpoints
+// ============================================================================
+
+app.post(
+	"/api/local/observability/query",
+	validateRequestBody(zObservabilityQueryData.shape.body),
+	(c) => runQuery(c, c.req.valid("json"))
+);
+
+app.post("/api/local/observability/clear", (c) => clearTraces(c));
+
+// ============================================================================
+// Email Endpoints
+// ============================================================================
+
+app.get(
+	"/api/local/email/routing",
+	validateQuery(zEmailListRoutingData.shape.query.unwrap()),
+	(c) => {
+		const query = c.req.valid("query");
+		return query.email_id === undefined
+			? listReceivedEmails(c, query)
+			: getReceivedEmail(c, query.email_id, query.worker);
+	}
+);
+
+app.post(
+	"/api/local/email/routing/send",
+	validateQuery(zEmailSendRoutingData.shape.query),
+	validateRequestBody(zEmailSendRoutingData.shape.body),
+	(c) => sendTestEmail(c, c.req.valid("json"), c.req.valid("query").worker)
+);
+
+app.get(
+	"/api/local/email/sending",
+	validateQuery(zEmailListSendingData.shape.query.unwrap()),
+	(c) => {
+		const query = c.req.valid("query");
+		return query.email_id === undefined
+			? listSentEmails(c, query)
+			: getSentEmail(c, query.email_id, query.worker);
+	}
+);
+
+// ============================================================================
 // Local Workers / Dev Registry Endpoint
 // ============================================================================
 
@@ -378,7 +479,9 @@ app.get("/api/local/workers", async (c) => {
 		const peerResults = await Promise.all(
 			peerUrls.map(async (url) => {
 				const peerResponse = await fetchFromPeer(url, "/local/workers");
-				if (!peerResponse?.ok) return [];
+				if (!peerResponse?.ok) {
+					return [];
+				}
 				try {
 					const data = (await peerResponse.json()) as {
 						result?: LocalExplorerWorker[];

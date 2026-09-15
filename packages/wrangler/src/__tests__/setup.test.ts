@@ -166,7 +166,7 @@ describe("wrangler setup", () => {
 		assert(autoconfigOutputEntry);
 
 		if (autoconfigOutputEntry.summary?.wranglerConfig) {
-			// Let's normalize the wrangler config values that are
+			// Let's normalize the Wrangler config values that are
 			// randomly generated or change over time
 			autoconfigOutputEntry.summary.wranglerConfig.name = "test-name";
 			autoconfigOutputEntry.summary.wranglerConfig.compatibility_date =
@@ -189,15 +189,11 @@ describe("wrangler setup", () => {
 			      "directory": "public",
 			    },
 			    "compatibility_date": "YYYY-MM-DD",
-			    "compatibility_flags": [
-			      "nodejs_compat",
-			    ],
 			    "name": "test-name",
 			    "observability": {
 			      "enabled": true,
 			    },
 			  },
-			  "wranglerInstall": true,
 			}
 		`);
 	});
@@ -261,10 +257,7 @@ describe("wrangler setup", () => {
 				    },
 				    "assets": {
 				      "directory": "<DIR>"
-				    },
-				    "compatibility_flags": [
-				      "nodejs_compat"
-				    ]
+				    }
 				  }
 
 				✋  Autoconfig process run in dry-run mode, existing now.

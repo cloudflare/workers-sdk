@@ -1,0 +1,12 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"outputs": ["dist/**"]
+		},
+		"test:ci": {
+			"env": ["CLOUDFLARE_CF_AUTH"]
+		}
+	}
+}

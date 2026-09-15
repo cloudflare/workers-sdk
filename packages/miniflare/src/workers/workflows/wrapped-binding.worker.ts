@@ -3,6 +3,10 @@ import type {
 	WorkflowInstanceRestartOptions,
 	WorkflowInstanceTerminateOptions,
 } from "@cloudflare/workflows-shared/src/binding";
+import type {
+	WorkflowSubscription,
+	WorkflowSubscriptionOptions,
+} from "@cloudflare/workflows-shared/src/subscription";
 import type { WorkflowIntrospectionOperation } from "@cloudflare/workflows-shared/src/types";
 
 class WorkflowImpl implements Workflow {
@@ -32,6 +36,10 @@ class WorkflowImpl implements Workflow {
 		return result.map((res) => {
 			return new InstanceImpl(res.id, this.binding);
 		});
+	}
+
+	async deleteBatch(instanceIds: string[]): Promise<WorkflowBatchDeleteResult> {
+		return this.binding.deleteBatch({ instances: instanceIds });
 	}
 
 	async unsafeGetBindingName(): Promise<string> {
@@ -124,10 +132,22 @@ class InstanceImpl implements WorkflowInstance {
 		await instance.restart(options);
 	}
 
+	public async delete(): Promise<void> {
+		await this.binding.deleteInstance(this.id);
+	}
+
 	public async status(): Promise<InstanceStatus> {
 		using instance = await this.getInstance();
 		using res = (await instance.status()) as InstanceStatus & Disposable;
 		return structuredClone(res);
+	}
+
+	public async subscribe(
+		options?: WorkflowSubscriptionOptions
+	): Promise<WorkflowSubscription> {
+		using instance = await this.getInstance();
+		// @ts-expect-error `subscribe` not yet included in workers-types.
+		return await instance.subscribe(options);
 	}
 
 	public async sendEvent(args: {

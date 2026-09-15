@@ -28,7 +28,7 @@ export default defineConfig({
 	build: {
 		chunkSizeWarningLimit: 1000,
 		lib: {
-			entry: resolve(__dirname, "lib/index.ts"),
+			entry: resolve(import.meta.dirname, "lib/index.ts"),
 			formats: ["es"],
 			fileName: "index",
 		},

@@ -18,10 +18,12 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 }
 
 export async function getAccessHeaders(
-	domain: string
+	domain: string,
+	signal?: AbortSignal
 ): Promise<Record<string, string>> {
 	return packageGetAccessHeaders(domain, {
 		logger,
 		isNonInteractiveOrCI,
+		signal,
 	});
 }

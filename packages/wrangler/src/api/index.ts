@@ -48,6 +48,7 @@ export type {
 	ReloadStartEvent,
 	ReloadCompleteEvent,
 	DevRegistryUpdateEvent,
+	RuntimeErrorEvent,
 	PreviewTokenExpiredEvent,
 	ReadyEvent,
 	ProxyWorkerIncomingRequestBody,

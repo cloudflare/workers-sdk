@@ -1,14 +1,18 @@
 import assert from "node:assert";
 import {
 	configFileName,
+	DEFAULT_COMPAT_DATE,
 	experimental_patchConfig,
 	formatConfigSnippet,
-	getTodaysCompatDate,
+	isDurableObjectContainerApp,
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { confirm, fetchResult, logger } from "../../shared/context";
-import { getSubdomainValues } from "../../triggers/deploy";
+import {
+	getSubdomainValues,
+	validateEventTriggerTargets,
+} from "../../triggers/deploy";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
 import { getWorkersDevSubdomain } from "../../triggers/subdomain";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
@@ -19,12 +23,12 @@ import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type { DeployProps, VersionsUploadProps } from "../../shared/types";
 import type {
-	AssetsOptions,
-	Config,
-	RawConfig,
-} from "@cloudflare/workers-utils";
+	ContainerlessConfig,
+	DeployProps,
+	VersionsUploadProps,
+} from "../../shared/types";
+import type { AssetsOptions, RawConfig } from "@cloudflare/workers-utils";
 
 /**
  *
@@ -41,7 +45,7 @@ type ValidateWorkerPropsInput =
 
 export function validateWorkerProps<T extends ValidateWorkerPropsInput>(
 	props: T,
-	config: Config
+	config: ContainerlessConfig
 ): T & { name: string } {
 	const { name, compatibilityDate } = props;
 	const { format } = props.entry;
@@ -58,7 +62,7 @@ export function validateWorkerProps<T extends ValidateWorkerPropsInput>(
 	}
 
 	if (!compatibilityDate) {
-		const compatibilityDateStr = getTodaysCompatDate();
+		const compatibilityDateStr = DEFAULT_COMPAT_DATE;
 		throw new UserError(
 			`A compatibility_date is required when uploading a Worker. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`
@@ -97,6 +101,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	if (props.command === "deploy") {
+		validateEventTriggerTargets(config, name);
 		validateRoutes(props.routes, props.assetsOptions);
 		assert(
 			!config.site || config.site.bucket,
@@ -113,7 +118,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 	} else {
-		if (config.containers && config.containers.length > 0) {
+		if (
+			props.containers.source?.some(
+				(container) => !isDurableObjectContainerApp(container)
+			)
+		) {
 			logger.warn(
 				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`deploy\`.`
 			);
@@ -137,7 +146,7 @@ export type PreUploadApiChecksResult = {
  */
 export async function preUploadApiChecks(
 	props: DeployProps | VersionsUploadProps,
-	config: Config
+	config: ContainerlessConfig
 ): Promise<PreUploadApiChecksResult> {
 	const { accountId, name } = props;
 
@@ -161,12 +170,25 @@ export async function preUploadApiChecks(
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 	let workerExists = true;
 
-	// Skip the service metadata fetch for dispatch namespace deploys (Workers for Platforms).
-	// Dispatch namespace scripts don't have standard service metadata.
-	const skipMetadataFetch =
-		props.command === "deploy" && !!props.dispatchNamespace;
-
-	if (!skipMetadataFetch) {
+	if (props.command === "deploy" && props.dispatchNamespace) {
+		try {
+			await fetchResult(
+				config,
+				`/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${name}`
+			);
+		} catch (e) {
+			if (
+				typeof e === "object" &&
+				e !== null &&
+				"code" in e &&
+				e.code === 10092
+			) {
+				workerExists = false;
+			} else {
+				throw e;
+			}
+		}
+	} else {
 		try {
 			const serviceMetaData = await fetchResult<{
 				default_environment: {
@@ -302,13 +324,19 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	await ensureQueuesExistByConfig(config, accountId);
+	await ensureQueuesExistByConfig(
+		config,
+		accountId,
+		!props.resourcesProvision,
+		name
+	);
 
 	// Resolve whether this deploy will actually publish to workers.dev, using
 	// the same logic as the triggers phase (`getSubdomainValues`): workers_dev
 	// defaults to true only when there are no routes.
 	const wantsWorkersDev =
 		props.command === "deploy" &&
+		props.dispatchNamespace === undefined &&
 		getSubdomainValues(config.workers_dev, config.preview_urls, props.routes)
 			.workers_dev;
 
@@ -318,13 +346,13 @@ export async function preUploadApiChecks(
 	// new Worker that targets workers.dev, so the user gets a clear prompt
 	// instead of a cryptic API failure. We skip it for:
 	//   - existing Workers (their account already has a subdomain),
-	//   - dispatch namespace deploys (which skip the metadata fetch, so
-	//     `workerExists` stays true), and
+	//   - dispatch namespace deploys, and
 	//   - routes-only / `workers_dev: false` deploys, which don't publish to
 	//     workers.dev and previously never required a subdomain (workflows on
 	//     such deploys still get a correctly-worded prompt in the triggers phase).
 	if (!workerExists && wantsWorkersDev) {
 		await getWorkersDevSubdomain(config, accountId, {
+			autoRegisterSubdomain: props.autoRegisterWorkersDevSubdomain,
 			configPath: config.configPath,
 		});
 	}

@@ -1,5 +1,6 @@
 export const SharedHeaders = {
 	LOG_LEVEL: "MF-Log-Level",
+	NAMESPACE: "MF-Namespace",
 } as const;
 
 export const SharedBindings = {
@@ -8,7 +9,6 @@ export const SharedBindings = {
 	MAYBE_SERVICE_BLOBS: "MINIFLARE_BLOBS",
 	MAYBE_SERVICE_LOOPBACK: "MINIFLARE_LOOPBACK",
 	MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS: "MINIFLARE_ENABLE_CONTROL_ENDPOINTS",
-	MAYBE_JSON_ENABLE_STICKY_BLOBS: "MINIFLARE_STICKY_BLOBS",
 } as const;
 
 export enum LogLevel {

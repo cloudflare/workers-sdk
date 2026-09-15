@@ -11,6 +11,23 @@ export const SERVICE_ENTRY = `${CORE_PLUGIN_NAME}:entry`;
 export const SERVICE_LOCAL_EXPLORER = `${CORE_PLUGIN_NAME}:local-explorer`;
 // Disk service for local explorer UI assets
 export const LOCAL_EXPLORER_DISK = `${CORE_PLUGIN_NAME}:local-explorer-disk`;
+// Local observability collector; user workers' `streamingTails` point here.
+// Prefixed via getUserServiceName(), so the name itself must not contain a
+// colon (it collides with the `core:user:` service namespacing).
+export const OBSERVABILITY_COLLECTOR_SERVICE_NAME =
+	"miniflare-observability-collector";
+// Hosts the local email store Durable Object (see email-store.worker.ts). The
+// send_email binding, the receiving `email()` path, and the local explorer all
+// bind to this service to capture/read emails over workerd-internal RPC.
+export const EMAIL_STORE_SERVICE_NAME = `email:store`;
+// Disk service backing the EmailStore DO's SQLite storage.
+export const EMAIL_STORE_DISK = `email:store-disk`;
+// Flags that make a user worker stream its tail (incl. user spans) to the
+// collector; applied to each user worker when observability is enabled
+export const OBSERVABILITY_COMPAT_FLAGS = [
+	"streaming_tail_worker",
+	"tail_worker_user_spans",
+] as const;
 // Service prefix for all regular user workers
 const SERVICE_USER_PREFIX = `${CORE_PLUGIN_NAME}:user`;
 // Service prefix for `workerd`'s builtin services (network, external, disk)

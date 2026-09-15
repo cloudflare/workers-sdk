@@ -5,8 +5,8 @@ import {
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
-	writeOutputWorkerConfig,
-} from "@cloudflare/config";
+	writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
@@ -25,6 +25,7 @@ import {
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
+import { getServerWatchConfig } from "./wrangler-watch-ignore";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
 import type * as vite from "vite";
@@ -72,6 +73,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						ctx.getTunnelHostnames(),
 						userConfig.server?.allowedHosts
 					),
+					watch: getServerWatchConfig(userConfig.server?.watch),
 					fs: {
 						deny: [
 							...defaultDeniedFiles,
@@ -223,10 +225,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 							entryWorkerNewConfig,
 							`No config found for "${entryWorkerEnvironmentName}" environment`
 						);
-						await writeOutputWorkerConfig(
-							builder.config.root,
-							entryWorkerNewConfig
-						);
+						await writeWorkerConfig({
+							root: builder.config.root,
+							config: entryWorkerNewConfig,
+						});
 					} else {
 						const entryWorkerConfig = ctx.getWorkerConfig(
 							entryWorkerEnvironmentName
@@ -354,7 +356,7 @@ function getEnvironmentsConfig(
 }
 
 /**
- * When the Build Output API is enabled,
+ * When the Build Output Specification is enabled,
  * force every Worker environment's and the client environment's `build.outDir`
  * to the spec-mandated location.
  *
@@ -371,44 +373,22 @@ function forceBuildOutputDirs(
 	}
 
 	const { root } = resolvedViteConfig;
-	let clientWorkerName: string;
 
+	// The Build Output Specification currently holds a single Worker in the
+	// `default` directory (the default export in `cloudflare.config.ts`). Only
+	// the entry Worker is emitted; auxiliary Worker environments keep their
+	// normal build output and are ignored by the spec.
 	if (resolvedPluginConfig.type === "workers") {
-		for (const [
-			environmentName,
-			worker,
-		] of resolvedPluginConfig.environmentNameToWorkerMap) {
-			const environment = resolvedViteConfig.environments[environmentName];
-			if (!environment) {
-				continue;
-			}
-			assert(worker.parsedNewConfig, "Expected parsedNewConfig to be defined");
-			environment.build.outDir = getWorkerBundleDir(
-				root,
-				worker.parsedNewConfig.name
-			);
-		}
-
 		const entryName = resolvedPluginConfig.entryWorkerEnvironmentName;
-		const entryWorker =
-			resolvedPluginConfig.environmentNameToWorkerMap.get(entryName);
-		assert(entryWorker, `Expected entry worker for environment "${entryName}"`);
-		assert(
-			entryWorker.parsedNewConfig,
-			"Expected parsedNewConfig to be defined"
-		);
-		clientWorkerName = entryWorker.parsedNewConfig.name;
-	} else {
-		assert(
-			resolvedPluginConfig.parsedNewConfig,
-			"Expected parsedNewConfig to be defined"
-		);
-		clientWorkerName = resolvedPluginConfig.parsedNewConfig.name;
+		const entryEnvironment = resolvedViteConfig.environments[entryName];
+		if (entryEnvironment) {
+			entryEnvironment.build.outDir = getWorkerBundleDir(root);
+		}
 	}
 
 	const clientEnvironment = resolvedViteConfig.environments.client;
 	if (clientEnvironment) {
-		clientEnvironment.build.outDir = getWorkerAssetsDir(root, clientWorkerName);
+		clientEnvironment.build.outDir = getWorkerAssetsDir(root);
 	}
 }
 

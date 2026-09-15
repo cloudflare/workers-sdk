@@ -20,6 +20,22 @@
 	"vars": {
 		"SENTRY_DSN": "https://1ff9df95733c4e7d9c31dc13ab05d44a@sentry10.cfdata.org/891",
 	},
+	"secrets": {
+		"required": [
+			"PROMETHEUS_TOKEN",
+			"SENTRY_ACCESS_CLIENT_SECRET",
+			"SENTRY_ACCESS_CLIENT_ID",
+		],
+	},
+	"unsafe": {
+		"bindings": [
+			{
+				"name": "WSHIM_SOCKET",
+				"type": "internal_service_http",
+				"service": "wshim",
+			},
+		],
+	},
 	"observability": {
 		"enabled": true,
 	},

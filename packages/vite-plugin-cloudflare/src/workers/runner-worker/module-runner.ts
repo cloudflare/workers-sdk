@@ -202,18 +202,34 @@ async function createModuleRunner(
 					stub.send(environmentName, JSON.stringify(data));
 				},
 				async invoke(data) {
-					const response = await env.__VITE_INVOKE_MODULE__.fetch(
-						new Request(UNKNOWN_HOST, {
-							method: "POST",
-							headers: {
-								[ENVIRONMENT_NAME_HEADER]: environmentName,
-							},
-							body: JSON.stringify(data),
-						})
-					);
-					const result = await response.json();
+					// The fetch can fail transiently (e.g. the runtime reusing a
+					// pooled connection to the loopback server just as it closes).
+					// A failed invoke is cached by the module runner and poisons the
+					// module graph for the rest of the session, so retry before
+					// giving up. Invokes are idempotent requests for module code,
+					// making retries safe.
+					let lastError: unknown;
 
-					return result as { result: unknown } | { error: unknown };
+					for (let attempt = 0; attempt < 3; attempt++) {
+						try {
+							const response = await env.__VITE_INVOKE_MODULE__.fetch(
+								new Request(UNKNOWN_HOST, {
+									method: "POST",
+									headers: {
+										[ENVIRONMENT_NAME_HEADER]: environmentName,
+									},
+									body: JSON.stringify(data),
+								})
+							);
+							const result = await response.json();
+
+							return result as { result: unknown } | { error: unknown };
+						} catch (error) {
+							lastError = error;
+						}
+					}
+
+					throw lastError;
 				},
 			},
 			hmr: true,

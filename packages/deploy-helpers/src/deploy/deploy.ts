@@ -3,29 +3,52 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli-shared-helpers";
-import { verifyDockerInstalled } from "@cloudflare/containers-shared";
+import {
+	deployContainers,
+	initContainersSharedContext,
+	pushBuiltContainerImage,
+} from "@cloudflare/containers-shared";
 import {
 	APIError,
 	formatTime,
+	getBindings,
 	getDockerPath,
+	getDurableObjectContainerApps,
 	hasDurableObjectExports,
 	parseNonHyphenedUuid,
+	printBindings,
 	retryOnAPIFailure,
 	UserError,
+	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { fetchResult, logger } from "../shared/context";
+import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
 import {
 	buildAssetManifest,
 	resolveAssetOptions,
 	syncAssets,
 } from "./helpers/assets";
-import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize } from "./helpers/bundle-reporter";
-import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
+import { confirmLatestDeploymentOverwriteAndGetLatest } from "./helpers/confirm-latest-deployment-overwrite";
+import {
+	addContainerImagesBinding,
+	clearRemovedContainerImagesBindings,
+} from "./helpers/container-image-bindings";
+import {
+	getContainerMetadata,
+	getContainerMetadataForRolloutSkip,
+} from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
+import {
+	deployDurableObjectContainerApplications,
+	prepareDurableObjectContainerApplications,
+} from "./helpers/durable-object-container-applications";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
@@ -42,7 +65,6 @@ import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-e
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
-import { printBindings } from "./helpers/print-bindings";
 import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
@@ -61,23 +83,24 @@ import {
 	patchNonVersionedScriptSettings,
 } from "./helpers/versions-api";
 import { addWorkersSitesBindings } from "./helpers/workers-sites-bindings";
-import type { DeployProps, WorkerBuildResult } from "../shared/types";
+import type {
+	ContainerlessConfig,
+	DeployProps,
+	WorkerBuildResult,
+} from "../shared/types";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
+	ApiDeployment,
 	ApiVersion,
 	Percentage,
 	VersionId,
 } from "./helpers/versions-types";
-import type {
-	ContainerNormalizedConfig,
-	ImageURIConfig,
-} from "@cloudflare/containers-shared";
+import type { ResolvedContainerDeployment } from "@cloudflare/containers-shared";
 import type {
 	CfModule,
 	CfWorkerInit,
 	ComplianceConfig,
-	Config,
 	ExportsReconciliationResult,
 	LegacyAssetPaths,
 } from "@cloudflare/workers-utils";
@@ -86,7 +109,7 @@ import type { FormData } from "undici";
 /**
  * Wrangler-specific functions injected into `deploy()`. These remain in
  * wrangler because they depend on wrangler-only systems (account selection,
- * metrics, the dev-mode worker registry, container orchestration, etc.).
+ * metrics, the dev-mode worker registry, etc.).
  */
 export type DeployCallbacks = {
 	syncWorkersSite:
@@ -103,48 +126,59 @@ export type DeployCallbacks = {
 				namespace: string | undefined;
 		  }>)
 		| undefined;
-	getNormalizedContainerOptions:
-		| ((
-				config: Config,
-				args: {
-					containersRollout?: "gradual" | "immediate" | "none";
-					dryRun?: boolean;
-				}
-		  ) => Promise<ContainerNormalizedConfig[]>)
-		| undefined;
-	buildContainer:
-		| ((
-				containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
-				imageTag: string,
-				dryRun: boolean,
-				pathToDocker: string,
-				verifyDockerIsRunning: boolean
-		  ) => Promise<unknown>)
-		| undefined;
-	deployContainers:
-		| ((
-				config: Config,
-				normalisedContainerConfig: ContainerNormalizedConfig[],
-				args: { versionId: string; accountId: string; scriptName: string }
-		  ) => Promise<void>)
-		| undefined;
-	analyseBundle:
-		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
-		| undefined;
+	/**
+	 * @deprecated Startup profiling is provided by deploy-helpers automatically.
+	 */
+	analyseBundle?: (
+		workerBundle: string | FormData
+	) => Promise<Record<string, unknown>>;
 };
 
-export default async function deploy(
-	props: DeployProps,
-	config: Config,
-	buildResult: WorkerBuildResult,
-	callbacks: DeployCallbacks
-): Promise<{
+type DeployResult = {
 	sourceMapSize?: number;
 	versionId: string | null;
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
-}> {
+	bundleSize?: BundleSize;
+};
+
+export default async function deploy(
+	props: DeployProps,
+	config: ContainerlessConfig,
+	buildResult: WorkerBuildResult,
+	callbacks: DeployCallbacks
+): Promise<DeployResult> {
+	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
+
+	const result = await deployWorker(props, config, buildResult, callbacks);
+
+	writeOutput({
+		type: "deploy",
+		version: 1,
+		worker_name: props.name ?? null,
+		worker_tag: result.workerTag,
+		version_id: result.versionId,
+		targets: result.targets,
+		wrangler_environment: props.env,
+		worker_name_overridden: props.workerNameOverridden ?? false,
+		bundle_size: result.bundleSize
+			? {
+					raw_bytes: result.bundleSize.size,
+					gzip_bytes: result.bundleSize.gzipSize,
+				}
+			: undefined,
+	});
+
+	return result;
+}
+
+async function deployWorker(
+	props: DeployProps,
+	config: ContainerlessConfig,
+	buildResult: WorkerBuildResult,
+	callbacks: DeployCallbacks
+): Promise<DeployResult> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
 
@@ -175,13 +209,15 @@ export default async function deploy(
 	const { format } = entry;
 	const { projectRoot } = entry;
 
+	let latestDeployment: ApiDeployment | undefined;
 	if (!props.dispatchNamespace && accountId && scriptName) {
-		const yes = await confirmLatestDeploymentOverwrite(
+		const confirmation = await confirmLatestDeploymentOverwriteAndGetLatest(
 			config,
 			accountId,
 			scriptName
 		);
-		if (!yes) {
+		latestDeployment = confirmation.latestDeployment;
+		if (!confirmation.confirmed) {
 			cancel("Aborting deploy...");
 			return { versionId, workerTag };
 		}
@@ -189,9 +225,13 @@ export default async function deploy(
 
 	const isDryRun = props.dryRun;
 
-	const normalisedContainerConfig = callbacks.getNormalizedContainerOptions
-		? await callbacks.getNormalizedContainerOptions(config, props)
-		: [];
+	const normalisedContainerConfig = props.containers.standard.normalized;
+	const builtContainerImages = props.containers.standard.builtImages;
+	const durableObjectContainerConfig = getDurableObjectContainerApps(
+		props.containers.source
+	);
+	const shouldDeployContainers =
+		normalisedContainerConfig.length > 0 && props.containersRollout !== "none";
 	const {
 		modules,
 		dependencies,
@@ -200,6 +240,39 @@ export default async function deploy(
 		content,
 		sourceMaps,
 	} = buildResult;
+	const skipContainerChanges = props.containersRollout === "none";
+	const preparedContainerImages = skipContainerChanges
+		? undefined
+		: await prepareDurableObjectContainerApplications(
+				config,
+				durableObjectContainerConfig,
+				props.containers.durableObjects.builtImages,
+				{
+					accountId,
+					dryRun: Boolean(isDryRun),
+					scriptName,
+					dispatchNamespace: props.dispatchNamespace,
+				}
+			);
+	const rolloutSkipContainerState = skipContainerChanges
+		? await getContainerMetadataForRolloutSkip(
+				config,
+				props.containers.source,
+				{
+					accountId,
+					scriptName,
+					dispatchNamespace: props.dispatchNamespace,
+					workerExists,
+					latestDeployment,
+					dryRun: isDryRun,
+				}
+			)
+		: undefined;
+	const containerMetadata = rolloutSkipContainerState
+		? rolloutSkipContainerState.containers
+		: getContainerMetadata(props.containers.source, preparedContainerImages, {
+				exports: config.exports,
+			});
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
 	const { migrations, exports } = await resolveExportsUploadPayload({
@@ -270,6 +343,26 @@ export default async function deploy(
 		type: "deploy",
 		workerExists,
 	});
+	if (!skipContainerChanges && keepVars && !isDryRun && workerExists) {
+		await clearRemovedContainerImagesBindings(
+			config,
+			durableObjectContainerConfig,
+			bindings,
+			workerUrl
+		);
+	}
+	addContainerImagesBinding(
+		durableObjectContainerConfig,
+		bindings,
+		preparedContainerImages ?? {},
+		{
+			preserveExisting: skipContainerChanges,
+			exports: config.exports,
+			workerExists,
+			hasExistingBinding:
+				rolloutSkipContainerState?.hasExistingContainerImagesBinding,
+		}
+	);
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
@@ -295,7 +388,7 @@ export default async function deploy(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: containerMetadata,
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -328,7 +421,10 @@ export default async function deploy(
 		cache: config.cache,
 		package_dependencies:
 			config.dependencies_instrumentation?.enabled !== false && projectRoot
-				? await collectPackageDependencies(projectRoot)
+				? await collectPackageDependencies(
+						projectRoot,
+						config.dependencies_instrumentation?.exclude_packages
+					)
 				: undefined,
 	};
 
@@ -337,10 +433,8 @@ export default async function deploy(
 		0
 	);
 
-	await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	// We can use the new versions/deployments APIs if we:
 	// * are uploading a worker that already exists
@@ -357,52 +451,14 @@ export default async function deploy(
 		migrations === undefined &&
 		!hasDurableObjectExports(config.exports) &&
 		!config.first_party_worker &&
-		config.containers === undefined;
+		props.containers.source === undefined &&
+		// Rollout skip can recover Container metadata absent from local config.
+		containerMetadata === undefined;
 
 	let workerBundle: FormData;
 	const dockerPath = getDockerPath();
 
-	// lets fail earlier in the case where docker isn't installed
-	// and we have containers so that we don't get into a
-	// disjointed state where the worker updates but the container
-	// fails.
-	if (normalisedContainerConfig.length && props.containersRollout !== "none") {
-		// if you have a registry url specified, you don't need docker
-		const containersWithDockerfile = normalisedContainerConfig.filter(
-			(container) => "dockerfile" in container
-		);
-		if (containersWithDockerfile.length > 0) {
-			await verifyDockerInstalled({
-				dockerPath,
-				operation: `deploying${isDryRun ? " (even in dry-run mode)" : ""}`,
-				imageNoun:
-					containersWithDockerfile.length !== 1
-						? "the configured images"
-						: "the configured image",
-				hint: "If you cannot run Docker locally, you can still deploy your Worker by passing --containers-rollout=none. This will not deploy or update your Container.",
-			});
-		}
-	}
-
 	if (isDryRun) {
-		if (normalisedContainerConfig.length) {
-			for (const container of normalisedContainerConfig) {
-				if (
-					"dockerfile" in container &&
-					props.containersRollout !== "none" &&
-					callbacks.buildContainer
-				) {
-					await callbacks.buildContainer(
-						container,
-						workerTag ?? "worker-tag",
-						isDryRun,
-						dockerPath,
-						false
-					);
-				}
-			}
-		}
-
 		workerBundle = createWorkerUploadForm(
 			worker,
 			addWorkersSitesBindings(
@@ -417,20 +473,24 @@ export default async function deploy(
 			}
 		);
 
-		printBindings(
-			bindings,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			config.containers,
-			{ warnIfNoBindings: true, unsafeMetadata: config.unsafe?.metadata }
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: config.tail_consumers,
+			streamingTailConsumers: config.streaming_tail_consumers,
+			containers: props.containers.source,
+			warnIfNoBindings: true,
+			unsafeMetadata: config.unsafe?.metadata,
+		});
 	} else {
 		assert(accountId, "Missing accountId");
+		let provisionBindingsResult:
+			| Awaited<ReturnType<typeof provisionBindings>>
+			| undefined;
 
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
 			logger.debug("skipping provisioning on assets-only project");
 		} else if (props.resourcesProvision) {
-			await provisionBindings(
+			provisionBindingsResult = await provisionBindings(
 				bindings ?? {},
 				accountId,
 				scriptName,
@@ -586,13 +646,14 @@ export default async function deploy(
 			}
 			bindingsPrinted = true;
 
-			printBindings(
-				bindings,
-				config.tail_consumers,
-				config.streaming_tail_consumers,
-				config.containers,
-				{ unsafeMetadata: config.unsafe?.metadata }
-			);
+			printBindings(bindings, {
+				log: logger.log,
+				tailConsumers: config.tail_consumers,
+				streamingTailConsumers: config.streaming_tail_consumers,
+				containers: props.containers.source,
+				unsafeMetadata: config.unsafe?.metadata,
+			});
+			provisionBindingsResult?.warnOnSkippedProvisioning();
 
 			versionId = parseNonHyphenedUuid(result.deployment_id);
 
@@ -618,13 +679,13 @@ export default async function deploy(
 			}
 		} catch (err) {
 			if (!bindingsPrinted) {
-				printBindings(
-					bindings,
-					config.tail_consumers,
-					config.streaming_tail_consumers,
-					config.containers,
-					{ unsafeMetadata: config.unsafe?.metadata }
-				);
+				printBindings(bindings, {
+					log: logger.log,
+					tailConsumers: config.tail_consumers,
+					streamingTailConsumers: config.streaming_tail_consumers,
+					containers: props.containers.source,
+					unsafeMetadata: config.unsafe?.metadata,
+				});
 			}
 
 			// Reconciliation errors include structured per-class details.
@@ -645,6 +706,7 @@ export default async function deploy(
 				dependencies,
 				workerBundle,
 				projectRoot,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
 				callbacks.analyseBundle
 			);
 			if (message !== null) {
@@ -716,30 +778,79 @@ export default async function deploy(
 
 	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, bundleSize };
 	}
 
 	const uploadMs = Date.now() - start;
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	if (
-		normalisedContainerConfig.length &&
-		props.containersRollout !== "none" &&
-		callbacks.deployContainers
-	) {
+	if (shouldDeployContainers) {
 		assert(versionId && accountId);
-		await callbacks.deployContainers(config, normalisedContainerConfig, {
+		initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
+		const containerDeployments: ResolvedContainerDeployment[] = [];
+		for (const container of normalisedContainerConfig) {
+			if ("dockerfile" in container) {
+				const builtImage = builtContainerImages.find(
+					(image) => image.container === container
+				);
+				assert(
+					builtImage,
+					"Expected container image to be built before upload"
+				);
+				containerDeployments.push({
+					container,
+					imageRef: await pushBuiltContainerImage(
+						builtImage,
+						versionId,
+						dockerPath,
+						accountId,
+						config
+					),
+				});
+			} else {
+				containerDeployments.push({
+					container,
+					imageRef: { newTag: container.image_uri },
+				});
+			}
+		}
+		await deployContainers(config, containerDeployments, {
 			versionId,
 			accountId,
 			scriptName,
+			dispatchNamespace: props.dispatchNamespace,
 		});
+	}
+	if (!skipContainerChanges && durableObjectContainerConfig.length > 0) {
+		assert(versionId && accountId);
+		try {
+			await deployDurableObjectContainerApplications(
+				config,
+				durableObjectContainerConfig,
+				{
+					versionId,
+					accountId,
+					scriptName,
+					dispatchNamespace: props.dispatchNamespace,
+				}
+			);
+		} catch (error) {
+			throw new UserError(
+				"The Worker version was deployed, but Wrangler could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command to retry and finish deployment.",
+				{
+					telemetryMessage:
+						"deploy durable object container application creation failed after deployment",
+					cause: error,
+				}
+			);
+		}
 	}
 
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, assetUploadStats };
+		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
 	// deploy triggers
@@ -747,10 +858,12 @@ export default async function deploy(
 		config,
 		accountId,
 		scriptName,
-		env: props.env,
+		workerTag,
 		crons: props.triggers,
 		firstDeploy: !workerExists,
 		routes: props.routes,
+		validated: true,
+		dryRun: false,
 	});
 
 	logger.log("Current Version ID:", versionId);
@@ -761,5 +874,6 @@ export default async function deploy(
 		workerTag,
 		assetUploadStats,
 		targets: targets ?? [],
+		bundleSize,
 	};
 }

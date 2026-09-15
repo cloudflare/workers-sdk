@@ -1,6 +1,10 @@
 import { Miniflare } from "miniflare";
 import { assert, describe, test } from "vitest";
-import { miniflareTest, useDispose } from "../../test-shared";
+import {
+	miniflareTest,
+	singleModuleManifest,
+	useDispose,
+} from "../../test-shared";
 import type { MiniflareTestContext } from "../../test-shared";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
@@ -10,7 +14,18 @@ interface Context extends MiniflareTestContext {
 }
 
 const ctx = miniflareTest<{ BUCKET: R2Bucket }, Context>(
-	{ r2Buckets: { BUCKET: "bucket" } },
+	{
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: "bucket" } },
+				},
+			},
+		],
+	},
 	async (global) => new global.Response(null, { status: 404 })
 );
 
@@ -613,10 +628,22 @@ test("multiple buckets are each independently reachable", async ({
 	expect,
 }) => {
 	const opts: MiniflareOptions = {
-		modules: true,
-		script:
-			"export default { fetch() { return new Response(null, { status: 404 }) } }",
-		r2Buckets: { ALPHA: "alpha", BETA: "beta" },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch() { return new Response(null, { status: 404 }) } }"
+					),
+					env: {
+						ALPHA: { type: "r2", name: "alpha" },
+						BETA: { type: "r2", name: "beta" },
+					},
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -644,18 +671,26 @@ test("buckets across multiple workers are all reachable", async ({
 	const opts: MiniflareOptions = {
 		workers: [
 			{
-				name: "worker-a",
-				modules: true,
-				script:
-					"export default { fetch() { return new Response(null, { status: 404 }) } }",
-				r2Buckets: { BUCKET: "alpha" },
+				config: {
+					type: "worker",
+					name: "worker-a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch() { return new Response(null, { status: 404 }) } }"
+					),
+					env: { BUCKET: { type: "r2", name: "alpha" } },
+				},
 			},
 			{
-				name: "worker-b",
-				modules: true,
-				script:
-					"export default { fetch() { return new Response(null, { status: 404 }) } }",
-				r2Buckets: { BUCKET: "beta" },
+				config: {
+					type: "worker",
+					name: "worker-b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch() { return new Response(null, { status: 404 }) } }"
+					),
+					env: { BUCKET: { type: "r2", name: "beta" } },
+				},
 			},
 		],
 	};
@@ -683,10 +718,22 @@ test("two bindings pointing at the same underlying bucket id share the same URL"
 	expect,
 }) => {
 	const opts: MiniflareOptions = {
-		modules: true,
-		script:
-			"export default { fetch() { return new Response(null, { status: 404 }) } }",
-		r2Buckets: { ALIAS_A: "shared", ALIAS_B: "shared" },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch() { return new Response(null, { status: 404 }) } }"
+					),
+					env: {
+						ALIAS_A: { type: "r2", name: "shared" },
+						ALIAS_B: { type: "r2", name: "shared" },
+					},
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);

@@ -113,7 +113,7 @@ export const R2ConditionalSchema = z.object({
 	// Performs the operation if the object was uploaded AFTER the given date
 	uploadedAfter: DateSchema.optional(), // "If-Modified-Since"
 	// Truncates dates to seconds before performing comparisons
-	secondsGranularity: z.oboolean(),
+	secondsGranularity: z.boolean().optional(),
 });
 export type R2Conditional = z.infer<typeof R2ConditionalSchema>;
 
@@ -142,11 +142,11 @@ export const R2PublishedPartSchema = z.object({
 export type R2PublishedPart = z.infer<typeof R2PublishedPartSchema>;
 
 export const R2HttpFieldsSchema = z.object({
-	contentType: z.ostring(),
-	contentLanguage: z.ostring(),
-	contentDisposition: z.ostring(),
-	contentEncoding: z.ostring(),
-	cacheControl: z.ostring(),
+	contentType: z.string().optional(),
+	contentLanguage: z.string().optional(),
+	contentDisposition: z.string().optional(),
+	contentEncoding: z.string().optional(),
+	cacheControl: z.string().optional(),
 	cacheExpiry: z.coerce.number().optional(),
 });
 export type R2HttpFields = z.infer<typeof R2HttpFieldsSchema>;
@@ -163,7 +163,7 @@ export const R2GetRequestSchema = z.object({
 	// of bytes from the object should be returned. Refer to
 	// https://developers.cloudflare.com/r2/runtime-apis/#ranged-reads.
 	range: R2RangeSchema.optional(),
-	rangeHeader: z.ostring(),
+	rangeHeader: z.string().optional(),
 	// Specifies that the object should only be returned given satisfaction of
 	// certain conditions in the R2Conditional. Refer to R2Conditional above.
 	onlyIf: R2ConditionalSchema.optional(),
@@ -231,11 +231,11 @@ export const R2AbortMultipartUploadRequestSchema = z.object({
 
 export const R2ListRequestSchema = z.object({
 	method: z.literal("list"),
-	limit: z.onumber(),
-	prefix: z.ostring(),
-	cursor: z.ostring(),
-	delimiter: z.ostring(),
-	startAfter: z.ostring(),
+	limit: z.number().optional(),
+	prefix: z.string().optional(),
+	cursor: z.string().optional(),
+	delimiter: z.string().optional(),
+	startAfter: z.string().optional(),
 	include: z
 		.union([z.literal(0), z.literal(1)])
 		.transform((value) => (value === 0 ? "httpMetadata" : "customMetadata"))

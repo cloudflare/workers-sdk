@@ -1,16 +1,19 @@
 import { describe, it } from "vitest";
 import { convertToWranglerConfig } from "../convert";
-import { exports as exportConfig } from "../exports";
 
-const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
+const baseConfig = {
+	type: "worker",
+	name: "my-worker",
+	compatibilityDate: "2026-06-01",
+} as const;
 
 describe("convertToWranglerConfig", () => {
 	describe("top-level fields", () => {
 		it("maps primitive top-level fields", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				type: "worker",
 				name: "my-worker",
 				entrypoint: "./src/index.ts",
-				accountId: "acc-123",
 				compatibilityDate: "2026-01-01",
 				compatibilityFlags: ["nodejs_compat"],
 				workersDev: true,
@@ -21,7 +24,6 @@ describe("convertToWranglerConfig", () => {
 			expect(result).toEqual({
 				name: "my-worker",
 				main: "./src/index.ts",
-				account_id: "acc-123",
 				compatibility_date: "2026-01-01",
 				compatibility_flags: ["nodejs_compat"],
 				workers_dev: true,
@@ -29,24 +31,6 @@ describe("convertToWranglerConfig", () => {
 				logpush: true,
 				first_party_worker: false,
 			});
-		});
-
-		it("maps complianceRegion: 'fedramp-high' to 'fedramp_high'", ({
-			expect,
-		}) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				complianceRegion: "fedramp-high",
-			});
-			expect(result.compliance_region).toBe("fedramp_high");
-		});
-
-		it("passes complianceRegion: 'public' through unchanged", ({ expect }) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				complianceRegion: "public",
-			});
-			expect(result.compliance_region).toBe("public");
 		});
 
 		it("passes placement through unchanged", ({ expect }) => {
@@ -71,6 +55,7 @@ describe("convertToWranglerConfig", () => {
 				observability: {
 					enabled: true,
 					headSamplingRate: 0.5,
+					redactQueryString: true,
 					logs: {
 						enabled: true,
 						headSamplingRate: 0.25,
@@ -89,6 +74,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.observability).toEqual({
 				enabled: true,
 				head_sampling_rate: 0.5,
+				redact_query_string: true,
 				logs: {
 					enabled: true,
 					head_sampling_rate: 0.25,
@@ -173,7 +159,6 @@ describe("convertToWranglerConfig", () => {
 					MY_MEDIA: { type: "media" },
 					MY_STREAM: { type: "stream" },
 					MY_VM: { type: "version-metadata" },
-					MY_WEB_SEARCH: { type: "web-search" },
 				},
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI" });
@@ -182,7 +167,6 @@ describe("convertToWranglerConfig", () => {
 			expect(result.media).toEqual({ binding: "MY_MEDIA" });
 			expect(result.stream).toEqual({ binding: "MY_STREAM" });
 			expect(result.version_metadata).toEqual({ binding: "MY_VM" });
-			expect(result.websearch).toEqual({ binding: "MY_WEB_SEARCH" });
 		});
 
 		it("includes the remote flag on singletons that support it", ({
@@ -190,28 +174,34 @@ describe("convertToWranglerConfig", () => {
 		}) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				env: { MY_AI: { type: "ai", remote: true } },
+				env: { MY_AI: { type: "ai", dev: { remote: true } } },
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI", remote: true });
 		});
+	});
 
-		it("includes the remote flag on web-search", ({ expect }) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				env: { MY_WS: { type: "web-search", remote: true } },
-			});
-			expect(result.websearch).toEqual({
-				binding: "MY_WS",
-				remote: true,
-			});
+	it("creates draft provisionable bindings", ({ expect }) => {
+		const result = convertToWranglerConfig({
+			...baseConfig,
+			env: {
+				QUEUE: { type: "queue" },
+				DISPATCH: { type: "dispatch-namespace" },
+				FLAGS: { type: "flagship" },
+			},
 		});
+
+		expect(result.queues?.producers).toEqual([{ binding: "QUEUE" }]);
+		expect(result.dispatch_namespaces).toEqual([{ binding: "DISPATCH" }]);
+		expect(result.flagship).toEqual([{ binding: "FLAGS" }]);
 	});
 
 	describe("array bindings", () => {
 		it("maps kv with id", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				env: { MY_KV: { type: "kv", id: "abc", remote: true } },
+				env: {
+					MY_KV: { type: "kv", id: "abc", dev: { remote: true } },
+				},
 			});
 			expect(result.kv_namespaces).toEqual([
 				{ binding: "MY_KV", id: "abc", remote: true },
@@ -244,15 +234,37 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps r2 with name and jurisdiction", ({ expect }) => {
+		it("maps r2 with name, jurisdiction, and dev S3 credentials", ({
+			expect,
+		}) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					MY_R2: { type: "r2", name: "my-bucket", jurisdiction: "eu" },
+					MY_R2: {
+						type: "r2",
+						name: "my-bucket",
+						jurisdiction: "eu",
+						dev: {
+							experimentalS3Credentials: {
+								accessKeyId: "access-key",
+								secretAccessKey: "secret-key",
+							},
+						},
+					},
 				},
 			});
 			expect(result.r2_buckets).toEqual([
-				{ binding: "MY_R2", bucket_name: "my-bucket", jurisdiction: "eu" },
+				{
+					binding: "MY_R2",
+					bucket_name: "my-bucket",
+					jurisdiction: "eu",
+					local_dev: {
+						experimental_s3_credentials: {
+							accessKeyId: "access-key",
+							secretAccessKey: "secret-key",
+						},
+					},
+				},
 			]);
 		});
 
@@ -276,16 +288,14 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps hyperdrive with localConnectionString (camelCase)", ({
-			expect,
-		}) => {
+		it("maps hyperdrive dev.connectionString", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
 					HD: {
 						type: "hyperdrive",
 						id: "h-1",
-						localConnectionString: "postgres://...",
+						dev: { connectionString: "postgres://..." },
 					},
 				},
 			});
@@ -316,6 +326,14 @@ describe("convertToWranglerConfig", () => {
 			expect(result.flagship).toEqual([{ binding: "F", app_id: "app-1" }]);
 		});
 
+		it("preserves a draft flagship binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { F: { type: "flagship" } },
+			});
+			expect(result.flagship).toEqual([{ binding: "F" }]);
+		});
+
 		it("maps ai-search.name to instance_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
@@ -340,7 +358,11 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					MEM: { type: "agent-memory", namespace: "ns-1", remote: true },
+					MEM: {
+						type: "agent-memory",
+						namespace: "ns-1",
+						dev: { remote: true },
+					},
 				},
 			});
 			expect(result.agent_memory).toEqual([
@@ -387,7 +409,7 @@ describe("convertToWranglerConfig", () => {
 					DN: {
 						type: "dispatch-namespace",
 						namespace: "ns-1",
-						outbound: { workerName: "out-worker", parameters: ["p1", "p2"] },
+						outbound: { worker: "out-worker", parameters: ["p1", "p2"] },
 					},
 				},
 			});
@@ -398,6 +420,14 @@ describe("convertToWranglerConfig", () => {
 					outbound: { service: "out-worker", parameters: ["p1", "p2"] },
 				},
 			]);
+		});
+
+		it("preserves a draft dispatch namespace binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { DN: { type: "dispatch-namespace" } },
+			});
+			expect(result.dispatch_namespaces).toEqual([{ binding: "DN" }]);
 		});
 
 		it("maps secrets-store-secret to store_id + secret_name", ({ expect }) => {
@@ -416,13 +446,17 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps send-email with all address fields", ({ expect }) => {
+		it("maps send-email address restrictions", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					EM: {
+					EM_DESTINATION: {
 						type: "send-email",
 						destinationAddress: "dest@example.com",
+						allowedSenderAddresses: ["sender@x.com"],
+					},
+					EM_ALLOWLIST: {
+						type: "send-email",
 						allowedDestinationAddresses: ["a@x.com", "b@x.com"],
 						allowedSenderAddresses: ["sender@x.com"],
 					},
@@ -430,8 +464,12 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.send_email).toEqual([
 				{
-					name: "EM",
+					name: "EM_DESTINATION",
 					destination_address: "dest@example.com",
+					allowed_sender_addresses: ["sender@x.com"],
+				},
+				{
+					name: "EM_ALLOWLIST",
 					allowed_destination_addresses: ["a@x.com", "b@x.com"],
 					allowed_sender_addresses: ["sender@x.com"],
 				},
@@ -504,10 +542,10 @@ describe("convertToWranglerConfig", () => {
 				env: {
 					W: {
 						type: "worker",
-						workerName: "other-worker",
+						worker: "other-worker",
 						exportName: "MyEntry",
 						props: { foo: "bar" },
-						remote: true,
+						dev: { remote: true },
 					},
 				},
 			});
@@ -534,6 +572,14 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("preserves a draft queue binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { Q: { type: "queue" } },
+			});
+			expect(result.queues).toEqual({ producers: [{ binding: "Q" }] });
+		});
+
 		it("maps durable-object binding to durable_objects.bindings", ({
 			expect,
 		}) => {
@@ -542,7 +588,7 @@ describe("convertToWranglerConfig", () => {
 				env: {
 					DO: {
 						type: "durable-object",
-						workerName: "other-worker",
+						worker: "other-worker",
 						exportName: "MyDO",
 					},
 				},
@@ -650,6 +696,54 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("converts an attached container on a live durable-object export", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					MyDO: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				MyDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "my-container",
+				},
+			});
+		});
+
+		it("converts an attached container on an expecting-transfer export", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Incoming: {
+						type: "durable-object",
+						state: "expecting-transfer",
+						storage: "sqlite",
+						transferFrom: "source-worker",
+						container: "my-container",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Incoming: {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "sqlite",
+					transfer_from: "source-worker",
+					container: "my-container",
+				},
+			});
+		});
+
 		it('treats an explicit `state: "created"` like the default and omits it on the wire', ({
 			expect,
 		}) => {
@@ -754,8 +848,11 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				exports: {
-					default: exportConfig.worker({ cache: { enabled: false } }),
-					Admin: exportConfig.worker({ cache: { enabled: true } }),
+					default: {
+						type: "worker",
+						cache: { enabled: false },
+					},
+					Admin: { type: "worker", cache: { enabled: true } },
 				},
 			});
 
@@ -771,8 +868,8 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				exports: {
-					Counter: exportConfig.durableObject({ storage: "sqlite" }),
-					Admin: exportConfig.worker({ cache: { enabled: true } }),
+					Counter: { type: "durable-object", storage: "sqlite" },
+					Admin: { type: "worker", cache: { enabled: true } },
 				},
 			});
 
@@ -818,6 +915,14 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("preserves empty email trigger addresses", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [{ type: "email", addresses: [] }],
+			});
+			expect(result.addresses).toEqual([]);
+		});
+
 		it("maps scheduled triggers to triggers.crons", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
@@ -829,6 +934,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.triggers).toEqual({
 				crons: ["0 * * * *", "*/5 * * * *"],
 			});
+			expect(result.addresses).toBeUndefined();
 		});
 
 		it("maps fetch trigger with dot-zone to zone_name", ({ expect }) => {
@@ -915,6 +1021,52 @@ describe("convertToWranglerConfig", () => {
 				consumers: [{ queue: "c-queue" }],
 			});
 		});
+
+		it("maps connect trigger to connect", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						address: "127.0.0.1",
+					},
+				],
+			});
+			expect(result.connect).toEqual([
+				{ protocol: "tcp", port: 5432, address: "127.0.0.1" },
+			]);
+		});
+
+		it("maps connect trigger without an address", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [{ type: "connect", protocol: "tcp", port: 5432 }],
+			});
+			expect(result.connect).toEqual([{ protocol: "tcp", port: 5432 }]);
+		});
+
+		it("collects multiple connect triggers into a single connect array", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{ type: "connect", protocol: "tcp", port: 5432 },
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 6379,
+						address: "0.0.0.0",
+					},
+				],
+			});
+			expect(result.connect).toEqual([
+				{ protocol: "tcp", port: 5432 },
+				{ protocol: "tcp", port: 6379, address: "0.0.0.0" },
+			]);
+		});
 	});
 
 	describe("domains", () => {
@@ -959,7 +1111,7 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
-		it("attaches the assets binding name when bindings.assets() is present", ({
+		it("attaches the assets binding name when an assets binding is present", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
@@ -988,7 +1140,7 @@ describe("convertToWranglerConfig", () => {
 		it("maps non-streaming consumers to tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				tailConsumers: [{ workerName: "tail-worker" }],
+				tailConsumers: [{ worker: "tail-worker" }],
 			});
 			expect(result.tail_consumers).toEqual([{ service: "tail-worker" }]);
 			expect(result.streaming_tail_consumers).toBeUndefined();
@@ -997,7 +1149,7 @@ describe("convertToWranglerConfig", () => {
 		it("maps streaming consumers to streaming_tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				tailConsumers: [{ workerName: "stream-worker", streaming: true }],
+				tailConsumers: [{ worker: "stream-worker", streaming: true }],
 			});
 			expect(result.streaming_tail_consumers).toEqual([
 				{ service: "stream-worker" },
@@ -1009,9 +1161,9 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				tailConsumers: [
-					{ workerName: "a" },
-					{ workerName: "b", streaming: true },
-					{ workerName: "c", streaming: false },
+					{ worker: "a" },
+					{ worker: "b", streaming: true },
+					{ worker: "c", streaming: false },
 				],
 			});
 			expect(result.tail_consumers).toEqual([
@@ -1019,6 +1171,163 @@ describe("convertToWranglerConfig", () => {
 				{ service: "c" },
 			]);
 			expect(result.streaming_tail_consumers).toEqual([{ service: "b" }]);
+		});
+	});
+
+	describe("containers", () => {
+		it("omits containers when no Container exports are provided", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig);
+
+			expect(result).not.toHaveProperty("containers");
+		});
+
+		it("converts standard Container exports to Wrangler containers", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig, undefined, [
+				{
+					type: "container",
+					name: "dockerfile-container",
+					image: {
+						dockerfile: "./Dockerfile",
+						buildContext: ".",
+						buildVars: { VERSION: "1" },
+					},
+					maxInstances: 4,
+					instanceType: {
+						vcpu: 1,
+						memoryMib: 1024,
+						diskMb: 4000,
+					},
+					schedulingPolicy: "regional",
+					ssh: { enabled: true, port: 2222 },
+					authorizedKeys: [{ name: "deploy", publicKey: "ssh-ed25519 key" }],
+					constraints: {
+						regions: ["ENAM", "WEUR"],
+						jurisdiction: "eu",
+					},
+					rollout: {
+						kind: "full-auto",
+						stepPercentage: [50, 100],
+						activeGracePeriod: 30,
+					},
+					observability: {
+						enabled: true,
+						logs: { enabled: true },
+						targetInstancePercentage: 50,
+					},
+					unsafe: { experimental: true },
+				},
+				{
+					type: "container",
+					name: "referenced-container",
+					image: { reference: "registry.example.com/image:tag" },
+					maxInstances: 20,
+					observability: {
+						enabled: true,
+						targetInstanceCount: 2,
+					},
+				},
+			]);
+
+			expect(result.containers).toEqual([
+				{
+					name: "dockerfile-container",
+					image: "./Dockerfile",
+					image_build_context: ".",
+					image_vars: { VERSION: "1" },
+					max_instances: 4,
+					instance_type: {
+						vcpu: 1,
+						memory_mib: 1024,
+						disk_mb: 4000,
+					},
+					scheduling_policy: "regional",
+					ssh: { enabled: true, port: 2222 },
+					authorized_keys: [{ name: "deploy", public_key: "ssh-ed25519 key" }],
+					constraints: {
+						regions: ["ENAM", "WEUR"],
+						jurisdiction: "eu",
+					},
+					rollout_kind: "full_auto",
+					rollout_step_percentage: [50, 100],
+					rollout_active_grace_period: 30,
+					observability: {
+						enabled: true,
+						logs: { enabled: true },
+						target_instance_percentage: 50,
+					},
+					unsafe: { experimental: true },
+				},
+				{
+					name: "referenced-container",
+					image: "registry.example.com/image:tag",
+					max_instances: 20,
+					observability: {
+						enabled: true,
+						target_instance_count: 2,
+					},
+				},
+			]);
+		});
+
+		it("rejects Durable Object-managed Container exports", ({ expect }) => {
+			expect(() =>
+				convertToWranglerConfig(baseConfig, undefined, [
+					{
+						type: "container",
+						name: "managed-container",
+						schedulingPolicy: "durable-object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				])
+			).toThrow(
+				"Durable Object-managed Containers are not currently supported by `convertToWranglerConfig()`."
+			);
+		});
+	});
+
+	describe("settings", () => {
+		it("maps accountId to account_id", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				accountId: "acc-123",
+			});
+			expect(result.account_id).toBe("acc-123");
+		});
+
+		it("maps complianceRegion: 'fedramp-high' to 'fedramp_high'", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				complianceRegion: "fedramp-high",
+			});
+			expect(result.compliance_region).toBe("fedramp_high");
+		});
+
+		it("passes complianceRegion: 'public' through unchanged", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				complianceRegion: "public",
+			});
+			expect(result.compliance_region).toBe("public");
+		});
+
+		it("sets no settings fields when none are provided", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, { type: "settings" });
+			expect(result.account_id).toBeUndefined();
+			expect(result.compliance_region).toBeUndefined();
+		});
+
+		it("sets no settings fields when settings config is omitted", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig);
+			expect(result.account_id).toBeUndefined();
+			expect(result.compliance_region).toBeUndefined();
 		});
 	});
 });

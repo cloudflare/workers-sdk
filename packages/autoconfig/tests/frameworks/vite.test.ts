@@ -10,6 +10,7 @@ import { createMockContext } from "../helpers/mock-context";
 const context = createMockContext();
 
 const BASE_OPTIONS = {
+	target: "cf" as const,
 	projectPath: ".",
 	workerName: "my-vite-app",
 	outputDir: "dist",
@@ -31,6 +32,21 @@ describe("Vite framework", () => {
 			const framework = new Vite({ id: "vite", name: "Vite" });
 			expect(framework.isConfigured(".")).toBe(false);
 		});
+
+		it("only treats the Cloudflare plugin as configured in legacy Wrangler mode", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`import { cloudflare } from "@cloudflare/vite-plugin";
+				 import { defineConfig } from "vite";
+				 export default defineConfig({ plugins: [cloudflare()] });`
+			);
+			const framework = new Vite({ id: "vite", name: "Vite" });
+
+			expect(framework.isConfigured(".")).toBe(false);
+			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
+		});
 	});
 
 	describe("configure()", () => {
@@ -47,11 +63,12 @@ describe("Vite framework", () => {
 			);
 			expect(content).toContain("plugins: [cloudflare()]");
 
-			expect(result.wranglerConfig).toEqual({
+			expect(result.workerConfig).toEqual({
 				assets: {
-					not_found_handling: "single-page-application",
+					notFoundHandling: "single-page-application",
 				},
 			});
+			expect(result.buildTool).toBe("vite");
 		});
 
 		it("uses .ts extension when the project has a tsconfig.json", async ({
@@ -101,9 +118,9 @@ export default defineConfig({
 
 			expect(existsSync("vite.config.ts")).toBe(false);
 			expect(existsSync("vite.config.js")).toBe(false);
-			expect(result.wranglerConfig).toEqual({
+			expect(result.workerConfig).toEqual({
 				assets: {
-					not_found_handling: "single-page-application",
+					notFoundHandling: "single-page-application",
 				},
 			});
 		});

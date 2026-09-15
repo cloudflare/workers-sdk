@@ -1,10 +1,9 @@
 import assert from "node:assert";
 import {
-	configureOpenAPIForContainerPull,
+	cleanupContainers,
 	getCloudflareContainerRegistry,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
-import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { UserError } from "@cloudflare/workers-utils";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
@@ -15,7 +14,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
-import { getDockerPath } from "../containers";
+import { configureContainerPull, getDockerPath } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
 	compareExportTypes,
@@ -46,25 +45,16 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 	let containerImageTags = new Set<string>();
 
 	return {
-		async buildEnd() {
+		buildEnd() {
+			// Server restarts are handled here.
+			// Server shutdown is handled in the patched `server.close()`.
 			if (
 				ctx.resolvedViteConfig.command === "serve" &&
+				ctx.isRestartingDevServer &&
 				containerImageTags.size
 			) {
 				const dockerPath = getDockerPath();
 				cleanupContainers(dockerPath, containerImageTags);
-			}
-
-			debuglog(
-				"buildEnd:",
-				ctx.isRestartingDevServer ? "restarted" : "disposing"
-			);
-			if (!ctx.isRestartingDevServer) {
-				try {
-					await ctx.disposeMiniflare();
-				} catch (error) {
-					debuglog("Failed to dispose Miniflare instance:", error);
-				}
 			}
 		},
 		async configureServer(viteDevServer) {
@@ -74,6 +64,29 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
+
+			// Dispose Miniflare and clean up containers when the dev server
+			// shuts down. `buildEnd` can't be used for this under
+			// `experimental.bundledDev`.
+			// Note Vite's `restartServer` calls `server.close()` on every restart, so we skip
+			// teardown while restarting.
+			const closeServer = viteDevServer.close.bind(viteDevServer);
+			viteDevServer.close = async () => {
+				try {
+					await closeServer();
+				} finally {
+					if (!ctx.isRestartingDevServer) {
+						if (containerImageTags.size) {
+							cleanupContainers(getDockerPath(), containerImageTags);
+						}
+						try {
+							await ctx.disposeMiniflare();
+						} catch (error) {
+							debuglog("Failed to dispose Miniflare instance:", error);
+						}
+					}
+				}
+			};
 
 			// Once the HTTP server is listening, update Miniflare's publicUrl with
 			// the actual address. This ensures "Cloudflare Stream" preview URLs always reflect
@@ -236,7 +249,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						(opts) =>
 							"image_uri" in opts &&
 							new URL(`http://${opts.image_uri}`).hostname ===
-								getCloudflareContainerRegistry()
+								getCloudflareContainerRegistry(ctx.entryWorkerConfig)
 					);
 
 					if (hasCFRegistryImages) {
@@ -255,7 +268,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							);
 						}
 
-						configureOpenAPIForContainerPull(accountId, apiToken);
+						configureContainerPull(accountId, apiToken, ctx.entryWorkerConfig);
 					}
 
 					await prepareContainerImagesForDev({
@@ -264,6 +277,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
 						logger: viteDevServer.config.logger,
+						complianceConfig: ctx.entryWorkerConfig,
 					});
 
 					containerImageTags = new Set(containerTagToOptionsMap.keys());

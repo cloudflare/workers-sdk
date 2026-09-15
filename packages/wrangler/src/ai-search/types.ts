@@ -55,6 +55,12 @@ export interface AiSearchCustomMetadata {
 	field_name: string;
 }
 
+/**
+ * How a web-crawler source discovers URLs. `sitemap` reads XML sitemaps;
+ * `discover` follows links recursively.
+ */
+export type AiSearchParseType = "sitemap" | "discover";
+
 export interface AiSearchPublicEndpointParams {
 	authorized_hosts?: string[];
 	chat_completions_endpoint?: { disabled?: boolean };
@@ -76,7 +82,7 @@ export interface AiSearchSourceParams {
 			specific_sitemaps?: string[];
 			use_browser_rendering?: boolean;
 		};
-		parse_type?: string;
+		parse_type?: AiSearchParseType;
 		store_options?: {
 			storage_id?: string;
 			r2_jurisdiction?: string;
@@ -153,6 +159,33 @@ export interface AiSearchToken {
 export interface AiSearchMessage {
 	role: "system" | "user" | "assistant";
 	content: string;
+}
+
+/**
+ * Per-request retrieval overrides for an AI Search query.
+ */
+export interface AiSearchSearchRetrievalOptions {
+	filters?: Record<string, string>;
+	match_threshold?: number;
+	max_num_results?: number;
+}
+
+/**
+ * Per-request options for an AI Search query.
+ */
+export interface AiSearchSearchOptions {
+	retrieval?: AiSearchSearchRetrievalOptions;
+	reranking?: {
+		enabled: boolean;
+	};
+}
+
+/**
+ * Request body for an AI Search query.
+ */
+export interface AiSearchSearchRequest {
+	messages: AiSearchMessage[];
+	ai_search_options?: AiSearchSearchOptions;
 }
 
 /**

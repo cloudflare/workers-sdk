@@ -1,6 +1,9 @@
 import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
 import { runFrameworkGenerator } from "frameworks/index";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { usesTypescript } from "helpers/files";
@@ -25,7 +28,7 @@ const configure = async (ctx: C3Context) => {
 	usesTypescript(ctx);
 	const filePath = `vite.config.${usesTypescript(ctx) ? "ts" : "js"}`;
 
-	const compatDate = getWorkerdCompatibilityDate(ctx.project.path);
+	const compatDate = getWorkerdCompatibilityDate();
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 

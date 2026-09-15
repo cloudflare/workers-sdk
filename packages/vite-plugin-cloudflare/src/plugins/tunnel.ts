@@ -627,19 +627,22 @@ export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
 	}
 
 	return {
-		/**
-		 * Vite runs `buildEnd` when the dev server restarts or closes.
-		 */
-		buildEnd() {
-			if (!ctx.isRestartingDevServer) {
-				stopTunnel();
-			}
-		},
 		configureServer(server) {
 			assertIsNotPreview(ctx);
 
 			tunnelManager ??= new TunnelManager(server.config.logger);
 			patchPrintUrls(server);
+
+			const closeServer = server.close.bind(server);
+			server.close = async () => {
+				try {
+					await closeServer();
+				} finally {
+					if (!ctx.isRestartingDevServer) {
+						stopTunnel();
+					}
+				}
+			};
 
 			if (!ctx.resolvedPluginConfig.tunnel.autoStart) {
 				return;
@@ -677,12 +680,10 @@ export const tunnelPlugin = createPlugin("tunnel", (ctx) => {
 
 			const closePreviewServer = server.close.bind(server);
 			server.close = async () => {
-				const closePromise = closePreviewServer();
-
 				try {
-					stopTunnel();
+					await closePreviewServer();
 				} finally {
-					await closePromise;
+					stopTunnel();
 				}
 			};
 		},

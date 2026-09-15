@@ -430,7 +430,7 @@ async function validateAssetSize(
 function validateAssetKey(assetKey: string) {
 	if (assetKey.length > 512) {
 		throw new UserError(
-			`The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`,
+			`The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`,
 			{ telemetryMessage: "sites asset key too long" }
 		);
 	}

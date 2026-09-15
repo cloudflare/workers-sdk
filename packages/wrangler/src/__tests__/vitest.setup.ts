@@ -263,7 +263,8 @@ vi.mock("../metrics/metrics-config", async (importOriginal) => {
 vi.mock("../agents-skills-install", async (importOriginal) => {
 	const realModule =
 		await importOriginal<typeof import("../agents-skills-install")>();
-	vi.spyOn(realModule, "runSkillsInstallFlow").mockResolvedValue(undefined);
+	vi.spyOn(realModule, "runSkillsInstallFlow").mockResolvedValue(false);
+	vi.spyOn(realModule, "runSkillsUpdateFlow").mockResolvedValue(undefined);
 	vi.spyOn(realModule, "telemetryCurrentAgentSkillsInstalled").mockReturnValue(
 		Promise.resolve(null)
 	);
@@ -283,14 +284,25 @@ vi.mock("prompts", () => {
 	};
 });
 
-vi.mock("execa", async (importOriginal) => {
-	const realModule = await importOriginal<typeof import("execa")>();
+vi.mock("tinyexec", async (importOriginal) => {
+	const realModule = await importOriginal<typeof import("tinyexec")>();
+	// `x()` returns an `ExecProcess`: a thenable that also exposes the spawned
+	// process. Mimic enough of that shape that callers which reach for `.process`
+	// or `.pid` behave the same way they would for a real (already exited)
+	// command.
+	const mockResult = () =>
+		Object.assign(Promise.resolve({ stdout: "", stderr: "", exitCode: 0 }), {
+			process: undefined,
+			pid: undefined,
+			exitCode: 0,
+			killed: false,
+			aborted: false,
+			kill: () => false,
+		});
 	return {
 		...realModule,
-		execa: vi.fn((...args: Parameters<typeof realModule.execa>) => {
-			return args[0] === "mockpm"
-				? Promise.resolve()
-				: realModule.execa(...args);
+		x: vi.fn((...args: Parameters<typeof realModule.x>) => {
+			return args[0] === "mockpm" ? mockResult() : realModule.x(...args);
 		}),
 	};
 });

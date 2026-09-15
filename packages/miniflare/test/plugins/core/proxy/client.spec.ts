@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import http from "node:http";
+import path from "node:path";
 import { text } from "node:stream/consumers";
 import { ReadableStream, WritableStream } from "node:stream/web";
 import util from "node:util";
@@ -9,13 +10,22 @@ import {
 	DeferredPromise,
 	fetch,
 	Miniflare,
+	Request,
 	Response,
 	WebSocketPair,
 } from "miniflare";
 import { describe, onTestFinished, test } from "vitest";
-import { useDispose } from "../../../test-shared";
+import {
+	EXPORTED_FIXTURES,
+	singleModuleManifest,
+	useDispose,
+} from "../../../test-shared";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
-import type { MessageEvent, ReplaceWorkersTypes } from "miniflare";
+import type {
+	MessageEvent,
+	ReplaceWorkersTypes,
+	RequestInit as MiniflareRequestInit,
+} from "miniflare";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests
 // make extensive use of the API proxy, testing their specific special cases.
@@ -26,17 +36,32 @@ const nullScript =
 describe("ProxyClient", () => {
 	test("supports service bindings with WebSockets", async ({ expect }) => {
 		const mf = new Miniflare({
-			script: nullScript,
-			serviceBindings: {
-				CUSTOM() {
-					const { 0: webSocket1, 1: webSocket2 } = new WebSocketPair();
-					webSocket1.accept();
-					webSocket1.addEventListener("message", (event) => {
-						webSocket1.send(`echo:${event.data}`);
-					});
-					return new Response(null, { status: 101, webSocket: webSocket2 });
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: {
+							CUSTOM: {
+								type: "fetcher",
+								handler() {
+									const { 0: webSocket1, 1: webSocket2 } = new WebSocketPair();
+									webSocket1.accept();
+									webSocket1.addEventListener("message", (event) => {
+										webSocket1.send(`echo:${event.data}`);
+									});
+									return new Response(null, {
+										status: 101,
+										webSocket: webSocket2,
+									});
+								},
+							},
+						},
+					},
+					legacy: { serviceWorkerScript: nullScript },
 				},
-			},
+			],
 		});
 		useDispose(mf);
 
@@ -60,12 +85,24 @@ describe("ProxyClient", () => {
 		expect,
 	}) => {
 		const mf = new Miniflare({
-			script: nullScript,
-			serviceBindings: {
-				CUSTOM(request: Request) {
-					return new Response(request.url);
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: {
+							CUSTOM: {
+								type: "fetcher",
+								handler(request) {
+									return new Response(request.url);
+								},
+							},
+						},
+					},
+					legacy: { serviceWorkerScript: nullScript },
 				},
-			},
+			],
 		});
 		useDispose(mf);
 
@@ -81,38 +118,37 @@ describe("ProxyClient", () => {
 	test("supports serialising multiple ReadableStreams, Blobs and Files", async ({
 		expect,
 	}) => {
-		// For testing proxy client serialisation, add an API that just returns its
-		// arguments. Note without the `.pipeThrough(new TransformStream())` below,
-		// we'll see `TypeError: Inter-TransformStream ReadableStream.pipeTo() is
-		// not implemented.`. `IdentityTransformStream` doesn't work here.
+		// For testing proxy client serialisation, use a wrapped binding inside an
+		// unsafe binding. This is just an echo module that just returns its arguments
+		// (see the `echo-plugin` fixture).
+		const echoPlugin = path.resolve(EXPORTED_FIXTURES, "echo-plugin/index.js");
 		const mf = new Miniflare({
 			workers: [
 				{
-					name: "entry",
-					modules: true,
-					script: "",
-					wrappedBindings: { IDENTITY: "identity" },
-				},
-				{
-					name: "identity",
-					modules: true,
-					script: `
-				class Identity {
-					async asyncIdentity(...args) {
-						const i = args.findIndex((arg) => arg instanceof ReadableStream);
-						if (i !== -1) args[i] = args[i].pipeThrough(new TransformStream());
-						return args;
-					}
-				}
-				export default function() { return new Identity(); }
-				`,
+					config: {
+						type: "worker",
+						name: "entry",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(""),
+						env: {
+							IDENTITY: {
+								type: "unsafe:wrapped",
+								dev: {
+									plugin: { package: echoPlugin, name: "echo-plugin" },
+									options: {},
+								},
+							},
+						},
+					},
 				},
 			],
 		});
 		useDispose(mf);
 
 		const client = await mf._getProxyClient();
-		const IDENTITY = client.env["MINIFLARE_PROXY:core:entry:IDENTITY"] as {
+		const IDENTITY = client.env[
+			"MINIFLARE_PROXY:echo-plugin:entry:IDENTITY"
+		] as {
 			asyncIdentity<Args extends any[]>(...args: Args): Promise<Args>;
 		};
 
@@ -151,13 +187,27 @@ describe("ProxyClient", () => {
 		expect(allResult[2].lastModified).toBe(1000);
 		expect(await allResult[2].text()).toBe("text file");
 	});
+
 	test("poisons dependent proxies after setOptions()/dispose()", async ({
 		expect,
 	}) => {
-		const mf = new Miniflare({ script: nullScript });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
 		let disposed = false;
 		onTestFinished(() => {
-			if (!disposed) return mf.dispose();
+			if (!disposed) {
+				return mf.dispose();
+			}
 		});
 		let caches = await mf.getCaches();
 		let defaultCache = caches.default;
@@ -166,7 +216,18 @@ describe("ProxyClient", () => {
 		const key = "http://localhost";
 		await defaultCache.match(key);
 
-		await mf.setOptions({ script: nullScript });
+		await mf.setOptions({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
 
 		const error = new Error(
 			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
@@ -188,7 +249,18 @@ describe("ProxyClient", () => {
 		expect(() => namedCache.match(key)).toThrow(error);
 	});
 	test("logging proxies provides useful information", async ({ expect }) => {
-		const mf = new Miniflare({ script: nullScript });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
 		useDispose(mf);
 
 		const caches = await mf.getCaches();
@@ -212,15 +284,34 @@ describe("ProxyClient", () => {
 		}
 
 		const mf = new Miniflare({
-			modules: true,
-			script: `export class DurableObject {}
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						// Asynchronous functions must reject rather than throw. This was
+						// gated behind the `capture_async_api_throws` flag, which became the
+						// default as of 2022-10-31 (before this compatibility date), so the
+						// flag is no longer needed:
+						// https://developers.cloudflare.com/workers/configuration/compatibility-dates/#do-not-throw-from-async-functions
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`export class DurableObject {}
     export default {
       fetch() { return new Response(null, { status: 404 }); }
-    }`,
-			durableObjects: { OBJECT: "DurableObject" },
-			// Make sure asynchronous functions are rejecting, not throwing:
-			// https://developers.cloudflare.com/workers/configuration/compatibility-dates/#do-not-throw-from-async-functions
-			compatibilityFlags: ["capture_async_api_throws"],
+    }`),
+						env: {
+							OBJECT: {
+								type: "durable-object",
+								worker: "",
+								exportName: "DurableObject",
+							},
+						},
+						exports: {
+							DurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -253,7 +344,19 @@ describe("ProxyClient", () => {
 	test("can access ReadableStream property multiple times", async ({
 		expect,
 	}) => {
-		const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
 		useDispose(mf);
 
 		const bucket = await mf.getR2Bucket("BUCKET");
@@ -264,7 +367,19 @@ describe("ProxyClient", () => {
 		expect(await text(objectBody.body)).toBe("value"); // 2nd access
 	});
 	test("returns empty ReadableStream synchronously", async ({ expect }) => {
-		const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
 		useDispose(mf);
 
 		const bucket = await mf.getR2Bucket("BUCKET");
@@ -274,7 +389,19 @@ describe("ProxyClient", () => {
 		expect(await text(objectBody.body)).toBe(""); // Synchronous empty stream access
 	});
 	test("returns multiple ReadableStreams in parallel", async ({ expect }) => {
-		const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
 		useDispose(mf);
 
 		const logs: string[] = [];
@@ -300,7 +427,9 @@ describe("ProxyClient", () => {
 
 		async function readStream(objectKey: string, stream?: ReadableStream) {
 			logs.push(`[${objectKey}] stream start`);
-			if (!stream) return;
+			if (!stream) {
+				return;
+			}
 			await stream.pipeTo(
 				new WritableStream({
 					write(_chunk) {
@@ -323,7 +452,19 @@ describe("ProxyClient", () => {
 	});
 
 	test("can `JSON.stringify()` proxies", async ({ expect }) => {
-		const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
 		useDispose(mf);
 
 		const bucket = await mf.getR2Bucket("BUCKET");
@@ -347,8 +488,170 @@ describe("ProxyClient", () => {
 		});
 	});
 
+	test("Durable Object stub.fetch accepts Node global Request", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "entry",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(
+							"export default { fetch() { return new Response(null, { status: 404 }); } }"
+						),
+						env: {
+							OBJECT: {
+								type: "durable-object",
+								worker: "do-worker",
+								exportName: "TestObject",
+							},
+						},
+					},
+				},
+				{
+					config: {
+						type: "worker",
+						name: "do-worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`export class TestObject {
+  async fetch(request) {
+    return Response.json(
+      {
+        url: request.url,
+        method: request.method,
+        header:
+          request.headers.get("X-Test") ??
+          request.headers.get("Content-Language"),
+        body: await request.text(),
+      },
+      { headers: { "X-Cf-Colo": request.cf?.colo ?? "" } }
+    );
+  }
+}`),
+						exports: {
+							TestObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const ns = await mf.getDurableObjectNamespace("OBJECT", "entry");
+		const stub = ns.get(ns.idFromName("test"));
+		type GlobalRequestInit = NonNullable<
+			ConstructorParameters<typeof globalThis.Request>[1]
+		> &
+			Pick<MiniflareRequestInit, "cf">;
+		const proxyFetch = stub.fetch as unknown as (
+			input: globalThis.Request,
+			init?: GlobalRequestInit
+		) => Promise<Response>;
+		async function fetchDetails(
+			input: globalThis.Request,
+			init?: GlobalRequestInit
+		) {
+			const response = await proxyFetch(input, init);
+			expect(response.status).toBe(200);
+			return response.json();
+		}
+
+		const globalRequest = new globalThis.Request(
+			"https://example.com/from-global"
+		);
+		expect(globalRequest).not.toBeInstanceOf(Request);
+		expect(await fetchDetails(globalRequest)).toEqual({
+			url: "https://example.com/from-global",
+			method: "GET",
+			header: null,
+			body: "",
+		});
+
+		for (const [path, requestInit] of [
+			["keepalive", { method: "POST", body: "keepalive", keepalive: true }],
+			[
+				"no-cors",
+				{ method: "POST", body: "no-cors", mode: "no-cors" as const },
+			],
+		] as const) {
+			const request = new globalThis.Request(`https://example.com/${path}`, {
+				...requestInit,
+				headers:
+					path === "no-cors"
+						? { "Content-Language": path }
+						: { "X-Test": path },
+			});
+			expect(await fetchDetails(request)).toEqual({
+				url: `https://example.com/${path}`,
+				method: "POST",
+				header: path,
+				body: path,
+			});
+		}
+
+		for (const init of [
+			{ method: undefined },
+			{ headers: undefined },
+			{ body: undefined },
+			{ body: null },
+		]) {
+			const request = new globalThis.Request(
+				"https://example.com/undefined-init",
+				{
+					method: "POST",
+					headers: { "X-Test": "original" },
+					body: "original",
+				}
+			);
+			expect(await fetchDetails(request, init)).toEqual({
+				url: "https://example.com/undefined-init",
+				method: "POST",
+				header: "original",
+				body: "original",
+			});
+		}
+
+		const original = new globalThis.Request("https://example.com/overrides", {
+			method: "POST",
+			headers: { "X-Test": "original" },
+			body: "original",
+		});
+		expect(
+			await fetchDetails(original, {
+				method: "PUT",
+				headers: { "X-Test": "override" },
+				body: "override",
+			})
+		).toEqual({
+			url: "https://example.com/overrides",
+			method: "PUT",
+			header: "override",
+			body: "override",
+		});
+
+		const cfResponse = await proxyFetch(
+			new globalThis.Request("https://example.com/cf"),
+			{ cf: { colo: "GLOBAL_REQUEST" } }
+		);
+		expect(cfResponse.headers.get("X-Cf-Colo")).toBe("GLOBAL_REQUEST");
+		await cfResponse.text();
+	});
+
 	test("ProxyServer: prevents unauthorised access", async ({ expect }) => {
-		const mf = new Miniflare({ script: nullScript });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
 		useDispose(mf);
 		const url = await mf.ready;
 		const proxyUrl = new URL(CorePaths.PLATFORM_PROXY, url);

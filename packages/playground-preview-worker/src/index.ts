@@ -12,6 +12,34 @@ import {
 import { handleException, setupSentry } from "./sentry";
 import type { Toucan } from "toucan-js";
 
+declare const ROOT: string;
+declare const PREVIEW: string;
+
+const PREVIEW_COOKIE_NAME = "__Host-token";
+const rootDomain = ROOT;
+const previewHostname = PREVIEW;
+const previewDomain = `:any/${previewHostname.replaceAll(".", "/")}`;
+
+async function pushMetrics(env: Env, metrics: string) {
+	try {
+		const response = await env.WSHIM_SOCKET.fetch(
+			"https://workers-logging.cfdata.org/prometheus",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
+				},
+				body: metrics,
+			}
+		);
+		if (!response.ok) {
+			console.error(`Failed to push metrics: ${response.status}`);
+		}
+	} catch (error) {
+		console.error("Failed to push metrics", error);
+	}
+}
+
 function maybeParseUrl(url: string | undefined) {
 	if (!url) {
 		return undefined;
@@ -21,6 +49,10 @@ function maybeParseUrl(url: string | undefined) {
 	} catch {
 		return undefined;
 	}
+}
+
+function isPreviewHostname(hostname: string) {
+	return hostname.endsWith(`.${previewHostname}`);
 }
 
 const app = new Hono<{
@@ -34,9 +66,6 @@ const app = new Hono<{
 		return url.hostname.replaceAll(".", "/") + url.pathname;
 	},
 });
-
-const rootDomain = ROOT;
-const previewDomain = PREVIEW;
 
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
@@ -128,15 +157,7 @@ app.use("*", async (c, next) => {
 	try {
 		return await next();
 	} finally {
-		c.executionCtx.waitUntil(
-			fetch("https://workers-logging.cfdata.org/prometheus", {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${c.env.PROMETHEUS_TOKEN}`,
-				},
-				body: registry.metrics(),
-			})
-		);
+		c.executionCtx.waitUntil(pushMetrics(c.env, registry.metrics()));
 	}
 });
 
@@ -217,6 +238,7 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	const referer = maybeParseUrl(c.req.header("Referer"));
 
 	if (
+		!isPreviewHostname(url.hostname) ||
 		!referer ||
 		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
 		!(
@@ -241,11 +263,11 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 		throw new TokenUpdateFailed();
 	}
 
-	setCookie(c, "token", token, {
+	setCookie(c, PREVIEW_COOKIE_NAME, token, {
 		secure: true,
 		sameSite: "None",
 		httpOnly: true,
-		domain: url.hostname,
+		path: "/",
 		partitioned: true,
 	});
 
@@ -271,7 +293,7 @@ app.all(`${previewDomain}/*`, async (c) => {
 	if (c.req.raw.headers.has("cf-raw-http")) {
 		return handleRawHttp(c.req.raw, url, c.env);
 	}
-	const token = getCookie(c, "token");
+	const token = getCookie(c, PREVIEW_COOKIE_NAME);
 	if (!token) {
 		throw new PreviewRequestFailed(token, false);
 	}

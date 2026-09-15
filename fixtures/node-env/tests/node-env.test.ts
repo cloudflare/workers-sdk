@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { describe, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
@@ -62,14 +62,16 @@ describe("`process.env.NODE_ENV` replacement in production", () => {
 			stdio: "pipe",
 		});
 
-		const miniflare = new Miniflare({
-			modules: [
-				{
-					type: "ESModule",
-					path: "./dist/index.js",
-				},
-			],
-		});
+		const miniflare = new Miniflare(
+			convertV4MiniflareOptions({
+				modules: [
+					{
+						type: "ESModule",
+						path: "./dist/index.js",
+					},
+				],
+			})
+		);
 
 		await miniflare.ready;
 
@@ -94,14 +96,16 @@ describe("`process.env.NODE_ENV` replacement in production", () => {
 			stdio: "pipe",
 		});
 
-		const miniflare = new Miniflare({
-			modules: [
-				{
-					type: "ESModule",
-					path: "./dist/index.js",
-				},
-			],
-		});
+		const miniflare = new Miniflare(
+			convertV4MiniflareOptions({
+				modules: [
+					{
+						type: "ESModule",
+						path: "./dist/index.js",
+					},
+				],
+			})
+		);
 
 		await miniflare.ready;
 

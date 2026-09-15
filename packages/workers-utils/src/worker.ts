@@ -1,6 +1,7 @@
 import type {
 	CacheOptions,
 	Exports,
+	LocalS3Credentials,
 	Observability,
 	Route,
 } from "./config/environment";
@@ -93,10 +94,20 @@ export interface CfKvNamespace {
 export type CfSendEmailBindings = {
 	name: string;
 	remote?: boolean;
+	allowed_sender_addresses?: string[];
 } & (
-	| { destination_address?: string }
-	| { allowed_destination_addresses?: string[] }
-	| { allowed_sender_addresses?: string[] }
+	| {
+			destination_address: string;
+			allowed_destination_addresses?: never;
+	  }
+	| {
+			destination_address?: never;
+			allowed_destination_addresses: string[];
+	  }
+	| {
+			destination_address?: never;
+			allowed_destination_addresses?: never;
+	  }
 );
 
 /**
@@ -192,17 +203,19 @@ export interface CfWorkflow {
 	class_name: string;
 	binding: string;
 	script_name?: string;
-	remote?: boolean;
 	raw?: boolean;
 	limits?: {
 		steps?: number;
+	};
+	concurrency?: {
+		limit?: number;
 	};
 	schedules?: string | string[];
 }
 
 export interface CfQueue {
 	binding: string;
-	queue_name: string;
+	queue_name?: string | typeof INHERIT_SYMBOL;
 	delivery_delay?: number;
 	remote?: boolean;
 	raw?: boolean;
@@ -214,6 +227,11 @@ export interface CfR2Bucket {
 	jurisdiction?: string;
 	remote?: boolean;
 	raw?: boolean;
+	/** Settings that only apply to local development */
+	local_dev?: {
+		/** EXPERIMENTAL: credentials for the local S3-compatible endpoint */
+		experimental_s3_credentials?: LocalS3Credentials;
+	};
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
@@ -249,11 +267,6 @@ export interface CfAISearch {
 	remote?: boolean;
 }
 
-export interface CfWebSearch {
-	binding: string;
-	remote?: boolean;
-}
-
 export interface CfAgentMemory {
 	binding: string;
 	namespace: string | typeof INHERIT_SYMBOL;
@@ -279,7 +292,7 @@ export interface CfHelloWorld {
 
 export interface CfFlagship {
 	binding: string;
-	app_id: string;
+	app_id?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 
@@ -353,7 +366,7 @@ export interface CfAnalyticsEngineDataset {
 
 export interface CfDispatchNamespace {
 	binding: string;
-	namespace: string;
+	namespace?: string | typeof INHERIT_SYMBOL;
 	outbound?: {
 		service: string;
 		environment?: string;
@@ -425,6 +438,11 @@ export interface CfDurableObjectMigrations {
 			from: string;
 			to: string;
 		}[];
+		transferred_classes?: {
+			from: string;
+			from_script: string;
+			to: string;
+		}[];
 		deleted_classes?: string[];
 	}[];
 }
@@ -473,7 +491,17 @@ export interface CfWorkerInit {
 	 */
 	sourceMaps: CfWorkerSourceMap[] | undefined;
 
-	containers: { class_name: string }[] | undefined;
+	/**
+	 * A container is linked to its Durable Object either by `class_name`, or by
+	 * the Durable Object's `exports` entry naming the container by `name`.
+	 */
+	containers:
+		| {
+				name?: string;
+				class_name?: string;
+				images?: Record<string, string>;
+		  }[]
+		| undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
 	/**

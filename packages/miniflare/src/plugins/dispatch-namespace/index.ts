@@ -1,54 +1,27 @@
 import SCRIPT_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
 import SCRIPT_DISPATCH_NAMESPACE_PROXY from "worker:dispatch-namespace/dispatch-namespace-proxy";
-import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
 import type { Worker_Binding } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-export const DispatchNamespaceOptionsSchema = z.object({
-	dispatchNamespaces: z
-		.record(
-			z.object({
-				namespace: z.string(),
-				remoteProxyConnectionString: z
-					.custom<RemoteProxyConnectionString>()
-					.optional(),
-			})
-		)
-		.optional(),
-});
+import type { ParsedWorkerOptions, Plugin } from "../shared";
 
 export const DISPATCH_NAMESPACE_PLUGIN_NAME = "dispatch-namespace";
 
-/** Service name for the proxy client worker backing a dispatch namespace. */
-function getProxyServiceName(
-	name: string,
-	remoteProxyConnectionString?: RemoteProxyConnectionString
-): string {
-	return getUserBindingServiceName(
-		`${DISPATCH_NAMESPACE_PLUGIN_NAME}-proxy`,
-		name,
-		remoteProxyConnectionString
-	);
-}
+// One shared proxy client service for all dispatch namespaces (config via props).
+const DISPATCH_NAMESPACE_REMOTE_SERVICE_NAME = `${DISPATCH_NAMESPACE_PLUGIN_NAME}-proxy:remote`;
 
-export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
-	typeof DispatchNamespaceOptionsSchema
-> = {
-	options: DispatchNamespaceOptionsSchema,
+export const DISPATCH_NAMESPACE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Dispatch namespace",
 	async getBindings(options) {
-		if (!options.dispatchNamespaces) {
-			return [];
-		}
-
-		const bindings = Object.entries(
-			options.dispatchNamespaces
-		).map<Worker_Binding>(([name, config]) => {
+		return getEnvBindingsOfType(
+			options.config,
+			"dispatch-namespace"
+		).map<Worker_Binding>(([name, binding]) => {
 			return {
 				name,
 				wrapped: {
@@ -57,9 +30,10 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 						{
 							name: "proxyClient",
 							service: {
-								name: getProxyServiceName(
-									name,
-									config.remoteProxyConnectionString
+								name: DISPATCH_NAMESPACE_REMOTE_SERVICE_NAME,
+								props: buildRemoteProxyProps(
+									getRemoteProxyConnectionString(binding, options.dev),
+									name
 								),
 							},
 						},
@@ -67,35 +41,34 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 				},
 			};
 		});
-		return bindings;
 	},
-	getNodeBindings(options: z.infer<typeof DispatchNamespaceOptionsSchema>) {
-		if (!options.dispatchNamespaces) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.dispatchNamespaces).map((name) => [
-				name,
-				new ProxyNodeBinding(),
-			])
+			getEnvBindingsOfType(options.config, "dispatch-namespace").map(
+				([name]) => [name, new ProxyNodeBinding()]
+			)
 		);
 	},
 	async getServices({ options }) {
-		if (!options.dispatchNamespaces) {
+		if (
+			getEnvBindingsOfType(options.config, "dispatch-namespace").length === 0
+		) {
 			return [];
 		}
 
-		return Object.entries(options.dispatchNamespaces).map(([name, config]) => ({
-			name: getProxyServiceName(name, config.remoteProxyConnectionString),
-			worker: remoteProxyClientWorker(
-				config.remoteProxyConnectionString,
-				name,
-				SCRIPT_DISPATCH_NAMESPACE_PROXY
-			),
-		}));
+		return [
+			{
+				name: DISPATCH_NAMESPACE_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(SCRIPT_DISPATCH_NAMESPACE_PROXY),
+			},
+		];
 	},
-	getExtensions({ options }) {
-		if (!options.some((o) => o.dispatchNamespaces)) {
+	getExtensions({ options }: { options: ParsedWorkerOptions[] }) {
+		if (
+			!options.some(
+				(o) => getEnvBindingsOfType(o.config, "dispatch-namespace").length > 0
+			)
+		) {
 			return [];
 		}
 

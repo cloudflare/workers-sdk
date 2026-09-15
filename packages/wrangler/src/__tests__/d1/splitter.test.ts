@@ -1,5 +1,23 @@
+import { performance } from "node:perf_hooks";
 import { describe, it } from "vitest";
-import { mayContainMultipleStatements, splitSqlQuery } from "../../d1/splitter";
+import {
+	mayContainMultipleStatements,
+	normalizeSqlLineEndings,
+	splitSqlQuery,
+} from "../../d1/splitter";
+
+describe("normalizeSqlLineEndings()", () => {
+	it("should preserve CRLF inside quoted SQL values and identifiers", ({
+		expect,
+	}) => {
+		const sql =
+			"SELECT 'single''quote\r\nvalue', \"double\r\nquote\", `backtick\r\nquote`, [bracket\r\nquote]; -- don't stop scanning\r\n/* block\r\ncomment */\r\nSELECT 1;";
+
+		expect(normalizeSqlLineEndings(sql)).toBe(
+			"SELECT 'single''quote\r\nvalue', \"double\r\nquote\", `backtick\r\nquote`, [bracket\r\nquote]; -- don't stop scanning\n/* block\ncomment */\nSELECT 1;"
+		);
+	});
+});
 
 describe("mayContainMultipleStatements()", () => {
 	it("should return false if there is only a semi-colon at the end", ({
@@ -328,6 +346,27 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
+	it("should handle a lowercase end closing a compound statement", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+	CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+	begin
+		DELETE FROM updates WHERE item_id=old.id;
+	end;
+	CREATE TABLE after_the_trigger (id TEXT PRIMARY KEY);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+				begin
+					DELETE FROM updates WHERE item_id=old.id;
+				end",
+			  "CREATE TABLE after_the_trigger (id TEXT PRIMARY KEY)",
+			]
+		`);
+	});
+
 	it("should handle compound statements for CASEs", ({ expect }) => {
 		expect(
 			splitSqlQuery(`
@@ -416,5 +455,51 @@ describe("splitSqlQuery()", () => {
 						END ; END",
 			]
 		`);
+	});
+
+	describe("performance tests", () => {
+		it("should split a file with a lot of commands", ({ expect }) => {
+			const sql = "INSERT INTO blobs (id, data) VALUES (1, 'xxx');\n".repeat(
+				5 * 1024
+			);
+
+			const startedAt = performance.now();
+			const statements = splitSqlQuery(sql);
+			const elapsedMs = performance.now() - startedAt;
+
+			expect(statements).toHaveLength(5 * 1024);
+			expect(statements[0]).toBe(
+				"INSERT INTO blobs (id, data) VALUES (1, 'xxx')"
+			);
+			expect(elapsedMs).toBeLessThan(1000);
+		});
+
+		it("should split a file with a large quoted value quickly", ({
+			expect,
+		}) => {
+			const largeValue = "x".repeat(256 * 1024);
+			const sql = `INSERT INTO blobs (id, data) VALUES (1, '${largeValue}');\nSELECT count(*) FROM blobs;`;
+
+			const startedAt = performance.now();
+			const statements = splitSqlQuery(sql);
+			const elapsedMs = performance.now() - startedAt;
+
+			expect(statements).toEqual([
+				`INSERT INTO blobs (id, data) VALUES (1, '${largeValue}')`,
+				"SELECT count(*) FROM blobs",
+			]);
+			expect(elapsedMs).toBeLessThan(1000);
+		});
+
+		it("should split a file with very long comments quickly", ({ expect }) => {
+			const sql = "SELECT 1; -- " + "c".repeat(256 * 1024) + "\nSELECT 2;";
+
+			const startedAt = performance.now();
+			const statements = splitSqlQuery(sql);
+			const elapsedMs = performance.now() - startedAt;
+
+			expect(statements).toEqual(["SELECT 1", "SELECT 2"]);
+			expect(elapsedMs).toBeLessThan(1000);
+		});
 	});
 });

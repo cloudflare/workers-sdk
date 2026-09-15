@@ -48,7 +48,7 @@
 		"!packages/create-cloudflare/templates*/hello-world/**/*.*",
 		"packages/create-cloudflare/templates*/hello-world/**/worker-configuration.d.ts",
 
-		"packages/vitest-pool-workers/scripts/rtti/rtti.js",
+		"packages/vitest-plugin/scripts/rtti/rtti.js",
 		"packages/vite-plugin-cloudflare/playground/prisma/src/generated",
 		"dist-functions",
 		"vscode.d.ts",
@@ -58,6 +58,7 @@
 		"fixtures/interactive-dev-tests/src/startup-error.ts",
 		"packages/vite-plugin-cloudflare/playground/**/*.d.ts",
 		"fixtures/**/worker-configuration.d.ts",
+		"packages/**/worker-configuration.d.ts",
 		"packages/local-explorer-ui/src/routeTree.gen.ts",
 		"packages/local-explorer-ui/src/api/generated",
 	],

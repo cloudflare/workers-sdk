@@ -24,11 +24,6 @@ export interface MiniflareDurableObjectEnv {
 	// for testing. Note these endpoints allow anyone with access to the Miniflare
 	// dev server to run arbitrary SQL queries and read arbitrary blobs.
 	[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS]?: boolean;
-	// If set to `true`, Miniflare won't delete blobs when deleting/overriding
-	// existing keys. This is a requirement for "stacked storage": when popping
-	// from the storage stack, we need to guarantee the blobs created in and
-	// before that storage stack frame still exist.
-	[SharedBindings.MAYBE_JSON_ENABLE_STICKY_BLOBS]?: boolean;
 }
 
 export interface MiniflareDurableObjectCfControlOp {
@@ -76,15 +71,15 @@ export abstract class MiniflareDurableObject<
 
 	#blob?: BlobStore;
 	get blob(): BlobStore {
-		if (this.#blob !== undefined) return this.#blob;
+		if (this.#blob !== undefined) {
+			return this.#blob;
+		}
 		const maybeBlobsService = this.env[SharedBindings.MAYBE_SERVICE_BLOBS];
-		const stickyBlobs =
-			!!this.env[SharedBindings.MAYBE_JSON_ENABLE_STICKY_BLOBS];
 		assert(
 			maybeBlobsService !== undefined,
 			`Expected ${SharedBindings.MAYBE_SERVICE_BLOBS} service binding`
 		);
-		this.#blob = new BlobStore(maybeBlobsService, this.name, stickyBlobs);
+		this.#blob = new BlobStore(maybeBlobsService, this.name);
 		return this.#blob;
 	}
 
@@ -134,7 +129,9 @@ export abstract class MiniflareDurableObject<
 		// object. Used by tests to update fake time, and access internal storage.
 		if (this.env[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS] === true) {
 			const controlOp = req?.cf?.miniflare?.controlOp;
-			if (controlOp !== undefined) return this.#handleControlOp(controlOp);
+			if (controlOp !== undefined) {
+				return this.#handleControlOp(controlOp);
+			}
 		}
 
 		// Each regular request to a `MiniflareDurableObject` includes the object

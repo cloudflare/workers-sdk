@@ -76,14 +76,21 @@ export function buildPluginFromFunctions({
 							.then(() => true)
 							.catch(() => false);
 
-						const isDirectory =
-							exists && (await lstat(directory)).isDirectory();
-
-						if (!isDirectory) {
+						if (!exists) {
 							return {
 								errors: [
 									{
-										text: `'${directory}' does not exist or is not a directory.`,
+										text: `'${directory}' does not exist. Please create the directory or check the path and try again.`,
+									},
+								],
+							};
+						}
+
+						if (!(await lstat(directory)).isDirectory()) {
+							return {
+								errors: [
+									{
+										text: `'${directory}' is not a directory. Please provide a path to a valid directory.`,
 									},
 								],
 							};

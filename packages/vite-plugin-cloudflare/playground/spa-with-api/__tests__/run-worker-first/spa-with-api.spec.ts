@@ -6,7 +6,9 @@ import {
 	isBuild,
 	viteTestUrl,
 } from "../../../__test-utils__";
-import "../base-tests";
+import { runBaseTests } from "../base-tests";
+
+runBaseTests();
 
 test("returns the home page via the Worker", async ({ expect }) => {
 	const response = await getResponse();

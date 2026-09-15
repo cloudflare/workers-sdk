@@ -1,6 +1,7 @@
 import * as fsp from "node:fs/promises";
 import { createRequire } from "node:module";
-import { Miniflare } from "miniflare";
+import { isNodejsCompatDefaultOn } from "@cloudflare/workers-utils";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { version } from "workerd";
 import {
 	getRuntimeHeader,
@@ -74,12 +75,19 @@ export async function generateRuntimeTypes({
 		}
 	}
 
+	const runtimeCompatibilityFlags = compatibilityFlags.filter(
+		(flag) => !flag.includes("nodejs_compat")
+	);
+	if (isNodejsCompatDefaultOn(compatibilityDate)) {
+		runtimeCompatibilityFlags.push("no_nodejs_compat", "no_nodejs_compat_v2");
+	}
+
 	const types = await generate({
 		compatibilityDate,
-		// Ignore nodejs compat flags as there is currently no mechanism to generate these dynamically.
-		compatibilityFlags: compatibilityFlags.filter(
-			(flag) => !flag.includes("nodejs_compat")
-		),
+		// Ignore Node.js compatibility as there is currently no mechanism to
+		// generate these types dynamically. Explicit opt-outs are needed once the
+		// compatibility date enables Node.js compatibility by default.
+		compatibilityFlags: runtimeCompatibilityFlags,
 	});
 
 	return { runtimeHeader: header, runtimeTypes: types, isCached: false };
@@ -99,15 +107,17 @@ async function generate({
 	const worker = (
 		await fsp.readFile(require.resolve("workerd/worker.mjs"))
 	).toString();
-	const mf = new Miniflare({
-		// Must stay before the 2024-09-23 nodejs_compat v1->v2 switchover: the
-		// workerd RTTI worker only runs under nodejs_compat v1. This date is
-		// internal to type generation and never appears in the output/header.
-		compatibilityDate: "2024-01-01",
-		compatibilityFlags: ["nodejs_compat", "rtti_api"],
-		modules: true,
-		script: worker,
-	});
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			// Must stay before the 2024-09-23 nodejs_compat v1->v2 switchover: the
+			// workerd RTTI worker only runs under nodejs_compat v1. This date is
+			// internal to type generation and never appears in the output/header.
+			compatibilityDate: "2024-01-01",
+			compatibilityFlags: ["nodejs_compat", "rtti_api"],
+			modules: true,
+			script: worker,
+		})
+	);
 
 	const flagsString = compatibilityFlags.length
 		? `+${compatibilityFlags.join("+")}`

@@ -1,5 +1,37 @@
 # @cloudflare/workflows-shared
 
+## 0.14.0
+
+### Minor Changes
+
+- [#15441](https://github.com/cloudflare/workers-sdk/pull/15441) [`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Add experimental Workflow event subscriptions to local development
+
+  Local Workflow instances now implement `subscribe()`, returning a disposable RPC subscription that streams historical and live lifecycle events. Subscriptions support event cursors and type filters and include Workflow inputs, status transitions, step configuration, outputs, errors, retries, waits, and rollback activity where applicable.
+
+## 0.13.0
+
+### Minor Changes
+
+- [#14735](https://github.com/cloudflare/workers-sdk/pull/14735) [`30c2d47`](https://github.com/cloudflare/workers-sdk/commit/30c2d47965c51350aca6b2c70db8fc6496bdaa17) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add individual and batch Workflow instance deletion to the runtime and SDK.
+
+  - `WorkflowInstance.delete()` deletes one instance. Self-deletion stops the current execution.
+  - `env.MY_WORKFLOW.deleteBatch(instanceIds)` deletes up to 100 instances and returns `{ deleted, errors }` per input position.
+  - `wrangler workflows instances delete <name> [id..]` deletes instances remotely or with `--local`; IDs can also come from a JSON array passed with `--filename`, with a combined limit of 100.
+
+## 0.12.2
+
+### Patch Changes
+
+- [#14840](https://github.com/cloudflare/workers-sdk/pull/14840) [`03a4330`](https://github.com/cloudflare/workers-sdk/commit/03a4330eb11865ef20a7c993a6ebe1f1b10838ad) Thanks [@Kkartik14](https://github.com/Kkartik14)! - Fix local Workflows retaining abort listeners after waits complete
+
+  Workflow sleeps, retry delays, and event waits now share a typed abort-aware race that removes its listener when either side settles. This prevents long-running local Workflow instances from retaining a listener and its captured promise state for every completed wait until the instance is paused or evicted.
+
+## 0.12.1
+
+### Patch Changes
+
+- [#14707](https://github.com/cloudflare/workers-sdk/pull/14707) [`b38f494`](https://github.com/cloudflare/workers-sdk/commit/b38f494204e5e08e561b8f198ef928188e554868) Thanks [@emily-shen](https://github.com/emily-shen)! - Update zod to v4
+
 ## 0.12.0
 
 ### Minor Changes

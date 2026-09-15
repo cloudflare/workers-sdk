@@ -20,15 +20,52 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("should set configured: true if a configPath exists", async ({
+	it("should set configured: true if a configPath exists during legacy Wrangler detection", async ({
 		expect,
 	}) => {
 		await expect(
 			details.getDetailsForAutoConfig({
 				wranglerConfig: { configPath: "/tmp" } as Config,
+				target: "wrangler",
 				context,
 			})
 		).resolves.toMatchObject({ configured: true });
+	});
+
+	it("should migrate an existing Wrangler project by default", async ({
+		expect,
+	}) => {
+		await writeFile("index.html", "<h1>Hello World</h1>");
+
+		await expect(
+			details.getDetailsForAutoConfig({
+				wranglerConfig: { configPath: "/tmp" } as Config,
+				context,
+			})
+		).resolves.toMatchObject({ configured: false });
+	});
+
+	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				scripts: { build: "astro build", dev: "cf dev" },
+				dependencies: { astro: "5" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "astro" },
+			buildCommand: "npx astro build",
+			devCommand: "npx astro dev",
+			packageManager: { type: "npm" },
+		});
 	});
 
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
@@ -59,6 +96,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				details.getDetailsForAutoConfig({ context })
 			).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
+				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
 				configured: false,
 				outputDir: "dist",
 				packageJson: {
@@ -166,7 +204,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		expect(std.warn).toContain("project is part of a workspace");
 	});
 
-	it("should use npm build instead of framework build if present", async ({
+	it("should use the direct framework build instead of an npm script for cf", async ({
 		expect,
 	}) => {
 		await writeFile(
@@ -184,7 +222,48 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await expect(
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
+			buildCommand: "npx astro build",
+		});
+	});
+
+	it("should preserve npm build script detection for Wrangler", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"package.json",
+			JSON.stringify({
+				scripts: {
+					build: "echo build",
+				},
+				dependencies: {
+					astro: "5",
+				},
+			})
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ target: "wrangler", context })
+		).resolves.toMatchObject({
 			buildCommand: "npm run build",
+		});
+	});
+
+	it("should include the Vite plugin command environment for cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({ dependencies: { vite: "8" } }),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			framework: { id: "vite" },
+			buildCommand: "npx vite build",
+			env: {
+				CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+			},
 		});
 	});
 

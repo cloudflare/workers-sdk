@@ -6,7 +6,6 @@ import {
 	DELETE,
 	GET,
 	KeyValueStorage,
-	LogLevel,
 	MiniflareDurableObject,
 	parseRanges,
 	PURGE,
@@ -19,7 +18,6 @@ import {
 	RangeNotSatisfiable,
 	StorageFailure,
 } from "./errors.worker";
-import type { CacheObjectCf } from "./constants";
 import type {
 	InclusiveRange,
 	MiniflareDurableObjectCf,
@@ -36,7 +34,7 @@ interface CacheMetadata {
 
 type CacheRouteHandler = RouteHandler<
 	unknown,
-	RequestInitCfProperties & MiniflareDurableObjectCf & CacheObjectCf
+	RequestInitCfProperties & MiniflareDurableObjectCf
 >;
 
 function getCacheKey(req: Request<unknown, RequestInitCfProperties>) {
@@ -100,7 +98,9 @@ function getExpiration(timers: Timers, req: Request, res: Response) {
 // headers in KV once this has been determined.
 function normaliseHeaders(headers: Headers): Record<string, string> {
 	const result: Record<string, string> = {};
-	for (const [key, value] of headers) result[key.toLowerCase()] = value;
+	for (const [key, value] of headers) {
+		result[key.toLowerCase()] = value;
+	}
 	return result;
 }
 
@@ -176,7 +176,9 @@ function getMatchResponse(reqHeaders: Headers, res: CachedResponse): Response {
 		}
 	}
 
-	if (!(res.body instanceof ReadableStream)) res.body = res.body.body;
+	if (!(res.body instanceof ReadableStream)) {
+		res.body = res.body.body;
+	}
 	return new Response(res.body, { status: res.status, headers: res.headers });
 }
 
@@ -202,7 +204,9 @@ export async function parseHttpResponse(
 				buffer[index + 2] === CR &&
 				buffer[index + 3] === LF
 		);
-		if (blankLineIndex !== -1) break;
+		if (blankLineIndex !== -1) {
+			break;
+		}
 	}
 	assert(blankLineIndex !== -1, "Expected to find blank line in HTTP message");
 
@@ -265,17 +269,6 @@ class SizingStream extends TransformStream<Uint8Array, Uint8Array> {
 }
 
 export class CacheObject extends MiniflareDurableObject {
-	#warnedUsage = false;
-	async #maybeWarnUsage(request: Request<unknown, CacheObjectCf>) {
-		if (!this.#warnedUsage && request.cf?.miniflare?.cacheWarnUsage === true) {
-			this.#warnedUsage = true;
-			await this.logWithLevel(
-				LogLevel.WARN,
-				"Cache operations will have no impact if you deploy to a workers.dev subdomain!"
-			);
-		}
-	}
-
 	#storage?: KeyValueStorage<CacheMetadata>;
 	get storage() {
 		// `KeyValueStorage` can only be constructed once `this.blob` is initialised
@@ -284,11 +277,12 @@ export class CacheObject extends MiniflareDurableObject {
 
 	@GET()
 	match: CacheRouteHandler = async (req) => {
-		await this.#maybeWarnUsage(req);
 		const cacheKey = getCacheKey(req);
 
 		// Never cache Workers Sites requests, so we always return on-disk files
-		if (isSitesRequest(req)) throw new CacheMiss();
+		if (isSitesRequest(req)) {
+			throw new CacheMiss();
+		}
 
 		let resHeaders: Headers | undefined;
 		let resRanges: InclusiveRange[] | undefined;
@@ -301,7 +295,9 @@ export class CacheObject extends MiniflareDurableObject {
 			const rangeHeader = req.headers.get("Range");
 			if (rangeHeader !== null) {
 				resRanges = parseRanges(rangeHeader, size);
-				if (resRanges === undefined) throw new RangeNotSatisfiable(size);
+				if (resRanges === undefined) {
+					throw new RangeNotSatisfiable(size);
+				}
 			}
 
 			return {
@@ -310,7 +306,9 @@ export class CacheObject extends MiniflareDurableObject {
 				contentType: contentType ?? undefined,
 			};
 		});
-		if (cached?.metadata === undefined) throw new CacheMiss();
+		if (cached?.metadata === undefined) {
+			throw new CacheMiss();
+		}
 
 		// Should've constructed headers when we extracted range options (the only
 		// time we don't do this is when the entry isn't found, or expired, in which
@@ -330,11 +328,12 @@ export class CacheObject extends MiniflareDurableObject {
 
 	@PUT()
 	put: CacheRouteHandler = async (req) => {
-		await this.#maybeWarnUsage(req);
 		const cacheKey = getCacheKey(req);
 
 		// Never cache Workers Sites requests, so we always return on-disk files
-		if (isSitesRequest(req)) throw new CacheMiss();
+		if (isSitesRequest(req)) {
+			throw new CacheMiss();
+		}
 
 		assert(req.body !== null);
 		const res = await parseHttpResponse(req.body);
@@ -384,12 +383,13 @@ export class CacheObject extends MiniflareDurableObject {
 
 	@PURGE()
 	delete: CacheRouteHandler = async (req) => {
-		await this.#maybeWarnUsage(req);
 		const cacheKey = getCacheKey(req);
 
 		const deleted = await this.storage.delete(cacheKey);
 		// This is an extremely vague error, but it fits with what the cache API in workerd expects
-		if (!deleted) throw new PurgeFailure();
+		if (!deleted) {
+			throw new PurgeFailure();
+		}
 		return new Response(null);
 	};
 

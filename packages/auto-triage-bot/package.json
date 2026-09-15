@@ -1,0 +1,28 @@
+{
+	"name": "@cloudflare/workers-sdk-auto-triage",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build",
+		"cf-typegen": "wrangler types --config dist/workers_sdk_auto_triage/wrangler.json --include-runtime=false",
+		"check:type": "tsc",
+		"deploy": "pnpm run build && wrangler deploy --config dist/workers_sdk_auto_triage/wrangler.json",
+		"dev": "vite dev"
+	},
+	"devDependencies": {
+		"@cloudflare/sandbox": "^0.12.4",
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@flue/cli": "^2.0.3",
+		"@flue/github": "^2.0.3",
+		"@flue/runtime": "^2.0.3",
+		"@flue/vite": "^2.0.3",
+		"@octokit/rest": "^22.0.1",
+		"agents": "^0.20.1",
+		"hono": "4.12.32",
+		"valibot": "^1.4.2",
+		"vite": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}

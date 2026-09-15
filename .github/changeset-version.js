@@ -22,6 +22,40 @@ function parseVersion(version) {
 	return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
 }
 
+function getNextMiniflarePrereleaseVersion(
+	workerdVersion,
+	previousVersion,
+	version,
+	prereleaseIdentifier
+) {
+	let nextVersion = getNextMiniflareVersion(
+		workerdVersion,
+		previousVersion,
+		version
+	);
+	const [previousMajor, previousMinor, previousPatch] =
+		parseVersion(previousVersion);
+	if (!previousVersion.includes("-")) {
+		if (previousVersion === version) return nextVersion;
+		const [major] = parseVersion(version);
+		assert(
+			major > previousMajor,
+			"Starting a prerelease requires a major bump"
+		);
+	} else if (previousVersion !== version) {
+		// All changeset types advance an active prerelease by one patch.
+		nextVersion = getNextMiniflareVersion(
+			workerdVersion,
+			previousVersion,
+			`${previousMajor}.${previousMinor}.${previousPatch + 1}`
+		);
+	}
+
+	const [major, minor, patch] = parseVersion(nextVersion);
+	return `${major}.${minor}.${patch}-${prereleaseIdentifier}`;
+}
+exports.getNextMiniflarePrereleaseVersion = getNextMiniflarePrereleaseVersion;
+
 const rootPath = path.resolve(__dirname, "..");
 const miniflarePath = path.join(rootPath, "packages/miniflare");
 const miniflarePkgPath = path.join(miniflarePath, "package.json");
@@ -34,6 +68,7 @@ function getWorkerdVersion() {
 	assert(match !== null, `Expected ${match[1]} to be <major>.<minor>.<patch>`);
 	return match[1];
 }
+
 /**
  * Gets the correct version to bump `miniflare` to, ensuring the minor versions
  * of `workerd` and `miniflare` match. Minor bumps in changesets will become
@@ -68,6 +103,14 @@ function main() {
 	//    minor version was bumped
 	const previousMiniflarePkg = getPkg(miniflarePkgPath);
 	const previousMiniflareVersion = previousMiniflarePkg.version;
+	const prereleaseIdentifier =
+		previousMiniflarePkg["workers-sdk"]?.npmPrereleaseIdentifier;
+	if (prereleaseIdentifier !== undefined) {
+		assert(
+			/^[A-Za-z][0-9A-Za-z-]*$/.test(prereleaseIdentifier),
+			"Invalid Miniflare npmPrereleaseIdentifier"
+		);
+	}
 
 	// 2. Run standard `changeset version` command to apply changesets, bump
 	//    versions, and update changelogs
@@ -79,11 +122,20 @@ function main() {
 	const miniflarePkg = getPkg(miniflarePkgPath);
 	const miniflareVersion = miniflarePkg.version;
 	const workerdVersion = getWorkerdVersion();
-	const nextMiniflareVersion = getNextMiniflareVersion(
-		workerdVersion,
-		previousMiniflareVersion,
-		miniflareVersion
-	);
+	const nextMiniflareVersion =
+		prereleaseIdentifier === undefined
+			? getNextMiniflareVersion(
+					workerdVersion,
+					previousMiniflareVersion,
+					miniflareVersion
+				)
+			: getNextMiniflarePrereleaseVersion(
+					workerdVersion,
+					previousMiniflareVersion,
+					miniflareVersion,
+					prereleaseIdentifier
+				);
+
 	if (nextMiniflareVersion !== miniflareVersion) {
 		// If `changeset version` didn't produce the correct version on its own...
 

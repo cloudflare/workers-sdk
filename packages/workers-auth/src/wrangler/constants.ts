@@ -16,6 +16,9 @@ export const WRANGLER_KEYRING_SERVICE_NAME = "wrangler";
 /** CLI name used for keyring install-dir scoping and user-facing messaging. */
 export const WRANGLER_CLI_NAME = "wrangler";
 
+/** Wrangler's branded name, used in prose addressed to the user. */
+export const WRANGLER_DISPLAY_NAME = "Wrangler";
+
 /** The `redirect_uri` registered on Wrangler's OAuth app. */
 export const OAUTH_CALLBACK_URL = "http://localhost:8976/oauth/callback";
 

@@ -1,17 +1,14 @@
 import {
-	buildAndMaybePush,
 	buildCommand,
+	initContainersSharedContext,
 	pushCommand,
-} from "../cloudchamber/build";
+} from "@cloudflare/containers-shared";
+import { fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
+import { getOrSelectAccountId } from "../user";
 import { containersScope } from ".";
-import type { ImageRef } from "../cloudchamber/build";
-import type {
-	ContainerNormalizedConfig,
-	ImageURIConfig,
-} from "@cloudflare/containers-shared";
 
 // --- Command definitions ---
 
@@ -35,7 +32,6 @@ export const containersBuildCommand = createCommand({
 		},
 		"path-to-docker": {
 			type: "string",
-			default: "docker",
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		},
@@ -57,8 +53,9 @@ export const containersBuildCommand = createCommand({
 	},
 	positionalArgs: ["PATH"],
 	async handler(args, { config }) {
+		initContainersSharedContext({ logger, fetchResult });
 		await fillOpenAPIConfiguration(config, containersScope);
-		await buildCommand(args);
+		await buildCommand(args, config);
 	},
 });
 
@@ -76,41 +73,14 @@ export const containersPushCommand = createCommand({
 		},
 		"path-to-docker": {
 			type: "string",
-			default: "docker",
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		},
 	},
 	positionalArgs: ["TAG"],
 	async handler(args, { config }) {
+		initContainersSharedContext({ logger, fetchResult });
 		await fillOpenAPIConfiguration(config, containersScope);
-		await pushCommand(args, config);
+		await pushCommand(args, await getOrSelectAccountId(config), config);
 	},
 });
-
-// --- Helper functions ---
-
-export async function buildContainer(
-	containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
-	/** just the tag component. will be prefixed with the container name */
-	imageTag: string,
-	dryRun: boolean,
-	pathToDocker: string,
-	verifyDockerIsRunning?: boolean
-): Promise<ImageRef> {
-	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
-	logger.log("Building image", imageFullName);
-
-	return await buildAndMaybePush(
-		{
-			tag: imageFullName,
-			pathToDockerfile: containerConfig.dockerfile,
-			buildContext: containerConfig.image_build_context,
-			args: containerConfig.image_vars,
-		},
-		pathToDocker,
-		!dryRun,
-		containerConfig,
-		verifyDockerIsRunning
-	);
-}

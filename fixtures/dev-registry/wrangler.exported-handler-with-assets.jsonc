@@ -34,9 +34,12 @@
 			"entrypoint": "NamedEntrypoint",
 		},
 	],
+	// Middle link of the one-directional tail chain described in
+	// wrangler.worker-entrypoint.jsonc. Pointing this back at worker-entrypoint
+	// would close the cycle.
 	"tail_consumers": [
 		{
-			"service": "worker-entrypoint",
+			"service": "exported-handler",
 		},
 	],
 }

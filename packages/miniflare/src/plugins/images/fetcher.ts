@@ -1,4 +1,5 @@
 import { File } from "node:buffer";
+import { Response } from "../../http";
 import type {
 	ImageInfoResponse,
 	RequestInitCfPropertiesImage,
@@ -11,6 +12,9 @@ type Transform = {
 	rotate?: number;
 	width?: number;
 	height?: number;
+	fit?: RequestInitCfPropertiesImage["fit"];
+	gravity?: RequestInitCfPropertiesImage["gravity"];
+	background?: string;
 };
 
 function validateTransforms(inputTransforms: unknown): Transform[] | null {
@@ -120,7 +124,9 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 		case "gif":
 			mime = "image/gif";
 			break;
-		case "avif":
+		// libvips reports AVIF (and other HEIF variants) under the `heif`
+		// container format; Cloudflare Images' supported HEIF variant is AVIF.
+		case "heif":
 			mime = "image/avif";
 			break;
 		default:
@@ -173,8 +179,14 @@ async function runTransform(
 		}
 
 		if (transform.width !== undefined || transform.height !== undefined) {
+			const { fit, withoutEnlargement } = resolveFit(transform.fit);
 			transformer.resize(transform.width || null, transform.height || null, {
-				fit: "contain",
+				fit,
+				withoutEnlargement,
+				position: resolveGravity(transform.gravity),
+				background:
+					transform.background ??
+					(transform.fit === "pad" ? "#ffffff" : undefined),
 			});
 		}
 	}
@@ -210,7 +222,13 @@ async function runTransform(
 			break;
 	}
 
-	return new Response(transformer, {
+	// Buffer explicitly rather than passing the raw Sharp Duplex stream
+	// straight into Response() - the latter produced incomplete/corrupted
+	// output in some environments, only caught once pixel-level regression
+	// tests started decoding the response. Matches cfImageLocalFetcher's
+	// (working) pattern below.
+	const output = await transformer.toBuffer();
+	return new Response(output, {
 		headers: {
 			"content-type": outputFormat,
 		},
@@ -249,6 +267,12 @@ function resolveQuality(
 	return undefined;
 }
 
+// Fit resolution shared by the Images binding (`env.IMAGES.transform()`)
+// and cf.image (`fetch(url, { cf: { image } })`). Despite `fit` being
+// documented per-API, production treats them identically - `contain`
+// shrinks to fit within the box preserving aspect ratio (no padding),
+// same as `scale-down` but allowed to enlarge. See cf-image.spec.ts
+// "fit:contain preserves aspect ratio" and transform.spec.ts.
 function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
 	fit: keyof FitEnum;
 	withoutEnlargement?: boolean;
@@ -298,7 +322,9 @@ function formatToMime(format: string | undefined): string | null {
 			return "image/webp";
 		case "gif":
 			return "image/gif";
-		case "avif":
+		// libvips reports AVIF (and other HEIF variants) under the `heif`
+		// container format; Cloudflare Images' supported HEIF variant is AVIF.
+		case "heif":
 			return "image/avif";
 		default:
 			return null;

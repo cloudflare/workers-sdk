@@ -3,14 +3,20 @@ import { writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
 import { describe, it, vitest } from "vitest";
 import {
+	DEFAULT_COMPAT_DATE_PATH,
+	updateDefaultCompatDate,
+} from "../../deployments/update-default-compat-date";
+import {
 	commitAndPush,
 	generateChangesetHeader,
 	generateCommitMessage,
 	getDependencyChanges,
 	getPackageJsonDiff,
 	parseDiffForChanges,
+	updatePathsForChanges,
 	writeChangeSet,
 } from "../generate-dependabot-pr-changesets";
+import type { Change } from "../generate-dependabot-pr-changesets";
 import type { Mock } from "vitest";
 
 vitest.mock("node:child_process", async () => {
@@ -23,6 +29,42 @@ vitest.mock("node:fs", async () => {
 	return {
 		writeFileSync: vitest.fn(),
 	};
+});
+
+vitest.mock(
+	"../../deployments/update-default-compat-date",
+	async (importOriginal) => {
+		return {
+			...(await importOriginal<
+				typeof import("../../deployments/update-default-compat-date")
+			>()),
+			updateDefaultCompatDate: vitest.fn(),
+		};
+	}
+);
+
+function makeChanges(...names: string[]): Map<string, Change> {
+	return new Map(names.map((name) => [name, { from: "1.0.0", to: "1.0.1" }]));
+}
+
+describe("updatePathsForChanges()", () => {
+	it("should refresh the default compatibility date when workerd is bumped", ({
+		expect,
+	}) => {
+		(updateDefaultCompatDate as Mock).mockClear();
+
+		expect(
+			updatePathsForChanges(makeChanges("workerd", "some-package"))
+		).toEqual([DEFAULT_COMPAT_DATE_PATH]);
+		expect(updateDefaultCompatDate).toHaveBeenCalledTimes(1);
+	});
+
+	it("should do nothing when workerd is not bumped", ({ expect }) => {
+		(updateDefaultCompatDate as Mock).mockClear();
+
+		expect(updatePathsForChanges(makeChanges("some-package"))).toEqual([]);
+		expect(updateDefaultCompatDate).not.toHaveBeenCalled();
+	});
 });
 
 describe("getPackageJsonDiff()", () => {
@@ -395,5 +437,18 @@ describe("commitAndPush()", () => {
 		expect(() =>
 			commitAndPush("commit message")
 		).toThrowErrorMatchingInlineSnapshot(`[Error: Failed to push]`);
+	});
+
+	it("should stage additional paths when provided", ({ expect }) => {
+		(spawnSync as Mock).mockClear();
+		(spawnSync as Mock).mockReturnValue({ output: [] });
+
+		commitAndPush("chore: update dependencies", [DEFAULT_COMPAT_DATE_PATH]);
+
+		expect((spawnSync as Mock).mock.calls[0][1]).toEqual([
+			"add",
+			".changeset",
+			DEFAULT_COMPAT_DATE_PATH,
+		]);
 	});
 });

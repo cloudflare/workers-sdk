@@ -1,75 +1,49 @@
-import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-const MtlsSchema = z.object({
-	certificate_id: z.string(),
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
-});
-
-export const MtlsOptionsSchema = z.object({
-	mtlsCertificates: z.record(MtlsSchema).optional(),
-});
+import type { Plugin } from "../shared";
 
 export const MTLS_PLUGIN_NAME = "mtls";
+const MTLS_REMOTE_SERVICE_NAME = `${MTLS_PLUGIN_NAME}:remote`;
 
-export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
-	options: MtlsOptionsSchema,
+export const MTLS_PLUGIN: Plugin = {
 	bindingTypeDescription: "mTLS certificate",
 	async getBindings(options) {
-		if (!options.mtlsCertificates) {
-			return [];
-		}
-
-		return Object.entries(options.mtlsCertificates).map(
-			([name, { certificate_id, remoteProxyConnectionString }]) => {
-				return {
-					name,
-
-					service: {
-						name: getUserBindingServiceName(
-							MTLS_PLUGIN_NAME,
-							certificate_id,
-							remoteProxyConnectionString
-						),
-					},
-				};
-			}
+		return getEnvBindingsOfType(options.config, "mtls-certificate").map(
+			([name, binding]) => ({
+				name,
+				service: {
+					name: MTLS_REMOTE_SERVICE_NAME,
+					props: buildRemoteProxyProps(
+						getRemoteProxyConnectionString(binding, options.dev),
+						name
+					),
+				},
+			})
 		);
 	},
-	getNodeBindings(options: z.infer<typeof MtlsOptionsSchema>) {
-		if (!options.mtlsCertificates) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.mtlsCertificates).map((name) => [
+			getEnvBindingsOfType(options.config, "mtls-certificate").map(([name]) => [
 				name,
 				new ProxyNodeBinding(),
 			])
 		);
 	},
 	async getServices({ options }) {
-		if (!options.mtlsCertificates) {
+		if (getEnvBindingsOfType(options.config, "mtls-certificate").length === 0) {
 			return [];
 		}
 
-		return Object.entries(options.mtlsCertificates).map(
-			([name, { certificate_id, remoteProxyConnectionString }]) => {
-				return {
-					name: getUserBindingServiceName(
-						MTLS_PLUGIN_NAME,
-						certificate_id,
-						remoteProxyConnectionString
-					),
-					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
-				};
-			}
-		);
+		return [
+			{
+				name: MTLS_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			},
+		];
 	},
 };

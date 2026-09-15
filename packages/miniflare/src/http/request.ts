@@ -34,7 +34,9 @@ export class Request<
 		super(input, init);
 		this[kCf] = init?.cf;
 		// Prefer `cf` from `init`, but if it's set on `input`, use that
-		if (input instanceof Request) this[kCf] ??= input.cf;
+		if (input instanceof Request) {
+			this[kCf] ??= input.cf;
+		}
 	}
 
 	get cf() {

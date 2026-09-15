@@ -1,10 +1,16 @@
 import events from "node:events";
+import http from "node:http";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
 import { beforeAll, test, vi } from "vitest";
 import WebSocket from "ws";
-import { useDispose } from "../../../test-shared";
+import { InspectorProxyController } from "../../../../src/plugins/core/inspector-proxy";
+import {
+	singleModuleManifest,
+	TestLog,
+	useDispose,
+} from "../../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 const nullScript =
@@ -17,6 +23,91 @@ beforeAll(() => {
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 });
 
+test("InspectorProxy: removes startup error handler after listening", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const off = vi.spyOn(http.Server.prototype, "off");
+	const log = new TestLog();
+	const logError = vi.spyOn(log, "error").mockImplementation(() => {});
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		log,
+		new Set()
+	);
+	onTestFinished(async () => {
+		await controller.dispose();
+		off.mockRestore();
+		logError.mockRestore();
+	});
+
+	await controller.getInspectorURL();
+
+	expect(off).toHaveBeenCalledWith("error", expect.any(Function));
+	const errorListenerRemovalIndex = off.mock.calls.findIndex(
+		([event]) => event === "error"
+	);
+	const server = off.mock.instances[errorListenerRemovalIndex] as http.Server;
+	expect(server.listenerCount("error")).toBe(1);
+
+	const error = new Error("test error");
+	server.emit("error", error);
+	expect(logError).toHaveBeenCalledWith(error);
+});
+
+test("InspectorProxy: closes server and preserves bind failure", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const close = vi.spyOn(http.Server.prototype, "close");
+	onTestFinished(() => close.mockRestore());
+	const controller = new InspectorProxyController(
+		0,
+		"192.0.2.1",
+		new TestLog(),
+		new Set()
+	);
+
+	await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
+	const bindError = await controller.ready.catch((error: unknown) => error);
+	expect(bindError).toMatchObject({
+		address: "192.0.2.1",
+		syscall: "listen",
+	});
+	await expect(controller.getInspectorURL()).rejects.toBe(bindError);
+	await expect(controller.dispose()).rejects.toBe(bindError);
+	expect(close).toHaveBeenCalledOnce();
+});
+
+test("InspectorProxy: propagates bind failure through Miniflare", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		inspectorPort: 0,
+		inspectorHost: "192.0.2.1",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
+			},
+		],
+	});
+
+	const bindError = await mf.ready.catch((error: unknown) => error);
+	expect(bindError).toMatchObject({
+		address: "192.0.2.1",
+		syscall: "listen",
+	});
+	await expect(mf.getInspectorURL()).rejects.toBe(bindError);
+	await expect(mf.dispose()).rejects.toBe(bindError);
+});
+
 test("InspectorProxy: /json/version should provide details about the inspector version", async ({
 	expect,
 }) => {
@@ -24,8 +115,13 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -38,7 +134,9 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 
 	const versionDetails = (await res.json()) as Record<string, string>;
 
-	expect(versionDetails["Browser"]).toMatch(/^miniflare\/v\d\.\d{8}\.\d+$/);
+	expect(versionDetails["Browser"]).toMatch(
+		/^miniflare\/v\d\.\d{8}\.\d+(-\w+)?$/
+	);
 	expect(versionDetails["Protocol-Version"]).toMatch(/^\d+\.\d+$/);
 });
 
@@ -49,8 +147,13 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -76,8 +179,13 @@ test("InspectorProxy: proxy port validation", async ({ expect }) => {
 			new Miniflare({
 				workers: [
 					{
-						script: nullScript,
-						unsafeInspectorProxy: true,
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-05-01",
+						},
+						legacy: { serviceWorkerScript: nullScript },
+						dev: { unsafeInspectorProxy: true },
 					},
 				],
 			})
@@ -96,18 +204,31 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "extra-worker-a",
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "extra-worker-a",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "extra-worker-b",
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "extra-worker-b",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -144,17 +265,30 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "extra-worker-a",
-				script: nullScript,
+				config: {
+					type: "worker",
+					name: "extra-worker-a",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
 			},
 			{
-				name: "extra-worker-b",
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "extra-worker-b",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -186,8 +320,13 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 	const options: MiniflareOptions = {
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	};
@@ -239,8 +378,13 @@ test("InspectorProxy: should keep the same inspector port on miniflare#setOption
 		inspectorPort: 0,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	};
@@ -264,8 +408,13 @@ test("InspectorProxy: should not keep the same inspector port on miniflare#setOp
 		inspectorPort: initialInspectorPort,
 		workers: [
 			{
-				script: nullScript,
-				unsafeInspectorProxy: true,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	};
@@ -294,16 +443,20 @@ test("InspectorProxy: should allow debugging a single worker", async ({
 		inspectorPort: 0,
 		workers: [
 			{
-				script: `
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("body");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -350,16 +503,20 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 	const options: MiniflareOptions = {
 		workers: [
 			{
-				script: `
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("body");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	};
@@ -422,8 +579,11 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 		inspectorPort: 0,
 		workers: [
 			{
-				name: "worker-a",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							async fetch(request, env, ctx) {
 								debugger;
@@ -432,25 +592,28 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 								return new Response(\`worker-a -> \${workerBText}\`);
 							}
 						}
-					`,
-				modules: true,
-				serviceBindings: {
-					WORKER_B: "worker-b",
+					`),
+					env: {
+						WORKER_B: { type: "worker", worker: "worker-b" },
+					},
 				},
-				unsafeInspectorProxy: true,
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "worker-b",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("worker-b");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -551,17 +714,20 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 		inspectorPort: 0,
 		workers: [
 			{
-				name: "worker-b",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("worker-b");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -573,8 +739,11 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 		inspectorPort: 0,
 		workers: [
 			{
-				name: "worker-a",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							async fetch(request, env, ctx) {
 								debugger;
@@ -583,25 +752,28 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 								return new Response(\`worker-a -> \${workerBText}\`);
 							}
 						}
-					`,
-				modules: true,
-				serviceBindings: {
-					WORKER_B: "worker-b",
+					`),
+					env: {
+						WORKER_B: { type: "worker", worker: "worker-b" },
+					},
 				},
-				unsafeInspectorProxy: true,
+				dev: { unsafeInspectorProxy: true },
 			},
 			{
-				name: "worker-b",
-				script: `
+				config: {
+					type: "worker",
+					name: "worker-b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								debugger;
 								return new Response("worker-b");
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});
@@ -706,24 +878,26 @@ test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		inspectorPort: 0,
-		// Avoid the default handling of stdio since that will console log the very large string in the test output.
-		handleRuntimeStdio(stdout, stderr) {
-			// We need to add these handlers otherwise the streams will not be consumed and the process will hang.
-			stdout.on("data", () => {});
-			stderr.on("data", () => {});
-		},
+		// Avoid the default handling of stdio since that will console log the very
+		// large string in the test output. A no-op structured log handler consumes
+		// the runtime output without forwarding it to the console.
+		handleStructuredLogs() {},
 		workers: [
 			{
-				script: `
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 						export default {
 							fetch(request, env, ctx) {
 								console.log("${LARGE_STRING}");
 								return new Response(\`body:${LARGE_STRING}\`);
 							}
 						}
-					`,
-				modules: true,
-				unsafeInspectorProxy: true,
+					`),
+				},
+				dev: { unsafeInspectorProxy: true },
 			},
 		],
 	});

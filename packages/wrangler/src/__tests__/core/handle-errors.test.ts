@@ -1,4 +1,5 @@
 import { APIError, ParseError } from "@cloudflare/workers-utils";
+import { Cloudflare } from "cloudflare";
 import { beforeEach, describe, it, vi } from "vitest";
 import {
 	getErrorType,
@@ -812,6 +813,39 @@ describe("handleError", () => {
 
 			expect(std.err).toContain("A file or directory could not be found");
 			expect(std.err).toContain("Missing file or directory: .wrangler");
+		});
+	});
+
+	describe("Cloudflare SDK errors", () => {
+		it("should surface the Retry-After header from a 429 SDK error", async ({
+			expect,
+		}) => {
+			const error = new Cloudflare.APIError(
+				429,
+				{ errors: [{ message: "rate limited" }] },
+				"rate limited",
+				{ "retry-after": "42" }
+			);
+
+			await handleError(error, {}, []);
+
+			expect(std.err).toContain("Retry-After");
+			expect(std.err).toContain("42 second(s)");
+		});
+
+		it("should not add a Retry-After note when the header is absent", async ({
+			expect,
+		}) => {
+			const error = new Cloudflare.APIError(
+				500,
+				{ errors: [{ message: "server error" }] },
+				"server error",
+				{}
+			);
+
+			await handleError(error, {}, []);
+
+			expect(std.err).not.toContain("Retry-After");
 		});
 	});
 });

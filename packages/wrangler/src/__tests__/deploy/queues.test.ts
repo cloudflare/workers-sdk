@@ -29,14 +29,6 @@ import {
 import type { QueueResponse } from "../../queues/client";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -677,7 +669,7 @@ describe("deploy", () => {
 			mockGetQueueByName(queueName, null);
 
 			await expect(
-				runWrangler("deploy index.js")
+				runWrangler("deploy index.js --no-experimental-provision")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
@@ -698,7 +690,7 @@ describe("deploy", () => {
 			mockGetQueueByName(queueName, null);
 
 			await expect(
-				runWrangler("deploy index.js")
+				runWrangler("deploy index.js --no-experimental-provision")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);

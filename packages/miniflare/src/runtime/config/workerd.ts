@@ -28,10 +28,14 @@ export type Socket = {
 	name?: string;
 	address?: string;
 	service?: ServiceDesignator;
-} & ({ http?: HttpOptions } | { https?: Socket_Https });
+} & ({ http?: HttpOptions } | { https?: Socket_Https } | { tcp?: Socket_Tcp });
 
 export interface Socket_Https {
 	options?: HttpOptions;
+	tlsOptions?: TlsOptions;
+}
+
+export interface Socket_Tcp {
 	tlsOptions?: TlsOptions;
 }
 
@@ -76,6 +80,8 @@ export type Worker = (
 	tails?: ServiceDesignator[];
 	streamingTails?: ServiceDesignator[];
 	containerEngine?: Worker_ContainerEngine;
+	accessBlobHeader?: string;
+	accessBindingService?: ServiceDesignator;
 };
 
 export type Worker_DurableObjectStorage =
@@ -93,7 +99,7 @@ export type Worker_Module = {
 	| { wasm?: Uint8Array }
 	| { json?: string }
 	| { pythonModule?: string }
-	| { pythonRequirement?: string }
+	| { obsoletePythonRequirement?: string }
 );
 
 export type Worker_Binding = {
@@ -109,7 +115,7 @@ export type Worker_Binding = {
 	| { durableObjectNamespace?: Worker_Binding_DurableObjectNamespaceDesignator }
 	| { kvNamespace?: ServiceDesignator }
 	| { r2Bucket?: ServiceDesignator }
-	| { r2Admin?: ServiceDesignator }
+	| { obsolete0?: ServiceDesignator }
 	| { wrapped?: Worker_Binding_WrappedBinding }
 	| { queue?: ServiceDesignator }
 	| { fromEnvironment?: string }
@@ -135,7 +141,7 @@ export type Worker_Binding_Type =
 	| { durableObjectNamespace: Void }
 	| { kvNamespace?: Void }
 	| { r2Bucket?: Void }
-	| { r2Admin?: Void }
+	| { obsolete0?: Void }
 	| { queue?: Void }
 	| { analyticsEngine?: Void }
 	| { hyperdrive?: Void };
@@ -195,7 +201,25 @@ export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
 	enableSql?: boolean;
+	container?: Worker_DurableObjectNamespace_ContainerOptions;
 } & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
+
+export interface Worker_DurableObjectNamespace_ContainerOptions {
+	imageName?: string;
+	privileges?: Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges;
+}
+
+export interface Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges {
+	capabilities?: string[];
+	devices?: Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device[];
+	securityOpt?: string[];
+}
+
+export interface Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device {
+	pathOnHost?: string;
+	pathInContainer?: string;
+	cgroupPermissions?: string;
+}
 
 export type ExternalServer = { address?: string } & (
 	| { http: HttpOptions }

@@ -1,6 +1,6 @@
 import http from "node:http";
 import { afterAll, beforeAll, test } from "vitest";
-import { fetchJson } from "../../__test-utils__";
+import { getJsonResponse } from "../../__test-utils__";
 
 // Regression test for https://github.com/cloudflare/workers-sdk/issues/13791.
 //
@@ -47,7 +47,7 @@ afterAll(async () => {
 test("outbound subrequests use the first configured route's zone name as the `CF-Worker` header", async ({
 	expect,
 }) => {
-	const response = await fetchJson(
+	const response = await getJsonResponse(
 		`/cf-worker-header?echoUrl=${encodeURIComponent(echoUrl)}`
 	);
 	expect(response).toEqual({ cfWorker: "example.com" });
