@@ -584,7 +584,9 @@ export function convertBinding(
 											{ length: binding.outbound.params?.length ?? 0 },
 											() => REPLACE_ME
 										)
-									: (binding.outbound.params?.map(({ name }) => name) ?? []),
+									: (binding.outbound.params?.map(
+											({ name: parameterName }) => parameterName
+										) ?? []),
 							},
 						}),
 					},
