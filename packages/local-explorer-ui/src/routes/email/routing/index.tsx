@@ -14,8 +14,8 @@ import { SendTestEmailDialog } from "../../../components/email/SendTestEmailDial
 import { useTestEmailDrafts } from "../../../components/email/TestEmailDraftsContext";
 import { ResourceError } from "../../../components/ResourceError";
 import { getSelectedWorker } from "../../../components/WorkerSelector";
-import { timeAgo } from "../../../components/workflows/helpers";
 import { formatEmailAddress } from "../../../utils/format";
+import { timeAgo } from "../../../utils/time";
 import { toEmailId } from "../shared/types";
 import { useCursorPaginatedList } from "../shared/useCursorPaginatedList";
 import type { EmailRoutingItem } from "../../../api";

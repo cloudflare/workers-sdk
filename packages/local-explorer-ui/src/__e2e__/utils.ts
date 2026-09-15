@@ -79,6 +79,90 @@ export async function seedWorkflow(workflowName: string): Promise<{
 	};
 }
 
+export async function seedFlag(
+	appId: string,
+	flag: {
+		key: string;
+		enabled?: boolean;
+		default_variation: string;
+		variations: Record<string, unknown>;
+		rules?: unknown[];
+	}
+): Promise<void> {
+	const response = await fetch(
+		`${workerUrl}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${appId}/flags`,
+		{
+			body: JSON.stringify(flag),
+			headers: { "Content-Type": "application/json" },
+			method: "POST",
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			`Failed to seed flag '${flag.key}': ${await response.text()}`
+		);
+	}
+}
+
+/**
+ * Reads a flag back from the local Flagship API so tests can assert on what was
+ * actually persisted.
+ */
+export async function fetchFlag(
+	appId: string,
+	flagKey: string
+): Promise<{
+	default_variation: string;
+	enabled: boolean;
+	rules: Array<{
+		priority: number;
+		serve_variation: string;
+		conditions: unknown[];
+		rollout?: { percentage: number; attribute?: string };
+	}>;
+	variations: Record<string, unknown>;
+}> {
+	const response = await fetch(
+		`${workerUrl}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${appId}/flags/${flagKey}`
+	);
+	if (!response.ok) {
+		throw new Error(
+			`Failed to read flag '${flagKey}': ${await response.text()}`
+		);
+	}
+	const body = (await response.json()) as {
+		result: {
+			default_variation: string;
+			enabled: boolean;
+			rules: Array<{
+				priority: number;
+				serve_variation: string;
+				conditions: unknown[];
+				rollout?: { percentage: number; attribute?: string };
+			}>;
+			variations: Record<string, unknown>;
+		};
+	};
+	return body.result;
+}
+
+export async function cleanupFlags(appId: string): Promise<void> {
+	const response = await fetch(
+		`${workerUrl}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${appId}/flags`
+	);
+	const body = (await response.json()) as {
+		result?: Array<{ key?: string }>;
+	};
+	for (const flag of body.result ?? []) {
+		if (flag.key !== undefined) {
+			await fetch(
+				`${workerUrl}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${appId}/flags/${flag.key}`,
+				{ method: "DELETE" }
+			);
+		}
+	}
+}
+
 /**
  * Delete all instances of a workflow via the explorer API.
  */
@@ -221,6 +305,11 @@ export async function navigateToDOObjectByName(
 	}
 
 	return objectId;
+}
+
+export async function navigateToFlagshipApp(appId: string): Promise<void> {
+	await navigateTo(`${LOCAL_EXPLORER_BASE_PATH}/flagship/${appId}`);
+	await waitForPageLoad();
 }
 
 /**
