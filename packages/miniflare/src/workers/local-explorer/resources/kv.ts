@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { HttpError } from "miniflare:shared";
 import { KVHeaders, KVParams } from "../../kv/constants";
 import { validateKey, validatePutOptions } from "../../kv/validator.worker";
@@ -108,25 +109,30 @@ interface PreparedKVWrite {
 }
 
 const textEncoder = new TextEncoder();
+const BASE64_PATTERN =
+	/^(?:[A-Za-z\d+/]{4})*(?:[A-Za-z\d+/]{2}(?:==)?|[A-Za-z\d+/]{3}=?){0,1}$/;
 
 function decodeBase64(value: string): Uint8Array {
-	try {
-		return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
-	} catch {
+	const normalisedValue = value.replace(/[\t\n\f\r ]/g, "");
+	if (!BASE64_PATTERN.test(normalisedValue)) {
 		throw new HttpError(400, "Invalid base64 value");
 	}
+	return Buffer.from(normalisedValue, "base64");
 }
 
-/* Safely serialise values for comparison in de-duplication */
-function stableStringify(value: unknown): string | undefined {
+/**
+ * Serialises a value with recursively sorted object keys so semantically
+ * equivalent metadata can be compared regardless of property insertion order.
+ */
+function canonicalStringify(value: unknown): string | undefined {
 	if (Array.isArray(value)) {
-		return `[${value.map(stableStringify).join(",")}]`;
+		return `[${value.map(canonicalStringify).join(",")}]`;
 	}
 	if (value !== null && typeof value === "object") {
 		const record = value as Record<string, unknown>;
 		return `{${Object.keys(record)
 			.sort()
-			.map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+			.map((key) => `${JSON.stringify(key)}:${canonicalStringify(record[key])}`)
 			.join(",")}}`;
 	}
 	return JSON.stringify(value);
@@ -153,7 +159,7 @@ function preparedKVWritesEqual(
 		valuesEqual(left.value, right.value) &&
 		left.expiration === right.expiration &&
 		left.expirationTtl === right.expirationTtl &&
-		stableStringify(left.metadata) === stableStringify(right.metadata)
+		canonicalStringify(left.metadata) === canonicalStringify(right.metadata)
 	);
 }
 
