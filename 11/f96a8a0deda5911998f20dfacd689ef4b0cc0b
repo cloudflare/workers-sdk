@@ -1,0 +1,67 @@
+.changeset/fuzzy-pandas-launch.md
+  s_3725c7a238f252::t_a41ca70f1d1fc5 1-13
+packages/containers-shared/src/client/index.ts
+  s_3725c7a238f252::t_1ebc79a7c91dc0 49-52,189-190,224-225
+packages/containers-shared/src/client/models/ContainerInstanceGroup.ts
+  s_3725c7a238f252::t_857491a8a9454f 1-13
+packages/containers-shared/src/client/models/ContainerInstanceGroupSSHConfiguration.ts
+  s_3725c7a238f252::t_9a86172cc02022 1-10
+packages/containers-shared/src/client/models/PutContainerInstanceGroupRequestBody.ts
+  s_3725c7a238f252::t_0cb28e86dcd53b 1-11
+packages/containers-shared/src/client/services/ContainerInstanceGroupsService.ts
+  s_3725c7a238f252::t_63f68531a19b12 1-35
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_3725c7a238f252::t_8c99f19e635590 11,28,133-144,283-304,334,777-787
+packages/deploy-helpers/src/deploy/helpers/container-metadata.ts
+  s_3725c7a238f252::t_e4cc80358406e3 1-30
+packages/deploy-helpers/src/deploy/helpers/durable.ts
+  s_3725c7a238f252::t_1a8a67048094d3 5,113-124,127
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_3725c7a238f252::t_e6e9d5f8294852 19,164
+packages/workers-utils/src/config/containers.ts
+  s_3725c7a238f252::t_013ec7f2a52d26 2-45
+packages/workers-utils/src/config/environment.ts
+  s_3725c7a238f252::t_b9d4d2c35f54ff 350-381,428-430,438-440,445,460-462,467
+packages/workers-utils/src/config/index.ts
+  s_3725c7a238f252::t_65d55aab9de2b7 45,47,50
+packages/workers-utils/src/config/validation.ts
+  s_3725c7a238f252::t_72ba3a36196318 10-14,3479,3504,4754-4768,6181-6191,6193-6271,6273,7023-7024,7037-7045,7063-7070,7096-7102
+packages/workers-utils/src/index.ts
+  s_3725c7a238f252::t_a18e4dbae26fa7 18,20,23
+packages/workers-utils/tests/config/containers.test.ts
+  s_3725c7a238f252::t_31aced27ca677f 4,55-115
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_3725c7a238f252::t_12c0140fa69239 2655,4621-4829
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_cabfd3c6cec071 6,56,115-560,3250-3309
+packages/wrangler/src/__tests__/containers/schema.test.ts
+  s_3725c7a238f252::t_6caecd19d44591 13-20,24-38,91-125
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_3725c7a238f252::t_30b63ec33defe4 1898-1944
+packages/wrangler/src/containers/config.ts
+  s_3725c7a238f252::t_bdec60695d9176 65-68
+packages/wrangler/src/containers/deploy.ts
+  s_3725c7a238f252::t_ccaa741cf97217 75,78,80,85-86,100,105,107,114-115,117-124,126-128,130-133,135-153,155-158,161-162,164-173
+packages/wrangler/src/containers/instance-groups.ts
+  s_3725c7a238f252::t_6c3a9565a1c0f9 1-216
+packages/wrangler/src/deploy/index.ts
+  s_3725c7a238f252::t_9b9a173d2b4698 10-13,208-209
+packages/wrangler/src/type-generation/index.ts
+  s_3725c7a238f252::t_27553a8d738d60 10,1969-1973,1997-2005,2012,2014,2016,3043-3046,3049,3072-3080,3089,3096
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "11f96a8a0deda5911998f20dfacd689ef4b0cc0b",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_cfcda634814b92::t_41a67405698d9d 10,34-50
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_cfcda634814b92::t_83b2073045f940 15,18-19,31,36,41,74-75,114,116-123,125,132,142,175,177-178,180-190,193,195
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_cfcda634814b92::t_3b6b80ec475367 8-13,18-20,22-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "56b04aa3eb47a3988e40a098fffbf23f92cade24",
+  "prompts": {},
+  "sessions": {
+    "s_cfcda634814b92": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05662ba38ffeFAbzJynmgX0Ka6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

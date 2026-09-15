@@ -1,0 +1,23 @@
+.changeset/tidy-pears-travel.md
+  s_b1ac6d1b2f94d8::t_49342bfb4cf771 1-7
+packages/wrangler/src/__tests__/triggers.test.ts
+  s_b1ac6d1b2f94d8::t_d1fbf21ef109dd 1-31
+packages/wrangler/src/triggers/index.ts
+  s_b1ac6d1b2f94d8::t_dc334a7b4e11f5 58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b63a3a623eb83466ec8af097d4912ac505659aa8",
+  "prompts": {},
+  "sessions": {
+    "s_b1ac6d1b2f94d8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019faa56-489c-7cb2-a48e-ddeb1a651b06",
+        "model": "unknown"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}

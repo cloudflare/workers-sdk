@@ -1,0 +1,23 @@
+packages/miniflare/src/plugins/core/modules.ts
+  s_9ba936cb68b1b8::t_e2a398295d37f5 126
+packages/miniflare/src/runtime/config/workerd.ts
+  s_9ba936cb68b1b8::t_9307e4d2c46778 96
+packages/vitest-pool-workers/src/pool/module-fallback.ts
+  s_9ba936cb68b1b8::t_e83e415b5f3e86 478
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c733a3934744abdaa19e6c743a07ffa97f80465b",
+  "prompts": {},
+  "sessions": {
+    "s_9ba936cb68b1b8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00e791335ffeu8c37t8G6rTX66",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Victor Berchet <victor@suumit.com>"
+    }
+  }
+}

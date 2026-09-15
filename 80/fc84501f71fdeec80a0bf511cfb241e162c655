@@ -1,0 +1,60 @@
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_9fff95db50b440::t_bc48754277eb18 350
+  s_9fff95db50b440::t_1538b711bc3e97 38-45
+  s_9fff95db50b440::t_06a67d7788ed98 355-360
+  s_9fff95db50b440::t_1b83e6c13df937 20
+  s_9fff95db50b440::t_af465c4f77551f 153
+  s_9fff95db50b440::t_36a9647b90e340 177
+  s_9fff95db50b440::t_e9d0e20078fd61 391
+  s_9fff95db50b440::t_9ae211576881b5 148-150,160-163
+packages/local-explorer-ui/src/components/observability/TraceWaterfall.tsx
+  s_9fff95db50b440::t_d6595942c9a87f 439
+  s_9fff95db50b440::t_1b29e88cb23d6b 342
+  s_9fff95db50b440::t_ce9e7a46cc07c6 8-12
+packages/miniflare/test/plugins/core/observability.spec.ts
+  s_9fff95db50b440::t_f89fac134ade88 4
+packages/miniflare/src/plugins/core/index.ts
+  s_9fff95db50b440::t_6e95a7886c1136 17
+  s_9fff95db50b440::t_37e97cfd2c1bde 53-54
+  s_9fff95db50b440::t_2c5e4a7093f3e5 1315-1317
+packages/miniflare/test/plugins/local-explorer/observability.spec.ts
+  s_9fff95db50b440::t_77fd0bd4056c75 4
+packages/miniflare/src/plugins/core/constants.ts
+  s_9fff95db50b440::t_f9e158bae60209 19-24
+  s_9fff95db50b440::t_1294621c4e7d7c 14-18
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_9fff95db50b440::t_5b3e3b7222fdfe 1934
+packages/miniflare/src/plugins/core/observability.ts
+  s_9fff95db50b440::t_0f1a7ef68eb973 5-8
+  s_9fff95db50b440::t_5e69ce40bba460 26
+  s_9fff95db50b440::t_6466f4fdc4e710 4
+  s_9fff95db50b440::t_acb9f0fb519600 58
+  s_9fff95db50b440::t_f728752e91a315 28-41
+  s_9fff95db50b440::t_60dedbf1636fec 56-57
+.changeset/wobs-local-observability.md
+  s_9fff95db50b440::t_8d80fbb4d09d03 1-16
+packages/miniflare/src/plugins/core/explorer.ts
+  s_9fff95db50b440::t_1af211f6dd2e90 20
+packages/local-explorer-ui/src/utils/observability.ts
+  s_9fff95db50b440::t_5a536dd085a917 279
+  s_9fff95db50b440::t_d1a93fcea66caa 480-495
+  s_9fff95db50b440::t_91df0ec25dad6d 248-249
+packages/local-explorer-ui/src/components/observability/icons.tsx
+  s_9fff95db50b440::t_2b50b953f362c0 2-4,8-177,180,182,187,191,193,195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "80fc84501f71fdeec80a0bf511cfb241e162c655",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

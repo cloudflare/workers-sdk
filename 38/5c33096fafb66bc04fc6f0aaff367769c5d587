@@ -1,0 +1,27 @@
+.changeset/fuzzy-pandas-launch.md
+  s_3725c7a238f252::t_c2b42f395dc59c 1-9
+packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
+  s_3725c7a238f252::t_c2f9e77c5a0c35 120
+packages/workers-utils/src/config/validation.ts
+  s_3725c7a238f252::t_a1373cacab5ef8 3369-3526,3544-3550,3552,3554,3571-3587,3593,3598-3621,3623,3625,4034,4037
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_61599ebe233452 55,114-285
+packages/wrangler/src/containers/instance-groups.ts
+  s_3725c7a238f252::t_647382ce645867 1-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "385c33096fafb66bc04fc6f0aaff367769c5d587",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

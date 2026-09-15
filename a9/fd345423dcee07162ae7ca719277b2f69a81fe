@@ -1,0 +1,23 @@
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_ae91e42aa48337::t_01d1232c25c8d2 156,174,223,249,294,348,387,429,453,480,527,605,630,673,690,717,725,738,767,784,811,840,858,937,954,966,978
+packages/wrangler/e2e/multiworker-dev.test.ts
+  s_ae91e42aa48337::t_edcec7b234f193 713,731,734
+packages/wrangler/e2e/dev.test.ts
+  s_ae91e42aa48337::t_e308047a58d5c2 2698,2710,2751,2771
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a9fd345423dcee07162ae7ca719277b2f69a81fe",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

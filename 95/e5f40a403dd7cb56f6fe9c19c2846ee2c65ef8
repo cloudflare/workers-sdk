@@ -1,0 +1,28 @@
+packages/local-explorer-ui/src/utils/observability.ts
+  s_9fff95db50b440::t_90ce5272205034 214-236
+  s_9fff95db50b440::t_6c8989abeca285 302-309
+  s_9fff95db50b440::t_191a141a7b0525 320
+  s_9fff95db50b440::t_3c735e79f1f7ea 581-625,637-638
+packages/local-explorer-ui/src/components/observability/TraceWaterfall.tsx
+  s_9fff95db50b440::t_dee7bee1e8440c 12
+  s_9fff95db50b440::t_189c19133e474f 89
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_9fff95db50b440::t_ac4b8e29de7700 3,10-11
+  s_9fff95db50b440::t_3f608fb9c44d36 138-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "95e5f40a403dd7cb56f6fe9c19c2846ee2c65ef8",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

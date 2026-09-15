@@ -1,0 +1,21 @@
+packages/vite-plugin-cloudflare/src/build-output-preview.ts
+  s_e39e618fd25267::t_8e5c723fb7a722 31,40-42,52,67
+packages/wrangler/src/__tests__/build-output.test.ts
+  s_e39e618fd25267::t_9de86cf9780d0d 49-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bfd90418b58923d7b06e3eb205a55aab4705e023",
+  "prompts": {},
+  "sessions": {
+    "s_e39e618fd25267": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05fb0a8ebffeHKtix6DRvGwn5a",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

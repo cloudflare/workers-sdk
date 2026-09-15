@@ -1,0 +1,21 @@
+packages/wrangler/src/core/register-yargs-command.ts
+  s_bbf5010a08a6e5::t_dbbebb4497276e 19,356,358-362,364,366-382,389
+packages/wrangler/src/core/types.ts
+  s_bbf5010a08a6e5::t_817819e5c71e39 228-229,231,233
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "db80dcac384a582bb411cc5bc8cf45642862865e",
+  "prompts": {},
+  "sessions": {
+    "s_bbf5010a08a6e5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a023e7-4ae8-7351-8dae-6b91911409bd",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

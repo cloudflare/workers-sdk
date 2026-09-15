@@ -1,0 +1,19 @@
+.changeset/gold-spoons-sin.md
+  s_168d6f73e9e63d::t_ca3a26e8d356c7 5,7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f12813d203363ec86c62c2bcdb2606d54dd87cb8",
+  "prompts": {},
+  "sessions": {
+    "s_168d6f73e9e63d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f98ad0f66ffenvYuXJpfs1NEGt",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

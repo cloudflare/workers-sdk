@@ -1,0 +1,25 @@
+pnpm-lock.yaml
+  s_1aa7cf05bea79e::t_d2f3d14db42670 1669-1671,1687-1689,16980,16989,17055,18767,19247,19260,24015,24405,24855,26083,26852,26879,27672
+packages/autoconfig/src/types.ts
+  s_1aa7cf05bea79e::t_697965ff009003 75
+packages/autoconfig/tests/run-upgrade.test.ts
+  s_1aa7cf05bea79e::t_85933c8a2f1279 1-141,143-144
+  s_1aa7cf05bea79e::t_e3b9d5be9f48b6 142
+  s_1aa7cf05bea79e::t_638ba08b1982e8 145-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c095cfffd128e6e95e835d28e492e3812460481c",
+  "prompts": {},
+  "sessions": {
+    "s_1aa7cf05bea79e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05d0220a5ffexc1W7v47GXDn7c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Angus <ahawkings@cloudflare.com>"
+    }
+  }
+}

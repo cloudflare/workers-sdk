@@ -1,0 +1,57 @@
+.changeset/tidy-falcons-comply.md
+  s_2025e41a9384d1::t_8d5268d926cbd5 1-8
+packages/containers-shared/src/images.ts
+  s_2025e41a9384d1::t_7c60162df4099b 19,50-51,55-56,117,157-162,198-202,215-219,222,255-258,297
+packages/containers-shared/src/knobs.ts
+  s_2025e41a9384d1::t_9c21a2bfdbf319 1-4,6,8-12,14-23
+packages/containers-shared/src/registry.ts
+  s_2025e41a9384d1::t_59b42e904b9242 2,9-10,12
+packages/containers-shared/tests/images.test.ts
+  s_2025e41a9384d1::t_7ebc2927152f54 136-147
+packages/containers-shared/tests/knobs.test.ts
+  s_2025e41a9384d1::t_a0c29884b80a9c 1,5-8,21-53
+packages/vite-plugin-cloudflare/src/containers.ts
+  s_2025e41a9384d1::t_41a01663fa549a 3-8,13-27
+packages/vite-plugin-cloudflare/src/plugins/dev.ts
+  s_2025e41a9384d1::t_4032f0d9fb299d 17,252,271,280
+packages/vite-plugin-cloudflare/src/plugins/preview.ts
+  s_2025e41a9384d1::t_b2ed9d2c24227c 9,75,96,105
+packages/wrangler/src/__tests__/containers/config.test.ts
+  s_2025e41a9384d1::t_5a80145de471d6 280-313
+packages/wrangler/src/api/startDevWorker/LocalRuntimeController.ts
+  s_2025e41a9384d1::t_b967c782bad223 384-386
+packages/wrangler/src/api/startDevWorker/MultiworkerRuntimeController.ts
+  s_2025e41a9384d1::t_d72e82cd2d80e4 207-209
+packages/wrangler/src/cloudchamber/apply.ts
+  s_2025e41a9384d1::t_57f152eb4bb8b3 126-127,132-136,260,289,401,409-411
+packages/wrangler/src/cloudchamber/build.ts
+  s_2025e41a9384d1::t_24aed7083092c6 34,102-103,105,113-114,121,138-139,148-152,161,172-177,197-198,251,259-260,272,278-282,306-307,324-325,342-343,365-366,396-398,409,413,495
+packages/wrangler/src/cloudchamber/images/images.ts
+  s_2025e41a9384d1::t_497de1f98fefe8 23,98,100,133-134,194-195,197-199,267,270
+packages/wrangler/src/containers/build.ts
+  s_2025e41a9384d1::t_5bc1a9c5ba57a4 15,62,100-101,116-117
+packages/wrangler/src/containers/config.ts
+  s_2025e41a9384d1::t_a845f362ce8345 232-233
+packages/wrangler/src/containers/deploy.ts
+  s_2025e41a9384d1::t_5dc4021a88362a 99-100,318,326,429,459,723-724,730-734
+packages/wrangler/src/containers/images.ts
+  s_2025e41a9384d1::t_7e13f69a10e0f9 18,113,115,148-149,214-215,217-219,287,290
+packages/wrangler/src/containers/registries.ts
+  s_2025e41a9384d1::t_44f0b0f7ec582a 157,678-689,841
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0c642245f6e4d097c891230afe129f93d3182fdd",
+  "prompts": {},
+  "sessions": {
+    "s_2025e41a9384d1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ffd28-4773-7ff0-a58a-d4e60112ef5c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

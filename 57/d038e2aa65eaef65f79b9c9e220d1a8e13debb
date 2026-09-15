@@ -1,0 +1,29 @@
+.changeset/startup-profile-summary.md
+  s_aced62a76ff9cb::t_968b6087e899de 1-7
+packages/wrangler/src/__tests__/startup-profiling.test.ts
+  s_c5b750804f5505::t_9c340cba509582 8,37-43,171-224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "57d038e2aa65eaef65f79b9c9e220d1a8e13debb",
+  "prompts": {},
+  "sessions": {
+    "s_aced62a76ff9cb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0c3bed7d1ffeduihW7svCWwP6o",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_c5b750804f5505": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_057d69139ffe4FSaHciP5oTjp5",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}

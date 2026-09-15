@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/pages/deploy.test.ts
+  s_da4850dcde74ad::t_4516581f6fad0e 132,139-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a712b653135b8d654aa4a4bd557c7437cd8240ba",
+  "prompts": {},
+  "sessions": {
+    "s_da4850dcde74ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06836-3f2c-71d2-b7b1-b00a14ae1f67",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

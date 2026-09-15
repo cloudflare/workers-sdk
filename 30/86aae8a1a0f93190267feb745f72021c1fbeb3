@@ -1,0 +1,49 @@
+packages/miniflare/test/plugins/workflows/index.spec.ts
+  s_b554ffcd7ba695::t_4507e88a476e17 172-183,320-356
+.changeset/workflows-instances-delete.md
+  s_b554ffcd7ba695::t_9d4d25ce8f20c5 1-9
+packages/workflows-shared/src/lib/errors.ts
+  s_b554ffcd7ba695::t_1f4a8dcfd65398 73,114-117
+packages/wrangler/src/workflows/commands/instances/delete.ts
+  s_b554ffcd7ba695::t_35d9508f0f0147 1-79
+packages/workflows-shared/src/engine.ts
+  s_b554ffcd7ba695::t_4666ee66662360 1040-1051
+packages/wrangler/src/index.ts
+  s_b554ffcd7ba695::t_aa2fbf0e904182 539,2273-2276
+packages/miniflare/src/workers/workflows/wrapped-binding.worker.ts
+  s_b554ffcd7ba695::t_d35f9ae4e503b4 6,38-41,132-137
+packages/workflows-shared/src/types.ts
+  s_383f5c3ec55457::t_f905d920713aa8 1-9
+packages/wrangler/src/workflows/utils.ts
+  s_b554ffcd7ba695::t_78022911766717 10,147-165
+packages/workflows-shared/tests/binding.test.ts
+  s_b554ffcd7ba695::t_1ba951ea14d9c4 133,148-306
+packages/wrangler/src/__tests__/workflows.test.ts
+  s_b554ffcd7ba695::t_e2da25a60546d0 22,203,692-750,1872-1943
+packages/wrangler/src/workflows/local.ts
+  s_b554ffcd7ba695::t_c3d02a3ab408d5 8,82-89,95-102,174-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3086aae8a1a0f93190267feb745f72021c1fbeb3",
+  "prompts": {},
+  "sessions": {
+    "s_383f5c3ec55457": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f7f64-a8f9-770b-998d-af2bac98f1f4",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    },
+    "s_b554ffcd7ba695": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f74df-f5c8-71b4-88d3-30b0c9e17ab0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}

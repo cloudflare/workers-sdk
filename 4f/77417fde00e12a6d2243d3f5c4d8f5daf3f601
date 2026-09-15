@@ -1,0 +1,23 @@
+packages/wrangler/src/__tests__/pages/deploy.test.ts
+  s_da4850dcde74ad::t_6a4a0d8dcf6074 32,2012-2142,6830,6835,6867-6870
+.changeset/pages-delegation-branch-flags.md
+  s_da4850dcde74ad::t_d10d4fd2279dc0 5,7,9
+packages/wrangler/src/pages/deploy.ts
+  s_da4850dcde74ad::t_16e432cad3375d 658-660,662-666,672
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4f77417fde00e12a6d2243d3f5c4d8f5daf3f601",
+  "prompts": {},
+  "sessions": {
+    "s_da4850dcde74ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06836-3f2c-71d2-b7b1-b00a14ae1f67",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

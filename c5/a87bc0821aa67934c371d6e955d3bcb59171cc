@@ -1,0 +1,83 @@
+packages/autoconfig/src/frameworks/analog.ts
+  s_1abe185e12dcb9::t_507204c8ab3d1d 6,49
+packages/autoconfig/src/frameworks/solid-start.ts
+  s_1abe185e12dcb9::t_b693af92a5cdc4 4,92
+packages/autoconfig/src/run.ts
+  s_1abe185e12dcb9::t_db7c0b8aff5210 11,96
+packages/create-cloudflare/src/helpers/__tests__/compatDate.test.ts
+  s_1abe185e12dcb9::t_def9f0dfbe0134 1,22-23,25
+packages/create-cloudflare/src/helpers/compatDate.ts
+  s_1abe185e12dcb9::t_67c1d2eb378ec6 5,9-10,12,14,16-17,19
+packages/create-cloudflare/src/wrangler/config.ts
+  s_1abe185e12dcb9::t_de370d519f0ddd 41,64,99,215,220,226-227
+packages/create-cloudflare/templates/analog/c3.ts
+  s_1abe185e12dcb9::t_3d53c8f740d1bc 28
+packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
+  s_1abe185e12dcb9::t_08b32de4805e09 4,64
+packages/vite-plugin-cloudflare/src/__tests__/resolve-plugin-config.spec.ts
+  s_1abe185e12dcb9::t_b0672a303f70bb 4,566-568,821-823
+packages/vite-plugin-cloudflare/src/index.ts
+  s_1abe185e12dcb9::t_aa990f511892a7 1,36
+packages/vite-plugin-cloudflare/src/plugin-config.ts
+  s_1abe185e12dcb9::t_6fa922a9c1f258 14-17
+packages/vitest-pool-workers/src/pool/index.ts
+  s_1abe185e12dcb9::t_6ea8f8bfa18416 8,363-364,366
+packages/workers-utils/src/construct-wrangler-config.ts
+  s_1abe185e12dcb9::t_8c1e997f1c037b 1,90
+packages/workers-utils/tests/compatibility-date.test.ts
+  s_1abe185e12dcb9::t_c870b87aa33394 10-24
+packages/wrangler/e2e/pages-dev.test.ts
+  s_1abe185e12dcb9::t_4512e01330dbba 3,35-36,39,42,45
+packages/wrangler/src/__tests__/autoconfig/run.test.ts
+  s_1abe185e12dcb9::t_7e31672c1b7c0c 7,304,325,341-342,348,499,518,531-532,538
+packages/wrangler/src/__tests__/deploy/config-args-merging.test.ts
+  s_1abe185e12dcb9::t_d65254f0a663ec 14,339-341,344-346,350-352,363,366,432-434,441,443-444,446-448
+packages/wrangler/src/__tests__/deploy/deploy-interactive-prompts.test.ts
+  s_1abe185e12dcb9::t_66217f40ba0ea4 3,87,98,117,152,193,209,231,243,250,269,275,304,368,390,407,426,441,458,475,493,510,528,556,573,594,622,639,660,675,693,719,736,754,782,797,815,841,858,876,891,909,924,943,960,978,993,1011,1037,1052,1070,1085,1103,1118,1136,1151,1169,1195,1223,1240,1262
+packages/wrangler/src/__tests__/deploy/entry-points.test.ts
+  s_1abe185e12dcb9::t_3e76b6bf002196 4-7,895,916-920,923,929-930,939,976,997-1001,1004,1010-1011,1020,1056,1077-1081,1084,1139,1161-1162,1169,1201,1215-1216,1223,1255,1269-1270,1277
+packages/wrangler/src/__tests__/deploy/workers-dev.test.ts
+  s_1abe185e12dcb9::t_6671daf6da3a25 4,808-814
+packages/wrangler/src/__tests__/dev.test.ts
+  s_1abe185e12dcb9::t_d9981e08c2b72a 4,365,367,369-370
+packages/wrangler/src/__tests__/init.test.ts
+  s_1abe185e12dcb9::t_9599e55b320cf9 3,1244
+packages/wrangler/src/__tests__/pages/pages-download-config.test.ts
+  s_1abe185e12dcb9::t_a88b25ea0411cf 3,26
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_1abe185e12dcb9::t_bb6cff49cbaef4 10,2056
+packages/wrangler/src/api/integrations/platform/index.ts
+  s_1abe185e12dcb9::t_186d229e9e30bf 4,49,52
+packages/wrangler/src/deploy/autoconfig.ts
+  s_1abe185e12dcb9::t_7fa56bd1d3101e 5,222,225,243
+packages/wrangler/src/deployment-bundle/entry.ts
+  s_1abe185e12dcb9::t_ba12bbf2a7f2d6 4,60
+packages/wrangler/src/deployment-bundle/merge-config-args.ts
+  s_1abe185e12dcb9::t_63cdc0e4356687 3,60
+packages/wrangler/src/pages/dev.ts
+  s_1abe185e12dcb9::t_4aed79a3a31062 8,1235-1237,1240
+packages/wrangler/src/pages/download-config.ts
+  s_1abe185e12dcb9::t_c31e944f225daf 6,78,80-82,84
+tools/dependabot/__tests__/generate-dependabot-pr-changesets.test.ts
+  s_1abe185e12dcb9::t_203e5b7863ece5 5-8,16,19,34-69,441-453
+tools/deployments/__tests__/update-default-compat-date.test.ts
+  s_1abe185e12dcb9::t_2f693420447300 1-77
+tools/deployments/update-default-compat-date.ts
+  s_1abe185e12dcb9::t_4e63020a6fdc53 1-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c5a87bc0821aa67934c371d6e955d3bcb59171cc",
+  "prompts": {},
+  "sessions": {
+    "s_1abe185e12dcb9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_003f69fa9ffebPylDVituoxXq6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

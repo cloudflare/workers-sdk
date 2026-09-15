@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_c2586c182c96a1::t_9781c2524cd3ed 634
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "351cdac32e1654ed83f6fabae57769075a57ae3c",
+  "prompts": {},
+  "sessions": {
+    "s_c2586c182c96a1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_032eb7497ffep5iIN2QXO8oIWm",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

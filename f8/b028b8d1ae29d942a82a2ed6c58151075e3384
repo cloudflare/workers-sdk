@@ -1,0 +1,41 @@
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_9fff95db50b440::t_589d6bdacd7e60 38,43-44
+  s_9fff95db50b440::t_31e31be402b5ec 318-327
+  s_9fff95db50b440::t_6ea462b50e72f2 378-398
+  s_9fff95db50b440::t_03930fe807c1c7 518-530
+  s_9fff95db50b440::t_61bb0d6012dcef 602
+  s_9fff95db50b440::t_9394c731818366 139-140
+packages/miniflare/src/workers/local-explorer/resources/observability.ts
+  s_9fff95db50b440::t_b317292e1d675f 12-17,19,21
+packages/local-explorer-ui/src/utils/observability.ts
+  s_9fff95db50b440::t_f6382f885aac1a 613
+  s_9fff95db50b440::t_ef8406ced62ad6 676-680
+  s_9fff95db50b440::t_990c73df8db953 93-95,97
+  s_9fff95db50b440::t_6e551840a65ce2 787-821
+  s_9fff95db50b440::t_4bb7012fe81133 657,675
+  s_9fff95db50b440::t_3ef4a91bb7fd67 658-664
+  s_9fff95db50b440::t_e560de5748fff4 183-185
+  s_9fff95db50b440::t_0fa6b2f8216237 614-641
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_9fff95db50b440::t_f955a1cbfcb015 139-227
+  s_9fff95db50b440::t_16a53cc5789af7 471-526
+  s_9fff95db50b440::t_6d3f4268b86c9b 13-14
+packages/local-explorer-ui/src/components/observability/TraceWaterfall.tsx
+  s_9fff95db50b440::t_6dc7958e60735c 165-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f8b028b8d1ae29d942a82a2ed6c58151075e3384",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": null
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/preview.test.ts
+  s_3390551efeeb50::t_2855c945cfc624 33-39,1903,1906-1941,1943-1959,1961-1983,1985,1987-2003
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "53e5fbe516e72ee091e4f4b2aaa5a1b59fd78418",
+  "prompts": {},
+  "sessions": {
+    "s_3390551efeeb50": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f8d2daa09ffeu2VrkxhMrPdYqs",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}

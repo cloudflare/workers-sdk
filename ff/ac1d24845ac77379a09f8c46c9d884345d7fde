@@ -1,0 +1,39 @@
+packages/wrangler/src/__tests__/index.test.ts
+  22baa37600d6ebd1 72,150
+packages/wrangler/src/core/teams.d.ts
+  22baa37600d6ebd1 18
+packages/wrangler/src/index.ts
+  22baa37600d6ebd1 444-445,1448-1456
+packages/wrangler/src/websearch/client.ts
+  22baa37600d6ebd1 1-22
+packages/wrangler/src/utils/add-created-resource-config.ts
+  22baa37600d6ebd1 23
+packages/wrangler/src/websearch/index.ts
+  22baa37600d6ebd1 1-10
+packages/wrangler/src/websearch/search.ts
+  22baa37600d6ebd1 1-69
+.changeset/add-web-search-binding.md
+  22baa37600d6ebd1 19-29
+packages/wrangler/src/websearch/types.ts
+  22baa37600d6ebd1 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "ffac1d24845ac77379a09f8c46c9d884345d7fde",
+  "prompts": {
+    "22baa37600d6ebd1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c49c2946ffez7W6VFJaYSJQFu",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "Gabriel Massadas",
+      "messages": [],
+      "total_additions": 172,
+      "total_deletions": 1,
+      "accepted_lines": 172,
+      "overriden_lines": 0
+    }
+  }
+}

@@ -1,0 +1,28 @@
+packages/miniflare/src/workers/local-explorer/resources/observability.ts
+  s_9fff95db50b440::t_b317292e1d675f 12-17,19,21
+packages/local-explorer-ui/src/utils/observability.ts
+  s_9fff95db50b440::t_0fa6b2f8216237 612-639
+  s_9fff95db50b440::t_3ef4a91bb7fd67 656-662
+  s_9fff95db50b440::t_4bb7012fe81133 655,673
+  s_9fff95db50b440::t_990c73df8db953 93-95,97
+  s_9fff95db50b440::t_ef8406ced62ad6 674-678
+  s_9fff95db50b440::t_f6382f885aac1a 611
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_9fff95db50b440::t_16a53cc5789af7 380-435
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b69b140eac54426152d4ce61dc5b6fbeb6c9983a",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": null
+    }
+  }
+}

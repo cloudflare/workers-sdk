@@ -1,0 +1,57 @@
+packages/miniflare/scripts/email-openapi.ts
+  s_0af0e8d26e8295::t_807be29a29165e 15-30,33-44
+packages/miniflare/src/workers/core/email.ts
+  s_26b06ef24f9c34::t_c80789f7da47b9 58-96,201-207,446,456,459,462,472-474,484,495-498
+packages/miniflare/src/workers/email/contracts.ts
+  s_ff9e97aa7f7ce5::t_ef27d8feeea784 7-8,14-15,18-22,30,40,44
+packages/miniflare/src/workers/email/email-store.ts
+  s_ff9e97aa7f7ce5::t_a71ae21d451a32 27,163
+packages/miniflare/src/workers/email/input-validation.ts
+  s_ff9e97aa7f7ce5::t_3d45fc671242b4 3-15,21-74
+packages/miniflare/src/workers/email/mime.ts
+  s_ff9e97aa7f7ce5::t_00057cfb3e7892 4,6,63,68,202-209
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_0af0e8d26e8295::t_cdce419d5ddc1b 793,802-805,817-820,868,888,907-909,929,948-950,1053,1081
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_0af0e8d26e8295::t_099bd4746bc39c 537,543,549,566-601,607,615,623-625,633,641-643,655,669
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_0af0e8d26e8295::t_1ca6314f2385d0 3832-3835,3855-3858,3865,3943,3972,4010,4016,4022,4062,4100,4106,4112,4275,4341
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_ff9e97aa7f7ce5::t_c8bdfed87b51fa 16-18,27,605-608,611,1073-1075,1080-1084
+packages/miniflare/test/index.spec.ts
+  s_ff9e97aa7f7ce5::t_fa673fb119166a 2536-2542,2796-2800
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_26b06ef24f9c34::t_f566caaacae3a9 26,46-49,329-338,991-993,1465,1476-1478,1485-1530,1533,1537,1542-1552,1583-1691,1768,1771,1785,1787,1789-1791,1808-1814
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9cf84f3f36fce9028e63b4b773ef8f70dafbc740",
+  "prompts": {},
+  "sessions": {
+    "s_0af0e8d26e8295": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03db1-876e-78c0-869f-e18475c99905",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_26b06ef24f9c34": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03db1-6608-78f1-b5b3-7af6fdcaca61",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_ff9e97aa7f7ce5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a038f2-4760-7423-8b42-1eb8942b028b",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

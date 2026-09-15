@@ -1,0 +1,19 @@
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_20890f2bc2d65e::t_fd8158969d7e2a 191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "372b23dad3c41a36e67ff30057ce45bb22b7f0cb",
+  "prompts": {},
+  "sessions": {
+    "s_20890f2bc2d65e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_037c6695cffekPS6cQICtHB2o2",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

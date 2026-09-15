@@ -1,0 +1,19 @@
+packages/create-cloudflare/templates/next/c3.ts
+  s_27dcc028b2d0b7::t_5bdf166d5297b4 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "49b885d478247dda18d9979abc44396926ef5dee",
+  "prompts": {},
+  "sessions": {
+    "s_27dcc028b2d0b7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00db102c6ffe4PPWWiLa4PBhQE",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "scottbuscemi <sbuscemi@cloudflare.com>"
+    }
+  }
+}

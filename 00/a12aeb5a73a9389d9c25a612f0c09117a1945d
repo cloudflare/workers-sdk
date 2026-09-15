@@ -1,0 +1,21 @@
+packages/wrangler/src/dev/start-dev.ts
+  s_1356a911e53448::t_cadc02c9da0ec3 385
+packages/wrangler/src/__tests__/dev/start-dev.test.ts
+  s_1356a911e53448::t_6537a591875a9d 113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "00a12aeb5a73a9389d9c25a612f0c09117a1945d",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

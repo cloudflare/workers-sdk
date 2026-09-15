@@ -1,0 +1,52 @@
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_1356a911e53448::t_c99c139f26cafa 17
+  s_1356a911e53448::t_e7bd8b8f806811 599
+  s_1356a911e53448::t_919374ad302b11 131-136
+  s_1356a911e53448::t_318cfe9aeee504 340-367
+packages/local-explorer-ui/src/utils/observability.ts
+  s_1356a911e53448::t_c8b6b5a791d59c 271-287,294
+  s_1356a911e53448::t_ac6ec8ca310b85 563,565
+  s_1356a911e53448::t_94c1f42ba0f4d3 620-623
+  s_1356a911e53448::t_2277d932c9d1f8 648-655,659-662
+  s_1356a911e53448::t_86c967a6b5d339 517-527
+  s_1356a911e53448::t_3704c3a0b563fa 331,333-336
+packages/local-explorer-ui/src/utils/observability-query.ts
+  s_1356a911e53448::t_2bea3a66bf6c7e 225-236
+  s_1356a911e53448::t_df493b6bc6069c 144-145
+  s_1356a911e53448::t_efb6b7975ec0f2 173-182
+  s_1356a911e53448::t_220e94bb98fb39 7
+  s_1356a911e53448::t_ddd0170e96bd58 203-204
+packages/local-explorer-ui/src/routes/observability/events.tsx
+  s_1356a911e53448::t_76d5abd535d606 122-123
+  s_1356a911e53448::t_b3fd7bab27e84d 384,389-403
+  s_1356a911e53448::t_d1e00c5ecc13c8 408
+  s_1356a911e53448::t_23c83bb2f50404 290
+  s_1356a911e53448::t_0441cfd45b94b6 325-332
+  s_1356a911e53448::t_c9714b672ec69e 13,16,27
+  s_1356a911e53448::t_44b3fe8398af4e 404
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_1356a911e53448::t_ef971bc90e1abd 566-570
+packages/local-explorer-ui/src/components/observability/QuerySyntaxHint.tsx
+  s_1356a911e53448::t_e8c78aca3b2334 54-56,68-70
+packages/local-explorer-ui/src/components/observability/InvocationLogs.tsx
+  s_1356a911e53448::t_f6eae1bd183ac9 3
+  s_1356a911e53448::t_3c2e1e20d14d85 81
+packages/local-explorer-ui/src/__tests__/observability/query-clauses.test.ts
+  s_1356a911e53448::t_64e2583548182d 71-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5ef51de3cd77e145ec33b0e34398060682e05d0a",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": null
+    }
+  }
+}

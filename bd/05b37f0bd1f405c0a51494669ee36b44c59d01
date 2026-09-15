@@ -1,0 +1,33 @@
+packages/containers-shared/src/client/index.ts
+  s_3725c7a238f252::t_746c9e4d5df558 49-50,187,221
+packages/containers-shared/src/client/models/ContainerInstanceGroup.ts
+  s_3725c7a238f252::t_a851e37090ec18 1-13
+packages/containers-shared/src/client/models/ContainerInstanceGroupSSHConfiguration.ts
+  s_3725c7a238f252::t_0146dff0fb780f 1-10
+packages/containers-shared/src/client/models/PutContainerInstanceGroupRequestBody.ts
+  s_3725c7a238f252::t_f9266882c22551 1-11
+packages/containers-shared/src/client/services/ContainerInstanceGroupsService.ts
+  s_3725c7a238f252::t_c3f8c7368e156a 1-35
+packages/workers-utils/src/config/validation.ts
+  s_3725c7a238f252::t_5141dcc90549ea 2191-2196,2800-2839,2883-2897,2907,3500-3505,3507,3509,3526,3532,3537-3545,3548,6740-6785
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_457c334ec90323 55,114-338
+packages/wrangler/src/deploy/index.ts
+  s_3725c7a238f252::t_577b41488d8961 10,205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bd05b37f0bd1f405c0a51494669ee36b44c59d01",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

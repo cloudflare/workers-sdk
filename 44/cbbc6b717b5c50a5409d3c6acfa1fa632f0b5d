@@ -1,0 +1,67 @@
+packages/local-explorer-ui/src/components/email/EmailContent.tsx
+  s_eeb838205f8100::t_be52f1a05411e2 1-114
+packages/local-explorer-ui/src/components/email/EmailHtmlBody.tsx
+  s_eeb838205f8100::t_96b7e89dddd0dd 1-2,6-8,11-18,20-22,24-42,44-52
+packages/local-explorer-ui/src/components/email/EmailList.tsx
+  s_26b06ef24f9c34::t_4549978b7d9959 56,107
+packages/local-explorer-ui/src/components/email/EmailTruncationWarning.tsx
+  s_dabb4773aed416::t_b86bbfa4ef5224 25,28-30
+packages/local-explorer-ui/src/components/email/ReceivedEmailHeaders.tsx
+  s_719ff7c6ab9093::t_ec8e32a588f69b 1-72
+packages/local-explorer-ui/src/components/email/SentEmailDetails.tsx
+  s_eeb838205f8100::t_001575ef04bc1d 3-4,18-20,25-48,51-53,82-108,116,121-128,158,161,170-178
+packages/local-explorer-ui/src/routes/email/shared/ConstantsCard.tsx
+  s_ff9e97aa7f7ce5::t_fc1296712c50c0 3-7,25,47,51-53,75,78
+packages/local-explorer-ui/src/routes/email/shared/InfoFlow.tsx
+  s_26b06ef24f9c34::t_763da0f2d802f2 40
+packages/local-explorer-ui/src/utils/email-headers.ts
+  s_ff9e97aa7f7ce5::t_b648be9e83dced 1-25,28,30-40,42-43,45-56,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "44cbbc6b717b5c50a5409d3c6acfa1fa632f0b5d",
+  "prompts": {},
+  "sessions": {
+    "s_26b06ef24f9c34": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03db1-6608-78f1-b5b3-7af6fdcaca61",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_719ff7c6ab9093": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03e7b-abcf-72b1-b33c-84183497c87b",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_dabb4773aed416": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03f05-a9b9-7673-8100-25804b5737f1",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_eeb838205f8100": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a039cd-3150-73b3-a130-3b61bf89ed35",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_ff9e97aa7f7ce5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a038f2-4760-7423-8b42-1eb8942b028b",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

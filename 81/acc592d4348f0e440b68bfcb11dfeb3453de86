@@ -1,0 +1,35 @@
+packages/local-explorer-ui/src/components/observability/ObservabilityViewSwitcher.tsx
+  s_9fff95db50b440::t_f1db3430a2ae74 4
+packages/local-explorer-ui/src/components/observability/icons.tsx
+  s_9fff95db50b440::t_89aa335764dbe6 8
+packages/local-explorer-ui/src/components/observability/FilterSelect.tsx
+  s_9fff95db50b440::t_6f01b2e5fa9aca 3
+packages/miniflare/test/plugins/core/observability.spec.ts
+  s_9fff95db50b440::t_1a4dafb3f17c43 616-637
+packages/miniflare/src/plugins/core/index.ts
+  s_9fff95db50b440::t_20423ef8f93b20 885-888,890-895
+packages/local-explorer-ui/src/utils/observability.ts
+  s_9fff95db50b440::t_3afaae72b4aee6 365-371,375-378
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_9fff95db50b440::t_481c2917bb7f59 24
+packages/local-explorer-ui/src/components/observability/TraceWaterfall.tsx
+  s_9fff95db50b440::t_7c0df7522ecdf8 15
+packages/local-explorer-ui/src/routes/observability/logs.tsx
+  s_9fff95db50b440::t_d3b872cf2481c6 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "81acc592d4348f0e440b68bfcb11dfeb3453de86",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}
