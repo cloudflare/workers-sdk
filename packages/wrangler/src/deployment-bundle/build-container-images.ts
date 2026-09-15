@@ -138,7 +138,9 @@ export async function buildDurableObjectContainerImages(
 				dockerPath,
 				false,
 				undefined,
-				false
+				false,
+				undefined,
+				{ displayName: `${container.class_name}/${imageName}` }
 			);
 			builtImages.push({
 				className: container.class_name,

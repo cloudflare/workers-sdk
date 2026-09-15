@@ -332,6 +332,7 @@ async function buildOrResolveImage(
 			accountId,
 			complianceConfig: config,
 			cleanupSourceTag: true,
+			displayName: `${container.class_name}/${imageName}`,
 		});
 		builtImage.localTagCleaned = true;
 

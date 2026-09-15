@@ -155,6 +155,7 @@ export async function prepareContainerImagesForDev(args: {
 			const build = await startContainerBuild({
 				pathToDocker: dockerPath,
 				verifyDockerIsRunning: false,
+				outputMode: "inherit",
 				build: {
 					tag: options.image_tag,
 					pathToDockerfile: options.dockerfile,

@@ -95,7 +95,8 @@ describe("deployPreviewContainers", () => {
 			true,
 			expect.objectContaining({ name: "test-worker_my-feature_mycontainer" }),
 			false,
-			config
+			config,
+			{ displayName: "test-worker_my-feature_mycontainer" }
 		);
 		expect(vi.mocked(apply).mock.calls[0]?.[1]).toMatchObject({
 			name: PREVIEW_APP_NAME,

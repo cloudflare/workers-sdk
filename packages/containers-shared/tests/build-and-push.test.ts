@@ -204,6 +204,7 @@ describe("buildCommand", () => {
 	});
 
 	afterEach(() => {
+		delete logger.loggerLevel;
 		vi.restoreAllMocks();
 		vi.unstubAllEnvs();
 		for (const dir of tempDirs) {
@@ -226,6 +227,8 @@ describe("buildCommand", () => {
 
 		expectSpawnWith([
 			"build",
+			"--progress",
+			"plain",
 			"--load",
 			"-t",
 			"test-app:tag",
@@ -236,6 +239,49 @@ describe("buildCommand", () => {
 			"-",
 			dir,
 		]);
+	});
+
+	it("streams Docker build output when debug logging is enabled", async () => {
+		logger.loggerLevel = "debug";
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await buildCommand({
+			PATH: dir,
+			tag: args.tag,
+			pathToDocker: "docker",
+			push: false,
+		});
+
+		expectSpawnWith([
+			"build",
+			"--load",
+			"-t",
+			"test-app:tag",
+			"--platform",
+			"linux/amd64",
+			"--provenance=false",
+			"-f",
+			"-",
+			dir,
+		]);
+	});
+
+	it("does not emit image progress when log output is disabled", async ({
+		expect,
+	}) => {
+		logger.loggerLevel = "warn";
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await buildCommand({
+			PATH: dir,
+			tag: args.tag,
+			pathToDocker: "docker",
+			push: false,
+		});
+
+		expect(logger.log).not.toHaveBeenCalled();
 	});
 
 	it("tags and pushes new images, returning the pushed digest", async ({
@@ -280,6 +326,7 @@ describe("buildCommand", () => {
 		]);
 		expectSpawnWith([
 			"push",
+			"--quiet",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 	});
@@ -309,6 +356,7 @@ describe("buildCommand", () => {
 		expectSpawnWith(["image", "rm", "test-app:tag"]);
 		expectNoSpawnWith([
 			"push",
+			"--quiet",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 	});
@@ -450,6 +498,8 @@ describe("deploy container image build and push", () => {
 
 		expectSpawnWith([
 			"build",
+			"--progress",
+			"plain",
 			"--load",
 			"-t",
 			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
@@ -515,6 +565,7 @@ describe("deploy container image build and push", () => {
 		]);
 		expectSpawnWith([
 			"push",
+			"--quiet",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 		]);
 		const tagCallIndex = vi
@@ -546,6 +597,7 @@ describe("deploy container image build and push", () => {
 					JSON.stringify(args) ===
 					JSON.stringify([
 						"push",
+						"--quiet",
 						`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 					])
 			);
@@ -638,6 +690,8 @@ describe("buildCommand arguments", () => {
 
 		expectSpawnCommandWith("/custom/docker", [
 			"build",
+			"--progress",
+			"plain",
 			"--load",
 			"-t",
 			"test-app:tag",
@@ -668,6 +722,8 @@ describe("buildCommand arguments", () => {
 
 		expectSpawnCommandWith("/env/docker", [
 			"build",
+			"--progress",
+			"plain",
 			"--load",
 			"-t",
 			"test-app:tag",
@@ -725,6 +781,7 @@ describe("pushCommand", () => {
 		]);
 		expectSpawnWith([
 			"push",
+			"--quiet",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 	});
@@ -748,6 +805,7 @@ describe("pushCommand", () => {
 		]);
 		expectSpawnCommandWith("/env/docker", [
 			"push",
+			"--quiet",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 	});
@@ -763,6 +821,7 @@ describe("pushCommand", () => {
 		).rejects.toThrow("Unsupported platform");
 		expectNoSpawnWith([
 			"push",
+			"--quiet",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 	});

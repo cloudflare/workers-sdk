@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import { formatTime, isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { isDirectory } from "@cloudflare/workers-utils/fs-helpers";
@@ -11,6 +13,10 @@ import { dockerImageInspect } from "./inspect";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { ensureContainerLimits, getContainerAccount } from "./limits";
 import { dockerLoginImageRegistry } from "./login";
+import {
+	createBoundedOutputCollector,
+	withDockerDebugHint,
+} from "./process-output";
 import { verifyDockerInstalled } from "./utils";
 import { runDockerCmd, runDockerCmdWithOutput } from "./utils";
 import type {
@@ -33,6 +39,82 @@ export type BuiltImage = {
 export type BuiltContainerImage = BuiltImage & {
 	container: DockerfileContainerConfig;
 };
+
+type DockerOutputMode = "capture" | "inherit";
+
+function getDockerOutputMode(): DockerOutputMode {
+	return logger.loggerLevel === "debug" ? "inherit" : "capture";
+}
+
+async function runImageStep<T>(
+	startMessage: string,
+	doneMessage: string,
+	operation: () => Promise<T>
+): Promise<T> {
+	if (
+		logger.loggerLevel !== undefined &&
+		logger.loggerLevel !== "log" &&
+		logger.loggerLevel !== "debug"
+	) {
+		return operation();
+	}
+
+	const startedAt = Date.now();
+	if (isNonInteractiveOrCI() || getDockerOutputMode() === "inherit") {
+		logger.log(`${startMessage}...`);
+		const result = await operation();
+		logger.log(`${doneMessage} ${formatTime(Date.now() - startedAt)}`);
+		return result;
+	}
+
+	const status = spinner();
+	status.start(startMessage);
+	try {
+		const result = await operation();
+		status.stop(`${doneMessage} ${formatTime(Date.now() - startedAt)}`);
+		return result;
+	} catch (error) {
+		status.stop();
+		throw error;
+	}
+}
+
+function runDockerCommand(pathToDocker: string, args: string[]) {
+	return runDockerCmd(
+		pathToDocker,
+		args,
+		getDockerOutputMode() === "inherit" ? undefined : ["ignore", "pipe", "pipe"]
+	);
+}
+
+function pushDockerImage(pathToDocker: string, imageTag: string) {
+	return runDockerCommand(
+		pathToDocker,
+		getDockerOutputMode() === "inherit"
+			? ["push", imageTag]
+			: ["push", "--quiet", imageTag]
+	);
+}
+
+function loginToImageRegistry(pathToDocker: string, domain: string) {
+	return dockerLoginImageRegistry(pathToDocker, domain, getDockerOutputMode());
+}
+
+function withPlainProgress(buildCmd: string[]): string[] {
+	if (
+		buildCmd.some(
+			(argument) =>
+				argument === "--progress" || argument.startsWith("--progress=")
+		)
+	) {
+		return buildCmd;
+	}
+
+	const command = buildCmd[0];
+	return command === undefined
+		? buildCmd
+		: [command, "--progress", "plain", ...buildCmd.slice(1)];
+}
 
 export function isDockerfileContainerConfig(
 	container: ContainerNormalizedConfig
@@ -100,22 +182,26 @@ type StartedContainerBuild = Awaited<ReturnType<typeof dockerBuild>>;
  * @param verifyDockerIsRunning - When `true` (the default), verifies Docker is installed
  *   and the daemon is running before building. Set to `false` when the caller has already
  *   performed this check.
+ * @param outputMode - Capture build output, or inherit the terminal for local development.
  * @returns An object with an `abort` function and a `ready` promise.
  */
 export async function startContainerBuild({
 	build,
 	pathToDocker,
 	verifyDockerIsRunning,
+	outputMode,
 }: {
 	build: BuildArgs;
 	pathToDocker: string;
 	verifyDockerIsRunning?: boolean;
+	outputMode?: DockerOutputMode;
 }): Promise<StartedContainerBuild> {
 	const { buildCmd, dockerfile } = await constructBuildCommand(build);
 	return await dockerBuild(pathToDocker, {
 		buildCmd,
 		dockerfile,
 		verifyDockerIsRunning,
+		outputMode,
 	});
 }
 
@@ -221,6 +307,7 @@ async function tagAndPushImage({
 	pathToDocker,
 	sourceTag,
 	targetTag,
+	displayName,
 	externalAccountId,
 	complianceConfig,
 	cleanupSourceTag,
@@ -228,6 +315,7 @@ async function tagAndPushImage({
 	pathToDocker: string;
 	sourceTag: string;
 	targetTag: string;
+	displayName: string;
 	externalAccountId: string;
 	complianceConfig?: ComplianceConfig;
 	cleanupSourceTag?: boolean;
@@ -237,12 +325,18 @@ async function tagAndPushImage({
 		targetTag,
 		complianceConfig
 	);
-	await runDockerCmd(pathToDocker, ["tag", sourceTag, namespacedImageTag]);
+	await runDockerCommand(pathToDocker, ["tag", sourceTag, namespacedImageTag]);
 	if (cleanupSourceTag) {
 		logger.debug(`Untagging built image: ${sourceTag}.`);
-		await runDockerCmd(pathToDocker, ["image", "rm", sourceTag]);
+		await runDockerCommand(pathToDocker, ["image", "rm", sourceTag]);
 	}
-	await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
+	await runImageStep(
+		`Pushing image ${displayName}`,
+		`Pushed image ${displayName}`,
+		async () => {
+			await pushDockerImage(pathToDocker, namespacedImageTag);
+		}
+	);
 	return namespacedImageTag;
 }
 
@@ -257,6 +351,7 @@ export async function pushImageIfChanged({
 	accountId,
 	complianceConfig,
 	cleanupSourceTag,
+	displayName = targetTag,
 }: {
 	pathToDocker: string;
 	sourceTag: string;
@@ -265,6 +360,7 @@ export async function pushImageIfChanged({
 	accountId?: string;
 	complianceConfig?: ComplianceConfig;
 	cleanupSourceTag?: boolean;
+	displayName?: string;
 }): Promise<ImageRef> {
 	/**
 	 * Get `RepoDigests`:
@@ -291,7 +387,7 @@ export async function pushImageIfChanged({
 		containerConfig,
 	});
 
-	await dockerLoginImageRegistry(
+	await loginToImageRegistry(
 		pathToDocker,
 		// Won't be an external registry since this is building from a Dockerfile
 		// rather than specifying an image URI.
@@ -331,12 +427,12 @@ export async function pushImageIfChanged({
 		const parsedRemoteManifest = JSON.parse(remoteManifest);
 
 		if (parsedRemoteManifest.Descriptor.digest === hash) {
-			logger.log("Image already exists remotely, skipping push");
+			logger.log(`Image ${displayName} is unchanged; reusing existing upload.`);
 			logger.debug(
 				`Untagging built image: ${sourceTag} since there was no change.`
 			);
 
-			await runDockerCmd(pathToDocker, ["image", "rm", sourceTag]);
+			await runDockerCommand(pathToDocker, ["image", "rm", sourceTag]);
 
 			return { remoteDigest };
 		}
@@ -348,8 +444,8 @@ export async function pushImageIfChanged({
 		}
 	}
 	// Re-tag the image to include the account ID.
-	logger.log(
-		`Image does not exist remotely, pushing: ${resolveImageName(
+	logger.debug(
+		`Pushing image as ${resolveImageName(
 			account.external_account_id,
 			targetTag,
 			complianceConfig
@@ -359,6 +455,7 @@ export async function pushImageIfChanged({
 		pathToDocker,
 		sourceTag,
 		targetTag,
+		displayName,
 		externalAccountId: account.external_account_id,
 		complianceConfig,
 		cleanupSourceTag,
@@ -429,17 +526,24 @@ export async function buildCommand(
 	const pathToDocker = args.pathToDocker ?? getDockerPath();
 
 	try {
-		const build = await startContainerBuild({
-			pathToDocker,
-			build: {
-				tag: args.tag,
-				pathToDockerfile,
-				buildContext: args.PATH,
-				platform: args.platform,
-				// No option to add env vars at build time...?
-			},
-		});
-		await build.ready;
+		await runImageStep(
+			`Building image ${args.tag}`,
+			`Built image ${args.tag}`,
+			async () => {
+				const build = await startContainerBuild({
+					pathToDocker,
+					outputMode: getDockerOutputMode(),
+					build: {
+						tag: args.tag,
+						pathToDockerfile,
+						buildContext: args.PATH,
+						platform: args.platform,
+						// No option to add env vars at build time...?
+					},
+				});
+				await build.ready;
+			}
+		);
 
 		if (args.push) {
 			await pushImageIfChanged({
@@ -447,6 +551,7 @@ export async function buildCommand(
 				sourceTag: args.tag,
 				targetTag: args.tag,
 				complianceConfig,
+				displayName: args.tag,
 			});
 		}
 	} catch (error) {
@@ -469,7 +574,7 @@ export async function pushCommand(
 ) {
 	try {
 		const dockerPath = args.pathToDocker ?? getDockerPath();
-		await dockerLoginImageRegistry(
+		await loginToImageRegistry(
 			dockerPath,
 			getCloudflareContainerRegistry(complianceConfig)
 		);
@@ -479,10 +584,11 @@ export async function pushCommand(
 			pathToDocker: dockerPath,
 			sourceTag: args.TAG,
 			targetTag: args.TAG,
+			displayName: args.TAG,
 			externalAccountId: accountId,
 			complianceConfig,
 		});
-		logger.log(`Pushed image: ${newTag}`);
+		logger.debug(`Pushed image as ${newTag}`);
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message, {
@@ -523,6 +629,7 @@ async function checkImagePlatform(
  * @param containerConfig - Optional container configuration for limit validation.
  * @param verifyDockerIsRunning - Whether to verify Docker before building.
  * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @param options - User-facing display options.
  * @returns An {@link ImageRef} describing the built or pushed image.
  */
 export async function buildAndMaybePush(
@@ -531,15 +638,24 @@ export async function buildAndMaybePush(
 	push: boolean,
 	containerConfig?: DockerfileContainerConfig,
 	verifyDockerIsRunning?: boolean,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ComplianceConfig,
+	options: { displayName?: string } = {}
 ): Promise<ImageRef> {
+	const displayName = options.displayName ?? args.tag;
 	try {
-		const build = await startContainerBuild({
-			pathToDocker,
-			verifyDockerIsRunning,
-			build: args,
-		});
-		await build.ready;
+		await runImageStep(
+			`Building image ${displayName}`,
+			`Built image ${displayName}`,
+			async () => {
+				const build = await startContainerBuild({
+					pathToDocker,
+					verifyDockerIsRunning,
+					outputMode: getDockerOutputMode(),
+					build: args,
+				});
+				await build.ready;
+			}
+		);
 
 		if (!push) {
 			return { newTag: args.tag };
@@ -552,6 +668,7 @@ export async function buildAndMaybePush(
 			containerConfig,
 			complianceConfig,
 			cleanupSourceTag: true,
+			displayName,
 		});
 	} catch (error) {
 		if (error instanceof Error) {
@@ -574,20 +691,25 @@ async function buildContainerImage(
 	const localTag = `${getContainerImageRepositoryName(
 		containerConfig
 	)}:wrangler-${crypto.randomUUID()}`;
-	logger.log("Building image", localTag);
-
 	try {
-		const build = await startContainerBuild({
-			pathToDocker,
-			verifyDockerIsRunning,
-			build: {
-				tag: localTag,
-				pathToDockerfile: containerConfig.dockerfile,
-				buildContext: containerConfig.image_build_context,
-				args: containerConfig.image_vars,
-			},
-		});
-		await build.ready;
+		await runImageStep(
+			`Building image ${containerConfig.name}`,
+			`Built image ${containerConfig.name}`,
+			async () => {
+				const build = await startContainerBuild({
+					pathToDocker,
+					verifyDockerIsRunning,
+					outputMode: getDockerOutputMode(),
+					build: {
+						tag: localTag,
+						pathToDockerfile: containerConfig.dockerfile,
+						buildContext: containerConfig.image_build_context,
+						args: containerConfig.image_vars,
+					},
+				});
+				await build.ready;
+			}
+		);
 
 		return { container: containerConfig, localTag };
 	} catch (error) {
@@ -660,6 +782,7 @@ export async function pushBuiltContainerImage(
 			accountId,
 			complianceConfig,
 			cleanupSourceTag: true,
+			displayName: builtImage.container.name,
 		});
 		builtImage.localTagCleaned = true;
 		return imageRef;
@@ -692,7 +815,11 @@ export async function cleanupBuiltImages<T extends BuiltImage>(
 		}
 		try {
 			logger.debug(`Untagging built image: ${builtImage.localTag}.`);
-			await runDockerCmd(pathToDocker, ["image", "rm", builtImage.localTag]);
+			await runDockerCommand(pathToDocker, [
+				"image",
+				"rm",
+				builtImage.localTag,
+			]);
 			builtImage.localTagCleaned = true;
 		} catch (error) {
 			if (error instanceof Error) {
@@ -736,6 +863,7 @@ function getContainerImageRepositoryName(
  * @param options.dockerfile - The Dockerfile content to pipe into stdin.
  * @param options.verifyDockerIsRunning - When `true` (the default), verifies Docker is installed
  *   and the daemon is running before spawning the build. Set to `false` to skip the check.
+ * @param options.outputMode - Capture build output, or inherit the terminal. Defaults to capture.
  *
  * @returns An object with an `abort` function and a `ready` promise.
  */
@@ -745,6 +873,7 @@ export async function dockerBuild(
 		buildCmd: string[];
 		dockerfile: string;
 		verifyDockerIsRunning?: boolean;
+		outputMode?: DockerOutputMode;
 	}
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	if (options.verifyDockerIsRunning !== false) {
@@ -762,8 +891,17 @@ export async function dockerBuild(
 		reject = rej;
 	});
 
-	const child = spawn(dockerPath, options.buildCmd, {
-		stdio: ["pipe", "inherit", "inherit"],
+	const outputMode = options.outputMode ?? "capture";
+	const buildCmd =
+		outputMode === "capture"
+			? withPlainProgress(options.buildCmd)
+			: options.buildCmd;
+	const capturedOutput = createBoundedOutputCollector();
+	const child = spawn(dockerPath, buildCmd, {
+		stdio:
+			outputMode === "capture"
+				? ["pipe", "pipe", "pipe"]
+				: ["pipe", "inherit", "inherit"],
 		// We need to set detached to true so that the child process
 		// will control all of its child processes and we can kill
 		// all of them in case we need to abort the build process.
@@ -778,23 +916,38 @@ export async function dockerBuild(
 		child.stdin.write(options.dockerfile);
 		child.stdin.end();
 	}
+	child.stdout?.on("data", capturedOutput.append);
+	child.stderr?.on("data", capturedOutput.append);
 
-	child.on("exit", (code) => {
+	child.on("close", (code) => {
 		if (code === 0) {
 			resolve();
 		} else if (!errorHandled) {
 			errorHandled = true;
+			const details = capturedOutput.read();
+			const message = details
+				? `Docker build failed with exit code ${code}:\n${details}`
+				: `Docker build exited with code: ${code}`;
 			reject(
-				new UserError(`Docker build exited with code: ${code}`, {
-					telemetryMessage: false,
-				})
+				new UserError(
+					outputMode === "capture" ? withDockerDebugHint(message) : message,
+					{
+						telemetryMessage: false,
+					}
+				)
 			);
 		}
 	});
 	child.on("error", (err) => {
 		if (!errorHandled) {
 			errorHandled = true;
-			reject(err);
+			const message = `Docker build failed: ${err.message}`;
+			reject(
+				new UserError(
+					outputMode === "capture" ? withDockerDebugHint(message) : message,
+					{ telemetryMessage: false }
+				)
+			);
 		}
 	});
 	return {

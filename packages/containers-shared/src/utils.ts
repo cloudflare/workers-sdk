@@ -9,6 +9,10 @@ import { existsSync } from "node:fs";
 import { release } from "node:os";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { dockerImageInspect } from "./inspect";
+import {
+	createBoundedOutputCollector,
+	withDockerDebugHint,
+} from "./process-output";
 import type { ContainerDevOptions } from "./types";
 
 /** helper for simple docker command call that don't require any io handling */
@@ -41,6 +45,9 @@ export const runDockerCmd = (
 		// This is a no-op on non-Windows platforms.
 		windowsHide: true,
 	});
+	const capturedOutput = createBoundedOutputCollector();
+	child.stdout?.on("data", capturedOutput.append);
+	child.stderr?.on("data", capturedOutput.append);
 	let errorHandled = false;
 
 	child.on("close", (code) => {
@@ -48,20 +55,31 @@ export const runDockerCmd = (
 			resolve({ aborted });
 		} else if (!errorHandled) {
 			errorHandled = true;
+			const details = capturedOutput.read();
+			const message = details
+				? `Docker command failed with exit code ${code}:\n${details}`
+				: `Docker command exited with code: ${code}`;
 			reject(
-				new UserError(`Docker command exited with code: ${code}`, {
-					telemetryMessage: false,
-				})
+				new UserError(
+					stdio === undefined || stdio === "inherit"
+						? message
+						: withDockerDebugHint(message),
+					{ telemetryMessage: false }
+				)
 			);
 		}
 	});
 	child.on("error", (err) => {
 		if (!errorHandled) {
 			errorHandled = true;
+			const message = `Docker command failed: ${err.message}`;
 			reject(
-				new UserError(`Docker command failed: ${err.message}`, {
-					telemetryMessage: false,
-				})
+				new UserError(
+					stdio === undefined || stdio === "inherit"
+						? message
+						: withDockerDebugHint(message),
+					{ telemetryMessage: false }
+				)
 			);
 		}
 	});
