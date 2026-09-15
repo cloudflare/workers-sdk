@@ -814,14 +814,32 @@ describe("Local Explorer workflow instance status endpoint", () => {
 			{ status: "pause" }
 		);
 		expect(pauseResponse.status).toBe(200);
-		expect(await pauseResponse.json()).toMatchObject({
+		const pauseBody = (await pauseResponse.json()) as {
+			result: { status: string; timestamp: string };
+			success: boolean;
+		};
+		expect(pauseBody).toMatchObject({
 			success: true,
 			result: {
-				status: "waitingForPause",
 				timestamp: expect.any(String),
 			},
 		});
+		expect(["waitingForPause", "paused"]).toContain(pauseBody.result.status);
 		await waitForStatus(mf, id, "paused");
+
+		const pausedResponse = await updateLocalExplorerWorkflowInstanceStatus(
+			mf,
+			id,
+			{ status: "pause" }
+		);
+		expect(pausedResponse.status).toBe(200);
+		expect(await pausedResponse.json()).toMatchObject({
+			success: true,
+			result: {
+				status: "paused",
+				timestamp: expect.any(String),
+			},
+		});
 
 		const resumeResponse = await updateLocalExplorerWorkflowInstanceStatus(
 			mf,
@@ -829,13 +847,17 @@ describe("Local Explorer workflow instance status endpoint", () => {
 			{ status: "resume" }
 		);
 		expect(resumeResponse.status).toBe(200);
-		expect(await resumeResponse.json()).toMatchObject({
+		const resumeBody = (await resumeResponse.json()) as {
+			result: { status: string; timestamp: string };
+			success: boolean;
+		};
+		expect(resumeBody).toMatchObject({
 			success: true,
 			result: {
-				status: "queued",
 				timestamp: expect.any(String),
 			},
 		});
+		expect(["queued", "running"]).toContain(resumeBody.result.status);
 		await waitForStatus(mf, id, "complete");
 	});
 
@@ -866,13 +888,17 @@ describe("Local Explorer workflow instance status endpoint", () => {
 			from: { name: "first step", type: "do" },
 		});
 		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({
+		const responseBody = (await response.json()) as {
+			result: { status: string; timestamp: string };
+			success: boolean;
+		};
+		expect(responseBody).toMatchObject({
 			success: true,
 			result: {
-				status: "queued",
 				timestamp: expect.any(String),
 			},
 		});
+		expect(["queued", "running"]).toContain(responseBody.result.status);
 		await waitForStatus(mf, id, "complete");
 	});
 

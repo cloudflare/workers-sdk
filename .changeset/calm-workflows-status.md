@@ -1,5 +1,5 @@
 ---
-"miniflare": patch
+"miniflare": minor
 "wrangler": patch
 ---
 

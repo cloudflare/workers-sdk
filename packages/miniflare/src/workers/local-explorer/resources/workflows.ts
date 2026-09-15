@@ -967,15 +967,10 @@ export async function changeWorkflowInstanceStatus(
 		}
 
 		statusCountsCache.delete(workflowName);
-		const responseStatus = {
-			pause: "waitingForPause",
-			restart: "queued",
-			resume: "queued",
-			terminate: "terminated",
-		} as const satisfies Record<typeof status, string>;
+		const instanceStatus = await handle.status();
 		return c.json(
 			wrapResponse({
-				status: responseStatus[status],
+				status: instanceStatus.status,
 				timestamp: new Date().toISOString(),
 			})
 		);
