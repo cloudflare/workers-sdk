@@ -3,7 +3,7 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
-import { z } from "zod";
+import { z } from "miniflare:zod";
 import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
