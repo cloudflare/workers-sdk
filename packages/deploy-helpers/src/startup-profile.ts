@@ -318,7 +318,6 @@ type MiniflareBindingOptions = Pick<
 	| "versionMetadata"
 	| "vpcNetworks"
 	| "vpcServices"
-	| "websearch"
 	| "workerLoaders"
 >;
 
@@ -376,7 +375,6 @@ async function convertWorkerBundleBindings(
 	let versionMetadata: string | undefined;
 	const vpcNetworks: MiniflareBindingOption<"vpcNetworks"> = {};
 	const vpcServices: MiniflareBindingOption<"vpcServices"> = {};
-	const websearch: MiniflareBindingOption<"websearch"> = {};
 	const workerLoaders: MiniflareBindingOption<"workerLoaders"> = {};
 	const unsupportedBindings: UnsupportedWorkerBinding[] = [];
 
@@ -457,9 +455,6 @@ async function convertWorkerBundleBindings(
 				aiSearchInstances[binding.name] = {
 					instance_name: binding.instance_name,
 				};
-				break;
-			case "websearch":
-				websearch[binding.name] = {};
 				break;
 			case "agent_memory":
 				agentMemory[binding.name] = { namespace: binding.namespace };
@@ -614,7 +609,6 @@ async function convertWorkerBundleBindings(
 			versionMetadata,
 			vpcNetworks,
 			vpcServices,
-			websearch,
 			workerLoaders,
 		},
 		unsupportedBindings,

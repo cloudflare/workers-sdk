@@ -189,7 +189,6 @@ describe("startup profile", () => {
 			"STARTUP_VERSION",
 			"STARTUP_AI_SEARCH_NAMESPACE",
 			"STARTUP_AI_SEARCH",
-			"STARTUP_WEBSEARCH",
 			"STARTUP_AGENT_MEMORY",
 			"STARTUP_MEDIA",
 			"STARTUP_EMAIL",
@@ -240,7 +239,6 @@ describe("startup profile", () => {
 						type: "ai_search",
 						instance_name: "startup-instance",
 					},
-					{ name: "STARTUP_WEBSEARCH", type: "websearch" },
 					{
 						name: "STARTUP_AGENT_MEMORY",
 						type: "agent_memory",
