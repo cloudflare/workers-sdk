@@ -267,8 +267,8 @@ function isDollarQuoteIdentifier(str: string) {
  * include letters with diacritical marks, as in `isDollarQuoteIdentifier()`,
  * so a `néend` column does not match either.
  */
-const COMPOUND_STATEMENT_START = /(?<![\p{L}\p{N}_$])(BEGIN|CASE)\s$/iu;
-const COMPOUND_STATEMENT_END = /(?<![\p{L}\p{N}_$])END[^\p{L}\p{N}_$]$/iu;
+const COMPOUND_STATEMENT_START = /(?<![\p{L}\p{M}\p{N}_$])(BEGIN|CASE)\s$/iu;
+const COMPOUND_STATEMENT_END = /(?<![\p{L}\p{M}\p{N}_$])END[^\p{L}\p{M}\p{N}_$]$/iu;
 
 /**
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
