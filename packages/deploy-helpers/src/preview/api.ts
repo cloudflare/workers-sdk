@@ -112,6 +112,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	compatibility_date?: string;
 	compatibility_flags?: string[];
+	exports?: CfWorkerInit["exports"];
 	annotations?: {
 		"workers/commit_sha"?: string;
 		"workers/message"?: string;

@@ -53,6 +53,7 @@ import type {
 	Config,
 	ContainerApp,
 	CustomDomainRoute,
+	Exports,
 	PreviewsConfig,
 	RawEnvironment,
 	Route,
@@ -229,6 +230,21 @@ function buildPreviewContainerConfig(
 		},
 		observability,
 	};
+}
+
+function getPreviewExports(exports: Exports): Exports {
+	const previewExports = structuredClone(exports);
+	for (const configuredExport of Object.values(previewExports)) {
+		if (
+			configuredExport.type === "durable-object" &&
+			"container" in configuredExport
+		) {
+			// Preview containers link to Durable Objects by class name, not by the
+			// names used in the top level container config.
+			delete configuredExport.container;
+		}
+	}
+	return previewExports;
 }
 
 /**
@@ -561,6 +577,9 @@ async function assemblePreviewDeploymentSettings(
 	}
 	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
 		request.compatibility_flags = config.compatibility_flags;
+	}
+	if (Object.keys(config.exports).length > 0) {
+		request.exports = getPreviewExports(config.exports);
 	}
 	const repositoryUrl = options.repositoryUrl;
 	const pullRequest = options.pullRequest;
