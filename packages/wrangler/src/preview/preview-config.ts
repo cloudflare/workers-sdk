@@ -1,4 +1,5 @@
 import { extractConfigBindings } from "@cloudflare/deploy-helpers";
+import { UserError } from "@cloudflare/workers-utils";
 import type {
 	Binding,
 	EnvBindings,
@@ -136,6 +137,9 @@ export function convertTopLevelSetting(
 			break;
 		}
 		case "observability": {
+			if (usePlaceholderValue) {
+				break;
+			}
 			const observability = settings.observability;
 			if (observability === undefined) {
 				break;
@@ -232,8 +236,11 @@ export function convertTopLevelSetting(
 		case "tail_consumers":
 			if (settings.tail_consumers !== undefined) {
 				converted.tail_consumers = settings.tail_consumers.map(
-					({ service }) => ({
+					({ service, environment }) => ({
 						service: usePlaceholderValue ? REPLACE_ME : service,
+						...(environment !== undefined && {
+							environment: usePlaceholderValue ? REPLACE_ME : environment,
+						}),
 					})
 				);
 			}
@@ -337,16 +344,23 @@ export function convertPreviewSettings(
 						} else if (Array.isArray(existing) && Array.isArray(next)) {
 							merged.set(key, [...existing, ...next]);
 						} else {
-							throw new Error(
-								`Preview ${configField} binding is defined more than once`
+							throw new UserError(
+								`Preview ${configField} binding is defined more than once. Rename one of the bindings so each Preview setting is produced only once.`,
+								{
+									telemetryMessage:
+										"preview command duplicate previews binding",
+								}
 							);
 						}
 					}
 					config.set(configField, Object.fromEntries(merged));
 					continue;
 				}
-				throw new Error(
-					`Preview ${configField} binding is defined more than once`
+				throw new UserError(
+					`Preview ${configField} binding is defined more than once. Rename one of the bindings so each Preview setting is produced only once.`,
+					{
+						telemetryMessage: "preview command duplicate previews binding",
+					}
 				);
 			}
 		}
