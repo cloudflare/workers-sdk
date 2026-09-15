@@ -1,9 +1,14 @@
-import { CONTAINER_IMAGES_BINDING, UserError } from "@cloudflare/workers-utils";
+import {
+	CONTAINER_IMAGES_BINDING,
+	getResolvedDurableObjectContainerApps,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { fetchResult } from "../../shared/context";
 import type { ContainerlessConfig } from "../../shared/types";
 import type {
 	Binding,
 	DurableObjectContainerApp,
+	Exports,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
@@ -39,6 +44,7 @@ export function addContainerImagesBinding(
 		preserveExisting?: boolean;
 		workerExists?: boolean;
 		hasExistingBinding?: boolean;
+		exports?: Exports;
 	} = {}
 ): void {
 	const shouldInheritExisting =
@@ -71,7 +77,10 @@ export function addContainerImagesBinding(
 	bindings[CONTAINER_IMAGES_BINDING] = {
 		type: "json",
 		value: Object.fromEntries(
-			durableObjectContainerConfig.map((container) => {
+			getResolvedDurableObjectContainerApps(
+				durableObjectContainerConfig,
+				options.exports
+			).map((container) => {
 				const configuredImages = Object.keys(container.images ?? {});
 				const preparedImages = preparedContainerImages[container.class_name];
 				if (configuredImages.length > 0 && preparedImages === undefined) {

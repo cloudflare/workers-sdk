@@ -4347,12 +4347,7 @@ test("Miniflare: CF-Connecting-IP is injected", async ({ expect }) => {
 	useDispose(mf);
 
 	const ip = await mf.dispatchFetch("http://example.com/");
-	// Tracked in https://github.com/cloudflare/workerd/issues/3310
-	if (!isWindows) {
-		expect(await ip.text()).toEqual("127.0.0.1");
-	} else {
-		expect(await ip.text()).toEqual("");
-	}
+	expect(await ip.text()).toEqual("127.0.0.1");
 });
 
 test("Miniflare: CF-Connecting-IP is injected (ipv6)", async ({ expect }) => {
@@ -4377,13 +4372,7 @@ test("Miniflare: CF-Connecting-IP is injected (ipv6)", async ({ expect }) => {
 	useDispose(mf);
 
 	const ip = await mf.dispatchFetch("http://example.com/");
-
-	// Tracked in https://github.com/cloudflare/workerd/issues/3310
-	if (!isWindows) {
-		expect(await ip.text()).toEqual("::1");
-	} else {
-		expect(await ip.text()).toEqual("");
-	}
+	expect(await ip.text()).toEqual("::1");
 });
 
 test("Miniflare: CF-Connecting-IP is preserved when present", async ({
