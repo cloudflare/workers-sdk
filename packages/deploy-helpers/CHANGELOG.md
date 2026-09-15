@@ -1,5 +1,90 @@
 # @cloudflare/deploy-helpers
 
+## 0.11.2
+
+### Patch Changes
+
+- [#15606](https://github.com/cloudflare/workers-sdk/pull/15606) [`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d) Thanks [@emily-shen](https://github.com/emily-shen)! - refactor: separate container config from worker/generic config access
+
+- Updated dependencies [[`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3), [`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d)]:
+  - miniflare@5.20260911.1-alpha
+  - @cloudflare/containers-shared@0.16.2
+  - @cloudflare/workers-utils@0.38.1
+  - @cloudflare/cli-shared-helpers@0.1.30
+
+## 0.11.1
+
+### Patch Changes
+
+- [#15592](https://github.com/cloudflare/workers-sdk/pull/15592) [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add a provisioning delay note when custom domain Preview URLs change
+
+  Wrangler now explains that DNS and TLS certificate provisioning may continue after a deploy adds a custom domain or enables its Preview URLs. Stable redeploys don't repeat the note.
+
+  This assumes that a request which matches the stored custom domain state doesn't restart provisioning. The client infers this from the API changeset and current domain record because this repository can't verify the backend behavior.
+
+- [#15592](https://github.com/cloudflare/workers-sdk/pull/15592) [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Clarify production status labels for custom domain routes
+
+  Wrangler now prefixes explicit custom domain production states with `production:` so they match Preview labels. The updated labels appear in deployed trigger output and `WRANGLER_OUTPUT_FILE_PATH`.
+
+- [#15592](https://github.com/cloudflare/workers-sdk/pull/15592) [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Avoid replacement prompts for custom domains already on the Worker
+
+  Wrangler now updates Preview settings without asking to replace a custom domain when that domain already belongs to the deployed Worker. It still asks before replacing domains attached to another Worker.
+
+- [#15592](https://github.com/cloudflare/workers-sdk/pull/15592) [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Explain how to enable Preview URLs when a Preview deployment has none
+
+  `wrangler preview` now shows URL shapes and configuration snippets for Workers.dev and custom domains. The custom domain snippet preserves every configured route, and the guidance distinguishes missing settings from disabled ones.
+
+  This changes a private beta feature. The warning also makes clear that `wrangler deploy` publishes code from the current checkout.
+
+- Updated dependencies [[`47d906f`](https://github.com/cloudflare/workers-sdk/commit/47d906f52d109509f61b1c801c1b08ecad583c0d), [`c2699bf`](https://github.com/cloudflare/workers-sdk/commit/c2699bf625134a2425d7142c72c4f31c4b6f8eab), [`7d39eed`](https://github.com/cloudflare/workers-sdk/commit/7d39eed90b6155961b7d342f7b69b6df95d21188)]:
+  - miniflare@5.20260911.0-alpha
+  - @cloudflare/containers-shared@0.16.1
+
+## 0.11.0
+
+### Minor Changes
+
+- [#15480](https://github.com/cloudflare/workers-sdk/pull/15480) [`36aed7f`](https://github.com/cloudflare/workers-sdk/commit/36aed7f0f2db5056af9df917cf6c22a2be950b1e) Thanks [@skepticfx](https://github.com/skepticfx)! - Add Durable Object-managed Containers to top-level container configuration
+
+  Wrangler now accepts `scheduling_policy: "durable_object"` in the top-level `containers` array and creates its namespace-backed application after the Worker upload resolves the Durable Object namespace ID. The namespace ID is also the application ID, so repeated deploys idempotently ensure the same application without name-based lookup, modification, or a Containers rollout.
+
+  Durable Object-managed entries accept `class_name`, `scheduling_policy`, an optional `name`, and an optional named `images` map. Scheduler-only fields are rejected. Each image provides either a local `dockerfile` or a digest-pinned managed-registry `image`. Wrangler builds or resolves each image, waits while Cloudflare prepares it for the Containers runtime, and uploads the resulting references with the Worker version for access through `ctx.container.images` and `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES`. Local development support for these entries is deferred to a follow-up.
+
+  Existing scheduler-backed entries and Durable Object migrations continue to work unchanged.
+
+  With `--containers-rollout=none`, existing Workers retain their deployed Container metadata and image binding even when local `containers` is omitted or empty; local scheduler edits are also ignored. The upload stops if the deployed versions cannot be recovered. Existing Workers for Platforms dispatch scripts reject this flag before upload because their API does not expose enough metadata to preserve Container associations safely. First deployments can still skip Container preparation and rollout. Without this flag, removing managed Containers, including by omitting `containers` entirely, clears the experimental image binding even with `keep_vars`.
+
+  `versions deploy` validates the selected versions before changing traffic and creates their Durable Object-managed applications only after deployment succeeds. Both `deploy` and `versions deploy` report partial completion if application creation fails afterward, with instructions to retry the same command.
+
+  `EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES` is a temporary, reserved Wrangler binding until native Container image metadata is available. Its class keys identify managed applications during `versions deploy`, including classes with empty image maps. User configuration cannot declare a binding with this name; existing versions that already use it are treated as Container configuration.
+
+### Patch Changes
+
+- [#15411](https://github.com/cloudflare/workers-sdk/pull/15411) [`0b43395`](https://github.com/cloudflare/workers-sdk/commit/0b433956a805d7aa86b39ebffc2c2d476a40cc89) Thanks [@xgame92](https://github.com/xgame92)! - Fail `wrangler versions upload` early when a Worker has a pending Durable Object migration
+
+  Wrangler now directs users to run `wrangler deploy` to apply the migration instead of sending a version upload request that the API will reject.
+
+- Updated dependencies [[`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94), [`f69f95a`](https://github.com/cloudflare/workers-sdk/commit/f69f95aa2da329dcfa9888cfeb204cdda634d979), [`a549e58`](https://github.com/cloudflare/workers-sdk/commit/a549e58af707e84d6aeddaadc6566103ae236dbb), [`36aed7f`](https://github.com/cloudflare/workers-sdk/commit/36aed7f0f2db5056af9df917cf6c22a2be950b1e), [`bff525d`](https://github.com/cloudflare/workers-sdk/commit/bff525d66dd3785481148353d782dd33c3a644ed), [`dbb3ff4`](https://github.com/cloudflare/workers-sdk/commit/dbb3ff4ebe7579be76f42591957c429f26da319b), [`fea3cd0`](https://github.com/cloudflare/workers-sdk/commit/fea3cd0f2ef5af6c8f2b50c794a89b8ef03ca82b), [`6bd7b6c`](https://github.com/cloudflare/workers-sdk/commit/6bd7b6cae44d441e415130991e3f181694bd3b6d), [`15cd6e1`](https://github.com/cloudflare/workers-sdk/commit/15cd6e16129af3dad09d53d6cd03f963f9203970), [`be1caec`](https://github.com/cloudflare/workers-sdk/commit/be1caeca44ccd9660a81420805fb0958ca422589), [`dbc9506`](https://github.com/cloudflare/workers-sdk/commit/dbc9506e48d99237be701685d08582966f62f59f)]:
+  - miniflare@5.20260910.0-alpha
+  - @cloudflare/workers-utils@0.38.0
+  - @cloudflare/cli-shared-helpers@0.1.29
+
+## 0.10.3
+
+### Patch Changes
+
+- Updated dependencies [[`edb3631`](https://github.com/cloudflare/workers-sdk/commit/edb3631666677b51d58000d23ed693d83da9ff48), [`bcebf08`](https://github.com/cloudflare/workers-sdk/commit/bcebf080bc65759fe43cffff10b3f708693941a8), [`a849e0d`](https://github.com/cloudflare/workers-sdk/commit/a849e0d6d2253034fc158d5442c5124e77a39bd9)]:
+  - miniflare@5.20260908.0-alpha
+  - @cloudflare/workers-utils@0.37.0
+  - @cloudflare/cli-shared-helpers@0.1.28
+
+## 0.10.2
+
+### Patch Changes
+
+- Updated dependencies [[`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84), [`2b42d6f`](https://github.com/cloudflare/workers-sdk/commit/2b42d6f2b971fa54de0648e8e9bea03cbf6f702a)]:
+  - miniflare@5.20260907.0-alpha
+
 ## 0.10.1
 
 ### Patch Changes

@@ -12,13 +12,19 @@
 // wrangler boundary.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import type { ContainerConfigExport } from "./container-definition";
+
 /**
  * Storage backend for the Durable Object.
  *
  * Containers are only supported on the SQLite storage engine, so `container` is
  * only offered alongside `storage: "sqlite"`.
  */
-export type DurableObjectStorageOptions =
+export type DurableObjectStorageOptions<
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
+		| undefined,
+> =
 	| {
 			/**
 			 * Selects the SQLite-backed storage engine (recommended for new
@@ -26,10 +32,9 @@ export type DurableObjectStorageOptions =
 			 */
 			storage: "sqlite";
 			/**
-			 * Attach a container to this Durable Object, by container name. The
-			 * name must match an entry in the top level `containers` array.
+			 * Attach a Container application to this Durable Object by config reference.
 			 */
-			container?: string;
+			container?: TContainer;
 	  }
 	| {
 			/** Selects the legacy key-value storage engine. */
@@ -44,9 +49,13 @@ export type DurableObjectStorageOptions =
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
-export type DurableObjectCreatedExportOptions = {
+export type DurableObjectCreatedExportOptions<
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
+		| undefined,
+> = {
 	state?: "created";
-} & DurableObjectStorageOptions;
+} & DurableObjectStorageOptions<TContainer>;
 
 /**
  * Retire a provisioned Durable Object namespace whose class has
@@ -90,19 +99,25 @@ export interface DurableObjectTransferredExportOptions {
  * Prepare to receive cross-Worker Durable Object transfer.
  * Once the source Worker's `transferred` export is deployed, this entry becomes a normal live `durable-object` export.
  */
-export type DurableObjectExpectingTransferExportOptions = {
+export type DurableObjectExpectingTransferExportOptions<
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
+		| undefined,
+> = {
 	state: "expecting-transfer";
 	/**
 	 * The source Worker for the two-phase cross-Worker transfer.
 	 */
 	transferFrom: string;
-} & DurableObjectStorageOptions;
+} & DurableObjectStorageOptions<TContainer>;
 
 // A type intersection rather than an `interface ... extends`, because the
 // options are a union over `storage` and an interface cannot extend a union.
-export type DurableObjectCreatedExport = DurableObjectCreatedExportOptions & {
-	type: "durable-object";
-};
+export type DurableObjectCreatedExport<
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
+		| undefined,
+> = DurableObjectCreatedExportOptions<TContainer> & { type: "durable-object" };
 export interface DurableObjectDeletedExport extends DurableObjectDeletedExportOptions {
 	type: "durable-object";
 }
@@ -113,10 +128,13 @@ export interface DurableObjectTransferredExport extends DurableObjectTransferred
 	type: "durable-object";
 }
 
-export type DurableObjectExpectingTransferExport =
-	DurableObjectExpectingTransferExportOptions & {
-		type: "durable-object";
-	};
+export type DurableObjectExpectingTransferExport<
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
+		| undefined,
+> = DurableObjectExpectingTransferExportOptions<TContainer> & {
+	type: "durable-object";
+};
 
 export type DurableObjectExportOptions =
 	| DurableObjectCreatedExportOptions
@@ -156,9 +174,11 @@ export interface Exports {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
-	durableObject(
-		options: DurableObjectCreatedExportOptions
-	): DurableObjectCreatedExport;
+	durableObject<
+		TContainer extends ContainerConfigExport | undefined = undefined,
+	>(
+		options: DurableObjectCreatedExportOptions<TContainer>
+	): DurableObjectCreatedExport<TContainer>;
 	/**
 	 * Retire a provisioned Durable Object namespace whose class has been removed from code.
 	 */
@@ -181,9 +201,11 @@ export interface Exports {
 	 * Prepare to receive cross-Worker Durable Object transfer.
 	 * The source Worker must follow up with a deployment containing a `transferred` export to commit the transfer.
 	 */
-	durableObject(
-		options: DurableObjectExpectingTransferExportOptions
-	): DurableObjectExpectingTransferExport;
+	durableObject<
+		TContainer extends ContainerConfigExport | undefined = undefined,
+	>(
+		options: DurableObjectExpectingTransferExportOptions<TContainer>
+	): DurableObjectExpectingTransferExport<TContainer>;
 	// Fallback overload. TypeScript only reaches this when none of the precise
 	// overloads above match, and it reports the last overload's error. Typing the
 	// parameter as the full discriminated union means the reported error keys off
@@ -199,9 +221,11 @@ export interface Exports {
 	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
 }
 
-function durableObject(
-	options: DurableObjectCreatedExportOptions
-): DurableObjectCreatedExport;
+function durableObject<
+	TContainer extends ContainerConfigExport | undefined = undefined,
+>(
+	options: DurableObjectCreatedExportOptions<TContainer>
+): DurableObjectCreatedExport<TContainer>;
 function durableObject(
 	options: DurableObjectDeletedExportOptions
 ): DurableObjectDeletedExport;
@@ -211,9 +235,11 @@ function durableObject(
 function durableObject(
 	options: DurableObjectTransferredExportOptions
 ): DurableObjectTransferredExport;
-function durableObject(
-	options: DurableObjectExpectingTransferExportOptions
-): DurableObjectExpectingTransferExport;
+function durableObject<
+	TContainer extends ContainerConfigExport | undefined = undefined,
+>(
+	options: DurableObjectExpectingTransferExportOptions<TContainer>
+): DurableObjectExpectingTransferExport<TContainer>;
 // Fallback overload; see the matching comment in the `Exports` interface for why
 // this union-typed signature exists.
 function durableObject(
@@ -236,12 +262,17 @@ function worker(
  *
  * @example
  * ```typescript
- * import { defineWorker, exports } from "@cloudflare/config";
+ * import { defineContainer, defineWorker, exports } from "@cloudflare/config";
+ *
+ * const myContainer = defineContainer({
+ *   name: "my-container",
+ *   image: { dockerfile: "./Dockerfile" },
+ * });
  *
  * export default defineWorker({
  *   exports: {
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
- *     MyContainerDO:   exports.durableObject({ storage: "sqlite", container: "my-container" }),
+ *     MyContainerDO:   exports.durableObject({ storage: "sqlite", container: myContainer }),
  *     OldClass:        exports.durableObject({ state: "deleted" }),
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
  *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),

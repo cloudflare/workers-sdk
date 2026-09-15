@@ -1,5 +1,23 @@
 # @cloudflare/config
 
+## 0.12.0
+
+### Minor Changes
+
+- [#15544](https://github.com/cloudflare/workers-sdk/pull/15544) [`3f42b10`](https://github.com/cloudflare/workers-sdk/commit/3f42b10a40d2b3aae1d8d5142ea0bc3ac58fa954) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add standalone Container configuration to the experimental config API
+
+  Container applications can now be declared with `defineContainer`, exported alongside Workers, and referenced directly from SQLite Durable Object exports. The new input and output schemas support the camel-cased Container configuration format and require output to use an image reference.
+
+  Support currently only exists in the config package and has not been added to its consumers.
+
+## 0.11.0
+
+### Minor Changes
+
+- [#15511](https://github.com/cloudflare/workers-sdk/pull/15511) [`9c60d14`](https://github.com/cloudflare/workers-sdk/commit/9c60d14c0e4cd9306a58c830023f5b43fe6ed054) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Enable referencing Worker configs directly in cross-Worker bindings
+
+  `defineWorker` and `defineSettings` now return ordinary config objects, functions, or promises. Cross-Worker bindings can use a `defineWorker` result as their `worker`, preserving type inference while resolving and parsing the referenced config only once.
+
 ## 0.10.0
 
 ### Minor Changes

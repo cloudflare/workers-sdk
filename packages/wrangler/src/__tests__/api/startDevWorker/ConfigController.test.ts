@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
@@ -189,6 +190,34 @@ describe("ConfigController", () => {
 
 		const { config } = await event;
 		expect(config.dev?.structuredLogsHandler).toBe(structuredLogsHandler);
+	});
+
+	it("runs a programmatic custom build command supplied only through input.build.custom", async ({
+		expect,
+	}) => {
+		// `BundlerController` assumes `getEntry()` already ran the effective
+		// custom build command for the current config before it sees a
+		// `configUpdate` event, and skips running it again itself. That's only
+		// true if `getEntry()` runs the *merged* command (config file `[build]`
+		// overridden by a programmatic `input.build.custom`), not just the
+		// config file's own `command` (which is absent here).
+		await seed({
+			"build.mjs": dedent /* javascript */ `
+				import { writeFileSync } from "node:fs";
+				writeFileSync("out.ts", 'export default { fetch() { return new Response("from custom build") } };');
+			`,
+		});
+
+		const event = bus.waitFor("configUpdate");
+		await controller.set({
+			entrypoint: "out.ts",
+			build: {
+				custom: { command: "node build.mjs" },
+			},
+		});
+		await event;
+
+		expect(existsSync("out.ts")).toBe(true);
 	});
 
 	it("should derive nodejsCompatMode from the config like the CLI", async ({

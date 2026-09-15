@@ -14,9 +14,19 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
+	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
+} from "./config/containers";
+export type {
+	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
 } from "./config/containers";
 export {
 	type RedirectedRawConfig,
@@ -158,7 +168,7 @@ export { MetricsRegistry } from "./prometheus-metrics";
 export type { Counter } from "./prometheus-metrics";
 
 export type { Tunnel, TunnelOptions } from "./tunnel";
-export { startTunnel } from "./tunnel";
+export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
 export * from "./cfetch";

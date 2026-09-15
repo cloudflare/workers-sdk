@@ -1,8 +1,8 @@
 import {
+	cleanupContainers,
 	getCloudflareContainerRegistry,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
-import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { UserError } from "@cloudflare/workers-utils";
 import { buildPublicUrl, Request as MiniflareRequest } from "miniflare";
 import colors from "picocolors";

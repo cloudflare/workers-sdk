@@ -2445,7 +2445,7 @@ describe.sequential("DevRegistry", () => {
 		await remote.ready;
 
 		const logs: string[] = [];
-		const local = new Miniflare({
+		const localOptions: MiniflareOptions = {
 			unsafeDevRegistryPath,
 			handleStructuredLogs: ({ message }) => void logs.push(message),
 			workers: [
@@ -2467,7 +2467,8 @@ describe.sequential("DevRegistry", () => {
 					},
 				},
 			],
-		});
+		};
+		const local = new Miniflare(localOptions);
 		useDispose(local);
 		await local.ready;
 
@@ -2480,11 +2481,20 @@ describe.sequential("DevRegistry", () => {
 			{ timeout: 10_000, interval: 100 }
 		);
 
-		// Drop the peer without letting it deregister, so `local` keeps a registry
-		// entry pointing at a debug port that is no longer accepting connections.
+		const remoteDefinitionPath = path.join(
+			unsafeDevRegistryPath,
+			"remote-worker"
+		);
+		const remoteDefinition = await fs.readFile(remoteDefinitionPath, "utf8");
+
+		// Restore the registry entry removed by disposal to model a peer that exited
+		// without cleaning up. This leaves `local` pointing at a debug port that is
+		// no longer accepting connections, regardless of watcher timing.
 		// The forwarding RPC now rejects; that rejection must be reported rather
 		// than escaping as an unhandled rejection.
 		await remote.dispose();
+		await fs.writeFile(remoteDefinitionPath, remoteDefinition);
+		await local.setOptions(localOptions);
 		logs.length = 0;
 
 		await vi.waitFor(

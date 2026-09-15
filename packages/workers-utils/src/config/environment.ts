@@ -98,8 +98,54 @@ type UnsafeBinding = {
 };
 
 /**
- * Configuration for a container application
+ * An image Wrangler prepares for a Durable Object-managed container.
  */
+export type DurableObjectContainerImage =
+	| {
+			/**
+			 * Path to the Dockerfile Wrangler builds and pushes.
+			 */
+			dockerfile: string;
+			/**
+			 * Build context, relative to the Wrangler configuration file.
+			 * Defaults to the Dockerfile's directory.
+			 */
+			build_context?: string;
+			/** Variables available to the image only while it is being built. */
+			build_vars?: Record<string, string>;
+			image?: never;
+	  }
+	| {
+			/**
+			 * Digest-pinned image in the account's managed registry.
+			 */
+			image: string;
+			dockerfile?: never;
+			build_context?: never;
+			build_vars?: never;
+	  };
+
+/**
+ * Configuration for a container application.
+ */
+export type ContainerObservability = {
+	/** If observability is enabled for this container application */
+	enabled?: boolean;
+	logs?: {
+		enabled?: boolean;
+	};
+	/**
+	 * Percentage of instances to target with application-level observability hot reloads.
+	 * Mutually exclusive with `target_instance_count`.
+	 */
+	target_instance_percentage?: number;
+	/**
+	 * Number of instances to target with application-level observability hot reloads.
+	 * Mutually exclusive with `target_instance_percentage`.
+	 */
+	target_instance_count?: number;
+};
+
 export type ContainerApp = {
 	// TODO: fill out the entire type
 
@@ -132,7 +178,16 @@ export type ContainerApp = {
 	/**
 	 * The path to a Dockerfile, or an image URI for the Cloudflare registry.
 	 */
-	image: string;
+	image?: string;
+
+	/**
+	 * Named images available to a Durable Object-managed container through
+	 * `ctx.container.images` and
+	 * `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES[className]`.
+	 *
+	 * Only supported when `scheduling_policy` is `"durable_object"`.
+	 */
+	images?: Record<string, DurableObjectContainerImage>;
 
 	/**
 	 * Build context of the application.
@@ -157,11 +212,25 @@ export type ContainerApp = {
 	class_name?: string;
 
 	/**
+	 * Specify the observability behavior of this container application.
+	 *
+	 * When set, this overrides the root `observability` config for this container.
+	 * Durable Object-managed Containers only support enabling or disabling logs.
+	 * Their settings are application-wide, and omitted settings preserve the
+	 * existing application rather than inheriting root Worker observability.
+	 */
+	observability?: ContainerObservability;
+
+	/**
 	 * The scheduling policy of the application
 	 * @optional
+	 * `"durable_object"` makes each Durable Object instance own its Container.
+	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`, and
+	 * application-wide log `observability` are supported on this entry.
+	 *
 	 * @default "default"
 	 */
-	scheduling_policy?: "default" | "moon" | "regional";
+	scheduling_policy?: "default" | "durable_object" | "moon" | "regional";
 
 	/**
 	 * The instance type to be used for the container.
@@ -360,6 +429,12 @@ export type DurableObjectMigration = {
 	/** The Durable Objects being renamed. */
 	renamed_classes?: {
 		from: string;
+		to: string;
+	}[];
+	/** The Durable Objects being transferred from another Worker. */
+	transferred_classes?: {
+		from: string;
+		from_script: string;
 		to: string;
 	}[];
 	/** The Durable Objects being removed. */
@@ -1285,26 +1360,6 @@ export interface EnvironmentNonInheritable {
 		/** Whether the Agent Memory binding should be remote in local development */
 		remote?: boolean;
 	}[];
-
-	/**
-	 * Cloudflare Web Search binding. There is exactly one shared web corpus, so the
-	 * binding is zero-config -- only the variable name is required, declared as a
-	 * single object (not an array).
-	 *
-	 * NOTE: This field is not automatically inherited from the top level environment,
-	 * and so must be specified in every named environment.
-	 *
-	 * @default {}
-	 * @nonInheritable
-	 */
-	websearch:
-		| {
-				/** The binding name used to refer to Web Search in the Worker. */
-				binding: string;
-				/** Whether the Web Search binding should be remote or not in local development */
-				remote?: boolean;
-		  }
-		| undefined;
 
 	/**
 	 * Specifies Hyperdrive configs that are bound to this Worker environment.

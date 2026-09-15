@@ -46,4 +46,29 @@ describe("printBindings", () => {
 
 		expect(output).toContain("local [connected]");
 	});
+
+	test.for([{ class_name: "Sandbox" }, { name: "Sandbox" }])(
+		"prints Durable Object-managed containers using their configured identity %j",
+		(identity, { expect }) => {
+			const output = captureBindings(
+				{},
+				{
+					containers: [
+						{
+							...identity,
+							scheduling_policy: "durable_object",
+							images: {
+								sandbox: { dockerfile: "./container/Dockerfile" },
+							},
+						},
+					],
+				}
+			);
+
+			expect(output).toContain(
+				"The following containers are available:\n- Sandbox (durable_object)"
+			);
+			expect(output).not.toContain("undefined");
+		}
+	);
 });

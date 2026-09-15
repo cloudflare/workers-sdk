@@ -2,4 +2,6 @@
 "wrangler": patch
 ---
 
-Keep the local development server running when proxying an individual request fails.
+Reduce the size of Wrangler's published package
+
+Exclude test-only, build-only, and obsolete template files from the npm package while retaining all runtime templates.
