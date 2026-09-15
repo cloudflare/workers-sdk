@@ -24,6 +24,7 @@ export interface Binding {
 	database_name?: string;
 	bucket_name?: string;
 	index_name?: string;
+	instance_name?: string;
 	id?: string;
 	service?: string;
 	dataset?: string;

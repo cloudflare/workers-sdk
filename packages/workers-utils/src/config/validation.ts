@@ -95,7 +95,6 @@ export type ConfigBindingFieldName =
 	| "vectorize"
 	| "ai_search_namespaces"
 	| "ai_search"
-	| "websearch"
 	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
@@ -136,7 +135,6 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	websearch: "Web Search",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
@@ -195,7 +193,6 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	websearch: "Web Search",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
@@ -1860,16 +1857,6 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateAISearchBinding),
 			[]
 		),
-		websearch: notInheritable(
-			diagnostics,
-			topLevelEnv,
-			rawConfig,
-			rawEnv,
-			envName,
-			"websearch",
-			validateNamedSimpleBinding(envName),
-			undefined
-		),
 		agent_memory: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3423,7 +3410,6 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
-			"websearch",
 			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",
@@ -6145,6 +6131,8 @@ const validatePreviewsConfig =
 				"d1_databases",
 				"r2_buckets",
 				"vectorize",
+				"ai_search_namespaces",
+				"ai_search",
 				"hyperdrive",
 				"services",
 				"analytics_engine_datasets",
@@ -6250,6 +6238,22 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.vectorize`,
 				previews.vectorize,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAISearchNamespaceBinding)(
+				diagnostics,
+				`${field}.ai_search_namespaces`,
+				previews.ai_search_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAISearchBinding)(
+				diagnostics,
+				`${field}.ai_search`,
+				previews.ai_search,
 				undefined
 			) && isValid;
 
