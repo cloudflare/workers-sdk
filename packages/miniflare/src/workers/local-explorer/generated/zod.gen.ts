@@ -354,6 +354,16 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 	})
 );
 
+export const zLocalExplorerScheduledRequest = z.object({
+	cron: z.string().regex(/.*\S.*/),
+	scheduled_time: z.int().gte(-9223372036854).lte(9223372036854).optional(),
+});
+
+export const zLocalExplorerScheduledResult = z.object({
+	outcome: z.string(),
+	noRetry: z.boolean(),
+});
+
 export const zR2Object = z.object({
 	key: z.string().optional(),
 	etag: z.string().optional(),
@@ -411,6 +421,13 @@ export const zDoRawQueryResult = z.object({
 		.optional(),
 });
 
+/**
+ * Trigger metadata for a worker
+ */
+export const zLocalExplorerWorkerTriggers = z.object({
+	crons: z.array(z.string()),
+});
+
 export const zLocalExplorerNamedBinding = z.object({
 	bindingName: z.string(),
 });
@@ -450,7 +467,9 @@ export const zLocalExplorerWorkerBindings = z.object({
 export const zLocalExplorerWorker = z.object({
 	isSelf: z.boolean(),
 	name: z.string(),
+	persistenceScope: z.string().optional(),
 	bindings: zLocalExplorerWorkerBindings.optional(),
+	triggers: zLocalExplorerWorkerTriggers.optional(),
 });
 
 /**
@@ -1078,6 +1097,24 @@ export const zLocalExplorerListWorkersResponse = zWorkersApiResponseCommon.and(
 		result: z.array(zLocalExplorerWorker).optional(),
 	})
 );
+
+export const zLocalExplorerDispatchScheduledData = z.object({
+	body: zLocalExplorerScheduledRequest,
+	path: z.never().optional(),
+	query: z.object({
+		worker: z.string().min(1),
+	}),
+});
+
+/**
+ * Scheduled invocation result.
+ */
+export const zLocalExplorerDispatchScheduledResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: zLocalExplorerScheduledResult,
+		})
+	);
 
 export const zEmailListRoutingData = z.object({
 	body: z.never().optional(),

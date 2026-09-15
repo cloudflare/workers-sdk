@@ -514,6 +514,7 @@ export function unstable_getMiniflareWorkerOptions(
 		modulesRules,
 		zone: getZoneFromConfig(config),
 		access: config.access?.dev,
+		cronTriggers: config.triggers.crons,
 
 		...bindingOptions,
 		...sitesOptions,
