@@ -62,6 +62,15 @@ export function handleWebSocket(
 			const isClaimed = () =>
 				(socket as unknown as Socket).bytesWritten > bytesWrittenAtStart;
 
+			// Synchronous preamble. This listener is prepended, so this code runs
+			// before any other `upgrade` listener. A throw here (e.g. `new URL()`
+			// rejecting a malformed `Host` that another owner's route doesn't
+			// inspect) must not destroy the socket — the previously registered
+			// owners haven't run yet and may still own it. Bail out and leave
+			// the socket untouched for them.
+			let url: URL;
+			let isViteRequest: boolean | undefined;
+			let isSandboxRequest: boolean;
 			try {
 				const rawHost = request.headers.host ?? UNKNOWN_HOST;
 				// Honor `X-Forwarded-Proto` so that the upgrade URL reflects the
@@ -71,23 +80,27 @@ export function handleWebSocket(
 				const base = /^https?:\/\//i.test(rawHost)
 					? rawHost
 					: `${protocol}//${rawHost}`;
-				const url = new URL(request.url ?? "", base);
+				url = new URL(request.url ?? "", base);
 
-				const isViteRequest =
+				isViteRequest =
 					request.headers["sec-websocket-protocol"]?.startsWith("vite");
-				const isSandboxRequest = hasSandboxOrigin(url.origin);
+				isSandboxRequest = hasSandboxOrigin(url.origin);
+			} catch {
+				return;
+			}
 
-				// Ignore Vite HMR WebSockets but forward on all sandbox requests.
-				if (isViteRequest && !isSandboxRequest) {
-					return;
-				}
+			// Ignore Vite HMR WebSockets but forward on all sandbox requests.
+			if (isViteRequest && !isSandboxRequest) {
+				return;
+			}
 
-				const headers = createHeaders(request);
+			const headers = createHeaders(request);
 
-				if (entryWorkerName) {
-					headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
-				}
+			if (entryWorkerName) {
+				headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+			}
 
+			try {
 				const response = await miniflare.dispatchFetch(url, {
 					headers: headers as unknown as Headers,
 					method: request.method,
@@ -138,6 +151,11 @@ export function handleWebSocket(
 					}
 				);
 			} catch {
+				// This `catch` only handles failures after control has already
+				// yielded to the remaining `upgrade` listeners (i.e. `await
+				// dispatchFetch` rejected, or our own `handleUpgrade` on a socket
+				// we own threw). Synchronous preamble failures return above
+				// without touching the socket.
 				// `dispatchFetch` rejects if Miniflare is disposed while an upgrade
 				// is still in flight (e.g. during dev server shutdown or restart).
 				// This listener is `async`, so an uncaught rejection here escapes as
