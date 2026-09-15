@@ -340,6 +340,25 @@ describe("Preview configuration conversion", () => {
 		).toEqual({ limits: {}, tail_consumers: [] });
 	});
 
+	test("omits null Preview Base settings without removing JSON null", ({
+		expect,
+	}) => {
+		expect(
+			convertPreviewBaseToPreviewsConfig({
+				observability: {
+					enabled: false,
+					head_sampling_rate: null,
+				},
+			} as Parameters<typeof convertPreviewBaseToPreviewsConfig>[0]).config
+		).toEqual({ observability: { enabled: false } });
+
+		expect(
+			convertBinding("NULL_VALUE", { type: "json", json: null }, false)
+		).toEqual({
+			config: { vars: { NULL_VALUE: null } },
+		});
+	});
+
 	test("rejects duplicate singleton bindings", ({ expect }) => {
 		const convertDuplicates = () =>
 			convertPreviewSettings(

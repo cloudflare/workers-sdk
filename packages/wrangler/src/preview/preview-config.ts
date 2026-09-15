@@ -1,5 +1,6 @@
 import { extractConfigBindings } from "@cloudflare/deploy-helpers";
 import { UserError } from "@cloudflare/workers-utils";
+import { omitNullish } from "../utils/omit-nullish";
 import type {
 	Binding,
 	EnvBindings,
@@ -39,12 +40,6 @@ export type ProposedPreviewsConfig = {
 	messages: string[];
 	blocksDeployment: boolean;
 };
-
-function omitUndefined<T extends Record<string, unknown>>(object: T): T {
-	return Object.fromEntries(
-		Object.entries(object).filter(([, value]) => value !== undefined)
-	) as T;
-}
 
 /** Converts Preview Base API data into local Preview configuration. */
 export function convertPreviewBaseToPreviewsConfig(
@@ -144,14 +139,14 @@ export function convertTopLevelSetting(
 			if (observability === undefined) {
 				break;
 			}
-			converted.observability = omitUndefined({
+			converted.observability = omitNullish({
 				enabled: observability.enabled,
 				head_sampling_rate: observability.head_sampling_rate,
 				redact_query_string: observability.redact_query_string,
 				logs:
 					observability.logs === undefined
 						? undefined
-						: omitUndefined({
+						: omitNullish({
 								enabled: observability.logs.enabled,
 								head_sampling_rate: observability.logs.head_sampling_rate,
 								invocation_logs: observability.logs.invocation_logs,
@@ -166,7 +161,7 @@ export function convertTopLevelSetting(
 				traces:
 					observability.traces === undefined
 						? undefined
-						: omitUndefined({
+						: omitNullish({
 								enabled: observability.traces.enabled,
 								head_sampling_rate: observability.traces.head_sampling_rate,
 								persist: observability.traces.persist,
@@ -187,7 +182,7 @@ export function convertTopLevelSetting(
 			break;
 		case "limits":
 			if (!usePlaceholderValue && settings.limits !== undefined) {
-				converted.limits = omitUndefined({
+				converted.limits = omitNullish({
 					cpu_ms: settings.limits.cpu_ms,
 					subrequests: settings.limits.subrequests,
 				});
@@ -208,17 +203,17 @@ export function convertTopLevelSetting(
 			} else if (placement.mode === "off") {
 				converted.placement = { mode: placement.mode };
 			} else if ("region" in placement) {
-				converted.placement = omitUndefined({
+				converted.placement = omitNullish({
 					mode: placement.mode,
 					region: usePlaceholderValue ? REPLACE_ME : placement.region,
 				});
 			} else if ("host" in placement) {
-				converted.placement = omitUndefined({
+				converted.placement = omitNullish({
 					mode: placement.mode,
 					host: usePlaceholderValue ? REPLACE_ME : placement.host,
 				});
 			} else if ("hostname" in placement) {
-				converted.placement = omitUndefined({
+				converted.placement = omitNullish({
 					mode: placement.mode,
 					hostname: usePlaceholderValue ? REPLACE_ME : placement.hostname,
 				});
@@ -227,7 +222,7 @@ export function convertTopLevelSetting(
 		}
 		case "cache":
 			if (!usePlaceholderValue && settings.cache !== undefined) {
-				converted.cache = omitUndefined({
+				converted.cache = omitNullish({
 					enabled: settings.cache.enabled,
 					cross_version_cache: settings.cache.cross_version_cache,
 				});
@@ -482,7 +477,7 @@ export function convertBinding(
 			config = {
 				queues: {
 					producers: [
-						omitUndefined({
+						omitNullish({
 							binding: name,
 							queue: usePlaceholderValue ? REPLACE_ME : binding.queue_name,
 							delivery_delay: binding.delivery_delay,
