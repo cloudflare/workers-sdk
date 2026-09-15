@@ -6,7 +6,7 @@ import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
 import { createCommand } from "../core/create-command";
 import { MAX_ASSET_COUNT_DEFAULT, MAX_ASSET_SIZE } from "./constants";
-import { hashFile } from "./hash";
+import { hashFile, initHash } from "./hash";
 import { maxFileCountAllowedFromClaims } from "./upload";
 
 export const pagesProjectValidateCommand = createCommand({
@@ -146,6 +146,7 @@ export const validate = async (args: {
 		return fileMap;
 	};
 
+	await initHash();
 	const fileMap = await walk(directory);
 
 	if (fileMap.size > fileCountLimit) {
