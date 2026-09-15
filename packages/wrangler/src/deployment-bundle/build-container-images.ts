@@ -1,14 +1,16 @@
 import path from "node:path";
 import {
 	buildContainerImages,
-	buildAndMaybePush,
 	cleanupBuiltImages,
+	createLocalContainerImageTag,
 	isDockerfileContainerConfig,
+	startContainerBuild,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
 import {
 	getDockerPath,
 	getDurableObjectContainerApps,
+	UserError,
 } from "@cloudflare/workers-utils";
 import type { BuiltContainerImage } from "@cloudflare/containers-shared";
 import type {
@@ -56,18 +58,6 @@ function isDockerfileDurableObjectContainerImage(
 	image: DurableObjectContainerImage
 ): image is Extract<DurableObjectContainerImage, { dockerfile: string }> {
 	return typeof image.dockerfile === "string";
-}
-
-function buildDurableObjectImageTag(
-	scriptName: string,
-	className: string,
-	imageName: string
-): string {
-	const repository = `${scriptName}-${className}-${imageName}`
-		.toLowerCase()
-		.replace(/[^a-z0-9._-]+/g, "-")
-		.replace(/^-+|-+$/g, "");
-	return `${repository}:wrangler-${Date.now().toString(36)}`;
 }
 
 type DurableObjectContainerBuildProps =
@@ -123,23 +113,20 @@ export async function buildDurableObjectContainerImages(
 	try {
 		for (const { container, imageName, image } of imagesToBuild) {
 			const dockerfile = path.resolve(baseDir, image.dockerfile);
-			const localTag = buildDurableObjectImageTag(
-				props.name,
-				container.class_name,
-				imageName
+			const localTag = createLocalContainerImageTag(
+				`${props.name}-${container.class_name}-${imageName}`
 			);
-			await buildAndMaybePush(
-				{
+			const build = await startContainerBuild({
+				build: {
 					tag: localTag,
 					pathToDockerfile: dockerfile,
 					buildContext: path.dirname(dockerfile),
 					platform: "linux/amd64",
 				},
-				dockerPath,
-				false,
-				undefined,
-				false
-			);
+				pathToDocker: dockerPath,
+				verifyDockerIsRunning: false,
+			});
+			await build.ready;
 			builtImages.push({
 				className: container.class_name,
 				imageName,
@@ -148,7 +135,15 @@ export async function buildDurableObjectContainerImages(
 		}
 	} catch (error) {
 		await cleanupBuiltImages(builtImages, dockerPath);
-		throw error;
+		if (error instanceof Error) {
+			throw new UserError(error.message, {
+				cause: error,
+				telemetryMessage: "container build image operation failed",
+			});
+		}
+		throw new UserError("An unknown error occurred", {
+			telemetryMessage: "container build unknown error",
+		});
 	}
 	return builtImages;
 }

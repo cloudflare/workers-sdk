@@ -47,8 +47,7 @@ import type { ExpectStatic } from "vitest";
 
 vi.mock("node:child_process");
 
-const TEST_CONTAINER_BUILD_TAG =
-	"wrangler-11111111-1111-4111-8111-111111111111";
+const TEST_CONTAINER_BUILD_TAG = "11111111-1111-4111-8111-111111111111";
 
 describe("wrangler deploy with containers", () => {
 	runInTempDir();
@@ -986,7 +985,7 @@ describe("wrangler deploy with containers", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
+			Building image my-container:11111111-1111-4111-8111-111111111111
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -1480,7 +1479,7 @@ describe("wrangler deploy with containers", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
+				Building image my-container:11111111-1111-4111-8111-111111111111
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1549,7 +1548,7 @@ describe("wrangler deploy with containers", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
+			Building image my-container:11111111-1111-4111-8111-111111111111
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -4318,7 +4317,7 @@ describe("wrangler deploy with containers dry run", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
+			Building image my-container:11111111-1111-4111-8111-111111111111
 			Total Upload: xx KiB / gzip: xx KiB
 			Your Worker has access to the following bindings:
 			Binding                                            Resource

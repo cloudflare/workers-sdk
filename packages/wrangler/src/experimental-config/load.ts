@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import {
 	convertToWranglerConfig,
+	getContainerConfigExports,
 	loadAndValidateConfig,
 	loadConfig,
 } from "@cloudflare/config";
@@ -15,6 +16,7 @@ import {
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
 import type {
+	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
@@ -28,13 +30,17 @@ export interface NormalizedTypes {
 	includeRuntime: boolean;
 }
 
+export interface ParsedProjectConfig {
+	entryWorker: ParsedInputWorkerConfig;
+	settings: ParsedInputSettingsConfig | undefined;
+	containers: Record<string, ParsedInputContainerConfig>;
+}
+
 export interface LoadNewConfigResult {
 	/** Merged result: `cloudflare.config.ts` runtime + `wrangler.config.ts` tooling. */
 	rawConfig: Omit<RawConfig, "env">;
-	/**  The validated `cloudflare.config.ts` worker shape (default export). */
-	parsedWorkerConfig: ParsedInputWorkerConfig;
-	/** The validated `settings` export, if present. */
-	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/** Validated project configuration grouped by resource type. */
+	parsedConfig: ParsedProjectConfig;
 	/**
 	 * The mode the config was resolved in, from `--mode`/`--env` or
 	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
@@ -107,6 +113,11 @@ export async function loadNewConfig(options: {
 		workerConfigResult.result.data.settings?.type === "settings"
 			? workerConfigResult.result.data.settings
 			: undefined;
+	const parsedConfig: ParsedProjectConfig = {
+		entryWorker: worker,
+		settings,
+		containers: getContainerConfigExports(workerConfigResult.result.data),
+	};
 
 	// ── Wrangler (tooling) config ───────────────────────────────────────
 	let wranglerConfigResult:
@@ -133,7 +144,10 @@ export async function loadNewConfig(options: {
 	}
 
 	// ── Conversion + merge ──────────────────────────────────────────────
-	const rawWorkerConfig: RawConfig = convertToWranglerConfig(worker, settings);
+	const rawWorkerConfig: RawConfig = convertToWranglerConfig(
+		parsedConfig.entryWorker,
+		parsedConfig.settings
+	);
 
 	const rawWranglerConfig = convertToolingConfig(
 		parsedWranglerConfig?.data ?? {}
@@ -158,8 +172,7 @@ export async function loadNewConfig(options: {
 
 	return {
 		rawConfig,
-		parsedWorkerConfig: worker,
-		parsedSettingsConfig: settings,
+		parsedConfig,
 		mode,
 		cloudflareConfigPath,
 		wranglerConfigPath,

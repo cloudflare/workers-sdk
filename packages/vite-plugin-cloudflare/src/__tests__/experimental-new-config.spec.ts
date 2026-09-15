@@ -466,6 +466,52 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		}
 	);
 
+	test("includes standard Container exports in the resolved Worker config", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		fs.writeFileSync(path.join(tempDir, "Dockerfile"), "FROM scratch\n");
+		writeWorkerConfig(
+			[
+				"import { defineContainer, defineWorker, exports as workerExports } from '@cloudflare/config';",
+				"export const app = defineContainer({",
+				"  name: 'fixture-app',",
+				"  image: { dockerfile: './Dockerfile' },",
+				"  maxInstances: 2,",
+				"});",
+				"export default defineWorker({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"  exports: {",
+				"    ContainerDO: workerExports.durableObject({",
+				"      storage: 'sqlite',",
+				"      container: app,",
+				"    }),",
+				"  },",
+				"});",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{ experimental: { newConfig: { cfBuildOutput: true } } },
+			{ root: tempDir },
+			viteBuildEnv
+		)) as WorkersResolvedConfig;
+
+		const worker = result.environmentNameToWorkerMap.get(
+			"experimental_config_worker"
+		);
+		expect(worker?.config.containers).toEqual([
+			{
+				name: "fixture-app",
+				image: path.join(tempDir, "Dockerfile"),
+				image_build_context: tempDir,
+				max_instances: 2,
+			},
+		]);
+	});
+
 	test("does not rewrite worker-configuration.d.ts when content is unchanged", async ({
 		expect,
 	}) => {

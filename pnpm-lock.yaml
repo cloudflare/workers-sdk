@@ -1858,9 +1858,15 @@ importers:
 
   packages/containers-shared:
     dependencies:
+      '@cloudflare/build-output-utils':
+        specifier: workspace:*
+        version: link:../build-output-utils
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
+      '@cloudflare/config':
+        specifier: workspace:*
+        version: link:../config
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils

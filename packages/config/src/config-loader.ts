@@ -31,6 +31,23 @@ export type ParsedConfigExports = {
 	settings?: ParsedInputSettingsConfig;
 } & Record<string, ParsedInputContainerConfig | ParsedInputWorkerConfig>;
 
+/**
+ * Selects the Container exports from a validated project configuration.
+ *
+ * @param config - Validated exports keyed by their JavaScript export names.
+ * @returns Container configurations keyed by those same export names.
+ */
+export function getContainerConfigExports(
+	config: ParsedConfigExports
+): Record<string, ParsedInputContainerConfig> {
+	return Object.fromEntries(
+		Object.entries(config).filter(
+			(entry): entry is [string, ParsedInputContainerConfig] =>
+				entry[1]?.type === "container"
+		)
+	);
+}
+
 export type ConfigParseResult =
 	| z.ZodSafeParseSuccess<ParsedConfigExports>
 	| z.ZodSafeParseError<unknown>;

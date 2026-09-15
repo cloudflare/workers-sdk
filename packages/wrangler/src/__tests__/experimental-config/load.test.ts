@@ -186,7 +186,7 @@ describe("loadNewConfig", () => {
 
 			expect(result.rawConfig.account_id).toBe("acc-123");
 			expect(result.rawConfig.compliance_region).toBe("fedramp_high");
-			expect(result.parsedSettingsConfig).toEqual({
+			expect(result.parsedConfig.settings).toEqual({
 				type: "settings",
 				accountId: "acc-123",
 				complianceRegion: "fedramp-high",
@@ -203,7 +203,7 @@ describe("loadNewConfig", () => {
 
 			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
 
-			expect(result.parsedSettingsConfig).toBeUndefined();
+			expect(result.parsedConfig.settings).toBeUndefined();
 			expect(result.rawConfig.account_id).toBeUndefined();
 		});
 	});
@@ -222,7 +222,7 @@ describe("loadNewConfig", () => {
 			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
 
 			expect(result.rawConfig.name).toBe("primary");
-			expect(result.parsedWorkerConfig.name).toBe("primary");
+			expect(result.parsedConfig.entryWorker.name).toBe("primary");
 		});
 
 		it("still validates non-default worker exports", async ({ expect }) => {
@@ -236,6 +236,29 @@ describe("loadNewConfig", () => {
 			await expect(
 				loadNewConfig({ cwd: process.cwd(), args: {} })
 			).rejects.toThrow(/other\.name/);
+		});
+
+		it("groups Container exports by export name", async ({ expect }) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export default { type: "worker", name: "primary", compatibilityDate: "2026-05-18" };
+					export const other = { type: "worker", name: "other", compatibilityDate: "2026-05-18" };
+					export const api = { type: "container", name: "api", image: { reference: "registry.example.com/api:latest" } };
+					export const sessions = { type: "container", name: "sessions", schedulingPolicy: "durable-object" };
+				`,
+			});
+
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(Object.keys(result.parsedConfig.containers).sort()).toEqual([
+				"api",
+				"sessions",
+			]);
+			expect(result.parsedConfig.containers.api).toMatchObject({
+				name: "api",
+				image: { reference: "registry.example.com/api:latest" },
+			});
+			expect(result.parsedConfig.containers).not.toHaveProperty("other");
 		});
 
 		it("throws when there is no default worker export", async ({ expect }) => {

@@ -11,6 +11,13 @@ function getSettingsConfigPath() {
 	return path.join(rootDir, ".cloudflare/output/v0", "config.json");
 }
 
+function getContainerConfigPath() {
+	return path.join(
+		rootDir,
+		".cloudflare/output/v0/containers/apiContainer/config.json"
+	);
+}
+
 describe("Build Output Specification", () => {
 	test("serves the worker", async ({ expect }) => {
 		const response = await getTextResponse("/");
@@ -130,5 +137,17 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 			"config.json"
 		);
 		expect(fs.existsSync(deployConfig)).toBe(false);
+	});
+
+	test("emits Container configs under their export names", ({ expect }) => {
+		const contents = JSON.parse(
+			fs.readFileSync(getContainerConfigPath(), "utf-8")
+		) as Record<string, unknown>;
+
+		expect(contents).toMatchObject({
+			type: "container",
+			name: "build-output-api",
+			image: { reference: "registry.example.com/api:latest" },
+		});
 	});
 });
