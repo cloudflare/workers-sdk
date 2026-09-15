@@ -1,5 +1,11 @@
 # @cloudflare/workers-utils
 
+## 0.38.1
+
+### Patch Changes
+
+- [#15606](https://github.com/cloudflare/workers-sdk/pull/15606) [`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d) Thanks [@emily-shen](https://github.com/emily-shen)! - refactor: separate container config from worker/generic config access
+
 ## 0.38.0
 
 ### Minor Changes

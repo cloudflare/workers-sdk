@@ -1,4 +1,5 @@
 import {
+	formatNoActivePreviewUrlsMessage,
 	getBranchName,
 	NO_ACTIVE_PREVIEW_URLS_MESSAGE,
 	patchPreviewDeployment,
@@ -47,7 +48,7 @@ export function toSecretBindingsPatch(
 export const NO_PREVIEW_DEPLOYMENT_PATCH_ERR_CODE = 10032;
 export const NO_PREVIEW_DEPLOYMENT_GET_ERR_CODE = 10222;
 export const PREVIEW_NOT_FOUND_ERR_CODE = 10025;
-export { NO_ACTIVE_PREVIEW_URLS_MESSAGE };
+export { formatNoActivePreviewUrlsMessage, NO_ACTIVE_PREVIEW_URLS_MESSAGE };
 
 export function noPreviewDeploymentPatchMessage(previewName: string) {
 	return `There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment before modifying a secret.`;

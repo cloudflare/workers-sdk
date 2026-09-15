@@ -1,5 +1,5 @@
 import {
-	cleanupBuiltContainerImages,
+	cleanupBuiltImages,
 	initContainersSharedContext,
 } from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
@@ -14,7 +14,10 @@ import { analyseBundle } from "../check/commands";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
-import { buildDeployContainerImages } from "../deployment-bundle/build-container-images";
+import {
+	buildDeployContainerImages,
+	buildDurableObjectContainerImages,
+} from "../deployment-bundle/build-container-images";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -206,12 +209,15 @@ export async function runDeployCommandHandler(
 			fetchPagedListResult,
 			fetchResult,
 		});
-		props.builtContainerDeployments = await buildDeployContainerImages(props);
+		props.containers.standard.builtImages =
+			await buildDeployContainerImages(props);
+		props.containers.durableObjects.builtImages =
+			await buildDurableObjectContainerImages(props, config);
 		if (
 			!props.dryRun &&
 			props.containersRollout !== "none" &&
-			(props.normalisedContainerConfig.length > 0 ||
-				getDurableObjectContainerApps(config.containers).length > 0)
+			(props.containers.standard.normalized.length > 0 ||
+				getDurableObjectContainerApps(props.containers.source).length > 0)
 		) {
 			await fillOpenAPIConfiguration(config, containersScope);
 		}
@@ -239,10 +245,17 @@ export async function runDeployCommandHandler(
 			}
 		);
 	} finally {
-		if (props.builtContainerDeployments.length > 0) {
-			await cleanupBuiltContainerImages(
-				props.builtContainerDeployments,
-				getDockerPath()
+		if (
+			props.containers.standard.builtImages.length > 0 ||
+			props.containers.durableObjects.builtImages.length > 0
+		) {
+			const dockerPath = getDockerPath();
+			await cleanupBuiltImages(
+				[
+					...props.containers.standard.builtImages,
+					...props.containers.durableObjects.builtImages,
+				],
+				dockerPath
 			);
 		}
 		cleanupDestination(buildProps.destination);

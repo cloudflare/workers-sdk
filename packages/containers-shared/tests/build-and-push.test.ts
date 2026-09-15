@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	AccountService,
 	buildCommand,
-	cleanupBuiltContainerImages,
+	cleanupBuiltImages,
 	buildContainerImages,
 	getCloudflareContainerRegistry,
 	getContainerImageTag,
@@ -402,10 +402,7 @@ describe("deploy container image build and push", () => {
 		).resolves.toStrictEqual([
 			{
 				container,
-				builtImage: {
-					containerConfig: container,
-					localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
-				},
+				localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
 			},
 		]);
 	});
@@ -427,10 +424,7 @@ describe("deploy container image build and push", () => {
 		).resolves.toStrictEqual([
 			{
 				container,
-				builtImage: {
-					containerConfig: container,
-					localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
-				},
+				localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
 			},
 		]);
 		expect(getContainerImageTag(container, "Galaxy-Class")).toBe(
@@ -474,7 +468,7 @@ describe("deploy container image build and push", () => {
 		expect,
 	}) => {
 		const builtImage: BuiltContainerImage = {
-			containerConfig: dockerfileContainer,
+			container: dockerfileContainer,
 			localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
 		};
 
@@ -564,14 +558,11 @@ describe("deploy container image build and push", () => {
 		expect,
 	}) => {
 		const builtImage: BuiltContainerImage = {
-			containerConfig: dockerfileContainer,
+			container: dockerfileContainer,
 			localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
 		};
 
-		await cleanupBuiltContainerImages(
-			[{ container: dockerfileContainer, builtImage }],
-			"docker"
-		);
+		await cleanupBuiltImages([builtImage], "docker");
 
 		expectSpawnWith([
 			"image",
@@ -582,15 +573,12 @@ describe("deploy container image build and push", () => {
 	});
 
 	it("does not clean up built deployment images that were already cleaned", async () => {
-		await cleanupBuiltContainerImages(
+		await cleanupBuiltImages(
 			[
 				{
 					container: dockerfileContainer,
-					builtImage: {
-						containerConfig: dockerfileContainer,
-						localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
-						localTagCleaned: true,
-					},
+					localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+					localTagCleaned: true,
 				},
 			],
 			"docker"

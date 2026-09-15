@@ -4,11 +4,11 @@ import { setTimeout } from "node:timers/promises";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import {
 	ApplicationsService,
-	buildAndMaybePush,
 	ContainerImagePreparationsService,
 	ContainerImagePreparationStatus,
 	createDurableObjectNamespaceResolver,
 	listDurableObjects,
+	pushImageIfChanged,
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
@@ -16,11 +16,13 @@ import {
 	CONTAINER_IMAGES_BINDING,
 	getDockerPath,
 	getDurableObjectClassNameToUseSQLiteMap,
-	getDurableObjectContainerApps,
 	UserError,
 	validateDurableObjectContainerApplications,
 } from "@cloudflare/workers-utils";
-import { logger } from "../../shared/context";
+import type {
+	BuiltDurableObjectContainerImage,
+	ContainerlessConfig,
+} from "../../shared/types";
 import type { ApiVersion } from "./versions-types";
 import type { CreateDurableObjectApplicationRequest } from "@cloudflare/containers-shared";
 import type {
@@ -291,24 +293,12 @@ export async function deployVersionedDurableObjectContainerApplications(
 	}
 }
 
-function buildTag(
-	scriptName: string,
-	className: string,
-	imageName: string
-): string {
-	const repository = `${scriptName}-${className}-${imageName}`
-		.toLowerCase()
-		.replace(/[^a-z0-9._-]+/g, "-")
-		.replace(/^-+|-+$/g, "");
-	return `${repository}:wrangler-${Date.now().toString(36)}`;
-}
-
 async function buildOrResolveImage(
-	config: Config,
+	config: ContainerlessConfig,
 	container: DurableObjectContainerApp,
 	imageName: string,
 	imageConfig: DurableObjectContainerImage,
-	scriptName: string,
+	builtImages: BuiltDurableObjectContainerImage[],
 	dryRun: boolean,
 	accountId: string | undefined
 ): Promise<string> {
@@ -320,27 +310,43 @@ async function buildOrResolveImage(
 		return resolveImageName(accountId, imageConfig.image, config);
 	}
 
-	const baseDir = config.configPath
-		? path.dirname(config.configPath)
-		: process.cwd();
-	const dockerfile = path.resolve(baseDir, imageConfig.dockerfile);
-	const tag = buildTag(scriptName, container.class_name, imageName);
-	logger.log("Building image", tag);
-	const imageRef = await buildAndMaybePush(
-		{
-			tag,
-			pathToDockerfile: dockerfile,
-			buildContext: path.dirname(dockerfile),
-			platform: "linux/amd64",
-		},
-		getDockerPath(),
-		!dryRun,
-		undefined,
-		true,
-		config
+	const builtImage = builtImages.find(
+		(candidate) =>
+			candidate.className === container.class_name &&
+			candidate.imageName === imageName
 	);
+	if (builtImage === undefined) {
+		throw new Error(
+			`Container image "${imageName}" for Durable Object class "${container.class_name}" was not built before upload.`
+		);
+	}
+	if (dryRun) {
+		return builtImage.localTag;
+	}
 
-	return "remoteDigest" in imageRef ? imageRef.remoteDigest : imageRef.newTag;
+	try {
+		const imageRef = await pushImageIfChanged({
+			pathToDocker: getDockerPath(),
+			sourceTag: builtImage.localTag,
+			targetTag: builtImage.localTag,
+			accountId,
+			complianceConfig: config,
+			cleanupSourceTag: true,
+		});
+		builtImage.localTagCleaned = true;
+
+		return "remoteDigest" in imageRef ? imageRef.remoteDigest : imageRef.newTag;
+	} catch (error) {
+		if (error instanceof Error) {
+			throw new UserError(error.message, {
+				cause: error,
+				telemetryMessage: "durable object container image push failed",
+			});
+		}
+		throw new UserError("An unknown error occurred", {
+			telemetryMessage: "durable object container image push failed",
+		});
+	}
 }
 
 async function waitForImagePreparation(image: string): Promise<void> {
@@ -383,7 +389,9 @@ async function waitForImagePreparation(image: string): Promise<void> {
 }
 
 export async function prepareDurableObjectContainerApplications(
-	config: Config,
+	config: ContainerlessConfig,
+	durableObjectContainerConfig: DurableObjectContainerApp[],
+	builtImages: BuiltDurableObjectContainerImage[],
 	{
 		accountId,
 		dryRun,
@@ -391,16 +399,17 @@ export async function prepareDurableObjectContainerApplications(
 		dispatchNamespace,
 	}: PrepareDurableObjectContainerApplicationsArgs
 ): Promise<PreparedContainerImages> {
-	validateDurableObjectContainerApplications(config);
+	validateDurableObjectContainerApplications(
+		config,
+		durableObjectContainerConfig
+	);
 	if (!dryRun) {
 		assert(accountId, "Expected accountId to prepare container applications");
 		const storageByClass = getDurableObjectClassNameToUseSQLiteMap(
 			config.migrations,
 			config.exports
 		);
-		const unknownStorage = getDurableObjectContainerApps(
-			config.containers
-		).filter(
+		const unknownStorage = durableObjectContainerConfig.filter(
 			(container) => storageByClass.get(container.class_name) === undefined
 		);
 		if (unknownStorage.length > 0) {
@@ -428,7 +437,7 @@ export async function prepareDurableObjectContainerApplications(
 		}
 	}
 
-	const containers = getDurableObjectContainerApps(config.containers).filter(
+	const containers = durableObjectContainerConfig.filter(
 		(container) => Object.keys(container.images ?? {}).length > 0
 	);
 	if (containers.length === 0) {
@@ -455,7 +464,7 @@ export async function prepareDurableObjectContainerApplications(
 					container,
 					imageName,
 					imageConfig,
-					scriptName,
+					builtImages,
 					dryRun,
 					accountId
 				);
@@ -480,7 +489,8 @@ export async function prepareDurableObjectContainerApplications(
 }
 
 export async function deployDurableObjectContainerApplications(
-	config: Config,
+	config: ContainerlessConfig,
+	durableObjectContainerConfig: DurableObjectContainerApp[],
 	{
 		versionId,
 		accountId,
@@ -488,7 +498,7 @@ export async function deployDurableObjectContainerApplications(
 		dispatchNamespace,
 	}: DeployDurableObjectContainerApplicationsArgs
 ): Promise<void> {
-	const containers = getDurableObjectContainerApps(config.containers);
+	const containers = durableObjectContainerConfig;
 	if (containers.length === 0) {
 		return;
 	}

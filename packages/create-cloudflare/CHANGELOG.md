@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.72.7
+
+### Patch Changes
+
+- [#15604](https://github.com/cloudflare/workers-sdk/pull/15604) [`9109a76`](https://github.com/cloudflare/workers-sdk/commit/9109a767a47defa3e060632b3e39f918ed628c27) Thanks [@dom96](https://github.com/dom96)! - Update the default compatibility date for newly created projects to 2026-09-11
+
+  The default compatibility date tracks the pinned `workerd` release, which was bumped to `1.20260911.1`. Releasing C3 ships the updated date to `npm create cloudflare` users, since it is bundled into the published package.
+
 ## 2.72.6
 
 ### Patch Changes

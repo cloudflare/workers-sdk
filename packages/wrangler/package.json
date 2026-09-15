@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.131.0",
+	"version": "4.131.2",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -45,6 +45,11 @@
 		"miniflare-dist",
 		"wrangler-dist",
 		"templates",
+		"!templates/__tests__",
+		"!templates/**/*.d.ts",
+		"!templates/new-worker*",
+		"!templates/startDevWorker",
+		"!templates/tsconfig*",
 		"kv-asset-handler.js",
 		"config-schema.json"
 	],
