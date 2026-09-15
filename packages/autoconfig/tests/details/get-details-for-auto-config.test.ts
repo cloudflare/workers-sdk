@@ -61,7 +61,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
 			configured: true,
-			framework: { id: "astro" },
+			framework: { id: "astro", supportsMode: true },
 			buildCommand: "npx astro build",
 			devCommand: "npx astro dev",
 			packageManager: { type: "npm" },
@@ -97,6 +97,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
 				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
+				framework: { supportsMode: true },
 				configured: false,
 				outputDir: "dist",
 				packageJson: {
