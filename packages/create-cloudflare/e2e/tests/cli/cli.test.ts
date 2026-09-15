@@ -438,10 +438,7 @@ describe("Create Cloudflare CLI", () => {
 						},
 						{
 							matcher: /Which development framework do you want to use\?/,
-							input: {
-								type: "select",
-								target: "Go back",
-							},
+							input: [keys.up, keys.enter],
 						},
 						{
 							matcher: /What would you like to start with\?/,
@@ -681,7 +678,7 @@ describe("Create Cloudflare CLI", () => {
 					    npm create cloudflare -- --framework svelte -- --types=ts
 					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
-					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue, waku
+					      analog, angular, astro, django, docusaurus, fastapi, flask, gatsby, hono, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue, waku
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -737,6 +734,23 @@ describe("Create Cloudflare CLI", () => {
 	});
 
 	describe("frameworks related", () => {
+		test("error when using a framework with an unsupported language", async ({
+			expect,
+			logStream,
+		}) => {
+			await expect(
+				runC3(
+					["my-app", "--framework=django", "--lang=ts", "--accept-defaults"],
+					[],
+					logStream
+				)
+			).rejects.toMatchObject({
+				errors: expect.stringContaining(
+					'The Django framework doesn\'t support the "ts" language'
+				),
+			});
+		});
+
 		["solid", "next", "react-router", "analog"].forEach((framework) =>
 			test(`error when trying to create a ${framework} app on Pages`, async ({
 				expect,
@@ -846,6 +860,38 @@ describe("Create Cloudflare CLI", () => {
 			);
 			expect(output).toContain("--template react-ts");
 			expect(output).not.toContain("Select a variant");
+		});
+
+		test("Python filtering offers static framework starters", async ({
+			expect,
+			logStream,
+			project,
+		}) => {
+			const { output } = await runC3(
+				[
+					project.path,
+					"--lang=python",
+					"--no-deploy",
+					"--git=false",
+					"--no-agents",
+				],
+				[
+					{
+						matcher: /What would you like to start with\?/,
+						input: { type: "select", target: "Framework Starter" },
+					},
+					{
+						matcher: /Which development framework do you want to use\?/,
+						input: {
+							type: "select",
+							target: "Django",
+						},
+					},
+				],
+				logStream
+			);
+
+			expect(output).toContain("category Framework Starter");
 		});
 	});
 

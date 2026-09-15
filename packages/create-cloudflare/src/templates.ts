@@ -20,7 +20,10 @@ import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
 import astroTemplate from "templates/astro/c3";
 import commonTemplate from "templates/common/c3";
+import djangoTemplate from "templates/django/c3";
 import docusaurusTemplate from "templates/docusaurus/c3";
+import fastapiTemplate from "templates/fastapi/c3";
+import flaskTemplate from "templates/flask/c3";
 import gatsbyTemplate from "templates/gatsby/c3";
 import assetsOnlyTemplate from "templates/hello-world-assets-only/c3";
 import helloWorldWithDurableObjectAssetsTemplate from "templates/hello-world-durable-object-with-assets/c3";
@@ -209,6 +212,28 @@ const templateSupportsLanguage = (
 	return true;
 };
 
+const getTemplateSupportedLanguages = (
+	config: TemplateConfig | MultiPlatformTemplateConfig,
+	platform?: C3Args["platform"]
+): string[] => {
+	const configs =
+		"platformVariants" in config
+			? platform
+				? [config.platformVariants[platform]]
+				: Object.values(config.platformVariants)
+			: [config];
+
+	return [
+		...new Set(
+			configs.flatMap(({ copyFiles }) =>
+				copyFiles && !isVariantInfo(copyFiles)
+					? Object.keys(copyFiles.variants)
+					: []
+			)
+		),
+	];
+};
+
 const filterTemplatesByLanguage = <
 	T extends TemplateConfig | MultiPlatformTemplateConfig,
 >(
@@ -264,7 +289,10 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			analog: analogTemplate,
 			angular: angularTemplate,
 			astro: astroTemplate,
+			django: djangoTemplate,
 			docusaurus: docusaurusTemplate,
+			fastapi: fastapiTemplate,
+			flask: flaskTemplate,
 			gatsby: gatsbyTemplate,
 			hono: honoTemplate,
 			next: nextTemplate,
@@ -386,6 +414,26 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		}
 
 		args.lang = language;
+	}
+
+	// Derive language from the framework (ts, py)
+
+	if (
+		args.framework &&
+		args.lang === undefined &&
+		(args.acceptDefaults || args.wranglerDefaults)
+	) {
+		const frameworkConfig = getFrameworkMap({
+			experimental: args.experimental,
+		})[args.framework];
+		const supportedLanguages = frameworkConfig
+			? getTemplateSupportedLanguages(frameworkConfig, args.platform)
+			: [];
+
+		args.lang =
+			supportedLanguages.length === 1
+				? supportedLanguages[0]
+				: C3_DEFAULTS.lang;
 	}
 };
 
