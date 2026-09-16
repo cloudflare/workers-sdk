@@ -437,7 +437,7 @@ const ContainerObservabilityBaseSchema = z.strictObject({
 	logs: z.strictObject({ enabled: z.boolean().optional() }).optional(),
 });
 
-const ContainerObservabilitySchema = z.union([
+const StandardContainerObservabilitySchema = z.union([
 	ContainerObservabilityBaseSchema.extend({
 		targetInstancePercentage: z.number().min(0).max(100).optional(),
 	}),
@@ -449,11 +449,11 @@ const ContainerObservabilitySchema = z.union([
 const BaseContainerSchema = z.strictObject({
 	type: z.literal("container"),
 	name: z.string().min(1),
-	observability: ContainerObservabilitySchema.optional(),
 	unsafe: z.record(z.string(), z.unknown()).optional(),
 });
 
 const StandardContainerBaseSchema = BaseContainerSchema.extend({
+	observability: StandardContainerObservabilitySchema.optional(),
 	maxInstances: z.number().int().nonnegative().default(20),
 	instanceType: z
 		.union([
@@ -513,6 +513,7 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 
 const DurableObjectContainerBaseSchema = BaseContainerSchema.extend({
 	schedulingPolicy: z.literal("durable-object"),
+	observability: ContainerObservabilityBaseSchema.optional(),
 });
 
 /**

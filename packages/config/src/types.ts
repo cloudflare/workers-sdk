@@ -152,6 +152,31 @@ type ContainerImage =
 			reference: string;
 	  };
 
+/** Application-wide observability settings shared by all Containers. */
+interface ContainerObservabilityConfig {
+	/** Whether observability is enabled. */
+	enabled?: boolean;
+	logs?: {
+		/** Whether log collection is enabled. */
+		enabled?: boolean;
+	};
+}
+
+/** Observability settings for a standard Container application. */
+type StandardContainerObservabilityConfig = ContainerObservabilityConfig &
+	(
+		| {
+				/** Percentage of Container instances targeted for observability. */
+				targetInstancePercentage?: number;
+				targetInstanceCount?: never;
+		  }
+		| {
+				targetInstancePercentage?: never;
+				/** Number of Container instances targeted for observability. */
+				targetInstanceCount?: number;
+		  }
+	);
+
 /** Fields shared by all Container application configurations. */
 interface BaseContainerConfig {
 	/**
@@ -170,27 +195,6 @@ interface BaseContainerConfig {
 	 */
 	name: string;
 
-	/** Configures observability for Container instances. */
-	observability?: {
-		/** Whether observability is enabled. */
-		enabled?: boolean;
-		logs?: {
-			/** Whether log collection is enabled. */
-			enabled?: boolean;
-		};
-	} & (
-		| {
-				/** Percentage of Container instances targeted for observability. */
-				targetInstancePercentage?: number;
-				targetInstanceCount?: never;
-		  }
-		| {
-				targetInstancePercentage?: never;
-				/** Number of Container instances targeted for observability. */
-				targetInstanceCount?: number;
-		  }
-	);
-
 	/**
 	 * Passed through without client-side validation or transformation.
 	 *
@@ -201,6 +205,9 @@ interface BaseContainerConfig {
 
 /** A Container application managed with a standard scheduling policy. */
 interface StandardContainerConfig extends BaseContainerConfig {
+	/** Configures observability and optional targeting for Container instances. */
+	observability?: StandardContainerObservabilityConfig;
+
 	/** The image to build or deploy. */
 	image: ContainerImage;
 
@@ -319,6 +326,11 @@ interface StandardContainerConfig extends BaseContainerConfig {
 /** A Container application managed by a Durable Object. */
 interface DurableObjectContainerConfig extends BaseContainerConfig {
 	schedulingPolicy: "durable-object";
+	/**
+	 * Configures application-wide observability. Instance targeting is not
+	 * supported for Durable Object-managed Containers.
+	 */
+	observability?: ContainerObservabilityConfig;
 	/** Named images that the Durable Object can start. */
 	images?: Record<string, ContainerImage>;
 }
