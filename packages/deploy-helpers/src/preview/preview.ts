@@ -11,6 +11,7 @@ import {
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
+import { parseBulkInputToObject } from "../deploy/helpers/parse-bulk-input";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
 import { confirm, logger } from "../shared/context";
@@ -53,6 +54,7 @@ import type {
 	Config,
 	ContainerApp,
 	CustomDomainRoute,
+	Exports,
 	PreviewsConfig,
 	RawEnvironment,
 	Route,
@@ -67,6 +69,9 @@ export type PreviewArgs = {
 	ignoreBaseConfig: boolean;
 	workerName?: string;
 	"worker-name"?: string;
+	secretsFile?: string;
+	/** Parsed `--var` args. CLI-only vars; config vars flow separately via `extractConfigBindings(config)`. */
+	cliVars?: Record<string, string>;
 };
 
 export type PreviewAssetsOptions = {
@@ -229,6 +234,21 @@ function buildPreviewContainerConfig(
 		},
 		observability,
 	};
+}
+
+function getPreviewExports(exports: Exports): Exports {
+	const previewExports = structuredClone(exports);
+	for (const configuredExport of Object.values(previewExports)) {
+		if (
+			configuredExport.type === "durable-object" &&
+			"container" in configuredExport
+		) {
+			// Preview containers link to Durable Objects by class name, not by the
+			// names used in the top level container config.
+			delete configuredExport.container;
+		}
+	}
+	return previewExports;
 }
 
 /**
@@ -527,6 +547,8 @@ async function assemblePreviewDeploymentSettings(
 		pullRequest?: PullRequestMetadata;
 		commitSha?: string;
 		assetsOptions?: PreviewAssetsOptions;
+		secrets?: Record<string, string>;
+		cliVars?: Record<string, string>;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -561,6 +583,9 @@ async function assemblePreviewDeploymentSettings(
 	}
 	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
 		request.compatibility_flags = config.compatibility_flags;
+	}
+	if (Object.keys(config.exports).length > 0) {
+		request.exports = getPreviewExports(config.exports);
 	}
 	const repositoryUrl = options.repositoryUrl;
 	const pullRequest = options.pullRequest;
@@ -664,6 +689,18 @@ async function assemblePreviewDeploymentSettings(
 	}
 
 	const env = extractConfigBindings(config);
+
+	// Vars from the CLI (--var) override same-named vars from the previews config
+	for (const [varName, varValue] of Object.entries(options.cliVars ?? {})) {
+		env[varName] = { type: "plain_text", text: varValue };
+	}
+
+	for (const [secretName, secretValue] of Object.entries(
+		options.secrets ?? {}
+	)) {
+		env[secretName] = { type: "secret_text", text: secretValue };
+	}
+
 	if (Object.keys(env).length > 0) {
 		request.env = env;
 	}
@@ -814,6 +851,13 @@ export async function preview(
 ): Promise<PreviewResult> {
 	const workerName = resolveWorkerName(args, config);
 
+	// Parse the secrets file up front so a bad path or malformed contents
+	// fails before the preview is created and assets are uploaded.
+	let secrets: Record<string, string> | undefined;
+	if (args.secretsFile) {
+		secrets = (await parseBulkInputToObject(args.secretsFile))?.content;
+	}
+
 	let previewName = args.name;
 	if (!previewName) {
 		previewName = getBranchName();
@@ -905,6 +949,8 @@ export async function preview(
 			pullRequest,
 			commitSha,
 			assetsOptions,
+			secrets,
+			cliVars: args.cliVars,
 		}
 	);
 	const deployment = await createPreviewDeployment(
@@ -914,6 +960,15 @@ export async function preview(
 		previewResource.id,
 		deploymentRequest
 	);
+	// The API may echo the uploaded env back on the deployment. Redact secret
+	// values as soon as it is received, before anything can log or return them
+	// (e.g. --json output) - matching `preview secret list`, which only ever
+	// outputs secret names and types.
+	for (const binding of Object.values(deployment.env ?? {})) {
+		if (binding.type === "secret_text") {
+			delete binding.text;
+		}
+	}
 
 	if (
 		normalisedContainerConfig.length > 0 &&
@@ -961,10 +1016,13 @@ export async function preview(
 				accountId,
 				workerName
 			);
+			// Compare against the env that was actually uploaded (config bindings
+			// plus --var and --secrets-file values), not just the config, so
+			// CLI-supplied bindings aren't reported as missing.
 			logMissingPreviewsBindingsWarning(
 				topLevelBindings,
 				previewBaseConfig.env,
-				extractConfigBindings(config)
+				deploymentRequest.env ?? {}
 			);
 		}
 	}

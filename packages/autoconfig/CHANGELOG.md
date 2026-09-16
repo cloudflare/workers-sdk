@@ -1,5 +1,27 @@
 # @cloudflare/autoconfig
 
+## 0.4.6
+
+### Patch Changes
+
+- [#15491](https://github.com/cloudflare/workers-sdk/pull/15491) [`6c15da1`](https://github.com/cloudflare/workers-sdk/commit/6c15da10a6f486b0cf29cbbe30cabe50b16f4b4a) Thanks [@penalosa](https://github.com/penalosa)! - Recognize Astro 7 as officially supported by autoconfig
+
+  Astro 7 projects no longer receive an unsupported-version warning during automatic configuration. Astro 7 uses the existing native `astro add cloudflare` configuration path introduced for Astro 6.
+
+- Updated dependencies [[`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`cb0955f`](https://github.com/cloudflare/workers-sdk/commit/cb0955f274102afb30b8502193edf66c0d3cb4d6), [`fa79b26`](https://github.com/cloudflare/workers-sdk/commit/fa79b26ef442303797013c70078c7acdd2c79247), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78)]:
+  - @cloudflare/workers-utils@0.39.0
+  - @cloudflare/config@0.13.0
+  - @cloudflare/cli-shared-helpers@0.1.31
+
+## 0.4.5
+
+### Patch Changes
+
+- Updated dependencies [[`3f42b10`](https://github.com/cloudflare/workers-sdk/commit/3f42b10a40d2b3aae1d8d5142ea0bc3ac58fa954), [`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d)]:
+  - @cloudflare/config@0.12.0
+  - @cloudflare/workers-utils@0.38.1
+  - @cloudflare/cli-shared-helpers@0.1.30
+
 ## 0.4.4
 
 ### Patch Changes

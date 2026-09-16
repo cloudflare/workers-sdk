@@ -1,23 +1,25 @@
-import { CONTAINER_IMAGES_BINDING } from "@cloudflare/workers-utils";
+import {
+	CONTAINER_IMAGES_BINDING,
+	getDurableObjectContainerApps,
+} from "@cloudflare/workers-utils";
 import { describe, it, vi } from "vitest";
 import { clearRemovedContainerImagesBindings } from "../src/deploy/helpers/container-image-bindings";
 import { fetchResult } from "../src/shared/context";
 vi.mock("../src/shared/context", () => ({ fetchResult: vi.fn() }));
 import { addContainerImagesBinding } from "../src/deploy/helpers/container-image-bindings";
+import type { ContainerlessConfig } from "../src/shared/types";
 import type {
 	Binding,
-	Config,
 	DurableObjectContainerApp,
 } from "@cloudflare/workers-utils";
 
 describe("addContainerImagesBinding", () => {
-	it("adds only Durable Object-managed images to the JSON binding", ({
+	it("resolves named export links in the image binding, including empty image maps", ({
 		expect,
 	}) => {
-		const durableObjectContainerConfig = [
+		const durableObjectContainerConfig: DurableObjectContainerApp[] = [
 			{
 				name: "sandbox",
-				class_name: "Sandbox",
 				scheduling_policy: "durable_object",
 				images: {
 					sandbox: { dockerfile: "./container/Dockerfile" },
@@ -25,18 +27,35 @@ describe("addContainerImagesBinding", () => {
 			},
 			{
 				name: "tools",
-				class_name: "Tools",
 				scheduling_policy: "durable_object",
 			},
-		] as DurableObjectContainerApp[];
+		];
 		const bindings: Record<string, Binding> = {};
 
-		addContainerImagesBinding(durableObjectContainerConfig, bindings, {
-			Sandbox: {
-				sandbox:
-					"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		addContainerImagesBinding(
+			durableObjectContainerConfig,
+			bindings,
+			{
+				Sandbox: {
+					sandbox:
+						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
 			},
-		});
+			{
+				exports: {
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "sandbox",
+					},
+					Tools: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "tools",
+					},
+				},
+			}
+		);
 
 		expect(Object.keys(bindings)).toEqual([CONTAINER_IMAGES_BINDING]);
 		expect(bindings[CONTAINER_IMAGES_BINDING]).toEqual({
@@ -49,6 +68,7 @@ describe("addContainerImagesBinding", () => {
 				Tools: {},
 			},
 		});
+		expect(durableObjectContainerConfig[1].class_name).toBeUndefined();
 	});
 
 	it("does not add the binding for scheduler-backed containers", ({
@@ -118,13 +138,12 @@ describe("addContainerImagesBinding", () => {
 		);
 	});
 
-	it("inherits the binding when the existing image map should be preserved", ({
+	it("inherits the existing image map without resolving local container changes", ({
 		expect,
 	}) => {
 		const durableObjectContainerConfig = [
 			{
 				name: "sandbox",
-				class_name: "Sandbox",
 				scheduling_policy: "durable_object",
 				images: {
 					sandbox: { dockerfile: "./container/Dockerfile" },
@@ -236,18 +255,15 @@ describe("clearRemovedContainerImagesBindings", () => {
 			vi.mocked(fetchResult).mockResolvedValue({ bindings: [imageBinding] });
 			const bindings: Record<string, Binding> = {};
 			await clearRemovedContainerImagesBindings(
-				{ containers } as unknown as Config,
-				[],
+				{} as ContainerlessConfig,
+				getDurableObjectContainerApps(containers),
 				bindings,
 				"/worker"
 			);
 			expect(bindings).toEqual({
 				[CONTAINER_IMAGES_BINDING]: { type: "json", value: {} },
 			});
-			expect(fetchResult).toHaveBeenCalledWith(
-				{ containers },
-				"/worker/settings"
-			);
+			expect(fetchResult).toHaveBeenCalledWith({}, "/worker/settings");
 		}
 	);
 	it.for([undefined, []])(
@@ -258,8 +274,8 @@ describe("clearRemovedContainerImagesBindings", () => {
 			});
 			const bindings: Record<string, Binding> = {};
 			await clearRemovedContainerImagesBindings(
-				{ containers } as unknown as Config,
-				[],
+				{} as ContainerlessConfig,
+				getDurableObjectContainerApps(containers),
 				bindings,
 				"/worker"
 			);
@@ -274,8 +290,8 @@ describe("clearRemovedContainerImagesBindings", () => {
 				USER_IMAGES: { type: "json", value: { user: true } },
 			};
 			await clearRemovedContainerImagesBindings(
-				{ containers } as unknown as Config,
-				[],
+				{} as ContainerlessConfig,
+				getDurableObjectContainerApps(containers),
 				bindings,
 				"/worker"
 			);
@@ -298,7 +314,7 @@ describe("clearRemovedContainerImagesBindings", () => {
 		async (containers, { expect }) => {
 			const bindings: Record<string, Binding> = {};
 			await clearRemovedContainerImagesBindings(
-				{ containers } as unknown as Config,
+				{} as ContainerlessConfig,
 				containers as DurableObjectContainerApp[],
 				bindings,
 				"/worker"
