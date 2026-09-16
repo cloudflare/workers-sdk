@@ -53,12 +53,11 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/config": "workspace:*",
-		"@cloudflare/unenv-preset": "workspace:*",
-		"miniflare": "workspace:*",
+		"@cloudflare/config": "0.13.0",
+		"@cloudflare/unenv-preset": "2.16.1",
+		"miniflare": "5.20260915.0-alpha",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "catalog:default",
-		"wrangler": "workspace:*",
+		"workerd": "1.20260915.1",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
@@ -95,8 +94,7 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"vite": "^7.0.0 || ^8.0.0",
-		"wrangler": "workspace:^"
+		"vite": "^7.0.0 || ^8.0.0"
 	},
 	"workers-sdk": {
 		"prerelease": true

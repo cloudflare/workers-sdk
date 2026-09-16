@@ -5,6 +5,12 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
+	// TODO(release): Revert these three packages to workspace dependencies.
+	// Bundling them would bypass the published-version pins used by v2 alphas.
+	"@cloudflare/config",
+	"@cloudflare/unenv-preset",
+	"miniflare",
+
 	// Must be external - resolved at runtime when bundling user's worker code
 	// to provide Node.js compatibility polyfills
 	"unenv",
