@@ -2718,6 +2718,7 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					vars: { API_URL: "https://prod.example.com", API_TOKEN: "token" },
+					previews: {},
 				})
 			);
 			writeFileSync("secrets.json", JSON.stringify({ API_TOKEN: "cli-token" }));
@@ -3463,6 +3464,7 @@ describe("wrangler preview", () => {
 			writeWranglerConfig(
 				{
 					main: "src/index.ts",
+					previews: {},
 					routes: [
 						{
 							pattern: "previews.example.com",
@@ -3870,6 +3872,7 @@ describe("wrangler preview", () => {
 					name: "test-worker",
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
+					previews: {},
 					containers: [
 						{
 							name: "ecommerce-agent",
