@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.72.6",
+	"version": "2.72.8",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -65,7 +65,6 @@
 		"dns2": "^2.1.0",
 		"dotenv": "catalog:default",
 		"esbuild": "catalog:default",
-		"execa": "^7.1.1",
 		"exit-hook": "2.2.1",
 		"get-port": "^7.1.0",
 		"haikunator": "^2.1.2",

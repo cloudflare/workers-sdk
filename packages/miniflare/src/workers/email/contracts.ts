@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "miniflare:zod";
 
 export type EmailHandlerEvent =
 	| {

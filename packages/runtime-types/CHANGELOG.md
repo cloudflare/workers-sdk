@@ -1,5 +1,33 @@
 # @cloudflare/runtime-types
 
+## 0.0.27
+
+### Patch Changes
+
+- Updated dependencies [[`7db596c`](https://github.com/cloudflare/workers-sdk/commit/7db596c153ae0cda7e30aa351955b1781902435f), [`e35c4a1`](https://github.com/cloudflare/workers-sdk/commit/e35c4a154ea16a96b47cb2e68a4930c1d833e81d), [`d3565a5`](https://github.com/cloudflare/workers-sdk/commit/d3565a5326d879fbebba72b16c0f14ba2a4fba99), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`1015cfb`](https://github.com/cloudflare/workers-sdk/commit/1015cfb2a780d57b13d137324c83af53d3a3a8a2), [`982b806`](https://github.com/cloudflare/workers-sdk/commit/982b8060d99d9bb303ef7b7f15bf6c8b1f83c72a), [`641df47`](https://github.com/cloudflare/workers-sdk/commit/641df4774f19313ffecf53cf7443ac3dd79abb31)]:
+  - miniflare@5.20260915.0-alpha
+
+## 0.0.26
+
+### Patch Changes
+
+- Updated dependencies [[`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3)]:
+  - miniflare@5.20260911.1-alpha
+
+## 0.0.25
+
+### Patch Changes
+
+- Updated dependencies [[`47d906f`](https://github.com/cloudflare/workers-sdk/commit/47d906f52d109509f61b1c801c1b08ecad583c0d), [`c2699bf`](https://github.com/cloudflare/workers-sdk/commit/c2699bf625134a2425d7142c72c4f31c4b6f8eab)]:
+  - miniflare@5.20260911.0-alpha
+
+## 0.0.24
+
+### Patch Changes
+
+- Updated dependencies [[`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94), [`f69f95a`](https://github.com/cloudflare/workers-sdk/commit/f69f95aa2da329dcfa9888cfeb204cdda634d979), [`a549e58`](https://github.com/cloudflare/workers-sdk/commit/a549e58af707e84d6aeddaadc6566103ae236dbb), [`dbb3ff4`](https://github.com/cloudflare/workers-sdk/commit/dbb3ff4ebe7579be76f42591957c429f26da319b), [`fea3cd0`](https://github.com/cloudflare/workers-sdk/commit/fea3cd0f2ef5af6c8f2b50c794a89b8ef03ca82b), [`6bd7b6c`](https://github.com/cloudflare/workers-sdk/commit/6bd7b6cae44d441e415130991e3f181694bd3b6d), [`15cd6e1`](https://github.com/cloudflare/workers-sdk/commit/15cd6e16129af3dad09d53d6cd03f963f9203970), [`be1caec`](https://github.com/cloudflare/workers-sdk/commit/be1caeca44ccd9660a81420805fb0958ca422589), [`dbc9506`](https://github.com/cloudflare/workers-sdk/commit/dbc9506e48d99237be701685d08582966f62f59f)]:
+  - miniflare@5.20260910.0-alpha
+
 ## 0.0.23
 
 ### Patch Changes

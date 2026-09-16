@@ -298,13 +298,6 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
-					case "websearch":
-						{
-							configObj.websearch = {
-								binding: binding.name,
-							};
-						}
-						break;
 					case "agent_memory": {
 						configObj.agent_memory = [
 							...(configObj.agent_memory ?? []),

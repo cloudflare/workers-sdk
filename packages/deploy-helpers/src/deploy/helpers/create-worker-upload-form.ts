@@ -134,7 +134,6 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const websearch = extractBindingsOfType("websearch", bindings)[0];
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
@@ -390,13 +389,6 @@ export function createWorkerUploadForm(
 			instance_name,
 		});
 	});
-
-	if (websearch !== undefined) {
-		metadataBindings.push({
-			name: websearch.binding,
-			type: "websearch",
-		});
-	}
 
 	agent_memory.forEach(({ binding, namespace }) => {
 		if (options?.dryRun) {

@@ -39,6 +39,9 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
+  # TODO(release): Revert these three packages to workspace dependencies.
+  - "@cloudflare/config"
+  - "@cloudflare/unenv-preset"
   # TEMPORARY: vite-plugin-cloudflare + vitest-plugin are pinned to the
   # published miniflare while the workspace miniflare is mid-migration. Revert
   # with the repoint.
@@ -102,6 +105,7 @@ patchedDependencies:
   "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
   "@netlify/build-info@10.5.1": "patches/@netlify__build-info@10.5.1.patch"
   "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
+  "vite@8.1.5": "patches/vite@8.1.5.patch"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Catalog
@@ -128,8 +132,8 @@ catalog:
   esbuild: "0.28.1"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20260910.1"
-  workerd: "1.20260910.1"
+  "@cloudflare/workers-types": "^5.20260916.1"
+  workerd: "1.20260916.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
   msw: "2.14.6"
