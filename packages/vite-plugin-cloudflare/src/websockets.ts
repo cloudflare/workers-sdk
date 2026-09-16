@@ -106,9 +106,17 @@ export function handleWebSocket(
 					// No route on the Worker → this upgrade isn't ours. If another
 					// listener claimed it, leave it untouched; otherwise tear it
 					// down deferred by a tick (an unanswered upgrade dangles
-					// forever and hangs `httpServer.close()`), re-checking claimed
-					// status at fire time so late owners survive.
+					// forever and hangs `httpServer.close()`), but only when no
+					// other `upgrade` listener could still be processing it.
+					// `isClaimed()` only sees bytes already written, so it can't
+					// reveal a delayed async owner (e.g. awaiting auth) — and any
+					// fixed deadline races one. With only this listener
+					// registered, no other owner can exist for an already-emitted
+					// event, so deferred teardown is safe.
 					if (socket.destroyed || isClaimed()) {
+						return;
+					}
+					if (httpServer.listenerCount("upgrade") > 1) {
 						return;
 					}
 					setImmediate(() => {
