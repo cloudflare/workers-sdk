@@ -1,10 +1,9 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import {
-	getContainersDir,
+	cleanBuildOutputDir,
 	writeContainerConfig,
 } from "@cloudflare/build-output-utils";
-import { removeDir } from "@cloudflare/workers-utils";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import {
 	cleanupBuiltImages,
@@ -50,50 +49,46 @@ export async function buildAndWriteContainerOutput(options: {
 		pathToDocker: options.pathToDocker,
 	});
 
-	const dockerfileCount = countDockerfiles(containers);
-	if (dockerfileCount > 0) {
-		await verifyDockerInstalled({
-			dockerPath: options.pathToDocker,
-			operation: "building the project",
-			imageNoun:
-				dockerfileCount === 1
-					? "the configured image"
-					: "the configured images",
-		});
-	}
-
 	const buildId = createBuildId();
 	const localTags = new Set<string>();
-	const outputConfigs: WriteContainerConfigOptions[] = [];
 	try {
-		for (const [directoryName, config] of containers) {
-			outputConfigs.push({
-				root: options.root,
-				directoryName,
-				config: await buildContainerOutputConfig({
-					config,
-					root: options.root,
-					pathToDocker: options.pathToDocker,
-					buildId,
-					localTags,
-				}),
+		const dockerfileCount = countDockerfiles(containers);
+		if (dockerfileCount > 0) {
+			await verifyDockerInstalled({
+				dockerPath: options.pathToDocker,
+				operation: "building the project",
+				imageNoun:
+					dockerfileCount === 1
+						? "the configured image"
+						: "the configured images",
 			});
 		}
-	} catch (error) {
-		await cleanupBuiltImages(
-			Array.from(localTags, (localTag) => ({ localTag })),
-			options.pathToDocker
-		);
-		throwBuildError(error);
-	}
 
-	try {
+		const outputConfigs: WriteContainerConfigOptions[] = [];
+		try {
+			for (const [directoryName, config] of containers) {
+				outputConfigs.push({
+					root: options.root,
+					directoryName,
+					config: await buildContainerOutputConfig({
+						config,
+						root: options.root,
+						pathToDocker: options.pathToDocker,
+						buildId,
+						localTags,
+					}),
+				});
+			}
+		} catch (error) {
+			throwBuildError(error);
+		}
+
 		for (const outputConfig of outputConfigs) {
 			await writeContainerConfig(outputConfig);
 		}
 	} catch (error) {
-		await Promise.all([
-			removeDir(getContainersDir(options.root)),
+		await Promise.allSettled([
+			cleanBuildOutputDir(options.root),
 			cleanupBuiltImages(
 				Array.from(localTags, (localTag) => ({ localTag })),
 				options.pathToDocker

@@ -3,8 +3,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import path from "node:path";
 import {
+	BUILD_OUTPUT_ROOT,
 	getContainerConfigPath,
-	getContainersDir,
+	getWorkerDir,
 } from "@cloudflare/build-output-utils";
 import { InputContainerSchema } from "@cloudflare/config";
 import { removeDirSync } from "@cloudflare/workers-utils";
@@ -44,6 +45,7 @@ describe("buildAndWriteContainerOutput", () => {
 		root = fs.mkdtempSync(path.join(os.tmpdir(), "container-build-output-"));
 		vi.spyOn(crypto, "randomUUID").mockReturnValue(UUIDS[0]);
 		vi.mocked(runDockerCmdWithOutput).mockReturnValue("");
+		vi.mocked(verifyDockerInstalled).mockResolvedValue(undefined);
 		vi.mocked(startContainerBuild).mockResolvedValue({
 			abort: vi.fn(),
 			ready: Promise.resolve(),
@@ -274,6 +276,7 @@ describe("buildAndWriteContainerOutput", () => {
 				abort: vi.fn(),
 				ready: Promise.reject(new Error("build failed")),
 			});
+		seedWorkerOutput(root);
 
 		await expect(
 			buildAndWriteContainerOutput({
@@ -282,7 +285,7 @@ describe("buildAndWriteContainerOutput", () => {
 				pathToDocker: "docker",
 			})
 		).rejects.toThrow("build failed");
-		expect(fs.existsSync(getContainersDir(root))).toBe(false);
+		expect(fs.existsSync(getBuildOutputPath(root))).toBe(false);
 		expect(cleanupBuiltImages).toHaveBeenCalledWith(
 			[
 				{
@@ -306,6 +309,7 @@ describe("buildAndWriteContainerOutput", () => {
 			name: "second",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
+		seedWorkerOutput(root);
 
 		await expect(
 			buildAndWriteContainerOutput({
@@ -314,7 +318,7 @@ describe("buildAndWriteContainerOutput", () => {
 				pathToDocker: "docker",
 			})
 		).rejects.toThrow("Container directory names");
-		expect(fs.existsSync(getContainersDir(root))).toBe(false);
+		expect(fs.existsSync(getBuildOutputPath(root))).toBe(false);
 		expect(cleanupBuiltImages).toHaveBeenCalledWith(
 			[
 				{
@@ -326,6 +330,30 @@ describe("buildAndWriteContainerOutput", () => {
 			],
 			"docker"
 		);
+	});
+
+	it("removes complete output when Docker verification fails", async ({
+		expect,
+	}) => {
+		const config = InputContainerSchema.parse({
+			type: "container",
+			name: "app",
+			image: { dockerfile: "./Dockerfile" },
+		});
+		vi.mocked(verifyDockerInstalled).mockRejectedValue(
+			new Error("Docker is unavailable")
+		);
+		seedWorkerOutput(root);
+
+		await expect(
+			buildAndWriteContainerOutput({
+				containers: { app: config },
+				root,
+				pathToDocker: "docker",
+			})
+		).rejects.toThrow("Docker is unavailable");
+		expect(fs.existsSync(getBuildOutputPath(root))).toBe(false);
+		expect(startContainerBuild).not.toHaveBeenCalled();
 	});
 
 	it("removes the previous tag before rebuilding deleted output", async ({
@@ -457,6 +485,16 @@ function expectedBuildOutputTag(
 		.slice(0, maxNameLength)
 		.replace(/[._-]+$/g, "");
 	return `${repositoryPrefix}${normalizedName}:${buildId}`;
+}
+
+function seedWorkerOutput(rootDirectory: string): void {
+	const workerDirectory = getWorkerDir(rootDirectory);
+	fs.mkdirSync(workerDirectory, { recursive: true });
+	fs.writeFileSync(path.join(workerDirectory, "config.json"), "{}");
+}
+
+function getBuildOutputPath(rootDirectory: string): string {
+	return path.resolve(rootDirectory, BUILD_OUTPUT_ROOT);
 }
 
 function shortHash(value: string): string {
