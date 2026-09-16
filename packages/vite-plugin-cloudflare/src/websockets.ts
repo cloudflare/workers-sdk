@@ -60,6 +60,13 @@ export function handleWebSocket(
 			const isClaimed = () =>
 				(socket as unknown as Socket).bytesWritten > bytesWrittenAtStart;
 
+			// Snapshot other-listener presence now, before the first yield: a
+			// once("upgrade") owner is removed before its callback runs, so a
+			// count taken after dispatchFetch cannot see it. Listeners added
+			// later cannot receive this already-emitted event, so the snapshot
+			// stays valid for this socket.
+			const hadOtherListeners = httpServer.listenerCount("upgrade") > 1;
+
 			// Synchronous preamble — runs before any other listener (we prepend).
 			// A throw here must not destroy the socket, since the real owner's
 			// listener hasn't run yet; bail out and leave it untouched.
@@ -107,7 +114,8 @@ export function handleWebSocket(
 					// listener claimed it, leave it untouched; otherwise tear it
 					// down deferred by a tick (an unanswered upgrade dangles
 					// forever and hangs `httpServer.close()`), but only when no
-					// other `upgrade` listener could still be processing it.
+					// other `upgrade` listener could still be processing it (see
+					// hadOtherListeners above).
 					// `isClaimed()` only sees bytes already written, so it can't
 					// reveal a delayed async owner (e.g. awaiting auth) — and any
 					// fixed deadline races one. With only this listener
@@ -116,7 +124,7 @@ export function handleWebSocket(
 					if (socket.destroyed || isClaimed()) {
 						return;
 					}
-					if (httpServer.listenerCount("upgrade") > 1) {
+					if (hadOtherListeners) {
 						return;
 					}
 					setImmediate(() => {
