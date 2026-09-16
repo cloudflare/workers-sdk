@@ -1218,7 +1218,7 @@ describe("wrangler workflows", () => {
 								delay: "10 seconds",
 								limit: 3,
 							},
-						timeout: "10 minutes",
+							timeout: "10 minutes",
 						},
 						end: null,
 						name: "running-step",
