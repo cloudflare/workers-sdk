@@ -165,6 +165,13 @@ export function getOutputConfig({
 		resolvedViteConfig.root,
 		workerOutputDirectory
 	);
+	const rebasePathToOutput = (sourcePath: string) =>
+		vite.normalizePath(
+			path.relative(
+				outputDirectory,
+				path.resolve(sourceConfigDirectory, sourcePath)
+			) || "."
+		);
 
 	return {
 		...inputWorkerConfig,
@@ -180,16 +187,40 @@ export function getOutputConfig({
 					),
 				}
 			: undefined,
+		containers: inputWorkerConfig.containers?.map((container) => {
+			if (container.images === undefined) {
+				return container;
+			}
+
+			return {
+				...container,
+				images: Object.fromEntries(
+					Object.entries(container.images).map(([name, image]) => {
+						if (image.dockerfile === undefined) {
+							return [name, image];
+						}
+
+						return [
+							name,
+							{
+								dockerfile: rebasePathToOutput(image.dockerfile),
+								...(image.build_context === undefined
+									? {}
+									: {
+											build_context: rebasePathToOutput(image.build_context),
+										}),
+								...(image.build_vars === undefined
+									? {}
+									: { build_vars: image.build_vars }),
+							},
+						];
+					})
+				),
+			};
+		}),
 		d1_databases: inputWorkerConfig.d1_databases.map((database) => {
 			const sourceMigrationsDir = database.migrations_dir ?? "migrations";
-			const sourceMigrationsPath = path.resolve(
-				sourceConfigDirectory,
-				sourceMigrationsDir
-			);
-
-			const outputMigrationsDir = vite.normalizePath(
-				path.relative(outputDirectory, sourceMigrationsPath) || "."
-			);
+			const outputMigrationsDir = rebasePathToOutput(sourceMigrationsDir);
 
 			return {
 				...database,
