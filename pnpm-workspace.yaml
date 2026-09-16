@@ -132,7 +132,7 @@ catalog:
   "@cloudflare/workers-types": "^5.20260915.1"
   workerd: "1.20260915.1"
   jsonc-parser: "3.2.0"
-  smol-toml: "1.5.2"
+  smol-toml: "1.8.0"
   msw: "2.14.6"
   tinyglobby: "0.2.16"
   "tree-kill": "1.2.2"
