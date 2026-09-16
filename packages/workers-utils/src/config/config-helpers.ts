@@ -1,6 +1,7 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import * as find from "empathic/find";
+import * as walk from "empathic/walk";
 import dedent from "ts-dedent";
 import { PATH_TO_DEPLOY_CONFIG } from "../constants";
 import { UserError } from "../errors";
@@ -60,10 +61,7 @@ export function findWranglerConfig(
 	referencePath: string = process.cwd(),
 	{ useRedirectIfAvailable = false } = {}
 ): ConfigPaths {
-	const userConfigPath =
-		find.file(`wrangler.json`, { cwd: referencePath }) ??
-		find.file(`wrangler.jsonc`, { cwd: referencePath }) ??
-		find.file(`wrangler.toml`, { cwd: referencePath });
+	const userConfigPath = findNearestUserConfig(referencePath);
 
 	if (!useRedirectIfAvailable) {
 		return {
@@ -83,6 +81,41 @@ export function findWranglerConfig(
 		deployConfigPath,
 		redirected,
 	};
+}
+
+/**
+ * The user configuration file names Wrangler recognises, in order of preference
+ * when more than one exists in the SAME directory.
+ */
+const USER_CONFIG_FILE_NAMES = [
+	"wrangler.json",
+	"wrangler.jsonc",
+	"wrangler.toml",
+];
+
+/**
+ * Walk up from `referencePath` and return the first user configuration file found,
+ * checking every recognised file name in each directory before moving to its parent.
+ *
+ * Proximity wins over format: a `wrangler.jsonc` in the current directory is chosen
+ * over a `wrangler.json` in a parent. Searching for each file name all the way to the
+ * filesystem root before trying the next name would let an unrelated ancestor's config
+ * shadow the project's own.
+ */
+function findNearestUserConfig(referencePath: string): string | undefined {
+	for (const dir of walk.up(referencePath)) {
+		for (const name of USER_CONFIG_FILE_NAMES) {
+			const candidate = path.join(dir, name);
+			try {
+				if (statSync(candidate).isFile()) {
+					return candidate;
+				}
+			} catch {
+				// not present in this directory, try the next name
+			}
+		}
+	}
+	return undefined;
 }
 
 /**
