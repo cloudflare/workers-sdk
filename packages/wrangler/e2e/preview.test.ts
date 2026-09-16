@@ -15,6 +15,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("preview", { timeout: 90_000 }, () => {
 				main: "src/index.ts",
 				compatibility_date: "2025-01-01",
 				upload_source_maps: true,
+				previews: {},
 			}),
 			"src/index.ts": `export default {
 				fetch() {
@@ -68,6 +69,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					exports: {
 						EcommerceAgent: { type: "durable-object", storage: "sqlite" },
 					},
+					previews: {},
 				}),
 				"src/index.ts": `import { DurableObject } from "cloudflare:workers";
 
