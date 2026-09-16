@@ -40,34 +40,29 @@ export function handleWebSocket(
 		}
 	);
 
-	// Prepend so our `bytesWritten` baseline is captured before any other
-	// `upgrade` listener can write its 101 response. Node invokes `upgrade`
-	// listeners synchronously in registration order — with `on()`, an owner
-	// registered before us would already have completed its handshake before
-	// our callback runs, making its bytes indistinguishable from keep-alive
-	// bytes and breaking `isClaimed()` below.
+	// Node dispatches `upgrade` to *every* registered listener, not just the
+	// first, so another listener (e.g. Vite DevTools at `/__devtools/__ws`) may
+	// own a socket we don't. We must never tear down a socket someone else
+	// claimed. Prepend so our `bytesWritten` baseline (see `isClaimed` below) is
+	// captured before any other listener can write its 101 response.
+	// See https://github.com/cloudflare/workers-sdk/issues/15654
 	httpServer.prependListener(
 		"upgrade",
 		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
 			// Socket errors crash Node.js if unhandled
 			socket.on("error", () => socket.destroy());
 
-			// Baseline for detecting whether another `upgrade` listener claims
-			// the socket while `dispatchFetch` is in flight. `bytesWritten`
-			// counts the socket's lifetime, so a keep-alive connection may
-			// already be non-zero from earlier responses — only an increase
-			// during this upgrade means someone sent the 101.
+			// True once another listener has claimed the socket (written its 101).
+			// `bytesWritten` is lifetime-cumulative, so compare against a baseline
+			// rather than zero to stay correct on reused keep-alive connections.
 			const bytesWrittenAtStart =
 				(socket as unknown as Socket).bytesWritten ?? 0;
 			const isClaimed = () =>
 				(socket as unknown as Socket).bytesWritten > bytesWrittenAtStart;
 
-			// Synchronous preamble. This listener is prepended, so this code runs
-			// before any other `upgrade` listener. A throw here (e.g. `new URL()`
-			// rejecting a malformed `Host` that another owner's route doesn't
-			// inspect) must not destroy the socket — the previously registered
-			// owners haven't run yet and may still own it. Bail out and leave
-			// the socket untouched for them.
+			// Synchronous preamble — runs before any other listener (we prepend).
+			// A throw here must not destroy the socket, since the real owner's
+			// listener hasn't run yet; bail out and leave it untouched.
 			let url: URL;
 			let isViteRequest: boolean | undefined;
 			let isSandboxRequest: boolean;
@@ -108,26 +103,13 @@ export function handleWebSocket(
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
-					// Node dispatches `upgrade` to every registered listener, not just
-					// the first. Another listener (e.g. Vite DevTools at
-					// `/__devtools/__ws`, which uses no `vite`-prefixed subprotocol)
-					// may upgrade this socket while `dispatchFetch` is in flight —
-					// synchronously or asynchronously (e.g. after auth/setup).
-					// Destroying here (even deferred by a tick) would kill a socket
-					// we don't own (client sees `onopen` then close `1006`), and no
-					// deadline can distinguish a slow async owner from a declined
-					// upgrade. If the Worker has no route, this upgrade isn't ours —
-					// leave the socket untouched for its owner.
-					// See https://github.com/cloudflare/workers-sdk/issues/15654
+					// No route on the Worker → this upgrade isn't ours; leave the
+					// socket untouched for its owner (see top of listener).
 					return;
 				}
 
-				// If another listener claimed the socket while `dispatchFetch` was
-				// in flight (it already sent the 101 response), don't attempt a
-				// second upgrade — it would corrupt their connection. Likewise,
-				// the client may have disconnected in the meantime. This listener
-				// is prepended above, so the baseline was captured before any
-				// other owner could write.
+				// Another listener claimed the socket, or the client went away,
+				// while `dispatchFetch` was in flight: don't attempt a second upgrade.
 				if (socket.destroyed || isClaimed()) {
 					workerResponseHeaders.delete(request);
 					return;
@@ -151,19 +133,10 @@ export function handleWebSocket(
 					}
 				);
 			} catch {
-				// This `catch` only handles failures after control has already
-				// yielded to the remaining `upgrade` listeners (i.e. `await
-				// dispatchFetch` rejected, or our own `handleUpgrade` on a socket
-				// we own threw). Synchronous preamble failures return above
-				// without touching the socket.
-				// `dispatchFetch` rejects if Miniflare is disposed while an upgrade
-				// is still in flight (e.g. during dev server shutdown or restart).
-				// This listener is `async`, so an uncaught rejection here escapes as
-				// an unhandled rejection — which terminates the Node.js process on
-				// modern versions and leaks the client socket.
-				// Only tear the socket down if no other listener claimed it in the
-				// meantime (see above) — otherwise we'd kill e.g. a DevTools
-				// connection that upgraded while we were awaiting `dispatchFetch`.
+				// `dispatchFetch` rejects if Miniflare is disposed mid-upgrade (e.g.
+				// dev server restart). This listener is `async`, so an uncaught
+				// rejection would crash Node and leak the socket — tear it down, but
+				// only if no other listener claimed it in the meantime.
 				workerResponseHeaders.delete(request);
 				if (!socket.destroyed && !isClaimed()) {
 					socket.destroy();
