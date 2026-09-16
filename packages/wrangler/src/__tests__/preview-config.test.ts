@@ -88,15 +88,13 @@ describe("Preview configuration conversion", () => {
 					logs: { destinations: ["production-log-destination"] },
 				},
 				placement: { mode: "smart", hint: "production-hint" },
-				tail_consumers: [
-					{ service: "production-tail", environment: "production" },
-				],
+				tail_consumers: [{ service: "production-tail" }],
 			}),
 			true
 		);
 
 		expect(result.messages).toEqual([]);
-		expect(result.blocksDeployment).toBe(false);
+		expect(result.blockingDeploymentMessages).toEqual([]);
 		expect(Object.keys(result.config)).toEqual([
 			"vars",
 			"browser",
@@ -141,9 +139,7 @@ describe("Preview configuration conversion", () => {
 			},
 			define: { API_URL: "<REPLACE_ME>" },
 			placement: { mode: "smart", hint: "<REPLACE_ME>" },
-			tail_consumers: [
-				{ service: "<REPLACE_ME>", environment: "<REPLACE_ME>" },
-			],
+			tail_consumers: [{ service: "<REPLACE_ME>" }],
 		});
 		expect(JSON.stringify(result)).not.toContain("production");
 	});
@@ -180,10 +176,10 @@ describe("Preview configuration conversion", () => {
 					producers: [{ binding: "QUEUE", queue: "preview-queue" }],
 				},
 			},
-			messages: [
+			messages: [],
+			blockingDeploymentMessages: [
 				"This Worker uses Durable Objects. They are not included in the suggested Preview configuration.\nFollow the setup instructions so each Preview automatically gets a new, isolated Durable Object namespace:\nhttps://developers.cloudflare.com/workers/previews/resources/#durable-objects",
 			],
-			blocksDeployment: true,
 		});
 	});
 
@@ -203,9 +199,7 @@ describe("Preview configuration conversion", () => {
 		];
 
 		for (const binding of ignoredBindings) {
-			expect(convertBinding("IGNORED", binding, true)).toEqual({
-				blocksDeployment: false,
-			});
+			expect(convertBinding("IGNORED", binding, true)).toEqual({});
 		}
 	});
 
@@ -221,19 +215,15 @@ describe("Preview configuration conversion", () => {
 			}
 		);
 
-		expect(convertBinding("SECRET", binding, false)).toEqual({
-			blocksDeployment: false,
-		});
+		expect(convertBinding("SECRET", binding, false)).toEqual({});
 	});
 
 	test("reports unsupported binding messages", ({ expect }) => {
 		expect(convertBinding("WORKFLOW", { type: "workflow" }, true)).toEqual({
-			message: "Workflows",
-			blocksDeployment: false,
+			bindingLimitationName: "Workflows",
 		});
 		expect(convertBinding("SERVICE", { type: "service" }, true)).toEqual({
-			message: "Service Bindings",
-			blocksDeployment: false,
+			bindingLimitationName: "Service Bindings",
 		});
 	});
 
@@ -245,18 +235,37 @@ describe("Preview configuration conversion", () => {
 		});
 
 		expect(convertTopLevelSetting(settings, "containers", true)).toEqual({
-			message:
+			blockDeploymentMessage:
 				"This Worker uses Containers. They are not included in the suggested Preview configuration.\nFollow the setup instructions so each Preview automatically gets a new, isolated Container app and state:\nhttps://developers.cloudflare.com/workers/previews/resources/#containers",
-			blocksDeployment: true,
 		});
 		expect(convertTopLevelSetting(settings, "queues", true)).toEqual({
-			message: "Queue consumers",
-			blocksDeployment: false,
+			bindingLimitationName: "Queue consumers",
 		});
 		expect(convertTopLevelSetting(settings, "triggers", true)).toEqual({
-			message: "Cron triggers",
-			blocksDeployment: false,
+			bindingLimitationName: "Cron triggers",
 		});
+	});
+
+	test("omits tail consumer environments and reports their limitation", ({
+		expect,
+	}) => {
+		const result = convertPreviewSettings(
+			{},
+			topLevelSettings({
+				tail_consumers: [
+					{ service: "production-tail", environment: "staging" },
+				],
+			}),
+			true
+		);
+
+		expect(result.config).toEqual({
+			tail_consumers: [{ service: "<REPLACE_ME>" }],
+		});
+		expect(result.messages).toEqual([
+			"These settings have limitations in Worker Previews: Tail consumer environments.\nWrangler did not add them automatically. Review the limitations, then decide how you want to configure them for your Preview.\nLearn more: https://developers.cloudflare.com/workers/previews/limitations/",
+		]);
+		expect(result.blockingDeploymentMessages).toEqual([]);
 	});
 
 	test("inherits production observability", ({ expect }) => {
@@ -271,7 +280,7 @@ describe("Preview configuration conversion", () => {
 				"observability",
 				true
 			)
-		).toEqual({ blocksDeployment: false });
+		).toEqual({});
 	});
 
 	test("aggregates config, deduplicates messages, and preserves blocking", ({
@@ -300,17 +309,18 @@ describe("Preview configuration conversion", () => {
 		});
 		expect(result.messages).toEqual([
 			"These settings have limitations in Worker Previews: Workflows, Service Bindings, Queue consumers, Cron triggers.\nWrangler did not add them automatically. Review the limitations, then decide how you want to configure them for your Preview.\nLearn more: https://developers.cloudflare.com/workers/previews/limitations/",
+		]);
+		expect(result.blockingDeploymentMessages).toEqual([
 			"This Worker uses Durable Objects. They are not included in the suggested Preview configuration.\nFollow the setup instructions so each Preview automatically gets a new, isolated Durable Object namespace:\nhttps://developers.cloudflare.com/workers/previews/resources/#durable-objects",
 			"This Worker uses Containers. They are not included in the suggested Preview configuration.\nFollow the setup instructions so each Preview automatically gets a new, isolated Container app and state:\nhttps://developers.cloudflare.com/workers/previews/resources/#containers",
 		]);
-		expect(result.blocksDeployment).toBe(true);
 	});
 
 	test("returns an empty nonblocking aggregate", ({ expect }) => {
 		expect(convertPreviewSettings({}, topLevelSettings(), true)).toEqual({
 			config: {},
 			messages: [],
-			blocksDeployment: false,
+			blockingDeploymentMessages: [],
 		});
 	});
 

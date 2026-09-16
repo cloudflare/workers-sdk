@@ -32,13 +32,21 @@ export type PreviewTopLevelSettings = {
 };
 
 export type PreviewSettingConversion =
-	| { config: PreviewsConfig; message?: never; blocksDeployment?: never }
-	| { config?: never; message?: string; blocksDeployment: boolean };
+	| {
+			config?: PreviewsConfig;
+			bindingLimitationName?: string;
+			blockDeploymentMessage?: never;
+	  }
+	| {
+			config?: never;
+			bindingLimitationName?: never;
+			blockDeploymentMessage: string;
+	  };
 
 export type ProposedPreviewsConfig = {
 	config: PreviewsConfig;
 	messages: string[];
-	blocksDeployment: boolean;
+	blockingDeploymentMessages: string[];
 };
 
 /** Converts Preview Base API data into local Preview configuration. */
@@ -231,21 +239,27 @@ export function convertTopLevelSetting(
 		case "tail_consumers":
 			if (settings.tail_consumers !== undefined) {
 				converted.tail_consumers = settings.tail_consumers.map(
-					({ service, environment }) => ({
+					({ service }) => ({
 						service: usePlaceholderValue ? REPLACE_ME : service,
-						...(environment !== undefined && {
-							environment: usePlaceholderValue ? REPLACE_ME : environment,
-						}),
 					})
 				);
+				if (
+					settings.tail_consumers.some(
+						({ environment }) => environment !== undefined
+					)
+				) {
+					return {
+						config: converted,
+						bindingLimitationName: "Tail consumer environments",
+					};
+				}
 			}
 			break;
 		case "containers":
 			if (settings.containers !== undefined && settings.containers.length > 0) {
 				return {
-					message:
+					blockDeploymentMessage:
 						"This Worker uses Containers. They are not included in the suggested Preview configuration.\nFollow the setup instructions so each Preview automatically gets a new, isolated Container app and state:\nhttps://developers.cloudflare.com/workers/previews/resources/#containers",
-					blocksDeployment: true,
 				};
 			}
 			break;
@@ -253,12 +267,12 @@ export function convertTopLevelSetting(
 			break;
 		case "queues":
 			if ((settings.queues?.consumers?.length ?? 0) > 0) {
-				return { message: "Queue consumers", blocksDeployment: false };
+				return { bindingLimitationName: "Queue consumers" };
 			}
 			break;
 		case "triggers":
 			if ((settings.triggers?.crons?.length ?? 0) > 0) {
-				return { message: "Cron triggers", blocksDeployment: false };
+				return { bindingLimitationName: "Cron triggers" };
 			}
 			break;
 		default: {
@@ -266,9 +280,7 @@ export function convertTopLevelSetting(
 			throw new Error(`Unexpected Preview setting: ${exhaustiveCheck}`);
 		}
 	}
-	return Object.keys(converted).length > 0
-		? { config: converted }
-		: { blocksDeployment: false };
+	return Object.keys(converted).length > 0 ? { config: converted } : {};
 }
 
 export function convertPreviewSettings(
@@ -277,10 +289,8 @@ export function convertPreviewSettings(
 	usePlaceholderValue: boolean
 ): ProposedPreviewsConfig {
 	const config = new Map<string, unknown>();
-	const messages: Array<string | undefined> = [];
-	const limitationNames = new Set<string>();
-	const emittedMessages = new Set<string>();
-	let blocksDeployment = false;
+	const bindingLimitationNames = new Set<string>();
+	const blockingDeploymentMessages = new Set<string>();
 
 	const conversions = [
 		...Object.entries(bindings).map(([name, binding]) =>
@@ -293,21 +303,13 @@ export function convertPreviewSettings(
 	];
 
 	for (const converted of conversions) {
-		if (converted.config === undefined) {
-			blocksDeployment ||= converted.blocksDeployment;
-			if (converted.message === undefined) {
-				continue;
-			}
-			if (!converted.blocksDeployment) {
-				limitationNames.add(converted.message);
-				if (!messages.includes(undefined)) {
-					messages.push(undefined);
-				}
-			} else if (!emittedMessages.has(converted.message)) {
-				emittedMessages.add(converted.message);
-				messages.push(converted.message);
-			}
-		} else {
+		if (converted.bindingLimitationName !== undefined) {
+			bindingLimitationNames.add(converted.bindingLimitationName);
+		}
+		if (converted.blockDeploymentMessage !== undefined) {
+			blockingDeploymentMessages.add(converted.blockDeploymentMessage);
+		}
+		if (converted.config !== undefined) {
 			for (const [configField, configValue] of Object.entries(
 				converted.config
 			)) {
@@ -363,16 +365,18 @@ export function convertPreviewSettings(
 
 	return {
 		config: Object.fromEntries(config) as PreviewsConfig,
-		messages: messages.map(
-			(message) =>
-				message ??
-				`These settings have limitations in Worker Previews: ${[
-					...limitationNames,
-				].join(
-					", "
-				)}.\nWrangler did not add them automatically. Review the limitations, then decide how you want to configure them for your Preview.\nLearn more: https://developers.cloudflare.com/workers/previews/limitations/`
-		),
-		blocksDeployment,
+		messages: [
+			...(bindingLimitationNames.size === 0
+				? []
+				: [
+						`These settings have limitations in Worker Previews: ${[
+							...bindingLimitationNames,
+						].join(
+							", "
+						)}.\nWrangler did not add them automatically. Review the limitations, then decide how you want to configure them for your Preview.\nLearn more: https://developers.cloudflare.com/workers/previews/limitations/`,
+					]),
+		],
+		blockingDeploymentMessages: [...blockingDeploymentMessages],
 	};
 }
 
@@ -464,12 +468,11 @@ export function convertBinding(
 			break;
 		case "durable_object_namespace":
 			return {
-				message:
+				blockDeploymentMessage:
 					"This Worker uses Durable Objects. They are not included in the suggested Preview configuration.\nFollow the setup instructions so each Preview automatically gets a new, isolated Durable Object namespace:\nhttps://developers.cloudflare.com/workers/previews/resources/#durable-objects",
-				blocksDeployment: true,
 			};
 		case "workflow":
-			return { message: "Workflows", blocksDeployment: false };
+			return { bindingLimitationName: "Workflows" };
 		case "queue":
 			if (binding.queue_name === undefined) {
 				break;
@@ -542,7 +545,7 @@ export function convertBinding(
 			};
 			break;
 		case "service":
-			return { message: "Service Bindings", blocksDeployment: false };
+			return { bindingLimitationName: "Service Bindings" };
 		case "analytics_engine":
 			config = {
 				analytics_engine_datasets: [
@@ -696,5 +699,5 @@ export function convertBinding(
 		default:
 			break;
 	}
-	return config === undefined ? { blocksDeployment: false } : { config };
+	return config === undefined ? {} : { config };
 }

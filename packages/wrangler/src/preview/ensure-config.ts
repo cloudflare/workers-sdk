@@ -122,7 +122,7 @@ export async function ensurePreviewsConfig(
 
 	const baseConversion: ProposedPreviewsConfig = baseConfig
 		? convertPreviewBaseToPreviewsConfig(baseConfig)
-		: { config: {}, messages: [], blocksDeployment: false };
+		: { config: {}, messages: [], blockingDeploymentMessages: [] };
 	const hasPreviewBase = hasConfiguredFields(baseConfig);
 	const proposedConfig = hasPreviewBase
 		? baseConversion.config
@@ -135,7 +135,12 @@ export async function ensurePreviewsConfig(
 		configPath
 	);
 	const conversionMessages = [
-		...new Set([...productionConversion.messages, ...baseConversion.messages]),
+		...new Set([
+			...productionConversion.messages,
+			...productionConversion.blockingDeploymentMessages,
+			...baseConversion.messages,
+			...baseConversion.blockingDeploymentMessages,
+		]),
 	];
 	if (!hasPreviewBase && containsGeneratedPlaceholder(proposedConfig)) {
 		conversionMessages.push(
@@ -161,8 +166,8 @@ export async function ensurePreviewsConfig(
 		missingPreviewsConfigParagraphs.join("\n");
 
 	if (
-		productionConversion.blocksDeployment ||
-		baseConversion.blocksDeployment
+		productionConversion.blockingDeploymentMessages.length > 0 ||
+		baseConversion.blockingDeploymentMessages.length > 0
 	) {
 		logConversionMessages(conversionMessages, args.json);
 		throw new UserError(missingPreviewsConfigMessage, {
