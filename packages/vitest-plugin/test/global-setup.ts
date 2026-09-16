@@ -27,8 +27,16 @@ export default async function ({ provide }: TestProject) {
 		console.log("Closing down local npm registry");
 		await stop();
 
+		const owners = (await fs.readdir(projectPath)).filter((name) =>
+			name.startsWith("watch-owner-")
+		);
+		if (owners.length > 0) {
+			throw new Error(
+				`Watch cleanup is unresolved; retained ${projectPath}: ${owners.join(", ")}`
+			);
+		}
 		console.log("Cleaning up temporary directory...");
-		void removeDir(projectPath, { fireAndForget: true });
+		await removeDir(projectPath);
 	};
 }
 
