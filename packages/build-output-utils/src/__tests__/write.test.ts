@@ -12,11 +12,13 @@ import {
 	BUILD_OUTPUT_ROOT,
 	getContainerConfigPath,
 	getSettingsConfigPath,
+	getWorkerAssetsDir,
 	getWorkerConfigPath,
 } from "../paths";
 import {
 	cleanBuildOutputDir,
 	writeContainerConfig,
+	writeAssets,
 	writeSettingsConfig,
 	writeWorkerConfig,
 } from "../write";
@@ -207,5 +209,54 @@ describe("cleanBuildOutputDir", () => {
 
 		await cleanBuildOutputDir(root);
 		expect(fs.existsSync(outputDir)).toBe(false);
+	});
+});
+
+describe("writeAssets", () => {
+	runInTempDir();
+
+	it("copies an asset directory into the build output", async ({ expect }) => {
+		const root = process.cwd();
+		const sourceDirectory = path.join(root, "public");
+		fs.mkdirSync(sourceDirectory);
+		fs.writeFileSync(path.join(sourceDirectory, "index.html"), "hello");
+
+		await writeAssets({ root, sourceDirectory });
+
+		expect(
+			fs.readFileSync(path.join(getWorkerAssetsDir(root), "index.html"), "utf8")
+		).toBe("hello");
+	});
+
+	it("omits .cloudflare when the project root contains the assets", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.writeFileSync(path.join(root, "index.html"), "hello");
+		await writeSettingsConfig(root, parsedSettingsConfig);
+
+		await writeAssets({ root, sourceDirectory: root });
+
+		const assetsDir = getWorkerAssetsDir(root);
+		expect(fs.readFileSync(path.join(assetsDir, "index.html"), "utf8")).toBe(
+			"hello"
+		);
+		expect(fs.existsSync(path.join(assetsDir, ".cloudflare"))).toBe(false);
+	});
+
+	it("preserves files already generated in the build output", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.writeFileSync(path.join(root, "index.html"), "source");
+		const assetsDir = getWorkerAssetsDir(root);
+		fs.mkdirSync(assetsDir, { recursive: true });
+		fs.writeFileSync(path.join(assetsDir, "index.html"), "generated");
+
+		await writeAssets({ root, sourceDirectory: root });
+
+		expect(fs.readFileSync(path.join(assetsDir, "index.html"), "utf8")).toBe(
+			"generated"
+		);
 	});
 });

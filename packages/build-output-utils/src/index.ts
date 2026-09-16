@@ -16,10 +16,12 @@ export {
 export {
 	cleanBuildOutputDir,
 	writeContainerConfig,
+	writeAssets,
 	writeSettingsConfig,
 	writeWorkerConfig,
 } from "./write";
 export type {
+	WriteAssetsOptions,
 	WriteContainerConfigOptions,
 	WriteWorkerConfigOptions,
 } from "./write";
