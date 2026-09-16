@@ -1,17 +1,22 @@
+import {
+	cleanupBuiltImages,
+	initContainersSharedContext,
+} from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
+	getDockerPath,
+	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
 	isNonInteractiveOrCI,
 } from "@cloudflare/workers-utils";
-import { analyseBundle } from "../check/commands";
-import { buildContainer } from "../containers/build";
-import { getNormalizedContainerOptions } from "../containers/config";
-import { deployContainers } from "../containers/deploy";
-import {
-	deployDurableObjectContainerApplications,
-	prepareDurableObjectContainerApplications,
-} from "../containers/durable-object-applications";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
+import {
+	buildDeployContainerImages,
+	buildDurableObjectContainerImages,
+} from "../deployment-bundle/build-container-images";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -198,18 +203,30 @@ export async function runDeployCommandHandler(
 
 		const buildResult = await buildWorker(buildProps, config);
 
+		initContainersSharedContext({
+			logger,
+			fetchPagedListResult,
+			fetchResult,
+		});
+		props.containers.standard.builtImages =
+			await buildDeployContainerImages(props);
+		props.containers.durableObjects.builtImages =
+			await buildDurableObjectContainerImages(props, config);
+		if (
+			!props.dryRun &&
+			props.containersRollout !== "none" &&
+			(props.containers.standard.normalized.length > 0 ||
+				getDurableObjectContainerApps(props.containers.source).length > 0)
+		) {
+			await fillOpenAPIConfiguration(config, containersScope);
+		}
+
 		const { sourceMapSize, assetUploadStats } = await deploy(
 			props,
 			config,
 			buildResult,
 			{
 				syncWorkersSite,
-				getNormalizedContainerOptions,
-				buildContainer,
-				deployContainers,
-				prepareDurableObjectContainerApplications,
-				deployDurableObjectContainerApplications,
-				analyseBundle,
 			}
 		);
 
@@ -226,6 +243,19 @@ export async function runDeployCommandHandler(
 			}
 		);
 	} finally {
+		if (
+			props.containers.standard.builtImages.length > 0 ||
+			props.containers.durableObjects.builtImages.length > 0
+		) {
+			const dockerPath = getDockerPath();
+			await cleanupBuiltImages(
+				[
+					...props.containers.standard.builtImages,
+					...props.containers.durableObjects.builtImages,
+				],
+				dockerPath
+			);
+		}
 		cleanupDestination(buildProps.destination);
 	}
 }

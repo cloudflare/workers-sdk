@@ -95,7 +95,6 @@ export type ConfigBindingFieldName =
 	| "vectorize"
 	| "ai_search_namespaces"
 	| "ai_search"
-	| "websearch"
 	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
@@ -136,7 +135,6 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	websearch: "Web Search",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
@@ -195,7 +193,6 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	websearch: "Web Search",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
@@ -1860,16 +1857,6 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateAISearchBinding),
 			[]
 		),
-		websearch: notInheritable(
-			diagnostics,
-			topLevelEnv,
-			rawConfig,
-			rawEnv,
-			envName,
-			"websearch",
-			validateNamedSimpleBinding(envName),
-			undefined
-		),
 		agent_memory: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3423,7 +3410,6 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
-			"websearch",
 			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",
@@ -3733,8 +3719,42 @@ function validateDurableObjectContainerImages(
 			}
 		}
 
+		const isDockerfileBuild = hasDockerfile && !hasImage;
+		if (isDockerfileBuild) {
+			if (
+				image.build_context !== undefined &&
+				(typeof image.build_context !== "string" ||
+					image.build_context.length === 0)
+			) {
+				diagnostics.errors.push(
+					`"${imageField}.build_context" must be a non-empty string.`
+				);
+				valid = false;
+			}
+			if (
+				image.build_vars !== undefined &&
+				(typeof image.build_vars !== "object" ||
+					image.build_vars === null ||
+					Array.isArray(image.build_vars) ||
+					Object.values(image.build_vars).some(
+						(value) => typeof value !== "string"
+					))
+			) {
+				diagnostics.errors.push(
+					`"${imageField}.build_vars" must be an object with string values.`
+				);
+				valid = false;
+			}
+		}
+
 		const unsupportedFields = Object.keys(image).filter(
-			(property) => property !== "dockerfile" && property !== "image"
+			(property) =>
+				property !== "dockerfile" &&
+				property !== "image" &&
+				!(
+					isDockerfileBuild &&
+					(property === "build_context" || property === "build_vars")
+				)
 		);
 		if (unsupportedFields.length > 0) {
 			diagnostics.errors.push(
@@ -3747,6 +3767,46 @@ function validateDurableObjectContainerImages(
 	}
 
 	return valid;
+}
+
+function validateDurableObjectContainerUnsafe(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): void {
+	if (value === undefined) {
+		return;
+	}
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(`"${field}" should be an object.`);
+		return;
+	}
+	const unsafe = value as Record<string, unknown>;
+	const configuration = unsafe.configuration;
+	if (
+		Object.keys(unsafe).some((key) => key !== "configuration") ||
+		(configuration !== undefined &&
+			(typeof configuration !== "object" ||
+				configuration === null ||
+				Array.isArray(configuration) ||
+				Object.keys(configuration).some((key) => key !== "experimental_flags")))
+	) {
+		diagnostics.errors.push(
+			`Only "${field}.configuration.experimental_flags" is supported for Durable Object-managed Containers.`
+		);
+		return;
+	}
+	if (configuration !== undefined) {
+		const flags = (configuration as Record<string, unknown>).experimental_flags;
+		if (
+			flags !== undefined &&
+			(!Array.isArray(flags) || flags.some((flag) => typeof flag !== "string"))
+		) {
+			diagnostics.errors.push(
+				`"${field}.configuration.experimental_flags" should be an array of strings.`
+			);
+		}
+	}
 }
 
 function validateContainerApp(
@@ -3778,19 +3838,16 @@ function validateContainerApp(
 				typeof containerAppOptional.class_name === "string" &&
 				containerAppOptional.class_name.length > 0;
 
-			if (isDurableObjectManaged) {
-				if (!hasValidDurableObjectClassName) {
-					diagnostics.errors.push(
-						`"containers.class_name" must be a non-empty string when "containers.scheduling_policy" is "durable_object".`
-					);
-				}
-			} else {
-				validateOptionalProperty(
-					diagnostics,
-					field,
-					"class_name",
-					containerAppOptional.class_name,
-					"string"
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"class_name",
+				containerAppOptional.class_name,
+				"string"
+			);
+			if (isDurableObjectManaged && containerAppOptional.class_name === "") {
+				diagnostics.errors.push(
+					`"containers.class_name" must be a non-empty string when specified for a Durable Object-managed Container.`
 				);
 			}
 
@@ -3806,7 +3863,9 @@ function validateContainerApp(
 			if (
 				generateDefaultName &&
 				!containerAppOptional.name &&
-				(!isDurableObjectManaged || hasValidDurableObjectClassName)
+				(!isDurableObjectManaged ||
+					containerAppOptional.class_name === undefined ||
+					hasValidDurableObjectClassName)
 			) {
 				// The default name is derived from the class name, so without one there
 				// is nothing to derive it from. Such a container must be linked to a
@@ -3838,13 +3897,41 @@ function validateContainerApp(
 					containerAppOptional.images,
 					options.complianceConfig
 				);
+				validateContainerObservability(
+					diagnostics,
+					`${field}.observability`,
+					containerAppOptional.observability,
+					config
+				);
+				if (
+					containerAppOptional.observability?.target_instance_count !==
+						undefined ||
+					containerAppOptional.observability?.target_instance_percentage !==
+						undefined
+				) {
+					diagnostics.errors.push(
+						`"${field}.observability" only supports enabling or disabling logs for Durable Object-managed Containers; instance targeting is not supported.`
+					);
+				}
+				validateDurableObjectContainerUnsafe(
+					diagnostics,
+					`${field}.unsafe`,
+					containerAppOptional.unsafe
+				);
 				const unsupportedFields = Object.keys(containerAppOptional).filter(
 					(key) =>
-						!["name", "class_name", "scheduling_policy", "images"].includes(key)
+						![
+							"name",
+							"class_name",
+							"scheduling_policy",
+							"images",
+							"observability",
+							"unsafe",
+						].includes(key)
 				);
 				if (unsupportedFields.length > 0) {
 					diagnostics.errors.push(
-						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", and "images" are supported.`
+						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", "images", "observability", and restricted "unsafe" settings are supported.`
 					);
 				}
 				continue;
@@ -6145,6 +6232,8 @@ const validatePreviewsConfig =
 				"d1_databases",
 				"r2_buckets",
 				"vectorize",
+				"ai_search_namespaces",
+				"ai_search",
 				"hyperdrive",
 				"services",
 				"analytics_engine_datasets",
@@ -6250,6 +6339,22 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.vectorize`,
 				previews.vectorize,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAISearchNamespaceBinding)(
+				diagnostics,
+				`${field}.ai_search_namespaces`,
+				previews.ai_search_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAISearchBinding)(
+				diagnostics,
+				`${field}.ai_search`,
+				previews.ai_search,
 				undefined
 			) && isValid;
 

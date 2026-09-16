@@ -106,7 +106,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			await writeBuildOutputWorkerConfig({
 				root: builder.config.root,
 				config: workerConfig,
-				workerDirectoryName,
+				directoryName: workerDirectoryName,
 			});
 			return;
 		}
@@ -128,7 +128,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				mainModule: entryChunk.file,
 				modules: collectAdditionalModules(builder, environmentName, bundleDir),
 			},
-			workerDirectoryName,
+			directoryName: workerDirectoryName,
 		});
 	}
 

@@ -1,4 +1,7 @@
-import { CONTAINER_IMAGES_BINDING } from "@cloudflare/workers-utils";
+import {
+	CONTAINER_IMAGES_BINDING,
+	defaultWranglerConfig,
+} from "@cloudflare/workers-utils";
 import { describe, it, vi } from "vitest";
 import {
 	getContainerMetadata,
@@ -9,61 +12,129 @@ import type {
 	ApiDeployment,
 	ApiVersion,
 } from "../src/deploy/helpers/versions-types";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInit,
+	Config,
+	ContainerApp,
+	DurableObjectContainerApp,
+} from "@cloudflare/workers-utils";
 
 vi.mock("../src/deploy/helpers/versions-api");
+
+function containerConfig(
+	options: {
+		containerMetadataConfig?: CfWorkerInit["containers"];
+		durableObjectContainerConfig?: DurableObjectContainerApp[];
+	} = {}
+) {
+	const metadata = Object.hasOwn(options, "containerMetadataConfig")
+		? options.containerMetadataConfig
+		: [];
+	return metadata === undefined
+		? undefined
+		: [
+				...(metadata as ContainerApp[]),
+				...(options.durableObjectContainerConfig ?? []),
+			];
+}
 
 describe("getContainerMetadata", () => {
 	it("returns undefined when container configuration is absent", ({
 		expect,
 	}) => {
-		expect(getContainerMetadata({} as Config)).toBeUndefined();
+		expect(
+			getContainerMetadata(
+				containerConfig({ containerMetadataConfig: undefined })
+			)
+		).toBeUndefined();
 	});
 
 	it("returns an empty list when container configuration is explicitly empty", ({
 		expect,
 	}) => {
-		expect(
-			getContainerMetadata({ containers: [] } as unknown as Config)
-		).toEqual([]);
+		expect(getContainerMetadata(containerConfig({}))).toEqual([]);
+	});
+
+	it("includes standard container metadata", ({ expect }) => {
+		const metadata = getContainerMetadata(
+			containerConfig({
+				containerMetadataConfig: [
+					{
+						class_name: "Scheduled",
+						name: "scheduled-app",
+					},
+				],
+			})
+		);
+
+		expect(metadata).toEqual([
+			{ name: "scheduled-app", class_name: "Scheduled" },
+		]);
+	});
+
+	it("preserves standard container metadata without an explicit class name", ({
+		expect,
+	}) => {
+		const metadata = getContainerMetadata(
+			containerConfig({
+				containerMetadataConfig: [{ name: "scheduled-app" }],
+			})
+		);
+
+		expect(metadata).toEqual([{ name: "scheduled-app" }]);
 	});
 
 	it("includes the resolved name when no Durable Object-managed images are configured", ({
 		expect,
 	}) => {
-		const metadata = getContainerMetadata({
-			containers: [
-				{
-					class_name: "Sandbox",
-					name: "sandbox-app",
-					scheduling_policy: "durable_object",
-				},
-			],
-		} as unknown as Config);
-
-		expect(metadata).toEqual([{ name: "sandbox-app", class_name: "Sandbox" }]);
-	});
-
-	it("includes prepared named images for Durable Object-managed containers", ({
-		expect,
-	}) => {
 		const metadata = getContainerMetadata(
-			{
-				containers: [
+			containerConfig({
+				durableObjectContainerConfig: [
 					{
 						class_name: "Sandbox",
 						name: "sandbox-app",
 						scheduling_policy: "durable_object",
-						images: {
-							sandbox: { dockerfile: "./container/Dockerfile" },
-						},
 					},
 				],
-			} as unknown as Config,
+			})
+		);
+
+		expect(metadata).toEqual([{ name: "sandbox-app", class_name: "Sandbox" }]);
+	});
+
+	it("resolves managed export links while preserving scheduler metadata and order", ({
+		expect,
+	}) => {
+		const containers: ContainerApp[] = [
+			{
+				name: "sandbox-app",
+				scheduling_policy: "durable_object",
+				images: {
+					sandbox: { dockerfile: "./container/Dockerfile" },
+				},
+			},
+			{ name: "scheduled-app", image: "./Dockerfile" },
+		];
+		const metadata = getContainerMetadata(
+			containers,
 			{
 				Sandbox: {
 					sandbox:
 						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			},
+			{
+				exports: {
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "sandbox-app",
+					},
+					Scheduled: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "scheduled-app",
+					},
 				},
 			}
 		);
@@ -77,15 +148,17 @@ describe("getContainerMetadata", () => {
 						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 				},
 			},
+			{ name: "scheduled-app" },
 		]);
+		expect(containers[0].class_name).toBeUndefined();
 	});
 
 	it("keeps Durable Object metadata without images when preparation is skipped", ({
 		expect,
 	}) => {
 		const metadata = getContainerMetadata(
-			{
-				containers: [
+			containerConfig({
+				durableObjectContainerConfig: [
 					{
 						class_name: "Sandbox",
 						name: "sandbox-app",
@@ -95,7 +168,7 @@ describe("getContainerMetadata", () => {
 						},
 					},
 				],
-			} as unknown as Config,
+			}),
 			{},
 			{ allowUnprepared: true }
 		);
@@ -152,8 +225,9 @@ describe("getContainerMetadataForRolloutSkip", () => {
 		};
 	}
 	function recover(config: Config, versions: ApiVersion[]) {
+		const { containers, ...workerConfig } = config;
 		vi.mocked(fetchVersions).mockResolvedValue(versions);
-		return getContainerMetadataForRolloutSkip(config, {
+		return getContainerMetadataForRolloutSkip(workerConfig, containers, {
 			accountId: "account",
 			scriptName: "worker",
 			dispatchNamespace: undefined,
@@ -235,13 +309,17 @@ describe("getContainerMetadataForRolloutSkip", () => {
 		"rejects an existing Worker without recoverable deployed versions: %j",
 		async (latestDeployment, { expect }) => {
 			await expect(
-				getContainerMetadataForRolloutSkip({} as Config, {
-					accountId: "account",
-					scriptName: "worker",
-					dispatchNamespace: undefined,
-					workerExists: true,
-					latestDeployment,
-				})
+				getContainerMetadataForRolloutSkip(
+					{} as Config,
+					containerConfig({ containerMetadataConfig: undefined }),
+					{
+						accountId: "account",
+						scriptName: "worker",
+						dispatchNamespace: undefined,
+						workerExists: true,
+						latestDeployment,
+					}
+				)
 			).rejects.toThrow("deployed Container metadata could not be recovered");
 			expect(fetchVersions).not.toHaveBeenCalled();
 		}
@@ -249,13 +327,17 @@ describe("getContainerMetadataForRolloutSkip", () => {
 
 	it("rejects an existing Worker without an account ID", async ({ expect }) => {
 		await expect(
-			getContainerMetadataForRolloutSkip({} as Config, {
-				accountId: undefined,
-				scriptName: "worker",
-				dispatchNamespace: undefined,
-				workerExists: true,
-				latestDeployment: undefined,
-			})
+			getContainerMetadataForRolloutSkip(
+				{} as Config,
+				containerConfig({ containerMetadataConfig: undefined }),
+				{
+					accountId: undefined,
+					scriptName: "worker",
+					dispatchNamespace: undefined,
+					workerExists: true,
+					latestDeployment: undefined,
+				}
+			)
 		).rejects.toThrow("deployed Container metadata could not be recovered");
 	});
 
@@ -268,15 +350,24 @@ describe("getContainerMetadataForRolloutSkip", () => {
 		async (options, { expect }) => {
 			const result = await getContainerMetadataForRolloutSkip(
 				{
-					containers: [
+					...defaultWranglerConfig,
+					exports: {
+						Sandbox: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "sandbox",
+						},
+					},
+				},
+				containerConfig({
+					durableObjectContainerConfig: [
 						{
 							name: "sandbox",
-							class_name: "Sandbox",
 							scheduling_policy: "durable_object",
 							images: { app: { dockerfile: "./Dockerfile" } },
 						},
 					],
-				} as unknown as Config,
+				}),
 				{
 					...options,
 					scriptName: "worker",
@@ -310,7 +401,6 @@ describe("getContainerMetadataForRolloutSkip", () => {
 				{
 					containers: [
 						{
-							class_name: "Added",
 							name: "added-app",
 							scheduling_policy: "durable_object",
 							images: { app: { dockerfile: "./Dockerfile" } },

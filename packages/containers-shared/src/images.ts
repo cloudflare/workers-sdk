@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils/errors";
-import { buildImage } from "./build";
+import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
@@ -152,7 +152,17 @@ export async function prepareContainerImagesForDev(args: {
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
-			const build = await buildImage(dockerPath, options, false);
+			const build = await startContainerBuild({
+				pathToDocker: dockerPath,
+				verifyDockerIsRunning: false,
+				build: {
+					tag: options.image_tag,
+					pathToDockerfile: options.dockerfile,
+					buildContext: options.image_build_context,
+					args: options.image_vars,
+					platform: "linux/amd64",
+				},
+			});
 			onContainerImagePreparationStart({
 				containerOptions: options,
 				abort: () => {
