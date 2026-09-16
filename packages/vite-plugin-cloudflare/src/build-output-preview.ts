@@ -4,7 +4,11 @@ import {
 } from "@cloudflare/build-output-utils";
 import { convertToWranglerConfig } from "@cloudflare/config";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
-import type { ModuleType } from "@cloudflare/config";
+import type {
+	ModuleType,
+	ParsedInputContainerConfig,
+	ParsedOutputContainerConfig,
+} from "@cloudflare/config";
 import type { Unstable_Config } from "wrangler";
 
 export interface Bundle {
@@ -34,17 +38,25 @@ export async function readBuildOutputWorkers(
 	// settings (`account_id`, `compliance_region`) shared by every Worker. It
 	// also carries the `mode` the build ran in, which `convertToWranglerConfig`
 	// ignores — preview does not act on it yet.
-	const { workers, settings } = await readBuildOutput(root);
+	const { workers, settings, containers } = await readBuildOutput(root);
 	const worker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
 
 	const { manifest, ...inputShape } = worker.config;
-	const rawConfig = convertToWranglerConfig(inputShape, settings);
+	const rawConfig = convertToWranglerConfig(
+		inputShape,
+		settings,
+		Object.values(containers).map(({ config }) =>
+			convertOutputContainerToInput(config)
+		)
+	);
 
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		undefined,
 		undefined,
-		{},
+		// Build Output preview does not consume Container images yet. Include
+		// their configs for reference validation, but do not prepare them locally.
+		{ enableContainers: false },
 		true
 	);
 
@@ -73,4 +85,39 @@ export async function readBuildOutputWorkers(
 	}
 
 	return [{ source: "build-output", config, bundle }];
+}
+
+type OutputContainerImage = Extract<
+	ParsedOutputContainerConfig,
+	{ image: unknown }
+>["image"];
+
+function convertOutputContainerToInput(
+	config: ParsedOutputContainerConfig
+): ParsedInputContainerConfig {
+	if (config.schedulingPolicy === "durable-object") {
+		return {
+			...config,
+			images:
+				config.images === undefined
+					? undefined
+					: Object.fromEntries(
+							Object.entries(config.images).map(([name, image]) => [
+								name,
+								convertOutputContainerImage(image),
+							])
+						),
+		};
+	}
+
+	return {
+		...config,
+		image: convertOutputContainerImage(config.image),
+	};
+}
+
+function convertOutputContainerImage(image: OutputContainerImage) {
+	return {
+		reference: "reference" in image ? image.reference : image.localReference,
+	};
 }
