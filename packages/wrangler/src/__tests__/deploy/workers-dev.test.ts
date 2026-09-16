@@ -858,7 +858,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should sync workers.dev when granular auth prevents the account subdomain lookup", async ({
+		it("should get the workers.dev URL from the Worker resource", async ({
 			expect,
 		}) => {
 			vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "output.json");
@@ -867,25 +867,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: false });
 			mockUpdateWorkerSubdomain({ enabled: true });
-			msw.use(
-				http.get("*/accounts/:accountId/workers/subdomain", () =>
-					HttpResponse.json(
-						createFetchResult(null, false, [
-							{ code: 10000, message: "Authentication error" },
-						]),
-						{ status: 403 }
-					)
-				)
-			);
-
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toContain("Uploaded test-name");
 			expect(std.out).toContain("Current Version ID");
-			expect(std.out).not.toContain("test-sub-domain.workers.dev");
 			expect(std.out).toContain("Deployed test-name triggers");
 			expect(std.out).toContain(
-				"workers.dev (hostname unavailable to this API token)"
+				"https://test-name.test-sub-domain.workers.dev"
 			);
 			expect(std.out).not.toContain("No targets deployed");
 			expect(std.err).toBe("");
@@ -897,7 +885,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			expect(
 				outputEntries.find((entry) => entry.type === "deploy")
 			).toMatchObject({
-				targets: [],
+				targets: ["https://test-name.test-sub-domain.workers.dev"],
 			});
 		});
 
@@ -945,7 +933,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			});
 			writeWorkerSource();
 			mockUploadWorkerRequest();
-			mockGetWorkerSubdomain({ enabled: false });
+			mockGetWorkerSubdomain({ enabled: false, subdomain: false });
 			mockSubDomainRequest("does-not-exist", false);
 
 			mockConfirm({
@@ -984,8 +972,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				writeWorkerSource();
 				mockWorkerDoesNotExist();
 				// The account-level subdomain lookup reports "not registered" until we
-				// register one, then succeeds for the post-upload triggers lookup.
-				mockSubDomainRequest("test-sub-domain", true, false);
+				// register one before upload.
 				mockSubDomainRequest("test-sub-domain", false, true);
 				mockUploadWorkerRequest({ useOldUploadApi: true });
 
@@ -1109,6 +1096,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					expectedScriptName: "agent-project-name",
 					useOldUploadApi: true,
 				});
+				mockGetWorkerSubdomain({
+					enabled: true,
+					expectedScriptName: "agent-project-name",
+					subdomain: "agent-project-name",
+				});
 				vi.mocked(detectAgent).mockReturnValue({
 					isAgent: true,
 					id: "test-agent",
@@ -1181,8 +1173,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockWorkerDoesNotExist();
-				// Fetched once before upload and once for the post-upload triggers.
-				mockSubDomainRequest("test-sub-domain", true, false);
+				// Fetched before upload to confirm that registration is not required.
+				mockSubDomainRequest("test-sub-domain");
 				mockUploadWorkerRequest({ useOldUploadApi: true });
 
 				await runWrangler("deploy ./index");
@@ -1222,6 +1214,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				await runWrangler("deploy ./index");
 
 				expect(std.out).toContain("Uploaded test-name");
+				expect(std.out).toContain(
+					"https://test-name.test-sub-domain.workers.dev"
+				);
 				expect(std.out).toContain("Current Version ID");
 				expect(std.err).toBe("");
 			});
@@ -1822,7 +1817,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			`);
 		});
 
-		it("should preserve the mixed-state warning when granular auth hides the hostname", async ({
+		it("should use the Worker preview URL suffix in mixed-state warnings", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -1833,17 +1828,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			mockUploadWorkerRequest();
 			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
 			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
-			msw.use(
-				http.get("*/accounts/:accountId/workers/subdomain", () =>
-					HttpResponse.json(
-						createFetchResult(null, false, [
-							{ code: 10000, message: "Authentication error" },
-						]),
-						{ status: 403 }
-					)
-				)
-			);
-
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toContain("Uploaded test-name");
@@ -1851,7 +1835,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				"You are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled."
 			);
 			expect(std.warn).toContain(
-				"https://<VERSION_PREFIX>-test-name.<YOUR_SUBDOMAIN>.workers.dev"
+				"https://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev"
 			);
 		});
 

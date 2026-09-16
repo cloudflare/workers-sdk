@@ -2,6 +2,6 @@
 "wrangler": patch
 ---
 
-Allow Worker deployments to continue when granular API tokens cannot read the account's workers.dev subdomain
+Read workers.dev URLs from the Worker resource during deployment
 
-Wrangler now treats the account-level hostname lookup as optional while still applying the requested Worker-scoped subdomain configuration.
+Wrangler no longer requires account-level subdomain permission to display Worker and version-preview URLs. It now uses the Worker-scoped URL fields while preserving account-level registration for accounts without a workers.dev subdomain.

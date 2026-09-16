@@ -17,6 +17,13 @@ type GetWorkersDevSubdomainOptions = {
 	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
 };
 
+export type WorkerSubdomain = {
+	enabled: boolean;
+	previews_enabled: boolean;
+	url?: string;
+	preview_url_suffix?: string;
+};
+
 function toValidSubdomain(input: string): string {
 	const subdomain = input
 		.toLowerCase()
@@ -141,6 +148,19 @@ export async function getWorkersDevSubdomainIfAccessible(
 		options,
 		true
 	);
+}
+
+/** Gets the Worker-scoped subdomain configuration and routable URLs. */
+export async function getWorkerSubdomain(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	workerName: string
+): Promise<WorkerSubdomain> {
+	const worker = await fetchResult<{ subdomain: WorkerSubdomain }>(
+		complianceConfig,
+		`/accounts/${accountId}/workers/workers/${workerName}`
+	);
+	return worker.subdomain;
 }
 
 function getRegistrationWarning(

@@ -21,10 +21,7 @@ import {
 	ensureQueuesExistByConfig,
 	updateQueueConsumers,
 } from "./queue-consumers";
-import {
-	getWorkersDevSubdomain,
-	getWorkersDevSubdomainIfAccessible,
-} from "./subdomain";
+import { getWorkerSubdomain, getWorkersDevSubdomain } from "./subdomain";
 import { getZoneForRoute } from "./zones";
 import type { TriggerDeployment, TriggerProps } from "../shared/types";
 import type { RouteObject } from "./publish-routes";
@@ -79,16 +76,15 @@ export async function triggersDeploy(
 		isWorkflowDefinedInThisScript(workflow, scriptName)
 	);
 
-	const { wantWorkersDev, workersDevHostnameUnavailable, workersDevInSync } =
-		await subdomainDeploy(
-			props,
-			accountId,
-			scriptName,
-			workerUrl,
-			routes,
-			deployments,
-			props.firstDeploy
-		);
+	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
+		props,
+		accountId,
+		scriptName,
+		workerUrl,
+		routes,
+		deployments,
+		props.firstDeploy
+	);
 
 	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
 		// TODO is this true? How does last subdomain status affect route confict??
@@ -486,13 +482,10 @@ export async function triggersDeploy(
 			// Append protocol only on workers.dev domains
 			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
 		);
-	if (targets.length > 0 || workersDevHostnameUnavailable) {
+	if (targets.length > 0) {
 		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
 		for (const target of targets) {
 			logger.log(" ", target);
-		}
-		if (workersDevHostnameUnavailable) {
-			logger.log(" ", "workers.dev (hostname unavailable to this API token)");
 		}
 	} else {
 		logger.log("No targets deployed for", workerName, formatTime(deployMs));
@@ -642,18 +635,15 @@ export function getSubdomainValuesAPIMock(
 }
 
 async function validateSubdomainMixedState(
-	props: TriggerProps,
-	accountId: string,
 	scriptName: string,
 	before: { workers_dev: boolean; preview_urls: boolean },
 	after: { workers_dev: boolean; preview_urls: boolean },
+	previewURLSuffix: string | undefined,
 	firstDeploy: boolean
 ): Promise<{
 	workers_dev: boolean;
 	preview_urls: boolean;
 }> {
-	const { config } = props;
-
 	const changed =
 		after.workers_dev !== before.workers_dev ||
 		after.preview_urls !== before.preview_urls;
@@ -683,15 +673,8 @@ async function validateSubdomainMixedState(
 		return after;
 	}
 
-	const userSubdomain = await getWorkersDevSubdomainIfAccessible(
-		config,
-		accountId,
-		{
-			configPath: config.configPath,
-		}
-	);
-	const previewUrl = userSubdomain
-		? `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`
+	const previewUrl = previewURLSuffix
+		? `https://<VERSION_PREFIX>${previewURLSuffix}`
 		: `https://<VERSION_PREFIX>-${scriptName}.<YOUR_SUBDOMAIN>.workers.dev`;
 
 	// Scenario 1: User disables workers.dev while having preview URLs enabled
@@ -738,28 +721,21 @@ async function subdomainDeploy(
 
 	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
 		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
-	let workersDevHostnameUnavailable = false;
+	const before = await getWorkerSubdomain(config, accountId, scriptName);
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {
-		const userSubdomain = await getWorkersDevSubdomainIfAccessible(
-			config,
-			accountId,
-			{ configPath: config.configPath }
-		);
-		workersDevHostnameUnavailable = !userSubdomain;
+		const workersDevHostname = before.url
+			? new URL(before.url).hostname
+			: `${scriptName}.${await getWorkersDevSubdomain(config, accountId, {
+					configPath: config.configPath,
+				})}`;
 		deployments.push(
 			Promise.resolve({
-				targets: userSubdomain ? [`${scriptName}.${userSubdomain}`] : [],
+				targets: [workersDevHostname],
 			})
 		);
 	}
-
-	// Get current subdomain enablement status.
-	const before = await fetchResult<{
-		enabled: boolean;
-		previews_enabled: boolean;
-	}>(config, `${workerUrl}/subdomain`);
 
 	// Update subdomain status.
 	// Occasionally this update to the subdomain endpoint fails due to some internal API error,
@@ -826,17 +802,15 @@ async function subdomainDeploy(
 
 	// Warn about mixed status.
 	await validateSubdomainMixedState(
-		props,
-		accountId,
 		scriptName,
 		{ workers_dev: before.enabled, preview_urls: before.previews_enabled },
 		{ workers_dev: after.enabled, preview_urls: after.previews_enabled },
+		before.preview_url_suffix,
 		firstDeploy
 	);
 
 	return {
 		wantWorkersDev,
-		workersDevHostnameUnavailable,
 		wantPreviews,
 		workersDevInSync: before.enabled === after.enabled,
 		previewsInSync: before.previews_enabled === after.previews_enabled,

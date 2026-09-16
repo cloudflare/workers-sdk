@@ -431,20 +431,10 @@ describe("versions upload", () => {
 		`);
 	});
 
-	test("should succeed when granular auth prevents the preview hostname lookup", async () => {
+	test("should get the preview URL suffix from the Worker resource", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
 		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
-		msw.use(
-			http.get("*/accounts/:accountId/workers/subdomain", () =>
-				HttpResponse.json(
-					createFetchResult(null, false, [
-						{ code: 10000, message: "Authentication error" },
-					]),
-					{ status: 403 }
-				)
-			)
-		);
 		writeWranglerConfig({ name: "test-name", main: "./index.js" });
 		writeWorkerSource();
 		setIsTTY(false);
@@ -452,7 +442,9 @@ describe("versions upload", () => {
 		await expect(runWrangler("versions upload")).resolves.toBeUndefined();
 
 		expect(std.out).toContain("Worker Version ID:");
-		expect(std.out).not.toContain("Version Preview URL:");
+		expect(std.out).toContain(
+			"Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
+		);
 	});
 
 	test("should allow specifying --preview-alias", async () => {
