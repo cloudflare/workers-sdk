@@ -1,0 +1,21 @@
+packages/miniflare/src/plugins/core/proxy/fetch-sync.ts
+  s_fc36f18452e668::t_368bb1dff2a3b8 135-136,184
+packages/miniflare/test/plugins/core/proxy/fetch-sync.spec.ts
+  s_fc36f18452e668::t_c156c6ca99f794 87-91,112-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c532391bec764adffaaf97be4e8beb7a8373a0cf",
+  "prompts": {},
+  "sessions": {
+    "s_fc36f18452e668": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "e3ea84fc-760f-4788-9110-99abc43167eb",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Christopher Little-Savage <clittle-savage@cloudflare.com>"
+    }
+  }
+}
