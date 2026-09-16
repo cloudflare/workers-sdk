@@ -11,6 +11,7 @@ import type {
 } from "./bindings";
 import type { Pipeline } from "cloudflare:pipelines";
 
+// TODO: Replace this with the runtime type once cloudflare/workerd#7396 is merged.
 interface AnalyticsSQLBinding {
 	query<T extends Record<string, unknown> = Record<string, unknown>>(request: {
 		query: string;
