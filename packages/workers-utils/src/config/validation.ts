@@ -7274,7 +7274,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	let isValid = true;
 
 	/**
-	 * One of observability.enabled, observability.logs.enabled, observability.traces.enabled must be defined
+	 * At least one observability feature's enabled flag must be defined.
 	 */
 	isValid =
 		validateAtLeastOnePropertyRequired(diagnostics, field, [
@@ -7291,6 +7291,11 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			{
 				key: "traces.enabled",
 				value: val.traces?.enabled,
+				type: "boolean",
+			},
+			{
+				key: "issues.enabled",
+				value: val.issues?.enabled,
 				type: "boolean",
 			},
 		]) && isValid;
@@ -7314,6 +7319,15 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"issues",
+			val.issues,
+			"object"
+		) && isValid;
+
+	isValid =
 		validateOptionalProperty(diagnostics, field, "logs", val.logs, "object") &&
 		isValid;
 
@@ -7331,9 +7345,28 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			"enabled",
 			"head_sampling_rate",
 			"redact_query_string",
+			"issues",
 			"logs",
 			"traces",
 		]) && isValid;
+
+	if (typeof val.issues === "object") {
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				`${field}.issues`,
+				"enabled",
+				val.issues.enabled,
+				"boolean"
+			) && isValid;
+		isValid =
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.issues`,
+				Object.keys(val.issues),
+				["enabled"]
+			) && isValid;
+	}
 
 	/**
 	 * Validate the optional nested logs configuration

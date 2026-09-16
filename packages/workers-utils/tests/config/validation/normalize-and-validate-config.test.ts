@@ -1459,6 +1459,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected "observability.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.traces.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.issues.enabled" to be of type boolean but got undefined.
 				  - Expected "observability.head_sampling_rate" to be of type number but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.head_sampling_rate" to be of type number but got "INVALID".
@@ -12611,7 +12612,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.issues.enabled" is required.
 					  - Expected "observability.head_sampling_rate" to be of type number but got true.
 					  - Expected "observability.redact_query_string" to be of type boolean but got "true"."
 				`);

@@ -1915,6 +1915,11 @@ export interface Observability {
 	 * @default false
 	 */
 	redact_query_string?: boolean;
+	/** Real-time Issues settings for this Worker. */
+	issues?: {
+		/** Whether real-time Issues are enabled. */
+		enabled?: boolean;
+	};
 	logs?: {
 		enabled?: boolean;
 		/** The sampling rate */
