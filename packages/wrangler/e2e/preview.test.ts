@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { waitForWorkersDev } from "./helpers/wait-for-workers-dev";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("preview", { timeout: 90_000 }, () => {
 	const workerName = generateResourceName();
@@ -103,7 +104,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				`wrangler preview --name ${previewName} --json`
 			);
 			const output = JSON.parse(stdout);
-			const response = await fetch(output.deployment.urls[0]);
+			const response = await waitForWorkersDev(
+				output.deployment.urls[0],
+				async (candidate) =>
+					(await candidate.clone().text()) ===
+					"Hello from the Preview Durable Object"
+			);
 
 			expect(await response.text()).toBe(
 				"Hello from the Preview Durable Object"
