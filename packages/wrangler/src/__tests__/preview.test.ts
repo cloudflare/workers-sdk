@@ -1346,9 +1346,9 @@ describe("wrangler preview", () => {
 											type: "d1",
 											database_id: "preview-db-canonical-id",
 										},
+										AI: { type: "ai", staging: true },
 									},
 								});
-								expect(deployment.env).not.toHaveProperty("AI");
 								expect(deployment.env).not.toHaveProperty("SERVICE");
 								expect(JSON.stringify(deployment)).not.toContain(
 									"must-not-be-printed"
@@ -1401,6 +1401,7 @@ describe("wrangler preview", () => {
 							placement: { mode: "smart" },
 							cache: { enabled: true },
 							tail_consumers: [{ service: "tail-worker" }],
+							ai: { binding: "AI", staging: true },
 							vars: {
 								ENVIRONMENT: "preview",
 								EMPTY_OBJECT: {},

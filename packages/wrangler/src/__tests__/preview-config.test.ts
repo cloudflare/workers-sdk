@@ -40,7 +40,7 @@ describe("Preview configuration conversion", () => {
 				TEXT: { type: "plain_text", text: "production-text" },
 				JSON: { type: "json", json: { source: "production-json" } },
 				BROWSER: { type: "browser" },
-				AI: { type: "ai" },
+				AI: { type: "ai", staging: true },
 				IMAGES: { type: "images" },
 				STREAM: { type: "stream" },
 				VERSION: { type: "version_metadata" },
@@ -58,6 +58,14 @@ describe("Preview configuration conversion", () => {
 				},
 				D1: { type: "d1", database_id: "production-database" },
 				VECTOR: { type: "vectorize", index_name: "production-index" },
+				AI_SEARCH_NAMESPACE: {
+					type: "ai_search_namespace",
+					namespace: "production-search-namespace",
+				},
+				AI_SEARCH: {
+					type: "ai_search",
+					instance_name: "production-search-instance",
+				},
 				HYPERDRIVE: { type: "hyperdrive", id: "production-hyperdrive" },
 				ANALYTICS: { type: "analytics_engine", dataset: "production-dataset" },
 				DISPATCH: {
@@ -109,6 +117,8 @@ describe("Preview configuration conversion", () => {
 			"r2_buckets",
 			"d1_databases",
 			"vectorize",
+			"ai_search_namespaces",
+			"ai_search",
 			"hyperdrive",
 			"analytics_engine_datasets",
 			"dispatch_namespaces",
@@ -126,6 +136,7 @@ describe("Preview configuration conversion", () => {
 		]);
 		expect(result.config).toMatchObject({
 			vars: { TEXT: "<REPLACE_ME>", JSON: "<REPLACE_ME>" },
+			ai: { binding: "AI", staging: true },
 			kv_namespaces: [{ binding: "KV", id: "<REPLACE_ME>" }],
 			r2_buckets: [
 				{
@@ -137,6 +148,10 @@ describe("Preview configuration conversion", () => {
 			queues: {
 				producers: [{ binding: "QUEUE", queue: "<REPLACE_ME>" }],
 			},
+			ai_search_namespaces: [
+				{ binding: "AI_SEARCH_NAMESPACE", namespace: "<REPLACE_ME>" },
+			],
+			ai_search: [{ binding: "AI_SEARCH", instance_name: "<REPLACE_ME>" }],
 			define: { API_URL: "<REPLACE_ME>" },
 			placement: { mode: "smart", hint: "<REPLACE_ME>" },
 			tail_consumers: [{ service: "<REPLACE_ME>" }],
@@ -194,7 +209,6 @@ describe("Preview configuration conversion", () => {
 			{ type: "data_blob" },
 			{ type: "assets" },
 			{ type: "unknown" },
-			{ type: "ai", staging: true },
 			{ type: "kv_namespace" },
 		];
 
@@ -244,6 +258,27 @@ describe("Preview configuration conversion", () => {
 		expect(convertTopLevelSetting(settings, "triggers", true)).toEqual({
 			bindingLimitationName: "Cron triggers",
 		});
+		expect(
+			convertTopLevelSetting(
+				topLevelSettings({
+					triggers: {
+						events: [
+							{
+								type: "cf.artifacts.repo.created",
+								targets: [
+									{
+										type: "workflow",
+										workflow_name: "production-workflow",
+									},
+								],
+							},
+						],
+					},
+				}),
+				"triggers",
+				true
+			)
+		).toEqual({ bindingLimitationName: "Artifacts event triggers" });
 	});
 
 	test("omits tail consumer environments and reports their limitation", ({
@@ -329,6 +364,7 @@ describe("Preview configuration conversion", () => {
 	}) => {
 		expect(
 			getProductionBindingsExpectedInPreview({
+				ai: { binding: "AI", staging: false },
 				kv_namespaces: [{ binding: "KV", id: "production-kv" }],
 				services: [{ binding: "SERVICE", service: "production-service" }],
 				durable_objects: {
@@ -337,6 +373,7 @@ describe("Preview configuration conversion", () => {
 				assets: { binding: "ASSETS", directory: "public" },
 			} as Config)
 		).toEqual({
+			AI: { type: "ai", staging: false },
 			KV: { type: "kv_namespace", namespace_id: "production-kv" },
 		});
 	});
@@ -359,7 +396,8 @@ describe("Preview configuration conversion", () => {
 					enabled: false,
 					head_sampling_rate: null,
 				},
-			} as Parameters<typeof convertPreviewBaseToPreviewsConfig>[0]).config
+			} as unknown as Parameters<typeof convertPreviewBaseToPreviewsConfig>[0])
+				.config
 		).toEqual({ observability: { enabled: false } });
 
 		expect(

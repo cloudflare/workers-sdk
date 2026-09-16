@@ -270,11 +270,21 @@ export function convertTopLevelSetting(
 				return { bindingLimitationName: "Queue consumers" };
 			}
 			break;
-		case "triggers":
-			if ((settings.triggers?.crons?.length ?? 0) > 0) {
-				return { bindingLimitationName: "Cron triggers" };
+		case "triggers": {
+			const hasCrons = (settings.triggers?.crons?.length ?? 0) > 0;
+			const hasEvents = (settings.triggers?.events?.length ?? 0) > 0;
+			if (hasCrons || hasEvents) {
+				return {
+					bindingLimitationName:
+						hasCrons && hasEvents
+							? "Cron and Artifacts event triggers"
+							: hasCrons
+								? "Cron triggers"
+								: "Artifacts event triggers",
+				};
 			}
 			break;
+		}
 		default: {
 			const exhaustiveCheck: never = setting;
 			throw new Error(`Unexpected Preview setting: ${exhaustiveCheck}`);
@@ -412,10 +422,14 @@ export function convertBinding(
 			config = { browser: { binding: name } };
 			break;
 		case "ai":
-			if (binding.staging !== undefined) {
-				break;
-			}
-			config = { ai: { binding: name } };
+			config = {
+				ai: {
+					binding: name,
+					...(binding.staging !== undefined && {
+						staging: binding.staging,
+					}),
+				},
+			};
 			break;
 		case "images":
 			config = { images: { binding: name } };
@@ -527,6 +541,34 @@ export function convertBinding(
 					{
 						binding: name,
 						index_name: usePlaceholderValue ? REPLACE_ME : binding.index_name,
+					},
+				],
+			};
+			break;
+		case "ai_search_namespace":
+			if (binding.namespace === undefined) {
+				break;
+			}
+			config = {
+				ai_search_namespaces: [
+					{
+						binding: name,
+						namespace: usePlaceholderValue ? REPLACE_ME : binding.namespace,
+					},
+				],
+			};
+			break;
+		case "ai_search":
+			if (binding.instance_name === undefined) {
+				break;
+			}
+			config = {
+				ai_search: [
+					{
+						binding: name,
+						instance_name: usePlaceholderValue
+							? REPLACE_ME
+							: binding.instance_name,
 					},
 				],
 			};
