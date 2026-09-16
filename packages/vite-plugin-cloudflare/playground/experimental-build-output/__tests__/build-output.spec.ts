@@ -147,7 +147,13 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(contents).toMatchObject({
 			type: "container",
 			name: "build-output-api",
-			image: { reference: "registry.example.com/api:latest" },
+			schedulingPolicy: "durable-object",
+			images: {
+				api: {
+					reference:
+						"registry.cloudflare.com/account/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			},
 		});
 	});
 });

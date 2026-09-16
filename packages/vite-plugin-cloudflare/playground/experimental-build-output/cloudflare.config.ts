@@ -6,9 +6,13 @@ import {
 } from "@cloudflare/vite-plugin/experimental-config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
+const MANAGED_IMAGE_REFERENCE =
+	"registry.cloudflare.com/account/api@sha256:" + "a".repeat(64);
+
 export const apiContainer = defineContainer({
 	name: "build-output-api",
-	image: { reference: "registry.example.com/api:latest" },
+	schedulingPolicy: "durable-object",
+	images: { api: { reference: MANAGED_IMAGE_REFERENCE } },
 });
 
 export default defineWorker({
