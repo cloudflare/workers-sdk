@@ -13,7 +13,7 @@
 // `forward`/`reply` event (correlated by `messageId`). This lets consumers
 // render a timeline while still having the details on hand.
 
-import { z } from "zod";
+import { z } from "miniflare:zod";
 import {
 	zEmailCaptureOrigin,
 	zEmailHeaders,
