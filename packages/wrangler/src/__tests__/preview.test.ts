@@ -1235,6 +1235,9 @@ describe("wrangler preview", () => {
 									database_id: "production-database-id",
 								},
 							],
+							durable_objects: {
+								bindings: [{ name: "DO", class_name: "ProductionDO" }],
+							},
 						},
 						configPath
 					);
@@ -1388,6 +1391,12 @@ describe("wrangler preview", () => {
 					);
 					expect(std.warn.replace(/\s+/g, " ")).toContain(
 						"Wrangler did not add them automatically. Review the limitations, then decide how you want to configure them for your Preview."
+					);
+					expect(std.warn).not.toContain(
+						"Replace each <REPLACE_ME> placeholder with a Preview-safe value."
+					);
+					expect(std.warn).not.toContain(
+						"This Worker uses Durable Objects. They are not included in the suggested Preview configuration."
 					);
 					expect(`${std.out}${std.info}${std.warn}${std.err}`).not.toContain(
 						"must-not-be-printed"
@@ -2124,6 +2133,54 @@ describe("wrangler preview", () => {
 			);
 		});
 
+		test.for([
+			{
+				name: "Durable Objects",
+				config: {
+					durable_objects: {
+						bindings: [{ name: "DO", class_name: "ProductionDO" }],
+					},
+				},
+				warning: "This Worker uses Durable Objects.",
+			},
+			{
+				name: "Containers",
+				config: {
+					containers: [
+						{
+							class_name: "ContainerDO",
+							image: "registry.cloudflare.com/account/image:latest",
+						},
+					],
+					durable_objects: {
+						bindings: [{ name: "CONTAINER", class_name: "ContainerDO" }],
+					},
+				},
+				warning: "This Worker uses Containers.",
+			},
+		])(
+			"uses blocking lead-in with generated Preview configuration for $name",
+			async ({ config, warning }, { expect }) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						kv_namespaces: [{ binding: "KV", id: "production-kv" }],
+						...config,
+					},
+					"wrangler.json"
+				);
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --ignore-base-config"
+					)
+				).rejects.toThrow("needs a `previews` block to run this command");
+
+				expect(std.warn).toContain(warning);
+			}
+		);
+
 		test("emits one combined unsupported-settings warning", async ({
 			expect,
 		}) => {
@@ -2175,60 +2232,6 @@ describe("wrangler preview", () => {
 							message.startsWith("Replace each <REPLACE_ME>"))
 				);
 			expect(conversionWarnings).toHaveLength(2);
-		});
-
-		test("does not let Preview Base suppress Durable Object guidance", async ({
-			expect,
-		}) => {
-			writeWranglerConfig(
-				{
-					name: "test-worker",
-					main: "src/index.ts",
-					durable_objects: {
-						bindings: [{ name: "DO", class_name: "ProductionDO" }],
-					},
-				},
-				"wrangler.json"
-			);
-			msw.use(
-				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
-					HttpResponse.json({
-						success: true,
-						result: {
-							previews_base_config: {
-								env: {
-									DO: {
-										type: "durable_object_namespace",
-										class_name: "PreviewDO",
-										script_name: "preview-do-worker",
-										environment: "staging",
-									},
-								},
-							},
-						},
-					})
-				)
-			);
-			let deploymentRequests = 0;
-			mockContainerPreview({
-				previewId: "preview-durable-object-blocked",
-				onCreateDeployment: () => deploymentRequests++,
-			});
-
-			let thrown: unknown;
-			try {
-				await runWrangler("preview --name test-preview");
-			} catch (error) {
-				thrown = error;
-			}
-
-			expect(thrown).toBeInstanceOf(Error);
-			expect((thrown as Error).message).toContain("needs a `previews` block");
-			expect((thrown as Error).message).not.toContain("durable_objects");
-			expect(std.warn.replace(/\s+/g, " ")).toContain(
-				"This Worker uses Durable Objects. They are not included in the suggested Preview configuration."
-			);
-			expect(deploymentRequests).toBe(0);
 		});
 
 		test("should not warn about top-level bindings when they are present in local previews config", async ({

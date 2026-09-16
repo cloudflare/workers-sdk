@@ -124,9 +124,11 @@ export async function ensurePreviewsConfig(
 		? convertPreviewBaseToPreviewsConfig(baseConfig)
 		: { config: {}, messages: [], blockingDeploymentMessages: [] };
 	const hasPreviewBase = hasConfiguredFields(baseConfig);
-	const proposedConfig = hasPreviewBase
-		? baseConversion.config
-		: productionConversion.config;
+	// preview base configuration takes precedence over local config for warnings, printed output, etc
+	const selectedConversion = hasPreviewBase
+		? baseConversion
+		: productionConversion;
+	const proposedConfig = selectedConversion.config;
 	const proposedConfigPatch: RawConfig = config.targetEnvironment
 		? { env: { [config.targetEnvironment]: { previews: proposedConfig } } }
 		: { previews: proposedConfig };
@@ -136,10 +138,8 @@ export async function ensurePreviewsConfig(
 	);
 	const conversionMessages = [
 		...new Set([
-			...productionConversion.messages,
-			...productionConversion.blockingDeploymentMessages,
-			...baseConversion.messages,
-			...baseConversion.blockingDeploymentMessages,
+			...selectedConversion.messages,
+			...selectedConversion.blockingDeploymentMessages,
 		]),
 	];
 	if (!hasPreviewBase && containsGeneratedPlaceholder(proposedConfig)) {
@@ -149,10 +149,12 @@ export async function ensurePreviewsConfig(
 	}
 
 	const hasEmptyProposedConfig = Object.keys(proposedConfig).length === 0;
+	const hasBlockingDeploymentMessages =
+		selectedConversion.blockingDeploymentMessages.length > 0;
 	const missingPreviewsConfigParagraphs = [
 		hasEmptyProposedConfig && conversionMessages.length === 0
 			? "Your Wrangler configuration is missing a `previews` block to run this command. Add the following to your configuration file:"
-			: hasEmptyProposedConfig
+			: hasEmptyProposedConfig || hasBlockingDeploymentMessages
 				? "Your Wrangler configuration needs a `previews` block to run this command. Add the following to your configuration file:"
 				: "Your Wrangler configuration is missing a `previews` block. Add the following to your configuration file:",
 		formattedProposedConfig,
@@ -165,10 +167,7 @@ export async function ensurePreviewsConfig(
 	const missingPreviewsConfigMessage =
 		missingPreviewsConfigParagraphs.join("\n");
 
-	if (
-		productionConversion.blockingDeploymentMessages.length > 0 ||
-		baseConversion.blockingDeploymentMessages.length > 0
-	) {
+	if (hasBlockingDeploymentMessages) {
 		logConversionMessages(conversionMessages, args.json);
 		throw new UserError(missingPreviewsConfigMessage, {
 			telemetryMessage: "preview command previews configuration missing",
