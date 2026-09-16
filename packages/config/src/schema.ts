@@ -27,7 +27,7 @@ export const BrowserBindingSchema = z.strictObject({
 });
 
 export const AnalyticsSQLBindingSchema = z.strictObject({
-	type: z.literal("analytics-sql"),
+	type: z.literal("analytics"),
 	dev: RemoteBindingDevSchema.optional(),
 });
 
@@ -300,7 +300,7 @@ const SINGLETON_BINDING_TYPES = new Set([
 	"ai",
 	"assets",
 	"browser",
-	"analytics-sql",
+	"analytics",
 	"images",
 	"media",
 	"stream",

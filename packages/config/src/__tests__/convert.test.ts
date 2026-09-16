@@ -155,7 +155,7 @@ describe("convertToWranglerConfig", () => {
 				env: {
 					MY_AI: { type: "ai" },
 					MY_BROWSER: { type: "browser" },
-					MY_ANALYTICS: { type: "analytics-sql" },
+					MY_ANALYTICS: { type: "analytics" },
 					MY_IMAGES: { type: "images" },
 					MY_MEDIA: { type: "media" },
 					MY_STREAM: { type: "stream" },

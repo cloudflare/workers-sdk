@@ -1,13 +1,13 @@
-import { describe, test } from "vitest";
 import { ANALYTICS_SQL_PLUGIN, ProxyNodeBinding } from "miniflare";
+import { describe, test } from "vitest";
 
 function workerOptions(bindings = true) {
 	return {
 		config: {
 			env: bindings
 				? {
-						ANALYTICS: { type: "analytics-sql" },
-						SECOND_ANALYTICS: { type: "analytics-sql" },
+						ANALYTICS: { type: "analytics" },
+						SECOND_ANALYTICS: { type: "analytics" },
 					}
 				: {},
 		},

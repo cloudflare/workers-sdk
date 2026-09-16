@@ -638,7 +638,7 @@ function addProductBindings(
 	}
 	for (const [name, binding] of Object.entries(worker.analyticsSql ?? {})) {
 		env[name] = {
-			type: "analytics-sql",
+			type: "analytics",
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}

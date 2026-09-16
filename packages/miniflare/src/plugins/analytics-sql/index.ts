@@ -14,7 +14,7 @@ const ANALYTICS_SQL_REMOTE_SERVICE_NAME = "analytics-sql:remote";
 export const ANALYTICS_SQL_PLUGIN: Plugin = {
 	bindingTypeDescription: "Analytics SQL",
 	async getBindings(options) {
-		return getEnvBindingsOfType(options.config, "analytics-sql").map(
+		return getEnvBindingsOfType(options.config, "analytics").map(
 			([name, binding]) => ({
 				name,
 				service: {
@@ -29,14 +29,14 @@ export const ANALYTICS_SQL_PLUGIN: Plugin = {
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(
-			getEnvBindingsOfType(options.config, "analytics-sql").map(([name]) => [
+			getEnvBindingsOfType(options.config, "analytics").map(([name]) => [
 				name,
 				new ProxyNodeBinding(),
 			])
 		);
 	},
 	async getServices({ options }) {
-		if (getEnvBindingsOfType(options.config, "analytics-sql").length === 0) {
+		if (getEnvBindingsOfType(options.config, "analytics").length === 0) {
 			return [];
 		}
 

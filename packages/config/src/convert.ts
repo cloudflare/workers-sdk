@@ -453,7 +453,7 @@ function convertBindingsAndAssets(
 				});
 				break;
 			}
-			case "analytics-sql": {
+			case "analytics": {
 				result.analytics = omitUndefined({
 					binding: name,
 					remote: binding.dev?.remote,

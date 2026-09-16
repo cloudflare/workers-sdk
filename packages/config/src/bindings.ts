@@ -150,7 +150,7 @@ interface AnalyticsSQLBindingOptions {
 
 /** An Analytics SQL binding. */
 export interface AnalyticsSQLBinding extends AnalyticsSQLBindingOptions {
-	type: "analytics-sql";
+	type: "analytics";
 }
 
 interface D1BindingOptions {
@@ -917,7 +917,7 @@ export const bindings = {
 	text: (value) => ({ type: "text", value }),
 	vectorize: (options) => ({ type: "vectorize", ...options }),
 	versionMetadata: () => ({ type: "version-metadata" }),
-	analyticsSQL: (options) => ({ type: "analytics-sql", ...options }),
+	analyticsSQL: (options) => ({ type: "analytics", ...options }),
 	vpcService: (options) => ({ type: "vpc-service", ...options }),
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),

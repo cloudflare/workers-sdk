@@ -111,7 +111,7 @@ interface BindingTypeMap<TBinding> {
 	"ai-search": AiSearchInstance;
 	"ai-search-namespace": AiSearchNamespace;
 	"analytics-engine-dataset": AnalyticsEngineDataset;
-	"analytics-sql": AnalyticsSQLBinding;
+	analytics: AnalyticsSQLBinding;
 	artifacts: Artifacts;
 	assets: Fetcher;
 	browser: BrowserRun;
