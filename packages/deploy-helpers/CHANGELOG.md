@@ -1,5 +1,19 @@
 # @cloudflare/deploy-helpers
 
+## 0.12.1
+
+### Patch Changes
+
+- [#15655](https://github.com/cloudflare/workers-sdk/pull/15655) [`be2437a`](https://github.com/cloudflare/workers-sdk/commit/be2437a8b32215dc404266c930db148fc3feb17b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Send exports with Worker Preview deployments
+
+  `wrangler preview` dropped the `exports` block from deployment requests. Durable Objects reached through `ctx.exports` had no Preview namespace, and cache settings for each entrypoint were lost too.
+
+- Updated dependencies [[`71b6f10`](https://github.com/cloudflare/workers-sdk/commit/71b6f102f258e14e2b1dc23e9643cc74685d35cb), [`ad23e6e`](https://github.com/cloudflare/workers-sdk/commit/ad23e6e42dc81c9dc894248e787ed6c0abbe9028), [`6f3d7b5`](https://github.com/cloudflare/workers-sdk/commit/6f3d7b58b1f6cd036aca3e5946807bba37776065), [`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513)]:
+  - miniflare@5.20260916.0-alpha
+  - @cloudflare/workers-utils@0.39.1
+  - @cloudflare/cli-shared-helpers@0.1.32
+  - @cloudflare/containers-shared@0.16.4
+
 ## 0.12.0
 
 ### Minor Changes
