@@ -775,4 +775,78 @@ describe("handleWebSocket", () => {
 		expect(unhandled).not.toHaveBeenCalled();
 		socket.destroy();
 	});
+
+	test("destroys sole-listener upgrades the Worker does not route", async ({
+		expect,
+	}) => {
+		// No other listener exists, so an unrouted upgrade has no possible
+		// owner: the deferred teardown must destroy it, or the socket would
+		// dangle forever and hang httpServer.close().
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const socket = await connect();
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+
+		socket.write(
+			"GET /nothing-here HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
+	});
+
+	test("upgrades Worker routes on reused keep-alive connections", async ({
+		expect,
+	}) => {
+		// bytesWritten counts the whole socket lifetime, so the claimed check
+		// must baseline at upgrade time: a 200 served earlier on the same
+		// keep-alive connection must not read as another listener 101.
+		await listen();
+
+		const socket = await connect();
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		// Ordinary request first: the server answers 200 on this connection.
+		socket.write(
+			`GET / HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nConnection: keep-alive\r\n\r\n`
+		);
+		await vi.waitFor(
+			() => {
+				expect(Buffer.concat(chunks).toString("utf8")).toContain("200 OK");
+			},
+			{ timeout: 10_000 }
+		);
+
+		// Then upgrade on the SAME socket: the Worker (default script answers
+		// 101 to everything) must still upgrade despite the earlier bytes.
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		socket.destroy();
+	});
 });
