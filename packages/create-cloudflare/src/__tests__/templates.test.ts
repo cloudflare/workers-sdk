@@ -9,6 +9,10 @@ import { getAgentsMd } from "../agents-md";
 import {
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
+	filterTemplatesByLanguage,
+	getFrameworkMap,
+	getHelloWorldTemplateMap,
+	getOtherTemplateMap,
 	updatePackageName,
 	writeAgentsMd,
 } from "../templates";
@@ -196,6 +200,97 @@ describe("deriveCorrelatedArgs", () => {
 		).toThrow(
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument"
 		);
+	});
+});
+
+describe("filterTemplatesByLanguage", () => {
+	test("should keep every template when no language is specified", ({
+		expect,
+	}) => {
+		const templates = getOtherTemplateMap({});
+
+		expect(
+			Object.keys(filterTemplatesByLanguage(templates, undefined))
+		).toEqual(Object.keys(templates));
+	});
+
+	test("should keep a TypeScript template that has no language variants", ({
+		expect,
+	}) => {
+		// The OpenAPI template ships a single `./ts` directory rather than js/ts
+		// variants, so it has no variant key for `--lang ts` to match against.
+		const filtered = filterTemplatesByLanguage(getOtherTemplateMap({}), "ts");
+
+		expect(Object.keys(filtered)).toContain("openapi");
+	});
+
+	test("should keep TypeScript frameworks that have no language variants", ({
+		expect,
+	}) => {
+		// Most frameworks scaffold the application with their own CLI and only
+		// overlay Cloudflare-specific files, so they have no variants either.
+		const filtered = Object.keys(
+			filterTemplatesByLanguage(getFrameworkMap({}), "ts")
+		);
+
+		expect(filtered).toEqual(
+			expect.arrayContaining([
+				"hono",
+				"next",
+				"nuxt",
+				"react-router",
+				"svelte",
+				"vike",
+			])
+		);
+	});
+
+	test("should drop TypeScript-only templates when JavaScript is requested", ({
+		expect,
+	}) => {
+		expect(
+			Object.keys(filterTemplatesByLanguage(getOtherTemplateMap({}), "js"))
+		).not.toContain("openapi");
+		expect(
+			Object.keys(filterTemplatesByLanguage(getFrameworkMap({}), "js"))
+		).not.toContain("react-router");
+	});
+
+	test("should drop templates that cannot be created in Python", ({
+		expect,
+	}) => {
+		// The Application Starter templates are all JavaScript or TypeScript, so
+		// `--lang python` leaves that category empty and C3 reports it as such.
+		expect(
+			Object.keys(filterTemplatesByLanguage(getOtherTemplateMap({}), "python"))
+		).toEqual([]);
+
+		const frameworks = Object.keys(
+			filterTemplatesByLanguage(getFrameworkMap({}), "python")
+		);
+
+		expect(frameworks).not.toContain("hono");
+		expect(frameworks).not.toContain("next");
+		expect(frameworks).not.toContain("react-router");
+	});
+
+	test("should keep the templates that declare a Python variant", ({
+		expect,
+	}) => {
+		const filtered = Object.keys(
+			filterTemplatesByLanguage(getHelloWorldTemplateMap({}), "python")
+		);
+
+		expect(filtered).toEqual(
+			expect.arrayContaining([
+				"hello-world",
+				"hello-world-with-assets",
+				"hello-world-durable-object",
+				"hello-world-durable-object-with-assets",
+			])
+		);
+		expect(filtered).not.toContain("hello-world-workflows");
+		expect(filtered).not.toContain("common");
 	});
 });
 
