@@ -486,16 +486,16 @@ export async function triggersDeploy(
 			// Append protocol only on workers.dev domains
 			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
 		);
-	if (targets.length > 0) {
+	if (targets.length > 0 || workersDevHostnameUnavailable) {
 		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
 		for (const target of targets) {
 			logger.log(" ", target);
 		}
+		if (workersDevHostnameUnavailable) {
+			logger.log(" ", "workers.dev (hostname unavailable to this API token)");
+		}
 	} else {
 		logger.log("No targets deployed for", workerName, formatTime(deployMs));
-	}
-	if (workersDevHostnameUnavailable) {
-		logger.log("The workers.dev hostname is unavailable to this API token.");
 	}
 
 	const customDomainDeployment = completedDeployments.find(

@@ -883,9 +883,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			expect(std.out).toContain("Uploaded test-name");
 			expect(std.out).toContain("Current Version ID");
 			expect(std.out).not.toContain("test-sub-domain.workers.dev");
+			expect(std.out).toContain("Deployed test-name triggers");
 			expect(std.out).toContain(
-				"The workers.dev hostname is unavailable to this API token."
+				"workers.dev (hostname unavailable to this API token)"
 			);
+			expect(std.out).not.toContain("No targets deployed");
 			expect(std.err).toBe("");
 
 			const outputEntries = readFileSync("output.json", "utf8")
