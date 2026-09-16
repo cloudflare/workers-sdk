@@ -714,4 +714,65 @@ describe("handleWebSocket", () => {
 		expect(closed).toBe(false);
 		socket.destroy();
 	});
+
+	test("leaves the socket alone when dispatchFetch rejects with another listener present", async ({
+		expect,
+	}) => {
+		// Rejection (e.g. Miniflare disposed on dev server restart) is not
+		// proof that no owner exists: another listener may yet finish a
+		// viable handshake on this socket. The bystander below ignores the
+		// path, so the socket simply survives; the test tracks and destroys
+		// the server-side socket itself so afterEach never hangs on an
+		// upgrade that received no response.
+		const mf = await listen();
+
+		const serverSockets = new Set<net.Socket>();
+		httpServer.on("connection", (socket) => {
+			serverSockets.add(socket);
+			socket.on("close", () => serverSockets.delete(socket));
+		});
+		onTestFinished(() => {
+			for (const socket of serverSockets) {
+				socket.destroy();
+			}
+		});
+		httpServer.on("upgrade", (request) => {
+			if (request.url === "/__devtools/__ws") {
+				// Bystander: present but never claims.
+			}
+		});
+
+		vi.spyOn(mf, "dispatchFetch").mockRejectedValue(
+			new Error("Cannot use disposed instance")
+		);
+
+		const unhandled = vi.fn();
+		process.on("unhandledRejection", unhandled);
+		onTestFinished(() => {
+			process.off("unhandledRejection", unhandled);
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Give the rejection handler time to run: it must leave the socket
+		// open and swallow the rejection.
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		expect(unhandled).not.toHaveBeenCalled();
+		socket.destroy();
+	});
 });
