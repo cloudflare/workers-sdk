@@ -12648,8 +12648,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \"observability.enabled\" or \"observability.logs.enabled\" or \"observability.traces.enabled\" or \"observability.issues.enabled\" is required.
-					  - \"observability.issues\" should be an object but got null."
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.issues.enabled" is required.
+					  - "observability.issues" should be an object but got null."
 				`);
 			});
 
