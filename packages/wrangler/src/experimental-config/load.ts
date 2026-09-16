@@ -146,7 +146,8 @@ export async function loadNewConfig(options: {
 	// ── Conversion + merge ──────────────────────────────────────────────
 	const rawWorkerConfig: RawConfig = convertToWranglerConfig(
 		parsedConfig.worker,
-		parsedConfig.settings
+		parsedConfig.settings,
+		Object.values(parsedConfig.containers)
 	);
 
 	const rawWranglerConfig = convertToolingConfig(

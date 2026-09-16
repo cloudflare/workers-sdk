@@ -261,6 +261,41 @@ describe("loadNewConfig", () => {
 			expect(result.parsedConfig.containers).not.toHaveProperty("other");
 		});
 
+		it("includes referenced Container exports in the raw config", async ({
+			expect,
+		}) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export const api = { type: "container", name: "api", image: { reference: "registry.example.com/api:latest" } };
+					export default {
+						type: "worker",
+						name: "primary",
+						compatibilityDate: "2026-05-18",
+						exports: {
+							ApiContainer: { type: "durable-object", storage: "sqlite", container: api },
+						},
+					};
+				`,
+			});
+
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(result.rawConfig.exports).toEqual({
+				ApiContainer: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "api",
+				},
+			});
+			expect(result.rawConfig.containers).toEqual([
+				{
+					name: "api",
+					image: "registry.example.com/api:latest",
+					max_instances: 20,
+				},
+			]);
+		});
+
 		it("throws when there is no default worker export", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts": 'export const settings = { type: "settings" };',
