@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.72.9
+
+### Patch Changes
+
+- [#15666](https://github.com/cloudflare/workers-sdk/pull/15666) [`6d37984`](https://github.com/cloudflare/workers-sdk/commit/6d37984c644a98d48651ba2e77731d38bf019012) Thanks [@NuroDev](https://github.com/NuroDev)! - Prevent the common template's proxy and redirect examples from accepting arbitrary destinations
+
+  The examples now use fixed destinations that developers can change in the generated source instead of destinations supplied by unauthenticated requests.
+
 ## 2.72.8
 
 ### Patch Changes
