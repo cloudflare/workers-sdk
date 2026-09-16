@@ -470,6 +470,7 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- Preserve legacy service environments in Preview API payloads.
 			environment: service.environment,
 			entrypoint: service.entrypoint,
 			...(crossAccountGrant !== undefined && {
