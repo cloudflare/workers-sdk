@@ -11,6 +11,7 @@ export type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
+	AnalyticsSQLBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,

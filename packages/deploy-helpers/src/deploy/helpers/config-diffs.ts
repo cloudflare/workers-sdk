@@ -51,6 +51,7 @@ const reorderableBindings = {
 	text_blobs: false,
 	data_blobs: false,
 	browser: false,
+	analytics: false,
 	ai: false,
 	images: false,
 	stream: false,
@@ -252,6 +253,7 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	const singleBindingFields = [
 		"browser",
+		"analytics",
 		"ai",
 		"images",
 		"stream",
