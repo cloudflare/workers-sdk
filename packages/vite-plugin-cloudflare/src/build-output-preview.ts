@@ -96,18 +96,12 @@ function convertOutputContainerToInput(
 	config: ParsedOutputContainerConfig
 ): ParsedInputContainerConfig {
 	if (config.schedulingPolicy === "durable-object") {
-		return {
-			...config,
-			images:
-				config.images === undefined
-					? undefined
-					: Object.fromEntries(
-							Object.entries(config.images).map(([name, image]) => [
-								name,
-								convertOutputContainerImage(image),
-							])
-						),
-		};
+		// Preview does not run Containers. Keep the application metadata so
+		// Worker export references can be validated, but omit named images: a
+		// locally built output image cannot be represented by Wrangler's remote,
+		// managed-registry-only `images.<name>.image` field.
+		const { images: _images, ...container } = config;
+		return container;
 	}
 
 	return {
