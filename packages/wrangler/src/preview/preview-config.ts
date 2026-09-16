@@ -429,6 +429,9 @@ export function convertBinding(
 		case "browser":
 			config = { browser: { binding: name } };
 			break;
+		case "analytics":
+			config = { analytics: { binding: name } };
+			break;
 		case "ai":
 			config = {
 				ai: {
