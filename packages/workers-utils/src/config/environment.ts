@@ -1456,7 +1456,7 @@ export interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
-	 * An account-scoped Analytics SQL binding.
+	 * An Analytics SQL binding.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
