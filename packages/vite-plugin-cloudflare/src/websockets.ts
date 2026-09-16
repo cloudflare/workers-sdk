@@ -160,13 +160,14 @@ export function handleWebSocket(
 					}
 				);
 			} catch {
-				// `dispatchFetch` rejects if Miniflare is disposed mid-upgrade (e.g.
-				// dev server restart). This listener is `async`, so an uncaught
-				// rejection would crash Node and leak the socket — tear it down, but
-				// only if no other listener claimed it in the meantime and no other
-				// listener could still own it (see hadOtherListeners above): a
-				// rejection is not proof of disposal, and another listener may yet
-				// finish a viable handshake on this socket.
+				// `dispatchFetch` can reject mid-upgrade (e.g. when Miniflare is
+				// disposed on dev server restart). This listener is `async`, so
+				// an uncaught rejection would crash Node and leak the socket.
+				// Tear it down, but only if no other listener claimed it in
+				// the meantime and no other listener could still own it (see
+				// hadOtherListeners above): a rejection is not proof of
+				// disposal, and another listener may yet finish a viable
+				// handshake on this socket.
 				workerResponseHeaders.delete(request);
 				if (!socket.destroyed && !isClaimed() && !hadOtherListeners) {
 					socket.destroy();
