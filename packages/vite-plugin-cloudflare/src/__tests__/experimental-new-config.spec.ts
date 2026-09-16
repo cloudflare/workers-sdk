@@ -512,6 +512,51 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		]);
 	});
 
+	test("includes Durable Object-managed Container exports in the resolved Worker config", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		fs.writeFileSync(path.join(tempDir, "Dockerfile"), "FROM scratch\n");
+		writeWorkerConfig(
+			[
+				"import { defineContainer, defineWorker, exports as workerExports } from '@cloudflare/config';",
+				"export const app = defineContainer({",
+				"  name: 'fixture-app',",
+				"  schedulingPolicy: 'durable-object',",
+				"  images: { tools: { dockerfile: './Dockerfile' } },",
+				"});",
+				"export default defineWorker({",
+				"  name: 'experimental-config-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"  exports: {",
+				"    ContainerDO: workerExports.durableObject({",
+				"      storage: 'sqlite',",
+				"      container: app,",
+				"    }),",
+				"  },",
+				"});",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{ experimental: { newConfig: { cfBuildOutput: true } } },
+			{ root: tempDir },
+			viteBuildEnv
+		)) as WorkersResolvedConfig;
+
+		const worker = result.environmentNameToWorkerMap.get(
+			"experimental_config_worker"
+		);
+		expect(worker?.config.containers).toEqual([
+			{
+				name: "fixture-app",
+				scheduling_policy: "durable_object",
+				images: { tools: { dockerfile: "./Dockerfile" } },
+			},
+		]);
+	});
+
 	test("does not rewrite worker-configuration.d.ts when content is unchanged", async ({
 		expect,
 	}) => {
