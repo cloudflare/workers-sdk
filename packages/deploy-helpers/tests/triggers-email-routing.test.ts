@@ -35,6 +35,11 @@ describe("triggersDeploy Email Routing integration", () => {
 				path: string,
 				init?: RequestInit
 			) => {
+				if (path.endsWith(`/workers/workers/${WORKER_NAME}`)) {
+					return {
+						subdomain: { enabled: false, previews_enabled: false },
+					};
+				}
 				if (path.endsWith("/subdomain")) {
 					return { enabled: false, previews_enabled: false };
 				}
@@ -178,6 +183,11 @@ describe("triggersDeploy preflight", () => {
 				init?: RequestInit
 			) => {
 				fetchResultRequests.push(`${init?.method ?? "GET"} ${path}`);
+				if (path.endsWith(`/workers/workers/${WORKER_NAME}`)) {
+					return {
+						subdomain: { enabled: false, previews_enabled: false },
+					};
+				}
 				if (path.endsWith("/subdomain")) {
 					return { enabled: false, previews_enabled: false };
 				}
@@ -318,7 +328,7 @@ describe("triggersDeploy preflight", () => {
 
 		expect(fetchPagedListRequests).toEqual([]);
 		expect(fetchResultRequests).toEqual([
-			`GET /accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/subdomain`,
+			`GET /accounts/${ACCOUNT_ID}/workers/workers/${WORKER_NAME}`,
 			`POST /accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/subdomain`,
 		]);
 	});
