@@ -24,6 +24,7 @@ import {
 	validateSingletonBindings,
 } from "@cloudflare/config";
 import { z } from "zod";
+import { DOContainerOptionsSchema } from "../plugins/do/options";
 import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
 import {
 	HttpOptions_Style,
@@ -36,7 +37,6 @@ import type {
 	RemoteProxyConnectionString,
 	WorkerdStructuredLog,
 } from "../index";
-import type { DOContainerOptions } from "../plugins/do";
 import type { UnsafeUniqueKey } from "../plugins/shared/constants";
 import type { Log } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
@@ -355,13 +355,13 @@ export const MiniflareDurableObjectExportSchema =
 	DurableObjectCreatedExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
-		container: z.custom<DOContainerOptions>().optional(),
+		container: DOContainerOptionsSchema.optional(),
 	});
 export const MiniflareDurableObjectExpectingTransferExportSchema =
 	DurableObjectExpectingTransferExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
-		container: z.custom<DOContainerOptions>().optional(),
+		container: DOContainerOptionsSchema.optional(),
 	});
 
 // const MiniflareWorkflowExportSchema = z.strictObject({
