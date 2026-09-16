@@ -655,4 +655,63 @@ describe("handleWebSocket", () => {
 		expect(closed).toBe(false);
 		socket.destroy();
 	});
+
+	test("does not destroy sockets owned by a one-shot async upgrade listener", async ({
+		expect,
+	}) => {
+		// A `once("upgrade")` owner is removed before its callback runs, so a
+		// listener count taken after `dispatchFetch` cannot see it. The
+		// presence snapshot is taken synchronously instead, letting a delayed
+		// one-shot owner complete its handshake.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.once("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				setTimeout(() => {
+					owner.handleUpgrade(request, socket, head, (ws) => {
+						owner.emit("connection", ws, request);
+					});
+				}, 300);
+			}
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// The one-shot 101 arrives after its async setup; a post-yield
+		// listener count would have missed the removed owner and destroyed
+		// the socket first.
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
 });
