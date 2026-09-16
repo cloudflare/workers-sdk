@@ -11,6 +11,23 @@ import type {
 } from "./bindings";
 import type { Pipeline } from "cloudflare:pipelines";
 
+interface AnalyticsSQLClient {
+	query<T extends Record<string, unknown> = Record<string, unknown>>(request: {
+		query: string;
+		params?:
+			| readonly (string | number | boolean | null)[]
+			| Readonly<Record<string, string | number | boolean | null>>;
+	}): Promise<{
+		data: T[];
+		rows: number;
+		statistics: {
+			elapsed_ms: number;
+			rows_read: number;
+			bytes_read: number;
+		};
+	}>;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // GENERIC UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -93,6 +110,7 @@ interface BindingTypeMap<TBinding> {
 	"ai-search": AiSearchInstance;
 	"ai-search-namespace": AiSearchNamespace;
 	"analytics-engine-dataset": AnalyticsEngineDataset;
+	"analytics-sql": AnalyticsSQLClient;
 	artifacts: Artifacts;
 	assets: Fetcher;
 	browser: BrowserRun;

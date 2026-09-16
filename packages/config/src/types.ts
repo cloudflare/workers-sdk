@@ -12,6 +12,7 @@ import type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
+	AnalyticsSQLBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,
@@ -71,6 +72,7 @@ type Binding =
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
 	| AnalyticsEngineDatasetBinding
+	| AnalyticsSQLBinding
 	| ArtifactsBinding
 	| AssetsBinding
 	| BrowserBinding

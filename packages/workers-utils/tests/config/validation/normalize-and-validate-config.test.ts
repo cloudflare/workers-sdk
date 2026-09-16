@@ -92,6 +92,7 @@ describe("normalizeAndValidateConfig()", () => {
 			site: undefined,
 			text_blobs: undefined,
 			browser: undefined,
+			analytics: undefined,
 			ai: undefined,
 			version_metadata: undefined,
 			triggers: {
@@ -3548,6 +3549,33 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - The field "browser" should be an object but got null."
 				`);
+			});
+		});
+
+		describe("[analytics]", () => {
+			it("accepts an Analytics SQL binding", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ analytics: { binding: "ANALYTICS" } } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.analytics).toEqual({ binding: "ANALYTICS" });
+			});
+
+			it("requires a binding name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ analytics: {} } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'binding should have a string "binding" field'
+				);
 			});
 		});
 

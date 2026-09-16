@@ -1456,6 +1456,23 @@ export interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
+	 * An account-scoped Analytics SQL binding.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	analytics:
+		| {
+				binding: string;
+				/** Whether the binding should connect to the remote service during local development. */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
 	 * Binding to the AI project.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

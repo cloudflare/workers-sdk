@@ -435,6 +435,7 @@ type WorkerOptionsBindings = Pick<
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
 	| "agentMemory"
+	| "analyticsSql"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -556,6 +557,7 @@ export function buildMiniflareBindingOptions(
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
 	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
+	const analyticsSqlBindings = extractBindingsOfType("analytics", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
@@ -693,6 +695,10 @@ export function buildMiniflareBindingOptions(
 		validateBindingRemoteSetting("agent_memory", memory.remote, logger.warn);
 	}
 
+	for (const analytics of analyticsSqlBindings) {
+		validateBindingRemoteSetting("analytics", analytics.remote, logger.warn);
+	}
+
 	for (const media of mediaBindings) {
 		validateBindingRemoteSetting("media", media.remote, logger.warn);
 	}
@@ -821,6 +827,13 @@ export function buildMiniflareBindingOptions(
 					namespace: memory.namespace as string,
 					remoteProxyConnectionString,
 				},
+			])
+		),
+
+		analyticsSql: Object.fromEntries(
+			analyticsSqlBindings.map((analytics) => [
+				analytics.binding,
+				{ remoteProxyConnectionString },
 			])
 		),
 

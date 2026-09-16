@@ -79,6 +79,13 @@ export function mapWorkerMetadataBindings(
 							};
 						}
 						break;
+					case "analytics":
+						{
+							configObj.analytics = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "ai":
 						{
 							configObj.ai = {

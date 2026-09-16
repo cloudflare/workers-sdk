@@ -143,6 +143,16 @@ export interface BrowserBinding extends BrowserBindingOptions {
 	type: "browser";
 }
 
+interface AnalyticsSQLBindingOptions {
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
+}
+
+/** Account-scoped Analytics SQL binding. */
+export interface AnalyticsSQLBinding extends AnalyticsSQLBindingOptions {
+	type: "analytics-sql";
+}
+
 interface D1BindingOptions {
 	/** The UUID of this D1 database (not required). */
 	id?: string;
@@ -710,6 +720,8 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
 	 */
 	browser(options?: BrowserBindingOptions): BrowserBinding;
+	/** Account-scoped Analytics SQL binding. */
+	analyticsSQL(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
 	/**
 	 * Binding to a D1 database.
 	 *
@@ -905,6 +917,7 @@ export const bindings = {
 	text: (value) => ({ type: "text", value }),
 	vectorize: (options) => ({ type: "vectorize", ...options }),
 	versionMetadata: () => ({ type: "version-metadata" }),
+	analyticsSQL: (options) => ({ type: "analytics-sql", ...options }),
 	vpcService: (options) => ({ type: "vpc-service", ...options }),
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),
