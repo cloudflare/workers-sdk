@@ -163,7 +163,12 @@ export function handleWebSocket(
 				// `dispatchFetch` rejects if Miniflare is disposed mid-upgrade (e.g.
 				// dev server restart). This listener is `async`, so an uncaught
 				// rejection would crash Node and leak the socket — tear it down, but
-				// only if no other listener claimed it in the meantime.
+				// only if no other listener claimed it in the meantime. Unlike the
+				// no-route path above, teardown here is unconditional on listener
+				// presence: dispose means the server is going down, so no owner
+				// can complete a viable handshake anyway — while skipping the
+				// destroy would leave a never-responded socket that even
+				// closeAllConnections() cannot reap, hanging close().
 				workerResponseHeaders.delete(request);
 				if (!socket.destroyed && !isClaimed()) {
 					socket.destroy();
