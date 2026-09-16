@@ -1,7 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, test } from "vitest";
-import { getTextResponse, isBuild, rootDir } from "../../__test-utils__";
+import {
+	getTextResponse,
+	isBuild,
+	rootDir,
+	satisfiesMinimumViteVersion,
+} from "../../__test-utils__";
 
 function getBuildOutputDir() {
 	return path.join(rootDir, ".cloudflare/output/v0/workers", "default");
@@ -18,7 +23,11 @@ function getContainerConfigPath() {
 	);
 }
 
-describe("Build Output Specification", () => {
+const isVite7OrLater = satisfiesMinimumViteVersion("7.0.0");
+const describeBuildOutput = describe.runIf(isVite7OrLater);
+const describeBuildOutputFiles = describe.runIf(isBuild && isVite7OrLater);
+
+describeBuildOutput("Build Output Specification", () => {
 	test("serves the worker", async ({ expect }) => {
 		const response = await getTextResponse("/");
 		expect(response).toBe("hello from worker");
@@ -35,7 +44,7 @@ describe("Build Output Specification", () => {
 	});
 });
 
-describe.runIf(isBuild)("Build Output Specification files", () => {
+describeBuildOutputFiles("Build Output Specification files", () => {
 	test("emits config.json at the correct location", ({ expect }) => {
 		const configPath = path.join(getBuildOutputDir(), "config.json");
 		expect(fs.existsSync(configPath)).toBe(true);
