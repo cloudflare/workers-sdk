@@ -7318,14 +7318,17 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			"boolean"
 		) && isValid;
 
-	isValid =
-		validateOptionalProperty(
-			diagnostics,
-			field,
-			"issues",
-			val.issues,
-			"object"
-		) && isValid;
+	const issuesIsObject =
+		val.issues === undefined ||
+		(val.issues !== null &&
+			typeof val.issues === "object" &&
+			!Array.isArray(val.issues));
+	if (!issuesIsObject) {
+		diagnostics.errors.push(
+			`"${field}.issues" should be an object but got ${JSON.stringify(val.issues)}.`
+		);
+		isValid = false;
+	}
 
 	isValid =
 		validateOptionalProperty(diagnostics, field, "logs", val.logs, "object") &&
@@ -7350,7 +7353,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			"traces",
 		]) && isValid;
 
-	if (typeof val.issues === "object") {
+	if (val.issues !== undefined && issuesIsObject) {
 		isValid =
 			validateOptionalProperty(
 				diagnostics,

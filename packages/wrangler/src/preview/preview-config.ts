@@ -151,6 +151,12 @@ export function convertTopLevelSetting(
 				enabled: observability.enabled,
 				head_sampling_rate: observability.head_sampling_rate,
 				redact_query_string: observability.redact_query_string,
+				issues:
+					observability.issues === undefined
+						? undefined
+						: omitNullish({
+								enabled: observability.issues.enabled,
+							}),
 				logs:
 					observability.logs === undefined
 						? undefined
