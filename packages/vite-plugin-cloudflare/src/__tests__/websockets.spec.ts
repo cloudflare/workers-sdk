@@ -595,4 +595,64 @@ describe("handleWebSocket", () => {
 		expect(closed).toBe(false);
 		socket.destroy();
 	});
+
+	test("does not destroy sockets claimed asynchronously by another upgrade listener", async ({
+		expect,
+	}) => {
+		// Another listener may complete its handshake only after async work
+		// (e.g. an authorization lookup) that outlasts the plugin's
+		// `dispatchFetch` round-trip plus a tick. `isClaimed()` can't see such
+		// a delayed owner (no bytes written yet), so the deferred
+		// unclaimed-upgrade teardown must not run while any other `upgrade`
+		// listener exists.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				setTimeout(() => {
+					owner.handleUpgrade(request, socket, head, (ws) => {
+						owner.emit("connection", ws, request);
+					});
+				}, 300);
+			}
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// The owner's 101 arrives after its async setup; the plugin's
+		// deferred teardown would previously have destroyed the socket first.
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
 });
