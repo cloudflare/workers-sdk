@@ -906,7 +906,17 @@ describe("wrangler preview", () => {
 			});
 		});
 
-		test.for([undefined, "eu", "fedramp", "us"])(
+		test("should extract r2_buckets", ({ expect }) => {
+			const config = configWithPreviews({
+				r2_buckets: [{ binding: "BUCKET", bucket_name: "my-bucket" }],
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toMatchObject({
+				BUCKET: { type: "r2_bucket", bucket_name: "my-bucket" },
+			});
+		});
+
+		test.for(["eu", "fedramp", "us"])(
 			"should extract r2_buckets with jurisdiction %s",
 			(jurisdiction, { expect }) => {
 				const config = configWithPreviews({
