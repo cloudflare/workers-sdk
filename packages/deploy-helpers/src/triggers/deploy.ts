@@ -683,10 +683,16 @@ async function validateSubdomainMixedState(
 		return after;
 	}
 
-	const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-		configPath: config.configPath,
-	});
-	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
+	const userSubdomain = await getWorkersDevSubdomainIfAccessible(
+		config,
+		accountId,
+		{
+			configPath: config.configPath,
+		}
+	);
+	const previewUrl = userSubdomain
+		? `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`
+		: `https://<VERSION_PREFIX>-${scriptName}.<YOUR_SUBDOMAIN>.workers.dev`;
 
 	// Scenario 1: User disables workers.dev while having preview URLs enabled
 	if (!after.workers_dev && after.preview_urls) {

@@ -1199,6 +1199,31 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("uploads a new Worker when granular auth prevents the account subdomain lookup", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+				msw.use(
+					http.get("*/accounts/:accountId/workers/subdomain", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10000, message: "Authentication error" },
+							]),
+							{ status: 403 }
+						)
+					)
+				);
+
+				await runWrangler("deploy ./index");
+
+				expect(std.out).toContain("Uploaded test-name");
+				expect(std.out).toContain("Current Version ID");
+				expect(std.err).toBe("");
+			});
+
 			it("does not check for a workers.dev subdomain when a new Worker only targets routes", async ({
 				expect,
 			}) => {
@@ -1793,6 +1818,39 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				"
 			`);
+		});
+
+		it("should preserve the mixed-state warning when granular auth hides the hostname", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: true,
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+			msw.use(
+				http.get("*/accounts/:accountId/workers/subdomain", () =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10000, message: "Authentication error" },
+						]),
+						{ status: 403 }
+					)
+				)
+			);
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toContain("Uploaded test-name");
+			expect(std.warn).toContain(
+				"You are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled."
+			);
+			expect(std.warn).toContain(
+				"https://<VERSION_PREFIX>-test-name.<YOUR_SUBDOMAIN>.workers.dev"
+			);
 		});
 
 		it("should warn when workers_dev=true,preview_urls=false", async ({
