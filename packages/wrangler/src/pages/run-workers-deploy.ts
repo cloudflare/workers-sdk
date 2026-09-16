@@ -5,6 +5,7 @@ import {
 	fetchPagedListResult,
 	fetchResult,
 } from "../cfetch";
+import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { runDeployCommandHandler, type DeployArgs } from "../deploy";
 import { confirm, prompt, select } from "../dialogs";
@@ -97,6 +98,7 @@ export async function runPagesToWorkersDeploy(
 		await run(experimentalFlags, async () => {
 			initDeployHelpersContext({
 				logger,
+				createCloudflareClient,
 				fetchResult,
 				fetchListResult,
 				fetchPagedListResult,

@@ -5,8 +5,15 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { confirm, fetchResult, logger, prompt } from "../shared/context";
+import {
+	confirm,
+	createCloudflareClient,
+	fetchResult,
+	logger,
+	prompt,
+} from "../shared/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Worker } from "cloudflare/resources/workers/beta/workers/workers";
 
 type WorkersDevSubdomainRegistrationContext = "workers_dev" | "workflows";
 
@@ -17,7 +24,7 @@ type GetWorkersDevSubdomainOptions = {
 	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
 };
 
-export type WorkerSubdomain = {
+export type WorkerSubdomain = Worker.Subdomain & {
 	enabled: boolean;
 	previews_enabled: boolean;
 	url?: string;
@@ -156,11 +163,14 @@ export async function getWorkerSubdomain(
 	accountId: string,
 	workerName: string
 ): Promise<WorkerSubdomain> {
-	const worker = await fetchResult<{ subdomain: WorkerSubdomain }>(
-		complianceConfig,
-		`/accounts/${accountId}/workers/workers/${workerName}`
-	);
-	return worker.subdomain;
+	const worker = await createCloudflareClient(
+		complianceConfig
+	).workers.beta.workers.get(workerName, { account_id: accountId });
+	return {
+		...worker.subdomain,
+		enabled: worker.subdomain.enabled ?? false,
+		previews_enabled: worker.subdomain.previews_enabled ?? false,
+	};
 }
 
 function getRegistrationWarning(
