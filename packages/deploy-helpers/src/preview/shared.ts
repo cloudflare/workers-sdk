@@ -465,13 +465,14 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	for (const service of previews?.services ?? []) {
 		// `cross_account_grant` is internal/non-public-facing, so we access it
 		// through the runtime shape instead of the public type.
-		const crossAccountGrant = (service as { cross_account_grant?: string })
-			.cross_account_grant;
+		const { cross_account_grant: crossAccountGrant, environment } = service as {
+			cross_account_grant?: string;
+			environment?: string;
+		};
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
-			// eslint-disable-next-line @typescript-eslint/no-deprecated -- Preserve legacy service environments in Preview API payloads.
-			environment: service.environment,
+			environment,
 			entrypoint: service.entrypoint,
 			...(crossAccountGrant !== undefined && {
 				cross_account_grant: crossAccountGrant,
