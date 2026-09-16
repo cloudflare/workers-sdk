@@ -148,7 +148,7 @@ interface AnalyticsSQLBindingOptions {
 	dev?: BindingDevOptions;
 }
 
-/** Account-scoped Analytics SQL binding. */
+/** An Analytics SQL binding. */
 export interface AnalyticsSQLBinding extends AnalyticsSQLBindingOptions {
 	type: "analytics-sql";
 }
@@ -720,7 +720,7 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
 	 */
 	browser(options?: BrowserBindingOptions): BrowserBinding;
-	/** Account-scoped Analytics SQL binding. */
+	/** An Analytics SQL binding. */
 	analyticsSQL(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
 	/**
 	 * Binding to a D1 database.
