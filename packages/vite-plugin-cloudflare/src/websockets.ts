@@ -103,8 +103,19 @@ export function handleWebSocket(
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
-					// No route on the Worker → this upgrade isn't ours; leave the
-					// socket untouched for its owner (see top of listener).
+					// No route on the Worker → this upgrade isn't ours. If another
+					// listener claimed it, leave it untouched; otherwise tear it
+					// down deferred by a tick (an unanswered upgrade dangles
+					// forever and hangs `httpServer.close()`), re-checking claimed
+					// status at fire time so late owners survive.
+					if (socket.destroyed || isClaimed()) {
+						return;
+					}
+					setImmediate(() => {
+						if (!socket.destroyed && !isClaimed()) {
+							socket.destroy();
+						}
+					});
 					return;
 				}
 
