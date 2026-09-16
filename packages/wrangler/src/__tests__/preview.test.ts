@@ -906,15 +906,24 @@ describe("wrangler preview", () => {
 			});
 		});
 
-		test("should extract r2_buckets", ({ expect }) => {
-			const config = configWithPreviews({
-				r2_buckets: [{ binding: "BUCKET", bucket_name: "my-bucket" }],
-			});
-			const bindings = extractConfigBindings(config);
-			expect(bindings).toMatchObject({
-				BUCKET: { type: "r2_bucket", bucket_name: "my-bucket" },
-			});
-		});
+		test.for([undefined, "eu", "fedramp", "us"])(
+			"should extract r2_buckets with jurisdiction %s",
+			(jurisdiction, { expect }) => {
+				const config = configWithPreviews({
+					r2_buckets: [
+						{ binding: "BUCKET", bucket_name: "my-bucket", jurisdiction },
+					],
+				});
+				const bindings = extractConfigBindings(config);
+				expect(bindings).toEqual({
+					BUCKET: {
+						type: "r2_bucket",
+						bucket_name: "my-bucket",
+						jurisdiction,
+					},
+				});
+			}
+		);
 
 		test("should extract services", ({ expect }) => {
 			const config = configWithPreviews({
@@ -1202,6 +1211,68 @@ describe("wrangler preview", () => {
 				"Deployment URL: https://abc12345.test-worker.cloudflare.app"
 			);
 		});
+
+		test.for([undefined, "eu", "fedramp", "us"])(
+			"should send R2 bindings with jurisdiction %s in preview deployments",
+			async (jurisdiction, { expect }) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						previews: {
+							r2_buckets: [
+								{ binding: "BUCKET", bucket_name: "my-bucket", jurisdiction },
+							],
+						},
+					},
+					"wrangler.json"
+				);
+				let deploymentRequestBody:
+					| Awaited<ReturnType<typeof readPreviewDeploymentRequest>>
+					| undefined;
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json({
+								success: true,
+								result: {
+									id: "preview-id-r2",
+									name: "test-preview",
+									slug: "test-preview",
+									worker_name: "test-worker",
+								},
+							})
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						async ({ request }) => {
+							deploymentRequestBody =
+								await readPreviewDeploymentRequest(request);
+							return HttpResponse.json({
+								success: true,
+								result: {
+									id: "deployment-id-r2",
+									preview_id: "preview-id-r2",
+									preview_name: "test-preview",
+								},
+							});
+						}
+					)
+				);
+
+				await runWrangler("preview --name test-preview --json");
+
+				expect(deploymentRequestBody?.env).toStrictEqual({
+					BUCKET: {
+						type: "r2_bucket",
+						bucket_name: "my-bucket",
+						...(jurisdiction === undefined ? {} : { jurisdiction }),
+					},
+				});
+			}
+		);
 
 		describe("when the parent Worker does not exist", () => {
 			const { setIsTTY } = useMockIsTTY();

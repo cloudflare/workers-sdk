@@ -23,6 +23,7 @@ export interface Binding {
 	database_id?: string;
 	database_name?: string;
 	bucket_name?: string;
+	jurisdiction?: string;
 	index_name?: string;
 	instance_name?: string;
 	id?: string;
