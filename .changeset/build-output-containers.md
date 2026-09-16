@@ -1,8 +1,8 @@
 ---
-"@cloudflare/config": patch
-"@cloudflare/containers-shared": patch
-"@cloudflare/vite-plugin": patch
-"wrangler": patch
+"@cloudflare/config": minor
+"@cloudflare/containers-shared": minor
+"@cloudflare/vite-plugin": minor
+"wrangler": minor
 ---
 
 Build Containers when emitting experimental Build Output
