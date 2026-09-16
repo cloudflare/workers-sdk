@@ -389,6 +389,15 @@ function forceBuildOutputDirs(
 	const clientEnvironment = resolvedViteConfig.environments.client;
 	if (clientEnvironment) {
 		clientEnvironment.build.outDir = getWorkerAssetsDir(root);
+		if (
+			resolvedViteConfig.publicDir &&
+			path.resolve(resolvedViteConfig.publicDir) === path.resolve(root)
+		) {
+			// Vite's public directory copier recurses into its nested output when
+			// the project root is public. The Build Output plugin copies missing
+			// public files after the client build has generated its output.
+			clientEnvironment.build.copyPublicDir = false;
+		}
 	}
 }
 
