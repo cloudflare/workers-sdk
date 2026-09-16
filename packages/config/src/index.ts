@@ -11,10 +11,12 @@ export {
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
 	ExportSchema,
+	InputContainerSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
 	KnownBindingSchema,
 	KVBindingSchema,
+	OutputContainerSchema,
 	OutputSettingsSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
@@ -42,8 +44,10 @@ export type {
 	ParsedConfigExports,
 } from "./config-loader";
 export type {
+	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
+	ParsedOutputContainerConfig,
 	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
 	ModuleType,

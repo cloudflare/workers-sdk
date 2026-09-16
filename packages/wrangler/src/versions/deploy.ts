@@ -7,21 +7,23 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { initContainersSharedContext } from "@cloudflare/containers-shared";
 import {
 	type ApiVersion,
+	deployVersionedDurableObjectContainerApplications,
+	getVersionedDurableObjectContainerApplications,
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
 	printVersions,
 	renderInconsistentExportsAcrossVersionsError,
+	resolveVersionedDurableObjectContainerApplications,
 } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
-import {
-	deployVersionedDurableObjectContainerApplications,
-	getVersionedDurableObjectContainerApplications,
-	resolveVersionedDurableObjectContainerApplications,
-} from "../containers/durable-object-applications";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
@@ -218,6 +220,15 @@ export const versionsDeployCommand = createCommand({
 		if (args.dryRun) {
 			cli.cancel("--dry-run: exiting");
 			return;
+		}
+
+		if (containerApplications.length > 0) {
+			initContainersSharedContext({
+				logger,
+				fetchPagedListResult,
+				fetchResult,
+			});
+			await fillOpenAPIConfiguration(config, containersScope);
 		}
 
 		const resolvedContainerApplications =

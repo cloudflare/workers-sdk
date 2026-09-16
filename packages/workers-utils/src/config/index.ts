@@ -44,11 +44,17 @@ export {
 	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectClassNameToUseSQLiteMap,
 	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
 } from "./containers";
-export type { DurableObjectContainerApp } from "./containers";
+export type {
+	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
+} from "./containers";
 
 export function configFormat(
 	configPath: string | undefined

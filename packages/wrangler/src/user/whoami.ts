@@ -190,7 +190,7 @@ function printTokenPermissions(user: UserInfo) {
 	const expectedScopes = new Set(DefaultScopeKeys);
 	for (const [scope, access] of permissions) {
 		// We'll remove scopes from the set of scopes that we expect to see when we see them in the API response.
-		// Some scopes are dot-separated (e.g. "websearch.run") rather than colon-separated, in which case
+		// Some scopes are dot-separated (e.g. "challenge-widgets.write") rather than colon-separated, in which case
 		// the split above yields a single element with `access === undefined`.
 		const key = (access === undefined ? scope : `${scope}:${access}`) as Scope;
 		expectedScopes.delete(key);

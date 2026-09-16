@@ -580,8 +580,11 @@ export async function buildOperationsSummary(
 		summary.scripts = {
 			deploy:
 				scriptOverrides?.deploy ?? `${buildCommandPrefix}${target} deploy`,
-			preview: scriptOverrides?.preview ?? `${buildCommandPrefix}${target} dev`,
 		};
+		if (target === "wrangler") {
+			summary.scripts.preview =
+				scriptOverrides?.preview ?? `${buildCommandPrefix}${target} dev`;
+		}
 
 		const containsServerSideCode =
 			// If there is an entrypoint then we know that there is server side code
