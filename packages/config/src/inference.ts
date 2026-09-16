@@ -11,7 +11,7 @@ import type {
 } from "./bindings";
 import type { Pipeline } from "cloudflare:pipelines";
 
-interface AnalyticsSQLClient {
+interface AnalyticsSQLBinding {
 	query<T extends Record<string, unknown> = Record<string, unknown>>(request: {
 		query: string;
 		params?:
@@ -110,7 +110,7 @@ interface BindingTypeMap<TBinding> {
 	"ai-search": AiSearchInstance;
 	"ai-search-namespace": AiSearchNamespace;
 	"analytics-engine-dataset": AnalyticsEngineDataset;
-	"analytics-sql": AnalyticsSQLClient;
+	"analytics-sql": AnalyticsSQLBinding;
 	artifacts: Artifacts;
 	assets: Fetcher;
 	browser: BrowserRun;
