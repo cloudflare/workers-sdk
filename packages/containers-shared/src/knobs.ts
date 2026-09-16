@@ -1,6 +1,24 @@
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	getComplianceRegionSubdomain,
+} from "@cloudflare/workers-utils/compliance";
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
+import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
 
-export { getCloudflareContainerRegistry } from "@cloudflare/workers-utils/compliance";
+export function getCloudflareContainerRegistry(
+	complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
+): string {
+	if (process.env.CLOUDFLARE_CONTAINER_REGISTRY) {
+		return process.env.CLOUDFLARE_CONTAINER_REGISTRY;
+	}
+
+	const environmentPrefix =
+		process.env.WRANGLER_API_ENVIRONMENT === "staging" ? "staging." : "";
+	const complianceRegionSubdomain =
+		getComplianceRegionSubdomain(complianceConfig);
+
+	return `${environmentPrefix}registry${complianceRegionSubdomain}.cloudflare.com`;
+}
 
 /** Prefixes with the cloudflare-dev namespace. The name should be the container's DO classname, and the tag a build uuid. */
 export const getDevContainerImageName = (name: string, tag: string) => {

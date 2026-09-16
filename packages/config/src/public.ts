@@ -43,7 +43,6 @@ export type {
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
-	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
 	WorkerReference,
@@ -77,7 +76,12 @@ export type {
 	UnwrapConfig,
 } from "./inference";
 export type { ConfigContext } from "./definition";
-export type { SettingsConfig, WorkerConfig } from "./types";
+export type { ContainerConfig, SettingsConfig, WorkerConfig } from "./types";
+export type {
+	ContainerConfigExport,
+	ContainerConfigInput,
+} from "./container-definition";
+export { defineContainer } from "./container-definition";
 export type {
 	WorkerConfigExport,
 	WorkerConfigInput,

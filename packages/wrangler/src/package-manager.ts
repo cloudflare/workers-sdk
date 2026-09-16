@@ -1,6 +1,6 @@
 import { env } from "node:process";
 import { UserError } from "@cloudflare/workers-utils";
-import { execaCommandSync } from "execa";
+import { x } from "tinyexec";
 import { logger } from "./logger";
 
 export type { PackageManager } from "@cloudflare/workers-utils";
@@ -86,9 +86,18 @@ export function getPackageManagerName(packageManager: PackageManager): string {
 
 async function supports(name: string): Promise<boolean> {
 	try {
-		execaCommandSync(`${name} --version`, { stdio: "ignore" });
-		return true;
+		const { exitCode } = await x(name, ["--version"], {
+			nodeOptions: { stdio: "ignore" },
+			// Disable tinyexec's default PATH manipulation, which prepends every
+			// ancestor `node_modules/.bin` and the directory holding the running Node
+			// binary, so that we only detect package managers that are actually
+			// available on the user's own PATH.
+			nodePath: false,
+		});
+		// `exitCode` is `undefined` when the process was terminated by a signal.
+		return exitCode === 0;
 	} catch {
+		// The command could not be spawned at all (e.g. it is not installed).
 		return false;
 	}
 }

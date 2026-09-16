@@ -368,8 +368,9 @@ function maybePrintScheduledWorkerWarning(
 }
 
 /**
- * Keep the message in sync with the Vite plugin copy in
- * packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts.
+ * Keep the message in sync with:
+ * - packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts (printLocalExplorerAgentHint)
+ * - packages/create-cloudflare/src/agents-md.ts (Local Explorer section)
  */
 function printLocalExplorerAgentHint(url: URL): void {
 	const displayUrl = new URL(url.href);
@@ -387,6 +388,7 @@ function printLocalExplorerAgentHint(url: URL): void {
 		  GET ${explorerApiUrl}/workflows - Workflows
 		  POST ${explorerApiUrl}/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:
 		    curl -X POST ${explorerApiUrl}/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'
+		  POST ${explorerApiUrl}/local/observability/clear - clear all captured traces and logs
 		If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
 		  GET ${explorerApiUrl} - OpenAPI schema`);
 }

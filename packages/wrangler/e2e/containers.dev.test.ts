@@ -5,7 +5,7 @@ import { stripVTControlCharacters } from "node:util";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
-import { buildImage } from "../../containers-shared/src/build";
+import { startContainerBuild } from "../../containers-shared/src/build";
 import { generateContainerBuildId } from "../../containers-shared/src/utils";
 import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -306,12 +306,15 @@ for (const source of imageSource) {
 			const initialImageTag = `cloudflare-dev/test-cleanup:${fakeBuildID}`;
 
 			// First, build an image directly to create a duplicate tag scenario
-			const build = await buildImage(dockerPath, {
-				dockerfile: path.resolve(helper.tmpPath, "./Dockerfile"),
-				image_tag: initialImageTag,
-				class_name: "TestContainer",
-				image_build_context: helper.tmpPath,
-				image_vars: {},
+			const build = await startContainerBuild({
+				pathToDocker: dockerPath,
+				build: {
+					tag: initialImageTag,
+					pathToDockerfile: path.resolve(helper.tmpPath, "./Dockerfile"),
+					buildContext: helper.tmpPath,
+					args: {},
+					platform: "linux/amd64",
+				},
 			});
 			await build.ready;
 
