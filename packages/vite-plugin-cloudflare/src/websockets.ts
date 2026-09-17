@@ -65,14 +65,16 @@ function getUpgradeServerPatch(
 		return originalEmit(event, ...args);
 	} as typeof httpServer.emit;
 
-	const originalClose = httpServer.close;
+	const originalClose = httpServer.close.bind(httpServer) as (
+		callback?: (err?: Error) => void
+	) => unknown;
 	httpServer.close = ((callback?: (err?: Error) => void) => {
 		patch.closing.current = true;
 		for (const pending of patch.pendingUpgrades) {
 			pending.destroy();
 		}
 		patch.pendingUpgrades.clear();
-		return originalClose.call(httpServer, callback as never);
+		return originalClose(callback);
 	}) as typeof httpServer.close;
 
 	return patch;

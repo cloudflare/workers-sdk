@@ -832,9 +832,7 @@ describe("handleWebSocket", () => {
 		socket.destroy();
 	});
 
-	test("destroys sole-listener upgrades the Worker does not route", async ({
-		expect,
-	}) => {
+	test("destroys sole-listener upgrades the Worker does not route", async () => {
 		// No other listener exists, so an unrouted upgrade has no possible
 		// owner: the deferred teardown must destroy it, or the socket would
 		// dangle forever and hang httpServer.close().
@@ -906,9 +904,7 @@ describe("handleWebSocket", () => {
 		socket.destroy();
 	});
 
-	test("server close reaps unanswered upgrades left for another listener", async ({
-		expect,
-	}) => {
+	test("server close reaps unanswered upgrades left for another listener", async () => {
 		// A rejected, unclaimed upgrade with a bystander present is left open
 		// with no response, which neither close() nor closeAllConnections()
 		// can reap on their own. The handler tracks such sockets and destroys
