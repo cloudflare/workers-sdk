@@ -68,7 +68,8 @@ export function parseEpochMilliseconds(value: string): {
 		epochMs > MAX_DATE_EPOCH_MS
 	) {
 		return {
-			error: "Epoch milliseconds are outside the supported scheduled-time range.",
+			error:
+				"Epoch milliseconds are outside the supported scheduled-time range.",
 		};
 	}
 	return { epochMs };
