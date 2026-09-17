@@ -117,6 +117,7 @@ export async function dispatchScheduledToWorker(
 ): Promise<Response> {
 	const forwarded = c.req.raw.headers.has(NO_AGGREGATE_HEADER);
 	if (
+		!forwarded &&
 		c.env[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES].includes(query.worker)
 	) {
 		return dispatchLocalScheduled(c, query.worker, body);
