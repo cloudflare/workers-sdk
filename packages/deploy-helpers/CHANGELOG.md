@@ -1,5 +1,19 @@
 # @cloudflare/deploy-helpers
 
+## 0.12.2
+
+### Patch Changes
+
+- [#15445](https://github.com/cloudflare/workers-sdk/pull/15445) [`edb2fe7`](https://github.com/cloudflare/workers-sdk/commit/edb2fe7d2076a6f69011dd62b08a537c23bc346e) Thanks [@nileshpatil6](https://github.com/nileshpatil6)! - Join route lists before printing them in deploy messages
+
+  The "already assigned to routes" error and the "Previously deployed routes" warning interpolated an array of routes straight into a template literal, so with more than one route the output picked up the commas that `Array.prototype.toString` inserts between elements. Both sites now join the mapped lines before printing.
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114), [`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef), [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8), [`2b39fc2`](https://github.com/cloudflare/workers-sdk/commit/2b39fc2c79f7919b0af21603e278dce030c48870)]:
+  - @cloudflare/workers-utils@0.40.0
+  - miniflare@5.20260917.0-alpha
+  - @cloudflare/containers-shared@0.16.5
+  - @cloudflare/cli-shared-helpers@0.1.33
+
 ## 0.12.1
 
 ### Patch Changes
