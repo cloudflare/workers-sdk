@@ -142,11 +142,14 @@ Each CLI is a thin **descriptor + entrypoint**:
   - `createCfAuth(ctx)`. OAuth-app values (client ID `cbca97e7-…`, callback port
     8877, `cf-oauth-consent-*` pages, scoped-token-only auth) mirror the `cf`
     CLI's registration, and device authorization is its default interactive
-    login flow. cf carries its own scope policy (`src/cf/scopes.ts`): the full
-    requestable production registration is the flat validation/type catalog and
-    the default scope set requested on login. This is distinct from wrangler's
-    smaller `src/core/scopes.ts` key → description map, so cf does not re-export
-    `DefaultScopes`.
+    login flow. cf carries its own scope policy (`src/cf/scopes.ts`): the raw
+    client registration is kept separate from the known-grantable catalog used
+    for validation, types, and login defaults. Requestable scopes must both
+    appear in the client registration and resolve in the consent service's Bach
+    catalog; registered exceptions stay explicit negative regressions. Retain
+    separately verified, grandfathered legacy scopes and registration order.
+    This is distinct from wrangler's smaller `src/core/scopes.ts` key →
+    description map, so cf does not re-export `DefaultScopes`.
 
 ## CONVENTIONS
 
