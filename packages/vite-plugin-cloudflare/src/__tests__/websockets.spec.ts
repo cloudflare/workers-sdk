@@ -849,4 +849,68 @@ describe("handleWebSocket", () => {
 		);
 		socket.destroy();
 	});
+
+	test("server close reaps unanswered upgrades left for another listener", async ({
+		expect,
+	}) => {
+		// A rejected, unclaimed upgrade with a bystander present is left open
+		// with no response, which neither close() nor closeAllConnections()
+		// can reap on their own. The handler tracks such sockets and destroys
+		// them when close() is initiated, so shutdown completes. Uses a
+		// dedicated server: afterEach owns the shared one, and closing a
+		// server twice reports an error.
+		const mf = startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const localServer = http.createServer((_req, res) => res.end("OK"));
+		handleWebSocket(localServer, mf);
+		localServer.on("upgrade", (request) => {
+			if (request.url === "/__devtools/__ws") {
+				// Bystander: present but never claims.
+			}
+		});
+		const localSockets = new Set<net.Socket>();
+		localServer.on("connection", (socket) => {
+			localSockets.add(socket);
+			socket.on("close", () => localSockets.delete(socket));
+		});
+		onTestFinished(() => {
+			for (const socket of localSockets) {
+				socket.destroy();
+			}
+		});
+		await new Promise<void>((r) => localServer.listen(0, "127.0.0.1", r));
+		const localPort = (localServer.address() as AddressInfo).port;
+
+		vi.spyOn(mf, "dispatchFetch").mockRejectedValue(
+			new Error("Cannot use disposed instance")
+		);
+
+		const client = net.connect(localPort, "127.0.0.1");
+		openSockets.add(client);
+		client.on("close", () => openSockets.delete(client));
+		await new Promise<void>((r) => client.on("connect", r));
+		client.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${localPort}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Let the rejection handler run and leave the socket open...
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		// ...then shut down directly: the tracked socket must be reaped so
+		// close() resolves instead of hanging.
+		client.destroy();
+		await new Promise<void>((resolve, reject) =>
+			localServer.close((e) => (e ? reject(e) : resolve()))
+		);
+	});
 });

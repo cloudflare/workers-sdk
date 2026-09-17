@@ -29,6 +29,33 @@ export function handleWebSocket(
 	// upgrade with stale headers leaked from the previous Worker response. The
 	// WeakMap entry is GC'd if the request never completes.
 	const workerResponseHeaders = new WeakMap<IncomingMessage, Headers>();
+
+	// Upgrade sockets this handler leaves unanswered (another listener may
+	// own them) stay pending on the server: Node reaps neither them on
+	// close() nor on closeAllConnections(), so one rejected, unclaimed
+	// upgrade would hang server shutdown forever. Track such sockets and
+	// destroy them when close() is initiated. Destroying here races no one:
+	// the server is going down, and claimed sockets are never tracked.
+	const pendingUpgrades = new Set<Duplex>();
+	const trackUnresolved = (socket: Duplex) => {
+		const netSocket = socket as unknown as Socket;
+		if (socket.destroyed || netSocket.closed) {
+			return;
+		}
+		pendingUpgrades.add(socket);
+		socket.once("close", () => {
+			pendingUpgrades.delete(socket);
+		});
+	};
+	const serverClose = httpServer.close.bind(httpServer);
+	httpServer.close = ((callback?: (err?: Error) => void) => {
+		for (const pending of pendingUpgrades) {
+			pending.destroy();
+		}
+		pendingUpgrades.clear();
+		return serverClose(callback as never);
+	}) as typeof httpServer.close;
+
 	nodeWebSocket.on(
 		"headers",
 		(responseHeaders: string[], request: IncomingMessage) => {
@@ -88,11 +115,13 @@ export function handleWebSocket(
 					request.headers["sec-websocket-protocol"]?.startsWith("vite");
 				isSandboxRequest = hasSandboxOrigin(url.origin);
 			} catch {
+				trackUnresolved(socket);
 				return;
 			}
 
 			// Ignore Vite HMR WebSockets but forward on all sandbox requests.
 			if (isViteRequest && !isSandboxRequest) {
+				trackUnresolved(socket);
 				return;
 			}
 
@@ -115,7 +144,8 @@ export function handleWebSocket(
 					// down deferred by a tick (an unanswered upgrade dangles
 					// forever and hangs `httpServer.close()`), but only when no
 					// other `upgrade` listener could still be processing it (see
-					// hadOtherListeners above).
+					// hadOtherListeners above). The socket is tracked instead so
+					// server shutdown can still reap it (see pendingUpgrades).
 					// `isClaimed()` only sees bytes already written, so it can't
 					// reveal a delayed async owner (e.g. awaiting auth) — and any
 					// fixed deadline races one. With only this listener
@@ -125,6 +155,7 @@ export function handleWebSocket(
 						return;
 					}
 					if (hadOtherListeners) {
+						trackUnresolved(socket);
 						return;
 					}
 					setImmediate(() => {
@@ -169,9 +200,14 @@ export function handleWebSocket(
 				// disposal, and another listener may yet finish a viable
 				// handshake on this socket.
 				workerResponseHeaders.delete(request);
-				if (!socket.destroyed && !isClaimed() && !hadOtherListeners) {
-					socket.destroy();
+				if (socket.destroyed || isClaimed()) {
+					return;
 				}
+				if (hadOtherListeners) {
+					trackUnresolved(socket);
+					return;
+				}
+				socket.destroy();
 			}
 		}
 	);
