@@ -2577,6 +2577,13 @@ export class Miniflare {
 			reusePorts
 		);
 		const configBuffer = serializeConfig(config);
+		const hasContainers = config.services?.some(
+			(service) =>
+				"worker" in service &&
+				service.worker?.durableObjectNamespaces?.some(
+					(namespace) => namespace.container !== undefined
+				)
+		);
 
 		// Get all socket names we expect to get ports for
 		assert(config.sockets !== undefined);
@@ -2639,6 +2646,7 @@ export class Miniflare {
 				? "127.0.0.1:0"
 				: undefined,
 			verbose: this.#sharedOpts.verbose,
+			gracefulShutdown: hasContainers,
 			handleStructuredLogs: this.#sharedOpts.handleStructuredLogs,
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.unsafeRuntimeEnv,

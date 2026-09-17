@@ -76,13 +76,13 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					await closeServer();
 				} finally {
 					if (!ctx.isRestartingDevServer) {
-						if (containerImageTags.size) {
-							cleanupContainers(getDockerPath(), containerImageTags);
-						}
 						try {
 							await ctx.disposeMiniflare();
-						} catch (error) {
-							debuglog("Failed to dispose Miniflare instance:", error);
+						} finally {
+							if (containerImageTags.size) {
+								cleanupContainers(getDockerPath(), containerImageTags);
+								containerImageTags.clear();
+							}
 						}
 					}
 				}
