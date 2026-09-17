@@ -213,6 +213,33 @@ describe("deriveCorrelatedArgs", () => {
 		expect(args.type).toBe("web-framework");
 		expect(args.lang).toBe("python");
 	});
+
+	test("does not derive a language for a framework without language variants", ({
+		expect,
+	}) => {
+		const args: Partial<C3Args> = {
+			acceptDefaults: true,
+			framework: "angular",
+		};
+
+		deriveCorrelatedArgs(args);
+
+		expect(args.lang).toBeUndefined();
+	});
+
+	test("derives the default language for a framework with multiple language variants", ({
+		expect,
+	}) => {
+		const args: Partial<C3Args> = {
+			acceptDefaults: true,
+			framework: "react",
+			platform: "workers",
+		};
+
+		deriveCorrelatedArgs(args);
+
+		expect(args.lang).toBe("ts");
+	});
 });
 
 describe("getFrameworkMap", () => {

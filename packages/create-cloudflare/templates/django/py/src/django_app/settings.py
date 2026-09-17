@@ -1,4 +1,5 @@
-SECRET_KEY = "test-secret-key-please-update"
+# Replace this before enabling signing, sessions, authentication, or CSRF features.
+SECRET_KEY = "unused"
 DEBUG = False
 # Cloudflare routing validates the hostname before invoking this Worker.
 ALLOWED_HOSTS = ["*"]

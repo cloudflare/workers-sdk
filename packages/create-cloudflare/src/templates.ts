@@ -430,10 +430,12 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 			? getTemplateSupportedLanguages(frameworkConfig, args.platform)
 			: [];
 
-		args.lang =
-			supportedLanguages.length === 1
-				? supportedLanguages[0]
-				: C3_DEFAULTS.lang;
+		if (supportedLanguages.length > 0) {
+			args.lang =
+				supportedLanguages.length === 1
+					? supportedLanguages[0]
+					: C3_DEFAULTS.lang;
+		}
 	}
 };
 
