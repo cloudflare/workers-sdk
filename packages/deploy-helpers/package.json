@@ -46,6 +46,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"blake3-wasm": "2.1.5",
