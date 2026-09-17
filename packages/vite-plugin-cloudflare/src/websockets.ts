@@ -39,9 +39,11 @@ function getUpgradeServerPatch(httpServer: vite.HttpServer): UpgradeServerPatch 
 	// prepended handler but is already unregistered when our handler runs,
 	// so a live `listenerCount` would miss it and schedule a destroy that
 	// races its async handshake. The emit entry still sees it.
-	const originalEmit = httpServer.emit;
+	const originalEmit = httpServer.emit.bind(httpServer) as (
+		event: string | symbol,
+		...args: Array<unknown>
+	) => boolean;
 	httpServer.emit = function (
-		this: typeof httpServer,
 		event: string | symbol,
 		...args: Array<unknown>
 	): boolean {
@@ -58,7 +60,7 @@ function getUpgradeServerPatch(httpServer: vite.HttpServer): UpgradeServerPatch 
 				}
 			}
 		}
-		return originalEmit.call(this, event, ...args);
+		return originalEmit(event, ...args);
 	} as typeof httpServer.emit;
 
 	const originalClose = httpServer.close;
