@@ -1,6 +1,7 @@
 import * as z from "zod";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
-import type { ContainerConfig, SettingsConfig, WorkerConfig } from "./types";
+import type { Settings } from "./types";
+import type { ContainerConfig, WorkerConfig } from "./types";
 
 const RemoteBindingDevSchema = z.strictObject({
 	remote: z.boolean().optional(),
@@ -447,7 +448,6 @@ const StandardContainerObservabilitySchema = z.union([
 ]);
 
 const BaseContainerSchema = z.strictObject({
-	type: z.literal("container"),
 	name: z.string().min(1),
 	unsafe: z.record(z.string(), z.unknown()).optional(),
 });
@@ -517,8 +517,8 @@ const DurableObjectContainerBaseSchema = BaseContainerSchema.extend({
 });
 
 /**
- * Input Container schema — validates user-authored `cloudflare.config.ts`
- * Container exports. Dockerfiles are built by the consuming build tool.
+ * Input Container schema — parses user-authored `cloudflare.config.ts`
+ * Container objects. Dockerfiles are built by the consuming build tool.
  */
 export const InputContainerSchema = z.union([
 	StandardContainerBaseSchema.extend({
@@ -532,15 +532,17 @@ export const InputContainerSchema = z.union([
 export type ParsedInputContainerConfig = z.output<typeof InputContainerSchema>;
 
 /**
- * Output Container schema — validates Container configs in the Build Output
+ * Output Container schema — parses Container configs in the Build Output
  * Specification, after any Dockerfile has been built into a local or remote
  * image reference.
  */
 export const OutputContainerSchema = z.union([
 	StandardContainerBaseSchema.extend({
+		type: z.literal("container"),
 		image: OutputContainerImageSchema,
 	}).superRefine(validateContainerRelationships),
 	DurableObjectContainerBaseSchema.extend({
+		type: z.literal("container"),
 		images: z.record(z.string(), OutputContainerImageSchema).optional(),
 	}),
 ]);
@@ -737,7 +739,6 @@ const UnsafeSchema = z.strictObject({
  * (user-authored) and output (on-disk) Worker configs.
  */
 const BaseWorkerSchema = z.strictObject({
-	type: z.literal("worker"),
 	name: z.string(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
@@ -760,9 +761,9 @@ const BaseWorkerSchema = z.strictObject({
 });
 
 /**
- * Input Worker schema — the shape that user-authored `cloudflare.config.ts`
- * files are validated against. Adds an optional `entrypoint` field to the
- * base schema.
+ * Input Worker schema — parses Worker definitions from user-authored
+ * `cloudflare.config.ts` files. Adds an optional `entrypoint` field to the base
+ * schema.
  */
 export const InputWorkerSchema = BaseWorkerSchema.extend({
 	entrypoint: z
@@ -774,81 +775,37 @@ export const InputWorkerSchema = BaseWorkerSchema.extend({
 export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
 
 /**
- * Input settings schema — validates the named `settings` export of a
- * `cloudflare.config.ts`. Holds account/deployment settings shared by the other exports.
+ * Input settings schema — parses the account settings at the top level of
+ * `cloudflare.config.ts`.
  */
-export const InputSettingsSchema = z.strictObject({
-	type: z.literal("settings"),
+export const InputSettingsSchema = z.object({
 	accountId: z.string().optional(),
 	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
 });
 
 export type ParsedInputSettingsConfig = z.output<typeof InputSettingsSchema>;
 
+/** The resolved, user-authored project configuration. */
+export const InputConfigSchema = z.strictObject({
+	...InputSettingsSchema.shape,
+	worker: InputWorkerSchema.optional(),
+	containers: z.array(InputContainerSchema).default([]),
+});
+
+export type ParsedInputConfig = z.output<typeof InputConfigSchema>;
+
 /**
  * Output settings schema — the shape of the top-level `config.json` in the
  * Build Output Specification. Adds the build mode and Preview intent.
  */
-export const OutputSettingsSchema = InputSettingsSchema.extend({
+export const OutputSettingsSchema = z.strictObject({
+	...InputSettingsSchema.shape,
+	type: z.literal("settings"),
 	isPreview: z.boolean().optional(),
 	mode: z.string().optional(),
 });
 
 export type ParsedOutputSettingsConfig = z.output<typeof OutputSettingsSchema>;
-
-const DEFAULT_EXPORT_NAME = "default";
-const SETTINGS_EXPORT_NAME = "settings";
-const SUPPORTED_EXPORT_TYPES = new Set(["container", "worker", "settings"]);
-
-function invalidConfigExportMessage(exportName: string): string {
-	return `The \`${exportName}\` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.`;
-}
-
-export const ConfigExportsTypeSchema = z
-	.record(z.string(), z.unknown())
-	.check((ctx) => {
-		for (const [key, value] of Object.entries(ctx.value)) {
-			const isObject = typeof value === "object" && value !== null;
-			const type = isObject && "type" in value ? value.type : undefined;
-			if (typeof type !== "string" || !SUPPORTED_EXPORT_TYPES.has(type)) {
-				ctx.issues.push({
-					code: "custom",
-					input: value,
-					path: isObject ? [key, "type"] : [key],
-					message: invalidConfigExportMessage(key),
-				});
-				continue;
-			}
-
-			if (key === DEFAULT_EXPORT_NAME && type !== "worker") {
-				ctx.issues.push({
-					code: "custom",
-					input: value,
-					path: [key],
-					message: `The \`${DEFAULT_EXPORT_NAME}\` export is reserved for a \`worker\` config; found a \`${type}\` config.`,
-				});
-				continue;
-			}
-
-			const isSettingsName = key === SETTINGS_EXPORT_NAME;
-			const isSettingsType = type === "settings";
-			if (isSettingsType && !isSettingsName) {
-				ctx.issues.push({
-					code: "custom",
-					input: value,
-					path: [key],
-					message: `A \`settings\` config is only allowed on the \`${SETTINGS_EXPORT_NAME}\` export; found one on the \`${key}\` export.`,
-				});
-			} else if (isSettingsName && !isSettingsType) {
-				ctx.issues.push({
-					code: "custom",
-					input: value,
-					path: [key],
-					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${type}\` config.`,
-				});
-			}
-		}
-	});
 
 export const ModuleTypeSchema = z.enum([
 	"esm",
@@ -899,6 +856,7 @@ const ManifestSchema = z
  * base schema.
  */
 export const OutputWorkerSchema = BaseWorkerSchema.extend({
+	type: z.literal("worker"),
 	manifest: ManifestSchema.optional(),
 });
 
@@ -1024,11 +982,11 @@ void _assertInputContainerSchemaMatchesConfig;
 
 /**
  * Bidirectional drift check between {@link InputSettingsSchema} and the public
- * {@link SettingsConfig} interface.
+ * {@link Settings} interface.
  */
 type _AssertInputSettingsSchemaMatchesConfig = [
-	z.input<typeof InputSettingsSchema> extends SettingsConfig ? true : false,
-	SettingsConfig extends z.input<typeof InputSettingsSchema> ? true : false,
+	z.input<typeof InputSettingsSchema> extends Settings ? true : false,
+	Settings extends z.input<typeof InputSettingsSchema> ? true : false,
 ];
 const _assertInputSettingsSchemaMatchesConfig: _AssertInputSettingsSchemaMatchesConfig =
 	[true, true];
