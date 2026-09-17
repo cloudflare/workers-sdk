@@ -1240,9 +1240,6 @@ importers:
       '@better-auth/stripe':
         specifier: ^1.4.6
         version: 1.5.4(@better-auth/core@1.5.4(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@5.20261109.1)(better-call@1.3.2(zod@4.6.5))(jose@5.9.3)(kysely@0.28.11)(nanostores@1.1.1))(better-auth@1.5.4(6ea2921aa71f77969b0cc258d9e9b934))(better-call@1.3.2(zod@4.6.5))(stripe@20.4.1(@types/node@22.15.17))
-      '@cloudflare/containers':
-        specifier: ^0.2.2
-        version: 0.2.2
       '@cloudflare/vitest-plugin':
         specifier: workspace:*
         version: link:../../packages/vitest-plugin
@@ -4138,6 +4135,9 @@ importers:
       '@cloudflare/config':
         specifier: workspace:*
         version: link:../config
+      '@cloudflare/containers-shared':
+        specifier: workspace:*
+        version: link:../containers-shared
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
@@ -5596,9 +5596,6 @@ packages:
 
   '@cloudflare/config@0.26.0':
     resolution: {integrity: sha512-18i2llyc49mWX/CQ5edwBlXclfMWZ6QIvquRbHWuxRYzKVd/immaQyRNvwqIHMUowDeNRwVk+K68xsVavdXPSQ==}
-
-  '@cloudflare/containers@0.2.2':
-    resolution: {integrity: sha512-cfTSd7M96Z9NeCiaN4i3FuMb+i2Nzi0HbMuxvMAnUmkXwtWIZCQ3XLqUWQkdCKWNJZ/3BLMInC6ntFvpbTWIpA==}
 
   '@cloudflare/elements@3.0.3':
     resolution: {integrity: sha512-s6Sjh+IWJD0xn+4iy6hk/FYwY1gAFLWvpiWUmfDZWrQ09ZOTto8aRwpoEN7jUV6dZCPlCkUqMj4xKwRzDQ72FQ==}
@@ -17449,8 +17446,6 @@ snapshots:
   '@cloudflare/config@0.26.0':
     dependencies:
       zod: 4.6.5
-
-  '@cloudflare/containers@0.2.2': {}
 
   '@cloudflare/elements@3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
