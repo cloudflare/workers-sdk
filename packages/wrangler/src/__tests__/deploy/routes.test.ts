@@ -1,4 +1,5 @@
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import { PREVIEW_DOMAIN_PROVISIONING_NOTE } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -46,14 +47,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -439,6 +432,68 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should list every conflicting route when routes are assigned to another worker", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				routes: ["example.com/route-one/*", "example.com/route-two/*"],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerSubdomain({ enabled: false });
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", [
+				// Simulate both routes already being assigned to another worker.
+				{ pattern: "example.com/route-one/*", script: "other-worker" },
+				{ pattern: "example.com/route-two/*", script: "other-worker" },
+			]);
+			await expect(runWrangler("deploy ./index")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Can't deploy routes that are assigned to another worker.
+				"other-worker" is already assigned to routes:
+				  - example.com/route-one/*
+				  - example.com/route-two/*
+
+				Unassign other workers from the routes you want to deploy to, and then try again.
+				Visit https://dash.cloudflare.com/some-account-id/workers/overview to unassign a worker from a route.]
+			`);
+		});
+
+		it("should list every previously deployed route in the fallback warning", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				routes: ["example.com/some-route/*"],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerSubdomain({ enabled: false });
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", [
+				// Simulate that the worker has already been deployed to two other routes.
+				{ pattern: "foo.example.com/other-route", script: "test-name" },
+				{ pattern: "bar.example.com/other-route", script: "test-name" },
+			]);
+			// Simulate the bulk-routes API failing with a not authorized error.
+			mockUnauthorizedPublishRoutesRequest();
+			mockPublishRoutesFallbackRequest({
+				pattern: "example.com/some-route/*",
+				script: "test-name",
+			});
+			await runWrangler("deploy ./index");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
+
+				  The following routes were already associated with this worker, and have not been deleted:
+				   - "foo.example.com/other-route"
+				   - "bar.example.com/other-route"
+				  If these routes are not wanted then you can remove them in the dashboard.
+
+				"
+			`);
+		});
+
 		describe("custom domains", () => {
 			it("should deploy routes marked with 'custom_domain' as separate custom domains", async ({
 				expect,
@@ -502,7 +557,143 @@ describe("deploy", () => {
 				});
 				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
-				expect(std.out).toContain("[enabled, previews: enabled]");
+				expect(std.out).toContain("[production: enabled, previews: enabled]");
+				expect(std.out).toContain(PREVIEW_DOMAIN_PROVISIONING_NOTE);
+				expect(
+					std.out.indexOf(PREVIEW_DOMAIN_PROVISIONING_NOTE)
+				).toBeGreaterThan(std.out.indexOf("api.example.com (custom domain)"));
+			});
+
+			it("should not print the Preview provisioning note for an unchanged Preview domain", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					routes: [
+						{
+							pattern: "api.example.com",
+							custom_domain: true,
+							previews_enabled: true,
+						},
+					],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
+				mockCustomDomainsChangesetRequest({
+					changeset: { added: [], updated: [] },
+				});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [
+						{
+							hostname: "api.example.com",
+							previews_enabled: true,
+						},
+					],
+				});
+
+				await runWrangler("deploy ./index");
+
+				expect(std.out).not.toContain(PREVIEW_DOMAIN_PROVISIONING_NOTE);
+			});
+
+			it("should not print the Preview provisioning note when previews_enabled is false or omitted", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					routes: [
+						{
+							pattern: "api.example.com",
+							custom_domain: true,
+							previews_enabled: false,
+						},
+						{
+							pattern: "app.example.com",
+							custom_domain: true,
+						},
+					],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockGetZonesMulti(expect, {
+					"api.example.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "api-example-com-id" }],
+					},
+					"app.example.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "app-example-com-id" }],
+					},
+				});
+				mockGetZoneWorkerRoutesMulti(expect, {
+					"api-example-com-id": [],
+					"app-example-com-id": [],
+				});
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [
+						{
+							hostname: "api.example.com",
+							previews_enabled: false,
+						},
+						{ hostname: "app.example.com" },
+					],
+				});
+
+				await runWrangler("deploy ./index");
+
+				expect(std.out).not.toContain(PREVIEW_DOMAIN_PROVISIONING_NOTE);
+			});
+
+			it("should not print the Preview provisioning note when custom-domain publishing fails", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					routes: [
+						{
+							pattern: "api.example.com",
+							custom_domain: true,
+							previews_enabled: true,
+						},
+					],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
+				mockCustomDomainsChangesetRequest({});
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:scriptName/domains/records",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 100159,
+										message: "Custom-domain publishing failed",
+									},
+								])
+							),
+						{ once: true }
+					)
+				);
+
+				await expect(runWrangler("deploy ./index")).rejects.toThrow();
+
+				expect(std.out).not.toContain(PREVIEW_DOMAIN_PROVISIONING_NOTE);
 			});
 
 			it("should confirm override if custom domain deploy would override an existing domain", async ({
@@ -520,7 +711,7 @@ describe("deploy", () => {
 				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
-					originConflicts: [
+					updatedDomains: [
 						{
 							id: "101",
 							zone_id: "",
@@ -559,6 +750,76 @@ Update them to point to this script instead?`,
 				});
 				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
+			});
+
+			it("should override a custom domain without confirmation if it already belongs to this Worker environment", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					env: {
+						dev: {
+							routes: [
+								{
+									pattern: "api.example.com",
+									custom_domain: true,
+									previews_enabled: true,
+								},
+							],
+						},
+					},
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false, env: "dev" });
+				mockUploadWorkerRequest({ expectedType: "esm", env: "dev" });
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
+				mockCustomDomainsChangesetRequest({
+					env: "dev",
+					updatedDomains: [
+						{
+							id: "101",
+							zone_id: "",
+							zone_name: "",
+							hostname: "api.example.com",
+							service: "test-name-dev",
+							environment: "dev",
+							enabled: true,
+							previews_enabled: true,
+						},
+					],
+				});
+				mockCustomDomainLookup({
+					id: "101",
+					zone_id: "",
+					zone_name: "",
+					hostname: "api.example.com",
+					service: "test-name-dev",
+					environment: "dev",
+					enabled: true,
+					previews_enabled: false,
+				});
+				mockPublishCustomDomainsRequest({
+					env: "dev",
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: true,
+						override_existing_dns_record: false,
+					},
+					domains: [
+						{
+							hostname: "api.example.com",
+							previews_enabled: true,
+						},
+					],
+				});
+
+				await runWrangler("deploy ./index --env dev");
+
+				expect(std.out).toContain(
+					"api.example.com (custom domain) [previews: enabled]"
+				);
+				expect(std.out).toContain(PREVIEW_DOMAIN_PROVISIONING_NOTE);
+				expect(std.out).not.toContain("Custom Domains already exist");
 			});
 
 			it("should confirm override if custom domain deploy contains a conflicting DNS record", async ({
@@ -622,7 +883,7 @@ Update them to point to this script instead?`,
 				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
-					originConflicts: [
+					updatedDomains: [
 						{
 							id: "101",
 							zone_id: "",
@@ -729,7 +990,7 @@ Update them to point to this script instead?`,
 				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
-					originConflicts: [
+					updatedDomains: [
 						{
 							id: "101",
 							zone_id: "",
@@ -1430,7 +1691,7 @@ Update them to point to this script instead?`,
 			mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
 			mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 			mockCustomDomainsChangesetRequest({
-				originConflicts: [
+				updatedDomains: [
 					{
 						id: "101",
 						zone_id: "",

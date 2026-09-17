@@ -2,12 +2,16 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { ContainerImagePreparationStatus } from "@cloudflare/containers-shared";
 import {
 	ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE,
 	generatePreviewAlias,
 } from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
-import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
+import {
+	CONTAINER_IMAGES_BINDING,
+	DEFAULT_COMPAT_DATE,
+} from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -19,14 +23,17 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { beforeEach, describe, expect, it, test, vi } from "vitest";
+import { logger } from "../../logger";
 import * as metrics from "../../metrics";
 import { dedent } from "../../utils/dedent";
+import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
+import { mockGetSettings } from "../helpers/mock-worker-settings";
 import {
 	mockGetWorkerSubdomain,
 	mockSubDomainRequest,
@@ -151,6 +158,16 @@ describe("versions upload", () => {
 	}
 
 	beforeEach(() => {
+		msw.use(
+			http.get("*/applications/:id", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 1000, message: "Application not found" },
+					]),
+					{ status: 404 }
+				)
+			)
+		);
 		// Mock the secrets endpoint that checkRemoteSecretsOverride calls
 		msw.use(
 			http.get(
@@ -1038,12 +1055,56 @@ describe("versions upload", () => {
 
 	describe("keep_vars", () => {
 		beforeEach(() => {
+			mockGetSettings({ result: { bindings: [] } });
 			mockGetScript();
 			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
 			writeWorkerSource();
 			setIsTTY(false);
 		});
 
+		test.for([
+			{ bindingName: CONTAINER_IMAGES_BINDING, containers: [] },
+			{ bindingName: "USER_IMAGES", containers: [] },
+			{ bindingName: CONTAINER_IMAGES_BINDING, containers: undefined },
+			{ bindingName: "USER_IMAGES", containers: undefined },
+		])(
+			"clears only the reserved Container image binding with keep_vars: %j",
+			async ({ bindingName, containers }, { expect }) => {
+				mockGetScript();
+				const requests = mockUploadVersion(false, 0);
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					keep_vars: true,
+					containers,
+				});
+				writeWorkerSource();
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/workers/scripts/:scriptName/settings",
+						() =>
+							HttpResponse.json(
+								createFetchResult({
+									bindings: [
+										{ name: bindingName, type: "json", json: { OldClass: {} } },
+									],
+								})
+							)
+					)
+				);
+				await runWrangler("versions upload");
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.containers).toEqual(containers);
+				expect(metadata.keep_bindings).toEqual(
+					expect.arrayContaining(["json", "plain_text"])
+				);
+				expect(metadata.bindings).toEqual(
+					bindingName === CONTAINER_IMAGES_BINDING
+						? [{ name: CONTAINER_IMAGES_BINDING, type: "json", json: {} }]
+						: []
+				);
+			}
+		);
 		test("should include plain_text and json in keep_bindings when keep_vars is true", async () => {
 			const mockUploadVersionCapture = captureRequestsFrom(
 				http.post(
@@ -1761,6 +1822,23 @@ describe("versions upload", () => {
 			expect(std.out).toContain("MY_KV");
 			expect(std.out).toContain("--dry-run: exiting now.");
 		});
+
+		test("categorises the positional path in command telemetry", async ({
+			expect,
+		}) => {
+			logger.loggerLevel = "debug";
+			writeWranglerConfig({ name: "test-name" });
+			writeWorkerSource();
+
+			try {
+				await runWrangler("versions upload index.js --dry-run");
+			} finally {
+				logger.resetLoggerLevel();
+			}
+
+			expect(std.debug).toContain('"sanitizedCommand":"versions upload"');
+			expect(std.debug).toContain('"path":"file"');
+		});
 	});
 
 	// --no-bundle, --var/--define/--alias, annotations, non-versioned fields,
@@ -2301,7 +2379,9 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("should include migrations in upload metadata", async ({ expect }) => {
+		test("fails before uploading a version with pending migrations", async ({
+			expect,
+		}) => {
 			mockGetScript(
 				{
 					default_environment: {
@@ -2331,12 +2411,164 @@ describe("versions upload", () => {
 			});
 			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
 
-			await runWrangler("versions upload");
-
-			const metadata = await getMetadata(requests[requests.length - 1]);
-			expect(metadata.migrations).toBeDefined();
-			expect(metadata.migrations?.new_tag).toEqual("v1");
+			const rejection = runWrangler("versions upload");
+			await expect(rejection).rejects.toThrow(
+				/pending Durable Object migration/
+			);
+			await expect(rejection).rejects.toThrow(/Run `wrangler deploy`/);
+			expect(requests).toHaveLength(0);
 		});
+
+		test.for([false, true])(
+			"uploads managed images without updating an existing application (%s)",
+			async (applicationExists, { expect }) => {
+				const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+				const image =
+					"registry.cloudflare.com/some-account-id/tools@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+				mockGetScript(
+					{
+						default_environment: {
+							script: {
+								last_deployed_from: "wrangler",
+								migration_tag: "v1",
+							},
+						},
+					},
+					{ once: false }
+				);
+				mockContainersAccount();
+				const requests = mockUploadVersion(false, 0);
+				const applicationRequests: unknown[] = [];
+				msw.use(
+					http.get(`*/applications/${namespaceId}`, () =>
+						applicationExists
+							? HttpResponse.json(
+									createFetchResult({
+										id: namespaceId,
+										name: "test-name-mydurableobject",
+										scheduling_policy: "durable_object",
+										durable_objects: { namespace_id: namespaceId },
+										configuration: { experimental_flags: ["old"] },
+										observability: { logs: { enabled: true } },
+									})
+								)
+							: HttpResponse.json(
+									createFetchResult(null, false, [
+										{ code: 1000, message: "Application not found" },
+									]),
+									{ status: 404 }
+								)
+					),
+					http.post("*/image-preparations", async ({ request }) => {
+						const body = (await request.json()) as { image: string };
+						expect(body).toEqual({ image });
+						return HttpResponse.json(
+							createFetchResult({
+								image,
+								status: ContainerImagePreparationStatus.READY,
+							})
+						);
+					}),
+					http.get(
+						"*/accounts/:accountId/workers/scripts/:scriptName/versions/:versionId",
+						({ params }) => {
+							expect(params.versionId).toBe(
+								"51e4886e-2db7-4900-8d38-fbfecfeab993"
+							);
+							return HttpResponse.json(
+								createFetchResult({
+									id: params.versionId,
+									metadata: {},
+									number: 1,
+									resources: {
+										bindings: [
+											{
+												type: "durable_object_namespace",
+												namespace_id: namespaceId,
+												class_name: "MyDurableObject",
+											},
+										],
+									},
+								})
+							);
+						}
+					),
+					http.post("*/applications", async ({ request }) => {
+						const body = await request.json();
+						applicationRequests.push(body);
+						return HttpResponse.json(createFetchResult(body));
+					})
+				);
+
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+					},
+					migrations: [
+						{
+							tag: "v1",
+							new_sqlite_classes: ["MyDurableObject"],
+						},
+					],
+					containers: [
+						{
+							class_name: "MyDurableObject",
+							scheduling_policy: "durable_object",
+							observability: { enabled: false },
+							unsafe: { configuration: { experimental_flags: [] } },
+							images: {
+								tools: { image },
+							},
+						},
+					],
+				});
+				writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+				await runWrangler("versions upload");
+
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.migrations).toBeUndefined();
+				expect(metadata.exports).toBeUndefined();
+				expect(metadata.containers).toEqual([
+					{
+						name: "test-name-mydurableobject",
+						class_name: "MyDurableObject",
+						images: { tools: image },
+					},
+				]);
+				expect(metadata.bindings.filter(({ type }) => type === "json")).toEqual(
+					[
+						{
+							json: {
+								MyDurableObject: {
+									tools: image,
+								},
+							},
+							name: CONTAINER_IMAGES_BINDING,
+							type: "json",
+						},
+					]
+				);
+				expect(applicationRequests).toEqual(
+					applicationExists
+						? []
+						: [
+								{
+									name: "test-name-mydurableobject",
+									scheduling_policy: "durable_object",
+									durable_objects: { namespace_id: namespaceId },
+									configuration: { experimental_flags: [] },
+									observability: { logs: { enabled: false } },
+								},
+							]
+				);
+				expect(std.warn).not.toContain(
+					"Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions"
+				);
+			}
+		);
 
 		test("should skip migrations in dry-run", async ({ expect }) => {
 			writeWranglerConfig({
@@ -2401,6 +2633,108 @@ describe("versions upload", () => {
 			});
 			expect(metadata.migrations).toBeUndefined();
 		});
+
+		test.for(["populated", "empty"] as const)(
+			"uploads a name-only managed Container export with %s images and defers application creation",
+			async (imageMap, { expect }) => {
+				const image =
+					"registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+				const imageRefs: Record<string, string> =
+					imageMap === "empty" ? {} : { app: image };
+				mockGetScript();
+				mockContainersAccount();
+				const requests = mockUploadVersion(false, 0);
+				const preparationRequests: unknown[] = [];
+				let namespaceListRequests = 0;
+				let applicationRequests = 0;
+				msw.use(
+					http.post("*/image-preparations", async ({ request }) => {
+						preparationRequests.push(await request.json());
+						return HttpResponse.json(
+							createFetchResult({
+								image,
+								status: ContainerImagePreparationStatus.READY,
+							})
+						);
+					}),
+					http.get(
+						"*/accounts/:accountId/workers/durable_objects/namespaces",
+						() => {
+							namespaceListRequests++;
+							return HttpResponse.json(createFetchResult([]));
+						}
+					),
+					http.patch("*/applications/:id", () => {
+						applicationRequests++;
+						return HttpResponse.json(createFetchResult({}));
+					}),
+					http.post("*/applications", () => {
+						applicationRequests++;
+						return HttpResponse.json(createFetchResult({}));
+					})
+				);
+
+				writeWranglerConfig(
+					{
+						name: "test-name",
+						main: "./index.js",
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "managed-app",
+							},
+						},
+						containers: [
+							{
+								name: "managed-app",
+								scheduling_policy: "durable_object",
+								observability: { logs: { enabled: true } },
+								unsafe: {
+									configuration: { experimental_flags: ["test-flag"] },
+								},
+								...(imageMap === "populated" && { images: { app: { image } } }),
+							},
+						],
+					},
+					"./wrangler.json"
+				);
+				writeWorkerSource({ durableObjects: ["Sandbox"] });
+
+				await runWrangler("versions upload --config ./wrangler.json");
+
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.exports).toEqual({
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "managed-app",
+					},
+				});
+				expect(metadata.containers).toEqual([
+					{
+						name: "managed-app",
+						class_name: "Sandbox",
+						...(imageMap === "populated" && { images: imageRefs }),
+					},
+				]);
+				expect(metadata.bindings).toEqual(
+					expect.arrayContaining([
+						{
+							name: CONTAINER_IMAGES_BINDING,
+							type: "json",
+							json: { Sandbox: imageRefs },
+						},
+					])
+				);
+				expect(preparationRequests).toEqual(
+					imageMap === "empty" ? [] : [{ image }]
+				);
+				expect(metadata.migrations).toBeUndefined();
+				expect(namespaceListRequests).toBe(0);
+				expect(applicationRequests).toBe(0);
+			}
+		);
 
 		test("surfaces a friendly error when EWC rejects a binding to a not-yet-provisioned `exports` class (code 100406)", async ({
 			expect,

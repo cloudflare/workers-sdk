@@ -104,7 +104,9 @@ class DigestingStream<
 		});
 		super({
 			async transform(chunk, controller) {
-				for (const hash of hashes) await hash.writer.write(chunk);
+				for (const hash of hashes) {
+					await hash.writer.write(chunk);
+				}
 				controller.enqueue(chunk);
 			},
 			async flush() {
@@ -136,7 +138,9 @@ function generateId() {
 function generateMultipartEtag(md5Hexes: string[]) {
 	// https://stackoverflow.com/a/19896823
 	const hash = createHash("md5");
-	for (const md5Hex of md5Hexes) hash.update(md5Hex, "hex");
+	for (const md5Hex of md5Hexes) {
+		hash.update(md5Hex, "hex");
+	}
 	return `${hash.digest("hex")}-${md5Hexes.length}`;
 }
 
@@ -148,7 +152,9 @@ async function decodeMetadata(req: Request<unknown, unknown>) {
 	const metadataSize = parseInt(
 		req.headers.get(R2Headers.METADATA_SIZE) ?? "NaN"
 	);
-	if (Number.isNaN(metadataSize)) throw new InvalidMetadata();
+	if (Number.isNaN(metadataSize)) {
+		throw new InvalidMetadata();
+	}
 
 	assert(req.body !== null);
 	const body = req.body as ReadableStream<Uint8Array>;
@@ -162,7 +168,9 @@ async function decodeMetadata(req: Request<unknown, unknown>) {
 }
 function decodeHeaderMetadata(req: Request<unknown, unknown>) {
 	const header = req.headers.get(R2Headers.REQUEST);
-	if (header === null) throw new InvalidMetadata();
+	if (header === null) {
+		throw new InvalidMetadata();
+	}
 	return R2BindingRequestSchema.parse(JSON.parse(header));
 }
 
@@ -321,7 +329,9 @@ function sqlStmts(db: TypedSql) {
 		getByKey: stmtGetByKey,
 		getPartsByKey: db.txn((key: string) => {
 			const row = get(stmtGetByKey({ key }));
-			if (row === undefined) return;
+			if (row === undefined) {
+				return;
+			}
 			if (row.blob_id === null) {
 				// If this is a multipart object, also return the parts
 				const partsRows = all(stmtListPartsByKey({ object_key: key }));
@@ -334,7 +344,9 @@ function sqlStmts(db: TypedSql) {
 		put: db.txn((newRow: ObjectRow, onlyIf?: R2Conditional) => {
 			const key = newRow.key;
 			const row = get(stmtGetPreviousByKey({ key }));
-			if (onlyIf !== undefined) validate.condition(row, onlyIf);
+			if (onlyIf !== undefined) {
+				validate.condition(row, onlyIf);
+			}
 			stmtPut(newRow);
 			const maybeOldBlobId = row?.blob_id;
 			if (maybeOldBlobId === undefined) {
@@ -357,7 +369,9 @@ function sqlStmts(db: TypedSql) {
 					// If blob_id is null, this was a multipart object, so delete all
 					// multipart parts
 					const partRows = stmtDeletePartsByKey({ object_key: key });
-					for (const partRow of partRows) oldBlobIds.push(partRow.blob_id);
+					for (const partRow of partRows) {
+						oldBlobIds.push(partRow.blob_id);
+					}
 				} else if (maybeOldBlobId !== undefined) {
 					oldBlobIds.push(maybeOldBlobId);
 				}
@@ -454,7 +468,9 @@ function sqlStmts(db: TypedSql) {
 				// 2. Check all selected part numbers are unique
 				const partNumberSet = new Set<number>();
 				for (const { part } of selectedParts) {
-					if (partNumberSet.has(part)) throw new InternalError();
+					if (partNumberSet.has(part)) {
+						throw new InternalError();
+					}
 					partNumberSet.add(part);
 				}
 
@@ -517,7 +533,9 @@ function sqlStmts(db: TypedSql) {
 					// If blob_id is null, this was a multipart object, so delete all
 					// multipart parts
 					const partRows = stmtDeletePartsByKey({ object_key: key });
-					for (const partRow of partRows) oldBlobIds.push(partRow.blob_id);
+					for (const partRow of partRows) {
+						oldBlobIds.push(partRow.blob_id);
+					}
 				} else if (maybeOldBlobId !== undefined) {
 					oldBlobIds.push(maybeOldBlobId);
 				}
@@ -549,7 +567,9 @@ function sqlStmts(db: TypedSql) {
 
 				// 7. Delete unlinked, unused parts
 				const partRows = stmtDeleteUnlinkedPartsByUploadId({ upload_id });
-				for (const partRow of partRows) oldBlobIds.push(partRow.blob_id);
+				for (const partRow of partRows) {
+					oldBlobIds.push(partRow.blob_id);
+				}
 
 				// 8. Mark the upload as completed
 				stmtUpdateUploadState({
@@ -711,7 +731,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 		validate.key(key);
 
 		const row = get(this.#stmts.getByKey({ key }));
-		if (row === undefined) throw new NoSuchKey();
+		if (row === undefined) {
+			throw new NoSuchKey();
+		}
 
 		const range: R2Range = { offset: 0, length: row.size };
 		return new InternalR2Object(row, range);
@@ -725,7 +747,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 
 		// Try to get this key, including multipart parts if it's multipart
 		const result = this.#stmts.getPartsByKey(key);
-		if (result === undefined) throw new NoSuchKey();
+		if (result === undefined) {
+			throw new NoSuchKey();
+		}
 		const { row, parts } = result;
 
 		// Validate pre-condition
@@ -759,7 +783,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 		} else {
 			// Otherwise, just return a single part value
 			value = await this.blob.get(row.blob_id, range);
-			if (value === null) throw new NoSuchKey();
+			if (value === null) {
+				throw new NoSuchKey();
+			}
 		}
 
 		return new InternalR2ObjectBody(row, value, r2Range);
@@ -776,7 +802,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 		const algorithms: DigestAlgorithm[] = [];
 		for (const { name, field } of R2_HASH_ALGORITHMS) {
 			// Always compute MD5 digest
-			if (field === "md5" || opts[field] !== undefined) algorithms.push(name);
+			if (field === "md5" || opts[field] !== undefined) {
+				algorithms.push(name);
+			}
 		}
 		const digesting = new DigestingStream(algorithms);
 		const blobId = await this.blob.put(value.pipeThrough(digesting));
@@ -811,22 +839,36 @@ export class R2BucketObject extends MiniflareDurableObject {
 			throw e;
 		}
 		if (oldBlobIds !== undefined) {
-			for (const blobId of oldBlobIds) this.#backgroundDelete(blobId);
+			for (const blobId of oldBlobIds) {
+				this.#backgroundDelete(blobId);
+			}
 		}
 		return new InternalR2Object(row);
 	}
 
 	#delete(keys: string | string[]) {
-		if (!Array.isArray(keys)) keys = [keys];
-		for (const key of keys) validate.key(key);
+		if (!Array.isArray(keys)) {
+			keys = [keys];
+		}
+		for (const key of keys) {
+			validate.key(key);
+		}
 		const oldBlobIds = this.#stmts.deleteByKeys(keys);
-		for (const blobId of oldBlobIds) this.#backgroundDelete(blobId);
+		for (const blobId of oldBlobIds) {
+			this.#backgroundDelete(blobId);
+		}
 	}
 
 	#listWithoutDelimiterQuery(excludeHttp: boolean, excludeCustom: boolean) {
-		if (excludeHttp && excludeCustom) return this.#stmts.listWithoutDelimiter;
-		if (excludeHttp) return this.#stmts.listCustomMetadataWithoutDelimiter;
-		if (excludeCustom) return this.#stmts.listHttpMetadataWithoutDelimiter;
+		if (excludeHttp && excludeCustom) {
+			return this.#stmts.listWithoutDelimiter;
+		}
+		if (excludeHttp) {
+			return this.#stmts.listCustomMetadataWithoutDelimiter;
+		}
+		if (excludeCustom) {
+			return this.#stmts.listHttpMetadataWithoutDelimiter;
+		}
 		return this.#stmts.listHttpCustomMetadataWithoutDelimiter;
 	}
 
@@ -840,7 +882,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 		// accommodate it. Simulate this by limiting the limit to 100.
 		// See https://developers.cloudflare.com/r2/api/workers/workers-api-reference/#r2listoptions.
 		const include = opts.include ?? [];
-		if (include.length > 0) limit = Math.min(limit, 100);
+		if (include.length > 0) {
+			limit = Math.min(limit, 100);
+		}
 		const excludeHttp = !include.includes("httpMetadata");
 		const excludeCustom = !include.includes("customMetadata");
 		const rowObject = (
@@ -869,7 +913,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 		}
 
 		let delimiter = opts.delimiter;
-		if (delimiter === "") delimiter = undefined;
+		if (delimiter === "") {
+			delimiter = undefined;
+		}
 
 		// Run appropriate query depending on options
 		const params = {
@@ -901,7 +947,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 				}
 			}
 
-			if (hasMoreRows) nextCursorStartAfter = rows[limit - 1].last_key;
+			if (hasMoreRows) {
+				nextCursorStartAfter = rows[limit - 1].last_key;
+			}
 		} else {
 			// If we don't have a delimiter, we can use a more efficient query
 			const query = this.#listWithoutDelimiterQuery(excludeHttp, excludeCustom);
@@ -913,7 +961,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 
 			objects = rows.map(rowObject);
 
-			if (hasMoreRows) nextCursorStartAfter = rows[limit - 1].key;
+			if (hasMoreRows) {
+				nextCursorStartAfter = rows[limit - 1].key;
+			}
 		}
 
 		// The cursor encodes a key to start after rather than the key to start at
@@ -981,7 +1031,9 @@ export class R2BucketObject extends MiniflareDurableObject {
 			this.#backgroundDelete(blobId);
 			throw e;
 		}
-		if (maybeOldBlobId !== undefined) this.#backgroundDelete(maybeOldBlobId);
+		if (maybeOldBlobId !== undefined) {
+			this.#backgroundDelete(maybeOldBlobId);
+		}
 
 		return { etag };
 	}
@@ -1001,14 +1053,18 @@ export class R2BucketObject extends MiniflareDurableObject {
 			parts,
 			minPartSize
 		);
-		for (const blobId of oldBlobIds) this.#backgroundDelete(blobId);
+		for (const blobId of oldBlobIds) {
+			this.#backgroundDelete(blobId);
+		}
 		return new InternalR2Object(newRow);
 	}
 
 	async #abortMultipartUpload(key: string, uploadId: string): Promise<void> {
 		validate.key(key);
 		const oldBlobIds = this.#stmts.abortMultipartUpload(key, uploadId);
-		for (const blobId of oldBlobIds) this.#backgroundDelete(blobId);
+		for (const blobId of oldBlobIds) {
+			this.#backgroundDelete(blobId);
+		}
 	}
 
 	@GET("/")

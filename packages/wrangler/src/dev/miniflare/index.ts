@@ -3,14 +3,13 @@ import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
 	extractBindingsOfType,
-	isUnsafeBindingType,
-} from "@cloudflare/deploy-helpers";
-import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
 	getWranglerHiddenDirPath,
+	isUnsafeBindingType,
 	UserError,
+	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
@@ -19,7 +18,6 @@ import { logger } from "../../logger";
 import { getMetricsConfig } from "../../metrics";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
-import { warnOrError } from "../../utils/print-bindings";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
@@ -436,7 +434,6 @@ type WorkerOptionsBindings = Pick<
 	| "ai"
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
-	| "websearch"
 	| "agentMemory"
 	| "textBlobBindings"
 	| "dataBlobBindings"
@@ -558,7 +555,6 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
-	const websearchBindings = extractBindingsOfType("websearch", bindings);
 	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
@@ -682,35 +678,31 @@ export function buildMiniflareBindingOptions(
 	const externalWorkers: V4WorkerOptions[] = [];
 
 	for (const ai of aiBindings) {
-		warnOrError("ai", ai.remote);
+		validateBindingRemoteSetting("ai", ai.remote, logger.warn);
 	}
 
 	for (const ns of aiSearchNamespaceBindings) {
-		warnOrError("ai_search_namespace", ns.remote);
+		validateBindingRemoteSetting("ai_search_namespace", ns.remote, logger.warn);
 	}
 
 	for (const inst of aiSearchInstanceBindings) {
-		warnOrError("ai_search", inst.remote);
-	}
-
-	for (const ws of websearchBindings) {
-		warnOrError("websearch", ws.remote);
+		validateBindingRemoteSetting("ai_search", inst.remote, logger.warn);
 	}
 
 	for (const memory of agentMemoryBindings) {
-		warnOrError("agent_memory", memory.remote);
+		validateBindingRemoteSetting("agent_memory", memory.remote, logger.warn);
 	}
 
 	for (const media of mediaBindings) {
-		warnOrError("media", media.remote);
+		validateBindingRemoteSetting("media", media.remote, logger.warn);
 	}
 
 	for (const artifact of artifactsBindings) {
-		warnOrError("artifacts", artifact.remote);
+		validateBindingRemoteSetting("artifacts", artifact.remote, logger.warn);
 	}
 
 	for (const flagship of flagshipBindings) {
-		warnOrError("flagship", flagship.remote);
+		validateBindingRemoteSetting("flagship", flagship.remote, logger.warn);
 	}
 
 	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
@@ -822,15 +814,6 @@ export function buildMiniflareBindingOptions(
 			])
 		),
 
-		websearch: Object.fromEntries(
-			websearchBindings.map((ws) => [
-				ws.binding,
-				{
-					remoteProxyConnectionString,
-				},
-			])
-		),
-
 		agentMemory: Object.fromEntries(
 			agentMemoryBindings.map((memory) => [
 				memory.binding,
@@ -884,6 +867,13 @@ export function buildMiniflareBindingOptions(
 							`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
 								`Configure limits on the worker that defines the workflow.`,
 							{ telemetryMessage: "workflow limits on external script" }
+						);
+					}
+					if (workflow.concurrency) {
+						throw new UserError(
+							`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
+								`Configure concurrency on the worker that defines the workflow.`,
+							{ telemetryMessage: "workflow concurrency on external script" }
 						);
 					}
 					if (workflow.schedules) {
@@ -975,7 +965,11 @@ export function buildMiniflareBindingOptions(
 
 		vectorize: Object.fromEntries(
 			vectorizeBindings.map((vectorize) => {
-				warnOrError("vectorize", vectorize.remote);
+				validateBindingRemoteSetting(
+					"vectorize",
+					vectorize.remote,
+					logger.warn
+				);
 				return [
 					vectorize.binding,
 					{
@@ -990,7 +984,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcServices: Object.fromEntries(
 			vpcServices.map((vpc) => {
-				warnOrError("vpc_service", vpc.remote);
+				validateBindingRemoteSetting("vpc_service", vpc.remote, logger.warn);
 				return [
 					vpc.binding,
 					{
@@ -1002,7 +996,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcNetworks: Object.fromEntries(
 			vpcNetworks.map((vpc) => {
-				warnOrError("vpc_network", vpc.remote);
+				validateBindingRemoteSetting("vpc_network", vpc.remote, logger.warn);
 				const id =
 					vpc.tunnel_id !== undefined
 						? { tunnel_id: vpc.tunnel_id }
@@ -1013,7 +1007,11 @@ export function buildMiniflareBindingOptions(
 
 		dispatchNamespaces: Object.fromEntries(
 			dispatchNamespaces.map((dispatchNamespace) => {
-				warnOrError("dispatch_namespace", dispatchNamespace.remote);
+				validateBindingRemoteSetting(
+					"dispatch_namespace",
+					dispatchNamespace.remote,
+					logger.warn
+				);
 				return dispatchNamespaceEntry(
 					dispatchNamespace,
 					dispatchNamespace.remote && remoteProxyConnectionString
@@ -1050,7 +1048,11 @@ export function buildMiniflareBindingOptions(
 
 		mtlsCertificates: Object.fromEntries(
 			mtlsCertificates.map((mtlsCertificate) => {
-				warnOrError("mtls_certificate", mtlsCertificate.remote);
+				validateBindingRemoteSetting(
+					"mtls_certificate",
+					mtlsCertificate.remote,
+					logger.warn
+				);
 				return [
 					mtlsCertificate.binding,
 					{

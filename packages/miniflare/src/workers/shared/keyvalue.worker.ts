@@ -155,7 +155,9 @@ export class KeyValueStorage<Metadata = unknown> {
 	> {
 		// Try to get key from metadata store, returning null if not found
 		const row = get(this.#stmts.getByKey(key));
-		if (row === undefined) return null;
+		if (row === undefined) {
+			return null;
+		}
 
 		if (this.#hasExpired(row)) {
 			// If expired, delete from metadata and blob stores. Assuming a
@@ -179,12 +181,16 @@ export class KeyValueStorage<Metadata = unknown> {
 			// If no range was requested, or just a single one was, return a regular
 			// stream
 			const value = await this.#blob.get(row.blob_id, opts?.ranges?.[0]);
-			if (value === null) return null;
+			if (value === null) {
+				return null;
+			}
 			return { ...entry, value };
 		} else {
 			// Otherwise, if multiple ranges were requested, return a multipart stream
 			const value = await this.#blob.get(row.blob_id, opts.ranges, opts);
-			if (value === null) return null;
+			if (value === null) {
+				return null;
+			}
 			return { ...entry, value };
 		}
 	}
@@ -222,14 +228,18 @@ export class KeyValueStorage<Metadata = unknown> {
 					: JSON.stringify(await entry.metadata),
 		});
 		// Garbage collect previous entry's blob
-		if (maybeOldBlobId !== undefined) this.#backgroundDelete(maybeOldBlobId);
+		if (maybeOldBlobId !== undefined) {
+			this.#backgroundDelete(maybeOldBlobId);
+		}
 	}
 
 	async delete(key: string): Promise<boolean> {
 		// Try to delete key from metadata store, returning false if not found
 		const cursor = this.#stmts.deleteByKey({ key });
 		const row = get(cursor);
-		if (row === undefined) return false;
+		if (row === undefined) {
+			return false;
+		}
 		// Garbage collect deleted entry's blob
 		this.#backgroundDelete(row.blob_id);
 		// Return true iff this entry hasn't expired
@@ -274,7 +284,9 @@ export class KeyValueStorage<Metadata = unknown> {
 		// Garbage collect expired entries. As with `get()`, assuming a
 		// monotonically increasing clock, this doesn't need to be in a transaction.
 		const expiredRows = this.#stmts.deleteExpired({ now });
-		for (const row of expiredRows) this.#backgroundDelete(row.blob_id);
+		for (const row of expiredRows) {
+			this.#backgroundDelete(row.blob_id);
+		}
 
 		// If there are more results, we'll be returning a cursor
 		const hasMoreRows = rows.length === opts.limit + 1;

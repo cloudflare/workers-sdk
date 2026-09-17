@@ -24,9 +24,6 @@ export function getParsedEmailCaptureFields(
 	email: Email,
 	excludedHeaderNames: readonly string[] = []
 ): ParsedEmailCaptureFields {
-	const excludedHeaders = new Set(
-		excludedHeaderNames.map((name) => name.toLowerCase())
-	);
 	return {
 		cc: email.cc?.map(formatParsedAddress),
 		bcc: email.bcc?.map(formatParsedAddress),
@@ -35,9 +32,7 @@ export function getParsedEmailCaptureFields(
 			: undefined,
 		subject: email.subject ?? "(no subject)",
 		headers: Object.fromEntries(
-			email.headers
-				.filter(({ key }) => !excludedHeaders.has(key.toLowerCase()))
-				.map(({ key, value }) => [key, value])
+			getParsedEmailHeaderEntries(email, excludedHeaderNames)
 		),
 		attachments: (email.attachments ?? []).map((attachment) => ({
 			filename: attachment.filename ?? "attachment",
@@ -47,4 +42,19 @@ export function getParsedEmailCaptureFields(
 			size: contentByteLength(attachment.content),
 		})),
 	};
+}
+
+/**
+ * Returns parsed headers in source order so repeated fields remain distinct.
+ */
+export function getParsedEmailHeaderEntries(
+	email: Email,
+	excludedHeaderNames: readonly string[] = []
+): [string, string][] {
+	const excludedHeaders = new Set(
+		excludedHeaderNames.map((name) => name.toLowerCase())
+	);
+	return email.headers
+		.filter(({ key }) => !excludedHeaders.has(key.toLowerCase()))
+		.map(({ key, value }): [string, string] => [key, value]);
 }

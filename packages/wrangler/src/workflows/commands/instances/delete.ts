@@ -8,7 +8,7 @@ import {
 	getLocalInstanceIdFromArgs,
 	localWorkflowArgs,
 } from "../../local";
-import { getInstanceIdFromArgs } from "../../utils";
+import { getInstanceIdFromArgs, jsonWorkflowArgs } from "../../utils";
 
 type WorkflowBatchDeleteResult = {
 	deleted: { id: string }[];
@@ -24,6 +24,7 @@ export const workflowsInstancesDeleteCommand = createCommand({
 	positionalArgs: ["name", "id"],
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -39,6 +40,9 @@ export const workflowsInstancesDeleteCommand = createCommand({
 			describe: "Path to a JSON file containing an array of instance IDs",
 			type: "string",
 		},
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
 	},
 
 	async handler(args, { config }) {
@@ -77,10 +81,11 @@ export const workflowsInstancesDeleteCommand = createCommand({
 
 		if (args.local) {
 			if (ids.includes("latest")) {
-				const latestId = await getLocalInstanceIdFromArgs(args.port, {
-					id: "latest",
-					name: args.name,
-				});
+				const latestId = await getLocalInstanceIdFromArgs(
+					args.port,
+					{ id: "latest", name: args.name },
+					{ quiet: args.json }
+				);
 				ids = ids.map((id) => (id === "latest" ? latestId : id));
 			}
 			result = await fetchLocalResult<WorkflowBatchDeleteResult>(
@@ -113,7 +118,16 @@ export const workflowsInstancesDeleteCommand = createCommand({
 			);
 		}
 
-		if (result.deleted.length > 0) {
+		// Emitted before the error below is thrown so that a partial failure still
+		// exits non-zero while the payload describing it reaches stdout.
+		if (args.json) {
+			logger.json(result);
+			if (result.errors.length === 0) {
+				return;
+			}
+		}
+
+		if (!args.json && result.deleted.length > 0) {
 			logger.info(
 				`🗑️  Deleted workflow instances from "${args.name}": ${result.deleted.map(({ id }) => `"${id}"`).join(", ")}`
 			);

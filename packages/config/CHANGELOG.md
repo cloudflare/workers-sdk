@@ -1,5 +1,81 @@
 # @cloudflare/config
 
+## 0.13.0
+
+### Minor Changes
+
+- [#15453](https://github.com/cloudflare/workers-sdk/pull/15453) [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891) Thanks [@G4brym](https://github.com/G4brym)! - Remove the gated Web Search binding and Wrangler command
+
+  The unreleased search binding and its experimental command have been removed from Wrangler, Miniflare, and configuration APIs.
+
+## 0.12.0
+
+### Minor Changes
+
+- [#15544](https://github.com/cloudflare/workers-sdk/pull/15544) [`3f42b10`](https://github.com/cloudflare/workers-sdk/commit/3f42b10a40d2b3aae1d8d5142ea0bc3ac58fa954) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add standalone Container configuration to the experimental config API
+
+  Container applications can now be declared with `defineContainer`, exported alongside Workers, and referenced directly from SQLite Durable Object exports. The new input and output schemas support the camel-cased Container configuration format and require output to use an image reference.
+
+  Support currently only exists in the config package and has not been added to its consumers.
+
+## 0.11.0
+
+### Minor Changes
+
+- [#15511](https://github.com/cloudflare/workers-sdk/pull/15511) [`9c60d14`](https://github.com/cloudflare/workers-sdk/commit/9c60d14c0e4cd9306a58c830023f5b43fe6ed054) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Enable referencing Worker configs directly in cross-Worker bindings
+
+  `defineWorker` and `defineSettings` now return ordinary config objects, functions, or promises. Cross-Worker bindings can use a `defineWorker` result as their `worker`, preserving type inference while resolving and parsing the referenced config only once.
+
+## 0.10.0
+
+### Minor Changes
+
+- [#15379](https://github.com/cloudflare/workers-sdk/pull/15379) [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46) Thanks [@ibbykhazanchi](https://github.com/ibbykhazanchi)! - Add query string redaction to Workers observability configuration
+
+  Set `observability.redact_query_string` in `wrangler.json` or `observability.redactQueryString` in the experimental `cloudflare.config.ts` format to remove query strings from request URLs in logs and traces.
+
+- [#15388](https://github.com/cloudflare/workers-sdk/pull/15388) [`10d6bfb`](https://github.com/cloudflare/workers-sdk/commit/10d6bfbaf0ab7466892f4d97af1301494ca71e37) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support partial manifests in the experimental Build Output Specification
+
+  Build output producers now declare whether their module inventory is complete. `readBuildOutput()` resolves partial manifests by discovering `.js`, `.mjs`, and `.map` files while preserving explicit module type overrides.
+
+## 0.9.0
+
+### Minor Changes
+
+- [#15373](https://github.com/cloudflare/workers-sdk/pull/15373) [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename Worker target fields from `workerName` to `worker`
+
+  The experimental `@cloudflare/config` and Miniflare configuration APIs now use `worker` consistently for Worker, Durable Object, Workflow, dispatch namespace, and tail consumer targets.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#15326](https://github.com/cloudflare/workers-sdk/pull/15326) [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename the settings config schema exports to the input/output convention
+
+  `SettingsSchema` is now `InputSettingsSchema` and `ParsedSettingsConfig` is now `ParsedInputSettingsConfig`.
+
+- [#15326](https://github.com/cloudflare/workers-sdk/pull/15326) [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Record the selected mode in the Build Output Specification top-level `config.json`
+
+  The mode a build was produced in is now written to `.cloudflare/output/v0/config.json` as a `mode` field, alongside the account and compliance settings.
+
+- [#15318](https://github.com/cloudflare/workers-sdk/pull/15318) [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Consolidate development-only binding configuration under `dev`
+
+  This experimental configuration now uses `dev.remote` for remote bindings and `dev.connectionString` for Hyperdrive. Miniflare's v5 binding configuration follows the same shape, and R2's local S3 credentials now share the `dev` object.
+
+- [#15325](https://github.com/cloudflare/workers-sdk/pull/15325) [`7f66836`](https://github.com/cloudflare/workers-sdk/commit/7f668362bd5675afb95c1cb5128fad6aa092a430) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Reject conflicting destination restrictions in send-email bindings
+
+  Send-email bindings now match Wrangler validation by allowing either `destinationAddress` or `allowedDestinationAddresses`, but not both. `allowedSenderAddresses` remains an independent restriction that can accompany either destination mode.
+
+### Patch Changes
+
+- [#15324](https://github.com/cloudflare/workers-sdk/pull/15324) [`ead8f69`](https://github.com/cloudflare/workers-sdk/commit/ead8f69e85efa758dd066b4d1cfc2fec406939dd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix the inferred type of `ConfigExportsSchema` to reserve the `settings` key for settings configuration
+
+  Parsed config exports now expose `settings` as a settings configuration while treating all other exports as Worker configurations. Validation continues to report specific errors when a settings configuration uses the wrong export name or the reserved name contains a Worker configuration, and now explains how to handle unsupported exports.
+
+- [#15297](https://github.com/cloudflare/workers-sdk/pull/15297) [`acb14d0`](https://github.com/cloudflare/workers-sdk/commit/acb14d01d64f21f0f21c247da7c2fcb0557ebb3d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix declaration emit for values returned by `defineSettings`
+
+  Projects can now export a `defineSettings()` result while generating TypeScript declarations without encountering TS4023.
+
 ## 0.7.0
 
 ### Minor Changes

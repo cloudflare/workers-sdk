@@ -278,6 +278,13 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			onModuleRunner(moduleRunner: unknown) {
 				const runner = moduleRunner as {
 					evaluator?: { createRequire?: CreateRequire };
+					options?: {
+						createImportMeta?: (
+							modulePath: string
+						) =>
+							| Promise<{ url: string; resolve: (id: string) => string }>
+							| { url: string; resolve: (id: string) => string };
+					};
 					transport?: { invoke?: (...args: unknown[]) => unknown };
 				};
 				if (runner.evaluator?.createRequire) {
@@ -297,6 +304,19 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 						"[vitest-plugin] Could not patch module runner createRequire. " +
 							"Relative require() may fail when the project path contains encoded characters."
 					);
+				}
+				if (
+					runner.options?.createImportMeta !== undefined &&
+					import.meta.resolve !== undefined
+				) {
+					const originalCreateImportMeta = runner.options.createImportMeta;
+					runner.options.createImportMeta = async (modulePath) => {
+						const meta = await originalCreateImportMeta(modulePath);
+						// Workerd's native resolver is bound to the Vitest module that
+						// created it, so resolve inlined modules relative to their own URL.
+						meta.resolve = (specifier) => new URL(specifier, meta.url).href;
+						return meta;
+					};
 				}
 				if (runner.transport?.invoke) {
 					const originalInvoke = runner.transport.invoke.bind(runner.transport);

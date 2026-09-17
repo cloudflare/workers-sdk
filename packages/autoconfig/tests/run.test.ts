@@ -11,7 +11,10 @@ import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
 import { runAutoConfig } from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
-import type { ConfigurationResults } from "../src/frameworks/framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "../src/frameworks/framework-class";
 
 class ExternalWorkerConfigFramework extends Framework {
 	configure(): ConfigurationResults {
@@ -32,6 +35,15 @@ class ViteBuildToolFramework extends Framework {
 	}
 }
 
+class BuildCommandOverrideFramework extends Static {
+	configure(options: ConfigurationOptions): ConfigurationResults {
+		return {
+			...super.configure(options),
+			buildCommandOverride: "npx framework build",
+		};
+	}
+}
+
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	mockConsoleMethods();
@@ -44,28 +56,34 @@ describe("runAutoConfig()", () => {
 			.mockResolvedValue();
 		const packageJson = {
 			name: "my-static-app",
-			scripts: { build: "generate && vite build" },
+			scripts: {
+				build: "generate && vite build",
+				preview: "vite preview",
+			},
 		};
 		await seed({
 			"package.json": JSON.stringify(packageJson),
 			"public/index.html": "<h1>Hello World</h1>",
 		});
+		const context = createMockContext();
 
 		const summary = await runAutoConfig(
 			{
 				configured: false,
 				projectPath: process.cwd(),
 				workerName: "my-static-app",
-				framework: new Static({ id: "static", name: "Static" }),
+				framework: new BuildCommandOverrideFramework({
+					id: "static",
+					name: "Static",
+				}),
 				buildCommand: "npm run build",
 				outputDir: "public",
 				packageJson,
 				packageManager: NpmPackageManager,
 			},
 			{
-				context: createMockContext(),
+				context,
 				skipConfirmations: true,
-				runBuild: false,
 				enableTargetCliInstallation: false,
 			}
 		);
@@ -75,6 +93,7 @@ describe("runAutoConfig()", () => {
 			observability: { enabled: true },
 		});
 		expect(summary.buildConfig).toEqual({ assetsDirectory: "public" });
+		expect(summary.buildCommand).toBe("npx framework build");
 		expect(summary.deployCommand).toBe("npx cf deploy");
 		expect(summary.versionCommand).toBe("npx cf versions upload");
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
@@ -85,11 +104,16 @@ describe("runAutoConfig()", () => {
 		);
 		expect(existsSync("wrangler.jsonc")).toBe(false);
 		expect(installWrangler).toHaveBeenCalledWith("npm", false);
+		expect(context.runCommand).toHaveBeenCalledWith(
+			"npx framework build",
+			process.cwd(),
+			"[build]"
+		);
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
 			scripts: {
 				build: "generate && vite build",
-				deploy: "npm run build && cf deploy --no-build",
-				preview: "cf dev",
+				deploy: "cf deploy",
+				preview: "vite preview",
 			},
 		});
 	});
@@ -129,6 +153,40 @@ describe("runAutoConfig()", () => {
 			isWorkspaceRoot: false,
 		});
 		expect(installWrangler).toHaveBeenCalledWith("npm", false);
+	});
+
+	it("does not reinstall an existing cf dependency", async ({ expect }) => {
+		const installPackages = vi
+			.spyOn(cliPackages, "installPackages")
+			.mockResolvedValue();
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+		const packageJson = {
+			name: "my-static-app",
+			devDependencies: { cf: "^0.8.0" },
+		};
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"public/index.html": "<h1>Hello World</h1>",
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-static-app",
+				framework: new Static({ id: "static", name: "Static" }),
+				outputDir: "public",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		expect(installPackages).not.toHaveBeenCalled();
 	});
 
 	it("does not install Wrangler when cf delegates to Vite", async ({

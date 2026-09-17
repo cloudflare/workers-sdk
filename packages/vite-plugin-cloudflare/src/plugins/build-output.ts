@@ -30,7 +30,10 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					workerNewConfig,
 					"Expected a default worker export on assets-only resolved config"
 				);
-				await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig);
+				await writeWorkerConfig({
+					root: ctx.resolvedViteConfig.root,
+					config: workerNewConfig,
+				});
 				await writeSettings();
 				return;
 			}
@@ -83,9 +86,14 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				modules[fileName] = { type: detectModuleType(fileName) };
 			}
 
-			await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig, {
-				mainModule: entryChunk.fileName,
-				modules,
+			await writeWorkerConfig({
+				root: ctx.resolvedViteConfig.root,
+				config: workerNewConfig,
+				manifest: {
+					type: "complete",
+					mainModule: entryChunk.fileName,
+					modules,
+				},
 			});
 			await writeSettings();
 		},

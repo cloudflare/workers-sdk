@@ -3,17 +3,20 @@ import * as path from "node:path";
 import {
 	InputSettingsSchema,
 	InputWorkerSchema,
+	OutputContainerSchema,
 	OutputWorkerSchema,
 } from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
 	BUILD_OUTPUT_ROOT,
+	getContainerConfigPath,
 	getSettingsConfigPath,
 	getWorkerConfigPath,
 } from "../paths";
 import {
 	cleanBuildOutputDir,
+	writeContainerConfig,
 	writeSettingsConfig,
 	writeWorkerConfig,
 } from "../write";
@@ -29,6 +32,21 @@ const parsedSettingsConfig = InputSettingsSchema.parse({
 	type: "settings",
 	accountId: "1234567890",
 	complianceRegion: "public",
+});
+
+const parsedStandardContainerConfig = OutputContainerSchema.parse({
+	type: "container",
+	name: "api-container",
+	image: { reference: "registry.example.com/api:latest" },
+});
+
+const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
+	type: "container",
+	name: "session-container",
+	schedulingPolicy: "durable-object",
+	images: {
+		default: { localReference: "session-container:latest" },
+	},
 });
 
 describe("writeSettingsConfig", () => {
@@ -97,11 +115,12 @@ describe("writeWorkerConfig", () => {
 	}) => {
 		const root = process.cwd();
 		const manifest = {
+			type: "complete",
 			mainModule: "index.js",
-			modules: { "index.js": { type: "esm" as const } },
-		};
+			modules: { "index.js": { type: "esm" } },
+		} as const;
 
-		await writeWorkerConfig(root, parsedWorkerConfig, manifest);
+		await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
 
 		const contents = JSON.parse(
 			fs.readFileSync(getWorkerConfigPath(root), "utf-8")
@@ -116,12 +135,64 @@ describe("writeWorkerConfig", () => {
 		expect,
 	}) => {
 		const root = process.cwd();
-		await writeWorkerConfig(root, parsedWorkerConfig);
+		await writeWorkerConfig({ root, config: parsedWorkerConfig });
 
 		const contents = JSON.parse(
 			fs.readFileSync(getWorkerConfigPath(root), "utf-8")
 		);
 		expect(contents).not.toHaveProperty("manifest");
+	});
+
+	it("writes config.json for a named Worker directory", async ({ expect }) => {
+		const root = process.cwd();
+		await writeWorkerConfig({
+			root,
+			config: parsedWorkerConfig,
+			directoryName: "additional",
+		});
+
+		const contents = JSON.parse(
+			fs.readFileSync(getWorkerConfigPath(root, "additional"), "utf-8")
+		);
+		expect(contents.name).toBe("my-worker");
+	});
+});
+
+describe("writeContainerConfig", () => {
+	runInTempDir();
+
+	it("writes a standard Container config with a remote image reference", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await writeContainerConfig({
+			root,
+			config: parsedStandardContainerConfig,
+			directoryName: "api",
+		});
+
+		const contents = JSON.parse(
+			fs.readFileSync(getContainerConfigPath(root, "api"), "utf-8")
+		);
+		expect(contents).toEqual(parsedStandardContainerConfig);
+		expect(OutputContainerSchema.parse(contents)).toEqual(contents);
+	});
+
+	it("writes a Durable Object Container config with a local image reference", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await writeContainerConfig({
+			root,
+			config: parsedDurableObjectContainerConfig,
+			directoryName: "session",
+		});
+
+		const contents = JSON.parse(
+			fs.readFileSync(getContainerConfigPath(root, "session"), "utf-8")
+		);
+		expect(contents).toEqual(parsedDurableObjectContainerConfig);
+		expect(OutputContainerSchema.parse(contents)).toEqual(contents);
 	});
 });
 

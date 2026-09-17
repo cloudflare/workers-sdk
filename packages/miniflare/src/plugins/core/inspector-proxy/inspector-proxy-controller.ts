@@ -42,6 +42,10 @@ export class InspectorProxyController {
 		private workerNamesToProxy: Set<string>
 	) {
 		this.#server = this.#createServer();
+		// The server starts before callers can observe `ready`, so attach a
+		// rejection handler immediately while preserving the original promise for
+		// public methods to await
+		void this.#server.catch(() => {});
 	}
 
 	async #createServer() {
@@ -61,9 +65,8 @@ export class InspectorProxyController {
 			res.end(null);
 		});
 
-		this.#initializeWebSocketServer(server);
-
 		await this.#startListening(server);
+		this.#initializeWebSocketServer(server);
 
 		return server;
 	}
@@ -84,12 +87,15 @@ export class InspectorProxyController {
 			`Trying to listen on ${this.inspectorHostOption}:${this.inspectorPortOption}`
 		);
 		return new Promise<void>((resolve, reject) => {
-			server.once("error", reject);
-			server.listen(
-				this.inspectorPortOption,
-				this.inspectorHostOption,
-				resolve
-			);
+			const onError = (error: Error) => {
+				server.close();
+				reject(error);
+			};
+			server.prependOnceListener("error", onError);
+			server.listen(this.inspectorPortOption, this.inspectorHostOption, () => {
+				server.off("error", onError);
+				resolve();
+			});
 		});
 	}
 
@@ -108,6 +114,7 @@ export class InspectorProxyController {
 
 	#initializeWebSocketServer(server: Server) {
 		const devtoolsWebSocketServer = new WebSocketServer({ server });
+		devtoolsWebSocketServer.on("error", (error) => this.log.error(error));
 
 		devtoolsWebSocketServer.on("connection", (devtoolsWs, upgradeRequest) => {
 			const validationError =
@@ -139,7 +146,9 @@ export class InspectorProxyController {
 	#validateDevToolsWebSocketUpgradeRequest(req: IncomingMessage) {
 		// Validate `Host` header
 		const hostHeader = req.headers.host;
-		if (hostHeader == null) return { statusText: null, status: 400 };
+		if (hostHeader == null) {
+			return { statusText: null, status: 400 };
+		}
 		try {
 			const host = new URL(`http://${hostHeader}`);
 			// Allow the configured inspector host in addition to the default allowed hostnames
@@ -166,8 +175,11 @@ export class InspectorProxyController {
 		try {
 			const origin = new URL(originHeader);
 			const allowed = ALLOWED_ORIGIN_HOSTNAMES.some((rule) => {
-				if (typeof rule === "string") return origin.hostname === rule;
-				else return rule.test(origin.hostname);
+				if (typeof rule === "string") {
+					return origin.hostname === rule;
+				} else {
+					return rule.test(origin.hostname);
+				}
 			});
 			if (!allowed) {
 				return { statusText: "Disallowed `Origin` header", status: 401 };
@@ -282,6 +294,7 @@ export class InspectorProxyController {
 
 			await this.#restartServer();
 		}
+		await this.#server;
 
 		const workerdInspectorJson = (await fetch(
 			`http://127.0.0.1:${runtimeInspectorPort}/json`
@@ -317,7 +330,7 @@ export class InspectorProxyController {
 	}
 
 	async #waitForReady() {
-		await this.#runtimeConnectionEstablished;
+		await Promise.all([this.#server, this.#runtimeConnectionEstablished]);
 	}
 
 	get ready(): Promise<void> {

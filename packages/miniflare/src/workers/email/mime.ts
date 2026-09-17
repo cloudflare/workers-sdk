@@ -1,7 +1,9 @@
 import { extractEmailAddress, formatEmailAddress } from "./address";
 import { bytesToBase64 } from "./capture";
 import {
+	foldHeaderValue,
 	hasControlCharacters,
+	isManagedEmailHeaderName,
 	isMimeType,
 	normalizeBase64,
 } from "./input-validation";
@@ -52,18 +54,18 @@ export function buildMimeMessage(
 		headers.push(`${key}: ${value}`);
 	}
 
-	const managedHeaders = new Set([
-		"bcc",
-		"message-id",
-		"content-type",
-		"content-transfer-encoding",
-		...Object.keys(generatedHeaders).map((name) => name.toLowerCase()),
-	]);
+	const generatedHeaderNames = new Set(
+		Object.keys(generatedHeaders).map((name) => name.toLowerCase())
+	);
 	for (const [key, value] of Object.entries(message.headers ?? {})) {
-		if (managedHeaders.has(key.toLowerCase())) {
+		const normalizedKey = key.toLowerCase();
+		if (
+			isManagedEmailHeaderName(normalizedKey) ||
+			generatedHeaderNames.has(normalizedKey)
+		) {
 			continue;
 		}
-		headers.push(`${key}: ${value}`);
+		headers.push(`${key}: ${foldHeaderValue(value)}`);
 	}
 
 	const text = message.text ?? "";
@@ -197,22 +199,14 @@ export function buildReplyFromMessageBuilder(
 	if (customHeaders.has("received")) {
 		throw new Error("invalid headers set");
 	}
-	for (const name of [
-		"from",
-		"to",
-		"cc",
-		"bcc",
-		"reply-to",
-		"subject",
-		"message-id",
-		"in-reply-to",
-		"references",
-		"date",
-		"mime-version",
-		"content-type",
-		"content-transfer-encoding",
-	]) {
-		customHeaders.delete(name);
+	for (const name of Array.from(customHeaders.keys())) {
+		if (
+			isManagedEmailHeaderName(name) ||
+			name === "in-reply-to" ||
+			name === "references"
+		) {
+			customHeaders.delete(name);
+		}
 	}
 
 	const incomingMessageId = incomingMessage.messageId;

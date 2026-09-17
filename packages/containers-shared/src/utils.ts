@@ -7,7 +7,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { release } from "node:os";
-import { UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils/errors";
 import { dockerImageInspect } from "./inspect";
 import type { ContainerDevOptions } from "./types";
 

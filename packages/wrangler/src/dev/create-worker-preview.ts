@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { URL } from "node:url";
 import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
 import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
@@ -63,7 +62,7 @@ export interface CfPreviewSession {
 	 * The worker name used when the session was created.
 	 * Used to detect when the session needs to be recreated.
 	 */
-	name: string | undefined;
+	name: string;
 }
 
 /**
@@ -123,6 +122,25 @@ function switchHost(
 	const url = new URL(originalUrl);
 	url.hostname = zonePreview ? (host ?? url.hostname) : url.hostname;
 	return url;
+}
+
+function getWorkersDevPreviewHost(
+	exchangeUrl: string | undefined,
+	name: string
+): string | undefined {
+	if (!exchangeUrl) {
+		return undefined;
+	}
+
+	try {
+		const exchangeHost = new URL(exchangeUrl).hostname;
+		const firstDot = exchangeHost.indexOf(".");
+		return firstDot === -1
+			? undefined
+			: `${name}${exchangeHost.slice(firstDot)}`;
+	} catch {
+		return undefined;
+	}
 }
 
 /**
@@ -188,12 +206,12 @@ export async function createPreviewSession(
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal,
-	name: string | undefined
+	name: string
 ): Promise<CfPreviewSession> {
 	const { accountId, apiToken } = account;
 	const initUrl = ctx.zone
 		? `/zones/${ctx.zone}/workers/edge-preview`
-		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
+		: `/accounts/${accountId}/workers/scripts/${name}/subdomain/edge-preview`;
 
 	const { token, exchange_url } = await fetchResult<{
 		token: string;
@@ -213,7 +231,9 @@ export async function createPreviewSession(
 		: token;
 
 	try {
-		let host = ctx.host;
+		let host =
+			ctx.host ??
+			getWorkersDevPreviewHost(ctx.zone ? undefined : exchange_url, name);
 		if (!host) {
 			const subdomain = await getWorkersDevSubdomain(
 				complianceConfig,
@@ -222,7 +242,7 @@ export async function createPreviewSession(
 					abortSignal: withTimeout(abortSignal),
 				}
 			);
-			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
+			host = `${name}.${subdomain}`;
 		}
 		return {
 			value: previewSessionToken,

@@ -1,4 +1,4 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
 import { CorePaths } from "./constants";
 import {
@@ -36,6 +36,7 @@ const HANDLER_RESERVED_KEYS = new Set([
 interface Env {
 	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
 	DEV_REGISTRY_INSTANCE_ID: string;
+	MINIFLARE_LOOPBACK: Fetcher;
 }
 
 interface Props {
@@ -50,6 +51,21 @@ interface Props {
 	// (first active worker in the dev registry)
 	storage?: boolean;
 	storageScope?: string;
+	rpcProperties?: string[];
+}
+
+class ExternalRpcTarget extends RpcTarget {
+	constructor(resolve: () => object) {
+		super();
+		return new Proxy(this, {
+			get(target, prop) {
+				if (Reflect.has(target, prop)) {
+					return Reflect.get(target, prop);
+				}
+				return Reflect.get(resolve(), prop);
+			},
+		});
+	}
 }
 
 function getTarget(props: Props): RegistryEntry | undefined {
@@ -142,6 +158,20 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 				}
 				if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
 					return undefined;
+				}
+				// A debug-port RpcProperty cannot itself cross this outer property path.
+				// Terminate the outer hop with a local target, then forward its methods.
+				if (
+					typeof prop === "string" &&
+					ctx.props.rpcProperties?.includes(prop)
+				) {
+					return new ExternalRpcTarget(() => {
+						const fetcher = target._resolve();
+						if (!fetcher) {
+							throw new Error(workerNotFoundMessage(ctx.props.service));
+						}
+						return Reflect.get(fetcher, prop) as object;
+					});
 				}
 
 				const fetcher = target._resolve();

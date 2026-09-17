@@ -1,5 +1,86 @@
 # @cloudflare/workers-auth
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513)]:
+  - @cloudflare/workers-utils@0.39.1
+
+## 0.7.0
+
+### Minor Changes
+
+- [#15623](https://github.com/cloudflare/workers-sdk/pull/15623) [`c103dd6`](https://github.com/cloudflare/workers-sdk/commit/c103dd6599fd81600ecebe6fb2342a6273cb7295) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Accept all production-registered cf OAuth scopes for explicit requests
+
+  The cf scope validator now recognizes the full production OAuth registration, including newer scopes such as `dns.read`. The existing default login scope request remains unchanged, so broader permissions are requested only when a caller explicitly supplies them.
+
+- [#15623](https://github.com/cloudflare/workers-sdk/pull/15623) [`c103dd6`](https://github.com/cloudflare/workers-sdk/commit/c103dd6599fd81600ecebe6fb2342a6273cb7295) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support per-CLI default OAuth login flows
+
+  CLI descriptors can now make OAuth device authorization their default while preserving a per-login opt-out. The cf auth layer enables this default for both explicit login commands and implicit logins started during account resolution; Wrangler continues to use its localhost callback flow by default.
+
+- [#15453](https://github.com/cloudflare/workers-sdk/pull/15453) [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891) Thanks [@G4brym](https://github.com/G4brym)! - Remove the gated Web Search binding and Wrangler command
+
+  The unreleased search binding and its experimental command have been removed from Wrangler, Miniflare, and configuration APIs.
+
+### Patch Changes
+
+- Updated dependencies [[`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`cb0955f`](https://github.com/cloudflare/workers-sdk/commit/cb0955f274102afb30b8502193edf66c0d3cb4d6), [`fa79b26`](https://github.com/cloudflare/workers-sdk/commit/fa79b26ef442303797013c70078c7acdd2c79247), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78)]:
+  - @cloudflare/workers-utils@0.39.0
+
+## 0.6.12
+
+### Patch Changes
+
+- Updated dependencies [[`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d)]:
+  - @cloudflare/workers-utils@0.38.1
+
+## 0.6.11
+
+### Patch Changes
+
+- Updated dependencies [[`36aed7f`](https://github.com/cloudflare/workers-sdk/commit/36aed7f0f2db5056af9df917cf6c22a2be950b1e), [`bff525d`](https://github.com/cloudflare/workers-sdk/commit/bff525d66dd3785481148353d782dd33c3a644ed)]:
+  - @cloudflare/workers-utils@0.38.0
+
+## 0.6.10
+
+### Patch Changes
+
+- Updated dependencies [[`a849e0d`](https://github.com/cloudflare/workers-sdk/commit/a849e0d6d2253034fc158d5442c5124e77a39bd9)]:
+  - @cloudflare/workers-utils@0.37.0
+
+## 0.6.9
+
+### Patch Changes
+
+- [#15547](https://github.com/cloudflare/workers-sdk/pull/15547) [`e3f2baf`](https://github.com/cloudflare/workers-sdk/commit/e3f2baf9929e15f0ab7a900d220f1a4e81544910) Thanks [@penalosa](https://github.com/penalosa)! - Fix `cf auth login` requesting unsupported email read scopes
+
+  The Cloudflare OAuth server does not define `email_routing:read` or `email_sending:read`. The `cf` CLI now requests only the registered write scopes for those products, preventing login from failing with an unknown OAuth scope error.
+
+## 0.6.8
+
+### Patch Changes
+
+- [#15477](https://github.com/cloudflare/workers-sdk/pull/15477) [`fca8abd`](https://github.com/cloudflare/workers-sdk/commit/fca8abdfddda2e42562f64766781b1a8b038392b) Thanks [@Skye-31](https://github.com/Skye-31)! - Add missing email_routing and email_sending auth scopes to CF cli
+
+- Updated dependencies [[`fd17fc5`](https://github.com/cloudflare/workers-sdk/commit/fd17fc5c5fb86423e37ff5b142391e03cd7dbf59)]:
+  - @cloudflare/workers-utils@0.36.0
+
+## 0.6.7
+
+### Patch Changes
+
+- Updated dependencies [[`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45), [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71), [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46)]:
+  - @cloudflare/workers-utils@0.35.0
+
+## 0.6.6
+
+### Patch Changes
+
+- [#15320](https://github.com/cloudflare/workers-sdk/pull/15320) [`c809851`](https://github.com/cloudflare/workers-sdk/commit/c809851f38f0fe4805e876b6c8bfcd6556f49afb) Thanks [@Om-singhaI](https://github.com/Om-singhaI)! - Fix `wrangler login --use-keyring` incorrectly reporting that `secret-tool` is missing on Linux
+
+  Libsecret's `secret-tool` does not support `--version`; it prints usage and exits 2, which Wrangler previously interpreted as unavailable. Wrangler now reports it missing only when launching the executable fails.
+
 ## 0.6.5
 
 ### Patch Changes

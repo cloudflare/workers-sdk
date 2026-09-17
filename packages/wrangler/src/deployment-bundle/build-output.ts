@@ -54,7 +54,7 @@ export async function writeBuildOutput({
 		assetsOptions ? writeAssets({ root, assetsOptions }) : Promise.resolve(),
 	]);
 
-	await writeWorkerConfig(root, parsedWorkerConfig, manifest);
+	await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
 	await writeSettingsConfig(root, parsedSettingsConfig, mode);
 }
 
@@ -97,7 +97,7 @@ async function writeBundle({
 		modules[key] = { type: "sourcemap" };
 	}
 
-	return { mainModule: entryKey, modules };
+	return { type: "complete", mainModule: entryKey, modules };
 }
 
 async function writeAssets({

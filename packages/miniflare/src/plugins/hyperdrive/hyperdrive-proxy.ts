@@ -510,7 +510,9 @@ function mysqlSupportsSSL(payload: Buffer<ArrayBuffer>): boolean {
 	let offset = 1;
 
 	// Find end of server_version string (null terminator)
-	while (offset < payloadLength && payload[offset] != 0x00) offset++;
+	while (offset < payloadLength && payload[offset] != 0x00) {
+		offset++;
+	}
 
 	// Skip null terminator
 	offset++;
@@ -520,8 +522,9 @@ function mysqlSupportsSSL(payload: Buffer<ArrayBuffer>): boolean {
 	offset += MYSQL_AUTH_PLUGIN_DATA_PART_1_LENGTH;
 	offset += MYSQL_FILLER_LENGTH;
 	// Ensure there are enough bytes left for fixed fields
-	if (offset + MYSQL_CAPABILITY_FLAGS_LOWER_LENGTH > payloadLength)
+	if (offset + MYSQL_CAPABILITY_FLAGS_LOWER_LENGTH > payloadLength) {
 		return false;
+	}
 
 	// Read 2-byte little-endian capability_flags_lower
 	const caps = payload[offset] | (payload[offset + 1] << 8);

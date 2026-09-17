@@ -13,6 +13,26 @@ export function formatSize(bytes: number | undefined): string {
 }
 
 /**
+ * Removes the RFC Message-ID delimiters for display in the interface.
+ *
+ * @param messageId - A Message-ID with or without surrounding angle brackets
+ * @returns The Message-ID without its surrounding angle brackets
+ */
+export function formatMessageId(messageId: string): string {
+	return messageId.replace(/^<|>$/g, "");
+}
+
+/**
+ * Removes angle brackets used to delimit an address for display in the interface.
+ *
+ * @param address - An email address with or without angle brackets
+ * @returns The email address without angle brackets
+ */
+export function formatEmailAddress(address: string): string {
+	return address.replace(/<([^<>]+)>/g, "$1");
+}
+
+/**
  * Formats a date string into a human-readable UTC format.
  *
  * @param dateString - An ISO date string to format

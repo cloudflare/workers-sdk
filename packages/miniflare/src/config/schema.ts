@@ -24,6 +24,7 @@ import {
 	validateSingletonBindings,
 } from "@cloudflare/config";
 import { z } from "zod";
+import { DOContainerOptionsSchema } from "../plugins/do/options";
 import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
 import {
 	HttpOptions_Style,
@@ -36,7 +37,6 @@ import type {
 	RemoteProxyConnectionString,
 	WorkerdStructuredLog,
 } from "../index";
-import type { DOContainerOptions } from "../plugins/do";
 import type { UnsafeUniqueKey } from "../plugins/shared/constants";
 import type { Log } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
@@ -184,11 +184,11 @@ const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
 });
 
 /**
- * Extended worker (service) binding. `workerName` may be `kCurrentWorker`
+ * Extended worker (service) binding. `worker` may be `kCurrentWorker`
  * (the SELF marker) in addition to a plain worker name.
  */
 const MiniflareWorkerBindingSchema = WorkerBindingSchema.extend({
-	workerName: z.union([
+	worker: z.union([
 		z.string(),
 		z.custom<typeof kCurrentWorker>((v) => v === kCurrentWorker),
 	]),
@@ -206,10 +206,9 @@ const HelloWorldBindingSchema = z.strictObject({
 const MiniflareWorkflowBindingSchema = z.strictObject({
 	type: z.literal("workflow"),
 	name: z.string(),
-	workerName: z.string(),
+	worker: z.string(),
 	exportName: z.string(),
 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	dev: z.strictObject({ remote: z.boolean().optional() }).optional(),
 });
 
 // The miniflare-extended schemas below replace these base `@cloudflare/config`
@@ -356,13 +355,13 @@ export const MiniflareDurableObjectExportSchema =
 	DurableObjectCreatedExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
-		container: z.custom<DOContainerOptions>().optional(),
+		container: DOContainerOptionsSchema.optional(),
 	});
 export const MiniflareDurableObjectExpectingTransferExportSchema =
 	DurableObjectExpectingTransferExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
-		container: z.custom<DOContainerOptions>().optional(),
+		container: DOContainerOptionsSchema.optional(),
 	});
 
 // const MiniflareWorkflowExportSchema = z.strictObject({

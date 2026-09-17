@@ -3,11 +3,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
-import { getCloudflareEnv } from "../environment-variables/misc-variables";
+import {
+	getCloudflareContainerRegistry,
+	getCloudflareEnv,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
-import { getContainerNameToClassNameMap } from "./containers";
+import {
+	CONTAINER_IMAGES_BINDING,
+	getContainerNameToClassNameMap,
+} from "./containers";
 import { Diagnostics } from "./diagnostics";
 import { getDurableObjectExports } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
@@ -38,6 +44,7 @@ import {
 	validateUniqueNameProperty,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
+import type { ComplianceConfig } from "../compliance";
 import type { Binding } from "../types";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -46,6 +53,7 @@ import type {
 	CacheOptions,
 	ContainerApp,
 	CustomDomainRoute,
+	ContainerObservability,
 	DispatchNamespaceOutbound,
 	DurableObjectExport,
 	Environment,
@@ -87,7 +95,6 @@ export type ConfigBindingFieldName =
 	| "vectorize"
 	| "ai_search_namespaces"
 	| "ai_search"
-	| "websearch"
 	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
@@ -128,7 +135,6 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	websearch: "Web Search",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
@@ -187,7 +193,6 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vectorize: "Vectorize Index",
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
-	websearch: "Web Search",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
@@ -1208,22 +1213,41 @@ function validateRoutes(
 function normalizeAndValidatePlacement(
 	diagnostics: Diagnostics,
 	topLevelEnv: Environment | undefined,
-	rawEnv: RawEnvironment
+	rawEnv: RawEnvironment,
+	diagnosticField = "placement"
 ): Config["placement"] {
-	if (rawEnv.placement) {
+	if (rawEnv.placement !== undefined) {
+		if (
+			typeof rawEnv.placement !== "object" ||
+			rawEnv.placement === null ||
+			Array.isArray(rawEnv.placement)
+		) {
+			diagnostics.errors.push(
+				`The field "${diagnosticField}" should be an object but got ${JSON.stringify(rawEnv.placement)}.`
+			);
+			return inheritable(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				"placement",
+				() => true,
+				undefined
+			);
+		}
 		const placement = rawEnv.placement as Record<string, unknown>;
 
 		// Detect which format is being used
 		const hasHint = "hint" in placement;
-		const hasRegion = "region" in placement;
-		const hasHost = "host" in placement;
-		const hasHostname = "hostname" in placement;
-		const hasTargetedFields = hasRegion || hasHost || hasHostname;
+		const targetedFields = ["region", "host", "hostname"] as const;
+		const presentTargetedFields = targetedFields.filter(
+			(field) => field in placement
+		);
+		const hasTargetedFields = presentTargetedFields.length > 0;
 
 		// Validate that formats aren't mixed
 		if (hasHint && hasTargetedFields) {
 			diagnostics.errors.push(
-				`"placement" cannot have both "hint" (smart format) and "region"/"host"/"hostname" (targeted format) fields`
+				`"${diagnosticField}" cannot have both "hint" (smart format) and "region"/"host"/"hostname" (targeted format) fields`
 			);
 			return inheritable(
 				diagnostics,
@@ -1239,7 +1263,7 @@ function normalizeAndValidatePlacement(
 		if (hasHint) {
 			validateRequiredProperty(
 				diagnostics,
-				"placement",
+				diagnosticField,
 				"mode",
 				placement.mode,
 				"string",
@@ -1252,71 +1276,46 @@ function normalizeAndValidatePlacement(
 			// Hint must be a string (if provided)
 			if (hint !== undefined && typeof hint !== "string") {
 				diagnostics.errors.push(
-					`"placement.hint" must be a string when "placement.mode" is "${mode}"`
+					`"${diagnosticField}.hint" must be a string when "${diagnosticField}.mode" is "${mode}"`
 				);
 			}
 			if (hint && mode !== "smart") {
 				diagnostics.errors.push(
-					`"placement.hint" can only be set when "placement.mode" is "smart"`
+					`"${diagnosticField}.hint" can only be set when "${diagnosticField}.mode" is "smart"`
 				);
 			}
 		}
 		// Validate new format (with region/host/hostname)
 		else if (hasTargetedFields) {
-			// Mode is optional for new format, but if present must be "off" or "targeted"
+			// Mode is optional for new format, but if present must be "targeted"
 			validateOptionalProperty(
 				diagnostics,
-				"placement",
+				diagnosticField,
 				"mode",
 				placement.mode,
 				"string",
-				["off", "targeted"]
+				["targeted"]
 			);
 
-			// Validate that region/host/hostname are strings if present
-			if (hasRegion) {
-				validateOptionalProperty(
+			for (const field of presentTargetedFields) {
+				validateRequiredProperty(
 					diagnostics,
-					"placement",
-					"region",
-					placement.region,
+					diagnosticField,
+					field,
+					placement[field],
 					"string"
 				);
-			}
-			if (hasHost) {
-				validateOptionalProperty(
-					diagnostics,
-					"placement",
-					"host",
-					placement.host,
-					"string"
-				);
-			}
-			if (hasHostname) {
-				validateOptionalProperty(
-					diagnostics,
-					"placement",
-					"hostname",
-					placement.hostname,
-					"string"
-				);
+				if (placement[field] === "") {
+					diagnostics.errors.push(
+						`"${diagnosticField}.${field}" must be a non-empty string.`
+					);
+				}
 			}
 
 			// Validate that region/host/hostname are mutually exclusive
-			const fieldsPresent = [hasRegion, hasHost, hasHostname].filter(Boolean);
-			if (fieldsPresent.length > 1) {
-				const presentFields = [];
-				if (hasRegion) {
-					presentFields.push("region");
-				}
-				if (hasHost) {
-					presentFields.push("host");
-				}
-				if (hasHostname) {
-					presentFields.push("hostname");
-				}
+			if (presentTargetedFields.length > 1) {
 				diagnostics.errors.push(
-					`"placement" fields ${presentFields.map((f) => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
+					`"${diagnosticField}" fields ${presentTargetedFields.map((field) => `"${field}"`).join(", ")} are mutually exclusive. Only one can be specified.`
 				);
 			}
 		}
@@ -1324,12 +1323,19 @@ function normalizeAndValidatePlacement(
 		else {
 			validateRequiredProperty(
 				diagnostics,
-				"placement",
+				diagnosticField,
 				"mode",
 				placement.mode,
 				"string",
 				["off", "smart", "targeted"]
 			);
+			if (placement.mode === "targeted") {
+				validateAtLeastOnePropertyRequired(diagnostics, diagnosticField, [
+					{ key: "region", value: placement.region, type: "string" },
+					{ key: "host", value: placement.host, type: "string" },
+					{ key: "hostname", value: placement.hostname, type: "string" },
+				]);
+			}
 		}
 	}
 
@@ -1759,7 +1765,17 @@ function normalizeAndValidateEnvironment(
 			// `name` is inheritable, so a named environment that doesn't redeclare it
 			// still runs under the top level Worker name — fall back to it so the
 			// generated container name isn't built from `undefined`.
-			validateContainerApp(envName, rawEnv.name ?? rawConfig?.name, configPath),
+			validateContainerApp(
+				envName,
+				rawEnv.name ?? rawConfig?.name,
+				configPath,
+				{
+					complianceConfig: {
+						compliance_region:
+							rawEnv.compliance_region ?? topLevelEnv?.compliance_region,
+					},
+				}
+			),
 			undefined
 		),
 		send_email: notInheritable(
@@ -1841,16 +1857,6 @@ function normalizeAndValidateEnvironment(
 			"ai_search",
 			validateBindingArray(envName, validateAISearchBinding),
 			[]
-		),
-		websearch: notInheritable(
-			diagnostics,
-			topLevelEnv,
-			rawConfig,
-			rawEnv,
-			envName,
-			"websearch",
-			validateNamedSimpleBinding(envName),
-			undefined
 		),
 		agent_memory: notInheritable(
 			diagnostics,
@@ -3083,12 +3089,49 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		}
 	}
 
+	if (hasProperty(value, "concurrency") && value.concurrency !== undefined) {
+		if (
+			typeof value.concurrency !== "object" ||
+			value.concurrency === null ||
+			Array.isArray(value.concurrency)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "concurrency" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const concurrency = value.concurrency as Record<string, unknown>;
+			if (
+				concurrency.limit !== undefined &&
+				(typeof concurrency.limit !== "number" ||
+					!Number.isInteger(concurrency.limit) ||
+					concurrency.limit < 1)
+			) {
+				diagnostics.errors.push(
+					`"${field}" bindings "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
+						concurrency.limit
+					)}.`
+				);
+				isValid = false;
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.concurrency`,
+				Object.keys(concurrency),
+				["limit"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"name",
 		"class_name",
 		"script_name",
 		"limits",
+		"concurrency",
 		"schedules",
 		"default_retention",
 	]);
@@ -3368,7 +3411,6 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
-			"websearch",
 			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",
@@ -3528,6 +3570,21 @@ function validatePreviewsContainers(
 	});
 	return (diagnostics, field, value, config) => {
 		if (Array.isArray(value)) {
+			const durableObjectPolicyFields = [...value.entries()]
+				.filter(
+					([, entry]) =>
+						entry &&
+						typeof entry === "object" &&
+						entry.scheduling_policy === "durable_object"
+				)
+				.map(([index]) => `"${field}[${index}].scheduling_policy"`);
+			if (durableObjectPolicyFields.length > 0) {
+				diagnostics.errors.push(
+					`${durableObjectPolicyFields.join(", ")} cannot be "durable_object". Durable Object-managed Containers are configured only in the top-level "containers" array.`
+				);
+				return false;
+			}
+
 			const nameFields = [...value.entries()]
 				.filter(
 					([, entry]) => entry && typeof entry === "object" && "name" in entry
@@ -3568,11 +3625,199 @@ function validatePreviewsContainers(
 	};
 }
 
+function validateDurableObjectContainerImages(
+	diagnostics: Diagnostics,
+	field: string,
+	images: unknown,
+	complianceConfig: ComplianceConfig | undefined
+): boolean {
+	if (images === undefined) {
+		return true;
+	}
+
+	if (
+		typeof images !== "object" ||
+		images === null ||
+		Array.isArray(images) ||
+		Object.keys(images).length === 0
+	) {
+		diagnostics.errors.push(
+			`"${field}" must be a non-empty object when present.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	const entries = Object.entries(images);
+	if (entries.length > 100) {
+		diagnostics.errors.push(`"${field}" must contain at most 100 images.`);
+		valid = false;
+	}
+
+	for (const [imageName, imageValue] of entries) {
+		const imageField = `${field}.${imageName}`;
+		if (imageName.length === 0 || imageName.length > 128) {
+			diagnostics.errors.push(
+				`"${field}" image names must be between 1 and 128 characters.`
+			);
+			valid = false;
+		}
+		if (
+			typeof imageValue !== "object" ||
+			imageValue === null ||
+			Array.isArray(imageValue)
+		) {
+			diagnostics.errors.push(
+				`"${imageField}" must be an object with either a "dockerfile" or "image" field.`
+			);
+			valid = false;
+			continue;
+		}
+
+		const image = imageValue as Record<string, unknown>;
+		const hasDockerfile = image.dockerfile !== undefined;
+		const hasImage = image.image !== undefined;
+		if (hasDockerfile === hasImage) {
+			diagnostics.errors.push(
+				`"${imageField}" must specify exactly one of "dockerfile" or "image".`
+			);
+			valid = false;
+		}
+		if (
+			hasDockerfile &&
+			(typeof image.dockerfile !== "string" || image.dockerfile.length === 0)
+		) {
+			diagnostics.errors.push(
+				`"${imageField}.dockerfile" must be a non-empty string.`
+			);
+			valid = false;
+		}
+		if (
+			hasImage &&
+			(typeof image.image !== "string" || image.image.length === 0)
+		) {
+			diagnostics.errors.push(
+				`"${imageField}.image" must be a non-empty string.`
+			);
+			valid = false;
+		}
+		if (typeof image.image === "string" && image.image.length > 0) {
+			const registry = getCloudflareContainerRegistry(complianceConfig);
+			const prefix = `${registry}/`;
+			const reference = image.image.slice(prefix.length);
+			// Require an account/repository path and an immutable SHA-256 digest.
+			const digestReference = reference.match(
+				/^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*(?:\/[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*)+@sha256:[a-f0-9]{64}$/
+			);
+			if (
+				!image.image.startsWith(prefix) ||
+				digestReference?.[0] !== reference
+			) {
+				diagnostics.errors.push(
+					`"${imageField}.image" must be a digest-pinned image in the managed registry, in the form "${registry}/<account-id>/<repository>@sha256:<64 lowercase hex characters>".`
+				);
+				valid = false;
+			}
+		}
+
+		const isDockerfileBuild = hasDockerfile && !hasImage;
+		if (isDockerfileBuild) {
+			if (
+				image.build_context !== undefined &&
+				(typeof image.build_context !== "string" ||
+					image.build_context.length === 0)
+			) {
+				diagnostics.errors.push(
+					`"${imageField}.build_context" must be a non-empty string.`
+				);
+				valid = false;
+			}
+			if (
+				image.build_vars !== undefined &&
+				(typeof image.build_vars !== "object" ||
+					image.build_vars === null ||
+					Array.isArray(image.build_vars) ||
+					Object.values(image.build_vars).some(
+						(value) => typeof value !== "string"
+					))
+			) {
+				diagnostics.errors.push(
+					`"${imageField}.build_vars" must be an object with string values.`
+				);
+				valid = false;
+			}
+		}
+
+		const unsupportedFields = Object.keys(image).filter(
+			(property) =>
+				property !== "dockerfile" &&
+				property !== "image" &&
+				!(
+					isDockerfileBuild &&
+					(property === "build_context" || property === "build_vars")
+				)
+		);
+		if (unsupportedFields.length > 0) {
+			diagnostics.errors.push(
+				`Unexpected fields found in ${imageField} field: ${unsupportedFields
+					.map((property) => `"${property}"`)
+					.join(", ")}`
+			);
+			valid = false;
+		}
+	}
+
+	return valid;
+}
+
+function validateDurableObjectContainerUnsafe(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): void {
+	if (value === undefined) {
+		return;
+	}
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(`"${field}" should be an object.`);
+		return;
+	}
+	const unsafe = value as Record<string, unknown>;
+	const configuration = unsafe.configuration;
+	if (
+		Object.keys(unsafe).some((key) => key !== "configuration") ||
+		(configuration !== undefined &&
+			(typeof configuration !== "object" ||
+				configuration === null ||
+				Array.isArray(configuration) ||
+				Object.keys(configuration).some((key) => key !== "experimental_flags")))
+	) {
+		diagnostics.errors.push(
+			`Only "${field}.configuration.experimental_flags" is supported for Durable Object-managed Containers.`
+		);
+		return;
+	}
+	if (configuration !== undefined) {
+		const flags = (configuration as Record<string, unknown>).experimental_flags;
+		if (
+			flags !== undefined &&
+			(!Array.isArray(flags) || flags.some((flag) => typeof flag !== "string"))
+		) {
+			diagnostics.errors.push(
+				`"${field}.configuration.experimental_flags" should be an array of strings.`
+			);
+		}
+	}
+}
+
 function validateContainerApp(
 	envName: string,
 	topLevelName: string | undefined,
 	configPath: string | undefined,
-	options: { generateDefaultName?: boolean } = {}
+	options: {
+		generateDefaultName?: boolean;
+		complianceConfig?: ComplianceConfig;
+	} = {}
 ): ValidatorFn {
 	const { generateDefaultName = true } = options;
 	return (diagnostics, field, value, config) => {
@@ -3588,6 +3833,12 @@ function validateContainerApp(
 		}
 
 		for (const containerAppOptional of value) {
+			const isDurableObjectManaged =
+				containerAppOptional.scheduling_policy === "durable_object";
+			const hasValidDurableObjectClassName =
+				typeof containerAppOptional.class_name === "string" &&
+				containerAppOptional.class_name.length > 0;
+
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -3595,6 +3846,12 @@ function validateContainerApp(
 				containerAppOptional.class_name,
 				"string"
 			);
+			if (isDurableObjectManaged && containerAppOptional.class_name === "") {
+				diagnostics.errors.push(
+					`"containers.class_name" must be a non-empty string when specified for a Durable Object-managed Container.`
+				);
+			}
+
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -3602,8 +3859,15 @@ function validateContainerApp(
 				containerAppOptional.name,
 				"string"
 			);
+
 			// try and add a default name
-			if (generateDefaultName && !containerAppOptional.name) {
+			if (
+				generateDefaultName &&
+				!containerAppOptional.name &&
+				(!isDurableObjectManaged ||
+					containerAppOptional.class_name === undefined ||
+					hasValidDurableObjectClassName)
+			) {
 				// The default name is derived from the class name, so without one there
 				// is nothing to derive it from. Such a container must be linked to a
 				// Durable Object from the `exports` side, which references it by name.
@@ -3626,6 +3890,54 @@ function validateContainerApp(
 					containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
 				}
 			}
+
+			if (isDurableObjectManaged) {
+				validateDurableObjectContainerImages(
+					diagnostics,
+					`${field}.images`,
+					containerAppOptional.images,
+					options.complianceConfig
+				);
+				validateContainerObservability(
+					diagnostics,
+					`${field}.observability`,
+					containerAppOptional.observability,
+					config
+				);
+				if (
+					containerAppOptional.observability?.target_instance_count !==
+						undefined ||
+					containerAppOptional.observability?.target_instance_percentage !==
+						undefined
+				) {
+					diagnostics.errors.push(
+						`"${field}.observability" only supports enabling or disabling logs for Durable Object-managed Containers; instance targeting is not supported.`
+					);
+				}
+				validateDurableObjectContainerUnsafe(
+					diagnostics,
+					`${field}.unsafe`,
+					containerAppOptional.unsafe
+				);
+				const unsupportedFields = Object.keys(containerAppOptional).filter(
+					(key) =>
+						![
+							"name",
+							"class_name",
+							"scheduling_policy",
+							"images",
+							"observability",
+							"unsafe",
+						].includes(key)
+				);
+				if (unsupportedFields.length > 0) {
+					diagnostics.errors.push(
+						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", "images", "observability", and restricted "unsafe" settings are supported.`
+					);
+				}
+				continue;
+			}
+
 			if (
 				!containerAppOptional.configuration?.image &&
 				!containerAppOptional.image
@@ -3805,6 +4117,12 @@ function validateContainerApp(
 				containerAppOptional.image_vars,
 				"object"
 			);
+			validateContainerObservability(
+				diagnostics,
+				`${field}.observability`,
+				containerAppOptional.observability,
+				config
+			);
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -3857,6 +4175,7 @@ function validateContainerApp(
 					"image",
 					"image_build_context",
 					"image_vars",
+					"observability",
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
@@ -4875,7 +5194,8 @@ const validateBindingsHaveUniqueNames = (
 	// Add secrets to binding name validation (secrets is not a CfWorkerInit binding type,
 	// but we want to validate that secret names don't conflict with other bindings)
 	bindingsGroupedByType["Secret"] = config.secrets?.required ?? [];
-
+	// This temporary binding name identifies Wrangler-managed Container images.
+	bindingsGroupedByType["Container images"] = [CONTAINER_IMAGES_BINDING];
 	const bindingsGroupedByName: Record<string, string[]> = {};
 
 	for (const bindingType in bindingsGroupedByType) {
@@ -5913,6 +6233,8 @@ const validatePreviewsConfig =
 				"d1_databases",
 				"r2_buckets",
 				"vectorize",
+				"ai_search_namespaces",
+				"ai_search",
 				"hyperdrive",
 				"services",
 				"analytics_engine_datasets",
@@ -5939,6 +6261,7 @@ const validatePreviewsConfig =
 				"logpush",
 				"observability",
 				"limits",
+				"placement",
 				"cache",
 			]) && isValid;
 
@@ -5957,6 +6280,13 @@ const validatePreviewsConfig =
 				previews.define,
 				undefined
 			) && isValid;
+
+		normalizeAndValidatePlacement(
+			diagnostics,
+			undefined,
+			previews,
+			`${field}.placement`
+		);
 
 		isValid =
 			validateBindingsProperty(envName, validateDurableObjectBinding)(
@@ -6018,6 +6348,22 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.vectorize`,
 				previews.vectorize,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAISearchNamespaceBinding)(
+				diagnostics,
+				`${field}.ai_search_namespaces`,
+				previews.ai_search_namespaces,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateAISearchBinding)(
+				diagnostics,
+				`${field}.ai_search`,
+				previews.ai_search,
 				undefined
 			) && isValid;
 
@@ -6717,6 +7063,201 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	return valid;
 };
 
+const CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MIN = 1;
+const CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MAX = 99;
+const CONTAINER_OBSERVABILITY_TARGET_INSTANCE_COUNT_MIN = 1;
+
+function isContainerObservabilityEnabled(
+	observability: ContainerObservability | undefined
+): boolean {
+	return (
+		observability?.logs?.enabled === true || observability?.enabled === true
+	);
+}
+
+function hasConflictingContainerObservabilityEnabledValues(
+	observability: ContainerObservability
+): boolean {
+	return (
+		typeof observability.enabled === "boolean" &&
+		typeof observability.logs?.enabled === "boolean" &&
+		observability.enabled !== observability.logs.enabled
+	);
+}
+
+const validateContainerObservability: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as ContainerObservability;
+	let isValid = true;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"enabled",
+			val.enabled,
+			"boolean"
+		) && isValid;
+
+	if (val.logs !== undefined) {
+		if (
+			typeof val.logs !== "object" ||
+			val.logs === null ||
+			Array.isArray(val.logs)
+		) {
+			diagnostics.errors.push(
+				`Expected "${field}.logs" to be of type object but got ${JSON.stringify(
+					val.logs
+				)}.`
+			);
+			isValid = false;
+		} else {
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"logs.enabled",
+					val.logs.enabled,
+					"boolean"
+				) && isValid;
+
+			isValid =
+				validateAdditionalProperties(
+					diagnostics,
+					`${field}.logs`,
+					Object.keys(val.logs),
+					["enabled"]
+				) && isValid;
+		}
+	}
+
+	if (
+		val.enabled === undefined &&
+		val.target_instance_percentage === undefined &&
+		val.target_instance_count === undefined &&
+		(val.logs === undefined ||
+			(typeof val.logs === "object" &&
+				val.logs !== null &&
+				!Array.isArray(val.logs) &&
+				val.logs.enabled === undefined))
+	) {
+		isValid =
+			validateAtLeastOnePropertyRequired(diagnostics, field, [
+				{
+					key: "enabled",
+					value: val.enabled,
+					type: "boolean",
+				},
+				{
+					key: "logs.enabled",
+					value: val.logs?.enabled,
+					type: "boolean",
+				},
+			]) && isValid;
+	}
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"target_instance_percentage",
+			val.target_instance_percentage,
+			"number"
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"target_instance_count",
+			val.target_instance_count,
+			"number"
+		) && isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"enabled",
+			"logs",
+			"target_instance_percentage",
+			"target_instance_count",
+		]) && isValid;
+
+	if (hasConflictingContainerObservabilityEnabledValues(val)) {
+		diagnostics.errors.push(
+			`"${field}.enabled" and "${field}.logs.enabled" cannot be set to different values.`
+		);
+		isValid = false;
+	}
+
+	if (
+		val.target_instance_percentage !== undefined &&
+		val.target_instance_count !== undefined
+	) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_percentage" and "${field}.target_instance_count" cannot both be set.`
+		);
+		isValid = false;
+	}
+
+	if (
+		typeof val.target_instance_percentage === "number" &&
+		(!Number.isInteger(val.target_instance_percentage) ||
+			val.target_instance_percentage <
+				CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MIN ||
+			val.target_instance_percentage >
+				CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MAX)
+	) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_percentage" must be an integer between ${CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MIN} and ${CONTAINER_OBSERVABILITY_TARGET_INSTANCE_PERCENTAGE_MAX} inclusive.`
+		);
+		isValid = false;
+	}
+
+	if (
+		typeof val.target_instance_count === "number" &&
+		(!Number.isInteger(val.target_instance_count) ||
+			val.target_instance_count <
+				CONTAINER_OBSERVABILITY_TARGET_INSTANCE_COUNT_MIN)
+	) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_count" must be a positive integer.`
+		);
+		isValid = false;
+	}
+
+	const observabilityEnabled = isContainerObservabilityEnabled(val);
+
+	if (val.target_instance_percentage !== undefined && !observabilityEnabled) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_percentage" requires "${field}.enabled" or "${field}.logs.enabled" to be true because container observability overrides root observability.`
+		);
+		isValid = false;
+	}
+
+	if (val.target_instance_count !== undefined && !observabilityEnabled) {
+		diagnostics.errors.push(
+			`"${field}.target_instance_count" requires "${field}.enabled" or "${field}.logs.enabled" to be true because container observability overrides root observability.`
+		);
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {
 		return true;
@@ -6764,6 +7305,15 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"redact_query_string",
+			val.redact_query_string,
+			"boolean"
+		) && isValid;
+
+	isValid =
 		validateOptionalProperty(diagnostics, field, "logs", val.logs, "object") &&
 		isValid;
 
@@ -6780,6 +7330,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
 			"head_sampling_rate",
+			"redact_query_string",
 			"logs",
 			"traces",
 		]) && isValid;
@@ -7193,7 +7744,6 @@ function validateContainerExportLinks(
 	const durableObjectExports = getDurableObjectExports(exports);
 	const liveExportClassNames = new Set<string>();
 	const classNamesByContainerName = new Map<string, string[]>();
-
 	for (const [className, entry] of Object.entries(durableObjectExports)) {
 		if (
 			entry.state !== undefined &&

@@ -6,11 +6,16 @@ import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
-import { Response } from "miniflare";
+import * as esModuleLexer from "es-module-lexer";
+import { parseModuleFallbackRequest, Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { ENCODED_PATH_PREFIX } from "../shared/module-path";
 import { isFileNotFoundError } from "./helpers";
-import type { Request, Worker_Module } from "miniflare";
+import type {
+	Request,
+	V2ModuleFallbackRequest,
+	Worker_Module,
+} from "miniflare";
 import type { Vite } from "vitest/node";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
@@ -317,6 +322,9 @@ async function viteResolve(
 }
 
 const wasmModuleSuffix = ".wasm?module";
+// Workerd can request the `?module` adapter under the underlying WASM file's
+// normalised URL. Give the native module a distinct internal URL to avoid a cycle.
+const v2CompiledWasmPathSuffix = ".__mf_vitest_compiled_wasm";
 
 type ResolveMethod = "import" | "require";
 async function resolve(
@@ -456,6 +464,14 @@ function maybeGetForceTypeModuleContents(
 
 	filePath = trimSuffix(match[0], filePath);
 	const type = match[1] as LegacyModuleRuleType;
+	return loadForcedModuleContents(filePath, type);
+}
+
+/** Loads a file using an explicitly selected Workerd module type. */
+function loadForcedModuleContents(
+	filePath: string,
+	type: LegacyModuleRuleType
+): ModuleContents {
 	const contents = fs.readFileSync(filePath);
 	switch (type) {
 		case "ESModule":
@@ -478,6 +494,23 @@ function maybeGetForceTypeModuleContents(
 			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
 		}
 	}
+}
+
+/** Classifies and reads a JavaScript or JSON module from the filesystem. */
+function loadJavaScriptOrJsonModule(
+	filePath: string
+):
+	| { kind: "json"; contents: string }
+	| { kind: "esm"; contents: string }
+	| { kind: "cjs"; contents: string } {
+	if (filePath.endsWith(".json")) {
+		return { kind: "json", contents: fs.readFileSync(filePath, "utf8") };
+	}
+	const contents = fs.readFileSync(filePath, "utf8");
+	const isEsm =
+		filePath.endsWith(".mjs") ||
+		(filePath.endsWith(".js") && isWithinTypeModuleContext(filePath));
+	return { kind: isEsm ? "esm" : "cjs", contents };
 }
 // `name` must exactly match the literal `specifier` string `workerd` sent for
 // this request (see the `rawTarget` comment in `handleModuleFallbackRequest()`
@@ -592,25 +625,21 @@ async function load(
 		filePath = trimSuffix(disableCjsEsmShimSuffix, filePath);
 	}
 
-	const isEsm =
-		filePath.endsWith(".mjs") ||
-		(filePath.endsWith(".js") && isWithinTypeModuleContext(filePath));
-
 	// JSON modules: CommonJS `require("./data.json")` is common in many widely
 	// used packages (e.g. mime-types). If we return raw JSON as a `commonJsModule`,
 	// `workerd` will try to parse it as JavaScript and fail with
 	// `SyntaxError: Unexpected token ':'`.
-	if (filePath.endsWith(".json")) {
-		const json = fs.readFileSync(filePath, "utf8");
+	const module = loadJavaScriptOrJsonModule(filePath);
+	if (module.kind === "json") {
 		debuglog(logBase, "json:", filePath);
-		return buildModuleResponse(rawTarget, { json });
+		return buildModuleResponse(rawTarget, { json: module.contents });
 	}
 
-	let contents = fs.readFileSync(filePath, "utf8");
+	let contents = module.contents;
 	const targetUrl = pathToFileURL(target);
 	contents = withSourceUrl(contents, targetUrl);
 
-	if (isEsm) {
+	if (module.kind === "esm") {
 		// Respond with ES module
 		contents = withImportMetaUrl(contents, targetUrl);
 		debuglog(logBase, "esm:", filePath);
@@ -641,7 +670,22 @@ async function load(
 	return buildModuleResponse(rawTarget, { commonJsModule: contents });
 }
 
+/** Dispatches module fallback requests using Workerd's selected protocol. */
 export async function handleModuleFallbackRequest(
+	vite: Vite.ViteDevServer,
+	request: Request
+): Promise<Response> {
+	const parsed = await parseModuleFallbackRequest(request);
+	if (parsed === null) {
+		return new Response("Invalid module fallback request", { status: 400 });
+	}
+	return parsed.protocol === "v1"
+		? handleV1ModuleFallbackRequest(vite, request)
+		: handleV2ModuleFallbackRequest(vite, parsed);
+}
+
+/** Handles the legacy V1 fallback protocol. */
+async function handleV1ModuleFallbackRequest(
 	vite: Vite.ViteDevServer,
 	request: Request
 ): Promise<Response> {
@@ -745,4 +789,399 @@ export async function handleModuleFallbackRequest(
 	}
 
 	return new Response(null, { status: 404 });
+}
+
+// Workerd uses `internal` when the runtime resolves a module directly, such as
+// the Worker entrypoint, rather than resolving an import or require expression.
+type V2ResolveMethod = ResolveMethod | "internal";
+
+type V2ModulePath = {
+	filePath: string;
+	search: string;
+	hash: string;
+};
+
+type V2LoadedModule = {
+	contents: ModuleContents;
+	namedExports?: Iterable<string>;
+};
+
+// Workerd loads these modules before Vitest's Vite module runner exists. Their
+// imports overlap with modules later loaded through Vite, but Workerd identifies
+// instances by module name. Canonicalise imports reachable from these entry
+// points so the native and Vite-resolved paths share Vitest's stateful modules
+// instead of creating separate instances.
+const vitestNativeEntrySpecifiers = new Set([
+	"vitest/worker",
+	"cloudflare:snapshot",
+]);
+const v2VitestModulePaths = new WeakMap<Vite.ViteDevServer, Set<string>>();
+
+/** Resolves a V2 request to a local module path. */
+async function resolveV2(
+	vite: Vite.ViteDevServer,
+	method: V2ResolveMethod,
+	target: V2ModulePath,
+	specifier: string,
+	referrer: V2ModulePath
+): Promise<V2ModulePath> {
+	const isRequire = method === "require";
+	// `?module` requests an adapter around the underlying WebAssembly file.
+	const resolvedTarget =
+		isRequire && target.search === "?module"
+			? { ...target, search: "" }
+			: target;
+	if (resolvedTarget.filePath.endsWith(v2CompiledWasmPathSuffix)) {
+		const wasmPath = trimSuffix(
+			v2CompiledWasmPathSuffix,
+			resolvedTarget.filePath
+		);
+		if (isFile(wasmPath)) {
+			return resolvedTarget;
+		}
+	}
+
+	let filePath = maybeGetTargetFilePath(resolvedTarget.filePath, isRequire);
+	if (filePath !== undefined) {
+		return { ...resolvedTarget, filePath };
+	}
+
+	const specifierLibPath = posixPath.join(
+		libPath,
+		specifier.replaceAll(":", "/")
+	);
+	filePath = maybeGetTargetFilePath(specifierLibPath, /* isRequire */ true);
+	if (filePath !== undefined) {
+		return { filePath, search: "", hash: "" };
+	}
+
+	const resolved = await viteResolve(
+		vite,
+		specifier,
+		modulePathToViteId(referrer),
+		method === "require"
+	);
+	if (/^\/?(node|cloudflare|workerd):/.test(resolved)) {
+		throw new Error("Not found");
+	}
+	return viteIdToModulePath(resolved);
+}
+
+/** Converts a Workerd module URL into a target suitable for Vite resolution. */
+function moduleUrlToResolutionTarget(specifier: string): V2ModulePath {
+	const url = new URL(specifier);
+	if (url.protocol !== "file:") {
+		return viteIdToModulePath(specifier);
+	}
+	// Workerd uses root-anchored file URLs such as `file:///bundle/index.mjs`
+	// for its logical module namespace. These are valid module URLs, but Node's
+	// Windows fileURLToPath() rejects them because they don't contain a drive.
+	const isWindowsFilePath = /^\/[a-zA-Z]:\//.test(url.pathname);
+	const filePath =
+		isWindows && url.host === "" && !isWindowsFilePath
+			? decodeURIComponent(url.pathname)
+			: ensurePosixLikePath(fileURLToPath(url));
+	return {
+		filePath: decodeEncodedSpecifier(filePath),
+		search: url.search,
+		hash: url.hash,
+	};
+}
+
+/** Separates Vite ID query and fragment syntax from its filesystem path. */
+function viteIdToModulePath(modulePath: string): V2ModulePath {
+	const queryIndex = modulePath.indexOf("?");
+	const hashIndex = modulePath.indexOf("#");
+	const pathEnd = Math.min(
+		queryIndex === -1 ? modulePath.length : queryIndex,
+		hashIndex === -1 ? modulePath.length : hashIndex
+	);
+	const searchEnd = hashIndex === -1 ? modulePath.length : hashIndex;
+	return {
+		filePath: modulePath.slice(0, pathEnd),
+		search:
+			queryIndex === -1 || queryIndex > searchEnd
+				? ""
+				: modulePath.slice(queryIndex, searchEnd),
+		hash: hashIndex === -1 ? "" : modulePath.slice(hashIndex),
+	};
+}
+
+/** Converts a structured V2 module path into a Vite module ID. */
+function modulePathToViteId(modulePath: V2ModulePath): string {
+	return modulePath.filePath + modulePath.search + modulePath.hash;
+}
+
+/** Converts a structured local module path into its canonical module URL. */
+function pathToModuleUrl(modulePath: V2ModulePath): string {
+	return (
+		pathToFileURL(modulePath.filePath).href +
+		modulePath.search +
+		modulePath.hash
+	);
+}
+
+/** Reads Vite's private module-type marker without making it module identity. */
+function getV2ForcedModuleType(
+	modulePath: V2ModulePath
+): LegacyModuleRuleType | undefined {
+	const match = /^\?mf_vitest_force=(.+)$/.exec(modulePath.search);
+	if (
+		match === null ||
+		!legacyModuleRuleTypes.includes(match[1] as LegacyModuleRuleType)
+	) {
+		return;
+	}
+	return match[1] as LegacyModuleRuleType;
+}
+
+/** Checks for Vite's `?module` WebAssembly adapter request. */
+function isV2WasmModuleSpecifier(modulePath: V2ModulePath): boolean {
+	return (
+		modulePath.filePath.endsWith(".wasm") && modulePath.search === "?module"
+	);
+}
+
+/** Builds the JSON response expected by Workerd's V2 fallback protocol. */
+function buildV2ModuleResponse(
+	name: string,
+	contents: ModuleContents,
+	namedExports?: Iterable<string>
+): Response {
+	const result: Record<string, unknown> = { name };
+	for (const key in contents) {
+		const value = (contents as Record<string, unknown>)[key];
+		result[key] = value instanceof Uint8Array ? Array.from(value) : value;
+	}
+	if (namedExports !== undefined) {
+		result.namedExports = Array.from(namedExports);
+	}
+	return Response.json(result);
+}
+
+/** Loads a resolved path using Workerd's native V2 module types. */
+async function loadV2Module(
+	vite: Vite.ViteDevServer,
+	logBase: string,
+	method: V2ResolveMethod,
+	specifier: string,
+	modulePath: V2ModulePath
+): Promise<V2LoadedModule> {
+	const { filePath } = modulePath;
+	if (filePath.endsWith(v2CompiledWasmPathSuffix)) {
+		const wasmPath = trimSuffix(v2CompiledWasmPathSuffix, filePath);
+		debuglog(logBase, "wasm:", wasmPath);
+		return { contents: { wasm: fs.readFileSync(wasmPath) } };
+	}
+
+	if (
+		method === "require" &&
+		isV2WasmModuleSpecifier(viteIdToModulePath(specifier)) &&
+		filePath.endsWith(".wasm")
+	) {
+		// Workerd normalises `*.wasm?module` to this wrapper's file URL. Use a
+		// distinct internal URL for the native module so it doesn't import itself.
+		const moduleSpecifier = JSON.stringify(
+			pathToModuleUrl({
+				filePath: filePath + v2CompiledWasmPathSuffix,
+				search: "",
+				hash: "",
+			})
+		);
+		const wrapper = `import wasm from ${moduleSpecifier}; export default wasm;`;
+		debuglog(logBase, "wasm-module-wrapper:", filePath);
+		return { contents: { esModule: wrapper } };
+	}
+
+	const forcedType =
+		getV2ForcedModuleType(modulePath) ??
+		getV2ForcedModuleType(viteIdToModulePath(specifier));
+	if (forcedType !== undefined) {
+		const ruleContents = loadForcedModuleContents(filePath, forcedType);
+		debuglog(logBase, "forced:", forcedType, filePath);
+		if ("commonJsModule" in ruleContents) {
+			return {
+				contents: ruleContents,
+				namedExports: await getCjsNamedExports(
+					vite,
+					filePath,
+					ruleContents.commonJsModule
+				),
+			};
+		}
+		return { contents: ruleContents };
+	}
+
+	if (filePath.endsWith(".wasm")) {
+		const contents = loadForcedModuleContents(filePath, "CompiledWasm");
+		debuglog(logBase, "forced:", filePath);
+		return { contents };
+	}
+
+	const module = loadJavaScriptOrJsonModule(filePath);
+	if (module.kind === "json") {
+		debuglog(logBase, "json:", filePath);
+		return { contents: { json: module.contents } };
+	}
+
+	if (module.kind === "esm") {
+		debuglog(logBase, "esm:", filePath);
+		return { contents: { esModule: module.contents } };
+	}
+
+	debuglog(logBase, "cjs:", filePath);
+	const namedExports = await getCjsNamedExports(
+		vite,
+		filePath,
+		module.contents
+	);
+	return { contents: { commonJsModule: module.contents }, namedExports };
+}
+
+/** Recovers the source import specifier from a V2 fallback request. */
+function getV2RequestSpecifier(
+	request: V2ModuleFallbackRequest,
+	target: V2ModulePath,
+	referrer: V2ModulePath
+): string {
+	let specifier = request.rawSpecifier;
+	if (specifier?.startsWith("file:")) {
+		const rawModulePath = moduleUrlToResolutionTarget(specifier);
+		if (rawModulePath.filePath.startsWith("/bundle/")) {
+			rawModulePath.filePath = rawModulePath.filePath.slice("/bundle/".length);
+		}
+		specifier = modulePathToViteId(rawModulePath);
+	}
+	return (
+		specifier ??
+		modulePathToViteId({
+			...target,
+			filePath: getApproximateSpecifier(
+				target.filePath,
+				posixPath.dirname(referrer.filePath)
+			),
+		})
+	);
+}
+
+/** Handles a parsed V2 fallback request. */
+async function handleV2ModuleFallbackRequest(
+	vite: Vite.ViteDevServer,
+	request: V2ModuleFallbackRequest
+): Promise<Response> {
+	if (request.referrer === undefined) {
+		return new Response("Invalid module fallback request", { status: 400 });
+	}
+
+	let vitestModulePaths = v2VitestModulePaths.get(vite);
+	if (vitestModulePaths === undefined) {
+		vitestModulePaths = new Set();
+		v2VitestModulePaths.set(vite, vitestModulePaths);
+	}
+	const target = moduleUrlToResolutionTarget(request.specifier);
+	const referrer = moduleUrlToResolutionTarget(request.referrer);
+	const specifier = getV2RequestSpecifier(request, target, referrer);
+	const logBase = `${request.type}(${JSON.stringify(modulePathToViteId(target))}) relative to ${modulePathToViteId(referrer)}:`;
+
+	try {
+		const modulePath = await resolveV2(
+			vite,
+			request.type,
+			target,
+			specifier,
+			referrer
+		);
+		const canonicalSpecifier = pathToModuleUrl(modulePath);
+		if (
+			vitestNativeEntrySpecifiers.has(specifier) ||
+			vitestModulePaths.has(request.referrer)
+		) {
+			vitestModulePaths.add(canonicalSpecifier);
+		}
+		if (canonicalSpecifier !== request.specifier) {
+			debuglog(logBase, "redirect:", canonicalSpecifier);
+			return new Response(null, {
+				status: 301,
+				headers: { Location: canonicalSpecifier },
+			});
+		}
+		const module = await loadV2Module(
+			vite,
+			logBase,
+			request.type,
+			specifier,
+			modulePath
+		);
+		if (
+			"esModule" in module.contents &&
+			vitestModulePaths.has(canonicalSpecifier)
+		) {
+			module.contents.esModule = await linkV2VitestModule(
+				vite,
+				module.contents.esModule,
+				modulePath,
+				vitestModulePaths
+			);
+		}
+		return buildV2ModuleResponse(
+			request.specifier,
+			module.contents,
+			module.namedExports
+		);
+	} catch (error) {
+		debuglog(logBase, "error:", error);
+		console.error(
+			`[vitest-plugin] Failed to ${request.type} ${JSON.stringify(modulePathToViteId(target))} from ${JSON.stringify(modulePathToViteId(referrer))}.`,
+			"To resolve this, try bundling the relevant dependency with Vite.",
+			"For more details, refer to https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
+		);
+		return new Response(null, { status: 404 });
+	}
+}
+
+/**
+ * Links Vitest's native bootstrap graph to canonical module URLs so its shared
+ * state is instantiated once. User modules are left for Workerd to resolve.
+ */
+async function linkV2VitestModule(
+	vite: Vite.ViteDevServer,
+	contents: string,
+	modulePath: V2ModulePath,
+	vitestModulePaths: Set<string>
+): Promise<string> {
+	await esModuleLexer.init;
+	const [imports] = esModuleLexer.parse(contents);
+	for (let i = imports.length - 1; i >= 0; i--) {
+		const imported = imports[i];
+		const specifier = imported.n;
+		if (specifier === undefined || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(specifier)) {
+			continue;
+		}
+
+		let resolved: string;
+		try {
+			resolved = await viteResolve(
+				vite,
+				specifier,
+				modulePathToViteId(modulePath),
+				/* isRequire */ false
+			);
+		} catch {
+			continue;
+		}
+		if (/^\/?(node|cloudflare|workerd):/.test(resolved)) {
+			continue;
+		}
+
+		const resolvedModulePath = viteIdToModulePath(resolved);
+		const canonicalSpecifier = pathToModuleUrl(resolvedModulePath);
+		vitestModulePaths.add(canonicalSpecifier);
+		const replacement =
+			imported.d === -1
+				? canonicalSpecifier
+				: JSON.stringify(canonicalSpecifier);
+		contents =
+			contents.slice(0, imported.s) + replacement + contents.slice(imported.e);
+	}
+	return contents;
 }

@@ -82,6 +82,12 @@ describe("Angular framework configure()", () => {
 			expect(result.workerConfig).not.toHaveProperty("entrypoint");
 		});
 
+		it("does not support Cloudflare modes", ({ expect }) => {
+			const framework = new Angular({ id: "angular", name: "Angular" });
+
+			expect(framework.supportsMode).toBe(false);
+		});
+
 		it("sets configurationDescription for SPA", async ({ expect }) => {
 			const framework = new Angular({ id: "angular", name: "Angular" });
 			await framework.configure(BASE_OPTIONS);

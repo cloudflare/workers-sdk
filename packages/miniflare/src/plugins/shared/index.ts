@@ -175,7 +175,9 @@ export function namespaceEntries<
 }
 
 export function maybeParseURL(url: string | undefined): URL | undefined {
-	if (typeof url !== "string" || path.isAbsolute(url)) return;
+	if (typeof url !== "string" || path.isAbsolute(url)) {
+		return;
+	}
 	try {
 		return new URL(url);
 	} catch {}
@@ -280,8 +282,13 @@ export function getStorageService(
 	sharedOptions: Pick<
 		ParsedInstanceOptions,
 		"resourcePersistencePath" | "unsafeEnableSharedStorage"
-	>
+	>,
+	options: {
+		entrypoint?: string;
+		rpcProperties?: string[];
+	} = {}
 ): ServiceDesignator {
+	const { entrypoint, rpcProperties } = options;
 	const storageScope = getStorageScope(sharedOptions.resourcePersistencePath);
 	return sharedOptions.unsafeEnableSharedStorage && storageScope !== undefined
 		? {
@@ -290,6 +297,8 @@ export function getStorageService(
 				props: {
 					json: JSON.stringify({
 						service: localServiceName,
+						entrypoint,
+						rpcProperties,
 						userProps: props,
 						storage: true,
 						storageScope,
@@ -298,6 +307,7 @@ export function getStorageService(
 			}
 		: {
 				name: localServiceName,
+				...(entrypoint === undefined ? {} : { entrypoint }),
 				props: {
 					json: JSON.stringify(props),
 				},

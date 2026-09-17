@@ -71,7 +71,9 @@ export abstract class MiniflareDurableObject<
 
 	#blob?: BlobStore;
 	get blob(): BlobStore {
-		if (this.#blob !== undefined) return this.#blob;
+		if (this.#blob !== undefined) {
+			return this.#blob;
+		}
 		const maybeBlobsService = this.env[SharedBindings.MAYBE_SERVICE_BLOBS];
 		assert(
 			maybeBlobsService !== undefined,
@@ -127,7 +129,9 @@ export abstract class MiniflareDurableObject<
 		// object. Used by tests to update fake time, and access internal storage.
 		if (this.env[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS] === true) {
 			const controlOp = req?.cf?.miniflare?.controlOp;
-			if (controlOp !== undefined) return this.#handleControlOp(controlOp);
+			if (controlOp !== undefined) {
+				return this.#handleControlOp(controlOp);
+			}
 		}
 
 		// Each regular request to a `MiniflareDurableObject` includes the object

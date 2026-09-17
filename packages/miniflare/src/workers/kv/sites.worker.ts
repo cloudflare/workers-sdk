@@ -22,7 +22,9 @@ interface Env {
 const siteRegExpsCache = new WeakMap<Env, SiteMatcherRegExps>();
 function getSiteRegExps(env: Env): SiteMatcherRegExps {
 	let regExps = siteRegExpsCache.get(env);
-	if (regExps !== undefined) return regExps;
+	if (regExps !== undefined) {
+		return regExps;
+	}
 	regExps = deserialiseSiteRegExps(env[SiteBindings.JSON_SITE_FILTER]);
 	siteRegExpsCache.set(env, regExps);
 	return regExps;
@@ -77,8 +79,12 @@ function arrayCompare(
 	for (let i = 0; i < minLength; i++) {
 		const aElement = a[i];
 		const bElement = b[i];
-		if (aElement < bElement) return -1;
-		if (aElement > bElement) return 1;
+		if (aElement < bElement) {
+			return -1;
+		}
+		if (aElement > bElement) {
+			return 1;
+		}
 	}
 	return a.length - b.length;
 }
@@ -102,14 +108,20 @@ async function handleListRequest(
 	// (https://github.com/cloudflare/miniflare/issues/380).
 	let keys: { name: string; encodedName?: Uint8Array }[] = [];
 	for await (let name of walkDirectory(blobsService)) {
-		if (!testSiteRegExps(siteRegExps, name)) continue;
+		if (!testSiteRegExps(siteRegExps, name)) {
+			continue;
+		}
 		name = encodeSitesKey(name);
-		if (prefix !== undefined && !name.startsWith(prefix)) continue;
+		if (prefix !== undefined && !name.startsWith(prefix)) {
+			continue;
+		}
 		keys.push({ name, encodedName: encoder.encode(name) });
 	}
 	keys.sort((a, b) => arrayCompare(a.encodedName, b.encodedName));
 	// Remove `encodedName`s, so they don't get returned
-	for (const key of keys) delete key.encodedName;
+	for (const key of keys) {
+		delete key.encodedName;
+	}
 
 	// Apply cursor
 	const startAfter = cursor === undefined ? "" : base64Decode(cursor);
@@ -119,7 +131,9 @@ async function handleListRequest(
 		// is an incredibly unlikely operation, so doesn't need to be optimised
 		startIndex = keys.findIndex(({ name }) => name === startAfter);
 		// If we couldn't find where to start, return nothing
-		if (startIndex === -1) startIndex = keys.length;
+		if (startIndex === -1) {
+			startIndex = keys.length;
+		}
 		// Since we want to start AFTER this index, add 1 to it
 		startIndex++;
 	}

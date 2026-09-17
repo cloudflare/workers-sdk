@@ -1,5 +1,15 @@
 # @cloudflare/local-explorer-ui
 
+## 0.15.0
+
+### Minor Changes
+
+- [#15337](https://github.com/cloudflare/workers-sdk/pull/15337) [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add email inspection and testing to Local Explorer
+
+  Add an Email group with Routing and Sending views for inspecting messages received by a Worker's `email()` handler and messages sent through its `send_email` bindings. Detail views show message content, metadata, attachments, and handler activity including forwarding, replies, rejection, and unhandled messages.
+
+  Add a test-email composer that delivers custom text, HTML, headers, and attachments directly to the selected Worker's `email()` handler during local development.
+
 ## 0.14.2
 
 ### Patch Changes

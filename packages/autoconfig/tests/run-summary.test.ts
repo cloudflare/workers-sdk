@@ -232,8 +232,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary.scripts).toEqual({
-				deploy: "npm run build && cf deploy --no-build",
-				preview: "cf dev",
+				deploy: "cf deploy",
 			});
 			expect(std.out).toContain(
 				dedent`

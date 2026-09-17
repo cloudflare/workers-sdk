@@ -1,15 +1,21 @@
-import {
-	aggregateListResults,
-	fetchFromPeer,
-	getPeerUrlsIfAggregating,
-} from "../aggregation";
+import { R2Headers } from "../../r2/constants";
+import { readPrefix } from "../../shared/blob.worker";
+import { SharedHeaders } from "../../shared/constants";
+import { aggregateListResults } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
+import type {
+	R2DeleteRequestSchema,
+	R2ErrorResponse,
+	R2GetRequestSchema,
+	R2HeadResponse,
+	R2HeadRequestSchema,
+	R2ListRequestSchema,
+	R2ListResponse,
+	R2PutRequestSchema,
+} from "../../r2/schemas.worker";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
-import type {
-	R2Bucket as R2BucketType,
-	R2ListBucketsResponse,
-} from "../generated";
+import type { R2Bucket as R2BucketType } from "../generated";
 import type {
 	zR2BucketDeleteObjectsData,
 	zR2BucketGetObjectData,
@@ -18,50 +24,121 @@ import type {
 } from "../generated/zod.gen";
 import type z from "zod";
 
-// ============================================================================
-// Error Codes (matching Cloudflare API)
-// ============================================================================
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
-/** Error code for bucket not found */
-const R2_ERROR_BUCKET_NOT_FOUND = 10006;
-/** Error code for object not found */
-const R2_ERROR_OBJECT_NOT_FOUND = 10007;
+type R2PutRequest =
+	| z.input<typeof R2PutRequestSchema>
+	| z.input<typeof R2DeleteRequestSchema>;
+
+type R2GetRequest =
+	| z.input<typeof R2HeadRequestSchema>
+	| z.input<typeof R2GetRequestSchema>
+	| z.input<typeof R2ListRequestSchema>;
+
+interface DecodedR2Response<T> {
+	metadata: T;
+	body: ReadableStream;
+}
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-/**
- * Get an R2 binding by bucket name
- */
-function getR2Binding(env: Env, bucket_name: string): R2Bucket | null {
-	const bindingMap = env.LOCAL_EXPLORER_BINDING_MAP.r2;
-
-	// Find the binding name for this bucket
-	const bindingName = bindingMap[bucket_name];
-	if (!bindingName) return null;
-
-	return env[bindingName] as R2Bucket;
+async function sendR2GetRequest(
+	c: AppContext,
+	bucketName: string,
+	request: R2GetRequest
+): Promise<Response> {
+	return c.env.MINIFLARE_R2.fetch("http://r2/", {
+		headers: {
+			[SharedHeaders.NAMESPACE]: bucketName,
+			[R2Headers.REQUEST]: JSON.stringify({ version: 1, ...request }),
+		},
+	});
 }
 
-async function findR2BucketOwner(
+async function sendR2PutRequest(
 	c: AppContext,
-	bucketName: string
-): Promise<string | null> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) return null;
+	bucketName: string,
+	request: R2PutRequest,
+	value?: ArrayBuffer
+): Promise<Response> {
+	const metadata = encoder.encode(JSON.stringify({ version: 1, ...request }));
+	const body = new Uint8Array(metadata.byteLength + (value?.byteLength ?? 0));
+	body.set(metadata);
+	if (value !== undefined) {
+		body.set(new Uint8Array(value), metadata.byteLength);
+	}
+	return c.env.MINIFLARE_R2.fetch("http://r2/", {
+		method: "PUT",
+		headers: {
+			"Content-Length": String(body.byteLength),
+			[SharedHeaders.NAMESPACE]: bucketName,
+			[R2Headers.METADATA_SIZE]: String(metadata.byteLength),
+		},
+		body,
+	});
+}
 
-	const responses = await Promise.all(
-		peerUrls.map(async (url) => {
-			const response = await fetchFromPeer(url, "/r2/buckets");
-			if (!response?.ok) return null;
-			const data = (await response.json()) as R2ListBucketsResponse;
-			const found = data.result?.buckets?.some((b) => b.name === bucketName);
-			return found ? url : null;
-		})
+function toR2ErrorResponse(response: Response): Response {
+	const encoded = response.headers.get(R2Headers.ERROR);
+	if (encoded !== null) {
+		try {
+			const error = JSON.parse(encoded) as R2ErrorResponse;
+			return errorResponse(response.status, error.v4code, error.message);
+		} catch {}
+	}
+	return errorResponse(
+		response.status,
+		10000,
+		response.statusText || "Internal R2 request failed"
 	);
+}
 
-	return responses.find((url) => url !== null) ?? null;
+async function decodeR2Response<T>(
+	response: Response
+): Promise<DecodedR2Response<T>> {
+	const metadataSize = Number(response.headers.get(R2Headers.METADATA_SIZE));
+	if (!Number.isInteger(metadataSize) || metadataSize < 0) {
+		throw new Error("R2 response did not contain a valid metadata size");
+	}
+	if (response.body === null) {
+		throw new Error("R2 response did not contain a body");
+	}
+	const [metadata, body] = await readPrefix(response.body, metadataSize);
+	return {
+		metadata: JSON.parse(decoder.decode(metadata)) as T,
+		body,
+	};
+}
+
+function decodeCustomMetadata(
+	fields: R2HeadResponse["customFields"]
+): Record<string, string> | undefined {
+	return fields === undefined
+		? undefined
+		: Object.fromEntries(fields.map(({ k, v }) => [k, v]));
+}
+
+function toExplorerObject(object: R2HeadResponse) {
+	return {
+		key: object.name,
+		etag: object.etag,
+		size: object.size,
+		last_modified: new Date(object.uploaded).toISOString(),
+		http_metadata:
+			object.httpFields === undefined
+				? undefined
+				: {
+						...object.httpFields,
+						cacheExpiry:
+							object.httpFields.cacheExpiry === undefined
+								? undefined
+								: new Date(object.httpFields.cacheExpiry).toISOString(),
+					},
+		custom_metadata: decodeCustomMetadata(object.customFields),
+	};
 }
 
 /**
@@ -82,24 +159,21 @@ function getLocalR2Buckets(env: Env): Required<Pick<R2BucketType, "name">>[] {
 // ============================================================================
 
 /**
- * List all R2 buckets across all connected instances.
+ * List all local R2 buckets and buckets configured by shared-storage peers.
  *
- * This is an aggregated endpoint - it fetches buckets from the local instance
- * and all peer instances in the dev registry, then merges the results.
+ * Shared-storage peers are scoped by their canonical persistence root.
  *
  * @see https://developers.cloudflare.com/api/resources/r2/subresources/buckets/methods/list/
  */
 export async function listR2Buckets(c: AppContext) {
 	const localBuckets = getLocalR2Buckets(c.env);
-	const aggregatedBuckets = await aggregateListResults<{
+	const allBuckets = await aggregateListResults<{
 		name: string;
-	}>(c, localBuckets, "/r2/buckets", "buckets");
-
-	// Deduplicate by name
-	const localNames = new Set(localBuckets.map((b) => b.name));
-	const allBuckets = aggregatedBuckets.filter(
-		(b, index) => index < localBuckets.length || !localNames.has(b.name)
-	);
+	}>(c, localBuckets, "/r2/buckets", {
+		getKey: (bucket) => bucket.name,
+		resultKey: "buckets",
+		sharedStorageOnly: true,
+	});
 
 	// Sort by name
 	allBuckets.sort((a, b) => a.name.localeCompare(b.name));
@@ -137,67 +211,22 @@ export async function listR2Objects(
 	const cursor = query.cursor;
 	const limit = query.per_page;
 
-	// Try local first
-	const r2 = getR2Binding(c.env, bucket_name);
-	if (r2) {
-		return executeListObjects(r2, { prefix, delimiter, cursor, limit }, c);
+	const response = await sendR2GetRequest(c, bucket_name, {
+		method: "list",
+		prefix,
+		delimiter,
+		cursor,
+		limit,
+		// Matches workerd when the r2_list_honor_include compat flag is enabled
+		// and the caller does not specify an include list.
+		include: [],
+	});
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
 	}
-
-	const ownerMiniflare = await findR2BucketOwner(c, bucket_name);
-	if (ownerMiniflare) {
-		const params = new URLSearchParams();
-		if (prefix) params.set("prefix", prefix);
-		if (delimiter) params.set("delimiter", delimiter);
-		if (cursor) params.set("cursor", cursor);
-		if (limit !== undefined) params.set("per_page", String(limit));
-		const queryString = params.toString();
-		const path = `/r2/buckets/${encodeURIComponent(bucket_name)}/objects${
-			queryString ? `?${queryString}` : ""
-		}`;
-
-		const response = await fetchFromPeer(ownerMiniflare, path);
-		if (response) return response;
-	}
-
-	return errorResponse(
-		404,
-		R2_ERROR_BUCKET_NOT_FOUND,
-		"list objects: 'bucket not found'"
-	);
-}
-
-/**
- * Execute list objects on a local R2 binding.
- */
-async function executeListObjects(
-	r2: R2Bucket,
-	options: {
-		prefix?: string;
-		delimiter?: string;
-		cursor?: string;
-		limit?: number;
-	},
-	c: AppContext
-) {
-	const listResult = await r2.list(options);
-
-	const objects = listResult.objects.map((obj) => ({
-		key: obj.key,
-		etag: obj.etag,
-		size: obj.size,
-		last_modified: obj.uploaded.toISOString(),
-		http_metadata: obj.httpMetadata
-			? {
-					contentType: obj.httpMetadata.contentType,
-					contentLanguage: obj.httpMetadata.contentLanguage,
-					contentDisposition: obj.httpMetadata.contentDisposition,
-					contentEncoding: obj.httpMetadata.contentEncoding,
-					cacheControl: obj.httpMetadata.cacheControl,
-					cacheExpiry: obj.httpMetadata.cacheExpiry?.toISOString(),
-				}
-			: undefined,
-		custom_metadata: obj.customMetadata,
-	}));
+	const { metadata: listResult } =
+		await decodeR2Response<R2ListResponse>(response);
+	const objects = listResult.objects.map(toExplorerObject);
 
 	return c.json({
 		...wrapResponse(objects),
@@ -228,83 +257,33 @@ export async function getR2Object(
 	headers: GetObjectHeaders
 ) {
 	const metadataOnly = headers["cf-metadata-only"] === "true";
-
-	// Try local first
-	const r2 = getR2Binding(c.env, bucket_name);
-	if (r2) {
-		if (metadataOnly) {
-			const obj = await r2.head(object_key);
-			if (obj === null) {
-				return errorResponse(
-					404,
-					R2_ERROR_OBJECT_NOT_FOUND,
-					"head: 'object not found'"
-				);
-			}
-			return c.json(
-				wrapResponse({
-					key: obj.key,
-					etag: obj.etag,
-					last_modified: obj.uploaded.toISOString(),
-					size: obj.size,
-					http_metadata: obj.httpMetadata
-						? {
-								contentType: obj.httpMetadata.contentType,
-								contentLanguage: obj.httpMetadata.contentLanguage,
-								contentDisposition: obj.httpMetadata.contentDisposition,
-								contentEncoding: obj.httpMetadata.contentEncoding,
-								cacheControl: obj.httpMetadata.cacheControl,
-								cacheExpiry: obj.httpMetadata.cacheExpiry?.toISOString(),
-							}
-						: undefined,
-					custom_metadata: obj.customMetadata,
-				})
-			);
-		}
-
-		const obj = await r2.get(object_key);
-		if (obj === null) {
-			return errorResponse(
-				404,
-				R2_ERROR_OBJECT_NOT_FOUND,
-				"get: 'object not found'"
-			);
-		}
-
-		const responseHeaders = new Headers();
-		if (obj.httpMetadata?.contentType) {
-			responseHeaders.set("Content-Type", obj.httpMetadata.contentType);
-		}
-		responseHeaders.set("Content-Length", String(obj.size));
-		responseHeaders.set("ETag", obj.etag);
-		responseHeaders.set("Last-Modified", obj.uploaded.toUTCString());
-
-		// Include custom metadata as headers
-		if (obj.customMetadata) {
-			for (const [key, value] of Object.entries(obj.customMetadata)) {
-				responseHeaders.set(`X-R2-Custom-Metadata-${key}`, value);
-			}
-		}
-
-		return new Response(obj.body, { headers: responseHeaders });
+	const response = await sendR2GetRequest(c, bucket_name, {
+		method: metadataOnly ? "head" : "get",
+		object: object_key,
+	});
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
+	}
+	const { metadata: object, body } =
+		await decodeR2Response<R2HeadResponse>(response);
+	const explorerObject = toExplorerObject(object);
+	if (metadataOnly) {
+		return c.json(wrapResponse(explorerObject));
 	}
 
-	const ownerMiniflare = await findR2BucketOwner(c, bucket_name);
-	if (ownerMiniflare) {
-		const route = `/r2/buckets/${encodeURIComponent(
-			bucket_name
-		)}/objects/${encodeURIComponent(object_key)}`;
-		const response = await fetchFromPeer(ownerMiniflare, route, {
-			headers: metadataOnly ? { "cf-metadata-only": "true" } : undefined,
-		});
-		if (response) return response;
+	const responseHeaders = new Headers();
+	if (object.httpFields?.contentType !== undefined) {
+		responseHeaders.set("Content-Type", object.httpFields.contentType);
 	}
-
-	return errorResponse(
-		404,
-		R2_ERROR_BUCKET_NOT_FOUND,
-		"get: 'bucket not found'"
-	);
+	responseHeaders.set("Content-Length", String(object.size));
+	responseHeaders.set("ETag", object.etag);
+	responseHeaders.set("Last-Modified", new Date(object.uploaded).toUTCString());
+	for (const [key, value] of Object.entries(
+		decodeCustomMetadata(object.customFields) ?? {}
+	)) {
+		responseHeaders.set(`X-R2-Custom-Metadata-${key}`, value);
+	}
+	return new Response(body, { headers: responseHeaders });
 }
 
 type PutObjectHeaders = NonNullable<
@@ -327,61 +306,44 @@ export async function putR2Object(
 	object_key: string,
 	headers: PutObjectHeaders
 ) {
-	// Try local first
-	const r2 = getR2Binding(c.env, bucket_name);
-	if (r2) {
-		const body = await c.req.arrayBuffer();
-		const contentType = headers["content-type"];
-		const customMetadataHeader = headers["cf-r2-custom-metadata"];
-
-		const options: R2PutOptions = {};
-		if (contentType) {
-			options.httpMetadata = { contentType };
+	const body = await c.req.arrayBuffer();
+	const contentType = headers["content-type"];
+	const customMetadataHeader = headers["cf-r2-custom-metadata"];
+	let customFields: { k: string; v: string }[] | undefined;
+	if (customMetadataHeader !== undefined) {
+		try {
+			const customMetadata = JSON.parse(customMetadataHeader) as Record<
+				string,
+				string
+			>;
+			customFields = Object.entries(customMetadata).map(([k, v]) => ({ k, v }));
+		} catch {
+			return errorResponse(400, 10001, "Invalid custom metadata JSON");
 		}
-		if (customMetadataHeader) {
-			try {
-				options.customMetadata = JSON.parse(customMetadataHeader);
-			} catch {
-				return errorResponse(400, 10001, "Invalid custom metadata JSON");
-			}
-		}
-
-		const obj = await r2.put(object_key, body, options);
-		return c.json(
-			wrapResponse({
-				key: obj.key,
-				etag: obj.etag,
-				size: obj.size,
-				version: obj.version,
-			})
-		);
 	}
 
-	const ownerMiniflare = await findR2BucketOwner(c, bucket_name);
-	if (ownerMiniflare) {
-		const body = await c.req.arrayBuffer();
-		const fetchHeaders: Record<string, string> = {};
-		if (headers["content-type"]) {
-			fetchHeaders["content-type"] = headers["content-type"];
-		}
-		if (headers["cf-r2-custom-metadata"]) {
-			fetchHeaders["cf-r2-custom-metadata"] = headers["cf-r2-custom-metadata"];
-		}
-		const path = `/r2/buckets/${encodeURIComponent(
-			bucket_name
-		)}/objects/${encodeURIComponent(object_key)}`;
-		const response = await fetchFromPeer(ownerMiniflare, path, {
-			method: "PUT",
-			headers: fetchHeaders,
-			body,
-		});
-		if (response) return response;
+	const response = await sendR2PutRequest(
+		c,
+		bucket_name,
+		{
+			method: "put",
+			object: object_key,
+			httpFields: contentType === undefined ? undefined : { contentType },
+			customFields,
+		},
+		body
+	);
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
 	}
-
-	return errorResponse(
-		404,
-		R2_ERROR_BUCKET_NOT_FOUND,
-		"put: 'bucket not found'"
+	const { metadata: object } = await decodeR2Response<R2HeadResponse>(response);
+	return c.json(
+		wrapResponse({
+			key: object.name,
+			etag: object.etag,
+			size: object.size,
+			version: object.version,
+		})
 	);
 }
 
@@ -408,27 +370,12 @@ export async function deleteR2Objects(
 		);
 	}
 
-	// Try local first
-	const r2 = getR2Binding(c.env, bucket_name);
-	if (r2) {
-		await r2.delete(keys);
-		return c.json(wrapResponse(keys.map((key) => ({ key }))));
+	const response = await sendR2PutRequest(c, bucket_name, {
+		method: "delete",
+		objects: keys,
+	});
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
 	}
-
-	const ownerMiniflare = await findR2BucketOwner(c, bucket_name);
-	if (ownerMiniflare) {
-		const path = `/r2/buckets/${encodeURIComponent(bucket_name)}/objects`;
-		const response = await fetchFromPeer(ownerMiniflare, path, {
-			method: "DELETE",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(keys),
-		});
-		if (response) return response;
-	}
-
-	return errorResponse(
-		404,
-		R2_ERROR_BUCKET_NOT_FOUND,
-		"delete: 'bucket not found'"
-	);
+	return c.json(wrapResponse(keys.map((key) => ({ key }))));
 }

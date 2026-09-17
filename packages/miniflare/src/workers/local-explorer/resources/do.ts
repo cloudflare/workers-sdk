@@ -50,7 +50,9 @@ function getDOBinding(
 	useSQLite: boolean;
 } | null {
 	const info = env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
-	if (!info) return null;
+	if (!info) {
+		return null;
+	}
 	return {
 		binding: env[
 			info.binding
@@ -77,8 +79,12 @@ async function findDONamespaceOwner(
 	c: AppContext,
 	namespaceId: string
 ): Promise<string | null> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) return null;
+	const peerUrls = await getPeerUrlsIfAggregating(c, {
+		sharedStorageOnly: true,
+	});
+	if (peerUrls.length === 0) {
+		return null;
+	}
 
 	const responses = await Promise.all(
 		peerUrls.map(async (url) => {
@@ -86,7 +92,9 @@ async function findDONamespaceOwner(
 				url,
 				"/workers/durable_objects/namespaces"
 			);
-			if (!response?.ok) return null;
+			if (!response?.ok) {
+				return null;
+			}
 			const data = (await response.json()) as {
 				result?: Array<{ id: string }>;
 			};
@@ -112,13 +120,14 @@ async function findDONamespaceOwner(
  */
 export async function listDONamespaces(c: AppContext) {
 	const localNamespaces = getLocalDONamespaces(c.env);
-	// note that we don't have duplication issues here like
-	// we do for listD1Namespaces etc. because DOs are tied
-	// to scripts and external DOs have already been filtered out
 	const allNamespaces = await aggregateListResults(
 		c,
 		localNamespaces,
-		"/workers/durable_objects/namespaces"
+		"/workers/durable_objects/namespaces",
+		{
+			getKey: (namespace) => namespace.id,
+			sharedStorageOnly: true,
+		}
 	);
 
 	return c.json({
@@ -158,15 +167,21 @@ export async function listDOObjects(
 	const ownerMiniflare = await findDONamespaceOwner(c, namespaceId);
 	if (ownerMiniflare) {
 		const params = new URLSearchParams();
-		if (cursor) params.set("cursor", cursor);
-		if (limit !== undefined) params.set("limit", String(limit));
+		if (cursor) {
+			params.set("cursor", cursor);
+		}
+		if (limit !== undefined) {
+			params.set("limit", String(limit));
+		}
 		const queryString = params.toString();
 		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(
 			namespaceId
 		)}/objects${queryString ? `?${queryString}` : ""}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -327,7 +342,9 @@ export async function queryDOSqlite(
 				body: JSON.stringify(body),
 			}
 		);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(

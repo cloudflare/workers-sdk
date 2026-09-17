@@ -158,6 +158,28 @@ test("head: returns metadata for existing keys", async ({ expect }) => {
 	expect(headers.get("Content-Type")).toBe("text/plain");
 	expect(headers.get("X-Key")).toBe("value");
 });
+test("head: writeHttpMetadata() accepts a `Headers` instance from another realm", async ({
+	expect,
+}) => {
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/6047:
+	// user code (e.g. inside Next.js, Astro, or SvelteKit) typically constructs
+	// `Headers` using the platform global, which is backed by a different
+	// `Headers` implementation than the `undici` copy Miniflare uses
+	// internally. This previously caused a `DevalueError` when serialising the
+	// argument to send across the proxy.
+	const { r2 } = ctx;
+	await r2.put("key", "value", {
+		httpMetadata: { contentType: "text/plain" },
+	});
+	const object = await r2.head("key");
+	assert(object !== null);
+
+	const headers = new globalThis.Headers({ "X-Key": "value" });
+	expect(headers).not.toBeInstanceOf(Headers);
+	expect(object.writeHttpMetadata(headers)).toBeUndefined();
+	expect(headers.get("Content-Type")).toBe("text/plain");
+	expect(headers.get("X-Key")).toBe("value");
+});
 test("head: validates key", async ({ expect }) => {
 	await testValidatesKey(expect, {
 		method: "head",
@@ -651,8 +673,9 @@ async function testList(
 	const { r2, ns } = ctx;
 
 	// Seed bucket
-	for (let i = 0; i < opts.keys.length; i++)
+	for (let i = 0; i < opts.keys.length; i++) {
 		await r2.put(opts.keys[i], `value${i}`);
+	}
 
 	let lastCursor: string | undefined;
 	for (let pageIndex = 0; pageIndex < opts.pages.length; pageIndex++) {
@@ -929,7 +952,9 @@ test("list: returns correct delimitedPrefixes for delimiter and prefix", async (
 		file9: "value9",
 	};
 	const allKeys = Object.keys(values);
-	for (const [key, value] of Object.entries(values)) await r2.put(key, value);
+	for (const [key, value] of Object.entries(values)) {
+		await r2.put(key, value);
+	}
 
 	const keys = (result: Awaited<ReturnType<typeof r2.list>>) =>
 		result.objects.map(({ key }) => key.substring(ns.length));
@@ -1194,8 +1219,9 @@ test("abortMultipartUpload", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload1.uploadId)).length).toBe(0);
 	// Check blobs deleted
 	await object.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await object.getBlob(part.blob_id)).toBe(null);
+	}
 
 	// Check cannot upload after abort
 	await expect(upload1.uploadPart(4, "value4")).rejects.toThrow(
@@ -1282,8 +1308,9 @@ test("completeMultipartUpload", async ({ expect }) => {
 	expect(object.etag).toBe("46d1741e8075da4ac72c71d8130fcb71-1");
 	// Check previous multipart uploads blobs deleted
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 
 	// Check completing multiple uploads overrides existing, deleting all parts
 	expect((await stmts.getPartsByUploadId(upload1.uploadId)).length).toBe(0);
@@ -1554,8 +1581,9 @@ test("put: is multipart aware", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(0);
 	// Check deletes all previous blobs
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("delete: is multipart aware", async ({ expect }) => {
 	const { r2, object: objectStub } = ctx;
@@ -1577,8 +1605,9 @@ test("delete: is multipart aware", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(0);
 	// Check deletes all previous blobs
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("delete: waits for in-progress multipart gets before deleting part blobs", async ({
 	expect,
@@ -1605,8 +1634,9 @@ test("delete: waits for in-progress multipart gets before deleting part blobs", 
 	);
 
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("list: is multipart aware", async ({ expect }) => {
 	const { r2, ns } = ctx;

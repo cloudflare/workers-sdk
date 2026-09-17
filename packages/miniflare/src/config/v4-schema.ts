@@ -245,7 +245,14 @@ const V4DurableObjectSchema = z.object({
 		.optional(),
 	unsafePreventEviction: z.boolean().optional(),
 	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
-	container: z.object({ imageName: z.string() }).optional(),
+	container: z
+		.object({
+			imageName: z.string().optional(),
+			images: z
+				.array(z.object({ name: z.string(), image: z.string() }))
+				.optional(),
+		})
+		.optional(),
 });
 
 const V4QueueMessageDelaySchema = z.number().int().min(0).max(86400).optional();
@@ -337,10 +344,6 @@ const V4EmailBindingOptionsSchema = z
 			}),
 		])
 	);
-
-const V4RemoteBindingSchema = z.object({
-	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
-});
 
 const V4RemoteBindingWithNameSchema = z.object({
 	binding: z.string(),
@@ -457,8 +460,6 @@ const V4WorkerOptionsShapeSchema = z.object({
 				className: z.string(),
 				scriptName: z.string().optional(),
 				external: z.boolean().optional(),
-				remoteProxyConnectionString:
-					RemoteProxyConnectionStringSchema.optional(),
 				stepLimit: z.number().int().min(1).optional(),
 			})
 		)
@@ -511,7 +512,6 @@ const V4WorkerOptionsShapeSchema = z.object({
 			})
 		)
 		.optional(),
-	websearch: z.record(z.string(), V4RemoteBindingSchema).optional(),
 	browserRendering: z
 		.object({
 			binding: z.string(),
@@ -746,7 +746,10 @@ export type V4DurableObject = {
 	unsafeUniqueKey?: string | symbol;
 	unsafePreventEviction?: boolean;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
-	container?: { imageName: string };
+	container?: {
+		imageName?: string;
+		images?: { name: string; image: string }[];
+	};
 };
 export type V4QueueProducerOptions = {
 	queueName: string;
@@ -851,7 +854,6 @@ export type V4WorkerOptionsShape = {
 			className: string;
 			scriptName?: string;
 			external?: boolean;
-			remoteProxyConnectionString?: RemoteProxyConnectionString;
 			stepLimit?: number;
 		}
 	>;
@@ -896,7 +898,6 @@ export type V4WorkerOptionsShape = {
 		string,
 		{ namespace?: string; instance_name?: string } & V4RemoteBinding
 	>;
-	websearch?: Record<string, V4RemoteBinding>;
 	browserRendering?: V4RemoteBindingWithName & { headful?: boolean };
 	dispatchNamespaces?: Record<string, { namespace: string } & V4RemoteBinding>;
 	images?: V4RemoteBindingWithName;

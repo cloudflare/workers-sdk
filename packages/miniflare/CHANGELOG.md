@@ -1,5 +1,475 @@
 # miniflare
 
+## 5.20260916.0-alpha
+
+### Minor Changes
+
+- [#15483](https://github.com/cloudflare/workers-sdk/pull/15483) [`71b6f10`](https://github.com/cloudflare/workers-sdk/commit/71b6f102f258e14e2b1dc23e9643cc74685d35cb) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Align Local Explorer Workflow instance status requests with production
+
+  Local Explorer and Wrangler local mode now use the production-compatible `status` request field for pausing, resuming, restarting, and terminating Workflow instances. Direct Local Explorer API consumers must replace the previous `action` field with `status`.
+
+  Successful Local Explorer status updates now return the production-compatible instance `status` and response `timestamp` instead of the local-only `result.success` acknowledgement.
+
+### Patch Changes
+
+- [#15665](https://github.com/cloudflare/workers-sdk/pull/15665) [`ad23e6e`](https://github.com/cloudflare/workers-sdk/commit/ad23e6e42dc81c9dc894248e787ed6c0abbe9028) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260915.1 | ^5.20260916.1 |
+  | workerd                   | 1.20260915.1  | 1.20260916.1  |
+
+- [#15552](https://github.com/cloudflare/workers-sdk/pull/15552) [`6f3d7b5`](https://github.com/cloudflare/workers-sdk/commit/6f3d7b58b1f6cd036aca3e5946807bba37776065) Thanks [@superbuilder-norm](https://github.com/superbuilder-norm)! - Prevent synchronous binding calls from failing intermittently under load
+
+  Miniflare now keeps synchronous binding requests and responses correctly paired when background work is delayed. This prevents rare cascades of assertion failures in local development and CI, including when using synchronous D1 methods such as `prepare()` and `bind()`.
+
+## 5.20260915.0-alpha
+
+### Minor Changes
+
+- [#15486](https://github.com/cloudflare/workers-sdk/pull/15486) [`d3565a5`](https://github.com/cloudflare/workers-sdk/commit/d3565a5326d879fbebba72b16c0f14ba2a4fba99) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add production-compatible KV bulk write and delete routes to Local Explorer
+
+  API clients can now write and delete multiple local KV entries by changing only their Cloudflare API base URL. The new routes support production request and response shapes, including base64 values, expiration options, and metadata.
+
+- [#15453](https://github.com/cloudflare/workers-sdk/pull/15453) [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891) Thanks [@G4brym](https://github.com/G4brym)! - Remove the gated Web Search binding and Wrangler command
+
+  The unreleased search binding and its experimental command have been removed from Wrangler, Miniflare, and configuration APIs.
+
+### Patch Changes
+
+- [#15633](https://github.com/cloudflare/workers-sdk/pull/15633) [`7db596c`](https://github.com/cloudflare/workers-sdk/commit/7db596c153ae0cda7e30aa351955b1781902435f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260911.1 | ^5.20260915.1 |
+  | workerd                   | 1.20260911.1  | 1.20260915.1  |
+
+- [#15420](https://github.com/cloudflare/workers-sdk/pull/15420) [`e35c4a1`](https://github.com/cloudflare/workers-sdk/commit/e35c4a154ea16a96b47cb2e68a4930c1d833e81d) Thanks [@manthaaaaan](https://github.com/manthaaaaan)! - Fix Infinity/-Infinity being emitted as an invalid bare identifier in D1 export
+
+- [#15527](https://github.com/cloudflare/workers-sdk/pull/15527) [`1015cfb`](https://github.com/cloudflare/workers-sdk/commit/1015cfb2a780d57b13d137324c83af53d3a3a8a2) Thanks [@devaniketh](https://github.com/devaniketh)! - Scope Durable Object and Workflow local explorer peers by storageScope
+
+  Restricts Durable Object and Workflow peer discovery and owner resolution to Miniflare peers sharing the same storageScope when Shared Storage is enabled. This ensures consistency with KV, D1, and R2 local explorer behaviors and prevents cross-project access to local development state across instances with different persistence roots.
+
+- [#15399](https://github.com/cloudflare/workers-sdk/pull/15399) [`982b806`](https://github.com/cloudflare/workers-sdk/commit/982b8060d99d9bb303ef7b7f15bf6c8b1f83c72a) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Improve over-limit `run_worker_first` errors when duplicate rules are present
+
+  The error now reports distinct and duplicate-entry counts and lists duplicated rules, making it clear when removing redundant entries can bring the configuration within the limit.
+
+  ```
+  Too many `run_worker_first` rules were provided; 105 rules provided (99 distinct, 6 duplicate entries) exceeds max of 100. Note: duplicate entries count towards the route limit. Ensure that no duplicate rules are present in your `run_worker_first` configuration.
+
+  The duplicated rules found are:
+  - "/rule/0"
+  - "/rule/1"
+  - "/rule/2"
+  - "/rule/3"
+  - "/rule/4"
+  ...and 1 more duplicated rule.
+  ```
+
+- [#15397](https://github.com/cloudflare/workers-sdk/pull/15397) [`641df47`](https://github.com/cloudflare/workers-sdk/commit/641df4774f19313ffecf53cf7443ac3dd79abb31) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce Miniflare's bundle size by sharing Zod across embedded workers
+
+  Workflows, Email Store, and Local Explorer now import Zod from Miniflare's existing workerd extension instead of each bundling a separate copy.
+
+## 5.20260911.1-alpha
+
+### Minor Changes
+
+- [#15441](https://github.com/cloudflare/workers-sdk/pull/15441) [`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Add experimental Workflow event subscriptions to local development
+
+  Local Workflow instances now implement `subscribe()`, returning a disposable RPC subscription that streams historical and live lifecycle events. Subscriptions support event cursors and type filters and include Workflow inputs, status transitions, step configuration, outputs, errors, retries, waits, and rollback activity where applicable.
+
+## 5.20260911.0-alpha
+
+### Patch Changes
+
+- [#15602](https://github.com/cloudflare/workers-sdk/pull/15602) [`47d906f`](https://github.com/cloudflare/workers-sdk/commit/47d906f52d109509f61b1c801c1b08ecad583c0d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260910.1 | ^5.20260911.1 |
+  | workerd                   | 1.20260910.1  | 1.20260911.1  |
+
+- [#15121](https://github.com/cloudflare/workers-sdk/pull/15121) [`c2699bf`](https://github.com/cloudflare/workers-sdk/commit/c2699bf625134a2425d7142c72c4f31c4b6f8eab) Thanks [@HaoChiBao](https://github.com/HaoChiBao)! - Fix Durable Object `stub.fetch` rejecting Node's global `Request`
+
+  Passing a Node.js global `Request` object to a Durable Object stub's `fetch()` (for example when using `getPlatformProxy`) previously failed with a URL parsing error. Such requests are now accepted and forwarded as expected.
+
+## 5.20260910.0-alpha
+
+### Minor Changes
+
+- [#15578](https://github.com/cloudflare/workers-sdk/pull/15578) [`15cd6e1`](https://github.com/cloudflare/workers-sdk/commit/15cd6e16129af3dad09d53d6cd03f963f9203970) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Add `Miniflare#dispatchConnect()` for testing Worker TCP handlers
+
+  Tests can now open a Node.js socket to a Worker's configured TCP trigger without reserving and connecting to a fixed port manually. Miniflare waits for startup, resolves OS-assigned ports, supports selecting Workers and triggers, and closes dispatched sockets during disposal.
+
+### Patch Changes
+
+- [#15432](https://github.com/cloudflare/workers-sdk/pull/15432) [`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94) Thanks [@razethion](https://github.com/razethion)! - Prevent delayed internal errors from fetch-only remote bindings
+
+  Fetch-only remote bindings such as D1 and R2 previously opened an unused WebSocket RPC session. RPC sessions are now created only when an RPC method is called.
+
+- [#15585](https://github.com/cloudflare/workers-sdk/pull/15585) [`f69f95a`](https://github.com/cloudflare/workers-sdk/commit/f69f95aa2da329dcfa9888cfeb204cdda634d979) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260908.1 | ^5.20260910.1 |
+  | workerd                   | 1.20260908.1  | 1.20260910.1  |
+
+- [#14814](https://github.com/cloudflare/workers-sdk/pull/14814) [`a549e58`](https://github.com/cloudflare/workers-sdk/commit/a549e58af707e84d6aeddaadc6566103ae236dbb) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Match `Content-Type` case-insensitively when simulating Cloudflare's response compression
+
+  Locally, responses were only compressed when the `Content-Type` matched the compressible media type list exactly. Because HTTP media types are case-insensitive and may carry whitespace before their parameters, headers such as `Application/JSON` or `text/html ; charset=utf-8` were treated as non-compressible, diverging from production behaviour. The media type is now trimmed and lowercased before matching.
+
+- [#15540](https://github.com/cloudflare/workers-sdk/pull/15540) [`dbb3ff4`](https://github.com/cloudflare/workers-sdk/commit/dbb3ff4ebe7579be76f42591957c429f26da319b) Thanks [@NAVEENKUMARKR777](https://github.com/NAVEENKUMARKR777)! - Fix `DevalueError: Cannot stringify arbitrary non-POJOs` when passing a `Headers` instance to a proxied binding method
+
+  `R2Object#writeHttpMetadata()`, `R2Bucket#put()`'s `onlyIf` option, and other proxied APIs that accept a `Headers` argument previously only worked if that `Headers` instance came from the exact same `Headers` implementation Miniflare uses internally (`undici`). In practice, user code almost always constructs `Headers` using the platform global instead (for example inside Next.js, Astro, Remix, or SvelteKit dev servers), which is backed by a different copy of `undici` and isn't `instanceof` the one Miniflare imports. This mismatch caused serialisation to fail with a confusing `DevalueError`, even though the exact same code worked fine when deployed.
+
+  `Headers`, `Request`, and `Response` values are now also recognised by their `Symbol.toStringTag`, which is realm-independent, so any spec-compliant instance is accepted regardless of which copy of the class created it.
+
+- [#15485](https://github.com/cloudflare/workers-sdk/pull/15485) [`fea3cd0`](https://github.com/cloudflare/workers-sdk/commit/fea3cd0f2ef5af6c8f2b50c794a89b8ef03ca82b) Thanks [@RealBhupesh](https://github.com/RealBhupesh)! - Reject loopback server bind failures during Miniflare startup instead of leaving `ready` and `dispose()` hanging
+
+  `#startLoopbackServer` now attaches an `error` listener before `listen`, matching the inspector proxy. When the configured host cannot be bound (e.g. `192.0.2.1`), `ready` rejects and `dispose()` still settles even if the loopback server never started.
+
+- [#15580](https://github.com/cloudflare/workers-sdk/pull/15580) [`6bd7b6c`](https://github.com/cloudflare/workers-sdk/commit/6bd7b6cae44d441e415130991e3f181694bd3b6d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update `sharp` to 0.35.4
+
+  This updates the image-processing dependency used by Miniflare's local Images binding to a version that addresses `GHSA-rgj7-g3m4-5g8c`, covering vulnerabilities in its bundled libheif library.
+
+- [#15515](https://github.com/cloudflare/workers-sdk/pull/15515) [`be1caec`](https://github.com/cloudflare/workers-sdk/commit/be1caeca44ccd9660a81420805fb0958ca422589) Thanks [@Wichtowski](https://github.com/Wichtowski)! - Handle Miniflare listener startup failures consistently
+
+  Loopback and inspector servers now remove startup-only error handlers after binding and close the server after bind failures. Inspector bind failures are observed immediately and propagated through readiness, URL access, and disposal.
+
+- [#15403](https://github.com/cloudflare/workers-sdk/pull/15403) [`dbc9506`](https://github.com/cloudflare/workers-sdk/commit/dbc9506e48d99237be701685d08582966f62f59f) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce the size of Miniflare's embedded asset and router Workers
+
+  Miniflare does not configure Sentry credentials for its asset services, so their builds now replace the unused production Sentry setup with a no-op instead of bundling Toucan.
+
+## 5.20260908.0-alpha
+
+### Minor Changes
+
+- [#15268](https://github.com/cloudflare/workers-sdk/pull/15268) [`bcebf08`](https://github.com/cloudflare/workers-sdk/commit/bcebf080bc65759fe43cffff10b3f708693941a8) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Simulate Flagship bindings locally
+
+  Flagship bindings can now evaluate flags against a persisted local store instead of requiring a remote app. Miniflare also exposes an admin API for populating and managing that store in development tools and tests, while bindings configured for remote access continue to proxy to Flagship.
+
+### Patch Changes
+
+- [#15560](https://github.com/cloudflare/workers-sdk/pull/15560) [`edb3631`](https://github.com/cloudflare/workers-sdk/commit/edb3631666677b51d58000d23ed693d83da9ff48) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260907.1 | ^5.20260908.1 |
+  | workerd                   | 1.20260907.1  | 1.20260908.1  |
+
+## 5.20260907.0-alpha
+
+### Patch Changes
+
+- [#15502](https://github.com/cloudflare/workers-sdk/pull/15502) [`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260903.1 | ^5.20260904.1 |
+  | workerd                   | 1.20260903.1  | 1.20260904.1  |
+
+- [#15543](https://github.com/cloudflare/workers-sdk/pull/15543) [`2b42d6f`](https://github.com/cloudflare/workers-sdk/commit/2b42d6f2b971fa54de0648e8e9bea03cbf6f702a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260904.1 | ^5.20260907.1 |
+  | workerd                   | 1.20260904.1  | 1.20260907.1  |
+
+## 5.20260903.0-alpha
+
+### Minor Changes
+
+- [#15401](https://github.com/cloudflare/workers-sdk/pull/15401) [`00a9f2f`](https://github.com/cloudflare/workers-sdk/commit/00a9f2f87bb1319ed96b41fe5d9be5503445d2c0) Thanks [@penalosa](https://github.com/penalosa)! - Allow Local Explorer storage APIs to access arbitrary local resource IDs
+
+  D1, KV and R2 operations now address Miniflare's internal storage services directly, so they no longer require configured bindings. Shared-storage sessions route these requests to the elected storage owner, and storage listings only aggregate peers in the same shared-storage scope.
+
+### Patch Changes
+
+- [#15495](https://github.com/cloudflare/workers-sdk/pull/15495) [`1dba24a`](https://github.com/cloudflare/workers-sdk/commit/1dba24a1ecf770a98b36c218cb77e26c7701be49) Thanks [@penalosa](https://github.com/penalosa)! - Prevent short-lived Miniflare instances from hanging during disposal
+
+  Wait for the development registry's filesystem watcher to finish initialising before runtime startup completes, ensuring the watcher can always be closed cleanly.
+
+- [#15469](https://github.com/cloudflare/workers-sdk/pull/15469) [`d40a634`](https://github.com/cloudflare/workers-sdk/commit/d40a634f970971bbcba01a8ac201fd3526b3e5fe) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260831.1 | ^5.20260902.1 |
+  | workerd                   | 1.20260831.1  | 1.20260902.1  |
+
+- [#15481](https://github.com/cloudflare/workers-sdk/pull/15481) [`7c1b2a6`](https://github.com/cloudflare/workers-sdk/commit/7c1b2a600a02a8978d97786af4c7098216c31c4d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260902.1 | ^5.20260903.1 |
+  | workerd                   | 1.20260902.1  | 1.20260903.1  |
+
+## 5.20260831.0-alpha
+
+### Minor Changes
+
+- [#15353](https://github.com/cloudflare/workers-sdk/pull/15353) [`87a7acf`](https://github.com/cloudflare/workers-sdk/commit/87a7acf197629f5bf16bb38a2e411dc6c21339e0) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `--date-start` and `--date-end` filters to `wrangler workflows instances list`
+
+  You can now narrow an instance listing to a creation-time window:
+
+  `wrangler workflows instances list my-workflow --date-start 2026-01-01 --date-end 2026-01-31`
+
+  Either flag can be used independently. Both accept an ISO 8601 date or timestamp and are normalised to UTC before being sent, so a date-only value such as `2026-01-01` works as well as a full `2026-01-01T13:00:00Z`. The bounds are inclusive and compose with the existing `--status` filter.
+
+### Patch Changes
+
+- [#15436](https://github.com/cloudflare/workers-sdk/pull/15436) [`200780f`](https://github.com/cloudflare/workers-sdk/commit/200780faa81ab5e58bc656e2d21a20fdd3a4b725) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260828.1 | ^5.20260831.1 |
+  | workerd                   | 1.20260828.1  | 1.20260831.1  |
+
+- [#15406](https://github.com/cloudflare/workers-sdk/pull/15406) [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce the installed bundle sizes of Wrangler and Miniflare
+
+  Wrangler now resolves bundled workspace dependencies from source during monorepo builds so unused exports can be removed. Miniflare, its shared CLI and container dependencies now use granular `@cloudflare/workers-utils` entry points instead of loading the package barrel, reducing the raw Wrangler and Miniflare artifacts by 6.16 MiB (31.4%) and 1.06 MiB (22.9%) respectively without changing runtime behavior or installed dependencies.
+
+## 5.20260828.0-alpha
+
+### Minor Changes
+
+- [#15337](https://github.com/cloudflare/workers-sdk/pull/15337) [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add email inspection and testing to Local Explorer
+
+  Add an Email group with Routing and Sending views for inspecting messages received by a Worker's `email()` handler and messages sent through its `send_email` bindings. Detail views show message content, metadata, attachments, and handler activity including forwarding, replies, rejection, and unhandled messages.
+
+  Add a test-email composer that delivers custom text, HTML, headers, and attachments directly to the selected Worker's `email()` handler during local development.
+
+- [#15305](https://github.com/cloudflare/workers-sdk/pull/15305) [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234) Thanks [@Monark-Arkmon](https://github.com/Monark-Arkmon)! - Support `env.IMAGES.hosted.createDirectUpload()` in local development. Creates a draft image and returns an `uploadURL` served by a new local endpoint that accepts the completed upload as `multipart/form-data` (field name `file`). Matches production's validation (`expiresIn` bounds of 120–21600 seconds, rejecting UUID custom IDs) and single-use/expiry semantics: completing an unknown or already-used upload link returns 404/409, and an expired link returns 410.
+
+- [#15305](https://github.com/cloudflare/workers-sdk/pull/15305) [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234) Thanks [@Monark-Arkmon](https://github.com/Monark-Arkmon)! - Support the `filter.metadata` option on `env.IMAGES.hosted.list()` in local development, matching the metadata filtering behaviour of the production Images binding. Filters support the `eq` (implicit for bare values), `in`, `gt`, `gte`, `lt`, and `lte` operators, dot-notation nested field paths, and AND logic across multiple fields.
+
+- [#15305](https://github.com/cloudflare/workers-sdk/pull/15305) [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234) Thanks [@Monark-Arkmon](https://github.com/Monark-Arkmon)! - Support `env.IMAGES.hosted.image(id).signedUrl()` in local development. A fixed local-dev signing secret is used to generate and verify signed delivery URLs, so images uploaded with `requireSignedURLs: true` can only be fetched from the local image delivery endpoint with a valid, unexpired signature — matching the production Images binding's signed URL behaviour end-to-end.
+
+- [#15373](https://github.com/cloudflare/workers-sdk/pull/15373) [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename Worker target fields from `workerName` to `worker`
+
+  The experimental `@cloudflare/config` and Miniflare configuration APIs now use `worker` consistently for Worker, Durable Object, Workflow, dispatch namespace, and tail consumer targets.
+
+### Patch Changes
+
+- [#15383](https://github.com/cloudflare/workers-sdk/pull/15383) [`eb01850`](https://github.com/cloudflare/workers-sdk/commit/eb018505fdd8f721d57da64cd3704e4af5cb7753) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260826.1 | ^5.20260827.1 |
+  | workerd                   | 1.20260826.1  | 1.20260827.1  |
+
+- [#15393](https://github.com/cloudflare/workers-sdk/pull/15393) [`e1df91a`](https://github.com/cloudflare/workers-sdk/commit/e1df91a2135c97806152760930fcab0211417bda) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260827.1 | ^5.20260828.1 |
+  | workerd                   | 1.20260827.1  | 1.20260828.1  |
+
+- [#15337](https://github.com/cloudflare/workers-sdk/pull/15337) [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Validate custom headers sent through the Local Explorer test-email endpoint
+
+  Reject header names and values that cannot be safely encoded. Multiline values remain supported and are folded into valid MIME continuation lines.
+
+## 5.20260826.0-alpha
+
+### Patch Changes
+
+- [#15367](https://github.com/cloudflare/workers-sdk/pull/15367) [`412c79e`](https://github.com/cloudflare/workers-sdk/commit/412c79e2735176727bdb2ab108fe581d4c7961d0) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260825.1 | ^5.20260826.1 |
+  | workerd                   | 1.20260825.1  | 1.20260826.1  |
+
+## 5.20260825.0-alpha
+
+### Minor Changes
+
+- [#15064](https://github.com/cloudflare/workers-sdk/pull/15064) [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Support `EmailReplyMessageBuilder` when replying from local email handlers
+
+  Builder replies now generate the recipient, threading headers, and a production-style Message-ID automatically. Raw `EmailMessage` replies also use a generated production-style Message-ID; user-provided Message-ID headers are rejected in favor of the generated ID.
+
+- [#15064](https://github.com/cloudflare/workers-sdk/pull/15064) [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Include a chronological list of handler events in email test harness results, so programmatic local email tests can assert the order in which messages are received, forwarded, replied to, or rejected.
+
+  ```ts
+  const result = await server.getWorker().email({
+    from: "sender@example.com",
+    to: "inbox@example.com",
+    raw: [
+      "From: Sender <sender@example.com>",
+      "To: Inbox <inbox@example.com>",
+      "Message-ID: <test@example.com>",
+      "Subject: Test email",
+      "",
+      "Hello from the test harness",
+    ].join("\r\n"),
+  });
+
+  expect(result.events).toEqual([
+    { type: "received", timestamp: expect.any(String) },
+    {
+      type: "forward",
+      timestamp: expect.any(String),
+      messageId: expect.any(String),
+    },
+    {
+      type: "reply",
+      timestamp: expect.any(String),
+      messageId: expect.any(String),
+    },
+  ]);
+  ```
+
+- [#15187](https://github.com/cloudflare/workers-sdk/pull/15187) [`37ed753`](https://github.com/cloudflare/workers-sdk/commit/37ed753470232676a8f8ba4a424d4f73ac58dc5b) Thanks [@penalosa](https://github.com/penalosa)! - Support Images data in experimental shared local storage
+
+- [#15188](https://github.com/cloudflare/workers-sdk/pull/15188) [`f76b68e`](https://github.com/cloudflare/workers-sdk/commit/f76b68efd1f1a148b6d96340f3711d3aed52323a) Thanks [@penalosa](https://github.com/penalosa)! - Support Stream in experimental shared local storage
+
+- [#15134](https://github.com/cloudflare/workers-sdk/pull/15134) [`c66d2d5`](https://github.com/cloudflare/workers-sdk/commit/c66d2d5303393381632d1ec474b8e7622dafe30a) Thanks [@gpanders](https://github.com/gpanders)! - Enable FUSE-capable local container development
+
+  Miniflare now automatically passes the Docker privileges needed for FUSE to local Durable Object containers when using local rootless Docker on Linux with `/dev/fuse` available, or a local Docker engine on macOS or through WSL where Linux containers run in a VM. This applies to Wrangler, the Cloudflare Vite plugin, and direct Miniflare use.
+
+- [#15064](https://github.com/cloudflare/workers-sdk/pull/15064) [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Capture locally sent and received emails, along with forwarding and reply activity and metadata, for inspection through the Local Explorer email API.
+
+  Miniflare now captures locally sent and received emails, including forwarding, reply, rejection, and exception activity. The following endpoints are available below `/cdn-cgi/local/explorer/api` while `wrangler dev` is running:
+
+  - `POST /local/email/routing/send?worker=<name>` sends a test email to a Worker's `email()` handler.
+  - `GET /local/email/routing?worker=<name>` lists emails received by a Worker.
+  - `GET /local/email/routing?email_id=<message-id>&worker=<name>` returns a received email and its handler activity.
+  - `GET /local/email/sending?worker=<name>` lists emails sent through a Worker's `send_email` bindings.
+  - `GET /local/email/sending?email_id=<message-id>&worker=<name>` returns a sent email.
+
+  For example, send and then inspect a test email against a Worker named `my-worker`:
+
+  ```sh
+  curl -X POST \
+    "http://localhost:8787/cdn-cgi/local/explorer/api/local/email/routing/send?worker=my-worker" \
+    -H "Content-Type: application/json" \
+    --data '{
+      "from": "sender@example.com",
+      "to": ["inbox@example.com"],
+      "subject": "Local test",
+      "text": "Hello from Local Explorer"
+    }'
+
+  curl \
+    "http://localhost:8787/cdn-cgi/local/explorer/api/local/email/routing?worker=my-worker"
+  ```
+
+  List endpoints support `per_page` and opaque `cursor` query parameters. File paths logged by the `send_email` binding are asynchronous debugging artifacts and should not be used to synchronize after `send()` resolves. Email handler exceptions are logged when structured local delivery reports an exception outcome.
+
+  When email content exceeds the local storage row budget of approximately 2 MB, the email is delivered in full but the Local Explorer capture is truncated to fit. Detail responses identify each truncated sent email, received email, or reply in the top-level `messages` array with warning code `10604`; for example:
+
+  ```json
+  {
+    "messages": [
+      {
+        "code": 10604,
+        "message": "Displayed received email content was truncated during local capture. The complete message was still delivered to the Worker."
+      }
+    ]
+  }
+  ```
+
+- [#15169](https://github.com/cloudflare/workers-sdk/pull/15169) [`dd5148d`](https://github.com/cloudflare/workers-sdk/commit/dd5148d7da11665ad3f3338de338380ccea979cc) Thanks [@penalosa](https://github.com/penalosa)! - Add experimental shared local storage, letting several Miniflare instances read and write one set of local resources
+
+  Each instance previously kept its own copy of local state, so two dev sessions pointed at the same KV namespace or D1 database could not see each other's writes. Instances that opt in now elect a single storage owner through the dev registry and route storage through it, so resources with the same ID resolve to the same data.
+
+  Opt in with `unsafeEnableSharedStorage`, which requires three paths to be set:
+
+  ```js
+  new Miniflare({
+    unsafeEnableSharedStorage: true,
+    // Shared between instances: resources that participate in sharing live here
+    resourcePersistencePath: "/path/to/shared/state",
+    // Per project: resources that cannot be shared keep their own state here
+    isolatedResourcePersistencePath: "/path/to/project/state",
+    // Instances elect the storage owner through the dev registry
+    unsafeDevRegistryPath: "/path/to/registry",
+    // ...
+  });
+  ```
+
+  KV, D1, R2, Rate Limits, and Secrets Store participate in sharing. Cache, Durable Objects, Workflows, observability, and Hello World storage do not yet, and stay instance-local under `isolatedResourcePersistencePath`, keeping their state across restarts without concurrent access to the shared root.
+
+  This is experimental and the `unsafe`-prefixed options may change without a major version bump.
+
+- [#15318](https://github.com/cloudflare/workers-sdk/pull/15318) [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Consolidate development-only binding configuration under `dev`
+
+  This experimental configuration now uses `dev.remote` for remote bindings and `dev.connectionString` for Hyperdrive. Miniflare's v5 binding configuration follows the same shape, and R2's local S3 credentials now share the `dev` object.
+
+### Patch Changes
+
+- [#15341](https://github.com/cloudflare/workers-sdk/pull/15341) [`aa54b49`](https://github.com/cloudflare/workers-sdk/commit/aa54b491a42c83d410983197b84088dc5319564c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Remove unsupported remote configuration from Workflow bindings
+
+  Miniflare now rejects `dev.remote` on Workflow bindings and no longer exposes or converts the legacy Workflow `remoteProxyConnectionString` option. Workflows always use the local simulator.
+
+- [#15294](https://github.com/cloudflare/workers-sdk/pull/15294) [`4a67a28`](https://github.com/cloudflare/workers-sdk/commit/4a67a2827862a1e09ec341df1930d0a9f88b6fa1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260820.1 | ^5.20260821.1 |
+  | workerd                   | 1.20260820.1  | 1.20260821.1  |
+
+- [#15328](https://github.com/cloudflare/workers-sdk/pull/15328) [`2d78137`](https://github.com/cloudflare/workers-sdk/commit/2d7813781e935b171ace346ce322738f1c4048a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260821.1 | ^5.20260823.1 |
+  | workerd                   | 1.20260821.1  | 1.20260824.1  |
+
+- [#15346](https://github.com/cloudflare/workers-sdk/pull/15346) [`04e8564`](https://github.com/cloudflare/workers-sdk/commit/04e856464dfaf094e9b622c9bbf92d871b98f9ff) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260823.1 | ^5.20260825.1 |
+  | workerd                   | 1.20260824.1  | 1.20260825.1  |
+
+- [#15064](https://github.com/cloudflare/workers-sdk/pull/15064) [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Generate and use production-style Message-IDs for local email artifacts
+
+  Locally sent emails and replies now use generated Message-IDs - which are 36 alphanumeric characters - consistently in returned results, raw MIME headers, Local Explorer records, and stored artifact filenames. User-provided `Message-ID` headers are replaced by the generated ID.
+
+  For example, sending an email from `sender@example.com` may return `<AbCdEfGhIjKlMnOpQrStUvWxYz0123456789@example.com>`. The raw email uses that same value for its `Message-ID` header, the Local Explorer exposes the same ID, and the stored artifact is named `AbCdEfGhIjKlMnOpQrStUvWxYz0123456789@example.com.eml`.
+
+  Similarly, a reply containing `Message-ID: <custom@example.com>` is stored and returned with a newly generated ID instead. This mirrors production behavior and prevents the supplied ID from becoming the local artifact key.
+
+- [#15316](https://github.com/cloudflare/workers-sdk/pull/15316) [`74de3ab`](https://github.com/cloudflare/workers-sdk/commit/74de3ab56f0dfabfc09da368f3d19eaf82093d10) Thanks [@dexvdev](https://github.com/dexvdev)! - Restore cross-process service bindings after a machine wakes from sleep
+
+  Workers running in separate `wrangler dev` or Vite dev sessions now reconnect automatically after the machine wakes. Previously, service bindings could return `Worker "<name>" not found` until the serving process reloaded or restarted.
+
+- [#15242](https://github.com/cloudflare/workers-sdk/pull/15242) [`0cb8690`](https://github.com/cloudflare/workers-sdk/commit/0cb86908903b87a742d1786ac8aa5aa9dce6c575) Thanks [@aesopfrom0](https://github.com/aesopfrom0)! - Shut down `workerd` when Miniflare is terminated with `SIGHUP`
+
+  On `SIGHUP`, Miniflare now stops `workerd` and removes its temporary directory instead of leaving them behind. Previously only `SIGINT` and `SIGTERM` were handled, so tools that embed Miniflare, such as `@cloudflare/vitest-pool-workers` and `@cloudflare/vite-plugin`, could leave a stray process and directory behind on each run.
+
 ## 5.20260820.0-alpha
 
 ### Major Changes

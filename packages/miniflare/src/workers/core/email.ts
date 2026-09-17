@@ -8,7 +8,10 @@ import {
 	RAW_EMAIL,
 	stripEmailHeader,
 } from "../email/capture";
-import { getParsedEmailCaptureFields } from "../email/capture-metadata";
+import {
+	getParsedEmailCaptureFields,
+	getParsedEmailHeaderEntries,
+} from "../email/capture-metadata";
 import { logEmailToLoopback, storeEmailTempFile } from "../email/loopback";
 import { messageIdToStorageId, synthesizeMessageId } from "../email/message-id";
 import { buildReplyFromMessageBuilder } from "../email/mime";
@@ -186,6 +189,9 @@ export async function handleEmail(
 				subject: parsedFields.subject,
 				messageId: parsedIncomingEmail.messageId,
 				headers: parsedFields.headers,
+				headerEntries: getParsedEmailHeaderEntries(parsedIncomingEmail, [
+					"bcc",
+				]),
 				receivedAt,
 				rawSize: deliveredEmailRaw.byteLength,
 				attachments: parsedFields.attachments,

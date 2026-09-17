@@ -20,11 +20,9 @@ export const BUILD_OUTPUT_ROOT = ".cloudflare/output";
 export const CONFIG_FILENAME = "config.json";
 
 /**
- * Name of the sub-directory under `workers/` holding the Worker.
- *
- * This corresponds with the export name in the input `cloudflare.config.ts`.
+ * Name of the sub-directory under `workers/` holding the default Worker.
  */
-export const DEFAULT_WORKER_EXPORT = "default";
+export const DEFAULT_WORKER_DIRECTORY_NAME = "default";
 
 /**
  * Absolute path to the Build Output Specification root for the current project.
@@ -56,29 +54,91 @@ export function getWorkersDir(root: string): string {
 }
 
 /**
- * Absolute path to the Worker's directory (`workers/default`).
+ * Absolute path to the Containers output directory.
  */
-export function getWorkerDir(root: string): string {
-	return path.join(getWorkersDir(root), DEFAULT_WORKER_EXPORT);
+export function getContainersDir(root: string): string {
+	return path.join(getBuildOutputDir(root), BUILD_OUTPUT_VERSION, "containers");
+}
+
+function validateDirectoryName(name: string, resourceName: string): void {
+	if (
+		name.length === 0 ||
+		name === "." ||
+		name === ".." ||
+		name.includes("/") ||
+		name.includes("\\") ||
+		name.includes("\0")
+	) {
+		throw new Error(
+			`${resourceName} directory names must be non-empty, single path segments. Received ${JSON.stringify(name)}.`
+		);
+	}
+}
+
+/**
+ * Absolute path to a Worker's directory (`workers/<worker-directory-name>`).
+ */
+export function getWorkerDir(
+	root: string,
+	workerDirectoryName = DEFAULT_WORKER_DIRECTORY_NAME
+): string {
+	validateDirectoryName(workerDirectoryName, "Worker");
+
+	return path.join(getWorkersDir(root), workerDirectoryName);
+}
+
+/**
+ * Absolute path to a Container's directory
+ * (`containers/<container-directory-name>`).
+ */
+export function getContainerDir(
+	root: string,
+	containerDirectoryName: string
+): string {
+	validateDirectoryName(containerDirectoryName, "Container");
+
+	return path.join(getContainersDir(root), containerDirectoryName);
+}
+
+/**
+ * Absolute path to the Container's config file.
+ */
+export function getContainerConfigPath(
+	root: string,
+	containerDirectoryName: string
+): string {
+	return path.join(
+		getContainerDir(root, containerDirectoryName),
+		CONFIG_FILENAME
+	);
 }
 
 /**
  * Absolute path to the Worker's config file.
  */
-export function getWorkerConfigPath(root: string): string {
-	return path.join(getWorkerDir(root), CONFIG_FILENAME);
+export function getWorkerConfigPath(
+	root: string,
+	workerDirectoryName = DEFAULT_WORKER_DIRECTORY_NAME
+): string {
+	return path.join(getWorkerDir(root, workerDirectoryName), CONFIG_FILENAME);
 }
 
 /**
  * Absolute path to the Worker's bundle directory.
  */
-export function getWorkerBundleDir(root: string): string {
-	return path.join(getWorkerDir(root), "bundle");
+export function getWorkerBundleDir(
+	root: string,
+	workerDirectoryName = DEFAULT_WORKER_DIRECTORY_NAME
+): string {
+	return path.join(getWorkerDir(root, workerDirectoryName), "bundle");
 }
 
 /**
  * Absolute path to the Worker's assets directory.
  */
-export function getWorkerAssetsDir(root: string): string {
-	return path.join(getWorkerDir(root), "assets");
+export function getWorkerAssetsDir(
+	root: string,
+	workerDirectoryName = DEFAULT_WORKER_DIRECTORY_NAME
+): string {
+	return path.join(getWorkerDir(root, workerDirectoryName), "assets");
 }

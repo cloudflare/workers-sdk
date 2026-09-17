@@ -120,12 +120,18 @@ export type Namespaced<T> = T & { ns: string };
 export function namespace<T>(ns: string, binding: T): Namespaced<T> {
 	return new Proxy(binding as Namespaced<T>, {
 		get(target, key, receiver) {
-			if (key === "ns") return ns;
+			if (key === "ns") {
+				return ns;
+			}
 			const value = Reflect.get(target, key, receiver);
 			if (typeof value === "function" && key !== "list") {
 				return (keys: unknown, ...args: unknown[]) => {
-					if (typeof keys === "string") keys = ns + keys;
-					if (Array.isArray(keys)) keys = keys.map((key) => ns + key);
+					if (typeof keys === "string") {
+						keys = ns + keys;
+					}
+					if (Array.isArray(keys)) {
+						keys = keys.map((key) => ns + key);
+					}
 					const result = (value as (...args: unknown[]) => unknown)(
 						keys,
 						...args

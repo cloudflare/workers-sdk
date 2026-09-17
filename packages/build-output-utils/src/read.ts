@@ -1,24 +1,52 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
-import { OutputSettingsSchema, OutputWorkerSchema } from "@cloudflare/config";
+import * as path from "node:path";
+import {
+	OutputContainerSchema,
+	OutputSettingsSchema,
+	OutputWorkerSchema,
+} from "@cloudflare/config";
 import { BuildOutputError } from "./errors";
 import {
 	BUILD_OUTPUT_VERSION,
+	DEFAULT_WORKER_DIRECTORY_NAME,
+	getContainerConfigPath,
+	getContainersDir,
 	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
+	getWorkersDir,
 } from "./paths";
 import type {
+	ModuleType,
+	ParsedOutputContainerConfig,
 	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 
+type ManifestModules = NonNullable<
+	ParsedOutputWorkerConfig["manifest"]
+>["modules"];
+
+type CompleteManifest = Omit<
+	NonNullable<ParsedOutputWorkerConfig["manifest"]>,
+	"type"
+> & { type: "complete" };
+
+/** A schema-validated Worker config whose manifest has been fully resolved. */
+export type ResolvedOutputWorkerConfig = Omit<
+	ParsedOutputWorkerConfig,
+	"manifest"
+> & {
+	manifest?: CompleteManifest;
+};
+
 interface BuildOutputWorkerBase {
 	/** Absolute path to the Worker's `config.json`. */
 	configPath: string;
-	/** The parsed, schema-validated Worker config, including its `manifest`. */
-	config: ParsedOutputWorkerConfig;
+	/** The parsed Worker config, including its fully resolved `manifest`. */
+	config: ResolvedOutputWorkerConfig;
 }
 
 /**
@@ -46,6 +74,22 @@ export type BuildOutputWorker = BuildOutputWorkerBase &
 		  }
 	);
 
+export type BuildOutputWorkers = Record<string, BuildOutputWorker> & {
+	/** The Worker in the default directory. */
+	default: BuildOutputWorker;
+};
+
+/** A Container found in the Build Output Specification tree. */
+export interface BuildOutputContainer {
+	/** Absolute path to the Container's `config.json`. */
+	configPath: string;
+	/** The parsed, schema-validated Container config. */
+	config: ParsedOutputContainerConfig;
+}
+
+/** Containers keyed by their output directory names. */
+export type BuildOutputContainers = Record<string, BuildOutputContainer>;
+
 /**
  * The result of reading a Build Output Specification tree.
  */
@@ -62,10 +106,16 @@ export interface BuildOutput {
 	 */
 	settings: ParsedOutputSettingsConfig | undefined;
 	/**
-	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`.
-	 * Guaranteed to contain at least one Worker; currently always exactly one.
+	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`, keyed by
+	 * their directory names. Guaranteed to contain the `default` Worker.
 	 */
-	workers: [BuildOutputWorker, ...BuildOutputWorker[]];
+	workers: BuildOutputWorkers;
+	/**
+	 * The Containers found under
+	 * `<root>/.cloudflare/output/v0/containers/`, keyed by their directory
+	 * names.
+	 */
+	containers: BuildOutputContainers;
 }
 
 /**
@@ -73,17 +123,100 @@ export interface BuildOutput {
  * `<root>/.cloudflare/output/v0/`.
  *
  * Reads the optional top-level settings `config.json`, then reads and
- * schema-validates the Worker's `config.json` and resolves its
- * `bundle/` / `assets/` directories.
+ * schema-validates each Worker and Container `config.json`, and resolves each
+ * Worker's `bundle/` / `assets/` directories. Partial manifests are resolved
+ * into complete manifests using the files in `bundle/`.
  *
  * @throws {BuildOutputError} if the top-level `config.json` is invalid, or if
- * the Worker config is missing, is not valid JSON, or fails schema validation.
+ * a Worker or Container config is missing, is not valid JSON, or fails schema
+ * validation.
  */
 export async function readBuildOutput(root: string): Promise<BuildOutput> {
 	const settings = await readSettings(root);
-	const worker = await readWorker(root);
+	const defaultWorker = await readWorker(root, DEFAULT_WORKER_DIRECTORY_NAME);
+	const additionalWorkerDirectoryNames = (
+		await fsp.readdir(getWorkersDir(root), {
+			withFileTypes: true,
+		})
+	)
+		.filter(
+			(entry) =>
+				entry.isDirectory() && entry.name !== DEFAULT_WORKER_DIRECTORY_NAME
+		)
+		.map((entry) => entry.name)
+		.sort();
+	const additionalWorkers = await Promise.all(
+		additionalWorkerDirectoryNames.map(
+			async (workerDirectoryName) =>
+				[
+					workerDirectoryName,
+					await readWorker(root, workerDirectoryName),
+				] as const
+		)
+	);
+	const workers: BuildOutputWorkers = {
+		default: defaultWorker,
+		...Object.fromEntries(additionalWorkers),
+	};
+	const containers = await readContainers(root);
 
-	return { root, version: BUILD_OUTPUT_VERSION, settings, workers: [worker] };
+	return {
+		root,
+		version: BUILD_OUTPUT_VERSION,
+		settings,
+		workers,
+		containers,
+	};
+}
+
+/** Read and schema-validate all Container configs, if any. */
+async function readContainers(root: string): Promise<BuildOutputContainers> {
+	const containersDir = getContainersDir(root);
+	if (!fs.existsSync(containersDir)) {
+		return {};
+	}
+
+	const containerDirectoryNames = (
+		await fsp.readdir(containersDir, { withFileTypes: true })
+	)
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => entry.name)
+		.sort();
+	const containers = await Promise.all(
+		containerDirectoryNames.map(
+			async (containerDirectoryName) =>
+				[
+					containerDirectoryName,
+					await readContainer(root, containerDirectoryName),
+				] as const
+		)
+	);
+
+	return Object.fromEntries(containers);
+}
+
+/** Read and schema-validate one Container config. */
+async function readContainer(
+	root: string,
+	containerDirectoryName: string
+): Promise<BuildOutputContainer> {
+	const configPath = getContainerConfigPath(root, containerDirectoryName);
+
+	if (!fs.existsSync(configPath)) {
+		throw new BuildOutputError(`no Container config found at ${configPath}.`);
+	}
+
+	const contents = await fsp.readFile(configPath, "utf-8");
+	const result = OutputContainerSchema.safeParse(
+		parseJson(contents, configPath)
+	);
+	if (!result.success) {
+		throw new BuildOutputError(
+			`invalid Container config at ${configPath}.\n${result.error.message}`
+		);
+	}
+
+	return { configPath, config: result.data };
 }
 
 /**
@@ -94,8 +227,11 @@ export async function readBuildOutput(root: string): Promise<BuildOutput> {
  * @throws {BuildOutputError} if the config is missing, is not valid JSON, or
  * fails schema validation.
  */
-async function readWorker(root: string): Promise<BuildOutputWorker> {
-	const configPath = getWorkerConfigPath(root);
+async function readWorker(
+	root: string,
+	workerDirectoryName: string
+): Promise<BuildOutputWorker> {
+	const configPath = getWorkerConfigPath(root, workerDirectoryName);
 
 	if (!fs.existsSync(configPath)) {
 		throw new BuildOutputError(`no Worker config found at ${configPath}.`);
@@ -109,8 +245,8 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 		);
 	}
 
-	const bundleDir = getWorkerBundleDir(root);
-	const assetsDir = getWorkerAssetsDir(root);
+	const bundleDir = getWorkerBundleDir(root, workerDirectoryName);
+	const assetsDir = getWorkerAssetsDir(root, workerDirectoryName);
 	const hasBundleDir = fs.existsSync(bundleDir);
 	const hasAssetsDir = fs.existsSync(assetsDir);
 
@@ -121,18 +257,20 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 	}
 
 	if (hasBundleDir) {
+		const config = await resolveManifest(result.data, configPath, bundleDir);
 		return {
 			configPath,
-			config: result.data,
+			config,
 			bundleDir,
 			assetsDir: hasAssetsDir ? assetsDir : undefined,
 		};
 	}
 
 	if (hasAssetsDir) {
+		const { manifest: _manifest, ...config } = result.data;
 		return {
 			configPath,
-			config: result.data,
+			config,
 			bundleDir: undefined,
 			assetsDir,
 		};
@@ -141,6 +279,78 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 	throw new BuildOutputError(
 		`Worker config at ${configPath} has neither a bundle directory (${bundleDir}) nor an assets directory (${assetsDir}).`
 	);
+}
+
+/** Resolve the manifest against the bundle contents. */
+async function resolveManifest(
+	config: ParsedOutputWorkerConfig,
+	configPath: string,
+	bundleDir: string
+): Promise<ResolvedOutputWorkerConfig> {
+	const { manifest, ...workerConfig } = config;
+	if (manifest === undefined) {
+		return workerConfig;
+	}
+	if (manifest.type === "complete") {
+		return {
+			...workerConfig,
+			manifest: { ...manifest, type: "complete" },
+		};
+	}
+
+	const inferredModules = await scanModules(bundleDir);
+	if (inferredModules[manifest.mainModule]?.type !== "esm") {
+		throw new BuildOutputError(
+			`partial manifest at ${configPath} has main module "${manifest.mainModule}", but it was not found as an ES module in the bundle.`
+		);
+	}
+
+	const modules = {
+		...inferredModules,
+		...manifest.modules,
+	};
+
+	return {
+		...workerConfig,
+		manifest: {
+			type: "complete",
+			mainModule: manifest.mainModule,
+			modules,
+		},
+	};
+}
+
+/** Infer JavaScript modules and source maps from a bundle directory. */
+async function scanModules(bundleDir: string): Promise<ManifestModules> {
+	const modules: ManifestModules = {};
+	const entries = await fsp.readdir(bundleDir, {
+		recursive: true,
+		withFileTypes: true,
+	});
+
+	for (const entry of entries) {
+		const type = entry.isFile() ? inferModuleType(entry.name) : undefined;
+		if (type !== undefined) {
+			const modulePath = path
+				.relative(bundleDir, path.join(entry.parentPath, entry.name))
+				.split(path.sep)
+				.join("/");
+			modules[modulePath] = { type };
+		}
+	}
+
+	return modules;
+}
+
+/** Infer the module type for extensions supported by partial manifests. */
+function inferModuleType(modulePath: string): ModuleType | undefined {
+	switch (path.extname(modulePath)) {
+		case ".js":
+		case ".mjs":
+			return "esm";
+		case ".map":
+			return "sourcemap";
+	}
 }
 
 /**

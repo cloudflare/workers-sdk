@@ -80,7 +80,7 @@ describe("Durable Object Wrapper", () => {
 							env: {
 								TEST_DO: {
 									type: "durable-object",
-									workerName: "",
+									worker: "",
 									exportName: "TestDO",
 								},
 							},

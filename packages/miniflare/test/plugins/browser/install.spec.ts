@@ -13,11 +13,16 @@ const PLATFORM = "linux64";
 
 let cacheDir: string;
 
-vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@cloudflare/workers-utils")>()),
-	// Keep the real `removeDir`; only the cache location is faked.
-	getGlobalWranglerCachePath: () => cacheDir,
-}));
+vi.mock(
+	"@cloudflare/workers-utils/global-wrangler-config-path",
+	async (importOriginal) => ({
+		...(await importOriginal<
+			typeof import("@cloudflare/workers-utils/global-wrangler-config-path")
+		>()),
+		// Keep the real filesystem helper; only the cache location is faked.
+		getGlobalWranglerCachePath: () => cacheDir,
+	})
+);
 
 const install = vi.hoisted(() => vi.fn());
 

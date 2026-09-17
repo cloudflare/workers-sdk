@@ -47,14 +47,6 @@ import {
 import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -1187,7 +1179,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	describe("keep_vars behavior", () => {
 		describe("deploy", () => {
-			beforeEach(setupDeployMocks);
+			beforeEach(() => {
+				setupDeployMocks();
+				mockGetSettings({ result: { bindings: [] } });
+			});
 
 			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
 				writeWranglerConfig();
@@ -1227,6 +1222,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		});
 
 		describe("versions upload", () => {
+			beforeEach(() => mockGetSettings({ result: { bindings: [] } }));
 			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
 				writeWranglerConfig({ main: "./index.js" });
 				writeWorkerSource();
@@ -1357,12 +1353,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect,
 			}) => {
 				writeWranglerConfig({
-					observability: { enabled: true },
+					observability: {
+						enabled: true,
+						redact_query_string: true,
+					},
 				});
 				writeWorkerSource();
 				mockUploadWorkerRequest({
 					expectedSettingsPatch: expect.objectContaining({
-						observability: { enabled: true },
+						observability: {
+							enabled: true,
+							redact_query_string: true,
+						},
 					}),
 				});
 				mockSubDomainRequest();

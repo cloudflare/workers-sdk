@@ -263,7 +263,7 @@ export type D1DatabaseName = string;
 /**
  * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
  */
-export type D1JurisdictionNullable = "eu" | "fedramp";
+export type D1JurisdictionNullable = "eu" | "fedramp" | "us";
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
@@ -324,6 +324,41 @@ export type WorkersKvBulkGetResult = {
  */
 export type WorkersKvKeyNameBulk = string;
 
+export type WorkersKvBulkDelete = Array<WorkersKvKeyNameBulk>;
+
+export type WorkersKvBulkResult = {
+	/**
+	 * Number of keys successfully updated.
+	 */
+	successful_key_count?: number;
+	/**
+	 * Name of the keys that failed to be fully updated. They should be retried.
+	 */
+	unsuccessful_keys?: Array<string>;
+};
+
+export type WorkersKvBulkWrite = Array<{
+	/**
+	 * Indicates whether or not the server should base64 decode the value before storing it. Useful for writing values that wouldn't otherwise be valid JSON strings, such as images.
+	 */
+	base64?: boolean;
+	expiration?: WorkersKvExpiration;
+	expiration_ttl?: WorkersKvExpirationTtl;
+	key: WorkersKvKeyNameBulk;
+	metadata?: WorkersKvListMetadata;
+	/**
+	 * A UTF-8 encoded string to be stored, up to 25 MiB in length.
+	 */
+	value: string;
+}>;
+
+export type WorkersKvListMetadata = WorkersKvAny & unknown;
+
+/**
+ * Expires the key after a number of seconds. Must be at least 60.
+ */
+export type WorkersKvExpirationTtl = number;
+
 export type WorkersKvApiResponseCommonNoResult = WorkersKvApiResponseCommon & {
 	result?: {
 		[key: string]: unknown;
@@ -380,8 +415,6 @@ export type WorkersKvKey = {
 	metadata?: WorkersKvListMetadata;
 	name: WorkersKvKeyName;
 };
-
-export type WorkersKvListMetadata = WorkersKvAny & unknown;
 
 /**
  * Namespace identifier tag.
@@ -857,12 +890,7 @@ export type EmailBase = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 };
 
 export type EmailRoutingItem = {
@@ -882,12 +910,7 @@ export type EmailRoutingItem = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 	/**
 	 * Envelope RCPT TO address.
 	 */
@@ -896,6 +919,10 @@ export type EmailRoutingItem = {
 	headers?: {
 		[key: string]: string;
 	};
+	/**
+	 * Email headers as ordered name/value pairs, including duplicates.
+	 */
+	headerEntries?: Array<[string, string]>;
 	receivedAt: string;
 	rawSize: number;
 	/**
@@ -906,55 +933,9 @@ export type EmailRoutingItem = {
 	 * Reason passed to setReject(), if the handler rejected the message.
 	 */
 	rejectReason?: string;
-	forwards: Array<{
-		messageId: string;
-		/**
-		 * Envelope recipient the message was forwarded to.
-		 */
-		recipient: string;
-		/**
-		 * Headers added to the forwarded message.
-		 */
-		headers: Array<[string, string]>;
-	}>;
-	replies: Array<{
-		messageId: string;
-		/**
-		 * Address the reply was sent from.
-		 */
-		sender: string;
-		/**
-		 * Raw MIME content of the reply. Omitted from the routing list; present on the detail response.
-		 */
-		raw?: string;
-		/**
-		 * Lossless base64 representation of the reply MIME.
-		 */
-		rawBase64?: string;
-	}>;
-	/**
-	 * One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
-	 */
-	events: Array<
-		| {
-				type: "received" | "reject" | "unhandled";
-				/**
-				 * ISO 8601 timestamp of when the event occurred.
-				 */
-				timestamp: string;
-		  }
-		| {
-				type: "forward" | "reply";
-				/**
-				 * ISO 8601 timestamp of when the event occurred.
-				 */
-				timestamp: string;
-				/**
-				 * Correlates with the matching `forwards`/`replies` entry.
-				 */
-				messageId: string;
-		  }
-	>;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
 };
 
 export type EmailRoutingDetail = {
@@ -974,12 +955,7 @@ export type EmailRoutingDetail = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 	/**
 	 * Envelope RCPT TO address.
 	 */
@@ -988,6 +964,10 @@ export type EmailRoutingDetail = {
 	headers?: {
 		[key: string]: string;
 	};
+	/**
+	 * Email headers as ordered name/value pairs, including duplicates.
+	 */
+	headerEntries?: Array<[string, string]>;
 	receivedAt: string;
 	rawSize: number;
 	/**
@@ -998,55 +978,17 @@ export type EmailRoutingDetail = {
 	 * Reason passed to setReject(), if the handler rejected the message.
 	 */
 	rejectReason?: string;
-	forwards: Array<{
-		messageId: string;
-		/**
-		 * Envelope recipient the message was forwarded to.
-		 */
-		recipient: string;
-		/**
-		 * Headers added to the forwarded message.
-		 */
-		headers: Array<[string, string]>;
-	}>;
-	replies: Array<{
-		messageId: string;
-		/**
-		 * Address the reply was sent from.
-		 */
-		sender: string;
-		/**
-		 * Raw MIME content of the reply. Omitted from the routing list; present on the detail response.
-		 */
-		raw?: string;
-		/**
-		 * Lossless base64 representation of the reply MIME.
-		 */
-		rawBase64?: string;
-	}>;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
 	/**
-	 * One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
+	 * Parsed plain text body, when present.
 	 */
-	events: Array<
-		| {
-				type: "received" | "reject" | "unhandled";
-				/**
-				 * ISO 8601 timestamp of when the event occurred.
-				 */
-				timestamp: string;
-		  }
-		| {
-				type: "forward" | "reply";
-				/**
-				 * ISO 8601 timestamp of when the event occurred.
-				 */
-				timestamp: string;
-				/**
-				 * Correlates with the matching `forwards`/`replies` entry.
-				 */
-				messageId: string;
-		  }
-	>;
+	text?: string;
+	/**
+	 * Parsed HTML body, when present.
+	 */
+	html?: string;
 	/**
 	 * Raw MIME content of the received email.
 	 */
@@ -1141,12 +1083,7 @@ export type EmailSendingItem = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 	to: Array<string>;
 	cc?: Array<string>;
 	bcc?: Array<string>;
@@ -1174,12 +1111,7 @@ export type EmailSendingDetail = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 	to: Array<string>;
 	cc?: Array<string>;
 	bcc?: Array<string>;
@@ -1228,9 +1160,11 @@ export type WorkersKvAnyWritable =
 	| null
 	| Array<WorkersKvAnyWritable>;
 
-export type WorkersKvMetadataWritable = WorkersKvAnyWritable & unknown;
+export type WorkersKvBulkDeleteWritable = Array<WorkersKvKeyNameBulk>;
 
 export type WorkersKvListMetadataWritable = WorkersKvAnyWritable & unknown;
+
+export type WorkersKvMetadataWritable = WorkersKvAnyWritable & unknown;
 
 export type WorkersKvNamespaceWritable = {
 	title: WorkersKvNamespaceTitle;
@@ -1409,6 +1343,72 @@ export type WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses = {
 export type WorkersKvNamespaceWriteKeyValuePairWithMetadataResponse =
 	WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses[keyof WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses];
 
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsData = {
+	body: WorkersKvBulkWrite;
+	path: {
+		namespace_id: WorkersKvNamespaceIdentifier;
+	};
+	query?: never;
+	url: "/storage/kv/namespaces/{namespace_id}/bulk";
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsErrors = {
+	/**
+	 * Write multiple key-value pairs response failure.
+	 */
+	"4XX": WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsError =
+	WorkersKvNamespaceWriteMultipleKeyValuePairsErrors[keyof WorkersKvNamespaceWriteMultipleKeyValuePairsErrors];
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsResponses = {
+	/**
+	 * Write multiple key-value pairs response.
+	 */
+	200: WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsResponse =
+	WorkersKvNamespaceWriteMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceWriteMultipleKeyValuePairsResponses];
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsData = {
+	body: WorkersKvBulkDeleteWritable;
+	path: {
+		namespace_id: WorkersKvNamespaceIdentifier;
+	};
+	query?: never;
+	url: "/storage/kv/namespaces/{namespace_id}/bulk/delete";
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors = {
+	/**
+	 * Delete multiple key-value pairs response failure.
+	 */
+	"4XX": WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsError =
+	WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors[keyof WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors];
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses = {
+	/**
+	 * Delete multiple key-value pairs response.
+	 */
+	200: WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsResponse =
+	WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses];
+
 export type WorkersKvNamespaceGetMultipleKeyValuePairsData = {
 	body: {
 		/**
@@ -1515,6 +1515,129 @@ export type D1RawDatabaseQueryResponses = {
 
 export type D1RawDatabaseQueryResponse =
 	D1RawDatabaseQueryResponses[keyof D1RawDatabaseQueryResponses];
+
+export type WorChangeStatusWorkflowInstanceData = {
+	body:
+		| {
+				status: "pause";
+		  }
+		| {
+				status: "resume";
+		  }
+		| {
+				/**
+				 * Run rollback before terminating.
+				 */
+				rollback?: boolean;
+				status: "terminate";
+		  }
+		| {
+				/**
+				 * Step to restart from.
+				 */
+				from?: {
+					count?: number;
+					name: string;
+					type?: "do" | "sleep" | "waitForEvent";
+				};
+				status: "restart";
+		  };
+	path: {
+		workflow_name: string;
+		/**
+		 * Instance identifier. User-created instances match `^[a-zA-Z0-9_][a-zA-Z0-9-_]*$` (max 100 characters); cron-triggered instances can use a longer, system-generated id derived from the cron expression.
+		 */
+		instance_id: string;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/{instance_id}/status";
+};
+
+export type WorChangeStatusWorkflowInstanceErrors = {
+	/**
+	 * Bad Request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+	/**
+	 * Instance not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+	/**
+	 * Instance not in a restartable state.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+};
+
+export type WorChangeStatusWorkflowInstanceError =
+	WorChangeStatusWorkflowInstanceErrors[keyof WorChangeStatusWorkflowInstanceErrors];
+
+export type WorChangeStatusWorkflowInstanceResponses = {
+	/**
+	 * Change status of instance - it can be paused, resumed or terminated.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<{
+			code: number;
+			message: string;
+		}>;
+		result: {
+			status:
+				| "queued"
+				| "running"
+				| "paused"
+				| "errored"
+				| "terminated"
+				| "complete"
+				| "waitingForPause"
+				| "waiting"
+				| "rollingBack";
+			/**
+			 * Accepts ISO 8601 with no timezone offsets and in UTC.
+			 */
+			timestamp: string;
+		};
+		result_info?: {
+			count: number;
+			cursor?: string;
+			page?: number;
+			per_page: number;
+			total_count: number;
+			total_pages?: number;
+		};
+		success: true;
+	};
+};
+
+export type WorChangeStatusWorkflowInstanceResponse =
+	WorChangeStatusWorkflowInstanceResponses[keyof WorChangeStatusWorkflowInstanceResponses];
 
 export type DurableObjectsNamespaceListNamespacesData = {
 	body?: never;
@@ -2162,6 +2285,14 @@ export type WorkflowsListInstancesData = {
 			| "complete"
 			| "waitingForPause"
 			| "waiting";
+		/**
+		 * Only return instances created at or after this time. Accepts ISO 8601 with no timezone offsets and in UTC.
+		 */
+		date_start?: string;
+		/**
+		 * Only return instances created at or before this time. Accepts ISO 8601 with no timezone offsets and in UTC.
+		 */
+		date_end?: string;
 	};
 	url: "/workflows/{workflow_name}/instances";
 };
@@ -2346,66 +2477,6 @@ export type WorkflowsGetInstanceDetailsResponses = {
 
 export type WorkflowsGetInstanceDetailsResponse =
 	WorkflowsGetInstanceDetailsResponses[keyof WorkflowsGetInstanceDetailsResponses];
-
-export type WorkflowsChangeInstanceStatusData = {
-	body: {
-		/**
-		 * The action to perform on the workflow instance.
-		 */
-		action: "pause" | "resume" | "restart" | "terminate";
-		/**
-		 * The step to restart the instance from. Only valid when action is restart.
-		 */
-		from?: {
-			/**
-			 * The name of the step.
-			 */
-			name: string;
-			/**
-			 * The 1-based index of the step when multiple steps share the same name and type. Defaults to 1.
-			 */
-			count?: number;
-			/**
-			 * The step type. Defaults to do.
-			 */
-			type?: "do" | "sleep" | "waitForEvent";
-		};
-		/**
-		 * The option to trigger rollbacks when terminating the workflow instance.
-		 */
-		rollback?: boolean;
-	};
-	path: {
-		workflow_name: WorkflowsWorkflowName;
-		instance_id: WorkflowsInstanceId;
-	};
-	query?: never;
-	url: "/workflows/{workflow_name}/instances/{instance_id}/status";
-};
-
-export type WorkflowsChangeInstanceStatusErrors = {
-	/**
-	 * Change Workflow Instance Status response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type WorkflowsChangeInstanceStatusError =
-	WorkflowsChangeInstanceStatusErrors[keyof WorkflowsChangeInstanceStatusErrors];
-
-export type WorkflowsChangeInstanceStatusResponses = {
-	/**
-	 * Change Workflow Instance Status response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: {
-			success?: boolean;
-		};
-	};
-};
-
-export type WorkflowsChangeInstanceStatusResponse =
-	WorkflowsChangeInstanceStatusResponses[keyof WorkflowsChangeInstanceStatusResponses];
 
 export type WorkflowsSendInstanceEventData = {
 	/**

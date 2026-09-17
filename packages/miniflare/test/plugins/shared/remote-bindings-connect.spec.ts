@@ -254,7 +254,7 @@ function makeEdge(targetScript: string, directSockets = false): Miniflare {
 							},
 						},
 					},
-					env: { VPC: { type: "worker", workerName: "vpc-target" } },
+					env: { VPC: { type: "worker", worker: "vpc-target" } },
 				},
 			},
 			{

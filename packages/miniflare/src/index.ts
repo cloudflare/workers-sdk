@@ -10,8 +10,8 @@ import { setTimeout as wait } from "node:timers/promises";
 import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
-import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
-import { formatZodError } from "@cloudflare/workers-utils";
+import { removeDir, removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
+import { formatZodError } from "@cloudflare/workers-utils/zod-format";
 import { $ as colors$, bold, dim, green, yellow } from "kleur/colors";
 import stoppable from "stoppable";
 import { getGlobalDispatcher, Pool } from "undici";
@@ -48,7 +48,6 @@ import {
 	getExportsOfType,
 	getGlobalServices,
 	getPersistPath,
-	getRemoteProxyConnectionString,
 	getStorageScope,
 	getTriggersOfType,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -72,6 +71,7 @@ import {
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
 	STREAM_PLUGIN_NAME,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -133,6 +133,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
+import { ADMIN_API as FLAGSHIP_ADMIN_API } from "./workers/flagship/constants";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import type {
 	MiniflareOptions,
@@ -170,6 +171,9 @@ import type {
 } from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type { Awaitable } from "./workers";
+import type { FlagshipAdmin } from "./workers/flagship/admin";
+import type { EvaluationDetails, FlagValue } from "./workers/flagship/evaluate";
+import type { Flag, FlagInput } from "./workers/flagship/flags";
 import type {
 	CacheStorage,
 	D1Database,
@@ -200,11 +204,15 @@ function resolveLocalhost(host: string) {
 function maybeGetLocallyAccessibleHost(
 	h: string
 ): "localhost" | "127.0.0.1" | "[::1]" | undefined {
-	if (h === "localhost") return "localhost";
+	if (h === "localhost") {
+		return "localhost";
+	}
 	if (h === "127.0.0.1" || h === "*" || h === "0.0.0.0" || h === "::") {
 		return "127.0.0.1";
 	}
-	if (h === "::1") return "[::1]";
+	if (h === "::1") {
+		return "[::1]";
+	}
 }
 
 /**
@@ -407,11 +415,11 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		if (tailConsumers !== undefined) {
 			for (let i = 0; i < tailConsumers.length; i++) {
 				const consumer = tailConsumers[i];
-				const serviceName = consumer.workerName;
+				const serviceName = consumer.worker;
 				if (serviceName && !allWorkerNames.includes(serviceName)) {
 					getEntrypoints(serviceName).entrypoints.add(consumer.entrypoint);
 					tailConsumers[i] = {
-						workerName: SERVICE_DEV_REGISTRY_PROXY,
+						worker: SERVICE_DEV_REGISTRY_PROXY,
 						streaming: consumer.streaming,
 						entrypoint: "ExternalServiceProxy",
 						// User-supplied `props` are preserved in `userProps` so the proxy
@@ -450,7 +458,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 				// remote entrypoint via the debug port.
 				env[name] = {
 					type: "worker",
-					workerName: SERVICE_DEV_REGISTRY_PROXY,
+					worker: SERVICE_DEV_REGISTRY_PROXY,
 					exportName: "ExternalServiceProxy",
 					props: {
 						service: serviceName,
@@ -466,32 +474,29 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 			config,
 			"durable-object"
 		)) {
-			const { workerName, exportName } = binding;
-			if (!allWorkerNames.includes(workerName)) {
+			const { worker, exportName } = binding;
+			if (!allWorkerNames.includes(worker)) {
 				// Point it at the outbound DO proxy class on the dev-registry proxy
 				// worker. The proxy worker registers the namespace (with a matching
 				// unique key) itself, so no extra config is needed on the binding.
 				env[bindingName] = {
 					type: "durable-object",
-					workerName: SERVICE_DEV_REGISTRY_PROXY,
-					exportName: getOutboundDoProxyClassName(workerName, exportName),
+					worker: SERVICE_DEV_REGISTRY_PROXY,
+					exportName: getOutboundDoProxyClassName(worker, exportName),
 				};
-				getEntrypoints(workerName).classNames.add(exportName);
+				getEntrypoints(worker).classNames.add(exportName);
 			}
 		}
 
-		// Cross-worker workflow bindings: when `workerName` refers to a worker
+		// Cross-worker workflow bindings: when `worker` refers to a worker
 		// outside this Miniflare instance (registered in the dev registry), record
 		// its entrypoint so the dev-registry proxy exposes it. The workflows plugin
 		// reroutes the engine's USER_WORKFLOW binding through the proxy itself; here
 		// we only register the external entrypoint. Mirrors the DO block above.
 		for (const [, binding] of getEnvBindingsOfType(config, "workflow")) {
-			const { workerName, exportName } = binding;
-			if (
-				getRemoteProxyConnectionString(binding, dev) === undefined &&
-				!allWorkerNames.includes(workerName)
-			) {
-				getEntrypoints(workerName).entrypoints.add(exportName);
+			const { worker, exportName } = binding;
+			if (!allWorkerNames.includes(worker)) {
+				getEntrypoints(worker).entrypoints.add(exportName);
 			}
 		}
 	}
@@ -626,7 +631,9 @@ function getInternalDurableObjectProxyBindings(
 	plugin: string,
 	service: Service
 ): Worker_Binding[] | undefined {
-	if (!("worker" in service)) return;
+	if (!("worker" in service)) {
+		return;
+	}
 	assert(service.worker !== undefined);
 	const serviceName = service.name;
 	assert(serviceName !== undefined);
@@ -660,9 +667,13 @@ export function _transformsForContentEncodingAndContentType(
 	type: string | undefined | null
 ): Transform[] {
 	const encoders: Transform[] = [];
-	if (!encoding) return encoders;
+	if (!encoding) {
+		return encoders;
+	}
 	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
-	if (!isCompressedByCloudflareFL(type)) return encoders;
+	if (!isCompressedByCloudflareFL(type)) {
+		return encoders;
+	}
 
 	// Reverse of https://github.com/nodejs/undici/blob/48d9578f431cbbd6e74f77455ba92184f57096cf/lib/fetch/index.js#L1660
 	const codings = encoding
@@ -758,6 +769,14 @@ type PendingWorkflowStorageDelete = {
 	deleted: boolean;
 };
 
+/** Selects the Worker TCP trigger used by `Miniflare#dispatchConnect()`. */
+export interface DispatchConnectOptions {
+	/** Defaults to the entrypoint Worker. */
+	workerName?: string;
+	/** The configured trigger port, including `0` for an OS-assigned port. */
+	port?: number;
+}
+
 const WORKFLOW_STORAGE_EXTENSIONS = [".sqlite", ".sqlite-shm", ".sqlite-wal"];
 const WORKFLOW_STORAGE_DELETE_RETRY_INTERVAL_MS = 50;
 const WORKFLOW_STORAGE_DELETE_TIMEOUT_MS = 2_000;
@@ -795,6 +814,7 @@ export class Miniflare {
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
+	#dispatchConnectSockets = new Set<net.Socket>();
 	#proxyClient?: ProxyClient;
 	#runtimeRestartError?: MiniflareCoreError;
 	// Number of times workerd has crashed and been restarted for this instance.
@@ -1029,7 +1049,9 @@ export class Miniflare {
 	}
 
 	async #pushRegistryUpdate(retries = 3): Promise<void> {
-		if (this.#disposeController.signal.aborted) return;
+		if (this.#disposeController.signal.aborted) {
+			return;
+		}
 		if (!this.#devRegistryDispatcher) {
 			return;
 		}
@@ -1575,9 +1597,13 @@ export class Miniflare {
 			// These headers are unsupported in undici fetch requests, they're added
 			// automatically. For custom service bindings, we may pass this request
 			// straight through to another fetch so strip them now.
-			if (restrictedUndiciHeaders.includes(name)) continue;
+			if (restrictedUndiciHeaders.includes(name)) {
+				continue;
+			}
 			if (Array.isArray(values)) {
-				for (const value of values) headers.append(name, value);
+				for (const value of values) {
+					headers.append(name, value);
+				}
 			} else if (values !== undefined) {
 				headers.append(name, values);
 			}
@@ -1632,7 +1658,9 @@ export class Miniflare {
 				);
 				const logLevel = level as LogLevel;
 				let message = await request.text();
-				if (!colors$.enabled) message = stripAnsi(message);
+				if (!colors$.enabled) {
+					message = stripAnsi(message);
+				}
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/core/remote-bindings-access-warning") {
@@ -1875,7 +1903,9 @@ export class Miniflare {
 		if (response.body) {
 			try {
 				for await (const chunk of response.body) {
-					if (chunk) initialStream.write(chunk);
+					if (chunk) {
+						initialStream.write(chunk);
+					}
 				}
 			} catch (error) {
 				this.#log.debug(
@@ -1909,9 +1939,11 @@ export class Miniflare {
 	}
 
 	#startLoopbackServer(hostname: string): Promise<StoppableServer> {
-		if (hostname === "*") hostname = "::";
+		if (hostname === "*") {
+			hostname = "::";
+		}
 
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
 			const server = stoppable(
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
@@ -1925,14 +1957,35 @@ export class Miniflare {
 			// already disable their timeouts.
 			server.keepAliveTimeout = 0;
 			server.on("upgrade", this.#handleLoopbackUpgrade);
-			server.listen(0, hostname, () => resolve(server));
+			const onError = (error: Error) => {
+				server.close();
+				reject(error);
+			};
+			server.once("error", onError);
+			server.listen(0, hostname, () => {
+				server.off("error", onError);
+				// Startup has settled, so report operational errors through the logger
+				server.on("error", (error) => this.#log.error(error));
+				resolve(server);
+			});
 		});
 	}
 
 	#stopLoopbackServer(): Promise<void> {
+		const loopbackServer = this.#loopbackServer;
+		if (loopbackServer === undefined) {
+			return Promise.resolve();
+		}
 		return new Promise((resolve, reject) => {
-			assert(this.#loopbackServer !== undefined);
-			this.#loopbackServer.stop((err) => (err ? reject(err) : resolve()));
+			loopbackServer.stop((err) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+				this.#loopbackServer = undefined;
+				this.#loopbackHost = undefined;
+				resolve();
+			});
 		});
 	}
 
@@ -2361,6 +2414,7 @@ export class Miniflare {
 							name: CoreBindings.DEV_REGISTRY_INSTANCE_ID,
 							text: this.#devRegistry.instanceId,
 						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					durableObjectStorage: { inMemory: kVoid },
 					// uniqueKey must match the target session's key for identical DO IDs.
@@ -2601,7 +2655,9 @@ export class Miniflare {
 					this.#disposeController.signal
 				)
 		);
-		if (this.#disposeController.signal.aborted) return;
+		if (this.#disposeController.signal.aborted) {
+			return;
+		}
 		if (maybeSocketPorts === undefined) {
 			throw new MiniflareCoreError(
 				"ERR_RUNTIME_FAILURE",
@@ -2767,7 +2823,9 @@ export class Miniflare {
 		// If we called `dispose()`, we may not have a `#runtimeEntryURL` if we
 		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
 		// instance. In this case, return a discard URL which we'll ignore.
-		if (disposing) return new URL("http://[100::]/");
+		if (disposing) {
+			return new URL("http://[100::]/");
+		}
 		// if there is an inspector proxy let's wait for it to be ready
 		await this.#maybeInspectorProxyController?.ready;
 		// Make sure `dispose()` wasn't called in the time we've been waiting
@@ -3054,8 +3112,9 @@ export class Miniflare {
 		// Technically, at this point, this a malformed response so let's remove the header
 		// Retain it as MF-Content-Encoding so we can tell the body was actually compressed.
 		const contentEncoding = response.headers.get("Content-Encoding");
-		if (contentEncoding)
+		if (contentEncoding) {
 			response.headers.set("MF-Content-Encoding", contentEncoding);
+		}
 		response.headers.delete("Content-Encoding");
 
 		if (
@@ -3073,11 +3132,108 @@ export class Miniflare {
 			);
 			Error.stackTraceLimit = originalLimit;
 			setImmediate(() => {
-				if (!response.bodyUsed) throw error;
+				if (!response.bodyUsed) {
+					throw error;
+				}
 			});
 		}
 
 		return response;
+	};
+
+	/**
+	 * Opens a TCP connection to a Worker's connect trigger.
+	 *
+	 * @param options Worker and trigger selection options
+	 * @returns A connected Node.js socket
+	 */
+	dispatchConnect = async (
+		options: DispatchConnectOptions = {}
+	): Promise<net.Socket> => {
+		this.#checkDisposed();
+		await this.ready;
+
+		const workerIndex = this.#findAndAssertWorkerIndex(options.workerName);
+		const workerOpts = this.#workerOpts[workerIndex];
+		const connectTriggers = getTriggersOfType(workerOpts.config, "connect");
+		const workerDescription =
+			options.workerName === undefined
+				? "entrypoint worker"
+				: `${JSON.stringify(options.workerName)} worker`;
+
+		let trigger: (typeof connectTriggers)[number] | undefined;
+		if (options.port === undefined) {
+			if (connectTriggers.length === 0) {
+				throw new TypeError(
+					`No TCP connect triggers configured for ${workerDescription}`
+				);
+			}
+			if (connectTriggers.length > 1) {
+				throw new TypeError(
+					`Multiple TCP connect triggers configured for ${workerDescription}; specify a port`
+				);
+			}
+			trigger = connectTriggers[0];
+		} else {
+			trigger = connectTriggers.find(({ port }) => port === options.port);
+			if (trigger === undefined) {
+				throw new TypeError(
+					`TCP connect trigger on port ${options.port} not found for ${workerDescription}`
+				);
+			}
+		}
+
+		assert(this.#socketPorts !== undefined);
+		const socketName = getConnectSocketName(
+			workerIndex,
+			trigger.protocol,
+			trigger.port
+		);
+		const port = this.#socketPorts.get(socketName);
+		assert(port !== undefined);
+
+		const configuredHost = trigger.address ?? DEFAULT_HOST;
+		const host =
+			resolveLocalhost(configuredHost) ??
+			(configuredHost === "*" ||
+			configuredHost === "0.0.0.0" ||
+			configuredHost === "::"
+				? DEFAULT_HOST
+				: configuredHost);
+		const socket = net.connect({ host, port });
+		this.#dispatchConnectSockets.add(socket);
+		socket.once("close", () => this.#dispatchConnectSockets.delete(socket));
+
+		try {
+			await new Promise<void>((resolve, reject) => {
+				function cleanup() {
+					socket.off("connect", onConnect);
+					socket.off("error", onError);
+					socket.off("close", onClose);
+				}
+				function onConnect() {
+					cleanup();
+					resolve();
+				}
+				function onError(error: Error) {
+					cleanup();
+					reject(error);
+				}
+				function onClose() {
+					cleanup();
+					reject(new Error("Socket closed before connecting"));
+				}
+
+				socket.once("connect", onConnect);
+				socket.once("error", onError);
+				socket.once("close", onClose);
+			});
+		} catch (error) {
+			socket.destroy();
+			throw error;
+		}
+
+		return socket;
 	};
 
 	/** @internal */
@@ -3333,7 +3489,7 @@ export class Miniflare {
 		const binding = workerOpts.config.env?.[classNameOrBindingName];
 		if (binding?.type === "durable-object") {
 			className = binding.exportName;
-			scriptName = binding.workerName;
+			scriptName = binding.worker;
 		} else if (
 			getExportsOfType(workerOpts.config, "durable-object").some(
 				([exportName]) => exportName === classNameOrBindingName
@@ -3465,6 +3621,17 @@ export class Miniflare {
 	): Promise<Flagship> {
 		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName);
 	}
+	getFlagshipBindingAPI(
+		bindingName: string,
+		workerName?: string
+	): Promise<() => FlagshipAdmin> {
+		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName).then(
+			(binding) => {
+				// @ts-expect-error We exposed an admin API on this key
+				return binding[FLAGSHIP_ADMIN_API];
+			}
+		);
+	}
 	getStreamBinding(
 		bindingName: string,
 		workerName?: string
@@ -3487,6 +3654,7 @@ export class Miniflare {
 				R2_PLUGIN_NAME,
 				RATELIMIT_PLUGIN_NAME,
 				SECRET_STORE_PLUGIN_NAME,
+				STREAM_PLUGIN_NAME,
 			].includes(pluginName)
 		) {
 			throw new TypeError(
@@ -3502,6 +3670,10 @@ export class Miniflare {
 
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
+		for (const socket of this.#dispatchConnectSockets) {
+			socket.destroy();
+		}
+		this.#dispatchConnectSockets.clear();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
 		// invalidating all existing native references. Mark all proxies as invalid.
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
@@ -3606,7 +3778,14 @@ export class Miniflare {
 		}
 
 		// Close the inspector proxy server if there is one
-		await this.#maybeInspectorProxyController?.dispose();
+		try {
+			await this.#maybeInspectorProxyController?.dispose();
+		} catch (error) {
+			if (!independentCleanupFailed) {
+				independentCleanupFailed = true;
+				independentCleanupError = error;
+			}
+		}
 		// Unregister workers from dev registry and stop the file watcher
 		await this.#devRegistry.dispose();
 
@@ -3617,13 +3796,41 @@ export class Miniflare {
 		// existing behavior when an earlier cleanup operation fails.
 		maybeInstanceRegistry?.delete(this);
 
-		if (independentCleanupFailed) throw independentCleanupError;
-		if (!runtimeCleanupOutcome.ok) throw runtimeCleanupOutcome.error;
-		if (waitForReadyFailed) throw waitForReadyError;
+		if (independentCleanupFailed) {
+			throw independentCleanupError;
+		}
+		if (!runtimeCleanupOutcome.ok) {
+			throw runtimeCleanupOutcome.error;
+		}
+		if (waitForReadyFailed) {
+			throw waitForReadyError;
+		}
 	}
 }
 
 export type { WorkerdStructuredLog } from "./plugins/core";
+
+export type { FlagshipAdmin } from "./workers/flagship/admin";
+
+export type {
+	BaseCondition,
+	Condition,
+	ErrorCode,
+	LogicalCondition,
+	EvaluationContext,
+	EvaluationDetails,
+	EvaluationReason,
+	FlagValue,
+	Operator,
+	Rollout,
+} from "./workers/flagship/evaluate";
+export type {
+	Flag,
+	FlagChanges,
+	FlagInput,
+	FlagType,
+	Rule,
+} from "./workers/flagship/flags";
 
 export interface SecretsStoreSecretAdmin {
 	create(value: string): Promise<string>;

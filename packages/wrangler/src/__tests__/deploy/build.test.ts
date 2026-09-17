@@ -11,7 +11,10 @@ import {
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, test, vi } from "vitest";
-import { printBundleSize } from "../../deployment-bundle/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+} from "../../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../../output";
 import { diagnoseScriptSizeError } from "../../utils/friendly-validator-errors";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -32,14 +35,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -1071,6 +1066,9 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
+			// The startup profiler runs Miniflare, whose HTTP server expects real
+			// Node.js timeout handles (including `unref()`).
+			vi.unstubAllGlobals();
 			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{
@@ -1117,17 +1115,19 @@ export default { fetch() { return new Response(foo); } }`
 			// keeping these as unit tests to try and keep them snappy, as they often deal with
 			// big files that would take a while to deal with in a full wrangler test
 
-			test("should print the bundle size", async ({ expect }) => {
+			test("should calculate the bundle size", async ({ expect }) => {
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
-				await printBundleSize({ name: "index.js", content: "" }, [
-					{
-						name: "index.js",
-						filePath: undefined,
-						content: bigModule,
-						type: "buffer",
-					},
-				]);
+				const bundleSize = await getSize([{ content: bigModule }]);
+
+				expect(bundleSize).toEqual({
+					size: 10_000_000,
+					gzipSize: expect.any(Number),
+				});
+			});
+
+			test("should print the bundle size", ({ expect }) => {
+				printBundleSize({ size: 10_000_000, gzipSize: 10_000_000 });
 
 				expect(std).toMatchInlineSnapshot(`
 					{

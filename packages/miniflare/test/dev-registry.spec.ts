@@ -17,6 +17,29 @@ import type {
 } from "miniflare";
 
 describe.sequential("DevRegistry", () => {
+	test("waits for the filesystem watcher to be ready", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+
+		try {
+			const watching = registry.watch(
+				new Map([["worker", { classNames: new Set(), entrypoints: new Set() }]])
+			);
+			expect(watching).toBeInstanceOf(Promise);
+			await watching;
+
+			// Subsequent calls must reuse the settled readiness promise rather than
+			// waiting for another `ready` event that will never be emitted.
+			await registry.watch(new Map(), true);
+		} finally {
+			await registry.dispose();
+		}
+	});
+
 	test("surfaces fresh legacy entries and removes them when stale", async ({
 		expect,
 	}) => {
@@ -259,7 +282,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -311,7 +334,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -407,7 +430,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -490,7 +513,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -575,7 +598,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "TestEntrypoint",
 							},
 						},
@@ -681,7 +704,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "PropsEntrypoint",
 								props: { foo: 123, bar: { baz: "hello from props" } },
 							},
@@ -725,7 +748,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -820,7 +843,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -920,7 +943,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -957,7 +980,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1000,7 +1023,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1043,7 +1066,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1089,7 +1112,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1132,7 +1155,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1186,7 +1209,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1223,7 +1246,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1262,7 +1285,7 @@ describe.sequential("DevRegistry", () => {
 							MY_WORKFLOW: {
 								type: "workflow",
 								name: "MY_WORKFLOW",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyWorkflow",
 							},
 						},
@@ -1343,7 +1366,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1385,7 +1408,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1426,7 +1449,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1501,7 +1524,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1614,7 +1637,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							REMOTE: { type: "worker", workerName: "remote-worker" },
+							REMOTE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1694,9 +1717,9 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 						env: {
-							remote: { type: "worker", workerName: "remote-worker" },
+							remote: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1737,9 +1760,9 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 						env: {
-							remote: { type: "worker", workerName: "remote-worker" },
+							remote: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1825,7 +1848,7 @@ describe.sequential("DevRegistry", () => {
 			`),
 						tailConsumers: [
 							{
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								entrypoint: "TailCollector",
 								props: { tailKey: "from-tail-binding" },
 							},
@@ -1879,7 +1902,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1988,7 +2011,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -2069,7 +2092,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -2113,7 +2136,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -2172,7 +2195,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -2294,7 +2317,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -2422,7 +2445,7 @@ describe.sequential("DevRegistry", () => {
 		await remote.ready;
 
 		const logs: string[] = [];
-		const local = new Miniflare({
+		const localOptions: MiniflareOptions = {
 			unsafeDevRegistryPath,
 			handleStructuredLogs: ({ message }) => void logs.push(message),
 			workers: [
@@ -2440,11 +2463,12 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 					},
 				},
 			],
-		});
+		};
+		const local = new Miniflare(localOptions);
 		useDispose(local);
 		await local.ready;
 
@@ -2457,11 +2481,20 @@ describe.sequential("DevRegistry", () => {
 			{ timeout: 10_000, interval: 100 }
 		);
 
-		// Drop the peer without letting it deregister, so `local` keeps a registry
-		// entry pointing at a debug port that is no longer accepting connections.
+		const remoteDefinitionPath = path.join(
+			unsafeDevRegistryPath,
+			"remote-worker"
+		);
+		const remoteDefinition = await fs.readFile(remoteDefinitionPath, "utf8");
+
+		// Restore the registry entry removed by disposal to model a peer that exited
+		// without cleaning up. This leaves `local` pointing at a debug port that is
+		// no longer accepting connections, regardless of watcher timing.
 		// The forwarding RPC now rejects; that rejection must be reported rather
 		// than escaping as an unhandled rejection.
 		await remote.dispose();
+		await fs.writeFile(remoteDefinitionPath, remoteDefinition);
+		await local.setOptions(localOptions);
 		logs.length = 0;
 
 		await vi.waitFor(

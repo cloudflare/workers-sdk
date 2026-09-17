@@ -31,6 +31,7 @@ import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import {
+	categoriseArgs,
 	COMMAND_ARG_ALLOW_LIST,
 	getAllowedArgs,
 	sanitizeArgKeys,
@@ -298,10 +299,12 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					sanitizedCommand
 				);
 				const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
-				const sanitizedArgs = sanitizeArgValues(
-					argsWithSanitizedKeys,
-					allowedArgs
-				);
+				const sanitizedArgs = {
+					...sanitizeArgValues(argsWithSanitizedKeys, allowedArgs),
+					// Categorised positional args (e.g. the deploy path) are added
+					// separately because positionals are excluded by sanitizeArgKeys.
+					...categoriseArgs(args, allowedArgs),
+				};
 				const argsUsed = Object.keys(argsWithSanitizedKeys).sort();
 
 				dispatcher.sendCommandEvent(
@@ -359,15 +362,20 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						shouldSuggestSkills === true ||
 						(typeof shouldSuggestSkills === "function" &&
 							shouldSuggestSkills(args) === true);
+					// We are currently not sure whether the automatic skills installation is beneficial
+					// so we are skipping it for the time being (we might potentially re-enable it later on)
+					const shouldInstall = false;
 
 					if (suggestSkillsEnabled) {
 						try {
-							const justInstalled = await runSkillsInstallFlow({
-								force: false,
-								command: sanitizedCommand,
-								promptMessage:
-									skillInstallPromptMessageAfterWranglerCommandHandler,
-							});
+							const justInstalled = shouldInstall
+								? await runSkillsInstallFlow({
+										force: false,
+										command: sanitizedCommand,
+										promptMessage:
+											skillInstallPromptMessageAfterWranglerCommandHandler,
+									})
+								: false;
 
 							// Only check for updates when the install flow did not
 							// just perform a fresh install — a brand-new install
