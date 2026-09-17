@@ -1,5 +1,27 @@
 # @cloudflare/containers-shared
 
+## 0.16.5
+
+### Patch Changes
+
+- [#15673](https://github.com/cloudflare/workers-sdk/pull/15673) [`2b39fc2`](https://github.com/cloudflare/workers-sdk/commit/2b39fc2c79f7919b0af21603e278dce030c48870) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Support explicit named Container image selection in Wrangler local development
+
+  Wrangler builds or pulls named images configured through Wrangler JSON or TOML and exposes their local tags through `ctx.container.images`. Pass one of those references to `ctx.container.start({ image })` to select the image.
+
+  This extends the experimental Durable Object-managed Containers interface. Named images are opt-in and do not become the Container's default image. A Container without a default image must supply an image or full Container snapshot when starting.
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114)]:
+  - @cloudflare/workers-utils@0.40.0
+  - @cloudflare/cli-shared-helpers@0.1.33
+
+## 0.16.4
+
+### Patch Changes
+
+- Updated dependencies [[`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513)]:
+  - @cloudflare/workers-utils@0.39.1
+  - @cloudflare/cli-shared-helpers@0.1.32
+
 ## 0.16.3
 
 ### Patch Changes

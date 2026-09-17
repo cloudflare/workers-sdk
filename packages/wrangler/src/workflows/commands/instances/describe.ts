@@ -145,10 +145,9 @@ function renderInstanceDetails(
 			new Date(instance.start)
 		);
 	} else if (instance.start != null) {
-		// Convert current date to UTC
 		formattedInstance.Duration = formatDistanceStrict(
 			new Date(instance.start),
-			new Date(new Date().toUTCString().slice(0, -4))
+			new Date()
 		);
 	}
 
@@ -205,10 +204,9 @@ function logStep(
 				new Date(step.start)
 			);
 		} else if (step.start != null) {
-			// Convert current date to UTC
 			formattedStep.Duration = formatDistanceStrict(
 				new Date(step.start),
-				new Date(new Date().toUTCString().slice(0, -4))
+				new Date()
 			);
 		}
 	} else if (step.type == "termination") {
@@ -276,10 +274,9 @@ function logStep(
 					new Date(val.start)
 				);
 			} else if (val.start != null) {
-				// Converting datetimes into UTC is very cool in JS
 				attempt.Duration = formatDistanceStrict(
 					new Date(val.start),
-					new Date(new Date().toUTCString().slice(0, -4))
+					new Date()
 				);
 			}
 

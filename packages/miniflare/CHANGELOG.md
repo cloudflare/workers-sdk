@@ -1,5 +1,51 @@
 # miniflare
 
+## 5.20260917.0-alpha
+
+### Minor Changes
+
+- [#15672](https://github.com/cloudflare/workers-sdk/pull/15672) [`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Support named images or no default image for Durable Object-managed Containers
+
+  Miniflare now accepts named image references for Durable Object-managed Containers and preserves an omitted default image (`imageName`). A Container without a default image must supply an image or full Container snapshot when starting.
+
+  This extends Miniflare's experimental Durable Object-managed Containers interface.
+
+### Patch Changes
+
+- [#15689](https://github.com/cloudflare/workers-sdk/pull/15689) [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260916.1 | ^5.20260917.1 |
+  | workerd                   | 1.20260916.1  | 1.20260917.1  |
+
+## 5.20260916.0-alpha
+
+### Minor Changes
+
+- [#15483](https://github.com/cloudflare/workers-sdk/pull/15483) [`71b6f10`](https://github.com/cloudflare/workers-sdk/commit/71b6f102f258e14e2b1dc23e9643cc74685d35cb) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Align Local Explorer Workflow instance status requests with production
+
+  Local Explorer and Wrangler local mode now use the production-compatible `status` request field for pausing, resuming, restarting, and terminating Workflow instances. Direct Local Explorer API consumers must replace the previous `action` field with `status`.
+
+  Successful Local Explorer status updates now return the production-compatible instance `status` and response `timestamp` instead of the local-only `result.success` acknowledgement.
+
+### Patch Changes
+
+- [#15665](https://github.com/cloudflare/workers-sdk/pull/15665) [`ad23e6e`](https://github.com/cloudflare/workers-sdk/commit/ad23e6e42dc81c9dc894248e787ed6c0abbe9028) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260915.1 | ^5.20260916.1 |
+  | workerd                   | 1.20260915.1  | 1.20260916.1  |
+
+- [#15552](https://github.com/cloudflare/workers-sdk/pull/15552) [`6f3d7b5`](https://github.com/cloudflare/workers-sdk/commit/6f3d7b58b1f6cd036aca3e5946807bba37776065) Thanks [@superbuilder-norm](https://github.com/superbuilder-norm)! - Prevent synchronous binding calls from failing intermittently under load
+
+  Miniflare now keeps synchronous binding requests and responses correctly paired when background work is delayed. This prevents rare cascades of assertion failures in local development and CI, including when using synchronous D1 methods such as `prepare()` and `bind()`.
+
 ## 5.20260915.0-alpha
 
 ### Minor Changes

@@ -20,6 +20,9 @@ export class Container extends DurableObject<Env> {
 			case "/status":
 				return new Response(JSON.stringify(this.container.running));
 
+			case "/images":
+				return Response.json(Object.keys(this.container.images));
+
 			case "/destroy":
 				if (!this.container.running) {
 					throw new Error("Container is not running.");
@@ -29,6 +32,9 @@ export class Container extends DurableObject<Env> {
 
 			case "/start":
 				this.container.start({
+					...(this.container.images.app === undefined
+						? {}
+						: { image: this.container.images.app }),
 					entrypoint: ["node", "app.js"],
 					env: { A: "B", C: "D", L: "F", MESSAGE: "from vite" },
 					enableInternet: false,
