@@ -256,9 +256,38 @@ function isDollarQuoteIdentifier(str: string) {
 }
 
 /**
+ * A character SQLite allows inside an unquoted identifier: ASCII letters,
+ * digits, underscore, `$`, and -- for its permissive Unicode support --
+ * every code point at or above U+0080. Anything else is a valid boundary
+ * between an identifier and a keyword like `BEGIN`/`CASE`/`END`.
+ *
+ * Used as the negated boundary class in both `isCompoundStatementStart()`
+ * and `isCompoundStatementEnd()` so the two can't drift out of sync again --
+ * that exact drift (one broadened, the other left narrow) is what caused
+ * the `(CASE ... END)` regression these functions' history describes below.
+ * Without this, an identifier like `foo$CASE` or `ENDα` is misread as the
+ * keyword, corrupting the compound-statement nesting for the rest of the
+ * file.
+ */
+const SQL_IDENTIFIER_CHAR = "A-Za-z0-9_$\\u0080-\\uffff";
+
+// Compiled once at module load, not per call: isCompoundStatementStart() runs
+// on every character of the input in splitSqlIntoStatements()'s main loop, so
+// constructing a `new RegExp` inside the function would recompile it once per
+// character of the whole file.
+const COMPOUND_STATEMENT_START_RE = new RegExp(
+	`[^${SQL_IDENTIFIER_CHAR}](BEGIN|CASE)\\s$`,
+	"i"
+);
+const COMPOUND_STATEMENT_END_RE = new RegExp(
+	`\\sEND[^${SQL_IDENTIFIER_CHAR}]$`,
+	"i"
+);
+
+/**
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
  *
- * The character immediately before `BEGIN`/`CASE` must not be a word
+ * The character immediately before `BEGIN`/`CASE` must not be an identifier
  * character, but is otherwise unconstrained, mirroring the same broadening
  * applied to `isCompoundStatementEnd()`: a `(CASE ... END)` used as a
  * parenthesised value expression is preceded directly by `(`, not
@@ -270,19 +299,20 @@ function isDollarQuoteIdentifier(str: string) {
  * `END)`, which the stack had never actually been pushed for.
  */
 function isCompoundStatementStart(str: string) {
-	return /[^A-Za-z0-9_](BEGIN|CASE)\s$/i.test(str);
+	return COMPOUND_STATEMENT_START_RE.test(str);
 }
 
 /**
  * Returns true if the `str` ends with a compound statement `END` marker.
  *
- * The character immediately after `END` must not be a word character, but is
- * otherwise unconstrained: a `CASE ... END` used as a value expression (e.g.
- * `SET x = CASE ... END, y = 1`) is legitimately followed by a comma or a
- * closing paren, not only `;` or whitespace. Requiring the narrower set
- * caused those `END`s to go undetected, leaving the compound-statement
- * tracking stack permanently one level too deep for the rest of the file.
+ * The character immediately after `END` must not be an identifier
+ * character, but is otherwise unconstrained: a `CASE ... END` used as a
+ * value expression (e.g. `SET x = CASE ... END, y = 1`) is legitimately
+ * followed by a comma or a closing paren, not only `;` or whitespace.
+ * Requiring the narrower set caused those `END`s to go undetected, leaving
+ * the compound-statement tracking stack permanently one level too deep for
+ * the rest of the file.
  */
 function isCompoundStatementEnd(str: string) {
-	return /\sEND[^A-Za-z0-9_]$/i.test(str);
+	return COMPOUND_STATEMENT_END_RE.test(str);
 }

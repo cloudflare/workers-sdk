@@ -511,6 +511,51 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
+	it("should not treat an identifier ending in CASE as a compound statement start", ({
+		expect,
+	}) => {
+		// SQLite allows `$` in unquoted identifiers, so `foo$CASE` is a single
+		// identifier token, not the CASE keyword preceded by punctuation.
+		expect(
+			splitSqlQuery(
+				`CREATE TABLE t (foo$CASE TEXT); SELECT foo$CASE FROM t; SELECT 1;`
+			)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TABLE t (foo$CASE TEXT)",
+			  "SELECT foo$CASE FROM t",
+			  "SELECT 1",
+			]
+		`);
+	});
+
+	it("should not treat an identifier starting with END as a compound statement end", ({
+		expect,
+	}) => {
+		// SQLite treats any code point >= U+0080 as an identifier character, so
+		// `ENDα` is a single identifier token, not the END keyword followed by
+		// punctuation -- it must not close the trigger's still-open BEGIN.
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER my_trigger AFTER INSERT ON items
+				BEGIN
+					SELECT ENDα;
+					UPDATE totals SET y = y + 1;
+				END;
+
+				CREATE INDEX items_idx ON items (id);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER my_trigger AFTER INSERT ON items
+							BEGIN
+								SELECT ENDα;
+								UPDATE totals SET y = y + 1;
+							END",
+			  "CREATE INDEX items_idx ON items (id)",
+			]
+		`);
+	});
+
 	describe("performance tests", () => {
 		it("should split a file with a lot of commands", ({ expect }) => {
 			const sql = "INSERT INTO blobs (id, data) VALUES (1, 'xxx');\n".repeat(
