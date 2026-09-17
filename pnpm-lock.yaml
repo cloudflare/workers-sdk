@@ -1233,9 +1233,6 @@ importers:
       '@better-auth/stripe':
         specifier: ^1.4.6
         version: 1.5.4(c51ce40625c68454d04eddb9ae8806de)
-      '@cloudflare/containers':
-        specifier: ^0.2.2
-        version: 0.2.2
       '@cloudflare/vitest-plugin':
         specifier: workspace:*
         version: link:../../packages/vitest-plugin
@@ -4149,6 +4146,9 @@ importers:
       '@cloudflare/config':
         specifier: workspace:*
         version: link:../config
+      '@cloudflare/containers-shared':
+        specifier: workspace:*
+        version: link:../containers-shared
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
@@ -5839,9 +5839,6 @@ packages:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
-  '@cloudflare/containers@0.2.2':
-    resolution: {integrity: sha512-cfTSd7M96Z9NeCiaN4i3FuMb+i2Nzi0HbMuxvMAnUmkXwtWIZCQ3XLqUWQkdCKWNJZ/3BLMInC6ntFvpbTWIpA==}
 
   '@cloudflare/containers@0.3.7':
     resolution: {integrity: sha512-DM9dm3FnIBSyiSJ1FLavKwl/lk3oAmTaynCzZQ9pZR0ncRPquSxkxd8Nu2MFILxmDDsPkxKsSNEh9mHHMty4Fw==}
@@ -18483,8 +18480,6 @@ snapshots:
       react: 18.3.1
     transitivePeerDependencies:
       - regenerator-runtime
-
-  '@cloudflare/containers@0.2.2': {}
 
   '@cloudflare/containers@0.3.7': {}
 
