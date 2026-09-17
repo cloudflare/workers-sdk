@@ -37,9 +37,14 @@ export function handleWebSocket(
 	// destroy them when close() is initiated. Destroying here races no one:
 	// the server is going down, and claimed sockets are never tracked.
 	const pendingUpgrades = new Set<Duplex>();
+	let isClosing = false;
 	const trackUnresolved = (socket: Duplex) => {
 		const netSocket = socket as unknown as Socket;
 		if (socket.destroyed || netSocket.closed) {
+			return;
+		}
+		if (isClosing) {
+			socket.destroy();
 			return;
 		}
 		pendingUpgrades.add(socket);
@@ -49,6 +54,7 @@ export function handleWebSocket(
 	};
 	const serverClose = httpServer.close.bind(httpServer);
 	httpServer.close = ((callback?: (err?: Error) => void) => {
+		isClosing = true;
 		for (const pending of pendingUpgrades) {
 			pending.destroy();
 		}
