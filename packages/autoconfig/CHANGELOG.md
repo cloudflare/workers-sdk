@@ -1,5 +1,20 @@
 # @cloudflare/autoconfig
 
+## 0.5.0
+
+### Minor Changes
+
+- [#15593](https://github.com/cloudflare/workers-sdk/pull/15593) [`e24795b`](https://github.com/cloudflare/workers-sdk/commit/e24795bcd04fdf0d27a38f4f46b58009fde197ca) Thanks [@edmundhung](https://github.com/edmundhung)! - Expose mode support for autoconfigured framework commands
+
+  Detected Astro and Vite frameworks now report that their build and development commands support `--mode`. Other frameworks remain unsupported by default.
+
+### Patch Changes
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114)]:
+  - @cloudflare/config@0.14.0
+  - @cloudflare/workers-utils@0.40.0
+  - @cloudflare/cli-shared-helpers@0.1.33
+
 ## 0.4.7
 
 ### Patch Changes

@@ -1,5 +1,21 @@
 # @cloudflare/vite-plugin
 
+## 1.55.0
+
+### Minor Changes
+
+- [#15674](https://github.com/cloudflare/workers-sdk/pull/15674) [`a939a6c`](https://github.com/cloudflare/workers-sdk/commit/a939a6cccd0868ec4c30ab2a4cfd3f29129e6a19) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Support explicit named Container image selection in local development
+
+  The Vite plugin builds or pulls named images from Wrangler configuration and exposes their local tags through `ctx.container.images`. Pass one of those references to `ctx.container.start({ image })` to select the image.
+
+  This extends the experimental Durable Object-managed Containers interface.
+
+### Patch Changes
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114), [`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef), [`d96b319`](https://github.com/cloudflare/workers-sdk/commit/d96b3193bfb7371da5a28fe36e6b56fb1c6108b0), [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8), [`2b39fc2`](https://github.com/cloudflare/workers-sdk/commit/2b39fc2c79f7919b0af21603e278dce030c48870)]:
+  - wrangler@4.134.0
+  - miniflare@5.20260917.0-alpha
+
 ## 1.54.11
 
 ### Patch Changes
