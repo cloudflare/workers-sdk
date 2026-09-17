@@ -15,6 +15,7 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 - `bin/cf-wrangler.js` — `cf-wrangler` delegate entrypoint. Owns verb dispatch, argv parsing (`parseCfWranglerArgs`), and the `StartDevOptions` literal; hands off to `runCfWranglerDev` from `wrangler-dist/cli.js` in-process (no re-spawn — the parent tool owns the Node runtime)
 - `src/containers/ssh.ts` — Thin command adapter; SSH options, authorization request, and transport live in `@cloudflare/containers-shared/src/ssh.ts`, shared with cf.
 - `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint (see below)
+- `src/containers/images.ts` — Command/presentation adapter; registry image operations live in `containers-shared/src/registry-images.ts`, shared with cf.
 - `templates/` — Worker templates
 
 ## Entry Points
