@@ -364,6 +364,31 @@ describe("Local Explorer scheduled dispatch", () => {
 		expect(response.status).toBe(502);
 		await response.text();
 
+		// A forwarded request must re-check registry ownership, even when the
+		// receiving instance still has a locally configured Worker with that name.
+		writeFileSync(
+			path.join(registryPath, "owner"),
+			JSON.stringify({
+				debugPortAddress: "127.0.0.1:1",
+				defaultEntrypointService: "owner",
+				userWorkerService: "owner",
+				instanceId: "new-owner",
+			})
+		);
+		response = await owner.dispatchFetch(
+			...scheduledRequest(
+				"owner",
+				{ cron: "stale-forward" },
+				{ [NO_AGGREGATE_HEADER]: "true" }
+			)
+		);
+		expect(response.status).toBe(502);
+		await response.text();
+		const ownerWorker = await owner.getWorker("owner");
+		expect(await (await ownerWorker.fetch("http://localhost")).json()).toEqual(
+			[]
+		);
+
 		const unavailableWorker = "unavailable";
 		writeFileSync(
 			path.join(registryPath, unavailableWorker),
