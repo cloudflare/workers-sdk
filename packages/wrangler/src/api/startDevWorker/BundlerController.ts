@@ -385,6 +385,7 @@ export class BundlerController extends Controller {
 
 		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
 		const buildAborter = this.#bundleBuildAborter;
+		let restartingForExportShape = false;
 
 		if (config.build?.custom?.command) {
 			return;
@@ -454,6 +455,32 @@ export class BundlerController extends Controller {
 							data: undefined,
 						});
 					}
+				},
+				onExportShapeChange: (exports) => {
+					if (
+						restartingForExportShape ||
+						buildAborter.signal.aborted ||
+						this.tearingDown
+					) {
+						return;
+					}
+					restartingForExportShape = true;
+					// The export-shape plugin runs before the output plugin. Abort this
+					// generation now so the stale build is neither emitted nor reported as
+					// a failure while its watch context is being replaced.
+					buildAborter.abort();
+					void this.#startBundle({
+						...config,
+						build: { ...config.build, exports },
+					}).catch((err) => {
+						this.emitErrorEvent({
+							type: "error",
+							reason: "Failed to restart bundler after exports changed",
+							cause: castErrorCause(err),
+							source: "BundlerController",
+							data: { config },
+						});
+					});
 				},
 				checkFetch: shouldCheckFetch(
 					config.compatibilityDate,
