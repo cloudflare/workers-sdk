@@ -526,6 +526,7 @@ async function uploadWorkerVersion(
 			workerSubdomain.preview_url_suffix
 		) {
 			const shortVersion = versionId.slice(0, 8);
+			// The API-provided suffix includes the leading "-" separator.
 			versionPreviewUrl = `https://${shortVersion}${workerSubdomain.preview_url_suffix}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 

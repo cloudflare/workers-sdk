@@ -24,10 +24,15 @@ type GetWorkersDevSubdomainOptions = {
 	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
 };
 
+type WorkersDevSubdomainLookup =
+	| { subdomain: string }
+	| { unauthorizedError: APIError };
+
 export type WorkerSubdomain = Worker.Subdomain & {
 	enabled: boolean;
 	previews_enabled: boolean;
 	url?: string;
+	/** Includes the leading "-" separator. */
 	preview_url_suffix?: string;
 };
 
@@ -50,32 +55,22 @@ export async function getWorkersDevSubdomain(
 	accountId: string,
 	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string> {
-	return getWorkersDevSubdomainInternal(
+	const result = await getWorkersDevSubdomainInternal(
 		complianceConfig,
 		accountId,
-		options,
-		false
+		options
 	);
+	if ("unauthorizedError" in result) {
+		throw result.unauthorizedError;
+	}
+	return result.subdomain;
 }
 
 async function getWorkersDevSubdomainInternal(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	options: GetWorkersDevSubdomainOptions,
-	allowUnauthorizedLookup: false
-): Promise<string>;
-async function getWorkersDevSubdomainInternal(
-	complianceConfig: ComplianceConfig,
-	accountId: string,
-	options: GetWorkersDevSubdomainOptions,
-	allowUnauthorizedLookup: true
-): Promise<string | undefined>;
-async function getWorkersDevSubdomainInternal(
-	complianceConfig: ComplianceConfig,
-	accountId: string,
-	options: GetWorkersDevSubdomainOptions,
-	allowUnauthorizedLookup: boolean
-): Promise<string | undefined> {
+	options: GetWorkersDevSubdomainOptions
+): Promise<WorkersDevSubdomainLookup> {
 	const {
 		abortSignal,
 		autoRegisterSubdomain,
@@ -92,10 +87,12 @@ async function getWorkersDevSubdomainInternal(
 			undefined,
 			abortSignal
 		);
-		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
+		return {
+			subdomain: `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`,
+		};
 	} catch (e) {
-		if (allowUnauthorizedLookup && e instanceof APIError && e.code === 10000) {
-			return undefined;
+		if (e instanceof APIError && e.code === 10000) {
+			return { unauthorizedError: e };
 		}
 
 		const error = e as { code?: number };
@@ -108,13 +105,15 @@ async function getWorkersDevSubdomainInternal(
 	// https://api.cloudflare.com/#worker-subdomain-get-subdomain
 	logger.warn(getRegistrationWarning(registrationContext));
 	if (autoRegisterSubdomain) {
-		return await registerSubdomain(
-			complianceConfig,
-			accountId,
-			configPath,
-			registrationContext,
-			autoRegisterSubdomain
-		);
+		return {
+			subdomain: await registerSubdomain(
+				complianceConfig,
+				accountId,
+				configPath,
+				registrationContext,
+				autoRegisterSubdomain
+			),
+		};
 	}
 
 	const wantsToRegister = await confirm(
@@ -129,12 +128,14 @@ async function getWorkersDevSubdomainInternal(
 		);
 	}
 
-	return await registerSubdomain(
-		complianceConfig,
-		accountId,
-		configPath,
-		registrationContext
-	);
+	return {
+		subdomain: await registerSubdomain(
+			complianceConfig,
+			accountId,
+			configPath,
+			registrationContext
+		),
+	};
 }
 
 /**
@@ -149,12 +150,14 @@ export async function getWorkersDevSubdomainIfAccessible(
 	accountId: string,
 	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string | undefined> {
-	return getWorkersDevSubdomainInternal(
+	const result = await getWorkersDevSubdomainInternal(
 		complianceConfig,
 		accountId,
-		options,
-		true
+		options
 	);
+	// The Worker upload is authoritative when a granular token cannot read
+	// account-level subdomain metadata.
+	return "unauthorizedError" in result ? undefined : result.subdomain;
 }
 
 /** Gets the Worker-scoped subdomain configuration and routable URLs. */
