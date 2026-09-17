@@ -10,6 +10,71 @@ import type { Duplex } from "node:stream";
 import type * as vite from "vite";
 
 /**
+ * Shared per-server state for upgrade handling. Stored in a WeakMap so
+ * repeated `handleWebSocket()` calls on the same server (e.g. Vite restarts)
+ * reuse one `close`/`emit` wrapper instead of stacking them.
+ */
+type UpgradeServerPatch = {
+	pendingUpgrades: Set<Duplex>;
+	closing: { current: boolean };
+	listenerCounts: WeakMap<IncomingMessage, number>;
+};
+
+const upgradeServerPatches = new WeakMap<object, UpgradeServerPatch>();
+
+function getUpgradeServerPatch(httpServer: vite.HttpServer): UpgradeServerPatch {
+	const existing = upgradeServerPatches.get(httpServer);
+	if (existing) {
+		return existing;
+	}
+	const patch: UpgradeServerPatch = {
+		pendingUpgrades: new Set(),
+		closing: { current: false },
+		listenerCounts: new WeakMap(),
+	};
+	upgradeServerPatches.set(httpServer, patch);
+
+	// Snapshot the `upgrade` listener set at emit time, before Node removes
+	// `once` wrappers. A later `prependOnceListener` owner runs before our
+	// prepended handler but is already unregistered when our handler runs,
+	// so a live `listenerCount` would miss it and schedule a destroy that
+	// races its async handshake. The emit entry still sees it.
+	const originalEmit = httpServer.emit;
+	httpServer.emit = function (
+		this: typeof httpServer,
+		event: string | symbol,
+		...args: Array<unknown>
+	): boolean {
+		if (event === "upgrade") {
+			const request = args[0];
+			if (typeof request === "object" && request !== null) {
+				try {
+					patch.listenerCounts.set(
+						request as IncomingMessage,
+						httpServer.listenerCount("upgrade")
+					);
+				} catch {
+					// Snapshot is best-effort; the handler falls back to a live count.
+				}
+			}
+		}
+		return originalEmit.call(this, event, ...args);
+	} as typeof httpServer.emit;
+
+	const originalClose = httpServer.close;
+	httpServer.close = ((callback?: (err?: Error) => void) => {
+		patch.closing.current = true;
+		for (const pending of patch.pendingUpgrades) {
+			pending.destroy();
+		}
+		patch.pendingUpgrades.clear();
+		return originalClose.call(httpServer, callback as never);
+	}) as typeof httpServer.close;
+
+	return patch;
+}
+
+/**
  * Handles 'upgrade' requests to the Vite HTTP server and forwards WebSocket events between the client and Worker environments.
  */
 export function handleWebSocket(
@@ -18,6 +83,11 @@ export function handleWebSocket(
 	entryWorkerName?: string
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
+
+	// Shared per-server patch (idempotent across Vite restarts): holds the
+	// unresolved-upgrade set, the closing flag, and emit-time listener counts.
+	const { pendingUpgrades, closing, listenerCounts } =
+		getUpgradeServerPatch(httpServer);
 
 	// Stash Worker 101-response headers keyed by the upgrade request so a single
 	// persistent `headers` listener can apply them when `ws` emits the upgrade
@@ -36,14 +106,12 @@ export function handleWebSocket(
 	// upgrade would hang server shutdown forever. Track such sockets and
 	// destroy them when close() is initiated. Destroying here races no one:
 	// the server is going down, and claimed sockets are never tracked.
-	const pendingUpgrades = new Set<Duplex>();
-	let isClosing = false;
 	const trackUnresolved = (socket: Duplex) => {
 		const netSocket = socket as unknown as Socket;
 		if (socket.destroyed || netSocket.closed) {
 			return;
 		}
-		if (isClosing) {
+		if (closing.current) {
 			socket.destroy();
 			return;
 		}
@@ -52,15 +120,6 @@ export function handleWebSocket(
 			pendingUpgrades.delete(socket);
 		});
 	};
-	const serverClose = httpServer.close.bind(httpServer);
-	httpServer.close = ((callback?: (err?: Error) => void) => {
-		isClosing = true;
-		for (const pending of pendingUpgrades) {
-			pending.destroy();
-		}
-		pendingUpgrades.clear();
-		return serverClose(callback as never);
-	}) as typeof httpServer.close;
 
 	nodeWebSocket.on(
 		"headers",
@@ -85,7 +144,9 @@ export function handleWebSocket(
 			// Socket errors crash Node.js if unhandled
 			socket.on("error", () => socket.destroy());
 
-			// True once another listener has claimed the socket (written its 101).
+			// True once another listener has written to the socket. Conservatively
+			// treated as claimed: whether the peer sent a 101 or an error
+			// response, attempting our own upgrade afterwards would corrupt it.
 			// `bytesWritten` is lifetime-cumulative, so compare against a baseline
 			// rather than zero to stay correct on reused keep-alive connections.
 			const bytesWrittenAtStart =
@@ -93,12 +154,16 @@ export function handleWebSocket(
 			const isClaimed = () =>
 				(socket as unknown as Socket).bytesWritten > bytesWrittenAtStart;
 
-			// Snapshot other-listener presence now, before the first yield: a
-			// once("upgrade") owner is removed before its callback runs, so a
-			// count taken after dispatchFetch cannot see it. Listeners added
-			// later cannot receive this already-emitted event, so the snapshot
-			// stays valid for this socket.
-			const hadOtherListeners = httpServer.listenerCount("upgrade") > 1;
+			// Prefer the emit-time listener count: a `prependOnceListener`
+			// owner added after us runs before us but its wrapper is already
+			// removed when our handler runs, so a live `listenerCount` would
+			// miss it. The emit wrapper snapshots before any removal. Fall
+			// back to a live count for direct (non-emit) invocations.
+			// Listeners added after emit cannot receive this event, so the
+			// snapshot stays valid for this socket.
+			const hadOtherListeners =
+				(listenerCounts.get(request) ??
+					httpServer.listenerCount("upgrade")) > 1;
 
 			// Synchronous preamble — runs before any other listener (we prepend).
 			// A throw here must not destroy the socket, since the real owner's

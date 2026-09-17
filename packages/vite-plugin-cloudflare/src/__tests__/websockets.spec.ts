@@ -715,6 +715,62 @@ describe("handleWebSocket", () => {
 		socket.destroy();
 	});
 
+	test("does not destroy sockets owned by a prepended one-shot async listener", async ({
+		expect,
+	}) => {
+		// A `prependOnceListener` owner added after our prepended handler runs
+		// before us, but Node removes its wrapper before invoking it. A live
+		// `listenerCount` in our handler would therefore miss it. The emit-time
+		// snapshot still sees it, letting a delayed one-shot owner complete.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.prependOnceListener("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				setTimeout(() => {
+					owner.handleUpgrade(request, socket, head, (ws) => {
+						owner.emit("connection", ws, request);
+					});
+				}, 300);
+			}
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
+
 	test("leaves the socket alone when dispatchFetch rejects with another listener present", async ({
 		expect,
 	}) => {
