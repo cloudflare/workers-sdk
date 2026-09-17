@@ -16,7 +16,7 @@ export const previewSecretDeleteCommand = createCommand({
 			"Delete a secret variable from a Worker Preview and create a new deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "open beta",
+		status: "private beta",
 	},
 	positionalArgs: ["key"],
 	args: {

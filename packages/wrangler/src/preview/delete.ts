@@ -7,7 +7,7 @@ export const previewDeleteCommand = createCommand({
 		description: "Delete a Preview and all its deployments",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "open beta",
+		status: "private beta",
 	},
 	args: {
 		name: {

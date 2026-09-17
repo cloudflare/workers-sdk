@@ -14,7 +14,7 @@ export const previewBaseConfigSecretBulkCommand = createCommand({
 		description: "Upload multiple secrets to the Preview base config",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "open beta",
+		status: "private beta",
 	},
 	positionalArgs: ["file"],
 	args: {

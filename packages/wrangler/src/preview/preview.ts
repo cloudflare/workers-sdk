@@ -18,7 +18,7 @@ export const previewCommand = createCommand({
 		description: "👀 Create a Preview deployment of the current Worker",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "open beta",
+		status: "private beta",
 	},
 	positionalArgs: ["script"],
 	args: {

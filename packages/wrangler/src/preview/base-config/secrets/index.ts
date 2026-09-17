@@ -6,7 +6,7 @@ export const previewBaseConfigSecretNamespace = createNamespace({
 		description: "Manage secrets on the Preview base config",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "open beta",
+		status: "private beta",
 	},
 });
 
