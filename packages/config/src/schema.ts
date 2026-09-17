@@ -636,6 +636,7 @@ const ObservabilitySchema = z.strictObject({
 	enabled: z.boolean().optional(),
 	headSamplingRate: z.number().optional(),
 	redactQueryString: z.boolean().optional(),
+	issues: z.strictObject({ enabled: z.boolean().optional() }).optional(),
 	logs: z
 		.strictObject({
 			enabled: z.boolean().optional(),

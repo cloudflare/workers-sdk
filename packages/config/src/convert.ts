@@ -262,6 +262,9 @@ function convertObservability(
 	if (observability.redactQueryString !== undefined) {
 		out.redact_query_string = observability.redactQueryString;
 	}
+	if (observability.issues !== undefined) {
+		out.issues = { enabled: observability.issues.enabled };
+	}
 	if (observability.logs !== undefined) {
 		const logs: NonNullable<NonNullable<RawConfig["observability"]>["logs"]> =
 			{};
