@@ -22,7 +22,9 @@ type UpgradeServerPatch = {
 
 const upgradeServerPatches = new WeakMap<object, UpgradeServerPatch>();
 
-function getUpgradeServerPatch(httpServer: vite.HttpServer): UpgradeServerPatch {
+function getUpgradeServerPatch(
+	httpServer: vite.HttpServer
+): UpgradeServerPatch {
 	const existing = upgradeServerPatches.get(httpServer);
 	if (existing) {
 		return existing;
@@ -164,8 +166,8 @@ export function handleWebSocket(
 			// Listeners added after emit cannot receive this event, so the
 			// snapshot stays valid for this socket.
 			const hadOtherListeners =
-				(listenerCounts.get(request) ??
-					httpServer.listenerCount("upgrade")) > 1;
+				(listenerCounts.get(request) ?? httpServer.listenerCount("upgrade")) >
+				1;
 
 			// Synchronous preamble — runs before any other listener (we prepend).
 			// A throw here must not destroy the socket, since the real owner's
