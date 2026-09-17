@@ -160,7 +160,7 @@ export function mergeCloudflareConfigWorker(
 
 	const workerExports: NonNullable<WorkerOptions["config"]["exports"]> = {};
 	for (const [name, exported] of Object.entries(configExports ?? {})) {
-		// Containers aren't supported by the pool, as for Wrangler configs
+		// The pool supports Containers only through Wrangler configs
 		const { container: _container, ...rest } = exported as typeof exported & {
 			container?: string;
 		};

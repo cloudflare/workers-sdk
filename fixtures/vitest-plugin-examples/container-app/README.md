@@ -1,3 +1,5 @@
-# Apps with no-op containers
+# Container-backed Durable Objects
 
-Currently, `vitest-plugin` does not support testing containers yet. It should still let you test your application as long as you do not test with any code paths that interact with containers.
+The enabled project tests scheduler-backed default images and Durable Object-managed named images through the real `ctx.container` runtime interface. The plugin builds both images from `wrangler.jsonc` before the project's tests run.
+
+The disabled project retains the same Container configuration but sets `dev.enable_containers` to `false`, so Worker tests that do not use Containers remain Docker-independent.

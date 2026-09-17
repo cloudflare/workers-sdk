@@ -4,24 +4,36 @@
 	// don't provide compatibility_date so that vitest will infer the latest one
 	"containers": [
 		{
+			"class_name": "NamedImageContainer",
+			"name": "named-image-container",
+			"scheduling_policy": "durable_object",
+			"images": {
+				"app": { "dockerfile": "./Dockerfile" },
+			},
+		},
+		{
+			"class_name": "DefaultImageContainer",
+			"name": "default-image-container",
 			"image": "./Dockerfile",
-			"class_name": "MyContainer",
-			"name": "container",
 			"max_instances": 2,
 		},
 	],
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "MyContainer",
-				"name": "MY_CONTAINER",
+				"class_name": "NamedImageContainer",
+				"name": "NAMED_CONTAINER",
+			},
+			{
+				"class_name": "DefaultImageContainer",
+				"name": "DEFAULT_CONTAINER",
 			},
 		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_sqlite_classes": ["MyContainer"],
+			"new_sqlite_classes": ["NamedImageContainer", "DefaultImageContainer"],
 		},
 	],
 }
