@@ -179,14 +179,19 @@ describe("worker selector", () => {
 		);
 	});
 
-	test("keeps workerless Message-ID detail lookups unfiltered", async ({
+	test("keeps workerless explicit and saved Message-ID detail lookups unfiltered", async ({
 		expect,
 	}) => {
+		const requestedCaptureIds: Array<string | null> = [];
 		const requestedWorkers: Array<string | null> = [];
 		const requestedEmailIds: Array<string | null> = [];
 		await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
 			const search = new URL(route.request().url()).searchParams;
 			const emailId = search.get("email_id");
+			const captureId = search.get("capture_id");
+			if (captureId !== null) {
+				requestedCaptureIds.push(captureId);
+			}
 			if (emailId !== null) {
 				requestedWorkers.push(search.get("worker"));
 				requestedEmailIds.push(emailId);
@@ -239,6 +244,22 @@ describe("worker selector", () => {
 		await expect.poll(() => requestedEmailIds.length).toBeGreaterThan(0);
 		expect(requestedEmailIds.every((id) => id === messageId)).toBe(true);
 		expect(requestedWorkers.every((worker) => worker === null)).toBe(true);
+		expect(requestedCaptureIds).toEqual([]);
+
+		requestedEmailIds.length = 0;
+		requestedWorkers.length = 0;
+		const savedMessageId = "<saved@example.com>";
+		await page.goto(
+			new URL(
+				`/cdn-cgi/local/explorer/email/routing/${encodeURIComponent(savedMessageId)}`,
+				viteUrl
+			).toString()
+		);
+
+		await expect.poll(() => requestedEmailIds.length).toBeGreaterThan(0);
+		expect(requestedEmailIds.every((id) => id === savedMessageId)).toBe(true);
+		expect(requestedWorkers.every((worker) => worker === null)).toBe(true);
+		expect(requestedCaptureIds).toEqual([]);
 	});
 
 	test("discards stale email lists after switching workers", async ({

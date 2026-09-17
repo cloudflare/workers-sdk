@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type JSX } from "react";
 import { getSelectedWorker } from "../components/WorkerSelector";
+import { isEmailCaptureId } from "./email/shared/types";
 
 export const Route = createFileRoute("/email")({
 	component: EmailLayout,
@@ -57,6 +58,7 @@ function EmailLayout(): JSX.Element {
 		if (routingDetailParams) {
 			if (
 				search.lookup === "message-id" ||
+				!isEmailCaptureId(routingDetailParams.captureId) ||
 				search.worker !== undefined ||
 				selectedWorker === ""
 			) {
