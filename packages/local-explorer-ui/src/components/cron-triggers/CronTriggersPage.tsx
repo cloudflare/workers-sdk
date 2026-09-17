@@ -173,16 +173,17 @@ export function CronTriggersPage({
 												size="sm"
 												variant="secondary"
 											>
-												Add custom
+												Add draft
 											</Button>
 										) : null
 									}
+									help="Draft crons are stored locally and do not modify your Worker configuration."
 									pane="custom"
-									title="Custom crons"
+									title="Draft crons"
 								>
 									{customRows.length === 0 ? (
 										<p className="px-1 py-2 text-sm text-kumo-subtle">
-											Custom crons you add or duplicate appear here.
+											Draft crons you add or duplicate appear here.
 										</p>
 									) : null}
 									{customRows.map(renderRow)}
@@ -199,11 +200,13 @@ export function CronTriggersPage({
 function CronPane({
 	action,
 	children,
+	help,
 	pane,
 	title,
 }: {
 	action?: JSX.Element | null;
 	children: React.ReactNode;
+	help?: string;
 	pane: CronPaneKind;
 	title: string;
 }): JSX.Element {
@@ -214,13 +217,26 @@ function CronPane({
 			data-cron-pane={pane}
 		>
 			<header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-kumo-fill bg-kumo-base px-5">
-				<h2
-					className="text-base font-semibold text-kumo-default"
-					data-cron-pane-heading
-					tabIndex={-1}
-				>
-					{title}
-				</h2>
+				<div className="inline-flex items-center gap-1">
+					<h2
+						className="text-base font-semibold text-kumo-default"
+						data-cron-pane-heading
+						tabIndex={-1}
+					>
+						{title}
+					</h2>
+					{help ? (
+						<Tooltip asChild content={help}>
+							<button
+								aria-label={`${title} help`}
+								className="focus-visible:ring-kumo-ring inline-flex h-5 w-5 items-center justify-center rounded-md text-kumo-subtle outline-none hover:bg-kumo-tint focus-visible:ring-2"
+								type="button"
+							>
+								<InfoIcon size={14} />
+							</button>
+						</Tooltip>
+					) : null}
+				</div>
 				{action}
 			</header>
 			<div

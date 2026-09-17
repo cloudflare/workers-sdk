@@ -59,7 +59,7 @@ describe("Cron Triggers", () => {
 		await page
 			.getByRole("heading", { name: "No Cron Triggers configured" })
 			.waitFor();
-		expect(await page.getByRole("button", { name: "Add custom" }).count()).toBe(
+		expect(await page.getByRole("button", { name: "Add draft" }).count()).toBe(
 			0
 		);
 		expect(
@@ -76,7 +76,7 @@ describe("Cron Triggers", () => {
 		const configuredPane = page.getByRole("region", {
 			name: "Configured crons",
 		});
-		const customPane = page.getByRole("region", { name: "Custom crons" });
+		const customPane = page.getByRole("region", { name: "Draft crons" });
 		const [configuredBox, customBox] = await Promise.all([
 			configuredPane.boundingBox(),
 			customPane.boundingBox(),
@@ -231,7 +231,7 @@ describe("Cron Triggers", () => {
 		const configuredPane = page.getByRole("region", {
 			name: "Configured crons",
 		});
-		const customPane = page.getByRole("region", { name: "Custom crons" });
+		const customPane = page.getByRole("region", { name: "Draft crons" });
 		const [configuredBox, customBox] = await Promise.all([
 			configuredPane.boundingBox(),
 			customPane.boundingBox(),

@@ -358,7 +358,7 @@ function CronBuilder({
 		>
 			<legend className="px-1 text-sm font-medium text-kumo-default">
 				<span className="inline-flex items-center gap-1">
-					Build a UTC expression
+					Build a Cron expression (UTC)
 					<Tooltip
 						asChild
 						content={
@@ -427,7 +427,7 @@ function CronBuilder({
 					<BuilderNumber
 						errors={generated.errors}
 						field="hour"
-						label="Hour (UTC)"
+						label="Hour"
 						onChange={updateField}
 						rowId={rowId}
 						value={value.hour}
@@ -437,7 +437,7 @@ function CronBuilder({
 					<BuilderNumber
 						errors={generated.errors}
 						field="minute"
-						label="Minute (UTC)"
+						label="Minute"
 						onChange={updateField}
 						rowId={rowId}
 						value={value.minute}
@@ -598,7 +598,6 @@ function CustomTimeEditor({
 			{row.customTimeInputMode === "calendar" ? (
 				<div className="grid min-w-0 gap-1">
 					<label className="grid min-w-0 gap-1 text-sm text-kumo-default">
-						Date and Time (UTC)
 						<input
 							aria-describedby={
 								calendar?.kind === "invalid"
@@ -651,7 +650,6 @@ function CustomTimeEditor({
 			) : (
 				<div className="grid min-w-0 gap-1">
 					<label className="grid min-w-0 gap-1 text-sm text-kumo-default">
-						Epoch milliseconds
 						<input
 							aria-describedby={
 								parseEpochMilliseconds(row.epochValue ?? "").error
