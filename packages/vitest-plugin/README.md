@@ -7,6 +7,7 @@ Refer to the [documentation](https://developers.cloudflare.com/workers/testing/v
 - 📚 Provides direct access to Workers runtime APIs and bindings
 - 📦 Implements isolated per-test storage
 - 🔥 Runs tests fully-locally using [Miniflare](https://miniflare.dev/)
+- 🐳 Supports container-backed Durable Objects
 - ⚡️ Leverages Vitest's hot-module reloading for near instant reruns
 - ↩️ Provides a declarative interface for mocking outbound requests
 - 🧩 Supports projects with multiple Workers

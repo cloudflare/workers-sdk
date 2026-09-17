@@ -1233,9 +1233,6 @@ importers:
       '@better-auth/stripe':
         specifier: ^1.4.6
         version: 1.5.4(a315f663dfd959d14386d5c0fa66fa47)
-      '@cloudflare/containers':
-        specifier: ^0.2.2
-        version: 0.2.2
       '@cloudflare/vitest-plugin':
         specifier: workspace:*
         version: link:../../packages/vitest-plugin
@@ -4110,6 +4107,9 @@ importers:
       '@cloudflare/config':
         specifier: workspace:*
         version: link:../config
+      '@cloudflare/containers-shared':
+        specifier: workspace:*
+        version: link:../containers-shared
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
@@ -5578,9 +5578,6 @@ packages:
 
   '@cloudflare/config@0.26.0':
     resolution: {integrity: sha512-18i2llyc49mWX/CQ5edwBlXclfMWZ6QIvquRbHWuxRYzKVd/immaQyRNvwqIHMUowDeNRwVk+K68xsVavdXPSQ==}
-
-  '@cloudflare/containers@0.2.2':
-    resolution: {integrity: sha512-cfTSd7M96Z9NeCiaN4i3FuMb+i2Nzi0HbMuxvMAnUmkXwtWIZCQ3XLqUWQkdCKWNJZ/3BLMInC6ntFvpbTWIpA==}
 
   '@cloudflare/elements@3.0.3':
     resolution: {integrity: sha512-s6Sjh+IWJD0xn+4iy6hk/FYwY1gAFLWvpiWUmfDZWrQ09ZOTto8aRwpoEN7jUV6dZCPlCkUqMj4xKwRzDQ72FQ==}
@@ -17389,8 +17386,6 @@ snapshots:
   '@cloudflare/config@0.26.0':
     dependencies:
       zod: 4.6.5
-
-  '@cloudflare/containers@0.2.2': {}
 
   '@cloudflare/elements@3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
