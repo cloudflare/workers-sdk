@@ -12,6 +12,16 @@ import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
 import type { DashApplication } from "@cloudflare/containers-shared";
 
 type ContainerState = "active" | "ready" | "provisioning" | "degraded";
+type ApplicationHealthInstancesWithAssigned =
+	DashApplication["health"]["instances"] & {
+		assigned?: number;
+	};
+
+function liveInstanceCount(app: DashApplication): number {
+	const instances: ApplicationHealthInstancesWithAssigned =
+		app.health.instances;
+	return instances.active + (instances.assigned ?? 0);
+}
 
 function deriveContainerState(app: DashApplication): ContainerState {
 	const h = app.health.instances;
@@ -21,7 +31,7 @@ function deriveContainerState(app: DashApplication): ContainerState {
 	if (h.starting > 0 || h.scheduling > 0) {
 		return "provisioning";
 	}
-	if (h.active > 0) {
+	if (liveInstanceCount(app) > 0) {
 		return "active";
 	}
 	return "ready";
@@ -59,20 +69,35 @@ async function fetchContainerPage(
 		if (err instanceof ApiError) {
 			if (err.status === 400 || err.status === 404) {
 				throw new UserError(
-					`There has been an error listing containers.\n${err.body.error}`,
+					`There has been an error listing container applications.\n${err.body.error}`,
 					{ telemetryMessage: "containers list fetch failed" }
 				);
 			}
 
 			throw new Error(
-				`There has been an unknown error listing containers.\n${JSON.stringify(err.body)}`
+				`There has been an unknown error listing container applications.\n${JSON.stringify(err.body)}`
 			);
 		}
 
 		throw new Error(
-			`There has been an internal error listing containers.\n${err.message}`
+			`There has been an internal error listing container applications.\n${err.message}`
 		);
 	}
+}
+
+async function fetchAllContainerApplications(
+	perPage: number
+): Promise<DashApplication[]> {
+	const applications: DashApplication[] = [];
+	let pageToken: string | undefined;
+
+	do {
+		const page = await fetchContainerPage(perPage, pageToken);
+		applications.push(...page.data);
+		pageToken = page.nextPageToken;
+	} while (pageToken);
+
+	return applications;
 }
 
 function renderContainerTable(apps: DashApplication[]) {
@@ -80,10 +105,10 @@ function renderContainerTable(apps: DashApplication[]) {
 		apps.map((app) => {
 			const state = deriveContainerState(app);
 			return {
-				ID: app.id,
+				"APPLICATION ID": app.id,
 				NAME: app.name,
 				STATE: colorState(state),
-				"LIVE INSTANCES": String(app.instances),
+				"LIVE INSTANCES": String(liveInstanceCount(app)),
 				"LAST MODIFIED": app.updated_at,
 			};
 		})
@@ -96,6 +121,7 @@ function appsToJsonOutput(apps: DashApplication[]) {
 		name: app.name,
 		state: deriveContainerState(app),
 		instances: app.instances,
+		live_instances: liveInstanceCount(app),
 		image: app.image,
 		version: app.version,
 		updated_at: app.updated_at,
@@ -105,14 +131,17 @@ function appsToJsonOutput(apps: DashApplication[]) {
 
 const listArgs = {
 	"per-page": {
-		describe: "Number of containers per page",
+		describe: "Number of container applications per page",
 		type: "number",
 		default: 25,
 		coerce: (val: number) => {
-			if (val < 1) {
-				throw new UserError("--per-page must be at least 1", {
-					telemetryMessage: "containers list invalid per-page",
-				});
+			if (!Number.isInteger(val) || val < 1 || val > 1000) {
+				throw new UserError(
+					"--per-page must be an integer between 1 and 1000",
+					{
+						telemetryMessage: "containers list invalid per-page",
+					}
+				);
 			}
 			return val;
 		},
@@ -130,8 +159,8 @@ export async function listCommand(args: ListArgs): Promise<void> {
 	// --json: output JSON and exit
 	if (args.json) {
 		try {
-			const { data } = await fetchContainerPage();
-			logger.json(appsToJsonOutput(data));
+			const applications = await fetchAllContainerApplications(args.perPage);
+			logger.json(appsToJsonOutput(applications));
 			return;
 		} catch (err) {
 			if (err instanceof UserError) {
@@ -146,12 +175,12 @@ export async function listCommand(args: ListArgs): Promise<void> {
 
 	// Non-interactive: fetch all results, render a single table, no pagination
 	if (isNonInteractiveOrCI()) {
-		const { data } = await fetchContainerPage();
-		if (data.length === 0) {
-			logger.log("No containers found.");
+		const applications = await fetchAllContainerApplications(args.perPage);
+		if (applications.length === 0) {
+			logger.log("No container applications found.");
 			return;
 		}
-		renderContainerTable(data);
+		renderContainerTable(applications);
 		return;
 	}
 
@@ -168,7 +197,7 @@ export async function listCommand(args: ListArgs): Promise<void> {
 	do {
 		// Refill buffer from API when empty
 		if (buffer.length === 0) {
-			start("Loading containers");
+			start("Loading container applications");
 			try {
 				const { data, nextPageToken } = await fetchContainerPage(
 					args.perPage,
@@ -182,7 +211,7 @@ export async function listCommand(args: ListArgs): Promise<void> {
 		}
 
 		if (buffer.length === 0 && totalShown === 0) {
-			logger.log("No containers found.");
+			logger.log("No container applications found.");
 			return;
 		}
 
@@ -197,7 +226,7 @@ export async function listCommand(args: ListArgs): Promise<void> {
 		if (hasMore) {
 			logger.log(
 				dim(
-					`Showing ${totalShown} containers. Press Enter to load ${args.perPage} more, or q/Esc to stop.`
+					`Showing ${totalShown} container applications. Press Enter to load ${args.perPage} more, or q/Esc to stop.`
 				)
 			);
 			await new Promise<void>((resolve) => {
@@ -225,7 +254,7 @@ export async function listCommand(args: ListArgs): Promise<void> {
 
 export const containersListCommand = createCommand({
 	metadata: {
-		description: "List containers",
+		description: "List container applications",
 		status: "stable",
 		owner: "Product: Cloudchamber",
 	},

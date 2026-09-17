@@ -9,6 +9,8 @@ import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
 const MOCK_APPLICATION_SINGLE = `{"id":"asdf","created_at":"2025-02-14T18:03:13.268999936Z","account_id":"test-account","name":"app-test","version":1,"configuration":{"image":"registry.test.cfdata.org/test-app:v1","network":{"mode":"private"}},"scheduling_policy":"regional","instances":2,"jobs":false,"constraints":{"region":"WNAM"},"durable_objects":{"namespace_id":"test-id"},"health":{"instances":{"healthy":2,"failed":0,"scheduling":0,"starting":0}}}`;
+const APPLICATION_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+const NAMESPACE_APPLICATION_ID = "7d88cd87be4b402387fd3aafa1d461af";
 
 describe("containers info", () => {
 	const std = mockConsoleMethods();
@@ -28,10 +30,10 @@ describe("containers info", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers info <ID>
 
-			Get information about a specific container
+			Get information about a container application
 
 			POSITIONALS
-			  ID  ID of the container to view  [string] [required]
+			  ID  ID of the container application to view  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config          Path to Wrangler configuration file  [string]
@@ -66,7 +68,7 @@ describe("containers info", () => {
 		setWranglerConfig({});
 		msw.use(
 			http.get(
-				"*/applications/asdf",
+				`*/applications/${APPLICATION_ID}`,
 				async ({ request }) => {
 					expect(await request.text()).toEqual("");
 					return HttpResponse.json(
@@ -76,7 +78,7 @@ describe("containers info", () => {
 				{ once: true }
 			)
 		);
-		await runWrangler("containers info asdf --json");
+		await runWrangler(`containers info ${APPLICATION_ID.toUpperCase()} --json`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
@@ -112,6 +114,55 @@ describe("containers info", () => {
 		`);
 	});
 
+	it("should reject an actor ID as an application ID", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+
+		await expect(
+			runWrangler(`containers info ${"a".repeat(64)} --json`)
+		).rejects.toThrow("Expected an application ID");
+	});
+
+	it("should get a namespace-backed application by its namespace ID", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			http.get(
+				"*/applications/:id",
+				async ({ params, request }) => {
+					expect(params.id).toBe(NAMESPACE_APPLICATION_ID);
+					expect(await request.text()).toEqual("");
+					return HttpResponse.json({
+						success: true,
+						result: {
+							id: NAMESPACE_APPLICATION_ID,
+							created_at: "2026-09-16T16:55:40Z",
+							updated_at: "2026-09-16T17:02:58Z",
+							account_id: "some-account-id",
+							name: "chess-match",
+							scheduling_policy: "durable_object",
+							durable_objects: { namespace_id: NAMESPACE_APPLICATION_ID },
+						},
+						errors: [],
+						messages: [],
+					});
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler(`containers info ${NAMESPACE_APPLICATION_ID} --json`);
+
+		expect(JSON.parse(std.out)).toMatchObject({
+			id: NAMESPACE_APPLICATION_ID,
+			name: "chess-match",
+			scheduling_policy: "durable_object",
+			durable_objects: { namespace_id: NAMESPACE_APPLICATION_ID },
+		});
+	});
+
 	it("should throw JsonFriendlyFatalError on unexpected API error with --json", async ({
 		expect,
 	}) => {
@@ -119,7 +170,7 @@ describe("containers info", () => {
 		setWranglerConfig({});
 		msw.use(
 			http.get(
-				"*/applications/asdf",
+				`*/applications/${APPLICATION_ID}`,
 				async () => {
 					return HttpResponse.json(
 						{
@@ -133,21 +184,21 @@ describe("containers info", () => {
 				{ once: true }
 			)
 		);
-		await expect(runWrangler("containers info asdf --json")).rejects.toThrow(
-			/There has been an internal error/
-		);
+		await expect(
+			runWrangler(`containers info ${APPLICATION_ID} --json`)
+		).rejects.toThrow(/There has been an internal error/);
 		expect(() => JSON.parse(std.out)).not.toThrow();
 		expect(JSON.parse(std.out)).toHaveProperty("error");
 	});
 
-	it("should show a single container when given an ID (json)", async ({
+	it("should show a single container application when given an ID", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
 			http.get(
-				"*/applications/asdf",
+				`*/applications/${APPLICATION_ID}`,
 				async ({ request }) => {
 					expect(await request.text()).toEqual("");
 					return HttpResponse.json(
@@ -157,7 +208,7 @@ describe("containers info", () => {
 				{ once: true }
 			)
 		);
-		await runWrangler("containers info asdf");
+		await runWrangler(`containers info ${APPLICATION_ID}`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"{

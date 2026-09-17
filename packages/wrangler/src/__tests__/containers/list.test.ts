@@ -10,6 +10,14 @@ import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { DashApplication } from "@cloudflare/containers-shared";
 
+type DashApplicationWithAssigned = Omit<DashApplication, "health"> & {
+	health: Omit<DashApplication["health"], "instances"> & {
+		instances: DashApplication["health"]["instances"] & {
+			assigned?: number;
+		};
+	};
+};
+
 /** Helper: wrap DashApplication[] in V4 envelope for MSW */
 function dashAppsResponse(
 	apps: DashApplication[],
@@ -26,6 +34,23 @@ function dashAppsResponse(
 		messages: [],
 	};
 }
+
+const NAMESPACE_APPLICATION: DashApplicationWithAssigned = {
+	...MOCK_DASH_APPLICATIONS[0],
+	id: "7d88cd87be4b402387fd3aafa1d461af",
+	name: "chess-match",
+	instances: 0,
+	health: {
+		instances: {
+			active: 0,
+			assigned: 2,
+			healthy: 0,
+			failed: 0,
+			starting: 0,
+			scheduling: 0,
+		},
+	},
+};
 
 describe("containers list", () => {
 	const std = mockConsoleMethods();
@@ -45,7 +70,7 @@ describe("containers list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers list
 
-			List containers
+			List container applications
 
 			GLOBAL FLAGS
 			  -c, --config          Path to Wrangler configuration file  [string]
@@ -58,7 +83,7 @@ describe("containers list", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			      --per-page  Number of containers per page  [number] [default: 25]
+			      --per-page  Number of container applications per page  [number] [default: 25]
 			      --json      Return output as JSON  [boolean] [default: false]"
 		`);
 	});
@@ -67,7 +92,7 @@ describe("containers list", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(runWrangler("containers list --per-page 0")).rejects.toThrow(
-			/--per-page must be at least 1/
+			/--per-page must be an integer between 1 and 1000/
 		);
 	});
 
@@ -75,8 +100,24 @@ describe("containers list", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(runWrangler("containers list --per-page -1")).rejects.toThrow(
-			/--per-page must be at least 1/
+			/--per-page must be an integer between 1 and 1000/
 		);
+	});
+
+	it("should reject a fractional --per-page value", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(runWrangler("containers list --per-page 1.5")).rejects.toThrow(
+			/--per-page must be an integer between 1 and 1000/
+		);
+	});
+
+	it("should reject --per-page above the API limit", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("containers list --per-page 1001")
+		).rejects.toThrow(/--per-page must be an integer between 1 and 1000/);
 	});
 
 	it("should show the correct authentication error", async ({ expect }) => {
@@ -114,7 +155,7 @@ describe("containers list", () => {
 			)
 		);
 		await expect(runWrangler("containers list")).rejects.toThrow(
-			/There has been an error listing containers/
+			/There has been an error listing container applications/
 		);
 	});
 
@@ -139,7 +180,7 @@ describe("containers list", () => {
 			)
 		);
 		await expect(runWrangler("containers list")).rejects.toThrow(
-			/unknown error listing containers/
+			/unknown error listing container applications/
 		);
 	});
 
@@ -159,17 +200,39 @@ describe("containers list", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"┌─┬─┬─┬─┬─┐
-			│ ID │ NAME │ STATE │ LIVE INSTANCES │ LAST MODIFIED │
+			│ APPLICATION ID │ NAME │ STATE │ LIVE INSTANCES │ LAST MODIFIED │
 			├─┼─┼─┼─┼─┤
 			│ aaaaaaaa-1111-1111-1111-111111111111 │ my-active-app │ active │ 2 │ 2025-06-10T12:00:00Z │
 			├─┼─┼─┼─┼─┤
-			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 3 │ 2025-06-11T09:30:00Z │
+			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 1 │ 2025-06-11T09:30:00Z │
 			├─┼─┼─┼─┼─┤
-			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 4 │ 2025-06-12T16:45:00Z │
+			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 0 │ 2025-06-12T16:45:00Z │
 			├─┼─┼─┼─┼─┤
 			│ dddddddd-4444-4444-4444-444444444444 │ my-ready-app │ ready │ 0 │ 2025-06-13T07:15:00Z │
 			└─┴─┴─┴─┴─┘"
 		`);
+	});
+
+	it("should show active namespace instances in the table", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			http.get(
+				"*/dash/applications",
+				async () =>
+					HttpResponse.json(dashAppsResponse([NAMESPACE_APPLICATION])),
+				{ once: true }
+			)
+		);
+
+		await runWrangler("containers list");
+
+		expect(std.out).toContain("LIVE INSTANCES");
+		expect(std.out).toContain(
+			"│ 7d88cd87be4b402387fd3aafa1d461af │ chess-match │ active │ 2 │"
+		);
 	});
 
 	it("should handle empty results (non-TTY)", async ({ expect }) => {
@@ -185,11 +248,11 @@ describe("containers list", () => {
 			)
 		);
 		await runWrangler("containers list");
-		// Non-TTY without --json: empty list logs "No containers found." as text
-		expect(std.out).toContain("No containers found.");
+		// Non-TTY without --json: empty list logs the empty application state as text
+		expect(std.out).toContain("No container applications found.");
 	});
 
-	it("should fetch all results in a single unpaginated request (non-TTY)", async ({
+	it("should fetch all results from a single page (non-TTY)", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
@@ -201,8 +264,7 @@ describe("containers list", () => {
 				async ({ request }) => {
 					requestCount++;
 					const url = new URL(request.url);
-					// Non-interactive omits per_page so the API returns everything
-					expect(url.searchParams.has("per_page")).toBe(false);
+					expect(url.searchParams.get("per_page")).toBe("25");
 					expect(url.searchParams.has("page_token")).toBe(false);
 					return HttpResponse.json(dashAppsResponse(MOCK_DASH_APPLICATIONS));
 				},
@@ -213,17 +275,47 @@ describe("containers list", () => {
 		expect(requestCount).toBe(1);
 		expect(std.out).toMatchInlineSnapshot(`
 			"┌─┬─┬─┬─┬─┐
-			│ ID │ NAME │ STATE │ LIVE INSTANCES │ LAST MODIFIED │
+			│ APPLICATION ID │ NAME │ STATE │ LIVE INSTANCES │ LAST MODIFIED │
 			├─┼─┼─┼─┼─┤
 			│ aaaaaaaa-1111-1111-1111-111111111111 │ my-active-app │ active │ 2 │ 2025-06-10T12:00:00Z │
 			├─┼─┼─┼─┼─┤
-			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 3 │ 2025-06-11T09:30:00Z │
+			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 1 │ 2025-06-11T09:30:00Z │
 			├─┼─┼─┼─┼─┤
-			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 4 │ 2025-06-12T16:45:00Z │
+			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 0 │ 2025-06-12T16:45:00Z │
 			├─┼─┼─┼─┼─┤
 			│ dddddddd-4444-4444-4444-444444444444 │ my-ready-app │ ready │ 0 │ 2025-06-13T07:15:00Z │
 			└─┴─┴─┴─┴─┘"
 		`);
+	});
+
+	it("should follow every application page in non-interactive output", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		let requestCount = 0;
+		msw.use(
+			http.get("*/dash/applications", async ({ request }) => {
+				requestCount++;
+				const pageToken = new URL(request.url).searchParams.get("page_token");
+				if (pageToken === null) {
+					return HttpResponse.json(
+						dashAppsResponse(MOCK_DASH_APPLICATIONS.slice(0, 2), "next-page")
+					);
+				}
+
+				expect(pageToken).toBe("next-page");
+				return HttpResponse.json(
+					dashAppsResponse(MOCK_DASH_APPLICATIONS.slice(2))
+				);
+			})
+		);
+
+		await runWrangler("containers list");
+
+		expect(requestCount).toBe(2);
+		expect(std.out).toContain("my-active-app");
+		expect(std.out).toContain("my-ready-app");
 	});
 
 	describe("state derivation", () => {
@@ -372,6 +464,30 @@ describe("containers list", () => {
 	});
 
 	describe("--json", () => {
+		it("should expose active namespace instances without losing the configured count", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			setWranglerConfig({});
+			msw.use(
+				http.get(
+					"*/dash/applications",
+					async () =>
+						HttpResponse.json(dashAppsResponse([NAMESPACE_APPLICATION])),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("containers list --json");
+
+			expect(JSON.parse(std.out)[0]).toMatchObject({
+				id: "7d88cd87be4b402387fd3aafa1d461af",
+				state: "active",
+				instances: 0,
+				live_instances: 2,
+			});
+		});
+
 		it("should output JSON matching expected schema", async ({ expect }) => {
 			setIsTTY(false);
 			setWranglerConfig({});
@@ -393,6 +509,7 @@ describe("containers list", () => {
 					name: expect.any(String),
 					state: expect.any(String),
 					instances: expect.any(Number),
+					live_instances: expect.any(Number),
 					image: expect.any(String),
 					version: expect.any(Number),
 					updated_at: expect.any(String),
@@ -416,9 +533,7 @@ describe("containers list", () => {
 			expect(output).toEqual([]);
 		});
 
-		it("should fetch all results in a single unpaginated request", async ({
-			expect,
-		}) => {
+		it("should fetch all results from a single page", async ({ expect }) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			let requestCount = 0;
@@ -428,7 +543,7 @@ describe("containers list", () => {
 					async ({ request }) => {
 						requestCount++;
 						const url = new URL(request.url);
-						expect(url.searchParams.has("per_page")).toBe(false);
+						expect(url.searchParams.get("per_page")).toBe("25");
 						expect(url.searchParams.has("page_token")).toBe(false);
 						return HttpResponse.json(dashAppsResponse(MOCK_DASH_APPLICATIONS));
 					},
@@ -439,6 +554,33 @@ describe("containers list", () => {
 			expect(requestCount).toBe(1);
 			const output = JSON.parse(std.out);
 			expect(output).toHaveLength(4);
+		});
+
+		it("should follow every application page in JSON output", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			setWranglerConfig({});
+			let requestCount = 0;
+			msw.use(
+				http.get("*/dash/applications", async ({ request }) => {
+					requestCount++;
+					const pageToken = new URL(request.url).searchParams.get("page_token");
+					return HttpResponse.json(
+						pageToken === null
+							? dashAppsResponse(
+									MOCK_DASH_APPLICATIONS.slice(0, 2),
+									"next-page"
+								)
+							: dashAppsResponse(MOCK_DASH_APPLICATIONS.slice(2))
+					);
+				})
+			);
+
+			await runWrangler("containers list --json");
+
+			expect(requestCount).toBe(2);
+			expect(JSON.parse(std.out)).toHaveLength(4);
 		});
 
 		it("should throw JsonFriendlyFatalError on unexpected API error", async ({
@@ -464,7 +606,7 @@ describe("containers list", () => {
 				)
 			);
 			await expect(runWrangler("containers list --json")).rejects.toThrow(
-				/unknown error listing containers/
+				/unknown error listing container applications/
 			);
 		});
 
@@ -492,7 +634,7 @@ describe("containers list", () => {
 				)
 			);
 			await expect(runWrangler("containers list --json")).rejects.toThrow(
-				/There has been an error listing containers/
+				/There has been an error listing container applications/
 			);
 		});
 	});

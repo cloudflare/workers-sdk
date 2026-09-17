@@ -8,7 +8,8 @@ import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { ExpectStatic } from "vitest";
 
-const testContainerID = "6925adea-c4ad-4aa6-bffd-d26783e9afbb";
+const testApplicationID = "6925adea-c4ad-4aa6-bffd-d26783e9afbb";
+const namespaceApplicationID = "7d88cd87be4b402387fd3aafa1d461af";
 
 describe("containers delete", () => {
 	const stdCli = mockCLIOutput();
@@ -29,10 +30,10 @@ describe("containers delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers delete <ID>
 
-			Delete a container
+			Delete a container application
 
 			POSITIONALS
-			  ID  ID of the container to delete  [string] [required]
+			  ID  ID of the container application to delete  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config          Path to Wrangler configuration file  [string]
@@ -46,12 +47,71 @@ describe("containers delete", () => {
 		`);
 	});
 
-	it("should reject invalid container ID format", async ({ expect }) => {
+	it("should reject invalid application ID format", async ({ expect }) => {
 		setWranglerConfig({});
 		await expect(
 			runWrangler("containers delete invalid-id")
 		).rejects.toMatchInlineSnapshot(
-			`[Error: Expected a container ID but got invalid-id. Use \`wrangler containers list\` to view your containers and corresponding IDs.]`
+			`[Error: Expected an application ID but got invalid-id. Use \`wrangler containers list\` to view your container applications and corresponding IDs.]`
+		);
+	});
+
+	it("should reject an instance actor ID as an application ID", async ({
+		expect,
+	}) => {
+		setWranglerConfig({});
+		let deleteRequests = 0;
+		msw.use(
+			http.delete("*/applications/:id", () => {
+				deleteRequests++;
+				return HttpResponse.json({ success: true, result: {} });
+			})
+		);
+
+		await expect(
+			runWrangler(`containers delete ${"a".repeat(64)}`)
+		).rejects.toThrow("Expected an application ID");
+		expect(deleteRequests).toBe(0);
+	});
+
+	it("should reject a non-canonical namespace application ID", async ({
+		expect,
+	}) => {
+		setWranglerConfig({});
+		let deleteRequests = 0;
+		msw.use(
+			http.delete("*/applications/:id", () => {
+				deleteRequests++;
+				return HttpResponse.json({ success: true, result: {} });
+			})
+		);
+
+		await expect(
+			runWrangler(`containers delete ${namespaceApplicationID.toUpperCase()}`)
+		).rejects.toThrow("Expected an application ID");
+		expect(deleteRequests).toBe(0);
+	});
+
+	it("should delete a namespace application by its namespace ID", async ({
+		expect,
+	}) => {
+		setWranglerConfig({});
+		msw.use(
+			http.delete(
+				"*/applications/:id",
+				async ({ params, request }) => {
+					expect(params.id).toBe(namespaceApplicationID);
+					expect(await request.text()).toEqual("");
+					return HttpResponse.json({ success: true, result: {} });
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler(`containers delete ${namespaceApplicationID}`);
+
+		expect(stdCli.stdout).toContain(
+			"The container application has been deleted"
 		);
 	});
 
@@ -72,25 +132,29 @@ describe("containers delete", () => {
 				{ once: true }
 			)
 		);
-		await expect(runWrangler(`containers delete ${testContainerID}`)).rejects
+		await expect(runWrangler(`containers delete ${testApplicationID}`)).rejects
 			.toMatchInlineSnapshot(`
-			[Error: There has been an error deleting the container.
+			[Error: There has been an error deleting the container application.
 			something happened]
 		`);
 		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
 		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
+			"╭ Delete container application
 			│
 			"
 		`);
 	}
 
-	it("should delete container with 400", ({ expect }) =>
-		testStatusCode(expect, 400));
-	it("should delete container with 404", ({ expect }) =>
-		testStatusCode(expect, 404));
+	it("should handle a 400 response when deleting an application", ({
+		expect,
+	}) => testStatusCode(expect, 400));
+	it("should handle a 404 response when deleting an application", ({
+		expect,
+	}) => testStatusCode(expect, 404));
 
-	it("should delete container with 500", async ({ expect }) => {
+	it("should handle a 500 response when deleting an application", async ({
+		expect,
+	}) => {
 		setWranglerConfig({});
 		msw.use(
 			http.delete(
@@ -108,25 +172,26 @@ describe("containers delete", () => {
 				{ once: true }
 			)
 		);
-		await expect(runWrangler(`containers delete ${testContainerID}`)).rejects
+		await expect(runWrangler(`containers delete ${testApplicationID}`)).rejects
 			.toMatchInlineSnapshot(`
-			[Error: There has been an unknown error deleting the container.
+			[Error: There has been an unknown error deleting the container application.
 			{"error":"something happened"}]
 		`);
 		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
 		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
+			"╭ Delete container application
 			│
 			"
 		`);
 	});
 
-	it("should delete container", async ({ expect }) => {
+	it("should delete an application", async ({ expect }) => {
 		setWranglerConfig({});
 		msw.use(
 			http.delete(
 				"*/applications/:id",
-				async ({ request }) => {
+				async ({ params, request }) => {
+					expect(params.id).toBe(testApplicationID);
 					expect(await request.text()).toEqual("");
 					return new HttpResponse(`{"success": true, "result": {}}`, {
 						type: "application/json",
@@ -135,12 +200,12 @@ describe("containers delete", () => {
 				{ once: true }
 			)
 		);
-		await runWrangler(`containers delete ${testContainerID}`);
+		await runWrangler(`containers delete ${testApplicationID}`);
 		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
 		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
+			"╭ Delete container application
 			│
-			╰ Your container has been deleted
+			╰ The container application has been deleted
 
 			"
 		`);

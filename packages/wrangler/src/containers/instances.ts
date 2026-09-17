@@ -1,15 +1,24 @@
 import { dim, green, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
+import {
+	ApiError,
+	ApplicationsService,
+	listContainerInstances,
+} from "@cloudflare/containers-shared";
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { onKeyPress } from "../utils/onKeyPress";
+import {
+	isNamespaceApplicationId,
+	normalizeApplicationId,
+} from "./application-id";
 import { containersScope } from "./index";
 import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
 import type {
+	ContainerInstance,
 	DashApplicationDurableObjectInstance,
 	DashApplicationInstance,
 	DashApplicationInstances,
@@ -64,9 +73,23 @@ function colorState(state: InstanceState): string {
 }
 
 type InstanceRow = {
-	instance?: DashApplicationInstance;
-	durableObject?: DashApplicationDurableObjectInstance;
+	id: string;
+	name?: string;
+	state: InstanceState;
+	location?: string;
+	version?: number;
+	created?: string;
+	canonical?: ContainerInstance;
+	isDurableObject: boolean;
 };
+
+type CanonicalInstanceRow = InstanceRow & {
+	canonical: ContainerInstance;
+};
+
+function isCanonicalInstanceRow(row: InstanceRow): row is CanonicalInstanceRow {
+	return row.canonical !== undefined;
+}
 
 /**
  * Join instances with durable_objects data. When DO data is present,
@@ -77,8 +100,14 @@ function buildInstanceRows(data: DashApplicationInstances): InstanceRow[] {
 	const doList = data.durable_objects ?? [];
 
 	if (doList.length === 0) {
-		// Non-DO application: just return raw instances
-		return data.instances.map((instance) => ({ instance }));
+		return data.instances.map((instance) => ({
+			id: instance.id,
+			state: deriveInstanceState(instance),
+			location: instance.location,
+			version: instance.app_version,
+			created: instance.created_at,
+			isDurableObject: false,
+		}));
 	}
 
 	// Build a map from deployment_id -> instance for fast lookup
@@ -87,12 +116,30 @@ function buildInstanceRows(data: DashApplicationInstances): InstanceRow[] {
 		instanceByDeploymentId.set(inst.id, inst);
 	}
 
-	// Each DO is a row; join with matching instance if one exists
-	return doList.map((doInst) => ({
-		instance: doInst.deployment_id
+	return doList.map((doInst) => {
+		const instance = doInst.deployment_id
 			? instanceByDeploymentId.get(doInst.deployment_id)
-			: undefined,
-		durableObject: doInst,
+			: undefined;
+		return {
+			id: doInst.id,
+			name: doInst.name,
+			state: instance ? deriveInstanceState(instance) : "inactive",
+			location: instance?.location,
+			version: instance?.app_version,
+			created: instance?.created_at ?? doInst.assigned_at,
+			isDurableObject: true,
+		};
+	});
+}
+
+function buildContainerInstanceRows(data: ContainerInstance[]): InstanceRow[] {
+	return data.map((instance) => ({
+		id: instance.id,
+		name: instance.name,
+		state: instance.status.state,
+		location: instance.location?.name,
+		canonical: instance,
+		isDurableObject: true,
 	}));
 }
 
@@ -104,72 +151,185 @@ function filterInstanceRows(
 		return rows;
 	}
 
-	return rows.filter(
-		(row) =>
-			(row.durableObject?.id ?? row.instance?.id) === search ||
-			row.durableObject?.name === search
+	return rows.filter((row) => row.id === search || row.name === search);
+}
+
+type InstancePage = {
+	rows: InstanceRow[];
+	nextPageToken?: string;
+	resultInfo?: ResultInfo;
+};
+
+type InstanceSource = "canonical" | "dash";
+
+type CanonicalInstanceFilters = {
+	state?: "active" | "not-active";
+	namePrefix?: string;
+};
+
+type RawInstancePage =
+	| {
+			kind: "canonical";
+			data: ContainerInstance[];
+			nextPageToken?: string;
+			resultInfo?: ResultInfo;
+	  }
+	| {
+			kind: "dash";
+			data: DashApplicationInstances;
+			nextPageToken?: string;
+			resultInfo?: ResultInfo;
+	  };
+
+function throwInstanceFetchError(err: unknown): never {
+	if (!(err instanceof Error)) {
+		throw err;
+	}
+
+	if (err instanceof ApiError) {
+		if (err.status === 400 || err.status === 404) {
+			throw new UserError(
+				`There has been an error fetching instances.\n${err.body.error}\nUse \`wrangler containers list\` to view your container applications and corresponding IDs.`,
+				{ telemetryMessage: "containers instances fetch failed" }
+			);
+		}
+
+		throw new Error(
+			`There has been an unknown error fetching instances.\n${JSON.stringify(err.body)}`
+		);
+	}
+
+	throw new Error(
+		`There has been an internal error fetching instances.\n${err.message}`
 	);
 }
 
-async function fetchPage(
+function resolveInstanceSource(applicationId: string): InstanceSource {
+	return isNamespaceApplicationId(applicationId) ? "canonical" : "dash";
+}
+
+async function fetchRawPage(
 	applicationId: string,
+	source: InstanceSource,
 	perPage?: number,
-	pageToken?: string
-): Promise<{
-	data: DashApplicationInstances;
-	nextPageToken?: string;
-	resultInfo?: ResultInfo;
-}> {
+	pageToken?: string,
+	filters?: CanonicalInstanceFilters
+): Promise<RawInstancePage> {
 	try {
+		if (source === "canonical") {
+			const page = await listContainerInstances(
+				applicationId,
+				perPage,
+				pageToken,
+				filters?.state,
+				filters?.namePrefix
+			);
+			return {
+				kind: "canonical",
+				data: page.data.instances,
+				nextPageToken: page.resultInfo?.next_page_token,
+				resultInfo: page.resultInfo,
+			};
+		}
+
 		const page = await ApplicationsService.listDashApplicationInstances(
 			applicationId,
 			perPage,
 			pageToken
 		);
 		return {
+			kind: "dash",
 			data: page.data,
 			nextPageToken: page.resultInfo?.next_page_token,
 			resultInfo: page.resultInfo,
 		};
 	} catch (err) {
-		if (!(err instanceof Error)) {
-			throw err;
-		}
-
-		if (err instanceof ApiError) {
-			if (err.status === 400 || err.status === 404) {
-				throw new UserError(
-					`There has been an error fetching instances.\n${err.body.error}\nUse \`wrangler containers list\` to view your containers and corresponding IDs.`,
-					{ telemetryMessage: "containers instances fetch failed" }
-				);
-			}
-
-			throw new Error(
-				`There has been an unknown error fetching instances.\n${JSON.stringify(err.body)}`
-			);
-		}
-
-		throw new Error(
-			`There has been an internal error fetching instances.\n${err.message}`
-		);
+		throwInstanceFetchError(err);
 	}
+}
+
+async function fetchPage(
+	applicationId: string,
+	source: InstanceSource,
+	perPage?: number,
+	pageToken?: string,
+	filters?: CanonicalInstanceFilters
+): Promise<InstancePage> {
+	const page = await fetchRawPage(
+		applicationId,
+		source,
+		perPage,
+		pageToken,
+		filters
+	);
+	return {
+		rows:
+			page.kind === "canonical"
+				? buildContainerInstanceRows(page.data)
+				: buildInstanceRows(page.data),
+		nextPageToken: page.nextPageToken,
+		resultInfo: page.resultInfo,
+	};
 }
 
 async function fetchAllRows(
 	applicationId: string,
-	perPage: number = DEFAULT_PER_PAGE
+	source: InstanceSource,
+	perPage?: number,
+	filters?: CanonicalInstanceFilters
 ): Promise<InstanceRow[]> {
-	// Searches span every page, so join only after all raw API data is present.
-	const instances: DashApplicationInstance[] = [];
-	const durableObjects: DashApplicationDurableObjectInstance[] = [];
-	let pageToken: string | undefined;
+	const firstPage = await fetchRawPage(
+		applicationId,
+		source,
+		perPage,
+		undefined,
+		filters
+	);
 
-	do {
-		const result = await fetchPage(applicationId, perPage, pageToken);
+	if (firstPage.kind === "canonical") {
+		const instances = [...firstPage.data];
+		let pageToken = firstPage.nextPageToken;
+
+		while (pageToken) {
+			const result = await fetchRawPage(
+				applicationId,
+				"canonical",
+				perPage,
+				pageToken,
+				filters
+			);
+			if (result.kind !== "canonical") {
+				throw new Error("Unexpected legacy instance response");
+			}
+			instances.push(...result.data);
+			pageToken = result.nextPageToken;
+		}
+
+		return buildContainerInstanceRows(instances);
+	}
+
+	// Dash pages can split a Durable Object and its deployment, so join only
+	// after all raw API data is present.
+	const instances: DashApplicationInstance[] = [...firstPage.data.instances];
+	const durableObjects: DashApplicationDurableObjectInstance[] = [
+		...(firstPage.data.durable_objects ?? []),
+	];
+	let pageToken = firstPage.nextPageToken;
+
+	while (pageToken) {
+		const result = await fetchRawPage(
+			applicationId,
+			"dash",
+			perPage,
+			pageToken
+		);
+		if (result.kind !== "dash") {
+			throw new Error("Unexpected canonical instance response");
+		}
 		instances.push(...result.data.instances);
 		durableObjects.push(...(result.data.durable_objects ?? []));
 		pageToken = result.nextPageToken;
-	} while (pageToken);
+	}
 
 	return buildInstanceRows({
 		instances,
@@ -177,36 +337,31 @@ async function fetchAllRows(
 	});
 }
 
-function rowsToJsonOutput(rows: InstanceRow[]): Record<string, unknown>[] {
-	const hasDurableObjects = rows.some((r) => r.durableObject);
-
-	if (hasDurableObjects) {
-		return rows.map((row) => {
-			const state = row.instance
-				? deriveInstanceState(row.instance)
-				: "inactive";
-			return {
-				id: row.durableObject?.id ?? row.instance?.id ?? null,
-				name: row.durableObject?.name ?? null,
-				state,
-				location: row.instance?.location ?? null,
-				version: row.instance?.app_version ?? null,
-				created:
-					row.instance?.created_at ?? row.durableObject?.assigned_at ?? null,
-			};
-		});
+function rowsToJsonOutput(rows: InstanceRow[]): unknown[] {
+	if (rows.every(isCanonicalInstanceRow)) {
+		return rows.map((row) => row.canonical);
 	}
 
-	return rows.map((row) => {
-		const state = row.instance ? deriveInstanceState(row.instance) : "unknown";
-		return {
-			id: row.instance?.id ?? null,
-			state,
-			location: row.instance?.location ?? null,
-			version: row.instance?.app_version ?? null,
-			created: row.instance?.created_at ?? null,
-		};
-	});
+	const hasDurableObjects = rows.some((row) => row.isDurableObject);
+
+	if (hasDurableObjects) {
+		return rows.map((row) => ({
+			id: row.id,
+			name: row.name ?? null,
+			state: row.state,
+			location: row.location ?? null,
+			version: row.version ?? null,
+			created: row.created ?? null,
+		}));
+	}
+
+	return rows.map((row) => ({
+		id: row.id,
+		state: row.state,
+		location: row.location ?? null,
+		version: row.version ?? null,
+		created: row.created ?? null,
+	}));
 }
 
 function instancesToJsonOutput(
@@ -226,46 +381,53 @@ function instancesToJsonOutput(
 }
 
 function renderTable(rows: InstanceRow[]): void {
-	const hasDurableObjects = rows.some((r) => r.durableObject);
+	if (rows.every(isCanonicalInstanceRow)) {
+		logger.table(
+			rows.map((row) => ({
+				INSTANCE: row.id,
+				NAME: row.name ?? "-",
+				STATE: colorState(row.state),
+				LOCATION: row.canonical.location?.name ?? "-",
+				REGION: row.canonical.location?.region ?? "-",
+				"EXIT CODE":
+					row.canonical.status.exit_code === undefined
+						? "-"
+						: String(row.canonical.status.exit_code),
+				STARTED: row.canonical.started_at ?? "-",
+			}))
+		);
+		return;
+	}
+
+	const hasDurableObjects = rows.some((row) => row.isDurableObject);
 
 	if (hasDurableObjects) {
 		logger.table(
-			rows.map((row) => {
-				const state = row.instance
-					? deriveInstanceState(row.instance)
-					: "inactive";
-				return {
-					INSTANCE: row.durableObject?.id ?? row.instance?.id ?? "-",
-					NAME: row.durableObject?.name ?? "-",
-					STATE: colorState(state),
-					LOCATION: row.instance?.location ?? "-",
-					VERSION: row.instance ? String(row.instance.app_version) : "-",
-					CREATED:
-						row.instance?.created_at ?? row.durableObject?.assigned_at ?? "-",
-				};
-			})
+			rows.map((row) => ({
+				INSTANCE: row.id,
+				NAME: row.name ?? "-",
+				STATE: colorState(row.state),
+				LOCATION: row.location ?? "-",
+				VERSION: row.version === undefined ? "-" : String(row.version),
+				CREATED: row.created ?? "-",
+			}))
 		);
 	} else {
 		logger.table(
-			rows.map((row) => {
-				const state = row.instance
-					? deriveInstanceState(row.instance)
-					: "unknown";
-				return {
-					INSTANCE: row.instance?.id ?? "-",
-					STATE: colorState(state),
-					LOCATION: row.instance?.location ?? "-",
-					VERSION: row.instance ? String(row.instance.app_version) : "-",
-					CREATED: row.instance?.created_at ?? "-",
-				};
-			})
+			rows.map((row) => ({
+				INSTANCE: row.id,
+				STATE: colorState(row.state),
+				LOCATION: row.location ?? "-",
+				VERSION: row.version === undefined ? "-" : String(row.version),
+				CREATED: row.created ?? "-",
+			}))
 		);
 	}
 }
 
 const instancesArgs = {
 	ID: {
-		describe: "ID of the application to list instances for",
+		describe: "ID of the container application to list instances for",
 		type: "string",
 		demandOption: true,
 	},
@@ -273,13 +435,33 @@ const instancesArgs = {
 		describe: "Number of instances per page",
 		type: "number",
 		coerce: (val: number) => {
-			if (val < 1) {
-				throw new UserError("--per-page must be at least 1", {
-					telemetryMessage: "containers instances invalid per-page",
-				});
+			if (!Number.isInteger(val) || val < 1 || val > 1000) {
+				throw new UserError(
+					"--per-page must be an integer between 1 and 1000",
+					{
+						telemetryMessage: "containers instances invalid per-page",
+					}
+				);
 			}
 			return val;
 		},
+	},
+	"experimental-instance-filters": {
+		alias: "x-instance-filters",
+		describe: "Enable experimental namespace instance filters",
+		type: "boolean",
+		default: false,
+	},
+	state: {
+		describe:
+			"Filter namespace-backed instances by lifecycle state (requires --experimental-instance-filters)",
+		choices: ["active", "not-active"] as const,
+	},
+	"name-prefix": {
+		describe:
+			"Filter namespace-backed instances by a case-sensitive name prefix (requires --experimental-instance-filters)",
+		type: "string",
+		conflicts: "search",
 	},
 	search: {
 		describe: "Find instances matching an exact instance ID or name",
@@ -301,15 +483,13 @@ const instancesArgs = {
 type InstancesArgs = HandlerArgs<typeof instancesArgs>;
 
 export async function instancesCommand(args: InstancesArgs): Promise<void> {
-	const uuidRegex =
-		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-	if (!uuidRegex.test(args.ID)) {
+	const applicationId = normalizeApplicationId(args.ID);
+	if (applicationId === undefined) {
 		throw new UserError(
-			`Expected an application ID but got ${args.ID}. Use \`wrangler containers list\` to view your containers and corresponding IDs.`,
+			`Expected an application ID but got ${args.ID}. Use \`wrangler containers list\` to view your container applications and corresponding IDs.`,
 			{ telemetryMessage: "containers instances invalid application id" }
 		);
 	}
-
 	if (args.pageToken !== undefined && !args.json) {
 		throw new UserError("--page-token requires --json", {
 			telemetryMessage: "containers instances page-token without json",
@@ -317,13 +497,38 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 	}
 
 	const perPage = args.perPage ?? DEFAULT_PER_PAGE;
+	const source = resolveInstanceSource(applicationId);
+	const filters: CanonicalInstanceFilters = {
+		state: args.state,
+		namePrefix: args.namePrefix,
+	};
+	const hasFilters = args.state !== undefined || args.namePrefix !== undefined;
+
+	if (hasFilters && source === "dash") {
+		throw new UserError(
+			"--state and --name-prefix are only supported for namespace-backed applications",
+			{
+				telemetryMessage:
+					"containers instances canonical filter for uuid application",
+			}
+		);
+	}
+	if (hasFilters && !args.experimentalInstanceFilters) {
+		throw new UserError(
+			"--state and --name-prefix require --experimental-instance-filters (or --x-instance-filters)",
+			{
+				telemetryMessage:
+					"containers instances filters require experimental flag",
+			}
+		);
+	}
 
 	// --json: output JSON and exit
 	if (args.json) {
 		try {
 			if (args.search !== undefined) {
 				const rows = filterInstanceRows(
-					await fetchAllRows(args.ID, perPage),
+					await fetchAllRows(applicationId, source, perPage, filters),
 					args.search
 				);
 				logger.json(rowsToJsonOutput(rows));
@@ -332,17 +537,26 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 
 			const isPaginated =
 				args.perPage !== undefined || args.pageToken !== undefined;
-			const result = await fetchPage(args.ID, args.perPage, args.pageToken);
-			const rows = buildInstanceRows(result.data);
-
 			if (!isPaginated) {
-				logger.json(rowsToJsonOutput(rows));
+				logger.json(
+					rowsToJsonOutput(
+						await fetchAllRows(applicationId, source, undefined, filters)
+					)
+				);
 				return;
 			}
 
+			const result = await fetchPage(
+				applicationId,
+				source,
+				args.perPage,
+				args.pageToken,
+				filters
+			);
+
 			logger.json(
 				instancesToJsonOutput(
-					rows,
+					result.rows,
 					result.resultInfo?.per_page ?? perPage,
 					result.resultInfo?.page_token ?? args.pageToken,
 					result.nextPageToken
@@ -364,12 +578,12 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 	if (args.search !== undefined) {
 		let rows: InstanceRow[];
 		if (isNonInteractiveOrCI()) {
-			rows = await fetchAllRows(args.ID, perPage);
+			rows = await fetchAllRows(applicationId, source, perPage, filters);
 		} else {
 			const { start, stop } = spinner();
 			start("Finding instances");
 			try {
-				rows = await fetchAllRows(args.ID, perPage);
+				rows = await fetchAllRows(applicationId, source, perPage, filters);
 			} finally {
 				stop();
 			}
@@ -388,8 +602,7 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 
 	// Non-interactive: fetch all results, render a single table, no pagination
 	if (isNonInteractiveOrCI()) {
-		const { data } = await fetchPage(args.ID);
-		const rows = buildInstanceRows(data);
+		const rows = await fetchAllRows(applicationId, source, undefined, filters);
 		if (rows.length === 0) {
 			logger.log(
 				"No instances found for this application. The application may not have any running containers."
@@ -408,16 +621,21 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 
 	do {
 		start("Loading instances");
-		let data: DashApplicationInstances;
+		let rows: InstanceRow[];
 		let nextPageToken: string | undefined;
 		try {
-			const result = await fetchPage(args.ID, perPage, pageToken);
-			data = result.data;
+			const result = await fetchPage(
+				applicationId,
+				source,
+				perPage,
+				pageToken,
+				filters
+			);
+			rows = result.rows;
 			nextPageToken = result.nextPageToken;
 		} finally {
 			stop();
 		}
-		const rows = buildInstanceRows(data);
 
 		if (rows.length === 0 && totalShown === 0) {
 			logger.log(
