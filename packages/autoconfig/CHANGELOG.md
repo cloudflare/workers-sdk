@@ -1,5 +1,33 @@
 # @cloudflare/autoconfig
 
+## 0.5.0
+
+### Minor Changes
+
+- [#15593](https://github.com/cloudflare/workers-sdk/pull/15593) [`e24795b`](https://github.com/cloudflare/workers-sdk/commit/e24795bcd04fdf0d27a38f4f46b58009fde197ca) Thanks [@edmundhung](https://github.com/edmundhung)! - Expose mode support for autoconfigured framework commands
+
+  Detected Astro and Vite frameworks now report that their build and development commands support `--mode`. Other frameworks remain unsupported by default.
+
+### Patch Changes
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114)]:
+  - @cloudflare/config@0.14.0
+  - @cloudflare/workers-utils@0.40.0
+  - @cloudflare/cli-shared-helpers@0.1.33
+
+## 0.4.7
+
+### Patch Changes
+
+- [#15651](https://github.com/cloudflare/workers-sdk/pull/15651) [`53c2189`](https://github.com/cloudflare/workers-sdk/commit/53c21892922f93a11b75d13d663acf327dad1695) Thanks [@edmundhung](https://github.com/edmundhung)! - Stop adding a `preview` script when configuring projects for `cf`
+
+  Projects can continue using their existing development and preview scripts, or invoke `cf dev` directly. Wrangler-targeted autoconfiguration continues to add its existing `preview` script.
+
+- Updated dependencies [[`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513)]:
+  - @cloudflare/workers-utils@0.39.1
+  - @cloudflare/cli-shared-helpers@0.1.32
+  - @cloudflare/config@0.13.0
+
 ## 0.4.6
 
 ### Patch Changes

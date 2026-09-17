@@ -1,5 +1,21 @@
 # @cloudflare/workers-utils
 
+## 0.40.0
+
+### Minor Changes
+
+- [#15684](https://github.com/cloudflare/workers-sdk/pull/15684) [`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for configuring real-time Issues with `observability.issues.enabled`
+
+  Wrangler now validates and uploads the Issues setting alongside the existing logs and traces observability options. The experimental configuration format supports the equivalent `observability.issues.enabled` option.
+
+## 0.39.1
+
+### Patch Changes
+
+- [#15669](https://github.com/cloudflare/workers-sdk/pull/15669) [`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513) Thanks [@Shubham-Padkonde](https://github.com/Shubham-Padkonde)! - Reject Windows drive prefixes when converting file paths to URL paths
+
+  `toUrlPath()` now throws for drive-prefixed paths as documented. Previously it used `console.assert()`, which only logged the invalid input and returned a path containing the drive prefix.
+
 ## 0.39.0
 
 ### Minor Changes

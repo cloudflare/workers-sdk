@@ -56,6 +56,7 @@ describe("convertToWranglerConfig", () => {
 					enabled: true,
 					headSamplingRate: 0.5,
 					redactQueryString: true,
+					issues: { enabled: true },
 					logs: {
 						enabled: true,
 						headSamplingRate: 0.25,
@@ -75,6 +76,7 @@ describe("convertToWranglerConfig", () => {
 				enabled: true,
 				head_sampling_rate: 0.5,
 				redact_query_string: true,
+				issues: { enabled: true },
 				logs: {
 					enabled: true,
 					head_sampling_rate: 0.25,

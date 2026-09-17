@@ -483,11 +483,6 @@ if (process.platform === "win32") {
 					expect(await res.text()).toBe("Blah! I'm an env var!");
 				}, WAITFOR_OPTIONS);
 
-				// Verify that the old image tag has been deleted after rebuild
-				expect(() => {
-					execSync(`docker image inspect ${imageName}`, { encoding: "utf8" });
-				}).toThrow();
-
 				wrangler.pty.kill();
 			});
 
