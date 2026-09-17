@@ -1898,7 +1898,7 @@ describe("generate types - CLI", () => {
 		`);
 	});
 
-	it("should generate one class-scoped binding for Durable Object-managed images", async ({
+	it("should use native Container image types without a generated environment binding", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -1942,9 +1942,7 @@ describe("generate types - CLI", () => {
 		const generated = fs.readFileSync("worker-configuration.d.ts", "utf-8");
 		expect(generated).not.toContain("SANDBOX_IMAGE");
 		expect(generated).not.toContain("TOOLS_IMAGE");
-		expect(generated).toContain(
-			"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: Readonly<Record<string, Readonly<Record<string, string>>>>;"
-		);
+		expect(generated).not.toContain("EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES");
 		expect(generated).toContain(
 			"SANDBOX: DurableObjectNamespace /* Sandbox */;"
 		);

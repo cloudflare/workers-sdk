@@ -182,10 +182,11 @@ export type ContainerApp = {
 
 	/**
 	 * Named images available to a Durable Object-managed container through
-	 * `ctx.container.images` and
-	 * `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES[className]`.
+	 * `ctx.container.images`.
 	 *
 	 * Only supported when `scheduling_policy` is `"durable_object"`.
+	 * When omitted, run `wrangler deploy` to provision the application before
+	 * uploading versions. Version deployments use its existing application.
 	 */
 	images?: Record<string, DurableObjectContainerImage>;
 

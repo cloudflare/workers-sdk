@@ -4694,7 +4694,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 				],
 			])(
-				"reserves the experimental image binding name with containers %j",
+				"allows the former experimental image binding name with containers %j",
 				(containers, { expect }) => {
 					const { diagnostics } = normalizeAndValidateConfig(
 						{
@@ -4708,10 +4708,7 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: undefined }
 					);
 
-					expect(diagnostics.hasErrors()).toBe(true);
-					expect(diagnostics.renderErrors()).toContain(
-						"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES assigned to Environment Variable and Container images bindings"
-					);
+					expect(diagnostics.hasErrors()).toBe(false);
 				}
 			);
 

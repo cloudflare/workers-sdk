@@ -10,7 +10,6 @@ import {
 	InstanceType,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { CONTAINER_IMAGES_BINDING } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -82,20 +81,21 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	it.for([
-		{ bindingName: CONTAINER_IMAGES_BINDING, containers: [] },
+		{ bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES", containers: [] },
 		{ bindingName: "USER_IMAGES", containers: [] },
-		{ bindingName: CONTAINER_IMAGES_BINDING, containers: undefined },
+		{
+			bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+			containers: undefined,
+		},
 		{ bindingName: "USER_IMAGES", containers: undefined },
 	])(
-		"keeps vars while clearing only the reserved Container image binding: %j",
-		async ({ bindingName, containers }, { expect }) => {
+		"keeps variables without generating Container image bindings: %j",
+		async ({ bindingName, containers }) => {
 			writeWranglerConfig({ containers, keep_vars: true });
-			let settingsRequests = 0;
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/workers/scripts/:scriptName/settings",
 					() => {
-						settingsRequests++;
 						return HttpResponse.json(
 							createFetchResult({
 								bindings: [
@@ -110,13 +110,9 @@ describe("wrangler deploy with containers", () => {
 				expectedContainers: containers,
 				keepVars: true,
 				useOldUploadApi: containers !== undefined,
-				expectedBindings:
-					bindingName === CONTAINER_IMAGES_BINDING
-						? [{ name: CONTAINER_IMAGES_BINDING, type: "json", json: {} }]
-						: [],
+				expectedBindings: [],
 			});
 			await runWrangler("deploy index.js");
-			expect(settingsRequests).toBeGreaterThan(0);
 		}
 	);
 	it("reports a deployed Worker and recovery instructions after application creation fails", async ({
@@ -308,15 +304,6 @@ describe("wrangler deploy with containers", () => {
 						name: "EXAMPLE_DO_BINDING",
 						type: "durable_object_namespace",
 					},
-					{
-						json: {
-							ExampleDurableObject: {
-								tools: image,
-							},
-						},
-						name: CONTAINER_IMAGES_BINDING,
-						type: "json",
-					},
 				],
 				expectedContainers: [
 					{
@@ -443,10 +430,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockUploadWorkerRequest({
 			expectedContainers: [
-				{
-					name: "managed-app",
-					class_name: "ExampleDurableObject",
-				},
+				{ name: "managed-app", class_name: "ExampleDurableObject" },
 			],
 			useOldUploadApi: true,
 		});
@@ -516,7 +500,7 @@ describe("wrangler deploy with containers", () => {
 			[
 				defaultDOBinding,
 				{
-					name: CONTAINER_IMAGES_BINDING,
+					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
 					type: "json",
 					json: {
 						ExampleDurableObject: { tools: deployedImage },
@@ -552,12 +536,7 @@ describe("wrangler deploy with containers", () => {
 					name: "EXAMPLE_DO_BINDING",
 					type: "durable_object_namespace",
 				},
-				{
-					name: CONTAINER_IMAGES_BINDING,
-					type: "inherit",
-				},
 			],
-			expectedBindingsInherit: "strict",
 			expectedContainers: [
 				{
 					name: "test-name-exampledurableobject",
@@ -606,7 +585,7 @@ describe("wrangler deploy with containers", () => {
 				[
 					defaultDOBinding,
 					{
-						name: CONTAINER_IMAGES_BINDING,
+						name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
 						type: "json",
 						json: {
 							ExampleDurableObject: { tools: deployedImage },
@@ -634,12 +613,7 @@ describe("wrangler deploy with containers", () => {
 						name: "EXAMPLE_DO_BINDING",
 						type: "durable_object_namespace",
 					},
-					{
-						name: CONTAINER_IMAGES_BINDING,
-						type: "inherit",
-					},
 				],
-				expectedBindingsInherit: "strict",
 				expectedContainers: [
 					{
 						name: "test-name-exampledurableobject",
@@ -692,7 +666,6 @@ describe("wrangler deploy with containers", () => {
 						type: "durable_object_namespace",
 					},
 				],
-				expectedBindingsInherit: "strict",
 				expectedContainers: containers,
 				useOldUploadApi: true,
 			});
@@ -780,7 +753,7 @@ describe("wrangler deploy with containers", () => {
 		expect(spawn).not.toHaveBeenCalled();
 	});
 
-	it("preserves the image binding when inherited image maps are empty", async () => {
+	it("preserves Container metadata without images or inherited image bindings", async () => {
 		const containers = [
 			{ name: "managed-app", class_name: "ExampleDurableObject" },
 		];
@@ -789,7 +762,7 @@ describe("wrangler deploy with containers", () => {
 			[
 				defaultDOBinding,
 				{
-					name: CONTAINER_IMAGES_BINDING,
+					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
 					type: "json",
 					json: { ExampleDurableObject: {} },
 				},
@@ -804,9 +777,7 @@ describe("wrangler deploy with containers", () => {
 					class_name: "ExampleDurableObject",
 					type: "durable_object_namespace",
 				},
-				{ name: CONTAINER_IMAGES_BINDING, type: "inherit" },
 			],
-			expectedBindingsInherit: "strict",
 			expectedContainers: containers,
 			useOldUploadApi: true,
 		});
@@ -824,7 +795,7 @@ describe("wrangler deploy with containers", () => {
 			"test-name:version:0",
 			[
 				{
-					name: CONTAINER_IMAGES_BINDING,
+					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
 					type: "json",
 					json: {
 						ManagedDurableObject: { tools: deployedImage },
@@ -899,12 +870,7 @@ describe("wrangler deploy with containers", () => {
 					name: "MANAGED",
 					type: "durable_object_namespace",
 				},
-				{
-					name: CONTAINER_IMAGES_BINDING,
-					type: "inherit",
-				},
 			],
-			expectedBindingsInherit: "strict",
 			expectedContainers: [
 				{
 					name: "scheduler-app",
@@ -1041,15 +1007,6 @@ describe("wrangler deploy with containers", () => {
 					class_name: "ManagedDurableObject",
 					name: "MANAGED",
 					type: "durable_object_namespace",
-				},
-				{
-					json: {
-						ManagedDurableObject: {
-							tools: image,
-						},
-					},
-					name: CONTAINER_IMAGES_BINDING,
-					type: "json",
 				},
 			],
 			expectedContainers: [
@@ -2270,7 +2227,6 @@ describe("wrangler deploy with containers", () => {
 					type: "durable_object_namespace",
 				},
 			],
-			expectedBindingsInherit: "strict",
 			expectedContainers: [
 				{ name: "my-container", class_name: "ExampleDurableObject" },
 			],
@@ -4281,13 +4237,7 @@ describe("wrangler deploy with containers", () => {
 				);
 				mockUploadWorkerRequest({
 					useOldUploadApi: true,
-					expectedBindings: [
-						{
-							name: CONTAINER_IMAGES_BINDING,
-							type: "json",
-							json: { Sandbox: imageRefs },
-						},
-					],
+					expectedBindings: [],
 					expectedContainers: [
 						{
 							name: "managed-app",

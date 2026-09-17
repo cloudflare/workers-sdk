@@ -14,7 +14,6 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
-	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
 	getDurableObjectClassNameToUseSQLiteMap,
