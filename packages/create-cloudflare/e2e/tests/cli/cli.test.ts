@@ -745,7 +745,7 @@ describe("Create Cloudflare CLI", () => {
 					)
 				).rejects.toMatchObject({
 					errors: expect.stringContaining(
-						'The Django framework doesn\'t support the "ts" language'
+						'Unsupported framework: django'
 					),
 				});
 			}
