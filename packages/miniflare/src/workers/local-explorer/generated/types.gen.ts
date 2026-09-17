@@ -2059,7 +2059,7 @@ export type LocalExplorerDispatchScheduledData = {
 	path?: never;
 	query: {
 		/**
-		 * Exact Worker name in the local dev registry.
+		 * Exact Worker name available to Local Explorer.
 		 */
 		worker: string;
 	};

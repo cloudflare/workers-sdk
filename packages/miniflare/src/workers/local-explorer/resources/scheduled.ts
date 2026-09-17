@@ -42,6 +42,37 @@ function peerUnavailable(message: string): Response {
 	return errorResponse(502, SCHEDULED_ERROR_CODE, message);
 }
 
+async function dispatchLocalScheduled(
+	c: AppContext,
+	worker: string,
+	body: ScheduledBody
+): Promise<Response> {
+	const service = getUserWorkerService(c, worker);
+	if (service === undefined) {
+		return peerUnavailable(`The owner of Worker "${worker}" is unavailable.`);
+	}
+
+	try {
+		const result = await dispatchScheduled(service, {
+			cron: body.cron,
+			scheduledTime:
+				body.scheduled_time === undefined
+					? undefined
+					: new Date(body.scheduled_time),
+		});
+		// Fetcher results are RPC-backed objects. Round-trip them before nesting
+		// in the API envelope so all serializable result fields are retained.
+		const plainResult = JSON.parse(JSON.stringify(result)) as unknown;
+		return Response.json(wrapResponse(plainResult));
+	} catch (error) {
+		const message =
+			error instanceof Error
+				? error.message
+				: `Failed to dispatch Worker "${worker}".`;
+		return errorResponse(500, SCHEDULED_ERROR_CODE, message);
+	}
+}
+
 async function decodePeerResponse(
 	response: Response | null,
 	worker: string
@@ -78,12 +109,19 @@ async function decodePeerResponse(
 	return peerUnavailable(`The owner of Worker "${worker}" is unavailable.`);
 }
 
-/** Dispatches a scheduled invocation to the exact registered Worker name. */
+/** Dispatches a scheduled invocation to the exact Worker available to Local Explorer. */
 export async function dispatchScheduledToWorker(
 	c: AppContext,
 	query: ScheduledQuery,
 	body: ScheduledBody
 ): Promise<Response> {
+	const forwarded = c.req.raw.headers.has(NO_AGGREGATE_HEADER);
+	if (
+		c.env[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES].includes(query.worker)
+	) {
+		return dispatchLocalScheduled(c, query.worker, body);
+	}
+
 	const registryResponse = await c.env[CoreBindings.SERVICE_LOOPBACK].fetch(
 		"http://localhost/core/dev-registry"
 	);
@@ -92,7 +130,6 @@ export async function dispatchScheduledToWorker(
 		"X-Miniflare-Dev-Registry-Instance-Id"
 	);
 	const owner = registry[query.worker];
-	const forwarded = c.req.raw.headers.has(NO_AGGREGATE_HEADER);
 
 	if (owner === undefined) {
 		return forwarded
@@ -105,32 +142,7 @@ export async function dispatchScheduledToWorker(
 	}
 
 	if (owner.instanceId === selfInstanceId) {
-		const service = getUserWorkerService(c, query.worker);
-		if (service === undefined) {
-			return peerUnavailable(
-				`The owner of Worker "${query.worker}" is unavailable.`
-			);
-		}
-
-		try {
-			const result = await dispatchScheduled(service, {
-				cron: body.cron,
-				scheduledTime:
-					body.scheduled_time === undefined
-						? undefined
-						: new Date(body.scheduled_time),
-			});
-			// Fetcher results are RPC-backed objects. Round-trip them before nesting
-			// in the API envelope so all serializable result fields are retained.
-			const plainResult = JSON.parse(JSON.stringify(result)) as unknown;
-			return Response.json(wrapResponse(plainResult));
-		} catch (error) {
-			const message =
-				error instanceof Error
-					? error.message
-					: `Failed to dispatch Worker "${query.worker}".`;
-			return errorResponse(500, SCHEDULED_ERROR_CODE, message);
-		}
+		return dispatchLocalScheduled(c, query.worker, body);
 	}
 
 	if (forwarded) {

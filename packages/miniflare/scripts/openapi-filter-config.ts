@@ -644,7 +644,7 @@ const config = {
 			"/local/scheduled": {
 				post: {
 					description:
-						"Dispatches one scheduled invocation to the exact Worker registered under the requested name.",
+						"Dispatches one scheduled invocation to the exact Worker available to Local Explorer under the requested name.",
 					operationId: "local-explorer-dispatch-scheduled",
 					parameters: [
 						{
@@ -652,7 +652,7 @@ const config = {
 							name: "worker",
 							required: true,
 							schema: { type: "string", minLength: 1 },
-							description: "Exact Worker name in the local dev registry.",
+							description: "Exact Worker name available to Local Explorer.",
 						},
 					],
 					requestBody: {
