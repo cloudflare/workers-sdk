@@ -68,6 +68,29 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
+	it("should defer a configured unsupported framework to a Cloudflare dev server", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				scripts: { build: "cf build", dev: "cf dev" },
+				dependencies: { hono: "4", vite: "8" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "hono" },
+			buildCommand: undefined,
+			devCommand: undefined,
+			packageManager: { type: "npm" },
+		});
+	});
+
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
 	// by exhaustively checking every possible combination
 	it.for(["npm", "pnpm"] as const)(
