@@ -744,9 +744,7 @@ describe("Create Cloudflare CLI", () => {
 						logStream
 					)
 				).rejects.toMatchObject({
-					errors: expect.stringContaining(
-						'Unsupported framework: django'
-					),
+					errors: expect.stringContaining("Unsupported framework: django"),
 				});
 			}
 		);
