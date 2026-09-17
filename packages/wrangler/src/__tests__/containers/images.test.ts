@@ -67,17 +67,24 @@ describe("containers images list", () => {
 		};
 
 		msw.use(
-			http.post("*/registries/:domain/credentials", async ({ params }) => {
-				expect(params.domain).toEqual(REGISTRY);
-				return HttpResponse.json(
-					wrapV4Response({
-						account_id: "1234",
-						registry_host: REGISTRY,
-						username: "foo",
-						password: "bar",
-					})
-				);
-			}),
+			http.post(
+				"*/registries/:domain/credentials",
+				async ({ params, request }) => {
+					expect(params.domain).toEqual(REGISTRY);
+					expect(await request.json()).toEqual({
+						expiration_minutes: 5,
+						permissions: ["pull"],
+					});
+					return HttpResponse.json(
+						wrapV4Response({
+							account_id: "1234",
+							registry_host: REGISTRY,
+							username: "foo",
+							password: "bar",
+						})
+					);
+				}
+			),
 			http.get("*/v2/_catalog?tags=true", async () => {
 				return HttpResponse.json({ repositories: tags });
 			})
@@ -106,17 +113,24 @@ describe("containers images list", () => {
 		};
 
 		msw.use(
-			http.post("*/registries/:domain/credentials", async ({ params }) => {
-				expect(params.domain).toEqual(REGISTRY);
-				return HttpResponse.json(
-					wrapV4Response({
-						account_id: "1234",
-						registry_host: REGISTRY,
-						username: "foo",
-						password: "bar",
-					})
-				);
-			}),
+			http.post(
+				"*/registries/:domain/credentials",
+				async ({ params, request }) => {
+					expect(params.domain).toEqual(REGISTRY);
+					expect(await request.json()).toEqual({
+						expiration_minutes: 5,
+						permissions: ["pull"],
+					});
+					return HttpResponse.json(
+						wrapV4Response({
+							account_id: "1234",
+							registry_host: REGISTRY,
+							username: "foo",
+							password: "bar",
+						})
+					);
+				}
+			),
 			http.get("*/v2/_catalog?tags=true", async () => {
 				return HttpResponse.json({ repositories: tags });
 			})
@@ -141,17 +155,24 @@ describe("containers images list", () => {
 		};
 
 		msw.use(
-			http.post("*/registries/:domain/credentials", async ({ params }) => {
-				expect(params.domain).toEqual(REGISTRY);
-				return HttpResponse.json(
-					wrapV4Response({
-						account_id: "1234",
-						registry_host: REGISTRY,
-						username: "foo",
-						password: "bar",
-					})
-				);
-			}),
+			http.post(
+				"*/registries/:domain/credentials",
+				async ({ params, request }) => {
+					expect(params.domain).toEqual(REGISTRY);
+					expect(await request.json()).toEqual({
+						expiration_minutes: 5,
+						permissions: ["pull"],
+					});
+					return HttpResponse.json(
+						wrapV4Response({
+							account_id: "1234",
+							registry_host: REGISTRY,
+							username: "foo",
+							password: "bar",
+						})
+					);
+				}
+			),
 			http.get("*/v2/_catalog?tags=true", async () => {
 				return HttpResponse.json({ repositories: tags });
 			})
@@ -243,6 +264,24 @@ describe("containers images delete", () => {
 		`);
 	});
 
+	it("reports deletion success with a warning when the GC request fails", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		mockDeleteImage(expect, REGISTRY);
+		msw.use(
+			http.put("*/v2/gc/layers", () => new HttpResponse(null, { status: 503 }))
+		);
+		await runWrangler(
+			"containers images delete one:hundred --skip-confirmation"
+		);
+		expect(std.out).toContain("Deleted one:hundred (some-digest)");
+		expect(std.warn).toContain(
+			"was deleted, but the garbage-collection request failed: 503"
+		);
+	});
+
 	it("should error when provided a repo without a tag", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -332,17 +371,24 @@ describe("containers images delete", () => {
 
 function mockDeleteImage(expect: ExpectStatic, registry: string) {
 	msw.use(
-		http.post("*/registries/:domain/credentials", async ({ params }) => {
-			expect(params.domain).toEqual(registry);
-			return HttpResponse.json(
-				wrapV4Response({
-					account_id: "1234",
-					registry_host: registry,
-					username: "foo",
-					password: "bar",
-				})
-			);
-		}),
+		http.post(
+			"*/registries/:domain/credentials",
+			async ({ params, request }) => {
+				expect(params.domain).toEqual(registry);
+				expect(await request.json()).toEqual({
+					expiration_minutes: 5,
+					permissions: ["pull", "push"],
+				});
+				return HttpResponse.json(
+					wrapV4Response({
+						account_id: "1234",
+						registry_host: registry,
+						username: "foo",
+						password: "bar",
+					})
+				);
+			}
+		),
 		http.head("*/v2/:accountId/:image/manifests/:tag", async ({ params }) => {
 			expect(params.accountId).toEqual("some-account-id");
 			expect(params.image).toEqual("one");
