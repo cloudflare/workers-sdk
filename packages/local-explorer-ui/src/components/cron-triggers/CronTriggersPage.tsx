@@ -108,6 +108,7 @@ export function CronTriggersPage({
 				}}
 				onUpdate={(update) => cron.updateRow(workerName, row.id, update)}
 				row={row}
+				triggerEnabled={!showNoConfiguration}
 				trigger={(scheduledTime) =>
 					void cron.invoke(workerName, row.id, scheduledTime)
 				}

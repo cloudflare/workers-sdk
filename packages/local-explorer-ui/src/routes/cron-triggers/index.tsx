@@ -19,8 +19,14 @@ const rootRoute = getRouteApi("__root__");
 function CronTriggersRoute(): JSX.Element {
 	const loaderData = rootRoute.useLoaderData();
 	const search = Route.useSearch();
-	const activeWorkerName =
-		search.worker ?? getSelectedWorker(loaderData.workers, "")?.name;
+	const activeWorkerName = loaderData.bootstrapAuthoritative
+		? getSelectedWorker(
+				loaderData.workers,
+				search.worker
+					? new URLSearchParams({ worker: search.worker }).toString()
+					: ""
+			)?.name
+		: search.worker;
 
 	return (
 		<CronTriggersProvider
