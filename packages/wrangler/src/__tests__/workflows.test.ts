@@ -17,7 +17,11 @@ import { clearDialogs } from "./helpers/mock-dialogs";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import type { Instance, Workflow } from "../workflows/types";
+import type {
+	Instance,
+	InstanceStatusAndLogs,
+	Workflow,
+} from "../workflows/types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { ExpectStatic } from "vitest";
 
@@ -1190,9 +1194,9 @@ describe("wrangler workflows", () => {
 			vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
 			vi.setSystemTime(new Date("2026-09-10T12:00:00.000Z"));
 
-			const runningResponse = {
+			const runningResponse: InstanceStatusAndLogs = {
 				end: null,
-				output: null,
+				error: null,
 				params: {},
 				queued: "2026-09-10T11:50:00.000Z",
 				start: "2026-09-10T11:55:00.000Z",
