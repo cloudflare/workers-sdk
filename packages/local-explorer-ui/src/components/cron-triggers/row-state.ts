@@ -1,11 +1,8 @@
 import { createDefaultCronBuilderDraft } from "./cron-builder";
 import type { CronRow } from "./types";
 
-let nextRowId = 0;
-
 function rowId(prefix: string): string {
-	nextRowId += 1;
-	return `${prefix}-${nextRowId}`;
+	return `${prefix}-${crypto.randomUUID()}`;
 }
 
 function configuredKeys(crons: string[]): string[] {

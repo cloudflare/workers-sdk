@@ -27,6 +27,7 @@ interface CronRowCardProps {
 	onUpdate: (update: (row: CronRow) => CronRow) => void;
 	row: CronRow;
 	trigger: (scheduledTime: number) => void;
+	triggerEnabled: boolean;
 }
 
 export function CronRowCard({
@@ -37,6 +38,7 @@ export function CronRowCard({
 	onUpdate,
 	row,
 	trigger,
+	triggerEnabled,
 }: CronRowCardProps): JSX.Element {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const actionRef = useRef<HTMLButtonElement>(null);
@@ -56,7 +58,8 @@ export function CronRowCard({
 		row.cron.trim() !== "" &&
 		(row.cronInputMode !== "builder" ||
 			(row.builderApplied === true && builder.expression === row.cron));
-	const canTrigger = !pending && cronValid && scheduledTime.valid;
+	const canTrigger =
+		triggerEnabled && !pending && cronValid && scheduledTime.valid;
 
 	useEffect(() => {
 		if (focusRequested) {
