@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import {
 	createContainerDevPlan,
 	generateContainerBuildId,
@@ -69,16 +70,36 @@ function getContainerOptions(
 function createProject(name = "test-project"): {
 	project: TestProject;
 	close: () => void;
+	emitFileEvent: (event: string, filePath: string) => void;
+	onRerun: ReturnType<typeof vi.fn>;
 } {
 	let close = () => {};
+	const fileWatcher = new EventEmitter();
+	Object.assign(fileWatcher, { add: vi.fn() });
+	const forceRerunTriggers: string[] = [];
+	const invalidates = new Set<string>();
+	const onRerun = vi.fn();
+	// Vitest's unlink listener runs first and records the path as invalidated.
+	// Its change handler ignores paths already present in this set.
+	fileWatcher.on("unlink", (filePath: string) => invalidates.add(filePath));
+	const onFileChange = vi.fn((filePath: string) => {
+		if (!invalidates.has(filePath) && forceRerunTriggers.includes(filePath)) {
+			onRerun(filePath);
+		}
+	});
 	const vitest = {
+		config: { forceRerunTriggers },
 		onClose(handler: () => void) {
 			close = handler;
 		},
+		vite: { watcher: fileWatcher },
+		watcher: { invalidates, onFileChange },
 	};
 	return {
 		project: { name, vitest } as unknown as TestProject,
 		close: () => close(),
+		emitFileEvent: (event, filePath) => fileWatcher.emit(event, filePath),
+		onRerun,
 	};
 }
 
@@ -145,9 +166,11 @@ function mockPendingPreparation(): {
 describe("project Container environments", () => {
 	let project: TestProject;
 	let closeVitest: () => void;
+	let emitFileEvent: ReturnType<typeof createProject>["emitFileEvent"];
+	let onRerun: ReturnType<typeof createProject>["onRerun"];
 
 	beforeEach(() => {
-		({ project, close: closeVitest } = createProject());
+		({ project, close: closeVitest, emitFileEvent, onRerun } = createProject());
 		mockPlan();
 		vi.mocked(generateContainerBuildId).mockReturnValue("build-id");
 		vi.mocked(getDockerPath).mockReturnValue("docker");
@@ -178,6 +201,8 @@ describe("project Container environments", () => {
 				dev: { ...config.dev, enable_containers: false },
 			})
 		).resolves.toBeUndefined();
+		emitFileEvent("change", "/project/container/app.js");
+		expect(onRerun).not.toHaveBeenCalled();
 		expect(createContainerDevPlan).toHaveBeenCalledOnce();
 		expect(getDockerPath).toHaveBeenCalledOnce();
 
@@ -228,6 +253,10 @@ describe("project Container environments", () => {
 			prepareProjectContainers(otherProject, config, CONFIG_PATH, logger),
 		]);
 		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
+
+		closeVitest();
+		emitFileEvent("change", "/project/container/app.js");
+		expect(onRerun).not.toHaveBeenCalled();
 	});
 
 	it("prepares runtime dependencies for plans without images", async ({
@@ -266,6 +295,47 @@ describe("project Container environments", () => {
 		).resolves.toMatchObject({ containerBuildId: "second-build" });
 
 		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
+	});
+
+	it("rebuilds after a Docker build-context file changes", async ({
+		expect,
+	}) => {
+		vi.mocked(generateContainerBuildId)
+			.mockReturnValueOnce("first-build")
+			.mockReturnValueOnce("second-build");
+
+		await prepare();
+		emitFileEvent("change", "/project-other/container/app.js");
+		expect(onRerun).not.toHaveBeenCalled();
+		emitFileEvent("change", "/project/container/app.js");
+
+		expect(onRerun).toHaveBeenCalledWith("/project/container/app.js");
+		await expect(prepare()).resolves.toMatchObject({
+			containerBuildId: "second-build",
+		});
+		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
+	});
+
+	it("rebuilds after a deleted Dockerfile is restored", async ({ expect }) => {
+		vi.mocked(generateContainerBuildId)
+			.mockReturnValueOnce("first-build")
+			.mockReturnValueOnce("missing-build")
+			.mockReturnValueOnce("restored-build");
+		mockPlan(getContainerOptions("build-id", "/docker/Dockerfile"));
+
+		await prepare();
+		emitFileEvent("unlink", "/docker/Dockerfile");
+		vi.mocked(prepareContainerImagesForDev).mockRejectedValueOnce(
+			new Error("Dockerfile is missing")
+		);
+		await expect(prepare()).rejects.toThrow("Dockerfile is missing");
+
+		emitFileEvent("add", "/docker/Dockerfile");
+		await expect(prepare()).resolves.toMatchObject({
+			containerBuildId: "restored-build",
+		});
+		expect(onRerun).toHaveBeenCalledTimes(2);
+		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(3);
 	});
 
 	it("adds project context and retries preparation failures", async ({
@@ -327,6 +397,8 @@ describe("project Container environments", () => {
 	it("prepares after a Vitest config restart", async ({ expect }) => {
 		await prepare();
 		closeVitest();
+		emitFileEvent("change", "/project/container/app.js");
+		expect(onRerun).not.toHaveBeenCalled();
 
 		beginContainerConfiguration(project.vitest);
 
