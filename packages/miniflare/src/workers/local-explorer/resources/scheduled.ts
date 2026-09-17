@@ -116,13 +116,6 @@ export async function dispatchScheduledToWorker(
 	body: ScheduledBody
 ): Promise<Response> {
 	const forwarded = c.req.raw.headers.has(NO_AGGREGATE_HEADER);
-	if (
-		!forwarded &&
-		c.env[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES].includes(query.worker)
-	) {
-		return dispatchLocalScheduled(c, query.worker, body);
-	}
-
 	const registryResponse = await c.env[CoreBindings.SERVICE_LOOPBACK].fetch(
 		"http://localhost/core/dev-registry"
 	);
@@ -133,6 +126,12 @@ export async function dispatchScheduledToWorker(
 	const owner = registry[query.worker];
 
 	if (owner === undefined) {
+		if (
+			!forwarded &&
+			c.env[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES].includes(query.worker)
+		) {
+			return dispatchLocalScheduled(c, query.worker, body);
+		}
 		return forwarded
 			? peerUnavailable(`This instance does not own Worker "${query.worker}".`)
 			: errorResponse(
