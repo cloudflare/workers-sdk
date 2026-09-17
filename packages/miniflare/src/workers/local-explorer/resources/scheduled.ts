@@ -128,7 +128,9 @@ export async function dispatchScheduledToWorker(
 	if (owner === undefined) {
 		if (
 			!forwarded &&
-			c.env[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES].includes(query.worker)
+			c.env[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES].includes(
+				query.worker
+			)
 		) {
 			return dispatchLocalScheduled(c, query.worker, body);
 		}
