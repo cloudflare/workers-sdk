@@ -46,6 +46,46 @@ function workerManifest(label: string) {
 }
 
 describe("Local Explorer scheduled dispatch", () => {
+	test("dispatches to a local Worker without the dev registry", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			inspectorPort: 0,
+			unsafeLocalExplorer: true,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "local",
+						compatibilityDate: "2026-01-01",
+						manifest: workerManifest("local"),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		const response = await mf.dispatchFetch(
+			...scheduledRequest("local", {
+				cron: "*/5 * * * *",
+				scheduled_time: 123,
+			})
+		);
+		const responseBody = await response.json();
+		expect(response.status, JSON.stringify(responseBody)).toBe(200);
+		expect(responseBody).toMatchObject({
+			success: true,
+			result: { outcome: "ok", noRetry: true },
+		});
+
+		const worker = await mf.getWorker("local");
+		expect(await (await worker.fetch("http://localhost")).json()).toEqual([
+			{ label: "local", cron: "*/5 * * * *", scheduledTime: 123 },
+		]);
+	});
+
 	test("dispatches to the exact local Worker without unsafe trigger handlers", async ({
 		expect,
 	}) => {
