@@ -65,8 +65,9 @@ export interface LoadNewConfigResult {
 export async function loadNewConfig(options: {
 	cwd: string;
 	args: { env?: string };
+	isPreview?: boolean;
 }): Promise<LoadNewConfigResult> {
-	const cwd = options.cwd;
+	const { cwd, args, isPreview = false } = options;
 	const cloudflareConfigPath = path.resolve(cwd, CLOUDFLARE_CONFIG_FILENAME);
 	if (!existsSync(cloudflareConfigPath)) {
 		throw new UserError(
@@ -83,10 +84,11 @@ export async function loadNewConfig(options: {
 		? candidateWranglerConfigPath
 		: undefined;
 
-	const mode = options.args.env ?? getCloudflareEnv();
+	const mode = args.env ?? getCloudflareEnv();
 
 	// ── Worker + settings config ────────────────────────────────────────
 	const workerConfigResult = await loadAndValidateConfig(cloudflareConfigPath, {
+		isPreview,
 		mode,
 	});
 
@@ -130,7 +132,7 @@ export async function loadNewConfig(options: {
 
 		const resolvedWranglerConfig = await resolveWranglerConfig(
 			wranglerConfigResult.exports.default,
-			{ mode }
+			{ isPreview, mode }
 		);
 
 		const parsed = WranglerConfigSchema.safeParse(resolvedWranglerConfig);

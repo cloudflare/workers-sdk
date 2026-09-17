@@ -19,7 +19,7 @@ import {
 import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
-import { isForcedBuildOutput } from "./build-output-env";
+import { isForcedBuildOutput, isPreviewBuild } from "./build-output-env";
 import { readBuildOutputWorkers } from "./build-output-preview";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
@@ -835,6 +835,7 @@ async function loadNewConfig(options: {
 	}
 
 	const { result, dependencies } = await loadAndValidateConfig(configPath, {
+		isPreview: isPreviewBuild(),
 		mode: options.mode,
 	});
 

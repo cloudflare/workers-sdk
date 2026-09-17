@@ -787,9 +787,10 @@ export type ParsedInputSettingsConfig = z.output<typeof InputSettingsSchema>;
 
 /**
  * Output settings schema — the shape of the top-level `config.json` in the
- * Build Output Specification. Adds the `mode` the build was produced in.
+ * Build Output Specification. Adds the build mode and Preview intent.
  */
 export const OutputSettingsSchema = InputSettingsSchema.extend({
+	isPreview: z.boolean().optional(),
 	mode: z.string().optional(),
 });
 
