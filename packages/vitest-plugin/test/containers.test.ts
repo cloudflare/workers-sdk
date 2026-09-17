@@ -9,10 +9,10 @@ import {
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
+	beginContainerConfiguration,
 	cleanupContainerInstances,
 	disposeContainersOnProcessExit,
 	prepareProjectContainers,
-	registerContainerShutdown,
 } from "../src/pool/containers";
 import type {
 	ContainerDevOptions,
@@ -354,7 +354,7 @@ describe("project Container environments", () => {
 	it("does not start preparation after an early shutdown", async ({
 		expect,
 	}) => {
-		registerContainerShutdown(project.vitest);
+		beginContainerConfiguration(project.vitest);
 		closeVitest();
 
 		await expect(prepare()).rejects.toThrow(
@@ -362,6 +362,19 @@ describe("project Container environments", () => {
 		);
 		expect(createContainerDevPlan).not.toHaveBeenCalled();
 		expect(getDockerPath).not.toHaveBeenCalled();
+	});
+
+	it("prepares after a Vitest config restart", async ({ expect }) => {
+		await prepare();
+		closeVitest();
+		cleanupContainerInstances();
+
+		beginContainerConfiguration(project.vitest);
+
+		await expect(prepare()).resolves.toMatchObject({
+			containerBuildId: "build-id",
+		});
+		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
 	});
 
 	it.for([

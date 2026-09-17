@@ -120,13 +120,23 @@ function beginVitestShutdown(vitest: Vitest): void {
 	}
 }
 
-/** Registers Container preparation cancellation before Vitest starts workers. */
-export function registerContainerShutdown(vitest: Vitest): void {
+// Installs the close handler once per Vitest instance.
+function registerContainerShutdown(vitest: Vitest): void {
 	if (registeredVitestInstances.has(vitest)) {
 		return;
 	}
 	registeredVitestInstances.add(vitest);
 	vitest.onClose(() => beginVitestShutdown(vitest));
+}
+
+/**
+ * Starts Container lifecycle for a newly configured Vitest server.
+ * Vitest reuses the same instance after configuration restarts, so this
+ * clears shutdown state from the previous configuration generation.
+ */
+export function beginContainerConfiguration(vitest: Vitest): void {
+	closingVitestInstances.delete(vitest);
+	registerContainerShutdown(vitest);
 }
 
 function getPreparationError(project: TestProject, error: unknown): UserError {
