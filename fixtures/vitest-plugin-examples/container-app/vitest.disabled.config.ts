@@ -7,12 +7,12 @@ export default mergeConfig(
 	defineProject({
 		plugins: [
 			cloudflareTest({
-				wrangler: { configPath: "./wrangler.jsonc" },
+				wrangler: { configPath: "./wrangler.disabled.jsonc" },
 			}),
 		],
 		test: {
-			include: ["test/container.test.ts"],
-			name: "container-app",
+			include: ["test/container-disabled.test.ts"],
+			name: "container-app-disabled",
 		},
 	})
 );

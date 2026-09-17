@@ -1,7 +1,8 @@
 {
-	"name": "container-app",
+	"name": "container-app-disabled",
 	"main": "src/index.ts",
-	// don't provide compatibility_date so that vitest will infer the latest one
+	// Keep the production Container shape while disabling local execution.
+	"dev": { "enable_containers": false },
 	"containers": [
 		{
 			"class_name": "NamedImageContainer",
