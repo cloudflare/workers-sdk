@@ -17,7 +17,6 @@ test("logs are written to the console by default when no `handleStructuredLogs` 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -63,7 +62,6 @@ test("logs are structured and handled via `handleStructuredLogs` when such optio
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -131,7 +129,6 @@ test("when using `handleStructuredLogs` some known unhelpful logs are filtered o
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
