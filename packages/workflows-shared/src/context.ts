@@ -767,14 +767,36 @@ export class Context extends RpcTarget {
 					}
 				} else {
 					timeoutTask = timeoutPromise();
-					result = await Promise.race([
+					const callbackTask = Promise.resolve(
 						doWrapperClosure({
 							step: { name, count },
 							attempt: stepState.attemptedCount,
 							config: toEngineStepConfig(config),
-						}),
-						timeoutTask,
-					]);
+						})
+					);
+					try {
+						result = await Promise.race([callbackTask, timeoutTask]);
+					} catch (error) {
+						// A timeout does not cancel the callback RPC. Release any late
+						// result without waiting for it before retrying. Successful race
+						// winners remain owned by persistStepResult, including streams.
+						void callbackTask
+							.then(async (value) => {
+								try {
+									if (isReadableStreamLike(value)) {
+										await value.cancel(error);
+									}
+								} finally {
+									(value as Partial<Disposable> | null | undefined)?.[
+										Symbol.dispose
+									]?.();
+								}
+							})
+							// Late rejection or cleanup failure must not replace the
+							// attempt's original error or become an unhandled rejection.
+							.catch(() => {});
+						throw error;
+					}
 				}
 
 				// We store the value of `output` in an object with a `value` property. This allows us to store `undefined`,
