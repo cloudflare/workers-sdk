@@ -35,6 +35,7 @@ export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 
 export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
+	isPreview?: boolean;
 	// Used by the Vite plugin
 	// If set to `true`, the `main` field is not converted to an absolute path
 	preserveOriginalMain?: boolean;
@@ -108,7 +109,11 @@ export async function readNewConfig(
 	}
 
 	const cwd = process.cwd();
-	const loaded = await loadNewConfig({ cwd, args });
+	const loaded = await loadNewConfig({
+		cwd,
+		args,
+		isPreview: options.isPreview,
+	});
 
 	// Construct a fresh `NormalizeAndValidateConfigArgs` with `env: undefined`.
 	// `args.env` is consumed only by `loadNewConfig` (to compute `ctx.mode`);
