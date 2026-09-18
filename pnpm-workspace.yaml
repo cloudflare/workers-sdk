@@ -60,6 +60,7 @@ minimumReleaseAgeExclude:
 
 allowBuilds:
   esbuild: true
+  node-hid: true
   workerd: true
   # miniflare's direct `sharp` (0.35+) has no install script, but the
   # catalog-pinned published @cloudflare/vitest-pool-workers (the pre-rename name)
