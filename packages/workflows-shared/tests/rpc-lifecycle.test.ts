@@ -1,9 +1,11 @@
-import { createExecutionContext } from "cloudflare:test";
+import { createExecutionContext, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { afterEach, it, vi } from "vitest";
 import workerdUnsafe from "workerd:unsafe";
 import { WorkflowBinding } from "../src/binding";
+import { InstanceEvent } from "../src/instance";
 import { WorkflowInstanceIntrospectorHandle } from "../src/introspection";
+import { normalizeForStorage } from "../src/lib/serialization";
 import { WorkflowInstanceModifier } from "../src/modifier";
 import { setTestWorkflowCallback } from "./test-entry";
 import { runWorkflowAndAwait } from "./utils";
@@ -94,3 +96,96 @@ it.for([false, true])(
 		}
 	}
 );
+
+it.for([false, true])(
+	"aborts after modifier acquisition fails (modify attempted: %s)",
+	async (attemptModify, { expect }) => {
+		const binding = createBinding();
+		const error = new Error("modifier acquisition failed");
+		vi.spyOn(binding, "unsafeGetInstanceModifier").mockRejectedValue(error);
+		const abort = vi.spyOn(binding, "unsafeAbort");
+		const id = crypto.randomUUID();
+		{
+			await using instance = new WorkflowInstanceIntrospectorHandle(
+				binding as unknown as IntrospectionBinding,
+				id
+			);
+			if (attemptModify) {
+				await expect(
+					instance.modify((modifier) => modifier.disableSleeps())
+				).rejects.toBe(error);
+			}
+			await expect(instance.dispose()).resolves.toBeUndefined();
+		}
+		expect(abort).toHaveBeenCalledExactlyOnceWith(id, "Instance dispose");
+	}
+);
+
+it("still reports a modifier disposer failure after aborting", async ({
+	expect,
+}) => {
+	const binding = createBinding();
+	const error = new Error("modifier disposal failed");
+	vi.spyOn(binding, "unsafeGetInstanceModifier").mockResolvedValue({
+		[Symbol.dispose]() {
+			throw error;
+		},
+	});
+	const abort = vi.spyOn(binding, "unsafeAbort");
+	const id = crypto.randomUUID();
+	const instance = new WorkflowInstanceIntrospectorHandle(
+		binding as unknown as IntrospectionBinding,
+		id
+	);
+	await expect(instance.dispose()).rejects.toBe(error);
+	expect(abort).toHaveBeenCalledExactlyOnceWith(id, "Instance dispose");
+});
+
+it.for([
+	{ name: "function-valued property", create: () => ({ helper: () => 42 }) },
+	{
+		name: "function-valued array property",
+		create: () => Object.assign([42], { helper: () => 42 }),
+	},
+])(
+	"rejects a non-cloneable step result: $name",
+	async ({ create }, { expect }) => {
+		// The storage normaliser used to discard extra array properties. They must
+		// not let non-serialisable output bypass the step result contract.
+		const id = crypto.randomUUID();
+		await runWorkflowAndAwait(id, async (_event, step) => {
+			await step.do("non-cloneable result", async () => create());
+		});
+		const engine = env.ENGINE.get(env.ENGINE.idFromName(id));
+		const { logs } = await engine.readLogs();
+		expect(logs).toContainEqual(
+			expect.objectContaining({
+				event: InstanceEvent.WORKFLOW_FAILURE,
+				metadata: expect.objectContaining({
+					error: expect.objectContaining({
+						message: expect.stringContaining("not serialisable"),
+					}),
+				}),
+			})
+		);
+	}
+);
+
+it("preserves data from class instances with prototype methods", async ({
+	expect,
+}) => {
+	class Result {
+		value = 42;
+		method(): number {
+			return this.value;
+		}
+	}
+	const stub = env.ENGINE.get(env.ENGINE.idFromName(crypto.randomUUID()));
+	await runInDurableObject(stub, async (_engine, state) => {
+		const value = new Result();
+		// Both the old storage path and structuredClone ignore prototype methods.
+		await state.storage.put("result", { value: normalizeForStorage(value) });
+		expect(await state.storage.get("result")).toEqual({ value: { value: 42 } });
+		expect(structuredClone(value)).toEqual({ value: 42 });
+	});
+});

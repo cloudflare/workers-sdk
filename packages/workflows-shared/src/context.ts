@@ -698,8 +698,9 @@ export class Context extends RpcTarget {
 				): Promise<unknown> => {
 					if (!isReadableStreamLike(value)) {
 						try {
-							// Do not forward the callback's RPC disposer into the caller's
-							// execution context. Keep the live result's data shape intact.
+							// Non-stream results must be structured-cloneable. Clone before
+							// normalisation, which can discard unsupported array properties,
+							// and avoid forwarding the callback's RPC disposer to the caller.
 							const cloned = structuredClone(value);
 							// Compact typed-array backing buffers only for storage (#14101).
 							const stored = normalizeForStorage(cloned);
