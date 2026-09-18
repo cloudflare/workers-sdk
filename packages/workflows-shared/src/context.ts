@@ -697,22 +697,25 @@ export class Context extends RpcTarget {
 					activeTimeoutTask?: Promise<never>
 				): Promise<unknown> => {
 					if (!isReadableStreamLike(value)) {
-						// Typed-array views anywhere in the value tree are copied
-						// into a tight backing buffer so the full backing buffer
-						// does not ride along with each view (issue #14101). View
-						// types are preserved so cached replays observe the same
-						// constructor as the live execution path. The caller still
-						// receives the original `value` below — only the stored
-						// shape changes.
-						const stored = normalizeForStorage(value);
-						await this.#state.storage.put(valueKey, { value: stored });
-						abortController.abort("step finished");
-						// @ts-expect-error priorityQueue is initiated in init
-						this.#engine.priorityQueue.remove({
-							hash: priorityQueueHash,
-							type: "timeout",
-						});
-						return value;
+						try {
+							// Do not forward the callback's RPC disposer into the caller's
+							// execution context. Keep the live result's data shape intact.
+							const cloned = structuredClone(value);
+							// Compact typed-array backing buffers only for storage (#14101).
+							const stored = normalizeForStorage(cloned);
+							await this.#state.storage.put(valueKey, { value: stored });
+							abortController.abort("step finished");
+							// @ts-expect-error priorityQueue is initiated in init
+							this.#engine.priorityQueue.remove({
+								hash: priorityQueueHash,
+								type: "timeout",
+							});
+							return cloned;
+						} finally {
+							(value as Partial<Disposable> | null | undefined)?.[
+								Symbol.dispose
+							]?.();
+						}
 					}
 
 					streamResultSeen = true;
