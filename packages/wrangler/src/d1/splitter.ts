@@ -126,20 +126,18 @@ function splitSqlIntoStatements(sql: string): string[] {
 	const statements: string[] = [];
 	let start = 0;
 	while (start < sql.length) {
-		const end = findCompleteStatementEnd(sql, start);
+		const { end, hasUsefulToken } = findCompleteStatementEnd(sql, start);
 		if (end === undefined) {
+			if (hasUsefulToken) {
+				statements.push(sql.slice(start).trim());
+			}
 			break;
 		}
 		const statement = sql.slice(start, end - 1).trim();
-		if (statement.length > 0) {
+		if (hasUsefulToken && statement.length > 0) {
 			statements.push(statement);
 		}
 		start = end;
-	}
-
-	const remainder = sql.slice(start).trim();
-	if (remainder.length > 0) {
-		statements.push(remainder);
 	}
 	return statements;
 }
@@ -251,8 +249,12 @@ const transitions: Record<State, Record<Token, State>> = {
 function findCompleteStatementEnd(
 	sql: string,
 	start: number
-): number | undefined {
+): {
+	end: number | undefined;
+	hasUsefulToken: boolean;
+} {
 	let state: State = "INVALID";
+	let hasUsefulToken = false;
 	for (let index = start; index < sql.length; index++) {
 		const char = sql[index];
 		let token: Token;
@@ -269,28 +271,28 @@ function findCompleteStatementEnd(
 		} else if (char === "/" && sql[index + 1] === "*") {
 			const end = sql.indexOf("*/", index + 2);
 			if (end === -1) {
-				return undefined;
+				return { end: undefined, hasUsefulToken };
 			}
 			index = end + 1;
 			token = "tkWS";
 		} else if (char === "-" && sql[index + 1] === "-") {
 			const end = sql.indexOf("\n", index + 2);
 			if (end === -1) {
-				return undefined;
+				return { end: undefined, hasUsefulToken };
 			}
 			index = end;
 			token = "tkWS";
 		} else if (char === "[") {
 			const end = sql.indexOf("]", index + 1);
 			if (end === -1) {
-				return undefined;
+				return { end: undefined, hasUsefulToken: true };
 			}
 			index = end;
 			token = "tkOTHER";
 		} else if (char === "'" || char === '"' || char === "`") {
 			const end = sql.indexOf(char, index + 1);
 			if (end === -1) {
-				return undefined;
+				return { end: undefined, hasUsefulToken: true };
 			}
 			index = end;
 			token = "tkOTHER";
@@ -304,12 +306,13 @@ function findCompleteStatementEnd(
 			token = "tkOTHER";
 		}
 
+		hasUsefulToken ||= token !== "tkSEMI" && token !== "tkWS";
 		state = getNextState(state, token);
 		if (state === "START") {
-			return index + 1;
+			return { end: index + 1, hasUsefulToken };
 		}
 	}
-	return undefined;
+	return { end: undefined, hasUsefulToken };
 }
 
 function getNextState(state: State, token: Token): State {

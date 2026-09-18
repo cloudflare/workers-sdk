@@ -129,7 +129,6 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
-	// FIXME(next commit): omit comment-only SQL fragments
 	it("should handle inline comments", ({ expect }) => {
 		expect(
 			splitSqlQuery(
@@ -142,7 +141,6 @@ describe("splitSqlQuery()", () => {
 			  "SELECT * FROM my_table -- semicolons; in; comments; don't count;
 			        WHERE val = 'foo;bar'
 			        AND "col;name" = \`other;col\`",
-			  "-- or identifiers (Postgres or MySQL style)",
 			]
 		`);
 	});
@@ -183,7 +181,6 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
-	// FIXME(next commit): omit comment-only SQL fragments
 	it("should ignore comment at the end", ({ expect }) => {
 		expect(
 			splitSqlQuery(
@@ -197,7 +194,6 @@ describe("splitSqlQuery()", () => {
 			[
 			  "-- This is a comment
 			        SELECT * FROM my_table WHERE id = 42 - 10",
-			  "-- This is a comment",
 			]
 		`);
 	});
@@ -303,6 +299,15 @@ describe("splitSqlQuery()", () => {
 		]);
 	});
 
+	it("drops only statement fragments containing no useful SQL token", ({
+		expect,
+	}) => {
+		expect(splitSqlQuery("SELECT 1; -- trailing comment")).toEqual([
+			"SELECT 1",
+		]);
+		expect(splitSqlQuery(";;; /* comment */")).toEqual([";;; /* comment */"]);
+	});
+
 	it("does not classify keyword-looking or quoted identifiers as keywords", ({
 		expect,
 	}) => {
@@ -314,6 +319,24 @@ describe("splitSqlQuery()", () => {
 			'CREATE TABLE create_trigger (endless TEXT, "END" TEXT)',
 			"SELECT 'create; trigger', \"end;\", `trigger;`",
 		]);
+	});
+
+	it("preserves an unterminated bracket identifier after a complete statement", ({
+		expect,
+	}) => {
+		expect(splitSqlQuery("SELECT 1; [unterminated")).toEqual([
+		"SELECT 1",
+		"[unterminated",
+	]);
+	});
+
+	it("preserves an unterminated quoted value after a complete statement", ({
+		expect,
+	}) => {
+		expect(splitSqlQuery("SELECT 1; 'unterminated")).toEqual([
+		"SELECT 1",
+		"'unterminated",
+	]);
 	});
 
 	it("should handle compound statements for BEGINs", ({ expect }) => {
