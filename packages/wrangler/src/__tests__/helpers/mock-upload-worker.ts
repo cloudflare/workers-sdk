@@ -20,6 +20,7 @@ import type { NonVersionedScriptSettings } from "../../versions/api";
 import type {
 	AssetConfigMetadata,
 	CfWorkerInit,
+	DurableObjectCodeUpdateStrategy,
 	ExportsReconciliationResult,
 	RawConfig,
 	RawEnvironment,
@@ -73,6 +74,8 @@ export function mockUploadWorkerRequest(
 		}[];
 		expectedAnnotations?: Record<string, string | undefined>;
 		expectedDeploymentMessage?: string;
+		expectedLegacyDurableObjectsRolloutGracePeriod?: string;
+		expectedDurableObjectsCodeUpdateStrategy?: DurableObjectCodeUpdateStrategy;
 		expectedBindingsInherit?: "strict";
 	} = {}
 ) {
@@ -177,6 +180,14 @@ export function mockUploadWorkerRequest(
 		if ("expectedAnnotations" in options) {
 			expect(metadata.annotations).toEqual(expectedAnnotations);
 		}
+		if (
+			useOldUploadApi &&
+			"expectedLegacyDurableObjectsRolloutGracePeriod" in options
+		) {
+			expect(metadata.durable_objects_rollout_grace_period).toEqual(
+				expectedLegacyDurableObjectsRolloutGracePeriod
+			);
+		}
 
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
@@ -253,6 +264,8 @@ export function mockUploadWorkerRequest(
 		expectedObservability,
 		expectedSettingsPatch,
 		expectedDeploymentMessage,
+		expectedLegacyDurableObjectsRolloutGracePeriod,
+		expectedDurableObjectsCodeUpdateStrategy,
 	} = options;
 
 	const expectedScriptName =
@@ -281,13 +294,28 @@ export function mockUploadWorkerRequest(
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
 				async ({ request }) => {
-					if ("expectedDeploymentMessage" in options) {
+					if (
+						"expectedDeploymentMessage" in options ||
+						"expectedDurableObjectsCodeUpdateStrategy" in options
+					) {
 						const body = (await request.json()) as {
 							annotations?: { "workers/message"?: string };
+							code_update_strategy?: DurableObjectCodeUpdateStrategy;
+							durable_objects_rollout_grace_period?: unknown;
 						};
-						expect(body.annotations?.["workers/message"]).toEqual(
-							expectedDeploymentMessage
-						);
+						if ("expectedDeploymentMessage" in options) {
+							expect(body.annotations?.["workers/message"]).toEqual(
+								expectedDeploymentMessage
+							);
+						}
+						if ("expectedDurableObjectsCodeUpdateStrategy" in options) {
+							expect(body.code_update_strategy).toEqual(
+								expectedDurableObjectsCodeUpdateStrategy
+							);
+							expect(body).not.toHaveProperty(
+								"durable_objects_rollout_grace_period"
+							);
+						}
 					}
 					return HttpResponse.json(createFetchResult({ id: "Deployment-ID" }));
 				}

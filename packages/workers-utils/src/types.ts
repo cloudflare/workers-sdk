@@ -271,6 +271,7 @@ type WorkerMetadataPut = {
 	compatibility_flags?: string[];
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
+	durable_objects_rollout_grace_period?: string;
 	exports?: CfExports;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];

@@ -14,6 +14,7 @@ import {
 	summariseVersionTraffic,
 	validateTrafficSubtotal,
 } from "../../versions/deploy";
+import { normalizeDurableObjectsCodeUpdateModeArgs } from "../../versions/deployment-args";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -260,7 +261,96 @@ describe("versions deploy", () => {
 		);
 	});
 
-	describe("legacy deploy", () => {
+	describe("top-level deploy", () => {
+		test("converts the deferred CLI code update strategy for the legacy upload API", async () => {
+			writeWranglerConfig();
+			writeWorkerSource({ type: "sw" });
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				useOldUploadApi: true,
+				expectedLegacyDurableObjectsRolloutGracePeriod: "45s",
+			});
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy --durable-objects-code-update-mode deferred 45s ./index"
+			);
+		});
+
+		test("converts the configured deferred code update strategy for the legacy upload API", async () => {
+			writeWranglerConfig({
+				durable_objects: {
+					code_update_strategy: { mode: "deferred", max_delay: 60 },
+				},
+			});
+			writeWorkerSource({ type: "sw" });
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				useOldUploadApi: true,
+				expectedLegacyDurableObjectsRolloutGracePeriod: "60s",
+			});
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
+
+			await runWrangler("deploy ./index");
+		});
+
+		test("sends the default Durable Objects code update strategy from top-level deploy", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedDurableObjectsCodeUpdateStrategy: {
+					mode: "deferred",
+					max_delay: 30,
+				},
+			});
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
+
+			await runWrangler("deploy ./index");
+		});
+
+		test("sends an unsafe code update strategy override to the deployments API", async ({
+			expect,
+		}) => {
+			let deploymentBody: unknown;
+			writeWranglerConfig({
+				unsafe: {
+					metadata: {
+						code_update_strategy: { mode: "deferred", max_delay: 5 },
+					},
+				},
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:workerName/deployments",
+					async ({ request }) => {
+						deploymentBody = await request.json();
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-deployment-id" })
+						);
+					}
+				)
+			);
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
+
+			await runWrangler(
+				"deploy ./index --durable-objects-code-update-mode immediate"
+			);
+
+			expect(
+				(deploymentBody as { code_update_strategy?: unknown })
+					.code_update_strategy
+			).toEqual({ mode: "deferred", max_delay: 5 });
+			expect(deploymentBody).not.toHaveProperty(
+				"durable_objects_rollout_grace_period"
+			);
+		});
+
 		test("should warn user when worker has deployment with multiple versions", async ({
 			expect,
 		}) => {
@@ -270,11 +360,15 @@ describe("versions deploy", () => {
 			);
 			writeWranglerConfig();
 			writeWorkerSource();
-			mockUploadWorkerRequest();
+			mockUploadWorkerRequest({
+				expectedDurableObjectsCodeUpdateStrategy: { mode: "immediate" },
+			});
 			mockGetWorkerSubdomain({ enabled: true });
 			mockSubDomainRequest();
 
-			await runWrangler("deploy ./index");
+			await runWrangler(
+				"deploy ./index --durable-objects-code-update-mode immediate"
+			);
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"╭  WARNING  Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.
@@ -297,6 +391,191 @@ describe("versions deploy", () => {
 				│"
 			`);
 		});
+	});
+
+	for (const {
+		name,
+		flag,
+		flagAfterVersion,
+		codeUpdateStrategy,
+		configPath,
+		expected,
+	} of [
+		{
+			name: "sends the default Durable Objects code update strategy",
+			flag: "",
+			flagAfterVersion: false,
+			codeUpdateStrategy: undefined,
+			configPath: undefined,
+			expected: { mode: "deferred", max_delay: 30 },
+		},
+		{
+			name: "sends the immediate CLI code update strategy",
+			flag: "--durable-objects-code-update-mode immediate",
+			flagAfterVersion: true,
+			codeUpdateStrategy: undefined,
+			configPath: undefined,
+			expected: { mode: "immediate" },
+		},
+		{
+			name: "sends the deferred CLI code update strategy",
+			flag: "--durable-objects-code-update-mode deferred 45s",
+			flagAfterVersion: false,
+			codeUpdateStrategy: undefined,
+			configPath: undefined,
+			expected: { mode: "deferred", max_delay: 45 },
+		},
+		{
+			name: "normalizes a unitless deferred Durable Objects code update delay",
+			flag: "--durable-objects-code-update-mode deferred 45",
+			flagAfterVersion: false,
+			codeUpdateStrategy: undefined,
+			configPath: undefined,
+			expected: { mode: "deferred", max_delay: 45 },
+		},
+		{
+			name: "sends a deferred code update delay with millisecond precision",
+			flag: "--durable-objects-code-update-mode deferred 1.001s",
+			flagAfterVersion: false,
+			codeUpdateStrategy: undefined,
+			configPath: undefined,
+			expected: { mode: "deferred", max_delay: 1.001 },
+		},
+		{
+			name: "sends the configured immediate Durable Objects code update strategy",
+			flag: "",
+			flagAfterVersion: false,
+			codeUpdateStrategy: { mode: "immediate" },
+			configPath: "wrangler.jsonc",
+			expected: { mode: "immediate" },
+		},
+		{
+			name: "omits the configured delay for immediate Durable Objects code updates",
+			flag: "",
+			flagAfterVersion: false,
+			codeUpdateStrategy: { mode: "immediate", max_delay: 60 },
+			configPath: undefined,
+			expected: { mode: "immediate" },
+		},
+		{
+			name: "sends the configured deferred Durable Objects code update strategy",
+			flag: "",
+			flagAfterVersion: false,
+			codeUpdateStrategy: { mode: "deferred", max_delay: 60 },
+			configPath: undefined,
+			expected: { mode: "deferred", max_delay: 60 },
+		},
+		{
+			name: "defaults the configured deferred code update strategy delay",
+			flag: "",
+			flagAfterVersion: false,
+			codeUpdateStrategy: { mode: "deferred" },
+			configPath: undefined,
+			expected: { mode: "deferred", max_delay: 30 },
+		},
+		{
+			name: "prefers the CLI Durable Objects code update mode over configuration",
+			flag: "--durable-objects-code-update-mode deferred 45s",
+			flagAfterVersion: false,
+			codeUpdateStrategy: { mode: "immediate" },
+			configPath: undefined,
+			expected: { mode: "deferred", max_delay: 45 },
+		},
+	] as const) {
+		test(name, async ({ expect }) => {
+			let deploymentBody: unknown;
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:workerName/deployments",
+					async ({ request }) => {
+						deploymentBody = await request.json();
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-deployment-id" })
+						);
+					}
+				)
+			);
+			writeWranglerConfig(
+				codeUpdateStrategy === undefined
+					? {}
+					: {
+							durable_objects: {
+								code_update_strategy: codeUpdateStrategy,
+							},
+						},
+				configPath
+			);
+
+			const versionId = "10000000-0000-0000-0000-000000000000";
+			await runWrangler(
+				flagAfterVersion
+					? `versions deploy ${versionId} --yes ${flag}`
+					: `versions deploy ${flag} ${versionId} --yes`
+			);
+
+			expect(
+				(deploymentBody as { code_update_strategy?: unknown })
+					.code_update_strategy
+			).toEqual(expected);
+			expect(deploymentBody).not.toHaveProperty(
+				"durable_objects_rollout_grace_period"
+			);
+		});
+	}
+
+	for (const duration of ["invalid", "-1s", "500us", "1.0005s", "301s"]) {
+		test(`rejects invalid Durable Objects code update delay: ${duration}`, async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					`versions deploy 10000000-0000-0000-0000-000000000000 --yes --durable-objects-code-update-mode deferred ${duration}`
+				)
+			).rejects.toThrow(
+				'The duration passed to "--durable-objects-code-update-mode deferred" must be between 0 seconds and 5 minutes and use millisecond precision.'
+			);
+		});
+	}
+
+	for (const mode of ["invalid", "deferred"]) {
+		test(`rejects invalid Durable Objects code update mode: ${mode}`, async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					`versions deploy 10000000-0000-0000-0000-000000000000 --yes --durable-objects-code-update-mode ${mode}`
+				)
+			).rejects.toThrow(
+				'The argument "--durable-objects-code-update-mode" must be either "immediate" or "deferred <duration>".'
+			);
+		});
+	}
+
+	test("does not normalize arguments after the option terminator", ({
+		expect,
+	}) => {
+		const argv = [
+			"deploy",
+			"--",
+			"--durable-objects-code-update-mode",
+			"deferred",
+			"45s",
+		];
+
+		expect(normalizeDurableObjectsCodeUpdateModeArgs(argv)).toEqual(argv);
+	});
+
+	test("does not consume a duration-shaped positional after immediate", ({
+		expect,
+	}) => {
+		const argv = [
+			"deploy",
+			"--durable-objects-code-update-mode",
+			"immediate",
+			"30",
+		];
+
+		expect(normalizeDurableObjectsCodeUpdateModeArgs(argv)).toEqual(argv);
 	});
 
 	describe("without wrangler.toml", () => {

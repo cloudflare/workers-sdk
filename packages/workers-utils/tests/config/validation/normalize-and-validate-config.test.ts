@@ -1770,22 +1770,123 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if durable_objects.bindings is not defined", ({
+			it("should default durable_objects.bindings when only a code update strategy is defined", ({
 				expect,
 			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ durable_objects: {} } as unknown as RawConfig,
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							code_update_strategy: {
+								mode: "deferred",
+								max_delay: 1.001,
+							},
+						},
+					},
 					undefined,
 					undefined,
 					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - The field "durable_objects" is missing the required "bindings" property."
-				`);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [],
+					code_update_strategy: { mode: "deferred", max_delay: 1.001 },
+				});
 			});
+
+			it("should support a code update strategy alongside durable object bindings", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "CHAT_ROOM", class_name: "ChatRoom" }],
+							code_update_strategy: {
+								mode: "deferred",
+								max_delay: 300,
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [{ name: "CHAT_ROOM", class_name: "ChatRoom" }],
+					code_update_strategy: { mode: "deferred", max_delay: 300 },
+				});
+			});
+
+			for (const { name, strategy, expectedError } of [
+				{
+					name: "is not an object",
+					strategy: [],
+					expectedError:
+						'The field "durable_objects.code_update_strategy" should be an object',
+				},
+				{
+					name: "has no mode",
+					strategy: {},
+					expectedError:
+						'"durable_objects.code_update_strategy.mode" is a required field.',
+				},
+				{
+					name: "has an unknown mode",
+					strategy: { mode: "gradual" },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.mode" field to be one of',
+				},
+				{
+					name: "has a non-number max delay",
+					strategy: { mode: "deferred", max_delay: "60" },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be of type number',
+				},
+				{
+					name: "has a negative max delay",
+					strategy: { mode: "deferred", max_delay: -1 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be between 0 and 300 seconds',
+				},
+				{
+					name: "has a max delay greater than five minutes",
+					strategy: { mode: "deferred", max_delay: 301 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be between 0 and 300 seconds',
+				},
+				{
+					name: "has a max delay below one millisecond",
+					strategy: { mode: "deferred", max_delay: 0.0005 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to use millisecond precision',
+				},
+				{
+					name: "has sub-millisecond precision",
+					strategy: { mode: "deferred", max_delay: 1.0005 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to use millisecond precision',
+				},
+			] as const) {
+				it(`should error if durable_objects.code_update_strategy ${name}`, ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							durable_objects: {
+								code_update_strategy: strategy,
+							},
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.renderErrors()).toContain(expectedError);
+				});
+			}
 
 			it("should error if durable_objects.bindings is an object", ({
 				expect,
@@ -11466,23 +11567,30 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if durable_objects.bindings is not defined", ({
+			it("should allow a named environment code update strategy without bindings", ({
 				expect,
 			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						env: {
+							ENV1: {
+								durable_objects: {
+									code_update_strategy: { mode: "immediate" },
+								},
+							},
+						},
+					},
 					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.ENV1" environment configuration
-					    - The field "env.ENV1.durable_objects" is missing the required "bindings" property."
-				`);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [],
+					code_update_strategy: { mode: "immediate" },
+				});
 			});
 
 			it("should error if durable_objects.bindings is an object", ({
@@ -13664,6 +13772,28 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject a preview code update strategy", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						previews: {
+							durable_objects: {
+								code_update_strategy: { mode: "immediate" },
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "previews.durable_objects" is missing the required "bindings" property.'
+				);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in previews.durable_objects field: "code_update_strategy"'
+				);
 			});
 
 			it("should reject invalid targeted placement in previews config", ({

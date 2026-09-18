@@ -504,6 +504,7 @@ export interface CfWorkerInit {
 		| undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	durable_objects_rollout_grace_period?: string;
 	/**
 	 * Declarative exports configuration. Durable Object entries are sent instead
 	 * of `migrations`.
