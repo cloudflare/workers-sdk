@@ -6,25 +6,38 @@ const SCHEDULED_ROUTE =
 	"**/cdn-cgi/local/explorer/api/local/scheduled?worker=*";
 const STORAGE_PREFIX = "local-explorer.cron-triggers.custom-rows.v1";
 
-async function mockWorkers(crons: string[]): Promise<void> {
+interface MockWorkerMetadata {
+	isSelf?: boolean;
+	name: string;
+	persistenceScope?: string;
+	triggers: { crons: string[] };
+}
+
+async function mockWorkerMetadata(
+	workers: MockWorkerMetadata[]
+): Promise<void> {
 	await page.route(WORKERS_ROUTE, async (route) => {
 		await route.fulfill({
 			body: JSON.stringify({
 				errors: [],
 				messages: [],
-				result: [
-					{
-						isSelf: true,
-						name: "cron-worker",
-						persistenceScope: "cron-e2e-project",
-						triggers: { crons },
-					},
-				],
+				result: workers,
 				success: true,
 			}),
 			contentType: "application/json",
 		});
 	});
+}
+
+async function mockWorkers(crons: string[]): Promise<void> {
+	await mockWorkerMetadata([
+		{
+			isSelf: true,
+			name: "cron-worker",
+			persistenceScope: "cron-e2e-project",
+			triggers: { crons },
+		},
+	]);
 }
 
 async function openCronTriggers(): Promise<void> {
@@ -56,6 +69,9 @@ describe("Cron Triggers", () => {
 	}) => {
 		await mockWorkers([]);
 		await openCronTriggers();
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBeNull();
 		await page
 			.getByRole("heading", { name: "No Cron Triggers configured" })
 			.waitFor();
@@ -65,6 +81,104 @@ describe("Cron Triggers", () => {
 		expect(
 			await page.getByRole("button", { name: "Trigger", exact: true }).count()
 		).toBe(0);
+	});
+
+	test("preserves the requested worker when bootstrap fails", async ({
+		expect,
+	}) => {
+		await page.route(WORKERS_ROUTE, async (route) => {
+			await route.fulfill({
+				body: JSON.stringify({
+					errors: [{ code: 10000, message: "Workers unavailable" }],
+					messages: [],
+					success: false,
+				}),
+				contentType: "application/json",
+				status: 500,
+			});
+		});
+
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/cron-triggers?worker=requested-worker",
+				viteUrl
+			).toString()
+		);
+		await expect
+			.poll(() => page.locator("body").innerText())
+			.toContain("Cron Triggers are unavailable");
+		expect(new URL(page.url()).searchParams.get("worker")).toBe(
+			"requested-worker"
+		);
+	});
+
+	test("canonicalizes missing and invalid workers before dispatch", async ({
+		expect,
+	}) => {
+		await mockWorkerMetadata([
+			{
+				isSelf: true,
+				name: "worker-1",
+				persistenceScope: "cron-project-1",
+				triggers: { crons: ["first-worker-cron"] },
+			},
+			{
+				name: "worker-2",
+				persistenceScope: "cron-project-2",
+				triggers: { crons: ["second-worker-cron"] },
+			},
+		]);
+		const requestedWorkers: Array<string | null> = [];
+		await page.route(SCHEDULED_ROUTE, async (route) => {
+			requestedWorkers.push(
+				new URL(route.request().url()).searchParams.get("worker")
+			);
+			await route.fulfill({
+				body: JSON.stringify({
+					errors: [],
+					messages: [],
+					result: { noRetry: false, outcome: "ok" },
+					success: true,
+				}),
+				contentType: "application/json",
+			});
+		});
+
+		await page.goto(
+			new URL("/cdn-cgi/local/explorer/cron-triggers", viteUrl).toString()
+		);
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBe("worker-1");
+
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/cron-triggers?worker=missing-worker",
+				viteUrl
+			).toString()
+		);
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBe("worker-1");
+		expect(await page.getByLabel("Cron expression").first().inputValue()).toBe(
+			"first-worker-cron"
+		);
+		await page.getByRole("button", { name: "Trigger", exact: true }).click();
+		await expect.poll(() => requestedWorkers).toEqual(["worker-1"]);
+
+		requestedWorkers.length = 0;
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/cron-triggers?worker=worker-2",
+				viteUrl
+			).toString()
+		);
+		expect(new URL(page.url()).searchParams.get("worker")).toBe("worker-2");
+		expect(await page.getByLabel("Cron expression").first().inputValue()).toBe(
+			"second-worker-cron"
+		);
+		await page.getByRole("button", { name: "Trigger", exact: true }).click();
+		await expect.poll(() => requestedWorkers).toEqual(["worker-2"]);
 	});
 
 	test("uses full-width equal panes and flattens only wide rows", async ({
@@ -396,7 +510,7 @@ describe("Cron Triggers", () => {
 			.click();
 		await page.getByText("Outcome: ok").waitFor();
 		await page.getByRole("button", { name: "Build expression" }).last().click();
-		await page.getByLabel("Hour (UTC)").last().fill("");
+		await page.getByLabel("Hour").last().fill("");
 		await expect
 			.poll(() =>
 				page.evaluate(
@@ -417,7 +531,7 @@ describe("Cron Triggers", () => {
 				.last()
 				.getAttribute("aria-pressed")
 		).toBe("true");
-		expect(await page.getByLabel("Hour (UTC)").last().inputValue()).toBe("");
+		expect(await page.getByLabel("Hour").last().inputValue()).toBe("");
 		expect(await page.getByLabel("Epoch milliseconds").inputValue()).toBe(
 			"123456789"
 		);
