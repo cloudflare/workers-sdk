@@ -5,6 +5,16 @@ const path = require("path");
 const MIN_NODE_VERSION = "22.0.0";
 let wranglerProcess;
 
+function resolveExitCode(code, signal) {
+	if (code !== null && code !== undefined) {
+		return code;
+	}
+	if (signal) {
+		console.error(`wrangler exited because it received signal ${signal}`);
+	}
+	return 1;
+}
+
 /**
  * Executes ../wrangler-dist/cli.js
  */
@@ -33,9 +43,7 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 			stdio: ["inherit", "inherit", "inherit", "ipc"],
 		}
 	)
-		.on("exit", (code) =>
-			process.exit(code === undefined || code === null ? 0 : code)
-		)
+		.on("exit", (code, signal) => process.exit(resolveExitCode(code, signal)))
 		.on("message", (message) => {
 			if (process.send) {
 				process.send(message);
@@ -89,3 +97,5 @@ if (module === require.main) {
 		wranglerProcess && wranglerProcess.kill();
 	});
 }
+
+module.exports = { resolveExitCode };
