@@ -7,7 +7,7 @@ import {
 	InputSettingsSchema,
 	InputWorkerSchema,
 	OutputContainerSchema,
-	OutputSettingsSchema,
+	OutputRootConfigSchema,
 	OutputWorkerSchema,
 } from "../schema";
 import type { ParsedInputWorkerConfig } from "../schema";
@@ -22,8 +22,8 @@ const baseContainer = {
 	image: { dockerfile: "./Dockerfile" },
 } as const;
 
-const baseOutputConfig = { ...baseConfig, type: "worker" } as const;
-const baseOutputContainer = { ...baseContainer, type: "container" } as const;
+const baseOutputConfig = { ...baseConfig } as const;
+const baseOutputContainer = { ...baseContainer } as const;
 
 describe("InputWorkerSchema", () => {
 	describe("env singleton bindings", () => {
@@ -1095,7 +1095,6 @@ describe("OutputContainerSchema", () => {
 
 	it("accepts built Durable Object Container images", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			type: "container",
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			images: {
@@ -1109,7 +1108,6 @@ describe("OutputContainerSchema", () => {
 
 	it("rejects unbuilt Durable Object Container images", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			type: "container",
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			images: { primary: { dockerfile: "./Dockerfile" } },
@@ -1333,37 +1331,48 @@ describe("InputSettingsSchema", () => {
 	});
 });
 
-describe("OutputSettingsSchema", () => {
-	it("accepts a mode alongside the settings fields", ({ expect }) => {
-		const result = OutputSettingsSchema.safeParse({
-			type: "settings",
+describe("OutputRootConfigSchema", () => {
+	it("accepts build context alongside the settings fields", ({ expect }) => {
+		const result = OutputRootConfigSchema.safeParse({
 			accountId: "acc-123",
 			complianceRegion: "public",
-			mode: "staging",
+			buildContext: { isPreview: false, mode: "staging" },
 		});
 
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts a config without a mode", ({ expect }) => {
-		const result = OutputSettingsSchema.safeParse({ type: "settings" });
+	it("accepts a build context without a mode", ({ expect }) => {
+		const result = OutputRootConfigSchema.safeParse({
+			buildContext: { isPreview: false },
+		});
 
 		expect(result.success).toBe(true);
 	});
 
+	it("requires build context", ({ expect }) => {
+		const result = OutputRootConfigSchema.safeParse({});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("requires Preview intent", ({ expect }) => {
+		const result = OutputRootConfigSchema.safeParse({ buildContext: {} });
+
+		expect(result.success).toBe(false);
+	});
+
 	it("rejects a non-string mode", ({ expect }) => {
-		const result = OutputSettingsSchema.safeParse({
-			type: "settings",
-			mode: 123,
+		const result = OutputRootConfigSchema.safeParse({
+			buildContext: { isPreview: false, mode: 123 },
 		});
 
 		expect(result.success).toBe(false);
 	});
 
 	it("rejects unknown fields", ({ expect }) => {
-		const result = OutputSettingsSchema.safeParse({
-			type: "settings",
-			mode: "staging",
+		const result = OutputRootConfigSchema.safeParse({
+			buildContext: { isPreview: false, mode: "staging" },
 			name: "my-worker",
 		});
 
