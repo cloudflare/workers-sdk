@@ -70,6 +70,7 @@ import {
 	constructExplorerBindingMap,
 	constructExplorerWorkerOpts,
 	getExplorerServices,
+	getLocalFlagshipBindings,
 	wrapDurableObjectModules,
 } from "./explorer";
 import {
@@ -983,11 +984,18 @@ export function getGlobalServices({
 				});
 			}
 		}
+		const flagshipApps = new Map<string, string[]>();
+		for (const workerOpts of allWorkerOpts ?? []) {
+			for (const { id, bindingName } of getLocalFlagshipBindings(workerOpts)) {
+				flagshipApps.set(id, [...(flagshipApps.get(id) ?? []), bindingName]);
+			}
+		}
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
 			allWorkerOpts ?? [],
 			proxyBindings,
 			durableObjectClassNames,
-			workflowOptions
+			workflowOptions,
+			flagshipApps
 		);
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
 
