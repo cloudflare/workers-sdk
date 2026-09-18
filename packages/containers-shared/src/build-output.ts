@@ -44,7 +44,7 @@ export async function buildAndWriteContainerOutput(options: {
 	pathToDocker: string;
 }): Promise<void> {
 	const containers = Object.entries(options.containers);
-	await cleanupPreviousBuildOutputImages({
+	await cleanupPreviousBuildOutputImageTags({
 		root: options.root,
 		pathToDocker: options.pathToDocker,
 	});
@@ -200,7 +200,7 @@ function createBuildOutputImageTag(options: {
 	return `${repositoryPrefix}${repositoryName}:${options.buildId}`;
 }
 
-async function cleanupPreviousBuildOutputImages(options: {
+async function cleanupPreviousBuildOutputImageTags(options: {
 	root: string;
 	pathToDocker: string;
 }): Promise<void> {
