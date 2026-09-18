@@ -1,4 +1,5 @@
 import { statSync } from "node:fs";
+import { resolve } from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
 import { getErrorType } from "../core/handle-errors";
 
@@ -53,11 +54,12 @@ export type AllowList = Record<string, AllowedArgs>;
  * non-identifying label.
  *
  * The raw value is never returned — paths can leak sensitive information and
- * are too high-cardinality to analyse. Relational references (`.`, `..`) are
- * surfaced as their own categories; anything else is resolved against the
- * filesystem to distinguish files from directories, mirroring how the deploy
- * path positional is actually interpreted. Returns `null` when no positional
- * was provided so the property is always present in telemetry.
+ * are too high-cardinality to analyse. Paths that resolve to the current
+ * directory and parent-relative references are surfaced as their own
+ * categories; anything else is resolved against the filesystem to distinguish
+ * files from directories, mirroring how the deploy path positional is actually
+ * interpreted. Returns `null` when no positional was provided so the property
+ * is always present in telemetry.
  */
 export function categorisePositionalPath(value: unknown): string | null {
 	if (typeof value !== "string" || value.length === 0) {
@@ -70,7 +72,11 @@ export function categorisePositionalPath(value: unknown): string | null {
 		return "parent-relative";
 	}
 	try {
-		return statSync(value).isDirectory() ? "directory" : "file";
+		const stats = statSync(value);
+		if (stats.isDirectory() && resolve(value) === resolve(".")) {
+			return "current-dir";
+		}
+		return stats.isDirectory() ? "directory" : "file";
 	} catch {
 		return "not-found";
 	}
