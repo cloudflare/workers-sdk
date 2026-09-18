@@ -64,6 +64,7 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./ts",
 	},
+	languages: ["ts"],
 	generate,
 	configure,
 	transformPackageJson: async () => ({
