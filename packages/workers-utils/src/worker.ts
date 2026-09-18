@@ -136,6 +136,12 @@ export interface CfBrowserBinding {
 	remote?: boolean;
 }
 
+/** A binding to Analytics SQL. */
+export interface CfAnalyticsSQLBinding {
+	binding: string;
+	remote?: boolean;
+}
+
 /**
  * A binding to the AI project
  */

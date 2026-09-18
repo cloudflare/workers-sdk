@@ -570,6 +570,10 @@ async function convertWorkerBundleBindings(
 				// Miniflare has no runtime binding option for log forwarders.
 				unsupportedBindings.push(binding);
 				break;
+			case "analytics":
+				// Analytics SQL bindings require a remote connection.
+				unsupportedBindings.push(binding);
+				break;
 			default: {
 				binding satisfies never;
 				const unknownBinding = binding as unknown as UnsupportedWorkerBinding;
