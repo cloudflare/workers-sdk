@@ -435,7 +435,7 @@ describe("deploy", () => {
 				Worker Startup Time: 100 ms
 				Uploaded test-name-testEnv (TIMINGS)
 				Deployed test-name-testEnv triggers (TIMINGS)
-				  https://test-name-testEnv.test-sub-domain.workers.dev
+				  https://test-name-testenv.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);

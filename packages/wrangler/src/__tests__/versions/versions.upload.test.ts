@@ -431,6 +431,22 @@ describe("versions upload", () => {
 		`);
 	});
 
+	test("should get the preview URL suffix from the Worker resource", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+		writeWranglerConfig({ name: "test-name", main: "./index.js" });
+		writeWorkerSource();
+		setIsTTY(false);
+
+		await expect(runWrangler("versions upload")).resolves.toBeUndefined();
+
+		expect(std.out).toContain("Worker Version ID:");
+		expect(std.out).toContain(
+			"Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
+		);
+	});
+
 	test("should allow specifying --preview-alias", async () => {
 		mockGetScript();
 		mockUploadVersion(true, 1, { "workers/alias": "abcd1234" });
