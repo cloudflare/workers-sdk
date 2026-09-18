@@ -325,18 +325,18 @@ describe("splitSqlQuery()", () => {
 		expect,
 	}) => {
 		expect(splitSqlQuery("SELECT 1; [unterminated")).toEqual([
-		"SELECT 1",
-		"[unterminated",
-	]);
+			"SELECT 1",
+			"[unterminated",
+		]);
 	});
 
 	it("preserves an unterminated quoted value after a complete statement", ({
 		expect,
 	}) => {
 		expect(splitSqlQuery("SELECT 1; 'unterminated")).toEqual([
-		"SELECT 1",
-		"'unterminated",
-	]);
+			"SELECT 1",
+			"'unterminated",
+		]);
 	});
 
 	it("should handle compound statements for BEGINs", ({ expect }) => {
@@ -516,6 +516,202 @@ describe("splitSqlQuery()", () => {
 						END ; END",
 			]
 		`);
+	});
+
+	describe("regression tests from splitter PRs #15234 #15226 #15163", () => {
+		it("keeps a CASE value expression followed by a comma inside a trigger", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER update_projection AFTER INSERT ON items BEGIN UPDATE totals SET count = CASE WHEN NEW.active THEN count + 1 ELSE count END, updated_at = NEW.created_at WHERE id = NEW.parent_id; END; CREATE INDEX items_parent_id_idx ON items (parent_id);"
+			);
+			expect(statements).toHaveLength(2);
+			expect(statements[1]).toBe(
+				"CREATE INDEX items_parent_id_idx ON items (parent_id)"
+			);
+		});
+
+		it("keeps a parenthesized CASE expression inside a trigger", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER my_trigger AFTER INSERT ON items BEGIN UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE 0 END); UPDATE totals SET y = y + 1; END; CREATE INDEX items_idx ON items (id);"
+			);
+			expect(statements).toHaveLength(2);
+			expect(statements[1]).toBe("CREATE INDEX items_idx ON items (id)");
+		});
+
+		it("does not treat an identifier ending in CASE as a keyword", ({
+			expect,
+		}) => {
+			expect(
+				splitSqlQuery(
+					"CREATE TABLE t (foo$CASE TEXT); SELECT foo$CASE FROM t; SELECT 1;"
+				)
+			).toEqual([
+				"CREATE TABLE t (foo$CASE TEXT)",
+				"SELECT foo$CASE FROM t",
+				"SELECT 1",
+			]);
+		});
+
+		it("does not treat an accented identifier beginning with END as a keyword", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER my_trigger AFTER INSERT ON items BEGIN SELECT ENDα; UPDATE totals SET y = y + 1; END; CREATE INDEX items_idx ON items (id);"
+			);
+			expect(statements).toHaveLength(2);
+			expect(statements[1]).toBe("CREATE INDEX items_idx ON items (id)");
+		});
+
+		it("does not treat qualified keyword identifiers as trigger boundaries", ({
+			expect,
+		}) => {
+			expect(
+				splitSqlQuery(
+					'CREATE TRIGGER t AFTER INSERT ON items BEGIN INSERT INTO audit(v) VALUES (new.begin); END; CREATE INDEX idx ON items("begin");'
+				)
+			).toEqual([
+				"CREATE TRIGGER t AFTER INSERT ON items BEGIN INSERT INTO audit(v) VALUES (new.begin); END",
+				'CREATE INDEX idx ON items("begin")',
+			]);
+		});
+
+		it("recognizes CASE immediately followed by a parenthesized expression", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER t2 AFTER INSERT ON items BEGIN UPDATE totals SET x = CASE(NEW.active) WHEN 1 THEN 1 ELSE 0 END, y = 2; UPDATE totals SET y = y + 1; END;"
+			);
+			expect(statements).toHaveLength(1);
+		});
+
+		it("recognizes a compact END after a parenthesized expression", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER t3 AFTER INSERT ON items BEGIN UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE(0)END); UPDATE totals SET y = y + 1; END; CREATE INDEX idx3 ON items(id);"
+			);
+			expect(statements).toHaveLength(2);
+			expect(statements[1]).toBe("CREATE INDEX idx3 ON items(id)");
+		});
+
+		it("handles bracket-quoted identifiers containing semicolons", ({
+			expect,
+		}) => {
+			expect(
+				splitSqlQuery(
+					"CREATE TABLE metrics ([value;unit] TEXT); SELECT [value;unit] FROM metrics;"
+				)
+			).toEqual([
+				"CREATE TABLE metrics ([value;unit] TEXT)",
+				"SELECT [value;unit] FROM metrics",
+			]);
+		});
+
+		it("handles END directly after a statement semicolon", ({ expect }) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER audit_trigger AFTER INSERT ON items BEGIN INSERT INTO audit (item_id) VALUES (new.id);END; INSERT INTO items (id) VALUES (1); SELECT * FROM items;"
+			);
+			expect(statements).toHaveLength(3);
+		});
+
+		it("handles BEGIN directly after a parenthesis", ({ expect }) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER audit_trigger AFTER INSERT ON items FOR EACH ROW WHEN (1=1)BEGIN INSERT INTO audit (item_id) VALUES (new.id); END; SELECT * FROM items;"
+			);
+			expect(statements).toHaveLength(2);
+		});
+
+		it("handles CASE expressions followed by parentheses and commas", ({
+			expect,
+		}) => {
+			expect(
+				splitSqlQuery(
+					"SELECT SUM(CASE WHEN a THEN 1 ELSE 0 END) FROM t; SELECT CASE WHEN a THEN 1 ELSE 0 END, b FROM t; SELECT * FROM t;"
+				)
+			).toHaveLength(3);
+		});
+
+		it("does not treat an identifier ending in END as a keyword", ({
+			expect,
+		}) => {
+			expect(
+				splitSqlQuery(
+					"CREATE TABLE weekend (id INTEGER PRIMARY KEY); INSERT INTO weekend (id) VALUES (1); SELECT * FROM weekend;"
+				)
+			).toHaveLength(3);
+		});
+
+		it("does not treat accented identifiers ending in END as keywords", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER t AFTER INSERT ON x BEGIN UPDATE y SET a = 1 WHERE b = néend; UPDATE z SET c = 2; END; SELECT 1;"
+			);
+			expect(statements).toHaveLength(2);
+		});
+
+		it("does not treat named parameters as trigger boundaries", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER t AFTER INSERT ON items BEGIN INSERT INTO audit (value) VALUES (:end); INSERT INTO audit (value) VALUES (:begin); END; SELECT 1;"
+			);
+			expect(statements).toHaveLength(2);
+		});
+
+		it("does not treat bracket-quoted identifiers as trigger boundaries", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TRIGGER t AFTER INSERT ON items BEGIN UPDATE x SET [end] = 1; UPDATE y SET z = 2; END; SELECT 1;"
+			);
+			expect(statements).toHaveLength(2);
+		});
+
+		it("keeps CASE expressions inside trigger bodies", ({ expect }) => {
+			for (const assignment of [
+				"value = CASE WHEN NEW.active THEN 1 ELSE 0 END, other = 2",
+				"value = (CASE WHEN NEW.active THEN 1 ELSE 0 END), other = 2",
+				"value = CASE WHEN NEW.active THEN 1 ELSE 0 END/* note */, other = 2",
+				"value = CASE WHEN NEW.active THEN(1)END, other = 2",
+			]) {
+				const statements = splitSqlQuery(
+					`CREATE TRIGGER update_projection AFTER INSERT ON source BEGIN UPDATE projections SET ${assignment}; UPDATE audit SET seen = 1; END; CREATE TABLE after_trigger (id INTEGER PRIMARY KEY);`
+				);
+				expect(statements, assignment).toHaveLength(2);
+			}
+		});
+
+		it("does not treat keyword-shaped identifiers as trigger boundaries", ({
+			expect,
+		}) => {
+			const statements = splitSqlQuery(
+				"CREATE TABLE source (begin TEXT, start INTEGER, end INTEGER); CREATE TABLE ranges (start INTEGER, end INTEGER); CREATE TRIGGER copy_range AFTER INSERT ON source BEGIN INSERT INTO ranges (start, end) VALUES (NEW.start, NEW.end); END; CREATE TABLE after_trigger (id INTEGER PRIMARY KEY);"
+			);
+			expect(statements).toHaveLength(4);
+		});
+
+		it("handles trigger boundaries separated by comments", ({ expect }) => {
+			const statements = splitSqlQuery(
+				"CREATE/* before trigger */TRIGGER audit_source AFTER INSERT ON source BEGIN/* body */ INSERT INTO audit VALUES (NEW.id); /* before end */END/* after end */; CREATE TABLE after_trigger (id INTEGER PRIMARY KEY);"
+			);
+			expect(statements).toHaveLength(2);
+			expect(statements[1]).toBe(
+				"CREATE TABLE after_trigger (id INTEGER PRIMARY KEY)"
+			);
+		});
+
+		it("handles temporary triggers", ({ expect }) => {
+			for (const modifier of ["TEMP", "TEMPORARY"]) {
+				const statements = splitSqlQuery(
+					`CREATE ${modifier} TRIGGER audit_source AFTER INSERT ON source BEGIN INSERT INTO audit VALUES (NEW.id); END; CREATE TABLE after_trigger (id INTEGER PRIMARY KEY);`
+				);
+				expect(statements, modifier).toHaveLength(2);
+			}
+		});
 	});
 
 	describe("performance tests", () => {
