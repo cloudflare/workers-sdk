@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import {
 	cleanBuildOutputDir,
+	normalizeDirectoryName,
 	writeContainerConfig,
 } from "@cloudflare/build-output-utils";
 import { UserError } from "@cloudflare/workers-utils/errors";
@@ -43,6 +44,8 @@ export async function buildAndWriteContainerOutput(options: {
 	root: string;
 	pathToDocker: string;
 }): Promise<void> {
+	const containers = resolveContainerDirectories(options.containers);
+
 	await cleanupPreviousBuildOutputImageTags({
 		root: options.root,
 		pathToDocker: options.pathToDocker,
@@ -65,10 +68,10 @@ export async function buildAndWriteContainerOutput(options: {
 
 		const outputConfigs: WriteContainerConfigOptions[] = [];
 		try {
-			for (const config of options.containers) {
+			for (const { config, directoryName } of containers) {
 				outputConfigs.push({
 					root: options.root,
-					directoryName: config.name,
+					directoryName,
 					config: await buildContainerOutputConfig({
 						config,
 						root: options.root,
@@ -95,6 +98,26 @@ export async function buildAndWriteContainerOutput(options: {
 		]);
 		throw error;
 	}
+}
+
+function resolveContainerDirectories(
+	containers: ParsedInputContainerConfig[]
+): Array<{ config: ParsedInputContainerConfig; directoryName: string }> {
+	const containerNameByDirectory = new Map<string, string>();
+
+	return containers.map((config) => {
+		const directoryName = normalizeDirectoryName(config.name);
+		const conflictingName = containerNameByDirectory.get(directoryName);
+		if (conflictingName !== undefined) {
+			throw new UserError(
+				`Container names ${JSON.stringify(conflictingName)} and ${JSON.stringify(config.name)} resolve to the same Build Output directory ${JSON.stringify(directoryName)}. Rename one of the Containers.`,
+				{ telemetryMessage: "container build output directory name conflict" }
+			);
+		}
+
+		containerNameByDirectory.set(directoryName, config.name);
+		return { config, directoryName };
+	});
 }
 
 async function buildContainerOutputConfig(options: {

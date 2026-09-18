@@ -13,6 +13,7 @@ import {
 	getWorkerBundleDir,
 	getWorkerConfigPath,
 	getWorkersDir,
+	normalizeDirectoryName,
 	ROOT_CONFIG_FILENAME,
 	WORKER_CONFIG_FILENAME,
 } from "../paths";
@@ -87,5 +88,34 @@ describe("path resolvers", () => {
 				`Container directory names must be non-empty, single path segments. Received ${JSON.stringify(name)}.`
 			);
 		}
+	});
+});
+
+describe("resource directory names", () => {
+	it("normalizes resource names to portable directory names", ({ expect }) => {
+		expect(normalizeDirectoryName("My_Container")).toBe("my_container");
+		expect(normalizeDirectoryName("my-worker")).toBe("my-worker");
+		expect(normalizeDirectoryName("My  Container\tName")).toBe(
+			"my-container-name"
+		);
+		expect(normalizeDirectoryName('API:prod?*<>"|')).toBe("api-prod-");
+		expect(normalizeDirectoryName("api/prod\\v1")).toBe("api-prod-v1");
+		expect(normalizeDirectoryName("api\u0007prod")).toBe("api-prod");
+		expect(normalizeDirectoryName("trailing-dots...")).toBe("trailing-dots-");
+		expect(normalizeDirectoryName("CON")).toBe("_con");
+		expect(normalizeDirectoryName("CON.json")).toBe("_con.json");
+		expect(normalizeDirectoryName("LPT².txt")).toBe("_lpt².txt");
+	});
+
+	it("truncates resource directory names", ({ expect }) => {
+		expect(normalizeDirectoryName("a".repeat(300))).toBe("a".repeat(254));
+		expect(normalizeDirectoryName("界".repeat(300))).toBe("界".repeat(84));
+		expect(normalizeDirectoryName("😀".repeat(300))).toBe("😀".repeat(63));
+
+		const boundaryPrefix = "a".repeat(251);
+		expect(normalizeDirectoryName(`${boundaryPrefix}😀`)).toBe(boundaryPrefix);
+		expect(normalizeDirectoryName(`${boundaryPrefix}�`)).toBe(
+			`${boundaryPrefix}�`
+		);
 	});
 });
