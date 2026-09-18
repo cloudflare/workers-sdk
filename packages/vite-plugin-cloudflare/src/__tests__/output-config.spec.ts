@@ -117,6 +117,45 @@ describe("getWorkerOutputConfig", () => {
 		]);
 	});
 
+	test("rewrites named-image paths relative to the generated config", ({
+		expect,
+	}) => {
+		const root = createRoot();
+
+		const outputConfig = getOutputConfig({
+			inputWorkerConfig: workerConfig(root, {
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ContainerDO",
+						scheduling_policy: "durable_object",
+						images: {
+							app: {
+								dockerfile: "./images/Dockerfile",
+								build_context: "./context",
+								build_vars: { NODE_ENV: "test" },
+							},
+							release: { image: "docker.io/example/release:latest" },
+						},
+					},
+				],
+			}),
+			workerOutputDirectory: "dist/api_worker",
+			resolvedViteConfig: resolvedViteConfig(root),
+			entryFileName: "index.js",
+			includeAssets: false,
+		});
+
+		expect(outputConfig.containers?.[0]?.images).toEqual({
+			app: {
+				dockerfile: "../../workers/api/images/Dockerfile",
+				build_context: "../../workers/api/context",
+				build_vars: { NODE_ENV: "test" },
+			},
+			release: { image: "docker.io/example/release:latest" },
+		});
+	});
+
 	test("preserves Wrangler's default migrations directory even when it is not on disk", ({
 		expect,
 	}) => {

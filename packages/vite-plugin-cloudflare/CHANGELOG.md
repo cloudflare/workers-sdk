@@ -1,5 +1,57 @@
 # @cloudflare/vite-plugin
 
+## 1.55.0
+
+### Minor Changes
+
+- [#15674](https://github.com/cloudflare/workers-sdk/pull/15674) [`a939a6c`](https://github.com/cloudflare/workers-sdk/commit/a939a6cccd0868ec4c30ab2a4cfd3f29129e6a19) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Support explicit named Container image selection in local development
+
+  The Vite plugin builds or pulls named images from Wrangler configuration and exposes their local tags through `ctx.container.images`. Pass one of those references to `ctx.container.start({ image })` to select the image.
+
+  This extends the experimental Durable Object-managed Containers interface.
+
+### Patch Changes
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114), [`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef), [`d96b319`](https://github.com/cloudflare/workers-sdk/commit/d96b3193bfb7371da5a28fe36e6b56fb1c6108b0), [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8), [`2b39fc2`](https://github.com/cloudflare/workers-sdk/commit/2b39fc2c79f7919b0af21603e278dce030c48870)]:
+  - wrangler@4.134.0
+  - miniflare@5.20260917.0-alpha
+
+## 1.54.11
+
+### Patch Changes
+
+- Updated dependencies [[`71b6f10`](https://github.com/cloudflare/workers-sdk/commit/71b6f102f258e14e2b1dc23e9643cc74685d35cb), [`ad23e6e`](https://github.com/cloudflare/workers-sdk/commit/ad23e6e42dc81c9dc894248e787ed6c0abbe9028), [`bac0c6a`](https://github.com/cloudflare/workers-sdk/commit/bac0c6a4f0dcf34008a0f67f4a97d068311b57dc), [`be2437a`](https://github.com/cloudflare/workers-sdk/commit/be2437a8b32215dc404266c930db148fc3feb17b), [`bac0c6a`](https://github.com/cloudflare/workers-sdk/commit/bac0c6a4f0dcf34008a0f67f4a97d068311b57dc), [`6f3d7b5`](https://github.com/cloudflare/workers-sdk/commit/6f3d7b58b1f6cd036aca3e5946807bba37776065)]:
+  - miniflare@5.20260916.0-alpha
+  - wrangler@4.133.0
+
+## 1.54.10
+
+### Patch Changes
+
+- [#14775](https://github.com/cloudflare/workers-sdk/pull/14775) [`1be7b97`](https://github.com/cloudflare/workers-sdk/commit/1be7b97035241c91edf78b4c1f0a79f3b276ff18) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Sync Local Explorer endpoint lists across agent hints
+
+  The Local Explorer endpoint list is now consistent across the three places it appears: the AGENTS.md template in `create-cloudflare`, the runtime agent hint in `wrangler dev`, and the Vite plugin agent hint. All three now include the `observability/clear` endpoint, use the canonical `/cdn-cgi/local/explorer` path, and have cross-reference comments pointing to each other.
+
+- [#15399](https://github.com/cloudflare/workers-sdk/pull/15399) [`982b806`](https://github.com/cloudflare/workers-sdk/commit/982b8060d99d9bb303ef7b7f15bf6c8b1f83c72a) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Improve over-limit `run_worker_first` errors when duplicate rules are present
+
+  The error now reports distinct and duplicate-entry counts and lists duplicated rules, making it clear when removing redundant entries can bring the configuration within the limit.
+
+  ```
+  Too many `run_worker_first` rules were provided; 105 rules provided (99 distinct, 6 duplicate entries) exceeds max of 100. Note: duplicate entries count towards the route limit. Ensure that no duplicate rules are present in your `run_worker_first` configuration.
+
+  The duplicated rules found are:
+  - "/rule/0"
+  - "/rule/1"
+  - "/rule/2"
+  - "/rule/3"
+  - "/rule/4"
+  ...and 1 more duplicated rule.
+  ```
+
+- Updated dependencies [[`1be7b97`](https://github.com/cloudflare/workers-sdk/commit/1be7b97035241c91edf78b4c1f0a79f3b276ff18), [`b149147`](https://github.com/cloudflare/workers-sdk/commit/b149147a1746d30fd8a868dbef7a4aac463444f1), [`7db596c`](https://github.com/cloudflare/workers-sdk/commit/7db596c153ae0cda7e30aa351955b1781902435f), [`76c0ce6`](https://github.com/cloudflare/workers-sdk/commit/76c0ce6cb35c741de4564787a45a8b3fe8246c1f), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`a0856da`](https://github.com/cloudflare/workers-sdk/commit/a0856da679b025cb076dd94f7300b47a2a3a1bc0), [`e35c4a1`](https://github.com/cloudflare/workers-sdk/commit/e35c4a154ea16a96b47cb2e68a4930c1d833e81d), [`d3565a5`](https://github.com/cloudflare/workers-sdk/commit/d3565a5326d879fbebba72b16c0f14ba2a4fba99), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`cb0955f`](https://github.com/cloudflare/workers-sdk/commit/cb0955f274102afb30b8502193edf66c0d3cb4d6), [`fa79b26`](https://github.com/cloudflare/workers-sdk/commit/fa79b26ef442303797013c70078c7acdd2c79247), [`16d1310`](https://github.com/cloudflare/workers-sdk/commit/16d1310a2a598f9a71878ba3746c8cf02e24386b), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`1015cfb`](https://github.com/cloudflare/workers-sdk/commit/1015cfb2a780d57b13d137324c83af53d3a3a8a2), [`982b806`](https://github.com/cloudflare/workers-sdk/commit/982b8060d99d9bb303ef7b7f15bf6c8b1f83c72a), [`ffabe74`](https://github.com/cloudflare/workers-sdk/commit/ffabe7489ad09f80b19a98e698c4590bba7b8452), [`7db596c`](https://github.com/cloudflare/workers-sdk/commit/7db596c153ae0cda7e30aa351955b1781902435f), [`e03822a`](https://github.com/cloudflare/workers-sdk/commit/e03822a3bc54a411b5795f77acbe603a010a9100), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`641df47`](https://github.com/cloudflare/workers-sdk/commit/641df4774f19313ffecf53cf7443ac3dd79abb31), [`c4a6279`](https://github.com/cloudflare/workers-sdk/commit/c4a627945775646bde6e0164e6deaee516150e89)]:
+  - wrangler@4.132.0
+  - miniflare@5.20260915.0-alpha
+
 ## 1.54.9
 
 ### Patch Changes

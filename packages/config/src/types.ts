@@ -503,6 +503,11 @@ export interface WorkerConfig {
 		 * @default false
 		 */
 		redactQueryString?: boolean;
+		/** Real-time Issues settings for this Worker. */
+		issues?: {
+			/** Whether real-time Issues are enabled. */
+			enabled?: boolean;
+		};
 		logs?: {
 			enabled?: boolean;
 			/** The sampling rate. */

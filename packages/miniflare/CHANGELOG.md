@@ -1,5 +1,100 @@
 # miniflare
 
+## 5.20260917.0-alpha
+
+### Minor Changes
+
+- [#15672](https://github.com/cloudflare/workers-sdk/pull/15672) [`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Support named images or no default image for Durable Object-managed Containers
+
+  Miniflare now accepts named image references for Durable Object-managed Containers and preserves an omitted default image (`imageName`). A Container without a default image must supply an image or full Container snapshot when starting.
+
+  This extends Miniflare's experimental Durable Object-managed Containers interface.
+
+### Patch Changes
+
+- [#15689](https://github.com/cloudflare/workers-sdk/pull/15689) [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260916.1 | ^5.20260917.1 |
+  | workerd                   | 1.20260916.1  | 1.20260917.1  |
+
+## 5.20260916.0-alpha
+
+### Minor Changes
+
+- [#15483](https://github.com/cloudflare/workers-sdk/pull/15483) [`71b6f10`](https://github.com/cloudflare/workers-sdk/commit/71b6f102f258e14e2b1dc23e9643cc74685d35cb) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Align Local Explorer Workflow instance status requests with production
+
+  Local Explorer and Wrangler local mode now use the production-compatible `status` request field for pausing, resuming, restarting, and terminating Workflow instances. Direct Local Explorer API consumers must replace the previous `action` field with `status`.
+
+  Successful Local Explorer status updates now return the production-compatible instance `status` and response `timestamp` instead of the local-only `result.success` acknowledgement.
+
+### Patch Changes
+
+- [#15665](https://github.com/cloudflare/workers-sdk/pull/15665) [`ad23e6e`](https://github.com/cloudflare/workers-sdk/commit/ad23e6e42dc81c9dc894248e787ed6c0abbe9028) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260915.1 | ^5.20260916.1 |
+  | workerd                   | 1.20260915.1  | 1.20260916.1  |
+
+- [#15552](https://github.com/cloudflare/workers-sdk/pull/15552) [`6f3d7b5`](https://github.com/cloudflare/workers-sdk/commit/6f3d7b58b1f6cd036aca3e5946807bba37776065) Thanks [@superbuilder-norm](https://github.com/superbuilder-norm)! - Prevent synchronous binding calls from failing intermittently under load
+
+  Miniflare now keeps synchronous binding requests and responses correctly paired when background work is delayed. This prevents rare cascades of assertion failures in local development and CI, including when using synchronous D1 methods such as `prepare()` and `bind()`.
+
+## 5.20260915.0-alpha
+
+### Minor Changes
+
+- [#15486](https://github.com/cloudflare/workers-sdk/pull/15486) [`d3565a5`](https://github.com/cloudflare/workers-sdk/commit/d3565a5326d879fbebba72b16c0f14ba2a4fba99) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add production-compatible KV bulk write and delete routes to Local Explorer
+
+  API clients can now write and delete multiple local KV entries by changing only their Cloudflare API base URL. The new routes support production request and response shapes, including base64 values, expiration options, and metadata.
+
+- [#15453](https://github.com/cloudflare/workers-sdk/pull/15453) [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891) Thanks [@G4brym](https://github.com/G4brym)! - Remove the gated Web Search binding and Wrangler command
+
+  The unreleased search binding and its experimental command have been removed from Wrangler, Miniflare, and configuration APIs.
+
+### Patch Changes
+
+- [#15633](https://github.com/cloudflare/workers-sdk/pull/15633) [`7db596c`](https://github.com/cloudflare/workers-sdk/commit/7db596c153ae0cda7e30aa351955b1781902435f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260911.1 | ^5.20260915.1 |
+  | workerd                   | 1.20260911.1  | 1.20260915.1  |
+
+- [#15420](https://github.com/cloudflare/workers-sdk/pull/15420) [`e35c4a1`](https://github.com/cloudflare/workers-sdk/commit/e35c4a154ea16a96b47cb2e68a4930c1d833e81d) Thanks [@manthaaaaan](https://github.com/manthaaaaan)! - Fix Infinity/-Infinity being emitted as an invalid bare identifier in D1 export
+
+- [#15527](https://github.com/cloudflare/workers-sdk/pull/15527) [`1015cfb`](https://github.com/cloudflare/workers-sdk/commit/1015cfb2a780d57b13d137324c83af53d3a3a8a2) Thanks [@devaniketh](https://github.com/devaniketh)! - Scope Durable Object and Workflow local explorer peers by storageScope
+
+  Restricts Durable Object and Workflow peer discovery and owner resolution to Miniflare peers sharing the same storageScope when Shared Storage is enabled. This ensures consistency with KV, D1, and R2 local explorer behaviors and prevents cross-project access to local development state across instances with different persistence roots.
+
+- [#15399](https://github.com/cloudflare/workers-sdk/pull/15399) [`982b806`](https://github.com/cloudflare/workers-sdk/commit/982b8060d99d9bb303ef7b7f15bf6c8b1f83c72a) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Improve over-limit `run_worker_first` errors when duplicate rules are present
+
+  The error now reports distinct and duplicate-entry counts and lists duplicated rules, making it clear when removing redundant entries can bring the configuration within the limit.
+
+  ```
+  Too many `run_worker_first` rules were provided; 105 rules provided (99 distinct, 6 duplicate entries) exceeds max of 100. Note: duplicate entries count towards the route limit. Ensure that no duplicate rules are present in your `run_worker_first` configuration.
+
+  The duplicated rules found are:
+  - "/rule/0"
+  - "/rule/1"
+  - "/rule/2"
+  - "/rule/3"
+  - "/rule/4"
+  ...and 1 more duplicated rule.
+  ```
+
+- [#15397](https://github.com/cloudflare/workers-sdk/pull/15397) [`641df47`](https://github.com/cloudflare/workers-sdk/commit/641df4774f19313ffecf53cf7443ac3dd79abb31) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce Miniflare's bundle size by sharing Zod across embedded workers
+
+  Workflows, Email Store, and Local Explorer now import Zod from Miniflare's existing workerd extension instead of each bundling a separate copy.
+
 ## 5.20260911.1-alpha
 
 ### Minor Changes

@@ -1,5 +1,73 @@
 # @cloudflare/workers-utils
 
+## 0.40.0
+
+### Minor Changes
+
+- [#15684](https://github.com/cloudflare/workers-sdk/pull/15684) [`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for configuring real-time Issues with `observability.issues.enabled`
+
+  Wrangler now validates and uploads the Issues setting alongside the existing logs and traces observability options. The experimental configuration format supports the equivalent `observability.issues.enabled` option.
+
+## 0.39.1
+
+### Patch Changes
+
+- [#15669](https://github.com/cloudflare/workers-sdk/pull/15669) [`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513) Thanks [@Shubham-Padkonde](https://github.com/Shubham-Padkonde)! - Reject Windows drive prefixes when converting file paths to URL paths
+
+  `toUrlPath()` now throws for drive-prefixed paths as documented. Previously it used `console.assert()`, which only logged the invalid input and returned a path containing the drive prefix.
+
+## 0.39.0
+
+### Minor Changes
+
+- [#15597](https://github.com/cloudflare/workers-sdk/pull/15597) [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78) Thanks [@skepticfx](https://github.com/skepticfx)! - Configure application-wide logs for experimental Durable Object-managed Containers
+
+  Set `containers[].observability.enabled` or `containers[].observability.logs.enabled` when using `scheduling_policy: "durable_object"`. Normal deployments create missing applications and update explicitly configured log settings without a Container rollout. Omitted settings preserve the application configuration; root Worker observability is not inherited for this policy.
+
+  Version uploads may initialize missing applications but preserve existing settings. Deploying or rolling back Worker versions also preserves existing application settings, and `--containers-rollout=none` skips their updates.
+
+- [#15597](https://github.com/cloudflare/workers-sdk/pull/15597) [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78) Thanks [@skepticfx](https://github.com/skepticfx)! - Support per-image build options for experimental Durable Object-managed Containers
+
+  Set `build_context` and `build_vars` alongside `dockerfile` in a Container's named `images` entries. Context paths resolve relative to the Wrangler configuration file and default to the Dockerfile's directory. Build variables are passed as Docker build arguments. Entries using the same Dockerfile with different contexts or variables are built separately.
+
+  ```jsonc
+  {
+    "containers": [
+      {
+        "class_name": "Sandbox",
+        "scheduling_policy": "durable_object",
+        "images": {
+          "app": {
+            "dockerfile": "./docker/Dockerfile",
+            "build_context": ".",
+            "build_vars": { "APP_ENV": "production" }
+          }
+        }
+      }
+    ]
+  }
+  ```
+
+- [#15638](https://github.com/cloudflare/workers-sdk/pull/15638) [`fa79b26`](https://github.com/cloudflare/workers-sdk/commit/fa79b26ef442303797013c70078c7acdd2c79247) Thanks [@G4brym](https://github.com/G4brym)! - Support AI Search bindings in Worker Previews
+
+  `wrangler preview` now accepts `ai_search` and `ai_search_namespaces` entries in the `previews` block and includes them in Preview deployment bindings. This lets Workers that use AI Search instance or namespace bindings attach existing resources to Preview deployments, including preview-specific instance or namespace names.
+
+  These bindings are non-inheritable: declare them explicitly under `previews`. They attach to existing AI Search resources; preview does not provision new isolated instances or namespaces.
+
+- [#15453](https://github.com/cloudflare/workers-sdk/pull/15453) [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891) Thanks [@G4brym](https://github.com/G4brym)! - Remove the gated Web Search binding and Wrangler command
+
+  The unreleased search binding and its experimental command have been removed from Wrangler, Miniflare, and configuration APIs.
+
+- [#15597](https://github.com/cloudflare/workers-sdk/pull/15597) [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78) Thanks [@skepticfx](https://github.com/skepticfx)! - Allow experimental Durable Object-managed Containers to link by name through exports
+
+  Containers using `scheduling_policy: "durable_object"` can now specify `name` and link from `exports.<Class>.container` without repeating `class_name`. Deploy and version upload resolve that link for image preparation, Worker metadata, and Container application creation.
+
+### Patch Changes
+
+- [#15179](https://github.com/cloudflare/workers-sdk/pull/15179) [`cb0955f`](https://github.com/cloudflare/workers-sdk/commit/cb0955f274102afb30b8502193edf66c0d3cb4d6) Thanks [@rioaguspermana](https://github.com/rioaguspermana)! - Treat 502, 503, and 504 as gateway errors during asset upload retries
+
+  Pages and Workers asset uploads now retry more patiently when the Cloudflare API responds with a 502, 503 or 504 gateway error, reducing concurrency and waiting longer between attempts instead of failing the deploy quickly.
+
 ## 0.38.1
 
 ### Patch Changes

@@ -165,6 +165,131 @@ describe("ConfigController", () => {
 		});
 	});
 
+	it("should plan named Container images for local runtime", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			Dockerfile: "FROM scratch",
+			"wrangler.json": JSON.stringify({
+				name: "named-images-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		await controller.set({
+			config: "./wrangler.json",
+			dev: {
+				containerBuildId: "build-id",
+				containerEngine: "unix:///tmp/docker.sock",
+			},
+		});
+
+		const { config } = await event;
+		const containerOptions = config.containerDevPlan?.containerOptions;
+		const appTag = containerOptions?.[0]?.image_tag;
+		expect(config.containers).toEqual([]);
+		expect(containerOptions).toEqual([
+			expect.objectContaining({
+				class_name: "ManagedDO",
+				image_name: "app",
+				image_tag: expect.stringMatching(
+					/^cloudflare-dev\/manageddo-app-[a-f0-9]{12}:build-id$/
+				),
+			}),
+		]);
+		expect(
+			config.containerDevPlan?.containerRuntimeOptions.get("ManagedDO")
+		).toEqual({
+			images: [{ name: "app", image: appTag }],
+		});
+	});
+
+	it("should not plan named Container images in remote mode", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			Dockerfile: "FROM scratch",
+			"wrangler.json": JSON.stringify({
+				name: "remote-named-images-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		const config = await controller.set(
+			{
+				config: "./wrangler.json",
+				dev: { remote: true, watch: false },
+			},
+			true
+		);
+
+		expect(config?.containerDevPlan).toBeUndefined();
+		expect(std.warn).toContain("Containers are only supported in local mode");
+	});
+
+	it("should not plan Container images when Containers are disabled", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			Dockerfile: "FROM scratch",
+			"wrangler.json": JSON.stringify({
+				name: "disabled-containers-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				dev: { enable_containers: false },
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		await controller.set({ config: "./wrangler.json" }, true);
+
+		const { config } = await event;
+		expect(config.dev.enableContainers).toBe(false);
+		expect(config.containerDevPlan).toBeUndefined();
+	});
+
 	it("should accept wrangler-specific dev fields through the public input", async ({
 		expect,
 	}) => {

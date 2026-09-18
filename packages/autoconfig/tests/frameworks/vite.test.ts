@@ -27,6 +27,12 @@ describe("Vite framework", () => {
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
 	});
 
+	it("accepts Cloudflare modes", ({ expect }) => {
+		const framework = new Vite({ id: "vite", name: "Vite" });
+
+		expect(framework.supportsMode).toBe(true);
+	});
+
 	describe("isConfigured()", () => {
 		it("returns false when no vite config file exists", ({ expect }) => {
 			const framework = new Vite({ id: "vite", name: "Vite" });

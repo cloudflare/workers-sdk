@@ -1,5 +1,21 @@
 # @cloudflare/config
 
+## 0.14.0
+
+### Minor Changes
+
+- [#15684](https://github.com/cloudflare/workers-sdk/pull/15684) [`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for configuring real-time Issues with `observability.issues.enabled`
+
+  Wrangler now validates and uploads the Issues setting alongside the existing logs and traces observability options. The experimental configuration format supports the equivalent `observability.issues.enabled` option.
+
+## 0.13.0
+
+### Minor Changes
+
+- [#15453](https://github.com/cloudflare/workers-sdk/pull/15453) [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891) Thanks [@G4brym](https://github.com/G4brym)! - Remove the gated Web Search binding and Wrangler command
+
+  The unreleased search binding and its experimental command have been removed from Wrangler, Miniflare, and configuration APIs.
+
 ## 0.12.0
 
 ### Minor Changes
