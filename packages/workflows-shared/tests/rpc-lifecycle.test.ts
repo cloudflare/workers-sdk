@@ -13,6 +13,7 @@ import type { WorkflowBinding as IntrospectionBinding } from "../src/types";
 
 afterEach(async () => {
 	await workerdUnsafe.abortAllDurableObjects();
+	vi.restoreAllMocks();
 	Reflect.deleteProperty(WorkflowInstanceModifier.prototype, Symbol.dispose);
 });
 
@@ -189,3 +190,109 @@ it("preserves data from class instances with prototype methods", async ({
 		expect(structuredClone(value)).toEqual({ value: 42 });
 	});
 });
+
+it.for(["object", "stream", "reject", "cancel-reject"] as const)(
+	"cleans up a late callback after a timeout: %s",
+	async (kind, { expect }) => {
+		const lateCleanup = vi.fn();
+		const originalCancel = ReadableStream.prototype.cancel;
+		const cancel = vi.spyOn(ReadableStream.prototype, "cancel");
+		if (kind === "cancel-reject") {
+			cancel.mockImplementation(async function (reason) {
+				await originalCancel.call(this, reason);
+				throw new Error("late stream cancellation failed");
+			});
+		}
+		const winningDispose = vi.fn();
+		const winningCancel = vi.fn();
+		const attempts: number[] = [];
+		const lateResult = Promise.withResolvers<void>();
+		let lateSettled = false;
+		let cleanupSeenByRetry = false;
+		let result: unknown;
+		await runWorkflowAndAwait(crypto.randomUUID(), async (_event, step) => {
+			const value = await step.do<
+				{ attempt: number } | ReadableStream<Uint8Array>
+			>(
+				"late callback result",
+				{
+					timeout: "1 second",
+					retries: { limit: 1, delay: 1, backoff: "constant" },
+				},
+				async (ctx) => {
+					attempts.push(ctx.attempt);
+					if (ctx.attempt === 1) {
+						// Only the retry can release this callback: cleanup must not
+						// delay the retry until the abandoned callback finishes.
+						await lateResult.promise;
+						lateSettled = true;
+						if (kind === "reject") {
+							throw new Error("late callback failed");
+						}
+						if (kind === "object") {
+							return { attempt: 1, [Symbol.dispose]: lateCleanup };
+						}
+						// Observe cancellation on the receiving stream. Workerd does
+						// not reliably notify the source's cancel hook over RPC.
+						return new ReadableStream<Uint8Array>();
+					}
+					lateResult.resolve();
+					cleanupSeenByRetry = await vi
+						.waitUntil(
+							() =>
+								kind === "reject"
+									? lateSettled
+									: kind === "object"
+										? lateCleanup.mock.calls.length === 1
+										: cancel.mock.settledResults.length === 1,
+							{ timeout: 500 }
+						)
+						.then(
+							() => true,
+							() => false
+						);
+					if (kind === "stream" || kind === "cancel-reject") {
+						return new ReadableStream<Uint8Array>({
+							start(controller) {
+								controller.enqueue(new TextEncoder().encode("retry succeeded"));
+								controller.close();
+							},
+							cancel: winningCancel,
+						});
+					}
+					return { attempt: 2, [Symbol.dispose]: winningDispose };
+				}
+			);
+			result =
+				value instanceof ReadableStream
+					? await new Response(value).text()
+					: value;
+		});
+
+		expect(attempts).toEqual([1, 2]);
+		expect(lateSettled).toBe(true);
+		expect(cleanupSeenByRetry).toBe(true);
+		if (kind === "stream" || kind === "cancel-reject") {
+			expect(result).toBe("retry succeeded");
+			expect(winningCancel).not.toHaveBeenCalled();
+		} else {
+			expect(result).toEqual({ attempt: 2 });
+			await vi.waitFor(() => expect(winningDispose).toHaveBeenCalledOnce());
+		}
+		if (kind === "object") {
+			expect(lateCleanup).toHaveBeenCalledOnce();
+		}
+		if (kind === "stream" || kind === "cancel-reject") {
+			expect(cancel).toHaveBeenCalledExactlyOnceWith(
+				expect.objectContaining({
+					name: "WorkflowTimeoutError",
+				})
+			);
+			expect(cancel.mock.settledResults[0]?.type).toBe(
+				kind === "stream" ? "fulfilled" : "rejected"
+			);
+		} else {
+			expect(cancel).not.toHaveBeenCalled();
+		}
+	}
+);
