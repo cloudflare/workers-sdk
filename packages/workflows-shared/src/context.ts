@@ -697,22 +697,26 @@ export class Context extends RpcTarget {
 					activeTimeoutTask?: Promise<never>
 				): Promise<unknown> => {
 					if (!isReadableStreamLike(value)) {
-						// Typed-array views anywhere in the value tree are copied
-						// into a tight backing buffer so the full backing buffer
-						// does not ride along with each view (issue #14101). View
-						// types are preserved so cached replays observe the same
-						// constructor as the live execution path. The caller still
-						// receives the original `value` below — only the stored
-						// shape changes.
-						const stored = normalizeForStorage(value);
-						await this.#state.storage.put(valueKey, { value: stored });
-						abortController.abort("step finished");
-						// @ts-expect-error priorityQueue is initiated in init
-						this.#engine.priorityQueue.remove({
-							hash: priorityQueueHash,
-							type: "timeout",
-						});
-						return value;
+						try {
+							// Non-stream results must be structured-cloneable. Clone before
+							// normalisation, which can discard unsupported array properties,
+							// and avoid forwarding the callback's RPC disposer to the caller.
+							const cloned = structuredClone(value);
+							// Compact typed-array backing buffers only for storage (#14101).
+							const stored = normalizeForStorage(cloned);
+							await this.#state.storage.put(valueKey, { value: stored });
+							abortController.abort("step finished");
+							// @ts-expect-error priorityQueue is initiated in init
+							this.#engine.priorityQueue.remove({
+								hash: priorityQueueHash,
+								type: "timeout",
+							});
+							return cloned;
+						} finally {
+							(value as Partial<Disposable> | null | undefined)?.[
+								Symbol.dispose
+							]?.();
+						}
 					}
 
 					streamResultSeen = true;
@@ -763,14 +767,41 @@ export class Context extends RpcTarget {
 					}
 				} else {
 					timeoutTask = timeoutPromise();
-					result = await Promise.race([
+					const callbackTask = Promise.resolve(
 						doWrapperClosure({
 							step: { name, count },
 							attempt: stepState.attemptedCount,
 							config: toEngineStepConfig(config),
-						}),
-						timeoutTask,
-					]);
+						})
+					);
+					try {
+						result = await Promise.race([callbackTask, timeoutTask]);
+					} catch (error) {
+						// A timeout does not cancel the callback RPC. Release any late
+						// result without waiting for it before retrying. Successful race
+						// winners remain owned by persistStepResult, including streams.
+						// The engine is a Durable Object, which stays active while there
+						// is ongoing work or pending I/O, so this untracked cleanup is
+						// retained without a waitUntil (a documented no-op for Durable
+						// Objects). Once the run() call that owns the callback stub ends,
+						// the stub is torn down with it and there is no result to release.
+						void callbackTask
+							.then(async (value) => {
+								try {
+									if (isReadableStreamLike(value)) {
+										await value.cancel(error);
+									}
+								} finally {
+									(value as Partial<Disposable> | null | undefined)?.[
+										Symbol.dispose
+									]?.();
+								}
+							})
+							// Late rejection or cleanup failure must not replace the
+							// attempt's original error or become an unhandled rejection.
+							.catch(() => {});
+						throw error;
+					}
 				}
 
 				// We store the value of `output` in an object with a `value` property. This allows us to store `undefined`,
