@@ -1,5 +1,61 @@
 # @cloudflare/config
 
+## 0.15.0
+
+### Minor Changes
+
+- [#15609](https://github.com/cloudflare/workers-sdk/pull/15609) [`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036) Thanks [@emily-shen](https://github.com/emily-shen)! - Support Durable Object-managed Containers in `convertToWranglerConfig()`.
+
+- [#15701](https://github.com/cloudflare/workers-sdk/pull/15701) [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Pass Preview intent to `defineWorker` and upload its resolved configuration
+
+  Preview builds now evaluate programmatic Worker configuration with `ctx.isPreview` set to `true` and record that intent in Build Output. The shared Preview uploader deploys the resolved bindings and settings while preserving configured Preview base values when it creates a Preview.
+
+## 0.14.0
+
+### Minor Changes
+
+- [#15684](https://github.com/cloudflare/workers-sdk/pull/15684) [`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for configuring real-time Issues with `observability.issues.enabled`
+
+  Wrangler now validates and uploads the Issues setting alongside the existing logs and traces observability options. The experimental configuration format supports the equivalent `observability.issues.enabled` option.
+
+## 0.13.0
+
+### Minor Changes
+
+- [#15453](https://github.com/cloudflare/workers-sdk/pull/15453) [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891) Thanks [@G4brym](https://github.com/G4brym)! - Remove the gated Web Search binding and Wrangler command
+
+  The unreleased search binding and its experimental command have been removed from Wrangler, Miniflare, and configuration APIs.
+
+## 0.12.0
+
+### Minor Changes
+
+- [#15544](https://github.com/cloudflare/workers-sdk/pull/15544) [`3f42b10`](https://github.com/cloudflare/workers-sdk/commit/3f42b10a40d2b3aae1d8d5142ea0bc3ac58fa954) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add standalone Container configuration to the experimental config API
+
+  Container applications can now be declared with `defineContainer`, exported alongside Workers, and referenced directly from SQLite Durable Object exports. The new input and output schemas support the camel-cased Container configuration format and require output to use an image reference.
+
+  Support currently only exists in the config package and has not been added to its consumers.
+
+## 0.11.0
+
+### Minor Changes
+
+- [#15511](https://github.com/cloudflare/workers-sdk/pull/15511) [`9c60d14`](https://github.com/cloudflare/workers-sdk/commit/9c60d14c0e4cd9306a58c830023f5b43fe6ed054) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Enable referencing Worker configs directly in cross-Worker bindings
+
+  `defineWorker` and `defineSettings` now return ordinary config objects, functions, or promises. Cross-Worker bindings can use a `defineWorker` result as their `worker`, preserving type inference while resolving and parsing the referenced config only once.
+
+## 0.10.0
+
+### Minor Changes
+
+- [#15379](https://github.com/cloudflare/workers-sdk/pull/15379) [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46) Thanks [@ibbykhazanchi](https://github.com/ibbykhazanchi)! - Add query string redaction to Workers observability configuration
+
+  Set `observability.redact_query_string` in `wrangler.json` or `observability.redactQueryString` in the experimental `cloudflare.config.ts` format to remove query strings from request URLs in logs and traces.
+
+- [#15388](https://github.com/cloudflare/workers-sdk/pull/15388) [`10d6bfb`](https://github.com/cloudflare/workers-sdk/commit/10d6bfbaf0ab7466892f4d97af1301494ca71e37) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support partial manifests in the experimental Build Output Specification
+
+  Build output producers now declare whether their module inventory is complete. `readBuildOutput()` resolves partial manifests by discovering `.js`, `.mjs`, and `.map` files while preserving explicit module type overrides.
+
 ## 0.9.0
 
 ### Minor Changes

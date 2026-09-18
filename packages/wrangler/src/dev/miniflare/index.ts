@@ -1,16 +1,14 @@
 import assert from "node:assert";
 import path from "node:path";
-import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
 	extractBindingsOfType,
-	isUnsafeBindingType,
-} from "@cloudflare/deploy-helpers";
-import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
 	getWranglerHiddenDirPath,
+	isUnsafeBindingType,
 	UserError,
+	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
@@ -19,16 +17,17 @@ import { logger } from "../../logger";
 import { getMetricsConfig } from "../../metrics";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
-import { warnOrError } from "../../utils/print-bindings";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
+import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
 	AssetsOptions,
 	Binding,
 	CfD1Database,
 	CfDispatchNamespace,
+	CfFlagship,
 	CfHyperdrive,
 	CfKvNamespace,
 	CfPipeline,
@@ -42,7 +41,6 @@ import type {
 	ServiceFetch,
 } from "@cloudflare/workers-utils";
 import type {
-	DOContainerOptions,
 	Json,
 	RemoteProxyConnectionString,
 	V4MiniflareOptions,
@@ -101,8 +99,7 @@ export interface ConfigBundle {
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
-	containerDOClassNames: Set<string> | undefined;
-	containerBuildId: string | undefined;
+	containerRuntimeOptions?: Map<string, ContainerDevRuntimeOptions>;
 	containerEngine: ContainerEngine | undefined;
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
@@ -242,6 +239,20 @@ function kvNamespaceEntry(
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
+function flagshipEntry(
+	{ binding, app_id, remote }: CfFlagship,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+): [
+	string,
+	{ app_id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+] {
+	const id = getRemoteId(app_id) ?? binding;
+	if (!remoteProxyConnectionString || !remote) {
+		return [binding, { app_id: id }];
+	}
+	return [binding, { app_id: id, remoteProxyConnectionString }];
+}
+
 function r2BucketEntry(
 	{ binding, bucket_name, remote, local_dev }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
@@ -436,7 +447,6 @@ type WorkerOptionsBindings = Pick<
 	| "ai"
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
-	| "websearch"
 	| "agentMemory"
 	| "textBlobBindings"
 	| "dataBlobBindings"
@@ -485,8 +495,7 @@ type MiniflareBindingsConfig = Pick<
 	| "tails"
 	| "streamingTails"
 	| "complianceRegion"
-	| "containerDOClassNames"
-	| "containerBuildId"
+	| "containerRuntimeOptions"
 	| "enableContainers"
 > &
 	Partial<
@@ -558,7 +567,6 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
-	const websearchBindings = extractBindingsOfType("websearch", bindings);
 	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
@@ -682,35 +690,31 @@ export function buildMiniflareBindingOptions(
 	const externalWorkers: V4WorkerOptions[] = [];
 
 	for (const ai of aiBindings) {
-		warnOrError("ai", ai.remote);
+		validateBindingRemoteSetting("ai", ai.remote, logger.warn);
 	}
 
 	for (const ns of aiSearchNamespaceBindings) {
-		warnOrError("ai_search_namespace", ns.remote);
+		validateBindingRemoteSetting("ai_search_namespace", ns.remote, logger.warn);
 	}
 
 	for (const inst of aiSearchInstanceBindings) {
-		warnOrError("ai_search", inst.remote);
-	}
-
-	for (const ws of websearchBindings) {
-		warnOrError("websearch", ws.remote);
+		validateBindingRemoteSetting("ai_search", inst.remote, logger.warn);
 	}
 
 	for (const memory of agentMemoryBindings) {
-		warnOrError("agent_memory", memory.remote);
+		validateBindingRemoteSetting("agent_memory", memory.remote, logger.warn);
 	}
 
 	for (const media of mediaBindings) {
-		warnOrError("media", media.remote);
+		validateBindingRemoteSetting("media", media.remote, logger.warn);
 	}
 
 	for (const artifact of artifactsBindings) {
-		warnOrError("artifacts", artifact.remote);
+		validateBindingRemoteSetting("artifacts", artifact.remote, logger.warn);
 	}
 
 	for (const flagship of flagshipBindings) {
-		warnOrError("flagship", flagship.remote);
+		validateBindingRemoteSetting("flagship", flagship.remote, logger.warn);
 	}
 
 	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
@@ -762,14 +766,9 @@ export function buildMiniflareBindingOptions(
 				className,
 				scriptName: undefined,
 				useSQLite,
-				container:
-					config.containerDOClassNames?.size && config.enableContainers
-						? getImageNameFromDOClassName({
-								doClassName: className,
-								containerDOClassNames: config.containerDOClassNames,
-								containerBuildId: config.containerBuildId,
-							})
-						: undefined,
+				container: config.enableContainers
+					? config.containerRuntimeOptions?.get(className)
+					: undefined,
 			});
 		}
 	}
@@ -817,15 +816,6 @@ export function buildMiniflareBindingOptions(
 				inst.binding,
 				{
 					instance_name: inst.instance_name,
-					remoteProxyConnectionString,
-				},
-			])
-		),
-
-		websearch: Object.fromEntries(
-			websearchBindings.map((ws) => [
-				ws.binding,
-				{
 					remoteProxyConnectionString,
 				},
 			])
@@ -911,13 +901,9 @@ export function buildMiniflareBindingOptions(
 			helloWorldBindings.map((binding) => [binding.binding, binding])
 		),
 		flagship: Object.fromEntries(
-			flagshipBindings.map((binding) => [
-				binding.binding,
-				{
-					app_id: getRemoteId(binding.app_id) ?? binding.binding,
-					remoteProxyConnectionString,
-				},
-			])
+			flagshipBindings.map((binding) =>
+				flagshipEntry(binding, remoteProxyConnectionString)
+			)
 		),
 		artifacts: Object.fromEntries(
 			artifactsBindings.map((binding) => [
@@ -982,7 +968,11 @@ export function buildMiniflareBindingOptions(
 
 		vectorize: Object.fromEntries(
 			vectorizeBindings.map((vectorize) => {
-				warnOrError("vectorize", vectorize.remote);
+				validateBindingRemoteSetting(
+					"vectorize",
+					vectorize.remote,
+					logger.warn
+				);
 				return [
 					vectorize.binding,
 					{
@@ -997,7 +987,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcServices: Object.fromEntries(
 			vpcServices.map((vpc) => {
-				warnOrError("vpc_service", vpc.remote);
+				validateBindingRemoteSetting("vpc_service", vpc.remote, logger.warn);
 				return [
 					vpc.binding,
 					{
@@ -1009,7 +999,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcNetworks: Object.fromEntries(
 			vpcNetworks.map((vpc) => {
-				warnOrError("vpc_network", vpc.remote);
+				validateBindingRemoteSetting("vpc_network", vpc.remote, logger.warn);
 				const id =
 					vpc.tunnel_id !== undefined
 						? { tunnel_id: vpc.tunnel_id }
@@ -1020,7 +1010,11 @@ export function buildMiniflareBindingOptions(
 
 		dispatchNamespaces: Object.fromEntries(
 			dispatchNamespaces.map((dispatchNamespace) => {
-				warnOrError("dispatch_namespace", dispatchNamespace.remote);
+				validateBindingRemoteSetting(
+					"dispatch_namespace",
+					dispatchNamespace.remote,
+					logger.warn
+				);
 				return dispatchNamespaceEntry(
 					dispatchNamespace,
 					dispatchNamespace.remote && remoteProxyConnectionString
@@ -1038,14 +1032,9 @@ export function buildMiniflareBindingOptions(
 							className,
 							scriptName,
 							useSQLite: classNameToUseSQLite.get(className),
-							container:
-								config.containerDOClassNames?.size && config.enableContainers
-									? getImageNameFromDOClassName({
-											doClassName: className,
-											containerDOClassNames: config.containerDOClassNames,
-											containerBuildId: config.containerBuildId,
-										})
-									: undefined,
+							container: config.enableContainers
+								? config.containerRuntimeOptions?.get(className)
+								: undefined,
 						},
 					];
 				}
@@ -1057,7 +1046,11 @@ export function buildMiniflareBindingOptions(
 
 		mtlsCertificates: Object.fromEntries(
 			mtlsCertificates.map((mtlsCertificate) => {
-				warnOrError("mtls_certificate", mtlsCertificate.remote);
+				validateBindingRemoteSetting(
+					"mtls_certificate",
+					mtlsCertificate.remote,
+					logger.warn
+				);
 				return [
 					mtlsCertificate.binding,
 					{
@@ -1202,30 +1195,6 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return options;
-}
-
-/**
- * Returns the Container options for the DO class name.
- * @returns The configuration or `undefined` when the DO has no attached container
- */
-export function getImageNameFromDOClassName(options: {
-	doClassName: string;
-	containerDOClassNames: Set<string>;
-	containerBuildId: string | undefined;
-}): DOContainerOptions | undefined {
-	assert(
-		options.containerBuildId,
-		"Build ID should be set if containers are defined and enabled"
-	);
-
-	if (options.containerDOClassNames.has(options.doClassName)) {
-		return {
-			imageName: getDevContainerImageName(
-				options.doClassName,
-				options.containerBuildId
-			),
-		};
-	}
 }
 
 /**

@@ -1,12 +1,11 @@
-import { UserError } from "@cloudflare/workers-utils";
-import { buildImage } from "./build";
+import { UserError } from "@cloudflare/workers-utils/errors";
+import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
 import {
 	checkExposedPorts,
-	cleanupDuplicateImageTags,
 	runDockerCmd,
 	verifyDockerInstalled,
 } from "./utils";
@@ -16,7 +15,7 @@ import type {
 	ViteLogger,
 	WranglerLogger,
 } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
 
 export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
 	"cloudflare/proxy-everything:3cb1195@sha256:0ef6716c52430096900b150d84a3302057d6cd2319dae7987128c85d0733e3c8";
@@ -58,7 +57,7 @@ export async function pullImage(
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
 	logger: WranglerLogger | ViteLogger,
 	complianceConfig?: ComplianceConfig
-): Promise<{ abort: () => void; ready: Promise<void> }> {
+): Promise<{ abort: () => void; ready: Promise<{ aborted: boolean }> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
 	const isExternalRegistry =
@@ -92,6 +91,7 @@ export async function pullImage(
 				options.image_tag,
 			]);
 		}
+		return { aborted };
 	});
 
 	return {
@@ -113,7 +113,7 @@ export async function pullImage(
  * expose any ports.
  *
  * @param args - Image preparation callbacks, Docker settings, and compliance configuration.
- * @returns A promise that resolves when all configured images are ready.
+ * @returns Whether image preparation was aborted before completion.
  */
 export async function prepareContainerImagesForDev(args: {
 	dockerPath: string;
@@ -127,7 +127,7 @@ export async function prepareContainerImagesForDev(args: {
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
 	complianceConfig?: ComplianceConfig;
-}): Promise<void> {
+}): Promise<{ aborted: boolean }> {
 	const {
 		dockerPath,
 		containerOptions,
@@ -152,7 +152,17 @@ export async function prepareContainerImagesForDev(args: {
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
-			const build = await buildImage(dockerPath, options, false);
+			const build = await startContainerBuild({
+				pathToDocker: dockerPath,
+				verifyDockerIsRunning: false,
+				build: {
+					tag: options.image_tag,
+					pathToDockerfile: options.dockerfile,
+					buildContext: options.image_build_context,
+					args: options.image_vars,
+					platform: "linux/amd64",
+				},
+			});
 			onContainerImagePreparationStart({
 				containerOptions: options,
 				abort: () => {
@@ -179,17 +189,16 @@ export async function prepareContainerImagesForDev(args: {
 					pull.abort();
 				},
 			});
-			await pull.ready;
+			const pullResult = await pull.ready;
+			aborted ||= pullResult.aborted;
 			onContainerImagePreparationEnd({
 				containerOptions: options,
 			});
 		}
-		if (!aborted) {
-			// Clean up duplicate image tags. This is scoped to cloudflare-dev only
-			await cleanupDuplicateImageTags(dockerPath, options.image_tag);
-
-			await checkExposedPorts(dockerPath, options);
+		if (aborted) {
+			break;
 		}
+		await checkExposedPorts(dockerPath, options);
 	}
 
 	// Pull the egress interceptor image used to intercept outbound HTTP from
@@ -197,6 +206,32 @@ export async function prepareContainerImagesForDev(args: {
 	if (!aborted) {
 		await pullEgressInterceptorImage(dockerPath);
 	}
+
+	return { aborted };
+}
+
+/**
+ * Determines whether an image reference belongs to the Cloudflare-managed
+ * registry, including shorthand references that omit the registry hostname.
+ *
+ * @param image - Image reference to classify.
+ * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @returns Whether the image uses the Cloudflare-managed registry.
+ */
+export function isCloudflareRegistryImage(
+	image: string,
+	complianceConfig?: ComplianceConfig
+): boolean {
+	let url: URL | undefined;
+	try {
+		url = new URL(`http://${image}`);
+	} catch {}
+
+	return (
+		url === undefined ||
+		(!url.host.match(/[:.]/) && url.hostname !== "localhost") ||
+		url.hostname === getCloudflareContainerRegistry(complianceConfig)
+	);
 }
 
 /**

@@ -96,7 +96,9 @@ async function testGet(
 		const expected = opts.expectedRoutes.has(route as Route);
 		const text = (await res.text()).trim();
 		expect(res.status).toBe(expected ? 200 : 404);
-		if (expected) expect(text).toBe(expectedContents);
+		if (expected) {
+			expect(text).toBe(expectedContents);
+		}
 	}
 }
 

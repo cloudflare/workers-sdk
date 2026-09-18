@@ -13,7 +13,11 @@ import {
 	disposeWithRetry,
 	singleModuleManifest,
 } from "../../test-shared";
-import { expectValidResponse } from "./helpers";
+import {
+	createSharedStorageExplorerPair,
+	createUnboundStorageExplorer,
+	expectValidResponse,
+} from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
@@ -135,16 +139,16 @@ describe("R2 API", () => {
 			);
 		});
 
-		test("returns 404 for non-existent bucket", async ({ expect }) => {
+		test("addresses an unlisted bucket", async ({ expect }) => {
 			const response = await dispatchFetchWithRetry(
 				mf,
 				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects`
 			);
 
-			expect(response.status).toBe(404);
+			expect(response.status).toBe(200);
 			expect(await response.json()).toMatchObject({
-				success: false,
-				errors: [expect.objectContaining({ code: 10006 })],
+				success: true,
+				result: [],
 			});
 		});
 	});
@@ -206,7 +210,9 @@ describe("R2 API", () => {
 			});
 		});
 
-		test("returns 404 for non-existent bucket", async ({ expect }) => {
+		test("returns object-not-found for an unlisted bucket", async ({
+			expect,
+		}) => {
 			const response = await dispatchFetchWithRetry(
 				mf,
 				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects/some-object.txt`
@@ -215,7 +221,7 @@ describe("R2 API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ code: 10006 })],
+				errors: [expect.objectContaining({ code: 10007 })],
 			});
 		});
 
@@ -286,7 +292,7 @@ describe("R2 API", () => {
 			expect(obj?.customMetadata).toEqual(customMetadata);
 		});
 
-		test("returns 404 for non-existent bucket", async ({ expect }) => {
+		test("uploads to an unlisted bucket", async ({ expect }) => {
 			const response = await dispatchFetchWithRetry(
 				mf,
 				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects/some-object.txt`,
@@ -296,11 +302,15 @@ describe("R2 API", () => {
 				}
 			);
 
-			expect(response.status).toBe(404);
+			expect(response.status).toBe(200);
 			expect(await response.json()).toMatchObject({
-				success: false,
-				errors: [expect.objectContaining({ code: 10006 })],
+				success: true,
+				result: { key: "some-object.txt" },
 			});
+			const getResponse = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects/some-object.txt`
+			);
+			expect(await getResponse.text()).toBe("content");
 		});
 
 		test("returns error for invalid custom metadata JSON", async ({
@@ -374,7 +384,7 @@ describe("R2 API", () => {
 			expect(await response.json()).toMatchObject({ success: true });
 		});
 
-		test("returns 404 for non-existent bucket", async ({ expect }) => {
+		test("deletes from an unlisted bucket", async ({ expect }) => {
 			const response = await dispatchFetchWithRetry(
 				mf,
 				`${BASE_URL}/r2/buckets/NON_EXISTENT/objects`,
@@ -385,11 +395,8 @@ describe("R2 API", () => {
 				}
 			);
 
-			expect(response.status).toBe(404);
-			expect(await response.json()).toMatchObject({
-				success: false,
-				errors: [expect.objectContaining({ code: 10006 })],
-			});
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
 		});
 
 		test("returns error for empty keys array", async ({ expect }) => {
@@ -407,4 +414,50 @@ describe("R2 API", () => {
 			await response.json();
 		});
 	});
+});
+
+test("addresses arbitrary bucket IDs without an R2 binding", async ({
+	expect,
+}) => {
+	const mf = createUnboundStorageExplorer();
+
+	try {
+		await mf.ready;
+		const objectUrl = `${BASE_URL}/r2/buckets/arbitrary-bucket/objects/unbound.txt`;
+		const putResponse = await dispatchFetchWithRetry(mf, objectUrl, {
+			method: "PUT",
+			body: "unbound-content",
+		});
+		expect(putResponse.status).toBe(200);
+		expect(await putResponse.json()).toMatchObject({ success: true });
+
+		const getResponse = await dispatchFetchWithRetry(mf, objectUrl);
+		expect(getResponse.status).toBe(200);
+		expect(await getResponse.text()).toBe("unbound-content");
+	} finally {
+		await disposeWithRetry(mf);
+	}
+});
+
+test("routes arbitrary bucket IDs through the shared-storage owner", async ({
+	expect,
+}) => {
+	const { owner, client } = await createSharedStorageExplorerPair();
+
+	try {
+		await client.ready;
+		const objectUrl = `${BASE_URL}/r2/buckets/arbitrary-bucket/objects/shared.txt`;
+		const putResponse = await dispatchFetchWithRetry(client, objectUrl, {
+			method: "PUT",
+			body: "written-through-client",
+		});
+		expect(putResponse.status).toBe(200);
+		expect(await putResponse.json()).toMatchObject({ success: true });
+
+		const getResponse = await dispatchFetchWithRetry(owner, objectUrl);
+		expect(getResponse.status).toBe(200);
+		expect(await getResponse.text()).toBe("written-through-client");
+	} finally {
+		await Promise.all([disposeWithRetry(client), disposeWithRetry(owner)]);
+	}
 });

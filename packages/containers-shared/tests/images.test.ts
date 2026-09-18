@@ -1,9 +1,10 @@
 import { beforeEach, describe, it, vi } from "vitest";
 import { ExternalRegistryKind } from "../src/client/models/ExternalRegistryKind";
 import {
-	getEgressInterceptorPlatform,
-	pullEgressInterceptorImage,
 	getAndValidateRegistryType,
+	getEgressInterceptorPlatform,
+	isCloudflareRegistryImage,
+	pullEgressInterceptorImage,
 	validateAndEncodeGarKey,
 } from "../src/images";
 import { runDockerCmd } from "../src/utils";
@@ -17,6 +18,19 @@ vi.mock("../src/utils", () => ({
 		},
 	})),
 }));
+
+describe("isCloudflareRegistryImage", () => {
+	it("recognizes managed registry and shorthand references", ({ expect }) => {
+		for (const [image, isManaged] of [
+			["image:tag", true],
+			["registry.cloudflare.com/image:tag", true],
+			["docker.io/example/image:tag", false],
+			["localhost:5000/image:tag", false],
+		] as const) {
+			expect(isCloudflareRegistryImage(image)).toBe(isManaged);
+		}
+	});
+});
 
 describe("getEgressInterceptorPlatform", () => {
 	beforeEach(() => {

@@ -27,7 +27,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 
 ## Lint Status (Transitional)
 
-- Many shared ESLint rules temporarily DISABLED: `curly`, `no-explicit-any`, `consistent-type-imports`, `no-shadow`, `no-floating-promises`, others
+- Many shared ESLint rules temporarily DISABLED: `no-explicit-any`, `consistent-type-imports`, `no-shadow`, `no-floating-promises`, others
 - Comment in config: "temporarily enabled while we transition Miniflare to use the standard workers-sdk eslint config"
 - `no-console: error` is on, except for `src/workers/` and `scripts/`
 

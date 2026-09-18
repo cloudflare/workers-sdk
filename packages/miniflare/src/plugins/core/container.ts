@@ -2,7 +2,7 @@ import {
 	containerPrivilegesAllowed,
 	FUSE_CONTAINER_PRIVILEGES,
 } from "@cloudflare/containers-shared";
-import { getDockerPath } from "@cloudflare/workers-utils";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import type {
 	Worker_ContainerEngine,
 	Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges,

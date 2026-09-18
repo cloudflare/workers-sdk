@@ -552,7 +552,6 @@ const bindingsConfigMock: Omit<
 		},
 	],
 	vpc_networks: [],
-	websearch: undefined,
 	connect: [],
 };
 
@@ -1864,6 +1863,7 @@ describe("generate types - CLI", () => {
 					varStr: "A from wrangler toml",
 					varArrNum: [1, 2, 3],
 					varArrMix: [1, "two", 3, true],
+					varArrEmpty: [],
 					varObj: { test: true },
 				},
 			}),
@@ -1882,6 +1882,7 @@ describe("generate types - CLI", () => {
 				varStr: string;
 				varArrNum: number[];
 				varArrMix: (boolean|number|string)[];
+				varArrEmpty: unknown[];
 				varObj: object;
 			}
 			declare namespace Cloudflare {
@@ -1895,6 +1896,58 @@ describe("generate types - CLI", () => {
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
+	});
+
+	it("should generate one class-scoped binding for Durable Object-managed images", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				name: "test-name",
+				durable_objects: {
+					bindings: [
+						{
+							name: "SANDBOX",
+							class_name: "Sandbox",
+						},
+					],
+				},
+				migrations: [
+					{
+						tag: "v1",
+						new_sqlite_classes: ["Sandbox"],
+					},
+				],
+				containers: [
+					{
+						class_name: "Sandbox",
+						scheduling_policy: "durable_object",
+						images: {
+							sandbox: {
+								dockerfile: "./Dockerfile",
+							},
+							tools: {
+								dockerfile: "./Dockerfile.tools",
+							},
+						},
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		const generated = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+		expect(generated).not.toContain("SANDBOX_IMAGE");
+		expect(generated).not.toContain("TOOLS_IMAGE");
+		expect(generated).toContain(
+			"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: Readonly<Record<string, Readonly<Record<string, string>>>>;"
+		);
+		expect(generated).toContain(
+			"SANDBOX: DurableObjectNamespace /* Sandbox */;"
+		);
 	});
 
 	it("should override vars with secrets", async ({ expect }) => {

@@ -1,10 +1,13 @@
 import assert from "node:assert";
 import path from "node:path";
-import { resolveDockerHost } from "@cloudflare/containers-shared";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
+import {
+	createContainerDevPlan,
+	resolveDockerHost,
+} from "@cloudflare/containers-shared";
 import {
 	configFileName,
 	DEFAULT_COMPAT_DATE,
+	extractBindingsOfType,
 	formatConfigSnippet,
 	getDisableConfigWatching,
 	getDockerPath,
@@ -257,19 +260,18 @@ async function resolveBindings(
 
 	// Create a print function that captures the current bindings context
 	const printCurrentBindings = (registry: WorkerRegistry | null) => {
-		printBindings(
-			bindings,
-			input.tailConsumers ?? config.tail_consumers,
-			input.streamingTailConsumers ?? config.streaming_tail_consumers,
-			config.containers,
-			{
-				registry,
-				local: !input.dev?.remote,
-				isMultiWorker: getFlag("MULTIWORKER"),
-				remoteBindingsDisabled: input.dev?.remote === false,
-				name: config.name,
-			}
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: input.tailConsumers ?? config.tail_consumers,
+			streamingTailConsumers:
+				input.streamingTailConsumers ?? config.streaming_tail_consumers,
+			containers: config.containers,
+			registry,
+			local: !input.dev?.remote,
+			isMultiWorker: getFlag("MULTIWORKER"),
+			remoteBindingsDisabled: input.dev?.remote === false,
+			name: config.name,
+		});
 	};
 
 	// Print the initial bindings table
@@ -359,6 +361,18 @@ async function resolveConfig(
 	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
+	// A programmatic `input.build.custom` override takes precedence over the
+	// config file, same as the `build.custom` merge below.
+	const customBuildCommand =
+		input.build?.custom?.command ?? config.build?.command;
+	const customWatchDir = input.build?.custom?.watch ?? config.build?.watch_dir;
+	const customWorkingDirectory =
+		input.build?.custom?.workingDirectory ?? config.build?.cwd;
+
+	// `getEntry()` runs the custom build command once, before `BundlerController`
+	// ever sees this config; it must run the *effective* command above, not just
+	// what's in the config file. Otherwise a purely-programmatic custom build
+	// would never run on startup.
 	const entry = await getEntry(
 		{
 			script: input.entrypoint,
@@ -368,7 +382,15 @@ async function resolveConfig(
 			// the entire Assets object is fine.
 			assets: input?.assets,
 		},
-		config,
+		{
+			...config,
+			build: {
+				...config.build,
+				command: customBuildCommand,
+				watch_dir: customWatchDir,
+				cwd: customWorkingDirectory,
+			},
+		},
 		"dev"
 	);
 
@@ -400,6 +422,43 @@ async function resolveConfig(
 		},
 		config,
 	});
+	// getNormalizedContainerOptions() validates scheduler-backed and Durable
+	// Object-managed Containers and resolves account-qualified image URIs for
+	// scheduler-backed registry images. createContainerDevPlan() owns local image
+	// preparation, so scheduler-backed entries use those normalized URIs.
+	const normalizedContainers = await getNormalizedContainerOptions(config, {});
+	const dev = await resolveDevConfig(config, input);
+	const containerPlan =
+		dev.enableContainers && !dev.remote
+			? createContainerDevPlan({
+					containers: config.containers,
+					exports: config.exports,
+					containerBuildId: dev.containerBuildId,
+					configPath: config.configPath,
+				})
+			: undefined;
+	const normalizedSchedulerImageUris = new Map(
+		normalizedContainers.flatMap((container) =>
+			"image_uri" in container
+				? [[container.class_name, container.image_uri] as const]
+				: []
+		)
+	);
+	const containerDevPlan = containerPlan
+		? {
+				...containerPlan,
+				containerOptions: containerPlan.containerOptions.map((container) => {
+					const normalizedImageUri = normalizedSchedulerImageUris.get(
+						container.class_name
+					);
+					return container.image_name === undefined &&
+						"image_uri" in container &&
+						normalizedImageUri !== undefined
+						? { ...container, image_uri: normalizedImageUri }
+						: container;
+				}),
+			}
+		: undefined;
 
 	const resolved = {
 		name:
@@ -436,10 +495,9 @@ async function resolveConfig(
 			keepNames: input.build?.keepNames ?? config.keep_names,
 			define: { ...config.define, ...input.build?.define },
 			custom: {
-				command: input.build?.custom?.command ?? config.build?.command,
-				watch: input.build?.custom?.watch ?? config.build?.watch_dir,
-				workingDirectory:
-					input.build?.custom?.workingDirectory ?? config.build?.cwd,
+				command: customBuildCommand,
+				watch: customWatchDir,
+				workingDirectory: customWorkingDirectory,
 			},
 			format: entry.format,
 			nodejsCompatMode: nodejsCompatMode ?? null,
@@ -448,8 +506,9 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
-		containers: await getNormalizedContainerOptions(config, {}),
-		dev: await resolveDevConfig(config, input),
+		containers: normalizedContainers,
+		containerDevPlan,
+		dev,
 		legacy: {
 			site: legacySite,
 		},
@@ -501,7 +560,7 @@ async function resolveConfig(
 	// for pulling containers, we need to make sure the OpenAPI config for the
 	// container API client is properly set so that we can get the correct permissions
 	// from the cloudchamber API to pull from the repository.
-	const needsPulling = resolved.containers.some(
+	const needsPulling = resolved.containerDevPlan?.containerOptions.some(
 		(c) => "image_uri" in c && c.image_uri
 	);
 	if (needsPulling && !resolved.dev.remote) {
@@ -523,11 +582,7 @@ async function resolveConfig(
 	if (resolved.dev.remote) {
 		// We're in remote mode (`--remote`)
 
-		if (
-			resolved.dev.enableContainers &&
-			resolved.containers &&
-			resolved.containers.length > 0
-		) {
+		if (resolved.dev.enableContainers && config.containers?.length) {
 			logger.once.warn(
 				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
 			);
@@ -718,7 +773,7 @@ export class ConfigController extends Controller {
 			if (newConfig && fileConfig.configPath) {
 				await regenerateNewConfigTypes({
 					cloudflareConfigPath: fileConfig.configPath,
-					workerConfig: newConfig.parsedWorkerConfig,
+					workerConfig: newConfig.parsedConfig.worker,
 					types: newConfig.types,
 				});
 			}

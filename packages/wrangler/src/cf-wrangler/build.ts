@@ -8,6 +8,6 @@ import { runBuildOutput } from "../build/run-build-output";
 import type { BuildArgs } from "./args";
 
 export async function runCfWranglerBuild(args: BuildArgs): Promise<number> {
-	await runBuildOutput({ env: args.mode });
+	await runBuildOutput({ env: args.mode, isPreview: args.preview });
 	return 0;
 }

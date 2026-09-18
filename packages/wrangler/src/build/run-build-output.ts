@@ -1,3 +1,9 @@
+import {
+	buildAndWriteContainerOutput,
+	initContainersSharedContext,
+} from "@cloudflare/containers-shared";
+import { getDockerPath } from "@cloudflare/workers-utils";
+import { fetchResult } from "../cfetch";
 import { readNewConfig } from "../config";
 import { writeBuildOutput } from "../deployment-bundle/build-output";
 import { buildWorker } from "../deployment-bundle/maybe-build-worker";
@@ -5,6 +11,7 @@ import {
 	cleanupDestination,
 	mergeBuildOutputProps,
 } from "../deployment-bundle/merge-config-args";
+import { logger } from "../logger";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 
 /**
@@ -12,13 +19,17 @@ import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
  *
  * The output is a self-contained `.cloudflare/output/v0/` directory.
  */
-export async function runBuildOutput(buildArgs: {
+export async function runBuildOutput({
+	env,
+	isPreview = false,
+}: {
 	env?: string;
+	isPreview?: boolean;
 }): Promise<void> {
-	const { config, parsedWorkerConfig, parsedSettingsConfig, mode } =
-		await readNewConfig({
-			env: buildArgs.env,
-		});
+	const { config, parsedConfig, mode } = await readNewConfig(
+		{ env },
+		{ isPreview }
+	);
 	const { buildProps, assetsOptions } = await mergeBuildOutputProps(config);
 	const root = process.cwd();
 
@@ -30,11 +41,20 @@ export async function runBuildOutput(buildArgs: {
 
 		await writeBuildOutput({
 			root,
-			parsedWorkerConfig,
-			parsedSettingsConfig,
+			parsedWorkerConfig: parsedConfig.worker,
+			parsedSettingsConfig: parsedConfig.settings,
 			mode,
+			isPreview,
 			buildResult,
 			assetsOptions,
+		});
+
+		initContainersSharedContext({ logger, fetchResult });
+		const pathToDocker = getDockerPath();
+		await buildAndWriteContainerOutput({
+			containers: parsedConfig.containers,
+			root,
+			pathToDocker,
 		});
 	} finally {
 		if (buildProps) {

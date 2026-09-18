@@ -1,9 +1,13 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
+import {
+	extractBindingsOfType,
+	INHERIT_SYMBOL,
+	isUnsafeBindingType,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { FormData } from "undici";
-import { extractBindingsOfType, isUnsafeBindingType } from "./binding-utils";
 import { handleUnsafeCapnp } from "./capnp";
 import type {
 	AssetConfigMetadata,
@@ -130,7 +134,6 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const websearch = extractBindingsOfType("websearch", bindings)[0];
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
@@ -386,13 +389,6 @@ export function createWorkerUploadForm(
 			instance_name,
 		});
 	});
-
-	if (websearch !== undefined) {
-		metadataBindings.push({
-			name: websearch.binding,
-			type: "websearch",
-		});
-	}
 
 	agent_memory.forEach(({ binding, namespace }) => {
 		if (options?.dryRun) {
@@ -878,6 +874,7 @@ export function createWorkerUploadForm(
 				: worker.containers.map((c) => ({
 						...(c.name !== undefined && { name: c.name }),
 						...(c.class_name !== undefined && { class_name: c.class_name }),
+						...(c.images !== undefined && { images: c.images }),
 					})),
 
 		...(compatibility_date && { compatibility_date }),

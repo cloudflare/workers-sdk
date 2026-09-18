@@ -10,7 +10,6 @@ import { release } from "node:os";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	checkExposedPorts,
-	cleanupDuplicateImageTags,
 	containerPrivilegesAllowed,
 	verifyDockerInstalled,
 } from "./../src/utils";
@@ -69,51 +68,18 @@ describe("checkExposedPorts", () => {
 				]
 			`);
 	});
-});
 
-describe("cleanupDuplicateImageTags", () => {
-	beforeEach(() => {
-		docketImageInspectResult = "";
-		vi.mocked(execFileSync).mockReset();
-		vi.mocked(execFileSync).mockReturnValue("");
-	});
-
-	it("does not remove sibling container tags from the same dev session", async ({
+	it("identifies the named image that does not expose ports", async ({
 		expect,
 	}) => {
-		docketImageInspectResult = [
-			"cloudflare-dev/egresstestcontainer:build-123",
-			"cloudflare-dev/egresstest1container:build-123",
-		].join("\n");
-
-		await cleanupDuplicateImageTags(
-			"docker",
-			"cloudflare-dev/egresstest1container:build-123"
-		);
-
-		expect(execFileSync).not.toHaveBeenCalled();
-	});
-
-	it("removes stale cloudflare-dev tags from previous dev sessions", async ({
-		expect,
-	}) => {
-		docketImageInspectResult = [
-			"cloudflare-dev/egresstestcontainer:build-123",
-			"cloudflare-dev/egresstest1container:build-123",
-			"cloudflare-dev/egresstestcontainer:build-122",
-			"user/image:latest",
-		].join("\n");
-
-		await cleanupDuplicateImageTags(
-			"docker",
-			"cloudflare-dev/egresstest1container:build-123"
-		);
-
-		expect(execFileSync).toHaveBeenCalledOnce();
-		expect(execFileSync).toHaveBeenCalledWith(
-			"docker",
-			["rmi", "cloudflare-dev/egresstestcontainer:build-122"],
-			{ encoding: "utf8" }
+		docketImageInspectResult = "0";
+		await expect(
+			checkExposedPorts("docker", {
+				...containerConfig,
+				image_name: "app",
+			})
+		).rejects.toThrow(
+			'The container "MyContainer.app" does not expose any ports'
 		);
 	});
 });

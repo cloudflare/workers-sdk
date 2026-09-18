@@ -55,7 +55,6 @@ const reorderableBindings = {
 	images: false,
 	stream: false,
 	media: false,
-	websearch: false,
 	version_metadata: false,
 	unsafe: false,
 	assets: false,
@@ -257,7 +256,6 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		"images",
 		"stream",
 		"media",
-		"websearch",
 	] as const;
 	for (const singleBindingField of singleBindingFields) {
 		if (
@@ -286,6 +284,7 @@ function normalizeObservability(
 	const fullObservabilityDefaults = {
 		enabled,
 		head_sampling_rate: 1,
+		redact_query_string: false,
 		logs: {
 			enabled,
 			head_sampling_rate: 1,

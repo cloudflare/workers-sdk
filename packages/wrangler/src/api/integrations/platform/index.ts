@@ -1,8 +1,8 @@
 import path from "node:path";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
+import { createContainerDevPlan } from "@cloudflare/containers-shared";
 import {
 	DEFAULT_COMPAT_DATE,
-	getContainerDurableObjectClassNames,
+	extractBindingsOfType,
 	getRegistryPath,
 } from "@cloudflare/workers-utils";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -292,12 +292,8 @@ async function getMiniflareOptionsFromConfig(args: {
 			exports: config.exports,
 			tails: [],
 			streamingTails: [],
-			containerDOClassNames: getContainerDurableObjectClassNames(
-				config.containers,
-				config.exports
-			),
-			containerBuildId: undefined,
-			enableContainers: config.dev.enable_containers,
+			// Platform proxy does not prepare local Container images.
+			enableContainers: false,
 		},
 		remoteProxyConnectionString
 	);
@@ -446,10 +442,18 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
-	const containerDOClassNames = getContainerDurableObjectClassNames(
-		config.containers,
-		config.exports
-	);
+	const enableContainers =
+		options?.overrides?.enableContainers !== undefined
+			? options.overrides.enableContainers
+			: config.dev.enable_containers;
+	const containerPlan = enableContainers
+		? createContainerDevPlan({
+				containers: config.containers,
+				exports: config.exports,
+				containerBuildId: options?.containerBuildId,
+				configPath: config.configPath,
+			})
+		: undefined;
 	const bindings = getBindings(
 		config,
 		env,
@@ -458,11 +462,6 @@ export function unstable_getMiniflareWorkerOptions(
 		undefined,
 		undefined
 	);
-
-	const enableContainers =
-		options?.overrides?.enableContainers !== undefined
-			? options?.overrides?.enableContainers
-			: config.dev.enable_containers;
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		{
@@ -474,8 +473,7 @@ export function unstable_getMiniflareWorkerOptions(
 			exports: config.exports,
 			tails: config.tail_consumers,
 			streamingTails: config.streaming_tail_consumers,
-			containerDOClassNames,
-			containerBuildId: options?.containerBuildId,
+			containerRuntimeOptions: containerPlan?.containerRuntimeOptions,
 			enableContainers,
 		},
 		options?.remoteProxyConnectionString

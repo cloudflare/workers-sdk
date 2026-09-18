@@ -3,6 +3,7 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
+import { z } from "miniflare:zod";
 import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
@@ -17,12 +18,14 @@ import {
 	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 	zObservabilityQueryData,
 	zWorkflowsBatchDeleteInstancesData,
-	zWorkflowsChangeInstanceStatusData,
+	zWorChangeStatusWorkflowInstanceData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
@@ -36,7 +39,9 @@ import {
 	sendTestEmail,
 } from "./resources/email";
 import {
+	bulkDeleteKVValues,
 	bulkGetKVValues,
+	bulkWriteKVValues,
 	deleteKVValue,
 	getKVValue,
 	listKVKeys,
@@ -74,6 +79,23 @@ import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-share
 import type { EmailStoreService } from "../email/storage";
 import type { LocalExplorerWorker } from "./generated";
 
+// Generated object schemas strip unknown keys, so reject invalid rollback
+// combinations before parsing rather than silently dropping the option.
+const zWorkflowInstanceStatusBody = z.preprocess((value, ctx) => {
+	if (
+		typeof value === "object" &&
+		value !== null &&
+		Object.hasOwn(value, "rollback") &&
+		(value as { status?: unknown }).status !== "terminate"
+	) {
+		ctx.addIssue({
+			code: "custom",
+			message: "'rollback' is only valid when terminating.",
+		});
+	}
+	return value;
+}, zWorChangeStatusWorkflowInstanceData.shape.body);
+
 export type Env = {
 	[key: string]: unknown;
 	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
@@ -84,6 +106,9 @@ export type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	// Worker names for this instance, used to filter self from dev registry during aggregation
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
+	[CoreBindings.SERVICE_D1]: Fetcher;
+	[CoreBindings.SERVICE_KV]: Fetcher;
+	[CoreBindings.SERVICE_R2]: Fetcher;
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
 	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
@@ -232,6 +257,24 @@ app.delete("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
 	deleteKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
 
+app.put(
+	"/api/storage/kv/namespaces/:namespace_id/bulk",
+	validateRequestBody(
+		zWorkersKvNamespaceWriteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkWriteKVValues(c, c.req.valid("json"))
+);
+
+app.post(
+	"/api/storage/kv/namespaces/:namespace_id/bulk/delete",
+	validateRequestBody(
+		zWorkersKvNamespaceDeleteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkDeleteKVValues(c, c.req.valid("json"))
+);
+
 app.post(
 	"/api/storage/kv/namespaces/:namespace_id/bulk/get",
 	validateRequestBody(
@@ -351,7 +394,7 @@ app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 
 app.patch(
 	"/api/workflows/:workflow_name/instances/:instance_id/status",
-	validateRequestBody(zWorkflowsChangeInstanceStatusData.shape.body),
+	validateRequestBody(zWorkflowInstanceStatusBody),
 	(c) =>
 		changeWorkflowInstanceStatus(
 			c,
@@ -454,7 +497,9 @@ app.get("/api/local/workers", async (c) => {
 		const peerResults = await Promise.all(
 			peerUrls.map(async (url) => {
 				const peerResponse = await fetchFromPeer(url, "/local/workers");
-				if (!peerResponse?.ok) return [];
+				if (!peerResponse?.ok) {
+					return [];
+				}
 				try {
 					const data = (await peerResponse.json()) as {
 						result?: LocalExplorerWorker[];

@@ -1,7 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, test } from "vitest";
-import { getTextResponse, isBuild, rootDir } from "../../__test-utils__";
+import {
+	getTextResponse,
+	isBuild,
+	rootDir,
+	satisfiesMinimumViteVersion,
+} from "../../__test-utils__";
 
 function getBuildOutputDir() {
 	return path.join(rootDir, ".cloudflare/output/v0/workers", "default");
@@ -11,7 +16,18 @@ function getSettingsConfigPath() {
 	return path.join(rootDir, ".cloudflare/output/v0", "config.json");
 }
 
-describe("Build Output Specification", () => {
+function getContainerConfigPath() {
+	return path.join(
+		rootDir,
+		".cloudflare/output/v0/containers/apiContainer/config.json"
+	);
+}
+
+const isVite7OrLater = satisfiesMinimumViteVersion("7.0.0");
+const describeBuildOutput = describe.runIf(isVite7OrLater);
+const describeBuildOutputFiles = describe.runIf(isBuild && isVite7OrLater);
+
+describeBuildOutput("Build Output Specification", () => {
 	test("serves the worker", async ({ expect }) => {
 		const response = await getTextResponse("/");
 		expect(response).toBe("hello from worker");
@@ -28,7 +44,7 @@ describe("Build Output Specification", () => {
 	});
 });
 
-describe.runIf(isBuild)("Build Output Specification files", () => {
+describeBuildOutputFiles("Build Output Specification files", () => {
 	test("emits config.json at the correct location", ({ expect }) => {
 		const configPath = path.join(getBuildOutputDir(), "config.json");
 		expect(fs.existsSync(configPath)).toBe(true);
@@ -63,6 +79,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(config).not.toHaveProperty("entrypoint");
 		expect(typeof config.manifest).toBe("object");
 		const manifest = config.manifest as Record<string, unknown>;
+		expect(manifest.type).toBe("complete");
 		expect(typeof manifest.mainModule).toBe("string");
 		expect(typeof manifest.modules).toBe("object");
 	});
@@ -129,5 +146,23 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 			"config.json"
 		);
 		expect(fs.existsSync(deployConfig)).toBe(false);
+	});
+
+	test("emits Container configs under their export names", ({ expect }) => {
+		const contents = JSON.parse(
+			fs.readFileSync(getContainerConfigPath(), "utf-8")
+		) as Record<string, unknown>;
+
+		expect(contents).toMatchObject({
+			type: "container",
+			name: "build-output-api",
+			schedulingPolicy: "durable-object",
+			images: {
+				api: {
+					reference:
+						"registry.cloudflare.com/account/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			},
+		});
 	});
 });

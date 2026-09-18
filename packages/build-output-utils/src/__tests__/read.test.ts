@@ -1,20 +1,31 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { InputSettingsSchema, InputWorkerSchema } from "@cloudflare/config";
+import {
+	InputSettingsSchema,
+	InputWorkerSchema,
+	OutputContainerSchema,
+} from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { BuildOutputError } from "../errors";
 import {
 	getSettingsConfigPath,
+	getContainerConfigPath,
+	getContainerDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
 } from "../paths";
 import { readBuildOutput } from "../read";
-import { writeSettingsConfig, writeWorkerConfig } from "../write";
+import {
+	writeContainerConfig,
+	writeSettingsConfig,
+	writeWorkerConfig,
+} from "../write";
 import type { ParsedOutputWorkerConfig } from "@cloudflare/config";
 
-const manifest: ParsedOutputWorkerConfig["manifest"] = {
+const completeManifest: ParsedOutputWorkerConfig["manifest"] = {
+	type: "complete",
 	mainModule: "index.js",
 	modules: { "index.js": { type: "esm" } },
 };
@@ -25,6 +36,21 @@ const parsedSettingsConfig = InputSettingsSchema.parse({
 	complianceRegion: "public",
 });
 
+const parsedStandardContainerConfig = OutputContainerSchema.parse({
+	type: "container",
+	name: "api-container",
+	image: { reference: "registry.example.com/api:latest" },
+});
+
+const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
+	type: "container",
+	name: "session-container",
+	schedulingPolicy: "durable-object",
+	images: {
+		default: { localReference: "session-container:latest" },
+	},
+});
+
 function inputWorkerConfig(name: string) {
 	return InputWorkerSchema.parse({
 		type: "worker",
@@ -32,6 +58,18 @@ function inputWorkerConfig(name: string) {
 		compatibilityDate: "2026-06-01",
 		entrypoint: "index.js",
 	});
+}
+
+async function writeBundleFiles(
+	root: string,
+	files: Record<string, string>
+): Promise<void> {
+	const bundleDir = getWorkerBundleDir(root);
+	for (const [fileName, contents] of Object.entries(files)) {
+		const filePath = path.join(bundleDir, fileName);
+		await fsp.mkdir(path.dirname(filePath), { recursive: true });
+		await fsp.writeFile(filePath, contents);
+	}
 }
 
 /**
@@ -62,8 +100,8 @@ async function seedWorker(
 	await writeWorkerConfig({
 		root,
 		config: inputWorkerConfig(name),
-		manifest: hasBundle ? manifest : undefined,
-		workerDirectoryName,
+		manifest: hasBundle ? completeManifest : undefined,
+		directoryName: workerDirectoryName,
 	});
 	if (bundleDir) {
 		await fsp.mkdir(getWorkerBundleDir(root, workerDirectoryName), {
@@ -95,7 +133,7 @@ describe("readBuildOutput", () => {
 		expect(output.workers.default.assetsDir).toBeUndefined();
 
 		expect(output.workers.default.config.name).toBe("my-worker");
-		expect(output.workers.default.config.manifest).toEqual(manifest);
+		expect(output.workers.default.config.manifest).toEqual(completeManifest);
 		expect(output.workers.default.config).not.toHaveProperty("entrypoint");
 	});
 
@@ -113,6 +151,192 @@ describe("readBuildOutput", () => {
 		expect(workers.additional?.config.name).toBe("additional-worker");
 		expect(workers.additional?.bundleDir).toBe(
 			getWorkerBundleDir(root, "additional")
+		);
+	});
+
+	it("reads Containers keyed by directory name", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeContainerConfig({
+			root,
+			config: parsedDurableObjectContainerConfig,
+			directoryName: "session",
+		});
+		await writeContainerConfig({
+			root,
+			config: parsedStandardContainerConfig,
+			directoryName: "api",
+		});
+
+		const { containers } = await readBuildOutput(root);
+
+		expect(Object.keys(containers)).toEqual(["api", "session"]);
+		expect(containers.api).toEqual({
+			configPath: getContainerConfigPath(root, "api"),
+			config: parsedStandardContainerConfig,
+		});
+		expect(containers.session).toEqual({
+			configPath: getContainerConfigPath(root, "session"),
+			config: parsedDurableObjectContainerConfig,
+		});
+	});
+
+	it("returns no Containers when the Containers directory is absent", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+
+		const { containers } = await readBuildOutput(root);
+
+		expect(containers).toEqual({});
+	});
+
+	it("still requires the default Worker when Containers are present", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await writeContainerConfig({
+			root,
+			config: parsedStandardContainerConfig,
+			directoryName: "api",
+		});
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/no Worker config found/
+		);
+	});
+
+	it("throws when a Container config is missing", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+
+		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/no Container config found/
+		);
+	});
+
+	it("throws when a Container config is not valid JSON", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+		await fsp.writeFile(getContainerConfigPath(root, "api"), "{ not json");
+
+		await expect(readBuildOutput(root)).rejects.toThrow(/could not parse JSON/);
+	});
+
+	it("throws when a Container config fails schema validation", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+		await fsp.writeFile(
+			getContainerConfigPath(root, "api"),
+			JSON.stringify({ type: "container", name: "api-container" })
+		);
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/invalid Container config/
+		);
+	});
+
+	it("resolves a partial manifest from bundle files and explicit overrides", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeWorkerConfig({
+			root,
+			config: inputWorkerConfig("my-worker"),
+			manifest: {
+				type: "partial",
+				mainModule: "index.js",
+				modules: {
+					"chunks/worker.mjs": { type: "cjs" },
+					"data.txt": { type: "text" },
+				},
+			},
+		});
+		await writeBundleFiles(root, {
+			"index.js": "module.exports = {};",
+			"chunks/worker.mjs": "export default {};",
+			"chunks/worker.mjs.map": "{}",
+			"data.txt": "data",
+			"ignored.json": "{}",
+		});
+
+		const { manifest: resolvedManifest } = (await readBuildOutput(root)).workers
+			.default.config;
+
+		expect(resolvedManifest).toEqual({
+			type: "complete",
+			mainModule: "index.js",
+			modules: {
+				"chunks/worker.mjs": { type: "cjs" },
+				"chunks/worker.mjs.map": { type: "sourcemap" },
+				"data.txt": { type: "text" },
+				"index.js": { type: "esm" },
+			},
+		});
+	});
+
+	it("does not scan bundle files for a complete manifest", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeBundleFiles(root, {
+			"index.js": "export default {};",
+			"unlisted.js": "export default {};",
+		});
+
+		const { manifest: resolvedManifest } = (await readBuildOutput(root)).workers
+			.default.config;
+
+		expect(resolvedManifest).toEqual(completeManifest);
+	});
+
+	it("throws when a partial manifest's main module cannot be resolved", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeWorkerConfig({
+			root,
+			config: inputWorkerConfig("my-worker"),
+			manifest: {
+				type: "partial",
+				mainModule: "missing.js",
+				modules: {},
+			},
+		});
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/partial manifest .* has main module "missing\.js", but it was not found as an ES module/
+		);
+	});
+
+	it("throws when a partial manifest's main module is a source map", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeWorkerConfig({
+			root,
+			config: inputWorkerConfig("my-worker"),
+			manifest: {
+				type: "partial",
+				mainModule: "index.js.map",
+				modules: {},
+			},
+		});
+		await writeBundleFiles(root, { "index.js.map": "{}" });
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/partial manifest .* has main module "index\.js\.map", but it was not found as an ES module/
 		);
 	});
 

@@ -4,7 +4,10 @@ import SCRIPT_R2_PUBLIC from "worker:r2/public";
 import SCRIPT_R2_S3 from "worker:r2/s3/index";
 import { MiniflareCoreError } from "../../shared";
 import { SharedBindings } from "../../workers";
-import { R2S3Bindings } from "../../workers/r2/constants";
+import {
+	R2_LOCAL_ENTRY_SERVICE_NAME,
+	R2S3Bindings,
+} from "../../workers/r2/constants";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
@@ -40,9 +43,6 @@ type R2S3Credentials = NonNullable<
 export const R2_PLUGIN_NAME = "r2";
 const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
 const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
-// A single entry service shared by every *local* bucket. Each bucket's id is
-// supplied per-binding via `ctx.props`, so one service serves all of them.
-const R2_LOCAL_ENTRY_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:entry`;
 // One shared remote-proxy service for all remote R2 buckets (config via props).
 const R2_REMOTE_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:remote`;
 export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
@@ -197,7 +197,9 @@ export const R2_PLUGIN: Plugin = {
 		const hasLocal =
 			buckets.some(
 				([, b]) => getRemoteProxyConnectionString(b, options.dev) === undefined
-			) || sharedOptions.unsafeEnableSharedStorage;
+			) ||
+			sharedOptions.unsafeEnableSharedStorage ||
+			sharedOptions.unsafeLocalExplorer;
 		if (hasLocal) {
 			services.push({
 				name: R2_LOCAL_ENTRY_SERVICE_NAME,
