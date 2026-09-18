@@ -452,6 +452,7 @@ export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	assets: true,
 	tailConsumers: true,
 }).extend({
+	type: z.literal("worker"),
 	manifest: MiniflareManifestSchema.optional(),
 	env: z
 		.record(z.string(), MiniflareBindingSchema)

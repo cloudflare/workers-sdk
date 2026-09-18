@@ -35,7 +35,7 @@ session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, 
 - `wrangler: { configPath, environment }` — a Wrangler configuration file, via
   `wrangler.unstable_readConfig()`
 - `experimental: { newConfig }` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
-  (`@cloudflare/config`'s `loadAndValidateConfig()` → `convertToWranglerConfig()` →
+  (`@cloudflare/config`'s `loadAndParseConfig()` → `convertToWranglerConfig()` →
   `normalizeAndValidateConfig()`). Mirrors `@cloudflare/vite-plugin`'s
   `experimental.newConfig`. `ctx.mode` comes from `project.vite.config.mode`.
 

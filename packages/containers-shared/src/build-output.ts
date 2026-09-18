@@ -39,11 +39,10 @@ const DOCKER_REPOSITORY_NAME_LENGTH = 255;
  * @param options - The validated Container configs and Docker build environment.
  */
 export async function buildAndWriteContainerOutput(options: {
-	containers: Record<string, ParsedInputContainerConfig>;
+	containers: ParsedInputContainerConfig[];
 	root: string;
 	pathToDocker: string;
 }): Promise<void> {
-	const containers = Object.entries(options.containers);
 	await cleanupPreviousBuildOutputImageTags({
 		root: options.root,
 		pathToDocker: options.pathToDocker,
@@ -52,7 +51,7 @@ export async function buildAndWriteContainerOutput(options: {
 	const buildId = createBuildId();
 	const localTags = new Set<string>();
 	try {
-		const dockerfileCount = countDockerfiles(containers);
+		const dockerfileCount = countDockerfiles(options.containers);
 		if (dockerfileCount > 0) {
 			await verifyDockerInstalled({
 				dockerPath: options.pathToDocker,
@@ -66,10 +65,10 @@ export async function buildAndWriteContainerOutput(options: {
 
 		const outputConfigs: WriteContainerConfigOptions[] = [];
 		try {
-			for (const [directoryName, config] of containers) {
+			for (const config of options.containers) {
 				outputConfigs.push({
 					root: options.root,
-					directoryName,
+					directoryName: config.name,
 					config: await buildContainerOutputConfig({
 						config,
 						root: options.root,
@@ -241,11 +240,9 @@ function createBuildId(): string {
 	return crypto.randomUUID().replaceAll("-", "").slice(0, 12);
 }
 
-function countDockerfiles(
-	containers: [string, ParsedInputContainerConfig][]
-): number {
+function countDockerfiles(containers: ParsedInputContainerConfig[]): number {
 	let count = 0;
-	for (const [, config] of containers) {
+	for (const config of containers) {
 		if (config.schedulingPolicy === "durable-object") {
 			count += Object.values(config.images ?? {}).filter(
 				(image) => "dockerfile" in image

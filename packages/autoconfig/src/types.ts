@@ -1,7 +1,7 @@
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type { Framework } from "./frameworks/framework-class";
 import type { BuildConfig } from "./frameworks/framework-class";
-import type { WorkerConfigInput } from "@cloudflare/config";
+import type { WorkerConfig } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
@@ -77,7 +77,7 @@ export type AutoConfigOptions = {
 
 export type AutoConfigSummary = {
 	scripts: Record<string, string>;
-	workerConfig?: WorkerConfigInput;
+	workerConfig?: WorkerConfig;
 	buildConfig?: BuildConfig;
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
