@@ -228,6 +228,7 @@ export class RemoteRuntimeController {
 
 		const accessHeaders = await getAccessHeaders(token.host, {
 			logger,
+			previewToken: token.value,
 		});
 
 		const proxyData: ProxyData = {
