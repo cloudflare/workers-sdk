@@ -36,10 +36,6 @@ import {
 } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwriteAndGetLatest } from "./helpers/confirm-latest-deployment-overwrite";
 import {
-	addContainerImagesBinding,
-	clearRemovedContainerImagesBindings,
-} from "./helpers/container-image-bindings";
-import {
 	getContainerMetadata,
 	getContainerMetadataForRolloutSkip,
 } from "./helpers/container-metadata";
@@ -343,26 +339,6 @@ async function deployWorker(
 		type: "deploy",
 		workerExists,
 	});
-	if (!skipContainerChanges && keepVars && !isDryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(
-			config,
-			durableObjectContainerConfig,
-			bindings,
-			workerUrl
-		);
-	}
-	addContainerImagesBinding(
-		durableObjectContainerConfig,
-		bindings,
-		preparedContainerImages ?? {},
-		{
-			preserveExisting: skipContainerChanges,
-			exports: config.exports,
-			workerExists,
-			hasExistingBinding:
-				rolloutSkipContainerState?.hasExistingContainerImagesBinding,
-		}
-	);
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
