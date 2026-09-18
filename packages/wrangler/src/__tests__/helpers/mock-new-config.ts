@@ -33,15 +33,15 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 	async function loadConfig(configPath: string) {
 		const exports = await importSeeded(configPath);
 		return {
-			exports,
+			config: exports.default,
 			dependencies: new Set<string>([path.resolve(configPath)]),
 		};
 	}
 
-	async function loadAndValidateConfig(configPath: string, ctx: unknown) {
-		const { exports } = await loadConfig(configPath);
+	async function loadAndParseConfig(configPath: string, ctx: unknown) {
+		const { config } = await loadConfig(configPath);
 		return {
-			result: await actual.resolveAndValidateConfigExports(exports, ctx),
+			result: await actual.resolveAndParseConfig(config, ctx),
 			dependencies: new Set<string>([path.resolve(configPath)]),
 		};
 	}
@@ -49,6 +49,6 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 	return {
 		...actual,
 		loadConfig,
-		loadAndValidateConfig,
+		loadAndParseConfig,
 	};
 }

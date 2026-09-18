@@ -1,19 +1,14 @@
-import {
-	bindings,
-	defineSettings,
-	defineWorker,
-} from "wrangler/experimental-config";
+import { bindings, defineConfig } from "wrangler/experimental-config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
-export const settings = defineSettings({
+export default defineConfig((ctx) => ({
 	complianceRegion: "public",
-});
-
-export default defineWorker((ctx) => ({
-	name: "experimental-new-config",
-	entrypoint,
-	compatibilityDate: "2026-05-18",
-	env: {
-		MY_TEXT: bindings.text(`The mode is ${ctx.mode}`),
+	worker: {
+		name: "experimental-new-config",
+		entrypoint,
+		compatibilityDate: "2026-05-18",
+		env: {
+			MY_TEXT: bindings.text(`The mode is ${ctx.mode}`),
+		},
 	},
 }));

@@ -60,13 +60,12 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
 			name: "remote-container",
 			image: { reference: "registry.example.com/app:latest" },
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { remote: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -75,7 +74,10 @@ describe("buildAndWriteContainerOutput", () => {
 		expect(startContainerBuild).not.toHaveBeenCalled();
 		expect(
 			JSON.parse(
-				fs.readFileSync(getContainerConfigPath(root, "remote"), "utf8")
+				fs.readFileSync(
+					getContainerConfigPath(root, "remote-container"),
+					"utf8"
+				)
 			)
 		).toEqual(config);
 	});
@@ -84,7 +86,6 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
 			name: "My Container",
 			image: {
 				dockerfile: "./container/Dockerfile",
@@ -94,7 +95,7 @@ describe("buildAndWriteContainerOutput", () => {
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "/usr/bin/docker",
 		});
@@ -113,7 +114,9 @@ describe("buildAndWriteContainerOutput", () => {
 			verifyDockerIsRunning: false,
 		});
 		expect(
-			JSON.parse(fs.readFileSync(getContainerConfigPath(root, "app"), "utf8"))
+			JSON.parse(
+				fs.readFileSync(getContainerConfigPath(root, "My Container"), "utf8")
+			)
 		).toEqual({
 			...config,
 			image: { localReference: localTag },
@@ -124,13 +127,12 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
 			name: "🔥",
 			image: { dockerfile: "./container/Dockerfile" },
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -148,13 +150,12 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
-			name: "a".repeat(300),
+			name: "a".repeat(240),
 			image: { dockerfile: "./container/Dockerfile" },
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -168,7 +169,6 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
 			name: "Session Container",
 			schedulingPolicy: "durable-object",
 			images: {
@@ -179,7 +179,7 @@ describe("buildAndWriteContainerOutput", () => {
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { sessions: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -220,7 +220,10 @@ describe("buildAndWriteContainerOutput", () => {
 		});
 		expect(
 			JSON.parse(
-				fs.readFileSync(getContainerConfigPath(root, "sessions"), "utf8")
+				fs.readFileSync(
+					getContainerConfigPath(root, "Session Container"),
+					"utf8"
+				)
 			)
 		).toEqual({
 			...config,
@@ -240,13 +243,12 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
 			name: "Session Container",
 			schedulingPolicy: "durable-object",
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { sessions: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -254,19 +256,20 @@ describe("buildAndWriteContainerOutput", () => {
 		expect(startContainerBuild).not.toHaveBeenCalled();
 		expect(
 			JSON.parse(
-				fs.readFileSync(getContainerConfigPath(root, "sessions"), "utf8")
+				fs.readFileSync(
+					getContainerConfigPath(root, "Session Container"),
+					"utf8"
+				)
 			)
 		).toEqual(config);
 	});
 
 	it("cleans images built before a later build fails", async ({ expect }) => {
 		const first = InputContainerSchema.parse({
-			type: "container",
 			name: "first",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
 		const second = InputContainerSchema.parse({
-			type: "container",
 			name: "second",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
@@ -280,7 +283,7 @@ describe("buildAndWriteContainerOutput", () => {
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { first, second },
+				containers: [first, second],
 				root,
 				pathToDocker: "docker",
 			})
@@ -300,20 +303,18 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const first = InputContainerSchema.parse({
-			type: "container",
 			name: "first",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
 		const second = InputContainerSchema.parse({
-			type: "container",
-			name: "second",
+			name: "invalid/name",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
 		seedWorkerOutput(root);
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { first, "invalid/name": second },
+				containers: [first, second],
 				root,
 				pathToDocker: "docker",
 			})
@@ -325,7 +326,7 @@ describe("buildAndWriteContainerOutput", () => {
 					localTag: expectedBuildOutputTag(root, "first", BUILD_IDS[0]),
 				},
 				{
-					localTag: expectedBuildOutputTag(root, "second", BUILD_IDS[0]),
+					localTag: expectedBuildOutputTag(root, "invalid/name", BUILD_IDS[0]),
 				},
 			],
 			"docker"
@@ -336,7 +337,6 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
 			name: "app",
 			image: { dockerfile: "./Dockerfile" },
 		});
@@ -347,7 +347,7 @@ describe("buildAndWriteContainerOutput", () => {
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { app: config },
+				containers: [config],
 				root,
 				pathToDocker: "docker",
 			})
@@ -360,7 +360,6 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
 			name: "api",
 			image: { dockerfile: "./Dockerfile" },
 		});
@@ -374,13 +373,13 @@ describe("buildAndWriteContainerOutput", () => {
 			.mockReturnValueOnce(UUIDS[1]);
 
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
 		removeDirSync(path.resolve(root, ".cloudflare/output"));
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -406,7 +405,7 @@ describe("buildAndWriteContainerOutput", () => {
 		vi.mocked(runDockerCmdWithOutput).mockReturnValue(staleTag);
 
 		await buildAndWriteContainerOutput({
-			containers: {},
+			containers: [],
 			root,
 			pathToDocker: "docker",
 		});
@@ -422,19 +421,17 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const first = InputContainerSchema.parse({
-			type: "container",
 			name: "My API",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
 		const second = InputContainerSchema.parse({
-			type: "container",
 			name: "my-api",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { first, second },
+				containers: [first, second],
 				root,
 				pathToDocker: "docker",
 			})
@@ -454,7 +451,6 @@ describe("buildAndWriteContainerOutput", () => {
 		expect,
 	}) => {
 		const config = InputContainerSchema.parse({
-			type: "container",
 			name: "remote-container",
 			image: { reference: "registry.example.com/app:latest" },
 		});
@@ -464,7 +460,7 @@ describe("buildAndWriteContainerOutput", () => {
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { remote: config },
+				containers: [config],
 				root,
 				pathToDocker: "docker",
 			})
@@ -490,7 +486,7 @@ function expectedBuildOutputTag(
 function seedWorkerOutput(rootDirectory: string): void {
 	const workerDirectory = getWorkerDir(rootDirectory);
 	fs.mkdirSync(workerDirectory, { recursive: true });
-	fs.writeFileSync(path.join(workerDirectory, "config.json"), "{}");
+	fs.writeFileSync(path.join(workerDirectory, "worker.config.json"), "{}");
 }
 
 function getBuildOutputPath(rootDirectory: string): string {

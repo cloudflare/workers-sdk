@@ -1,4 +1,3 @@
-import { getContainerConfigExports } from "@cloudflare/config";
 import { buildAndWriteContainerOutput } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import type { ResolvedPluginConfig } from "./plugin-config";
@@ -26,7 +25,7 @@ export async function buildOutputContainers(
 	}
 
 	await buildAndWriteContainerOutput({
-		containers: getContainerConfigExports(config),
+		containers: config.containers,
 		root,
 		pathToDocker: getDockerPath(),
 	});

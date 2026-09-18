@@ -38,12 +38,13 @@ test("loads cloudflare.config.ts from the project root", async ({
 		}),
 		"cloudflare.config.ts": dedent`
 			export default {
-				type: "worker",
-				name: "test-worker",
-				compatibilityDate: "2025-12-02",
-				entrypoint: "./index.ts",
-				env: {
-					MY_TEXT: { type: "text", value: "from the new config" },
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					entrypoint: "./index.ts",
+					env: {
+						MY_TEXT: { type: "text", value: "from the new config" },
+					},
 				},
 			};
 		`,
@@ -70,12 +71,13 @@ test("resolves a custom configPath and its entrypoint", async ({
 		// `entrypoint` is resolved relative to the config file, not the project root
 		"config/cloudflare.config.ts": dedent`
 			export default {
-				type: "worker",
-				name: "test-worker",
-				compatibilityDate: "2025-12-02",
-				entrypoint: "../index.ts",
-				env: {
-					MY_TEXT: { type: "text", value: "from the new config" },
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					entrypoint: "../index.ts",
+					env: {
+						MY_TEXT: { type: "text", value: "from the new config" },
+					},
 				},
 			};
 		`,
@@ -99,12 +101,13 @@ test("defaults config functions to test mode", async ({
 		}),
 		"cloudflare.config.ts": dedent`
 			export default (ctx) => ({
-				type: "worker",
-				name: "test-worker",
-				compatibilityDate: "2025-12-02",
-				entrypoint: "./index.ts",
-				env: {
-					MY_TEXT: { type: "text", value: ctx.mode },
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					entrypoint: "./index.ts",
+					env: {
+						MY_TEXT: { type: "text", value: ctx.mode },
+					},
 				},
 			});
 		`,
@@ -135,12 +138,13 @@ test("overrides config function mode with --mode", async ({
 		}),
 		"cloudflare.config.ts": dedent`
 			export default (ctx) => ({
-				type: "worker",
-				name: "test-worker",
-				compatibilityDate: "2025-12-02",
-				entrypoint: "./index.ts",
-				env: {
-					MY_TEXT: { type: "text", value: ctx.mode },
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					entrypoint: "./index.ts",
+					env: {
+						MY_TEXT: { type: "text", value: ctx.mode },
+					},
 				},
 			});
 		`,
@@ -203,7 +207,7 @@ describe("validation", () => {
 		);
 	});
 
-	test("reports a config with no default worker export", async ({
+	test("reports a config that does not define a Worker", async ({
 		expect,
 		seed,
 		vitestRun,
@@ -213,7 +217,7 @@ describe("validation", () => {
 				experimental: { newConfig: true },
 			}),
 			"cloudflare.config.ts": dedent`
-				export const settings = { type: "settings", accountId: "abc123" };
+				export default { accountId: "abc123" };
 			`,
 			"index.test.ts": "",
 		});
@@ -222,7 +226,7 @@ describe("validation", () => {
 
 		expect(await result.exitCode).toBe(1);
 		expect(result.stderr).toMatch(
-			"`cloudflare.config.ts` must have a default worker export."
+			"`cloudflare.config.ts` must define a Worker using the `worker` property."
 		);
 	});
 
@@ -234,9 +238,10 @@ describe("validation", () => {
 			// `compatibilityDate` is required
 			"cloudflare.config.ts": dedent`
 				export default {
-					type: "worker",
-					name: "test-worker",
-					entrypoint: "./index.ts",
+					worker: {
+						name: "test-worker",
+						entrypoint: "./index.ts",
+					},
 				};
 			`,
 			"index.ts": worker,

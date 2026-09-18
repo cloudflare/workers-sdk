@@ -17,10 +17,11 @@ describe("cf-wrangler build", () => {
 	it("emits Preview Build Output", async ({ expect }) => {
 		await seed({
 			"cloudflare.config.ts": `export default ({ isPreview }) => ({
-				type: "worker",
-				name: isPreview ? "preview-worker" : "production-worker",
-				compatibilityDate: "2026-05-18",
-				entrypoint: "./src/index.js",
+				worker: {
+					name: isPreview ? "preview-worker" : "production-worker",
+					compatibilityDate: "2026-05-18",
+					entrypoint: "./src/index.js",
+				},
 			});`,
 			"src/index.js": `export default {
 				async fetch() { return new Response("hello"); }
@@ -32,7 +33,7 @@ describe("cf-wrangler build", () => {
 		expect(exitCode).toBe(0);
 		expect(
 			fs.existsSync(
-				path.resolve(".cloudflare/output/v0/workers/default/config.json")
+				path.resolve(".cloudflare/output/v0/workers/default/worker.config.json")
 			)
 		).toBe(true);
 		expect(
@@ -42,16 +43,20 @@ describe("cf-wrangler build", () => {
 		).toBe(true);
 		const worker = JSON.parse(
 			fs.readFileSync(
-				path.resolve(".cloudflare/output/v0/workers/default/config.json"),
+				path.resolve(
+					".cloudflare/output/v0/workers/default/worker.config.json"
+				),
 				"utf8"
 			)
 		);
-		const settings = JSON.parse(
+		const rootConfig = JSON.parse(
 			fs.readFileSync(path.resolve(".cloudflare/output/v0/config.json"), "utf8")
 		);
 
 		expect(worker).toMatchObject({ name: "preview-worker" });
-		expect(settings).toMatchObject({ isPreview: true });
+		expect(rootConfig).toMatchObject({
+			buildContext: { isPreview: true },
+		});
 	});
 
 	it("emits an assets-only project whose assets directory is the project root", async ({
@@ -59,9 +64,10 @@ describe("cf-wrangler build", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
-				type: "worker",
-				name: "cf-wrangler-static-worker",
-				compatibilityDate: "2026-05-18",
+				worker: {
+					name: "cf-wrangler-static-worker",
+					compatibilityDate: "2026-05-18",
+				},
 			};`,
 			"wrangler.config.ts": `export default {
 				assetsDirectory: ".",
