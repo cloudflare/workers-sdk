@@ -296,3 +296,48 @@ it.for(["object", "stream", "reject", "cancel-reject"] as const)(
 		}
 	}
 );
+
+it("cleans up a late callback that lands after its step has finished", async ({
+	expect,
+}) => {
+	const lateCleanup = vi.fn();
+	const attempts: number[] = [];
+	const lateResult = Promise.withResolvers<void>();
+	let cleanupSeenByLaterStep = false;
+
+	await runWorkflowAndAwait(crypto.randomUUID(), async (_event, step) => {
+		await step.do(
+			"late callback result",
+			{
+				timeout: "1 second",
+				retries: { limit: 1, delay: 1, backoff: "constant" },
+			},
+			async (ctx) => {
+				attempts.push(ctx.attempt);
+				if (ctx.attempt === 1) {
+					// Held open past the retry, so the abandoned callback's cleanup is
+					// left running from the engine with no step awaiting it.
+					await lateResult.promise;
+					return { attempt: 1, [Symbol.dispose]: lateCleanup };
+				}
+				return { attempt: 2 };
+			}
+		);
+
+		// The engine keeps the abandoned cleanup alive across the step boundary:
+		// releasing the first callback here still disposes its result.
+		await step.do("later step", async () => {
+			lateResult.resolve();
+			cleanupSeenByLaterStep = await vi
+				.waitUntil(() => lateCleanup.mock.calls.length === 1, { timeout: 500 })
+				.then(
+					() => true,
+					() => false
+				);
+		});
+	});
+
+	expect(attempts).toEqual([1, 2]);
+	expect(cleanupSeenByLaterStep).toBe(true);
+	expect(lateCleanup).toHaveBeenCalledOnce();
+});

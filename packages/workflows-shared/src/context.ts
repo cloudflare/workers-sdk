@@ -780,6 +780,11 @@ export class Context extends RpcTarget {
 						// A timeout does not cancel the callback RPC. Release any late
 						// result without waiting for it before retrying. Successful race
 						// winners remain owned by persistStepResult, including streams.
+						// The engine is a Durable Object, which stays active while there
+						// is ongoing work or pending I/O, so this untracked cleanup is
+						// retained without a waitUntil (a documented no-op for Durable
+						// Objects). Once the run() call that owns the callback stub ends,
+						// the stub is torn down with it and there is no result to release.
 						void callbackTask
 							.then(async (value) => {
 								try {
