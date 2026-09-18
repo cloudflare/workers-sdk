@@ -265,7 +265,7 @@ describe("deploy", () => {
 					],
 				});
 				await runWrangler(
-					"deploy ./index --route app.example.com/* --route api.example.com/* --zone example.com"
+					"deploy ./index --x-route-zones --route app.example.com/* --route api.example.com/* --zone example.com"
 				);
 				expect(std.out).toContain("app.example.com/* (zone name: example.com)");
 				expect(std.out).toContain("api.example.com/* (zone name: example.com)");
@@ -302,7 +302,7 @@ describe("deploy", () => {
 					],
 				});
 				await runWrangler(
-					"deploy ./index --route a.example.com/* --zone example.com --route b.example.net/* --zone example.net"
+					"deploy ./index --x-route-zones --route a.example.com/* --zone example.com --route b.example.net/* --zone example.net"
 				);
 				expect(std.out).toContain("a.example.com/* (zone name: example.com)");
 				expect(std.out).toContain("b.example.net/* (zone name: example.net)");
@@ -330,11 +330,25 @@ describe("deploy", () => {
 					],
 				});
 				await runWrangler(
-					"deploy ./index --route a.example.com/* --zone-id example-com-id --route b.example.net/* --zone-id example-net-id"
+					"deploy ./index --x-route-zones --route a.example.com/* --zone-id example-com-id --route b.example.net/* --zone-id example-net-id"
 				);
 				expect(std.out).toContain("a.example.com/* (zone id: example-com-id)");
 				expect(std.out).toContain("b.example.net/* (zone id: example-net-id)");
 				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should error when --zone is used without --experimental-route-zones", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				await expect(
+					runWrangler(
+						"deploy ./index --route a.example.com/* --zone example.com"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --zone and --zone-id are experimental and require the --experimental-route-zones (--x-route-zones) flag.]`
+				);
 			});
 
 			it("should error when --zone and --zone-id are used together", async ({
@@ -344,7 +358,7 @@ describe("deploy", () => {
 				writeWorkerSource();
 				await expect(
 					runWrangler(
-						"deploy ./index --route a.example.com/* --zone example.com --zone-id example-com-id"
+						"deploy ./index --x-route-zones --route a.example.com/* --zone example.com --zone-id example-com-id"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Conflicting options: --zone and --zone-id cannot be used together. Please provide only one.]`
@@ -358,7 +372,7 @@ describe("deploy", () => {
 				writeWorkerSource();
 				await expect(
 					runWrangler(
-						"deploy ./index --route a.example.com/* --route b.example.com/* --route c.example.com/* --zone example.com --zone example.net"
+						"deploy ./index --x-route-zones --route a.example.com/* --route b.example.com/* --route c.example.com/* --zone example.com --zone example.net"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Received 2 --zone values for 3 --route values. Pass either a single --zone value to apply to all routes, or exactly one --zone value per --route in the same order.]`
@@ -372,7 +386,7 @@ describe("deploy", () => {
 				writeWorkerSource();
 				await expect(
 					runWrangler(
-						"deploy ./index --route a.example.com/* --zone-id one --zone-id two"
+						"deploy ./index --x-route-zones --route a.example.com/* --zone-id one --zone-id two"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Received 2 --zone-id values for 1 --route values. Pass either a single --zone-id value to apply to all routes, or exactly one --zone-id value per --route in the same order.]`
@@ -385,7 +399,7 @@ describe("deploy", () => {
 				writeWranglerConfig({ routes: ["example.com/*"] });
 				writeWorkerSource();
 				await expect(
-					runWrangler("deploy ./index --zone example.com")
+					runWrangler("deploy ./index --x-route-zones --zone example.com")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: --zone can only be used together with --route. To attach a zone to routes defined in your config file, set "zone_name" or "zone_id" on each route there instead.]`
 				);

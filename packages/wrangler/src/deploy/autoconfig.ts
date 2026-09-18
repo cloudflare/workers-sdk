@@ -36,6 +36,7 @@ type DeployConfigFlags = {
 	routes: string[] | undefined;
 	zone: string[] | undefined;
 	zoneId: string[] | undefined;
+	experimentalRouteZones: boolean | undefined;
 	domains: string[] | undefined;
 	triggers: string[] | undefined;
 	// Variables & build-time substitutions
@@ -335,6 +336,9 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 					? [`--compatibility-flags ${args.compatibilityFlags.join(" ")}`]
 					: []),
 				...(args.routes?.length ? [`--routes ${args.routes.join(" ")}`] : []),
+				...(args.zone?.length || args.zoneId?.length
+					? ["--x-route-zones"]
+					: []),
 				...(args.zone?.length ? [`--zone ${args.zone.join(" ")}`] : []),
 				...(args.zoneId?.length ? [`--zone-id ${args.zoneId.join(" ")}`] : []),
 				...(args.domains?.length

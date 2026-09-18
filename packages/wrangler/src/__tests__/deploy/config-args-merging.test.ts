@@ -867,7 +867,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				],
 			});
 			await runWrangler(
-				"deploy ./index.js --route cli-route.example.net/* --zone example.net"
+				"deploy ./index.js --x-route-zones --route cli-route.example.net/* --zone example.net"
 			);
 			expect(std.out).toContain("Uploaded test-name");
 			expect(std.out).toContain(

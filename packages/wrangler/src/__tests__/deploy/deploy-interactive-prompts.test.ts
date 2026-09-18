@@ -512,7 +512,7 @@ describe("deploy: interactive deploy config prompts", () => {
 		});
 
 		await runWrangler(
-			"deploy ./index.js --routes example.com/* --routes other.com/path --zone example.com --dry-run"
+			"deploy ./index.js --x-route-zones --routes example.com/* --routes other.com/path --zone example.com --dry-run"
 		);
 		expect(std.out).toContain("--dry-run: exiting now.");
 		const writtenConfig = JSON.parse(
@@ -549,11 +549,13 @@ describe("deploy: interactive deploy config prompts", () => {
 		});
 
 		await runWrangler(
-			"deploy ./index.js --routes example.com/* --zone example.com --dry-run"
+			"deploy ./index.js --x-route-zones --routes example.com/* --zone example.com --dry-run"
 		);
 		expect(std.out).toContain("--dry-run: exiting now.");
 		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-		expect(std.out).toContain("--routes example.com/* --zone example.com");
+		expect(std.out).toContain(
+			"--routes example.com/* --x-route-zones --zone example.com"
+		);
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 

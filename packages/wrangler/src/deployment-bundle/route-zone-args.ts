@@ -5,12 +5,21 @@ import type { Route } from "@cloudflare/workers-utils";
 /**
  * CLI args that attach a zone to the routes passed via `--route`.
  *
- * Shared by `wrangler deploy` and `wrangler triggers deploy`.
+ * Shared by `wrangler deploy` and `wrangler triggers deploy`. The feature is
+ * gated behind `--experimental-route-zones` (`--x-route-zones`) while it is
+ * being validated.
  */
 export const routeZoneArgs = {
+	"experimental-route-zones": {
+		describe:
+			"Experimental: Enable the --zone and --zone-id flags to attach a zone to the routes passed via --route",
+		type: "boolean",
+		default: false,
+		alias: ["x-route-zones"],
+	},
 	zone: {
 		describe:
-			"Zone name for the routes passed via --route. Pass one value to apply it to all routes, or one value per --route in the same order",
+			"Experimental (requires --x-route-zones): Zone name for the routes passed via --route. Pass one value to apply it to all routes, or one value per --route in the same order",
 		alias: "zones",
 		type: "string",
 		requiresArg: true,
@@ -18,7 +27,7 @@ export const routeZoneArgs = {
 	},
 	"zone-id": {
 		describe:
-			"Zone ID for the routes passed via --route. Pass one value to apply it to all routes, or one value per --route in the same order",
+			"Experimental (requires --x-route-zones): Zone ID for the routes passed via --route. Pass one value to apply it to all routes, or one value per --route in the same order",
 		alias: "zone-ids",
 		type: "string",
 		requiresArg: true,
@@ -30,11 +39,13 @@ export type RouteZoneArgs = {
 	routes?: string[];
 	zone?: string[];
 	zoneId?: string[];
+	experimentalRouteZones?: boolean;
 };
 
 /**
  * Validates the combination of `--route`, `--zone` and `--zone-id` args.
  *
+ * - `--zone` / `--zone-id` require the `--experimental-route-zones` flag
  * - `--zone` and `--zone-id` are mutually exclusive
  * - zone args require at least one `--route`
  * - either a single zone value (applied to all routes) or exactly one per route
@@ -45,6 +56,17 @@ export function validateRouteZoneArgs(args: RouteZoneArgs): void {
 	const zoneNames = args.zone ?? [];
 	const zoneIds = args.zoneId ?? [];
 
+	if (zoneNames.length === 0 && zoneIds.length === 0) {
+		return;
+	}
+
+	if (!args.experimentalRouteZones) {
+		throw new CommandLineArgsError(
+			"--zone and --zone-id are experimental and require the --experimental-route-zones (--x-route-zones) flag.",
+			{ telemetryMessage: "route zone args experimental flag missing" }
+		);
+	}
+
 	if (zoneNames.length > 0 && zoneIds.length > 0) {
 		throw new CommandLineArgsError(
 			"Conflicting options: --zone and --zone-id cannot be used together. Please provide only one.",
@@ -54,9 +76,6 @@ export function validateRouteZoneArgs(args: RouteZoneArgs): void {
 
 	const flag = zoneNames.length > 0 ? "--zone" : "--zone-id";
 	const zones = zoneNames.length > 0 ? zoneNames : zoneIds;
-	if (zones.length === 0) {
-		return;
-	}
 
 	const routes = args.routes ?? [];
 	if (routes.length === 0) {
@@ -80,7 +99,7 @@ export function validateRouteZoneArgs(args: RouteZoneArgs): void {
  * otherwise zones are paired with routes by position.
  *
  * Returns the routes unchanged when no zone args were given, so the existing
- * behaviour is preserved.
+ * behaviour is preserved. Expects `validateRouteZoneArgs` to have run first.
  */
 export function applyZoneArgsToRoutes(
 	routes: string[],
