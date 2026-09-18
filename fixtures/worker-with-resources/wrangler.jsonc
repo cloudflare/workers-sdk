@@ -43,6 +43,12 @@
 			"name": "my-workflow",
 		},
 	],
+	"flagship": [
+		{
+			"binding": "FLAGS",
+			"app_id": "e2e-flags",
+		},
+	],
 	"durable_objects": {
 		"bindings": [
 			{

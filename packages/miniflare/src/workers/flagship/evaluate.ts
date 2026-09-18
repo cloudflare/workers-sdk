@@ -202,6 +202,7 @@ export function evaluateFlag(
 	// Seeded per account+flag so the same targetingKey lands in different
 	// buckets across flags, preventing correlated rollouts.
 	let seed: number | undefined;
+	let randomBucket: number | undefined;
 
 	const rules = [...flagDef.rules].sort((a, b) => {
 		const aPriority = "priority" in a ? a.priority : 0;
@@ -228,7 +229,8 @@ export function evaluateFlag(
 			const bucket =
 				attr !== null && attr !== undefined
 					? murmurhash3(String(attr), seed)
-					: (crypto.getRandomValues(randomBuf)[0] / 0x100000000) * 100;
+					: (randomBucket ??=
+							(crypto.getRandomValues(randomBuf)[0] / 0x100000000) * 100);
 			if (bucket >= rule.rollout.percentage) {
 				ruleMatches = false;
 			}
