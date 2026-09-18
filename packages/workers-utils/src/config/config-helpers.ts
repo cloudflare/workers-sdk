@@ -101,17 +101,17 @@ const USER_CONFIG_FILE_NAMES = [
  * over a `wrangler.json` in a parent. Searching for each file name all the way to the
  * filesystem root before trying the next name would let an unrelated ancestor's config
  * shadow the project's own.
+ *
+ * This is `empathic`'s `find.any` restricted to file matches. Once a release carries
+ * lukeed/empathic#14 (`find.any` taking `type: "file"`), this becomes
+ * `find.any(USER_CONFIG_FILE_NAMES, { cwd: referencePath, type: "file" })`.
  */
 function findNearestUserConfig(referencePath: string): string | undefined {
 	for (const dir of walk.up(referencePath)) {
 		for (const name of USER_CONFIG_FILE_NAMES) {
 			const candidate = path.join(dir, name);
-			try {
-				if (statSync(candidate).isFile()) {
-					return candidate;
-				}
-			} catch {
-				// not present in this directory, try the next name
+			if (statSync(candidate, { throwIfNoEntry: false })?.isFile()) {
+				return candidate;
 			}
 		}
 	}
