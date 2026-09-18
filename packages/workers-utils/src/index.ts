@@ -212,3 +212,13 @@ export { _forceColour, formatZodError } from "./zod-format";
 
 export { toUrlPath } from "./url-path";
 export type { UrlPath } from "./url-path";
+
+export {
+	compareMigrationPaths,
+	getD1MigrationFiles,
+	normalizeRelativePath,
+} from "./d1-migrations";
+export type {
+	D1MigrationFile,
+	GetD1MigrationFilesOptions,
+} from "./d1-migrations";
