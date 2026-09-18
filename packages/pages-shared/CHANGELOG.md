@@ -1,5 +1,58 @@
 # @cloudflare/pages-shared
 
+## 0.13.185
+
+### Patch Changes
+
+- Updated dependencies [[`a0485d5`](https://github.com/cloudflare/workers-sdk/commit/a0485d5a5e2293b16e77d1302a470537281c2622)]:
+  - miniflare@5.20260918.0-alpha
+
+## 0.13.184
+
+### Patch Changes
+
+- Updated dependencies [[`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef), [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8)]:
+  - miniflare@5.20260917.0-alpha
+
+## 0.13.183
+
+### Patch Changes
+
+- Updated dependencies [[`71b6f10`](https://github.com/cloudflare/workers-sdk/commit/71b6f102f258e14e2b1dc23e9643cc74685d35cb), [`ad23e6e`](https://github.com/cloudflare/workers-sdk/commit/ad23e6e42dc81c9dc894248e787ed6c0abbe9028), [`6f3d7b5`](https://github.com/cloudflare/workers-sdk/commit/6f3d7b58b1f6cd036aca3e5946807bba37776065)]:
+  - miniflare@5.20260916.0-alpha
+
+## 0.13.182
+
+### Patch Changes
+
+- Updated dependencies [[`7db596c`](https://github.com/cloudflare/workers-sdk/commit/7db596c153ae0cda7e30aa351955b1781902435f), [`e35c4a1`](https://github.com/cloudflare/workers-sdk/commit/e35c4a154ea16a96b47cb2e68a4930c1d833e81d), [`d3565a5`](https://github.com/cloudflare/workers-sdk/commit/d3565a5326d879fbebba72b16c0f14ba2a4fba99), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`1015cfb`](https://github.com/cloudflare/workers-sdk/commit/1015cfb2a780d57b13d137324c83af53d3a3a8a2), [`982b806`](https://github.com/cloudflare/workers-sdk/commit/982b8060d99d9bb303ef7b7f15bf6c8b1f83c72a), [`641df47`](https://github.com/cloudflare/workers-sdk/commit/641df4774f19313ffecf53cf7443ac3dd79abb31)]:
+  - miniflare@5.20260915.0-alpha
+
+## 0.13.181
+
+### Patch Changes
+
+- Updated dependencies [[`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3)]:
+  - miniflare@5.20260911.1-alpha
+
+## 0.13.180
+
+### Patch Changes
+
+- Updated dependencies [[`47d906f`](https://github.com/cloudflare/workers-sdk/commit/47d906f52d109509f61b1c801c1b08ecad583c0d), [`c2699bf`](https://github.com/cloudflare/workers-sdk/commit/c2699bf625134a2425d7142c72c4f31c4b6f8eab)]:
+  - miniflare@5.20260911.0-alpha
+
+## 0.13.179
+
+### Patch Changes
+
+- [#15563](https://github.com/cloudflare/workers-sdk/pull/15563) [`ed5797a`](https://github.com/cloudflare/workers-sdk/commit/ed5797a17d837c381ebb63f50ea3fdc155df88fe) Thanks [@Bortlesboat](https://github.com/Bortlesboat)! - Encode filenames in Pages HTML redirects
+
+  Fix `wrangler pages dev` returning a 502 response when redirecting HTML paths containing Unicode characters. Keep reserved characters in filenames encoded in the redirect destination and preserve the request query string.
+
+- Updated dependencies [[`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94), [`f69f95a`](https://github.com/cloudflare/workers-sdk/commit/f69f95aa2da329dcfa9888cfeb204cdda634d979), [`a549e58`](https://github.com/cloudflare/workers-sdk/commit/a549e58af707e84d6aeddaadc6566103ae236dbb), [`dbb3ff4`](https://github.com/cloudflare/workers-sdk/commit/dbb3ff4ebe7579be76f42591957c429f26da319b), [`fea3cd0`](https://github.com/cloudflare/workers-sdk/commit/fea3cd0f2ef5af6c8f2b50c794a89b8ef03ca82b), [`6bd7b6c`](https://github.com/cloudflare/workers-sdk/commit/6bd7b6cae44d441e415130991e3f181694bd3b6d), [`15cd6e1`](https://github.com/cloudflare/workers-sdk/commit/15cd6e16129af3dad09d53d6cd03f963f9203970), [`be1caec`](https://github.com/cloudflare/workers-sdk/commit/be1caeca44ccd9660a81420805fb0958ca422589), [`dbc9506`](https://github.com/cloudflare/workers-sdk/commit/dbc9506e48d99237be701685d08582966f62f59f)]:
+  - miniflare@5.20260910.0-alpha
+
 ## 0.13.178
 
 ### Patch Changes

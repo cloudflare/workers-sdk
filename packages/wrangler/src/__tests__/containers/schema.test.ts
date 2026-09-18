@@ -48,7 +48,7 @@ describe("config schema", () => {
 		expect(schema.definitions.ContainerApp.properties).toHaveProperty(
 			"class_name"
 		);
-		expect(schema.definitions.ContainerApp.required).not.toContain(
+		expect(schema.definitions.ContainerApp.required ?? []).not.toContain(
 			"class_name"
 		);
 	});

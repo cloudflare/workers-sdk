@@ -1225,7 +1225,6 @@ export async function provisionBindings(
 				log: logger.log,
 				tailConsumers: config.tail_consumers,
 				streamingTailConsumers: config.streaming_tail_consumers,
-				containers: config.containers,
 				provisioning: true,
 			}
 		);

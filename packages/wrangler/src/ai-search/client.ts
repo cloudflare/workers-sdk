@@ -4,8 +4,8 @@ import type {
 	AiSearchInstance,
 	AiSearchJob,
 	AiSearchJobLog,
-	AiSearchMessage,
 	AiSearchNamespace,
+	AiSearchSearchRequest,
 	AiSearchSearchResponse,
 	AiSearchStats,
 	AiSearchToken,
@@ -123,13 +123,7 @@ export async function searchInstance(
 	config: Config,
 	namespace: string,
 	name: string,
-	body: {
-		messages: AiSearchMessage[];
-		filters?: Record<string, string>;
-		max_num_results?: number;
-		score_threshold?: number;
-		reranking?: boolean;
-	}
+	body: AiSearchSearchRequest
 ): Promise<AiSearchSearchResponse> {
 	const accountId = await requireAuth(config);
 	return await fetchResult<AiSearchSearchResponse>(

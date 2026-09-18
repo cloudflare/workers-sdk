@@ -84,7 +84,6 @@ export function printBindings(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const websearch = extractBindingsOfType("websearch", bindings);
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
@@ -350,17 +349,6 @@ export function printBindings(
 		);
 	}
 
-	if (websearch.length > 0) {
-		output.push(
-			...websearch.map(({ binding }) => ({
-				name: binding,
-				type: getBindingTypeFriendlyName("websearch"),
-				value: undefined,
-				mode: getMode({ isSimulatedLocally: false }),
-			}))
-		);
-	}
-
 	if (agent_memory.length > 0) {
 		output.push(
 			...agent_memory.map(({ binding, namespace }) => ({
@@ -493,15 +481,13 @@ export function printBindings(
 
 	if (flagship.length > 0) {
 		output.push(
-			...flagship.map(({ binding, app_id }) => {
+			...flagship.map(({ binding, app_id, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("flagship"),
 					value: app_id,
 					mode: getMode({
-						isSimulatedLocally: !context.remoteBindingsDisabled
-							? false
-							: undefined,
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
 				};
 			})
@@ -951,7 +937,11 @@ export function printBindings(
 
 		log(
 			`${containersTitle}\n${containers
-				.map((c) => `- ${c.name} (${c.image})`)
+				.map((container) =>
+					container.scheduling_policy === "durable_object"
+						? `- ${container.class_name ?? container.name} (durable_object)`
+						: `- ${container.name} (${container.image})`
+				)
 				.join("\n")}`
 		);
 		log("");

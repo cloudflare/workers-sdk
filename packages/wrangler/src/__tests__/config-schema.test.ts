@@ -6,7 +6,25 @@ type WranglerSchema = {
 	$ref?: string;
 	allOf?: { $ref: string }[];
 	allowTrailingCommas?: boolean;
-	definitions?: Record<string, { properties?: Record<string, unknown> }>;
+	definitions?: {
+		DurableObjectMigration?: { properties?: Record<string, unknown> };
+		ContainerApp?: {
+			properties?: {
+				images?: {
+					additionalProperties?: { $ref?: string };
+				};
+				scheduling_policy?: {
+					enum?: string[];
+				};
+			};
+		};
+		DurableObjectContainerImage?: {
+			anyOf?: {
+				properties?: Record<string, unknown>;
+				required?: string[];
+			}[];
+		};
+	};
 };
 
 function readSchema(): WranglerSchema {
@@ -45,5 +63,39 @@ describe("config schema", () => {
 				"deleted_classes",
 			])
 		);
+	});
+
+	it("includes Durable Object-managed container configuration", ({
+		expect,
+	}) => {
+		const schema = readSchema();
+		const container = schema.definitions?.ContainerApp;
+		const image = schema.definitions?.DurableObjectContainerImage;
+
+		expect(container?.properties?.scheduling_policy?.enum).toContain(
+			"durable_object"
+		);
+		expect(container?.properties?.images?.additionalProperties?.$ref).toBe(
+			"#/definitions/DurableObjectContainerImage"
+		);
+		expect(image?.anyOf?.map((variant) => variant.required)).toEqual([
+			["dockerfile"],
+			["image"],
+		]);
+		const dockerfile = image?.anyOf?.find((variant) =>
+			variant.required?.includes("dockerfile")
+		);
+		const registry = image?.anyOf?.find((variant) =>
+			variant.required?.includes("image")
+		);
+		expect(dockerfile?.properties?.build_context).toMatchObject({
+			type: "string",
+		});
+		expect(dockerfile?.properties?.build_vars).toMatchObject({
+			type: "object",
+			additionalProperties: { type: "string" },
+		});
+		expect(registry?.properties).not.toHaveProperty("build_context");
+		expect(registry?.properties).not.toHaveProperty("build_vars");
 	});
 });

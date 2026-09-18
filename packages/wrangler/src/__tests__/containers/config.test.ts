@@ -81,6 +81,35 @@ describe("getNormalizedContainerOptions", () => {
 		);
 	});
 
+	it("should throw early when a Durable Object-managed container class is missing", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "MissingContainer",
+					name: "missing-container",
+					scheduling_policy: "durable_object",
+					images: {},
+				},
+			],
+			durable_objects: {
+				bindings: [],
+			},
+			migrations: [],
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, {})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container class_name MissingContainer does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.]`
+		);
+	});
+
 	it("should resolve class_name from a durable object export that references the container by name", async ({
 		expect,
 	}) => {
@@ -180,6 +209,75 @@ describe("getNormalizedContainerOptions", () => {
 			getNormalizedContainerOptions(config, {})
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: The container test-container is referencing the durable object TestContainer, which appears to be defined on the other-script Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.]`
+		);
+	});
+
+	it("should throw early when a Durable Object-managed container uses an external class", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "ExternalContainer",
+					name: "external-container",
+					scheduling_policy: "durable_object",
+					images: {},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "EXTERNAL_DO",
+						class_name: "ExternalContainer",
+						script_name: "other-worker",
+					},
+				],
+			},
+			migrations: [],
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, {})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container external-container is referencing the durable object ExternalContainer, which appears to be defined on the other-worker Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.]`
+		);
+	});
+
+	it("should throw early when a Durable Object-managed container uses legacy storage", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "LegacyContainer",
+					name: "legacy-container",
+					scheduling_policy: "durable_object",
+					images: {},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "LEGACY_DO",
+						class_name: "LegacyContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_classes: ["LegacyContainer"] }],
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, {})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container legacy-container references Durable Object class LegacyContainer, which uses the legacy KV storage backend. Durable Object-managed Containers require SQLite-backed Durable Objects.]`
 		);
 	});
 

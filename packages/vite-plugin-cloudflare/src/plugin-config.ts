@@ -4,6 +4,7 @@ import * as path from "node:path";
 import {
 	convertToWranglerConfig,
 	generateTypes,
+	getContainerConfigExports,
 	loadAndValidateConfig,
 } from "@cloudflare/config";
 import {
@@ -18,7 +19,7 @@ import {
 import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
-import { isForcedBuildOutput } from "./build-output-env";
+import { isForcedBuildOutput, isPreviewBuild } from "./build-output-env";
 import { readBuildOutputWorkers } from "./build-output-preview";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
@@ -357,6 +358,8 @@ function resolveWorkerConfig(
 		 * from `@cloudflare/config`).
 		 */
 		rawConfigOverride?: RawConfig;
+		/** Path used to resolve relative values in `rawConfigOverride`. */
+		rawConfigPath?: string;
 	} & (
 		| {
 				configCustomizer: WorkerConfigCustomizer<false> | undefined;
@@ -375,7 +378,10 @@ function resolveWorkerConfig(
 			raw,
 			config: workerConfig,
 			nonApplicable,
-		} = readWorkerConfigFromRaw(options.rawConfigOverride));
+		} = readWorkerConfigFromRaw(
+			options.rawConfigOverride,
+			options.rawConfigPath
+		));
 	} else if (options.configPath) {
 		// File config already has defaults applied
 		({
@@ -553,6 +559,7 @@ export async function resolvePluginConfig(
 		configCustomizer: resolvedNewConfig ? undefined : pluginConfig.config,
 		visitedConfigPaths: configPaths,
 		rawConfigOverride,
+		rawConfigPath: resolvedNewConfig ? configPath : undefined,
 	});
 
 	const environmentNameToWorkerMap = new Map<string, Worker>();
@@ -828,6 +835,7 @@ async function loadNewConfig(options: {
 	}
 
 	const { result, dependencies } = await loadAndValidateConfig(configPath, {
+		isPreview: isPreviewBuild(),
 		mode: options.mode,
 	});
 
@@ -851,7 +859,11 @@ async function loadNewConfig(options: {
 			? result.data.settings
 			: undefined;
 
-	const rawConfig: RawConfig = convertToWranglerConfig(worker, settings);
+	const rawConfig: RawConfig = convertToWranglerConfig(
+		worker,
+		settings,
+		Object.values(getContainerConfigExports(result.data))
+	);
 
 	if (options.command === "serve" && options.types.generate) {
 		await writeWorkerConfigurationDts({

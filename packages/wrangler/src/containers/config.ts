@@ -6,11 +6,13 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import {
+	getDurableObjectClassNameToUseSQLiteMap,
 	isDockerfile,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
 	UserError,
+	validateDurableObjectContainerApplications,
 } from "@cloudflare/workers-utils";
-import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
@@ -19,7 +21,7 @@ import type {
 	InstanceTypeOrLimits,
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
-import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared";
 import type {
 	Config,
 	ContainerApp,
@@ -83,13 +85,23 @@ export const getNormalizedContainerOptions = async (
 		return [];
 	}
 
+	validateDurableObjectContainerApplications(config);
+
 	const normalizedContainers: ContainerNormalizedConfig[] = [];
+	const allDOs = getDurableObjectClassNameToUseSQLiteMap(
+		config.migrations,
+		config.exports
+	);
 
 	for (const container of config.containers) {
+		if (isDurableObjectContainerApp(container)) {
+			continue;
+		}
+
 		assert(container.name, "container name should have been set by validation");
-		const allDOs = getDurableObjectClassNameToUseSQLiteMap(
-			config.migrations,
-			config.exports
+		assert(
+			container.image,
+			"container image should have been set by validation"
 		);
 
 		// A container is linked to its Durable Object either by its own

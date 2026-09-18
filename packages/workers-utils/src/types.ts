@@ -49,7 +49,6 @@ import type {
 	CfVectorize,
 	CfVpcNetwork,
 	CfVpcService,
-	CfWebSearch,
 	CfWorkerLoader,
 	CfWorkflow,
 	CfScriptFormat,
@@ -86,7 +85,6 @@ export type WorkerMetadataBinding =
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "ai_search_namespace"; name: string; namespace: string }
 	| { type: "ai_search"; name: string; instance_name: string }
-	| { type: "websearch"; name: string }
 	| { type: "agent_memory"; name: string; namespace: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
@@ -294,7 +292,11 @@ type WorkerMetadataPut = {
 	observability?: Observability | undefined;
 	// `class_name` is omitted when the container is instead referenced from the
 	// Durable Object's `exports` entry via its `container` field.
-	containers?: { name?: string; class_name?: string }[];
+	containers?: {
+		name?: string;
+		class_name?: string;
+		images?: Record<string, string>;
+	}[];
 	package_dependencies?: Array<{
 		name: string;
 		packageJsonVersion: string;
@@ -476,7 +478,6 @@ export type Binding =
 	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
 	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
 	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
-	| ({ type: "websearch" } & BindingOmit<CfWebSearch>)
 	| ({ type: "agent_memory" } & BindingOmit<CfAgentMemory>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)

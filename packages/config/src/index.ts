@@ -11,10 +11,12 @@ export {
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
 	ExportSchema,
+	InputContainerSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
 	KnownBindingSchema,
 	KVBindingSchema,
+	OutputContainerSchema,
 	OutputSettingsSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
@@ -32,6 +34,7 @@ export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
 export {
+	getContainerConfigExports,
 	loadAndValidateConfig,
 	resolveAndValidateConfigExports,
 } from "./config-loader";
@@ -42,8 +45,10 @@ export type {
 	ParsedConfigExports,
 } from "./config-loader";
 export type {
+	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
+	ParsedOutputContainerConfig,
 	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
 	ModuleType,

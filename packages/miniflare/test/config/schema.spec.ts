@@ -299,6 +299,36 @@ describe("MiniflareWorkerConfigSchema", () => {
 			Entrypoint: { type: "worker" },
 		});
 	});
+
+	test("rejects unresolved Container images on live Durable Object exports", ({
+		expect,
+	}) => {
+		const exports = [
+			{ type: "durable-object", storage: "sqlite" },
+			{
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "old-worker/ContainerObject",
+			},
+		];
+
+		for (const exported of exports) {
+			const result = MiniflareWorkerConfigSchema.safeParse({
+				type: "worker",
+				name: "api",
+				compatibilityDate: "2026-01-01",
+				exports: {
+					ContainerObject: {
+						...exported,
+						container: { images: [{ name: "app", image: null }] },
+					},
+				},
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
 });
 
 describe("MiniflareOptionsSchema", () => {

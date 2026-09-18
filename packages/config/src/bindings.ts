@@ -596,19 +596,6 @@ export interface VpcServiceBinding extends VpcServiceBindingOptions {
 	type: "vpc-service";
 }
 
-interface WebSearchBindingOptions {
-	/** Options that only apply during local development. */
-	dev?: BindingDevOptions;
-}
-
-/**
- * Cloudflare Web Search binding. There is exactly one shared web corpus, so
- * the binding is zero-config — only the variable name is required.
- */
-export interface WebSearchBinding extends WebSearchBindingOptions {
-	type: "web-search";
-}
-
 interface WorkerBindingOptions<
 	TWorker extends WorkerReference = WorkerReference,
 	TExportName extends WorkerEntrypointExportName<TWorker> | undefined =
@@ -851,11 +838,6 @@ export interface Bindings {
 	/** Binding to a VPC service. */
 	vpcService(options: VpcServiceBindingOptions): VpcServiceBinding;
 	/**
-	 * Cloudflare Web Search binding. There is exactly one shared web corpus, so
-	 * the binding is zero-config — only the variable name is required.
-	 */
-	webSearch(options?: WebSearchBindingOptions): WebSearchBinding;
-	/**
 	 * Service binding (Worker-to-Worker). `worker` is the name or config of the
 	 * bound Worker; `exportName` selects a named `WorkerEntrypoint` export
 	 * (defaults to the default export).
@@ -925,7 +907,6 @@ export const bindings = {
 	versionMetadata: () => ({ type: "version-metadata" }),
 	vpcService: (options) => ({ type: "vpc-service", ...options }),
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
-	webSearch: (options) => ({ type: "web-search", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),
 	workerLoader: () => ({ type: "worker-loader" }),
 	// TODO: re-enable when workflow bindings return.

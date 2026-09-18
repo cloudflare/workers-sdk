@@ -1,5 +1,6 @@
 import { test, vi } from "vitest";
 import {
+	getJsonResponse,
 	getTextResponse,
 	isCINonLinux,
 	isLocalWithoutDockerRunning,
@@ -33,6 +34,26 @@ test.skipIf(skipContainerTests)(
 
 		await vi.waitFor(async () => {
 			const fetchResponse = await fetch(`${viteTestUrl}/dockerfile/fetch`, {
+				signal: AbortSignal.timeout(500),
+			});
+			expect(await fetchResponse.text()).toBe("Hello World!");
+		}, WAIT_FOR_OPTIONS);
+	}
+);
+
+test.skipIf(skipContainerTests)(
+	"starts a named Container image built from a local Dockerfile",
+	async ({ expect }) => {
+		expect(await getJsonResponse("/named-images/images")).toEqual(["app"]);
+
+		const startResponse = await getTextResponse("/named-images/start");
+		expect(startResponse).toBe("Container create request sent...");
+
+		const statusResponse = await getTextResponse("/named-images/status");
+		expect(statusResponse).toBe("true");
+
+		await vi.waitFor(async () => {
+			const fetchResponse = await fetch(`${viteTestUrl}/named-images/fetch`, {
 				signal: AbortSignal.timeout(500),
 			});
 			expect(await fetchResponse.text()).toBe("Hello World!");

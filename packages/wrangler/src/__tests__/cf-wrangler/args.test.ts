@@ -171,6 +171,10 @@ describe("cf-wrangler parseBuildArgs", () => {
 				mode: "production",
 			});
 		});
+
+		it("parses --preview", ({ expect }) => {
+			expect(parseBuildArgs(["--preview"])).toEqual({ preview: true });
+		});
 	});
 
 	describe("rejections", () => {

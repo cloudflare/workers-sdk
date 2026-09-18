@@ -98,7 +98,35 @@ type UnsafeBinding = {
 };
 
 /**
- * Configuration for a container application
+ * An image Wrangler prepares for a Durable Object-managed container.
+ */
+export type DurableObjectContainerImage =
+	| {
+			/**
+			 * Path to the Dockerfile Wrangler builds and pushes.
+			 */
+			dockerfile: string;
+			/**
+			 * Build context, relative to the Wrangler configuration file.
+			 * Defaults to the Dockerfile's directory.
+			 */
+			build_context?: string;
+			/** Variables available to the image only while it is being built. */
+			build_vars?: Record<string, string>;
+			image?: never;
+	  }
+	| {
+			/**
+			 * Digest-pinned image in the account's managed registry.
+			 */
+			image: string;
+			dockerfile?: never;
+			build_context?: never;
+			build_vars?: never;
+	  };
+
+/**
+ * Configuration for a container application.
  */
 export type ContainerObservability = {
 	/** If observability is enabled for this container application */
@@ -150,7 +178,16 @@ export type ContainerApp = {
 	/**
 	 * The path to a Dockerfile, or an image URI for the Cloudflare registry.
 	 */
-	image: string;
+	image?: string;
+
+	/**
+	 * Named images available to a Durable Object-managed container through
+	 * `ctx.container.images` and
+	 * `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES[className]`.
+	 *
+	 * Only supported when `scheduling_policy` is `"durable_object"`.
+	 */
+	images?: Record<string, DurableObjectContainerImage>;
 
 	/**
 	 * Build context of the application.
@@ -178,15 +215,22 @@ export type ContainerApp = {
 	 * Specify the observability behavior of this container application.
 	 *
 	 * When set, this overrides the root `observability` config for this container.
+	 * Durable Object-managed Containers only support enabling or disabling logs.
+	 * Their settings are application-wide, and omitted settings preserve the
+	 * existing application rather than inheriting root Worker observability.
 	 */
 	observability?: ContainerObservability;
 
 	/**
 	 * The scheduling policy of the application
 	 * @optional
+	 * `"durable_object"` makes each Durable Object instance own its Container.
+	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`, and
+	 * application-wide log `observability` are supported on this entry.
+	 *
 	 * @default "default"
 	 */
-	scheduling_policy?: "default" | "moon" | "regional";
+	scheduling_policy?: "default" | "durable_object" | "moon" | "regional";
 
 	/**
 	 * The instance type to be used for the container.
@@ -1318,26 +1362,6 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
-	 * Cloudflare Web Search binding. There is exactly one shared web corpus, so the
-	 * binding is zero-config -- only the variable name is required, declared as a
-	 * single object (not an array).
-	 *
-	 * NOTE: This field is not automatically inherited from the top level environment,
-	 * and so must be specified in every named environment.
-	 *
-	 * @default {}
-	 * @nonInheritable
-	 */
-	websearch:
-		| {
-				/** The binding name used to refer to Web Search in the Worker. */
-				binding: string;
-				/** Whether the Web Search binding should be remote or not in local development */
-				remote?: boolean;
-		  }
-		| undefined;
-
-	/**
 	 * Specifies Hyperdrive configs that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1714,7 +1738,7 @@ export interface EnvironmentNonInheritable {
 		/** The Flagship app ID to bind to. */
 		app_id?: string;
 
-		/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
+		/** Set to `true` to evaluate flags against the remote Flagship app during local dev, instead of the local simulator. */
 		remote?: boolean;
 	}[];
 
@@ -1891,6 +1915,11 @@ export interface Observability {
 	 * @default false
 	 */
 	redact_query_string?: boolean;
+	/** Real-time Issues settings for this Worker. */
+	issues?: {
+		/** Whether real-time Issues are enabled. */
+		enabled?: boolean;
+	};
 	logs?: {
 		enabled?: boolean;
 		/** The sampling rate */
@@ -1968,7 +1997,7 @@ export type ContainerEngine =
  *
  * The `previews` block contains any intentionally divergent configuration intended solely for Previews, including:
  * - All non-inheritable properties (environment variables and bindings like KV, D1, R2, etc.)
- * - Select inheritable properties: `logpush`, `observability`, `limits`, `cache`
+ * - Select inheritable properties: `logpush`, `observability`, `limits`, `placement`, `cache`
  *
  * @inheritable
  */
@@ -1978,6 +2007,6 @@ export interface PreviewsConfig
 		Partial<
 			Pick<
 				EnvironmentInheritable,
-				"logpush" | "observability" | "limits" | "cache"
+				"logpush" | "observability" | "limits" | "placement" | "cache"
 			>
 		> {}
