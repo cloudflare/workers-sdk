@@ -91,7 +91,7 @@ const USER_CONFIG_FILE_NAMES = [
 	"wrangler.json",
 	"wrangler.jsonc",
 	"wrangler.toml",
-];
+] satisfies string[];
 
 /**
  * Walk up from `referencePath` and return the first user configuration file found,
