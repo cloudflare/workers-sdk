@@ -290,8 +290,10 @@ export class WorkflowInstanceIntrospectorHandle implements WorkflowInstanceIntro
 		this.#disposed = true;
 		try {
 			// Acquisition starts in the constructor, even if modify() is never called.
+			// If it failed, there is no modifier to dispose; modify() still reports it.
 			const modifier =
-				this.#instanceModifier ?? (await this.#instanceModifierPromise);
+				this.#instanceModifier ??
+				(await this.#instanceModifierPromise?.catch(() => undefined));
 			(modifier as Partial<Disposable> | undefined)?.[Symbol.dispose]?.();
 		} finally {
 			await this.workflow.unsafeAbort(this.instanceId, "Instance dispose");
