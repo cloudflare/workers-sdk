@@ -23,8 +23,6 @@ function buildHyperdriveOptions(
 			exports: undefined,
 			tails: [],
 			streamingTails: [],
-			containerDOClassNames: undefined,
-			containerBuildId: undefined,
 			enableContainers: false,
 		},
 		connectionString,
