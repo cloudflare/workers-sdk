@@ -12,6 +12,7 @@ export {
 	getWorkerConfigPath,
 	getWorkerDir,
 	getWorkersDir,
+	normalizeDirectoryName,
 	ROOT_CONFIG_FILENAME,
 	WORKER_CONFIG_FILENAME,
 } from "./paths";

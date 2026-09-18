@@ -22,6 +22,13 @@ export const CONTAINER_CONFIG_FILENAME = "container.config.json";
 /** Name of the directory containing the default Worker. */
 export const DEFAULT_WORKER_DIRECTORY_NAME = "default";
 
+// oxlint-disable-next-line no-control-regex -- Windows forbids control characters in file names.
+const INVALID_DIRECTORY_NAME_CHARACTERS = /[\s<>:"/\\|?*\u0000-\u001f]+|\.+$/g;
+const WINDOWS_RESERVED_NAME =
+	/^(?:con|prn|aux|nul|conin\$|conout\$|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/;
+// Leave room for the prefix added to Windows reserved names.
+const MAX_DIRECTORY_NAME_BYTES = 254;
+
 /** Absolute path to the Build Output Specification directory. */
 export function getBuildOutputDir(root: string): string {
 	return path.resolve(root, BUILD_OUTPUT_ROOT);
@@ -53,6 +60,39 @@ export function getWorkersDir(root: string): string {
  */
 export function getContainersDir(root: string): string {
 	return path.join(getBuildOutputDir(root), BUILD_OUTPUT_VERSION, "containers");
+}
+
+/**
+ * Convert a Cloudflare resource name into a portable, case-insensitive
+ * directory name.
+ *
+ * The original resource name remains in its config file. Callers must reject
+ * collisions when multiple resource names normalise to the same directory.
+ */
+export function normalizeDirectoryName(name: string): string {
+	const directoryName = truncateUtf8(
+		name.toLowerCase(),
+		MAX_DIRECTORY_NAME_BYTES
+	).replace(INVALID_DIRECTORY_NAME_CHARACTERS, "-");
+
+	return WINDOWS_RESERVED_NAME.test(directoryName)
+		? `_${directoryName}`
+		: directoryName;
+}
+
+function truncateUtf8(value: string, maxBytes: number): string {
+	let result = "";
+	let byteLength = 0;
+	for (const character of value) {
+		const characterByteLength = Buffer.byteLength(character);
+		if (byteLength + characterByteLength > maxBytes) {
+			break;
+		}
+
+		result += character;
+		byteLength += characterByteLength;
+	}
+	return result;
 }
 
 function validateDirectoryName(name: string, resourceType: string): void {
