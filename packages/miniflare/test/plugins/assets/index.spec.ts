@@ -20,7 +20,6 @@ function makeOptions(directory: string, rootPath?: string): MiniflareOptions {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2026-04-29",
 					manifest: singleModuleManifest(WORKER_SCRIPT),

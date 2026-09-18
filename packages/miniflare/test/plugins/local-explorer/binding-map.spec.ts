@@ -29,7 +29,6 @@ describe("Local Explorer remote binding skipping", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -109,7 +108,6 @@ test("lists shared resources once without aggregating the current instance", asy
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2025-01-01",
 					compatibilityFlags: ["experimental"],

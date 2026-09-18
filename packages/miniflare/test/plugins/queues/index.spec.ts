@@ -51,7 +51,6 @@ test.skip("maxBatchTimeout validation", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -67,7 +66,6 @@ test.skip("maxBatchTimeout validation", async ({ expect }) => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -91,7 +89,6 @@ test("flushes partial and full batches", async ({ expect }) => {
 			// Check with producer and consumer as separate Workers
 			{
 				config: {
-					type: "worker",
 					name: "producer",
 					compatibilityDate: "2025-05-01",
 					env: { QUEUE: { type: "queue", name: "QUEUE" } },
@@ -111,7 +108,6 @@ test("flushes partial and full batches", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "consumer",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -236,7 +232,6 @@ test("supports declaring queue producers as a key-value pair -> queueProducers: 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -288,7 +283,6 @@ test("supports declaring queue producers as an array -> queueProducers: ['MY_QUE
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -340,7 +334,6 @@ test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-q
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -391,7 +384,6 @@ test("sends all structured cloneable types", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					// Pre-`queues_json_messages` compat date so queue messages use V8
 					// structured-clone serialization (required to round-trip BigInt et al.)
@@ -533,7 +525,6 @@ test("retries messages", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -795,7 +786,6 @@ test("moves to dead letter queue", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -920,7 +910,6 @@ test("moves to dead letter queue", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -944,7 +933,6 @@ test("operations permit strange queue names", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -1002,7 +990,6 @@ test("supports message contentTypes", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -1085,7 +1072,6 @@ test("supports metadata in send() response", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "producer",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["experimental"],
@@ -1100,7 +1086,6 @@ test("supports metadata in send() response", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "consumer",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "queue", name: "QUEUE" }],
@@ -1136,7 +1121,6 @@ test("supports metadata in sendBatch() response", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "producer",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["experimental"],
@@ -1151,7 +1135,6 @@ test("supports metadata in sendBatch() response", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "consumer",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "queue", name: "QUEUE" }],
@@ -1187,7 +1170,6 @@ test("validates message size", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
