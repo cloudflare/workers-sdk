@@ -16,6 +16,7 @@ import { Route as WorkflowsWorkflowNameRouteImport } from './routes/workflows/$w
 import { Route as R2BucketNameRouteImport } from './routes/r2/$bucketName'
 import { Route as ObservabilityEventsRouteImport } from './routes/observability/events'
 import { Route as KvNamespaceIdRouteImport } from './routes/kv/$namespaceId'
+import { Route as FlagshipAppIdRouteImport } from './routes/flagship/$appId'
 import { Route as EmailSendingRouteImport } from './routes/email/sending'
 import { Route as EmailRoutingRouteImport } from './routes/email/routing'
 import { Route as DoClassNameRouteImport } from './routes/do/$className'
@@ -62,6 +63,11 @@ const ObservabilityEventsRoute = ObservabilityEventsRouteImport.update({
 const KvNamespaceIdRoute = KvNamespaceIdRouteImport.update({
   id: '/kv/$namespaceId',
   path: '/kv/$namespaceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlagshipAppIdRoute = FlagshipAppIdRouteImport.update({
+  id: '/flagship/$appId',
+  path: '/flagship/$appId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailSendingRoute = EmailSendingRouteImport.update({
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/do/$className': typeof DoClassNameRouteWithChildren
   '/email/routing': typeof EmailRoutingRouteWithChildren
   '/email/sending': typeof EmailSendingRoute
+  '/flagship/$appId': typeof FlagshipAppIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/observability/events': typeof ObservabilityEventsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/email': typeof EmailRouteWithChildren
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/email/sending': typeof EmailSendingRoute
+  '/flagship/$appId': typeof FlagshipAppIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/observability/events': typeof ObservabilityEventsRoute
   '/observability': typeof ObservabilityIndexRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/do/$className': typeof DoClassNameRouteWithChildren
   '/email/routing': typeof EmailRoutingRouteWithChildren
   '/email/sending': typeof EmailSendingRoute
+  '/flagship/$appId': typeof FlagshipAppIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/observability/events': typeof ObservabilityEventsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/do/$className'
     | '/email/routing'
     | '/email/sending'
+    | '/flagship/$appId'
     | '/kv/$namespaceId'
     | '/observability/events'
     | '/r2/$bucketName'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/email'
     | '/d1/$databaseId'
     | '/email/sending'
+    | '/flagship/$appId'
     | '/kv/$namespaceId'
     | '/observability/events'
     | '/observability'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/do/$className'
     | '/email/routing'
     | '/email/sending'
+    | '/flagship/$appId'
     | '/kv/$namespaceId'
     | '/observability/events'
     | '/r2/$bucketName'
@@ -254,6 +266,7 @@ export interface RootRouteChildren {
   EmailRoute: typeof EmailRouteWithChildren
   D1DatabaseIdRoute: typeof D1DatabaseIdRoute
   DoClassNameRoute: typeof DoClassNameRouteWithChildren
+  FlagshipAppIdRoute: typeof FlagshipAppIdRoute
   KvNamespaceIdRoute: typeof KvNamespaceIdRoute
   ObservabilityEventsRoute: typeof ObservabilityEventsRoute
   R2BucketNameRoute: typeof R2BucketNameRouteWithChildren
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       path: '/kv/$namespaceId'
       fullPath: '/kv/$namespaceId'
       preLoaderRoute: typeof KvNamespaceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flagship/$appId': {
+      id: '/flagship/$appId'
+      path: '/flagship/$appId'
+      fullPath: '/flagship/$appId'
+      preLoaderRoute: typeof FlagshipAppIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/sending': {
@@ -473,6 +493,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailRoute: EmailRouteWithChildren,
   D1DatabaseIdRoute: D1DatabaseIdRoute,
   DoClassNameRoute: DoClassNameRouteWithChildren,
+  FlagshipAppIdRoute: FlagshipAppIdRoute,
   KvNamespaceIdRoute: KvNamespaceIdRoute,
   ObservabilityEventsRoute: ObservabilityEventsRoute,
   R2BucketNameRoute: R2BucketNameRouteWithChildren,
