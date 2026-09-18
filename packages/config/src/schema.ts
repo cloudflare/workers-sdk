@@ -532,17 +532,14 @@ export const InputContainerSchema = z.union([
 export type ParsedInputContainerConfig = z.output<typeof InputContainerSchema>;
 
 /**
- * Output Container schema — parses Container configs in the Build Output
- * Specification, after any Dockerfile has been built into a local or remote
- * image reference.
+ * Output Container schema — parses `container.config.json` files in the Build
+ * Output Specification, after any Dockerfile has been built into a local image reference.
  */
 export const OutputContainerSchema = z.union([
 	StandardContainerBaseSchema.extend({
-		type: z.literal("container"),
 		image: OutputContainerImageSchema,
 	}).superRefine(validateContainerRelationships),
 	DurableObjectContainerBaseSchema.extend({
-		type: z.literal("container"),
 		images: z.record(z.string(), OutputContainerImageSchema).optional(),
 	}),
 ]);
@@ -794,18 +791,22 @@ export const InputConfigSchema = z.strictObject({
 
 export type ParsedInputConfig = z.output<typeof InputConfigSchema>;
 
-/**
- * Output settings schema — the shape of the top-level `config.json` in the
- * Build Output Specification. Adds the build mode and Preview intent.
- */
-export const OutputSettingsSchema = z.strictObject({
-	...InputSettingsSchema.shape,
-	type: z.literal("settings"),
-	isPreview: z.boolean().optional(),
+const BuildContextSchema = z.strictObject({
+	isPreview: z.boolean(),
 	mode: z.string().optional(),
 });
 
-export type ParsedOutputSettingsConfig = z.output<typeof OutputSettingsSchema>;
+/**
+ * The shape of the top-level `config.json` in the Build Output Specification.
+ * Account settings remain at the top level while build context is grouped
+ * under `buildContext`.
+ */
+export const OutputRootConfigSchema = z.strictObject({
+	...InputSettingsSchema.shape,
+	buildContext: BuildContextSchema,
+});
+
+export type ParsedOutputRootConfig = z.output<typeof OutputRootConfigSchema>;
 
 export const ModuleTypeSchema = z.enum([
 	"esm",
@@ -851,12 +852,11 @@ const ManifestSchema = z
 	});
 
 /**
- * Output Worker schema — the shape of the Worker's `config.json` in the
- * Build Output Specification. Adds an optional `manifest` field to the
- * base schema.
+ * Output Worker schema — the shape of the Worker's `worker.config.json` in the
+ * Build Output Specification. Adds an optional `manifest` field to the base
+ * schema.
  */
 export const OutputWorkerSchema = BaseWorkerSchema.extend({
-	type: z.literal("worker"),
 	manifest: ManifestSchema.optional(),
 });
 
