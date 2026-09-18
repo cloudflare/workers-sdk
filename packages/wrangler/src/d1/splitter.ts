@@ -149,6 +149,10 @@ function splitSqlIntoStatements(sql: string): string[] {
 			case "`":
 				str += char + consumeUntilMarker(iterator, char);
 				break;
+			case `[`:
+				// SQLite bracket-quoted identifiers end at the first `]`; there is no escape sequence.
+				str += char + consumeUntilMarker(iterator, `]`);
+				break;
 			case `$`: {
 				const dollarQuote =
 					"$" + consumeWhile(iterator, isDollarQuoteIdentifier);
@@ -257,14 +261,18 @@ function isDollarQuoteIdentifier(str: string) {
 
 /**
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
+ * Markers may follow punctuation, as in `WHEN (1=1)BEGIN`, but not a qualification
+ * operator or named-parameter prefix, where SQLite permits keyword identifiers.
  */
 function isCompoundStatementStart(str: string) {
-	return /\s(BEGIN|CASE)\s$/i.test(str);
+	return /(?<![\p{L}\p{M}\p{N}_$.:])(BEGIN|CASE)\s$/iu.test(str);
 }
 
 /**
  * Returns true if the `str` ends with a compound statement `END` marker.
+ * Markers may precede punctuation, as in `END;`, but must not be qualified
+ * identifiers or named parameters such as `new.end` or `:end`.
  */
 function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/i.test(str);
+	return /(?<![\p{L}\p{M}\p{N}_$.:])END[^\p{L}\p{M}\p{N}_$]$/iu.test(str);
 }
