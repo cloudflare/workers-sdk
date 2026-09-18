@@ -51,6 +51,12 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Runs the E2E tests for the Vite plugin.
   - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `ci:run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
 
+### Package size reporting (package-size.yml + package-size-report.yml)
+
+- Triggers on non-markdown pull request updates.
+- Builds the exact synthetic pull request merge commit and its first parent, then reports deterministic raw and gzip sizes for selected published packages.
+- Uses a split security model: the package build has read-only permissions, while the privileged default-branch reporter size-limits and validates the data artifact against trusted workflow, pull request, and merge-parent metadata before updating one sticky comment.
+
 ## Deploy Pages Previews (deploy-pages-preview.yml)
 
 - Triggers
