@@ -903,22 +903,55 @@ const HANDLERS = {
 	},
 };
 
+type RawConfigBinding = { binding: string } & Record<string, unknown>;
+type RawConfigEnvironment = NonNullable<RawConfig["env"]>[string];
+
 function getRawConfigBindings(
-	config: RawConfig,
+	config: RawConfigEnvironment,
 	resourceType: keyof typeof HANDLERS
-): Array<{ binding: string }> {
+): RawConfigBinding[] {
 	if (resourceType === "queue") {
-		return config.queues?.producers ?? [];
+		return (config.queues?.producers ?? []) as RawConfigBinding[];
 	}
 
 	const configField = HANDLERS[resourceType].configField;
-	return (config[configField] ?? []) as Array<{ binding: string }>;
+	return (config[configField] ?? []) as RawConfigBinding[];
+}
+
+function addProvisionedIdentifier(
+	originalBinding: RawConfigBinding,
+	binding: ProvisionableBinding
+): RawConfigBinding {
+	switch (binding.type) {
+		case "kv_namespace":
+			return { ...originalBinding, id: binding.id };
+		case "d1":
+			return { ...originalBinding, database_id: binding.database_id };
+		case "r2_bucket":
+			return { ...originalBinding, bucket_name: binding.bucket_name };
+		case "ai_search_namespace":
+			return { ...originalBinding, namespace: binding.namespace };
+		case "agent_memory":
+			return { ...originalBinding, namespace: binding.namespace };
+		case "queue":
+			return {
+				...originalBinding,
+				queue:
+					typeof binding.queue_name === "string"
+						? binding.queue_name
+						: undefined,
+			};
+		case "dispatch_namespace":
+			return { ...originalBinding, namespace: binding.namespace };
+		case "flagship":
+			return { ...originalBinding, app_id: binding.app_id };
+	}
 }
 
 function addBindingToPatch(
 	patch: RawConfig,
 	resourceType: ProvisionableBinding["type"],
-	binding: ReturnType<typeof toConfigBinding>
+	binding: ReturnType<typeof toConfigBinding> | RawConfigBinding
 ): void {
 	const serialisableBinding = Object.fromEntries(
 		Object.entries(binding).filter(
@@ -1271,33 +1304,58 @@ export async function provisionBindings(
 			}
 		}
 
-		const patch: RawConfig = {};
-
-		const existingBindingNames = new Map<keyof typeof HANDLERS, Set<string>>();
-
 		const isUsingRedirectedConfig =
 			config.userConfigPath && config.userConfigPath !== config.configPath;
+		const rawUserConfig =
+			isUsingRedirectedConfig || config.targetEnvironment
+				? (
+						await experimental_readRawConfig(
+							{ config: configPath },
+							{ useRedirectIfAvailable: false }
+						)
+					).rawConfig
+				: undefined;
+
+		// Legacy environments fall back to the top-level config when the named
+		// environment does not exist, so their provisioned IDs must do the same.
+		const targetEnvironment =
+			config.targetEnvironment &&
+			rawUserConfig?.env?.[config.targetEnvironment] !== undefined
+				? config.targetEnvironment
+				: undefined;
+
+		const patch: RawConfig = {};
+		let patchEnvironment: RawConfigEnvironment = patch;
+		if (targetEnvironment) {
+			patch.env ??= {};
+			patch.env[targetEnvironment] ??= {};
+			patchEnvironment = patch.env[targetEnvironment];
+		}
+
+		const originalBindings = new Map<
+			keyof typeof HANDLERS,
+			Map<string, RawConfigBinding>
+		>();
 
 		// If we're using a redirected config, then the redirected config potentially has injected
 		// bindings that weren't originally in the user config. These can be provisioned, but we
 		// should not write the IDs back to the user config file (because the bindings weren't there in the first place).
 		if (isUsingRedirectedConfig) {
-			const { rawConfig: unredirectedConfig } =
-				await experimental_readRawConfig(
-					{ config: config.userConfigPath },
-					{ useRedirectIfAvailable: false }
-				);
+			assert(rawUserConfig);
+			const unredirectedEnvironment = targetEnvironment
+				? rawUserConfig.env?.[targetEnvironment]
+				: rawUserConfig;
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {
-				const bindingNames = new Set<string>();
+				const bindingsByName = new Map<string, RawConfigBinding>();
 				for (const binding of getRawConfigBindings(
-					unredirectedConfig,
+					unredirectedEnvironment ?? {},
 					resourceType
 				)) {
-					bindingNames.add(binding.binding);
+					bindingsByName.set(binding.binding, binding);
 				}
-				existingBindingNames.set(resourceType, bindingNames);
+				originalBindings.set(resourceType, bindingsByName);
 			}
 		}
 
@@ -1307,14 +1365,33 @@ export async function provisionBindings(
 			}
 
 			// See above for why we skip writing back some bindings to the config file.
-			if (
-				isUsingRedirectedConfig &&
-				!existingBindingNames.get(binding.type)?.has(bindingName)
-			) {
+			const originalBindingsByName = originalBindings.get(binding.type);
+			const originalBinding = originalBindingsByName?.get(bindingName);
+			if (isUsingRedirectedConfig) {
+				if (originalBinding) {
+					originalBindingsByName?.set(
+						bindingName,
+						addProvisionedIdentifier(originalBinding, binding)
+					);
+				}
 				continue;
 			}
-			const bindingToWrite = toConfigBinding(bindingName, binding);
-			addBindingToPatch(patch, binding.type, bindingToWrite);
+
+			addBindingToPatch(
+				patchEnvironment,
+				binding.type,
+				toConfigBinding(bindingName, binding)
+			);
+		}
+
+		if (isUsingRedirectedConfig) {
+			// Updating existing Map entries above retains their insertion order, so
+			// positional array patches follow the original user config's order.
+			for (const [resourceType, bindingsByName] of originalBindings) {
+				for (const binding of bindingsByName.values()) {
+					addBindingToPatch(patchEnvironment, resourceType, binding);
+				}
+			}
 		}
 
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
