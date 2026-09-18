@@ -1,5 +1,75 @@
 # @cloudflare/containers-shared
 
+## 0.16.5
+
+### Patch Changes
+
+- [#15673](https://github.com/cloudflare/workers-sdk/pull/15673) [`2b39fc2`](https://github.com/cloudflare/workers-sdk/commit/2b39fc2c79f7919b0af21603e278dce030c48870) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Support explicit named Container image selection in Wrangler local development
+
+  Wrangler builds or pulls named images configured through Wrangler JSON or TOML and exposes their local tags through `ctx.container.images`. Pass one of those references to `ctx.container.start({ image })` to select the image.
+
+  This extends the experimental Durable Object-managed Containers interface. Named images are opt-in and do not become the Container's default image. A Container without a default image must supply an image or full Container snapshot when starting.
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114)]:
+  - @cloudflare/workers-utils@0.40.0
+  - @cloudflare/cli-shared-helpers@0.1.33
+
+## 0.16.4
+
+### Patch Changes
+
+- Updated dependencies [[`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513)]:
+  - @cloudflare/workers-utils@0.39.1
+  - @cloudflare/cli-shared-helpers@0.1.32
+
+## 0.16.3
+
+### Patch Changes
+
+- [#15597](https://github.com/cloudflare/workers-sdk/pull/15597) [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78) Thanks [@skepticfx](https://github.com/skepticfx)! - Support per-image build options for experimental Durable Object-managed Containers
+
+  Set `build_context` and `build_vars` alongside `dockerfile` in a Container's named `images` entries. Context paths resolve relative to the Wrangler configuration file and default to the Dockerfile's directory. Build variables are passed as Docker build arguments. Entries using the same Dockerfile with different contexts or variables are built separately.
+
+  ```jsonc
+  {
+    "containers": [
+      {
+        "class_name": "Sandbox",
+        "scheduling_policy": "durable_object",
+        "images": {
+          "app": {
+            "dockerfile": "./docker/Dockerfile",
+            "build_context": ".",
+            "build_vars": { "APP_ENV": "production" }
+          }
+        }
+      }
+    ]
+  }
+  ```
+
+- Updated dependencies [[`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`cb0955f`](https://github.com/cloudflare/workers-sdk/commit/cb0955f274102afb30b8502193edf66c0d3cb4d6), [`fa79b26`](https://github.com/cloudflare/workers-sdk/commit/fa79b26ef442303797013c70078c7acdd2c79247), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78)]:
+  - @cloudflare/workers-utils@0.39.0
+  - @cloudflare/cli-shared-helpers@0.1.31
+
+## 0.16.2
+
+### Patch Changes
+
+- [#15606](https://github.com/cloudflare/workers-sdk/pull/15606) [`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d) Thanks [@emily-shen](https://github.com/emily-shen)! - refactor: separate container config from worker/generic config access
+
+- Updated dependencies [[`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d)]:
+  - @cloudflare/workers-utils@0.38.1
+  - @cloudflare/cli-shared-helpers@0.1.30
+
+## 0.16.1
+
+### Patch Changes
+
+- [#15512](https://github.com/cloudflare/workers-sdk/pull/15512) [`7d39eed`](https://github.com/cloudflare/workers-sdk/commit/7d39eed90b6155961b7d342f7b69b6df95d21188) Thanks [@emily-shen](https://github.com/emily-shen)! - Publish `@cloudflare/containers-shared` for internal use
+
+  It remains internal-only and does not provide a stable public API surface.
+
 ## 0.16.0
 
 ### Minor Changes

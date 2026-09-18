@@ -1,8 +1,8 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { evaluateFlag } from "../client";
 import { renderEvaluation } from "../render";
 import { parseContext } from "../shared";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 
 export const flagshipFlagsEvaluateCommand = createCommand({
 	metadata: {
@@ -46,6 +46,7 @@ export const flagshipFlagsEvaluateCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config }) {
@@ -54,7 +55,9 @@ export const flagshipFlagsEvaluateCommand = createCommand({
 		if (args.targetingKey) {
 			context.targetingKey = args.targetingKey;
 		}
-		const result = await evaluateFlag(config, appId, key, context);
+		const result = await withFlagStore(args, config, appId, (store) =>
+			store.evaluateFlag(key, context)
+		);
 		if (args.json) {
 			logger.json(result);
 			return;

@@ -87,6 +87,9 @@ describe("validateBindingRemoteSetting", () => {
 			expect(() =>
 				validateBindingRemoteSetting("kv_namespace", undefined, warn)
 			).not.toThrow();
+			expect(() =>
+				validateBindingRemoteSetting("flagship", undefined, warn)
+			).not.toThrow();
 			expect(warn).not.toHaveBeenCalled();
 		});
 	});

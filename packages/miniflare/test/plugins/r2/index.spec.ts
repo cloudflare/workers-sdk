@@ -158,6 +158,28 @@ test("head: returns metadata for existing keys", async ({ expect }) => {
 	expect(headers.get("Content-Type")).toBe("text/plain");
 	expect(headers.get("X-Key")).toBe("value");
 });
+test("head: writeHttpMetadata() accepts a `Headers` instance from another realm", async ({
+	expect,
+}) => {
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/6047:
+	// user code (e.g. inside Next.js, Astro, or SvelteKit) typically constructs
+	// `Headers` using the platform global, which is backed by a different
+	// `Headers` implementation than the `undici` copy Miniflare uses
+	// internally. This previously caused a `DevalueError` when serialising the
+	// argument to send across the proxy.
+	const { r2 } = ctx;
+	await r2.put("key", "value", {
+		httpMetadata: { contentType: "text/plain" },
+	});
+	const object = await r2.head("key");
+	assert(object !== null);
+
+	const headers = new globalThis.Headers({ "X-Key": "value" });
+	expect(headers).not.toBeInstanceOf(Headers);
+	expect(object.writeHttpMetadata(headers)).toBeUndefined();
+	expect(headers.get("Content-Type")).toBe("text/plain");
+	expect(headers.get("X-Key")).toBe("value");
+});
 test("head: validates key", async ({ expect }) => {
 	await testValidatesKey(expect, {
 		method: "head",

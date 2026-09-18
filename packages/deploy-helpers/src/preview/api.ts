@@ -6,13 +6,14 @@ import type {
 	CfPlacement,
 	CfUserLimits,
 	Config,
+	Json,
 	Observability,
 } from "@cloudflare/workers-utils";
 
 export interface Binding {
 	type: string;
 	text?: string;
-	json?: unknown;
+	json?: Json;
 	namespace_id?: string;
 	workflow_name?: string;
 	destination_address?: string;
@@ -23,9 +24,13 @@ export interface Binding {
 	database_id?: string;
 	database_name?: string;
 	bucket_name?: string;
+	jurisdiction?: string;
 	index_name?: string;
+	instance_name?: string;
 	id?: string;
 	service?: string;
+	environment?: string;
+	cross_account_grant?: string;
 	dataset?: string;
 	namespace?: string;
 	outbound?: {
@@ -112,6 +117,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	compatibility_date?: string;
 	compatibility_flags?: string[];
+	exports?: CfWorkerInit["exports"];
 	annotations?: {
 		"workers/commit_sha"?: string;
 		"workers/message"?: string;
@@ -123,7 +129,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	migrations?: CfWorkerInit["migrations"];
 	limits?: CfUserLimits;
-	placement?: CfPlacement;
+	placement?: CfPlacement | null;
 	cache?: CacheOptions;
 	env?: EnvBindings;
 	containers?: Array<{ class_name: string }>;
@@ -143,24 +149,6 @@ export type UpdatePreviewRequestParams = Omit<
 
 export type PreviewRequestOptions = {
 	ignoreBaseConfig?: boolean;
-};
-
-export type PreviewDefaults = {
-	observability?: Observability;
-	logpush?: boolean;
-	limits?: CfUserLimits;
-	placement?: CfPlacement;
-	cache?: CacheOptions;
-	tail_consumers?: Array<{ name: string }>;
-	env?: EnvBindings;
-};
-
-export type PreviewDefaultsPatch = Partial<Omit<PreviewDefaults, "env">> & {
-	env?: Record<string, Binding | null>;
-};
-
-type WorkerPreviewDefaultsResource = {
-	preview_defaults?: PreviewDefaults;
 };
 
 export type PreviewBaseConfig = {
@@ -354,37 +342,6 @@ export async function patchPreviewDeployment(
 			body: JSON.stringify({ env, annotations }),
 		}
 	);
-}
-
-export async function getWorkerPreviewDefaults(
-	config: Config,
-	accountId: string,
-	workerName: string
-): Promise<PreviewDefaults> {
-	const worker = await fetchResult<WorkerPreviewDefaultsResource>(
-		config,
-		`/accounts/${accountId}/workers/workers/${workerName}`
-	);
-	return worker.preview_defaults ?? {};
-}
-
-export async function editWorkerPreviewDefaults(
-	config: Config,
-	accountId: string,
-	workerName: string,
-	previewDefaults: PreviewDefaultsPatch
-): Promise<PreviewDefaults> {
-	const worker = await fetchResult<WorkerPreviewDefaultsResource>(
-		config,
-		`/accounts/${accountId}/workers/workers/${workerName}`,
-		{
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ preview_defaults: previewDefaults }),
-		}
-	);
-
-	return worker.preview_defaults ?? {};
 }
 
 export async function getPreviewBaseConfig(

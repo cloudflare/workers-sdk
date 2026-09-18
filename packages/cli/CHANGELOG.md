@@ -1,5 +1,47 @@
 # @cloudflare/cli
 
+## 0.1.33
+
+### Patch Changes
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114)]:
+  - @cloudflare/workers-utils@0.40.0
+
+## 0.1.32
+
+### Patch Changes
+
+- Updated dependencies [[`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513)]:
+  - @cloudflare/workers-utils@0.39.1
+
+## 0.1.31
+
+### Patch Changes
+
+- Updated dependencies [[`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`cb0955f`](https://github.com/cloudflare/workers-sdk/commit/cb0955f274102afb30b8502193edf66c0d3cb4d6), [`fa79b26`](https://github.com/cloudflare/workers-sdk/commit/fa79b26ef442303797013c70078c7acdd2c79247), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78)]:
+  - @cloudflare/workers-utils@0.39.0
+
+## 0.1.30
+
+### Patch Changes
+
+- Updated dependencies [[`60d40f8`](https://github.com/cloudflare/workers-sdk/commit/60d40f88e6109ef31aa13a9feb15f5d64b3ffe1d)]:
+  - @cloudflare/workers-utils@0.38.1
+
+## 0.1.29
+
+### Patch Changes
+
+- Updated dependencies [[`36aed7f`](https://github.com/cloudflare/workers-sdk/commit/36aed7f0f2db5056af9df917cf6c22a2be950b1e), [`bff525d`](https://github.com/cloudflare/workers-sdk/commit/bff525d66dd3785481148353d782dd33c3a644ed)]:
+  - @cloudflare/workers-utils@0.38.0
+
+## 0.1.28
+
+### Patch Changes
+
+- Updated dependencies [[`a849e0d`](https://github.com/cloudflare/workers-sdk/commit/a849e0d6d2253034fc158d5442c5124e77a39bd9)]:
+  - @cloudflare/workers-utils@0.37.0
+
 ## 0.1.27
 
 ### Patch Changes

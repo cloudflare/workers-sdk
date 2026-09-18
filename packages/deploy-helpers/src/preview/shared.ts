@@ -7,9 +7,8 @@ import {
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { shortHash, truncateWithSuffix } from "../shared/names";
-import type { Binding, EnvBindings, PreviewDefaults } from "./api";
+import type { Binding, EnvBindings } from "./api";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 const MAX_CONTAINER_APP_NAME_LENGTH = 253;
@@ -390,6 +389,10 @@ export function getBindingValue(binding: Binding): string {
 			return String(binding.queue_name ?? "");
 		case "vectorize":
 			return String(binding.index_name ?? "");
+		case "ai_search_namespace":
+			return String(binding.namespace ?? "");
+		case "ai_search":
+			return String(binding.instance_name ?? "");
 		case "hyperdrive":
 			return String(binding.id ?? "");
 		case "analytics_engine":
@@ -452,17 +455,24 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	for (const r2 of previews?.r2_buckets ?? []) {
-		env[r2.binding] = { type: "r2_bucket", bucket_name: r2.bucket_name };
+		env[r2.binding] = {
+			type: "r2_bucket",
+			bucket_name: r2.bucket_name,
+			jurisdiction: r2.jurisdiction,
+		};
 	}
 
 	for (const service of previews?.services ?? []) {
 		// `cross_account_grant` is internal/non-public-facing, so we access it
 		// through the runtime shape instead of the public type.
-		const crossAccountGrant = (service as { cross_account_grant?: string })
-			.cross_account_grant;
+		const { cross_account_grant: crossAccountGrant, environment } = service as {
+			cross_account_grant?: string;
+			environment?: string;
+		};
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
+			environment,
 			entrypoint: service.entrypoint,
 			...(crossAccountGrant !== undefined && {
 				cross_account_grant: crossAccountGrant,
@@ -508,6 +518,20 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[vectorize.binding] = {
 			type: "vectorize",
 			index_name: vectorize.index_name,
+		};
+	}
+
+	for (const ns of previews?.ai_search_namespaces ?? []) {
+		env[ns.binding] = {
+			type: "ai_search_namespace",
+			namespace: ns.namespace,
+		};
+	}
+
+	for (const search of previews?.ai_search ?? []) {
+		env[search.binding] = {
+			type: "ai_search",
+			instance_name: search.instance_name,
 		};
 	}
 
@@ -759,30 +783,4 @@ export function assemblePreviewScriptSettings(config: Config) {
 	}
 
 	return result;
-}
-
-export function assemblePreviewDefaults(config: Config): PreviewDefaults {
-	const previews = config.previews as PreviewsConfig | undefined;
-	const previewDefaults: PreviewDefaults = {
-		...assemblePreviewScriptSettings(config),
-	};
-
-	const previewEnv = extractConfigBindings(config);
-	if (Object.keys(previewEnv).length > 0) {
-		previewDefaults.env = previewEnv;
-	}
-
-	if (previews?.limits || config.limits) {
-		previewDefaults.limits = previews?.limits ?? config.limits;
-	}
-
-	if (previews?.cache !== undefined || config.cache !== undefined) {
-		previewDefaults.cache = previews?.cache ?? config.cache;
-	}
-
-	if (config.placement) {
-		previewDefaults.placement = parseConfigPlacement(config);
-	}
-
-	return previewDefaults;
 }
