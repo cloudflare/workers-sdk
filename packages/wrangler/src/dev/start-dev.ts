@@ -265,6 +265,7 @@ async function setupDevEnv(
 							? undefined
 							: args.upstreamProtocol === "https",
 				},
+				inferOriginFromRoutes: args.inferOriginFromRoutes,
 				persist: args.persist === false ? false : args.persistTo,
 				liveReload: args.liveReload,
 				testScheduled: args.testScheduled,
