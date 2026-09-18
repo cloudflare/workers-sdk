@@ -1,5 +1,29 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.1.13
+
+### Patch Changes
+
+- Updated dependencies [[`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036), [`a0485d5`](https://github.com/cloudflare/workers-sdk/commit/a0485d5a5e2293b16e77d1302a470537281c2622), [`629ddef`](https://github.com/cloudflare/workers-sdk/commit/629ddef4adb201d808b4b998668261a212632ffe), [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac), [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6)]:
+  - wrangler@4.135.0
+  - miniflare@5.20260918.0-alpha
+
+## 1.1.12
+
+### Patch Changes
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114), [`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef), [`d96b319`](https://github.com/cloudflare/workers-sdk/commit/d96b3193bfb7371da5a28fe36e6b56fb1c6108b0), [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8), [`2b39fc2`](https://github.com/cloudflare/workers-sdk/commit/2b39fc2c79f7919b0af21603e278dce030c48870)]:
+  - wrangler@4.134.0
+  - miniflare@5.20260917.0-alpha
+
+## 1.1.11
+
+### Patch Changes
+
+- Updated dependencies [[`71b6f10`](https://github.com/cloudflare/workers-sdk/commit/71b6f102f258e14e2b1dc23e9643cc74685d35cb), [`ad23e6e`](https://github.com/cloudflare/workers-sdk/commit/ad23e6e42dc81c9dc894248e787ed6c0abbe9028), [`bac0c6a`](https://github.com/cloudflare/workers-sdk/commit/bac0c6a4f0dcf34008a0f67f4a97d068311b57dc), [`be2437a`](https://github.com/cloudflare/workers-sdk/commit/be2437a8b32215dc404266c930db148fc3feb17b), [`bac0c6a`](https://github.com/cloudflare/workers-sdk/commit/bac0c6a4f0dcf34008a0f67f4a97d068311b57dc), [`6f3d7b5`](https://github.com/cloudflare/workers-sdk/commit/6f3d7b58b1f6cd036aca3e5946807bba37776065)]:
+  - miniflare@5.20260916.0-alpha
+  - wrangler@4.133.0
+
 ## 1.1.10
 
 ### Patch Changes

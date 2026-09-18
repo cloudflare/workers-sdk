@@ -1,9 +1,11 @@
 import path from "node:path";
+import { convertToWranglerConfig } from "@cloudflare/config";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
+import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
 import {
 	configFileName,
+	defaultWranglerConfig,
 	formatConfigSnippet,
-	getBindings,
 	getBindingTypeFriendlyName,
 	getDockerPath,
 	UserError,
@@ -28,6 +30,7 @@ import {
 } from "./api";
 import {
 	assemblePreviewScriptSettings,
+	extractBuildOutputBindings,
 	extractConfigBindings,
 	getBranchName,
 	getCommitSha,
@@ -49,6 +52,10 @@ import type {
 	PreviewResource,
 } from "./api";
 import type { PullRequestMetadata } from "./shared";
+import type {
+	ParsedOutputSettingsConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	Config,
@@ -98,6 +105,36 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
+export type PreviewBuildOutputSettings = ParsedOutputSettingsConfig & {
+	isPreview: true;
+};
+
+export type PreviewBuildOutput = {
+	// Authoritative Worker settings and bindings from Build Output.
+	workerConfig: ParsedOutputWorkerConfig;
+	// Project settings from Build Output, including the compliance region.
+	projectSettings: PreviewBuildOutputSettings;
+	// Compiled Worker code and modules, if this is not an assets-only build.
+	buildResult?: WorkerBuildResult;
+	// Static asset artifacts emitted by the build, if any.
+	assets?: Pick<PreviewAssetsOptions, "directory" | "_headers" | "_redirects">;
+};
+
+type PreviewWorkerBuildResult = WorkerBuildResult & {
+	mainModuleName?: string;
+};
+
+/** Verify that Build Output was produced with Preview configuration. */
+export function assertPreviewBuildOutputSettings(
+	settings: ParsedOutputSettingsConfig | undefined
+): asserts settings is PreviewBuildOutputSettings {
+	if (settings?.isPreview !== true) {
+		throw new UserError("Build Output was not created by a Preview build.", {
+			telemetryMessage: "preview build output missing preview intent",
+		});
+	}
+}
+
 // Building and applying a container to Cloudchamber requires wrangler-only
 // dependencies (Docker, the containers API client) that deploy-helpers has
 // no direct dependency on. As with `DeployCallbacks` (see ../deploy/deploy.ts),
@@ -111,6 +148,7 @@ export type PreviewResult = {
 // does need the deployment, since that's what resolves each container's DO
 // namespace_id, so it still runs after.
 export type PreviewCallbacks = {
+	productionBindingsExpectedInPreview?: Record<string, { type: string }>;
 	getNormalizedContainerOptions:
 		| ((
 				config: Config,
@@ -482,30 +520,33 @@ function getPreviewMigrationsToUpload(
 }
 
 function buildResultToDeploymentModules(
-	buildResult: WorkerBuildResult,
+	buildResult: PreviewWorkerBuildResult | undefined,
 	assetFiles?: { _headers?: string; _redirects?: string }
-): { main_module: string; modules: PreviewDeploymentModule[] } {
-	const mainModuleName = path.basename(buildResult.resolvedEntryPointPath);
-	const mainContentType =
-		moduleTypeMimeType[buildResult.bundleType] ?? "application/octet-stream";
-	const deploymentModules: PreviewDeploymentModule[] = [
-		{
-			name: mainModuleName,
-			content_type: mainContentType,
-			content: buildResult.content,
-		},
-		...buildResult.modules.map((mod) => {
-			const contentType =
-				moduleTypeMimeType[mod.type ?? "text"] ?? "application/octet-stream";
-			return {
+): { main_module?: string; modules: PreviewDeploymentModule[] } {
+	let mainModuleName: string | undefined;
+	const deploymentModules: PreviewDeploymentModule[] = [];
+	if (buildResult) {
+		mainModuleName =
+			buildResult.mainModuleName ??
+			path.basename(buildResult.resolvedEntryPointPath);
+		deploymentModules.push(
+			{
+				name: mainModuleName,
+				content_type:
+					moduleTypeMimeType[buildResult.bundleType] ??
+					"application/octet-stream",
+				content: buildResult.content,
+			},
+			...buildResult.modules.map((mod) => ({
 				name: mod.name,
-				content_type: contentType,
+				content_type:
+					moduleTypeMimeType[mod.type ?? "text"] ?? "application/octet-stream",
 				content: mod.content,
-			};
-		}),
-	];
+			}))
+		);
+	}
 
-	if (buildResult.sourceMaps) {
+	if (buildResult?.sourceMaps) {
 		deploymentModules.push(
 			...buildResult.sourceMaps.map((sourceMap) => ({
 				name: sourceMap.name,
@@ -536,7 +577,7 @@ function buildResultToDeploymentModules(
 
 async function assemblePreviewDeploymentSettings(
 	config: Config,
-	buildResult: WorkerBuildResult,
+	buildResult: PreviewWorkerBuildResult | undefined,
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
@@ -557,8 +598,12 @@ async function assemblePreviewDeploymentSettings(
 		_headers: options.assetsOptions?._headers,
 		_redirects: options.assetsOptions?._redirects,
 	});
-	request.main_module = deploymentModules.main_module;
-	request.modules = deploymentModules.modules;
+	if (deploymentModules.main_module !== undefined) {
+		request.main_module = deploymentModules.main_module;
+	}
+	if (deploymentModules.modules.length > 0) {
+		request.modules = deploymentModules.modules;
+	}
 
 	if (options.assetsOptions) {
 		const assetsUploadResult = await syncAssets(
@@ -653,8 +698,10 @@ async function assemblePreviewDeploymentSettings(
 	} else if (config.cache !== undefined) {
 		request.cache = config.cache;
 	}
-	if (config.placement) {
-		request.placement = parseConfigPlacement(config);
+	const placement = previews?.placement ?? config.placement;
+	if (placement !== undefined) {
+		request.placement =
+			placement.mode === "off" ? null : parseConfigPlacement(placement);
 	}
 
 	// Declare which DO classes are container-backed so the runtime populates
@@ -744,9 +791,6 @@ function formatPreviewDeploymentSummary(
 	return [
 		`${chalk.bold("Preview:")} ${previewResource.name} ${statusLabel}`,
 		...formatUrlLines("Preview", previewResource.urls),
-		"",
-		`${chalk.bold("Deployment ID:")} ${deployment.id}`,
-		...formatUrlLines("Deployment", deployment.urls),
 		...(pullRequestUrl || pullRequestNumber
 			? [
 					`${chalk.bold("Pull Request:")} ${
@@ -754,12 +798,13 @@ function formatPreviewDeploymentSummary(
 					}`,
 				]
 			: []),
+		...formatUrlLines("Unique Deployment", deployment.urls),
 		...(hasActiveUrls ? [] : [formatNoActivePreviewUrlsMessage(config)]),
 	].join("\n");
 }
 
 function logMissingPreviewsBindingsWarning(
-	topLevelBindings: Record<string, { type: string }>,
+	productionBindingsExpectedInPreview: Record<string, { type: string }>,
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
 	localPreviewBindings: Record<string, Binding>
 ) {
@@ -767,27 +812,29 @@ function logMissingPreviewsBindingsWarning(
 		...Object.keys(remotePreviewDefaultBindings ?? {}),
 		...Object.keys(localPreviewBindings),
 	]);
-	const missingBindings = Object.fromEntries(
-		Object.entries(topLevelBindings).filter(
+	const missingPreviewBindings = Object.fromEntries(
+		Object.entries(productionBindingsExpectedInPreview).filter(
 			([name]) => !availableBindingNames.has(name)
 		)
 	);
 
-	if (Object.keys(missingBindings).length === 0) {
+	if (Object.keys(missingPreviewBindings).length === 0) {
 		return;
 	}
 
-	logger.warn(`Your configuration has diverged.
-The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker.
+	logger.warn(`These bindings are configured for your production Worker but not for Previews:
 
-${Object.entries(missingBindings)
+${Object.entries(missingPreviewBindings)
 	.map(
 		([name, binding]) =>
 			`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type as Parameters<typeof getBindingTypeFriendlyName>[0]))}`
 	)
 	.join("\n")}
 
-Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update the Previews settings of your Worker in the Cloudflare dashboard.`);
+Parts of your Worker that depend on these bindings may not work correctly in the Preview. If this is not intentional, add Preview-safe values to the ${chalk.cyan("previews")} field.
+
+Configuration: https://developers.cloudflare.com/workers/previews/configuration/
+Resources: https://developers.cloudflare.com/workers/previews/resources/`);
 }
 
 /**
@@ -841,16 +888,16 @@ async function provisionParentWorker(
  * Full preview create/update + deployment orchestration.
  * The wrangler handler calls this after auth + build.
  */
-export async function preview(
+async function runPreview(
 	accountId: string,
 	args: PreviewArgs,
 	config: Config,
-	buildResult: WorkerBuildResult,
+	buildResult: PreviewWorkerBuildResult | undefined,
 	assetsOptions: PreviewAssetsOptions | undefined,
-	callbacks: PreviewCallbacks
+	callbacks: PreviewCallbacks,
+	workerName: string,
+	replaceTailConsumersAfterCreate = false
 ): Promise<PreviewResult> {
-	const workerName = resolveWorkerName(args, config);
-
 	// Parse the secrets file up front so a bad path or malformed contents
 	// fails before the preview is created and assets are uploaded.
 	let secrets: Record<string, string> | undefined;
@@ -903,6 +950,7 @@ export async function preview(
 		}
 	}
 	const isNewPreview = !existingPreview;
+	const previewRequest = assemblePreviewScriptSettings(config);
 
 	let previewResource: PreviewResource;
 	if (isNewPreview) {
@@ -910,11 +958,22 @@ export async function preview(
 			config,
 			accountId,
 			workerName,
-			{ name: previewName, ...assemblePreviewScriptSettings(config) },
+			{ name: previewName, ...previewRequest },
 			{ ignoreBaseConfig }
 		);
+		if (
+			replaceTailConsumersAfterCreate &&
+			previewRequest.tail_consumers !== undefined
+		) {
+			previewResource = await editPreview(
+				config,
+				accountId,
+				workerName,
+				previewIdentifier,
+				{ tail_consumers: previewRequest.tail_consumers }
+			);
+		}
 	} else {
-		const previewRequest = assemblePreviewScriptSettings(config);
 		if (Object.keys(previewRequest).length > 0) {
 			previewResource = await editPreview(
 				config,
@@ -999,6 +1058,21 @@ export async function preview(
 			JSON.stringify({ preview: previewResource, deployment }, null, 2)
 		);
 	} else {
+		const productionBindingsExpectedInPreview =
+			callbacks.productionBindingsExpectedInPreview ?? {};
+		if (Object.keys(productionBindingsExpectedInPreview).length > 0) {
+			const previewBaseConfig = await getPreviewBaseConfig(
+				config,
+				accountId,
+				workerName
+			);
+			logMissingPreviewsBindingsWarning(
+				productionBindingsExpectedInPreview,
+				previewBaseConfig.env,
+				deploymentRequest.env ?? {}
+			);
+		}
+
 		logger.log(
 			formatPreviewDeploymentSummary(
 				config,
@@ -1008,26 +1082,170 @@ export async function preview(
 				pullRequest
 			)
 		);
-
-		const topLevelBindings = getBindings(config);
-		if (Object.keys(topLevelBindings).length > 0) {
-			const previewBaseConfig = await getPreviewBaseConfig(
-				config,
-				accountId,
-				workerName
-			);
-			// Compare against the env that was actually uploaded (config bindings
-			// plus --var and --secrets-file values), not just the config, so
-			// CLI-supplied bindings aren't reported as missing.
-			logMissingPreviewsBindingsWarning(
-				topLevelBindings,
-				previewBaseConfig.env,
-				deploymentRequest.env ?? {}
-			);
-		}
 	}
 
 	return { preview: previewResource, deployment, isNewPreview };
+}
+
+/**
+ * Upload a Preview from Wrangler configuration.
+ *
+ * Wrangler resolves its Worker name from CLI and config precedence before
+ * entering the shared upload flow. Build Output already contains its final name.
+ *
+ * @param accountId Account that owns the parent Worker.
+ * @param args Wrangler Preview arguments.
+ * @param config Resolved Wrangler configuration.
+ * @param buildResult Compiled Worker code and modules.
+ * @param assetsOptions Static asset configuration and artifacts.
+ * @param callbacks Wrangler container integrations.
+ */
+export async function preview(
+	accountId: string,
+	args: PreviewArgs,
+	config: Config,
+	buildResult: WorkerBuildResult,
+	assetsOptions: PreviewAssetsOptions | undefined,
+	callbacks: PreviewCallbacks
+): Promise<PreviewResult> {
+	return runPreview(
+		accountId,
+		args,
+		config,
+		buildResult,
+		assetsOptions,
+		callbacks,
+		resolveWorkerName(args, config)
+	);
+}
+
+/**
+ * Upload a Preview from resolved Build Output configuration.
+ *
+ * @param accountId Account that owns the parent Worker.
+ * @param args Preview name and deployment annotations.
+ * @param buildOutput Exact configuration and artifacts emitted by the build.
+ */
+export async function previewBuildOutput(
+	accountId: string,
+	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json">,
+	buildOutput: PreviewBuildOutput
+): Promise<PreviewResult> {
+	const { workerConfig, projectSettings, buildResult, assets } = buildOutput;
+	assertPreviewBuildOutputSettings(projectSettings);
+	// TODO: Upload domains and triggers when Preview deployments support them.
+	// Wrangler can't configure them today, so reject them instead of ignoring them.
+	if (workerConfig.domains?.length) {
+		throw new UserError(
+			"Preview uploads from Build Output don't support the `domains` field.",
+			{
+				telemetryMessage: "preview build output custom domains not supported",
+			}
+		);
+	}
+	if (workerConfig.triggers?.length) {
+		throw new UserError(
+			"Preview uploads from Build Output don't support the `triggers` field.",
+			{
+				telemetryMessage: "preview build output triggers not supported",
+			}
+		);
+	}
+	if (workerConfig.tailConsumers?.some((consumer) => consumer.streaming)) {
+		throw new UserError(
+			"Preview uploads from Build Output don't support streaming tail consumers.",
+			{
+				telemetryMessage:
+					"preview build output streaming tail consumer not supported",
+			}
+		);
+	}
+	if (
+		Object.values(workerConfig.exports ?? {}).some(
+			(configExport) =>
+				"container" in configExport && configExport.container !== undefined
+		)
+	) {
+		throw new UserError(
+			"Preview uploads from Build Output don't support Container-backed Durable Objects.",
+			{
+				telemetryMessage: "preview build output containers not supported",
+			}
+		);
+	}
+	if (
+		workerConfig.unsafe?.capnp !== undefined ||
+		Object.keys(workerConfig.unsafe?.metadata ?? {}).length > 0
+	) {
+		throw new UserError(
+			"Preview uploads from Build Output don't support unsafe metadata or Cap'n Proto schemas.",
+			{
+				telemetryMessage: "preview build output unsafe settings not supported",
+			}
+		);
+	}
+	const convertedConfig = convertToWranglerConfig(
+		workerConfig,
+		projectSettings
+	);
+	const previewBuildResult = buildResult && {
+		...buildResult,
+		mainModuleName: workerConfig.manifest?.mainModule,
+	};
+	const bindings = extractBuildOutputBindings(convertedConfig);
+	const previewConfig: Config = {
+		...defaultWranglerConfig,
+		compliance_region: convertedConfig.compliance_region,
+		name: workerConfig.name,
+		compatibility_date: convertedConfig.compatibility_date,
+		compatibility_flags: convertedConfig.compatibility_flags ?? [],
+		exports: convertedConfig.exports ?? {},
+		limits: convertedConfig.limits,
+		cache: convertedConfig.cache,
+		placement: convertedConfig.placement,
+		observability: convertedConfig.observability,
+		logpush: convertedConfig.logpush,
+		workers_dev: false,
+		preview_urls: true,
+		previews: {
+			tail_consumers:
+				convertedConfig.tail_consumers ??
+				(workerConfig.tailConsumers === undefined ? undefined : []),
+			unsafe: {
+				bindings: Object.entries(bindings).map(([name, binding]) => ({
+					name,
+					...binding,
+				})),
+			},
+		},
+		assets: convertedConfig.assets,
+	};
+	const assetsOptions = assets && {
+		...assets,
+		_headers:
+			assets._headers ?? maybeGetFile(path.join(assets.directory, "_headers")),
+		_redirects:
+			assets._redirects ??
+			maybeGetFile(path.join(assets.directory, "_redirects")),
+		assetConfig: {
+			html_handling: convertedConfig.assets?.html_handling,
+			not_found_handling: convertedConfig.assets?.not_found_handling,
+		},
+		run_worker_first: convertedConfig.assets?.run_worker_first,
+	};
+	return runPreview(
+		accountId,
+		{ ...args, ignoreBaseConfig: false },
+		previewConfig,
+		previewBuildResult,
+		assetsOptions,
+		{
+			getNormalizedContainerOptions: undefined,
+			deployPreviewContainers: undefined,
+		},
+		workerConfig.name,
+		true
+	);
 }
 
 /**

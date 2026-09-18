@@ -35,7 +35,7 @@ const durableObjectContainer = defineContainer({
 		primary: { dockerfile: "./Dockerfile" },
 		fallback: { reference: "registry.example.com/fallback:latest" },
 	},
-	observability: { targetInstanceCount: 2 },
+	observability: { enabled: true, logs: { enabled: true } },
 });
 
 defineWorker({
@@ -77,6 +77,16 @@ const invalidObservabilityTargets: ContainerConfigInput = {
 	},
 };
 void invalidObservabilityTargets;
+
+const invalidDurableObjectObservability: ContainerConfigInput = {
+	name: "invalid-durable-object-observability",
+	schedulingPolicy: "durable-object",
+	observability: {
+		// @ts-expect-error Durable Object-managed Containers do not support instance targeting.
+		targetInstanceCount: 2,
+	},
+};
+void invalidDurableObjectObservability;
 
 type Equal<T, U> =
 	(<V>() => V extends T ? 1 : 2) extends <V>() => V extends U ? 1 : 2

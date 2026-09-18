@@ -1,5 +1,31 @@
 # @cloudflare/workers-utils
 
+## 0.40.1
+
+### Patch Changes
+
+- [#15329](https://github.com/cloudflare/workers-sdk/pull/15329) [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Evaluate Flagship flags locally during development
+
+  Flagship bindings now use the local Miniflare store by default in Wrangler and the Vite plugin, keeping development offline and isolated from production flags. Set `remote: true` on a binding to continue using its remote app.
+
+  Use `wrangler flagship flags pull <APP_ID>` to seed the store from a remote app. Flag management commands also accept `--local` to read and update the local store directly.
+
+## 0.40.0
+
+### Minor Changes
+
+- [#15684](https://github.com/cloudflare/workers-sdk/pull/15684) [`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for configuring real-time Issues with `observability.issues.enabled`
+
+  Wrangler now validates and uploads the Issues setting alongside the existing logs and traces observability options. The experimental configuration format supports the equivalent `observability.issues.enabled` option.
+
+## 0.39.1
+
+### Patch Changes
+
+- [#15669](https://github.com/cloudflare/workers-sdk/pull/15669) [`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513) Thanks [@Shubham-Padkonde](https://github.com/Shubham-Padkonde)! - Reject Windows drive prefixes when converting file paths to URL paths
+
+  `toUrlPath()` now throws for drive-prefixed paths as documented. Previously it used `console.assert()`, which only logged the invalid input and returned a path containing the drive prefix.
+
 ## 0.39.0
 
 ### Minor Changes

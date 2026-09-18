@@ -370,8 +370,12 @@ export async function checkExposedPorts(
 		formatString: "{{ len .Config.ExposedPorts }}",
 	});
 	if (output === "0") {
+		const containerName =
+			options.image_name === undefined
+				? options.class_name
+				: `${options.class_name}.${options.image_name}`;
 		throw new UserError(
-			`The container "${options.class_name}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
+			`The container "${containerName}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
 				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n",
 			{ telemetryMessage: false }
 		);
@@ -466,50 +470,3 @@ export const getDockerHostFromEnv = (): string => {
 		? "//./pipe/docker_engine"
 		: "unix:///var/run/docker.sock";
 };
-
-/**
- * Get all repository tags for a given image
- */
-export async function getImageRepoTags(
-	dockerPath: string,
-	imageTag: string
-): Promise<string[]> {
-	try {
-		const output = await dockerImageInspect(dockerPath, {
-			imageTag,
-			formatString: "{{ range .RepoTags }}{{ . }}\n{{ end }}",
-		});
-		return output.split("\n").filter((tag) => tag.trim() !== "");
-	} catch {
-		return [];
-	}
-}
-
-/**
- * Checks if the given image has any duplicate tags from previous dev sessions,
- * and remove them if so.
- */
-export async function cleanupDuplicateImageTags(
-	dockerPath: string,
-	imageTag: string
-): Promise<void> {
-	try {
-		const repoTags = await getImageRepoTags(dockerPath, imageTag);
-		const currentBuildId = getImageTag(imageTag);
-		// Remove all cloudflare-dev tags from previous sessions except the current dev session.
-		const tagsToRemove = repoTags.filter(
-			(tag) =>
-				tag.startsWith("cloudflare-dev") && getImageTag(tag) !== currentBuildId
-		);
-		if (tagsToRemove.length > 0) {
-			runDockerCmdWithOutput(dockerPath, ["rmi", ...tagsToRemove]);
-		}
-	} catch {}
-}
-
-function getImageTag(imageTag: string): string | undefined {
-	const tagSeparatorIndex = imageTag.lastIndexOf(":");
-	return tagSeparatorIndex === -1
-		? undefined
-		: imageTag.slice(tagSeparatorIndex + 1);
-}

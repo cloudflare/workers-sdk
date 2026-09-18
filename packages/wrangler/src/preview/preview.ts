@@ -10,13 +10,15 @@ import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { deployPreviewContainers, verifyContainersScope } from "./containers";
+import { ensurePreviewsConfig } from "./ensure-config";
+import { getProductionBindingsExpectedInPreview } from "./preview-config";
 
 export const previewCommand = createCommand({
 	metadata: {
 		description: "👀 Create a Preview deployment of the current Worker",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	positionalArgs: ["script"],
 	args: {
@@ -77,44 +79,52 @@ export const previewCommand = createCommand({
 	},
 	handler: async function previewHandler(args, { config }) {
 		const accountId = await requireAuth(config);
+		const productionBindingsExpectedInPreview =
+			getProductionBindingsExpectedInPreview(config);
+		const previewConfig = await ensurePreviewsConfig(accountId, args, config);
 
-		const entry = await getEntry({ script: args.script }, config, "deploy");
+		const entry = await getEntry(
+			{ script: args.script },
+			previewConfig,
+			"deploy"
+		);
 		const destination = getWranglerTmpDir(entry.projectRoot, "preview");
 		const buildResult = await buildWorker(
 			{
 				entry,
-				name: config.name,
-				compatibilityDate: config.compatibility_date,
-				compatibilityFlags: config.compatibility_flags,
-				uploadSourceMaps: config.upload_source_maps,
-				jsxFactory: config.jsx_factory,
-				jsxFragment: config.jsx_fragment,
-				tsconfig: config.tsconfig,
-				minify: config.minify,
-				noBundle: config.no_bundle ?? false,
-				defines: config.previews?.define ?? {},
-				alias: { ...config.alias },
-				doBindings: config.previews?.durable_objects?.bindings ?? [],
-				workflowBindings: config.previews?.workflows ?? [],
+				name: previewConfig.name,
+				compatibilityDate: previewConfig.compatibility_date,
+				compatibilityFlags: previewConfig.compatibility_flags,
+				uploadSourceMaps: previewConfig.upload_source_maps,
+				jsxFactory: previewConfig.jsx_factory,
+				jsxFragment: previewConfig.jsx_fragment,
+				tsconfig: previewConfig.tsconfig,
+				minify: previewConfig.minify,
+				noBundle: previewConfig.no_bundle ?? false,
+				defines: previewConfig.previews?.define ?? {},
+				alias: { ...previewConfig.alias },
+				doBindings: previewConfig.previews?.durable_objects?.bindings ?? [],
+				workflowBindings: previewConfig.previews?.workflows ?? [],
 				destination,
 				outdir: undefined,
 				metafile: undefined,
 			},
-			config
+			previewConfig
 		);
 
 		const assetsOptions = getAssetsOptions({
 			args: { assets: undefined, script: args.script },
-			config,
+			config: previewConfig,
 		});
 
 		const { preview: previewResource, deployment } = await preview(
 			accountId,
 			{ ...args, cliVars: collectKeyValues(args.var) },
-			config,
+			previewConfig,
 			buildResult,
 			assetsOptions,
 			{
+				productionBindingsExpectedInPreview,
 				getNormalizedContainerOptions,
 				deployPreviewContainers,
 				verifyContainersScope,

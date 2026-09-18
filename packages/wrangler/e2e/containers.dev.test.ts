@@ -1,12 +1,9 @@
 import { execSync } from "node:child_process";
-import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { stripVTControlCharacters } from "node:util";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
-import { startContainerBuild } from "../../containers-shared/src/build";
-import { generateContainerBuildId } from "../../containers-shared/src/utils";
 import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
@@ -89,8 +86,14 @@ for (const source of imageSource) {
 									case "/status":
 										return new Response(JSON.stringify(this.container.running));
 
+									case "/images":
+										return Response.json(Object.keys(this.container.images));
+
 									case "/start":
 										this.container.start({
+											...(this.container.images.app === undefined
+												? {}
+												: { image: this.container.images.app }),
 											entrypoint: ["node", "app.js"],
 											env: { MESSAGE: "I'm an env var!" },
 											enableInternet: false,
@@ -298,156 +301,72 @@ for (const source of imageSource) {
 			await worker.stop();
 		});
 
-		it("should clean up duplicate image tags after build", async ({
-			expect,
-		}) => {
-			const dockerPath = getDockerPath();
-			const fakeBuildID = generateContainerBuildId();
-			const initialImageTag = `cloudflare-dev/test-cleanup:${fakeBuildID}`;
-
-			// First, build an image directly to create a duplicate tag scenario
-			const build = await startContainerBuild({
-				pathToDocker: dockerPath,
-				build: {
-					tag: initialImageTag,
-					pathToDockerfile: path.resolve(helper.tmpPath, "./Dockerfile"),
-					buildContext: helper.tmpPath,
-					args: {},
-					platform: "linux/amd64",
-				},
-			});
-			await build.ready;
-
-			const initialRepoTags = JSON.parse(
-				execSync(
-					`${dockerPath} image inspect ${initialImageTag} --format "{{ json .RepoTags }}"`,
-					{ encoding: "utf8" }
-				)
-			);
-			expect(initialRepoTags.length).toBeGreaterThan(0);
-
-			// wrangler dev will rebuild/pull and trigger cleanup
-			const worker = helper.runLongLived("wrangler dev");
-			const ready = await worker.waitForReady();
-
-			// check that the container can still start
-			await waitFor(async () => {
-				const response = await fetch(`${ready.url}/status`);
-				expect(response.status).toBe(200);
-				const status = await response.json();
-				expect(status).toBe(false);
-			});
-
-			// expect the original tag not to be there any more
-			expect(() => {
-				execSync(`${dockerPath} image inspect ${initialImageTag}`);
-			}).toThrow();
-		});
-
 		it.runIf(source === "build")(
-			"preserves sibling image tags when containers share a Dockerfile",
+			"selects a named image without configuring a default",
 			async ({ expect }) => {
-				const dockerPath = getDockerPath();
-				const classNames = [
-					"E2ESharedDockerfileContainerA",
-					"E2ESharedDockerfileContainerB",
-				] as const;
-				const sharedBuildIdsBefore = getSharedContainerBuildIds(
-					dockerPath,
-					classNames
-				);
-
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
 						...wranglerConfig,
+						migrations: [{ tag: "v1", new_sqlite_classes: ["E2EContainer"] }],
 						containers: [
 							{
-								image: "./Dockerfile",
-								class_name: classNames[0],
-								name: `${workerName}-shared-container-a`,
-							},
-							{
-								image: "./Dockerfile",
-								class_name: classNames[1],
-								name: `${workerName}-shared-container-b`,
-							},
-						],
-						durable_objects: {
-							bindings: [
-								{
-									class_name: "E2EContainer",
-									name: "CONTAINER",
-								},
-								{
-									class_name: classNames[0],
-									name: "CONTAINER_A",
-								},
-								{
-									class_name: classNames[1],
-									name: "CONTAINER_B",
-								},
-							],
-						},
-						migrations: [
-							{
-								tag: "v1",
-								new_classes: ["E2EContainer", ...classNames],
+								name: `${workerName}-container`,
+								class_name: "E2EContainer",
+								scheduling_policy: "durable_object",
+								images: { app: { dockerfile: "./Dockerfile" } },
 							},
 						],
 					}),
-					"src/index.ts": dedent`
-						import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
-
-						export class TestService extends WorkerEntrypoint {
-							async fetch(req: Request) {
-								return new Response("hello from worker");
-							}
-						}
-
-						export class E2EContainer extends DurableObject<Env> {
-							container: globalThis.Container;
-
-							constructor(ctx: DurableObjectState, env: Env) {
-								super(ctx, env);
-								this.container = ctx.container!;
-							}
-
-							async fetch(req: Request) {
-								const path = new URL(req.url).pathname;
-								switch (path) {
-									case "/status":
-										return new Response(JSON.stringify(this.container.running));
-
-									default:
-										return new Response("Hi from Container DO");
-								}
-							}
-						}
-
-						export class E2ESharedDockerfileContainerA extends E2EContainer {}
-						export class E2ESharedDockerfileContainerB extends E2EContainer {}
-
-						export default {
-							async fetch(request, env): Promise<Response> {
-								const id = env.CONTAINER.idFromName("container");
-								const stub = env.CONTAINER.get(id);
-								return stub.fetch(request);
-							},
-						} satisfies ExportedHandler<Env>;`,
 				});
 
 				const worker = helper.runLongLived("wrangler dev");
-				await worker.readUntil(/Container image\(s\) ready/, 30_000);
+				const ready = await worker.waitForReady();
 
-				const sharedBuildIdsAfter = getSharedContainerBuildIds(
-					dockerPath,
-					classNames
-				);
-				const newSharedBuildIds = Array.from(sharedBuildIdsAfter).filter(
-					(buildId) => !sharedBuildIdsBefore.has(buildId)
-				);
+				const imagesResponse = await fetch(`${ready.url}/images`);
+				expect(imagesResponse.status).toBe(200);
+				expect(await imagesResponse.json()).toEqual(["app"]);
 
-				expect(newSharedBuildIds).toHaveLength(1);
+				const startResponse = await fetch(`${ready.url}/start`);
+				expect(startResponse.status).toBe(200);
+
+				await waitFor(async () => {
+					const response = await fetch(`${ready.url}/fetch`, {
+						signal: AbortSignal.timeout(3_000),
+						headers: { "MF-Disable-Pretty-Error": "true" },
+					});
+					expect(await response.text()).toBe(
+						"Hello World! Have an env var! I'm an env var!"
+					);
+				});
+
+				await worker.stop();
+			}
+		);
+
+		it.runIf(source === "build")(
+			"attaches a Container when configured images are omitted",
+			async ({ expect }) => {
+				await helper.seed({
+					"wrangler.json": JSON.stringify({
+						...wranglerConfig,
+						migrations: [{ tag: "v1", new_sqlite_classes: ["E2EContainer"] }],
+						containers: [
+							{
+								name: `${workerName}-container`,
+								class_name: "E2EContainer",
+								scheduling_policy: "durable_object",
+							},
+						],
+					}),
+				});
+
+				const worker = helper.runLongLived("wrangler dev");
+				const ready = await worker.waitForReady();
+				const imagesResponse = await fetch(`${ready.url}/images`);
+
+				expect(imagesResponse.status).toBe(200);
+				expect(await imagesResponse.json()).toEqual([]);
+				await worker.stop();
 			}
 		);
 
@@ -574,33 +493,4 @@ const getContainerIds = (class_name: string) => {
 		}
 	});
 	return ids.filter(Boolean);
-};
-
-const getSharedContainerBuildIds = (
-	dockerPath: string,
-	classNames: readonly string[]
-) => {
-	const [firstClassName, ...otherClassNames] = classNames;
-	if (firstClassName === undefined) {
-		return new Set<string>();
-	}
-
-	const sharedBuildIds = getContainerBuildIds(dockerPath, firstClassName);
-	for (const className of otherClassNames) {
-		const buildIds = getContainerBuildIds(dockerPath, className);
-		for (const buildId of sharedBuildIds) {
-			if (!buildIds.has(buildId)) {
-				sharedBuildIds.delete(buildId);
-			}
-		}
-	}
-	return sharedBuildIds;
-};
-
-const getContainerBuildIds = (dockerPath: string, className: string) => {
-	const output = execSync(
-		`${dockerPath} image ls cloudflare-dev/${className.toLowerCase()} --format "{{.Tag}}"`,
-		{ encoding: "utf8" }
-	);
-	return new Set(output.split("\n").filter((line) => line.trim()));
 };

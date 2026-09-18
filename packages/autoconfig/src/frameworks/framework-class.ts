@@ -11,6 +11,8 @@ export abstract class Framework {
 	readonly id: FrameworkInfo["id"];
 	readonly name: FrameworkInfo["name"];
 	declare readonly env?: Readonly<Record<string, string>>;
+	/** Whether this framework's build and development commands accept `--mode`. */
+	readonly supportsMode: boolean = false;
 
 	#frameworkVersion: string | undefined;
 	get frameworkVersion(): string {

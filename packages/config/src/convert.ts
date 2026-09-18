@@ -2,6 +2,7 @@ import {
 	UserError,
 	type RawConfig,
 	type ContainerApp,
+	type DurableObjectContainerImage,
 	type Exports,
 } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
@@ -59,13 +60,6 @@ export function convertToWranglerConfig(
 }
 
 function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
-	if (container.schedulingPolicy === "durable-object") {
-		throw new UserError(
-			"Durable Object-managed Containers are not currently supported by `convertToWranglerConfig()`.",
-			{ telemetryMessage: false }
-		);
-	}
-
 	const converted: ContainerApp = {
 		name: container.name,
 	};
@@ -77,6 +71,18 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 	}
 	if (container.unsafe !== undefined) {
 		converted.unsafe = container.unsafe;
+	}
+	if (container.schedulingPolicy === "durable-object") {
+		converted.scheduling_policy = "durable_object";
+		if (container.images !== undefined) {
+			converted.images = Object.fromEntries(
+				Object.entries(container.images).map(([name, image]) => [
+					name,
+					convertDurableObjectContainerImage(image),
+				])
+			);
+		}
+		return converted;
 	}
 
 	converted.image =
@@ -139,6 +145,32 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 		}
 	}
 
+	return converted;
+}
+
+type DurableObjectInputImage = NonNullable<
+	Extract<
+		ParsedInputContainerConfig,
+		{ schedulingPolicy: "durable-object" }
+	>["images"]
+>[string];
+
+function convertDurableObjectContainerImage(
+	image: DurableObjectInputImage
+): DurableObjectContainerImage {
+	if ("reference" in image) {
+		return { image: image.reference };
+	}
+
+	const converted: DurableObjectContainerImage = {
+		dockerfile: image.dockerfile,
+	};
+	if (image.buildContext !== undefined) {
+		converted.build_context = image.buildContext;
+	}
+	if (image.buildVars !== undefined) {
+		converted.build_vars = image.buildVars;
+	}
 	return converted;
 }
 
@@ -261,6 +293,9 @@ function convertObservability(
 	}
 	if (observability.redactQueryString !== undefined) {
 		out.redact_query_string = observability.redactQueryString;
+	}
+	if (observability.issues !== undefined) {
+		out.issues = { enabled: observability.issues.enabled };
 	}
 	if (observability.logs !== undefined) {
 		const logs: NonNullable<NonNullable<RawConfig["observability"]>["logs"]> =

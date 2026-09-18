@@ -1,5 +1,23 @@
 # @cloudflare/config
 
+## 0.15.0
+
+### Minor Changes
+
+- [#15609](https://github.com/cloudflare/workers-sdk/pull/15609) [`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036) Thanks [@emily-shen](https://github.com/emily-shen)! - Support Durable Object-managed Containers in `convertToWranglerConfig()`.
+
+- [#15701](https://github.com/cloudflare/workers-sdk/pull/15701) [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Pass Preview intent to `defineWorker` and upload its resolved configuration
+
+  Preview builds now evaluate programmatic Worker configuration with `ctx.isPreview` set to `true` and record that intent in Build Output. The shared Preview uploader deploys the resolved bindings and settings while preserving configured Preview base values when it creates a Preview.
+
+## 0.14.0
+
+### Minor Changes
+
+- [#15684](https://github.com/cloudflare/workers-sdk/pull/15684) [`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for configuring real-time Issues with `observability.issues.enabled`
+
+  Wrangler now validates and uploads the Issues setting alongside the existing logs and traces observability options. The experimental configuration format supports the equivalent `observability.issues.enabled` option.
+
 ## 0.13.0
 
 ### Minor Changes

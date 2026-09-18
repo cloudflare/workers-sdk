@@ -83,10 +83,9 @@ export async function writeContainerConfig({
 /**
  * Write the top-level `config.json` to the Build Output Specification tree.
  *
- * Holds the project-level settings shared by every Worker: those declared by
- * the `settings` export, including the `mode`, which is supplied at build time
- * rather than declared. Always written, even when there are no declared
- * settings and no mode: the result then degrades to `{ "type": "settings" }`.
+ * Holds the project settings shared by every Worker, plus the build mode and
+ * whether the build is for a Preview. Always written, even without declared
+ * settings or a mode.
  *
  * `mode` is omitted when undefined, which is the case for Wrangler builds that
  * selected no mode (Vite always resolves one).
@@ -94,11 +93,13 @@ export async function writeContainerConfig({
 export async function writeSettingsConfig(
 	root: string,
 	settings: ParsedInputSettingsConfig | undefined,
-	mode?: string
+	mode?: string,
+	isPreview = false
 ): Promise<void> {
 	const outputConfig: ParsedOutputSettingsConfig = {
 		...settings,
 		type: "settings",
+		...(isPreview ? { isPreview: true } : {}),
 		...(mode !== undefined ? { mode } : {}),
 	};
 	const configPath = getSettingsConfigPath(root);
