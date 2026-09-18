@@ -88,7 +88,7 @@ describe("readD1Migrations", () => {
 				// @ts-expect-error testing runtime validation
 				1
 			)
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			new TypeError(
 				"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string'."
 			)
