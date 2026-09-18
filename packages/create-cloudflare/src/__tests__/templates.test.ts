@@ -9,6 +9,7 @@ import { getAgentsMd } from "../agents-md";
 import {
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
+	getFrameworkMap,
 	updatePackageName,
 	writeAgentsMd,
 } from "../templates";
@@ -196,6 +197,81 @@ describe("deriveCorrelatedArgs", () => {
 		).toThrow(
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument"
 		);
+	});
+
+	test("derives the language for a single-language framework when accepting defaults", ({
+		expect,
+	}) => {
+		const args: Partial<C3Args> = {
+			acceptDefaults: true,
+			framework: "django",
+		};
+
+		deriveCorrelatedArgs(args);
+
+		expect(args.category).toBe("web-framework");
+		expect(args.type).toBe("web-framework");
+		expect(args.lang).toBe("python");
+	});
+
+	test("does not derive a language for a framework without language variants", ({
+		expect,
+	}) => {
+		const args: Partial<C3Args> = {
+			acceptDefaults: true,
+			framework: "angular",
+		};
+
+		deriveCorrelatedArgs(args);
+
+		expect(args.lang).toBeUndefined();
+	});
+
+	test("derives the default language for a framework with multiple language variants", ({
+		expect,
+	}) => {
+		const args: Partial<C3Args> = {
+			acceptDefaults: true,
+			framework: "react",
+			platform: "workers",
+		};
+
+		deriveCorrelatedArgs(args);
+
+		expect(args.lang).toBe("ts");
+	});
+});
+
+describe("getFrameworkMap", () => {
+	test("includes workers-only Python framework templates in stable mode", ({
+		expect,
+	}) => {
+		const frameworkMap = getFrameworkMap({ experimental: false });
+
+		for (const [id, displayName] of [
+			["django", "Django"],
+			["fastapi", "FastAPI"],
+			["flask", "Flask"],
+		]) {
+			const config = frameworkMap[id];
+			expect(config).toMatchObject({ id, displayName, platform: "workers" });
+			if (!config || "platformVariants" in config) {
+				throw new Error(`Expected ${id} to be a single-platform template`);
+			}
+			expect(config.copyFiles).toMatchObject({
+				variants: { python: { path: "./py" } },
+			});
+		}
+	});
+
+	test("excludes Python framework templates in experimental mode", ({
+		expect,
+	}) => {
+		const frameworkMap = getFrameworkMap({ experimental: true });
+
+		expect(frameworkMap).not.toHaveProperty("django");
+		expect(frameworkMap).not.toHaveProperty("fastapi");
+		expect(frameworkMap).not.toHaveProperty("flask");
 	});
 });
 
