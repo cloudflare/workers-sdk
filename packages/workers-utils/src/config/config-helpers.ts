@@ -110,8 +110,12 @@ function findNearestUserConfig(referencePath: string): string | undefined {
 	for (const dir of walk.up(referencePath)) {
 		for (const name of USER_CONFIG_FILE_NAMES) {
 			const candidate = path.join(dir, name);
-			if (statSync(candidate, { throwIfNoEntry: false })?.isFile()) {
-				return candidate;
+			try {
+				if (statSync(candidate, { throwIfNoEntry: false })?.isFile()) {
+					return candidate;
+				}
+			} catch {
+				// This candidate cannot be inspected, so try the next name.
 			}
 		}
 	}
