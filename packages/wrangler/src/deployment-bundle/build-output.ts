@@ -2,8 +2,8 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
 	cleanBuildOutputDir,
-	getWorkerAssetsDir,
 	getWorkerBundleDir,
+	writeAssets,
 	writeSettingsConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
@@ -53,7 +53,9 @@ export async function writeBuildOutput({
 		buildResult
 			? writeBundle({ root, buildResult })
 			: Promise.resolve(undefined),
-		assetsOptions ? writeAssets({ root, assetsOptions }) : Promise.resolve(),
+		assetsOptions
+			? writeAssets({ root, sourceDirectory: assetsOptions.directory })
+			: Promise.resolve(),
 	]);
 
 	await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
@@ -100,20 +102,6 @@ async function writeBundle({
 	}
 
 	return { type: "complete", mainModule: entryKey, modules };
-}
-
-async function writeAssets({
-	root,
-	assetsOptions,
-}: {
-	root: string;
-	assetsOptions: AssetsOptions;
-}): Promise<void> {
-	const assetsDir = getWorkerAssetsDir(root);
-	await fsp.mkdir(assetsDir, { recursive: true });
-	await fsp.cp(assetsOptions.directory, assetsDir, {
-		recursive: true,
-	});
 }
 
 async function writeBundleFile(

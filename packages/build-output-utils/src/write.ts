@@ -2,11 +2,13 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
+	BUILD_OUTPUT_ROOT,
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getBuildOutputDir,
 	getContainerConfigPath,
 	getContainerDir,
 	getSettingsConfigPath,
+	getWorkerAssetsDir,
 	getWorkerConfigPath,
 	getWorkerDir,
 } from "./paths";
@@ -23,6 +25,46 @@ import type {
  */
 export async function cleanBuildOutputDir(root: string): Promise<void> {
 	await removeDir(getBuildOutputDir(root));
+}
+
+export interface WriteAssetsOptions {
+	root: string;
+	sourceDirectory: string;
+}
+
+/**
+ * Copy static assets into the Build Output Specification tree.
+ *
+ * When the project root is itself the asset source, the reserved
+ * `.cloudflare` directory is omitted so the nested output is not copied into
+ * itself.
+ */
+export async function writeAssets({
+	root,
+	sourceDirectory,
+}: WriteAssetsOptions): Promise<void> {
+	const assetsDir = getWorkerAssetsDir(root);
+	await fsp.mkdir(assetsDir, { recursive: true });
+
+	if (path.resolve(sourceDirectory) !== path.resolve(root)) {
+		await fsp.cp(sourceDirectory, assetsDir, {
+			recursive: true,
+			force: false,
+		});
+		return;
+	}
+
+	const entries = await fsp.readdir(sourceDirectory);
+	await Promise.all(
+		entries
+			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
+			.map((entry) =>
+				fsp.cp(path.join(sourceDirectory, entry), path.join(assetsDir, entry), {
+					recursive: true,
+					force: false,
+				})
+			)
+	);
 }
 
 export interface WriteWorkerConfigOptions {
