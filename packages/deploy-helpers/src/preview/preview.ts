@@ -53,7 +53,7 @@ import type {
 } from "./api";
 import type { PullRequestMetadata } from "./shared";
 import type {
-	ParsedOutputSettingsConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
@@ -105,15 +105,15 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
-export type PreviewBuildOutputSettings = ParsedOutputSettingsConfig & {
-	isPreview: true;
+export type PreviewBuildOutputRootConfig = ParsedOutputRootConfig & {
+	buildContext: ParsedOutputRootConfig["buildContext"] & { isPreview: true };
 };
 
 export type PreviewBuildOutput = {
 	// Authoritative Worker settings and bindings from Build Output.
 	workerConfig: ParsedOutputWorkerConfig;
-	// Project settings from Build Output, including the compliance region.
-	projectSettings: PreviewBuildOutputSettings;
+	// Account settings and build context from the root Build Output config.
+	rootConfig: PreviewBuildOutputRootConfig;
 	// Compiled Worker code and modules, if this is not an assets-only build.
 	buildResult?: WorkerBuildResult;
 	// Static asset artifacts emitted by the build, if any.
@@ -125,10 +125,10 @@ type PreviewWorkerBuildResult = WorkerBuildResult & {
 };
 
 /** Verify that Build Output was produced with Preview configuration. */
-export function assertPreviewBuildOutputSettings(
-	settings: ParsedOutputSettingsConfig | undefined
-): asserts settings is PreviewBuildOutputSettings {
-	if (settings?.isPreview !== true) {
+export function assertPreviewBuildOutputRootConfig(
+	rootConfig: ParsedOutputRootConfig | undefined
+): asserts rootConfig is PreviewBuildOutputRootConfig {
+	if (rootConfig?.buildContext.isPreview !== true) {
 		throw new UserError("Build Output was not created by a Preview build.", {
 			telemetryMessage: "preview build output missing preview intent",
 		});
@@ -1131,8 +1131,8 @@ export async function previewBuildOutput(
 	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json">,
 	buildOutput: PreviewBuildOutput
 ): Promise<PreviewResult> {
-	const { workerConfig, projectSettings, buildResult, assets } = buildOutput;
-	assertPreviewBuildOutputSettings(projectSettings);
+	const { workerConfig, rootConfig, buildResult, assets } = buildOutput;
+	assertPreviewBuildOutputRootConfig(rootConfig);
 	// TODO: Upload domains and triggers when Preview deployments support them.
 	// Wrangler can't configure them today, so reject them instead of ignoring them.
 	if (workerConfig.domains?.length) {
@@ -1184,10 +1184,14 @@ export async function previewBuildOutput(
 			}
 		);
 	}
-	const convertedConfig = convertToWranglerConfig(
-		workerConfig,
-		projectSettings
-	);
+	const { buildContext: _buildContext, ...settings } = rootConfig;
+	const { manifest: _manifest, ...worker } = workerConfig;
+	const convertedConfig = convertToWranglerConfig({
+		...settings,
+		worker,
+		// TODO: Add support for Containers in Preview uploads from Build Output.
+		containers: [],
+	});
 	const previewBuildResult = buildResult && {
 		...buildResult,
 		mainModuleName: workerConfig.manifest?.mainModule,

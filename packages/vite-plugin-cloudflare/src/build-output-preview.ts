@@ -34,21 +34,20 @@ export interface BuildOutputPreviewWorker {
 export async function readBuildOutputWorkers(
 	root: string
 ): Promise<BuildOutputPreviewWorker[]> {
-	// `settings` comes from the top-level `config.json` holding project-level
-	// settings (`account_id`, `compliance_region`) shared by every Worker. It
-	// also carries the `mode` the build ran in, which `convertToWranglerConfig`
-	// ignores — preview does not act on it yet.
-	const { workers, settings, containers } = await readBuildOutput(root);
+	// `rootConfig` comes from the root `config.json` holding account
+	// settings and build context. Preview does not act on `mode` yet.
+	const { workers, rootConfig, containers } = await readBuildOutput(root);
 	const worker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
 
 	const { manifest, ...inputShape } = worker.config;
-	const rawConfig = convertToWranglerConfig(
-		inputShape,
-		settings,
-		Object.values(containers).map(({ config }) =>
+	const { buildContext: _buildContext, ...settings } = rootConfig;
+	const rawConfig = convertToWranglerConfig({
+		...settings,
+		worker: inputShape,
+		containers: containers.map(({ config }) =>
 			convertOutputContainerToInput(config)
-		)
-	);
+		),
+	});
 
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,

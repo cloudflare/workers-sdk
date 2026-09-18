@@ -5,7 +5,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { previewBuildOutput } from "../src/preview/preview";
 import type { PreviewBuildOutput } from "../src/preview/preview";
 import type {
-	ParsedOutputSettingsConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 
@@ -63,13 +63,12 @@ const buildResult: PreviewBuildOutput["buildResult"] = {
 	dependencies: {},
 };
 
-const projectSettings = { type: "settings", isPreview: true } as const;
+const validRootConfig = { buildContext: { isPreview: true } } as const;
 
 function buildOutputConfig(
 	overrides: Partial<ParsedOutputWorkerConfig> = {}
 ): ParsedOutputWorkerConfig {
 	return {
-		type: "worker",
 		name: "preview-worker",
 		compatibilityDate: "2026-09-17",
 		...overrides,
@@ -83,7 +82,7 @@ function uploadPreview(
 	return previewBuildOutput(
 		"account-id",
 		{ name: "feature", json: true },
-		{ workerConfig: config, projectSettings, buildResult, assets }
+		{ workerConfig: config, rootConfig: validRootConfig, buildResult, assets }
 	);
 }
 
@@ -259,7 +258,7 @@ describe("previewBuildOutput", () => {
 			{ name: "feature", json: true },
 			{
 				workerConfig: buildOutputConfig({ assets: {} }),
-				projectSettings,
+				rootConfig: validRootConfig,
 				assets: { directory },
 			}
 		);
@@ -298,7 +297,7 @@ describe("previewBuildOutput", () => {
 						},
 					},
 				}),
-				projectSettings,
+				rootConfig: validRootConfig,
 				buildResult: {
 					...buildResult,
 					resolvedEntryPointPath: "/tmp/bundle/server/index.js",
@@ -340,13 +339,13 @@ describe("previewBuildOutput", () => {
 		expect(request).not.toHaveProperty("env");
 	});
 
-	it.for<[string, ParsedOutputSettingsConfig | undefined]>([
+	it.for<[string, ParsedOutputRootConfig | undefined]>([
 		["missing", undefined],
-		["non-Preview", { type: "settings", isPreview: false }],
-	])("rejects $0 Preview intent", async ([, settings], { expect }) => {
+		["non-Preview", { buildContext: { isPreview: false } }],
+	])("rejects $0 Preview intent", async ([, rootConfig], { expect }) => {
 		const invalidBuildOutput = {
 			workerConfig: buildOutputConfig(),
-			projectSettings: settings,
+			rootConfig,
 			buildResult,
 		} as unknown as PreviewBuildOutput;
 		await expect(

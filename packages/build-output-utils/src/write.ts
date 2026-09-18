@@ -6,7 +6,7 @@ import {
 	getBuildOutputDir,
 	getContainerConfigPath,
 	getContainerDir,
-	getSettingsConfigPath,
+	getRootConfigPath,
 	getWorkerConfigPath,
 	getWorkerDir,
 } from "./paths";
@@ -14,8 +14,9 @@ import type {
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputContainerConfig,
-	ParsedOutputSettingsConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
+	ConfigContext,
 } from "@cloudflare/config";
 
 /**
@@ -33,7 +34,8 @@ export interface WriteWorkerConfigOptions {
 }
 
 /**
- * Write an output Worker `config.json` to the Build Output Specification tree.
+ * Write an output Worker `worker.config.json` to the Build Output Specification
+ * tree.
  *
  * - Workers mode: `manifest` is provided (bundle/ present on disk).
  * - Assets-only mode: `manifest` is omitted (no bundle/ directory).
@@ -60,8 +62,8 @@ export interface WriteContainerConfigOptions {
 }
 
 /**
- * Write an output Container `config.json` to the Build Output Specification
- * tree.
+ * Write an output Container `container.config.json` to the Build Output
+ * Specification tree.
  *
  * Local Dockerfiles must already have been built and represented by a
  * `localReference` in the output config.
@@ -83,26 +85,19 @@ export async function writeContainerConfig({
 /**
  * Write the top-level `config.json` to the Build Output Specification tree.
  *
- * Holds the project settings shared by every Worker, plus the build mode and
- * whether the build is for a Preview. Always written, even without declared
- * settings or a mode.
- *
- * `mode` is omitted when undefined, which is the case for Wrangler builds that
- * selected no mode (Vite always resolves one).
+ * Holds the settings declared at the top level of `cloudflare.config.ts` and
+ * build context supplied at build time.
  */
-export async function writeSettingsConfig(
+export async function writeRootConfig(
 	root: string,
 	settings: ParsedInputSettingsConfig | undefined,
-	mode?: string,
-	isPreview = false
+	buildContext: ConfigContext
 ): Promise<void> {
-	const outputConfig: ParsedOutputSettingsConfig = {
+	const outputConfig: ParsedOutputRootConfig = {
 		...settings,
-		type: "settings",
-		...(isPreview ? { isPreview: true } : {}),
-		...(mode !== undefined ? { mode } : {}),
+		buildContext,
 	};
-	const configPath = getSettingsConfigPath(root);
+	const configPath = getRootConfigPath(root);
 	await fsp.mkdir(path.dirname(configPath), { recursive: true });
 	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
 }

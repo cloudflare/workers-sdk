@@ -45,7 +45,6 @@ export type {
 	VpcServiceBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
-	WorkerReference,
 	WorkflowBinding,
 } from "./bindings";
 export { bindings } from "./bindings";
@@ -75,20 +74,16 @@ export type {
 	InferMainModule,
 	UnwrapConfig,
 } from "./inference";
-export type { ConfigContext } from "./definition";
-export type { ContainerConfig, SettingsConfig, WorkerConfig } from "./types";
 export type {
-	ContainerConfigExport,
-	ContainerConfigInput,
-} from "./container-definition";
-export { defineContainer } from "./container-definition";
+	ConfigContext,
+	ContainerDefinition,
+	WorkerDefinition,
+	WorkerReference,
+} from "./definition";
+export { defineConfig, defineContainer, defineWorker } from "./definition";
 export type {
-	WorkerConfigExport,
-	WorkerConfigInput,
-} from "./worker-definition";
-export { defineWorker } from "./worker-definition";
-export type {
-	SettingsConfigExport,
-	SettingsConfigInput,
-} from "./settings-definition";
-export { defineSettings } from "./settings-definition";
+	CloudflareConfig,
+	ContainerConfig,
+	Settings,
+	WorkerConfig,
+} from "./types";

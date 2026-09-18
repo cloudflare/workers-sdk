@@ -1,22 +1,25 @@
 export {
 	BUILD_OUTPUT_ROOT,
 	BUILD_OUTPUT_VERSION,
-	CONFIG_FILENAME,
+	CONTAINER_CONFIG_FILENAME,
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getContainerConfigPath,
 	getContainerDir,
 	getContainersDir,
-	getSettingsConfigPath,
+	getRootConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
 	getWorkerDir,
 	getWorkersDir,
+	normalizeDirectoryName,
+	ROOT_CONFIG_FILENAME,
+	WORKER_CONFIG_FILENAME,
 } from "./paths";
 export {
 	cleanBuildOutputDir,
 	writeContainerConfig,
-	writeSettingsConfig,
+	writeRootConfig,
 	writeWorkerConfig,
 } from "./write";
 export type {

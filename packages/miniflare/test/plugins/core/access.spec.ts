@@ -15,7 +15,6 @@ import { singleModuleManifest, useDispose } from "../../test-shared";
 function plainWorker(script: string): WorkerOptions {
 	return {
 		config: {
-			type: "worker",
 			name: "user",
 			compatibilityDate: "2026-06-01",
 			manifest: singleModuleManifest(script),
