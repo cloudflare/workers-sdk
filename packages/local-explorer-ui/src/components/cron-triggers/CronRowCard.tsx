@@ -602,6 +602,7 @@ function CustomTimeEditor({
 				<div className="grid min-w-0 gap-1">
 					<label className="grid min-w-0 gap-1 text-sm text-kumo-default">
 						<input
+							aria-label="Date and Time (UTC)"
 							aria-describedby={
 								calendar?.kind === "invalid"
 									? `${row.id}-calendar-error`
@@ -654,6 +655,7 @@ function CustomTimeEditor({
 				<div className="grid min-w-0 gap-1">
 					<label className="grid min-w-0 gap-1 text-sm text-kumo-default">
 						<input
+							aria-label="Epoch milliseconds"
 							aria-describedby={
 								parseEpochMilliseconds(row.epochValue ?? "").error
 									? `${row.id}-epoch-error`
