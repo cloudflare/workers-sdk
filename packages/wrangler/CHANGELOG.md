@@ -1,5 +1,32 @@
 # wrangler
 
+## 4.136.0
+
+### Minor Changes
+
+- [#15699](https://github.com/cloudflare/workers-sdk/pull/15699) [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c) Thanks [@skepticfx](https://github.com/skepticfx)! - Remove the experimental Container image environment binding
+
+  Durable Object-managed Containers now use `ctx.container.images` without Wrangler generating `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES`. Update code using the experimental environment binding to read `ctx.container.images` and regenerate your Worker types.
+
+  Version deployments identify managed applications from native named images, and `--containers-rollout=none` preserves native Container metadata. Containers without named images must first be provisioned with `wrangler deploy`; `versions upload` verifies that their applications already exist. The old binding is no longer read or reserved, including on previously uploaded versions. `keep_vars` retains existing variables as usual; redeploy without it to remove an existing experimental binding.
+
+- [#15702](https://github.com/cloudflare/workers-sdk/pull/15702) [`8235e6a`](https://github.com/cloudflare/workers-sdk/commit/8235e6a7e03d4910f1de78d67324a11974c393a0) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Return structured configuration errors from `wrangler preview --json`
+
+  When a Worker is missing its Preview configuration, JSON mode now returns an `error`, a `suggested_config` patch, and any associated onboarding `messages` without interactive output or terminal formatting. This changes the private-beta Preview command to make automated onboarding reliable.
+
+- [#15577](https://github.com/cloudflare/workers-sdk/pull/15577) [`731a2ee`](https://github.com/cloudflare/workers-sdk/commit/731a2ee747d3904564ea45188dbf848d62bcc6e8) Thanks [@sdnts](https://github.com/sdnts)! - Add support for jurisdictions to Queues subcommands
+
+### Patch Changes
+
+- [#15440](https://github.com/cloudflare/workers-sdk/pull/15440) [`43b1f85`](https://github.com/cloudflare/workers-sdk/commit/43b1f85fe26d4b1568f6d7aacc7ffba2b408419b) Thanks [@HuzaifaAbdulRehman](https://github.com/HuzaifaAbdulRehman)! - Rebase absolute non-JavaScript module specifiers when `preserve_file_names` is enabled
+
+  With `preserve_file_names` set, a non-JS module imported by an absolute path kept that path as its module name. The build machine's filesystem layout ended up inside the deployed Worker, and the module was never written to `--outdir`. A local dry run reported success while the upload failed server-side with error code `10021`. Tooling that rewrites externals to absolute paths hits this, which is how it was found in `@opennextjs/cloudflare` with WASM imports.
+
+  Absolute specifiers are now rebased to `./<basename>`, which is what the hashed branch of the same code already does minus the hash prefix. Relative specifiers keep the behaviour they had.
+
+- Updated dependencies []:
+  - miniflare@5.20260918.0-alpha
+
 ## 4.135.0
 
 ### Minor Changes

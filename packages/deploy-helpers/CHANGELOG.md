@@ -1,5 +1,26 @@
 # @cloudflare/deploy-helpers
 
+## 0.14.0
+
+### Minor Changes
+
+- [#15699](https://github.com/cloudflare/workers-sdk/pull/15699) [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c) Thanks [@skepticfx](https://github.com/skepticfx)! - Remove the experimental Container image environment binding
+
+  Durable Object-managed Containers now use `ctx.container.images` without Wrangler generating `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES`. Update code using the experimental environment binding to read `ctx.container.images` and regenerate your Worker types.
+
+  Version deployments identify managed applications from native named images, and `--containers-rollout=none` preserves native Container metadata. Containers without named images must first be provisioned with `wrangler deploy`; `versions upload` verifies that their applications already exist. The old binding is no longer read or reserved, including on previously uploaded versions. `keep_vars` retains existing variables as usual; redeploy without it to remove an existing experimental binding.
+
+### Patch Changes
+
+- [#15577](https://github.com/cloudflare/workers-sdk/pull/15577) [`731a2ee`](https://github.com/cloudflare/workers-sdk/commit/731a2ee747d3904564ea45188dbf848d62bcc6e8) Thanks [@sdnts](https://github.com/sdnts)! - Add `jurisdiction` to Queue\* types
+
+- Updated dependencies [[`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c)]:
+  - @cloudflare/workers-utils@0.41.0
+  - @cloudflare/cli-shared-helpers@0.1.35
+  - @cloudflare/config@0.15.0
+  - @cloudflare/containers-shared@0.17.1
+  - miniflare@5.20260918.0-alpha
+
 ## 0.13.0
 
 ### Minor Changes
