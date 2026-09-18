@@ -49,6 +49,8 @@ export async function runPagesToWorkersDeploy(
 		profile: undefined,
 		triggers: undefined,
 		routes: undefined,
+		zone: undefined,
+		zoneId: undefined,
 		domains: undefined,
 		metafile: undefined,
 		logpush: undefined,

@@ -26,6 +26,10 @@ import {
 	cleanupDestination,
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
+import {
+	routeZoneArgs,
+	validateRouteZoneArgs,
+} from "../deployment-bundle/route-zone-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -61,6 +65,7 @@ export const deployCommand = createCommand({
 			requiresArg: true,
 			array: true,
 		},
+		...routeZoneArgs,
 		domains: {
 			describe: "Custom domains to deploy to",
 			alias: "domain",
@@ -115,6 +120,7 @@ export const deployCommand = createCommand({
 	},
 	validateArgs(args) {
 		validateDeployVersionsArgs(args, "deploy");
+		validateRouteZoneArgs(args);
 	},
 	async handler(args, { config }) {
 		await runDeployCommandHandler(args, { config });
