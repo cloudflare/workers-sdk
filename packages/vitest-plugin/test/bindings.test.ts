@@ -178,7 +178,7 @@ test("adminSecretsStore seeds and reads secrets", async ({
 				import { it } from "vitest";
 
 				it("create, update, list, and delete a secret", async ({ expect }) => {
-					const admin = adminSecretsStore(env.MY_SECRET);
+					using admin = adminSecretsStore(env.MY_SECRET);
 
 					// create
 					const id = await admin.create("initial-value");
