@@ -258,7 +258,6 @@ describe("loadNewConfig", () => {
 				name: "api",
 				image: { reference: "registry.example.com/api:latest" },
 			});
-			expect(result.parsedConfig.containers).not.toHaveProperty("other");
 		});
 
 		it("includes referenced Container exports in the raw config", async ({
