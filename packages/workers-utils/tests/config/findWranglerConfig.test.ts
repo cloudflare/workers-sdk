@@ -65,18 +65,57 @@ describe("config findWranglerConfig()", () => {
 				expect(std).toMatchObject(NO_LOGS);
 			});
 
-			it("in different directories", async ({ expect }) => {
+			it("only when they are in the same directory", async ({ expect }) => {
+				// A wrangler.jsonc in the reference directory must not be shadowed by a
+				// wrangler.json further up the tree: proximity wins over format.
 				await seed({
 					[`wrangler.${ext1}`]: "DUMMY",
 					[`foo/wrangler.${ext2}`]: "DUMMY",
 				});
 				expect(findWranglerConfig("./foo")).toEqual({
-					configPath: path.resolve(`wrangler.${ext1}`),
-					userConfigPath: path.resolve(`wrangler.${ext1}`),
+					configPath: path.resolve(`foo/wrangler.${ext2}`),
+					userConfigPath: path.resolve(`foo/wrangler.${ext2}`),
 					redirected: false,
 				});
 				expect(std).toMatchObject(NO_LOGS);
 			});
+		});
+
+		it("should prefer the nearest config file regardless of format", async ({
+			expect,
+		}) => {
+			await seed({
+				[`wrangler.json`]: "DUMMY",
+				[`foo/wrangler.toml`]: "DUMMY",
+				[`foo/bar/wrangler.jsonc`]: "DUMMY",
+				[`foo/bar/qux/holder.txt`]: "DUMMY",
+			});
+			expect(findWranglerConfig("./foo/bar/qux").userConfigPath).toEqual(
+				path.resolve(`foo/bar/wrangler.jsonc`)
+			);
+			expect(findWranglerConfig("./foo/bar").userConfigPath).toEqual(
+				path.resolve(`foo/bar/wrangler.jsonc`)
+			);
+			expect(findWranglerConfig("./foo").userConfigPath).toEqual(
+				path.resolve(`foo/wrangler.toml`)
+			);
+			expect(findWranglerConfig(".").userConfigPath).toEqual(
+				path.resolve(`wrangler.json`)
+			);
+			expect(std).toMatchObject(NO_LOGS);
+		});
+
+		it("should ignore a directory that has a config file's name", async ({
+			expect,
+		}) => {
+			await seed({
+				[`wrangler.toml`]: "DUMMY",
+				[`foo/wrangler.json/holder.txt`]: "DUMMY",
+			});
+			expect(findWranglerConfig("./foo").userConfigPath).toEqual(
+				path.resolve(`wrangler.toml`)
+			);
+			expect(std).toMatchObject(NO_LOGS);
 		});
 
 		it("should return user config path even if a deploy config is found", async ({
