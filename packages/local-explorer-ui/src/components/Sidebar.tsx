@@ -7,6 +7,7 @@ import {
 } from "@cloudflare/kumo";
 import {
 	EnvelopeSimpleIcon,
+	FlagBannerIcon,
 	MonitorIcon,
 	MoonIcon,
 	PulseIcon,
@@ -121,6 +122,7 @@ export function AppSidebar({
 	const kvNamespaces = bindings?.kv ?? [];
 	const r2Buckets = bindings?.r2 ?? [];
 	const workflows = bindings?.workflows ?? [];
+	const flagshipApps = bindings?.flagship ?? [];
 
 	const sidebarItemGroups = [
 		{
@@ -238,6 +240,22 @@ export function AppSidebar({
 				},
 			],
 			title: "Email",
+		},
+		{
+			emptyLabel: "No Flagship apps",
+			groupId: "flagship" as const,
+			icon: FlagBannerIcon,
+			items: flagshipApps.map((app) => ({
+				id: `${app.id}:${app.bindingName}`,
+				isActive: currentPath === `/flagship/${app.id}`,
+				label: app.bindingName,
+				link: {
+					params: { appId: app.id },
+					search: workerSearch,
+					to: "/flagship/$appId",
+				},
+			})),
+			title: "Flagship",
 		},
 	] satisfies Array<{
 		emptyLabel: string;

@@ -1,4 +1,4 @@
-import { describe, test } from "vitest";
+import { describe, test, vi } from "vitest";
 import { evaluateFlag } from "../../../src/workers/flagship/evaluate";
 import type { EvaluationContext } from "../../../src/workers/flagship/evaluate";
 import type { FlagInput, Rule } from "../../../src/workers/flagship/flags";
@@ -205,6 +205,33 @@ describe("flagship evaluation", () => {
 			const baseline = reasons("rollout_test", ACCOUNT_TAG);
 			expect(reasons("rollout_test", "local")).not.toEqual(baseline);
 			expect(reasons("other", ACCOUNT_TAG)).not.toEqual(baseline);
+		});
+
+		test("reuses a random bucket when the rollout attribute is missing", ({
+			expect,
+			onTestFinished,
+		}) => {
+			const getRandomValues = vi.spyOn(crypto, "getRandomValues");
+			onTestFinished(() => getRandomValues.mockRestore());
+			const unkeyed = flag({
+				rules: [
+					{
+						conditions: [],
+						priority: 1,
+						rollout: { percentage: 0 },
+						serve_variation: "on",
+					},
+					{
+						conditions: [],
+						priority: 2,
+						rollout: { percentage: 0 },
+						serve_variation: "on",
+					},
+				],
+			});
+
+			expect(evaluateFlag(unkeyed, {}, ACCOUNT_TAG).reason).toBe("DEFAULT");
+			expect(getRandomValues).toHaveBeenCalledTimes(1);
 		});
 	});
 });
