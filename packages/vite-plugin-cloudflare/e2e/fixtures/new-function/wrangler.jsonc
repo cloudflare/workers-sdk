@@ -1,0 +1,5 @@
+{
+	"name": "cloudflare-vite-e2e-new-function",
+	"main": "./src/index.ts",
+	"compatibility_date": "2024-12-30",
+}
