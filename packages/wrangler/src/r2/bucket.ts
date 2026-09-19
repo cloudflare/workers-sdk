@@ -202,12 +202,12 @@ export const r2BucketListCommand = createCommand({
 			type: "string",
 		},
 	},
-	async handler(args, { config }) {
+	async handler(args, { config, sdk }) {
 		const accountId = await requireAuth(config);
 
 		logger.log(`Listing buckets...`);
 
-		const buckets = await listR2Buckets(config, accountId, args.jurisdiction);
+		const buckets = await listR2Buckets(sdk, accountId, args.jurisdiction);
 		const tableOutput = tableFromR2BucketsListResponse(buckets);
 		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 	},
