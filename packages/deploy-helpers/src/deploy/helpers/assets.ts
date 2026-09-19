@@ -27,7 +27,7 @@ import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import { FormData } from "undici";
 import { fetchResult, logger } from "../../shared/context";
-import { hashFile } from "./hash";
+import { hashFile, initHash } from "./hash";
 import { decodeJwtPayload, isJwtExpired } from "./jwt";
 import type { SharedDeployVersionsProps } from "../../shared/types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
@@ -388,6 +388,8 @@ export const buildAssetManifest = async (dir: string) => {
 	const { assetsIgnoreFunction, assetsIgnoreFilePresent } =
 		await createAssetsIgnoreFunction(dir);
 
+	await initHash();
+
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
 			if (assetsIgnoreFunction(relativeFilepath)) {
@@ -426,7 +428,7 @@ export const buildAssetManifest = async (dir: string) => {
 					);
 				}
 				manifest[normalizeFilePath(relativeFilepath)] = {
-					hash: hashFile(filepath),
+					hash: await hashFile(filepath),
 					size: filestat.size,
 				};
 			}
