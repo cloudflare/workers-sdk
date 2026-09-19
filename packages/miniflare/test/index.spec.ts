@@ -2123,8 +2123,19 @@ test("Miniflare: python modules", async ({ expect }) => {
 						modules: {
 							"index.py": {
 								type: "python",
-								contents:
-									"from test_module import add; from workers import Response, WorkerEntrypoint;\nclass Default(WorkerEntrypoint):\n  def fetch(self, request):\n    return Response(str(add(2,2)))",
+								contents: `from test_module import add
+from workers import Response, WorkerEntrypoint
+
+last_cron = ""
+
+class Default(WorkerEntrypoint):
+  def fetch(self, request):
+    return Response(str(add(2,2)) + ":" + last_cron)
+
+  async def scheduled(self, controller, env, ctx):
+    global last_cron
+    last_cron = controller.cron
+    controller.noRetry()`,
 							},
 							"test_module.py": {
 								type: "python",
@@ -2137,8 +2148,18 @@ test("Miniflare: python modules", async ({ expect }) => {
 		],
 	});
 	useDispose(mf);
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe("4");
+	let res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("4:");
+
+	const worker = await mf.getWorker();
+	expect(
+		await worker.scheduled({
+			cron: "python-cron",
+			scheduledTime: new Date(0),
+		})
+	).toEqual({ outcome: "ok", noRetry: true });
+	res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("4:python-cron");
 });
 
 test("Miniflare: HTTPS fetches using browser CA certificates", async ({
@@ -2240,6 +2261,7 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		log,
+		unsafeLocalExplorer: true,
 		unsafeTriggerHandlers: true,
 		workers: [
 			{
@@ -2255,6 +2277,7 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 				},
 				scheduled(controller) {
 					scheduledRun = true;
+					if (controller.cron === "failure") throw new Error("failure");
 					controller.noRetry();
 				}
 			}`),
@@ -2277,6 +2300,12 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("true");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/scheduled?format=json&cron=failure"
+	);
+	expect(res.status).toBe(500);
+	expect(await res.json()).toEqual({ outcome: "exception", noRetry: false });
 });
 
 test("Miniflare: manually triggered scheduled events with assets", async ({

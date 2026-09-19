@@ -8,6 +8,7 @@ import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
+import { EXPLORER_REFRESH_HEADER } from "./explorer-refresh";
 import {
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
@@ -18,6 +19,7 @@ import {
 	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zLocalExplorerDispatchScheduledData,
 	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
@@ -56,6 +58,7 @@ import {
 	listR2Objects,
 	putR2Object,
 } from "./resources/r2";
+import { dispatchScheduledToWorker } from "./resources/scheduled";
 import {
 	changeWorkflowInstanceStatus,
 	createWorkflowInstance,
@@ -148,8 +151,7 @@ app.use("/api/*", async (c, next) => {
 				"Access-Control-Allow-Origin": origin ?? "*",
 				"Access-Control-Allow-Methods":
 					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers":
-					"Content-Type, cf-metadata-only, cf-r2-custom-metadata",
+				"Access-Control-Allow-Headers": `Content-Type, cf-metadata-only, cf-r2-custom-metadata, ${EXPLORER_REFRESH_HEADER}`,
 				"Access-Control-Max-Age": "86400",
 			},
 		});
@@ -436,6 +438,17 @@ app.post(
 app.post("/api/local/observability/clear", (c) => clearTraces(c));
 
 // ============================================================================
+// Scheduled Endpoints
+// ============================================================================
+
+app.post(
+	"/api/local/scheduled",
+	validateQuery(zLocalExplorerDispatchScheduledData.shape.query),
+	validateRequestBody(zLocalExplorerDispatchScheduledData.shape.body),
+	(c) => dispatchScheduledToWorker(c, c.req.valid("query"), c.req.valid("json"))
+);
+
+// ============================================================================
 // Email Endpoints
 // ============================================================================
 
@@ -488,7 +501,7 @@ app.get("/api/local/workers", async (c) => {
 				return {
 					isSelf: true,
 					name,
-					bindings: explorerWorkerOpts[name],
+					...explorerWorkerOpts[name],
 				};
 			});
 

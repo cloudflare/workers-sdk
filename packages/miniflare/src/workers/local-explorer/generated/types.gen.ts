@@ -454,6 +454,20 @@ export type WorkersKvResultInfo = {
 	count?: number;
 };
 
+export type LocalExplorerScheduledRequest = {
+	cron: string;
+	/**
+	 * Epoch milliseconds within workerd's signed 64-bit nanosecond range.
+	 */
+	scheduled_time?: number;
+};
+
+export type LocalExplorerScheduledResult = {
+	outcome: string;
+	noRetry: boolean;
+	[key: string]: unknown;
+};
+
 export type R2Object = {
 	/**
 	 * Object key (path)
@@ -613,7 +627,22 @@ export type LocalExplorerWorker = {
 	 * Worker name from the dev registry
 	 */
 	name: string;
+	/**
+	 * Opaque stable identifier for the worker's local project, used to scope browser persistence without exposing its filesystem path
+	 */
+	persistenceScope?: string;
 	bindings?: LocalExplorerWorkerBindings;
+	triggers?: LocalExplorerWorkerTriggers;
+};
+
+/**
+ * Trigger metadata for a worker
+ */
+export type LocalExplorerWorkerTriggers = {
+	/**
+	 * Exact configured Cron Trigger expressions
+	 */
+	crons: Array<string>;
 };
 
 /**
@@ -2010,6 +2039,40 @@ export type LocalExplorerListWorkersResponses = {
 
 export type LocalExplorerListWorkersResponse =
 	LocalExplorerListWorkersResponses[keyof LocalExplorerListWorkersResponses];
+
+export type LocalExplorerDispatchScheduledData = {
+	body: LocalExplorerScheduledRequest;
+	path?: never;
+	query: {
+		/**
+		 * Exact Worker name available to Local Explorer.
+		 */
+		worker: string;
+	};
+	url: "/local/scheduled";
+};
+
+export type LocalExplorerDispatchScheduledErrors = {
+	/**
+	 * Scheduled invocation request failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type LocalExplorerDispatchScheduledError =
+	LocalExplorerDispatchScheduledErrors[keyof LocalExplorerDispatchScheduledErrors];
+
+export type LocalExplorerDispatchScheduledResponses = {
+	/**
+	 * Scheduled invocation result.
+	 */
+	200: WorkersApiResponseCommon & {
+		result: LocalExplorerScheduledResult;
+	};
+};
+
+export type LocalExplorerDispatchScheduledResponse =
+	LocalExplorerDispatchScheduledResponses[keyof LocalExplorerDispatchScheduledResponses];
 
 export type EmailListRoutingData = {
 	body?: never;
