@@ -97,40 +97,42 @@ describe("DevEnv", () => {
 			void devEnv.teardown();
 		});
 
-		test("should log ProxyWorker request errors without tearing down the dev session", ({
-			expect,
-		}) => {
+		test("should keep unexpected ProxyWorker errors fatal", ({ expect }) => {
 			const devEnv = new DevEnv();
 
 			const fatalEvents: unknown[] = [];
 			devEnv.on("error", (event) => fatalEvents.push(event));
 
-			// the ProxyWorker posts its error to the ProxyController as JSON, so
+			// A rejected forward of a request to the UserWorker is answered with a
+			// 502 inside the ProxyWorker and never reported here. An "Error inside
+			// ProxyWorker" report therefore means the ProxyWorker itself failed
+			// (e.g. while post-processing a received response) — that is a proxy
+			// defect and must remain fatal, not be swallowed as recoverable.
+			//
+			// The ProxyWorker posts its error to the ProxyController as JSON, so
 			// what reaches handleErrorEvent is a plain object wrapped by
 			// castErrorCause — an Error with NO message, carrying the real detail
-			// on `.cause`. Build the cause the same way so this test cannot pass
-			// with a message the production path never has.
+			// on `.cause`. Build the cause the same way.
 			const reportedByProxyWorker = JSON.parse(
 				JSON.stringify({
 					name: "Error",
 					message:
-						"GET http://127.0.0.1:8787/ (failed after 3 attempts): Network connection lost.",
-					stack: "Error: Network connection lost.\n    at <anonymous>",
+						"GET http://127.0.0.1:8787/ (failed after 1 attempt): Failed to inject live-reload script",
+					stack:
+						"Error: Failed to inject live-reload script\n    at <anonymous>",
 				})
 			) as unknown;
 
-			devEnv.dispatch({
+			const event = {
 				type: "error",
 				reason: "Error inside ProxyWorker",
 				cause: castErrorCause(reportedByProxyWorker),
 				source: "ProxyController",
 				data: {},
-			});
+			} as const;
+			devEnv.dispatch(event);
 
-			expect(std.err).toContain("Error inside ProxyWorker");
-			expect(std.err).toContain("Network connection lost.");
-			// one failed proxied request must not become a fatal dev-session error
-			expect(fatalEvents).toHaveLength(0);
+			expect(fatalEvents).toEqual([event]);
 
 			void devEnv.teardown();
 		});
