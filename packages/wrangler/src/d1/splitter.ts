@@ -256,15 +256,88 @@ function isDollarQuoteIdentifier(str: string) {
 }
 
 /**
+ * A character SQLite allows inside an unquoted identifier: ASCII letters,
+ * digits, underscore, `$`, and -- for its permissive Unicode support --
+ * every code point at or above U+0080. Anything else is a valid boundary
+ * between an identifier and a keyword like `BEGIN`/`CASE`/`END`.
+ *
+ * Used as the negated boundary class in both `isCompoundStatementStart()`
+ * and `isCompoundStatementEnd()` so the two can't drift out of sync again --
+ * that exact drift (one broadened, the other left narrow) is what caused
+ * the `(CASE ... END)` regression these functions' history describes below.
+ * Without this, an identifier like `foo$CASE` or `ENDα` is misread as the
+ * keyword, corrupting the compound-statement nesting for the rest of the
+ * file.
+ */
+const SQL_IDENTIFIER_CHAR = "A-Za-z0-9_$\\u0080-\\uffff";
+
+/**
+ * A valid boundary between an identifier and a `BEGIN`/`CASE`/`END` keyword:
+ * any non-identifier character, *except* `.`. SQLite's qualifier operator
+ * (`table.column`, `new.begin`) always introduces an identifier reference on
+ * its right-hand side, never a real keyword, even when that identifier's
+ * name happens to spell `begin`/`case`/`end` -- so a `.` must not itself
+ * count as a keyword boundary, or a qualified column literally named
+ * begin/case/end (`new.begin`, `t.end`) is misread as opening or closing a
+ * compound statement.
+ */
+const SQL_STATEMENT_BOUNDARY = `[^${SQL_IDENTIFIER_CHAR}.]`;
+
+// Compiled once at module load, not per call: isCompoundStatementStart() runs
+// on every character of the input in splitSqlIntoStatements()'s main loop, so
+// constructing a `new RegExp` inside the function would recompile it once per
+// character of the whole file.
+//
+// Both the leading boundary (SQL_STATEMENT_BOUNDARY, excluding `.`) and the
+// trailing boundary (any non-identifier character, `.` included -- nothing
+// meaningful can follow BEGIN/CASE/END with a `.`, so there's no equivalent
+// false-positive risk on that side) are shared between both regexes so they
+// can't drift out of sync again. That exact drift -- one side broadened,
+// the other left narrow -- is what caused every regression in this
+// function's history: first between start and end, then between the
+// required-whitespace and any-non-identifier-character forms of each.
+const COMPOUND_STATEMENT_START_RE = new RegExp(
+	`${SQL_STATEMENT_BOUNDARY}(BEGIN|CASE)[^${SQL_IDENTIFIER_CHAR}]$`,
+	"i"
+);
+const COMPOUND_STATEMENT_END_RE = new RegExp(
+	`${SQL_STATEMENT_BOUNDARY}END[^${SQL_IDENTIFIER_CHAR}]$`,
+	"i"
+);
+
+/**
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
+ *
+ * Neither the character immediately before nor after `BEGIN`/`CASE` needs to
+ * be whitespace specifically -- any valid statement boundary works on both
+ * sides. A `(CASE ... END)` used as a parenthesised value expression is
+ * preceded directly by `(`, not whitespace, and `CASE(expr)` (SQLite allows
+ * a value expression immediately after `CASE` with no space) is followed
+ * directly by `(`. Requiring whitespace on either side meant such a
+ * `CASE`'s start went undetected, while its `END` -- once end-detection was
+ * broadened to accept a trailing `)`/`,` -- was. That asymmetry let an
+ * unrelated, already-open compound statement's own end marker (e.g. an
+ * enclosing trigger's `BEGIN ... END`) get closed prematurely by the inner
+ * CASE's `END)`, which the stack had never actually been pushed for.
  */
 function isCompoundStatementStart(str: string) {
-	return /\s(BEGIN|CASE)\s$/i.test(str);
+	return COMPOUND_STATEMENT_START_RE.test(str);
 }
 
 /**
  * Returns true if the `str` ends with a compound statement `END` marker.
+ *
+ * Neither the character immediately before nor after `END` needs to be
+ * whitespace specifically: a `CASE ... END` used as a value expression
+ * (e.g. `SET x = CASE ... END, y = 1`) is legitimately followed by a comma
+ * or closing paren rather than `;`/whitespace, and a compactly-formatted
+ * expression (e.g. `THEN 1 ELSE(0)END`) can precede `END` with a closing
+ * paren and no space at all. Requiring whitespace before `END` meant that
+ * compact form went undetected entirely -- not just "not split", but
+ * actively wrong: the stack frame it should have popped stayed open, so a
+ * later, unrelated `END` (e.g. an enclosing trigger's own) popped it
+ * instead, silently merging every statement in between into one.
  */
 function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/i.test(str);
+	return COMPOUND_STATEMENT_END_RE.test(str);
 }

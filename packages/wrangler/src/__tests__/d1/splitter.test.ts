@@ -457,6 +457,160 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
+	it("should handle a CASE used as a value expression, whose END is followed directly by a comma rather than whitespace", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER update_projection AFTER INSERT ON items
+				BEGIN
+					UPDATE totals
+					SET
+						count = CASE WHEN NEW.active THEN count + 1 ELSE count END,
+						updated_at = NEW.created_at
+					WHERE id = NEW.parent_id;
+				END;
+
+				CREATE INDEX items_parent_id_idx ON items (parent_id);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER update_projection AFTER INSERT ON items
+							BEGIN
+								UPDATE totals
+								SET
+									count = CASE WHEN NEW.active THEN count + 1 ELSE count END,
+									updated_at = NEW.created_at
+								WHERE id = NEW.parent_id;
+							END",
+			  "CREATE INDEX items_parent_id_idx ON items (parent_id)",
+			]
+		`);
+	});
+
+	it("should not split inside a trigger body just because it contains a parenthesised CASE", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER my_trigger AFTER INSERT ON items
+				BEGIN
+					UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE 0 END);
+					UPDATE totals SET y = y + 1;
+				END;
+
+				CREATE INDEX items_idx ON items (id);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER my_trigger AFTER INSERT ON items
+							BEGIN
+								UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE 0 END);
+								UPDATE totals SET y = y + 1;
+							END",
+			  "CREATE INDEX items_idx ON items (id)",
+			]
+		`);
+	});
+
+	it("should not treat an identifier ending in CASE as a compound statement start", ({
+		expect,
+	}) => {
+		// SQLite allows `$` in unquoted identifiers, so `foo$CASE` is a single
+		// identifier token, not the CASE keyword preceded by punctuation.
+		expect(
+			splitSqlQuery(
+				`CREATE TABLE t (foo$CASE TEXT); SELECT foo$CASE FROM t; SELECT 1;`
+			)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TABLE t (foo$CASE TEXT)",
+			  "SELECT foo$CASE FROM t",
+			  "SELECT 1",
+			]
+		`);
+	});
+
+	it("should not treat an identifier starting with END as a compound statement end", ({
+		expect,
+	}) => {
+		// SQLite treats any code point >= U+0080 as an identifier character, so
+		// `ENDα` is a single identifier token, not the END keyword followed by
+		// punctuation -- it must not close the trigger's still-open BEGIN.
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER my_trigger AFTER INSERT ON items
+				BEGIN
+					SELECT ENDα;
+					UPDATE totals SET y = y + 1;
+				END;
+
+				CREATE INDEX items_idx ON items (id);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER my_trigger AFTER INSERT ON items
+							BEGIN
+								SELECT ENDα;
+								UPDATE totals SET y = y + 1;
+							END",
+			  "CREATE INDEX items_idx ON items (id)",
+			]
+		`);
+	});
+
+	it("should not treat a qualified reference to a column named begin/case/end as a compound statement marker", ({
+		expect,
+	}) => {
+		// SQLite's `.` qualifier operator always introduces an identifier
+		// reference on its right, never a real keyword -- `new.begin` is a
+		// column reference inside a trigger body, not the BEGIN keyword.
+		expect(
+			splitSqlQuery(
+				`CREATE TRIGGER t AFTER INSERT ON items BEGIN INSERT INTO audit(v) VALUES (new.begin); END; CREATE INDEX idx ON items("begin");`
+			)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER t AFTER INSERT ON items BEGIN INSERT INTO audit(v) VALUES (new.begin); END",
+			  "CREATE INDEX idx ON items("begin");",
+			]
+		`);
+	});
+
+	it("should recognise a CASE immediately followed by a parenthesised expression with no space", ({
+		expect,
+	}) => {
+		// SQLite allows `CASE(expr)` with no whitespace between the keyword and
+		// the expression. Missing this start left the trigger's own END
+		// prematurely popped by this CASE's own (comma-terminated) END,
+		// splitting the trigger body into unrelated fragments.
+		expect(
+			splitSqlQuery(
+				`CREATE TRIGGER t2 AFTER INSERT ON items BEGIN UPDATE totals SET x = CASE(NEW.active) WHEN 1 THEN 1 ELSE 0 END, y = 2; UPDATE totals SET y = y + 1; END;`
+			)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER t2 AFTER INSERT ON items BEGIN UPDATE totals SET x = CASE(NEW.active) WHEN 1 THEN 1 ELSE 0 END, y = 2; UPDATE totals SET y = y + 1; END",
+			]
+		`);
+	});
+
+	it("should recognise a compact END with no preceding whitespace", ({
+		expect,
+	}) => {
+		// A value expression can end directly in a closing paren with no space
+		// before END (e.g. `ELSE(0)END`). Missing this left the CASE's own
+		// stack frame open, so the trigger's own END popped it instead,
+		// silently merging the trigger with the statement after it.
+		expect(
+			splitSqlQuery(
+				`CREATE TRIGGER t3 AFTER INSERT ON items BEGIN UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE(0)END); UPDATE totals SET y = y + 1; END; CREATE INDEX idx3 ON items(id);`
+			)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER t3 AFTER INSERT ON items BEGIN UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE(0)END); UPDATE totals SET y = y + 1; END",
+			  "CREATE INDEX idx3 ON items(id)",
+			]
+		`);
+	});
+
 	describe("performance tests", () => {
 		it("should split a file with a lot of commands", ({ expect }) => {
 			const sql = "INSERT INTO blobs (id, data) VALUES (1, 'xxx');\n".repeat(
