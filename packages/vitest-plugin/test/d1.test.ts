@@ -90,7 +90,7 @@ describe("readD1Migrations", () => {
 			)
 		).rejects.toThrow(
 			new TypeError(
-				"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string'."
+				"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string' or 'object'."
 			)
 		);
 	});

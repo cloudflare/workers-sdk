@@ -18,12 +18,6 @@ export type ReadD1MigrationsOptions = {
  * `0001_init/migration.sql` via `migrationsPattern`.
  */
 export async function readD1Migrations(
-	migrationsPath: string
-): Promise<D1Migration[]>;
-export async function readD1Migrations(
-	options: ReadD1MigrationsOptions
-): Promise<D1Migration[]>;
-export async function readD1Migrations(
 	migrationsPathOrOptions: string | ReadD1MigrationsOptions
 ): Promise<D1Migration[]> {
 	const files = listD1MigrationFiles(migrationsPathOrOptions);
@@ -60,7 +54,7 @@ function listD1MigrationFiles(
 	}
 
 	throw new TypeError(
-		"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string'."
+		"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string' or 'object'."
 	);
 }
 
