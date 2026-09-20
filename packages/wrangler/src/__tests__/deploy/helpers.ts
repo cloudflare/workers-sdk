@@ -120,6 +120,29 @@ export function mockUnauthorizedPublishRoutesRequest(
 	);
 }
 
+export function mockForbiddenPublishRoutesRequest(
+	_options: {
+		env?: string | undefined;
+	} = {}
+) {
+	msw.use(
+		http.put(
+			`*/accounts/:accountId/workers/scripts/:scriptName/routes`,
+			() => {
+				// A 403 whose error carries no code, as the API returns for a
+				// token without "All Zones" permissions.
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{ message: "No access to the specified resource." },
+					]),
+					{ status: 403 }
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
 export function mockPublishRoutesFallbackRequest(route: {
 	pattern: string;
 	script: string;

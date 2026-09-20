@@ -1,4 +1,4 @@
-import { ParseError, UserError } from "@cloudflare/workers-utils";
+import { APIError, ParseError, UserError } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import {
 	confirm,
@@ -84,7 +84,19 @@ export function renderRoute(route: Route): string {
 }
 
 function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
+	if (!(e instanceof ParseError)) {
+		return false;
+	}
+
+	// A 403 from the account-level routes endpoint is the "not all zones" case
+	// whether or not the body carries a code: the API does not always attach
+	// code 10000 to it, and keying the fallback on the code alone makes a
+	// deploy that already uploaded the Worker report as failed.
+	if (e instanceof APIError && e.status === 403) {
+		return true;
+	}
+
+	return (e as { code?: number }).code === 10000;
 }
 
 /**

@@ -42,6 +42,7 @@ import {
 	mockPublishRoutesRequest,
 	mockPublishSchedulesRequest,
 	mockServiceScriptData,
+	mockForbiddenPublishRoutesRequest,
 	mockUnauthorizedPublishRoutesRequest,
 	writeAssets,
 } from "./helpers";
@@ -430,6 +431,34 @@ describe("deploy", () => {
 				  example.com/some-route/*
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+
+		it("should fallback to the zone-based API when the bulk-routes API returns 403 without an error code", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				routes: ["example.com/some-route/*"],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerSubdomain({ enabled: false });
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", []);
+			// The API does not always attach code 10000 to this 403.
+			mockForbiddenPublishRoutesRequest();
+			mockPublishRoutesFallbackRequest({
+				pattern: "example.com/some-route/*",
+				script: "test-name",
+			});
+			await runWrangler("deploy ./index");
+
+			expect(std.info).toMatchInlineSnapshot(`
+				"The current authentication token does not have 'All Zones' permissions.
+				Falling back to using the zone-based API endpoint to update each route individually.
+				Note that there is no access to routes associated with zones that the API token does not have permission for.
+				Existing routes for this Worker in such zones will not be deleted."
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should list every conflicting route when routes are assigned to another worker", async ({
