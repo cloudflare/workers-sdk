@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import path from "node:path";
-import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
 	extractBindingsOfType,
 	getBrowserRenderingHeadfulFromEnv,
@@ -22,11 +21,13 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
+import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
 	AssetsOptions,
 	Binding,
 	CfD1Database,
 	CfDispatchNamespace,
+	CfFlagship,
 	CfHyperdrive,
 	CfKvNamespace,
 	CfPipeline,
@@ -40,7 +41,6 @@ import type {
 	ServiceFetch,
 } from "@cloudflare/workers-utils";
 import type {
-	DOContainerOptions,
 	Json,
 	RemoteProxyConnectionString,
 	V4MiniflareOptions,
@@ -99,8 +99,7 @@ export interface ConfigBundle {
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
-	containerDOClassNames: Set<string> | undefined;
-	containerBuildId: string | undefined;
+	containerRuntimeOptions?: Map<string, ContainerDevRuntimeOptions>;
 	containerEngine: ContainerEngine | undefined;
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
@@ -240,6 +239,20 @@ function kvNamespaceEntry(
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
+function flagshipEntry(
+	{ binding, app_id, remote }: CfFlagship,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+): [
+	string,
+	{ app_id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+] {
+	const id = getRemoteId(app_id) ?? binding;
+	if (!remoteProxyConnectionString || !remote) {
+		return [binding, { app_id: id }];
+	}
+	return [binding, { app_id: id, remoteProxyConnectionString }];
+}
+
 function r2BucketEntry(
 	{ binding, bucket_name, remote, local_dev }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
@@ -434,7 +447,6 @@ type WorkerOptionsBindings = Pick<
 	| "ai"
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
-	| "websearch"
 	| "agentMemory"
 	| "textBlobBindings"
 	| "dataBlobBindings"
@@ -483,8 +495,7 @@ type MiniflareBindingsConfig = Pick<
 	| "tails"
 	| "streamingTails"
 	| "complianceRegion"
-	| "containerDOClassNames"
-	| "containerBuildId"
+	| "containerRuntimeOptions"
 	| "enableContainers"
 > &
 	Partial<
@@ -556,7 +567,6 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
-	const websearchBindings = extractBindingsOfType("websearch", bindings);
 	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
@@ -691,10 +701,6 @@ export function buildMiniflareBindingOptions(
 		validateBindingRemoteSetting("ai_search", inst.remote, logger.warn);
 	}
 
-	for (const ws of websearchBindings) {
-		validateBindingRemoteSetting("websearch", ws.remote, logger.warn);
-	}
-
 	for (const memory of agentMemoryBindings) {
 		validateBindingRemoteSetting("agent_memory", memory.remote, logger.warn);
 	}
@@ -760,14 +766,9 @@ export function buildMiniflareBindingOptions(
 				className,
 				scriptName: undefined,
 				useSQLite,
-				container:
-					config.containerDOClassNames?.size && config.enableContainers
-						? getImageNameFromDOClassName({
-								doClassName: className,
-								containerDOClassNames: config.containerDOClassNames,
-								containerBuildId: config.containerBuildId,
-							})
-						: undefined,
+				container: config.enableContainers
+					? config.containerRuntimeOptions?.get(className)
+					: undefined,
 			});
 		}
 	}
@@ -815,15 +816,6 @@ export function buildMiniflareBindingOptions(
 				inst.binding,
 				{
 					instance_name: inst.instance_name,
-					remoteProxyConnectionString,
-				},
-			])
-		),
-
-		websearch: Object.fromEntries(
-			websearchBindings.map((ws) => [
-				ws.binding,
-				{
 					remoteProxyConnectionString,
 				},
 			])
@@ -909,13 +901,9 @@ export function buildMiniflareBindingOptions(
 			helloWorldBindings.map((binding) => [binding.binding, binding])
 		),
 		flagship: Object.fromEntries(
-			flagshipBindings.map((binding) => [
-				binding.binding,
-				{
-					app_id: getRemoteId(binding.app_id) ?? binding.binding,
-					remoteProxyConnectionString,
-				},
-			])
+			flagshipBindings.map((binding) =>
+				flagshipEntry(binding, remoteProxyConnectionString)
+			)
 		),
 		artifacts: Object.fromEntries(
 			artifactsBindings.map((binding) => [
@@ -1044,14 +1032,9 @@ export function buildMiniflareBindingOptions(
 							className,
 							scriptName,
 							useSQLite: classNameToUseSQLite.get(className),
-							container:
-								config.containerDOClassNames?.size && config.enableContainers
-									? getImageNameFromDOClassName({
-											doClassName: className,
-											containerDOClassNames: config.containerDOClassNames,
-											containerBuildId: config.containerBuildId,
-										})
-									: undefined,
+							container: config.enableContainers
+								? config.containerRuntimeOptions?.get(className)
+								: undefined,
 						},
 					];
 				}
@@ -1212,30 +1195,6 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return options;
-}
-
-/**
- * Returns the Container options for the DO class name.
- * @returns The configuration or `undefined` when the DO has no attached container
- */
-export function getImageNameFromDOClassName(options: {
-	doClassName: string;
-	containerDOClassNames: Set<string>;
-	containerBuildId: string | undefined;
-}): DOContainerOptions | undefined {
-	assert(
-		options.containerBuildId,
-		"Build ID should be set if containers are defined and enabled"
-	);
-
-	if (options.containerDOClassNames.has(options.doClassName)) {
-		return {
-			imageName: getDevContainerImageName(
-				options.doClassName,
-				options.containerBuildId
-			),
-		};
-	}
 }
 
 /**

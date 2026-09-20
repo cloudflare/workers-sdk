@@ -17,6 +17,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { defu } from "defu";
+import { isPreviewBuild } from "./build-output-env";
 import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
@@ -762,6 +763,7 @@ async function loadCloudflareConfig(options: {
 	}
 
 	const { result, dependencies } = await loadAndValidateConfig(configPath, {
+		isPreview: isPreviewBuild(),
 		mode: options.mode,
 	});
 

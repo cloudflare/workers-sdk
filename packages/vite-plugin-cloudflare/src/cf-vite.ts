@@ -20,7 +20,7 @@
  * `build` runs Vite's full multi-environment app build via
  * `createBuilder().buildApp()` (NOT the legacy single-environment
  * `build()` helper, which would skip the plugin's worker builds). It
- * accepts only `--mode` (the other shared flags don't apply to a build).
+ * accepts `--mode` and the internal `--preview` build context flag.
  *
  * Exit codes: 0 graceful, 2 unknown verb / parse error, 130 SIGINT,
  * 143 SIGTERM.
@@ -28,6 +28,7 @@
 
 import { parseArgs as nodeParseArgs } from "node:util";
 import { createBuilder, createServer } from "vite";
+import { PREVIEW_BUILD_ENV_VAR } from "./build-output-env";
 import type { InlineConfig, ServerOptions } from "vite";
 
 interface DevArgs {
@@ -91,6 +92,7 @@ function parseDevArgs(argv: string[]): DevArgs {
 
 interface BuildArgs {
 	mode?: string;
+	preview?: boolean;
 }
 
 function parseBuildArgs(argv: string[]): BuildArgs {
@@ -100,6 +102,7 @@ function parseBuildArgs(argv: string[]): BuildArgs {
 			args: argv,
 			options: {
 				mode: { type: "string" },
+				preview: { type: "boolean" },
 			},
 			strict: true,
 			allowPositionals: false,
@@ -111,6 +114,9 @@ function parseBuildArgs(argv: string[]): BuildArgs {
 	const out: BuildArgs = {};
 	if (parsed.values.mode !== undefined) {
 		out.mode = parsed.values.mode;
+	}
+	if (parsed.values.preview !== undefined) {
+		out.preview = parsed.values.preview;
 	}
 
 	return out;
@@ -221,6 +227,7 @@ async function runBuild(userArgv: string[]): Promise<number> {
 		throw err;
 	}
 
+	process.env[PREVIEW_BUILD_ENV_VAR] = args.preview === true ? "true" : "false";
 	const inlineConfig: InlineConfig = {};
 	if (args.mode !== undefined) {
 		inlineConfig.mode = args.mode;

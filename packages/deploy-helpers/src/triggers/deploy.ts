@@ -27,6 +27,9 @@ import type { TriggerDeployment, TriggerProps } from "../shared/types";
 import type { RouteObject } from "./publish-routes";
 import type { Config, Route } from "@cloudflare/workers-utils";
 
+export const PREVIEW_DOMAIN_PROVISIONING_NOTE =
+	"Note: DNS and TLS certificate provisioning for Preview domains may continue after this deploy. If a new Preview URL does not work immediately, wait a few minutes and retry.";
+
 export async function triggersDeploy(
 	props: TriggerProps
 ): Promise<string[] | void> {
@@ -161,9 +164,9 @@ export async function triggersDeploy(
 
 			for (const worker in routesWithOtherBindings) {
 				const assignedRoutes = routesWithOtherBindings[worker];
-				errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
-					(r) => `  - ${chalk.underline(r)}\n`
-				)}`;
+				errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes
+					.map((r) => `  - ${chalk.underline(r)}\n`)
+					.join("")}`;
 			}
 
 			const resolution =
@@ -217,6 +220,7 @@ export async function triggersDeploy(
 				config,
 				workerUrl,
 				accountId,
+				scriptName,
 				customDomainsOnly
 			).then(
 				(result) => ({ ...result, category: "Custom domains" }),
@@ -485,6 +489,21 @@ export async function triggersDeploy(
 		}
 	} else {
 		logger.log("No targets deployed for", workerName, formatTime(deployMs));
+	}
+
+	const customDomainDeployment = completedDeployments.find(
+		(deployment) => deployment.category === "Custom domains"
+	);
+	if (
+		customDomainsOnly.some(
+			(domain) =>
+				"previews_enabled" in domain && domain.previews_enabled === true
+		) &&
+		customDomainDeployment !== undefined &&
+		customDomainDeployment.changed === true &&
+		customDomainDeployment.error === undefined
+	) {
+		logger.log(PREVIEW_DOMAIN_PROVISIONING_NOTE);
 	}
 
 	const failedDeployments = completedDeployments.filter(

@@ -68,7 +68,7 @@ describe("wrangler", () => {
 				  wrangler flagship               🚩 Manage Flagship apps and feature flags [open beta]
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
+				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [open beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
@@ -78,7 +78,6 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
-				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
@@ -170,7 +169,7 @@ describe("wrangler", () => {
 				  wrangler flagship               🚩 Manage Flagship apps and feature flags [open beta]
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [private beta]
+				  wrangler preview [script]       👀 Create a Preview deployment of the current Worker [open beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
@@ -180,7 +179,6 @@ describe("wrangler", () => {
 				  wrangler types [path]           📝 Generate types from your Worker configuration
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
-				  wrangler websearch              🔎 Run queries against Cloudflare Web Search [experimental]
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES

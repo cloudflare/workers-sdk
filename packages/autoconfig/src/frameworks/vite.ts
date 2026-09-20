@@ -15,6 +15,8 @@ import type {
 } from "./framework-class";
 
 export class Vite extends Framework {
+	override readonly supportsMode = true;
+
 	readonly env = {
 		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
 	} as const;

@@ -8,6 +8,7 @@ import {
 } from "@cloudflare/build-output-utils";
 import * as vite from "vite";
 import { loadViteManifest } from "../build";
+import { isPreviewBuild } from "../build-output-env";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
 import { resolveDevOnly } from "../plugin-config";
@@ -194,7 +195,8 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 		await writeBuildOutputSettingsConfig(
 			ctx.resolvedViteConfig.root,
 			settings,
-			ctx.resolvedViteConfig.mode
+			ctx.resolvedViteConfig.mode,
+			isPreviewBuild()
 		);
 	}
 });
