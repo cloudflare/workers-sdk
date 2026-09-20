@@ -1,6 +1,6 @@
 import type { UserConfig } from "vite";
 
-const WRANGLER_STATE_WATCH_IGNORE = "**/.wrangler/**";
+const CLOUDFLARE_STATE_WATCH_IGNORE = "**/.cloudflare/**";
 
 type ServerWatch = NonNullable<UserConfig["server"]>["watch"];
 type WatchIgnored = NonNullable<ServerWatch>["ignored"];
@@ -10,31 +10,31 @@ type WatchIgnored = NonNullable<ServerWatch>["ignored"];
  * replacing any ignore patterns the user already configured.
  *
  * @param userIgnored - Existing `server.watch.ignored` patterns, if any
- * @returns Ignore patterns that always include `.wrangler` directories
+ * @returns Ignore patterns that always include `.cloudflare` directories
  */
-export function withWranglerStateIgnored(
+export function withCloudflareStateIgnored(
 	userIgnored: WatchIgnored
 ): NonNullable<WatchIgnored> {
 	if (userIgnored == null) {
-		return WRANGLER_STATE_WATCH_IGNORE;
+		return CLOUDFLARE_STATE_WATCH_IGNORE;
 	}
 
 	if (Array.isArray(userIgnored)) {
-		return [...userIgnored, WRANGLER_STATE_WATCH_IGNORE];
+		return [...userIgnored, CLOUDFLARE_STATE_WATCH_IGNORE];
 	}
 
-	return [userIgnored, WRANGLER_STATE_WATCH_IGNORE];
+	return [userIgnored, CLOUDFLARE_STATE_WATCH_IGNORE];
 }
 
 /**
- * Merge `.wrangler` into Vite's `server.watch` config.
+ * Merge `.cloudflare` into Vite's `server.watch` config.
  *
  * Returns `null` when the user disabled watching with `server.watch: null`,
  * so this plugin does not turn the watcher back on.
  *
  * @param userWatch - The user's `server.watch` value from Vite config
  * @returns `null` when watching is disabled, otherwise a watch object whose
- *   `ignored` list includes `.wrangler` directories
+ *   `ignored` list includes `.cloudflare` directories
  */
 export function getServerWatchConfig(userWatch: ServerWatch): ServerWatch {
 	if (userWatch === null) {
@@ -43,6 +43,6 @@ export function getServerWatchConfig(userWatch: ServerWatch): ServerWatch {
 
 	return {
 		...userWatch,
-		ignored: withWranglerStateIgnored(userWatch?.ignored),
+		ignored: withCloudflareStateIgnored(userWatch?.ignored),
 	};
 }

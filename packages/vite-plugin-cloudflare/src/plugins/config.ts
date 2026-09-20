@@ -17,7 +17,7 @@ import {
 } from "../plugin-config";
 import { createPlugin, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
-import { getServerWatchConfig } from "./wrangler-watch-ignore";
+import { getServerWatchConfig } from "./cloudflare-watch-ignore";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
 import type * as vite from "vite";
@@ -44,6 +44,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				"**/.git/**",
 				".dev.vars",
 				".dev.vars.*",
+				"**/.cloudflare/**",
 				"**/.wrangler/**",
 			];
 
