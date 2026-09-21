@@ -751,7 +751,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "existing-d1-id",
+						database_id: "existing-d1-id",
 					},
 				],
 			});
@@ -874,7 +874,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "existing-d1-id-1",
+						database_id: "existing-d1-id-1",
 					},
 				],
 			});
@@ -1007,7 +1007,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1170,7 +1170,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1607,7 +1607,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "test-name-d1-id",
+						database_id: "test-name-d1-id",
 					},
 				],
 			});
@@ -1766,7 +1766,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1996,7 +1996,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -2201,7 +2201,7 @@ describe("resource provisioning", () => {
 					{
 						name: "DB_NAME",
 						type: "d1",
-						id: "existing-d1-id",
+						database_id: "existing-d1-id",
 					},
 				],
 			});
