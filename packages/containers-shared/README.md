@@ -16,3 +16,4 @@ Workers SDK packages.
 
 - Cloudchamber/Containers API client
 - Utils for constructing and running docker commands
+- SSH transport shared by Wrangler and cf (OpenSSH and stdio proxy modes)

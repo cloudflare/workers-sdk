@@ -41,9 +41,11 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:default",
+		"@types/ws": "^8.5.7",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"ws": "catalog:default"
 	},
 	"engines": {
 		"node": ">=22.0.0"
