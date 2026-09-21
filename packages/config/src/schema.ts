@@ -766,6 +766,7 @@ export const InputWorkerSchema = BaseWorkerSchema.extend({
 	entrypoint: z.string().optional(),
 });
 
+export type InputWorkerConfig = z.input<typeof InputWorkerSchema>;
 export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
 
 /**
