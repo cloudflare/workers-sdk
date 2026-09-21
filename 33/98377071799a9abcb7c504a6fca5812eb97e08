@@ -1,0 +1,56 @@
+packages/workers-utils/tests/map-worker-metadata-bindings.test.ts
+  s_eb9505de8c205e::t_e22dd60db60ef7 120-122,124-130,165-167,169-173
+packages/wrangler/src/__tests__/preview-config.test.ts
+  s_eb9505de8c205e::t_dae4f506dcb234 3-4,7,30-31,34-37,39-42,49,55,57-58,60-63,65,68-72,74,86-91,93-96,98-100,104-107,110,112,115,118,121-126,128-129,131-132,135,138,148-153,155-160,162-165,169-170,172-173,175-176,183,186,196,200-201
+  s_5bef8494e621c6::t_f5a59e041ecc7e 202-206
+packages/wrangler/src/__tests__/pages/functions-build.test.ts
+  s_e806f17992ef33::t_16265d81add9a7 809
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_e806f17992ef33::t_404c38cc41962d 2038
+packages/workers-utils/src/config/patch-config.ts
+  s_267c67b4382bfe::t_cce47f611e3a3a 8-58,76
+packages/workers-utils/src/index.ts
+  s_267c67b4382bfe::t_bbf874c6af23de 41
+packages/wrangler/src/preview/ensure-config.ts
+  s_267c67b4382bfe::t_bd78cbb39b70de 8,211-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3398377071799a9abcb7c504a6fca5812eb97e08",
+  "prompts": {},
+  "sessions": {
+    "s_267c67b4382bfe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3befe3ddffe8kYR1T6hO1GZ5d",
+        "model": "cloudflare/auto"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_5bef8494e621c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b20e8d7ffexDdhEzw9sgeXej",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_e806f17992ef33": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b4d8ae7ffeIkvnqhfc3vY7CY",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_eb9505de8c205e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3ecf0657ffeSaifwWkFycr33Y",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}
