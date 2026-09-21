@@ -4,4 +4,4 @@
 
 Preserve runtime polyfills when bundling `@cloudflare/unenv-preset`
 
-Side-effect-only polyfills are now explicitly marked in the published package metadata so that bundlers do not tree-shake their global assignments.
+Bundlers now retain side-effect-only polyfills that install runtime globals such as `performance` instead of tree-shaking them from applications.
