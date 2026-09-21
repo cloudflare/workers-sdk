@@ -55,9 +55,9 @@
 	"dependencies": {
 		"@cloudflare/config": "0.15.0",
 		"@cloudflare/unenv-preset": "2.16.1",
-		"miniflare": "5.20260915.0-alpha",
+		"miniflare": "5.20260918.0-alpha",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260915.1",
+		"workerd": "1.20260918.1",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {

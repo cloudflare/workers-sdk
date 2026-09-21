@@ -65,7 +65,7 @@ jobs:
           mkdir "$RUNNER_TEMP/vite-plugin-install-test"
           cd "$RUNNER_TEMP/vite-plugin-install-test"
           npm init --yes
-          npm install --ignore-scripts --package-lock-only "$RUNNER_TEMP"/cloudflare-vite-plugin-*.tgz
+          npm install --ignore-scripts "$RUNNER_TEMP"/cloudflare-vite-plugin-*.tgz
         working-directory: packages/vite-plugin-cloudflare
 
       - name: Publish @cloudflare/vite-plugin@v2
