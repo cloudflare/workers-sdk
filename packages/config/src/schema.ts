@@ -759,14 +759,11 @@ const BaseWorkerSchema = z.strictObject({
 
 /**
  * Input Worker schema — parses Worker definitions from user-authored
- * `cloudflare.config.ts` files. Adds an optional `entrypoint` field to the base
- * schema.
+ * `cloudflare.config.ts` files. Adds an optional string `entrypoint` field to
+ * the base schema.
  */
 export const InputWorkerSchema = BaseWorkerSchema.extend({
-	entrypoint: z
-		.union([z.string(), z.strictObject({ default: z.string() })])
-		.transform((value) => (typeof value === "string" ? value : value.default))
-		.optional(),
+	entrypoint: z.string().optional(),
 });
 
 export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
@@ -864,12 +861,10 @@ export type ParsedOutputWorkerConfig = z.output<typeof OutputWorkerSchema>;
 
 /**
  * Bidirectional drift check between {@link InputWorkerSchema} and the
- * public {@link WorkerConfig} interface. Excludes `entrypoint`, `env`, and
- * `exports`, which deliberately differ:
- *
- * - `entrypoint`: the public type accepts a `WorkerModule` namespace
- *   (produced by `import ... with { type: "cf-worker" }`), but the schema
- *   only accepts the post-`load.ts` shape (`string` or `{ default: string }`).
+ * public {@link WorkerConfig} interface. The public `entrypoint` type accepts a
+ * `WorkerModule` namespace, which the config loader replaces with its string
+ * specifier before parsing. Excludes `env` and `exports`, which deliberately
+ * differ:
  *
  * - `env`: see the separate unidirectional drift check below.
  *
@@ -877,12 +872,12 @@ export type ParsedOutputWorkerConfig = z.output<typeof OutputWorkerSchema>;
  */
 type _ComparableInput = Omit<
 	z.input<typeof InputWorkerSchema>,
-	"entrypoint" | "env" | "exports"
+	"env" | "exports"
 >;
 type _ComparableWorkerConfig = Omit<
 	WorkerConfig,
 	"entrypoint" | "env" | "exports"
->;
+> & { entrypoint?: string };
 type _AssertSchemaMatchesWorkerConfig = [
 	_ComparableInput extends _ComparableWorkerConfig ? true : false,
 	_ComparableWorkerConfig extends _ComparableInput ? true : false,

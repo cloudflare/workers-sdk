@@ -113,6 +113,26 @@ describe("resolveAndParseConfig", () => {
 		}
 	});
 
+	it("converts a module entrypoint to its string specifier before parsing", async ({
+		expect,
+	}) => {
+		const result = await resolveAndParseConfig(
+			{
+				worker: {
+					name: "web",
+					compatibilityDate,
+					entrypoint: { default: "./src/index.ts" },
+				},
+			},
+			{ isPreview: false, mode: undefined }
+		);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.worker?.entrypoint).toBe("./src/index.ts");
+		}
+	});
+
 	it("accepts settings without a Worker", async ({ expect }) => {
 		const result = await resolveAndParseConfig(
 			{ accountId: "account-id", complianceRegion: "public" },
