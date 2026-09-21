@@ -2857,23 +2857,20 @@ importers:
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/config':
-        specifier: workspace:*
-        version: link:../config
+        specifier: 0.15.0
+        version: 0.15.0
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
       miniflare:
-        specifier: workspace:*
-        version: link:../miniflare
+        specifier: 5.20260918.0-alpha
+        version: 5.20260918.0-alpha(@types/node@22.15.17)
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
       workerd:
-        specifier: catalog:default
+        specifier: 1.20260918.1
         version: 1.20260918.1
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
       ws:
         specifier: catalog:default
         version: 8.21.0
@@ -5778,6 +5775,9 @@ packages:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
+
+  '@cloudflare/config@0.15.0':
+    resolution: {integrity: sha512-VcXvoW8NajsbgJ7c4qicOhUXR5sOnp7cBZeVvSehqUzbJyphBI2bs4ePnJPqJcbJlHSra0BETIJY7V8ixhrtOQ==}
 
   '@cloudflare/containers@0.2.2':
     resolution: {integrity: sha512-cfTSd7M96Z9NeCiaN4i3FuMb+i2Nzi0HbMuxvMAnUmkXwtWIZCQ3XLqUWQkdCKWNJZ/3BLMInC6ntFvpbTWIpA==}
@@ -18627,6 +18627,10 @@ snapshots:
       react: 18.3.1
     transitivePeerDependencies:
       - regenerator-runtime
+
+  '@cloudflare/config@0.15.0':
+    dependencies:
+      zod: 4.4.3
 
   '@cloudflare/containers@0.2.2': {}
 
