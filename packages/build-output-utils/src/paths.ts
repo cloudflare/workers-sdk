@@ -7,10 +7,10 @@ import * as path from "node:path";
  */
 export const BUILD_OUTPUT_VERSION = "v0";
 
-/** Root-relative build output directory. */
+/** Build output directory relative to the project root. */
 export const BUILD_OUTPUT_ROOT = ".cloudflare/output";
 
-/** Filename of the top-level config in the Build Output Specification. */
+/** Filename of the root config in the Build Output Specification. */
 export const ROOT_CONFIG_FILENAME = "config.json";
 
 /** Filename of each Worker config in the Build Output Specification. */
@@ -35,7 +35,7 @@ export function getBuildOutputDir(root: string): string {
 }
 
 /**
- * Absolute path to the top-level `config.json`.
+ * Absolute path to the root `config.json`.
  *
  * Holds the settings declared at the top level of `cloudflare.config.ts` and
  * build context.

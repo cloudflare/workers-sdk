@@ -39,10 +39,10 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 	}
 
 	async function loadAndParseConfig(configPath: string, ctx: unknown) {
-		const { config } = await loadConfig(configPath);
+		const { config, dependencies } = await loadConfig(configPath);
 		return {
 			result: await actual.resolveAndParseConfig(config, ctx),
-			dependencies: new Set<string>([path.resolve(configPath)]),
+			dependencies,
 		};
 	}
 

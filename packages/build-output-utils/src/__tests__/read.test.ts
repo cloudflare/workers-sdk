@@ -152,6 +152,14 @@ describe("readBuildOutput", () => {
 		expect(worker.config).not.toHaveProperty("entrypoint");
 	});
 
+	it("returns an absolute project root", async ({ expect }) => {
+		await seedWorker(process.cwd());
+
+		const output = await readBuildOutput(".");
+
+		expect(output.root).toBe(process.cwd());
+	});
+
 	it("reads additional Workers keyed by directory name", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root, {

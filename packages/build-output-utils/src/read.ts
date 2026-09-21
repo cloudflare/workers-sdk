@@ -94,12 +94,12 @@ export type BuildOutputContainers = BuildOutputContainer[];
  * The result of reading a Build Output Specification tree.
  */
 export interface BuildOutput {
-	/** Root from which the output was read. */
+	/** Absolute project root from which the output was read. */
 	root: string;
 	/** Version of the spec the tree conforms to. */
 	version: string;
 	/**
-	 * The parsed top-level `config.json`.
+	 * The parsed root `config.json`.
 	 */
 	rootConfig: ParsedOutputRootConfig;
 	/**
@@ -119,24 +119,25 @@ export interface BuildOutput {
  * Read and parse the Build Output Specification tree at
  * `<root>/.cloudflare/output/v0/`.
  *
- * Reads the top-level `config.json`, then reads and parses each
+ * Reads the root `config.json`, then reads and parses each
  * `worker.config.json` and `container.config.json`, and resolves each Worker's
  * `bundle/` / `assets/` directories. Partial manifests are resolved into
  * complete manifests using the files in `bundle/`.
  *
- * @throws {BuildOutputError} if the top-level `config.json` is missing or
+ * @throws {BuildOutputError} if the root `config.json` is missing or
  * invalid, or if a Worker or Container config is missing, is not valid JSON,
  * or does not match its schema.
  */
 export async function readBuildOutput(root: string): Promise<BuildOutput> {
-	const rootConfig = await readRootConfig(root);
+	const absoluteRoot = path.resolve(root);
+	const rootConfig = await readRootConfig(absoluteRoot);
 	const [workers, containers] = await Promise.all([
-		readWorkers(root),
-		readContainers(root),
+		readWorkers(absoluteRoot),
+		readContainers(absoluteRoot),
 	]);
 
 	return {
-		root,
+		root: absoluteRoot,
 		version: BUILD_OUTPUT_VERSION,
 		rootConfig,
 		workers,
@@ -348,9 +349,9 @@ function inferModuleType(modulePath: string): ModuleType | undefined {
 }
 
 /**
- * Read and parse the top-level `config.json`.
+ * Read and parse the root `config.json`.
  *
- * @returns the parsed settings.
+ * @returns the parsed root config.
  * @throws {BuildOutputError} if the file is missing, is not valid JSON, or
  * does not match its schema.
  */

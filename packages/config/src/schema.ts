@@ -797,7 +797,7 @@ const BuildContextSchema = z.strictObject({
 });
 
 /**
- * The shape of the top-level `config.json` in the Build Output Specification.
+ * The shape of the root `config.json` in the Build Output Specification.
  * Account settings remain at the top level while build context is grouped
  * under `buildContext`.
  */

@@ -125,7 +125,7 @@ export async function writeContainerConfig({
 }
 
 /**
- * Write the top-level `config.json` to the Build Output Specification tree.
+ * Write the root `config.json` to the Build Output Specification tree.
  *
  * Holds the settings declared at the top level of `cloudflare.config.ts` and
  * build context supplied at build time.
