@@ -1,4 +1,3 @@
-import { cleanupContainers } from "@cloudflare/containers-shared";
 import { buildPublicUrl, Request as MiniflareRequest } from "miniflare";
 import colors from "picocolors";
 import { getDockerPath, prepareContainerImagesForVite } from "../containers";
@@ -7,12 +6,6 @@ import { getPreviewMiniflareOptions } from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
 import { rewriteLegacyMiniflarePath } from "./trigger-handlers";
-
-let exitCallback = () => {};
-
-process.on("exit", () => {
-	exitCallback();
-});
 
 /**
  * Plugin to provide core preview functionality
@@ -69,16 +62,9 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					logger: vitePreviewServer.config.logger,
 				});
 
-				const containerImageTags = new Set(containerTagToOptionsMap.keys());
 				vitePreviewServer.config.logger.info(
 					colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 				);
-
-				exitCallback = () => {
-					if (containerImageTags.size) {
-						cleanupContainers(dockerPath, containerImageTags);
-					}
-				};
 			}
 
 			handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare);
