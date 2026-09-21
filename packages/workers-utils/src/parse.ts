@@ -181,10 +181,51 @@ export function parseJSON(input: string, file?: string): unknown {
 /**
  * A wrapper around `JSONC.parse` that throws a `ParseError`.
  */
+type JSONCParseOptions = jsoncParser.ParseOptions & {
+	disallowDuplicateObjectKeys?: boolean;
+};
+
+function assertNoDuplicateObjectKeys(
+	input: string,
+	file: string | undefined,
+	options: jsoncParser.ParseOptions
+) {
+	const objectProperties: Array<Set<string>> = [];
+	jsoncParser.visit(
+		input,
+		{
+			onObjectBegin: () => {
+				objectProperties.push(new Set());
+			},
+			onObjectProperty: (property, offset, length) => {
+				const properties = objectProperties[objectProperties.length - 1];
+				if (!properties) {
+					return;
+				}
+				if (properties.has(property)) {
+					throw new ParseError({
+						text: `Duplicate property "${property}" is not allowed.`,
+						location: {
+							...indexLocation({ file, fileText: input }, offset + 1),
+							length,
+						},
+						telemetryMessage: "JSON(C) duplicate property",
+					});
+				}
+				properties.add(property);
+			},
+			onObjectEnd: () => {
+				objectProperties.pop();
+			},
+		},
+		options
+	);
+}
+
 export function parseJSONC(
 	input: string,
 	file?: string,
-	options: jsoncParser.ParseOptions = { allowTrailingComma: true }
+	options: JSONCParseOptions = { allowTrailingComma: true }
 ): unknown {
 	const errors: JsoncParseError[] = [];
 	const data = jsoncParser.parse(input, errors, options);
@@ -197,6 +238,9 @@ export function parseJSONC(
 			},
 			telemetryMessage: "JSON(C) parse error",
 		});
+	}
+	if (options.disallowDuplicateObjectKeys) {
+		assertNoDuplicateObjectKeys(input, file, options);
 	}
 	return data;
 }

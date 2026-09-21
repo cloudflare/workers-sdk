@@ -1223,6 +1223,27 @@ describe("wrangler preview", () => {
 				});
 			});
 
+			test("rejects duplicate previews blocks in JSONC config", async ({
+				expect,
+			}) => {
+				writeFileSync(
+					"wrangler.jsonc",
+					`{
+  "name": "test-worker",
+  "main": "src/index.ts",
+  "previews": {},
+  "observability": { "enabled": true },
+  "previews": {}
+}`
+				);
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.jsonc --ignore-base-config"
+					)
+				).rejects.toThrow('Duplicate property "previews" is not allowed.');
+			});
+
 			test.for(["wrangler.toml", "wrangler.json", "wrangler.jsonc"])(
 				"onboards a rich Preview Base into $0 and deploys it",
 				async (configPath, { expect }) => {
