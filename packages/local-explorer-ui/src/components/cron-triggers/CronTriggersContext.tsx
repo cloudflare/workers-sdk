@@ -42,7 +42,7 @@ interface ScheduledEnvelope {
 
 export interface CronTriggersContextValue {
 	addCustom(workerName: string): string;
-	duplicateRow(workerName: string, rowId: string): string | undefined;
+	duplicateRow(workerName: string, rowId: string): string;
 	entry: (workerName: string) => CronWorkerState;
 	fallbackWorkerName: string;
 	isRefreshing(workerName: string): boolean;
@@ -58,6 +58,7 @@ export interface CronTriggersContextValue {
 		rowId: string,
 		update: (row: CronRow) => CronRow
 	): void;
+	visibleWorkerNames: string[];
 }
 
 const CronTriggersContext = createContext<CronTriggersContextValue | null>(
@@ -114,10 +115,12 @@ const INTERNAL_WORKERS = new Set([
 	"__vite_proxy_worker__",
 ]);
 
+function visibleCronWorkers(metadata: WorkerMetadata[]): WorkerMetadata[] {
+	return metadata.filter((worker) => !INTERNAL_WORKERS.has(worker.name));
+}
+
 export function selectCronFallbackWorker(metadata: WorkerMetadata[]): string {
-	const visible = metadata.filter(
-		(worker) => !INTERNAL_WORKERS.has(worker.name)
-	);
+	const visible = visibleCronWorkers(metadata);
 	return (
 		visible.find((worker) => worker.isSelf)?.name ?? visible[0]?.name ?? ""
 	);
@@ -287,11 +290,17 @@ export function CronTriggersProvider({
 		const metadata = parseCronWorkerMetadata(seedWorkers) ?? [];
 		return selectCronFallbackWorker(metadata);
 	});
+	const [visibleWorkerNames, setVisibleWorkerNames] = useState(() => {
+		if (!bootstrapAuthoritative) {
+			return [];
+		}
+		const metadata = parseCronWorkerMetadata(seedWorkers) ?? [];
+		return visibleCronWorkers(metadata).map((worker) => worker.name);
+	});
 	const [refreshingWorkers, setRefreshingWorkers] = useState<Set<string>>(
 		new Set()
 	);
 	const generation = useRef(new RefreshGenerationTracker());
-	const refreshingGeneration = useRef(new Map<string, number>());
 	const pendingRows = useRef(new Set<string>());
 
 	useEffect(() => {
@@ -335,8 +344,10 @@ export function CronTriggersProvider({
 	);
 
 	const refresh = useCallback(async (workerName: string, automatic = false) => {
-		const requestGeneration = generation.current.start();
-		refreshingGeneration.current.set(workerName, requestGeneration);
+		const requestGeneration = generation.current.start(workerName, automatic);
+		if (requestGeneration === undefined) {
+			return;
+		}
 		setRefreshingWorkers((current) => new Set(current).add(workerName));
 		try {
 			const response = await fetch(`${LOCAL_EXPLORER_API_PATH}/local/workers`, {
@@ -353,7 +364,9 @@ export function CronTriggersProvider({
 			if (!generation.current.isLatest(requestGeneration)) {
 				return;
 			}
+			const visibleWorkers = visibleCronWorkers(metadata);
 			setFallbackWorkerName(selectCronFallbackWorker(metadata));
+			setVisibleWorkerNames(visibleWorkers.map((worker) => worker.name));
 			const previousScopedPersistenceKeys = lastScopedPersistenceKeys.current;
 			const returnedPersistenceKeys = persistenceKeysForMetadata(metadata);
 			const nextPersistenceKeys = reconcilePersistenceKeysForRefresh(
@@ -422,8 +435,7 @@ export function CronTriggersProvider({
 				return { ...current, [workerName]: { ...entry, stale: true } };
 			});
 		} finally {
-			if (refreshingGeneration.current.get(workerName) === requestGeneration) {
-				refreshingGeneration.current.delete(workerName);
+			if (generation.current.finish(workerName, requestGeneration)) {
 				setRefreshingWorkers((current) => {
 					const next = new Set(current);
 					next.delete(workerName);
@@ -472,15 +484,14 @@ export function CronTriggersProvider({
 				return row.id;
 			},
 			duplicateRow(workerName, id) {
-				let duplicateId: string | undefined;
+				const duplicateId = `custom-${crypto.randomUUID()}`;
 				setWorkers((current) => {
 					const entry = current[workerName] ?? emptyState();
 					const row = entry.rows.find((candidate) => candidate.id === id);
 					if (!row) {
 						return current;
 					}
-					const duplicate = duplicateCronRow(row);
-					duplicateId = duplicate.id;
+					const duplicate = duplicateCronRow(row, duplicateId);
 					return {
 						...current,
 						[workerName]: { ...entry, rows: [...entry.rows, duplicate] },
@@ -582,8 +593,16 @@ export function CronTriggersProvider({
 				});
 			},
 			updateRow,
+			visibleWorkerNames,
 		}),
-		[fallbackWorkerName, refresh, refreshingWorkers, updateRow, workers]
+		[
+			fallbackWorkerName,
+			refresh,
+			refreshingWorkers,
+			updateRow,
+			visibleWorkerNames,
+			workers,
+		]
 	);
 
 	return (
@@ -607,10 +626,23 @@ export { REFRESH_HEADER };
 
 export class RefreshGenerationTracker {
 	#latest = 0;
+	#pendingByWorker = new Map<string, number>();
 
-	start(): number {
+	start(workerName: string, automatic = false): number | undefined {
+		if (automatic && this.#pendingByWorker.has(workerName)) {
+			return undefined;
+		}
 		this.#latest += 1;
+		this.#pendingByWorker.set(workerName, this.#latest);
 		return this.#latest;
+	}
+
+	finish(workerName: string, generation: number): boolean {
+		if (this.#pendingByWorker.get(workerName) !== generation) {
+			return false;
+		}
+		this.#pendingByWorker.delete(workerName);
+		return true;
 	}
 
 	isLatest(generation: number): boolean {

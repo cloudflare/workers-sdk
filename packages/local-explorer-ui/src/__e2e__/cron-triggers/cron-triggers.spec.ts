@@ -83,10 +83,36 @@ describe("Cron Triggers", () => {
 		).toBe(0);
 	});
 
-	test("preserves the requested worker when bootstrap fails", async ({
+	test("recovers Worker selection after bootstrap fails", async ({
 		expect,
 	}) => {
+		let requestCount = 0;
+		let releaseRefresh: (() => void) | undefined;
+		const delayedRefresh = new Promise<void>((resolve) => {
+			releaseRefresh = resolve;
+		});
 		await page.route(WORKERS_ROUTE, async (route) => {
+			requestCount += 1;
+			if (requestCount > 1) {
+				await delayedRefresh;
+				await route.fulfill({
+					body: JSON.stringify({
+						errors: [],
+						messages: [],
+						result: [
+							{
+								isSelf: true,
+								name: "worker-1",
+								persistenceScope: "cron-project-1",
+								triggers: { crons: ["recovered-cron"] },
+							},
+						],
+						success: true,
+					}),
+					contentType: "application/json",
+				});
+				return;
+			}
 			await route.fulfill({
 				body: JSON.stringify({
 					errors: [{ code: 10000, message: "Workers unavailable" }],
@@ -110,6 +136,14 @@ describe("Cron Triggers", () => {
 		expect(new URL(page.url()).searchParams.get("worker")).toBe(
 			"requested-worker"
 		);
+
+		releaseRefresh?.();
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBeNull();
+		await expect
+			.poll(() => page.getByLabel("Cron expression").first().inputValue())
+			.toBe("recovered-cron");
 	});
 
 	test("canonicalizes missing and invalid workers before dispatch", async ({
@@ -369,6 +403,13 @@ describe("Cron Triggers", () => {
 		expect(await cronInputs.first().inputValue()).toBe("0 17 * * sun");
 		await page.getByRole("button", { name: "Duplicate cron" }).click();
 		await expect.poll(() => cronInputs.count()).toBe(2);
+		await expect
+			.poll(() =>
+				cronInputs
+					.last()
+					.evaluate((element) => element === document.activeElement)
+			)
+			.toBe(true);
 		await expect
 			.poll(() =>
 				page

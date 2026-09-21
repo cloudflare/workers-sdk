@@ -51,9 +51,9 @@ describe("Cron Trigger row state", () => {
 		};
 		const reconciled = reconcileConfiguredRows([custom], ["configured"]);
 		expect(reconciled[1]).toBe(custom);
-		const duplicate = duplicateCronRow(custom);
+		const duplicate = duplicateCronRow(custom, "custom-duplicate");
 		expect(duplicate.invocation).toBeUndefined();
 		expect(duplicate.cron).toBe(custom.cron);
-		expect(duplicate.id).not.toBe(custom.id);
+		expect(duplicate.id).toBe("custom-duplicate");
 	});
 });

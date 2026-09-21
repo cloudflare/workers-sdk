@@ -61,10 +61,10 @@ export function reconcileConfiguredRows(
 	return [...configured, ...local, ...staleSettled];
 }
 
-export function duplicateCronRow(row: CronRow): CronRow {
+export function duplicateCronRow(row: CronRow, id = rowId("custom")): CronRow {
 	return {
 		...row,
-		id: rowId("custom"),
+		id,
 		source: "custom",
 		cronBuilder: structuredClone(row.cronBuilder),
 		invocation: undefined,

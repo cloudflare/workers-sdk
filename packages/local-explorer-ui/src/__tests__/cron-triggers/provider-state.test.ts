@@ -118,9 +118,22 @@ describe("Cron Triggers provider state", () => {
 
 	it("rejects stale out-of-order refresh generations", ({ expect }) => {
 		const tracker = new RefreshGenerationTracker();
-		const older = tracker.start();
-		const newer = tracker.start();
+		const older = tracker.start("worker") ?? 0;
+		const newer = tracker.start("worker") ?? 0;
 		expect(tracker.isLatest(newer)).toBe(true);
 		expect(tracker.isLatest(older)).toBe(false);
+		expect(tracker.finish("worker", older)).toBe(false);
+		expect(tracker.finish("worker", newer)).toBe(true);
+	});
+
+	it("skips overlapping automatic refreshes for the same Worker", ({
+		expect,
+	}) => {
+		const tracker = new RefreshGenerationTracker();
+		const first = tracker.start("worker", true) ?? 0;
+		expect(tracker.start("worker", true)).toBeUndefined();
+		expect(tracker.start("other-worker", true)).toBeDefined();
+		expect(tracker.finish("worker", first)).toBe(true);
+		expect(tracker.start("worker", true)).toBeDefined();
 	});
 });

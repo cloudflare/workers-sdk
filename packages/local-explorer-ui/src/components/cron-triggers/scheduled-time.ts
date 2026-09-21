@@ -51,6 +51,12 @@ export function resolveUtcCalendarTime(value: string): UtcCalendarResolution {
 	}
 
 	const epochMs = date.getTime();
+	if (epochMs < MIN_DATE_EPOCH_MS || epochMs > MAX_DATE_EPOCH_MS) {
+		return {
+			kind: "invalid",
+			error: "Date and time are outside the supported scheduled-time range.",
+		};
+	}
 	return { kind: "exact", epochMs, utc: date.toISOString() };
 }
 

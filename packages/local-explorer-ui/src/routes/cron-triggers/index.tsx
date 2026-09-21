@@ -1,6 +1,9 @@
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { CronTriggersProvider } from "../../components/cron-triggers/CronTriggersContext";
+import {
+	CronTriggersProvider,
+	useCronTriggers,
+} from "../../components/cron-triggers/CronTriggersContext";
 import { CronTriggersPage } from "../../components/cron-triggers/CronTriggersPage";
 import {
 	filterVisibleWorkers,
@@ -65,7 +68,55 @@ function CronTriggersRoute(): JSX.Element {
 			bootstrapAuthoritative={loaderData.bootstrapAuthoritative}
 			seedWorkers={loaderData.workers}
 		>
-			<CronTriggersPage activeWorkerName={activeWorkerName} />
+			<CronTriggersContent
+				activeWorkerName={activeWorkerName}
+				bootstrapAuthoritative={loaderData.bootstrapAuthoritative}
+			/>
 		</CronTriggersProvider>
 	);
+}
+
+function CronTriggersContent({
+	activeWorkerName,
+	bootstrapAuthoritative,
+}: {
+	activeWorkerName?: string;
+	bootstrapAuthoritative: boolean;
+}): JSX.Element {
+	const cron = useCronTriggers();
+	const navigate = Route.useNavigate();
+	const search = Route.useSearch();
+	const recoveredWorkerName =
+		!bootstrapAuthoritative && cron.visibleWorkerNames.length > 0
+			? search.worker && cron.visibleWorkerNames.includes(search.worker)
+				? search.worker
+				: cron.fallbackWorkerName
+			: activeWorkerName;
+
+	useEffect(() => {
+		if (bootstrapAuthoritative || cron.visibleWorkerNames.length === 0) {
+			return;
+		}
+		const selectedWorker =
+			search.worker && cron.visibleWorkerNames.includes(search.worker)
+				? search.worker
+				: cron.fallbackWorkerName;
+		const canonicalWorker =
+			cron.visibleWorkerNames.length > 1 ? selectedWorker : undefined;
+		if (search.worker === canonicalWorker) {
+			return;
+		}
+		void navigate({
+			replace: true,
+			search: (previous) => ({ ...previous, worker: canonicalWorker }),
+		});
+	}, [
+		bootstrapAuthoritative,
+		cron.fallbackWorkerName,
+		cron.visibleWorkerNames,
+		navigate,
+		search.worker,
+	]);
+
+	return <CronTriggersPage activeWorkerName={recoveredWorkerName} />;
 }
