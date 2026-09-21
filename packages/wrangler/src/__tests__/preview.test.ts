@@ -3606,6 +3606,121 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain('"preview_urls": true');
 		});
 
+		test.for<{
+			name: string;
+			previewUrls: string[];
+			deploymentUrls: string[];
+			shouldWarn: boolean;
+		}>([
+			{
+				name: "workers.dev URLs are active but custom-domain URLs are missing",
+				previewUrls: ["https://custom-domain-preview.test-worker.workers.dev"],
+				deploymentUrls: [
+					"https://deployment-id-custom-domain.test-worker.workers.dev",
+				],
+				shouldWarn: true,
+			},
+			{
+				name: "the Preview URL array has a custom-domain URL",
+				previewUrls: ["https://custom-domain-preview.app.example.com"],
+				deploymentUrls: [
+					"https://deployment-id-custom-domain.test-worker.workers.dev",
+				],
+				shouldWarn: false,
+			},
+			{
+				name: "the deployment URL array has a custom-domain URL",
+				previewUrls: ["https://custom-domain-preview.test-worker.workers.dev"],
+				deploymentUrls: ["https://deployment-id-custom-domain.app.example.com"],
+				shouldWarn: false,
+			},
+		])(
+			"handles custom-domain Preview URL guidance when $name",
+			async (testCase, { expect }) => {
+				writeWranglerConfig(
+					{
+						main: "src/index.ts",
+						previews: {},
+						routes: [
+							{
+								pattern: "app.example.com",
+								custom_domain: true,
+								previews_enabled: true,
+							},
+						],
+					},
+					"wrangler.json"
+				);
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10025, message: "Preview not found" }],
+								},
+								{ status: 404 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "preview-id-custom-domain",
+										name: "custom-domain-preview",
+										slug: "custom-domain-preview",
+										urls: testCase.previewUrls,
+										worker_name: "test-worker",
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "deployment-id-custom-domain",
+										preview_id: "preview-id-custom-domain",
+										preview_name: "custom-domain-preview",
+										urls: testCase.deploymentUrls,
+										compatibility_date: "2025-01-01",
+										env: {},
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					)
+				);
+
+				await runWrangler("preview --name custom-domain-preview");
+
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				if (testCase.shouldWarn) {
+					expect(std.warn).toContain(
+						"Custom domain Preview URLs are configured, but this Preview only has other active URLs."
+					);
+					expect(std.warn).toContain(
+						"run `wrangler deploy` once to publish the custom domain Preview route"
+					);
+				} else {
+					expect(std.warn).not.toContain(
+						"Custom domain Preview URLs are configured"
+					);
+				}
+			}
+		);
+
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
 			expect,
 		}) => {
