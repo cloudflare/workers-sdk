@@ -37,8 +37,8 @@ export default defineConfig({
 			},
 			inspectorPort: false,
 			persistState: false,
-			auxiliaryWorkers: {
-				internalDurableObject: {
+			auxiliaryWorkers: [
+				{
 					config: {
 						name: "internal-durable-object",
 						entrypoint: "./workers/durable-object.ts",
@@ -58,7 +58,7 @@ export default defineConfig({
 						},
 					},
 				},
-			},
+			],
 		}),
 	],
 });

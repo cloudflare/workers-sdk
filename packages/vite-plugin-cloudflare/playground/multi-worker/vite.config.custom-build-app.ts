@@ -18,6 +18,15 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			types: { includeRuntime: false },
+			auxiliaryWorkers: [
+				{
+					config: {
+						name: "worker-b",
+						entrypoint: "./worker-b/index.ts",
+						compatibilityDate: "2024-12-30",
+					},
+				},
+			],
 			inspectorPort: false,
 			persistState: false,
 		}),

@@ -1,19 +1,21 @@
 import {
-	defineWorker,
+	defineConfig,
 	triggers,
 } from "@cloudflare/vite-plugin/experimental-config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
-export default defineWorker({
-	name: "cron-trigger-worker",
-	entrypoint,
-	compatibilityDate: "2025-02-14",
-	domains: ["example.com"],
-	triggers: [
-		triggers.scheduled({ schedule: "* * * * *" }),
-		triggers.fetch({
-			pattern: "cf-worker-header-test.example.net/*",
-			zone: "example.net",
-		}),
-	],
+export default defineConfig({
+	worker: {
+		name: "cron-trigger-worker",
+		entrypoint,
+		compatibilityDate: "2025-02-14",
+		domains: ["example.com"],
+		triggers: [
+			triggers.scheduled({ schedule: "* * * * *" }),
+			triggers.fetch({
+				pattern: "cf-worker-header-test.example.net/*",
+				zone: "example.net",
+			}),
+		],
+	},
 });

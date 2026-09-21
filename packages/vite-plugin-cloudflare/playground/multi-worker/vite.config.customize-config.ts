@@ -15,10 +15,13 @@ export default defineConfig({
 					},
 				},
 			}),
-			auxiliaryWorkers: {
-				auxiliaryWorker: {
+			auxiliaryWorkers: [
+				{
 					// Test config as an object on auxiliary worker
 					config: {
+						name: "worker-b",
+						entrypoint: "./worker-b/index.ts",
+						compatibilityDate: "2024-12-30",
 						env: {
 							CONFIGURED_VAR: {
 								type: "text",
@@ -27,7 +30,7 @@ export default defineConfig({
 						},
 					},
 				},
-			},
+			],
 			inspectorPort: false,
 			persistState: false,
 		}),

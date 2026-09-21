@@ -47,8 +47,10 @@ describe.skipIf(isBuild)("denies access to sensitive files in dev", () => {
 		expect(response.status()).toBe(403);
 	});
 
-	test("denies access to imported Worker config files", async ({ expect }) => {
-		const response = await getResponse("/worker-configs.ts");
+	test("denies access to files imported by cloudflare.config.ts", async ({
+		expect,
+	}) => {
+		const response = await getResponse("/constants.ts");
 		expect(response.status()).toBe(403);
 	});
 
@@ -134,8 +136,10 @@ describe.runIf(isBuild)("doesn't serve sensitive files in preview", () => {
 		expect(response).toBe("Worker A response");
 	});
 
-	test("doesn't serve imported Worker config files", async ({ expect }) => {
-		const response = await getTextResponse("/worker-configs.ts");
+	test("doesn't serve files imported by cloudflare.config.ts", async ({
+		expect,
+	}) => {
+		const response = await getTextResponse("/constants.ts");
 		expect(response).toBe("Worker A response");
 	});
 

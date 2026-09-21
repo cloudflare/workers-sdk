@@ -1,14 +1,16 @@
 import {
 	bindings,
-	defineWorker,
+	defineConfig,
 } from "@cloudflare/vite-plugin/experimental-config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
-export default defineWorker({
-	name: "worker",
-	entrypoint,
-	compatibilityDate: "2024-12-30",
-	env: {
-		DB: bindings.d1({ id: "local", name: "prisma-demo-db" }),
+export default defineConfig({
+	worker: {
+		name: "worker",
+		entrypoint,
+		compatibilityDate: "2024-12-30",
+		env: {
+			DB: bindings.d1({ id: "local", name: "prisma-demo-db" }),
+		},
 	},
 });
