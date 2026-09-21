@@ -44,15 +44,12 @@
 	},
 	"scripts": {
 		"build": "unbuild",
-		"check:type": "tsc --noEmit",
-		"test:ci": "vitest run"
+		"check:type": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@types/node-unenv": "npm:@types/node@^22.14.0",
 		"typescript": "catalog:default",
-		"unbuild": "^3.2.0",
-		"vite": "catalog:default",
-		"vitest": "catalog:default"
+		"unbuild": "^3.2.0"
 	},
 	"peerDependencies": {
 		"unenv": "2.0.0-rc.24",
