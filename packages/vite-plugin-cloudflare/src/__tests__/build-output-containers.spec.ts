@@ -33,17 +33,19 @@ describe("buildOutputContainers", () => {
 	it("builds and writes Container output when enabled", async ({ expect }) => {
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 		const container = InputContainerSchema.parse({
-			type: "container",
 			name: "api-container",
 			image: { dockerfile: "./container/Dockerfile" },
 		});
-		const config = { api: container };
+		const containers = [container];
 
-		await buildOutputContainers(createResolvedConfig(true, config), "/project");
+		await buildOutputContainers(
+			createResolvedConfig(true, { containers }),
+			"/project"
+		);
 
 		expect(buildAndWriteContainerOutput).toHaveBeenCalledOnce();
 		expect(buildAndWriteContainerOutput).toHaveBeenCalledWith({
-			containers: config,
+			containers,
 			root: "/project",
 			pathToDocker: "/usr/bin/docker",
 		});
@@ -63,11 +65,12 @@ describe("buildOutputContainers", () => {
 function createResolvedConfig(
 	cfBuildOutput: boolean,
 	parsedNewConfig = {
-		api: InputContainerSchema.parse({
-			type: "container",
-			name: "api-container",
-			image: { reference: "registry.example.com/api:latest" },
-		}),
+		containers: [
+			InputContainerSchema.parse({
+				name: "api-container",
+				image: { reference: "registry.example.com/api:latest" },
+			}),
+		],
 	}
 ): ResolvedPluginConfig {
 	return {

@@ -11,7 +11,7 @@ import { describe, it } from "vitest";
 import {
 	BUILD_OUTPUT_ROOT,
 	getContainerConfigPath,
-	getSettingsConfigPath,
+	getRootConfigPath,
 	getWorkerAssetsDir,
 	getWorkerConfigPath,
 } from "../paths";
@@ -19,31 +19,27 @@ import {
 	cleanBuildOutputDir,
 	writeContainerConfig,
 	writeAssets,
-	writeSettingsConfig,
+	writeRootConfig,
 	writeWorkerConfig,
 } from "../write";
 
 const parsedWorkerConfig = InputWorkerSchema.parse({
-	type: "worker",
 	name: "my-worker",
 	compatibilityDate: "2026-06-01",
 	entrypoint: "index.js",
 });
 
 const parsedSettingsConfig = InputSettingsSchema.parse({
-	type: "settings",
 	accountId: "1234567890",
 	complianceRegion: "public",
 });
 
 const parsedStandardContainerConfig = OutputContainerSchema.parse({
-	type: "container",
 	name: "api-container",
 	image: { reference: "registry.example.com/api:latest" },
 });
 
 const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
-	type: "container",
 	name: "session-container",
 	schedulingPolicy: "durable-object",
 	images: {
@@ -51,68 +47,80 @@ const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
 	},
 });
 
-describe("writeSettingsConfig", () => {
+describe("writeRootConfig", () => {
 	runInTempDir();
 
-	it("writes the top-level config.json with the shared settings", async ({
+	it("writes the root config.json with the shared settings", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
-		await writeSettingsConfig(root, parsedSettingsConfig);
+		await writeRootConfig(root, parsedSettingsConfig, {
+			isPreview: false,
+			mode: undefined,
+		});
 
 		const contents = JSON.parse(
-			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
+			fs.readFileSync(getRootConfigPath(root), "utf-8")
 		);
-		expect(contents).toEqual(parsedSettingsConfig);
+		expect(contents).toEqual({
+			...parsedSettingsConfig,
+			buildContext: { isPreview: false },
+		});
 	});
 
-	it("records the mode alongside the shared settings", async ({ expect }) => {
-		const root = process.cwd();
-		await writeSettingsConfig(root, parsedSettingsConfig, "staging");
-
-		const contents = JSON.parse(
-			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
-		);
-		expect(contents).toEqual({ ...parsedSettingsConfig, mode: "staging" });
-	});
-
-	it("omits the mode key when no mode was selected", async ({ expect }) => {
-		const root = process.cwd();
-		await writeSettingsConfig(root, parsedSettingsConfig, undefined);
-
-		const contents = JSON.parse(
-			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
-		);
-		expect(contents).not.toHaveProperty("mode");
-	});
-
-	it("writes a config with just the type when there are no settings and no mode", async ({
+	it("records build context alongside the shared settings", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
-		await writeSettingsConfig(root, undefined);
+		await writeRootConfig(root, parsedSettingsConfig, {
+			isPreview: false,
+			mode: "staging",
+		});
 
 		const contents = JSON.parse(
-			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
+			fs.readFileSync(getRootConfigPath(root), "utf-8")
 		);
-		expect(contents).toEqual({ type: "settings" });
+		expect(contents).toEqual({
+			...parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: "staging" },
+		});
 	});
 
-	it("writes the mode when there are no settings", async ({ expect }) => {
+	it("writes only build context when there are no settings or mode", async ({
+		expect,
+	}) => {
 		const root = process.cwd();
-		await writeSettingsConfig(root, undefined, "production");
+		await writeRootConfig(root, undefined, {
+			isPreview: false,
+			mode: undefined,
+		});
 
 		const contents = JSON.parse(
-			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
+			fs.readFileSync(getRootConfigPath(root), "utf-8")
 		);
-		expect(contents).toEqual({ type: "settings", mode: "production" });
+		expect(contents).toEqual({ buildContext: { isPreview: false } });
+	});
+
+	it("writes build context when there are no settings", async ({ expect }) => {
+		const root = process.cwd();
+		await writeRootConfig(root, undefined, {
+			isPreview: true,
+			mode: "production",
+		});
+
+		const contents = JSON.parse(
+			fs.readFileSync(getRootConfigPath(root), "utf-8")
+		);
+		expect(contents).toEqual({
+			buildContext: { isPreview: true, mode: "production" },
+		});
 	});
 });
 
 describe("writeWorkerConfig", () => {
 	runInTempDir();
 
-	it("writes config.json, stripping entrypoint and keeping the manifest", async ({
+	it("writes worker.config.json under default, stripping entrypoint and keeping the manifest", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
@@ -145,7 +153,9 @@ describe("writeWorkerConfig", () => {
 		expect(contents).not.toHaveProperty("manifest");
 	});
 
-	it("writes config.json for a named Worker directory", async ({ expect }) => {
+	it("writes worker.config.json for a named Worker directory", async ({
+		expect,
+	}) => {
 		const root = process.cwd();
 		await writeWorkerConfig({
 			root,
@@ -170,11 +180,11 @@ describe("writeContainerConfig", () => {
 		await writeContainerConfig({
 			root,
 			config: parsedStandardContainerConfig,
-			directoryName: "api",
+			directoryName: parsedStandardContainerConfig.name,
 		});
 
 		const contents = JSON.parse(
-			fs.readFileSync(getContainerConfigPath(root, "api"), "utf-8")
+			fs.readFileSync(getContainerConfigPath(root, "api-container"), "utf-8")
 		);
 		expect(contents).toEqual(parsedStandardContainerConfig);
 		expect(OutputContainerSchema.parse(contents)).toEqual(contents);
@@ -187,11 +197,14 @@ describe("writeContainerConfig", () => {
 		await writeContainerConfig({
 			root,
 			config: parsedDurableObjectContainerConfig,
-			directoryName: "session",
+			directoryName: parsedDurableObjectContainerConfig.name,
 		});
 
 		const contents = JSON.parse(
-			fs.readFileSync(getContainerConfigPath(root, "session"), "utf-8")
+			fs.readFileSync(
+				getContainerConfigPath(root, "session-container"),
+				"utf-8"
+			)
 		);
 		expect(contents).toEqual(parsedDurableObjectContainerConfig);
 		expect(OutputContainerSchema.parse(contents)).toEqual(contents);
@@ -203,7 +216,10 @@ describe("cleanBuildOutputDir", () => {
 
 	it("removes the build output directory", async ({ expect }) => {
 		const root = process.cwd();
-		await writeSettingsConfig(root, parsedSettingsConfig);
+		await writeRootConfig(root, parsedSettingsConfig, {
+			isPreview: false,
+			mode: undefined,
+		});
 		const outputDir = path.join(root, BUILD_OUTPUT_ROOT);
 		expect(fs.existsSync(outputDir)).toBe(true);
 
@@ -233,7 +249,10 @@ describe("writeAssets", () => {
 	}) => {
 		const root = process.cwd();
 		fs.writeFileSync(path.join(root, "index.html"), "hello");
-		await writeSettingsConfig(root, parsedSettingsConfig);
+		await writeRootConfig(root, parsedSettingsConfig, {
+			isPreview: false,
+			mode: undefined,
+		});
 
 		await writeAssets({ root, sourceDirectory: root });
 

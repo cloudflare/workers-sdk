@@ -122,7 +122,7 @@ describe("runAutoConfig()", () => {
 		expect(summary.deployCommand).toBe("npx cf deploy");
 		expect(summary.versionCommand).toBe("npx cf versions upload");
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
-			'import { defineWorker } from "cf/config";\n\nexport default defineWorker({\n  "name": "my-static-app"'
+			'import { defineConfig } from "cf/config";\n\nexport default defineConfig({\n  worker: {\n    "name": "my-static-app"'
 		);
 		expect(readFileSync("wrangler.config.ts", "utf8")).toContain(
 			'import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig({\n  "assetsDirectory": "public"'

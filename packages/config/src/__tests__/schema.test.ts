@@ -2,26 +2,28 @@ import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
 import {
 	BindingSchema,
+	InputConfigSchema,
 	InputContainerSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
 	OutputContainerSchema,
-	OutputSettingsSchema,
+	OutputRootConfigSchema,
 	OutputWorkerSchema,
 } from "../schema";
 import type { ParsedInputWorkerConfig } from "../schema";
 
 const baseConfig = {
-	type: "worker",
 	name: "my-worker",
 	compatibilityDate: "2026-06-01",
 } as const;
 
 const baseContainer = {
-	type: "container",
 	name: "my-container",
 	image: { dockerfile: "./Dockerfile" },
 } as const;
+
+const baseOutputConfig = { ...baseConfig } as const;
+const baseOutputContainer = { ...baseContainer } as const;
 
 describe("InputWorkerSchema", () => {
 	describe("env singleton bindings", () => {
@@ -781,15 +783,8 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
-	it("requires type: 'container'", ({ expect }) => {
-		const { type: _type, ...container } = baseContainer;
-
-		expect(InputContainerSchema.safeParse(container).success).toBe(false);
-	});
-
 	it("accepts a Durable Object Container", ({ expect }) => {
 		const result = InputContainerSchema.safeParse({
-			type: "container",
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			images: {
@@ -803,7 +798,6 @@ describe("InputContainerSchema", () => {
 
 	it("accepts a Durable Object Container without images", ({ expect }) => {
 		const result = InputContainerSchema.safeParse({
-			type: "container",
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 		});
@@ -815,7 +809,6 @@ describe("InputContainerSchema", () => {
 		expect,
 	}) => {
 		const result = InputContainerSchema.safeParse({
-			type: "container",
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			observability: { enabled: true, logs: { enabled: true } },
@@ -828,7 +821,6 @@ describe("InputContainerSchema", () => {
 		"rejects observability instance targeting for a Durable Object Container: %o",
 		(observability, { expect }) => {
 			const result = InputContainerSchema.safeParse({
-				type: "container",
 				name: "durable-object-container",
 				schedulingPolicy: "durable-object",
 				observability,
@@ -1061,7 +1053,7 @@ describe("OutputContainerSchema", () => {
 		{ localReference: "locally-built-image:latest" },
 	])("accepts a built image reference: %o", (image, { expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			...baseContainer,
+			...baseOutputContainer,
 			image,
 		});
 
@@ -1072,7 +1064,7 @@ describe("OutputContainerSchema", () => {
 	});
 
 	it("rejects a Dockerfile that has not been built", ({ expect }) => {
-		const result = OutputContainerSchema.safeParse(baseContainer);
+		const result = OutputContainerSchema.safeParse(baseOutputContainer);
 
 		expect(result.success).toBe(false);
 	});
@@ -1081,7 +1073,7 @@ describe("OutputContainerSchema", () => {
 		"rejects an empty image reference: %o",
 		(image, { expect }) => {
 			const result = OutputContainerSchema.safeParse({
-				...baseContainer,
+				...baseOutputContainer,
 				image,
 			});
 
@@ -1091,7 +1083,7 @@ describe("OutputContainerSchema", () => {
 
 	it("rejects both image reference types together", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			...baseContainer,
+			...baseOutputContainer,
 			image: {
 				reference: "registry.example.com/my-image:digest",
 				localReference: "locally-built-image:latest",
@@ -1103,7 +1095,6 @@ describe("OutputContainerSchema", () => {
 
 	it("accepts built Durable Object Container images", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			type: "container",
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			images: {
@@ -1117,7 +1108,6 @@ describe("OutputContainerSchema", () => {
 
 	it("rejects unbuilt Durable Object Container images", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			type: "container",
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			images: { primary: { dockerfile: "./Dockerfile" } },
@@ -1128,7 +1118,7 @@ describe("OutputContainerSchema", () => {
 
 	it("validates rollout steps against maximum instances", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			...baseContainer,
+			...baseOutputContainer,
 			image: { reference: "registry.example.com/my-image:digest" },
 			maxInstances: 2,
 			rollout: { stepPercentage: [10, 50, 100] },
@@ -1139,7 +1129,7 @@ describe("OutputContainerSchema", () => {
 
 	it("rejects invalid custom instance resources", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			...baseContainer,
+			...baseOutputContainer,
 			image: { reference: "registry.example.com/my-image:digest" },
 			instanceType: { vcpu: 0, memoryMib: -1, diskMb: -1 },
 		});
@@ -1149,7 +1139,7 @@ describe("OutputContainerSchema", () => {
 
 	it("rejects invalid observability targets", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
-			...baseContainer,
+			...baseOutputContainer,
 			image: { reference: "registry.example.com/my-image:digest" },
 			observability: { targetInstancePercentage: 101 },
 		});
@@ -1160,7 +1150,7 @@ describe("OutputContainerSchema", () => {
 
 describe("OutputWorkerSchema", () => {
 	it("accepts a config without manifest (assets-only mode)", ({ expect }) => {
-		const result = OutputWorkerSchema.safeParse({ ...baseConfig });
+		const result = OutputWorkerSchema.safeParse({ ...baseOutputConfig });
 
 		expect(result.success).toBe(true);
 		if (result.success) {
@@ -1170,7 +1160,7 @@ describe("OutputWorkerSchema", () => {
 
 	it("accepts a config with a valid complete manifest", ({ expect }) => {
 		const result = OutputWorkerSchema.safeParse({
-			...baseConfig,
+			...baseOutputConfig,
 			manifest: {
 				type: "complete",
 				mainModule: "index.js",
@@ -1191,7 +1181,7 @@ describe("OutputWorkerSchema", () => {
 		expect,
 	}) => {
 		const result = OutputWorkerSchema.safeParse({
-			...baseConfig,
+			...baseOutputConfig,
 			manifest: {
 				type: "partial",
 				mainModule: "index.js",
@@ -1206,7 +1196,7 @@ describe("OutputWorkerSchema", () => {
 		expect,
 	}) => {
 		const result = OutputWorkerSchema.safeParse({
-			...baseConfig,
+			...baseOutputConfig,
 			manifest: {
 				type: "partial",
 				mainModule: "index.js",
@@ -1221,7 +1211,7 @@ describe("OutputWorkerSchema", () => {
 		expect,
 	}) => {
 		const result = OutputWorkerSchema.safeParse({
-			...baseConfig,
+			...baseOutputConfig,
 			entrypoint: "./src/index.ts",
 		});
 
@@ -1230,7 +1220,7 @@ describe("OutputWorkerSchema", () => {
 
 	it("rejects a manifest with an unknown module type", ({ expect }) => {
 		const result = OutputWorkerSchema.safeParse({
-			...baseConfig,
+			...baseOutputConfig,
 			manifest: {
 				type: "complete",
 				mainModule: "index.js",
@@ -1245,7 +1235,7 @@ describe("OutputWorkerSchema", () => {
 
 	it("rejects a manifest without mainModule", ({ expect }) => {
 		const result = OutputWorkerSchema.safeParse({
-			...baseConfig,
+			...baseOutputConfig,
 			manifest: {
 				type: "complete",
 				modules: { "index.js": { type: "esm" } },
@@ -1259,7 +1249,7 @@ describe("OutputWorkerSchema", () => {
 		expect,
 	}) => {
 		const result = OutputWorkerSchema.safeParse({
-			...baseConfig,
+			...baseOutputConfig,
 			manifest: {
 				type: "complete",
 				mainModule: "index.js",
@@ -1272,7 +1262,7 @@ describe("OutputWorkerSchema", () => {
 
 	it("rejects a manifest module entry with unknown keys", ({ expect }) => {
 		const result = OutputWorkerSchema.safeParse({
-			...baseConfig,
+			...baseOutputConfig,
 			manifest: {
 				type: "complete",
 				mainModule: "index.js",
@@ -1286,25 +1276,40 @@ describe("OutputWorkerSchema", () => {
 	});
 });
 
-describe("InputWorkerSchema type discriminant", () => {
-	it("requires type: 'worker'", ({ expect }) => {
-		const { type: _type, ...withoutType } = baseConfig;
-		const result = InputWorkerSchema.safeParse(withoutType);
+describe("InputConfigSchema", () => {
+	it("accepts settings without a Worker and defaults its Containers", ({
+		expect,
+	}) => {
+		const result = InputConfigSchema.safeParse({
+			accountId: "account-id",
+			complianceRegion: "public",
+		});
 
-		expect(result.success).toBe(false);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.worker).toBeUndefined();
+			expect(result.data.containers).toEqual([]);
+		}
+	});
+
+	it("accepts a Container without a Worker", ({ expect }) => {
+		const result = InputConfigSchema.safeParse({
+			containers: [baseContainer],
+		});
+
+		expect(result.success).toBe(true);
 	});
 });
 
 describe("InputSettingsSchema", () => {
 	it("accepts a minimal settings config", ({ expect }) => {
-		const result = InputSettingsSchema.safeParse({ type: "settings" });
+		const result = InputSettingsSchema.safeParse({});
 
 		expect(result.success).toBe(true);
 	});
 
 	it("accepts accountId and complianceRegion", ({ expect }) => {
 		const result = InputSettingsSchema.safeParse({
-			type: "settings",
 			accountId: "acc-123",
 			complianceRegion: "fedramp-high",
 		});
@@ -1312,58 +1317,62 @@ describe("InputSettingsSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("rejects unknown fields", ({ expect }) => {
+	it("strips fields outside the account settings", ({ expect }) => {
 		const result = InputSettingsSchema.safeParse({
-			type: "settings",
+			accountId: "acc-123",
 			name: "my-worker",
-		});
-
-		expect(result.success).toBe(false);
-	});
-
-	it("rejects `mode`, which is supplied at build time rather than declared", ({
-		expect,
-	}) => {
-		const result = InputSettingsSchema.safeParse({
-			type: "settings",
 			mode: "staging",
 		});
 
-		expect(result.success).toBe(false);
+		expect(result).toEqual({
+			success: true,
+			data: { accountId: "acc-123" },
+		});
 	});
 });
 
-describe("OutputSettingsSchema", () => {
-	it("accepts a mode alongside the settings fields", ({ expect }) => {
-		const result = OutputSettingsSchema.safeParse({
-			type: "settings",
+describe("OutputRootConfigSchema", () => {
+	it("accepts build context alongside the settings fields", ({ expect }) => {
+		const result = OutputRootConfigSchema.safeParse({
 			accountId: "acc-123",
 			complianceRegion: "public",
-			mode: "staging",
+			buildContext: { isPreview: false, mode: "staging" },
 		});
 
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts a config without a mode", ({ expect }) => {
-		const result = OutputSettingsSchema.safeParse({ type: "settings" });
+	it("accepts a build context without a mode", ({ expect }) => {
+		const result = OutputRootConfigSchema.safeParse({
+			buildContext: { isPreview: false },
+		});
 
 		expect(result.success).toBe(true);
 	});
 
+	it("requires build context", ({ expect }) => {
+		const result = OutputRootConfigSchema.safeParse({});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("requires Preview intent", ({ expect }) => {
+		const result = OutputRootConfigSchema.safeParse({ buildContext: {} });
+
+		expect(result.success).toBe(false);
+	});
+
 	it("rejects a non-string mode", ({ expect }) => {
-		const result = OutputSettingsSchema.safeParse({
-			type: "settings",
-			mode: 123,
+		const result = OutputRootConfigSchema.safeParse({
+			buildContext: { isPreview: false, mode: 123 },
 		});
 
 		expect(result.success).toBe(false);
 	});
 
 	it("rejects unknown fields", ({ expect }) => {
-		const result = OutputSettingsSchema.safeParse({
-			type: "settings",
-			mode: "staging",
+		const result = OutputRootConfigSchema.safeParse({
+			buildContext: { isPreview: false, mode: "staging" },
 			name: "my-worker",
 		});
 

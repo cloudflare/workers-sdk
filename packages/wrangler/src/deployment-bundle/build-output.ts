@@ -1,29 +1,22 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
-	cleanBuildOutputDir,
 	getWorkerBundleDir,
 	writeAssets,
-	writeSettingsConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
-	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
 
-interface WriteBuildOutputArgs {
+interface WriteWorkerOutputArgs {
 	root: string;
-	parsedWorkerConfig: ParsedInputWorkerConfig;
-	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
-	/** The mode the build was produced in, recorded in the top-level config. */
-	mode: string | undefined;
-	isPreview: boolean;
+	workerConfig: ParsedInputWorkerConfig;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }
@@ -32,22 +25,18 @@ interface WriteBuildOutputArgs {
  * Write the Worker's `.cloudflare/output/v0/workers/default/` directory
  * tree from an in-memory `WorkerBuildResult` and `AssetsOptions`.
  */
-export async function writeBuildOutput({
+export async function writeWorkerOutput({
 	root,
-	parsedWorkerConfig,
-	parsedSettingsConfig,
-	mode,
-	isPreview,
+	workerConfig,
 	buildResult,
 	assetsOptions,
-}: WriteBuildOutputArgs): Promise<void> {
+}: WriteWorkerOutputArgs): Promise<void> {
 	if (buildResult === undefined && assetsOptions === undefined) {
 		throw new UserError(
 			"Cannot emit build output: the Worker has no entrypoint and no assets directory.",
 			{ telemetryMessage: "build output missing entrypoint and assets" }
 		);
 	}
-	await cleanBuildOutputDir(root);
 
 	const [manifest] = await Promise.all([
 		buildResult
@@ -58,8 +47,7 @@ export async function writeBuildOutput({
 			: Promise.resolve(),
 	]);
 
-	await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
-	await writeSettingsConfig(root, parsedSettingsConfig, mode, isPreview);
+	await writeWorkerConfig({ root, config: workerConfig, manifest });
 }
 
 async function writeBundle({

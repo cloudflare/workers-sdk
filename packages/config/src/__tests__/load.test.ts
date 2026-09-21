@@ -10,28 +10,19 @@ import { InputWorkerSchema } from "../schema";
 // inside a test directly. Instead, we run a small Node program in a
 // subprocess that calls `loadConfig`, serialises the result as JSON, and
 // prints it to stdout for the test to consume.
-function runLoadConfigInSubprocess(args: {
-	cwd: string;
-	configPath: string;
-	include?: string[];
-}): {
+function runLoadConfigInSubprocess(args: { cwd: string; configPath: string }): {
 	config: unknown;
-	exports: Record<string, unknown>;
 	dependencies: string[];
 } {
 	// Use a file:// URL rather than a raw filesystem path so the embedded
 	// `import` specifier is valid on Windows (where absolute paths like
 	// `C:\...` are not accepted as ESM specifiers).
 	const sourceEntry = pathToFileURL(path.resolve(__dirname, "../load.ts")).href;
-	const options = args.include
-		? `, { include: ${JSON.stringify(args.include)} }`
-		: "";
 	const script = `
 		import { loadConfig } from ${JSON.stringify(sourceEntry)};
-		const result = await loadConfig(${JSON.stringify(args.configPath)}${options});
+		const result = await loadConfig(${JSON.stringify(args.configPath)});
 		const serialisable = {
-			config: result.exports.default,
-			exports: result.exports,
+			config: result.config,
 			dependencies: [...result.dependencies],
 		};
 		process.stdout.write(JSON.stringify(serialisable, (_, v) => {
@@ -63,7 +54,7 @@ describe("loadConfig", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default { name: "my-worker" };`,
+			"cloudflare.config.ts": `export default { worker: { name: "my-worker" } };`,
 		});
 
 		const result = runLoadConfigInSubprocess({
@@ -71,44 +62,24 @@ describe("loadConfig", () => {
 			configPath: "./cloudflare.config.ts",
 		});
 
-		expect(result.config).toEqual({ name: "my-worker" });
+		expect(result.config).toEqual({ worker: { name: "my-worker" } });
 	});
 
-	it("returns all named exports keyed by name", async ({ expect }) => {
+	it("explains that the config requires a default export", async ({
+		expect,
+	}) => {
 		await seed({
-			"cloudflare.config.ts": `
-				export default { type: "worker", name: "w" };
-				export const settings = { type: "settings", accountId: "acc-123" };
-			`,
+			"cloudflare.config.ts": `export const worker = { name: "my-worker" };`,
 		});
 
-		const result = runLoadConfigInSubprocess({
-			cwd: process.cwd(),
-			configPath: "./cloudflare.config.ts",
-		});
-
-		expect(result.exports.default).toEqual({ type: "worker", name: "w" });
-		expect(result.exports.settings).toEqual({
-			type: "settings",
-			accountId: "acc-123",
-		});
-	});
-
-	it("filters exports by `include` before resolution", async ({ expect }) => {
-		await seed({
-			"cloudflare.config.ts": `
-				export default { type: "worker", name: "w" };
-				export const settings = { type: "settings" };
-			`,
-		});
-
-		const result = runLoadConfigInSubprocess({
-			cwd: process.cwd(),
-			configPath: "./cloudflare.config.ts",
-			include: ["settings"],
-		});
-
-		expect(Object.keys(result.exports)).toEqual(["settings"]);
+		expect(() =>
+			runLoadConfigInSubprocess({
+				cwd: process.cwd(),
+				configPath: "./cloudflare.config.ts",
+			})
+		).toThrow(
+			'The config file "./cloudflare.config.ts" does not have a default export. Export your configuration with `export default defineConfig({ ... })`.'
+		);
 	});
 
 	it("anchors relative cf-worker specifiers to an absolute path without executing them", async ({
@@ -198,7 +169,7 @@ describe("loadConfig", () => {
 			"src/index.ts": `// not executed`,
 			"cloudflare.config.ts": `
 				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
-				export default { type: "worker", name: "worker", compatibilityDate: "2026-06-01", entrypoint };
+				export default { name: "worker", compatibilityDate: "2026-06-01", entrypoint };
 			`,
 		});
 
@@ -228,8 +199,8 @@ describe("loadConfig", () => {
 			writeFileSync("./cloudflare.config.ts", 'export default { name: "second" };');
 			const second = await loadConfig("./cloudflare.config.ts");
 			process.stdout.write(JSON.stringify({
-				first: first.exports.default,
-				second: second.exports.default,
+				first: first.config,
+				second: second.config,
 			}));
 		`;
 		const sub = spawnSync(

@@ -10,7 +10,6 @@ async function createReadyMiniflare(): Promise<Miniflare> {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {

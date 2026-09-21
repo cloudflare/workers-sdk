@@ -89,7 +89,6 @@ test("InspectorProxy: propagates bind failure through Miniflare", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -116,7 +115,6 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -148,7 +146,6 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -180,7 +177,6 @@ test("InspectorProxy: proxy port validation", async ({ expect }) => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2025-05-01",
 						},
@@ -205,7 +201,6 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -214,7 +209,6 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 			},
 			{
 				config: {
-					type: "worker",
 					name: "extra-worker-a",
 					compatibilityDate: "2025-05-01",
 				},
@@ -223,7 +217,6 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 			},
 			{
 				config: {
-					type: "worker",
 					name: "extra-worker-b",
 					compatibilityDate: "2025-05-01",
 				},
@@ -266,7 +259,6 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -275,7 +267,6 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 			},
 			{
 				config: {
-					type: "worker",
 					name: "extra-worker-a",
 					compatibilityDate: "2025-05-01",
 				},
@@ -283,7 +274,6 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 			},
 			{
 				config: {
-					type: "worker",
 					name: "extra-worker-b",
 					compatibilityDate: "2025-05-01",
 				},
@@ -321,7 +311,6 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -379,7 +368,6 @@ test("InspectorProxy: should keep the same inspector port on miniflare#setOption
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -409,7 +397,6 @@ test("InspectorProxy: should not keep the same inspector port on miniflare#setOp
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -444,7 +431,6 @@ test("InspectorProxy: should allow debugging a single worker", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -504,7 +490,6 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -580,7 +565,6 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker-a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -601,7 +585,6 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 			},
 			{
 				config: {
-					type: "worker",
 					name: "worker-b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -715,7 +698,6 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker-b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -740,7 +722,6 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker-a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -761,7 +742,6 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 			},
 			{
 				config: {
-					type: "worker",
 					name: "worker-b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -885,7 +865,6 @@ test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
