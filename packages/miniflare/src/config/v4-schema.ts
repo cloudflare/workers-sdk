@@ -198,7 +198,7 @@ const V4UnsafeDirectSocketSchema = z.object({
 });
 
 const V4ConnectHandlerSchema = z.object({
-	protocol: z.enum(["tcp"]),
+	protocol: z.enum(["tcp", "udp"]),
 	port: z.number(),
 	address: z.string().optional(),
 });
@@ -790,7 +790,7 @@ export type V4WorkerOptionsShape = {
 		proxy?: boolean;
 	}>;
 	connectHandlers?: Array<{
-		protocol: "tcp";
+		protocol: "tcp" | "udp";
 		port: number;
 		address?: string;
 	}>;

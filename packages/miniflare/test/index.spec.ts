@@ -2,6 +2,7 @@
 
 import assert from "node:assert";
 import childProcess from "node:child_process";
+import dgram from "node:dgram";
 import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -3581,6 +3582,54 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 	const socket = await mf.dispatchConnect();
 	socket.write("hello");
 	expect(await text(socket)).toBe("hello");
+});
+
+test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect() handler", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const probe = dgram.createSocket("udp4");
+	probe.bind(0, "127.0.0.1");
+	await once(probe, "listening");
+	const port = probe.address().port;
+	probe.close();
+	await once(probe, "close");
+
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const reader = socket.readable.getReader();
+								const writer = socket.writable.getWriter();
+								const { value } = await reader.read();
+								await writer.write(value);
+							},
+						};
+					`),
+					triggers: [{ type: "connect", protocol: "udp", port }],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+	await mf.ready;
+	await expect(mf.dispatchConnect()).rejects.toThrow(
+		"No TCP connect triggers configured for entrypoint worker"
+	);
+
+	const client = dgram.createSocket("udp4");
+	onTestFinished(() => {
+		client.close();
+	});
+	client.send("hello", port, "127.0.0.1");
+	const [message] = await once(client, "message");
+	expect(message.toString()).toBe("hello");
 });
 
 test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({

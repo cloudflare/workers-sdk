@@ -437,7 +437,7 @@ export type Trigger =
 	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">)
 	| {
 			type: "connect";
-			protocol: "tcp";
+			protocol: "tcp" | "udp";
 			port: number;
 			address?: string;
 	  };

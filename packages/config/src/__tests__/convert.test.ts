@@ -1243,6 +1243,17 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("maps UDP connect trigger to connect", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					triggers: [{ type: "connect", protocol: "udp", port: 5432 }],
+				},
+				containers: [],
+			});
+			expect(result.connect).toEqual([{ protocol: "udp", port: 5432 }]);
+		});
+
 		it("maps connect trigger without an address", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

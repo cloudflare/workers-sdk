@@ -2329,12 +2329,28 @@ export class Miniflare {
 					connectHandler.port,
 					reusePorts
 				);
+				let protocol;
+				switch (connectHandler.protocol) {
+					case "tcp":
+						protocol = { tcp: {} };
+						break;
+					case "udp":
+						protocol = { udp: {} };
+						break;
+					default: {
+						// Config validation should make this unreachable.
+						const unsupportedProtocol: never = connectHandler.protocol;
+						throw new TypeError(
+							`Unsupported connect protocol: ${JSON.stringify(unsupportedProtocol)}`
+						);
+					}
+				}
 
 				sockets.push({
 					name,
 					address,
 					service: { name: getUserServiceName(workerName) },
-					tcp: {},
+					...protocol,
 				});
 			}
 		}
@@ -3155,7 +3171,10 @@ export class Miniflare {
 
 		const workerIndex = this.#findAndAssertWorkerIndex(options.workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
-		const connectTriggers = getTriggersOfType(workerOpts.config, "connect");
+		const connectTriggers = getTriggersOfType(
+			workerOpts.config,
+			"connect"
+		).filter((trigger) => trigger.protocol === "tcp");
 		const workerDescription =
 			options.workerName === undefined
 				? "entrypoint worker"
