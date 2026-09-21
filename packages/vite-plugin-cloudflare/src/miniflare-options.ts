@@ -264,7 +264,6 @@ export async function getDevMiniflareOptions(
 	const assetWorkers: WorkerOptions[] = [
 		{
 			config: {
-				type: "worker",
 				name: ROUTER_WORKER_NAME,
 				compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 				compatibilityFlags: ["enable_ctx_exports"],
@@ -296,7 +295,6 @@ export async function getDevMiniflareOptions(
 		},
 		{
 			config: {
-				type: "worker",
 				name: ASSET_WORKER_NAME,
 				compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 				manifest: assetWorkerManifest,
@@ -440,7 +438,6 @@ export async function getDevMiniflareOptions(
 		},
 		{
 			config: {
-				type: "worker",
 				name: VITE_PROXY_WORKER_NAME,
 				compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 				manifest: viteProxyWorkerManifest,
@@ -476,7 +473,7 @@ export async function getDevMiniflareOptions(
 
 							const preExistingRemoteProxySession =
 								remoteProxySessionsDataMap.get(worker.config.name);
-							const settings = resolvedPluginConfig.parsedConfig.settings;
+							const settings = resolvedPluginConfig.settings;
 
 							const remoteProxySessionData =
 								!resolvedPluginConfig.remoteBindings
@@ -487,9 +484,9 @@ export async function getDevMiniflareOptions(
 												name: worker.config.name,
 												bindings: bindings ?? {},
 												complianceRegion: toRemoteComplianceRegion(
-													settings?.complianceRegion
+													settings.complianceRegion
 												),
-												account_id: settings?.accountId,
+												account_id: settings.accountId,
 												profileDir: resolvedViteConfig.root,
 											},
 											preExistingRemoteProxySession ?? null,
@@ -804,9 +801,9 @@ export async function getPreviewMiniflareOptions(
 							name: workerConfig.name,
 							bindings: bindings ?? {},
 							complianceRegion: toRemoteComplianceRegion(
-								resolvedPluginConfig.settings?.complianceRegion
+								resolvedPluginConfig.settings.complianceRegion
 							),
-							account_id: resolvedPluginConfig.settings?.accountId,
+							account_id: resolvedPluginConfig.settings.accountId,
 							profileDir: resolvedViteConfig.root,
 						},
 						preExistingRemoteProxySessionData ?? null,

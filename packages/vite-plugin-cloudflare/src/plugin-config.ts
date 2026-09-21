@@ -2,9 +2,13 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
+	DEFAULT_WORKER_DIRECTORY_NAME,
+	normalizeDirectoryName,
+} from "@cloudflare/build-output-utils";
+import {
 	generateTypes,
 	InputWorkerSchema,
-	loadAndValidateConfig,
+	loadAndParseConfig,
 } from "@cloudflare/config";
 import {
 	generateRuntimeTypes,
@@ -17,18 +21,24 @@ import {
 } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { defu } from "defu";
+import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
 import { isPreviewBuild } from "./build-output-env";
 import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
 import type {
-	ParsedConfigExports,
+	InputWorkerConfig,
+	ParsedInputConfig,
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
-	ParsedOutputSettingsConfig,
 } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
 import type * as vite from "vite";
+
+type ParsedInputConfigWithWorker = Omit<ParsedInputConfig, "worker"> & {
+	worker: ParsedInputWorkerConfig;
+};
 
 export type PersistState = boolean | { path: string };
 export type TunnelConfig = {
@@ -36,7 +46,7 @@ export type TunnelConfig = {
 	name?: string;
 };
 
-interface BaseWorkerConfig {
+interface BaseWorkerOptions {
 	viteEnvironment?: { name?: string; childEnvironments?: string[] };
 }
 
@@ -47,8 +57,8 @@ interface BaseWorkerConfig {
  */
 type DevOnly = boolean | (() => boolean);
 
-interface EntryWorkerConfig extends BaseWorkerConfig {
-	config?: WorkerConfigCustomizer<true>;
+interface EntryWorkerOptions extends BaseWorkerOptions {
+	config?: EntryWorkerConfigCustomizer;
 	/**
 	 * Whether the entry Worker should be omitted from the production build.
 	 * Can be a boolean or a function that returns a boolean. The function is
@@ -62,14 +72,14 @@ interface EntryWorkerConfig extends BaseWorkerConfig {
 	assetsOnly?: DevOnly;
 }
 
-interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
-	/** Customize the Worker config selected from `cloudflare.config.ts`. */
-	config?: WorkerConfigCustomizer<false>;
+interface AuxiliaryWorkerOptions extends BaseWorkerOptions {
+	/** Configure an auxiliary Worker. */
+	config: WorkerConfigProvider;
 	devOnly?: DevOnly;
 }
 
-interface PrerenderWorkerConfig extends BaseWorkerConfig {
-	config?: WorkerConfigCustomizer<false>;
+interface PrerenderWorkerOptions extends BaseWorkerOptions {
+	config: WorkerConfigProvider;
 }
 
 interface TypeGenerationOptions {
@@ -105,30 +115,22 @@ function normalizeTypes(
 	};
 }
 
-type FilteredEntryWorkerConfig = Omit<ParsedInputWorkerConfig, "name" | "type">;
-type WorkerConfigCustomization = Partial<Omit<ParsedInputWorkerConfig, "type">>;
-
-type WorkerConfigCustomizer<TIsEntryWorker extends boolean> =
-	| WorkerConfigCustomization
+type EntryWorkerConfigCustomizer =
+	| Partial<ParsedInputWorkerConfig>
 	| ((
-			...args: TIsEntryWorker extends true
-				? [config: ParsedInputWorkerConfig]
-				: [
-						config: ParsedInputWorkerConfig,
-						options: { entryWorkerConfig: FilteredEntryWorkerConfig },
-					]
-	  ) => WorkerConfigCustomization | void);
+			config: ParsedInputWorkerConfig
+	  ) => Partial<ParsedInputWorkerConfig> | void);
 
-export interface PluginConfig extends EntryWorkerConfig {
-	/**
-	 * Auxiliary Workers keyed by their named export in `cloudflare.config.ts`, or
-	 * by their desired name when configured only here. Every named Worker export
-	 * other than the reserved `prerender` export is included whether or not it has
-	 * an override here. The key is used as the Vite environment name by default.
-	 */
-	auxiliaryWorkers?: Record<string, AuxiliaryWorkerConfig>;
+type WorkerConfigProvider =
+	| InputWorkerConfig
+	| ((options: {
+			entryWorkerConfig: ParsedInputWorkerConfig;
+	  }) => InputWorkerConfig);
+
+export interface PluginConfig extends EntryWorkerOptions {
+	auxiliaryWorkers?: AuxiliaryWorkerOptions[];
 	/** Configuration for a dedicated prerender Worker. */
-	prerenderWorker?: PrerenderWorkerConfig;
+	prerenderWorker?: PrerenderWorkerOptions;
 	persistState?: PersistState;
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
@@ -169,6 +171,7 @@ interface BaseResolvedConfig {
 	tunnel: TunnelConfig;
 	localEnv: LoadedEnv;
 	devVars: Record<string, string> | undefined;
+	settings: ParsedInputSettingsConfig;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -176,9 +179,6 @@ interface NonPreviewResolvedConfig extends BaseResolvedConfig {
 	environmentNameToWorkerMap: Map<string, Worker>;
 	environmentNameToChildEnvironmentNamesMap: Map<string, string[]>;
 	prerenderWorkerEnvironmentName: string | undefined;
-	// The full parsed `cloudflare.config.ts` exports (every worker export plus
-	// the optional `settings` export), keyed by export name.
-	parsedConfig: ParsedConfigExports;
 }
 
 export interface AssetsOnlyResolvedConfig extends NonPreviewResolvedConfig {
@@ -194,7 +194,6 @@ export interface WorkersResolvedConfig extends NonPreviewResolvedConfig {
 
 export interface PreviewResolvedConfig extends BaseResolvedConfig {
 	type: "preview";
-	settings: ParsedOutputSettingsConfig | undefined;
 	workers: BuildOutputPreviewWorker[];
 }
 
@@ -203,106 +202,65 @@ export type ResolvedPluginConfig =
 	| WorkersResolvedConfig
 	| PreviewResolvedConfig;
 
-function filterEntryWorkerConfig(
-	config: ParsedInputWorkerConfig
-): FilteredEntryWorkerConfig {
-	const { name: _name, type: _type, ...filteredConfig } = config;
-
-	return filteredConfig;
-}
-
-export function customizeWorkerConfig(options: {
-	workerConfig: ParsedInputWorkerConfig;
-	configCustomizer: WorkerConfigCustomizer<false> | undefined;
-	entryWorkerConfig: ParsedInputWorkerConfig;
-}): ParsedInputWorkerConfig;
-export function customizeWorkerConfig(options: {
-	workerConfig: ParsedInputWorkerConfig;
-	configCustomizer: WorkerConfigCustomizer<true> | undefined;
-}): ParsedInputWorkerConfig;
-export function customizeWorkerConfig(
-	options:
-		| {
-				workerConfig: ParsedInputWorkerConfig;
-				configCustomizer: WorkerConfigCustomizer<false> | undefined;
-				entryWorkerConfig: ParsedInputWorkerConfig;
-		  }
-		| {
-				workerConfig: ParsedInputWorkerConfig;
-				configCustomizer: WorkerConfigCustomizer<true> | undefined;
-		  }
-): ParsedInputWorkerConfig {
-	// The `config` option can either be an object to merge into the worker config,
-	// a function that returns such an object, or a function that mutates the worker config in place.
-	const configResult =
-		typeof options.configCustomizer === "function"
-			? "entryWorkerConfig" in options
-				? options.configCustomizer(options.workerConfig, {
-						entryWorkerConfig: filterEntryWorkerConfig(
-							options.entryWorkerConfig
-						),
-					})
-				: options.configCustomizer(options.workerConfig)
-			: options.configCustomizer;
-
-	// If the configResult is defined, merge it into the existing config.
-	if (configResult) {
-		return InputWorkerSchema.parse(defu(configResult, options.workerConfig));
-	}
-
-	return InputWorkerSchema.parse(options.workerConfig);
-}
-
 type ResolvedWorker =
 	| { type: "assets-only"; config: ResolvedAssetsOnlyConfig }
 	| { type: "worker"; config: ResolvedWorkerConfig };
 
 function createDefaultWorkerConfig(name: string): ParsedInputWorkerConfig {
 	return {
-		type: "worker",
 		name,
 		compatibilityDate: DEFAULT_COMPAT_DATE,
 	};
 }
 
-/** Resolves a Worker config. */
-function resolveWorkerConfig(options: {
+/** Resolves the entry Worker config. */
+function resolveEntryWorkerConfig(options: {
 	workerConfig: ParsedInputWorkerConfig;
-	configCustomizer: WorkerConfigCustomizer<true> | undefined;
-}): ResolvedWorker;
-function resolveWorkerConfig(options: {
-	workerConfig: ParsedInputWorkerConfig;
-	configCustomizer: WorkerConfigCustomizer<false> | undefined;
-	entryWorkerConfig: ParsedInputWorkerConfig;
-}): Extract<ResolvedWorker, { type: "worker" }>;
-function resolveWorkerConfig(
-	options:
-		| {
-				workerConfig: ParsedInputWorkerConfig;
-				configCustomizer: WorkerConfigCustomizer<true> | undefined;
-		  }
-		| {
-				workerConfig: ParsedInputWorkerConfig;
-				configCustomizer: WorkerConfigCustomizer<false> | undefined;
-				entryWorkerConfig: ParsedInputWorkerConfig;
-		  }
-): ResolvedWorker {
-	const isEntryWorker = !("entryWorkerConfig" in options);
+	configCustomizer: EntryWorkerConfigCustomizer | undefined;
+}): ResolvedWorker {
+	const configResult =
+		typeof options.configCustomizer === "function"
+			? options.configCustomizer(options.workerConfig)
+			: options.configCustomizer;
+	const config = InputWorkerSchema.parse(
+		configResult
+			? defu(configResult, options.workerConfig)
+			: options.workerConfig
+	);
 
-	const config =
-		"entryWorkerConfig" in options
-			? customizeWorkerConfig({
-					workerConfig: options.workerConfig,
-					configCustomizer: options.configCustomizer,
-					entryWorkerConfig: options.entryWorkerConfig,
-				})
-			: customizeWorkerConfig({
-					workerConfig: options.workerConfig,
-					configCustomizer: options.configCustomizer,
-				});
+	return resolveWorkerType({ config, isEntryWorker: true });
+}
+
+/** Resolves an auxiliary or prerender Worker config. */
+function resolveNonEntryWorkerConfig(options: {
+	config: WorkerConfigProvider;
+	entryWorkerConfig: ParsedInputWorkerConfig;
+}): Extract<ResolvedWorker, { type: "worker" }> {
+	const inputConfig =
+		typeof options.config === "function"
+			? options.config({ entryWorkerConfig: options.entryWorkerConfig })
+			: options.config;
+	const config = InputWorkerSchema.parse(inputConfig);
+
+	return resolveWorkerType({ config, isEntryWorker: false });
+}
+
+function resolveWorkerType(options: {
+	config: ParsedInputWorkerConfig;
+	isEntryWorker: false;
+}): Extract<ResolvedWorker, { type: "worker" }>;
+function resolveWorkerType(options: {
+	config: ParsedInputWorkerConfig;
+	isEntryWorker: true;
+}): ResolvedWorker;
+function resolveWorkerType(options: {
+	config: ParsedInputWorkerConfig;
+	isEntryWorker: boolean;
+}): ResolvedWorker {
+	const { config, isEntryWorker } = options;
 
 	if (!isEntryWorker && config.assets) {
-		throw new Error("assets is only supported by the default Worker");
+		throw new Error("assets are only supported by the default Worker");
 	}
 
 	if (config.entrypoint === undefined) {
@@ -335,7 +293,7 @@ export async function resolvePluginConfig(
 	const preview = viteEnv.isPreview
 		? await readBuildOutputPreview(root, !!process.env.CLOUDFLARE_VITE_BUILD)
 		: undefined;
-	const localEnvMode = preview ? preview.settings?.mode : mode;
+	const localEnvMode = preview?.rootConfig.buildContext.mode ?? mode;
 	const [localEnv, devVars] = await Promise.all([
 		loadEnv(envDir, localEnvMode),
 		loadDevVars(envDir, localEnvMode),
@@ -379,11 +337,12 @@ export async function resolvePluginConfig(
 			: (pluginConfig.remoteBindings ?? true);
 
 	if (preview !== undefined) {
+		const { accountId, complianceRegion } = preview.rootConfig;
 		return {
 			...shared,
 			remoteBindings,
 			type: "preview",
-			settings: preview.settings,
+			settings: { accountId, complianceRegion },
 			workers: preview.workers,
 		};
 	}
@@ -397,7 +356,10 @@ export async function resolvePluginConfig(
 		command: viteEnv.command,
 		types,
 	});
-	const parsedConfig = loadedConfig?.parsedConfig ?? {};
+	const settings = {
+		accountId: loadedConfig?.parsedConfig.accountId,
+		complianceRegion: loadedConfig?.parsedConfig.complianceRegion,
+	};
 	if (loadedConfig) {
 		configPaths.add(loadedConfig.configPath);
 		for (const dep of loadedConfig.dependencies) {
@@ -408,36 +370,32 @@ export async function resolvePluginConfig(
 	// Type generation happens while loading the file above. The plugin-level
 	// customizer is intentionally applied afterwards so generated declarations
 	// only describe `cloudflare.config.ts`.
-	const entryWorkerResolvedConfig = resolveWorkerConfig({
+	const entryWorkerResolvedConfig = resolveEntryWorkerConfig({
 		workerConfig:
-			parsedConfig.default?.type === "worker"
-				? parsedConfig.default
-				: createDefaultWorkerConfig(getWorkerNameFromProject(root)),
+			loadedConfig === undefined
+				? createDefaultWorkerConfig(getWorkerNameFromProject(root))
+				: loadedConfig.parsedConfig.worker,
 		configCustomizer: pluginConfig.config,
 	});
 
 	const environmentNameToWorkerMap = new Map<string, Worker>();
 	const environmentNameToChildEnvironmentNamesMap = new Map<string, string[]>();
+	const validateAndAddWorkerName = createWorkerNameValidator();
+	validateAndAddWorkerName(entryWorkerResolvedConfig.config.name);
 
 	const prerenderWorkerConfig = pluginConfig.prerenderWorker;
-	const exportedPrerenderWorkerConfig = parsedConfig.prerender;
-	const prerenderWorkerBaseConfig =
-		exportedPrerenderWorkerConfig?.type === "worker"
-			? exportedPrerenderWorkerConfig
-			: prerenderWorkerConfig
-				? createDefaultWorkerConfig("prerender")
-				: undefined;
 	let prerenderWorkerEnvironmentName: string | undefined;
 
-	if (prerenderWorkerBaseConfig && viteEnv.command === "build") {
-		const workerResolvedConfig = resolveWorkerConfig({
-			workerConfig: prerenderWorkerBaseConfig,
-			configCustomizer: prerenderWorkerConfig?.config,
+	if (prerenderWorkerConfig && viteEnv.command === "build") {
+		const workerResolvedConfig = resolveNonEntryWorkerConfig({
+			config: prerenderWorkerConfig.config,
 			entryWorkerConfig: entryWorkerResolvedConfig.config,
 		});
+		validateAndAddWorkerName(workerResolvedConfig.config.name);
 
 		prerenderWorkerEnvironmentName =
-			prerenderWorkerConfig?.viteEnvironment?.name ?? "prerender";
+			prerenderWorkerConfig.viteEnvironment?.name ??
+			workerNameToEnvironmentName(workerResolvedConfig.config.name);
 
 		validateAndAddEnvironmentName(prerenderWorkerEnvironmentName);
 
@@ -447,7 +405,7 @@ export async function resolvePluginConfig(
 		);
 
 		const prerenderWorkerChildEnvironments =
-			prerenderWorkerConfig?.viteEnvironment?.childEnvironments;
+			prerenderWorkerConfig.viteEnvironment?.childEnvironments;
 
 		if (prerenderWorkerChildEnvironments) {
 			for (const childName of prerenderWorkerChildEnvironments) {
@@ -465,16 +423,16 @@ export async function resolvePluginConfig(
 		addAuxiliaryWorkers({
 			auxiliaryWorkers: pluginConfig.auxiliaryWorkers,
 			entryWorkerConfig: entryWorkerResolvedConfig.config,
-			parsedConfig,
 			environmentNameToWorkerMap,
 			environmentNameToChildEnvironmentNamesMap,
 			validateAndAddEnvironmentName,
+			validateAndAddWorkerName,
 		});
 		return {
 			...shared,
 			type: "assets-only",
 			config: entryWorkerResolvedConfig.config,
-			parsedConfig,
+			settings,
 			environmentNameToWorkerMap,
 			environmentNameToChildEnvironmentNamesMap,
 			prerenderWorkerEnvironmentName,
@@ -522,10 +480,10 @@ export async function resolvePluginConfig(
 	addAuxiliaryWorkers({
 		auxiliaryWorkers: pluginConfig.auxiliaryWorkers,
 		entryWorkerConfig: entryWorkerResolvedConfig.config,
-		parsedConfig,
 		environmentNameToWorkerMap,
 		environmentNameToChildEnvironmentNamesMap,
 		validateAndAddEnvironmentName,
+		validateAndAddWorkerName,
 	});
 
 	return {
@@ -535,7 +493,7 @@ export async function resolvePluginConfig(
 		environmentNameToWorkerMap,
 		environmentNameToChildEnvironmentNamesMap,
 		prerenderWorkerEnvironmentName,
-		parsedConfig,
+		settings,
 		entryWorkerEnvironmentName,
 		staticRouting,
 		remoteBindings,
@@ -543,59 +501,31 @@ export async function resolvePluginConfig(
 }
 
 function addAuxiliaryWorkers(options: {
-	auxiliaryWorkers: Record<string, AuxiliaryWorkerConfig> | undefined;
+	auxiliaryWorkers: AuxiliaryWorkerOptions[] | undefined;
 	entryWorkerConfig: ParsedInputWorkerConfig;
-	parsedConfig: ParsedConfigExports;
 	environmentNameToWorkerMap: Map<string, Worker>;
 	environmentNameToChildEnvironmentNamesMap: Map<string, string[]>;
 	validateAndAddEnvironmentName: (name: string) => void;
+	validateAndAddWorkerName: (name: string) => void;
 }): void {
 	const usedDirectoryNames = new Map<string, string>();
-	for (const exportName of Object.keys(options.auxiliaryWorkers ?? {})) {
-		if (RESERVED_WORKER_EXPORT_NAMES.has(exportName)) {
-			throw new Error(
-				`The \`${exportName}\` export is reserved and cannot be configured through \`auxiliaryWorkers\`.`
-			);
-		}
-	}
-
-	const auxiliaryWorkerNames = new Set(
-		Object.keys(options.auxiliaryWorkers ?? {})
-	);
-	for (const [exportName, exportedConfig] of Object.entries(
-		options.parsedConfig
-	)) {
-		if (
-			!RESERVED_WORKER_EXPORT_NAMES.has(exportName) &&
-			exportedConfig.type === "worker"
-		) {
-			auxiliaryWorkerNames.add(exportName);
-		}
-	}
-
-	for (const exportName of auxiliaryWorkerNames) {
-		const auxiliaryWorker = options.auxiliaryWorkers?.[exportName] ?? {};
-		const exportedConfig = options.parsedConfig[exportName];
-		if (exportedConfig && exportedConfig.type !== "worker") {
-			throw new Error(
-				`The \`${exportName}\` export of \`${CONFIG_FILENAME}\` is not a Worker config.`
-			);
-		}
-
-		const workerResolvedConfig = resolveWorkerConfig({
-			workerConfig: exportedConfig ?? createDefaultWorkerConfig(exportName),
-			configCustomizer: auxiliaryWorker.config,
+	for (const auxiliaryWorker of options.auxiliaryWorkers ?? []) {
+		const workerResolvedConfig = resolveNonEntryWorkerConfig({
+			config: auxiliaryWorker.config,
 			entryWorkerConfig: options.entryWorkerConfig,
 		});
+		const workerName = workerResolvedConfig.config.name;
+		options.validateAndAddWorkerName(workerName);
 
-		const workerDirectoryName = workerExportNameToDirectoryName(exportName);
+		const workerDirectoryName = getAuxiliaryWorkerDirectoryName(workerName);
 		validateAuxiliaryWorkerDirectoryName({
-			exportName,
+			workerName,
 			workerDirectoryName,
 			usedDirectoryNames,
 		});
 		const workerEnvironmentName =
-			auxiliaryWorker.viteEnvironment?.name ?? exportName;
+			auxiliaryWorker.viteEnvironment?.name ??
+			workerNameToEnvironmentName(workerName);
 		options.validateAndAddEnvironmentName(workerEnvironmentName);
 
 		options.environmentNameToWorkerMap.set(
@@ -635,56 +565,55 @@ export function resolveEnvDir(
 	return envDir === false ? false : path.resolve(root, envDir ?? ".");
 }
 
-const RESERVED_WORKER_EXPORT_NAMES = new Set(["default", "prerender"]);
 const RESERVED_WORKER_DIRECTORY_NAMES = new Set([
-	...RESERVED_WORKER_EXPORT_NAMES,
-	"con",
-	"prn",
-	"aux",
-	"nul",
-	...Array.from({ length: 9 }, (_, index) => `com${index + 1}`),
-	...Array.from({ length: 9 }, (_, index) => `lpt${index + 1}`),
+	DEFAULT_WORKER_DIRECTORY_NAME,
+	PRERENDER_WORKER_DIRECTORY_NAME,
 ]);
 
-/** Convert a Worker export name to a filesystem-safe Build Output directory name. */
-export function workerExportNameToDirectoryName(exportName: string): string {
-	return exportName
-		.replace(/([A-Z]+)([A-Z][a-z])/g, "$1-$2")
-		.replace(/([a-z\d])([A-Z])/g, "$1-$2")
-		.replace(/[^a-zA-Z\d]+/g, "-")
-		.replace(/^-+|-+$/g, "")
-		.toLowerCase();
+function getAuxiliaryWorkerDirectoryName(workerName: string): string {
+	const directoryName = normalizeDirectoryName(workerName);
+
+	return RESERVED_WORKER_DIRECTORY_NAMES.has(directoryName)
+		? `_${directoryName}`
+		: directoryName;
 }
 
 function validateAuxiliaryWorkerDirectoryName(options: {
-	exportName: string;
+	workerName: string;
 	workerDirectoryName: string;
 	usedDirectoryNames: Map<string, string>;
 }): void {
-	if (!options.workerDirectoryName) {
-		throw new Error(
-			`The \`${options.exportName}\` auxiliary Worker export does not produce a valid Build Output directory name.`
-		);
-	}
-	if (RESERVED_WORKER_DIRECTORY_NAMES.has(options.workerDirectoryName)) {
-		throw new Error(
-			`The \`${options.exportName}\` auxiliary Worker export produces the reserved Build Output directory name \`${options.workerDirectoryName}\`.`
-		);
-	}
-
-	const existingExportName = options.usedDirectoryNames.get(
+	const existingWorkerName = options.usedDirectoryNames.get(
 		options.workerDirectoryName
 	);
-	if (existingExportName) {
+	if (existingWorkerName) {
 		throw new Error(
-			`The \`${options.exportName}\` and \`${existingExportName}\` auxiliary Worker exports both produce the Build Output directory name \`${options.workerDirectoryName}\`.`
+			`The \`${options.workerName}\` and \`${existingWorkerName}\` auxiliary Worker names both produce the Build Output directory name \`${options.workerDirectoryName}\`.`
 		);
 	}
 
 	options.usedDirectoryNames.set(
 		options.workerDirectoryName,
-		options.exportName
+		options.workerName
 	);
+}
+
+// Worker names can only contain alphanumeric characters and '-' whereas
+// environment names can only contain alphanumeric characters and '$', '_'.
+function workerNameToEnvironmentName(workerName: string): string {
+	return workerName.replaceAll("-", "_");
+}
+
+function createWorkerNameValidator() {
+	const usedNames = new Set<string>();
+
+	return (name: string): void => {
+		if (usedNames.has(name)) {
+			throw new Error(`Duplicate Worker name: "${name}"`);
+		}
+
+		usedNames.add(name);
+	};
 }
 
 function createEnvironmentNameValidator() {
@@ -736,7 +665,7 @@ const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
 
 /**
  * Load and validate `cloudflare.config.ts` via `@cloudflare/config`, if it
- * exists. Returns all parsed exports, the absolute path of the loaded file, and
+ * exists. Returns the parsed default export, the absolute path of the loaded file, and
  * the files imported while resolving the config (for watch-mode).
  *
  * When `types.generate` is true, also writes `worker-configuration.d.ts` next
@@ -750,7 +679,7 @@ async function loadCloudflareConfig(options: {
 	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<
 	| {
-			parsedConfig: ParsedConfigExports;
+			parsedConfig: ParsedInputConfigWithWorker;
 			configPath: string;
 			dependencies: Set<string>;
 	  }
@@ -762,7 +691,7 @@ async function loadCloudflareConfig(options: {
 		return;
 	}
 
-	const { result, dependencies } = await loadAndValidateConfig(configPath, {
+	const { result, dependencies } = await loadAndParseConfig(configPath, {
 		isPreview: isPreviewBuild(),
 		mode: options.mode,
 	});
@@ -771,12 +700,14 @@ async function loadCloudflareConfig(options: {
 		throw new Error(`Invalid \`${CONFIG_FILENAME}\`:\n${result.error.message}`);
 	}
 
-	const worker = result.data.default;
-	if (
-		worker?.type === "worker" &&
-		options.command === "serve" &&
-		options.types.generate
-	) {
+	const worker = result.data.worker;
+	if (worker === undefined) {
+		throw new Error(
+			`\`${CONFIG_FILENAME}\` must define a Worker using the \`worker\` property.`
+		);
+	}
+
+	if (options.command === "serve" && options.types.generate) {
 		await writeWorkerConfigurationDts({
 			root: options.root,
 			configPath,
@@ -787,7 +718,7 @@ async function loadCloudflareConfig(options: {
 	}
 
 	return {
-		parsedConfig: result.data,
+		parsedConfig: { ...result.data, worker },
 		configPath,
 		dependencies,
 	};

@@ -6,7 +6,7 @@ import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
 import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
 import type {
 	ModuleType,
-	ParsedOutputSettingsConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 
@@ -23,7 +23,7 @@ export interface BuildOutputPreviewWorker {
 }
 
 export interface BuildOutputPreview {
-	settings: ParsedOutputSettingsConfig | undefined;
+	rootConfig: ParsedOutputRootConfig;
 	workers: BuildOutputPreviewWorker[];
 }
 
@@ -36,11 +36,9 @@ export async function readBuildOutputPreview(
 	root: string,
 	isPrerender: boolean
 ): Promise<BuildOutputPreview> {
-	// `settings` comes from the top-level `config.json` holding project-level
-	// settings (`account_id`, `compliance_region`) shared by every Worker. It
-	// also carries the `mode` the build ran in, which preview uses to select
-	// local env files.
-	const { workers, settings } = await readBuildOutput(root);
+	// `rootConfig` comes from the top-level `config.json` holding project-level
+	// settings and build context shared by every Worker.
+	const { workers, rootConfig } = await readBuildOutput(root);
 	const defaultWorker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
 	const entryWorker = isPrerender
 		? (workers[PRERENDER_WORKER_DIRECTORY_NAME] ?? defaultWorker)
@@ -55,7 +53,7 @@ export async function readBuildOutputPreview(
 		.map(([_, worker]) => worker);
 	const selectedWorkers = [entryWorker, ...auxiliaryWorkers];
 
-	return { settings, workers: selectedWorkers.map(toPreviewWorker) };
+	return { rootConfig, workers: selectedWorkers.map(toPreviewWorker) };
 }
 
 function toPreviewWorker(worker: BuildOutputWorker): BuildOutputPreviewWorker {

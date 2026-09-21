@@ -15,7 +15,6 @@ import type {
 } from "./plugin-config";
 import type {
 	ModuleType,
-	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
@@ -297,14 +296,6 @@ export class PluginContext {
 		return this.resolvedPluginConfig.environmentNameToWorkerMap.get(
 			this.resolvedPluginConfig.entryWorkerEnvironmentName
 		)?.config;
-	}
-
-	get settings(): ParsedInputSettingsConfig | undefined {
-		if (this.resolvedPluginConfig.type === "preview") {
-			return this.resolvedPluginConfig.settings;
-		}
-
-		return this.resolvedPluginConfig.parsedConfig.settings;
 	}
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
