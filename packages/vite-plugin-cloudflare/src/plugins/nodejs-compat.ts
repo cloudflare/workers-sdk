@@ -102,12 +102,7 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 				}
 
 				// We are in build mode so return the absolute path to the polyfill.
-				const resolved = await this.resolve(result.resolved, importer, options);
-				// These entrypoints mutate `globalThis` and must survive tree-shaking,
-				// even though the preset package is otherwise side-effect-free.
-				return resolved && result.hasModuleSideEffects
-					? { ...resolved, moduleSideEffects: true }
-					: resolved;
+				return this.resolve(result.resolved, importer, options);
 			},
 		},
 		async configureServer(viteDevServer) {

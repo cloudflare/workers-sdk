@@ -172,11 +172,8 @@ export class NodeJsCompat {
 	 */
 	resolveNodeJsImport(
 		source: string
-	):
-		| { unresolved: string; resolved: string; hasModuleSideEffects: boolean }
-		| undefined {
+	): { unresolved: string; resolved: string } | undefined {
 		const alias = this.#env.alias[source];
-		const hasModuleSideEffects = this.#env.polyfill.includes(source);
 
 		// These aliases must be resolved from the context of this plugin since the alias will refer to one of the
 		// `@cloudflare/unenv-preset` or the `unenv` packages, which are direct dependencies of this package,
@@ -186,7 +183,6 @@ export class NodeJsCompat {
 			return {
 				unresolved: alias,
 				resolved: resolvePathSync(alias, { url: import.meta.url }),
-				hasModuleSideEffects,
 			};
 		}
 
@@ -194,7 +190,6 @@ export class NodeJsCompat {
 			return {
 				unresolved: source,
 				resolved: resolvePathSync(source, { url: import.meta.url }),
-				hasModuleSideEffects,
 			};
 		}
 	}
