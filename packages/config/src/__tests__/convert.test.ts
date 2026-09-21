@@ -56,6 +56,7 @@ describe("convertToWranglerConfig", () => {
 					enabled: true,
 					headSamplingRate: 0.5,
 					redactQueryString: true,
+					issues: { enabled: true },
 					logs: {
 						enabled: true,
 						headSamplingRate: 0.25,
@@ -75,6 +76,7 @@ describe("convertToWranglerConfig", () => {
 				enabled: true,
 				head_sampling_rate: 0.5,
 				redact_query_string: true,
+				issues: { enabled: true },
 				logs: {
 					enabled: true,
 					head_sampling_rate: 0.25,
@@ -1275,19 +1277,72 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("rejects Durable Object-managed Container exports", ({ expect }) => {
-			expect(() =>
-				convertToWranglerConfig(baseConfig, undefined, [
-					{
-						type: "container",
-						name: "managed-container",
-						schedulingPolicy: "durable-object",
-						images: { app: { dockerfile: "./Dockerfile" } },
+		it("converts Durable Object-managed Container exports", ({ expect }) => {
+			const registryImage =
+				"registry.cloudflare.com/account/base@sha256:" + "a".repeat(64);
+			const result = convertToWranglerConfig(baseConfig, undefined, [
+				{
+					type: "container",
+					name: "managed-container",
+					schedulingPolicy: "durable-object",
+					images: {
+						app: {
+							dockerfile: "./Dockerfile",
+							buildContext: "./container",
+							buildVars: { VERSION: "1" },
+						},
+						base: { reference: registryImage },
 					},
-				])
-			).toThrow(
-				"Durable Object-managed Containers are not currently supported by `convertToWranglerConfig()`."
-			);
+					observability: {
+						enabled: true,
+						logs: { enabled: false },
+					},
+					unsafe: {
+						configuration: { experimental_flags: ["allow_fast_images"] },
+					},
+				},
+			]);
+
+			expect(result.containers).toEqual([
+				{
+					name: "managed-container",
+					scheduling_policy: "durable_object",
+					images: {
+						app: {
+							dockerfile: "./Dockerfile",
+							build_context: "./container",
+							build_vars: { VERSION: "1" },
+						},
+						base: { image: registryImage },
+					},
+					observability: {
+						enabled: true,
+						logs: { enabled: false },
+					},
+					unsafe: {
+						configuration: { experimental_flags: ["allow_fast_images"] },
+					},
+				},
+			]);
+		});
+
+		it("omits images for a Durable Object-managed Container without them", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig, undefined, [
+				{
+					type: "container",
+					name: "managed-container",
+					schedulingPolicy: "durable-object",
+				},
+			]);
+
+			expect(result.containers).toEqual([
+				{
+					name: "managed-container",
+					scheduling_policy: "durable_object",
+				},
+			]);
 		});
 	});
 

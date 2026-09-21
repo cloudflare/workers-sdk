@@ -167,7 +167,11 @@ describe("Preview configuration conversion", () => {
 	}) => {
 		expect(
 			convertPreviewBaseToPreviewsConfig({
-				observability: { enabled: true, logs: { enabled: false } },
+				observability: {
+					enabled: true,
+					issues: { enabled: true },
+					logs: { enabled: false },
+				},
 				logpush: false,
 				limits: { subrequests: 100 },
 				placement: { mode: "smart" },
@@ -182,7 +186,11 @@ describe("Preview configuration conversion", () => {
 			} as Parameters<typeof convertPreviewBaseToPreviewsConfig>[0])
 		).toEqual({
 			config: {
-				observability: { enabled: true, logs: { enabled: false } },
+				observability: {
+					enabled: true,
+					issues: { enabled: true },
+					logs: { enabled: false },
+				},
 				logpush: false,
 				limits: { subrequests: 100 },
 				placement: { mode: "smart" },
@@ -198,6 +206,22 @@ describe("Preview configuration conversion", () => {
 			blockingDeploymentMessages: [
 				"This Worker uses Durable Objects. They are not included in the suggested Preview configuration.\nFollow the setup instructions so each Preview automatically gets a new, isolated Durable Object namespace:\nhttps://developers.cloudflare.com/workers/previews/resources/#durable-objects",
 			],
+		});
+	});
+
+	test("copies an Issues-only Preview Base observability configuration", ({
+		expect,
+	}) => {
+		expect(
+			convertPreviewBaseToPreviewsConfig({
+				observability: { issues: { enabled: true } },
+			} as Parameters<typeof convertPreviewBaseToPreviewsConfig>[0])
+		).toEqual({
+			config: {
+				observability: { issues: { enabled: true } },
+			},
+			messages: [],
+			blockingDeploymentMessages: [],
 		});
 	});
 

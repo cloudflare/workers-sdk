@@ -1,4 +1,7 @@
 export interface ConfigContext {
+	// Whether the config is being evaluated for a Preview build.
+	isPreview: boolean;
+
 	/**
 	 * The mode the config is being evaluated in.
 	 * Set via the `--mode` CLI flag.

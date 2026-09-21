@@ -7,6 +7,7 @@ import {
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
 import { runAutoConfig } from "../src/run";
@@ -47,6 +48,30 @@ class BuildCommandOverrideFramework extends Static {
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	mockConsoleMethods();
+
+	it("rejects autoconfiguration for an unsupported framework", async ({
+		expect,
+	}) => {
+		await expect(
+			runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "hono-app",
+					framework: getFrameworkClassInstance("hono"),
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				},
+				{
+					context: createMockContext(),
+					skipConfirmations: true,
+					runBuild: false,
+				}
+			)
+		).rejects.toThrow(
+			'The detected framework ("Hono") cannot be automatically configured.'
+		);
+	});
 
 	it("creates new configuration and cf scripts by default", async ({
 		expect,
