@@ -975,13 +975,13 @@ export class Miniflare {
 		// Setup runtime
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
-			void this.#runtime?.dispose();
+			void this.#runtime?.disposeImmediately();
 			// This exit hook is synchronous — the event loop will never run again
 			// after it returns, so any operation that schedules a microtask (like
 			// fs.promises.rm) will never even be executed, let alone completed.
 			// We must use the sync variant here.
-			// `Runtime#dispose()` should kill the runtime immediately but it might not,
-			// so we only clean up on a best effort basis.
+			// `Runtime#disposeImmediately()` sends SIGKILL synchronously, but this hook
+			// cannot wait for the child to exit, so subsequent cleanup is best-effort.
 			try {
 				removeDirSync(this.#tmpPath);
 			} catch (e) {
@@ -2522,6 +2522,16 @@ export class Miniflare {
 			reusePorts
 		);
 		const configBuffer = serializeConfig(config);
+		// Container namespaces need a managed drain so workerd can remove the
+		// runtime resources it created before exiting.
+		const requiresGracefulShutdown =
+			config.services?.some(
+				(service) =>
+					"worker" in service &&
+					service.worker?.durableObjectNamespaces?.some(
+						(namespace) => namespace.container !== undefined
+					)
+			) ?? false;
 
 		// Get all socket names we expect to get ports for
 		assert(config.sockets !== undefined);
@@ -2584,6 +2594,7 @@ export class Miniflare {
 				? "127.0.0.1:0"
 				: undefined,
 			verbose: this.#sharedOpts.verbose,
+			requiresGracefulShutdown,
 			handleStructuredLogs: this.#sharedOpts.handleStructuredLogs,
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.unsafeRuntimeEnv,
@@ -3699,9 +3710,6 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw.
 			await this.#closeBrowserProcesses();
 
-			// Remove exit hook, we're cleaning up what they would've cleaned up now
-			this.#removeExitHook?.();
-
 			await this.#proxyClient?.dispose();
 		} catch (error) {
 			independentCleanupFailed = true;
@@ -3709,6 +3717,9 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		// Keep emergency termination registered until workerd has exited. Managed
+		// Container shutdown can remain pending while the runtime drains.
+		this.#removeExitHook?.();
 		this.#devRegistry.unregisterWorkers();
 		// Close the undici Pool used for dispatching fetch requests to the
 		// runtime. This must happen after the runtime is disposed, so that
