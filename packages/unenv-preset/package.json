@@ -24,7 +24,9 @@
 		"dist"
 	],
 	"type": "module",
-	"sideEffects": false,
+	"sideEffects": [
+		"./dist/runtime/polyfill/*.mjs"
+	],
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
@@ -42,12 +44,15 @@
 	},
 	"scripts": {
 		"build": "unbuild",
-		"check:type": "tsc --noEmit"
+		"check:type": "tsc --noEmit",
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
 		"@types/node-unenv": "npm:@types/node@^22.14.0",
 		"typescript": "catalog:default",
-		"unbuild": "^3.2.0"
+		"unbuild": "^3.2.0",
+		"vite": "catalog:default",
+		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
 		"unenv": "2.0.0-rc.24",
