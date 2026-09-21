@@ -1,0 +1,19 @@
+packages/containers-shared/tests/registry-images.test.ts
+  s_fe67710bfadec2::t_fd08b87042d06b 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c9b22d64c9c344854c500c19e8aaf8efbd58607b",
+  "prompts": {},
+  "sessions": {
+    "s_fe67710bfadec2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3a9f57b4ffeX3BGbApD7JDIon",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}
