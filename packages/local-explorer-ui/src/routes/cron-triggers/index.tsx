@@ -1,5 +1,9 @@
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { useEffect } from "react";
+import {
+	createFileRoute,
+	getRouteApi,
+	useRouter,
+} from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import {
 	CronTriggersProvider,
 	useCronTriggers,
@@ -85,7 +89,9 @@ function CronTriggersContent({
 }): JSX.Element {
 	const cron = useCronTriggers();
 	const navigate = Route.useNavigate();
+	const router = useRouter();
 	const search = Route.useSearch();
+	const rootRecoveryInFlight = useRef(false);
 	const recoveredWorkerName =
 		!bootstrapAuthoritative && cron.visibleWorkerNames.length > 0
 			? search.worker && cron.visibleWorkerNames.includes(search.worker)
@@ -117,6 +123,20 @@ function CronTriggersContent({
 		navigate,
 		search.worker,
 	]);
+
+	useEffect(() => {
+		if (
+			bootstrapAuthoritative ||
+			cron.visibleWorkerNames.length === 0 ||
+			rootRecoveryInFlight.current
+		) {
+			return;
+		}
+		rootRecoveryInFlight.current = true;
+		void router.invalidate().finally(() => {
+			rootRecoveryInFlight.current = false;
+		});
+	}, [bootstrapAuthoritative, cron.visibleWorkerNames, router]);
 
 	return <CronTriggersPage activeWorkerName={recoveredWorkerName} />;
 }

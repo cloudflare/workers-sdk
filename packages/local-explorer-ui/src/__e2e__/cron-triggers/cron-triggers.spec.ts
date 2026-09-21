@@ -87,12 +87,16 @@ describe("Cron Triggers", () => {
 		expect,
 	}) => {
 		let requestCount = 0;
+		const refreshHeaders: Array<string | undefined> = [];
 		let releaseRefresh: (() => void) | undefined;
 		const delayedRefresh = new Promise<void>((resolve) => {
 			releaseRefresh = resolve;
 		});
 		await page.route(WORKERS_ROUTE, async (route) => {
 			requestCount += 1;
+			refreshHeaders.push(
+				route.request().headers()["x-miniflare-explorer-refresh"]
+			);
 			if (requestCount > 1) {
 				await delayedRefresh;
 				await route.fulfill({
@@ -105,6 +109,12 @@ describe("Cron Triggers", () => {
 								name: "worker-1",
 								persistenceScope: "cron-project-1",
 								triggers: { crons: ["recovered-cron"] },
+							},
+							{
+								isSelf: false,
+								name: "worker-2",
+								persistenceScope: "cron-project-2",
+								triggers: { crons: ["peer-cron"] },
 							},
 						],
 						success: true,
@@ -140,10 +150,24 @@ describe("Cron Triggers", () => {
 		releaseRefresh?.();
 		await expect
 			.poll(() => new URL(page.url()).searchParams.get("worker"))
-			.toBeNull();
+			.toBe("worker-1");
 		await expect
 			.poll(() => page.getByLabel("Cron expression").first().inputValue())
 			.toBe("recovered-cron");
+		expect(refreshHeaders).toContain("poll");
+		expect(
+			refreshHeaders.filter((header) => header === undefined).length
+		).toBeGreaterThanOrEqual(2);
+
+		await page.getByRole("combobox").getByText("worker-1").waitFor();
+		await page.getByRole("combobox").click();
+		await page.getByRole("option", { name: "worker-2" }).click();
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBe("worker-2");
+		await expect
+			.poll(() => page.getByLabel("Cron expression").first().inputValue())
+			.toBe("peer-cron");
 	});
 
 	test("canonicalizes missing and invalid workers before dispatch", async ({

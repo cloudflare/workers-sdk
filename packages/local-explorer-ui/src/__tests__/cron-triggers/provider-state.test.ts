@@ -1,7 +1,6 @@
 import { describe, it } from "vitest";
 import {
 	createCronStateFromSeed,
-	parseCronWorkerMetadata,
 	reconcilePersistenceKeysForRefresh,
 	RefreshGenerationTracker,
 	selectCronFallbackWorker,
@@ -12,42 +11,31 @@ describe("Cron Triggers provider state", () => {
 	it("treats absent and explicit empty trigger metadata as authoritative empty arrays", ({
 		expect,
 	}) => {
-		const metadata = parseCronWorkerMetadata([
-			{ name: "absent" },
-			{ name: "empty", triggers: { crons: [] } },
-		]);
-		expect(metadata).toEqual([
-			{ name: "absent", triggers: { crons: [] } },
-			{ name: "empty", triggers: { crons: [] } },
-		]);
-		const state = createCronStateFromSeed(metadata ?? [], true);
+		const state = createCronStateFromSeed(
+			[
+				{ isSelf: false, name: "absent" },
+				{ isSelf: false, name: "empty", triggers: { crons: [] } },
+			],
+			true
+		);
 		expect(state.absent?.authoritative).toBe(true);
 		expect(state.absent?.crons).toEqual([]);
+		expect(state.empty?.crons).toEqual([]);
 	});
 
 	it("does not claim authority when the root request failed", ({ expect }) => {
 		expect(
 			createCronStateFromSeed(
-				[{ name: "worker", triggers: { crons: ["0 0 * * *"] } }],
+				[
+					{
+						isSelf: true,
+						name: "worker",
+						triggers: { crons: ["0 0 * * *"] },
+					},
+				],
 				false
 			)
 		).toEqual({});
-	});
-
-	it("retains an optional persistence scope from Worker metadata", ({
-		expect,
-	}) => {
-		expect(
-			parseCronWorkerMetadata([
-				{ name: "worker", persistenceScope: "project-scope" },
-			])
-		).toEqual([
-			{
-				name: "worker",
-				persistenceScope: "project-scope",
-				triggers: { crons: [] },
-			},
-		]);
 	});
 
 	it("retains persistence keys for Workers omitted from a partial refresh", ({
@@ -61,6 +49,7 @@ describe("Cron Triggers provider state", () => {
 				},
 				[
 					{
+						isSelf: false,
 						name: "returned",
 						persistenceScope: "new-scope",
 					},
@@ -79,7 +68,7 @@ describe("Cron Triggers provider state", () => {
 		expect(
 			reconcilePersistenceKeysForRefresh(
 				{ returned: "old-key-for-returned-worker" },
-				[{ name: "returned" }]
+				[{ isSelf: false, name: "returned" }]
 			)
 		).toEqual({});
 	});
@@ -110,7 +99,7 @@ describe("Cron Triggers provider state", () => {
 		expect(
 			selectCronFallbackWorker([
 				{ isSelf: true, name: "__router-worker__" },
-				{ name: "peer" },
+				{ isSelf: false, name: "peer" },
 				{ isSelf: true, name: "self" },
 			])
 		).toBe("self");

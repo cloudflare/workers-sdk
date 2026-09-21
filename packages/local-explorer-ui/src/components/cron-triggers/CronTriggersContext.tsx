@@ -7,7 +7,9 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { localExplorerListWorkers } from "../../api";
 import { LOCAL_EXPLORER_API_PATH } from "../../constants";
+import { filterVisibleWorkers } from "../WorkerSelector";
 import {
 	cronCustomRowsStorageKey,
 	readPersistedCustomCronRows,
@@ -18,22 +20,12 @@ import {
 	duplicateCronRow,
 	reconcileConfiguredRows,
 } from "./row-state";
+import type { LocalExplorerWorker } from "../../api";
 import type { CronRow, CronWorkerState, FetcherScheduledResult } from "./types";
 import type { PropsWithChildren } from "react";
 
 const REFRESH_HEADER = "X-Miniflare-Explorer-Refresh";
 const POLL_INTERVAL_MS = 5_000;
-
-interface WorkerMetadata {
-	isSelf?: boolean;
-	name: string;
-	persistenceScope?: string;
-	triggers?: { crons?: string[] };
-}
-
-interface WorkersEnvelope {
-	result?: unknown;
-}
 
 interface ScheduledEnvelope {
 	result?: unknown;
@@ -65,61 +57,15 @@ const CronTriggersContext = createContext<CronTriggersContextValue | null>(
 	null
 );
 
-export function parseCronWorkerMetadata(
-	value: unknown
-): WorkerMetadata[] | undefined {
-	if (!Array.isArray(value)) {
-		return undefined;
-	}
-	const workers: WorkerMetadata[] = [];
-	for (const item of value) {
-		if (typeof item !== "object" || item === null || !("name" in item)) {
-			return undefined;
-		}
-		const name = (item as { name?: unknown }).name;
-		if (typeof name !== "string") {
-			return undefined;
-		}
-		const triggers = (item as { triggers?: unknown }).triggers;
-		const isSelf = (item as { isSelf?: unknown }).isSelf;
-		const persistenceScope = (item as { persistenceScope?: unknown })
-			.persistenceScope;
-		let crons: string[] = [];
-		if (
-			typeof triggers === "object" &&
-			triggers !== null &&
-			"crons" in triggers
-		) {
-			const candidate = (triggers as { crons?: unknown }).crons;
-			if (
-				!Array.isArray(candidate) ||
-				candidate.some((cron) => typeof cron !== "string")
-			) {
-				return undefined;
-			}
-			crons = candidate;
-		}
-		workers.push({
-			...(typeof isSelf === "boolean" ? { isSelf } : {}),
-			name,
-			...(typeof persistenceScope === "string" ? { persistenceScope } : {}),
-			triggers: { crons },
-		});
-	}
-	return workers;
+function visibleCronWorkers(
+	metadata: LocalExplorerWorker[]
+): LocalExplorerWorker[] {
+	return filterVisibleWorkers(metadata);
 }
 
-const INTERNAL_WORKERS = new Set([
-	"__router-worker__",
-	"__asset-worker__",
-	"__vite_proxy_worker__",
-]);
-
-function visibleCronWorkers(metadata: WorkerMetadata[]): WorkerMetadata[] {
-	return metadata.filter((worker) => !INTERNAL_WORKERS.has(worker.name));
-}
-
-export function selectCronFallbackWorker(metadata: WorkerMetadata[]): string {
+export function selectCronFallbackWorker(
+	metadata: LocalExplorerWorker[]
+): string {
 	const visible = visibleCronWorkers(metadata);
 	return (
 		visible.find((worker) => worker.isSelf)?.name ?? visible[0]?.name ?? ""
@@ -127,15 +73,14 @@ export function selectCronFallbackWorker(metadata: WorkerMetadata[]): string {
 }
 
 export function createCronStateFromSeed(
-	seedWorkers: unknown[],
+	seedWorkers: LocalExplorerWorker[],
 	authoritative: boolean
 ): Record<string, CronWorkerState> {
 	if (!authoritative) {
 		return {};
 	}
-	const metadata = parseCronWorkerMetadata(seedWorkers) ?? [];
 	return Object.fromEntries(
-		metadata.map((worker) => {
+		seedWorkers.map((worker) => {
 			const crons = worker.triggers?.crons ?? [];
 			return [
 				worker.name,
@@ -163,7 +108,7 @@ function localStorageIfAvailable(): Storage | undefined {
 }
 
 function persistenceKeysForMetadata(
-	metadata: WorkerMetadata[]
+	metadata: LocalExplorerWorker[]
 ): Record<string, string> {
 	return Object.fromEntries(
 		metadata.flatMap((worker) => {
@@ -178,7 +123,7 @@ function persistenceKeysForMetadata(
 
 export function reconcilePersistenceKeysForRefresh(
 	previousKeys: Record<string, string>,
-	metadata: WorkerMetadata[]
+	metadata: LocalExplorerWorker[]
 ): Record<string, string> {
 	const nextKeys = { ...previousKeys };
 	const returnedKeys = persistenceKeysForMetadata(metadata);
@@ -256,14 +201,12 @@ export function CronTriggersProvider({
 }: PropsWithChildren<{
 	activeWorkerName?: string;
 	bootstrapAuthoritative: boolean;
-	seedWorkers: unknown[];
+	seedWorkers: LocalExplorerWorker[];
 	active: boolean;
 }>) {
 	const storage = useRef<Storage | undefined>(localStorageIfAvailable());
 	const [initialPersistence] = useState(() => {
-		const metadata = bootstrapAuthoritative
-			? (parseCronWorkerMetadata(seedWorkers) ?? [])
-			: [];
+		const metadata = bootstrapAuthoritative ? seedWorkers : [];
 		const keys = persistenceKeysForMetadata(metadata);
 		return {
 			keys,
@@ -287,15 +230,13 @@ export function CronTriggersProvider({
 	);
 	const lastPersistedCustomRows = useRef(new Map<string, CronRow[]>());
 	const [fallbackWorkerName, setFallbackWorkerName] = useState(() => {
-		const metadata = parseCronWorkerMetadata(seedWorkers) ?? [];
-		return selectCronFallbackWorker(metadata);
+		return selectCronFallbackWorker(seedWorkers);
 	});
 	const [visibleWorkerNames, setVisibleWorkerNames] = useState(() => {
 		if (!bootstrapAuthoritative) {
 			return [];
 		}
-		const metadata = parseCronWorkerMetadata(seedWorkers) ?? [];
-		return visibleCronWorkers(metadata).map((worker) => worker.name);
+		return visibleCronWorkers(seedWorkers).map((worker) => worker.name);
 	});
 	const [refreshingWorkers, setRefreshingWorkers] = useState<Set<string>>(
 		new Set()
@@ -350,14 +291,10 @@ export function CronTriggersProvider({
 		}
 		setRefreshingWorkers((current) => new Set(current).add(workerName));
 		try {
-			const response = await fetch(`${LOCAL_EXPLORER_API_PATH}/local/workers`, {
+			const response = await localExplorerListWorkers({
 				headers: automatic ? { [REFRESH_HEADER]: "poll" } : undefined,
 			});
-			if (!response.ok) {
-				throw new Error(`Refresh failed with status ${response.status}.`);
-			}
-			const envelope = (await response.json()) as WorkersEnvelope;
-			const metadata = parseCronWorkerMetadata(envelope.result);
+			const metadata = response.data?.result;
 			if (!metadata) {
 				throw new Error("Refresh returned invalid Worker metadata.");
 			}
