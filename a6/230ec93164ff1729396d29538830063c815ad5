@@ -1,0 +1,31 @@
+.changeset/fix-runtime-type-header-whitespace.md
+  s_5f24b10152d259::t_ba95a91642abf4 1-7
+packages/runtime-types/src/__tests__/header.test.ts
+  s_5f24b10152d259::t_8df6b672c071b9 7,19
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_ded4a0404117e5::t_2e8ab0acbe9a63 2,586-615
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a6230ec93164ff1729396d29538830063c815ad5",
+  "prompts": {},
+  "sessions": {
+    "s_5f24b10152d259": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3ad341a9ffefLC4bxIs9SPRKk",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_ded4a0404117e5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3a97a5e6ffeS2A9FCi7RYDs14",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}
