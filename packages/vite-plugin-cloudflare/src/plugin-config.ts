@@ -4,7 +4,7 @@ import * as path from "node:path";
 import {
 	convertToWranglerConfig,
 	generateTypes,
-	loadAndValidateConfig,
+	loadAndParseConfig,
 } from "@cloudflare/config";
 import {
 	generateRuntimeTypes,
@@ -18,7 +18,7 @@ import {
 import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
-import { isForcedBuildOutput } from "./build-output-env";
+import { isForcedBuildOutput, isPreviewBuild } from "./build-output-env";
 import { readBuildOutputWorkers } from "./build-output-preview";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
@@ -38,7 +38,7 @@ import type {
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
 import type {
-	ParsedConfigExports,
+	ParsedInputConfig,
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
@@ -245,10 +245,9 @@ interface NonPreviewResolvedConfig extends BaseResolvedConfig {
 	environmentNameToWorkerMap: Map<string, Worker>;
 	environmentNameToChildEnvironmentNamesMap: Map<string, string[]>;
 	prerenderWorkerEnvironmentName: string | undefined;
-	// The full parsed `cloudflare.config.ts` exports (every worker export plus
-	// the optional `settings` export), keyed by export name. Undefined when
+	// The parsed default export from `cloudflare.config.ts`. Undefined when
 	// new-config is not in use.
-	parsedNewConfig: ParsedConfigExports | undefined;
+	parsedNewConfig: ParsedInputConfig | undefined;
 }
 
 export interface AssetsOnlyResolvedConfig extends NonPreviewResolvedConfig {
@@ -357,6 +356,8 @@ function resolveWorkerConfig(
 		 * from `@cloudflare/config`).
 		 */
 		rawConfigOverride?: RawConfig;
+		/** Path used to resolve relative values in `rawConfigOverride`. */
+		rawConfigPath?: string;
 	} & (
 		| {
 				configCustomizer: WorkerConfigCustomizer<false> | undefined;
@@ -375,7 +376,10 @@ function resolveWorkerConfig(
 			raw,
 			config: workerConfig,
 			nonApplicable,
-		} = readWorkerConfigFromRaw(options.rawConfigOverride));
+		} = readWorkerConfigFromRaw(
+			options.rawConfigOverride,
+			options.rawConfigPath
+		));
 	} else if (options.configPath) {
 		// File config already has defaults applied
 		({
@@ -489,7 +493,7 @@ export async function resolvePluginConfig(
 
 	let configPath: string | undefined;
 	let rawConfigOverride: RawConfig | undefined;
-	let parsedNewConfig: ParsedConfigExports | undefined;
+	let parsedNewConfig: ParsedInputConfig | undefined;
 
 	if (resolvedNewConfig) {
 		if (pluginConfig.configPath) {
@@ -553,6 +557,7 @@ export async function resolvePluginConfig(
 		configCustomizer: resolvedNewConfig ? undefined : pluginConfig.config,
 		visitedConfigPaths: configPaths,
 		rawConfigOverride,
+		rawConfigPath: resolvedNewConfig ? configPath : undefined,
 	});
 
 	const environmentNameToWorkerMap = new Map<string, Worker>();
@@ -643,10 +648,7 @@ export async function resolvePluginConfig(
 
 	validateAndAddEnvironmentName(entryWorkerEnvironmentName);
 
-	const entryWorkerNewConfig =
-		parsedNewConfig?.default?.type === "worker"
-			? parsedNewConfig.default
-			: undefined;
+	const entryWorkerNewConfig = parsedNewConfig?.worker;
 
 	environmentNameToWorkerMap.set(
 		entryWorkerEnvironmentName,
@@ -815,7 +817,7 @@ async function loadNewConfig(options: {
 	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<{
 	rawConfig: RawConfig;
-	parsedConfig: ParsedConfigExports;
+	parsedConfig: ParsedInputConfig;
 	configPath: string;
 	dependencies: Set<string>;
 }> {
@@ -827,7 +829,8 @@ async function loadNewConfig(options: {
 		);
 	}
 
-	const { result, dependencies } = await loadAndValidateConfig(configPath, {
+	const { result, dependencies } = await loadAndParseConfig(configPath, {
+		isPreview: isPreviewBuild(),
 		mode: options.mode,
 	});
 
@@ -837,21 +840,15 @@ async function loadNewConfig(options: {
 		);
 	}
 
-	const worker =
-		result.data.default?.type === "worker" ? result.data.default : undefined;
+	const worker = result.data.worker;
 
 	if (worker === undefined) {
 		throw new Error(
-			`\`${NEW_CONFIG_FILENAME}\` must have a default worker export.`
+			`\`${NEW_CONFIG_FILENAME}\` must define a Worker using the \`worker\` property.`
 		);
 	}
 
-	const settings =
-		result.data.settings?.type === "settings"
-			? result.data.settings
-			: undefined;
-
-	const rawConfig: RawConfig = convertToWranglerConfig(worker, settings);
+	const rawConfig: RawConfig = convertToWranglerConfig(result.data);
 
 	if (options.command === "serve" && options.types.generate) {
 		await writeWorkerConfigurationDts({

@@ -205,9 +205,8 @@ declare module "cloudflare:test" {
 	/**
 	 * Applies all un-applied `migrations` to database `db`, recording migrations
 	 * state in the `migrationsTableName` table. `migrationsTableName` defaults to
-	 * `d1_migrations`. Call the `readD1Migrations()` function from the
-	 * `@cloudflare/vitest-plugin/config` package inside Node.js to get the
-	 * `migrations` array.
+	 * `d1_migrations`. Call the `readD1Migrations()` function from
+	 * `@cloudflare/vitest-plugin` inside Node.js to get the `migrations` array.
 	 */
 	export function applyD1Migrations(
 		db: D1Database,

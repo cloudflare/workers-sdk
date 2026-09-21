@@ -1,5 +1,65 @@
 # @cloudflare/vite-plugin
 
+## 1.57.0
+
+### Minor Changes
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Identify experimental Build Output resource configs by filename and location
+
+  The root remains `config.json`, Worker configs are now `worker.config.json`, and Container configs are now `container.config.json`. Resource configs no longer contain top-level `type` discriminators, while settings and build context are stored together in the root config.
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Define experimental Cloudflare configuration with a single default export
+
+  Experimental `cloudflare.config.ts` files now define settings and resources together in a default-exported `defineConfig()` call. Add a Worker under `worker`, add Containers to the `containers` array, or omit both to provide settings only.
+
+  ```ts
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineConfig({
+  	accountId: "...",
+  	complianceRegion: "public",
+  	worker: {
+  		name: "my-worker",
+  		compatibilityDate: "2026-09-18",
+  		entrypoint,
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- [#15711](https://github.com/cloudflare/workers-sdk/pull/15711) [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Allow local Container images without exposed ports
+
+  Wrangler and the Cloudflare Vite plugin no longer reject images that omit Docker `EXPOSE` metadata. Local Containers can run command-only workloads or serve traffic through workerd without declaring an unused image port.
+
+- Updated dependencies [[`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f), [`c5913a6`](https://github.com/cloudflare/workers-sdk/commit/c5913a61e155cebf597c8081e445b64343bf2484), [`35668d7`](https://github.com/cloudflare/workers-sdk/commit/35668d7226f63b0a9e262ae1b187186409be8804), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c), [`8235e6a`](https://github.com/cloudflare/workers-sdk/commit/8235e6a7e03d4910f1de78d67324a11974c393a0), [`0751490`](https://github.com/cloudflare/workers-sdk/commit/0751490b357fc85022dbc9ff5e6642c0f33a2f0a), [`43b1f85`](https://github.com/cloudflare/workers-sdk/commit/43b1f85fe26d4b1568f6d7aacc7ffba2b408419b), [`731a2ee`](https://github.com/cloudflare/workers-sdk/commit/731a2ee747d3904564ea45188dbf848d62bcc6e8)]:
+  - wrangler@4.136.0
+  - miniflare@5.20260921.0-alpha
+
+## 1.56.0
+
+### Minor Changes
+
+- [#15609](https://github.com/cloudflare/workers-sdk/pull/15609) [`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036) Thanks [@emily-shen](https://github.com/emily-shen)! - Build Containers when emitting experimental Build Output
+
+  Wrangler and the Cloudflare Vite plugin now build Dockerfile-backed Container images when experimental Build Output is enabled. Container configs are emitted under `.cloudflare/output/v0/containers` with local image references, while existing registry references pass through unchanged.
+
+- [#15329](https://github.com/cloudflare/workers-sdk/pull/15329) [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Evaluate Flagship flags locally during development
+
+  Flagship bindings now use the local Miniflare store by default in Wrangler and the Vite plugin, keeping development offline and isolated from production flags. Set `remote: true` on a binding to continue using its remote app.
+
+  Use `wrangler flagship flags pull <APP_ID>` to seed the store from a remote app. Flag management commands also accept `--local` to read and update the local store directly.
+
+- [#15701](https://github.com/cloudflare/workers-sdk/pull/15701) [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Pass Preview intent to `defineWorker` and upload its resolved configuration
+
+  Preview builds now evaluate programmatic Worker configuration with `ctx.isPreview` set to `true` and record that intent in Build Output. The shared Preview uploader deploys the resolved bindings and settings while preserving configured Preview base values when it creates a Preview.
+
+### Patch Changes
+
+- Updated dependencies [[`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036), [`a0485d5`](https://github.com/cloudflare/workers-sdk/commit/a0485d5a5e2293b16e77d1302a470537281c2622), [`629ddef`](https://github.com/cloudflare/workers-sdk/commit/629ddef4adb201d808b4b998668261a212632ffe), [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac), [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6)]:
+  - wrangler@4.135.0
+  - miniflare@5.20260918.0-alpha
+
 ## 1.55.0
 
 ### Minor Changes

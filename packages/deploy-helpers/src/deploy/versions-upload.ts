@@ -24,10 +24,6 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
-import {
-	addContainerImagesBinding,
-	clearRemovedContainerImagesBindings,
-} from "./helpers/container-image-bindings";
 import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
@@ -133,10 +129,7 @@ async function uploadWorkerVersion(
 	const { name } = validateWorkerProps(props, config);
 
 	// any validation that DOES require API calls should go in preUploadApiChecks()
-	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
-		props,
-		config
-	);
+	const { workerTag, tags, aborted } = await preUploadApiChecks(props, config);
 	if (aborted) {
 		return { versionId: null, workerTag };
 	}
@@ -203,6 +196,7 @@ async function uploadWorkerVersion(
 				accountId,
 				dryRun: Boolean(props.dryRun),
 				scriptName,
+				requireExistingImageLessApplications: true,
 			}
 		);
 
@@ -228,20 +222,6 @@ async function uploadWorkerVersion(
 	}
 
 	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
-	if (keepVars && !props.dryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(
-			config,
-			durableObjectContainerConfig,
-			bindings,
-			workerUrl
-		);
-	}
-	addContainerImagesBinding(
-		durableObjectContainerConfig,
-		bindings,
-		preparedContainerImages ?? {},
-		{ exports: config.exports }
-	);
 
 	const placement = parseConfigPlacement(config.placement);
 
@@ -496,7 +476,9 @@ async function uploadWorkerVersion(
 		assert(versionId);
 		await deployDurableObjectContainerApplications(
 			config,
-			durableObjectContainerConfig,
+			durableObjectContainerConfig.filter(
+				(container) => Object.keys(container.images ?? {}).length > 0
+			),
 			{
 				versionId,
 				accountId,

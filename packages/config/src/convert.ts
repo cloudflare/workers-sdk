@@ -2,10 +2,12 @@ import {
 	UserError,
 	type RawConfig,
 	type ContainerApp,
+	type DurableObjectContainerImage,
 	type Exports,
 } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
 import type {
+	ParsedInputConfig,
 	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
@@ -21,36 +23,28 @@ const ROLLOUT_KIND_MAP = {
 /**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
  *
- * The caller is responsible for unwrapping any function/promise wrappers and
- * validating the configs against their corresponding input schemas before
- * passing them in.
+ * The caller is responsible for resolving any function/promise wrappers and
+ * parsing the configuration before passing it in.
  *
- * @param workerConfig The parsed (post-validation) Worker config.
- * @param settingsConfig The optional parsed settings config, whose fields
- * are merged onto the result.
- * @param containerExports The parsed Container exports to include in the
- * result.
+ * @param config The parsed configuration.
  * @returns The corresponding Wrangler `RawConfig`.
  */
-export function convertToWranglerConfig(
-	workerConfig: ParsedInputWorkerConfig,
-	settingsConfig?: ParsedInputSettingsConfig,
-	containerExports: ParsedInputContainerConfig[] = []
-): RawConfig {
+export function convertToWranglerConfig(config: ParsedInputConfig): RawConfig {
 	const result: RawConfig = {};
+	const { worker, containers } = config;
 
-	convertTopLevel(workerConfig, result);
-	convertBindingsAndAssets(workerConfig, result);
-	convertExports(workerConfig, result);
-	convertDomains(workerConfig, result);
-	convertTriggers(workerConfig, result);
-	convertTailConsumers(workerConfig, result);
-
-	if (settingsConfig !== undefined) {
-		convertSettings(settingsConfig, result);
+	if (worker !== undefined) {
+		convertTopLevel(worker, result);
+		convertBindingsAndAssets(worker, result);
+		convertExports(worker, result);
+		convertDomains(worker, result);
+		convertTriggers(worker, result);
+		convertTailConsumers(worker, result);
 	}
-	if (containerExports.length > 0) {
-		result.containers = containerExports.map((container) =>
+
+	convertSettings(config, result);
+	if (containers.length > 0) {
+		result.containers = containers.map((container) =>
 			convertContainer(container)
 		);
 	}
@@ -59,13 +53,6 @@ export function convertToWranglerConfig(
 }
 
 function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
-	if (container.schedulingPolicy === "durable-object") {
-		throw new UserError(
-			"Durable Object-managed Containers are not currently supported by `convertToWranglerConfig()`.",
-			{ telemetryMessage: false }
-		);
-	}
-
 	const converted: ContainerApp = {
 		name: container.name,
 	};
@@ -77,6 +64,18 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 	}
 	if (container.unsafe !== undefined) {
 		converted.unsafe = container.unsafe;
+	}
+	if (container.schedulingPolicy === "durable-object") {
+		converted.scheduling_policy = "durable_object";
+		if (container.images !== undefined) {
+			converted.images = Object.fromEntries(
+				Object.entries(container.images).map(([name, image]) => [
+					name,
+					convertDurableObjectContainerImage(image),
+				])
+			);
+		}
+		return converted;
 	}
 
 	converted.image =
@@ -139,6 +138,32 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 		}
 	}
 
+	return converted;
+}
+
+type DurableObjectInputImage = NonNullable<
+	Extract<
+		ParsedInputContainerConfig,
+		{ schedulingPolicy: "durable-object" }
+	>["images"]
+>[string];
+
+function convertDurableObjectContainerImage(
+	image: DurableObjectInputImage
+): DurableObjectContainerImage {
+	if ("reference" in image) {
+		return { image: image.reference };
+	}
+
+	const converted: DurableObjectContainerImage = {
+		dockerfile: image.dockerfile,
+	};
+	if (image.buildContext !== undefined) {
+		converted.build_context = image.buildContext;
+	}
+	if (image.buildVars !== undefined) {
+		converted.build_vars = image.buildVars;
+	}
 	return converted;
 }
 
