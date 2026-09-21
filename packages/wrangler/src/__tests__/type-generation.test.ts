@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { getRuntimeHeader } from "@cloudflare/runtime-types";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
@@ -582,6 +583,38 @@ describe("generate types - CLI", () => {
 			})
 		);
 	});
+
+	it("keeps the runtime header stable after trailing whitespace is removed", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2024-11-06",
+				vars: { value: "test" },
+			}),
+			"utf-8"
+		);
+		spy.mockResolvedValue({
+			runtimeHeader: getRuntimeHeader("1.0.0-test", "2024-11-06"),
+			runtimeTypes: "<runtime types go here>",
+		});
+
+		await runWrangler("types");
+		const generatedContent = fs.readFileSync(
+			"./worker-configuration.d.ts",
+			"utf-8"
+		);
+		const cleanedContent = generatedContent.replace(/[ \t]+$/gm, "");
+		fs.writeFileSync("./worker-configuration.d.ts", cleanedContent);
+
+		await runWrangler("types");
+
+		expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toBe(
+			cleanedContent
+		);
+	});
+
 	it("should error when no config file is detected", async ({ expect }) => {
 		await expect(runWrangler("types")).rejects.toMatchInlineSnapshot(
 			`[Error: No config file detected. This command requires a Wrangler configuration file.]`
