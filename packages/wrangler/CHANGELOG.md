@@ -1,5 +1,83 @@
 # wrangler
 
+## 4.136.0
+
+### Minor Changes
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Identify experimental Build Output resource configs by filename and location
+
+  The root remains `config.json`, Worker configs are now `worker.config.json`, and Container configs are now `container.config.json`. Resource configs no longer contain top-level `type` discriminators, while settings and build context are stored together in the root config.
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Define experimental Cloudflare configuration with a single default export
+
+  Experimental `cloudflare.config.ts` files now define settings and resources together in a default-exported `defineConfig()` call. Add a Worker under `worker`, add Containers to the `containers` array, or omit both to provide settings only.
+
+  ```ts
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineConfig({
+  	accountId: "...",
+  	complianceRegion: "public",
+  	worker: {
+  		name: "my-worker",
+  		compatibilityDate: "2026-09-18",
+  		entrypoint,
+  	},
+  });
+  ```
+
+- [#15720](https://github.com/cloudflare/workers-sdk/pull/15720) [`35668d7`](https://github.com/cloudflare/workers-sdk/commit/35668d7226f63b0a9e262ae1b187186409be8804) Thanks [@alexkli](https://github.com/alexkli)! - Add experimental `--zone` and `--zone-id` flags to `wrangler deploy` and `wrangler triggers deploy` to attach a zone to routes passed via `--route`
+
+  Routes passed on the command line were always sent to the Cloudflare API as bare patterns. Zones with an SSL for SaaS entitlement reject such routes with error 10082 ("When using wildcard host ssl for saas entitlement you must specify the zone per route using zone_id or zone_name"), and until now the only way to set a zone was in the config file, which `--route` overrides.
+
+  The new flags are experimental and must be enabled with `--experimental-route-zones` (alias `--x-route-zones`). Pass a single zone to apply it to all routes, or one zone per route in the same order as the `--route` flags:
+
+  `wrangler deploy --x-route-zones --route "app.example.com/*" --route "api.example.com/*" --zone example.com`
+
+  `wrangler deploy --x-route-zones --route "a.example.com/*" --zone example.com --route "b.example.net/*" --zone example.net`
+
+  `--zone` sets `zone_name` and `--zone-id` sets `zone_id` on each route. The two flags cannot be combined, and passing more than one zone requires exactly one per `--route`. Routes without zone flags behave exactly as before.
+
+- [#15699](https://github.com/cloudflare/workers-sdk/pull/15699) [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c) Thanks [@skepticfx](https://github.com/skepticfx)! - Remove the experimental Container image environment binding
+
+  Durable Object-managed Containers now use `ctx.container.images` without Wrangler generating `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES`. Update code using the experimental environment binding to read `ctx.container.images` and regenerate your Worker types.
+
+  Version deployments identify managed applications from native named images, and `--containers-rollout=none` preserves native Container metadata. Containers without named images must first be provisioned with `wrangler deploy`; `versions upload` verifies that their applications already exist. The old binding is no longer read or reserved, including on previously uploaded versions. `keep_vars` retains existing variables as usual; redeploy without it to remove an existing experimental binding.
+
+- [#15702](https://github.com/cloudflare/workers-sdk/pull/15702) [`8235e6a`](https://github.com/cloudflare/workers-sdk/commit/8235e6a7e03d4910f1de78d67324a11974c393a0) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Return structured configuration errors from `wrangler preview --json`
+
+  When a Worker is missing its Preview configuration, JSON mode now returns an `error`, a `suggested_config` patch, and any associated onboarding `messages` without interactive output or terminal formatting. This changes the private-beta Preview command to make automated onboarding reliable.
+
+- [#15577](https://github.com/cloudflare/workers-sdk/pull/15577) [`731a2ee`](https://github.com/cloudflare/workers-sdk/commit/731a2ee747d3904564ea45188dbf848d62bcc6e8) Thanks [@sdnts](https://github.com/sdnts)! - Add support for jurisdictions to Queues subcommands
+
+### Patch Changes
+
+- [#15711](https://github.com/cloudflare/workers-sdk/pull/15711) [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Allow local Container images without exposed ports
+
+  Wrangler and the Cloudflare Vite plugin no longer reject images that omit Docker `EXPOSE` metadata. Local Containers can run command-only workloads or serve traffic through workerd without declaring an unused image port.
+
+- [#15740](https://github.com/cloudflare/workers-sdk/pull/15740) [`c5913a6`](https://github.com/cloudflare/workers-sdk/commit/c5913a61e155cebf597c8081e445b64343bf2484) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260918.1 | ^5.20260921.1 |
+  | workerd                   | 1.20260918.1  | 1.20260921.1  |
+
+- [#15471](https://github.com/cloudflare/workers-sdk/pull/15471) [`0751490`](https://github.com/cloudflare/workers-sdk/commit/0751490b357fc85022dbc9ff5e6642c0f33a2f0a) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix cf builds for static projects that serve assets from the project root
+
+  The experimental Build Output path now omits the reserved `.cloudflare` directory when the project root is used for static assets. This prevents recursive output copying in Wrangler while preserving the existing behaviour for other asset directories.
+
+- [#15440](https://github.com/cloudflare/workers-sdk/pull/15440) [`43b1f85`](https://github.com/cloudflare/workers-sdk/commit/43b1f85fe26d4b1568f6d7aacc7ffba2b408419b) Thanks [@HuzaifaAbdulRehman](https://github.com/HuzaifaAbdulRehman)! - Rebase absolute non-JavaScript module specifiers when `preserve_file_names` is enabled
+
+  With `preserve_file_names` set, a non-JS module imported by an absolute path kept that path as its module name. The build machine's filesystem layout ended up inside the deployed Worker, and the module was never written to `--outdir`. A local dry run reported success while the upload failed server-side with error code `10021`. Tooling that rewrites externals to absolute paths hits this, which is how it was found in `@opennextjs/cloudflare` with WASM imports.
+
+  Absolute specifiers are now rebased to `./<basename>`, which is what the hashed branch of the same code already does minus the hash prefix. Relative specifiers keep the behaviour they had.
+
+- Updated dependencies [[`c5913a6`](https://github.com/cloudflare/workers-sdk/commit/c5913a61e155cebf597c8081e445b64343bf2484), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63)]:
+  - miniflare@5.20260921.0-alpha
+
 ## 4.135.0
 
 ### Minor Changes

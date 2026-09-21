@@ -1,5 +1,12 @@
 # @cloudflare/cli
 
+## 0.1.35
+
+### Patch Changes
+
+- Updated dependencies [[`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c), [`95af41d`](https://github.com/cloudflare/workers-sdk/commit/95af41d564f7476cdda8c5923208c3b8a3ec2a11)]:
+  - @cloudflare/workers-utils@0.41.0
+
 ## 0.1.34
 
 ### Patch Changes
