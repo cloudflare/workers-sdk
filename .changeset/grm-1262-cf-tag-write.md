@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-auth": patch
+"@cloudflare/workers-auth": minor
 ---
 
 Include Account Tag Write in the default CF CLI OAuth scopes
