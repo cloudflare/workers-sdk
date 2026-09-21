@@ -496,6 +496,7 @@ describe("convertV4MiniflareOptions", () => {
 				assetConfig: {
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
+					base_path: "/subpath",
 				},
 			},
 		});
@@ -503,6 +504,7 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.assets).toEqual({
 			directory: "./public",
 			hasUserWorker: true,
+			basePath: "/subpath",
 			htmlHandling: "auto-trailing-slash",
 			notFoundHandling: "single-page-application",
 			runWorkerFirst: true,

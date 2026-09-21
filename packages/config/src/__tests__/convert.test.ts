@@ -1318,6 +1318,7 @@ describe("convertToWranglerConfig", () => {
 					assets: {
 						htmlHandling: "none",
 						notFoundHandling: "404-page",
+						basePath: "/docs",
 						runWorkerFirst: ["/api/*"],
 					},
 				},
@@ -1326,6 +1327,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.assets).toEqual({
 				html_handling: "none",
 				not_found_handling: "404-page",
+				base_path: "/docs",
 				run_worker_first: ["/api/*"],
 			});
 		});

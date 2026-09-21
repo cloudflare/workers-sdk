@@ -317,6 +317,48 @@ describe("createWorkerUploadForm — unsafe metadata", () => {
 	});
 });
 
+describe("createWorkerUploadForm — assets metadata", () => {
+	it("should include base_path for worker and assets uploads", ({ expect }) => {
+		const worker = createEsmWorker({
+			assets: {
+				routerConfig: { has_user_worker: true },
+				jwt: "test-jwt",
+				assetConfig: {
+					html_handling: "auto-trailing-slash",
+					not_found_handling: "single-page-application",
+					base_path: "/subpath",
+				},
+			} as CfWorkerInit["assets"],
+		});
+		const form = createWorkerUploadForm(worker, {});
+		const metadata = getMetadata(form);
+		expect(metadata.assets).toMatchObject({
+			jwt: "test-jwt",
+			config: {
+				html_handling: "auto-trailing-slash",
+				not_found_handling: "single-page-application",
+				base_path: "/subpath",
+			},
+		});
+	});
+
+	it("should omit base_path when it is not configured", ({ expect }) => {
+		const worker = createEsmWorker({
+			assets: {
+				routerConfig: { has_user_worker: true },
+				jwt: "test-jwt",
+				assetConfig: {
+					html_handling: "auto-trailing-slash",
+					not_found_handling: "single-page-application",
+				},
+			} as CfWorkerInit["assets"],
+		});
+		const form = createWorkerUploadForm(worker, {});
+		const metadata = getMetadata(form);
+		expect(metadata.assets).not.toHaveProperty("config.base_path");
+	});
+});
+
 describe("createWorkerUploadForm — static assets only", () => {
 	it("should short-circuit for assets-only uploads", ({ expect }) => {
 		const worker = createEsmWorker({
@@ -326,6 +368,7 @@ describe("createWorkerUploadForm — static assets only", () => {
 				assetConfig: {
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
+					base_path: "/subpath",
 				},
 			} as CfWorkerInit["assets"],
 		});
@@ -336,6 +379,7 @@ describe("createWorkerUploadForm — static assets only", () => {
 			config: {
 				html_handling: "auto-trailing-slash",
 				not_found_handling: "single-page-application",
+				base_path: "/subpath",
 			},
 		});
 		// Should NOT have main_module or bindings
