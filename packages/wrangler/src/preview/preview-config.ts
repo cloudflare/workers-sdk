@@ -317,9 +317,27 @@ export function createPreviewConfigProposal(
 	if (source.kind === "previewBase") {
 		const config = source.config;
 		const bindings = config.env ?? {};
+		// correcting mismatch between API shape and wrangler API - null is allowed
+		// in preview base response
+		const observability = config.observability
+			? (JSON.parse(
+					JSON.stringify(config.observability, (_key, value) =>
+						value === null ? undefined : value
+					)
+				) as PreviewBaseConfig["observability"])
+			: undefined;
+		if (observability?.logs && Object.keys(observability.logs).length === 0) {
+			delete observability.logs;
+		}
+		if (
+			observability?.traces &&
+			Object.keys(observability.traces).length === 0
+		) {
+			delete observability.traces;
+		}
 		const settings: PreviewTopLevelSettings = {
 			define: undefined,
-			observability: config.observability,
+			observability,
 			logpush: config.logpush,
 			limits: config.limits,
 			placement: config.placement,

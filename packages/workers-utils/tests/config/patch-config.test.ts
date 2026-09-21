@@ -483,7 +483,9 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 
 describe("experimental_patchConfig()", () => {
 	runInTempDir();
-	it("distinguishes TOML comments from hashes in string values", ({ expect }) => {
+	it("distinguishes TOML comments from hashes in string values", ({
+		expect,
+	}) => {
 		writeFileSync(
 			"wrangler.toml",
 			`url = "https://example.com/#fragment"
@@ -496,6 +498,17 @@ pattern = """^preview#worker$"""
 		writeFileSync("wrangler.toml", 'name = "worker" # keep this comment\n');
 		expect(experimental_isConfigPatchable("wrangler.toml")).toBe(false);
 	});
+
+	it.for([
+		'value = """text"""" # keep this comment\n',
+		'value = """text""""" # keep this comment\n',
+	])(
+		"detects comments after multiline string closing quote runs",
+		(config, { expect }) => {
+			writeFileSync("wrangler.toml", config);
+			expect(experimental_isConfigPatchable("wrangler.toml")).toBe(false);
+		}
+	);
 
 	it("does not overwrite values with empty additive patches", ({ expect }) => {
 		writeWranglerConfig(

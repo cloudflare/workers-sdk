@@ -14,9 +14,11 @@ function hasTOMLComments(source: string): boolean {
 		if (quote !== undefined) {
 			if (multiline && source.startsWith(quote.repeat(3), index)) {
 				if (quote === "'" || !isEscaped(source, index)) {
+					while (source[index + 1] === quote) {
+						index++;
+					}
 					quote = undefined;
 					multiline = false;
-					index += 2;
 				}
 			} else if (!multiline && character === quote) {
 				if (quote === "'" || !isEscaped(source, index)) {
