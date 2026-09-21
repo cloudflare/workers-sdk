@@ -17,7 +17,7 @@ const {
 } = vi.hoisted(() => ({
 	RUNTIME_MARKER: "// Begin runtime types",
 	FAKE_RUNTIME_HEADER:
-		"// Runtime types generated with workerd@1.0.0 2024-12-30 ",
+		"// Runtime types generated with workerd@1.0.0 2024-12-30",
 	FAKE_RUNTIME_TYPES: "declare type __FakeRuntimeType = true;",
 	generateRuntimeTypesMock: vi.fn(),
 }));
