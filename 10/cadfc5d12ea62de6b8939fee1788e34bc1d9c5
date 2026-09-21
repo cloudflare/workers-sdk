@@ -1,0 +1,39 @@
+.changeset/dry-camels-buy.md
+  s_9eea9b4e1390a1::t_c9436fd9004253 1-7
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_9eea9b4e1390a1::t_eb5452817e4433 345
+packages/deploy-helpers/src/deploy/helpers/placement.ts
+  s_9eea9b4e1390a1::t_f249d0e9054dd6 6-10
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_9eea9b4e1390a1::t_2fdea96b714611 223
+packages/deploy-helpers/src/preview/api.ts
+  s_9eea9b4e1390a1::t_77edb4e5c1f56d 29,127
+packages/deploy-helpers/src/preview/preview.ts
+  s_9eea9b4e1390a1::t_773675504eccc3 515-518
+packages/workers-utils/src/config/environment.ts
+  s_9eea9b4e1390a1::t_474be5a94823a6 2003,2013
+packages/workers-utils/src/config/validation.ts
+  s_9eea9b4e1390a1::t_de22a1f299f39f 1219-1220,1222-1239,1244-1248,1253,1269,1282,1287,1293,1296,1300,1303-1304,1306-1308,1311-1315,1319,1321,1329,1335-1341,6175,6195-6201
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_9eea9b4e1390a1::t_3e0f8edf17be2f 13531-13551
+packages/wrangler/src/__tests__/preview.test.ts
+  s_9eea9b4e1390a1::t_bb9476d59a0c44 4981,4992,5017,5092
+packages/wrangler/src/api/pages/create-worker-bundle-contents.ts
+  s_9eea9b4e1390a1::t_d6801c695ef5c4 51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "10cadfc5d12ea62de6b8939fee1788e34bc1d9c5",
+  "prompts": {},
+  "sessions": {
+    "s_9eea9b4e1390a1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5a4fb566ffeLoPeOm2j1QDRUt",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

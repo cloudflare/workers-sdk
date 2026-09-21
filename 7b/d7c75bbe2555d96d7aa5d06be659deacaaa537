@@ -1,0 +1,41 @@
+packages/wrangler/src/preview/ensure-config.ts
+  s_3bc63ff1609647::t_6e1058d70e0726 13,170-187
+packages/wrangler/src/__tests__/preview.test.ts
+  s_05f7fde0243870::t_e345c0ab62f462 1217,1220-1223,1649,1652-1655,1813,1815-1822,2148-2180,2232
+  s_05f7fde0243870::t_84c0d47578deba 2229-2231
+  s_05f7fde0243870::t_7559e230e2692d 2233-2235
+.changeset/quiet-previews-report.md
+  s_83bb35add51466::t_a1ff8e164cdf7e 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7bd7c75bbe2555d96d7aa5d06be659deacaaa537",
+  "prompts": {},
+  "sessions": {
+    "s_05f7fde0243870": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f508a71d2ffeG5VlWRoKTbFVEL",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_3bc63ff1609647": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f508b43e8ffeZzpuQ8DBSa9uFR",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_83bb35add51466": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f4f22e77affe8tF6M5ZujMNv08",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

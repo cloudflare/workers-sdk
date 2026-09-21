@@ -1,0 +1,19 @@
+packages/deploy-helpers/src/preview/preview.ts
+  s_1411f33d6199b3::t_bd5526dd9147a6 510-511,513
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6035850cea2d7211f4c3d57a91b816e89815a829",
+  "prompts": {},
+  "sessions": {
+    "s_1411f33d6199b3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f795d1a3dffeWsgYGm3j5STc4v",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

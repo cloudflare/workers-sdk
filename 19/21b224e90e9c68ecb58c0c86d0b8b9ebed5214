@@ -1,0 +1,39 @@
+packages/deploy-helpers/src/deploy/helpers/durable-object-container-applications.ts
+  s_af189af6800ac9::t_1ab8e9eaf6df44 152-153,156,160-162,164-169,188,190-192,200-206,208-212,258-327,347
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_af189af6800ac9::t_64f7543ae92fa8 32,133,203-211,488-490
+packages/deploy-helpers/tests/container-metadata.test.ts
+  s_af189af6800ac9::t_45669d34776199 1,173,181,192,205,209,252,377,382,401,414,417-418,422,431
+packages/deploy-helpers/tests/versioned-container-applications.test.ts
+  s_af189af6800ac9::t_0e934f28550741 1-3,5-6,9-23,25-29,31-34,36-37,40-51,54-73,77-95,97-115,118-132,134,138-143,145,149-150,152-153,156-163
+packages/workers-utils/src/config/environment.ts
+  s_af189af6800ac9::t_880aa8424e4481 185,188-189
+packages/workers-utils/src/config/validation.ts
+  s_af189af6800ac9::t_1492270d7f314a 13
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_af189af6800ac9::t_fb4b708ebc9b91 4697,4711
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_af189af6800ac9::t_386747f999476f 84,86-89,92-93,113,433,503,588,756,765,798,4240
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_af189af6800ac9::t_a1c44d5e0da60c 1901,1945
+packages/wrangler/src/__tests__/versions/versions.deploy.test.ts
+  s_af189af6800ac9::t_554b3faf0b1d9c 88-89,130-135,370,381-385,409-410,562-586,588-601,603-610,612-614,616-624
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_af189af6800ac9::t_1c5da11dc72360 11,1063-1066,1068-1071,1074,1104,1269,2536,2621-2630,2655-2668,2671-2694,2732-2747,2765,2767-2769,2776
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1921b224e90e9c68ecb58c0c86d0b8b9ebed5214",
+  "prompts": {},
+  "sessions": {
+    "s_af189af6800ac9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a5fe-e3fa-7091-b9ac-6abba3257ce7",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}
