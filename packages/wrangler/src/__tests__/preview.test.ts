@@ -2140,7 +2140,10 @@ describe("wrangler preview", () => {
 			expect((thrown as Error).message).toContain("IMPORTANT_BINDING");
 			expect((thrown as Error).message).toContain('"id": "<REPLACE_ME>"');
 			expect((thrown as Error).message).not.toContain("kv-id-123");
-			expect(std.warn).toContain(
+			expect((thrown as Error).message).toMatch(
+				/}\n\nReplace each <REPLACE_ME> placeholder with a Preview-safe value\. Do not use production resources unless you intend for this Preview to access them\.$/
+			);
+			expect(std.warn).not.toContain(
 				"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them."
 			);
 		});
@@ -2285,12 +2288,11 @@ describe("wrangler preview", () => {
 				.filter(
 					(message) =>
 						typeof message === "string" &&
-						(message.startsWith(
+						message.startsWith(
 							"These settings have limitations in Worker Previews"
-						) ||
-							message.startsWith("Replace each <REPLACE_ME>"))
+						)
 				);
-			expect(conversionWarnings).toHaveLength(2);
+			expect(conversionWarnings).toHaveLength(1);
 		});
 
 		test("should not warn about top-level bindings when they are present in local previews config", async ({
