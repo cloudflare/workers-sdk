@@ -9,6 +9,7 @@ import {
 	fetchListResult,
 	fetchPagedListResult,
 } from "../cfetch";
+import { createCloudflareClient } from "../cfetch/internal";
 import { confirm, prompt, select } from "../dialogs";
 import { logger } from "../logger";
 import { msw } from "./helpers/msw";
@@ -18,6 +19,7 @@ chalk.level = 0;
 
 initDeployHelpersContext({
 	logger,
+	createCloudflareClient,
 	fetchResult,
 	fetchListResult,
 	fetchPagedListResult,

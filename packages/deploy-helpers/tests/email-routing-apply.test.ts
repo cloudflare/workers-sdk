@@ -66,6 +66,7 @@ describe("applyEmailRoutingAddresses", () => {
 		releaseRuleWrites = [];
 
 		initDeployHelpersContext({
+			createCloudflareClient: (() => {}) as never,
 			logger: {
 				debug() {},
 				info() {},
