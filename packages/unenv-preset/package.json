@@ -24,7 +24,9 @@
 		"dist"
 	],
 	"type": "module",
-	"sideEffects": false,
+	"sideEffects": [
+		"./dist/runtime/polyfill/*.mjs"
+	],
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
