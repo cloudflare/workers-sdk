@@ -44,16 +44,14 @@ export async function buildAndWriteContainerOutput(options: {
 	root: string;
 	pathToDocker: string;
 }): Promise<void> {
-	const containers = resolveContainerDirectories(options.containers);
-
-	await cleanupPreviousBuildOutputImageTags({
-		root: options.root,
-		pathToDocker: options.pathToDocker,
-	});
-
-	const buildId = createBuildId();
 	const localTags = new Set<string>();
 	try {
+		const containers = resolveContainerDirectories(options.containers);
+		await cleanupPreviousBuildOutputImageTags({
+			root: options.root,
+			pathToDocker: options.pathToDocker,
+		});
+		const buildId = createBuildId();
 		const dockerfileCount = countDockerfiles(options.containers);
 		if (dockerfileCount > 0) {
 			await verifyDockerInstalled({

@@ -376,6 +376,7 @@ describe("buildAndWriteContainerOutput", () => {
 			name: "api-prod",
 			image: { reference: "registry.example.com/api-2:latest" },
 		});
+		seedWorkerOutput(root);
 
 		await expect(
 			buildAndWriteContainerOutput({
