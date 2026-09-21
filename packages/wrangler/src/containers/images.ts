@@ -6,7 +6,10 @@ import {
 } from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import {
+	fillOpenAPIConfiguration,
+	isValidImageTag,
+} from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -174,7 +177,7 @@ async function listImages(
 		responses = responses.map((resp) => {
 			return {
 				name: resp.name,
-				tags: resp.tags.filter((t) => !t.startsWith("sha256")),
+				tags: resp.tags.filter(isValidImageTag),
 			};
 		});
 	}
