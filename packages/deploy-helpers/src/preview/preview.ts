@@ -810,11 +810,19 @@ function getPreviewCustomDomainHostnames(config: Config): string[] {
 			(route): route is CustomDomainRoute =>
 				isCustomDomainRoute(route) && route.previews_enabled === true
 		)
-		.map((route) => route.pattern.toLowerCase().replace(/\.$/, ""));
+		.map((route) => normalizeHostname(route.pattern));
+}
+
+function normalizeHostname(hostname: string) {
+	try {
+		return new URL(`https://${hostname}`).hostname.replace(/\.$/, "");
+	} catch {
+		return hostname.toLowerCase().replace(/\.$/, "");
+	}
 }
 
 function hostnameMatchesCustomDomain(hostname: string, customDomain: string) {
-	const normalizedHostname = hostname.toLowerCase().replace(/\.$/, "");
+	const normalizedHostname = normalizeHostname(hostname);
 	return (
 		normalizedHostname === customDomain ||
 		normalizedHostname.endsWith(`.${customDomain}`)

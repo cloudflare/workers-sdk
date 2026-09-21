@@ -3606,8 +3606,63 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain('"preview_urls": true');
 		});
 
+		function mockPreviewUrls(previewUrls: string[], deploymentUrls: string[]) {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-custom-domain",
+									name: "custom-domain-preview",
+									slug: "custom-domain-preview",
+									urls: previewUrls,
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-custom-domain",
+									preview_id: "preview-id-custom-domain",
+									preview_name: "custom-domain-preview",
+									urls: deploymentUrls,
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				)
+			);
+		}
+
 		test.for<{
 			name: string;
+			routePattern?: string;
 			previewUrls: string[];
 			deploymentUrls: string[];
 			shouldWarn: boolean;
@@ -3634,6 +3689,15 @@ describe("wrangler preview", () => {
 				deploymentUrls: ["https://deployment-id-custom-domain.app.example.com"],
 				shouldWarn: false,
 			},
+			{
+				name: "a configured IDN custom domain matches a punycoded Preview URL",
+				routePattern: "bücher.example.com",
+				previewUrls: [
+					"https://custom-domain-preview.xn--bcher-kva.example.com",
+				],
+				deploymentUrls: [],
+				shouldWarn: false,
+			},
 		])(
 			"handles custom-domain Preview URL guidance when $name",
 			async (testCase, { expect }) => {
@@ -3643,7 +3707,7 @@ describe("wrangler preview", () => {
 						previews: {},
 						routes: [
 							{
-								pattern: "app.example.com",
+								pattern: testCase.routePattern ?? "app.example.com",
 								custom_domain: true,
 								previews_enabled: true,
 							},
@@ -3651,57 +3715,7 @@ describe("wrangler preview", () => {
 					},
 					"wrangler.json"
 				);
-				msw.use(
-					http.get(
-						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
-						() =>
-							HttpResponse.json(
-								{
-									success: false,
-									result: null,
-									errors: [{ code: 10025, message: "Preview not found" }],
-								},
-								{ status: 404 }
-							)
-					),
-					http.post(
-						`*/accounts/:accountId/workers/workers/:workerId/previews`,
-						() =>
-							HttpResponse.json(
-								{
-									success: true,
-									result: {
-										id: "preview-id-custom-domain",
-										name: "custom-domain-preview",
-										slug: "custom-domain-preview",
-										urls: testCase.previewUrls,
-										worker_name: "test-worker",
-										created_on: new Date().toISOString(),
-									},
-								},
-								{ status: 201 }
-							)
-					),
-					http.post(
-						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-						() =>
-							HttpResponse.json(
-								{
-									success: true,
-									result: {
-										id: "deployment-id-custom-domain",
-										preview_id: "preview-id-custom-domain",
-										preview_name: "custom-domain-preview",
-										urls: testCase.deploymentUrls,
-										compatibility_date: "2025-01-01",
-										env: {},
-										created_on: new Date().toISOString(),
-									},
-								},
-								{ status: 201 }
-							)
-					)
-				);
+				mockPreviewUrls(testCase.previewUrls, testCase.deploymentUrls);
 
 				await runWrangler("preview --name custom-domain-preview");
 
