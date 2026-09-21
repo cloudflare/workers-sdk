@@ -565,6 +565,7 @@ const CF_DEFAULT_SCOPES = [
 	"sso-connector:read",
 	"sso-connector:write",
 	"ssl_certs:write",
+	"tag.write",
 	"teams:pii",
 	"teams:read",
 	"teams:secure_location",
