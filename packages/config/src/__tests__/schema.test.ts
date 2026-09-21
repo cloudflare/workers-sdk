@@ -811,6 +811,33 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts application-wide observability for a Durable Object Container", ({
+		expect,
+	}) => {
+		const result = InputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			observability: { enabled: true, logs: { enabled: true } },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it.for([{ targetInstancePercentage: 50 }, { targetInstanceCount: 2 }])(
+		"rejects observability instance targeting for a Durable Object Container: %o",
+		(observability, { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				type: "container",
+				name: "durable-object-container",
+				schedulingPolicy: "durable-object",
+				observability,
+			});
+
+			expect(result.success).toBe(false);
+		}
+	);
+
 	it("rejects Docker build fields without a Dockerfile", ({ expect }) => {
 		const result = InputContainerSchema.safeParse({
 			...baseContainer,

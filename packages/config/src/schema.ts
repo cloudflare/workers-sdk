@@ -437,7 +437,7 @@ const ContainerObservabilityBaseSchema = z.strictObject({
 	logs: z.strictObject({ enabled: z.boolean().optional() }).optional(),
 });
 
-const ContainerObservabilitySchema = z.union([
+const StandardContainerObservabilitySchema = z.union([
 	ContainerObservabilityBaseSchema.extend({
 		targetInstancePercentage: z.number().min(0).max(100).optional(),
 	}),
@@ -449,11 +449,11 @@ const ContainerObservabilitySchema = z.union([
 const BaseContainerSchema = z.strictObject({
 	type: z.literal("container"),
 	name: z.string().min(1),
-	observability: ContainerObservabilitySchema.optional(),
 	unsafe: z.record(z.string(), z.unknown()).optional(),
 });
 
 const StandardContainerBaseSchema = BaseContainerSchema.extend({
+	observability: StandardContainerObservabilitySchema.optional(),
 	maxInstances: z.number().int().nonnegative().default(20),
 	instanceType: z
 		.union([
@@ -513,6 +513,7 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 
 const DurableObjectContainerBaseSchema = BaseContainerSchema.extend({
 	schedulingPolicy: z.literal("durable-object"),
+	observability: ContainerObservabilityBaseSchema.optional(),
 });
 
 /**
@@ -786,9 +787,10 @@ export type ParsedInputSettingsConfig = z.output<typeof InputSettingsSchema>;
 
 /**
  * Output settings schema — the shape of the top-level `config.json` in the
- * Build Output Specification. Adds the `mode` the build was produced in.
+ * Build Output Specification. Adds the build mode and Preview intent.
  */
 export const OutputSettingsSchema = InputSettingsSchema.extend({
+	isPreview: z.boolean().optional(),
 	mode: z.string().optional(),
 });
 

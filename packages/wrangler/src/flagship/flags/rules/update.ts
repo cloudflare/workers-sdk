@@ -1,13 +1,14 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
-import { getFlag, toFlagInput, updateFlag } from "../../client";
+import { toFlagInput } from "../../client";
 import { renderFlag } from "../../render";
 import {
 	assertVariationsExist,
 	parseConditions,
 	parseRollout,
 } from "../../shared";
+import { flagStoreArgDefinitions, withFlagStore } from "../../store";
 import { findRule } from "./shared";
 import type { Rule } from "../../client";
 
@@ -72,6 +73,7 @@ export const flagshipFlagsRulesUpdateCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config }) {
@@ -106,30 +108,36 @@ export const flagshipFlagsRulesUpdateCommand = createCommand({
 		}
 
 		const { appId, key } = args;
-		const current = await getFlag(config, appId, key);
-		findRule(current.rules, args.priority);
-		const rules: Rule[] = current.rules.map((rule) =>
-			rule.priority === args.priority
-				? {
-						...rule,
-						serve_variation: args.serve ?? rule.serve_variation,
-						conditions: args.clearConditions
-							? []
-							: args.when !== undefined
-								? parseConditions(args.when)
-								: rule.conditions,
-						rollout: args.clearRollout
-							? undefined
-							: args.rollout !== undefined
-								? parseRollout(args.rollout)
-								: rule.rollout,
-					}
-				: rule
-		);
-		assertVariationsExist(current.variations, current.default_variation, rules);
-		const flag = await updateFlag(config, appId, key, {
-			...toFlagInput(current),
-			rules,
+		const flag = await withFlagStore(args, config, appId, async (store) => {
+			const current = await store.getFlag(key);
+			findRule(current.rules, args.priority);
+			const rules: Rule[] = current.rules.map((rule) =>
+				rule.priority === args.priority
+					? {
+							...rule,
+							serve_variation: args.serve ?? rule.serve_variation,
+							conditions: args.clearConditions
+								? []
+								: args.when !== undefined
+									? parseConditions(args.when)
+									: rule.conditions,
+							rollout: args.clearRollout
+								? undefined
+								: args.rollout !== undefined
+									? parseRollout(args.rollout)
+									: rule.rollout,
+						}
+					: rule
+			);
+			assertVariationsExist(
+				current.variations,
+				current.default_variation,
+				rules
+			);
+			return store.updateFlag(key, {
+				...toFlagInput(current),
+				rules,
+			});
 		});
 		if (args.json) {
 			logger.json(flag);

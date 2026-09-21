@@ -1,6 +1,7 @@
 export * from "./src/client";
 export { request } from "./src/client/core/request";
 export * from "./src/build";
+export * from "./src/build-output";
 export * from "./src/context";
 export * from "./src/deploy";
 export * from "./src/diff";

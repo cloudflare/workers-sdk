@@ -14,20 +14,20 @@ describe("cf-wrangler build", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("emits the Build Output Specification tree", async ({ expect }) => {
+	it("emits Preview Build Output", async ({ expect }) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
+			"cloudflare.config.ts": `export default ({ isPreview }) => ({
 				type: "worker",
-				name: "cf-wrangler-build-worker",
+				name: isPreview ? "preview-worker" : "production-worker",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
-			};`,
+			});`,
 			"src/index.js": `export default {
 				async fetch() { return new Response("hello"); }
 			};`,
 		});
 
-		const exitCode = await runCfWranglerBuild({});
+		const exitCode = await runCfWranglerBuild({ preview: true });
 
 		expect(exitCode).toBe(0);
 		expect(
@@ -40,5 +40,17 @@ describe("cf-wrangler build", () => {
 				path.resolve(".cloudflare/output/v0/workers/default/bundle/index.js")
 			)
 		).toBe(true);
+		const worker = JSON.parse(
+			fs.readFileSync(
+				path.resolve(".cloudflare/output/v0/workers/default/config.json"),
+				"utf8"
+			)
+		);
+		const settings = JSON.parse(
+			fs.readFileSync(path.resolve(".cloudflare/output/v0/config.json"), "utf8")
+		);
+
+		expect(worker).toMatchObject({ name: "preview-worker" });
+		expect(settings).toMatchObject({ isPreview: true });
 	});
 });

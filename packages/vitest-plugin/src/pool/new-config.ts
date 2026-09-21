@@ -34,7 +34,10 @@ export async function loadNewConfig(
 		);
 	}
 
-	const { result } = await loadAndValidateConfig(configPath, { mode });
+	const { result } = await loadAndValidateConfig(configPath, {
+		isPreview: false,
+		mode,
+	});
 
 	if (!result.success) {
 		throw new TypeError(
