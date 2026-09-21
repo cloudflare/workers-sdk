@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import {
+	writeAssets,
 	writeSettingsConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
@@ -14,6 +15,19 @@ import type { ModuleType } from "@cloudflare/config";
  */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 	return {
+		buildApp: {
+			order: "post",
+			async handler(builder) {
+				if (!builder.environments.client?.isBuilt) {
+					return;
+				}
+
+				const { publicDir, root } = ctx.resolvedViteConfig;
+				if (publicDir && path.resolve(publicDir) === path.resolve(root)) {
+					await writeAssets({ root, sourceDirectory: publicDir });
+				}
+			},
+		},
 		async writeBundle(_, bundle) {
 			if (ctx.isChildEnvironment(this.environment.name)) {
 				return;
