@@ -1,0 +1,21 @@
+packages/wrangler/src/metrics/sanitization.ts
+  s_7cedcfe447b60e::t_9c4381adfb1249 2,57-62,68
+packages/wrangler/src/__tests__/metrics/sanitization.test.ts
+  s_7cedcfe447b60e::t_9f67540bfb104f 155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "681434713e8e0d9fdd0edd7e08c4411b0398e656",
+  "prompts": {},
+  "sessions": {
+    "s_7cedcfe447b60e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a075-bb52-75b1-b8a4-38702bac5d21",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

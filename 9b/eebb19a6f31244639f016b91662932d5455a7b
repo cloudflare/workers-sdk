@@ -1,0 +1,29 @@
+.changeset/quiet-container-builds.md
+  s_d5d1b02a9ffc94::t_83a76a1d58cc1d 1-7
+packages/containers-shared/src/build.ts
+  s_d5d1b02a9ffc94::t_7f0c651651a0df 5-6,16-19,43-118,185,192,197,204,310,318,328,331,333-339,354,363,390,430,435,447-448,458,529-546,554,577,587,591,632,641-642,644,646-658,671,695-712,785,818-822,866,876,894-904,919-920,922,927-930,932-937,944-950
+packages/containers-shared/src/login.ts
+  s_d5d1b02a9ffc94::t_a0ffa5c3c116b6 5-8,29-30,34-35,52-61,63-79,81-84,88-91,93-96,101-103
+packages/containers-shared/tests/build.test.ts
+  s_d5d1b02a9ffc94::t_468ffe3a43741a 15-24,26-28,30-34,37-39,74,76,87-92,94-122,124-128,131-149
+packages/containers-shared/tests/login.test.ts
+  s_d5d1b02a9ffc94::t_534b51c4d0f119 1-4,6-41,48,73-148
+packages/containers-shared/tests/utils.test.ts
+  s_d5d1b02a9ffc94::t_da3bf908eb6b18 15,265-274,276-277,279-283,287-288,293-318
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9beebb19a6f31244639f016b91662932d5455a7b",
+  "prompts": {},
+  "sessions": {
+    "s_d5d1b02a9ffc94": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06a99-ed3a-7690-b25b-48b2edcc6ed8",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}
