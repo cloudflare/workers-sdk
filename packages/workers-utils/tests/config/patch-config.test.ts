@@ -1,5 +1,8 @@
 import { writeFileSync } from "node:fs";
-import { experimental_patchConfig } from "@cloudflare/workers-utils";
+import {
+	experimental_isConfigPatchable,
+	experimental_patchConfig,
+} from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { runInTempDir, writeWranglerConfig } from "../../src/test-helpers";
@@ -480,6 +483,20 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 
 describe("experimental_patchConfig()", () => {
 	runInTempDir();
+	it("distinguishes TOML comments from hashes in string values", ({ expect }) => {
+		writeFileSync(
+			"wrangler.toml",
+			`url = "https://example.com/#fragment"
+color = '#ff00aa'
+pattern = """^preview#worker$"""
+`
+		);
+		expect(experimental_isConfigPatchable("wrangler.toml")).toBe(true);
+
+		writeFileSync("wrangler.toml", 'name = "worker" # keep this comment\n');
+		expect(experimental_isConfigPatchable("wrangler.toml")).toBe(false);
+	});
+
 	it("does not overwrite values with empty additive patches", ({ expect }) => {
 		writeWranglerConfig(
 			{

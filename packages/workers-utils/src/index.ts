@@ -38,6 +38,7 @@ export {
 	experimental_readRawConfig,
 } from "./config";
 export {
+	experimental_isConfigPatchable,
 	experimental_patchConfig,
 	PatchConfigError,
 } from "./config/patch-config";
