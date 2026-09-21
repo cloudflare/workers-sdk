@@ -31,9 +31,7 @@ describe("buildDependantsGraph()", () => {
 
 		expect(graph["miniflare"]).toContain("wrangler");
 		expect(graph["miniflare"]).toContain("@cloudflare/vitest-plugin");
-		expect(graph["miniflare"]).toContain("@cloudflare/vite-plugin");
 
-		expect(graph["wrangler"]).toContain("@cloudflare/vite-plugin");
 		expect(graph["wrangler"]).toContain("@cloudflare/vitest-plugin");
 		expect(graph["wrangler"]).not.toContain("miniflare");
 		expect(graph["@cloudflare/containers-shared"]).toContain(

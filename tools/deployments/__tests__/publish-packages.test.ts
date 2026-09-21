@@ -271,6 +271,7 @@ describe("the real workspace", () => {
 			    "@cloudflare/kv-asset-handler",
 			    "@cloudflare/pages-functions",
 			    "@cloudflare/unenv-preset",
+			    "@cloudflare/vite-plugin",
 			    "@cloudflare/workers-editor-shared",
 			    "@cloudflare/workers-utils",
 			    "create-cloudflare",
@@ -287,7 +288,6 @@ describe("the real workspace", () => {
 			  [
 			    "@cloudflare/autoconfig",
 			    "@cloudflare/containers-shared",
-			    "@cloudflare/vite-plugin",
 			    "@cloudflare/vitest-plugin",
 			  ],
 			  [
@@ -306,9 +306,6 @@ describe("the real workspace", () => {
 			tiers.findIndex((tier) => tier.some((pkg) => pkg.name === name));
 
 		expect(tierOf("wrangler")).toBeGreaterThan(tierOf("miniflare"));
-		expect(tierOf("@cloudflare/vite-plugin")).toBeGreaterThan(
-			tierOf("wrangler")
-		);
 		expect(tierOf("@cloudflare/vitest-plugin")).toBeGreaterThan(
 			tierOf("wrangler")
 		);
