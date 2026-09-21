@@ -1,5 +1,20 @@
 # wrangler
 
+## 4.136.1
+
+### Patch Changes
+
+- [#15744](https://github.com/cloudflare/workers-sdk/pull/15744) [`0ed4c54`](https://github.com/cloudflare/workers-sdk/commit/0ed4c54cce958e937addac517f5aa9819ebe0379) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Improve `wrangler preview` onboarding guidance
+
+  Wrangler now displays placeholder replacement guidance directly beneath the suggested Preview configuration instead of as a separate warning. JSON output continues to include the guidance in its structured onboarding messages.
+
+- [#15678](https://github.com/cloudflare/workers-sdk/pull/15678) [`703922d`](https://github.com/cloudflare/workers-sdk/commit/703922dbcaaeef3d2c17d4d4450cc2dd2a713f0e) Thanks [@christhorwarth](https://github.com/christhorwarth)! - Read workers.dev URLs from the Worker resource during deployment
+
+  Wrangler no longer requires account-level subdomain permission to display Worker and version-preview URLs. It now uses the Worker-scoped URL fields while preserving account-level registration for accounts without a workers.dev subdomain.
+
+- Updated dependencies [[`14d946d`](https://github.com/cloudflare/workers-sdk/commit/14d946d5b5573d856f3b2ddaa0e75c3aa5fb7bfa)]:
+  - @cloudflare/unenv-preset@2.16.2
+
 ## 4.136.0
 
 ### Minor Changes
