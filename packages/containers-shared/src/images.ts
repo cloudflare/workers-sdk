@@ -4,11 +4,7 @@ import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
-import {
-	checkExposedPorts,
-	runDockerCmd,
-	verifyDockerInstalled,
-} from "./utils";
+import { runDockerCmd, verifyDockerInstalled } from "./utils";
 import type {
 	ContainerDevOptions,
 	DockerfileConfig,
@@ -108,9 +104,8 @@ export async function pullImage(
  * will be called before starting the local development server, and by a rebuild
  * hotkey during development.
  *
- * Because this runs when local dev starts, we also do some validation here,
- * such as checking if the Docker CLI is installed, and if the container images
- * expose any ports.
+ * Because this runs when local dev starts, it also checks that the Docker CLI
+ * is installed.
  *
  * @param args - Image preparation callbacks, Docker settings, and compliance configuration.
  * @returns Whether image preparation was aborted before completion.
@@ -198,7 +193,6 @@ export async function prepareContainerImagesForDev(args: {
 		if (aborted) {
 			break;
 		}
-		await checkExposedPorts(dockerPath, options);
 	}
 
 	// Pull the egress interceptor image used to intercept outbound HTTP from
