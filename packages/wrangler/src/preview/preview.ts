@@ -1,4 +1,8 @@
-import { preview, resolveWorkerName } from "@cloudflare/deploy-helpers";
+import {
+	extractConfigBindings,
+	preview,
+	resolveWorkerName,
+} from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -12,7 +16,7 @@ import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { deployPreviewContainers, verifyContainersScope } from "./containers";
 import { ensurePreviewsConfig } from "./ensure-config";
-import { getProductionBindingsExpectedInPreview } from "./preview-config";
+import { createPreviewConfigProposal } from "./preview-config";
 
 export const previewCommand = createCommand({
 	metadata: {
@@ -91,8 +95,11 @@ export const previewCommand = createCommand({
 		);
 
 		const accountId = await requireAuth(config);
-		const productionBindingsExpectedInPreview =
-			getProductionBindingsExpectedInPreview(config);
+		const productionBindingsExpectedInPreview = extractConfigBindings({
+			...config,
+			previews: createPreviewConfigProposal({ kind: "localConfig", config })
+				.config,
+		});
 		const previewConfig = await ensurePreviewsConfig(accountId, args, config);
 
 		const entry = await getEntry(

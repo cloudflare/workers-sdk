@@ -1290,8 +1290,8 @@ describe("resource provisioning", () => {
 			});
 			mockUploadWorkerRequest({
 				expectedBindings: [
-					{ name: "NEW", type: "d1", id: "new-d1-id" },
-					{ name: "EXISTING", type: "d1", id: "generated-id" },
+					{ name: "NEW", type: "d1", database_id: "new-d1-id" },
+					{ name: "EXISTING", type: "d1", database_id: "generated-id" },
 				],
 			});
 
@@ -1384,7 +1384,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1500,7 +1500,7 @@ describe("resource provisioning", () => {
 				mockUploadWorkerRequest({
 					expectedBindings: [
 						{ name: "KV", type: "kv_namespace", namespace_id: "new-kv-id" },
-						{ name: "D1", type: "d1", id: "existing-d1-id" },
+						{ name: "D1", type: "d1", database_id: "existing-d1-id" },
 					],
 				});
 
@@ -1829,7 +1829,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
