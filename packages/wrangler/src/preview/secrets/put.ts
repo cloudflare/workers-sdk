@@ -6,7 +6,7 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import {
-	NO_ACTIVE_PREVIEW_URLS_MESSAGE,
+	formatNoActivePreviewUrlsMessage,
 	patchPreviewDeploymentSecrets,
 	resolvePreviewName,
 	toSecretBindingsPatch,
@@ -18,7 +18,7 @@ export const previewSecretPutCommand = createCommand({
 			"Create or update a secret variable on a Worker Preview and create a new deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	positionalArgs: ["key"],
 	args: {
@@ -89,7 +89,7 @@ export const previewSecretPutCommand = createCommand({
 					? `\n➡️  Your Preview "${previewName}" is now live at ${liveUrls
 							.map((url) => chalk.bold.underline(url))
 							.join(", ")}`
-					: `\n${NO_ACTIVE_PREVIEW_URLS_MESSAGE}`)
+					: `\n${formatNoActivePreviewUrlsMessage(config)}`)
 		);
 	},
 });

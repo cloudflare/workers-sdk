@@ -1,5 +1,4 @@
 import { INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE } from "@cloudflare/deploy-helpers";
-import { CONTAINER_IMAGES_BINDING } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -86,7 +85,8 @@ function containerVersion(
 		className: string;
 		name: string;
 		namespaceId?: string;
-	}>
+	}>,
+	withoutImages = false
 ): ApiVersion {
 	return {
 		id,
@@ -103,13 +103,6 @@ function containerVersion(
 		},
 		resources: {
 			bindings: [
-				{
-					type: "json",
-					name: CONTAINER_IMAGES_BINDING,
-					json: Object.fromEntries(
-						applications.map(({ className }) => [className, {}])
-					),
-				},
 				...applications.flatMap(({ className, namespaceId }) =>
 					namespaceId === undefined
 						? []
@@ -134,6 +127,12 @@ function containerVersion(
 				usage_model: "standard",
 				limits: { cpu_ms: 50 },
 				containers: applications.map(({ className, name }) => ({
+					...(!withoutImages && {
+						images: {
+							app:
+								"registry.cloudflare.com/account/app@sha256:" + "a".repeat(64),
+						},
+					}),
 					class_name: className,
 					name,
 				})),
@@ -239,6 +238,16 @@ describe("versions deploy", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
+		msw.use(
+			http.get("*/applications/:id", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 1000, message: "Application not found" },
+					]),
+					{ status: 404 }
+				)
+			)
+		);
 		setIsTTY(false);
 		msw.use(
 			mswListNewDeployments,
@@ -358,7 +367,7 @@ describe("versions deploy", () => {
 		{ description: "array", json: ["hello"] },
 		{ description: "null", json: null },
 	])(
-		"rejects invalid data at the reserved image binding: $description",
+		"ignores unused legacy image variables without Container metadata: $description",
 		async ({ json }, { expect }) => {
 			const versionId = "10000000-0000-0000-0000-000000000000";
 			const version = containerVersion(versionId, [
@@ -369,7 +378,11 @@ describe("versions deploy", () => {
 				},
 			]);
 			version.resources.bindings = [
-				{ type: "json", name: CONTAINER_IMAGES_BINDING, json },
+				{
+					type: "json",
+					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					json,
+				},
 			];
 			version.resources.script_runtime.containers = undefined;
 			let deploymentRequests = 0;
@@ -393,8 +406,8 @@ describe("versions deploy", () => {
 			writeWranglerConfig();
 			await expect(
 				runWrangler(`versions deploy ${versionId}@100% --yes`)
-			).rejects.toThrow("invalid");
-			expect(deploymentRequests).toBe(0);
+			).resolves.toBeUndefined();
+			expect(deploymentRequests).toBe(1);
 			expect(applicationRequests).toBe(0);
 		}
 	);
@@ -418,192 +431,199 @@ describe("versions deploy", () => {
 		).resolves.toBeUndefined();
 	});
 
-	test("rejects generated image maps without matching Container metadata before deployment", async ({
-		expect,
-	}) => {
-		const versionId = "10000000-0000-0000-0000-000000000000";
-		const version = containerVersion(versionId, [
-			{ className: "UploadedDurableObject", name: "uploaded-app" },
-		]);
-		version.resources.script_runtime.containers = [];
-		let deploymentRequests = 0;
-		msw.use(
-			mswGetVersion(version),
-			http.post(
-				"*/accounts/:accountId/workers/scripts/:workerName/deployments",
-				() => {
-					deploymentRequests++;
-					return HttpResponse.json(createFetchResult({}));
-				}
-			)
-		);
-		writeWranglerConfig();
-		await expect(
-			runWrangler(`versions deploy ${versionId}@100% --yes`)
-		).rejects.toThrow("invalid Durable Object-managed Container metadata");
-		expect(deploymentRequests).toBe(0);
-	});
-
-	test("creates Container applications from the selected version instead of local config", async ({
-		expect,
-	}) => {
-		const versionId = "10000000-0000-0000-0000-000000000000";
-		const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
-		const applicationRequests: unknown[] = [];
-		let deploymentCreated = false;
-		msw.use(
-			mswGetVersion(
-				containerVersion(versionId, [
-					{ className: "UploadedDurableObject", name: "uploaded-app" },
-				])
-			),
-			http.get("*/accounts/:accountId/workers/durable_objects/namespaces", () =>
-				HttpResponse.json(
-					createFetchResult([
-						{
-							id: "other-dispatch",
-							name: "other",
-							script: "test-name",
-							class: "UploadedDurableObject",
-							use_sqlite: true,
-							dispatch_namespace: "other",
-						},
-						{
-							id: "preview-id",
-							name: "preview",
-							script: "test-name",
-							class: "UploadedDurableObject",
-							use_sqlite: true,
-							preview: { id: "preview", slug: "preview", name: "preview" },
-						},
-						{
-							id: namespaceId,
-							name: "uploaded-app",
-							script: "test-name",
-							class: "UploadedDurableObject",
-							use_sqlite: true,
-						},
+	test.for([false, true])(
+		"preserves application settings when deploying selected versions (%s)",
+		async (applicationExists, { expect }) => {
+			const versionId = "10000000-0000-0000-0000-000000000000";
+			const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+			const applicationRequests: unknown[] = [];
+			let deploymentCreated = false;
+			msw.use(
+				http.get(`*/applications/${namespaceId}`, () =>
+					applicationExists
+						? HttpResponse.json(
+								createFetchResult({
+									id: namespaceId,
+									name: "uploaded-app",
+									scheduling_policy: "durable_object",
+									durable_objects: { namespace_id: namespaceId },
+									configuration: { experimental_flags: ["old"] },
+									observability: { logs: { enabled: true } },
+								})
+							)
+						: HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 1000, message: "Application not found" },
+								]),
+								{ status: 404 }
+							)
+				),
+				mswGetVersion(
+					containerVersion(versionId, [
+						{ className: "UploadedDurableObject", name: "uploaded-app" },
 					])
-				)
-			),
-			http.post(
-				"*/accounts/:accountId/workers/scripts/:workerName/deployments",
-				() => {
-					deploymentCreated = true;
-					return HttpResponse.json(
-						createFetchResult({ id: "mock-new-deployment-id" })
-					);
-				}
-			),
-			http.post("*/applications", async ({ request }) => {
-				expect(deploymentCreated).toBe(true);
-				const body = await request.json();
-				applicationRequests.push(body);
-				return HttpResponse.json(createFetchResult(body));
-			})
-		);
-		writeWranglerConfig(
-			{
-				name: "test-name",
-				main: "./index.js",
-				durable_objects: {
-					bindings: [
+				),
+				http.get(
+					"*/accounts/:accountId/workers/durable_objects/namespaces",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{
+									id: "other-dispatch",
+									name: "other",
+									script: "test-name",
+									class: "UploadedDurableObject",
+									use_sqlite: true,
+									dispatch_namespace: "other",
+								},
+								{
+									id: "preview-id",
+									name: "preview",
+									script: "test-name",
+									class: "UploadedDurableObject",
+									use_sqlite: true,
+									preview: { id: "preview", slug: "preview", name: "preview" },
+								},
+								{
+									id: namespaceId,
+									name: "uploaded-app",
+									script: "test-name",
+									class: "UploadedDurableObject",
+									use_sqlite: true,
+								},
+							])
+						)
+				),
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:workerName/deployments",
+					() => {
+						deploymentCreated = true;
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-deployment-id" })
+						);
+					}
+				),
+				http.post("*/applications", async ({ request }) => {
+					expect(deploymentCreated).toBe(true);
+					const body = await request.json();
+					applicationRequests.push(body);
+					return HttpResponse.json(createFetchResult(body));
+				})
+			);
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					durable_objects: {
+						bindings: [
+							{
+								name: "LOCAL",
+								class_name: "LocalDurableObject",
+							},
+						],
+					},
+					migrations: [
 						{
-							name: "LOCAL",
+							tag: "v1",
+							new_sqlite_classes: ["LocalDurableObject"],
+						},
+					],
+					containers: [
+						{
+							name: "local-app",
 							class_name: "LocalDurableObject",
+							scheduling_policy: "durable_object",
+							observability: { enabled: false },
+							unsafe: { configuration: { experimental_flags: [] } },
 						},
 					],
 				},
-				migrations: [
-					{
-						tag: "v1",
-						new_sqlite_classes: ["LocalDurableObject"],
-					},
-				],
-				containers: [
-					{
-						name: "local-app",
-						class_name: "LocalDurableObject",
-						scheduling_policy: "durable_object",
-					},
-				],
-			},
-			"./wrangler.json"
-		);
+				"./wrangler.json"
+			);
 
-		await runWrangler(
-			`versions deploy ${versionId}@100% --yes --config ./wrangler.json`
-		);
+			await runWrangler(
+				`versions deploy ${versionId}@100% --yes --config ./wrangler.json`
+			);
 
-		expect(applicationRequests).toEqual([
-			{
-				name: "uploaded-app",
-				scheduling_policy: "durable_object",
-				durable_objects: { namespace_id: namespaceId },
-			},
-		]);
-	});
+			expect(applicationRequests).toEqual(
+				applicationExists
+					? []
+					: [
+							{
+								name: "uploaded-app",
+								scheduling_policy: "durable_object",
+								durable_objects: { namespace_id: namespaceId },
+							},
+						]
+			);
+		}
+	);
 
-	test("creates a consistent multi-version Container application once", async ({
-		expect,
-	}) => {
-		const firstVersionId = "10000000-0000-0000-0000-000000000000";
-		const secondVersionId = "20000000-0000-0000-0000-000000000000";
-		const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
-		const applicationRequests: unknown[] = [];
-		msw.use(
-			http.get(
-				`*/accounts/:accountId/workers/scripts/:workerName/versions/${firstVersionId}`,
-				() =>
-					HttpResponse.json(
-						createFetchResult(
-							containerVersion(firstVersionId, [
-								{
-									className: "UploadedDurableObject",
-									name: "uploaded-app",
-									namespaceId,
-								},
-							])
+	test.for([false, true])(
+		"creates a consistent multi-version Container application once (first version without images: %s)",
+		async (withoutImages, { expect }) => {
+			const firstVersionId = "10000000-0000-0000-0000-000000000000";
+			const secondVersionId = "20000000-0000-0000-0000-000000000000";
+			const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+			const applicationRequests: unknown[] = [];
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:workerName/versions/${firstVersionId}`,
+					() =>
+						HttpResponse.json(
+							createFetchResult(
+								containerVersion(
+									firstVersionId,
+									[
+										{
+											className: "UploadedDurableObject",
+											name: "uploaded-app",
+											namespaceId,
+										},
+									],
+									withoutImages
+								)
+							)
 						)
-					)
-			),
-			http.get(
-				`*/accounts/:accountId/workers/scripts/:workerName/versions/${secondVersionId}`,
-				() =>
-					HttpResponse.json(
-						createFetchResult(
-							containerVersion(secondVersionId, [
-								{
-									className: "UploadedDurableObject",
-									name: "uploaded-app",
-									namespaceId,
-								},
-							])
+				),
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:workerName/versions/${secondVersionId}`,
+					() =>
+						HttpResponse.json(
+							createFetchResult(
+								containerVersion(secondVersionId, [
+									{
+										className: "UploadedDurableObject",
+										name: "uploaded-app",
+										namespaceId,
+									},
+								])
+							)
 						)
-					)
-			),
-			http.post("*/applications", async ({ request }) => {
-				const body = await request.json();
-				applicationRequests.push(body);
-				return HttpResponse.json(createFetchResult(body));
-			})
-		);
-		writeWranglerConfig();
+				),
+				http.post("*/applications", async ({ request }) => {
+					const body = await request.json();
+					applicationRequests.push(body);
+					return HttpResponse.json(createFetchResult(body));
+				})
+			);
+			writeWranglerConfig();
 
-		await runWrangler(
-			`versions deploy ${firstVersionId}@50% ${secondVersionId}@50% --yes`
-		);
+			await runWrangler(
+				`versions deploy ${firstVersionId}@50% ${secondVersionId}@50% --yes`
+			);
 
-		expect(applicationRequests).toEqual([
-			{
-				name: "uploaded-app",
-				scheduling_policy: "durable_object",
-				durable_objects: { namespace_id: namespaceId },
-			},
-		]);
-	});
+			expect(applicationRequests).toEqual([
+				{
+					name: "uploaded-app",
+					scheduling_policy: "durable_object",
+					durable_objects: { namespace_id: namespaceId },
+				},
+			]);
+		}
+	);
 
-	test("creates a Container application after a selected version provisions its export", async ({
+	test("creates a name-only Container application after a selected version provisions its export", async ({
 		expect,
 	}) => {
 		const versionId = "10000000-0000-0000-0000-000000000000";
@@ -614,7 +634,7 @@ describe("versions deploy", () => {
 		msw.use(
 			mswGetVersion(
 				containerVersion(versionId, [
-					{ className: "UploadedDurableObject", name: "uploaded-app" },
+					{ className: "Sandbox", name: "managed-app" },
 				])
 			),
 			http.get(
@@ -626,10 +646,17 @@ describe("versions deploy", () => {
 							deploymentCreated
 								? [
 										{
-											id: namespaceId,
-											name: "uploaded-app",
+											id: "unrelated",
+											name: "managed-app",
 											script: "test-name",
-											class: "UploadedDurableObject",
+											class: "Unrelated",
+											use_sqlite: true,
+										},
+										{
+											id: namespaceId,
+											name: "sandbox-namespace",
+											script: "test-name",
+											class: "Sandbox",
 											use_sqlite: true,
 										},
 									]
@@ -654,14 +681,30 @@ describe("versions deploy", () => {
 				return HttpResponse.json(createFetchResult(body));
 			})
 		);
-		writeWranglerConfig();
+		writeWranglerConfig({
+			exports: {
+				Sandbox: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "managed-app",
+				},
+			},
+			containers: [
+				{
+					name: "managed-app",
+					scheduling_policy: "durable_object",
+					observability: { logs: { enabled: true } },
+					unsafe: { configuration: { experimental_flags: ["test-flag"] } },
+				},
+			],
+		});
 
 		await runWrangler(`versions deploy ${versionId}@100% --yes`);
 
 		expect(namespaceRequests).toBe(2);
 		expect(applicationRequests).toEqual([
 			{
-				name: "uploaded-app",
+				name: "managed-app",
 				scheduling_policy: "durable_object",
 				durable_objects: { namespace_id: namespaceId },
 			},

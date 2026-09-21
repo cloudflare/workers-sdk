@@ -1,8 +1,9 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { runBulk } from "../bulk";
-import { getFlag, toFlagInput, updateFlag } from "../client";
+import { toFlagInput } from "../client";
 import { renderFlag } from "../render";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 
 function makeToggleCommand(enabled: boolean) {
 	const verb = enabled ? "Enable" : "Disable";
@@ -32,26 +33,29 @@ function makeToggleCommand(enabled: boolean) {
 				default: false,
 				description: "Return output as JSON",
 			},
+			...flagStoreArgDefinitions,
 		},
 		positionalArgs: ["app-id", "key"],
 		async handler(args, { config }) {
 			const { appId, key: keys } = args;
-			await runBulk(
-				keys,
-				async (key) => {
-					const current = await getFlag(config, appId, key);
-					return updateFlag(config, appId, key, {
-						...toFlagInput(current),
-						enabled,
-					});
-				},
-				{
-					json: args.json,
-					onSuccess: (flag) => {
-						logger.log(`✅ ${verb}d flag\n`);
-						logger.log(renderFlag(flag));
+			await withFlagStore(args, config, appId, (store) =>
+				runBulk(
+					keys,
+					async (key) => {
+						const current = await store.getFlag(key);
+						return store.updateFlag(key, {
+							...toFlagInput(current),
+							enabled,
+						});
 					},
-				}
+					{
+						json: args.json,
+						onSuccess: (flag) => {
+							logger.log(`✅ ${verb}d flag\n`);
+							logger.log(renderFlag(flag));
+						},
+					}
+				)
 			);
 		},
 	});

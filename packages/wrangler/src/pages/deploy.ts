@@ -12,7 +12,6 @@ import {
 } from "@cloudflare/workers-utils";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
-import { analyseBundle } from "../check/commands";
 import { readPagesConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createAlias, createCommand } from "../core/create-command";
@@ -605,8 +604,7 @@ export const pagesDeployCommand = createCommand({
 					await diagnoseStartupError(
 						startupError,
 						filePath,
-						getPagesProjectRoot(),
-						analyseBundle
+						getPagesProjectRoot()
 					),
 					{ telemetryMessage: "pages deploy startup error" }
 				);

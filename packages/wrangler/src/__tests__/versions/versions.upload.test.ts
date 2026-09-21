@@ -8,10 +8,7 @@ import {
 	generatePreviewAlias,
 } from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
-import {
-	CONTAINER_IMAGES_BINDING,
-	DEFAULT_COMPAT_DATE,
-} from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -23,6 +20,7 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { beforeEach, describe, expect, it, test, vi } from "vitest";
+import { logger } from "../../logger";
 import * as metrics from "../../metrics";
 import { dedent } from "../../utils/dedent";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
@@ -157,6 +155,16 @@ describe("versions upload", () => {
 	}
 
 	beforeEach(() => {
+		msw.use(
+			http.get("*/applications/:id", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 1000, message: "Application not found" },
+					]),
+					{ status: 404 }
+				)
+			)
+		);
 		// Mock the secrets endpoint that checkRemoteSecretsOverride calls
 		msw.use(
 			http.get(
@@ -1052,12 +1060,18 @@ describe("versions upload", () => {
 		});
 
 		test.for([
-			{ bindingName: CONTAINER_IMAGES_BINDING, containers: [] },
+			{
+				bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+				containers: [],
+			},
 			{ bindingName: "USER_IMAGES", containers: [] },
-			{ bindingName: CONTAINER_IMAGES_BINDING, containers: undefined },
+			{
+				bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+				containers: undefined,
+			},
 			{ bindingName: "USER_IMAGES", containers: undefined },
 		])(
-			"clears only the reserved Container image binding with keep_vars: %j",
+			"keeps variables without generating Container image bindings: %j",
 			async ({ bindingName, containers }, { expect }) => {
 				mockGetScript();
 				const requests = mockUploadVersion(false, 0);
@@ -1087,11 +1101,7 @@ describe("versions upload", () => {
 				expect(metadata.keep_bindings).toEqual(
 					expect.arrayContaining(["json", "plain_text"])
 				);
-				expect(metadata.bindings).toEqual(
-					bindingName === CONTAINER_IMAGES_BINDING
-						? [{ name: CONTAINER_IMAGES_BINDING, type: "json", json: {} }]
-						: []
-				);
+				expect(metadata.bindings).toEqual([]);
 			}
 		);
 		test("should include plain_text and json in keep_bindings when keep_vars is true", async () => {
@@ -1256,12 +1266,7 @@ describe("versions upload", () => {
 				name: "test-name",
 				main: "./index.js",
 				durable_objects: {
-					bindings: [
-						{
-							name: "MY_DO",
-							class_name: "MyDurableObject",
-						},
-					],
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
 				},
 				migrations: [
 					{
@@ -1810,6 +1815,23 @@ describe("versions upload", () => {
 			expect(std.out).toContain("MY_VAR");
 			expect(std.out).toContain("MY_KV");
 			expect(std.out).toContain("--dry-run: exiting now.");
+		});
+
+		test("categorises the positional path in command telemetry", async ({
+			expect,
+		}) => {
+			logger.loggerLevel = "debug";
+			writeWranglerConfig({ name: "test-name" });
+			writeWorkerSource();
+
+			try {
+				await runWrangler("versions upload index.js --dry-run");
+			} finally {
+				logger.resetLoggerLevel();
+			}
+
+			expect(std.debug).toContain('"sanitizedCommand":"versions upload"');
+			expect(std.debug).toContain('"path":"file"');
 		});
 	});
 
@@ -2391,126 +2413,146 @@ describe("versions upload", () => {
 			expect(requests).toHaveLength(0);
 		});
 
-		test("includes managed images when Durable Object migrations are already deployed", async ({
-			expect,
-		}) => {
-			const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
-			const image =
-				"registry.cloudflare.com/some-account-id/tools@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-			mockGetScript(
-				{
-					default_environment: {
-						script: {
-							last_deployed_from: "wrangler",
-							migration_tag: "v1",
+		test.for([false, true])(
+			"uploads managed images without updating an existing application (%s)",
+			async (applicationExists, { expect }) => {
+				const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+				const image =
+					"registry.cloudflare.com/some-account-id/tools@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+				mockGetScript(
+					{
+						default_environment: {
+							script: {
+								last_deployed_from: "wrangler",
+								migration_tag: "v1",
+							},
 						},
 					},
-				},
-				{ once: false }
-			);
-			mockContainersAccount();
-			const requests = mockUploadVersion(false, 0);
-			const applicationRequests: unknown[] = [];
-			msw.use(
-				http.post("*/image-preparations", async ({ request }) => {
-					const body = (await request.json()) as { image: string };
-					expect(body).toEqual({ image });
-					return HttpResponse.json(
-						createFetchResult({
-							image,
-							status: ContainerImagePreparationStatus.READY,
-						})
-					);
-				}),
-				http.get(
-					"*/accounts/:accountId/workers/scripts/:scriptName/versions/:versionId",
-					({ params }) => {
-						expect(params.versionId).toBe(
-							"51e4886e-2db7-4900-8d38-fbfecfeab993"
-						);
+					{ once: false }
+				);
+				mockContainersAccount();
+				const requests = mockUploadVersion(false, 0);
+				const applicationRequests: unknown[] = [];
+				msw.use(
+					http.get(`*/applications/${namespaceId}`, () =>
+						applicationExists
+							? HttpResponse.json(
+									createFetchResult({
+										id: namespaceId,
+										name: "test-name-mydurableobject",
+										scheduling_policy: "durable_object",
+										durable_objects: { namespace_id: namespaceId },
+										configuration: { experimental_flags: ["old"] },
+										observability: { logs: { enabled: true } },
+									})
+								)
+							: HttpResponse.json(
+									createFetchResult(null, false, [
+										{ code: 1000, message: "Application not found" },
+									]),
+									{ status: 404 }
+								)
+					),
+					http.post("*/image-preparations", async ({ request }) => {
+						const body = (await request.json()) as { image: string };
+						expect(body).toEqual({ image });
 						return HttpResponse.json(
 							createFetchResult({
-								id: params.versionId,
-								metadata: {},
-								number: 1,
-								resources: {
-									bindings: [
-										{
-											type: "durable_object_namespace",
-											namespace_id: namespaceId,
-											class_name: "MyDurableObject",
-										},
-									],
-								},
+								image,
+								status: ContainerImagePreparationStatus.READY,
 							})
 						);
-					}
-				),
-				http.post("*/applications", async ({ request }) => {
-					const body = await request.json();
-					applicationRequests.push(body);
-					return HttpResponse.json(createFetchResult(body));
-				})
-			);
+					}),
+					http.get(
+						"*/accounts/:accountId/workers/scripts/:scriptName/versions/:versionId",
+						({ params }) => {
+							expect(params.versionId).toBe(
+								"51e4886e-2db7-4900-8d38-fbfecfeab993"
+							);
+							return HttpResponse.json(
+								createFetchResult({
+									id: params.versionId,
+									metadata: {},
+									number: 1,
+									resources: {
+										bindings: [
+											{
+												type: "durable_object_namespace",
+												namespace_id: namespaceId,
+												class_name: "MyDurableObject",
+											},
+										],
+									},
+								})
+							);
+						}
+					),
+					http.post("*/applications", async ({ request }) => {
+						const body = await request.json();
+						applicationRequests.push(body);
+						return HttpResponse.json(createFetchResult(body));
+					})
+				);
 
-			writeWranglerConfig({
-				name: "test-name",
-				main: "./index.js",
-				durable_objects: {
-					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
-				},
-				migrations: [
-					{
-						tag: "v1",
-						new_sqlite_classes: ["MyDurableObject"],
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
 					},
-				],
-				containers: [
+					migrations: [
+						{
+							tag: "v1",
+							new_sqlite_classes: ["MyDurableObject"],
+						},
+					],
+					containers: [
+						{
+							class_name: "MyDurableObject",
+							scheduling_policy: "durable_object",
+							observability: { enabled: false },
+							unsafe: { configuration: { experimental_flags: [] } },
+							images: {
+								tools: { image },
+							},
+						},
+					],
+				});
+				writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+				await runWrangler("versions upload");
+
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.migrations).toBeUndefined();
+				expect(metadata.exports).toBeUndefined();
+				expect(metadata.containers).toEqual([
 					{
+						name: "test-name-mydurableobject",
 						class_name: "MyDurableObject",
-						scheduling_policy: "durable_object",
-						images: {
-							tools: { image },
-						},
+						images: { tools: image },
 					},
-				],
-			});
-			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
-
-			await runWrangler("versions upload");
-
-			const metadata = await getMetadata(requests[requests.length - 1]);
-			expect(metadata.migrations).toBeUndefined();
-			expect(metadata.exports).toBeUndefined();
-			expect(metadata.containers).toEqual([
-				{
-					name: "test-name-mydurableobject",
-					class_name: "MyDurableObject",
-					images: { tools: image },
-				},
-			]);
-			expect(metadata.bindings.filter(({ type }) => type === "json")).toEqual([
-				{
-					json: {
-						MyDurableObject: {
-							tools: image,
-						},
-					},
-					name: CONTAINER_IMAGES_BINDING,
-					type: "json",
-				},
-			]);
-			expect(applicationRequests).toEqual([
-				{
-					name: "test-name-mydurableobject",
-					scheduling_policy: "durable_object",
-					durable_objects: { namespace_id: namespaceId },
-				},
-			]);
-			expect(std.warn).not.toContain(
-				"Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions"
-			);
-		});
+				]);
+				expect(metadata.bindings.filter(({ type }) => type === "json")).toEqual(
+					[]
+				);
+				expect(applicationRequests).toEqual(
+					applicationExists
+						? []
+						: [
+								{
+									name: "test-name-mydurableobject",
+									scheduling_policy: "durable_object",
+									durable_objects: { namespace_id: namespaceId },
+									configuration: { experimental_flags: [] },
+									observability: { logs: { enabled: false } },
+								},
+							]
+				);
+				expect(std.warn).not.toContain(
+					"Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions"
+				);
+			}
+		);
 
 		test("should skip migrations in dry-run", async ({ expect }) => {
 			writeWranglerConfig({
@@ -2576,78 +2618,246 @@ describe("versions upload", () => {
 			expect(metadata.migrations).toBeUndefined();
 		});
 
-		test("defers exports-managed Container application creation until versions deploy", async ({
-			expect,
-		}) => {
-			mockGetScript();
-			const requests = mockUploadVersion(false, 0);
-			let namespaceListRequests = 0;
-			let applicationRequests = 0;
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/durable_objects/namespaces",
-					() => {
-						namespaceListRequests++;
-						return HttpResponse.json(createFetchResult([]));
-					}
-				),
-				http.post("*/applications", () => {
-					applicationRequests++;
-					return HttpResponse.json(createFetchResult({}));
-				})
-			);
+		test.for([
+			{ imageMap: "populated", appState: "missing-namespace" },
+			{ imageMap: "empty", appState: "missing-namespace" },
+			{ imageMap: "empty", appState: "missing-app" },
+			{ imageMap: "empty", appState: "exists" },
+			{ imageMap: "empty", appState: "mismatch" },
+			{ imageMap: "empty", appState: "forbidden" },
+		] as const)(
+			"uploads a name-only managed Container export with $imageMap images and $appState",
+			async ({ imageMap, appState }, { expect }) => {
+				const image =
+					"registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+				const imageRefs: Record<string, string> =
+					imageMap === "empty" ? {} : { app: image };
+				mockGetScript();
+				mockContainersAccount();
+				const requests = mockUploadVersion(false, 0);
+				const preparationRequests: unknown[] = [];
+				let namespaceListRequests = 0;
+				let applicationRequests = 0;
+				msw.use(
+					http.post("*/image-preparations", async ({ request }) => {
+						preparationRequests.push(await request.json());
+						return HttpResponse.json(
+							createFetchResult({
+								image,
+								status: ContainerImagePreparationStatus.READY,
+							})
+						);
+					}),
+					http.get(
+						"*/accounts/:accountId/workers/durable_objects/namespaces",
+						() => {
+							namespaceListRequests++;
+							return HttpResponse.json(
+								createFetchResult(
+									appState === "missing-namespace"
+										? []
+										: [
+												{
+													id: "existing-namespace",
+													class: "Sandbox",
+													script: "test-name",
+													use_sqlite: true,
+												},
+											]
+								)
+							);
+						}
+					),
+					http.get("*/applications/existing-namespace", () => {
+						if (appState === "missing-app" || appState === "forbidden") {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 1000,
+										message:
+											appState === "forbidden"
+												? "Forbidden"
+												: "Application not found",
+									},
+								]),
+								{ status: appState === "forbidden" ? 403 : 404 }
+							);
+						}
+						return HttpResponse.json(
+							createFetchResult({
+								id: "existing-namespace",
+								name: appState === "mismatch" ? "other-app" : "managed-app",
+								scheduling_policy: "durable_object",
+								durable_objects: { namespace_id: "existing-namespace" },
+							})
+						);
+					}),
+					http.patch("*/applications/:id", () => {
+						applicationRequests++;
+						return HttpResponse.json(createFetchResult({}));
+					}),
+					http.post("*/applications", () => {
+						applicationRequests++;
+						return HttpResponse.json(createFetchResult({}));
+					})
+				);
 
-			writeWranglerConfig(
-				{
+				writeWranglerConfig(
+					{
+						name: "test-name",
+						main: "./index.js",
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "managed-app",
+							},
+						},
+						containers: [
+							{
+								name: "managed-app",
+								scheduling_policy: "durable_object",
+								observability: { logs: { enabled: true } },
+								unsafe: {
+									configuration: { experimental_flags: ["test-flag"] },
+								},
+								...(imageMap === "populated" && { images: { app: { image } } }),
+							},
+						],
+					},
+					"./wrangler.json"
+				);
+				writeWorkerSource({ durableObjects: ["Sandbox"] });
+
+				if (imageMap === "empty" && appState !== "exists") {
+					const message =
+						appState === "mismatch"
+							? "does not match Container"
+							: appState === "forbidden"
+								? "Forbidden"
+								: "Run `wrangler deploy`";
+					await expect(
+						runWrangler("versions upload --config ./wrangler.json")
+					).rejects.toThrow(message);
+					expect(requests).toHaveLength(0);
+					expect(applicationRequests).toBe(0);
+					expect(preparationRequests).toHaveLength(0);
+					return;
+				}
+
+				await runWrangler("versions upload --config ./wrangler.json");
+
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.exports).toEqual({
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "managed-app",
+					},
+				});
+				expect(metadata.containers).toEqual([
+					{
+						name: "managed-app",
+						class_name: "Sandbox",
+						...(imageMap === "populated" && { images: imageRefs }),
+					},
+				]);
+				expect(metadata.bindings).not.toEqual(
+					expect.arrayContaining([
+						expect.objectContaining({
+							name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+						}),
+					])
+				);
+				expect(preparationRequests).toEqual(
+					imageMap === "empty" ? [] : [{ image }]
+				);
+				expect(metadata.migrations).toBeUndefined();
+				expect(namespaceListRequests).toBe(imageMap === "empty" ? 1 : 0);
+				expect(applicationRequests).toBe(0);
+			}
+		);
+
+		test.for(["namespace", "application"])(
+			"rejects an image-less Container missing its %s before preparing other images",
+			async (missing, { expect }) => {
+				const image =
+					"registry.cloudflare.com/some-account-id/tools@sha256:" +
+					"b".repeat(64);
+				mockGetScript();
+				mockContainersAccount();
+				const uploads = mockUploadVersion(false, 0);
+				let preparations = 0;
+				msw.use(
+					http.post("*/image-preparations", () => {
+						preparations++;
+						return HttpResponse.json(
+							createFetchResult({
+								image,
+								status: ContainerImagePreparationStatus.READY,
+							})
+						);
+					}),
+					http.get(
+						"*/accounts/:accountId/workers/durable_objects/namespaces",
+						() =>
+							HttpResponse.json(
+								createFetchResult(
+									missing === "namespace"
+										? []
+										: [
+												{
+													id: "sandbox-namespace",
+													class: "Sandbox",
+													script: "test-name",
+													use_sqlite: true,
+												},
+											]
+								)
+							)
+					),
+					http.get("*/applications/sandbox-namespace", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 1000, message: "Application not found" },
+							]),
+							{ status: 404 }
+						)
+					)
+				);
+				writeWranglerConfig({
 					name: "test-name",
 					main: "./index.js",
 					exports: {
-						MyDurableObject: {
+						Images: {
 							type: "durable-object",
 							storage: "sqlite",
-							container: "managed-app",
+							container: "images-app",
+						},
+						Sandbox: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "sandbox-app",
 						},
 					},
 					containers: [
 						{
-							name: "managed-app",
-							class_name: "MyDurableObject",
+							name: "images-app",
 							scheduling_policy: "durable_object",
+							images: { tools: { image } },
 						},
+						{ name: "sandbox-app", scheduling_policy: "durable_object" },
 					],
-				},
-				"./wrangler.json"
-			);
-			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+				});
+				writeWorkerSource({ durableObjects: ["Images", "Sandbox"] });
 
-			await runWrangler("versions upload --config ./wrangler.json");
-
-			const metadata = await getMetadata(requests[requests.length - 1]);
-			expect(metadata.exports).toEqual({
-				MyDurableObject: {
-					type: "durable-object",
-					storage: "sqlite",
-					container: "managed-app",
-				},
-			});
-			expect(metadata.containers).toEqual([
-				{
-					name: "managed-app",
-					class_name: "MyDurableObject",
-				},
-			]);
-			expect(metadata.bindings).toEqual(
-				expect.arrayContaining([
-					{
-						name: CONTAINER_IMAGES_BINDING,
-						type: "json",
-						json: { MyDurableObject: {} },
-					},
-				])
-			);
-			expect(namespaceListRequests).toBe(0);
-			expect(applicationRequests).toBe(0);
-		});
+				await expect(runWrangler("versions upload")).rejects.toThrow(
+					"Run `wrangler deploy`"
+				);
+				expect(uploads).toHaveLength(0);
+				expect(preparations).toBe(0);
+			}
+		);
 
 		test("surfaces a friendly error when EWC rejects a binding to a not-yet-provisioned `exports` class (code 100406)", async ({
 			expect,

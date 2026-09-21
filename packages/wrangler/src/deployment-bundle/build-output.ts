@@ -23,6 +23,7 @@ interface WriteBuildOutputArgs {
 	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
 	/** The mode the build was produced in, recorded in the top-level config. */
 	mode: string | undefined;
+	isPreview: boolean;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }
@@ -36,6 +37,7 @@ export async function writeBuildOutput({
 	parsedWorkerConfig,
 	parsedSettingsConfig,
 	mode,
+	isPreview,
 	buildResult,
 	assetsOptions,
 }: WriteBuildOutputArgs): Promise<void> {
@@ -55,7 +57,7 @@ export async function writeBuildOutput({
 	]);
 
 	await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
-	await writeSettingsConfig(root, parsedSettingsConfig, mode);
+	await writeSettingsConfig(root, parsedSettingsConfig, mode, isPreview);
 }
 
 async function writeBundle({

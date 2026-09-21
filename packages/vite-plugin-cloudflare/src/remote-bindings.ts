@@ -169,12 +169,6 @@ export function getRemoteBindings(
 					remote: binding.dev?.remote,
 				};
 				break;
-			case "web-search":
-				bindings[name] = {
-					type: "websearch",
-					remote: binding.dev?.remote,
-				};
-				break;
 			case "worker":
 				bindings[name] = {
 					type: "service",
