@@ -22,6 +22,34 @@ const baseConfig = {
 } as const;
 
 describe("resolveAndValidateConfigExports", () => {
+	it("selects bindings from the Preview build context", async ({ expect }) => {
+		const worker = defineWorker(({ isPreview, mode }) => ({
+			name: `${isPreview ? "preview" : "non-preview"}-${mode}`,
+			compatibilityDate,
+			env: {
+				TARGET: bindings.text(isPreview ? "preview" : "non-preview"),
+			},
+		}));
+
+		const preview = await resolveAndValidateConfigExports(
+			{ default: worker },
+			{ isPreview: true, mode: "staging" }
+		);
+		const nonPreview = await resolveAndValidateConfigExports(
+			{ default: worker },
+			{ isPreview: false, mode: "staging" }
+		);
+
+		expect(preview.success && preview.data.default).toMatchObject({
+			name: "preview-staging",
+			env: { TARGET: { value: "preview" } },
+		});
+		expect(nonPreview.success && nonPreview.data.default).toMatchObject({
+			name: "non-preview-staging",
+			env: { TARGET: { value: "non-preview" } },
+		});
+	});
+
 	it("parses Worker and settings exports", async ({ expect }) => {
 		const result = await resolveAndValidateConfigExports(
 			{
@@ -29,7 +57,7 @@ describe("resolveAndValidateConfigExports", () => {
 				api: { ...baseConfig, name: "api" },
 				settings: { type: "settings", accountId: "acc-123" },
 			},
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(true);
@@ -50,7 +78,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ container },
-			{ mode: "production" }
+			{ isPreview: false, mode: "production" }
 		);
 
 		expect(result.success).toBe(true);
@@ -73,7 +101,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ container },
-			{ mode: "production" }
+			{ isPreview: false, mode: "production" }
 		);
 
 		expect(result.success).toBe(true);
@@ -94,7 +122,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: container },
-			{ mode: "production" }
+			{ isPreview: false, mode: "production" }
 		);
 
 		expect(result.success).toBe(false);
@@ -125,7 +153,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: worker, container },
-			{ mode: "development" }
+			{ isPreview: false, mode: "development" }
 		);
 
 		expect(result.success).toBe(true);
@@ -161,7 +189,7 @@ describe("resolveAndValidateConfigExports", () => {
 				}),
 			},
 		});
-		const ctx = { mode: "test" };
+		const ctx = { isPreview: false, mode: "test" };
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: worker, container },
@@ -202,7 +230,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: worker, container },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -239,7 +267,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: worker, container: exportedContainer },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -263,7 +291,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ first, second },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -284,7 +312,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry, auxiliary },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -317,7 +345,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: worker, container },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -361,7 +389,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry, auxiliary, container },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -393,7 +421,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: worker },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -423,7 +451,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: worker },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -449,7 +477,7 @@ describe("resolveAndValidateConfigExports", () => {
 				},
 				settings: { type: "settings", accountId: 42 },
 			},
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -471,7 +499,7 @@ describe("resolveAndValidateConfigExports", () => {
 			{
 				default: { name: "my-worker", compatibilityDate },
 			},
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -496,7 +524,7 @@ describe("resolveAndValidateConfigExports", () => {
 		async ({ value, path }, { expect }) => {
 			const result = await resolveAndValidateConfigExports(
 				{ default: baseConfig, WORKER_NAMES: value },
-				{ mode: undefined }
+				{ isPreview: false, mode: undefined }
 			);
 
 			expect(result.success).toBe(false);
@@ -519,7 +547,7 @@ describe("resolveAndValidateConfigExports", () => {
 				settings: { type: "settings" },
 				extraSettings: { type: "settings" },
 			},
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -539,7 +567,7 @@ describe("resolveAndValidateConfigExports", () => {
 				default: baseConfig,
 				settings: { ...baseConfig, name: "settings" },
 			},
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -568,7 +596,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry, auxiliary },
-			{ mode: "development" }
+			{ isPreview: false, mode: "development" }
 		);
 
 		expect(result.success).toBe(true);
@@ -599,7 +627,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -640,7 +668,7 @@ describe("resolveAndValidateConfigExports", () => {
 			},
 		});
 
-		const ctx = { mode: "test" };
+		const ctx = { isPreview: false, mode: "test" };
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry },
 			ctx
@@ -680,7 +708,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry },
-			{ mode: "development" }
+			{ isPreview: false, mode: "development" }
 		);
 
 		expect(result.success).toBe(true);
@@ -706,7 +734,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(true);
@@ -735,7 +763,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry, UNSUPPORTED: 42 },
-			{ mode: undefined }
+			{ isPreview: false, mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
@@ -762,7 +790,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: workers.first, second: workers.second },
-			{ mode: "development" }
+			{ isPreview: false, mode: "development" }
 		);
 
 		expect(result.success).toBe(true);
@@ -799,7 +827,7 @@ describe("resolveAndValidateConfigExports", () => {
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: entry, invalid },
-			{ mode: "development" }
+			{ isPreview: false, mode: "development" }
 		);
 
 		expect(result.success).toBe(false);

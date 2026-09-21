@@ -267,6 +267,7 @@ describe("deploy", () => {
 					enabled: true,
 					head_sampling_rate: 0.5,
 					redact_query_string: true,
+					issues: { enabled: true },
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
@@ -276,6 +277,7 @@ describe("deploy", () => {
 					enabled: true,
 					head_sampling_rate: 0.5,
 					redact_query_string: true,
+					issues: { enabled: true },
 				},
 			});
 

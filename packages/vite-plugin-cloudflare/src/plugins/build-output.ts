@@ -4,6 +4,7 @@ import {
 	writeSettingsConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
+import { isPreviewBuild } from "../build-output-env";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
@@ -117,7 +118,8 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 		await writeSettingsConfig(
 			ctx.resolvedViteConfig.root,
 			settings,
-			ctx.resolvedViteConfig.mode
+			ctx.resolvedViteConfig.mode,
+			isPreviewBuild()
 		);
 	}
 });

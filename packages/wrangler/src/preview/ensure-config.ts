@@ -10,6 +10,7 @@ import {
 	formatConfigSnippet,
 	isNonInteractiveOrCI,
 	JSON_CONFIG_FORMATS,
+	JsonFriendlyFatalError,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { confirm } from "../dialogs";
@@ -166,6 +167,24 @@ export async function ensurePreviewsConfig(
 	}
 	const missingPreviewsConfigMessage =
 		missingPreviewsConfigParagraphs.join("\n");
+	if (args.json) {
+		throw new JsonFriendlyFatalError(
+			JSON.stringify(
+				{
+					error: "Your Wrangler configuration is missing a previews block",
+					suggested_config: proposedConfigPatch,
+					...(conversionMessages.length > 0 && {
+						messages: conversionMessages,
+					}),
+				},
+				null,
+				2
+			),
+			{
+				telemetryMessage: "preview command previews configuration missing",
+			}
+		);
+	}
 
 	if (hasBlockingDeploymentMessages) {
 		logConversionMessages(conversionMessages, args.json);

@@ -15,11 +15,10 @@ import { loadNewConfig } from "../experimental-config/load";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { updateCheck } from "../update-check";
-import type { NormalizedTypes } from "../experimental-config/load";
 import type {
-	ParsedInputSettingsConfig,
-	ParsedInputWorkerConfig,
-} from "@cloudflare/config";
+	NormalizedTypes,
+	ParsedProjectConfig,
+} from "../experimental-config/load";
 import type {
 	Config,
 	ConfigBindingOptions,
@@ -36,6 +35,7 @@ export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 
 export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
+	isPreview?: boolean;
 	// Used by the Vite plugin
 	// If set to `true`, the `main` field is not converted to an absolute path
 	preserveOriginalMain?: boolean;
@@ -74,8 +74,8 @@ async function logWarningsWithUpgradeHint(
  */
 export interface NewConfig {
 	config: Config;
-	parsedWorkerConfig: ParsedInputWorkerConfig;
-	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/** Validated project configuration grouped by resource type. */
+	parsedConfig: ParsedProjectConfig;
 	/**
 	 * The mode the config was resolved in, from `--mode`/`--env` or
 	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
@@ -109,7 +109,11 @@ export async function readNewConfig(
 	}
 
 	const cwd = process.cwd();
-	const loaded = await loadNewConfig({ cwd, args });
+	const loaded = await loadNewConfig({
+		cwd,
+		args,
+		isPreview: options.isPreview,
+	});
 
 	// Construct a fresh `NormalizeAndValidateConfigArgs` with `env: undefined`.
 	// `args.env` is consumed only by `loadNewConfig` (to compute `ctx.mode`);
@@ -136,8 +140,7 @@ export async function readNewConfig(
 
 	return {
 		config,
-		parsedWorkerConfig: loaded.parsedWorkerConfig,
-		parsedSettingsConfig: loaded.parsedSettingsConfig,
+		parsedConfig: loaded.parsedConfig,
 		mode: loaded.mode,
 		dependencies: loaded.dependencies,
 		types: loaded.types,

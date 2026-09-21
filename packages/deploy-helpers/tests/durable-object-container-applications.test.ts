@@ -386,6 +386,87 @@ describe("Durable Object application settings", () => {
 });
 
 describe("Container image preparation", () => {
+	it.for(["missing-namespace", "missing-app", "mismatch", "ready", "dry-run"])(
+		"validates image-less applications before pushing Dockerfile images: %s",
+		async (state, { expect }) => {
+			const mixedConfig: Config = {
+				...exportConfig,
+				exports: {
+					...exportConfig.exports,
+					Empty: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "empty",
+					},
+				},
+				containers: [
+					...(exportConfig.containers ?? []),
+					{ name: "empty", scheduling_policy: "durable_object" },
+				],
+			};
+			vi.mocked(listDurableObjects).mockResolvedValue(
+				state === "missing-namespace" ? [] : [{ ...namespace, class: "Empty" }]
+			);
+			const getApplication = vi.spyOn(ApplicationsService, "getApplication");
+			if (state === "missing-app") {
+				getApplication.mockRejectedValue(apiError(404));
+			} else {
+				getApplication.mockResolvedValue({
+					...application,
+					id: namespace.id,
+					name: state === "mismatch" ? "other" : "empty",
+					durable_objects: { namespace_id: namespace.id },
+				});
+			}
+			vi.mocked(pushImageIfChanged).mockResolvedValue({ remoteDigest: image });
+			const prepare = vi
+				.spyOn(ContainerImagePreparationsService, "prepareContainerImage")
+				.mockResolvedValue({
+					image,
+					status: ContainerImagePreparationStatus.READY,
+				});
+			const result = prepareDurableObjectContainerApplications(
+				mixedConfig,
+				getDurableObjectContainerApps(mixedConfig.containers),
+				[
+					{
+						className: "Sandbox",
+						imageName: "tools",
+						localTag: "worker-sandbox-tools:wrangler-test",
+					},
+				],
+				{
+					...args,
+					dryRun: state === "dry-run",
+					requireExistingImageLessApplications: true,
+				}
+			);
+			if (state === "dry-run") {
+				await expect(result).resolves.toEqual({
+					Sandbox: { tools: "worker-sandbox-tools:wrangler-test" },
+				});
+				expect(listDurableObjects).not.toHaveBeenCalled();
+				expect(getApplication).not.toHaveBeenCalled();
+				expect(pushImageIfChanged).not.toHaveBeenCalled();
+				expect(prepare).not.toHaveBeenCalled();
+			} else if (state === "ready") {
+				await expect(result).resolves.toEqual({ Sandbox: { tools: image } });
+				expect(getApplication.mock.invocationCallOrder[0]).toBeLessThan(
+					vi.mocked(pushImageIfChanged).mock.invocationCallOrder[0]
+				);
+				expect(prepare).toHaveBeenCalledOnce();
+			} else {
+				await expect(result).rejects.toThrow(
+					state === "mismatch"
+						? "does not match Container"
+						: "Run `wrangler deploy`"
+				);
+				expect(pushImageIfChanged).not.toHaveBeenCalled();
+				expect(prepare).not.toHaveBeenCalled();
+			}
+		}
+	);
+
 	it("uses the export class for prepared image keys", async ({ expect }) => {
 		vi.mocked(pushImageIfChanged).mockResolvedValue({ remoteDigest: image });
 		vi.spyOn(
