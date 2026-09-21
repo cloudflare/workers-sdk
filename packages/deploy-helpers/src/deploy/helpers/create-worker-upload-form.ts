@@ -164,6 +164,7 @@ export function createWorkerUploadForm(
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
 	const wasm_modules = extractBindingsOfType("wasm_module", bindings);
 	const browser = extractBindingsOfType("browser", bindings)[0];
+	const analytics = extractBindingsOfType("analytics", bindings)[0];
 	const ai = extractBindingsOfType("ai", bindings)[0];
 	const images = extractBindingsOfType("images", bindings)[0];
 	const stream = extractBindingsOfType("stream", bindings)[0];
@@ -624,6 +625,13 @@ export function createWorkerUploadForm(
 			name: browser.binding,
 			type: "browser",
 			raw: browser.raw,
+		});
+	}
+
+	if (analytics !== undefined) {
+		metadataBindings.push({
+			name: analytics.binding,
+			type: "analytics",
 		});
 	}
 

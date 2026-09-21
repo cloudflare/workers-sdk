@@ -664,6 +664,10 @@ function extractBindings(
 		env[previews.browser.binding] = { type: "browser" };
 	}
 
+	if (previews?.analytics) {
+		env[previews.analytics.binding] = { type: "analytics" };
+	}
+
 	if (previews?.ai) {
 		env[previews.ai.binding] = { type: "ai", staging: previews.ai.staging };
 	}

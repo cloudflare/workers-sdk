@@ -488,6 +488,13 @@ function convertBindingsAndAssets(
 				});
 				break;
 			}
+			case "analytics": {
+				result.analytics = omitUndefined({
+					binding: name,
+					remote: binding.dev?.remote,
+				});
+				break;
+			}
 			case "d1": {
 				d1Databases.push(
 					omitUndefined({

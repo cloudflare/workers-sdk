@@ -122,6 +122,11 @@ export function convertConfigToBindings(
 				output[binding] = { type: "browser", ...x };
 				break;
 			}
+			case "analytics": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "analytics", ...x };
+				break;
+			}
 			case "durable_objects": {
 				for (const { name, ...x } of info.bindings ?? []) {
 					output[name] = { type: "durable_object_namespace", ...x };

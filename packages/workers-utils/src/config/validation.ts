@@ -100,6 +100,7 @@ export type ConfigBindingFieldName =
 	| "analytics_engine_datasets"
 	| "text_blobs"
 	| "browser"
+	| "analytics"
 	| "ai"
 	| "images"
 	| "stream"
@@ -140,6 +141,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	analytics_engine_datasets: "Analytics Engine Dataset",
 	text_blobs: "Text Blob",
 	browser: "Browser Run",
+	analytics: "Analytics SQL",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -177,6 +179,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	wasm_module: "Wasm Module",
 	text_blob: "Text Blob",
 	browser: "Browser Run",
+	analytics: "Analytics SQL",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -1955,6 +1958,16 @@ function normalizeAndValidateEnvironment(
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
+		analytics: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"analytics",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
 		ai: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3405,6 +3418,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"data_blob",
 			"text_blob",
 			"browser",
+			"analytics",
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
