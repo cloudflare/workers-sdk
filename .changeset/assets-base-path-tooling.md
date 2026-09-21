@@ -12,10 +12,10 @@ Serve an asset directory from a public URL prefix without changing its on-disk l
 
 ```jsonc
 {
-  "assets": {
-    "directory": "./public",
-    "base_path": "/docs"
-  }
+	"assets": {
+		"directory": "./public",
+		"base_path": "/docs",
+	},
 }
 ```
 

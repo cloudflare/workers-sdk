@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { resolveAssetOptions } from "../assets";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -8,25 +8,23 @@ const assetsDir = {
 };
 
 describe("resolveAssetOptions", () => {
-	test("preserves assets.base_path when constructing upload options", () => {
-		const result = resolveAssetOptions(
-			{ assetsDir, main: undefined },
-			{ assets: { directory: "./public", base_path: "./docs" } } as Config
-		);
+	test("preserves assets.base_path when constructing upload options", ({
+		expect,
+	}) => {
+		const result = resolveAssetOptions({ assetsDir, main: undefined }, {
+			assets: { directory: "./public", base_path: "./docs" },
+		} as Config);
 
 		expect(result?.assetConfig.base_path).toBe("./docs");
 	});
 
-	test("defers semantic validation to the Asset Worker", () => {
-		const result = resolveAssetOptions(
-			{ assetsDir, main: undefined },
-			{
-				assets: {
-					directory: "./public",
-					base_path: "https://example.com/docs",
-				},
-			} as Config
-		);
+	test("defers semantic validation to the Asset Worker", ({ expect }) => {
+		const result = resolveAssetOptions({ assetsDir, main: undefined }, {
+			assets: {
+				directory: "./public",
+				base_path: "https://example.com/docs",
+			},
+		} as Config);
 
 		expect(result?.assetConfig.base_path).toBe("https://example.com/docs");
 	});
