@@ -39,8 +39,9 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
-  # TODO(release): Revert @cloudflare/config to a workspace dependency.
+  # TODO(release): Revert these three packages to workspace dependencies.
   - "@cloudflare/config"
+  - "@cloudflare/unenv-preset"
   # TEMPORARY: vite-plugin-cloudflare + vitest-plugin are pinned to the
   # published miniflare while the workspace miniflare is mid-migration. Revert
   # with the repoint.
