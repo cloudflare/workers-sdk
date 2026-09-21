@@ -79,6 +79,7 @@ test("Miniflare: dispose requests workerd termination while proxy cleanup is pen
 test("Miniflare: dispose waits for workerd exit and continues cleanup before returning proxy cleanup failure", async ({
 	expect,
 }) => {
+	const signalListenerCount = process.listenerCount("SIGHUP");
 	let markRuntimeExitObserved!: () => void;
 	let releaseRuntimeExit!: () => void;
 	const runtimeExitObserved = new Promise<void>((resolve) => {
@@ -135,10 +136,14 @@ test("Miniflare: dispose waits for workerd exit and continues cleanup before ret
 		await new Promise<void>((resolve) => setImmediate(resolve));
 		expect(firstDisposeSettled).toBe(false);
 		expect(findKilledWorkerd(kill)).toBeDefined();
+		expect(process.listenerCount("SIGHUP")).toBeGreaterThan(
+			signalListenerCount
+		);
 
 		releaseRuntimeExit();
 		runtimeExitReleased = true;
 		const firstDisposeError = await firstDisposeResult;
+		expect(process.listenerCount("SIGHUP")).toBe(signalListenerCount);
 		expect(webSocketClose).toHaveBeenCalled();
 		expect(firstDisposeError).toBeInstanceOf(Error);
 		expect((firstDisposeError as Error).message).toContain(
