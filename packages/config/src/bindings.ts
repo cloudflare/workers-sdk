@@ -148,6 +148,8 @@ interface D1BindingOptions {
 	id?: string;
 	/** The name of this D1 database. */
 	name?: string;
+	/** The jurisdiction where an automatically provisioned D1 database will be created. */
+	jurisdiction?: string;
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }

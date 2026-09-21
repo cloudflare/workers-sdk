@@ -239,6 +239,7 @@ export interface CfD1Database {
 	binding: string;
 	database_id?: string | typeof INHERIT_SYMBOL;
 	database_name?: string;
+	jurisdiction?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;
