@@ -355,7 +355,6 @@ test("supports object-form Workflow batches", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "batch-worker",
 					compatibilityDate: "2024-11-20",
 					manifest: singleModuleManifest(BATCH_WORKFLOW_SCRIPT()),
