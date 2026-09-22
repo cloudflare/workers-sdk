@@ -1,7 +1,13 @@
 import { Blob } from "node:buffer";
 import http from "node:http";
 import { URLSearchParams } from "node:url";
-import { DeferredPromise, fetch, FormData } from "miniflare";
+import {
+	DeferredPromise,
+	DispatchFetchDispatcher,
+	fetch,
+	FormData,
+} from "miniflare";
+import { Pool } from "undici";
 import { assert, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
 import { useServer } from "../test-shared";
@@ -245,3 +251,49 @@ test("fetch: returns regular response if no WebSocket response returned", async 
 	expect(res.headers.get("Content-Type")).toBe("text/html");
 	expect(await res.text()).toBe("<p>Not Found</p>");
 });
+test(
+	"fetch: DispatchFetchDispatcher reuses connections across requests",
+	{ retry: 3 },
+	async ({ expect }) => {
+		// Regression test for
+		// https://github.com/cloudflare/workers-sdk/issues/15716: forcing
+		// `options.reset = true` closed the connection after every request, burning
+		// one ephemeral port per dispatch in `TIME_WAIT` until it expired.
+		let connectionCount = 0;
+		const server = http.createServer((req, res) => res.end("ok"));
+		server.on("connection", () => connectionCount++);
+		const port = await new Promise<number>((resolve) => {
+			server.listen(0, () => {
+				onTestFinished(
+					() =>
+						new Promise<void>((resolve, reject) => {
+							server.closeAllConnections();
+							server.close((err) => (err ? reject(err) : resolve()));
+						})
+				);
+				resolve((server.address() as AddressInfo).port);
+			});
+		});
+
+		const origin = `http://127.0.0.1:${port}`;
+		const runtimeDispatcher = new Pool(origin);
+		// Both origins match, so requests take the runtime dispatch path
+		const dispatcher = new DispatchFetchDispatcher(
+			runtimeDispatcher,
+			runtimeDispatcher,
+			origin,
+			origin
+		);
+		const requestCount = 20;
+		for (let i = 0; i < requestCount; i++) {
+			const res = await fetch(`${origin}/`, { dispatcher });
+			expect(await res.text()).toBe("ok");
+		}
+		// Reuse allows one connection, plus maybe one more opened while the first
+		// is still being returned to the pool after its body completes. Without
+		// keep-alive this would be one connection per request.
+		expect(connectionCount).toBeLessThanOrEqual(3);
+		expect(connectionCount).toBeLessThan(requestCount);
+		await runtimeDispatcher.close();
+	}
+);

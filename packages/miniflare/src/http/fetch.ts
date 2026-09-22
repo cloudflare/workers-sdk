@@ -242,11 +242,12 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 
 			options.headers = headers;
 
-			// Sometimes, keep-alive connections can sometimes cause issues with sockets
-			// disconnecting unexpectedly. To mitigate this, try to avoid keep-alive race
-			// conditions by telling the runtime to close the connection immediately after
-			// the request is complete
-			options.reset = true;
+			// Don't set `options.reset = true` here: closing the connection after
+			// every request burns one ephemeral port per `dispatchFetch()` call in
+			// the machine-wide `TIME_WAIT` pool, which exhausts it under CI load
+			// (https://github.com/cloudflare/workers-sdk/issues/15716). Reused
+			// keep-alive connections are safe — undici retries idempotent requests
+			// if a pooled connection has gone stale.
 
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate
