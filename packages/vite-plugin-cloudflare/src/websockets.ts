@@ -229,7 +229,9 @@ function trackUpgrades(server: vite.HttpServer) {
 
 		return {
 			isAnswerable() {
-				return !isClaimed() && !socket.destroyed && socket.writable;
+				// Answering while the server is closing would leave an upgraded socket
+				// open that Node does not close, blocking `server.close()`.
+				return !closing && !isClaimed() && !socket.destroyed && socket.writable;
 			},
 			release() {
 				if (isClaimed() || socket.destroyed) {

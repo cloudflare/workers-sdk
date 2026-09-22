@@ -671,6 +671,36 @@ describe("handleWebSocket", () => {
 			);
 		});
 
+		test("does not answer a Worker route when the server closes during dispatchFetch", async ({
+			expect,
+		}) => {
+			const mf = await listen();
+			const gate = new DeferredPromise<void>();
+			const dispatchFetch = mf.dispatchFetch.bind(mf);
+			const mocked = vi
+				.spyOn(mf, "dispatchFetch")
+				.mockImplementation(async (...args) => {
+					await gate;
+					return dispatchFetch(...args);
+				});
+
+			const socket = await connect();
+			const received = record(socket);
+			writeUpgrade(socket);
+
+			await vi.waitFor(() => expect(mocked).toHaveBeenCalled());
+
+			const closed = new Promise<void>((resolve, reject) =>
+				httpServer.close((e) => (e ? reject(e) : resolve()))
+			);
+			gate.resolve();
+			await closed;
+			await settle();
+
+			expect(received()).not.toContain("HTTP/1.1 101");
+			expect(socket.closed).toBe(true);
+		});
+
 		test("preserves shared upgrades again after the server is restarted", async ({
 			expect,
 		}) => {
