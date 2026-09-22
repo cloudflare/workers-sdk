@@ -4694,13 +4694,13 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 				],
 			])(
-				"allows the former experimental image binding name with containers %j",
+				"allows user variables with containers %j",
 				(containers, { expect }) => {
 					const { diagnostics } = normalizeAndValidateConfig(
 						{
 							containers,
 							vars: {
-								EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: "user value",
+								USER_IMAGES: "user value",
 							},
 						} as RawConfig,
 						undefined,
@@ -4711,37 +4711,6 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(false);
 				}
 			);
-
-			it("does not reserve the former Container metadata binding name", ({
-				expect,
-			}) => {
-				const vars = {
-					EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES_METADATA: "user value",
-				};
-				const ordinary = normalizeAndValidateConfig(
-					{ vars },
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-				expect(ordinary.diagnostics.hasErrors()).toBe(false);
-				const managed = normalizeAndValidateConfig(
-					{
-						vars,
-						containers: [
-							{
-								name: "sandbox",
-								class_name: "Sandbox",
-								scheduling_policy: "durable_object",
-							},
-						],
-					},
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-				expect(managed.diagnostics.hasErrors()).toBe(false);
-			});
 
 			it("should append the environment to a generated Durable Object-managed container name", ({
 				expect,

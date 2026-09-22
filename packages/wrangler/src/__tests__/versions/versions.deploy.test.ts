@@ -367,7 +367,7 @@ describe("versions deploy", () => {
 		{ description: "array", json: ["hello"] },
 		{ description: "null", json: null },
 	])(
-		"ignores unused legacy image variables without Container metadata: $description",
+		"ignores user variables without Container metadata: $description",
 		async ({ json }, { expect }) => {
 			const versionId = "10000000-0000-0000-0000-000000000000";
 			const version = containerVersion(versionId, [
@@ -380,7 +380,7 @@ describe("versions deploy", () => {
 			version.resources.bindings = [
 				{
 					type: "json",
-					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					name: "USER_IMAGES",
 					json,
 				},
 			];
@@ -412,7 +412,7 @@ describe("versions deploy", () => {
 		}
 	);
 
-	test("ignores an ordinary user binding at the former marker name", async ({
+	test("does not infer Containers from user metadata bindings", async ({
 		expect,
 	}) => {
 		const versionId = "10000000-0000-0000-0000-000000000000";
@@ -420,7 +420,7 @@ describe("versions deploy", () => {
 		version.resources.bindings = [
 			{
 				type: "json",
-				name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES_METADATA",
+				name: "USER_METADATA",
 				json: { version: 1 },
 			},
 		];

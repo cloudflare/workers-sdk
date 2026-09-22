@@ -62,7 +62,7 @@ describe("versioned Container applications from native images", () => {
 							[
 								{
 									type: "json",
-									name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+									name: "USER_IMAGES",
 									json: { Sandbox: {} },
 								},
 							]
@@ -83,7 +83,7 @@ describe("versioned Container applications from native images", () => {
 						version(containers, [
 							{
 								type: "json",
-								name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+								name: "USER_IMAGES",
 								json: 42,
 							},
 						]),
