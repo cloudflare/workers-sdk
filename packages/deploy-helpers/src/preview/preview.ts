@@ -855,10 +855,9 @@ function logMissingCustomDomainPreviewUrlsWarning(
 		return;
 	}
 
+	logger.log("");
 	logger.warn(
-		"Custom domain Preview URLs are configured, but this Preview only has other active URLs. " +
-			"If you just added `previews_enabled = true`, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. " +
-			"If you already deployed, the custom domain may still be provisioning."
+		"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
 	);
 }
 
