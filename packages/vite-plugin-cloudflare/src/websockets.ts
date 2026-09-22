@@ -87,6 +87,14 @@ function getUpgradeServerPatch(
 		return originalClose(callback);
 	}) as typeof httpServer.close;
 
+	const originalListen = httpServer.listen.bind(httpServer) as (
+		...args: Array<unknown>
+	) => unknown;
+	httpServer.listen = ((...args: Array<unknown>) => {
+		patch.closing.current = false;
+		return originalListen(...args);
+	}) as typeof httpServer.listen;
+
 	return patch;
 }
 
@@ -104,6 +112,9 @@ export function handleWebSocket(
 	// unresolved-upgrade set, the closing flag, and emit-time listener counts.
 	const patch = getUpgradeServerPatch(httpServer);
 	const { pendingUpgrades, closing, listenerCounts, upgradeListener } = patch;
+	// Reset the closing flag on setup so that unowned upgrades are preserved
+	// for other listeners after a server close and restart.
+	closing.current = false;
 
 	// Stash Worker 101-response headers keyed by the upgrade request so a single
 	// persistent `headers` listener can apply them when `ws` emits the upgrade
