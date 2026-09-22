@@ -70,7 +70,6 @@ export interface PreviewResource {
 	name: string;
 	slug: string;
 	urls?: string[];
-	worker_name: string;
 	tags?: string[];
 	observability?: Observability;
 	logpush?: boolean;

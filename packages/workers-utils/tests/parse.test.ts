@@ -57,11 +57,11 @@ describe("parseTOML", () => {
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
-				text: "Invalid TOML document: only letter, numbers, dashes and underscores are allowed in keys",
+				text: "Invalid TOML document: unfinished string",
 				kind: "error",
 				location: {
 					line: 1,
-					column: 12,
+					column: 7,
 					fileText: "name = 'fail\"",
 					file: undefined,
 					lineText: "name = 'fail\"",

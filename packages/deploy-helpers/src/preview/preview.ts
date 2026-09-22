@@ -803,6 +803,64 @@ function formatPreviewDeploymentSummary(
 	].join("\n");
 }
 
+function getPreviewCustomDomainHostnames(config: Config): string[] {
+	const routes = config.routes ?? (config.route ? [config.route] : []);
+	return routes
+		.filter(
+			(route): route is CustomDomainRoute =>
+				isCustomDomainRoute(route) && route.previews_enabled === true
+		)
+		.map((route) => normalizeHostname(route.pattern));
+}
+
+function normalizeHostname(hostname: string) {
+	try {
+		return new URL(`https://${hostname}`).hostname.replace(/\.$/, "");
+	} catch {
+		return hostname.toLowerCase().replace(/\.$/, "");
+	}
+}
+
+function hostnameMatchesCustomDomain(hostname: string, customDomain: string) {
+	const normalizedHostname = normalizeHostname(hostname);
+	return (
+		normalizedHostname === customDomain ||
+		normalizedHostname.endsWith(`.${customDomain}`)
+	);
+}
+
+function previewUrlMatchesCustomDomain(url: string, customDomains: string[]) {
+	try {
+		const { hostname } = new URL(url);
+		return customDomains.some((domain) =>
+			hostnameMatchesCustomDomain(hostname, domain)
+		);
+	} catch {
+		return false;
+	}
+}
+
+function logMissingCustomDomainPreviewUrlsWarning(
+	config: Config,
+	previewResource: PreviewResource,
+	deployment: DeploymentResource
+) {
+	const customDomains = getPreviewCustomDomainHostnames(config);
+	const urls = [...(previewResource.urls ?? []), ...(deployment.urls ?? [])];
+	if (
+		customDomains.length === 0 ||
+		urls.length === 0 ||
+		urls.some((url) => previewUrlMatchesCustomDomain(url, customDomains))
+	) {
+		return;
+	}
+
+	logger.log("");
+	logger.warn(
+		"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
+	);
+}
+
 function logMissingPreviewsBindingsWarning(
 	productionBindingsExpectedInPreview: Record<string, { type: string }>,
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
@@ -1081,6 +1139,11 @@ async function runPreview(
 				isNewPreview,
 				pullRequest
 			)
+		);
+		logMissingCustomDomainPreviewUrlsWarning(
+			config,
+			previewResource,
+			deployment
 		);
 	}
 
