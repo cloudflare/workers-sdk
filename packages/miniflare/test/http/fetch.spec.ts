@@ -321,6 +321,48 @@ test("fetch: DispatchFetchDispatcher retries stale GET connections", async ({
 	expect(await res.text()).toBe("ok");
 	runtimeDispatcher.assertNoPendingInterceptors();
 });
+test("fetch: DispatchFetchDispatcher preserves headers on partial GET retry", async ({
+	expect,
+}) => {
+	const requests: http.IncomingMessage[] = [];
+	const server = await useServer((req, res) => {
+		requests.push(req);
+		if (requests.length === 1) {
+			res.writeHead(200, {
+				"content-length": "10",
+				etag: '"retry-test"',
+			});
+			res.write("hello", () => res.socket?.end());
+			return;
+		}
+
+		res.writeHead(206, {
+			"content-length": "5",
+			"content-range": "bytes 5-9/10",
+			etag: '"retry-test"',
+		});
+		res.end("world");
+	});
+	const origin = server.http.origin;
+	const runtimeDispatcher = new Pool(origin);
+	onTestFinished(() => runtimeDispatcher.close());
+	const dispatcher = new DispatchFetchDispatcher(
+		runtimeDispatcher,
+		runtimeDispatcher,
+		origin,
+		origin
+	);
+
+	const res = await fetch(new URL("/retry", server.http), {
+		headers: { "x-test-header": "preserved" },
+		dispatcher,
+	});
+	expect(await res.text()).toBe("helloworld");
+	expect(requests).toHaveLength(2);
+	expect(requests[1].headers["x-test-header"]).toBe("preserved");
+	expect(requests[1].headers["mf-original-url"]).toBe(`${origin}/retry`);
+	expect(requests[1].headers["mf-disable-pretty-error"]).toBe("true");
+});
 test("fetch: DispatchFetchDispatcher isolates non-retryable requests", async ({
 	expect,
 }) => {

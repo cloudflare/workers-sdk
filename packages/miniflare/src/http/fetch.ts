@@ -264,8 +264,11 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			const canRetry = options.method === "GET" || options.method === "HEAD";
 			if (canRetry) {
 				options.reset = false;
+				// RetryHandler spreads headers when resuming an interrupted response.
+				// Convert to a plain object so user and Miniflare headers survive that
+				// retry path.
+				options.headers = Object.fromEntries(headers.entries());
 				return this.retryRuntimeDispatcher.dispatch(options, handler);
-			}
 			}
 			options.reset = true;
 			return this.nonRetryableRuntimeDispatcher.dispatch(options, handler);
