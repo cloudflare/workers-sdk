@@ -209,6 +209,41 @@ function createMockPostgresNoSslServer(): Promise<{
 	});
 }
 
+function createMockPostgresPumpServer(
+	serverCert: CertPair,
+	caCert: string
+): Promise<{ server: net.Server; port: number }> {
+	return new Promise((resolve) => {
+		const server = net.createServer((socket) => {
+			socket.on("error", () => {});
+			socket.once("data", () => {
+				socket.write("S", () => {
+					const tlsSocket = new tls.TLSSocket(socket, {
+						isServer: true,
+						key: serverCert.key,
+						cert: serverCert.cert,
+						ca: caCert,
+					});
+					tlsSocket.on("error", () => socket.destroy());
+					tlsSocket.on("secure", () => {
+						const pump = setInterval(() => {
+							tlsSocket.write(Buffer.alloc(256 * 1024));
+						}, 1);
+						const stop = () => clearInterval(pump);
+						tlsSocket.on("close", stop);
+						tlsSocket.on("error", stop);
+					});
+				});
+			});
+		});
+
+		server.listen(0, "127.0.0.1", () => {
+			const address = server.address() as net.AddressInfo;
+			resolve({ server, port: address.port });
+		});
+	});
+}
+
 // -- Test helper to send data through the proxy and read the response --
 
 function sendThroughProxy(
@@ -546,6 +581,61 @@ describe("HyperdriveProxyController TLS modes", () => {
 			const response = await sendThroughProxy(proxyPort, "hello");
 			expect(response).toBe("ECHO:hello");
 		} finally {
+			server.close();
+		}
+	});
+
+	test("a client socket error does not take down the process", async ({
+		expect,
+	}) => {
+		const { server, port: dbPort } = await createMockPostgresPumpServer(
+			certs.localhost,
+			certs.ca.cert
+		);
+		const uncaught: Error[] = [];
+		const collect = (err: Error) => uncaught.push(err);
+		process.on("uncaughtException", collect);
+
+		try {
+			const proxyPort = await controller.createProxyServer({
+				name: "test-client-error",
+				targetHost: "127.0.0.1",
+				targetPort: String(dbPort),
+				scheme: "postgres",
+				sslmode: "require",
+			});
+
+			await new Promise<void>((resolve) => {
+				const socket = net.connect({ host: "127.0.0.1", port: proxyPort }, () =>
+					socket.write("hello")
+				);
+				socket.on("error", () => {});
+				socket.once("data", () => {
+					socket.pause();
+					setTimeout(() => {
+						socket.destroy();
+						resolve();
+					}, 50);
+				});
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			expect(uncaught).toEqual([]);
+
+			const response = await sendThroughProxy(
+				await controller.createProxyServer({
+					name: "test-client-error-second",
+					targetHost: "127.0.0.1",
+					targetPort: String(dbPort),
+					scheme: "postgres",
+					sslmode: "require",
+				}),
+				"hello"
+			);
+			expect(response.length).toBeGreaterThan(0);
+		} finally {
+			process.off("uncaughtException", collect);
 			server.close();
 		}
 	});

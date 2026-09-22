@@ -221,8 +221,7 @@ export class HyperdriveProxyController {
 			}
 		}
 		// Pipe plain tcp sockets
-		clientSocket.pipe(dbSocket);
-		dbSocket.pipe(clientSocket);
+		pipeSockets(clientSocket, dbSocket);
 	}
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
@@ -282,8 +281,7 @@ async function handlePostgresTlsConnection(
 		clientSocket
 	);
 	// Pipe plain TCP sockets
-	clientSocket.pipe(newDbSocket);
-	newDbSocket.pipe(clientSocket);
+	pipeSockets(clientSocket, newDbSocket);
 }
 
 /** Handles MySQL TLS connection */
@@ -395,8 +393,7 @@ async function handleMySQLTlsConnection(
 	);
 
 	// Pipe plain TCP sockets
-	clientSocket.pipe(newDbSocket);
-	newDbSocket.pipe(clientSocket);
+	pipeSockets(clientSocket, newDbSocket);
 	return;
 }
 
@@ -432,20 +429,24 @@ async function createPlainTCPConnection(
 	return dbSocket;
 }
 
+function pipeSockets(clientSocket: net.Socket, peerSocket: net.Socket): void {
+	const teardown = () => {
+		clientSocket.destroy();
+		peerSocket.destroy();
+	};
+	clientSocket.on("error", teardown);
+	peerSocket.on("error", teardown);
+
+	clientSocket.pipe(peerSocket);
+	peerSocket.pipe(clientSocket);
+}
+
 /** Set up TLS connection with pipes and error handlers */
 function setupTLSConnection(
 	clientSocket: net.Socket,
 	tlsSocket: tls.TLSSocket
 ): void {
-	// Set up error handler for runtime TLS errors
-	tlsSocket.on("error", () => {
-		clientSocket.destroy();
-		tlsSocket.destroy();
-	});
-
-	// Pipe sockets
-	clientSocket.pipe(tlsSocket);
-	tlsSocket.pipe(clientSocket);
+	pipeSockets(clientSocket, tlsSocket);
 }
 
 /** Write buffer to socket and return as a promise helper function  */
