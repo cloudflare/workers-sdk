@@ -3075,7 +3075,7 @@ describe("wrangler preview", () => {
 			expect(std.warn).not.toContain("ASSETS");
 		});
 
-		test("should output preview and deployment JSON with --json", async ({
+		test("should output preview and deployment JSON for wrangler-action when the Preview API omits the Worker name", async ({
 			expect,
 		}) => {
 			const outputFile = "./output.json";
@@ -3103,7 +3103,6 @@ describe("wrangler preview", () => {
 									name: "test-preview",
 									slug: "test-preview",
 									urls: ["https://test-preview.test-worker.cloudflare.app"],
-									worker_name: "test-worker",
 									created_on: new Date().toISOString(),
 								},
 							},
@@ -3131,10 +3130,13 @@ describe("wrangler preview", () => {
 				)
 			);
 
-			await runWrangler("preview --name test-preview --json", {
-				...process.env,
-				WRANGLER_OUTPUT_FILE_PATH: outputFile,
-			});
+			await runWrangler(
+				"preview --name test-preview --worker-name override-worker --json",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: outputFile,
+				}
+			);
 
 			expect(std.out).toContain('"preview"');
 			expect(std.out).toContain('"deployment"');
@@ -3150,7 +3152,7 @@ describe("wrangler preview", () => {
 				expect.objectContaining({
 					type: "preview",
 					version: 1,
-					worker_name: "test-worker",
+					worker_name: "override-worker",
 					preview_id: "preview-id-json",
 					preview_name: "test-preview",
 					preview_slug: "test-preview",
