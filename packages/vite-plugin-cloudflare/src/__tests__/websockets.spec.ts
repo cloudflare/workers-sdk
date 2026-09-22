@@ -19,6 +19,9 @@ describe("handleWebSocket", () => {
 	let miniflare: Miniflare | undefined;
 	let port: number;
 	const openSockets = new Set<net.Socket>();
+	// Server-side sockets hijacked by a test's own `upgrade` listener: nothing
+	// reads from them once upgraded, so `httpServer.close()` would wait forever.
+	const hijackedSockets = new Set<net.Socket>();
 
 	const DEFAULT_WORKER_SCRIPT = `export default {
 		fetch() {
@@ -91,12 +94,85 @@ describe("handleWebSocket", () => {
 			socket.destroy();
 		}
 		openSockets.clear();
+		for (const socket of hijackedSockets) {
+			socket.destroy();
+		}
+		hijackedSockets.clear();
 		httpServer?.closeAllConnections();
 		await miniflare?.dispose();
 		await new Promise<void>((resolve, reject) =>
-			httpServer?.close((e) => (e ? reject(e) : resolve()))
+			httpServer?.close((e) =>
+				// Tests that close the server themselves leave nothing to close.
+				!e || (e as NodeJS.ErrnoException).code === "ERR_SERVER_NOT_RUNNING"
+					? resolve()
+					: reject(e)
+			)
 		);
 	});
+
+	/** Sends a raw WebSocket upgrade request. */
+	function writeUpgrade(
+		socket: net.Socket,
+		{ path = "/", host = `127.0.0.1:${port}` } = {}
+	) {
+		socket.write(
+			`GET ${path} HTTP/1.1\r\n` +
+				`Host: ${host}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+	}
+
+	/** Accumulates everything the server writes back on a socket. */
+	function record(socket: net.Socket) {
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+		return () => Buffer.concat(chunks).toString("utf8");
+	}
+
+	/**
+	 * Registers another `upgrade` listener that completes the handshake itself,
+	 * optionally only once `gate` resolves (a delayed asynchronous owner).
+	 */
+	function addOtherOwner({
+		register = "on",
+		gate,
+	}: {
+		register?: "on" | "once" | "prependOnceListener";
+		gate?: Promise<unknown>;
+	} = {}) {
+		const claimed = new DeferredPromise<void>();
+		httpServer[register]("upgrade", async (_request, socket: net.Socket) => {
+			hijackedSockets.add(socket);
+			await gate;
+			socket.write(
+				"HTTP/1.1 101 Switching Protocols\r\n" +
+					"Upgrade: websocket\r\n" +
+					"Connection: Upgrade\r\n\r\n"
+			);
+			claimed.resolve();
+		});
+		return claimed;
+	}
+
+	/** Registers an `upgrade` listener that could own the socket but never does. */
+	function addPassiveListener() {
+		httpServer.on("upgrade", () => {});
+	}
+
+	/** Mocks the Worker returning a plain (non-upgrade) response. */
+	function mockUnrouted(mf: Miniflare) {
+		return vi
+			.spyOn(mf, "dispatchFetch")
+			.mockResolvedValue(new Response("Not Found", { status: 404 }));
+	}
+
+	/** Gives the handler time to (incorrectly) tear a preserved socket down. */
+	async function settle() {
+		await new Promise((resolve) => setTimeout(resolve, 50));
+	}
 
 	// https://github.com/cloudflare/workers-sdk/issues/12047
 	test("survives client disconnect during upgrade", async ({ expect }) => {
@@ -378,6 +454,247 @@ describe("handleWebSocket", () => {
 		expect(headerBlock).toContain("Set-Cookie: theme=dark; Path=/; HttpOnly");
 
 		socket.destroy();
+	});
+
+	// Node invokes every registered `upgrade` listener, so these cover the
+	// ownership rules between this handler and other listeners on the server.
+	// https://github.com/cloudflare/workers-sdk/issues/15654
+	describe("shared `upgrade` listeners", () => {
+		test("leaves a socket claimed by a later listener open", async ({
+			expect,
+		}) => {
+			const mf = await listen();
+			const dispatchFetch = mockUnrouted(mf);
+			const claimed = addOtherOwner();
+
+			const socket = await connect();
+			const received = record(socket);
+			writeUpgrade(socket, { path: "/__devtools/__ws" });
+
+			await claimed;
+			await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+			await settle();
+
+			expect(received()).toContain("HTTP/1.1 101");
+			expect(socket.closed).toBe(false);
+		});
+
+		test("leaves a socket claimed by a listener registered before setup open", async ({
+			expect,
+		}) => {
+			const claimed = addOtherOwner();
+			const mf = await listen();
+			const dispatchFetch = mockUnrouted(mf);
+
+			const socket = await connect();
+			const received = record(socket);
+			writeUpgrade(socket);
+
+			await claimed;
+			await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+			await settle();
+
+			expect(received()).toContain("HTTP/1.1 101");
+			expect(socket.closed).toBe(false);
+		});
+
+		test.for(["on", "once", "prependOnceListener"] as const)(
+			"leaves a socket open for a delayed owner registered with `%s`",
+			async (register, { expect }) => {
+				const mf = await listen();
+				const dispatchFetch = mockUnrouted(mf);
+				const gate = new DeferredPromise<void>();
+				const claimed = addOtherOwner({ register, gate });
+
+				const socket = await connect();
+				const received = record(socket);
+				writeUpgrade(socket);
+
+				// The owner only claims the socket after this handler has given up.
+				await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+				await settle();
+				expect(socket.closed).toBe(false);
+
+				gate.resolve();
+				await claimed;
+				await settle();
+
+				expect(received()).toContain("HTTP/1.1 101");
+				expect(socket.closed).toBe(false);
+			}
+		);
+
+		test("leaves a socket open for another listener when the host is malformed", async ({
+			expect,
+		}) => {
+			await listen();
+			const claimed = addOtherOwner();
+
+			const socket = await connect();
+			const received = record(socket);
+			writeUpgrade(socket, { host: "[malformed" });
+
+			await claimed;
+			await settle();
+
+			expect(received()).toContain("HTTP/1.1 101");
+			expect(socket.closed).toBe(false);
+		});
+
+		test("closes a malformed-host upgrade when no other listener could own it", async ({
+			expect,
+		}) => {
+			await listen();
+
+			const socket = await connect();
+			writeUpgrade(socket, { host: "[malformed" });
+
+			await vi.waitFor(() => expect(socket.closed).toBe(true));
+		});
+
+		test("closes an unrouted upgrade when no other listener could own it", async ({
+			expect,
+		}) => {
+			const mf = await listen();
+			mockUnrouted(mf);
+
+			const socket = await connect();
+			writeUpgrade(socket);
+
+			await vi.waitFor(() => expect(socket.closed).toBe(true));
+		});
+
+		test("leaves the socket alone when dispatchFetch fails and another listener could own it", async ({
+			expect,
+		}) => {
+			const mf = await listen();
+			const dispatchFetch = vi
+				.spyOn(mf, "dispatchFetch")
+				.mockRejectedValue(new Error("Cannot use disposed instance"));
+			addPassiveListener();
+
+			const unhandled = vi.fn();
+			process.on("unhandledRejection", unhandled);
+			onTestFinished(() => {
+				process.off("unhandledRejection", unhandled);
+			});
+
+			const socket = await connect();
+			writeUpgrade(socket);
+
+			await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+			await settle();
+
+			expect(socket.closed).toBe(false);
+			expect(unhandled).not.toHaveBeenCalled();
+		});
+
+		test("does not upgrade a Worker route claimed while dispatchFetch was pending", async ({
+			expect,
+		}) => {
+			const mf = await listen();
+			const gate = new DeferredPromise<void>();
+			const dispatchFetch = mf.dispatchFetch.bind(mf);
+			vi.spyOn(mf, "dispatchFetch").mockImplementation(async (...args) => {
+				await gate;
+				return dispatchFetch(...args);
+			});
+			const claimed = addOtherOwner();
+
+			const socket = await connect();
+			const received = record(socket);
+			writeUpgrade(socket);
+
+			await claimed;
+			gate.resolve();
+			await settle();
+
+			expect(received().match(/HTTP\/1.1 101/g)).toHaveLength(1);
+			expect(received().toLowerCase()).not.toContain("sec-websocket-accept");
+			expect(socket.closed).toBe(false);
+		});
+
+		test("upgrades a Worker route on a reused keep-alive connection", async ({
+			expect,
+		}) => {
+			await listen();
+
+			const socket = await connect();
+			const received = record(socket);
+
+			// Bytes from an earlier response on this connection must not read as
+			// another listener having claimed the upgrade that follows.
+			socket.write(`GET / HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\n\r\n`);
+			await vi.waitFor(() => expect(received()).toContain("HTTP/1.1 200"));
+
+			writeUpgrade(socket);
+
+			await vi.waitFor(() => expect(received()).toContain("HTTP/1.1 101"), {
+				timeout: 10_000,
+			});
+			expect(received().toLowerCase()).toContain("sec-websocket-accept");
+		});
+
+		test("repeated setup installs a single listener and dispatches once", async ({
+			expect,
+		}) => {
+			const mf = await listen();
+			handleWebSocket(httpServer, mf);
+			handleWebSocket(httpServer, mf);
+			const dispatchFetch = mockUnrouted(mf);
+
+			expect(httpServer.listenerCount("upgrade")).toBe(1);
+
+			const socket = await connect();
+			writeUpgrade(socket);
+
+			await vi.waitFor(() => expect(socket.closed).toBe(true));
+			expect(dispatchFetch).toHaveBeenCalledTimes(1);
+		});
+
+		test("closes the server even when an upgrade was preserved for another listener", async ({
+			expect,
+		}) => {
+			const mf = await listen();
+			const dispatchFetch = mockUnrouted(mf);
+			addPassiveListener();
+
+			const socket = await connect();
+			writeUpgrade(socket);
+
+			await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+			await settle();
+			expect(socket.closed).toBe(false);
+
+			await new Promise<void>((resolve, reject) =>
+				httpServer.close((e) => (e ? reject(e) : resolve()))
+			);
+		});
+
+		test("preserves shared upgrades again after the server is restarted", async ({
+			expect,
+		}) => {
+			const mf = await listen();
+			const dispatchFetch = mockUnrouted(mf);
+			const claimed = addOtherOwner();
+
+			await new Promise<void>((resolve, reject) =>
+				httpServer.close((e) => (e ? reject(e) : resolve()))
+			);
+			await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
+			port = (httpServer.address() as AddressInfo).port;
+
+			const socket = await connect();
+			const received = record(socket);
+			writeUpgrade(socket);
+
+			await claimed;
+			await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+			await settle();
+
+			expect(received()).toContain("HTTP/1.1 101");
+			expect(socket.closed).toBe(false);
+		});
 	});
 
 	test("destroys the socket without an unhandled rejection when dispatchFetch fails", async ({
