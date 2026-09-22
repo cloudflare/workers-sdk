@@ -12,14 +12,14 @@ function getBuildOutputDir() {
 	return path.join(rootDir, ".cloudflare/output/v0/workers", "default");
 }
 
-function getSettingsConfigPath() {
+function getRootConfigPath() {
 	return path.join(rootDir, ".cloudflare/output/v0", "config.json");
 }
 
 function getContainerConfigPath() {
 	return path.join(
 		rootDir,
-		".cloudflare/output/v0/containers/apiContainer/config.json"
+		".cloudflare/output/v0/containers/build-output/container.config.json"
 	);
 }
 
@@ -45,13 +45,13 @@ describeBuildOutput("Build Output Specification", () => {
 });
 
 describeBuildOutputFiles("Build Output Specification files", () => {
-	test("emits config.json at the correct location", ({ expect }) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+	test("emits worker.config.json at the correct location", ({ expect }) => {
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		expect(fs.existsSync(configPath)).toBe(true);
 	});
 
 	test("emits a bundle/ directory with the entry chunk", ({ expect }) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: { mainModule: string };
 		};
@@ -68,10 +68,10 @@ describeBuildOutputFiles("Build Output Specification files", () => {
 		expect(fs.existsSync(assetsDir)).toBe(true);
 	});
 
-	test("strips `entrypoint` in config.json and adds `manifest`", ({
+	test("strips `entrypoint` in worker.config.json and adds `manifest`", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as Record<
 			string,
 			unknown
@@ -87,7 +87,7 @@ describeBuildOutputFiles("Build Output Specification files", () => {
 	test("includes every module in `manifest.modules` on disk under bundle/", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: { modules: Record<string, { type: string }> };
 		};
@@ -102,7 +102,7 @@ describeBuildOutputFiles("Build Output Specification files", () => {
 	test("includes source maps in `manifest.modules` with type `sourcemap`", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: {
 				mainModule: string;
@@ -126,16 +126,14 @@ describeBuildOutputFiles("Build Output Specification files", () => {
 		expect(fs.existsSync(wranglerJson)).toBe(false);
 	});
 
-	test("emits a top-level settings config.json recording the build mode", ({
-		expect,
-	}) => {
-		// This project has no `settings` export, so the settings config carries
-		// nothing but the discriminant and the mode `vite build` resolved.
+	test("emits a root config.json recording the build context", ({ expect }) => {
 		const contents = JSON.parse(
-			fs.readFileSync(getSettingsConfigPath(), "utf-8")
+			fs.readFileSync(getRootConfigPath(), "utf-8")
 		) as Record<string, unknown>;
 
-		expect(contents).toEqual({ type: "settings", mode: "production" });
+		expect(contents).toEqual({
+			buildContext: { isPreview: false, mode: "production" },
+		});
 	});
 
 	test("does not write .wrangler/deploy/config.json", ({ expect }) => {
@@ -148,14 +146,13 @@ describeBuildOutputFiles("Build Output Specification files", () => {
 		expect(fs.existsSync(deployConfig)).toBe(false);
 	});
 
-	test("emits Container configs under their export names", ({ expect }) => {
+	test("emits Container configs under their Container names", ({ expect }) => {
 		const contents = JSON.parse(
 			fs.readFileSync(getContainerConfigPath(), "utf-8")
 		) as Record<string, unknown>;
 
 		expect(contents).toMatchObject({
-			type: "container",
-			name: "build-output-api",
+			name: "build-output",
 			schedulingPolicy: "durable-object",
 			images: {
 				api: {

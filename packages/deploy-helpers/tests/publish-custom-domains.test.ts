@@ -64,6 +64,7 @@ describe("publishCustomDomains", () => {
 		});
 
 		initDeployHelpersContext({
+			createCloudflareClient: (() => {}) as never,
 			logger: {
 				debug() {},
 				error() {},

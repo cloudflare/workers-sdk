@@ -127,7 +127,6 @@ function convertWorkerOptions(
 	);
 
 	const config: MiniflareWorkerConfig = {
-		type: "worker",
 		name: worker.name ?? "",
 		compatibilityDate: worker.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE,
 		compatibilityFlags: worker.compatibilityFlags,

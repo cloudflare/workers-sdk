@@ -50,7 +50,6 @@ describe("Cross-process aggregation", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -97,7 +96,6 @@ describe("Cross-process aggregation", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -445,7 +443,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -495,7 +492,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b1",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -531,7 +527,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b2",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -544,7 +539,6 @@ describe("Multi-worker peer deduplication", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: "worker-shared",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -576,7 +570,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-d",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -595,7 +588,6 @@ describe("Multi-worker peer deduplication", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: "worker-shared",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -625,7 +617,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-c",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -800,7 +791,6 @@ describe("Same ID across multiple instances with different persistence directori
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -831,7 +821,6 @@ describe("Same ID across multiple instances with different persistence directori
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -934,7 +923,6 @@ describe("Same ID across multiple instances with same persistence directories", 
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -962,7 +950,6 @@ describe("Same ID across multiple instances with same persistence directories", 
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
