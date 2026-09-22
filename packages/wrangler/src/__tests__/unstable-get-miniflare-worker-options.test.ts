@@ -18,6 +18,40 @@ function asArray(value: unknown): unknown[] {
 describe("unstable_getMiniflareWorkerOptions", () => {
 	runInTempDir();
 
+	it("preserves UDP connect handlers", ({ expect }) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				main: "./index.js",
+				compatibility_date: "2026-09-21",
+				compatibility_flags: ["experimental"],
+				connect: [
+					{
+						protocol: "udp",
+						port: 9000,
+						address: "::1",
+						idle_timeout_ms: 1_000,
+						max_pending_bytes: 65_536,
+					},
+				],
+			},
+			"./wrangler.json"
+		);
+
+		const { workerOptions } =
+			unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+		expect(workerOptions.connectHandlers).toEqual([
+			{
+				protocol: "udp",
+				port: 9000,
+				address: "::1",
+				idleTimeoutMs: 1_000,
+				maxPendingBytes: 65_536,
+			},
+		]);
+	});
+
 	describe("zone derivation (used for the outbound CF-Worker header)", () => {
 		it("derives the zone from a single `route` string", ({ expect }) => {
 			writeWranglerConfig(
