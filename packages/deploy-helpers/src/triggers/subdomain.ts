@@ -1,11 +1,19 @@
 import {
+	APIError,
 	configFileName,
 	getComplianceRegionSubdomain,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { confirm, fetchResult, logger, prompt } from "../shared/context";
+import {
+	confirm,
+	createCloudflareClient,
+	fetchResult,
+	logger,
+	prompt,
+} from "../shared/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Worker } from "cloudflare/resources/workers/beta/workers/workers";
 
 type WorkersDevSubdomainRegistrationContext = "workers_dev" | "workflows";
 
@@ -14,6 +22,18 @@ type GetWorkersDevSubdomainOptions = {
 	autoRegisterSubdomain?: string | undefined;
 	configPath?: string | undefined;
 	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
+};
+
+type WorkersDevSubdomainLookup =
+	| { subdomain: string }
+	| { unauthorizedError: APIError };
+
+export type WorkerSubdomain = Worker.Subdomain & {
+	enabled: boolean;
+	previews_enabled: boolean;
+	url?: string;
+	/** Includes the leading "-" separator. */
+	preview_url_suffix?: string;
 };
 
 function toValidSubdomain(input: string): string {
@@ -35,6 +55,22 @@ export async function getWorkersDevSubdomain(
 	accountId: string,
 	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string> {
+	const result = await getWorkersDevSubdomainInternal(
+		complianceConfig,
+		accountId,
+		options
+	);
+	if ("unauthorizedError" in result) {
+		throw result.unauthorizedError;
+	}
+	return result.subdomain;
+}
+
+async function getWorkersDevSubdomainInternal(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions
+): Promise<WorkersDevSubdomainLookup> {
 	const {
 		abortSignal,
 		autoRegisterSubdomain,
@@ -51,45 +87,93 @@ export async function getWorkersDevSubdomain(
 			undefined,
 			abortSignal
 		);
-		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
+		return {
+			subdomain: `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`,
+		};
 	} catch (e) {
+		if (e instanceof APIError && e.code === 10000) {
+			return { unauthorizedError: e };
+		}
+
 		const error = e as { code?: number };
 		if (typeof error !== "object" || !error || error.code !== 10007) {
 			throw e;
 		}
+	}
 
-		// 10007 error code: not found
-		// https://api.cloudflare.com/#worker-subdomain-get-subdomain
-		logger.warn(getRegistrationWarning(registrationContext));
-		if (autoRegisterSubdomain) {
-			return await registerSubdomain(
+	// 10007 error code: not found
+	// https://api.cloudflare.com/#worker-subdomain-get-subdomain
+	logger.warn(getRegistrationWarning(registrationContext));
+	if (autoRegisterSubdomain) {
+		return {
+			subdomain: await registerSubdomain(
 				complianceConfig,
 				accountId,
 				configPath,
 				registrationContext,
 				autoRegisterSubdomain
-			);
-		}
+			),
+		};
+	}
 
-		const wantsToRegister = await confirm(
-			"Would you like to register a workers.dev subdomain now?",
-			{ fallbackValue: false }
+	const wantsToRegister = await confirm(
+		"Would you like to register a workers.dev subdomain now?",
+		{ fallbackValue: false }
+	);
+	if (!wantsToRegister) {
+		throw getRegistrationDeclinedError(
+			registrationContext,
+			accountId,
+			configPath
 		);
-		if (!wantsToRegister) {
-			throw getRegistrationDeclinedError(
-				registrationContext,
-				accountId,
-				configPath
-			);
-		}
+	}
 
-		return await registerSubdomain(
+	return {
+		subdomain: await registerSubdomain(
 			complianceConfig,
 			accountId,
 			configPath,
 			registrationContext
-		);
-	}
+		),
+	};
+}
+
+/**
+ * Gets the account's workers.dev hostname when the token can read it.
+ *
+ * Granular Worker tokens may manage a Worker without access to account-level
+ * subdomain metadata. Callers should use this helper only when the hostname is
+ * optional and the Worker-scoped API can validate the requested operation.
+ */
+export async function getWorkersDevSubdomainIfAccessible(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions = {}
+): Promise<string | undefined> {
+	const result = await getWorkersDevSubdomainInternal(
+		complianceConfig,
+		accountId,
+		options
+	);
+	// The Worker upload is authoritative when a granular token cannot read
+	// account-level subdomain metadata.
+	return "unauthorizedError" in result ? undefined : result.subdomain;
+}
+
+/** Gets the Worker-scoped subdomain configuration and routable URLs. */
+export async function getWorkerSubdomain(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	workerName: string
+): Promise<WorkerSubdomain> {
+	const worker = await createCloudflareClient(
+		complianceConfig
+	).workers.beta.workers.get(workerName, { account_id: accountId });
+	return {
+		...worker.subdomain,
+		enabled: worker.subdomain.enabled ?? false,
+		previews_enabled: worker.subdomain.previews_enabled ?? false,
+	};
 }
 
 function getRegistrationWarning(

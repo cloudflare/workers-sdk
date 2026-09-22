@@ -1,5 +1,26 @@
 import { describe, it } from "vitest";
-import { parseImageName } from "../../cloudchamber/common";
+import { isValidImageTag, parseImageName } from "../../cloudchamber/common";
+
+describe("isValidImageTag", () => {
+	it("accepts OCI tags and rejects digest entries", ({ expect }) => {
+		for (const tag of [
+			"latest",
+			"sha256-release",
+			"V1.0-rc_1",
+			"a".repeat(128),
+		]) {
+			expect(isValidImageTag(tag)).toBe(true);
+		}
+		for (const tag of [
+			"sha256:abcdef",
+			"-latest",
+			".latest",
+			"a".repeat(129),
+		]) {
+			expect(isValidImageTag(tag)).toBe(false);
+		}
+	});
+});
 
 describe("parseImageName", () => {
 	it("works", ({ expect }) => {

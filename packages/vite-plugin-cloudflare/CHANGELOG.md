@@ -1,5 +1,57 @@
 # @cloudflare/vite-plugin
 
+## 1.57.2
+
+### Patch Changes
+
+- Updated dependencies [[`ad20547`](https://github.com/cloudflare/workers-sdk/commit/ad205472db4b66c1a14d0a2360093587a877e863), [`02c1d83`](https://github.com/cloudflare/workers-sdk/commit/02c1d83417e1f8f63af720a4de731ea4fe74f10d), [`275184d`](https://github.com/cloudflare/workers-sdk/commit/275184d38b936c7ebed60d282fc33f002b4ca7b1), [`bd59eca`](https://github.com/cloudflare/workers-sdk/commit/bd59ecae8aaac2820efaa6f60be129a1dd94cd05)]:
+  - wrangler@4.136.2
+  - miniflare@5.20260921.0-alpha
+
+## 1.57.1
+
+### Patch Changes
+
+- Updated dependencies [[`0ed4c54`](https://github.com/cloudflare/workers-sdk/commit/0ed4c54cce958e937addac517f5aa9819ebe0379), [`703922d`](https://github.com/cloudflare/workers-sdk/commit/703922dbcaaeef3d2c17d4d4450cc2dd2a713f0e), [`14d946d`](https://github.com/cloudflare/workers-sdk/commit/14d946d5b5573d856f3b2ddaa0e75c3aa5fb7bfa)]:
+  - wrangler@4.136.1
+  - @cloudflare/unenv-preset@2.16.2
+
+## 1.57.0
+
+### Minor Changes
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Identify experimental Build Output resource configs by filename and location
+
+  The root remains `config.json`, Worker configs are now `worker.config.json`, and Container configs are now `container.config.json`. Resource configs no longer contain top-level `type` discriminators, while settings and build context are stored together in the root config.
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Define experimental Cloudflare configuration with a single default export
+
+  Experimental `cloudflare.config.ts` files now define settings and resources together in a default-exported `defineConfig()` call. Add a Worker under `worker`, add Containers to the `containers` array, or omit both to provide settings only.
+
+  ```ts
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineConfig({
+  	accountId: "...",
+  	complianceRegion: "public",
+  	worker: {
+  		name: "my-worker",
+  		compatibilityDate: "2026-09-18",
+  		entrypoint,
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- [#15711](https://github.com/cloudflare/workers-sdk/pull/15711) [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Allow local Container images without exposed ports
+
+  Wrangler and the Cloudflare Vite plugin no longer reject images that omit Docker `EXPOSE` metadata. Local Containers can run command-only workloads or serve traffic through workerd without declaring an unused image port.
+
+- Updated dependencies [[`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f), [`c5913a6`](https://github.com/cloudflare/workers-sdk/commit/c5913a61e155cebf597c8081e445b64343bf2484), [`35668d7`](https://github.com/cloudflare/workers-sdk/commit/35668d7226f63b0a9e262ae1b187186409be8804), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c), [`8235e6a`](https://github.com/cloudflare/workers-sdk/commit/8235e6a7e03d4910f1de78d67324a11974c393a0), [`0751490`](https://github.com/cloudflare/workers-sdk/commit/0751490b357fc85022dbc9ff5e6642c0f33a2f0a), [`43b1f85`](https://github.com/cloudflare/workers-sdk/commit/43b1f85fe26d4b1568f6d7aacc7ffba2b408419b), [`731a2ee`](https://github.com/cloudflare/workers-sdk/commit/731a2ee747d3904564ea45188dbf848d62bcc6e8)]:
+  - wrangler@4.136.0
+  - miniflare@5.20260921.0-alpha
+
 ## 1.56.0
 
 ### Minor Changes

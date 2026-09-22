@@ -63,7 +63,6 @@ describe("Images binding local transforms", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-04-01",
 						manifest: singleModuleManifest(WORKER_SCRIPT),
