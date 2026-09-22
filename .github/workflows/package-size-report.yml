@@ -1,0 +1,108 @@
+name: Package Size Report
+
+# This privileged companion runs from the default branch and never checks out or
+# executes pull request code. It accepts only one size-capped artifact, validates
+# its complete schema, and binds it to trusted workflow and GitHub API metadata
+# before allowing fixed-format Markdown to reach a write-capable action.
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] artifact data is strictly validated and no PR code executes with the write token
+    workflows: ["Package Size"]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: package-size-report-${{ github.event.workflow_run.head_repository.id }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  report:
+    name: Update package size comment
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.pull_requests[0]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out the trusted reporter
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Select the package size artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          artifacts=$(gh api --paginate --slurp \
+            "repos/$REPOSITORY/actions/runs/$WORKFLOW_RUN_ID/artifacts?per_page=100")
+          count=$(jq '[.[].artifacts[] | select(.name == "package-size-report")] | length' <<< "$artifacts")
+          if [ "$count" -ne 1 ]; then
+            echo "Expected exactly one package-size-report artifact, found $count" >&2
+            exit 1
+          fi
+          artifact_id=$(jq -r '.[].artifacts[] | select(.name == "package-size-report") | .id' <<< "$artifacts")
+          artifact_size=$(jq -r '.[].artifacts[] | select(.name == "package-size-report") | .size_in_bytes' <<< "$artifacts")
+          if ! [[ "$artifact_id" =~ ^[1-9][0-9]*$ ]] || \
+             ! [[ "$artifact_size" =~ ^[0-9]+$ ]] || \
+             [ "$artifact_size" -gt 5000000 ]; then
+            echo "Package size artifact metadata is invalid or exceeds 5 MB" >&2
+            exit 1
+          fi
+          printf 'id=%s\n' "$artifact_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download the package size artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ steps.artifact.outputs.id }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: ${{ runner.temp }}/package-size-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+
+      - name: Validate the artifact file
+        run: |
+          report="$RUNNER_TEMP/package-size-artifact/package-size-report.json"
+          mapfile -d '' entries < <(find "$RUNNER_TEMP/package-size-artifact" -mindepth 1 -print0)
+          if [ "${#entries[@]}" -ne 1 ] || \
+             [ "${entries[0]}" != "$report" ] || \
+             [ ! -f "$report" ] || [ -L "$report" ]; then
+            echo "Artifact must contain only package-size-report.json" >&2
+            exit 1
+          fi
+          report_size=$(wc -c < "$report")
+          if [ "$report_size" -eq 0 ] || [ "$report_size" -gt 5000000 ]; then
+            echo "Uncompressed package size report is empty or exceeds 5 MB" >&2
+            exit 1
+          fi
+
+      - name: Fetch trusted pull request and commit metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST: ${{ github.event.workflow_run.pull_requests[0].number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPOSITORY/pulls/$PULL_REQUEST" > "$RUNNER_TEMP/package-size-pr.json"
+          CANDIDATE_SHA=$(jq -er '.merge_commit_sha | select(test("^[0-9a-f]{40}$"))' "$RUNNER_TEMP/package-size-pr.json")
+          gh api "repos/$REPOSITORY/commits/$CANDIDATE_SHA" > "$RUNNER_TEMP/package-size-commit.json"
+
+      - name: Bind report to the workflow run and render it
+        run: |
+          node tools/package-size/index.mjs report \
+            --input "$RUNNER_TEMP/package-size-artifact/package-size-report.json" \
+            --event "$GITHUB_EVENT_PATH" \
+            --pull-request-json "$RUNNER_TEMP/package-size-pr.json" \
+            --candidate-commit-json "$RUNNER_TEMP/package-size-commit.json" \
+            --output "$RUNNER_TEMP/package-size-comment.md"
+          cat "$RUNNER_TEMP/package-size-comment.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Update the package size comment
+        uses: marocchino/sticky-pull-request-comment@d4d6b0936434b21bc8345ad45a440c5f7d2c40ff # v3.0.3
+        with:
+          number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          header: package-size-report
+          path: ${{ runner.temp }}/package-size-comment.md

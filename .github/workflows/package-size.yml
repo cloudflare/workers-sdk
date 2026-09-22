@@ -1,0 +1,108 @@
+name: Package Size
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    # Intentionally skip markdown-only changes as this is an informational signal.
+    paths-ignore:
+      - "**/*.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-size-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    name: Measure published packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SOURCEMAPS: "false"
+    steps:
+      - name: Check out the exact PR merge commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Validate merge commit and record revisions
+        id: revisions
+        env:
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_MERGE_SHA: ${{ github.sha }}
+        run: |
+          read -ra parents <<< "$(git rev-list --parents -n 1 HEAD)"
+          if [ "${#parents[@]}" -ne 3 ]; then
+            echo "Expected GitHub's synthetic two-parent PR merge commit" >&2
+            exit 1
+          fi
+          if [ "${parents[0]}" != "$EXPECTED_MERGE_SHA" ] || \
+             [ "${parents[1]}" != "$EXPECTED_BASE_SHA" ] || \
+             [ "${parents[2]}" != "$EXPECTED_HEAD_SHA" ]; then
+            echo "The checked-out merge commit does not match the PR event" >&2
+            exit 1
+          fi
+          printf 'candidate=%s\nbaseline=%s\n' "${parents[0]}" "${parents[1]}" >> "$GITHUB_OUTPUT"
+
+      - name: Install candidate dependencies
+        uses: ./.github/actions/install-dependencies
+
+      # Some generated files contain their absolute build path. Reusing one path
+      # for both revisions prevents checkout location from becoming a size delta.
+      - name: Build and measure the baseline
+        env:
+          BASELINE_SHA: ${{ steps.revisions.outputs.baseline }}
+          CI_OS: ${{ runner.os }}
+          NODE_ENV: production
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/package-size-build" "$BASELINE_SHA"
+          pnpm --dir "$RUNNER_TEMP/package-size-build" install --frozen-lockfile
+          node tools/package-size/index.mjs build \
+            --workspace "$RUNNER_TEMP/package-size-build" \
+            --cache-dir "$RUNNER_TEMP/package-size-turbo-cache"
+          node tools/package-size/index.mjs measure \
+            --workspace "$RUNNER_TEMP/package-size-build" \
+            --output "$RUNNER_TEMP/package-size-baseline.json"
+
+      - name: Build and measure the candidate
+        env:
+          CANDIDATE_SHA: ${{ steps.revisions.outputs.candidate }}
+          CI_OS: ${{ runner.os }}
+          NODE_ENV: production
+        run: |
+          git worktree remove "$RUNNER_TEMP/package-size-build"
+          git worktree add --detach "$RUNNER_TEMP/package-size-build" "$CANDIDATE_SHA"
+          pnpm --dir "$RUNNER_TEMP/package-size-build" install --frozen-lockfile
+          node tools/package-size/index.mjs build \
+            --workspace "$RUNNER_TEMP/package-size-build" \
+            --cache-dir "$RUNNER_TEMP/package-size-turbo-cache"
+          node tools/package-size/index.mjs measure \
+            --workspace "$RUNNER_TEMP/package-size-build" \
+            --output "$RUNNER_TEMP/package-size-candidate.json"
+
+      - name: Create package size report
+        env:
+          BASELINE_SHA: ${{ steps.revisions.outputs.baseline }}
+          CANDIDATE_SHA: ${{ steps.revisions.outputs.candidate }}
+        run: |
+          node tools/package-size/index.mjs combine \
+            --baseline "$RUNNER_TEMP/package-size-baseline.json" \
+            --candidate "$RUNNER_TEMP/package-size-candidate.json" \
+            --candidate-sha "$CANDIDATE_SHA" \
+            --baseline-sha "$BASELINE_SHA" \
+            --output package-size-report.json
+          node tools/package-size/index.mjs summary \
+            --input package-size-report.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload package size report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-size-report
+          path: package-size-report.json
+          if-no-files-found: error
+          retention-days: 14
