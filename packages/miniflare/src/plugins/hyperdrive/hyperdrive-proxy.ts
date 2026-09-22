@@ -177,9 +177,8 @@ export class HyperdriveProxyController {
 	) {
 		// Connect to real database
 		const dbSocket = net.connect({ host: targetHost, port: targetPort });
-		// The negotiation below awaits the database and, on the TLS paths, a
-		// handshake. Nothing else listens on the client socket until `pipeSockets`
-		// runs, so an error in that window would have no listener at all.
+		// Nothing listens on the client socket until pipeSockets runs, and the
+		// negotiation below awaits the database and a TLS handshake.
 		clientSocket.on("error", () => dbSocket.destroy());
 		const sslmodeRequire = sslmode === "require";
 		const sslmodePrefer = sslmode === "prefer";
@@ -416,20 +415,9 @@ async function createPlainTCPConnection(
 }
 
 /**
- * Pipes the client socket and its database-side peer together in both
- * directions, tearing both down as soon as either one errors.
- *
- * `Readable.pipe()` does not cover this on its own: the `error` listener it
- * installs on the destination removes itself and re-emits once no other
- * listener is left, which takes the whole Node process down.
- *
- * A client that goes away during the negotiation has already fired its `error`
- * and `close`, so a listener attached here would never run. The peer is torn
- * down straight away instead, which matters on the fallback paths where it was
- * opened after the client was gone.
- *
- * @param clientSocket - The socket carrying workerd's side of the connection.
- * @param peerSocket - The database-side socket, plain TCP or TLS.
+ * `pipe()` is not enough: the `error` listener it installs on the destination
+ * removes itself and re-emits once no other listener is left, which kills the
+ * process.
  */
 function pipeSockets(clientSocket: net.Socket, peerSocket: net.Socket): void {
 	const teardown = () => {
@@ -437,6 +425,8 @@ function pipeSockets(clientSocket: net.Socket, peerSocket: net.Socket): void {
 		peerSocket.destroy();
 	};
 
+	// A client that already errored will not fire again, so the peer it is about
+	// to be piped into would never be closed.
 	if (clientSocket.destroyed) {
 		teardown();
 		return;
