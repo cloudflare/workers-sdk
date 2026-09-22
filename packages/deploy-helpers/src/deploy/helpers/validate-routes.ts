@@ -1,11 +1,13 @@
 import path from "node:path";
+import { normalizeBasePath } from "@cloudflare/workers-shared/utils/base-path";
 import { UserError } from "@cloudflare/workers-utils";
 import { logger } from "../../shared/context";
 import type { AssetsOptions, Route } from "@cloudflare/workers-utils";
 
 export const validateRoutes = (
 	routes: Route[],
-	assets: AssetsOptions | undefined
+	assets: AssetsOptions | undefined,
+	workersDevEnabled?: boolean
 ) => {
 	const invalidRoutes: Record<string, string[]> = {};
 	const mountedAssetRoutes: string[] = [];
@@ -48,6 +50,18 @@ export const validateRoutes = (
 		);
 	}
 
+	const basePath = normalizeBasePath(assets?.assetConfig.base_path);
+	if (
+		workersDevEnabled === false &&
+		basePath.valid &&
+		basePath.value !== "/" &&
+		!routes.some((route) => routeMatchesPath(route, basePath.value))
+	) {
+		logger.warn(
+			`The configured assets base path "${basePath.value}" is not reachable through any configured route. Add a route that matches "${basePath.value}" or enable \`workers_dev\`.`
+		);
+	}
+
 	if (mountedAssetRoutes.length > 0 && assets?.directory !== undefined) {
 		const relativeAssetsDir = path.relative(process.cwd(), assets.directory);
 
@@ -69,3 +83,23 @@ export const validateRoutes = (
 		);
 	}
 };
+
+function routeMatchesPath(route: Route, pathname: string): boolean {
+	if (typeof route !== "string" && route.custom_domain) {
+		return true;
+	}
+
+	const pattern = typeof route === "string" ? route : route.pattern;
+	const patternWithoutScheme = pattern.replace(/^https?:\/\//, "");
+	const pathStart = patternWithoutScheme.indexOf("/");
+	if (pathStart === -1) {
+		return false;
+	}
+
+	const pathPattern = patternWithoutScheme.slice(pathStart);
+	const regexpPattern = pathPattern
+		.split("*")
+		.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+		.join(".*");
+	return new RegExp(`^${regexpPattern}$`).test(pathname);
+}
