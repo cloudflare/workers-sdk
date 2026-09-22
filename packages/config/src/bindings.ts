@@ -1,3 +1,4 @@
+import type { WorkerReference } from "./definition";
 import type {
 	InferDurableNamespaces,
 	InferExportsByType,
@@ -5,7 +6,6 @@ import type {
 	UnwrapConfig,
 } from "./inference";
 import type { Json } from "./utils";
-import type { WorkerConfigExport } from "./worker-definition";
 import type { PipelineRecord } from "cloudflare:pipelines";
 
 // JSDoc is derived from `packages/workers-utils/src/config/environment.ts` — keep both in sync.
@@ -183,8 +183,6 @@ interface DispatchNamespaceBindingOptions {
 export interface DispatchNamespaceBinding extends DispatchNamespaceBindingOptions {
 	type: "dispatch-namespace";
 }
-
-export type WorkerReference = string | WorkerConfigExport;
 
 type ReferencedWorkerConfig<TWorker extends WorkerReference> =
 	TWorker extends string ? never : UnwrapConfig<TWorker>;

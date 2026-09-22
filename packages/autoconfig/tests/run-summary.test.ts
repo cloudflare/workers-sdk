@@ -6,9 +6,9 @@ import { Astro } from "../src/frameworks/astro";
 import { Static } from "../src/frameworks/static";
 import { buildOperationsSummary } from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
-import type { WorkerConfigInput } from "@cloudflare/config";
+import type { WorkerConfig } from "@cloudflare/config";
 
-const testWorkerConfig: WorkerConfigInput = {
+const testWorkerConfig: WorkerConfig = {
 	name: "worker-name",
 	compatibilityDate: "2026-08-04",
 	observability: {
@@ -233,7 +233,6 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary.scripts).toEqual({
 				deploy: "cf deploy",
-				preview: "cf dev",
 			});
 			expect(std.out).toContain(
 				dedent`
@@ -242,8 +241,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				 - wrangler (devDependency)
 				`
 			);
-			expect(std.out).toContain('  import { defineWorker } from "cf/config";');
-			expect(std.out).toContain("  export default defineWorker({");
+			expect(std.out).toContain('  import { defineConfig } from "cf/config";');
+			expect(std.out).toContain("  export default defineConfig({");
 			expect(std.out).toContain(
 				'  import { defineWranglerConfig } from "wrangler/experimental-config";'
 			);

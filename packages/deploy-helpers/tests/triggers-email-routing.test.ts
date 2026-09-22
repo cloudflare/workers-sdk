@@ -23,6 +23,20 @@ describe("triggersDeploy Email Routing integration", () => {
 		planError = undefined;
 
 		initDeployHelpersContext({
+			createCloudflareClient: (() => ({
+				workers: {
+					beta: {
+						workers: {
+							get: async () => ({
+								subdomain: {
+									enabled: false,
+									previews_enabled: false,
+								},
+							}),
+						},
+					},
+				},
+			})) as never,
 			logger: {
 				debug() {},
 				info() {},
@@ -155,14 +169,36 @@ describe("triggersDeploy Email Routing integration", () => {
 describe("triggersDeploy preflight", () => {
 	let fetchResultRequests: string[];
 	let fetchPagedListRequests: string[];
+	let workerGetRequests: Array<[string, string]>;
 	let logs: string[];
 
 	beforeEach(() => {
 		fetchResultRequests = [];
 		fetchPagedListRequests = [];
+		workerGetRequests = [];
 		logs = [];
 
 		initDeployHelpersContext({
+			createCloudflareClient: (() => ({
+				workers: {
+					beta: {
+						workers: {
+							get: async (
+								workerName: string,
+								params: { account_id: string }
+							) => {
+								workerGetRequests.push([workerName, params.account_id]);
+								return {
+									subdomain: {
+										enabled: false,
+										previews_enabled: false,
+									},
+								};
+							},
+						},
+					},
+				},
+			})) as never,
 			logger: {
 				debug() {},
 				info() {},
@@ -317,8 +353,8 @@ describe("triggersDeploy preflight", () => {
 		});
 
 		expect(fetchPagedListRequests).toEqual([]);
+		expect(workerGetRequests).toEqual([[WORKER_NAME, ACCOUNT_ID]]);
 		expect(fetchResultRequests).toEqual([
-			`GET /accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/subdomain`,
 			`POST /accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/subdomain`,
 		]);
 	});

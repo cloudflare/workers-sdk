@@ -1,5 +1,4 @@
 import { INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE } from "@cloudflare/deploy-helpers";
-import { CONTAINER_IMAGES_BINDING } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -86,7 +85,8 @@ function containerVersion(
 		className: string;
 		name: string;
 		namespaceId?: string;
-	}>
+	}>,
+	withoutImages = false
 ): ApiVersion {
 	return {
 		id,
@@ -103,13 +103,6 @@ function containerVersion(
 		},
 		resources: {
 			bindings: [
-				{
-					type: "json",
-					name: CONTAINER_IMAGES_BINDING,
-					json: Object.fromEntries(
-						applications.map(({ className }) => [className, {}])
-					),
-				},
 				...applications.flatMap(({ className, namespaceId }) =>
 					namespaceId === undefined
 						? []
@@ -134,6 +127,12 @@ function containerVersion(
 				usage_model: "standard",
 				limits: { cpu_ms: 50 },
 				containers: applications.map(({ className, name }) => ({
+					...(!withoutImages && {
+						images: {
+							app:
+								"registry.cloudflare.com/account/app@sha256:" + "a".repeat(64),
+						},
+					}),
 					class_name: className,
 					name,
 				})),
@@ -368,7 +367,7 @@ describe("versions deploy", () => {
 		{ description: "array", json: ["hello"] },
 		{ description: "null", json: null },
 	])(
-		"rejects invalid data at the reserved image binding: $description",
+		"ignores unused legacy image variables without Container metadata: $description",
 		async ({ json }, { expect }) => {
 			const versionId = "10000000-0000-0000-0000-000000000000";
 			const version = containerVersion(versionId, [
@@ -379,7 +378,11 @@ describe("versions deploy", () => {
 				},
 			]);
 			version.resources.bindings = [
-				{ type: "json", name: CONTAINER_IMAGES_BINDING, json },
+				{
+					type: "json",
+					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					json,
+				},
 			];
 			version.resources.script_runtime.containers = undefined;
 			let deploymentRequests = 0;
@@ -403,8 +406,8 @@ describe("versions deploy", () => {
 			writeWranglerConfig();
 			await expect(
 				runWrangler(`versions deploy ${versionId}@100% --yes`)
-			).rejects.toThrow("invalid");
-			expect(deploymentRequests).toBe(0);
+			).resolves.toBeUndefined();
+			expect(deploymentRequests).toBe(1);
 			expect(applicationRequests).toBe(0);
 		}
 	);
@@ -426,32 +429,6 @@ describe("versions deploy", () => {
 		await expect(
 			runWrangler(`versions deploy ${versionId}@100% --yes`)
 		).resolves.toBeUndefined();
-	});
-
-	test("rejects generated image maps without matching Container metadata before deployment", async ({
-		expect,
-	}) => {
-		const versionId = "10000000-0000-0000-0000-000000000000";
-		const version = containerVersion(versionId, [
-			{ className: "UploadedDurableObject", name: "uploaded-app" },
-		]);
-		version.resources.script_runtime.containers = [];
-		let deploymentRequests = 0;
-		msw.use(
-			mswGetVersion(version),
-			http.post(
-				"*/accounts/:accountId/workers/scripts/:workerName/deployments",
-				() => {
-					deploymentRequests++;
-					return HttpResponse.json(createFetchResult({}));
-				}
-			)
-		);
-		writeWranglerConfig();
-		await expect(
-			runWrangler(`versions deploy ${versionId}@100% --yes`)
-		).rejects.toThrow("invalid Durable Object-managed Container metadata");
-		expect(deploymentRequests).toBe(0);
 	});
 
 	test.for([false, true])(
@@ -582,64 +559,69 @@ describe("versions deploy", () => {
 		}
 	);
 
-	test("creates a consistent multi-version Container application once", async ({
-		expect,
-	}) => {
-		const firstVersionId = "10000000-0000-0000-0000-000000000000";
-		const secondVersionId = "20000000-0000-0000-0000-000000000000";
-		const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
-		const applicationRequests: unknown[] = [];
-		msw.use(
-			http.get(
-				`*/accounts/:accountId/workers/scripts/:workerName/versions/${firstVersionId}`,
-				() =>
-					HttpResponse.json(
-						createFetchResult(
-							containerVersion(firstVersionId, [
-								{
-									className: "UploadedDurableObject",
-									name: "uploaded-app",
-									namespaceId,
-								},
-							])
+	test.for([false, true])(
+		"creates a consistent multi-version Container application once (first version without images: %s)",
+		async (withoutImages, { expect }) => {
+			const firstVersionId = "10000000-0000-0000-0000-000000000000";
+			const secondVersionId = "20000000-0000-0000-0000-000000000000";
+			const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+			const applicationRequests: unknown[] = [];
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:workerName/versions/${firstVersionId}`,
+					() =>
+						HttpResponse.json(
+							createFetchResult(
+								containerVersion(
+									firstVersionId,
+									[
+										{
+											className: "UploadedDurableObject",
+											name: "uploaded-app",
+											namespaceId,
+										},
+									],
+									withoutImages
+								)
+							)
 						)
-					)
-			),
-			http.get(
-				`*/accounts/:accountId/workers/scripts/:workerName/versions/${secondVersionId}`,
-				() =>
-					HttpResponse.json(
-						createFetchResult(
-							containerVersion(secondVersionId, [
-								{
-									className: "UploadedDurableObject",
-									name: "uploaded-app",
-									namespaceId,
-								},
-							])
+				),
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:workerName/versions/${secondVersionId}`,
+					() =>
+						HttpResponse.json(
+							createFetchResult(
+								containerVersion(secondVersionId, [
+									{
+										className: "UploadedDurableObject",
+										name: "uploaded-app",
+										namespaceId,
+									},
+								])
+							)
 						)
-					)
-			),
-			http.post("*/applications", async ({ request }) => {
-				const body = await request.json();
-				applicationRequests.push(body);
-				return HttpResponse.json(createFetchResult(body));
-			})
-		);
-		writeWranglerConfig();
+				),
+				http.post("*/applications", async ({ request }) => {
+					const body = await request.json();
+					applicationRequests.push(body);
+					return HttpResponse.json(createFetchResult(body));
+				})
+			);
+			writeWranglerConfig();
 
-		await runWrangler(
-			`versions deploy ${firstVersionId}@50% ${secondVersionId}@50% --yes`
-		);
+			await runWrangler(
+				`versions deploy ${firstVersionId}@50% ${secondVersionId}@50% --yes`
+			);
 
-		expect(applicationRequests).toEqual([
-			{
-				name: "uploaded-app",
-				scheduling_policy: "durable_object",
-				durable_objects: { namespace_id: namespaceId },
-			},
-		]);
-	});
+			expect(applicationRequests).toEqual([
+				{
+					name: "uploaded-app",
+					scheduling_policy: "durable_object",
+					durable_objects: { namespace_id: namespaceId },
+				},
+			]);
+		}
+	);
 
 	test("creates a name-only Container application after a selected version provisions its export", async ({
 		expect,

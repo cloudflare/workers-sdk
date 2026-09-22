@@ -2,11 +2,13 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
+	BUILD_OUTPUT_ROOT,
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getBuildOutputDir,
 	getContainerConfigPath,
 	getContainerDir,
-	getSettingsConfigPath,
+	getRootConfigPath,
+	getWorkerAssetsDir,
 	getWorkerConfigPath,
 	getWorkerDir,
 } from "./paths";
@@ -14,8 +16,9 @@ import type {
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputContainerConfig,
-	ParsedOutputSettingsConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
+	ConfigContext,
 } from "@cloudflare/config";
 
 /**
@@ -23,6 +26,46 @@ import type {
  */
 export async function cleanBuildOutputDir(root: string): Promise<void> {
 	await removeDir(getBuildOutputDir(root));
+}
+
+export interface WriteAssetsOptions {
+	root: string;
+	sourceDirectory: string;
+}
+
+/**
+ * Copy static assets into the Build Output Specification tree.
+ *
+ * When the project root is itself the asset source, the reserved
+ * `.cloudflare` directory is omitted so the nested output is not copied into
+ * itself.
+ */
+export async function writeAssets({
+	root,
+	sourceDirectory,
+}: WriteAssetsOptions): Promise<void> {
+	const assetsDir = getWorkerAssetsDir(root);
+	await fsp.mkdir(assetsDir, { recursive: true });
+
+	if (path.resolve(sourceDirectory) !== path.resolve(root)) {
+		await fsp.cp(sourceDirectory, assetsDir, {
+			recursive: true,
+			force: false,
+		});
+		return;
+	}
+
+	const entries = await fsp.readdir(sourceDirectory);
+	await Promise.all(
+		entries
+			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
+			.map((entry) =>
+				fsp.cp(path.join(sourceDirectory, entry), path.join(assetsDir, entry), {
+					recursive: true,
+					force: false,
+				})
+			)
+	);
 }
 
 export interface WriteWorkerConfigOptions {
@@ -33,7 +76,8 @@ export interface WriteWorkerConfigOptions {
 }
 
 /**
- * Write an output Worker `config.json` to the Build Output Specification tree.
+ * Write an output Worker `worker.config.json` to the Build Output Specification
+ * tree.
  *
  * - Workers mode: `manifest` is provided (bundle/ present on disk).
  * - Assets-only mode: `manifest` is omitted (no bundle/ directory).
@@ -60,8 +104,8 @@ export interface WriteContainerConfigOptions {
 }
 
 /**
- * Write an output Container `config.json` to the Build Output Specification
- * tree.
+ * Write an output Container `container.config.json` to the Build Output
+ * Specification tree.
  *
  * Local Dockerfiles must already have been built and represented by a
  * `localReference` in the output config.
@@ -81,27 +125,21 @@ export async function writeContainerConfig({
 }
 
 /**
- * Write the top-level `config.json` to the Build Output Specification tree.
+ * Write the root `config.json` to the Build Output Specification tree.
  *
- * Holds the project-level settings shared by every Worker: those declared by
- * the `settings` export, including the `mode`, which is supplied at build time
- * rather than declared. Always written, even when there are no declared
- * settings and no mode: the result then degrades to `{ "type": "settings" }`.
- *
- * `mode` is omitted when undefined, which is the case for Wrangler builds that
- * selected no mode (Vite always resolves one).
+ * Holds the settings declared at the top level of `cloudflare.config.ts` and
+ * build context supplied at build time.
  */
-export async function writeSettingsConfig(
+export async function writeRootConfig(
 	root: string,
 	settings: ParsedInputSettingsConfig | undefined,
-	mode?: string
+	buildContext: ConfigContext
 ): Promise<void> {
-	const outputConfig: ParsedOutputSettingsConfig = {
+	const outputConfig: ParsedOutputRootConfig = {
 		...settings,
-		type: "settings",
-		...(mode !== undefined ? { mode } : {}),
+		buildContext,
 	};
-	const configPath = getSettingsConfigPath(root);
+	const configPath = getRootConfigPath(root);
 	await fsp.mkdir(path.dirname(configPath), { recursive: true });
 	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
 }

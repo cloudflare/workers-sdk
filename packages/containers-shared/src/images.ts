@@ -4,12 +4,7 @@ import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
-import {
-	checkExposedPorts,
-	cleanupDuplicateImageTags,
-	runDockerCmd,
-	verifyDockerInstalled,
-} from "./utils";
+import { runDockerCmd, verifyDockerInstalled } from "./utils";
 import type {
 	ContainerDevOptions,
 	DockerfileConfig,
@@ -58,7 +53,7 @@ export async function pullImage(
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
 	logger: WranglerLogger | ViteLogger,
 	complianceConfig?: ComplianceConfig
-): Promise<{ abort: () => void; ready: Promise<void> }> {
+): Promise<{ abort: () => void; ready: Promise<{ aborted: boolean }> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
 	const isExternalRegistry =
@@ -92,6 +87,7 @@ export async function pullImage(
 				options.image_tag,
 			]);
 		}
+		return { aborted };
 	});
 
 	return {
@@ -108,12 +104,11 @@ export async function pullImage(
  * will be called before starting the local development server, and by a rebuild
  * hotkey during development.
  *
- * Because this runs when local dev starts, we also do some validation here,
- * such as checking if the Docker CLI is installed, and if the container images
- * expose any ports.
+ * Because this runs when local dev starts, it also checks that the Docker CLI
+ * is installed.
  *
  * @param args - Image preparation callbacks, Docker settings, and compliance configuration.
- * @returns A promise that resolves when all configured images are ready.
+ * @returns Whether image preparation was aborted before completion.
  */
 export async function prepareContainerImagesForDev(args: {
 	dockerPath: string;
@@ -127,7 +122,7 @@ export async function prepareContainerImagesForDev(args: {
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
 	complianceConfig?: ComplianceConfig;
-}): Promise<void> {
+}): Promise<{ aborted: boolean }> {
 	const {
 		dockerPath,
 		containerOptions,
@@ -189,16 +184,14 @@ export async function prepareContainerImagesForDev(args: {
 					pull.abort();
 				},
 			});
-			await pull.ready;
+			const pullResult = await pull.ready;
+			aborted ||= pullResult.aborted;
 			onContainerImagePreparationEnd({
 				containerOptions: options,
 			});
 		}
-		if (!aborted) {
-			// Clean up duplicate image tags. This is scoped to cloudflare-dev only
-			await cleanupDuplicateImageTags(dockerPath, options.image_tag);
-
-			await checkExposedPorts(dockerPath, options);
+		if (aborted) {
+			break;
 		}
 	}
 
@@ -207,6 +200,32 @@ export async function prepareContainerImagesForDev(args: {
 	if (!aborted) {
 		await pullEgressInterceptorImage(dockerPath);
 	}
+
+	return { aborted };
+}
+
+/**
+ * Determines whether an image reference belongs to the Cloudflare-managed
+ * registry, including shorthand references that omit the registry hostname.
+ *
+ * @param image - Image reference to classify.
+ * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @returns Whether the image uses the Cloudflare-managed registry.
+ */
+export function isCloudflareRegistryImage(
+	image: string,
+	complianceConfig?: ComplianceConfig
+): boolean {
+	let url: URL | undefined;
+	try {
+		url = new URL(`http://${image}`);
+	} catch {}
+
+	return (
+		url === undefined ||
+		(!url.host.match(/[:.]/) && url.hostname !== "localhost") ||
+		url.hostname === getCloudflareContainerRegistry(complianceConfig)
+	);
 }
 
 /**

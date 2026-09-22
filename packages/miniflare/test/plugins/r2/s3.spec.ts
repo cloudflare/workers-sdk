@@ -52,7 +52,6 @@ const ctx = miniflareTest<{ BUCKET: R2Bucket }, MiniflareTestContext>(
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -2127,7 +2126,6 @@ test("rejects different S3 credentials for the same bucket", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest("export default {};"),
@@ -2144,7 +2142,6 @@ test("rejects different S3 credentials for the same bucket", async ({
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest("export default {};"),
@@ -2182,7 +2179,6 @@ test("verifies signatures against the original host when `upstream` is set", asy
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(

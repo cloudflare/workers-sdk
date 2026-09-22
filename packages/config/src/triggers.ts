@@ -161,17 +161,21 @@ export interface Triggers {
  *
  * @example
  * ```typescript
- * import { defineWorker, triggers } from "@cloudflare/config";
+ * import { defineConfig, triggers } from "@cloudflare/config";
  *
- * export default defineWorker({
- *   triggers: [
- *     triggers.fetch({ pattern: "example.com/*", zone: "example.com" }),
- *     triggers.queue({ name: "my-queue" }),
- *     triggers.scheduled({ schedule: "0 * * * *" }),
- *     triggers.scheduled({ schedule: "30 0 * * *" }),
- *     triggers.email({ addresses: ["support@example.com"] }),
- *     triggers.connect({ protocol: "tcp", port: 5432 }),
- *   ],
+ * export default defineConfig({
+ *   worker: {
+ *     name: "my-worker",
+ *     compatibilityDate: "2026-09-17",
+ *     triggers: [
+ *       triggers.fetch({ pattern: "example.com/*", zone: "example.com" }),
+ *       triggers.queue({ name: "my-queue" }),
+ *       triggers.scheduled({ schedule: "0 * * * *" }),
+ *       triggers.scheduled({ schedule: "30 0 * * *" }),
+ *       triggers.email({ addresses: ["support@example.com"] }),
+ *       triggers.connect({ protocol: "tcp", port: 5432 }),
+ *     ],
+ *   },
  * });
  * ```
  */
