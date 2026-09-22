@@ -18,7 +18,8 @@ const apiContainer = defineContainer(({ mode }) => ({
 			: undefined,
 }));
 
-export default defineConfig({
+// This fixture checks Container build output without starting Containers locally.
+export default defineConfig(({ mode }) => ({
 	worker: {
 		name: "build-output-worker",
 		entrypoint,
@@ -26,12 +27,12 @@ export default defineConfig({
 		exports: {
 			ApiContainer: workerExports.durableObject({
 				storage: "sqlite",
-				container: apiContainer,
+				container: mode === "production" ? apiContainer : undefined,
 			}),
 		},
 		env: {
 			MY_TEXT: bindings.text("hello from text binding"),
 		},
 	},
-	containers: [apiContainer],
-});
+	containers: mode === "production" ? [apiContainer] : [],
+}));

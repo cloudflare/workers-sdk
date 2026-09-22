@@ -10,7 +10,7 @@ const ADMIN_API = "SecretsStoreSecret::admin_api";
  * ```ts
  * import { adminSecretsStore } from "cloudflare:test";
  *
- * const admin = adminSecretsStore(env.MY_SECRET);
+ * using admin = adminSecretsStore(env.MY_SECRET);
  * await admin.create("my-secret-value");
  * ```
  */
