@@ -235,9 +235,16 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
 
-			setTemporaryAllowed(
+			const temporaryAllowed =
 				def.behaviour?.supportTemporary === true &&
-					Boolean((args as { temporary?: boolean }).temporary)
+				Boolean((args as { temporary?: boolean }).temporary);
+			const eventCode =
+				"eventCode" in args && typeof args.eventCode === "string"
+					? args.eventCode
+					: undefined;
+			setTemporaryAllowed(
+				temporaryAllowed,
+				temporaryAllowed && eventCode ? { eventCode } : undefined
 			);
 
 			await run(experimentalFlags, async () => {

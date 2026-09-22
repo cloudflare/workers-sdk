@@ -37,6 +37,7 @@ import { createPreferences } from "./preferences";
 import { createTemporaryTermsPrompt } from "./temporary-terms";
 import type { UserAuthConfig } from "../config-file/auth";
 import type { TemporaryPreviewAccount } from "../config-file/temporary";
+import type { TemporaryAccountRequest } from "../context";
 import type { CredentialStore } from "../credential-store";
 import type {
 	LoginOrRefreshFailureReason,
@@ -81,7 +82,10 @@ export interface CloudflareAuth {
 	/** The currently-active credential store for the active profile. */
 	getCredentialStore: () => CredentialStore;
 	/** Mark whether `--temporary` is permitted for the current invocation. */
-	setTemporaryAllowed: (allowed: boolean) => void;
+	setTemporaryAllowed: (
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	) => void;
 
 	/** Resolve API credentials (env / temporary account / stored OAuth token). */
 	getAPIToken: () => ApiCredentials | undefined;
@@ -272,8 +276,11 @@ export function createCloudflareAuth(
 		return credentialStorage.getActiveStore(oauthFlow.getActiveProfile());
 	}
 
-	function setTemporaryAllowed(allowed: boolean): void {
-		oauthFlow.setTemporaryAllowed(allowed);
+	function setTemporaryAllowed(
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	): void {
+		oauthFlow.setTemporaryAllowed(allowed, request);
 	}
 
 	function getAPIToken(): ApiCredentials | undefined {
