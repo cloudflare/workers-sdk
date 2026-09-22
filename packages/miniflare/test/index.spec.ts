@@ -2,7 +2,6 @@
 
 import assert from "node:assert";
 import childProcess from "node:child_process";
-import dgram from "node:dgram";
 import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -3588,13 +3587,6 @@ test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect()
 	expect,
 	onTestFinished,
 }) => {
-	const probe = dgram.createSocket("udp4");
-	probe.bind(0, "127.0.0.1");
-	await once(probe, "listening");
-	const port = probe.address().port;
-	probe.close();
-	await once(probe, "close");
-
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -3616,7 +3608,7 @@ test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect()
 						{
 							type: "connect",
 							protocol: "udp",
-							port,
+							port: 0,
 							idleTimeoutMs: 1_000,
 							maxPendingBytes: 65_536,
 						},
@@ -3631,11 +3623,8 @@ test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect()
 		"No TCP connect triggers configured for entrypoint worker"
 	);
 
-	const client = dgram.createSocket("udp4");
-	onTestFinished(() => {
-		client.close();
-	});
-	client.send("hello", port, "127.0.0.1");
+	const client = await mf.dispatchConnect({ protocol: "udp" });
+	client.send("hello");
 	const [message] = await once(client, "message");
 	expect(message.toString()).toBe("hello");
 });
@@ -3720,7 +3709,10 @@ test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
 							},
 						};
 					`),
-					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+					triggers: [
+						{ type: "connect", protocol: "tcp", port: 0 },
+						{ type: "connect", protocol: "udp", port: 0 },
+					],
 				},
 			},
 		],
@@ -3734,9 +3726,11 @@ test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
 
 	const socket = await mf.dispatchConnect();
 	const closed = once(socket, "close");
+	const datagramSocket = await mf.dispatchConnect({ protocol: "udp" });
+	const datagramClosed = once(datagramSocket, "close");
 	await mf.dispose();
 	disposed = true;
-	await closed;
+	await Promise.all([closed, datagramClosed]);
 	expect(socket.destroyed).toBe(true);
 });
 
