@@ -6,9 +6,7 @@ import { getJsonResponse, isBuild, rootDir } from "../../__test-utils__";
 describe.runIf(isBuild)("output directories", () => {
 	test("creates the correct output directories", ({ expect }) => {
 		expect(fs.existsSync(getWorkerBundleDir(rootDir))).toBe(true);
-		expect(fs.existsSync(getWorkerBundleDir(rootDir, "auxiliary-worker"))).toBe(
-			true
-		);
+		expect(fs.existsSync(getWorkerBundleDir(rootDir, "worker-b"))).toBe(true);
 	});
 });
 

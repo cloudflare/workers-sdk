@@ -15,11 +15,16 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			types: { includeRuntime: false },
-			auxiliaryWorkers: {
-				auxiliaryWorker: {
+			auxiliaryWorkers: [
+				{
+					config: {
+						name: "worker-b",
+						entrypoint: "./worker-b/index.ts",
+						compatibilityDate: "2024-12-30",
+					},
 					viteEnvironment: { name: "worker_b" },
 				},
-			},
+			],
 			inspectorPort: false,
 			persistState: false,
 		}),

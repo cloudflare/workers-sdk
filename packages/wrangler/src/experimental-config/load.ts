@@ -2,8 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import {
 	convertToWranglerConfig,
-	getContainerConfigExports,
-	loadAndValidateConfig,
+	loadAndParseConfig,
 	loadConfig,
 } from "@cloudflare/config";
 import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
@@ -16,8 +15,7 @@ import {
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
 import type {
-	ParsedInputContainerConfig,
-	ParsedInputSettingsConfig,
+	ParsedInputConfig,
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -30,11 +28,9 @@ export interface NormalizedTypes {
 	includeRuntime: boolean;
 }
 
-export interface ParsedProjectConfig {
+export type ParsedProjectConfig = ParsedInputConfig & {
 	worker: ParsedInputWorkerConfig;
-	settings: ParsedInputSettingsConfig | undefined;
-	containers: Record<string, ParsedInputContainerConfig>;
-}
+};
 
 export interface LoadNewConfigResult {
 	/** Merged result: `cloudflare.config.ts` runtime + `wrangler.config.ts` tooling. */
@@ -57,7 +53,7 @@ export interface LoadNewConfigResult {
 }
 
 /**
- * Load and validate the new TypeScript-based configuration files.
+ * Load and parse the new TypeScript-based configuration files.
  *
  * - `cloudflare.config.ts` is required.
  * - `wrangler.config.ts` is optional (defaults apply when missing).
@@ -86,52 +82,40 @@ export async function loadNewConfig(options: {
 
 	const mode = args.env ?? getCloudflareEnv();
 
-	// ── Worker + settings config ────────────────────────────────────────
-	const workerConfigResult = await loadAndValidateConfig(cloudflareConfigPath, {
+	// ── Cloudflare config ───────────────────────────────────────────────
+	const configResult = await loadAndParseConfig(cloudflareConfigPath, {
 		isPreview,
 		mode,
 	});
 
-	if (!workerConfigResult.result.success) {
+	if (!configResult.result.success) {
 		throw new UserError(
-			`Invalid \`${CLOUDFLARE_CONFIG_FILENAME}\`:\n${formatZodError(workerConfigResult.result.error)}`,
+			`Invalid \`${CLOUDFLARE_CONFIG_FILENAME}\`:\n${formatZodError(configResult.result.error)}`,
 			{ telemetryMessage: "new-config worker validation failed" }
 		);
 	}
 
-	const worker =
-		workerConfigResult.result.data.default?.type === "worker"
-			? workerConfigResult.result.data.default
-			: undefined;
-
-	if (worker === undefined) {
+	if (configResult.result.data.worker === undefined) {
 		throw new UserError(
-			`\`${CLOUDFLARE_CONFIG_FILENAME}\` must have a default worker export.`,
-			{ telemetryMessage: "new-config worker default export missing" }
+			`\`${CLOUDFLARE_CONFIG_FILENAME}\` must define a Worker using the \`worker\` property.`,
+			{ telemetryMessage: "new-config worker missing" }
 		);
 	}
 
-	const settings =
-		workerConfigResult.result.data.settings?.type === "settings"
-			? workerConfigResult.result.data.settings
-			: undefined;
 	const parsedConfig: ParsedProjectConfig = {
-		worker,
-		settings,
-		containers: getContainerConfigExports(workerConfigResult.result.data),
+		...configResult.result.data,
+		worker: configResult.result.data.worker,
 	};
 
 	// ── Wrangler (tooling) config ───────────────────────────────────────
-	let wranglerConfigResult:
-		| { exports: Record<string, unknown>; dependencies: Set<string> }
-		| undefined;
+	let wranglerConfigResult: Awaited<ReturnType<typeof loadConfig>> | undefined;
 	let parsedWranglerConfig: { data: ParsedWranglerConfig } | undefined;
 
 	if (wranglerConfigPath !== undefined) {
 		wranglerConfigResult = await loadConfig(wranglerConfigPath);
 
 		const resolvedWranglerConfig = await resolveWranglerConfig(
-			wranglerConfigResult.exports.default,
+			wranglerConfigResult.config,
 			{ isPreview, mode }
 		);
 
@@ -146,11 +130,7 @@ export async function loadNewConfig(options: {
 	}
 
 	// ── Conversion + merge ──────────────────────────────────────────────
-	const rawWorkerConfig: RawConfig = convertToWranglerConfig(
-		parsedConfig.worker,
-		parsedConfig.settings,
-		Object.values(parsedConfig.containers)
-	);
+	const rawWorkerConfig: RawConfig = convertToWranglerConfig(parsedConfig);
 
 	const rawWranglerConfig = convertToolingConfig(
 		parsedWranglerConfig?.data ?? {}
@@ -166,7 +146,7 @@ export async function loadNewConfig(options: {
 	};
 
 	// ── Dependencies (union of both files) ──────────────────────────────
-	const dependencies = new Set(workerConfigResult.dependencies);
+	const dependencies = new Set(configResult.dependencies);
 	if (wranglerConfigResult) {
 		for (const dep of wranglerConfigResult.dependencies) {
 			dependencies.add(dep);

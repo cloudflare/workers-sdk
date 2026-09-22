@@ -48,19 +48,12 @@ function createMockPluginContext(options: {
 	Object.defineProperty(ctx, "resolvedPluginConfig", {
 		value: {
 			type: options.type,
+			settings: { accountId: options.account_id },
 			tunnel: {
 				autoStart: options.tunnel?.autoStart ?? false,
 				name: options.tunnel?.name,
 			},
 		},
-	});
-	Object.defineProperty(ctx, "settings", {
-		value: options.account_id
-			? {
-					type: "settings",
-					accountId: options.account_id,
-				}
-			: undefined,
 	});
 	return ctx;
 }

@@ -106,6 +106,21 @@ for (const source of imageSource) {
 											.fetch("http://foo/bar/baz");
 										return new Response(await res.text());
 
+									case "/exec": {
+										const process = await this.container.exec([
+											"node",
+											"-p",
+											"process.platform",
+										]);
+										const stdout = process.stdout
+											? await new Response(process.stdout).text()
+											: "";
+										return Response.json({
+											stdout,
+											exitCode: await process.exitCode,
+										});
+									}
+
 									case "/setup-intercept":
 										await this.container.interceptOutboundHttp(
 											"11.0.0.1:80",
@@ -140,7 +155,6 @@ for (const source of imageSource) {
 						WORKDIR /usr/src/app
 
 						COPY ./container/app.js app.js
-						EXPOSE 8080
 						`,
 				"container/app.js": dedent`
 					const { createServer } = require("http");
@@ -273,6 +287,13 @@ for (const source of imageSource) {
 				});
 				text = await response.text();
 				expect(text).toBe("Hello World! Have an env var! I'm an env var!");
+			});
+
+			response = await fetch(`${ready.url}/exec`);
+			expect(response.status).toBe(200);
+			expect(await response.json()).toEqual({
+				stdout: "linux\n",
+				exitCode: 0,
 			});
 
 			// Set up egress HTTP interception so the container can call back to the worker
@@ -434,23 +455,6 @@ for (const source of imageSource) {
 			expect(await worker.output).not.toContain(
 				"Preparing container image(s)..."
 			);
-		});
-
-		it("errors if no ports are exposed", async ({ expect }) => {
-			await helper.seed({
-				Dockerfile: dedent`
-								FROM alpine:latest
-								CMD ["echo", "hello world"]
-								`,
-			});
-			if (source === "pull") {
-				await helper.run(
-					`wrangler containers build . -t ${workerName}:tmp-e2e -p`
-				);
-			}
-			const worker = helper.runLongLived("wrangler dev");
-			expect(await worker.exitCode).toBe(1);
-			expect(await worker.output).toContain("does not expose any ports");
 		});
 
 		it("errors if docker is not installed", async ({ expect }) => {

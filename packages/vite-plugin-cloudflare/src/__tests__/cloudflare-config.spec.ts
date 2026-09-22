@@ -49,12 +49,14 @@ describe("cloudflare.config.ts", () => {
 		fs.writeFileSync(
 			path.join(root, "cloudflare.config.ts"),
 			[
-				"import { defineWorker } from '@cloudflare/config';",
-				"export default defineWorker({",
-				"  name: 'entry-worker',",
-				"  entrypoint: './src/index.ts',",
-				"  compatibilityDate: '2024-12-30',",
-				options?.env ?? "",
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig({",
+				"  worker: {",
+				"    name: 'entry-worker',",
+				"    entrypoint: './src/index.ts',",
+				"    compatibilityDate: '2024-12-30',",
+				options?.env ? `  ${options.env}` : "",
+				"  },",
 				"});",
 			].join("\n")
 		);
@@ -66,7 +68,6 @@ describe("cloudflare.config.ts", () => {
 		expect(result.type).toBe("assets-only");
 		if (result.type === "assets-only") {
 			expect(result.configPaths).toEqual(new Set());
-			expect(result.parsedConfig).toEqual({});
 		}
 	});
 
@@ -94,38 +95,6 @@ describe("cloudflare.config.ts", () => {
 		});
 	});
 
-	test("does not generate types for an entry Worker configured only in Vite", async ({
-		expect,
-	}) => {
-		fs.mkdirSync(path.join(root, "src"), { recursive: true });
-		fs.writeFileSync(path.join(root, "src/index.ts"), "export default {};");
-		fs.writeFileSync(
-			path.join(root, "cloudflare.config.ts"),
-			"export const settings = { type: 'settings' };"
-		);
-
-		const result = await resolvePluginConfig(
-			{ config: { entrypoint: "./src/index.ts" } },
-			{ root },
-			viteEnv
-		);
-
-		expect(result.type).toBe("workers");
-		if (result.type === "workers") {
-			expect(
-				result.environmentNameToWorkerMap.get(result.entryWorkerEnvironmentName)
-					?.config.entrypoint
-			).toBe("./src/index.ts");
-			expect(result.configPaths).toContain(
-				path.join(root, "cloudflare.config.ts")
-			);
-		}
-		expect(fs.existsSync(path.join(root, "worker-configuration.d.ts"))).toBe(
-			false
-		);
-		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
-	});
-
 	test("generates types from the config file before applying the entry customizer", async ({
 		expect,
 	}) => {
@@ -136,6 +105,7 @@ describe("cloudflare.config.ts", () => {
 		const result = (await resolvePluginConfig(
 			{
 				config: {
+					compatibilityDate: "2025-01-15",
 					env: { PLUGIN_ONLY: { type: "text", value: "plugin" } },
 				},
 			},
@@ -148,14 +118,12 @@ describe("cloudflare.config.ts", () => {
 			FILE_ONLY: { type: "text", value: "file" },
 			PLUGIN_ONLY: { type: "text", value: "plugin" },
 		});
-		const parsedEntry = result.parsedConfig.default;
-		expect(parsedEntry?.type).toBe("worker");
-		if (parsedEntry?.type === "worker") {
-			expect(parsedEntry.env).toEqual({
-				FILE_ONLY: { type: "text", value: "file" },
-			});
-		}
-
+		expect(entry?.config.compatibilityDate).toBe("2025-01-15");
+		expect(generateRuntimeTypesMock).toHaveBeenCalledWith({
+			compatibilityDate: "2024-12-30",
+			compatibilityFlags: [],
+			existingContent: undefined,
+		});
 		const content = fs.readFileSync(
 			path.join(root, "worker-configuration.d.ts"),
 			"utf8"

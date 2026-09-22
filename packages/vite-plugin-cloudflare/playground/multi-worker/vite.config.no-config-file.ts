@@ -13,15 +13,15 @@ export default defineConfig({
 					WORKER_D: { type: "worker", worker: "worker-d" },
 				},
 			},
-			auxiliaryWorkers: {
-				workerD: {
+			auxiliaryWorkers: [
+				{
 					config: {
 						name: "worker-d",
 						entrypoint: "./worker-d/index.ts",
 						compatibilityDate: "2024-12-30",
 					},
 				},
-			},
+			],
 			inspectorPort: false,
 			persistState: false,
 		}),

@@ -59,7 +59,10 @@ export function addShortcuts(
 			const workerConfigs = ctx.allWorkerConfigs;
 
 			for (const workerConfig of workerConfigs) {
-				const wranglerConfig = convertToWranglerConfig(workerConfig);
+				const wranglerConfig = convertToWranglerConfig({
+					worker: workerConfig,
+					containers: [],
+				});
 				const bindings = convertConfigToBindings(wranglerConfig, {
 					usePreviewIds: true,
 				});

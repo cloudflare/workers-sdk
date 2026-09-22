@@ -1,7 +1,9 @@
-import { defineWorker } from "@cloudflare/vite-plugin/experimental-config";
+import { defineConfig } from "@cloudflare/vite-plugin/experimental-config";
 
-export default defineWorker({
-	name: "worker",
-	entrypoint: "nonexistent-bare-module",
-	compatibilityDate: "2025-11-28",
+export default defineConfig({
+	worker: {
+		name: "worker",
+		entrypoint: "nonexistent-bare-module",
+		compatibilityDate: "2025-11-28",
+	},
 });

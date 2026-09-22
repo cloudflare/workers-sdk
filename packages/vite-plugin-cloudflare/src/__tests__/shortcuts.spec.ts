@@ -76,17 +76,19 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		fs.writeFileSync(
 			path.join(tempDir, "cloudflare.config.ts"),
 			[
-				"import { defineWorker } from '@cloudflare/config';",
-				"export default defineWorker({",
-				"  name: 'primary-worker',",
-				"  entrypoint: './src/index.ts',",
-				"  compatibilityDate: '2024-12-30',",
-				"  env: {",
-				"    KV: { type: 'kv', id: 'test-kv-id' },",
-				"    IMAGES: { type: 'images' },",
-				"    WAE: { type: 'analytics-engine-dataset', name: 'test' },",
-				"    HYPERDRIVE: { type: 'hyperdrive', id: 'test-hyperdrive-id', dev: { connectionString: 'postgres://localhost/test' } },",
-				"    RATE_LIMITER: { type: 'rate-limit', namespace: '1001', simple: { limit: 1, period: 60 } },",
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig({",
+				"  worker: {",
+				"    name: 'primary-worker',",
+				"    entrypoint: './src/index.ts',",
+				"    compatibilityDate: '2024-12-30',",
+				"    env: {",
+				"      KV: { type: 'kv', id: 'test-kv-id' },",
+				"      IMAGES: { type: 'images' },",
+				"      WAE: { type: 'analytics-engine-dataset', name: 'test' },",
+				"      HYPERDRIVE: { type: 'hyperdrive', id: 'test-hyperdrive-id', dev: { connectionString: 'postgres://localhost/test' } },",
+				"      RATE_LIMITER: { type: 'rate-limit', namespace: '1001', simple: { limit: 1, period: 60 } },",
+				"    },",
 				"  },",
 				"});",
 			].join("\n")
@@ -111,26 +113,27 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 			restartingDevServerCount: 0,
 			tunnelHostnames: new Set(),
 		});
-		if (options?.auxiliaryWorker) {
-			fs.appendFileSync(
-				path.join(tempDir, "cloudflare.config.ts"),
-				[
-					"export const auxiliaryWorker = defineWorker({",
-					"  name: 'auxiliary-worker',",
-					"  entrypoint: './aux/index.ts',",
-					"  compatibilityDate: '2024-12-30',",
-					"  env: {",
-					"    SERVICE: { type: 'worker', worker: 'primary-worker' },",
-					"  },",
-					"});",
-				].join("\n")
-			);
-		}
-
 		mockContext.setResolvedPluginConfig(
 			await resolvePluginConfig(
 				{
 					types: { generate: false },
+					auxiliaryWorkers: options?.auxiliaryWorker
+						? [
+								{
+									config: {
+										name: "auxiliary-worker",
+										entrypoint: "./aux/index.ts",
+										compatibilityDate: "2024-12-30",
+										env: {
+											SERVICE: {
+												type: "worker",
+												worker: "primary-worker",
+											},
+										},
+									},
+								},
+							]
+						: undefined,
 				},
 				{ root: tempDir },
 				{ command: "serve", mode: "development" }

@@ -115,7 +115,6 @@ async function warmChromeInstall(): Promise<void> {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "warmup",
 					compatibilityDate: "2024-11-20",
 					manifest: singleModuleManifest(BROWSER_WORKER_SCRIPT()),
@@ -156,7 +155,6 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(BROWSER_WORKER_SCRIPT()),
@@ -192,7 +190,6 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker-a",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(workerScript("BROWSER_A")),
@@ -201,7 +198,6 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 					},
 					{
 						config: {
-							type: "worker",
 							name: "worker-b",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(workerScript("BROWSER_B")),
@@ -247,7 +243,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(BROWSER_WORKER_CLOSE_SCRIPT),
@@ -300,7 +295,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(BROWSER_WORKER_REUSE_SCRIPT),
@@ -397,7 +391,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(BROWSER_WORKER_RECONNECT_SCRIPT),
@@ -447,7 +440,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -503,7 +495,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(GET_SESSIONS_SCRIPT),
@@ -561,7 +552,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -595,7 +585,6 @@ export default {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2024-11-20",
 						manifest: singleModuleManifest(
@@ -623,7 +612,6 @@ export default {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2024-11-20",
 						manifest: singleModuleManifest(
@@ -665,7 +653,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_SESSION_SCRIPT),
@@ -718,7 +705,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_JSON_SCRIPT),
@@ -784,7 +770,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_DELETE_SCRIPT),
@@ -848,7 +833,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_BROWSER_WS_SCRIPT),
@@ -886,7 +870,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -945,7 +928,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_JSON_PROTOCOL_SCRIPT),
@@ -995,7 +977,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -1049,7 +1030,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_PAGE_WS_SCRIPT),
@@ -1081,7 +1061,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -1173,7 +1152,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_DELETE_ALL_WS_SCRIPT),
@@ -1204,7 +1182,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(

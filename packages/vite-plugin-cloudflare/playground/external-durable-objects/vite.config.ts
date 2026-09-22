@@ -7,6 +7,18 @@ export default defineConfig({
 			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
+			auxiliaryWorkers: [
+				{
+					config: {
+						name: "worker-b",
+						entrypoint: "./worker-b/index.ts",
+						compatibilityDate: "2024-12-30",
+						exports: {
+							Counter: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		}),
 	],
 });

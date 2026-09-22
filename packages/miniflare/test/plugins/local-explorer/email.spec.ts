@@ -342,7 +342,6 @@ function emailPeerOptions(
 		workers: workerNames.map((name) => ({
 			dev: { unsafeRegisterWorker: register },
 			config: {
-				type: "worker",
 				name,
 				compatibilityDate: "2025-03-17",
 				manifest: singleModuleManifest(EMAIL_WORKER),
@@ -376,7 +375,6 @@ describe("Local Explorer email API", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: WORKER_NAME,
 						compatibilityDate: "2025-03-17",
 						manifest: singleModuleManifest(EMAIL_WORKER),
@@ -387,7 +385,6 @@ describe("Local Explorer email API", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: NO_EMAIL_HANDLER_WORKER_NAME,
 						compatibilityDate: "2025-03-17",
 						manifest: singleModuleManifest(NO_EMAIL_HANDLER_WORKER),

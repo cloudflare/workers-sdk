@@ -2140,7 +2140,10 @@ describe("wrangler preview", () => {
 			expect((thrown as Error).message).toContain("IMPORTANT_BINDING");
 			expect((thrown as Error).message).toContain('"id": "<REPLACE_ME>"');
 			expect((thrown as Error).message).not.toContain("kv-id-123");
-			expect(std.warn).toContain(
+			expect((thrown as Error).message).toMatch(
+				/}\n\nReplace each <REPLACE_ME> placeholder with a Preview-safe value\. Do not use production resources unless you intend for this Preview to access them\.$/
+			);
+			expect(std.warn).not.toContain(
 				"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them."
 			);
 		});
@@ -2285,12 +2288,11 @@ describe("wrangler preview", () => {
 				.filter(
 					(message) =>
 						typeof message === "string" &&
-						(message.startsWith(
+						message.startsWith(
 							"These settings have limitations in Worker Previews"
-						) ||
-							message.startsWith("Replace each <REPLACE_ME>"))
+						)
 				);
-			expect(conversionWarnings).toHaveLength(2);
+			expect(conversionWarnings).toHaveLength(1);
 		});
 
 		test("should not warn about top-level bindings when they are present in local previews config", async ({
@@ -3073,7 +3075,7 @@ describe("wrangler preview", () => {
 			expect(std.warn).not.toContain("ASSETS");
 		});
 
-		test("should output preview and deployment JSON with --json", async ({
+		test("should output preview and deployment JSON for wrangler-action when the Preview API omits the Worker name", async ({
 			expect,
 		}) => {
 			const outputFile = "./output.json";
@@ -3101,7 +3103,6 @@ describe("wrangler preview", () => {
 									name: "test-preview",
 									slug: "test-preview",
 									urls: ["https://test-preview.test-worker.cloudflare.app"],
-									worker_name: "test-worker",
 									created_on: new Date().toISOString(),
 								},
 							},
@@ -3129,10 +3130,13 @@ describe("wrangler preview", () => {
 				)
 			);
 
-			await runWrangler("preview --name test-preview --json", {
-				...process.env,
-				WRANGLER_OUTPUT_FILE_PATH: outputFile,
-			});
+			await runWrangler(
+				"preview --name test-preview --worker-name override-worker --json",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: outputFile,
+				}
+			);
 
 			expect(std.out).toContain('"preview"');
 			expect(std.out).toContain('"deployment"');
@@ -3148,7 +3152,7 @@ describe("wrangler preview", () => {
 				expect.objectContaining({
 					type: "preview",
 					version: 1,
-					worker_name: "test-worker",
+					worker_name: "override-worker",
 					preview_id: "preview-id-json",
 					preview_name: "test-preview",
 					preview_slug: "test-preview",

@@ -3,7 +3,7 @@ import * as path from "node:path";
 import {
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getWorkerBundleDir,
-	writeSettingsConfig as writeBuildOutputSettingsConfig,
+	writeRootConfig as writeBuildOutputRootConfig,
 	writeWorkerConfig as writeBuildOutputWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import * as vite from "vite";
@@ -48,7 +48,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					);
 				}
 
-				await writeSettingsConfig();
+				await writeRootConfig();
 			},
 		},
 	};
@@ -180,23 +180,24 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 	}
 
 	/**
-	 * Write the top-level `config.json`, recording the settings shared by every
+	 * Write the root `config.json`, recording the settings shared by every
 	 * Worker, including the Vite mode the build ran in.
 	 *
-	 * Written even when there is no `settings` export, so the mode is always
-	 * captured.
+	 * Written even when there are no account settings, so the build context is
+	 * always captured.
 	 */
-	async function writeSettingsConfig(): Promise<void> {
+	async function writeRootConfig(): Promise<void> {
 		if (ctx.resolvedPluginConfig.type === "preview") {
 			return;
 		}
-		const settings = ctx.resolvedPluginConfig.parsedConfig.settings;
 
-		await writeBuildOutputSettingsConfig(
+		await writeBuildOutputRootConfig(
 			ctx.resolvedViteConfig.root,
-			settings,
-			ctx.resolvedViteConfig.mode,
-			isPreviewBuild()
+			ctx.resolvedPluginConfig.settings,
+			{
+				isPreview: isPreviewBuild(),
+				mode: ctx.resolvedViteConfig.mode,
+			}
 		);
 	}
 });

@@ -34,7 +34,7 @@ describe("pre-rendering", () => {
 				".cloudflare/output/v0/workers/prerender"
 			);
 			const config = JSON.parse(
-				fs.readFileSync(path.join(workerDir, "config.json"), "utf-8")
+				fs.readFileSync(path.join(workerDir, "worker.config.json"), "utf-8")
 			) as { manifest: { mainModule: string } };
 
 			expect(

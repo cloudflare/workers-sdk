@@ -13,9 +13,8 @@ vi.mock("@cloudflare/build-output-utils", async (importOriginal) => ({
 
 function createWorker(name: string): BuildOutputWorker {
 	return {
-		configPath: `/project/${name}/config.json`,
+		configPath: `/project/${name}/worker.config.json`,
 		config: {
-			type: "worker",
 			name,
 			compatibilityDate: "2024-12-30",
 		},
@@ -33,7 +32,7 @@ describe("readBuildOutputPreview", () => {
 		expect,
 	}) => {
 		readBuildOutputMock.mockResolvedValue({
-			settings: undefined,
+			rootConfig: { buildContext: { isPreview: false } },
 			workers: {
 				default: createWorker("entry-worker"),
 				"auxiliary-worker": createWorker("auxiliary-worker"),
@@ -53,7 +52,7 @@ describe("readBuildOutputPreview", () => {
 		expect,
 	}) => {
 		readBuildOutputMock.mockResolvedValue({
-			settings: undefined,
+			rootConfig: { buildContext: { isPreview: false } },
 			workers: {
 				default: createWorker("entry-worker"),
 				"auxiliary-worker": createWorker("auxiliary-worker"),
@@ -73,7 +72,7 @@ describe("readBuildOutputPreview", () => {
 		expect,
 	}) => {
 		readBuildOutputMock.mockResolvedValue({
-			settings: undefined,
+			rootConfig: { buildContext: { isPreview: false } },
 			workers: {
 				default: createWorker("entry-worker"),
 				"auxiliary-worker": createWorker("auxiliary-worker"),

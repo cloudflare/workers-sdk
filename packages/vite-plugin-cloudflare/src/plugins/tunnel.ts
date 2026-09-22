@@ -457,8 +457,10 @@ export async function setupDevTunnel(
 		origin,
 		shortcutPressed,
 		name: tunnel.name,
-		accountId: ctx.settings?.accountId,
-		complianceRegion: toApiComplianceRegion(ctx.settings?.complianceRegion),
+		accountId: ctx.resolvedPluginConfig.settings.accountId,
+		complianceRegion: toApiComplianceRegion(
+			ctx.resolvedPluginConfig.settings.complianceRegion
+		),
 		profileDir: server.config.root,
 		// We will restart the server with the tunnel hostnames in allowedHosts if needed
 		allowedHosts: true,
@@ -530,8 +532,10 @@ export async function setupPreviewTunnel(
 		shortcutPressed,
 		name: tunnel.name,
 		allowedHosts: preview?.allowedHosts,
-		accountId: ctx.settings?.accountId,
-		complianceRegion: toApiComplianceRegion(ctx.settings?.complianceRegion),
+		accountId: ctx.resolvedPluginConfig.settings.accountId,
+		complianceRegion: toApiComplianceRegion(
+			ctx.resolvedPluginConfig.settings.complianceRegion
+		),
 		profileDir: server.config.root,
 	});
 
