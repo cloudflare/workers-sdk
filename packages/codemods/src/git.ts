@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { lstat } from "node:fs/promises";
+import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -45,7 +45,13 @@ function isGitUnavailable(error: unknown): boolean {
  * @returns Whether the directory may belong to a Git worktree.
  */
 async function hasGitMetadata(cwd: string): Promise<boolean> {
-	let currentDirectory = path.resolve(cwd);
+	let currentDirectory: string;
+	try {
+		currentDirectory = await realpath(cwd);
+	} catch {
+		return true;
+	}
+
 	while (true) {
 		try {
 			await lstat(path.join(currentDirectory, ".git"));
