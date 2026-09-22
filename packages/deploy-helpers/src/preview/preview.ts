@@ -1299,6 +1299,7 @@ export async function previewBuildOutput(
 		assetConfig: {
 			html_handling: convertedConfig.assets?.html_handling,
 			not_found_handling: convertedConfig.assets?.not_found_handling,
+			base_path: convertedConfig.assets?.base_path,
 		},
 		run_worker_first: convertedConfig.assets?.run_worker_first,
 	};
