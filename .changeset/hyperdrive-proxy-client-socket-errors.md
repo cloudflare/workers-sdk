@@ -2,8 +2,8 @@
 "miniflare": patch
 ---
 
-Handle client socket errors in the Hyperdrive proxy
+Prevent Hyperdrive bindings from crashing local dev when a connection fails
 
-The local Hyperdrive proxy pipes the client socket and the database socket together. Only the database side had an `error` listener, so an error on the client socket — an `EPIPE` when the client goes away while the database is still writing, or a reset while the proxy is still negotiating TLS — had no listener and took down the whole Node process.
+Miniflare's local Hyperdrive proxy watched for errors on the database connection but not on the one coming from the Worker. A Worker that hung up while the database was still writing, or a connection reset during TLS negotiation, raised an unhandled error that exited `wrangler dev`, `getPlatformProxy()` or a Vitest run.
 
-The client socket now gets a listener as soon as the connection is accepted, and both sockets are piped through a single helper that tears down each side when either one errors.
+The proxy now watches both sides for the whole life of the connection and closes one when the other fails. A connection opened towards the database after the Worker had already gone is now closed instead of left open. Connection strings using `sslmode=disable` are unaffected, since that mode connects directly and skips the proxy.
