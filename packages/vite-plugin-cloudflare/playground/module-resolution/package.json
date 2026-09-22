@@ -24,7 +24,6 @@
 		"react": "^19.2.1",
 		"slash-create": "6.2.1",
 		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
+		"vite": "catalog:default"
 	}
 }

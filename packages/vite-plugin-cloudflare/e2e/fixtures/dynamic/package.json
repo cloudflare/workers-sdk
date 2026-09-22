@@ -15,7 +15,6 @@
 		"@cloudflare/workers-types": "^5.20260706.1",
 		"globals": "^15.14.0",
 		"typescript": "~5.7.2",
-		"vite": "^8.0.0",
-		"wrangler": "*"
+		"vite": "^8.0.0"
 	}
 }

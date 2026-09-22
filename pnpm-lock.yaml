@@ -3028,9 +3028,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/assets:
     devDependencies:
@@ -3049,9 +3046,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/bindings:
     devDependencies:
@@ -3070,9 +3064,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/block-concurrency-while:
     devDependencies:
@@ -3091,9 +3082,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/build-output:
     devDependencies:
@@ -3112,9 +3100,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/child-environment:
     devDependencies:
@@ -3133,9 +3118,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/config-changes:
     devDependencies:
@@ -3154,9 +3136,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/containers:
     devDependencies:
@@ -3175,9 +3154,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/cron-triggers:
     devDependencies:
@@ -3196,9 +3172,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/ctx-exports:
     devDependencies:
@@ -3217,9 +3190,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/custom-build-app:
     devDependencies:
@@ -3238,9 +3208,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/deps-assets-importing:
     devDependencies:
@@ -3259,9 +3226,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/dev-vars:
     devDependencies:
@@ -3280,9 +3244,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/dot-env:
     devDependencies:
@@ -3301,9 +3262,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/durable-objects:
     devDependencies:
@@ -3322,9 +3280,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/dynamic-import-paths:
     devDependencies:
@@ -3343,9 +3298,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/email-worker:
     devDependencies:
@@ -3376,9 +3328,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/errors:
     devDependencies:
@@ -3397,9 +3346,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/external-durable-objects:
     devDependencies:
@@ -3418,9 +3364,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/external-workers:
     devDependencies:
@@ -3439,9 +3382,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/external-workflows:
     devDependencies:
@@ -3460,9 +3400,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/hot-channel:
     devDependencies:
@@ -3481,9 +3418,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/importable-env:
     devDependencies:
@@ -3502,9 +3436,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/main-resolution:
     devDependencies:
@@ -3526,9 +3457,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/middleware-mode:
     devDependencies:
@@ -3553,9 +3481,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/module-resolution:
     devDependencies:
@@ -3598,9 +3523,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/multi-worker:
     devDependencies:
@@ -3619,9 +3541,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/node-compat:
     devDependencies:
@@ -3664,9 +3583,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/node-env:
     dependencies:
@@ -3698,9 +3614,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/partyserver:
     dependencies:
@@ -3747,9 +3660,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/prerendering:
     devDependencies:
@@ -3768,9 +3678,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/prisma:
     devDependencies:
@@ -3802,8 +3709,8 @@ importers:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
       wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
+        specifier: 4.135.0
+        version: 4.135.0(@cloudflare/workers-types@5.20260921.1)(@types/node@22.15.17)
 
   packages/vite-plugin-cloudflare/playground/react-spa:
     dependencies:
@@ -3838,9 +3745,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/same-worker-service-bindings:
     devDependencies:
@@ -3859,9 +3763,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/sensitive-files:
     devDependencies:
@@ -3880,9 +3781,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/spa-with-api:
     dependencies:
@@ -3920,9 +3818,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/static:
     devDependencies:
@@ -3941,9 +3836,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/static-mpa:
     devDependencies:
@@ -3962,9 +3854,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/stream-binding:
     devDependencies:
@@ -3983,9 +3872,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/streaming:
     devDependencies:
@@ -4007,9 +3893,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/virtual-modules:
     devDependencies:
@@ -4028,9 +3911,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/websockets:
     devDependencies:
@@ -4049,9 +3929,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/worker-♫:
     devDependencies:
@@ -4070,9 +3947,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/workflows:
     devDependencies:
@@ -4091,9 +3965,6 @@ importers:
       vite:
         specifier: catalog:default
         version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../../wrangler
 
   packages/vitest-plugin:
     dependencies:
@@ -5862,6 +5733,10 @@ packages:
   '@cloudflare/kv-asset-handler@0.4.2':
     resolution: {integrity: sha512-SIOD2DxrRRwQ+jgzlXCqoEFiKOFqaPjhnNTGKXSRLvp1HiOvapLaFG2kEr9dYQTYe8rKrd9uvDUzmAITeNyaHQ==}
     engines: {node: '>=18.0.0'}
+
+  '@cloudflare/kv-asset-handler@0.5.0':
+    resolution: {integrity: sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg==}
+    engines: {node: '>=22.0.0'}
 
   '@cloudflare/playwright@1.0.0':
     resolution: {integrity: sha512-Z5LFFPJl1HxiI5+qJr+C3eoP8Lt5cv1xFesAWQG4ywL/Szx3b6S6ovJgOrPPZuZ6K9P5AFyqYEqFT3GjfVm/yA==}
@@ -17004,6 +16879,16 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
+  wrangler@4.135.0:
+    resolution: {integrity: sha512-WrNBQSfIG6YcILJcodYr5ty8vgkzGsV8YX+kfd+uZ5/Bd8cUW0GnUIRKAVfn5kYKqh1m/BPcji9h1d7mE8euFw==}
+    engines: {node: '>=22.0.0'}
+    hasBin: true
+    peerDependencies:
+      '@cloudflare/workers-types': ^5.20260918.1
+    peerDependenciesMeta:
+      '@cloudflare/workers-types':
+        optional: true
+
   wrangler@4.76.0:
     resolution: {integrity: sha512-Wan+CU5a0tu4HIxGOrzjNbkmxCT27HUmzrMj6kc7aoAnjSLv50Ggcn2Ant7wNQrD6xW3g31phKupZJgTZ8wZfQ==}
     engines: {node: '>=20.0.0'}
@@ -18797,6 +18682,8 @@ snapshots:
       mime: 2.6.0
 
   '@cloudflare/kv-asset-handler@0.4.2': {}
+
+  '@cloudflare/kv-asset-handler@0.5.0': {}
 
   '@cloudflare/playwright@1.0.0': {}
 
@@ -30412,6 +30299,24 @@ snapshots:
       '@cloudflare/workerd-linux-64': 1.20260921.1
       '@cloudflare/workerd-linux-arm64': 1.20260921.1
       '@cloudflare/workerd-windows-64': 1.20260921.1
+
+  wrangler@4.135.0(@cloudflare/workers-types@5.20260921.1)(@types/node@22.15.17):
+    dependencies:
+      '@cloudflare/kv-asset-handler': 0.5.0
+      '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260918.1)
+      blake3-wasm: 2.1.5
+      esbuild: 0.28.1
+      miniflare: 5.20260918.0-alpha(@types/node@22.15.17)
+      path-to-regexp: 6.3.0
+      unenv: 2.0.0-rc.24
+      workerd: 1.20260918.1
+    optionalDependencies:
+      '@cloudflare/workers-types': 5.20260921.1
+      fsevents: 2.3.3
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
 
   wrangler@4.76.0(@cloudflare/workers-types@5.20260921.1):
     dependencies:

@@ -21,7 +21,6 @@
 		"@types/react": "19.1.0",
 		"@types/react-dom": "19.1.1",
 		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
+		"vite": "catalog:default"
 	}
 }
