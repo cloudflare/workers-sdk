@@ -4,6 +4,9 @@ import NodeWebSocket from "ws";
 import { TypedEventTarget } from "../shared";
 import { viewToBuffer } from "../workers";
 import type { ValueOf } from "../workers";
+import type { Socket } from "node:net";
+
+type NodeWebSocketWithSocket = NodeWebSocket & { _socket?: Socket };
 
 export class MessageEvent extends Event {
 	readonly data: string | ArrayBuffer | Uint8Array<ArrayBuffer>;
@@ -49,6 +52,7 @@ const kPair = Symbol("kPair");
 
 const kAccepted = Symbol("kAccepted");
 const kCoupled = Symbol("kCoupled");
+const kNodeWebSocket = Symbol("kNodeWebSocket");
 
 // Whether close() has been called on the socket
 const kClosedOutgoing = Symbol("kClosedOutgoing");
@@ -79,6 +83,7 @@ export class WebSocket extends TypedEventTarget<WebSocketEventMap> {
 	[kPair]?: WebSocket;
 	[kAccepted] = false;
 	[kCoupled] = false;
+	[kNodeWebSocket]?: NodeWebSocket;
 	[kClosedOutgoing] = false;
 	[kClosedIncoming] = false;
 
@@ -238,6 +243,32 @@ export const WebSocketPair = function (this: WebSocketPair) {
 	this[1][kPair] = this[0];
 } as unknown as { new (): WebSocketPair };
 
+/** @internal Terminates a WebSocket and resolves once the connection closes. */
+export function _terminateWebSocket(webSocket: WebSocket): Promise<void> {
+	const nodeWebSocket = webSocket[kNodeWebSocket];
+	if (nodeWebSocket === undefined) {
+		if (!webSocket[kClosedOutgoing]) {
+			webSocket[kClose](1006);
+		}
+		return Promise.resolve();
+	}
+	if (nodeWebSocket.readyState === NodeWebSocket.CLOSED) {
+		return Promise.resolve();
+	}
+	return new Promise((resolve) => {
+		nodeWebSocket.once("close", () => resolve());
+		const socket = (nodeWebSocket as NodeWebSocketWithSocket)._socket;
+		if (socket !== undefined && !socket.destroyed) {
+			// `ws.terminate()` destroys the socket with a FIN, which leaves workerd's
+			// side in CLOSE_WAIT. Reset the TCP connection so its request context is
+			// released before managed shutdown begins.
+			socket.resetAndDestroy();
+		} else {
+			nodeWebSocket.terminate();
+		}
+	});
+}
+
 export async function coupleWebSocket(
 	ws: NodeWebSocket,
 	pair: WebSocket
@@ -301,4 +332,12 @@ export async function coupleWebSocket(
 	}
 	pair.accept();
 	pair[kCoupled] = true;
+	pair[kNodeWebSocket] = ws;
+	const other = pair[kPair];
+	assert(other !== undefined);
+	other[kNodeWebSocket] = ws;
+	ws.once("close", () => {
+		pair[kNodeWebSocket] = undefined;
+		other[kNodeWebSocket] = undefined;
+	});
 }

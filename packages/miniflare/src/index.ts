@@ -27,6 +27,7 @@ import {
 } from "./config/schema";
 import { exitHook } from "./exit-hook";
 import {
+	_terminateWebSocket,
 	coupleWebSocket,
 	DispatchFetchDispatcher,
 	fetch,
@@ -35,6 +36,7 @@ import {
 	Headers,
 	Request,
 	Response,
+	type WebSocket,
 } from "./http";
 import {
 	D1_PLUGIN_NAME,
@@ -815,6 +817,7 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#dispatchConnectSockets = new Set<net.Socket>();
+	#dispatchWebSockets = new Set<WebSocket>();
 	#proxyClient?: ProxyClient;
 	#runtimeRestartError?: MiniflareCoreError;
 	// Number of times workerd has crashed and been restarted for this instance.
@@ -953,13 +956,13 @@ export class Miniflare {
 		// Setup runtime
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
-			void this.#runtime?.dispose();
+			void this.#runtime?.disposeImmediately();
 			// This exit hook is synchronous — the event loop will never run again
 			// after it returns, so any operation that schedules a microtask (like
 			// fs.promises.rm) will never even be executed, let alone completed.
 			// We must use the sync variant here.
-			// `Runtime#dispose()` should kill the runtime immediately but it might not,
-			// so we only clean up on a best effort basis.
+			// `Runtime#disposeImmediately()` sends SIGKILL synchronously, but this hook
+			// cannot wait for the child to exit, so subsequent cleanup is best-effort.
 			try {
 				removeDirSync(this.#tmpPath);
 			} catch (e) {
@@ -2577,6 +2580,16 @@ export class Miniflare {
 			reusePorts
 		);
 		const configBuffer = serializeConfig(config);
+		// Container namespaces need a managed drain so workerd can remove the
+		// runtime resources it created before exiting.
+		const requiresGracefulShutdown =
+			config.services?.some(
+				(service) =>
+					"worker" in service &&
+					service.worker?.durableObjectNamespaces?.some(
+						(namespace) => namespace.container !== undefined
+					)
+			) ?? false;
 
 		// Get all socket names we expect to get ports for
 		assert(config.sockets !== undefined);
@@ -2639,6 +2652,7 @@ export class Miniflare {
 				? "127.0.0.1:0"
 				: undefined,
 			verbose: this.#sharedOpts.verbose,
+			requiresGracefulShutdown,
 			handleStructuredLogs: this.#sharedOpts.handleStructuredLogs,
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.unsafeRuntimeEnv,
@@ -3090,6 +3104,15 @@ export class Miniflare {
 		const forwardInit = forward as RequestInit;
 		forwardInit.dispatcher = dispatcher;
 		const response = await fetch(url, forwardInit);
+		if (response.webSocket != null) {
+			const webSocket = response.webSocket;
+			this.#dispatchWebSockets.add(webSocket);
+			webSocket.addEventListener(
+				"close",
+				() => this.#dispatchWebSockets.delete(webSocket),
+				{ once: true }
+			);
+		}
 
 		// If the Worker threw an uncaught exception, propagate it to the caller
 		const stack = response.headers.get(CoreHeaders.ERROR_STACK);
@@ -3674,6 +3697,14 @@ export class Miniflare {
 			socket.destroy();
 		}
 		this.#dispatchConnectSockets.clear();
+		const dispatchWebSocketTerminationPromise = Promise.all(
+			[...this.#dispatchWebSockets].map(async (webSocket) => {
+				try {
+					await _terminateWebSocket(webSocket);
+				} catch {}
+			})
+		);
+		this.#dispatchWebSockets.clear();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
 		// invalidating all existing native references. Mark all proxies as invalid.
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
@@ -3688,6 +3719,9 @@ export class Miniflare {
 			waitForReadyFailed = true;
 			waitForReadyError = error;
 		}
+		// workerd drains active request contexts after receiving SIGTERM. Reset
+		// upgraded dispatch connections first so they cannot block managed shutdown.
+		await dispatchWebSocketTerminationPromise;
 
 		// Runtime.dispose() requests workerd termination synchronously before
 		// returning its child-exit promise. Start it before awaiting independent
@@ -3713,9 +3747,6 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw.
 			await this.#closeBrowserProcesses();
 
-			// Remove exit hook, we're cleaning up what they would've cleaned up now
-			this.#removeExitHook?.();
-
 			await this.#proxyClient?.dispose();
 		} catch (error) {
 			independentCleanupFailed = true;
@@ -3723,6 +3754,9 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		// Keep emergency termination registered until workerd has exited. Managed
+		// Container shutdown can remain pending while the runtime drains.
+		this.#removeExitHook?.();
 		this.#devRegistry.unregisterWorkers();
 		try {
 			await Promise.all(

@@ -1,4 +1,5 @@
-import { execSync } from "child_process";
+import assert from "node:assert";
+import { execFileSync, spawnSync } from "node:child_process";
 import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import { createTestHarness } from "wrangler";
 
@@ -6,11 +7,22 @@ const isCINonLinux = process.platform !== "linux" && process.env.CI === "true";
 
 function isDockerRunning() {
 	try {
-		execSync("docker ps", { stdio: "ignore" });
+		execFileSync("docker", ["ps"], { stdio: "ignore" });
 		return true;
-	} catch (e) {
+	} catch {
 		return false;
 	}
+}
+
+function getRuntimeContainerIds(): string[] {
+	return execFileSync(
+		"docker",
+		["ps", "-q", "--no-trunc", "--filter", "name=workerd-container-app"],
+		{ encoding: "utf8" }
+	)
+		.trim()
+		.split("\n")
+		.filter(Boolean);
 }
 
 /** Indicates whether the test is being run locally (not in CI) AND docker is currently not running on the system */
@@ -31,13 +43,23 @@ describe.skipIf(
 	const server = createTestHarness({
 		workers: [{ configPath: "./wrangler.jsonc" }],
 	});
+	let existingRuntimeContainerIds = new Set<string>();
+	let runtimeContainerIds: string[] = [];
 
 	beforeAll(async () => {
+		existingRuntimeContainerIds = new Set(getRuntimeContainerIds());
 		await server.listen();
 	});
 
 	afterAll(async () => {
-		await server.close();
+		try {
+			await server.close();
+		} finally {
+			const remainingContainerIds = runtimeContainerIds.filter(
+				(id) => spawnSync("docker", ["inspect", id]).status === 0
+			);
+			assert.deepStrictEqual(remainingContainerIds, []);
+		}
 	});
 
 	test("starts and fetches from the container", async ({ expect }) => {
@@ -56,5 +78,21 @@ describe.skipIf(
 			},
 			{ interval: 500, timeout: 30_000 }
 		);
+
+		runtimeContainerIds = getRuntimeContainerIds().filter(
+			(id) => !existingRuntimeContainerIds.has(id)
+		);
+		expect(runtimeContainerIds).toHaveLength(2);
+		const runtimeContainerNames = runtimeContainerIds.map((id) =>
+			execFileSync("docker", ["inspect", "--format={{.Name}}", id], {
+				encoding: "utf8",
+			}).trim()
+		);
+		expect(
+			runtimeContainerNames.filter((name) => name.endsWith("-proxy"))
+		).toHaveLength(1);
+		expect(
+			runtimeContainerNames.filter((name) => !name.endsWith("-proxy"))
+		).toHaveLength(1);
 	});
 });

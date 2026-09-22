@@ -27,6 +27,10 @@ const ControlMessageSchema = z.discriminatedUnion("event", [
 	}),
 ]);
 
+// Container cleanup gets five seconds to finish before teardown switches to
+// immediate termination.
+const GRACEFUL_SHUTDOWN_TIMEOUT = 5_000;
+
 export const kInspectorSocket = Symbol("kInspectorSocket");
 export type SocketIdentifier = string | typeof kInspectorSocket;
 export type SocketPorts = Map<SocketIdentifier, number /* port */>;
@@ -47,6 +51,8 @@ export interface RuntimeOptions {
 	// Merged on top of `process.env` and Miniflare's own defaults
 	// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults.
 	runtimeEnv?: Record<string, string>;
+	/** @internal Whether managed disposal must let workerd drain before exit. */
+	requiresGracefulShutdown?: boolean;
 }
 
 async function waitForPorts(
@@ -237,9 +243,15 @@ class StartupLogBuffer {
 	}
 }
 
+type RuntimeProcessState = {
+	process: childProcess.ChildProcess;
+	exitPromise: Promise<void>;
+	requiresGracefulShutdown: boolean;
+	disposePromise?: Promise<void>;
+};
+
 export class Runtime {
-	#process?: childProcess.ChildProcess;
-	#processExitPromise?: Promise<void>;
+	#state?: RuntimeProcessState;
 
 	async updateConfig(
 		configBuffer: Buffer,
@@ -274,9 +286,13 @@ export class Runtime {
 			},
 		});
 		const startupLogBuffer = new StartupLogBuffer();
-		this.#process = runtimeProcess;
 		const processExitPromise = waitForExit(runtimeProcess);
-		this.#processExitPromise = processExitPromise;
+		const state: RuntimeProcessState = {
+			process: runtimeProcess,
+			exitPromise: processExitPromise,
+			requiresGracefulShutdown: options.requiresGracefulShutdown ?? false,
+		};
+		this.#state = state;
 
 		const stdoutStream = runtimeProcess.stdout.pipe(
 			startupLogBuffer.stdoutStream
@@ -327,7 +343,7 @@ export class Runtime {
 						env: {
 							NODE_INSPECTOR_INFO: JSON.stringify({
 								ipcAddress: info.inspectorIpc || "",
-								pid: String(this.#process.pid),
+								pid: String(runtimeProcess.pid),
 								scriptName: name,
 								inspectorURL: `ws://127.0.0.1:${ports?.get(
 									kInspectorSocket
@@ -354,18 +370,16 @@ export class Runtime {
 		} else {
 			// workerd is now listening. Watch for unexpected exits so we can
 			// restart.
-			const currentProcess = this.#process;
 			void processExitPromise.then(() => {
-				if (this.#process !== currentProcess) {
-					// We got here because dispose() set this.#process to
-					// undefined before sending SIGKILL
+				// Replacement or managed disposal owns this exit; neither is a crash.
+				if (this.#state !== state || state.disposePromise !== undefined) {
 					return;
 				}
 				if (abortSignal.aborted) {
 					return;
 				}
-				// Crash: clear stale #process and notify the caller.
-				this.#process = undefined;
+				// An unexpected exit releases this state and asks the caller to restart.
+				this.#state = undefined;
 				options.onWorkerdCrashRestart?.();
 			});
 		}
@@ -374,36 +388,69 @@ export class Runtime {
 	}
 
 	dispose(): Awaitable<void> {
-		const runtimeProcess = this.#process;
-		if (runtimeProcess === undefined) {
+		const state = this.#state;
+		if (state === undefined) {
 			return;
 		}
+		state.disposePromise ??= this.#disposeProcess(
+			state,
+			state.requiresGracefulShutdown
+		);
+		return state.disposePromise;
+	}
 
-		// Clear reference to prevent potential race conditions
-		this.#process = undefined;
-
-		// Explicitly destroy all stdio streams to ensure file descriptors are
-		// properly released. This prevents EBADF errors when spawning a new
-		// process after restart.
-		// See https://github.com/cloudflare/workers-sdk/issues/11675
-		runtimeProcess.stdin?.destroy();
-		runtimeProcess.stdout?.destroy();
-		runtimeProcess.stderr?.destroy();
-		// The control pipe at stdio[3] could be a Readable stream
-		const controlPipe = runtimeProcess.stdio[3];
-		if (controlPipe instanceof Readable) {
-			controlPipe.destroy();
+	/** @internal Force the current process to stop during synchronous host shutdown. */
+	disposeImmediately(): Awaitable<void> {
+		const state = this.#state;
+		if (state === undefined) {
+			return;
 		}
+		if (state.disposePromise === undefined) {
+			state.disposePromise = this.#disposeProcess(state, false);
+		} else {
+			state.process.kill("SIGKILL");
+		}
+		return state.disposePromise;
+	}
 
-		// `kill()` uses `SIGTERM` by default. In `workerd`, this waits for HTTP
-		// connections to close before exiting. Notably, Chrome sometimes keeps
-		// connections open for about 10s, blocking exit. We'd like `dispose()`/
-		// `setOptions()` to immediately terminate the existing process.
-		// Therefore, use `SIGKILL` which force closes all connections.
-		// See https://github.com/cloudflare/workerd/pull/244.
-		runtimeProcess.kill("SIGKILL");
+	async #disposeProcess(
+		state: RuntimeProcessState,
+		gracefully: boolean
+	): Promise<void> {
+		let timeout: NodeJS.Timeout | undefined;
+		try {
+			if (gracefully) {
+				state.process.kill("SIGTERM");
+				timeout = setTimeout(() => {
+					state.process.kill("SIGKILL");
+				}, GRACEFUL_SHUTDOWN_TIMEOUT);
+				timeout.unref();
+			} else {
+				// Ordinary runtimes shut down immediately because workerd drains HTTP
+				// connections on SIGTERM, which Chrome can keep open for about 10s.
+				// See https://github.com/cloudflare/workerd/pull/244.
+				state.process.kill("SIGKILL");
+			}
 
-		return this.#processExitPromise;
+			await state.exitPromise;
+		} finally {
+			clearTimeout(timeout);
+
+			// Release descriptors after workerd exits, when graceful shutdown no longer
+			// needs them, and before starting a replacement process.
+			// See https://github.com/cloudflare/workers-sdk/issues/11675.
+			state.process.stdin?.destroy();
+			state.process.stdout?.destroy();
+			state.process.stderr?.destroy();
+			const controlPipe = state.process.stdio[3];
+			if (controlPipe instanceof Readable) {
+				controlPipe.destroy();
+			}
+
+			if (this.#state === state) {
+				this.#state = undefined;
+			}
+		}
 	}
 }
 
