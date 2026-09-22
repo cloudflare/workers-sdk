@@ -7032,6 +7032,16 @@ function validateWorkflowExport(
 			"string"
 		) && valid;
 
+	if (
+		typeof workflowExport.name === "string" &&
+		!isValidWorkflowName(workflowExport.name)
+	) {
+		diagnostics.errors.push(
+			`"exports.${exportName}.name" is invalid. ${workflowNameFormatMessage}`
+		);
+		valid = false;
+	}
+
 	valid =
 		validateWorkflowExportLimits(
 			diagnostics,
@@ -7069,13 +7079,23 @@ function validateWorkflowExportLimits(
 	const limits = value as Record<string, unknown>;
 	let valid = true;
 
-	if (limits.steps !== undefined && typeof limits.steps !== "number") {
-		diagnostics.errors.push(
-			`Expected "${field}.steps" to be of type number but got ${JSON.stringify(
-				limits.steps
-			)}.`
-		);
-		valid = false;
+	if (limits.steps !== undefined) {
+		if (
+			typeof limits.steps !== "number" ||
+			!Number.isInteger(limits.steps) ||
+			limits.steps < 1
+		) {
+			diagnostics.errors.push(
+				`"${field}.steps" must be a positive integer but got ${JSON.stringify(
+					limits.steps
+				)}.`
+			);
+			valid = false;
+		} else if (limits.steps > 25_000) {
+			diagnostics.warnings.push(
+				`"${field}" has a step limit of ${limits.steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
+			);
+		}
 	}
 
 	valid =

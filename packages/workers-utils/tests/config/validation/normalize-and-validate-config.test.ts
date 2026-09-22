@@ -2255,6 +2255,81 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
+			it("errors when a workflow entry name has an invalid format", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							SpacedWorkflow: { type: "workflow", name: "bad name" },
+							EmptyWorkflow: { type: "workflow", name: "" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.SpacedWorkflow.name" is invalid.'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.EmptyWorkflow.name" is invalid.'
+				);
+			});
+
+			it("errors when a workflow step limit is not a positive integer", ({
+				expect,
+			}) => {
+				for (const steps of [0, -1, 1.5]) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							exports: {
+								GreetingWorkflow: {
+									type: "workflow",
+									name: "greeting",
+									limits: { steps },
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(
+						'"exports.GreetingWorkflow.limits.steps" must be a positive integer'
+					);
+				}
+			});
+
+			it("warns when a workflow step limit exceeds the production maximum", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 30_000 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					"exceeds the production maximum of 25,000"
+				);
+			});
+
 			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
