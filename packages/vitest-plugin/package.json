@@ -58,6 +58,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/config": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/runtime-types": "workspace:*",

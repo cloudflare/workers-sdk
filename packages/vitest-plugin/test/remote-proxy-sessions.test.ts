@@ -23,8 +23,8 @@ function fakeSessionData(dispose: () => Promise<void>): RemoteProxySessionData {
 	};
 }
 
-// Bypasses the constructor's version check; start() is never called so
-// socket/miniflare are undefined and stop() exercises only session disposal.
+// Bypasses the constructor's version check. start() is never called; tests
+// install only the lifecycle resources needed by each stop() scenario.
 function createPoolWorker(): CloudflarePoolWorker {
 	const worker = Object.create(
 		CloudflarePoolWorker.prototype
@@ -33,6 +33,17 @@ function createPoolWorker(): CloudflarePoolWorker {
 		value: util.debuglog("vitest-plugin"),
 	});
 	return worker;
+}
+
+function createDeferred(): {
+	promise: Promise<void>;
+	resolve: () => void;
+} {
+	let resolve = () => {};
+	const promise = new Promise<void>((resolvePromise) => {
+		resolve = resolvePromise;
+	});
+	return { promise, resolve };
 }
 
 describe("remote proxy session disposal", () => {
@@ -73,5 +84,65 @@ describe("remote proxy session disposal", () => {
 		await workerB.stop();
 		expect(dispose).toHaveBeenCalledTimes(1);
 		expect(remoteProxySessionsDataMap.has(configPath)).toBe(false);
+	});
+
+	it("awaits Miniflare before releasing the final project environment", async ({
+		expect,
+	}) => {
+		const miniflareDisposal = createDeferred();
+		const disposeMiniflare = vi.fn(() => miniflareDisposal.promise);
+		const disposeSession = vi.fn(async () => {});
+		remoteProxySessionsDataMap.set(
+			"/shared/wrangler.toml",
+			fakeSessionData(disposeSession)
+		);
+		poolWorkerStarted();
+		const worker = createPoolWorker();
+		Object.defineProperty(worker, "mf", {
+			configurable: true,
+			value: { dispose: disposeMiniflare },
+			writable: true,
+		});
+
+		const stopping = worker.stop();
+		await vi.waitFor(() => expect(disposeMiniflare).toHaveBeenCalledOnce());
+		expect(disposeSession).not.toHaveBeenCalled();
+
+		miniflareDisposal.resolve();
+		await stopping;
+		expect(disposeSession).toHaveBeenCalledOnce();
+	});
+
+	it("disposes Miniflare when closing the runner socket throws", async ({
+		expect,
+	}) => {
+		const calls: string[] = [];
+		const worker = createPoolWorker();
+		Object.defineProperties(worker, {
+			socket: {
+				configurable: true,
+				value: {
+					close: vi.fn(() => {
+						calls.push("close");
+						throw new Error("socket close failed");
+					}),
+				},
+				writable: true,
+			},
+			mf: {
+				configurable: true,
+				value: {
+					dispose: vi.fn(async () => {
+						calls.push("dispose");
+					}),
+				},
+				writable: true,
+			},
+		});
+		poolWorkerStarted();
+
+		await expect(worker.stop()).resolves.toBeUndefined();
+
+		expect(calls).toEqual(["close", "dispose"]);
 	});
 });

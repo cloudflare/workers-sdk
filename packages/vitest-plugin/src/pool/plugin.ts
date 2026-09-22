@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { beginContainerConfiguration } from "./containers";
 import { cloudflarePool } from "./pool";
 import type { WorkersPoolOptions } from "./config";
 import type { ProvidedContext } from "vitest";
@@ -80,6 +81,7 @@ export function cloudflareTest(
 			},
 		},
 		configureVitest(context: VitestPluginContext) {
+			beginContainerConfiguration(context.project.vitest);
 			context.project.config.poolRunner = cloudflarePool(options);
 			context.project.config.pool = "cloudflare-pool";
 			context.project.config.snapshotEnvironment = "cloudflare:snapshot";
