@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
 import {
+	mkdir,
 	mkdtemp,
 	readFile,
 	readdir,
 	rmdir,
+	symlink,
 	unlink,
 	writeFile,
 } from "node:fs/promises";
@@ -156,6 +158,29 @@ export default defineWorkersProject({
 
 		await expect(
 			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Unable to verify that the Git worktree is clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("rejects a symlinked Git worktree when Git is unavailable", async ({
+		expect,
+	}) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const repository = await createProject({});
+		const cwd = path.join(repository, "packages", "app");
+		await mkdir(cwd, { recursive: true });
+		await writeFile(path.join(cwd, "vitest.config.ts"), source);
+		await commitProject(repository);
+		const aliasParent = await createProject({});
+		const alias = path.join(aliasParent, "alias");
+		await symlink(cwd, alias, "dir");
+		vi.stubEnv("PATH", "");
+
+		await expect(
+			runCodemod("vitest v1", { cwd: alias, dryRun: false })
 		).rejects.toThrow("Unable to verify that the Git worktree is clean");
 		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
 			source
