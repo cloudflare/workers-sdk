@@ -2,8 +2,6 @@ import { describe, it } from "vitest";
 import {
 	CRON_CUSTOM_ROWS_STORAGE_PREFIX,
 	cronCustomRowsStorageKey,
-	MAX_PERSISTED_CUSTOM_ROWS,
-	MAX_PERSISTED_CUSTOM_ROWS_BYTES,
 	readPersistedCustomCronRows,
 	writePersistedCustomCronRows,
 } from "../../components/cron-triggers/persistence";
@@ -11,6 +9,7 @@ import { createCronRow } from "../../components/cron-triggers/row-state";
 
 class MemoryStorage implements Storage {
 	#values = new Map<string, string>();
+	writesBlocked = false;
 
 	get length(): number {
 		return this.#values.size;
@@ -33,6 +32,9 @@ class MemoryStorage implements Storage {
 	}
 
 	setItem(key: string, value: string): void {
+		if (this.writesBlocked) {
+			throw new Error("quota exceeded");
+		}
 		this.#values.set(key, value);
 	}
 }
@@ -138,30 +140,22 @@ describe("Cron Trigger custom-row persistence", () => {
 		});
 	}
 
-	it("enforces row and byte bounds", ({ expect }) => {
-		const storage = new MemoryStorage();
-		const rows = Array.from(
-			{ length: MAX_PERSISTED_CUSTOM_ROWS + 1 },
-			(_, index) => createCronRow(String(index))
-		);
-		writePersistedCustomCronRows(storage, "key", rows);
-		expect(JSON.parse(storage.getItem("key") ?? "[]")).toHaveLength(
-			MAX_PERSISTED_CUSTOM_ROWS
-		);
-
-		storage.setItem(
-			"oversized",
-			`"${"x".repeat(MAX_PERSISTED_CUSTOM_ROWS_BYTES)}"`
-		);
-		expect(readPersistedCustomCronRows(storage, "oversized")).toEqual([]);
-		expect(storage.getItem("oversized")).toBeNull();
-	});
-
 	it("removes empty state and tolerates storage failures", ({ expect }) => {
 		const storage = new MemoryStorage();
 		storage.setItem("key", "old");
 		writePersistedCustomCronRows(storage, "key", []);
 		expect(storage.getItem("key")).toBeNull();
+
+		const quotaStorage = new MemoryStorage();
+		writePersistedCustomCronRows(quotaStorage, "key", [
+			createCronRow("persisted"),
+		]);
+		const previous = quotaStorage.getItem("key");
+		quotaStorage.writesBlocked = true;
+		writePersistedCustomCronRows(quotaStorage, "key", [
+			createCronRow("not persisted"),
+		]);
+		expect(quotaStorage.getItem("key")).toBe(previous);
 
 		const throwing = {
 			getItem: () => {

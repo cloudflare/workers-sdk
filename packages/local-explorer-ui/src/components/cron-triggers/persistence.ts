@@ -7,8 +7,6 @@ import type { CronBuilderDraft, CronRow, CronWeekday } from "./types";
 
 export const CRON_CUSTOM_ROWS_STORAGE_PREFIX =
 	"local-explorer.cron-triggers.custom-rows.v1";
-export const MAX_PERSISTED_CUSTOM_ROWS = 100;
-export const MAX_PERSISTED_CUSTOM_ROWS_BYTES = 256 * 1024;
 
 type PersistedCustomRow = Pick<
 	CronRow,
@@ -192,10 +190,6 @@ function parsePersistedCustomRow(
 	};
 }
 
-function byteLength(value: string): number {
-	return new TextEncoder().encode(value).byteLength;
-}
-
 function remove(storage: Storage, key: string): void {
 	try {
 		storage.removeItem(key);
@@ -244,11 +238,6 @@ export function readPersistedCustomCronRows(
 	if (raw === null) {
 		return [];
 	}
-	if (byteLength(raw) > MAX_PERSISTED_CUSTOM_ROWS_BYTES) {
-		remove(storage, key);
-		return [];
-	}
-
 	let value: unknown;
 	try {
 		value = JSON.parse(raw);
@@ -256,11 +245,7 @@ export function readPersistedCustomCronRows(
 		remove(storage, key);
 		return [];
 	}
-	if (
-		!Array.isArray(value) ||
-		value.length === 0 ||
-		value.length > MAX_PERSISTED_CUSTOM_ROWS
-	) {
+	if (!Array.isArray(value) || value.length === 0) {
 		remove(storage, key);
 		return [];
 	}
@@ -297,17 +282,12 @@ export function writePersistedCustomCronRows(
 ): void {
 	const customRows = rows
 		.filter((row) => row.source === "custom")
-		.slice(0, MAX_PERSISTED_CUSTOM_ROWS)
 		.map(persistedDraft);
 	if (customRows.length === 0) {
 		remove(storage, key);
 		return;
 	}
 	const raw = JSON.stringify(customRows);
-	if (byteLength(raw) > MAX_PERSISTED_CUSTOM_ROWS_BYTES) {
-		remove(storage, key);
-		return;
-	}
 	try {
 		storage.setItem(key, raw);
 	} catch {
