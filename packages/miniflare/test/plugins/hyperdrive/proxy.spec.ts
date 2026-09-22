@@ -249,6 +249,29 @@ function createMockPostgresPumpServer(
 	});
 }
 
+/**
+ * Creates a mock Postgres server that sits on the SSL negotiation for `delayMs`
+ * before answering, leaving a window in which the proxy is still negotiating
+ * while the client goes away.
+ */
+function createMockPostgresSlowServer(
+	delayMs: number
+): Promise<{ server: net.Server; port: number }> {
+	return new Promise((resolve) => {
+		const server = net.createServer((socket) => {
+			socket.on("error", () => {});
+			socket.once("data", () => {
+				setTimeout(() => socket.write("N"), delayMs);
+			});
+		});
+
+		server.listen(0, "127.0.0.1", () => {
+			const address = server.address() as net.AddressInfo;
+			resolve({ server, port: address.port });
+		});
+	});
+}
+
 // -- Test helper to send data through the proxy and read the response --
 
 function sendThroughProxy(
@@ -639,6 +662,46 @@ describe("HyperdriveProxyController TLS modes", () => {
 				"hello"
 			);
 			expect(response.length).toBeGreaterThan(0);
+		} finally {
+			process.off("uncaughtException", collect);
+			server.close();
+		}
+	});
+
+	test("a client reset during negotiation does not take down the process", async ({
+		expect,
+	}) => {
+		const { server, port: dbPort } = await createMockPostgresSlowServer(400);
+		const uncaught: Error[] = [];
+		const collect = (err: Error) => uncaught.push(err);
+		process.on("uncaughtException", collect);
+
+		try {
+			const proxyPort = await controller.createProxyServer({
+				name: "test-client-reset-during-negotiation",
+				targetHost: "127.0.0.1",
+				targetPort: String(dbPort),
+				scheme: "postgres",
+				sslmode: "require",
+			});
+
+			await new Promise<void>((resolve) => {
+				const socket = net.connect(
+					{ host: "127.0.0.1", port: proxyPort },
+					() => {
+						socket.write("hello");
+						setTimeout(() => {
+							socket.resetAndDestroy();
+							resolve();
+						}, 50);
+					}
+				);
+				socket.on("error", () => {});
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 800));
+
+			expect(uncaught).toEqual([]);
 		} finally {
 			process.off("uncaughtException", collect);
 			server.close();
