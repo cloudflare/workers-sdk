@@ -914,6 +914,55 @@ describe("handleWebSocket", () => {
 		expect(httpServer.listenerCount("upgrade")).toBe(1);
 	});
 
+	test("preserves other upgrade listeners after server close and restart", async ({
+		expect,
+	}) => {
+		const mf = startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		handleWebSocket(httpServer, mf);
+		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
+		port = (httpServer.address() as AddressInfo).port;
+		await mf.ready;
+
+		// Simulate server close on restart
+		await new Promise<void>((r) => httpServer.close(() => r()));
+
+		// Simulate restart: re-listen and rerun handleWebSocket
+		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
+		port = (httpServer.address() as AddressInfo).port;
+		handleWebSocket(httpServer, mf);
+
+		// Register another upgrade listener (e.g. DevTools)
+		const otherClaimed = new Promise<void>((resolve) => {
+			httpServer.on("upgrade", (_req, socket) => {
+				socket.write(
+					"HTTP/1.1 101 Switching Protocols\r\n" +
+						"Upgrade: websocket\r\n" +
+						"Connection: Upgrade\r\n" +
+						"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n"
+				);
+				resolve();
+			});
+		});
+
+		const socket = await connect();
+		socket.write(
+			"GET /other-service HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await otherClaimed;
+		expect(socket.destroyed).toBe(false);
+		socket.destroy();
+	});
+
 	test("upgrades Worker routes on reused keep-alive connections", async ({
 		expect,
 	}) => {
