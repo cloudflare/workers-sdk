@@ -8,7 +8,10 @@ import {
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
+import {
+	VERSION_NOT_DEPLOYED_ERR_CODE,
+	VERSION_SETTINGS_NOT_DEPLOYED_ERR_CODE,
+} from "../secret";
 import {
 	WORKER_NOT_FOUND_ERR_CODE,
 	workerNotFoundErrorMessage,
@@ -1237,6 +1240,80 @@ describe("wrangler secret", () => {
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should error if the latest version is not deployed", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+				})
+			);
+
+			msw.use(
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual("script-name");
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: VERSION_NOT_DEPLOYED_ERR_CODE,
+									message: "latest is not deployed",
+								},
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(runWrangler("secret bulk ./secret.json --name script-name"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.
+				This limitation exists to prevent accidental deployment when using Worker versions and secrets together.
+				To resolve this, you have two options:
+				(1) use the \`wrangler versions secret bulk\` instead, which allows you to update secrets without deploying; or
+				(2) deploy the latest version first, then modify secrets.
+				Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.]
+			`);
+		});
+
+		it("should rewrite the logpush/tail_consumers settings error when the latest version is not deployed", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+				})
+			);
+
+			msw.use(
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: VERSION_SETTINGS_NOT_DEPLOYED_ERR_CODE,
+									message:
+										"Script edit failed. You attempted to deploy the latest version with modified settings, but the latest version isn't currently deployed.",
+								},
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(
+				runWrangler("secret bulk ./secret.json --name script-name")
+			).rejects.toThrow(/wrangler versions secret bulk/);
 		});
 
 		it("throws a meaningful error", async ({ expect }) => {
