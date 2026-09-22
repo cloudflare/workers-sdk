@@ -1,5 +1,13 @@
 # @cloudflare/config
 
+## 0.17.0
+
+### Minor Changes
+
+- [#15749](https://github.com/cloudflare/workers-sdk/pull/15749) [`ec5251a`](https://github.com/cloudflare/workers-sdk/commit/ec5251a92f561dbbba77694ac954d85298f44039) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Convert module entrypoints to strings before parsing experimental Worker configuration
+
+  `resolveAndParseConfig()` now converts a `cf-worker` module namespace to its string specifier alongside other authored references. `InputWorkerSchema` consequently accepts only the string form. The new `InputWorkerConfig` type exposes the schema's input type.
+
 ## 0.16.0
 
 ### Minor Changes

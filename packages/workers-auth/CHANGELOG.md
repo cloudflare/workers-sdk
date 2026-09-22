@@ -1,5 +1,13 @@
 # @cloudflare/workers-auth
 
+## 0.8.0
+
+### Minor Changes
+
+- [#15763](https://github.com/cloudflare/workers-sdk/pull/15763) [`f07c4e2`](https://github.com/cloudflare/workers-sdk/commit/f07c4e2b366f1a31b193d06c3243e768fc3729b8) Thanks [@jdickson-cf](https://github.com/jdickson-cf)! - Include Account Tag Write in the default CF CLI OAuth scopes
+
+  New CF CLI logins now request permission to manage account resource tags. Existing sessions must reauthenticate to receive the additional scope.
+
 ## 0.7.4
 
 ### Patch Changes

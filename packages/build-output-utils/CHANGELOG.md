@@ -1,5 +1,12 @@
 # @cloudflare/build-output-utils
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`ec5251a`](https://github.com/cloudflare/workers-sdk/commit/ec5251a92f561dbbba77694ac954d85298f44039)]:
+  - @cloudflare/config@0.17.0
+
 ## 0.7.0
 
 ### Minor Changes

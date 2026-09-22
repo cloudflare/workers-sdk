@@ -1,5 +1,28 @@
 # wrangler
 
+## 4.136.2
+
+### Patch Changes
+
+- [#15762](https://github.com/cloudflare/workers-sdk/pull/15762) [`ad20547`](https://github.com/cloudflare/workers-sdk/commit/ad205472db4b66c1a14d0a2360093587a877e863) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Fix `wrangler types` generating runtime headers with trailing whitespace
+
+  Runtime type headers without compatibility flags now end at the compatibility date, keeping generated types reproducible when tools remove trailing whitespace.
+
+- [#15703](https://github.com/cloudflare/workers-sdk/pull/15703) [`02c1d83`](https://github.com/cloudflare/workers-sdk/commit/02c1d83417e1f8f63af720a4de731ea4fe74f10d) Thanks [@KianNH](https://github.com/KianNH)! - Improve Container image listing and deletion
+
+  List all image pages using read-only credentials, validate tags before deletion, and report successful deletion when the garbage-collection request fails.
+
+- [#15700](https://github.com/cloudflare/workers-sdk/pull/15700) [`275184d`](https://github.com/cloudflare/workers-sdk/commit/275184d38b936c7ebed60d282fc33f002b4ca7b1) Thanks [@KianNH](https://github.com/KianNH)! - Fix Container SSH connection setup and shutdown
+
+  Prevent SSH connections from stalling during setup and ensure proxy processes exit when sessions close.
+
+- [#15759](https://github.com/cloudflare/workers-sdk/pull/15759) [`bd59eca`](https://github.com/cloudflare/workers-sdk/commit/bd59ecae8aaac2820efaa6f60be129a1dd94cd05) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Show valid `sha256`-prefixed tags in Container image listings
+
+  Container image listings now distinguish valid OCI tags such as `sha256-release` from synthetic digest entries such as `sha256:<digest>`.
+
+- Updated dependencies []:
+  - miniflare@5.20260921.0-alpha
+
 ## 4.136.1
 
 ### Patch Changes
