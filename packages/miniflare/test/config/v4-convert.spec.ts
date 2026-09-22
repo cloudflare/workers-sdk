@@ -70,6 +70,27 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts workflow exports to config exports", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			compatibilityDate: "2026-01-01",
+			script: "export default {};",
+			workflowExports: {
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			},
+		});
+
+		expect(converted.workers[0].config.exports).toMatchObject({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: {
+				type: "workflow",
+				name: "batch",
+				limits: { steps: 10 },
+			},
+		});
+	});
+
 	test("converts module source and representative bindings", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			rootPath: __dirname,

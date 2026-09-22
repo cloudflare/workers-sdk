@@ -364,11 +364,11 @@ export const MiniflareDurableObjectExpectingTransferExportSchema =
 		container: DOContainerOptionsSchema.optional(),
 	});
 
-// const MiniflareWorkflowExportSchema = z.strictObject({
-// 	type: z.literal("workflow"),
-// 	name: z.string(),
-// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-// });
+const MiniflareWorkflowExportSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	limits: z.strictObject({ steps: z.number().optional() }).optional(),
+});
 
 // Compose the unions explicitly (rather than filtering `ExportSchema.options`)
 // so the inferred type is precise: the miniflare-extended "created" variant
@@ -378,7 +378,7 @@ const MiniflareLiveExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
 	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
-	// MiniflareWorkflowExportSchema,
+	MiniflareWorkflowExportSchema,
 ]);
 const MiniflareAcceptedExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
@@ -387,7 +387,7 @@ const MiniflareAcceptedExportSchema = z.union([
 	DurableObjectTransferredExportSchema,
 	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
-	// MiniflareWorkflowExportSchema,
+	MiniflareWorkflowExportSchema,
 ]);
 
 const MiniflareExportsSchema = z

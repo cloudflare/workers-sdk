@@ -516,7 +516,25 @@ export interface WorkerEntrypointExport {
 	};
 }
 
-export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;
+/**
+ * A single declarative Workflow export entry in the `exports` config map. The
+ * map key is the exported class name (the class extending `WorkflowEntrypoint`);
+ * `name` is the workflow's stable identity, used for instance and storage
+ * namespacing, and is required.
+ */
+export interface WorkflowExport {
+	type: "workflow";
+	name: string;
+	limits?: {
+		/** Maximum number of steps a single workflow instance may run. */
+		steps?: number;
+	};
+}
+
+export type ConfiguredExport =
+	| DurableObjectExport
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /**
  * The declarative `exports` map keyed by export name. Durable Object exports

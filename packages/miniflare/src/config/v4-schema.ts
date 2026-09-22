@@ -464,6 +464,15 @@ const V4WorkerOptionsShapeSchema = z.object({
 			})
 		)
 		.optional(),
+	workflowExports: z
+		.record(
+			z.string(),
+			z.object({
+				name: z.string(),
+				stepLimit: z.number().int().min(1).optional(),
+			})
+		)
+		.optional(),
 	pipelines: z
 		.union([z.record(z.string(), V4PipelineSchema), z.array(z.string())])
 		.optional(),
@@ -854,6 +863,13 @@ export type V4WorkerOptionsShape = {
 			className: string;
 			scriptName?: string;
 			external?: boolean;
+			stepLimit?: number;
+		}
+	>;
+	workflowExports?: Record<
+		string,
+		{
+			name: string;
 			stepLimit?: number;
 		}
 	>;

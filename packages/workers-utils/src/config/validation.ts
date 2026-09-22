@@ -7016,6 +7016,76 @@ function validateWorkerExportCache(
 	return valid;
 }
 
+function validateWorkflowExport(
+	diagnostics: Diagnostics,
+	exportName: string,
+	workflowExport: { name?: unknown; limits?: unknown } & Record<string, unknown>
+): boolean {
+	let valid = true;
+
+	valid =
+		validateRequiredProperty(
+			diagnostics,
+			`exports.${exportName}`,
+			"name",
+			workflowExport.name,
+			"string"
+		) && valid;
+
+	valid =
+		validateWorkflowExportLimits(
+			diagnostics,
+			`exports.${exportName}.limits`,
+			workflowExport.limits
+		) && valid;
+
+	valid =
+		validateAdditionalProperties(
+			diagnostics,
+			`exports.${exportName}`,
+			Object.keys(workflowExport),
+			["type", "name", "limits"]
+		) && valid;
+
+	return valid;
+}
+
+function validateWorkflowExportLimits(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): boolean {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const limits = value as Record<string, unknown>;
+	let valid = true;
+
+	if (limits.steps !== undefined && typeof limits.steps !== "number") {
+		diagnostics.errors.push(
+			`Expected "${field}.steps" to be of type number but got ${JSON.stringify(
+				limits.steps
+			)}.`
+		);
+		valid = false;
+	}
+
+	valid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(limits), [
+			"steps",
+		]) && valid;
+
+	return valid;
+}
+
 const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined || value === null) {
 		return true;
@@ -7047,10 +7117,13 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 		} else if (exportConfig.type === "worker") {
 			valid =
 				validateWorkerExport(diagnostics, exportName, exportConfig) && valid;
+		} else if (exportConfig.type === "workflow") {
+			valid =
+				validateWorkflowExport(diagnostics, exportName, exportConfig) && valid;
 		} else {
 			valid = false;
 			diagnostics.errors.push(
-				`"exports.${exportName}.type" must be "durable-object" or "worker", but got ${JSON.stringify(exportConfig.type)}.`
+				`"exports.${exportName}.type" must be "durable-object", "worker", or "workflow", but got ${JSON.stringify(exportConfig.type)}.`
 			);
 		}
 	}

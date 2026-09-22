@@ -52,6 +52,23 @@ describe("V4MiniflareOptionsSchema", () => {
 		});
 	});
 
+	test("parses workflowExports carrier", ({ expect }) => {
+		const parsed = V4MiniflareOptionsSchema.parse({
+			script: "export default {}",
+			workflowExports: {
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			},
+		});
+
+		expect(parsed).toMatchObject({
+			workflowExports: {
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			},
+		});
+	});
+
 	test("parses Durable Object Container named images", ({ expect }) => {
 		const parsed = V4MiniflareOptionsSchema.parse({
 			script: "export default {}",

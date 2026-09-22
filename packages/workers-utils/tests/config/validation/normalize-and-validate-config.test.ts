@@ -2187,6 +2187,74 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("accepts workflow entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when a workflow entry is missing a name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							GreetingWorkflow: { type: "workflow" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow.name" is a required field.'
+				);
+			});
+
+			it("warns when workflow entries include unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								storage: "sqlite",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in exports.GreetingWorkflow field: "storage"'
+				);
+			});
+
 			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -2430,7 +2498,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
+					  - "exports.Weird.type" must be "durable-object", "worker", or "workflow", but got "container"."
 				`);
 			});
 
