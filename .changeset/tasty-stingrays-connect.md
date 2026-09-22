@@ -7,4 +7,4 @@
 
 Support UDP connect handlers in local development
 
-The experimental `connect` configuration now accepts `protocol: "udp"`. UDP datagrams are delivered to the Worker's `connect()` handler using workerd's value-mode socket streams.
+The experimental `connect` configuration now accepts `protocol: "udp"`, with optional `idle_timeout_ms` and `max_pending_bytes` settings. UDP datagrams are delivered to the Worker's `connect()` handler using workerd's value-mode socket streams.

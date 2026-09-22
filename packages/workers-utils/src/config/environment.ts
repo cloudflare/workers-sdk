@@ -974,6 +974,25 @@ export type WorkflowBinding = {
 	};
 };
 
+type ConnectHandlerConfigBase = {
+	/** The port to listen on. */
+	port: number;
+	/** The address to bind to. Defaults to `127.0.0.1`. */
+	address?: string;
+};
+
+type TcpConnectHandlerConfig = ConnectHandlerConfigBase & { protocol: "tcp" };
+
+type UdpConnectHandlerConfig = ConnectHandlerConfigBase & {
+	protocol: "udp";
+	/** The idle timeout in milliseconds after which a peer flow is closed. */
+	idle_timeout_ms?: number;
+	/** The maximum number of pending datagram bytes per peer flow. */
+	max_pending_bytes?: number;
+};
+
+type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
+
 /**
  * The `EnvironmentNonInheritable` interface declares all the configuration fields for an environment
  * that cannot be inherited from the top-level environment, and must be defined specifically.
@@ -1196,16 +1215,7 @@ export interface EnvironmentNonInheritable {
 	 * @default []
 	 * @nonInheritable
 	 */
-	connect: {
-		/** The transport protocol to listen for. */
-		protocol: "tcp" | "udp";
-
-		/** The port to listen on. */
-		port: number;
-
-		/** The address to bind to. Defaults to `127.0.0.1`. */
-		address?: string;
-	}[];
+	connect: ConnectHandlerConfig[];
 
 	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.

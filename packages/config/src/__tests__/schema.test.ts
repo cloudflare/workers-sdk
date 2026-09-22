@@ -538,10 +538,34 @@ describe("InputWorkerSchema", () => {
 		it("accepts a UDP connect trigger", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
-				triggers: [{ type: "connect", protocol: "udp", port: 5432 }],
+				triggers: [
+					{
+						type: "connect",
+						protocol: "udp",
+						port: 5432,
+						idleTimeoutMs: 1_000,
+						maxPendingBytes: 65_536,
+					},
+				],
 			});
 
 			expect(result.success).toBe(true);
+		});
+
+		it("rejects UDP options on a TCP connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						idleTimeoutMs: 1_000,
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
 		});
 
 		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {

@@ -1247,11 +1247,26 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
-					triggers: [{ type: "connect", protocol: "udp", port: 5432 }],
+					triggers: [
+						{
+							type: "connect",
+							protocol: "udp",
+							port: 5432,
+							idleTimeoutMs: 1_000,
+							maxPendingBytes: 65_536,
+						},
+					],
 				},
 				containers: [],
 			});
-			expect(result.connect).toEqual([{ protocol: "udp", port: 5432 }]);
+			expect(result.connect).toEqual([
+				{
+					protocol: "udp",
+					port: 5432,
+					idle_timeout_ms: 1_000,
+					max_pending_bytes: 65_536,
+				},
+			]);
 		});
 
 		it("maps connect trigger without an address", ({ expect }) => {

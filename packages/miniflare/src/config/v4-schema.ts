@@ -197,11 +197,20 @@ const V4UnsafeDirectSocketSchema = z.object({
 	proxy: z.boolean().optional(),
 });
 
-const V4ConnectHandlerSchema = z.object({
-	protocol: z.enum(["tcp", "udp"]),
-	port: z.number(),
-	address: z.string().optional(),
-});
+const V4ConnectHandlerSchema = z.discriminatedUnion("protocol", [
+	z.strictObject({
+		protocol: z.literal("tcp"),
+		port: z.number(),
+		address: z.string().optional(),
+	}),
+	z.strictObject({
+		protocol: z.literal("udp"),
+		port: z.number(),
+		address: z.string().optional(),
+		idleTimeoutMs: z.number().optional(),
+		maxPendingBytes: z.number().optional(),
+	}),
+]);
 
 const V4IdEntrySchema = z.object({
 	id: z.string(),
@@ -789,11 +798,16 @@ export type V4WorkerOptionsShape = {
 		entrypoint?: string;
 		proxy?: boolean;
 	}>;
-	connectHandlers?: Array<{
-		protocol: "tcp" | "udp";
-		port: number;
-		address?: string;
-	}>;
+	connectHandlers?: Array<
+		| { protocol: "tcp"; port: number; address?: string }
+		| {
+				protocol: "udp";
+				port: number;
+				address?: string;
+				idleTimeoutMs?: number;
+				maxPendingBytes?: number;
+		  }
+	>;
 	unsafeOverrideFetchWorker?: string;
 	unsafeEvalBinding?: string;
 	unsafeUseModuleFallbackService?: boolean;

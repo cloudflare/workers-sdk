@@ -2329,17 +2329,23 @@ export class Miniflare {
 					connectHandler.port,
 					reusePorts
 				);
+				const protocolName = connectHandler.protocol;
 				let protocol;
-				switch (connectHandler.protocol) {
+				switch (protocolName) {
 					case "tcp":
 						protocol = { tcp: {} };
 						break;
 					case "udp":
-						protocol = { udp: {} };
+						protocol = {
+							udp: {
+								idleTimeoutMs: connectHandler.idleTimeoutMs,
+								maxPendingBytes: connectHandler.maxPendingBytes,
+							},
+						};
 						break;
 					default: {
 						// Config validation should make this unreachable.
-						const unsupportedProtocol: never = connectHandler.protocol;
+						const unsupportedProtocol: never = protocolName;
 						throw new TypeError(
 							`Unsupported connect protocol: ${JSON.stringify(unsupportedProtocol)}`
 						);

@@ -3612,7 +3612,15 @@ test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect()
 							},
 						};
 					`),
-					triggers: [{ type: "connect", protocol: "udp", port }],
+					triggers: [
+						{
+							type: "connect",
+							protocol: "udp",
+							port,
+							idleTimeoutMs: 1_000,
+							maxPendingBytes: 65_536,
+						},
+					],
 				},
 			},
 		],

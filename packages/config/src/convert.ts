@@ -1000,6 +1000,12 @@ function convertTriggers(
 						protocol: trigger.protocol,
 						port: trigger.port,
 						address: trigger.address,
+						...(trigger.protocol === "udp"
+							? {
+									idle_timeout_ms: trigger.idleTimeoutMs,
+									max_pending_bytes: trigger.maxPendingBytes,
+								}
+							: {}),
 					})
 				);
 				break;
