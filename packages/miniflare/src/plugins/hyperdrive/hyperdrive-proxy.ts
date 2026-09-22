@@ -426,6 +426,11 @@ async function createPlainTCPConnection(
  * installs on the destination removes itself and re-emits once no other
  * listener is left, which takes the whole Node process down.
  *
+ * A client that goes away during the negotiation has already fired its `error`
+ * and `close`, so a listener attached here would never run. The peer is torn
+ * down straight away instead, which matters on the fallback paths where it was
+ * opened after the client was gone.
+ *
  * @param clientSocket - The socket carrying workerd's side of the connection.
  * @param peerSocket - The database-side socket, plain TCP or TLS.
  */
@@ -434,6 +439,12 @@ function pipeSockets(clientSocket: net.Socket, peerSocket: net.Socket): void {
 		clientSocket.destroy();
 		peerSocket.destroy();
 	};
+
+	if (clientSocket.destroyed) {
+		teardown();
+		return;
+	}
+
 	clientSocket.on("error", teardown);
 	peerSocket.on("error", teardown);
 
