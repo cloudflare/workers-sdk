@@ -17,3 +17,5 @@ Available codemods:
 
 Use `--dry-run` to list changes without writing them, `--cwd <path>` to target
 another project, or repeat `--files <glob>` to restrict the files considered.
+When the target is inside a Git worktree, the worktree must be clean. Use
+`--force` to bypass this safety check.

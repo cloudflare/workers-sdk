@@ -15,6 +15,7 @@ Options:
   --cwd <path>     Project directory (default: current directory)
   --files <glob>   Restrict files considered; may be repeated
   --dry-run        List changes without writing files
+  --force          Run even if the Git worktree is not clean
   --help           Show this help
 
 Available Codemods:
@@ -34,6 +35,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 			cwd: { type: "string" },
 			files: { type: "string", multiple: true },
 			"dry-run": { type: "boolean", default: false },
+			force: { type: "boolean", default: false },
 			help: { type: "boolean", short: "h", default: false },
 		},
 	});
@@ -55,6 +57,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 		cwd,
 		dryRun: values["dry-run"],
 		files: values.files,
+		force: values.force,
 	});
 
 	if (result.changedFiles.length > 0) {
