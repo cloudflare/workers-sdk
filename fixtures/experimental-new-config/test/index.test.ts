@@ -46,7 +46,6 @@ async function stageFixture(): Promise<string> {
 		"src",
 		"cloudflare.config.ts",
 		"wrangler.config.ts",
-		"worker-configuration.d.ts",
 		"tsconfig.json",
 		"tsconfig.node.json",
 		"tsconfig.worker.json",
@@ -206,5 +205,17 @@ describe("--x-new-config dev", () => {
 	}) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		expect(await response.text()).toBe("The mode is dev");
+	});
+
+	test("generates types in the hidden Cloudflare directory", async ({
+		expect,
+	}) => {
+		const generatedTypes = await fs.readFile(
+			path.join(tmpDir, ".cloudflare/types/index.d.ts"),
+			"utf8"
+		);
+		expect(generatedTypes).toContain(
+			'import("../../cloudflare.config").default'
+		);
 	});
 });
