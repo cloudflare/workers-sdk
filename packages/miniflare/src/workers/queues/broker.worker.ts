@@ -448,7 +448,8 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 				// zero-delay timer: workerd caps a Durable Object at 10000 active
 				// timeouts, and a producer looping over `send()`/`sendBatch()` gets
 				// through more messages than that before any of the timers run, so
-				// the broker used to throw `QuotaExceededError` at 10001 messages.
+				// Enqueue undelayed messages directly rather than through a
+				// zero-delay timer to avoid the workerd limit on active timeouts
 				fn();
 			}
 		}

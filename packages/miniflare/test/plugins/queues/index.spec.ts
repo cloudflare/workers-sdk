@@ -1214,10 +1214,6 @@ test("validates message size", async ({ expect }) => {
 });
 
 // Regression test for https://github.com/cloudflare/workers-sdk/issues/15670.
-// The broker used to hand every message to a timer, even when it had no
-// delivery delay. workerd allows a Durable Object at most 10000 active
-// timeouts and none of them run while a producer is still sending, so the
-// broker threw `QuotaExceededError` on the 10001st message of a burst.
 test("enqueues more undelayed messages than workerd's active timeout limit", async ({
 	expect,
 }) => {
