@@ -72,6 +72,7 @@ const EXPECTED_DEFAULT_SCOPE_KEYS = [
 	"sso-connector:read",
 	"sso-connector:write",
 	"ssl_certs:write",
+	"tag.write",
 	"teams:pii",
 	"teams:read",
 	"teams:secure_location",
@@ -97,7 +98,7 @@ const EXPECTED_DEFAULT_SCOPE_KEYS = [
 describe("cf OAuth scopes", () => {
 	it("preserves the existing default login scope set exactly", ({ expect }) => {
 		expect(DefaultScopeKeys).toEqual(EXPECTED_DEFAULT_SCOPE_KEYS);
-		expect(DefaultScopeKeys).toHaveLength(88);
+		expect(DefaultScopeKeys).toHaveLength(89);
 		expect(new Set(DefaultScopeKeys).size).toBe(DefaultScopeKeys.length);
 		expect(validateScopeKeys(DefaultScopeKeys)).toBe(true);
 	});
