@@ -1,5 +1,22 @@
 # @cloudflare/workers-auth
 
+## 0.9.0
+
+### Minor Changes
+
+- [#15688](https://github.com/cloudflare/workers-sdk/pull/15688) [`93ee76e`](https://github.com/cloudflare/workers-sdk/commit/93ee76e6eb99cbb1d42abb4f472eb00d61c0d7a1) Thanks [@penalosa](https://github.com/penalosa)! - Request every grantable scope registered for the cf OAuth client on login
+
+  The cf OAuth flow now requests all 468 scopes that are both accepted for its production client and grantable by the consent service, allowing cf commands to call the corresponding APIs. Six client-registered scopes without consent mappings remain excluded so browser and device login do not fail during authorization.
+
+### Patch Changes
+
+- [#15662](https://github.com/cloudflare/workers-sdk/pull/15662) [`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.8.0
+
+  This updates the bundled TOML parser that reads `wrangler.toml` to a version that addresses two advisories against 1.5.2: `GHSA-7w5x-hrqm-74c2` (a value followed by a comment with no trailing newline, such as `a=[1 #`, put the parser in an infinite loop) and `GHSA-v3rj-xjv7-4jmq` (thousands of consecutive comment lines overflowed the stack). On the old version, `wrangler deploy` against a `wrangler.toml` ending in `a=[1 #` never returned; it now fails with `Invalid TOML document: cannot find end of structure`.
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+
 ## 0.8.0
 
 ### Minor Changes

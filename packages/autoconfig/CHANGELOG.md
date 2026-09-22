@@ -1,5 +1,14 @@
 # @cloudflare/autoconfig
 
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+  - @cloudflare/cli-shared-helpers@0.1.36
+  - @cloudflare/config@0.17.0
+
 ## 0.6.1
 
 ### Patch Changes
