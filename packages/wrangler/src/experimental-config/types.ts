@@ -1,7 +1,7 @@
 /**
  * The shape of `wrangler.config.ts` — tooling / bundling / dev-server
  * configuration that complements the Worker configuration authored in
- * `cloudflare.config.ts` via `defineWorker`.
+ * `cloudflare.config.ts` via `defineConfig`.
  */
 export interface WranglerConfig {
 	// Bundling
@@ -37,7 +37,7 @@ export interface WranglerConfig {
 	/**
 	 * Assets directory — the only tooling-side asset setting. The runtime
 	 * asset fields (`binding`, `htmlHandling`, `notFoundHandling`,
-	 * `runWorkerFirst`) live in `cloudflare.config.ts` under `assets`.
+	 * `runWorkerFirst`) live in `cloudflare.config.ts` under `worker.assets`.
 	 */
 	assetsDirectory?: string;
 	// Dev/local

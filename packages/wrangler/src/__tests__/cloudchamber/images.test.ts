@@ -209,7 +209,7 @@ describe("cloudchamber image list", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
-			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
+			one: ["hundred", "ten", "sha256-release", "sha256:239a0dfhasdfui235"],
 			two: ["thousand", "twenty", "sha256:badfga4mag0vhjakf"],
 			three: ["million", "thirty", "sha256:23f0adfgbja0f0jf0"],
 		};
@@ -234,6 +234,7 @@ describe("cloudchamber image list", () => {
 			"REPOSITORY  TAG
 			one         hundred
 			one         ten
+			one         sha256-release
 			two         thousand
 			two         twenty
 			three       million

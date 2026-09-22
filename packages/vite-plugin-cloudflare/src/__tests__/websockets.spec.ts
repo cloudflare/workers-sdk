@@ -44,7 +44,6 @@ describe("handleWebSocket", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2023-07-24",
 						manifest: {

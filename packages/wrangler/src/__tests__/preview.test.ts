@@ -1214,9 +1214,13 @@ describe("wrangler preview", () => {
 					runWrangler(
 						"preview --name test-preview --config wrangler.json --json --ignore-base-config"
 					)
-				).rejects.toThrow("missing a `previews` block");
+				).rejects.toThrow("missing a previews block");
 
 				expect(std.warn).not.toContain(namedEnvironmentsMessage);
+				expect(JSON.parse(std.out)).toEqual({
+					error: "Your Wrangler configuration is missing a previews block",
+					suggested_config: { previews: {} },
+				});
 			});
 
 			test.for(["wrangler.toml", "wrangler.json", "wrangler.jsonc"])(
@@ -1642,12 +1646,13 @@ describe("wrangler preview", () => {
 					runWrangler(
 						"preview --name test-preview --config wrangler.json --json"
 					)
-				).rejects.toThrow(
-					'Your Wrangler configuration is missing a `previews` block to run this command. Add the following to your configuration file:\n{\n  "previews": {}\n}\nTo create or update a Preview with `npx wrangler preview`, your Wrangler configuration must include a `previews` block. The block can be empty. Assets, compatibility settings, migrations, and placement stay at the top level and do not need to be added to `previews`.\nLearn more: https://developers.cloudflare.com/workers/previews/configuration/#wrangler-configuration-file'
-				);
+				).rejects.toThrow("missing a previews block");
 
 				expect(deploymentRequests).toBe(0);
-				expect(std.out).toBe("");
+				expect(JSON.parse(std.out)).toEqual({
+					error: "Your Wrangler configuration is missing a previews block",
+					suggested_config: { previews: {} },
+				});
 				expect(std.info).toBe("");
 				expect(readFileSync("wrangler.json", "utf8")).toBe(originalConfig);
 			});
@@ -1805,9 +1810,16 @@ describe("wrangler preview", () => {
 					runWrangler(
 						"preview --name test-preview --config wrangler.json --json"
 					)
-				).rejects.toThrow("missing a `previews` block");
+				).rejects.toThrow("missing a previews block");
 
-				expect(std.out).toBe("");
+				expect(JSON.parse(std.out)).toEqual({
+					error: "Your Wrangler configuration is missing a previews block",
+					suggested_config: {
+						previews: {
+							vars: { API_URL: "https://preview.example.com" },
+						},
+					},
+				});
 				expect(std.info).toBe("");
 				expect(readFileSync("wrangler.json", "utf8")).toBe(originalConfig);
 			});
@@ -2128,9 +2140,45 @@ describe("wrangler preview", () => {
 			expect((thrown as Error).message).toContain("IMPORTANT_BINDING");
 			expect((thrown as Error).message).toContain('"id": "<REPLACE_ME>"');
 			expect((thrown as Error).message).not.toContain("kv-id-123");
-			expect(std.warn).toContain(
+			expect((thrown as Error).message).toMatch(
+				/}\n\nReplace each <REPLACE_ME> placeholder with a Preview-safe value\. Do not use production resources unless you intend for this Preview to access them\.$/
+			);
+			expect(std.warn).not.toContain(
 				"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them."
 			);
+		});
+
+		test("returns the suggested Preview configuration as JSON", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "src/index.ts",
+					kv_namespaces: [
+						{ binding: "SESSIONS", id: "production-sessions-kv-id" },
+					],
+				},
+				"wrangler.json"
+			);
+
+			await expect(
+				runWrangler("preview --name test-preview --json")
+			).rejects.toThrow("missing a previews block");
+
+			expect(JSON.parse(std.out)).toEqual({
+				error: "Your Wrangler configuration is missing a previews block",
+				suggested_config: {
+					previews: {
+						kv_namespaces: [{ binding: "SESSIONS", id: "<REPLACE_ME>" }],
+					},
+				},
+				messages: [
+					"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them.",
+				],
+			});
+			expect(std.warn).toBe("");
+			expect(std.err).toBe("");
 		});
 
 		test.for([
@@ -2178,6 +2226,20 @@ describe("wrangler preview", () => {
 				).rejects.toThrow("needs a `previews` block to run this command");
 
 				expect(std.warn).toContain(warning);
+				std.getAndClearOut();
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --ignore-base-config --json"
+					)
+				).rejects.toThrow("missing a previews block");
+
+				const jsonError = JSON.parse(std.out) as {
+					messages: string[];
+				};
+				expect(jsonError.messages).toEqual(
+					expect.arrayContaining([expect.stringContaining(warning)])
+				);
 			}
 		);
 
@@ -2226,12 +2288,11 @@ describe("wrangler preview", () => {
 				.filter(
 					(message) =>
 						typeof message === "string" &&
-						(message.startsWith(
+						message.startsWith(
 							"These settings have limitations in Worker Previews"
-						) ||
-							message.startsWith("Replace each <REPLACE_ME>"))
+						)
 				);
-			expect(conversionWarnings).toHaveLength(2);
+			expect(conversionWarnings).toHaveLength(1);
 		});
 
 		test("should not warn about top-level bindings when they are present in local previews config", async ({

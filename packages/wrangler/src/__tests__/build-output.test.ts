@@ -13,27 +13,26 @@ vi.mock("@cloudflare/config", async (importOriginal) => {
 const WORKER_NAME = "build-output-test-worker";
 
 // The Build Output Specification holds a single Worker in the `default`
-// directory (the export name in `cloudflare.config.ts`), regardless of the
-// Worker's configured `name`. Resolve at call time — `runInTempDir` changes
-// the cwd after this module is imported.
+// directory. Resolve at call time — `runInTempDir` changes the cwd after this
+// module is imported.
 function workerDir(): string {
 	return path.resolve(".cloudflare/output/v0/workers", "default");
 }
 
 function readOutputConfig() {
-	const configPath = path.join(workerDir(), "config.json");
+	const configPath = path.join(workerDir(), "worker.config.json");
 	return JSON.parse(fs.readFileSync(configPath, "utf8")) as Record<
 		string,
 		unknown
 	>;
 }
 
-function settingsConfigPath(): string {
+function rootConfigPath(): string {
 	return path.resolve(".cloudflare/output/v0", "config.json");
 }
 
-function readSettingsConfig() {
-	return JSON.parse(fs.readFileSync(settingsConfigPath(), "utf8")) as Record<
+function readRootConfig() {
+	return JSON.parse(fs.readFileSync(rootConfigPath(), "utf8")) as Record<
 		string,
 		unknown
 	>;
@@ -55,12 +54,11 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
-			};`,
+			} };`,
 			"src/index.js": `export default {
 				async fetch() { return new Response("hello"); }
 			};`,
@@ -91,12 +89,11 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.ts",
-			};`,
+			} };`,
 			"src/index.ts": `export default {
 				async fetch(): Promise<Response> { return new Response("hello"); }
 			};`,
@@ -123,12 +120,11 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
-			};`,
+			} };`,
 			"wrangler.config.ts": `export default {
 				rules: [{ type: "Text", globs: ["**/*.graphql"] }],
 			};`,
@@ -162,12 +158,11 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
-			};`,
+			} };`,
 			"wrangler.config.ts": `export default {
 				preserveFileNames: true,
 				rules: [{ type: "Text", globs: ["**/*.txt"] }],
@@ -197,12 +192,11 @@ describe("wrangler build --experimental-cf-build-output", () => {
 
 	it("copies the assets directory", async ({ expect }) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
-			};`,
+			} };`,
 			"wrangler.config.ts": `export default {
 				assetsDirectory: "./public",
 			};`,
@@ -237,11 +231,10 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
-			};`,
+			} };`,
 			"wrangler.config.ts": `export default {
 				assetsDirectory: "./public",
 			};`,
@@ -264,12 +257,11 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
-			};`,
+			} };`,
 			"wrangler.config.ts": `export default {
 				uploadSourceMaps: true,
 			};`,
@@ -293,12 +285,11 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
-			};`,
+			} };`,
 			"src/index.js": `export default { async fetch() { return new Response(""); } };`,
 		});
 
@@ -313,11 +304,10 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect,
 	}) => {
 		await seed({
-			"cloudflare.config.ts": `export default {
-				type: "worker",
+			"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
-			};`,
+			} };`,
 		});
 
 		await expect(
@@ -327,23 +317,24 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		).rejects.toThrow();
 	});
 
-	describe("top-level settings config.json", () => {
-		async function seedWorker(settingsExport = "") {
+	describe("root config.json", () => {
+		async function seedWorker(settings = "") {
 			await seed({
 				"cloudflare.config.ts": `export default {
-					type: "worker",
+					${settings}
+					worker: {
 					name: "${WORKER_NAME}",
 					compatibilityDate: "2026-05-18",
 					entrypoint: "./src/index.js",
-				};
-				${settingsExport}`,
+					},
+				};`,
 				"src/index.js": `export default {
 					async fetch() { return new Response("hello"); }
 				};`,
 			});
 		}
 
-		it("is emitted even when there is no settings export", async ({
+		it("is emitted even when there are no account settings", async ({
 			expect,
 		}) => {
 			await seedWorker();
@@ -352,8 +343,10 @@ describe("wrangler build --experimental-cf-build-output", () => {
 				"build --experimental-new-config --experimental-cf-build-output"
 			);
 
-			expect(fs.existsSync(settingsConfigPath())).toBe(true);
-			expect(readSettingsConfig()).toEqual({ type: "settings" });
+			expect(fs.existsSync(rootConfigPath())).toBe(true);
+			expect(readRootConfig()).toEqual({
+				buildContext: { isPreview: false },
+			});
 		});
 
 		it("records the mode from --env", async ({ expect }) => {
@@ -363,7 +356,9 @@ describe("wrangler build --experimental-cf-build-output", () => {
 				"build --experimental-new-config --experimental-cf-build-output --env staging"
 			);
 
-			expect(readSettingsConfig().mode).toBe("staging");
+			expect(readRootConfig()).toMatchObject({
+				buildContext: { isPreview: false, mode: "staging" },
+			});
 		});
 
 		it("records the mode from CLOUDFLARE_ENV", async ({ expect }) => {
@@ -374,7 +369,9 @@ describe("wrangler build --experimental-cf-build-output", () => {
 				"build --experimental-new-config --experimental-cf-build-output"
 			);
 
-			expect(readSettingsConfig().mode).toBe("preview");
+			expect(readRootConfig()).toMatchObject({
+				buildContext: { isPreview: false, mode: "preview" },
+			});
 		});
 
 		it("omits the mode when neither --env nor CLOUDFLARE_ENV is set", async ({
@@ -386,27 +383,23 @@ describe("wrangler build --experimental-cf-build-output", () => {
 				"build --experimental-new-config --experimental-cf-build-output"
 			);
 
-			expect(readSettingsConfig()).not.toHaveProperty("mode");
+			expect(readRootConfig().buildContext).not.toHaveProperty("mode");
 		});
 
-		it("records the mode alongside the settings export", async ({ expect }) => {
+		it("records the mode alongside account settings", async ({ expect }) => {
 			await seedWorker(
-				`export const settings = {
-					type: "settings",
-					accountId: "acc-123",
-					complianceRegion: "public",
-				};`
+				`accountId: "acc-123",
+				complianceRegion: "public",`
 			);
 
 			await runWrangler(
 				"build --experimental-new-config --experimental-cf-build-output --env staging"
 			);
 
-			expect(readSettingsConfig()).toEqual({
-				type: "settings",
+			expect(readRootConfig()).toEqual({
 				accountId: "acc-123",
 				complianceRegion: "public",
-				mode: "staging",
+				buildContext: { isPreview: false, mode: "staging" },
 			});
 		});
 	});

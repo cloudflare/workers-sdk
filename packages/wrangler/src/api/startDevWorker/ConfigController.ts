@@ -773,7 +773,7 @@ export class ConfigController extends Controller {
 			if (newConfig && fileConfig.configPath) {
 				await regenerateNewConfigTypes({
 					cloudflareConfigPath: fileConfig.configPath,
-					workerConfig: newConfig.parsedWorkerConfig,
+					workerConfig: newConfig.parsedConfig.worker,
 					types: newConfig.types,
 				});
 			}

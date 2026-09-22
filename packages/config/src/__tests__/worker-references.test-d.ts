@@ -1,7 +1,7 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 import { bindings } from "../bindings";
+import { defineWorker } from "../definition";
 import { exports as workerExports } from "../exports";
-import { defineWorker } from "../worker-definition";
 import type { DurableObjectBinding, WorkerBinding } from "../bindings";
 import type { InferEnv, UnwrapConfig } from "../inference";
 

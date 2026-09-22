@@ -1,5 +1,134 @@
 # wrangler
 
+## 4.136.1
+
+### Patch Changes
+
+- [#15744](https://github.com/cloudflare/workers-sdk/pull/15744) [`0ed4c54`](https://github.com/cloudflare/workers-sdk/commit/0ed4c54cce958e937addac517f5aa9819ebe0379) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Improve `wrangler preview` onboarding guidance
+
+  Wrangler now displays placeholder replacement guidance directly beneath the suggested Preview configuration instead of as a separate warning. JSON output continues to include the guidance in its structured onboarding messages.
+
+- [#15678](https://github.com/cloudflare/workers-sdk/pull/15678) [`703922d`](https://github.com/cloudflare/workers-sdk/commit/703922dbcaaeef3d2c17d4d4450cc2dd2a713f0e) Thanks [@christhorwarth](https://github.com/christhorwarth)! - Read workers.dev URLs from the Worker resource during deployment
+
+  Wrangler no longer requires account-level subdomain permission to display Worker and version-preview URLs. It now uses the Worker-scoped URL fields while preserving account-level registration for accounts without a workers.dev subdomain.
+
+- Updated dependencies [[`14d946d`](https://github.com/cloudflare/workers-sdk/commit/14d946d5b5573d856f3b2ddaa0e75c3aa5fb7bfa)]:
+  - @cloudflare/unenv-preset@2.16.2
+
+## 4.136.0
+
+### Minor Changes
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Identify experimental Build Output resource configs by filename and location
+
+  The root remains `config.json`, Worker configs are now `worker.config.json`, and Container configs are now `container.config.json`. Resource configs no longer contain top-level `type` discriminators, while settings and build context are stored together in the root config.
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Define experimental Cloudflare configuration with a single default export
+
+  Experimental `cloudflare.config.ts` files now define settings and resources together in a default-exported `defineConfig()` call. Add a Worker under `worker`, add Containers to the `containers` array, or omit both to provide settings only.
+
+  ```ts
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineConfig({
+  	accountId: "...",
+  	complianceRegion: "public",
+  	worker: {
+  		name: "my-worker",
+  		compatibilityDate: "2026-09-18",
+  		entrypoint,
+  	},
+  });
+  ```
+
+- [#15720](https://github.com/cloudflare/workers-sdk/pull/15720) [`35668d7`](https://github.com/cloudflare/workers-sdk/commit/35668d7226f63b0a9e262ae1b187186409be8804) Thanks [@alexkli](https://github.com/alexkli)! - Add experimental `--zone` and `--zone-id` flags to `wrangler deploy` and `wrangler triggers deploy` to attach a zone to routes passed via `--route`
+
+  Routes passed on the command line were always sent to the Cloudflare API as bare patterns. Zones with an SSL for SaaS entitlement reject such routes with error 10082 ("When using wildcard host ssl for saas entitlement you must specify the zone per route using zone_id or zone_name"), and until now the only way to set a zone was in the config file, which `--route` overrides.
+
+  The new flags are experimental and must be enabled with `--experimental-route-zones` (alias `--x-route-zones`). Pass a single zone to apply it to all routes, or one zone per route in the same order as the `--route` flags:
+
+  `wrangler deploy --x-route-zones --route "app.example.com/*" --route "api.example.com/*" --zone example.com`
+
+  `wrangler deploy --x-route-zones --route "a.example.com/*" --zone example.com --route "b.example.net/*" --zone example.net`
+
+  `--zone` sets `zone_name` and `--zone-id` sets `zone_id` on each route. The two flags cannot be combined, and passing more than one zone requires exactly one per `--route`. Routes without zone flags behave exactly as before.
+
+- [#15699](https://github.com/cloudflare/workers-sdk/pull/15699) [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c) Thanks [@skepticfx](https://github.com/skepticfx)! - Remove the experimental Container image environment binding
+
+  Durable Object-managed Containers now use `ctx.container.images` without Wrangler generating `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES`. Update code using the experimental environment binding to read `ctx.container.images` and regenerate your Worker types.
+
+  Version deployments identify managed applications from native named images, and `--containers-rollout=none` preserves native Container metadata. Containers without named images must first be provisioned with `wrangler deploy`; `versions upload` verifies that their applications already exist. The old binding is no longer read or reserved, including on previously uploaded versions. `keep_vars` retains existing variables as usual; redeploy without it to remove an existing experimental binding.
+
+- [#15702](https://github.com/cloudflare/workers-sdk/pull/15702) [`8235e6a`](https://github.com/cloudflare/workers-sdk/commit/8235e6a7e03d4910f1de78d67324a11974c393a0) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Return structured configuration errors from `wrangler preview --json`
+
+  When a Worker is missing its Preview configuration, JSON mode now returns an `error`, a `suggested_config` patch, and any associated onboarding `messages` without interactive output or terminal formatting. This changes the private-beta Preview command to make automated onboarding reliable.
+
+- [#15577](https://github.com/cloudflare/workers-sdk/pull/15577) [`731a2ee`](https://github.com/cloudflare/workers-sdk/commit/731a2ee747d3904564ea45188dbf848d62bcc6e8) Thanks [@sdnts](https://github.com/sdnts)! - Add support for jurisdictions to Queues subcommands
+
+### Patch Changes
+
+- [#15711](https://github.com/cloudflare/workers-sdk/pull/15711) [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Allow local Container images without exposed ports
+
+  Wrangler and the Cloudflare Vite plugin no longer reject images that omit Docker `EXPOSE` metadata. Local Containers can run command-only workloads or serve traffic through workerd without declaring an unused image port.
+
+- [#15740](https://github.com/cloudflare/workers-sdk/pull/15740) [`c5913a6`](https://github.com/cloudflare/workers-sdk/commit/c5913a61e155cebf597c8081e445b64343bf2484) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260918.1 | ^5.20260921.1 |
+  | workerd                   | 1.20260918.1  | 1.20260921.1  |
+
+- [#15471](https://github.com/cloudflare/workers-sdk/pull/15471) [`0751490`](https://github.com/cloudflare/workers-sdk/commit/0751490b357fc85022dbc9ff5e6642c0f33a2f0a) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix cf builds for static projects that serve assets from the project root
+
+  The experimental Build Output path now omits the reserved `.cloudflare` directory when the project root is used for static assets. This prevents recursive output copying in Wrangler while preserving the existing behaviour for other asset directories.
+
+- [#15440](https://github.com/cloudflare/workers-sdk/pull/15440) [`43b1f85`](https://github.com/cloudflare/workers-sdk/commit/43b1f85fe26d4b1568f6d7aacc7ffba2b408419b) Thanks [@HuzaifaAbdulRehman](https://github.com/HuzaifaAbdulRehman)! - Rebase absolute non-JavaScript module specifiers when `preserve_file_names` is enabled
+
+  With `preserve_file_names` set, a non-JS module imported by an absolute path kept that path as its module name. The build machine's filesystem layout ended up inside the deployed Worker, and the module was never written to `--outdir`. A local dry run reported success while the upload failed server-side with error code `10021`. Tooling that rewrites externals to absolute paths hits this, which is how it was found in `@opennextjs/cloudflare` with WASM imports.
+
+  Absolute specifiers are now rebased to `./<basename>`, which is what the hashed branch of the same code already does minus the hash prefix. Relative specifiers keep the behaviour they had.
+
+- Updated dependencies [[`c5913a6`](https://github.com/cloudflare/workers-sdk/commit/c5913a61e155cebf597c8081e445b64343bf2484), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63)]:
+  - miniflare@5.20260921.0-alpha
+
+## 4.135.0
+
+### Minor Changes
+
+- [#15609](https://github.com/cloudflare/workers-sdk/pull/15609) [`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036) Thanks [@emily-shen](https://github.com/emily-shen)! - Build Containers when emitting experimental Build Output
+
+  Wrangler and the Cloudflare Vite plugin now build Dockerfile-backed Container images when experimental Build Output is enabled. Container configs are emitted under `.cloudflare/output/v0/containers` with local image references, while existing registry references pass through unchanged.
+
+- [#15329](https://github.com/cloudflare/workers-sdk/pull/15329) [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Evaluate Flagship flags locally during development
+
+  Flagship bindings now use the local Miniflare store by default in Wrangler and the Vite plugin, keeping development offline and isolated from production flags. Set `remote: true` on a binding to continue using its remote app.
+
+  Use `wrangler flagship flags pull <APP_ID>` to seed the store from a remote app. Flag management commands also accept `--local` to read and update the local store directly.
+
+- [#15701](https://github.com/cloudflare/workers-sdk/pull/15701) [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Pass Preview intent to `defineWorker` and upload its resolved configuration
+
+  Preview builds now evaluate programmatic Worker configuration with `ctx.isPreview` set to `true` and record that intent in Build Output. The shared Preview uploader deploys the resolved bindings and settings while preserving configured Preview base values when it creates a Preview.
+
+### Patch Changes
+
+- [#15705](https://github.com/cloudflare/workers-sdk/pull/15705) [`a0485d5`](https://github.com/cloudflare/workers-sdk/commit/a0485d5a5e2293b16e77d1302a470537281c2622) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260917.1 | ^5.20260918.1 |
+  | workerd                   | 1.20260917.1  | 1.20260918.1  |
+
+- [#15587](https://github.com/cloudflare/workers-sdk/pull/15587) [`629ddef`](https://github.com/cloudflare/workers-sdk/commit/629ddef4adb201d808b4b998668261a212632ffe) Thanks [@Kuldeeep18](https://github.com/Kuldeeep18)! - Fix duration calculation for running workflow instances, steps, and attempts in `wrangler workflows instances describe`
+
+  `wrangler workflows instances describe` previously distorted the elapsed duration of in-progress instances, steps, and attempts across non-UTC timezones by stripping `" GMT"` from `toUTCString()`, causing `new Date(...)` to parse the timestamp in the local client timezone. The duration is now correctly computed against the current time.
+
+- Updated dependencies [[`a0485d5`](https://github.com/cloudflare/workers-sdk/commit/a0485d5a5e2293b16e77d1302a470537281c2622)]:
+  - miniflare@5.20260918.0-alpha
+
 ## 4.134.0
 
 ### Minor Changes

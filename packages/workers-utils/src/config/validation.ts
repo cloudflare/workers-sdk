@@ -10,10 +10,7 @@ import {
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
-import {
-	CONTAINER_IMAGES_BINDING,
-	getContainerNameToClassNameMap,
-} from "./containers";
+import { getContainerNameToClassNameMap } from "./containers";
 import { Diagnostics } from "./diagnostics";
 import { getDurableObjectExports } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
@@ -5194,8 +5191,6 @@ const validateBindingsHaveUniqueNames = (
 	// Add secrets to binding name validation (secrets is not a CfWorkerInit binding type,
 	// but we want to validate that secret names don't conflict with other bindings)
 	bindingsGroupedByType["Secret"] = config.secrets?.required ?? [];
-	// This temporary binding name identifies Wrangler-managed Container images.
-	bindingsGroupedByType["Container images"] = [CONTAINER_IMAGES_BINDING];
 	const bindingsGroupedByName: Record<string, string[]> = {};
 
 	for (const bindingType in bindingsGroupedByType) {

@@ -1,5 +1,47 @@
 # @cloudflare/autoconfig
 
+## 0.6.0
+
+### Minor Changes
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Define experimental Cloudflare configuration with a single default export
+
+  Experimental `cloudflare.config.ts` files now define settings and resources together in a default-exported `defineConfig()` call. Add a Worker under `worker`, add Containers to the `containers` array, or omit both to provide settings only.
+
+  ```ts
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineConfig({
+  	accountId: "...",
+  	complianceRegion: "public",
+  	worker: {
+  		name: "my-worker",
+  		compatibilityDate: "2026-09-18",
+  		entrypoint,
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c), [`95af41d`](https://github.com/cloudflare/workers-sdk/commit/95af41d564f7476cdda8c5923208c3b8a3ec2a11)]:
+  - @cloudflare/config@0.16.0
+  - @cloudflare/workers-utils@0.41.0
+  - @cloudflare/cli-shared-helpers@0.1.35
+
+## 0.5.1
+
+### Patch Changes
+
+- [#15694](https://github.com/cloudflare/workers-sdk/pull/15694) [`6e7c12e`](https://github.com/cloudflare/workers-sdk/commit/6e7c12eaf4cbd4545f9ba7144525198e9cf5f072) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Defer configured unsupported frameworks to an installed Cloudflare dev server
+
+  Configured `cf` projects whose detected framework is not supported by autoconfig no longer run inferred package scripts: `npm run build` as these may be invalid, e.g a build script `cf build` causes recursive calls `cf build -> npm run build -> cf build`. This allows `cf` to use its existing Cloudflare dev-server delegation instead.
+
+- Updated dependencies [[`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036), [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac), [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6)]:
+  - @cloudflare/config@0.15.0
+  - @cloudflare/workers-utils@0.40.1
+  - @cloudflare/cli-shared-helpers@0.1.34
+
 ## 0.5.0
 
 ### Minor Changes
