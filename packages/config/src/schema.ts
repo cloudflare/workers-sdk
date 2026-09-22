@@ -717,8 +717,8 @@ const TriggerSchema = z.discriminatedUnion("type", [
 			protocol: z.literal("udp"),
 			port: z.number(),
 			address: z.string().optional(),
-			idleTimeoutMs: z.number().optional(),
-			maxPendingBytes: z.number().optional(),
+			idleTimeoutMs: z.number().int().min(0).max(0xffffffff).optional(),
+			maxPendingBytes: z.number().int().min(0).max(0xffffffff).optional(),
 		}),
 	]),
 ]);
