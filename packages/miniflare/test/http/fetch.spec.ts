@@ -255,10 +255,8 @@ test(
 	"fetch: DispatchFetchDispatcher reuses connections across requests",
 	{ retry: 3 },
 	async ({ expect }) => {
-		// Regression test for
-		// https://github.com/cloudflare/workers-sdk/issues/15716: forcing
-		// `options.reset = true` closed the connection after every request, burning
-		// one ephemeral port per dispatch in `TIME_WAIT` until it expired.
+		// Forcing `options.reset = true` closed the connection after every request, burning
+		// one ephemeral port per dispatch in `TIME_WAIT` until it expired
 		let connectionCount = 0;
 		const server = http.createServer((req, res) => res.end("ok"));
 		server.on("connection", () => connectionCount++);
