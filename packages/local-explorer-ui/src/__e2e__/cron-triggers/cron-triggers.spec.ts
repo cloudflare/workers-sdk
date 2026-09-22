@@ -172,7 +172,7 @@ describe("Cron Triggers", () => {
 	test("canonicalizes missing and invalid workers before dispatch", async ({
 		expect,
 	}) => {
-		await mockWorkerMetadata([
+		const workers: MockWorkerMetadata[] = [
 			{
 				isSelf: true,
 				name: "worker-1",
@@ -184,7 +184,8 @@ describe("Cron Triggers", () => {
 				persistenceScope: "cron-project-2",
 				triggers: { crons: ["second-worker-cron"] },
 			},
-		]);
+		];
+		await mockWorkerMetadata(workers);
 		const requestedWorkers: Array<string | null> = [];
 		await page.route(SCHEDULED_ROUTE, async (route) => {
 			requestedWorkers.push(
@@ -233,6 +234,19 @@ describe("Cron Triggers", () => {
 				viteUrl
 			).toString()
 		);
+		expect(await page.getByLabel("Cron expression").inputValue()).toBe(
+			"second-worker-cron"
+		);
+		await page.getByRole("button", { name: "Trigger", exact: true }).click();
+		await expect.poll(() => requestedWorkers).toEqual(["worker-2"]);
+
+		requestedWorkers.length = 0;
+		workers.splice(1, 1);
+		await page.getByRole("button", { name: "Refresh Cron Triggers" }).click();
+		await page.getByText(/Existing rows may be stale/).waitFor();
+		expect(
+			await page.getByRole("combobox").filter({ hasText: "worker-2" }).count()
+		).toBe(1);
 		expect(await page.getByLabel("Cron expression").inputValue()).toBe(
 			"second-worker-cron"
 		);

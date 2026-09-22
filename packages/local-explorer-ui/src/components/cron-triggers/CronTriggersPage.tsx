@@ -24,12 +24,7 @@ export function CronTriggersPage({
 	view: CronTriggersView;
 }): JSX.Element {
 	const cron = useCronTriggers();
-	const workerName =
-		cron.activeWorkerName &&
-		(cron.visibleWorkerNames.length === 0 ||
-			cron.visibleWorkerNames.includes(cron.activeWorkerName))
-			? cron.activeWorkerName
-			: cron.fallbackWorkerName;
+	const workerName = cron.activeWorkerName ?? cron.fallbackWorkerName;
 	const entry = cron.entry(workerName);
 	const [focusRow, setFocusRow] = useState<string>();
 	const [timeSelection, setTimeSelection] =
