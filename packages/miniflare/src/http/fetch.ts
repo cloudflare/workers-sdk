@@ -263,7 +263,9 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			// retried after potentially reaching the Worker.
 			const canRetry = options.method === "GET" || options.method === "HEAD";
 			if (canRetry) {
+				options.reset = false;
 				return this.retryRuntimeDispatcher.dispatch(options, handler);
+			}
 			}
 			options.reset = true;
 			return this.nonRetryableRuntimeDispatcher.dispatch(options, handler);
