@@ -596,6 +596,26 @@ describe("handleWebSocket", () => {
 		socket.destroy();
 	});
 
+	test("destroys malformed upgrades when no other listener can own them", async () => {
+		await listen();
+
+		const socket = await connect();
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+
+		socket.write(
+			"GET /custom HTTP/1.1\r\n" +
+				"Host: not a host\r\n" +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
+	});
+
 	test("does not destroy sockets claimed asynchronously by another upgrade listener", async ({
 		expect,
 	}) => {
@@ -858,6 +878,40 @@ describe("handleWebSocket", () => {
 		);
 
 		await closed;
+	});
+
+	test("replaces its upgrade listener when setup repeats", async ({
+		expect,
+	}) => {
+		const mf = startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		handleWebSocket(httpServer, mf);
+		handleWebSocket(httpServer, mf);
+		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
+		port = (httpServer.address() as AddressInfo).port;
+		await mf.ready;
+
+		const dispatchFetch = vi.spyOn(mf, "dispatchFetch");
+		const socket = await connect();
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+
+		socket.write(
+			"GET /nothing-here HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
+		expect(dispatchFetch).toHaveBeenCalledTimes(1);
+		expect(httpServer.listenerCount("upgrade")).toBe(1);
 	});
 
 	test("upgrades Worker routes on reused keep-alive connections", async ({
