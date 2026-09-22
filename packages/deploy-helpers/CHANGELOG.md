@@ -1,5 +1,57 @@
 # @cloudflare/deploy-helpers
 
+## 0.14.0
+
+### Minor Changes
+
+- [#15699](https://github.com/cloudflare/workers-sdk/pull/15699) [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c) Thanks [@skepticfx](https://github.com/skepticfx)! - Remove the experimental Container image environment binding
+
+  Durable Object-managed Containers now use `ctx.container.images` without Wrangler generating `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES`. Update code using the experimental environment binding to read `ctx.container.images` and regenerate your Worker types.
+
+  Version deployments identify managed applications from native named images, and `--containers-rollout=none` preserves native Container metadata. Containers without named images must first be provisioned with `wrangler deploy`; `versions upload` verifies that their applications already exist. The old binding is no longer read or reserved, including on previously uploaded versions. `keep_vars` retains existing variables as usual; redeploy without it to remove an existing experimental binding.
+
+### Patch Changes
+
+- [#15577](https://github.com/cloudflare/workers-sdk/pull/15577) [`731a2ee`](https://github.com/cloudflare/workers-sdk/commit/731a2ee747d3904564ea45188dbf848d62bcc6e8) Thanks [@sdnts](https://github.com/sdnts)! - Add `jurisdiction` to Queue\* types
+
+- Updated dependencies [[`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f), [`c5913a6`](https://github.com/cloudflare/workers-sdk/commit/c5913a61e155cebf597c8081e445b64343bf2484), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c), [`95af41d`](https://github.com/cloudflare/workers-sdk/commit/95af41d564f7476cdda8c5923208c3b8a3ec2a11)]:
+  - @cloudflare/config@0.16.0
+  - @cloudflare/containers-shared@0.18.0
+  - miniflare@5.20260921.0-alpha
+  - @cloudflare/workers-utils@0.41.0
+  - @cloudflare/cli-shared-helpers@0.1.35
+
+## 0.13.0
+
+### Minor Changes
+
+- [#15701](https://github.com/cloudflare/workers-sdk/pull/15701) [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Pass Preview intent to `defineWorker` and upload its resolved configuration
+
+  Preview builds now evaluate programmatic Worker configuration with `ctx.isPreview` set to `true` and record that intent in Build Output. The shared Preview uploader deploys the resolved bindings and settings while preserving configured Preview base values when it creates a Preview.
+
+### Patch Changes
+
+- Updated dependencies [[`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036), [`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036), [`a0485d5`](https://github.com/cloudflare/workers-sdk/commit/a0485d5a5e2293b16e77d1302a470537281c2622), [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac), [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6)]:
+  - @cloudflare/containers-shared@0.17.0
+  - @cloudflare/config@0.15.0
+  - miniflare@5.20260918.0-alpha
+  - @cloudflare/workers-utils@0.40.1
+  - @cloudflare/cli-shared-helpers@0.1.34
+
+## 0.12.2
+
+### Patch Changes
+
+- [#15445](https://github.com/cloudflare/workers-sdk/pull/15445) [`edb2fe7`](https://github.com/cloudflare/workers-sdk/commit/edb2fe7d2076a6f69011dd62b08a537c23bc346e) Thanks [@nileshpatil6](https://github.com/nileshpatil6)! - Join route lists before printing them in deploy messages
+
+  The "already assigned to routes" error and the "Previously deployed routes" warning interpolated an array of routes straight into a template literal, so with more than one route the output picked up the commas that `Array.prototype.toString` inserts between elements. Both sites now join the mapped lines before printing.
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114), [`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef), [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8), [`2b39fc2`](https://github.com/cloudflare/workers-sdk/commit/2b39fc2c79f7919b0af21603e278dce030c48870)]:
+  - @cloudflare/workers-utils@0.40.0
+  - miniflare@5.20260917.0-alpha
+  - @cloudflare/containers-shared@0.16.5
+  - @cloudflare/cli-shared-helpers@0.1.33
+
 ## 0.12.1
 
 ### Patch Changes

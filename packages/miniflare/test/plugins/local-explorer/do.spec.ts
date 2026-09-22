@@ -57,7 +57,6 @@ describe("Durable Objects API", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "my-worker",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(`
@@ -167,7 +166,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker-with-do",
 							compatibilityDate: "2026-01-01",
 							compatibilityFlags: ["nodejs_compat"],
@@ -321,7 +319,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "my-worker",
 							compatibilityDate: "2026-01-01",
 							manifest: singleModuleManifest(`
@@ -385,7 +382,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker-a",
 							compatibilityDate: "2026-01-01",
 							manifest: singleModuleManifest(`
@@ -406,7 +402,6 @@ describe("Durable Objects API", () => {
 					},
 					{
 						config: {
-							type: "worker",
 							name: "worker-b",
 							compatibilityDate: "2026-01-01",
 							manifest: singleModuleManifest(`
@@ -455,7 +450,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "my-worker",
 							compatibilityDate: "2026-01-01",
 							manifest: singleModuleManifest(`
@@ -527,7 +521,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "query-worker",
 							compatibilityDate: "2026-01-01",
 							compatibilityFlags: ["nodejs_compat"],

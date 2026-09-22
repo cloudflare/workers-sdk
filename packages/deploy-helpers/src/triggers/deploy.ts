@@ -21,7 +21,7 @@ import {
 	ensureQueuesExistByConfig,
 	updateQueueConsumers,
 } from "./queue-consumers";
-import { getWorkersDevSubdomain } from "./subdomain";
+import { getWorkerSubdomain, getWorkersDevSubdomain } from "./subdomain";
 import { getZoneForRoute } from "./zones";
 import type { TriggerDeployment, TriggerProps } from "../shared/types";
 import type { RouteObject } from "./publish-routes";
@@ -164,9 +164,9 @@ export async function triggersDeploy(
 
 			for (const worker in routesWithOtherBindings) {
 				const assignedRoutes = routesWithOtherBindings[worker];
-				errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
-					(r) => `  - ${chalk.underline(r)}\n`
-				)}`;
+				errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes
+					.map((r) => `  - ${chalk.underline(r)}\n`)
+					.join("")}`;
 			}
 
 			const resolution =
@@ -635,18 +635,15 @@ export function getSubdomainValuesAPIMock(
 }
 
 async function validateSubdomainMixedState(
-	props: TriggerProps,
-	accountId: string,
 	scriptName: string,
 	before: { workers_dev: boolean; preview_urls: boolean },
 	after: { workers_dev: boolean; preview_urls: boolean },
+	previewURLSuffix: string | undefined,
 	firstDeploy: boolean
 ): Promise<{
 	workers_dev: boolean;
 	preview_urls: boolean;
 }> {
-	const { config } = props;
-
 	const changed =
 		after.workers_dev !== before.workers_dev ||
 		after.preview_urls !== before.preview_urls;
@@ -676,10 +673,9 @@ async function validateSubdomainMixedState(
 		return after;
 	}
 
-	const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-		configPath: config.configPath,
-	});
-	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
+	const previewUrl = previewURLSuffix
+		? `https://<VERSION_PREFIX>${previewURLSuffix}`
+		: `https://<VERSION_PREFIX>-${scriptName}.<YOUR_SUBDOMAIN>.workers.dev`;
 
 	// Scenario 1: User disables workers.dev while having preview URLs enabled
 	if (!after.workers_dev && after.preview_urls) {
@@ -725,21 +721,21 @@ async function subdomainDeploy(
 
 	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
 		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
+	const before = await getWorkerSubdomain(config, accountId, scriptName);
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {
-		const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-			configPath: config.configPath,
-		});
-		const workersDevURL = `${scriptName}.${userSubdomain}`;
-		deployments.push(Promise.resolve({ targets: [workersDevURL] }));
+		const workersDevHostname = before.url
+			? new URL(before.url).hostname
+			: `${scriptName}.${await getWorkersDevSubdomain(config, accountId, {
+					configPath: config.configPath,
+				})}`;
+		deployments.push(
+			Promise.resolve({
+				targets: [workersDevHostname],
+			})
+		);
 	}
-
-	// Get current subdomain enablement status.
-	const before = await fetchResult<{
-		enabled: boolean;
-		previews_enabled: boolean;
-	}>(config, `${workerUrl}/subdomain`);
 
 	// Update subdomain status.
 	// Occasionally this update to the subdomain endpoint fails due to some internal API error,
@@ -806,11 +802,10 @@ async function subdomainDeploy(
 
 	// Warn about mixed status.
 	await validateSubdomainMixedState(
-		props,
-		accountId,
 		scriptName,
 		{ workers_dev: before.enabled, preview_urls: before.previews_enabled },
 		{ workers_dev: after.enabled, preview_urls: after.previews_enabled },
+		before.preview_url_suffix,
 		firstDeploy
 	);
 

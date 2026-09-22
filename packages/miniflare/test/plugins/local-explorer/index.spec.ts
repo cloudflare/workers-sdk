@@ -24,7 +24,6 @@ describe("Local Explorer API validation", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -335,7 +334,6 @@ describe("Local Explorer works with custom routes", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -481,7 +479,6 @@ describe("Local Explorer works with wildcard routes", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -554,7 +551,6 @@ describe("Local Explorer works with upstream", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -645,7 +641,6 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a1",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -675,7 +670,6 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a2",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -698,7 +692,6 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(

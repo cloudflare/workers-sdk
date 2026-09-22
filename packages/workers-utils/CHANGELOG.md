@@ -1,5 +1,41 @@
 # @cloudflare/workers-utils
 
+## 0.41.0
+
+### Minor Changes
+
+- [#15699](https://github.com/cloudflare/workers-sdk/pull/15699) [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c) Thanks [@skepticfx](https://github.com/skepticfx)! - Remove the experimental Container image environment binding
+
+  Durable Object-managed Containers now use `ctx.container.images` without Wrangler generating `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES`. Update code using the experimental environment binding to read `ctx.container.images` and regenerate your Worker types.
+
+  Version deployments identify managed applications from native named images, and `--containers-rollout=none` preserves native Container metadata. Containers without named images must first be provisioned with `wrangler deploy`; `versions upload` verifies that their applications already exist. The old binding is no longer read or reserved, including on previously uploaded versions. `keep_vars` retains existing variables as usual; redeploy without it to remove an existing experimental binding.
+
+### Patch Changes
+
+- [#15707](https://github.com/cloudflare/workers-sdk/pull/15707) [`95af41d`](https://github.com/cloudflare/workers-sdk/commit/95af41d564f7476cdda8c5923208c3b8a3ec2a11) Thanks [@halfstack-dev](https://github.com/halfstack-dev)! - Support nested D1 migration layouts in `readD1Migrations()`
+
+  `readD1Migrations()` now accepts the same `migrationsDir` / `migrationsPattern` options Wrangler uses, so Vitest can apply Drizzle-style nested files such as `0001_init/migration.sql`. Discovery is shared with Wrangler via `@cloudflare/workers-utils`, so the test path and `wrangler d1 migrations apply` stay aligned.
+
+  The original `readD1Migrations(migrationsPath)` signature still reads only top-level `*.sql` files in that directory.
+
+## 0.40.1
+
+### Patch Changes
+
+- [#15329](https://github.com/cloudflare/workers-sdk/pull/15329) [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Evaluate Flagship flags locally during development
+
+  Flagship bindings now use the local Miniflare store by default in Wrangler and the Vite plugin, keeping development offline and isolated from production flags. Set `remote: true` on a binding to continue using its remote app.
+
+  Use `wrangler flagship flags pull <APP_ID>` to seed the store from a remote app. Flag management commands also accept `--local` to read and update the local store directly.
+
+## 0.40.0
+
+### Minor Changes
+
+- [#15684](https://github.com/cloudflare/workers-sdk/pull/15684) [`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for configuring real-time Issues with `observability.issues.enabled`
+
+  Wrangler now validates and uploads the Issues setting alongside the existing logs and traces observability options. The experimental configuration format supports the equivalent `observability.issues.enabled` option.
+
 ## 0.39.1
 
 ### Patch Changes

@@ -1,5 +1,49 @@
 # @cloudflare/config
 
+## 0.16.0
+
+### Minor Changes
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Identify experimental Build Output resource configs by filename and location
+
+  The root remains `config.json`, Worker configs are now `worker.config.json`, and Container configs are now `container.config.json`. Resource configs no longer contain top-level `type` discriminators, while settings and build context are stored together in the root config.
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Define experimental Cloudflare configuration with a single default export
+
+  Experimental `cloudflare.config.ts` files now define settings and resources together in a default-exported `defineConfig()` call. Add a Worker under `worker`, add Containers to the `containers` array, or omit both to provide settings only.
+
+  ```ts
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineConfig({
+  	accountId: "...",
+  	complianceRegion: "public",
+  	worker: {
+  		name: "my-worker",
+  		compatibilityDate: "2026-09-18",
+  		entrypoint,
+  	},
+  });
+  ```
+
+## 0.15.0
+
+### Minor Changes
+
+- [#15609](https://github.com/cloudflare/workers-sdk/pull/15609) [`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036) Thanks [@emily-shen](https://github.com/emily-shen)! - Support Durable Object-managed Containers in `convertToWranglerConfig()`.
+
+- [#15701](https://github.com/cloudflare/workers-sdk/pull/15701) [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Pass Preview intent to `defineWorker` and upload its resolved configuration
+
+  Preview builds now evaluate programmatic Worker configuration with `ctx.isPreview` set to `true` and record that intent in Build Output. The shared Preview uploader deploys the resolved bindings and settings while preserving configured Preview base values when it creates a Preview.
+
+## 0.14.0
+
+### Minor Changes
+
+- [#15684](https://github.com/cloudflare/workers-sdk/pull/15684) [`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add support for configuring real-time Issues with `observability.issues.enabled`
+
+  Wrangler now validates and uploads the Issues setting alongside the existing logs and traces observability options. The experimental configuration format supports the equivalent `observability.issues.enabled` option.
+
 ## 0.13.0
 
 ### Minor Changes

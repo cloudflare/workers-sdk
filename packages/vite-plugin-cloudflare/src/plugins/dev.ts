@@ -1,11 +1,6 @@
 import assert from "node:assert";
-import {
-	cleanupContainers,
-	getCloudflareContainerRegistry,
-	prepareContainerImagesForDev,
-} from "@cloudflare/containers-shared";
+import { cleanupContainers } from "@cloudflare/containers-shared";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import { UserError } from "@cloudflare/workers-utils";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
@@ -14,7 +9,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
-import { configureContainerPull, getDockerPath } from "../containers";
+import { getDockerPath, prepareContainerImagesForVite } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
 	compareExportTypes,
@@ -243,41 +238,10 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						)
 					);
 
-					const hasCFRegistryImages = [
-						...containerTagToOptionsMap.values(),
-					].some(
-						(opts) =>
-							"image_uri" in opts &&
-							new URL(`http://${opts.image_uri}`).hostname ===
-								getCloudflareContainerRegistry(ctx.entryWorkerConfig)
-					);
-
-					if (hasCFRegistryImages) {
-						const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-						const accountId =
-							ctx.entryWorkerConfig?.account_id ??
-							process.env.CLOUDFLARE_ACCOUNT_ID;
-
-						if (!apiToken || !accountId) {
-							throw new UserError(
-								"To use images from the Cloudflare-managed registry with the Vite plugin, " +
-									"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
-									"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
-									"Alternatively, use a Dockerfile that references the image via FROM.",
-								{ telemetryMessage: false }
-							);
-						}
-
-						configureContainerPull(accountId, apiToken, ctx.entryWorkerConfig);
-					}
-
-					await prepareContainerImagesForDev({
+					await prepareContainerImagesForVite({
 						dockerPath: getDockerPath(),
-						containerOptions: [...containerTagToOptionsMap.values()],
-						onContainerImagePreparationStart: () => {},
-						onContainerImagePreparationEnd: () => {},
+						containerTagToOptionsMap,
 						logger: viteDevServer.config.logger,
-						complianceConfig: ctx.entryWorkerConfig,
 					});
 
 					containerImageTags = new Set(containerTagToOptionsMap.keys());

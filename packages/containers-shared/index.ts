@@ -1,6 +1,7 @@
 export * from "./src/client";
 export { request } from "./src/client/core/request";
 export * from "./src/build";
+export * from "./src/build-output";
 export * from "./src/context";
 export * from "./src/deploy";
 export * from "./src/diff";
@@ -14,3 +15,5 @@ export * from "./src/inspect";
 export * from "./src/registry";
 export * from "./src/images";
 export * from "./src/spinner";
+export * from "./src/dev-options";
+export * from "./src/ssh";

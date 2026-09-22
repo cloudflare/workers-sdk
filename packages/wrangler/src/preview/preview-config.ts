@@ -15,20 +15,22 @@ import type {
 export const REPLACE_ME = "<REPLACE_ME>";
 
 export type PreviewTopLevelSettings = {
-	[K in keyof Pick<
-		Environment,
-		| "define"
-		| "observability"
-		| "logpush"
-		| "limits"
-		| "placement"
-		| "cache"
-		| "containers"
-		| "tail_consumers"
-		| "streaming_tail_consumers"
-		| "queues"
-		| "triggers"
-	>]: Environment[K] | undefined;
+	[
+		K in keyof Pick<
+			Environment,
+			| "define"
+			| "observability"
+			| "logpush"
+			| "limits"
+			| "placement"
+			| "cache"
+			| "containers"
+			| "tail_consumers"
+			| "streaming_tail_consumers"
+			| "queues"
+			| "triggers"
+		>
+	]: Environment[K] | undefined;
 };
 
 export type PreviewSettingConversion =
@@ -151,6 +153,12 @@ export function convertTopLevelSetting(
 				enabled: observability.enabled,
 				head_sampling_rate: observability.head_sampling_rate,
 				redact_query_string: observability.redact_query_string,
+				issues:
+					observability.issues === undefined
+						? undefined
+						: omitNullish({
+								enabled: observability.issues.enabled,
+							}),
 				logs:
 					observability.logs === undefined
 						? undefined
