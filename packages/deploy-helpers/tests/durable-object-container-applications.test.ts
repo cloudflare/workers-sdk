@@ -930,6 +930,36 @@ describe("unknown Durable Object storage", () => {
 	});
 });
 
+describe("Workers without Durable Object-managed Containers", () => {
+	// The API has already applied this history, so a later tag may delete a
+	// class that no earlier tag in the file creates.
+	const appliedHistoryConfig = {
+		migrations: [
+			{ tag: "v1", new_classes: ["Room"] },
+			{ tag: "v2", deleted_classes: ["LegacyRoom"] },
+		],
+		durable_objects: { bindings: [{ name: "ROOM", class_name: "Room" }] },
+	} as unknown as Config;
+
+	it.for([
+		{ dryRun: false, accountId: "account" },
+		{ dryRun: true, accountId: undefined },
+	])(
+		"does not replay an applied migration history: %j",
+		async (options, { expect }) => {
+			await expect(
+				prepareDurableObjectContainerApplications(
+					appliedHistoryConfig,
+					[],
+					[],
+					{ ...args, ...options }
+				)
+			).resolves.toEqual({});
+			expect(listDurableObjects).not.toHaveBeenCalled();
+		}
+	);
+});
+
 describe("Container namespace resolution", () => {
 	it("does not accept a preview when a versioned production namespace is missing", async ({
 		expect,

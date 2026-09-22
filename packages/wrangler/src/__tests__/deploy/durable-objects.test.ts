@@ -338,6 +338,54 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should deploy an applied history that deletes a class no earlier tag creates", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [{ name: "SOMENAME", class_name: "SomeClass" }],
+				},
+				migrations: [
+					{ tag: "v1", new_classes: ["SomeClass"] },
+					{ tag: "v2", deleted_classes: ["SomeOldClass"] },
+				],
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export class SomeClass{}; export default {};`
+			);
+			mockSubDomainRequest();
+			mockServiceScriptData({
+				script: { id: "test-name", migration_tag: "v2" },
+			});
+			mockUploadWorkerRequest({
+				expectedMigrations: undefined,
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std).toMatchInlineSnapshot(`
+				{
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                       Resource
+				env.SOMENAME (SomeClass)      Durable Object
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
+		});
+
 		describe("dispatch namespaces", () => {
 			it("should deploy all migrations on first deploy", async ({ expect }) => {
 				writeWranglerConfig({
