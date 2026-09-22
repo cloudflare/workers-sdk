@@ -143,12 +143,6 @@ export async function ensurePreviewsConfig(
 			...selectedConversion.blockingDeploymentMessages,
 		]),
 	];
-	if (!hasPreviewBase && containsGeneratedPlaceholder(proposedConfig)) {
-		conversionMessages.push(
-			"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them."
-		);
-	}
-
 	const hasEmptyProposedConfig = Object.keys(proposedConfig).length === 0;
 	const hasBlockingDeploymentMessages =
 		selectedConversion.blockingDeploymentMessages.length > 0;
@@ -160,6 +154,14 @@ export async function ensurePreviewsConfig(
 				: "Your Wrangler configuration is missing a `previews` block. Add the following to your configuration file:",
 		formattedProposedConfig,
 	];
+	if (!hasPreviewBase && containsGeneratedPlaceholder(proposedConfig)) {
+		const replacementMessage =
+			"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them.";
+		missingPreviewsConfigParagraphs.push(`\n${replacementMessage}`);
+		if (args.json) {
+			conversionMessages.push(replacementMessage);
+		}
+	}
 	if (hasEmptyProposedConfig && conversionMessages.length === 0) {
 		missingPreviewsConfigParagraphs.push(
 			"To create or update a Preview with `npx wrangler preview`, your Wrangler configuration must include a `previews` block. The block can be empty. Assets, compatibility settings, migrations, and placement stay at the top level and do not need to be added to `previews`.\nLearn more: https://developers.cloudflare.com/workers/previews/configuration/#wrangler-configuration-file"

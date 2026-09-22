@@ -20,6 +20,7 @@ import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
 import { getEntry } from "./entry";
+import { applyZoneArgsToRoutes } from "./route-zone-args";
 import type { HandlerArgs } from "../core/types";
 import type { DeployArgs } from "../deploy/index";
 import type { VersionsUploadArgs } from "../versions/upload";
@@ -141,8 +142,9 @@ export async function mergeDeployConfigArgs(
 		pattern: domain,
 		custom_domain: true as const,
 	}));
-	const routes =
-		args.routes ?? config.routes ?? (config.route ? [config.route] : []);
+	const routes = args.routes
+		? applyZoneArgsToRoutes(args.routes, args)
+		: (config.routes ?? (config.route ? [config.route] : []));
 	const normalizedContainerConfig = await getNormalizedContainerOptions(
 		config,
 		{

@@ -45,6 +45,7 @@ import type {
 	// TODO: re-enable when workflow bindings return.
 	// WorkflowBinding,
 } from "./bindings";
+import type { ConfigInput } from "./definition";
 import type {
 	DurableObjectDeletedExport,
 	DurableObjectExpectingTransferExport,
@@ -61,6 +62,28 @@ import type {
 	QueueConsumerTrigger,
 	ScheduledTrigger,
 } from "./triggers";
+
+/** Account-level values shared by the resources in a configuration. */
+export interface Settings {
+	/**
+	 * This is the ID of the account associated with your zone. It can also be
+	 * specified through the `CLOUDFLARE_ACCOUNT_ID` environment variable.
+	 */
+	accountId?: string;
+	/**
+	 * The compliance boundary in which commands should operate. When omitted,
+	 * this can be supplied through `CLOUDFLARE_COMPLIANCE_REGION`.
+	 */
+	complianceRegion?: "public" | "fedramp-high";
+}
+
+/** The authored shape of `cloudflare.config.ts`'s default export. */
+export interface CloudflareConfig extends Settings {
+	/** The Worker defined by this configuration. */
+	worker?: ConfigInput<WorkerConfig>;
+	/** Container applications defined by this configuration. */
+	containers?: ConfigInput<ContainerConfig>[];
+}
 
 /**
  * Union of all binding definitions accepted in `env`.
@@ -179,14 +202,6 @@ type StandardContainerObservabilityConfig = ContainerObservabilityConfig &
 
 /** Fields shared by all Container application configurations. */
 interface BaseContainerConfig {
-	/**
-	 * Discriminates this config as a Container config.
-	 *
-	 * Injected automatically by `defineContainer`; only needs to be written by
-	 * hand when authoring a raw config object without the helper.
-	 */
-	type: "container";
-
 	/**
 	 * Name of the application.
 	 *
@@ -337,7 +352,7 @@ interface DurableObjectContainerConfig extends BaseContainerConfig {
 
 /**
  * Container application configuration. This is the input shape passed to
- * `defineContainer` and is validated at runtime by `InputContainerSchema`.
+ * `defineContainer` and parsed at runtime by `InputContainerSchema`.
  */
 export type ContainerConfig =
 	| DurableObjectContainerConfig
@@ -347,18 +362,10 @@ export type ContainerConfig =
  * Worker configuration. This is the input shape passed to
  * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *
- * Fields are validated at runtime by `InputWorkerSchema` and normalised before
+ * Fields are parsed and normalised at runtime by `InputWorkerSchema` before
  * being passed to downstream tooling.
  */
 export interface WorkerConfig {
-	/**
-	 * Discriminates this config as a Worker config.
-	 *
-	 * Injected automatically by `defineWorker`; only needs to be written by
-	 * hand when authoring a raw config object without the helper.
-	 */
-	type: "worker";
-
 	/**
 	 * The name of your Worker.
 	 */
@@ -390,8 +397,10 @@ export interface WorkerConfig {
 	 *
 	 * @example
 	 * ```ts
+	 * import { defineConfig, defineWorker } from "@cloudflare/config";
 	 * import * as entrypoint from "./src" with { type: "cf-worker" };
-	 * export default defineWorker({ entrypoint });
+	 * const worker = defineWorker({ entrypoint });
+	 * export default defineConfig({ worker });
 	 * ```
 	 */
 	entrypoint?: string | WorkerModule;
@@ -631,36 +640,4 @@ export interface WorkerConfig {
 	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
 	 */
 	exports?: Record<string, Export>;
-}
-
-/**
- * Settings shared by the other exports.
- * Authored as a named `settings` export via
- * `defineSettings`.
- */
-export interface SettingsConfig {
-	/**
-	 * Discriminates this config as a settings config.
-	 *
-	 * Injected automatically by `defineSettings`; only needs to be written by
-	 * hand when authoring a raw config object without the helper.
-	 */
-	type: "settings";
-
-	/**
-	 * This is the ID of the account associated with your zone.
-	 * You might have more than one account, so make sure to use
-	 * the ID of the account associated with the zone/route you
-	 * provide, if you provide one. It can also be specified through
-	 * the CLOUDFLARE_ACCOUNT_ID environment variable.
-	 */
-	accountId?: string;
-
-	/**
-	 * Specify the compliance region mode of the Worker.
-	 *
-	 * Although if the user does not specify a compliance region, the default is `public`,
-	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
-	 */
-	complianceRegion?: "public" | "fedramp-high";
 }

@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.72.10
+
+### Patch Changes
+
+- [#15724](https://github.com/cloudflare/workers-sdk/pull/15724) [`b675116`](https://github.com/cloudflare/workers-sdk/commit/b6751167920afc4ccfa6b6b32add9bf3c6eee73e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From         | To           |
+  | ----------------- | ------------ | ------------ |
+  | create-vinext-app | 1.0.0-beta.2 | 1.0.0-beta.3 |
+
+- [#15725](https://github.com/cloudflare/workers-sdk/pull/15725) [`30f08f7`](https://github.com/cloudflare/workers-sdk/commit/30f08f73b0e954865386e997a29889185096451c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.23.0 | 3.24.0 |
+
+- [#15726](https://github.com/cloudflare/workers-sdk/pull/15726) [`61dc2b9`](https://github.com/cloudflare/workers-sdk/commit/61dc2b99a23e0c86322a6d85e3722c52220dda3f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.3.1 | 8.4.0 |
+
 ## 2.72.9
 
 ### Patch Changes

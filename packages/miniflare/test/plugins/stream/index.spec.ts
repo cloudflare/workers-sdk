@@ -141,7 +141,6 @@ function createMiniflare(options: Partial<MiniflareOptions> = {}): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: STREAM_COMPAT_DATE,
 					env: { STREAM: { type: "stream" } },
@@ -713,7 +712,6 @@ describe("Stream reloads", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: STREAM_COMPAT_DATE,
 						env: { STREAM: { type: "stream" } },
@@ -733,7 +731,6 @@ describe("Stream reloads", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: STREAM_COMPAT_DATE,
 						env: { STREAM: { type: "stream" } },
@@ -765,7 +762,6 @@ describe("Stream reloads", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: STREAM_COMPAT_DATE,
 						env: { STREAM: { type: "stream" } },
@@ -786,7 +782,6 @@ describe("Stream reloads", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: STREAM_COMPAT_DATE,
 						env: { STREAM: { type: "stream" } },

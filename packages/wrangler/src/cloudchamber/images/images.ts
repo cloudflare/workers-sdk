@@ -11,6 +11,7 @@ import {
 	cloudchamberScope,
 	fillOpenAPIConfiguration,
 	handleFailure,
+	isValidImageTag,
 	promiseSpinner,
 } from "../common";
 import type { containersScope } from "../../containers";
@@ -161,7 +162,7 @@ async function listImages(
 		responses = responses.map((resp) => {
 			return {
 				name: resp.name,
-				tags: resp.tags.filter((t) => !t.startsWith("sha256")),
+				tags: resp.tags.filter(isValidImageTag),
 			};
 		});
 	}

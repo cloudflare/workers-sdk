@@ -53,7 +53,7 @@ import type {
 } from "./api";
 import type { PullRequestMetadata } from "./shared";
 import type {
-	ParsedOutputSettingsConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
@@ -105,15 +105,15 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
-export type PreviewBuildOutputSettings = ParsedOutputSettingsConfig & {
-	isPreview: true;
+export type PreviewBuildOutputRootConfig = ParsedOutputRootConfig & {
+	buildContext: ParsedOutputRootConfig["buildContext"] & { isPreview: true };
 };
 
 export type PreviewBuildOutput = {
 	// Authoritative Worker settings and bindings from Build Output.
 	workerConfig: ParsedOutputWorkerConfig;
-	// Project settings from Build Output, including the compliance region.
-	projectSettings: PreviewBuildOutputSettings;
+	// Account settings and build context from the root Build Output config.
+	rootConfig: PreviewBuildOutputRootConfig;
 	// Compiled Worker code and modules, if this is not an assets-only build.
 	buildResult?: WorkerBuildResult;
 	// Static asset artifacts emitted by the build, if any.
@@ -125,10 +125,10 @@ type PreviewWorkerBuildResult = WorkerBuildResult & {
 };
 
 /** Verify that Build Output was produced with Preview configuration. */
-export function assertPreviewBuildOutputSettings(
-	settings: ParsedOutputSettingsConfig | undefined
-): asserts settings is PreviewBuildOutputSettings {
-	if (settings?.isPreview !== true) {
+export function assertPreviewBuildOutputRootConfig(
+	rootConfig: ParsedOutputRootConfig | undefined
+): asserts rootConfig is PreviewBuildOutputRootConfig {
+	if (rootConfig?.buildContext.isPreview !== true) {
 		throw new UserError("Build Output was not created by a Preview build.", {
 			telemetryMessage: "preview build output missing preview intent",
 		});
@@ -803,6 +803,64 @@ function formatPreviewDeploymentSummary(
 	].join("\n");
 }
 
+function getPreviewCustomDomainHostnames(config: Config): string[] {
+	const routes = config.routes ?? (config.route ? [config.route] : []);
+	return routes
+		.filter(
+			(route): route is CustomDomainRoute =>
+				isCustomDomainRoute(route) && route.previews_enabled === true
+		)
+		.map((route) => normalizeHostname(route.pattern));
+}
+
+function normalizeHostname(hostname: string) {
+	try {
+		return new URL(`https://${hostname}`).hostname.replace(/\.$/, "");
+	} catch {
+		return hostname.toLowerCase().replace(/\.$/, "");
+	}
+}
+
+function hostnameMatchesCustomDomain(hostname: string, customDomain: string) {
+	const normalizedHostname = normalizeHostname(hostname);
+	return (
+		normalizedHostname === customDomain ||
+		normalizedHostname.endsWith(`.${customDomain}`)
+	);
+}
+
+function previewUrlMatchesCustomDomain(url: string, customDomains: string[]) {
+	try {
+		const { hostname } = new URL(url);
+		return customDomains.some((domain) =>
+			hostnameMatchesCustomDomain(hostname, domain)
+		);
+	} catch {
+		return false;
+	}
+}
+
+function logMissingCustomDomainPreviewUrlsWarning(
+	config: Config,
+	previewResource: PreviewResource,
+	deployment: DeploymentResource
+) {
+	const customDomains = getPreviewCustomDomainHostnames(config);
+	const urls = [...(previewResource.urls ?? []), ...(deployment.urls ?? [])];
+	if (
+		customDomains.length === 0 ||
+		urls.length === 0 ||
+		urls.some((url) => previewUrlMatchesCustomDomain(url, customDomains))
+	) {
+		return;
+	}
+
+	logger.log("");
+	logger.warn(
+		"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
+	);
+}
+
 function logMissingPreviewsBindingsWarning(
 	productionBindingsExpectedInPreview: Record<string, { type: string }>,
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
@@ -1082,6 +1140,11 @@ async function runPreview(
 				pullRequest
 			)
 		);
+		logMissingCustomDomainPreviewUrlsWarning(
+			config,
+			previewResource,
+			deployment
+		);
 	}
 
 	return { preview: previewResource, deployment, isNewPreview };
@@ -1131,8 +1194,8 @@ export async function previewBuildOutput(
 	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json">,
 	buildOutput: PreviewBuildOutput
 ): Promise<PreviewResult> {
-	const { workerConfig, projectSettings, buildResult, assets } = buildOutput;
-	assertPreviewBuildOutputSettings(projectSettings);
+	const { workerConfig, rootConfig, buildResult, assets } = buildOutput;
+	assertPreviewBuildOutputRootConfig(rootConfig);
 	// TODO: Upload domains and triggers when Preview deployments support them.
 	// Wrangler can't configure them today, so reject them instead of ignoring them.
 	if (workerConfig.domains?.length) {
@@ -1184,10 +1247,14 @@ export async function previewBuildOutput(
 			}
 		);
 	}
-	const convertedConfig = convertToWranglerConfig(
-		workerConfig,
-		projectSettings
-	);
+	const { buildContext: _buildContext, ...settings } = rootConfig;
+	const { manifest: _manifest, ...worker } = workerConfig;
+	const convertedConfig = convertToWranglerConfig({
+		...settings,
+		worker,
+		// TODO: Add support for Containers in Preview uploads from Build Output.
+		containers: [],
+	});
 	const previewBuildResult = buildResult && {
 		...buildResult,
 		mainModuleName: workerConfig.manifest?.mainModule,

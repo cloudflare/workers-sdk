@@ -7,7 +7,6 @@ function workerConfigBase(
 	overrides?: Record<string, unknown>
 ): Record<string, unknown> {
 	return {
-		type: "worker",
 		name: "test-worker",
 		compatibilityDate: "2025-01-01",
 		manifest: {
@@ -38,7 +37,6 @@ function options(
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env,

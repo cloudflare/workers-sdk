@@ -1,14 +1,13 @@
-import { defineContainer } from "../container-definition";
+import {
+	defineConfig,
+	defineContainer,
+	defineWorker,
+	type ContainerDefinition,
+} from "../definition";
 import { exports as workerExports } from "../exports";
-import { defineWorker } from "../worker-definition";
-import type { ParsedConfigExports } from "../config-loader";
-import type {
-	ContainerConfigExport,
-	ContainerConfigInput,
-} from "../container-definition";
 import type { DurableObjectStorageOptions } from "../exports";
 import type { UnwrapConfig } from "../inference";
-import type { ParsedInputWorkerConfig } from "../schema";
+import type { ContainerConfig } from "../types";
 
 const objectContainer = defineContainer({
 	name: "object-container",
@@ -38,7 +37,12 @@ const durableObjectContainer = defineContainer({
 	observability: { enabled: true, logs: { enabled: true } },
 });
 
-defineWorker({
+const standaloneContainer = defineContainer({
+	name: "standalone-container",
+	image: { dockerfile: "./Dockerfile" },
+});
+
+const worker = defineWorker({
 	name: "worker",
 	compatibilityDate: "2026-06-24",
 	exports: {
@@ -61,13 +65,24 @@ defineWorker({
 	},
 });
 
+const config = defineConfig({
+	worker,
+	containers: [
+		objectContainer,
+		factoryContainer,
+		promisedContainer,
+		durableObjectContainer,
+		standaloneContainer,
+	],
+});
+
 workerExports.durableObject({
 	storage: "legacy-kv",
 	// @ts-expect-error Containers require SQLite Durable Object storage.
 	container: objectContainer,
 });
 
-const invalidObservabilityTargets: ContainerConfigInput = {
+const invalidObservabilityTargets: ContainerConfig = {
 	name: "invalid-observability",
 	image: { dockerfile: "./Dockerfile" },
 	observability: {
@@ -78,7 +93,7 @@ const invalidObservabilityTargets: ContainerConfigInput = {
 };
 void invalidObservabilityTargets;
 
-const invalidDurableObjectObservability: ContainerConfigInput = {
+const invalidDurableObjectObservability: ContainerConfig = {
 	name: "invalid-durable-object-observability",
 	schedulingPolicy: "durable-object",
 	observability: {
@@ -94,17 +109,17 @@ type Equal<T, U> =
 		: false;
 type Assert<T extends true> = T;
 
-export type ObjectContainerTypeTest = Assert<
-	Equal<UnwrapConfig<typeof objectContainer>["type"], "container">
+export type ObjectContainerNameTest = Assert<
+	Equal<UnwrapConfig<typeof objectContainer>["name"], "object-container">
 >;
-export type FactoryContainerExportTest = Assert<
-	typeof factoryContainer extends ContainerConfigExport ? true : false
+export type FactoryContainerDefinitionTest = Assert<
+	typeof factoryContainer extends ContainerDefinition ? true : false
 >;
-export type PromisedContainerExportTest = Assert<
-	typeof promisedContainer extends ContainerConfigExport ? true : false
+export type PromisedContainerDefinitionTest = Assert<
+	typeof promisedContainer extends ContainerDefinition ? true : false
 >;
-export type DurableObjectContainerExportTest = Assert<
-	typeof durableObjectContainer extends ContainerConfigExport ? true : false
+export type DurableObjectContainerDefinitionTest = Assert<
+	typeof durableObjectContainer extends ContainerDefinition ? true : false
 >;
 export type StringContainerReferenceTest = Assert<
 	Equal<
@@ -117,6 +132,9 @@ export type StringContainerReferenceTest = Assert<
 		false
 	>
 >;
-export type DefaultExportTypeTest = Assert<
-	Equal<ParsedConfigExports["default"], ParsedInputWorkerConfig | undefined>
+export type ConfigContainerTest = Assert<
+	Equal<
+		UnwrapConfig<typeof config>["containers"][4]["name"],
+		"standalone-container"
+	>
 >;
