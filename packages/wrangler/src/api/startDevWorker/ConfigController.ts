@@ -1,6 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
-import { resolveDockerHost } from "@cloudflare/containers-shared";
+import {
+	createContainerDevPlan,
+	resolveDockerHost,
+} from "@cloudflare/containers-shared";
 import {
 	configFileName,
 	DEFAULT_COMPAT_DATE,
@@ -419,6 +422,43 @@ async function resolveConfig(
 		},
 		config,
 	});
+	// getNormalizedContainerOptions() validates scheduler-backed and Durable
+	// Object-managed Containers and resolves account-qualified image URIs for
+	// scheduler-backed registry images. createContainerDevPlan() owns local image
+	// preparation, so scheduler-backed entries use those normalized URIs.
+	const normalizedContainers = await getNormalizedContainerOptions(config, {});
+	const dev = await resolveDevConfig(config, input);
+	const containerPlan =
+		dev.enableContainers && !dev.remote
+			? createContainerDevPlan({
+					containers: config.containers,
+					exports: config.exports,
+					containerBuildId: dev.containerBuildId,
+					configPath: config.configPath,
+				})
+			: undefined;
+	const normalizedSchedulerImageUris = new Map(
+		normalizedContainers.flatMap((container) =>
+			"image_uri" in container
+				? [[container.class_name, container.image_uri] as const]
+				: []
+		)
+	);
+	const containerDevPlan = containerPlan
+		? {
+				...containerPlan,
+				containerOptions: containerPlan.containerOptions.map((container) => {
+					const normalizedImageUri = normalizedSchedulerImageUris.get(
+						container.class_name
+					);
+					return container.image_name === undefined &&
+						"image_uri" in container &&
+						normalizedImageUri !== undefined
+						? { ...container, image_uri: normalizedImageUri }
+						: container;
+				}),
+			}
+		: undefined;
 
 	const resolved = {
 		name:
@@ -466,8 +506,9 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
-		containers: await getNormalizedContainerOptions(config, {}),
-		dev: await resolveDevConfig(config, input),
+		containers: normalizedContainers,
+		containerDevPlan,
+		dev,
 		legacy: {
 			site: legacySite,
 		},
@@ -519,7 +560,7 @@ async function resolveConfig(
 	// for pulling containers, we need to make sure the OpenAPI config for the
 	// container API client is properly set so that we can get the correct permissions
 	// from the cloudchamber API to pull from the repository.
-	const needsPulling = resolved.containers.some(
+	const needsPulling = resolved.containerDevPlan?.containerOptions.some(
 		(c) => "image_uri" in c && c.image_uri
 	);
 	if (needsPulling && !resolved.dev.remote) {
@@ -541,11 +582,7 @@ async function resolveConfig(
 	if (resolved.dev.remote) {
 		// We're in remote mode (`--remote`)
 
-		if (
-			resolved.dev.enableContainers &&
-			resolved.containers &&
-			resolved.containers.length > 0
-		) {
+		if (resolved.dev.enableContainers && config.containers?.length) {
 			logger.once.warn(
 				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
 			);
@@ -736,7 +773,7 @@ export class ConfigController extends Controller {
 			if (newConfig && fileConfig.configPath) {
 				await regenerateNewConfigTypes({
 					cloudflareConfigPath: fileConfig.configPath,
-					workerConfig: newConfig.parsedWorkerConfig,
+					workerConfig: newConfig.parsedConfig.worker,
 					types: newConfig.types,
 				});
 			}

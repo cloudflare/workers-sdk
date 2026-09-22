@@ -1214,9 +1214,13 @@ describe("wrangler preview", () => {
 					runWrangler(
 						"preview --name test-preview --config wrangler.json --json --ignore-base-config"
 					)
-				).rejects.toThrow("missing a `previews` block");
+				).rejects.toThrow("missing a previews block");
 
 				expect(std.warn).not.toContain(namedEnvironmentsMessage);
+				expect(JSON.parse(std.out)).toEqual({
+					error: "Your Wrangler configuration is missing a previews block",
+					suggested_config: { previews: {} },
+				});
 			});
 
 			test.for(["wrangler.toml", "wrangler.json", "wrangler.jsonc"])(
@@ -1642,12 +1646,13 @@ describe("wrangler preview", () => {
 					runWrangler(
 						"preview --name test-preview --config wrangler.json --json"
 					)
-				).rejects.toThrow(
-					'Your Wrangler configuration is missing a `previews` block to run this command. Add the following to your configuration file:\n{\n  "previews": {}\n}\nTo create or update a Preview with `npx wrangler preview`, your Wrangler configuration must include a `previews` block. The block can be empty. Assets, compatibility settings, migrations, and placement stay at the top level and do not need to be added to `previews`.\nLearn more: https://developers.cloudflare.com/workers/previews/configuration/#wrangler-configuration-file'
-				);
+				).rejects.toThrow("missing a previews block");
 
 				expect(deploymentRequests).toBe(0);
-				expect(std.out).toBe("");
+				expect(JSON.parse(std.out)).toEqual({
+					error: "Your Wrangler configuration is missing a previews block",
+					suggested_config: { previews: {} },
+				});
 				expect(std.info).toBe("");
 				expect(readFileSync("wrangler.json", "utf8")).toBe(originalConfig);
 			});
@@ -1805,9 +1810,16 @@ describe("wrangler preview", () => {
 					runWrangler(
 						"preview --name test-preview --config wrangler.json --json"
 					)
-				).rejects.toThrow("missing a `previews` block");
+				).rejects.toThrow("missing a previews block");
 
-				expect(std.out).toBe("");
+				expect(JSON.parse(std.out)).toEqual({
+					error: "Your Wrangler configuration is missing a previews block",
+					suggested_config: {
+						previews: {
+							vars: { API_URL: "https://preview.example.com" },
+						},
+					},
+				});
 				expect(std.info).toBe("");
 				expect(readFileSync("wrangler.json", "utf8")).toBe(originalConfig);
 			});
@@ -2128,9 +2140,45 @@ describe("wrangler preview", () => {
 			expect((thrown as Error).message).toContain("IMPORTANT_BINDING");
 			expect((thrown as Error).message).toContain('"id": "<REPLACE_ME>"');
 			expect((thrown as Error).message).not.toContain("kv-id-123");
-			expect(std.warn).toContain(
+			expect((thrown as Error).message).toMatch(
+				/}\n\nReplace each <REPLACE_ME> placeholder with a Preview-safe value\. Do not use production resources unless you intend for this Preview to access them\.$/
+			);
+			expect(std.warn).not.toContain(
 				"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them."
 			);
+		});
+
+		test("returns the suggested Preview configuration as JSON", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "src/index.ts",
+					kv_namespaces: [
+						{ binding: "SESSIONS", id: "production-sessions-kv-id" },
+					],
+				},
+				"wrangler.json"
+			);
+
+			await expect(
+				runWrangler("preview --name test-preview --json")
+			).rejects.toThrow("missing a previews block");
+
+			expect(JSON.parse(std.out)).toEqual({
+				error: "Your Wrangler configuration is missing a previews block",
+				suggested_config: {
+					previews: {
+						kv_namespaces: [{ binding: "SESSIONS", id: "<REPLACE_ME>" }],
+					},
+				},
+				messages: [
+					"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them.",
+				],
+			});
+			expect(std.warn).toBe("");
+			expect(std.err).toBe("");
 		});
 
 		test.for([
@@ -2178,6 +2226,20 @@ describe("wrangler preview", () => {
 				).rejects.toThrow("needs a `previews` block to run this command");
 
 				expect(std.warn).toContain(warning);
+				std.getAndClearOut();
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --ignore-base-config --json"
+					)
+				).rejects.toThrow("missing a previews block");
+
+				const jsonError = JSON.parse(std.out) as {
+					messages: string[];
+				};
+				expect(jsonError.messages).toEqual(
+					expect.arrayContaining([expect.stringContaining(warning)])
+				);
 			}
 		);
 
@@ -2226,12 +2288,11 @@ describe("wrangler preview", () => {
 				.filter(
 					(message) =>
 						typeof message === "string" &&
-						(message.startsWith(
+						message.startsWith(
 							"These settings have limitations in Worker Previews"
-						) ||
-							message.startsWith("Replace each <REPLACE_ME>"))
+						)
 				);
-			expect(conversionWarnings).toHaveLength(2);
+			expect(conversionWarnings).toHaveLength(1);
 		});
 
 		test("should not warn about top-level bindings when they are present in local previews config", async ({
@@ -3014,7 +3075,7 @@ describe("wrangler preview", () => {
 			expect(std.warn).not.toContain("ASSETS");
 		});
 
-		test("should output preview and deployment JSON with --json", async ({
+		test("should output preview and deployment JSON for wrangler-action when the Preview API omits the Worker name", async ({
 			expect,
 		}) => {
 			const outputFile = "./output.json";
@@ -3042,7 +3103,6 @@ describe("wrangler preview", () => {
 									name: "test-preview",
 									slug: "test-preview",
 									urls: ["https://test-preview.test-worker.cloudflare.app"],
-									worker_name: "test-worker",
 									created_on: new Date().toISOString(),
 								},
 							},
@@ -3070,10 +3130,13 @@ describe("wrangler preview", () => {
 				)
 			);
 
-			await runWrangler("preview --name test-preview --json", {
-				...process.env,
-				WRANGLER_OUTPUT_FILE_PATH: outputFile,
-			});
+			await runWrangler(
+				"preview --name test-preview --worker-name override-worker --json",
+				{
+					...process.env,
+					WRANGLER_OUTPUT_FILE_PATH: outputFile,
+				}
+			);
 
 			expect(std.out).toContain('"preview"');
 			expect(std.out).toContain('"deployment"');
@@ -3089,7 +3152,7 @@ describe("wrangler preview", () => {
 				expect.objectContaining({
 					type: "preview",
 					version: 1,
-					worker_name: "test-worker",
+					worker_name: "override-worker",
 					preview_id: "preview-id-json",
 					preview_name: "test-preview",
 					preview_slug: "test-preview",
@@ -3544,6 +3607,132 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 			expect(std.out).toContain('"preview_urls": true');
 		});
+
+		function mockPreviewUrls(previewUrls: string[], deploymentUrls: string[]) {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-custom-domain",
+									name: "custom-domain-preview",
+									slug: "custom-domain-preview",
+									urls: previewUrls,
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-custom-domain",
+									preview_id: "preview-id-custom-domain",
+									preview_name: "custom-domain-preview",
+									urls: deploymentUrls,
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				)
+			);
+		}
+
+		test.for<{
+			name: string;
+			routePattern?: string;
+			previewUrls: string[];
+			deploymentUrls: string[];
+			shouldWarn: boolean;
+		}>([
+			{
+				name: "workers.dev URLs are active but custom-domain URLs are missing",
+				previewUrls: ["https://custom-domain-preview.test-worker.workers.dev"],
+				deploymentUrls: [
+					"https://deployment-id-custom-domain.test-worker.workers.dev",
+				],
+				shouldWarn: true,
+			},
+			{
+				name: "the Preview URL array has a custom-domain URL",
+				previewUrls: ["https://custom-domain-preview.app.example.com"],
+				deploymentUrls: [
+					"https://deployment-id-custom-domain.test-worker.workers.dev",
+				],
+				shouldWarn: false,
+			},
+			{
+				name: "the deployment URL array has a custom-domain URL",
+				previewUrls: ["https://custom-domain-preview.test-worker.workers.dev"],
+				deploymentUrls: ["https://deployment-id-custom-domain.app.example.com"],
+				shouldWarn: false,
+			},
+			{
+				name: "a configured IDN custom domain matches a punycoded Preview URL",
+				routePattern: "bücher.example.com",
+				previewUrls: [
+					"https://custom-domain-preview.xn--bcher-kva.example.com",
+				],
+				deploymentUrls: [],
+				shouldWarn: false,
+			},
+		])(
+			"handles custom-domain Preview URL guidance when $name",
+			async (testCase, { expect }) => {
+				writeWranglerConfig(
+					{
+						main: "src/index.ts",
+						previews: {},
+						routes: [
+							{
+								pattern: testCase.routePattern ?? "app.example.com",
+								custom_domain: true,
+								previews_enabled: true,
+							},
+						],
+					},
+					"wrangler.json"
+				);
+				mockPreviewUrls(testCase.previewUrls, testCase.deploymentUrls);
+
+				await runWrangler("preview --name custom-domain-preview");
+
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				if (testCase.shouldWarn) {
+					expect(std.warn).toContain(
+						"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
+					);
+				} else {
+					expect(std.warn).not.toContain(
+						"Custom domain Preview URLs are configured"
+					);
+				}
+			}
+		);
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
 			expect,

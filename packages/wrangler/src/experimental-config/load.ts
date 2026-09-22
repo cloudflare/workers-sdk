@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import {
 	convertToWranglerConfig,
-	loadAndValidateConfig,
+	loadAndParseConfig,
 	loadConfig,
 } from "@cloudflare/config";
 import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
@@ -15,7 +15,7 @@ import {
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
 import type {
-	ParsedInputSettingsConfig,
+	ParsedInputConfig,
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -28,13 +28,15 @@ export interface NormalizedTypes {
 	includeRuntime: boolean;
 }
 
+export type ParsedProjectConfig = ParsedInputConfig & {
+	worker: ParsedInputWorkerConfig;
+};
+
 export interface LoadNewConfigResult {
 	/** Merged result: `cloudflare.config.ts` runtime + `wrangler.config.ts` tooling. */
 	rawConfig: Omit<RawConfig, "env">;
-	/**  The validated `cloudflare.config.ts` worker shape (default export). */
-	parsedWorkerConfig: ParsedInputWorkerConfig;
-	/** The validated `settings` export, if present. */
-	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/** Validated project configuration grouped by resource type. */
+	parsedConfig: ParsedProjectConfig;
 	/**
 	 * The mode the config was resolved in, from `--mode`/`--env` or
 	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
@@ -51,7 +53,7 @@ export interface LoadNewConfigResult {
 }
 
 /**
- * Load and validate the new TypeScript-based configuration files.
+ * Load and parse the new TypeScript-based configuration files.
  *
  * - `cloudflare.config.ts` is required.
  * - `wrangler.config.ts` is optional (defaults apply when missing).
@@ -59,8 +61,9 @@ export interface LoadNewConfigResult {
 export async function loadNewConfig(options: {
 	cwd: string;
 	args: { env?: string };
+	isPreview?: boolean;
 }): Promise<LoadNewConfigResult> {
-	const cwd = options.cwd;
+	const { cwd, args, isPreview = false } = options;
 	const cloudflareConfigPath = path.resolve(cwd, CLOUDFLARE_CONFIG_FILENAME);
 	if (!existsSync(cloudflareConfigPath)) {
 		throw new UserError(
@@ -77,49 +80,43 @@ export async function loadNewConfig(options: {
 		? candidateWranglerConfigPath
 		: undefined;
 
-	const mode = options.args.env ?? getCloudflareEnv();
+	const mode = args.env ?? getCloudflareEnv();
 
-	// ── Worker + settings config ────────────────────────────────────────
-	const workerConfigResult = await loadAndValidateConfig(cloudflareConfigPath, {
+	// ── Cloudflare config ───────────────────────────────────────────────
+	const configResult = await loadAndParseConfig(cloudflareConfigPath, {
+		isPreview,
 		mode,
 	});
 
-	if (!workerConfigResult.result.success) {
+	if (!configResult.result.success) {
 		throw new UserError(
-			`Invalid \`${CLOUDFLARE_CONFIG_FILENAME}\`:\n${formatZodError(workerConfigResult.result.error)}`,
+			`Invalid \`${CLOUDFLARE_CONFIG_FILENAME}\`:\n${formatZodError(configResult.result.error)}`,
 			{ telemetryMessage: "new-config worker validation failed" }
 		);
 	}
 
-	const worker =
-		workerConfigResult.result.data.default?.type === "worker"
-			? workerConfigResult.result.data.default
-			: undefined;
-
-	if (worker === undefined) {
+	if (configResult.result.data.worker === undefined) {
 		throw new UserError(
-			`\`${CLOUDFLARE_CONFIG_FILENAME}\` must have a default worker export.`,
-			{ telemetryMessage: "new-config worker default export missing" }
+			`\`${CLOUDFLARE_CONFIG_FILENAME}\` must define a Worker using the \`worker\` property.`,
+			{ telemetryMessage: "new-config worker missing" }
 		);
 	}
 
-	const settings =
-		workerConfigResult.result.data.settings?.type === "settings"
-			? workerConfigResult.result.data.settings
-			: undefined;
+	const parsedConfig: ParsedProjectConfig = {
+		...configResult.result.data,
+		worker: configResult.result.data.worker,
+	};
 
 	// ── Wrangler (tooling) config ───────────────────────────────────────
-	let wranglerConfigResult:
-		| { exports: Record<string, unknown>; dependencies: Set<string> }
-		| undefined;
+	let wranglerConfigResult: Awaited<ReturnType<typeof loadConfig>> | undefined;
 	let parsedWranglerConfig: { data: ParsedWranglerConfig } | undefined;
 
 	if (wranglerConfigPath !== undefined) {
 		wranglerConfigResult = await loadConfig(wranglerConfigPath);
 
 		const resolvedWranglerConfig = await resolveWranglerConfig(
-			wranglerConfigResult.exports.default,
-			{ mode }
+			wranglerConfigResult.config,
+			{ isPreview, mode }
 		);
 
 		const parsed = WranglerConfigSchema.safeParse(resolvedWranglerConfig);
@@ -133,7 +130,7 @@ export async function loadNewConfig(options: {
 	}
 
 	// ── Conversion + merge ──────────────────────────────────────────────
-	const rawWorkerConfig: RawConfig = convertToWranglerConfig(worker, settings);
+	const rawWorkerConfig: RawConfig = convertToWranglerConfig(parsedConfig);
 
 	const rawWranglerConfig = convertToolingConfig(
 		parsedWranglerConfig?.data ?? {}
@@ -149,7 +146,7 @@ export async function loadNewConfig(options: {
 	};
 
 	// ── Dependencies (union of both files) ──────────────────────────────
-	const dependencies = new Set(workerConfigResult.dependencies);
+	const dependencies = new Set(configResult.dependencies);
 	if (wranglerConfigResult) {
 		for (const dep of wranglerConfigResult.dependencies) {
 			dependencies.add(dep);
@@ -158,8 +155,7 @@ export async function loadNewConfig(options: {
 
 	return {
 		rawConfig,
-		parsedWorkerConfig: worker,
-		parsedSettingsConfig: settings,
+		parsedConfig,
 		mode,
 		cloudflareConfigPath,
 		wranglerConfigPath,

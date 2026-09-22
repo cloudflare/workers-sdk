@@ -61,9 +61,32 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
 			configured: true,
-			framework: { id: "astro" },
+			framework: { id: "astro", supportsMode: true },
 			buildCommand: "npx astro build",
 			devCommand: "npx astro dev",
+			packageManager: { type: "npm" },
+		});
+	});
+
+	it("should defer a configured unsupported framework to a Cloudflare dev server", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				scripts: { build: "cf build", dev: "cf dev" },
+				dependencies: { hono: "4", vite: "8" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "hono" },
+			buildCommand: undefined,
+			devCommand: undefined,
 			packageManager: { type: "npm" },
 		});
 	});
@@ -97,6 +120,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
 				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
+				framework: { supportsMode: true },
 				configured: false,
 				outputDir: "dist",
 				packageJson: {

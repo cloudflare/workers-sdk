@@ -34,6 +34,27 @@ export type BuiltContainerImage = BuiltImage & {
 	container: DockerfileContainerConfig;
 };
 
+const MAX_DOCKER_REPOSITORY_NAME_LENGTH = 255;
+
+export function normalizeContainerImageRepositoryName(value: string): string {
+	return (
+		value
+			.toLowerCase()
+			.replace(/[^a-z0-9._-]+/g, "-")
+			.replace(/[._-]+/g, (separators) =>
+				separators === "." ||
+				separators === "_" ||
+				separators === "__" ||
+				/^-+$/.test(separators)
+					? separators
+					: "-"
+			)
+			.replace(/^[._-]+|[._-]+$/g, "")
+			.slice(0, MAX_DOCKER_REPOSITORY_NAME_LENGTH)
+			.replace(/[._-]+$/g, "") || "container"
+	);
+}
+
 export function isDockerfileContainerConfig(
 	container: ContainerNormalizedConfig
 ): container is DockerfileContainerConfig {

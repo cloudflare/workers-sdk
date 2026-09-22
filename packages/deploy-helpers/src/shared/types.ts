@@ -9,6 +9,7 @@ import type {
 	CfModule,
 	CfModuleType,
 	CfWorkerSourceMap,
+	ComplianceConfig,
 	Config,
 	FetchKVGetValueFetcher,
 	FetchResultFetcher,
@@ -19,12 +20,14 @@ import type {
 	Entry,
 	ContainerApp,
 } from "@cloudflare/workers-utils";
+import type Cloudflare from "cloudflare";
 
 /**
  * client needs to handle logger and fetch/auth implementation
  * these are passed into this package to handle any API requests/logs
  */
 export type DeployHelpersContext = {
+	createCloudflareClient: (complianceConfig: ComplianceConfig) => Cloudflare;
 	fetchResult: FetchResultFetcher;
 	fetchListResult: FetchListResultFetcher;
 	fetchPagedListResult: FetchPagedListResultFetcher;

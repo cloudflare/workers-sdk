@@ -1,4 +1,4 @@
-import { preview } from "@cloudflare/deploy-helpers";
+import { preview, resolveWorkerName } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -18,7 +18,7 @@ export const previewCommand = createCommand({
 		description: "👀 Create a Preview deployment of the current Worker",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	positionalArgs: ["script"],
 	args: {
@@ -135,7 +135,7 @@ export const previewCommand = createCommand({
 		writeOutput({
 			type: "preview",
 			version: 1,
-			worker_name: previewResource.worker_name,
+			worker_name: resolveWorkerName(args, previewConfig),
 			preview_id: previewResource.id,
 			preview_name: previewResource.name,
 			preview_slug: previewResource.slug,

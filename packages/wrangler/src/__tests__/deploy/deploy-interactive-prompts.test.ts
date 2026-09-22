@@ -493,6 +493,72 @@ describe("deploy: interactive deploy config prompts", () => {
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 
+	it("should include zone_name routes in generated wrangler.jsonc when --routes and --zone are passed", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		writeWorkerSource();
+		mockPrompt({
+			text: "What do you want to name your project?",
+			result: "test-worker",
+		});
+		mockConfirm({
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
+			result: true,
+		});
+		mockConfirm({
+			text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+			result: true,
+		});
+
+		await runWrangler(
+			"deploy ./index.js --x-route-zones --routes example.com/* --routes other.com/path --zone example.com --dry-run"
+		);
+		expect(std.out).toContain("--dry-run: exiting now.");
+		const writtenConfig = JSON.parse(
+			fs.readFileSync("wrangler.jsonc", "utf-8")
+		);
+		expect(writtenConfig).toEqual({
+			name: "test-worker",
+			compatibility_date: DEFAULT_COMPAT_DATE,
+			main: "./index.js",
+			routes: [
+				{ pattern: "example.com/*", zone_name: "example.com" },
+				{ pattern: "other.com/path", zone_name: "example.com" },
+			],
+		});
+		expect(std.out).toContain("Proceeding with deployment...");
+	});
+
+	it("should include --zone in suggested CLI command when user declines config file write", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		writeWorkerSource();
+		mockPrompt({
+			text: "What do you want to name your project?",
+			result: "test-worker",
+		});
+		mockConfirm({
+			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
+			result: true,
+		});
+		mockConfirm({
+			text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+			result: false,
+		});
+
+		await runWrangler(
+			"deploy ./index.js --x-route-zones --routes example.com/* --zone example.com --dry-run"
+		);
+		expect(std.out).toContain("--dry-run: exiting now.");
+		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+		expect(std.out).toContain(
+			"--routes example.com/* --x-route-zones --zone example.com"
+		);
+		expect(std.out).toContain("Proceeding with deployment...");
+	});
+
 	it("should include --routes in suggested CLI command when user declines config file write", async ({
 		expect,
 	}) => {

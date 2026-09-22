@@ -13,7 +13,7 @@ export const previewBaseConfigSecretDeleteCommand = createCommand({
 		description: "Delete a secret variable from the Preview base config",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	positionalArgs: ["key"],
 	args: {

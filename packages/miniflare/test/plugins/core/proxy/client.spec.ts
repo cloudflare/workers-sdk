@@ -39,7 +39,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: {
@@ -88,7 +87,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: {
@@ -126,7 +124,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "entry",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -195,7 +192,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},
@@ -220,7 +216,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},
@@ -253,7 +248,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},
@@ -287,7 +281,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						// Asynchronous functions must reject rather than throw. This was
 						// gated behind the `capture_async_api_throws` flag, which became the
@@ -348,7 +341,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -371,7 +363,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -393,7 +384,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -456,7 +446,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -495,7 +484,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "entry",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(
@@ -512,7 +500,6 @@ describe("ProxyClient", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: "do-worker",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(`export class TestObject {
@@ -644,7 +631,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},

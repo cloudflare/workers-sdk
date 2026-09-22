@@ -1,24 +1,19 @@
 import { cancel } from "@cloudflare/cli-shared-helpers";
 import {
-	getCloudflareContainerRegistry,
-	ImageRegistriesService,
+	deleteContainerImage,
+	listContainerImages,
+	parseContainerImageTag,
 	promiseSpinner,
 } from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
-import { fetch } from "undici";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
 import { containersScope } from ".";
-import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
-
-interface Repository {
-	name: string;
-	tags: string[];
-}
+import type { ContainerImageRepository } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 // --- Namespace definition ---
 
@@ -93,9 +88,7 @@ async function handleDeleteImageCommand(
 	args: { image: string; skipConfirmation: boolean },
 	config: Config
 ) {
-	if (!args.image.includes(":")) {
-		throw new Error("Invalid image format. Expected IMAGE:TAG");
-	}
+	parseContainerImageTag(args.image);
 
 	if (!args.skipConfirmation) {
 		const yes = await confirm(
@@ -107,81 +100,42 @@ async function handleDeleteImageCommand(
 		}
 	}
 
-	const digest = await promiseSpinner(
-		getCreds(config).then(async (creds) => {
-			const accountId = await getOrSelectAccountId(config);
-			const url = new URL(`https://${getCloudflareContainerRegistry(config)}`);
-			const baseUrl = `${url.protocol}//${url.host}`;
-			const [image, tag] = args.image.split(":");
-			const digest_ = await deleteTag(baseUrl, accountId, image, tag, creds);
-
-			// trigger gc
-			const gcUrl = `${baseUrl}/v2/gc/layers`;
-			const gcResponse = await fetch(gcUrl, {
-				method: "PUT",
-				headers: {
-					Authorization: `Basic ${creds}`,
-					"Content-Type": "application/json",
-				},
-			});
-			if (!gcResponse.ok) {
-				throw new Error(
-					`Failed to delete image ${args.image}: ${gcResponse.status} ${gcResponse.statusText}`
-				);
-			}
-
-			return digest_;
+	const accountId = await getOrSelectAccountId(config);
+	const { digest, warning } = await promiseSpinner(
+		deleteContainerImage({
+			accountId,
+			complianceConfig: config,
+			image: args.image,
 		}),
 		{ message: `Deleting ${args.image}` }
 	);
 
 	logger.log(`Deleted ${args.image} (${digest})`);
+	if (warning) {
+		logger.warn(warning);
+	}
 }
 
 async function handleListImagesCommand(
 	args: { filter?: string; json: boolean },
 	config: Config
 ) {
+	const accountId = await getOrSelectAccountId(config);
 	const responses = await promiseSpinner(
-		getCreds(config).then(async (creds) => {
-			const repos = await listReposWithTags(creds, config);
-			const processed: Repository[] = [];
-			const accountId = await getOrSelectAccountId(config);
-			const accountIdPrefix = new RegExp(`^${accountId}/`);
-			const filter = new RegExp(args.filter ?? "");
-			for (const [repo, tags] of Object.entries(repos)) {
-				const stripped = repo.replace(/^\/+/, "");
-				if (filter.test(stripped)) {
-					const name = stripped.replace(accountIdPrefix, "");
-					processed.push({ name, tags });
-				}
-			}
-
-			return processed;
+		listContainerImages({
+			accountId,
+			complianceConfig: config,
+			filter: args.filter,
 		}),
 		{ message: "Listing" }
 	);
-
-	await listImages(responses, false, args.json);
+	await listImages(responses, args.json);
 }
 
 async function listImages(
-	responses: Repository[],
-	digests: boolean = false,
+	responses: ContainerImageRepository[],
 	json: boolean = false
 ) {
-	if (!digests) {
-		responses = responses.map((resp) => {
-			return {
-				name: resp.name,
-				tags: resp.tags.filter((t) => !t.startsWith("sha256")),
-			};
-		});
-	}
-	// Remove any repos with no tags
-	responses = responses.filter((resp) => {
-		return resp.tags !== undefined && resp.tags.length != 0;
-	});
 	if (json) {
 		logger.log(JSON.stringify(responses, null, 2));
 	} else {
@@ -201,96 +155,4 @@ async function listImages(
 			logger.log(row.map((v, i) => v.padEnd(widths[i], " ")).join("  "));
 		}
 	}
-}
-
-interface CatalogWithTagsResponse {
-	repositories: Record<string, string[]>;
-	cursor?: string;
-}
-
-async function listReposWithTags(
-	creds: string,
-	complianceConfig?: ComplianceConfig
-): Promise<Record<string, string[]>> {
-	const url = new URL(
-		`https://${getCloudflareContainerRegistry(complianceConfig)}`
-	);
-	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog?tags=true`;
-
-	const response = await fetch(catalogUrl, {
-		method: "GET",
-		headers: {
-			Authorization: `Basic ${creds}`,
-		},
-	});
-	if (!response.ok) {
-		logger.log(JSON.stringify(response));
-		throw new Error(
-			`Failed to fetch repository catalog: ${response.status} ${response.statusText}`
-		);
-	}
-
-	const data = (await response.json()) as CatalogWithTagsResponse;
-
-	return data.repositories ?? {};
-}
-
-async function deleteTag(
-	baseUrl: string,
-	accountId: string,
-	image: string,
-	tag: string,
-	creds: string
-): Promise<string> {
-	const manifestAcceptHeader =
-		"application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json";
-	const manifestUrl = `${baseUrl}/v2/${accountId}/${image}/manifests/${tag}`;
-	// grab the digest for this tag
-	const headResponse = await fetch(manifestUrl, {
-		method: "HEAD",
-		headers: {
-			Authorization: `Basic ${creds}`,
-			Accept: manifestAcceptHeader,
-		},
-	});
-	if (!headResponse.ok) {
-		throw new Error(
-			`Failed to retrieve info for ${image}:${tag}: ${headResponse.status} ${headResponse.statusText}`
-		);
-	}
-
-	const digest = headResponse.headers.get("Docker-Content-Digest");
-	if (!digest) {
-		throw new Error(`Digest not found for ${image}:${tag}.`);
-	}
-
-	const deleteUrl = `${baseUrl}/v2/${accountId}/${image}/manifests/${tag}`;
-	const deleteResponse = await fetch(deleteUrl, {
-		method: "DELETE",
-		headers: {
-			Authorization: `Basic ${creds}`,
-			Accept: manifestAcceptHeader,
-		},
-	});
-
-	if (!deleteResponse.ok) {
-		throw new Error(
-			`Failed to delete ${image}:${tag} (digest: ${digest}): ${deleteResponse.status} ${deleteResponse.statusText}`
-		);
-	}
-
-	return digest;
-}
-
-async function getCreds(complianceConfig?: ComplianceConfig): Promise<string> {
-	const credentials =
-		await ImageRegistriesService.generateImageRegistryCredentials(
-			getCloudflareContainerRegistry(complianceConfig),
-			{
-				expiration_minutes: 5,
-				permissions: ["pull", "push"] as ImageRegistryPermissions[],
-			}
-		);
-
-	return Buffer.from(`v1:${credentials.password}`).toString("base64");
 }

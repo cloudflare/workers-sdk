@@ -705,7 +705,6 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2025-09-06",
 							manifest: createManifest(helper.tmpPath, [
@@ -797,7 +796,6 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2025-09-06",
 							manifest: createManifest(helper.tmpPath, ["mtls.js"]),
@@ -854,7 +852,6 @@ describe("Remote bindings (remote proxy session disabled)", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-09-06",
 						manifest: createManifest(helper.tmpPath, [

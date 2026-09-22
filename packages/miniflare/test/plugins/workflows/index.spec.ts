@@ -33,7 +33,6 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-compatibility-flags-worker",
 					compatibilityDate: "2024-11-20",
 					compatibilityFlags: [
@@ -71,7 +70,6 @@ test("subscribes to Workflow instance events through an RPC target", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-subscription-worker",
 					compatibilityDate: "2026-08-28",
 					manifest: singleModuleManifest(`
@@ -157,7 +155,6 @@ test("subscribes to structured and streamed step outputs", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-step-output-subscription-worker",
 					compatibilityDate: "2026-08-28",
 					manifest: singleModuleManifest(`
@@ -238,7 +235,6 @@ test("persists Workflow data on file-system between runs", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2024-11-20",
 					manifest: singleModuleManifest(WORKFLOW_SCRIPT()),
@@ -395,7 +391,6 @@ function lifecycleMiniflareOpts(tmp: string): MiniflareOptions {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "lifecycle-worker",
 					compatibilityDate: "2026-03-09",
 					manifest: singleModuleManifest(LIFECYCLE_WORKFLOW_SCRIPT()),
