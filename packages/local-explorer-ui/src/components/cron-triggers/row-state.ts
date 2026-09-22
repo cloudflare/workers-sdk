@@ -61,16 +61,6 @@ export function reconcileConfiguredRows(
 	return [...configured, ...local, ...staleSettled];
 }
 
-export function duplicateCronRow(row: CronRow, id = rowId("custom")): CronRow {
-	return {
-		...row,
-		id,
-		source: "custom",
-		cronBuilder: structuredClone(row.cronBuilder),
-		invocation: undefined,
-	};
-}
-
 export function rowIsPending(row: CronRow): boolean {
 	return row.invocation?.status === "pending";
 }

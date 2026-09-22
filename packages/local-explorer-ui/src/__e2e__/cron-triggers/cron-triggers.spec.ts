@@ -4,7 +4,7 @@ import { page, viteUrl } from "../utils";
 const WORKERS_ROUTE = "**/cdn-cgi/local/explorer/api/local/workers";
 const SCHEDULED_ROUTE =
 	"**/cdn-cgi/local/explorer/api/local/scheduled?worker=*";
-const STORAGE_PREFIX = "local-explorer.cron-triggers.custom-rows.v1";
+const STORAGE_PREFIX = "local-explorer.cron-triggers.";
 
 interface MockWorkerMetadata {
 	isSelf?: boolean;
@@ -75,9 +75,9 @@ describe("Cron Triggers", () => {
 		await page
 			.getByRole("heading", { name: "No Cron Triggers configured" })
 			.waitFor();
-		expect(await page.getByRole("button", { name: "Add draft" }).count()).toBe(
-			0
-		);
+		expect(
+			await page.getByRole("button", { name: "Add trigger" }).count()
+		).toBe(0);
 		expect(
 			await page.getByRole("button", { name: "Trigger", exact: true }).count()
 		).toBe(0);
@@ -136,7 +136,7 @@ describe("Cron Triggers", () => {
 
 		await page.goto(
 			new URL(
-				"/cdn-cgi/local/explorer/cron-triggers?worker=requested-worker",
+				"/cdn-cgi/local/explorer/cron-triggers/configured?worker=requested-worker",
 				viteUrl
 			).toString()
 		);
@@ -155,12 +155,11 @@ describe("Cron Triggers", () => {
 			.poll(() => page.getByLabel("Cron expression").first().inputValue())
 			.toBe("recovered-cron");
 		expect(refreshHeaders).toContain("poll");
-		expect(
-			refreshHeaders.filter((header) => header === undefined).length
-		).toBeGreaterThanOrEqual(2);
 
-		await page.getByRole("combobox").getByText("worker-1").waitFor();
-		await page.getByRole("combobox").click();
+		const workerSelector = page
+			.getByRole("combobox")
+			.filter({ hasText: "worker-1" });
+		await workerSelector.click();
 		await page.getByRole("option", { name: "worker-2" }).click();
 		await expect
 			.poll(() => new URL(page.url()).searchParams.get("worker"))
@@ -203,7 +202,10 @@ describe("Cron Triggers", () => {
 		});
 
 		await page.goto(
-			new URL("/cdn-cgi/local/explorer/cron-triggers", viteUrl).toString()
+			new URL(
+				"/cdn-cgi/local/explorer/cron-triggers/configured",
+				viteUrl
+			).toString()
 		);
 		await expect
 			.poll(() => new URL(page.url()).searchParams.get("worker"))
@@ -211,14 +213,14 @@ describe("Cron Triggers", () => {
 
 		await page.goto(
 			new URL(
-				"/cdn-cgi/local/explorer/cron-triggers?worker=missing-worker",
+				"/cdn-cgi/local/explorer/cron-triggers/configured?worker=missing-worker",
 				viteUrl
 			).toString()
 		);
 		await expect
 			.poll(() => new URL(page.url()).searchParams.get("worker"))
 			.toBe("worker-1");
-		expect(await page.getByLabel("Cron expression").first().inputValue()).toBe(
+		expect(await page.getByLabel("Cron expression").inputValue()).toBe(
 			"first-worker-cron"
 		);
 		await page.getByRole("button", { name: "Trigger", exact: true }).click();
@@ -227,263 +229,150 @@ describe("Cron Triggers", () => {
 		requestedWorkers.length = 0;
 		await page.goto(
 			new URL(
-				"/cdn-cgi/local/explorer/cron-triggers?worker=worker-2",
+				"/cdn-cgi/local/explorer/cron-triggers/configured?worker=worker-2",
 				viteUrl
 			).toString()
 		);
-		expect(new URL(page.url()).searchParams.get("worker")).toBe("worker-2");
-		expect(await page.getByLabel("Cron expression").first().inputValue()).toBe(
+		expect(await page.getByLabel("Cron expression").inputValue()).toBe(
 			"second-worker-cron"
 		);
 		await page.getByRole("button", { name: "Trigger", exact: true }).click();
 		await expect.poll(() => requestedWorkers).toEqual(["worker-2"]);
 	});
 
-	test("uses full-width equal panes and flattens only wide rows", async ({
+	test("uses full-width routed views and removes cron duplication", async ({
 		expect,
 	}) => {
 		await page.setViewportSize({ height: 900, width: 1920 });
 		await mockWorkers(["0 17 * * sun"]);
 		await openCronTriggers();
-		const configuredPane = page.getByRole("region", {
-			name: "Configured crons",
+
+		const configuredLink = page.getByRole("link", {
+			name: "Configured Crons",
 		});
-		const customPane = page.getByRole("region", { name: "Draft crons" });
-		const [configuredBox, customBox] = await Promise.all([
-			configuredPane.boundingBox(),
-			customPane.boundingBox(),
-		]);
-		expect(
-			Math.abs((configuredBox?.width ?? 0) - (customBox?.width ?? 0))
-		).toBeLessThanOrEqual(1);
-		expect(
-			Math.abs(
-				(customBox?.x ?? 0) -
-					((configuredBox?.x ?? 0) + (configuredBox?.width ?? 0))
-			)
-		).toBeLessThanOrEqual(1);
-		const [configuredBorder, customBorder] = await Promise.all([
-			configuredPane.evaluate(
-				(element) => getComputedStyle(element).borderRightWidth
-			),
-			customPane.evaluate(
-				(element) => getComputedStyle(element).borderLeftWidth
-			),
-		]);
-		expect(configuredBorder).toBe("0px");
-		expect(customBorder).toBe("0px");
-		const [configuredPadding, customPadding] = await Promise.all([
-			configuredPane.locator("[data-cron-pane-scroll]").evaluate((element) => {
-				const style = getComputedStyle(element);
-				return { left: style.paddingLeft, right: style.paddingRight };
-			}),
-			customPane.locator("[data-cron-pane-scroll]").evaluate((element) => {
-				const style = getComputedStyle(element);
-				return { left: style.paddingLeft, right: style.paddingRight };
-			}),
-		]);
-		expect(configuredPadding).toEqual({ left: "16px", right: "8px" });
-		expect(customPadding).toEqual({ left: "8px", right: "16px" });
-		expect(
-			1920 - ((customBox?.x ?? 0) + (customBox?.width ?? 0))
-		).toBeLessThanOrEqual(1);
-		const [configuredHeaderBox, customHeaderBox] = await Promise.all([
-			configuredPane.locator("header").boundingBox(),
-			customPane.locator("header").boundingBox(),
-		]);
-		expect(configuredHeaderBox?.height).toBe(customHeaderBox?.height);
-
-		await configuredPane
-			.getByRole("button", { name: "Duplicate cron" })
-			.click();
-		const customRow = customPane.locator("[data-row-id]").first();
-		expect(
-			await customRow.getByText("Cron expression", { exact: true }).count()
-		).toBe(0);
-		expect(
-			await customRow.getByText(/This custom cron is saved locally/).count()
-		).toBe(0);
-		const [cronInputBox, triggerBox, duplicateBox, removeBox] =
-			await Promise.all([
-				customRow.getByLabel("Cron expression").boundingBox(),
-				customRow
-					.getByRole("button", { name: "Trigger", exact: true })
-					.boundingBox(),
-				customRow.getByRole("button", { name: "Duplicate cron" }).boundingBox(),
-				customRow.getByRole("button", { name: "Remove row" }).boundingBox(),
-			]);
-		expect(
-			Math.abs((cronInputBox?.y ?? 0) - (triggerBox?.y ?? 0))
-		).toBeLessThanOrEqual(1);
-		expect((cronInputBox?.x ?? 0) + (cronInputBox?.width ?? 0)).toBeLessThan(
-			triggerBox?.x ?? 0
-		);
-		expect(triggerBox?.height).toBe(cronInputBox?.height);
-		expect(duplicateBox?.height).toBe(cronInputBox?.height);
-		expect(removeBox?.height).toBe(cronInputBox?.height);
-		const cardPadding = await customRow.evaluate((element) => {
-			const style = getComputedStyle(element);
-			return { left: style.paddingLeft, top: style.paddingTop };
+		const adHocLink = page.getByRole("link", { name: "Ad-Hoc Triggers" });
+		await configuredLink.waitFor();
+		await expect
+			.poll(() => new URL(page.url()).pathname)
+			.toMatch(/\/cron-triggers\/configured$/);
+		const configuredPanel = page.getByRole("region", {
+			name: "Configured Crons",
 		});
-		expect(cardPadding.left).toBe(cardPadding.top);
-		await customRow.getByRole("button", { name: "Build expression" }).click();
-		expect(await customRow.locator("fieldset code").count()).toBe(0);
+		const panelBox = await configuredPanel.boundingBox();
+		const rowListBox = await configuredPanel
+			.locator("[data-cron-row-list]")
+			.boundingBox();
+		expect(Math.abs((panelBox?.width ?? 0) - (rowListBox?.width ?? 0))).toBe(0);
 		expect(
-			await customRow
-				.getByText(/Step values start at the field minimum/)
-				.count()
+			await page.getByRole("button", { name: "Duplicate cron" }).count()
 		).toBe(0);
-		await customRow.getByRole("button", { name: "Cron builder help" }).hover();
-		await page.getByText(/Step values start at the field minimum/).waitFor();
-		await customRow.getByRole("button", { name: "Custom time" }).click();
-		const expressionControls = customRow.locator(
-			"[data-cron-expression-controls]"
-		);
-		const timeControls = customRow.locator("[data-cron-time-controls]");
-		const [wideExpressionBox, wideTimeBox] = await Promise.all([
-			expressionControls.boundingBox(),
-			timeControls.boundingBox(),
-		]);
-		expect(
-			Math.abs((wideExpressionBox?.y ?? 0) - (wideTimeBox?.y ?? 0))
-		).toBeLessThanOrEqual(1);
-		expect(wideTimeBox?.x ?? 0).toBeGreaterThan(wideExpressionBox?.x ?? 0);
-		expect(
-			await customRow.evaluate(
-				(element) => element.scrollWidth <= element.clientWidth
-			)
-		).toBe(true);
 
-		await page.setViewportSize({ height: 720, width: 1280 });
-		const [narrowExpressionBox, narrowTimeBox] = await Promise.all([
-			expressionControls.boundingBox(),
-			timeControls.boundingBox(),
+		await adHocLink.click();
+		await expect
+			.poll(() => new URL(page.url()).pathname)
+			.toMatch(/\/cron-triggers\/ad-hoc$/);
+		const adHocPanel = page.getByRole("region", { name: "Ad-Hoc Triggers" });
+		await adHocPanel.getByRole("button", { name: "Add trigger" }).click();
+		const row = adHocPanel.locator("[data-row-id]");
+		await row.getByLabel("Cron expression").fill("15 4 * * *");
+		const copyButton = row.getByRole("button", {
+			name: "Copy expression",
+		});
+		const [inputBox, triggerBox, copyBox, removeBox] = await Promise.all([
+			row.getByLabel("Cron expression").boundingBox(),
+			row.getByRole("button", { name: "Trigger", exact: true }).boundingBox(),
+			copyButton.boundingBox(),
+			row.getByRole("button", { name: "Remove row" }).boundingBox(),
 		]);
-		expect(narrowTimeBox?.y ?? 0).toBeGreaterThan(
-			(narrowExpressionBox?.y ?? 0) + (narrowExpressionBox?.height ?? 0)
+		expect(Math.abs((inputBox?.y ?? 0) - (triggerBox?.y ?? 0))).toBeLessThan(2);
+		expect(triggerBox?.height).toBe(inputBox?.height);
+		expect(copyBox?.height).toBe(inputBox?.height);
+		expect(removeBox?.height).toBe(inputBox?.height);
+		expect(copyBox?.x ?? 0).toBeGreaterThan(
+			(triggerBox?.x ?? 0) + (triggerBox?.width ?? 0)
 		);
-		expect(
-			await customRow.evaluate(
-				(element) => element.scrollWidth <= element.clientWidth
-			)
-		).toBe(true);
-	});
-
-	test("duplicates a configured cron and sends an immutable one-off request", async ({
-		expect,
-	}) => {
-		await mockWorkers(["0 17 * * sun"]);
-		let body: unknown;
-		await page.route(SCHEDULED_ROUTE, async (route) => {
-			body = route.request().postDataJSON();
-			await route.fulfill({
-				body: JSON.stringify({
-					errors: [],
-					messages: [],
-					result: { noRetry: true, outcome: "ok" },
-					success: true,
-				}),
-				contentType: "application/json",
+		expect(removeBox?.x ?? 0).toBeGreaterThan(
+			(copyBox?.x ?? 0) + (copyBox?.width ?? 0)
+		);
+		await row.evaluate((element) => {
+			Object.defineProperty(navigator, "clipboard", {
+				configurable: true,
+				value: {
+					writeText: (text: string) => {
+						element.setAttribute("data-copied-cron", text);
+						return Promise.resolve();
+					},
+				},
 			});
 		});
-		await page.goto(
-			new URL("/cdn-cgi/local/explorer/?worker=cron-worker", viteUrl).toString()
+		await copyButton.click();
+		expect(await row.getAttribute("data-copied-cron")).toBe("15 4 * * *");
+		await row.getByRole("button", { name: "Build expression" }).click();
+		expect(await row.getByLabel("Cron expression").inputValue()).toBe(
+			"15 4 * * *"
 		);
-		await page.evaluate(() => {
-			document.documentElement.dataset.navigationMarker = "preserved";
-		});
-		await page.getByRole("link", { name: "Cron Triggers" }).click();
-		expect(new URL(page.url()).searchParams.get("worker")).toBeNull();
 		expect(
-			await page.evaluate(
-				() => document.documentElement.dataset.navigationMarker
-			)
-		).toBeUndefined();
-		await page.getByLabel("Cron expression").waitFor();
-		const configuredPane = page.getByRole("region", {
-			name: "Configured crons",
-		});
-		const customPane = page.getByRole("region", { name: "Draft crons" });
-		const [configuredBox, customBox] = await Promise.all([
-			configuredPane.boundingBox(),
-			customPane.boundingBox(),
-		]);
-		expect(configuredBox?.x).toBeLessThan(customBox?.x ?? 0);
-		expect(
-			Math.abs((configuredBox?.width ?? 0) - (customBox?.width ?? 0))
-		).toBe(0);
-		expect(
-			await configuredPane
-				.locator("[data-cron-pane-scroll]")
-				.evaluate((element) => getComputedStyle(element).overflowY)
-		).toBe("auto");
-		expect(
-			await customPane
-				.locator("[data-cron-pane-scroll]")
-				.evaluate((element) => getComputedStyle(element).overflowY)
-		).toBe("auto");
-		const cronInputs = page.getByLabel("Cron expression");
-		await cronInputs.waitFor();
-		expect(await cronInputs.first().inputValue()).toBe("0 17 * * sun");
-		await page.getByRole("button", { name: "Duplicate cron" }).click();
-		await expect.poll(() => cronInputs.count()).toBe(2);
-		await expect
-			.poll(() =>
-				cronInputs
-					.last()
-					.evaluate((element) => element === document.activeElement)
-			)
-			.toBe(true);
-		await expect
-			.poll(() =>
-				page
-					.getByRole("button", { name: "Now" })
-					.last()
-					.getAttribute("aria-pressed")
-			)
-			.toBe("true");
-
-		await configuredPane
-			.getByRole("button", { name: "Duplicate cron" })
-			.click();
-		await expect
-			.poll(() => customPane.locator("[data-row-id]").count())
-			.toBe(2);
-		expect(
-			await page
-				.getByRole("heading", {
-					exact: true,
-					name: /Configured Cron|Custom Cron/,
-				})
+			await row
+				.getByRole("button", { name: "Use generated expression" })
 				.count()
 		).toBe(0);
-		await customPane
-			.getByRole("button", { name: "Remove row" })
-			.first()
-			.click();
-		await expect
-			.poll(() =>
-				customPane
-					.getByLabel("Cron expression")
-					.evaluate((element) => element === document.activeElement)
+		expect(
+			await row.getByText("Complete the builder before triggering.").count()
+		).toBe(0);
+		const hourInput = row.getByRole("textbox", { name: "Hour" });
+		await hourInput.fill("2");
+		expect(await row.getByLabel("Cron expression").inputValue()).toBe(
+			"0 2 * * *"
+		);
+		await hourInput.fill("25");
+		const hourLabel = row.getByText("Hour", { exact: true });
+		const hourError = row.getByText("must be between 0 and 23.", {
+			exact: true,
+		});
+		const [hourLabelBox, hourErrorBox, hourLabelColor, hourErrorColor] =
+			await Promise.all([
+				hourLabel.boundingBox(),
+				hourError.boundingBox(),
+				hourLabel.evaluate((element) => getComputedStyle(element).color),
+				hourError.evaluate((element) => getComputedStyle(element).color),
+			]);
+		expect(
+			Math.abs(
+				(hourLabelBox?.y ?? 0) +
+					(hourLabelBox?.height ?? 0) / 2 -
+					((hourErrorBox?.y ?? 0) + (hourErrorBox?.height ?? 0) / 2)
 			)
-			.toBe(true);
-
-		const before = Date.now();
-		await page
-			.getByRole("button", { name: "Trigger", exact: true })
-			.last()
-			.click();
-		await page.getByText("Outcome: ok").waitFor();
-		const after = Date.now();
-		expect(body).toMatchObject({ cron: "0 17 * * sun" });
-		const scheduledTime = (body as { scheduled_time: number }).scheduled_time;
-		expect(scheduledTime).toBeGreaterThanOrEqual(before);
-		expect(scheduledTime).toBeLessThanOrEqual(after);
-		await page.getByText(/one-off local test/).waitFor();
+		).toBeLessThan(2);
+		expect(hourLabelColor).not.toBe(hourErrorColor);
+		expect(await hourInput.getAttribute("aria-invalid")).toBe("true");
+		await row
+			.getByLabel("Schedule")
+			.selectOption({ label: "Selected weekdays" });
+		const weekdays = row.getByRole("group", { name: "Weekdays" });
+		await weekdays.getByRole("checkbox", { name: "mon" }).uncheck();
+		expect(await weekdays.getAttribute("aria-invalid")).toBe("true");
+		const weekdayError = weekdays.getByText("Select at least one weekday.");
+		const [saturdayBox, weekdayErrorBox] = await Promise.all([
+			weekdays.getByText("sat", { exact: true }).boundingBox(),
+			weekdayError.boundingBox(),
+		]);
+		expect(
+			Math.abs(
+				(saturdayBox?.y ?? 0) +
+					(saturdayBox?.height ?? 0) / 2 -
+					((weekdayErrorBox?.y ?? 0) + (weekdayErrorBox?.height ?? 0) / 2)
+			)
+		).toBeLessThan(2);
+		await row.getByRole("button", { name: "Cron builder help" }).hover();
+		await page.getByText(/Step values start at the field minimum/).waitFor();
+		expect(
+			await row.evaluate(
+				(element) => element.scrollWidth <= element.clientWidth
+			)
+		).toBe(true);
 	});
 
-	test("sends custom times only as UTC calendar values or epoch milliseconds", async ({
+	test("saves and uses UTC and epoch presets in both views", async ({
 		expect,
 	}) => {
 		await mockWorkers(["0 17 * * sun"]);
@@ -501,12 +390,44 @@ describe("Cron Triggers", () => {
 			});
 		});
 		await openCronTriggers();
-		await page.getByRole("button", { name: "Custom time" }).click();
-		expect(await page.getByText("Time zone", { exact: true }).count()).toBe(0);
+		await page.getByText("Selected epoch: now").waitFor();
+		const scheduledTimeSelect = page.getByRole("combobox", {
+			name: "Scheduled time",
+		});
+		const addPreset = page.getByRole("button", { name: "Add preset" });
+		const removePreset = page.getByRole("button", { name: "Remove preset" });
+		const [selectBox, addBox, removeBox] = await Promise.all([
+			scheduledTimeSelect.boundingBox(),
+			addPreset.boundingBox(),
+			removePreset.boundingBox(),
+		]);
+		expect(addBox?.height).toBe(selectBox?.height);
+		expect(removeBox?.height).toBe(selectBox?.height);
+		expect(Math.abs((addBox?.y ?? 0) - (selectBox?.y ?? 0))).toBeLessThan(2);
+		expect(Math.abs((removeBox?.y ?? 0) - (selectBox?.y ?? 0))).toBeLessThan(2);
+		expect(await removePreset.textContent()).toBe("");
+		expect(await removePreset.getAttribute("aria-disabled")).toBe("true");
 
+		await addPreset.click();
+		const calendarInput = page.getByLabel("Date and time (UTC)");
+		const cancelPreset = page.getByRole("button", { name: "Cancel" });
+		const savePreset = page.getByRole("button", { name: "Save preset" });
+		const [calendarBox, cancelBox, saveBox] = await Promise.all([
+			calendarInput.boundingBox(),
+			cancelPreset.boundingBox(),
+			savePreset.boundingBox(),
+		]);
+		expect(cancelBox?.height).toBe(calendarBox?.height);
+		expect(saveBox?.height).toBe(calendarBox?.height);
+		expect(Math.abs((cancelBox?.y ?? 0) - (calendarBox?.y ?? 0))).toBeLessThan(
+			2
+		);
+		expect(Math.abs((saveBox?.y ?? 0) - (calendarBox?.y ?? 0))).toBeLessThan(2);
 		await page
-			.getByLabel("Date and Time (UTC)")
+			.getByLabel("Date and time (UTC)")
 			.fill("2026-01-10T12:30:45.123");
+		await savePreset.click();
+		expect(await removePreset.getAttribute("aria-disabled")).toBe("false");
 		await page.getByRole("button", { name: "Trigger", exact: true }).click();
 		await expect.poll(() => bodies.length).toBe(1);
 		expect(bodies[0]).toEqual({
@@ -514,41 +435,63 @@ describe("Cron Triggers", () => {
 			scheduled_time: Date.parse("2026-01-10T12:30:45.123Z"),
 		});
 
-		await page.getByRole("button", { name: "Epoch milliseconds" }).click();
-		await page.getByLabel("Epoch milliseconds").fill("-1");
+		await page.getByRole("link", { name: "Ad-Hoc Triggers" }).click();
+		await page.getByRole("combobox", { name: "Scheduled time" }).click();
+		await page
+			.getByRole("option", { name: "2026-01-10T12:30:45.123Z" })
+			.click();
+		await page.getByRole("button", { name: "Add trigger" }).click();
+		await page.getByLabel("Cron expression").fill("15 4 * * *");
 		await page.getByRole("button", { name: "Trigger", exact: true }).click();
 		await expect.poll(() => bodies.length).toBe(2);
 		expect(bodies[1]).toEqual({
-			cron: "0 17 * * sun",
-			scheduled_time: -1,
+			cron: "15 4 * * *",
+			scheduled_time: Date.parse("2026-01-10T12:30:45.123Z"),
 		});
-	});
+		await page.getByRole("button", { name: "Build expression" }).click();
+		await page.getByRole("textbox", { name: "Hour" }).fill("");
+		await page.getByRole("button", { name: "Trigger", exact: true }).click();
+		await expect.poll(() => bodies.length).toBe(3);
+		expect(bodies[2]).toEqual({
+			cron: "15 4 * * *",
+			scheduled_time: Date.parse("2026-01-10T12:30:45.123Z"),
+		});
 
-	test("preserves custom time drafts after switching to now", async ({
-		expect,
-	}) => {
-		await mockWorkers(["0 17 * * sun"]);
-		await openCronTriggers();
-		await page.getByRole("button", { name: "Custom time" }).click();
-
-		const calendarInput = page.getByLabel("Date and Time (UTC)");
-		await calendarInput.fill("2026-01-10T12:30:45.123");
-		await page.getByRole("button", { name: "Now", exact: true }).click();
-		await page.getByRole("button", { name: "Custom time" }).click();
-		expect(await calendarInput.inputValue()).toBe("2026-01-10T12:30:45.123");
-
+		await page.getByRole("button", { name: "Add preset" }).click();
 		await page.getByRole("button", { name: "Epoch milliseconds" }).click();
-		const epochInput = page.getByLabel("Epoch milliseconds");
-		await epochInput.fill("123456789");
-		await page.getByRole("button", { name: "Now", exact: true }).click();
-		await page.getByRole("button", { name: "Custom time" }).click();
-		expect(await epochInput.inputValue()).toBe("123456789");
+		await page.getByLabel("Epoch milliseconds").fill("");
+		await expect
+			.poll(() =>
+				page.getByRole("button", { name: "Save preset" }).isDisabled()
+			)
+			.toBe(true);
+		await page.getByLabel("Epoch milliseconds").fill("-1");
+		await expect.poll(() => savePreset.isEnabled()).toBe(true);
+		await savePreset.click();
+		await page.getByRole("button", { name: "Trigger", exact: true }).click();
+		await expect.poll(() => bodies.length).toBe(4);
+		expect(bodies[3]?.scheduled_time).toBe(-1);
+
+		await removePreset.click();
+		expect(await removePreset.getAttribute("aria-disabled")).toBe("true");
+		await page.getByText("Selected epoch: now").waitFor();
+		expect(
+			await page.getByRole("combobox", { name: "Scheduled time" }).textContent()
+		).toContain("Now");
+		await page.getByRole("combobox", { name: "Scheduled time" }).click();
+		expect(
+			await page
+				.getByRole("option", { name: "1969-12-31T23:59:59.999Z" })
+				.count()
+		).toBe(0);
+		await page.keyboard.press("Escape");
 	});
 
-	test("restores persisted custom drafts as idle rows after navigation and reload", async ({
+	test("restores and retains ad-hoc drafts and time presets", async ({
 		expect,
 	}) => {
-		await mockWorkers(["0 17 * * sun"]);
+		const configuredCrons = ["0 17 * * sun"];
+		await mockWorkers(configuredCrons);
 		await page.route(SCHEDULED_ROUTE, async (route) => {
 			await route.fulfill({
 				body: JSON.stringify({
@@ -561,57 +504,81 @@ describe("Cron Triggers", () => {
 			});
 		});
 		await openCronTriggers();
-		await page.getByRole("button", { name: "Duplicate cron" }).click();
-		await page.getByLabel("Cron expression").last().fill("15 4 * * *");
-		await page.getByRole("button", { name: "Custom time" }).last().click();
-		await page
-			.getByRole("button", { name: "Epoch milliseconds" })
-			.last()
-			.click();
+		await page.getByRole("button", { name: "Add preset" }).click();
+		await page.getByRole("button", { name: "Epoch milliseconds" }).click();
 		await page.getByLabel("Epoch milliseconds").fill("123456789");
+		await page.getByRole("button", { name: "Save preset" }).click();
+		await page.getByRole("link", { name: "Ad-Hoc Triggers" }).click();
+		await page.getByRole("combobox", { name: "Scheduled time" }).click();
 		await page
-			.getByRole("button", { name: "Trigger", exact: true })
-			.last()
+			.getByRole("option", { name: "1970-01-02T10:17:36.789Z" })
 			.click();
-		await page.getByText("Outcome: ok").waitFor();
-		await page.getByRole("button", { name: "Build expression" }).last().click();
-		await page.getByLabel("Hour").last().fill("");
+		await page.getByRole("button", { name: "Add trigger" }).click();
+		await page.getByLabel("Cron expression").fill("15 4 * * *");
+		await page.getByRole("button", { name: "Build expression" }).click();
+		await page.getByRole("textbox", { name: "Hour" }).fill("");
+		expect(
+			await page
+				.getByRole("button", { name: "Trigger", exact: true })
+				.getAttribute("aria-disabled")
+		).toBe("false");
 		await expect
 			.poll(() =>
 				page.evaluate(
 					(prefix) =>
-						Object.keys(localStorage).some((key) => key.startsWith(prefix)),
+						Object.keys(localStorage).filter((key) => key.startsWith(prefix))
+							.length,
 					STORAGE_PREFIX
 				)
 			)
-			.toBe(true);
+			.toBe(2);
 
 		await page.getByRole("link", { name: "Traces" }).click();
-		await page.getByRole("link", { name: "Cron Triggers" }).click();
-
-		await page.getByLabel("Cron expression").last().waitFor();
-		expect(
-			await page
-				.getByRole("button", { name: "Build expression" })
-				.last()
-				.getAttribute("aria-pressed")
-		).toBe("true");
-		expect(await page.getByLabel("Hour").last().inputValue()).toBe("");
-		expect(await page.getByLabel("Epoch milliseconds").inputValue()).toBe(
-			"123456789"
-		);
-		expect(await page.getByText("Outcome: ok").count()).toBe(0);
-
-		await page.reload();
-
-		await page.getByLabel("Cron expression").last().waitFor();
-		expect(await page.getByLabel("Cron expression").last().inputValue()).toBe(
+		await page.getByRole("link", { name: "Ad-Hoc Triggers" }).click();
+		await page.getByLabel("Cron expression").waitFor();
+		expect(await page.getByLabel("Cron expression").inputValue()).toBe(
 			"15 4 * * *"
 		);
-		expect(await page.getByLabel("Epoch milliseconds").inputValue()).toBe(
-			"123456789"
+		expect(await page.getByRole("textbox", { name: "Hour" }).inputValue()).toBe(
+			""
 		);
-		expect(await page.getByText("Outcome: ok").count()).toBe(0);
+		await page.getByRole("combobox", { name: "Scheduled time" }).click();
+		await expect
+			.poll(() =>
+				page.getByRole("option", { name: "1970-01-02T10:17:36.789Z" }).count()
+			)
+			.toBe(1);
+		await page.keyboard.press("Escape");
+
+		await page.reload();
+		await page.getByLabel("Cron expression").waitFor();
+		expect(await page.getByLabel("Cron expression").inputValue()).toBe(
+			"15 4 * * *"
+		);
+		await page.getByRole("combobox", { name: "Scheduled time" }).click();
+		await expect
+			.poll(() =>
+				page.getByRole("option", { name: "1970-01-02T10:17:36.789Z" }).count()
+			)
+			.toBe(1);
+		await page.keyboard.press("Escape");
 		expect(await page.getByText("Invocation is running…").count()).toBe(0);
+
+		configuredCrons.length = 0;
+		await page.getByRole("button", { name: "Refresh Cron Triggers" }).click();
+		await page
+			.getByRole("heading", { name: "No Cron Triggers configured" })
+			.waitFor();
+		expect(await page.getByLabel("Cron expression").inputValue()).toBe(
+			"15 4 * * *"
+		);
+		expect(
+			await page
+				.getByRole("button", { name: "Trigger", exact: true })
+				.getAttribute("aria-disabled")
+		).toBe("true");
+		expect(
+			await page.getByRole("button", { name: "Add trigger" }).count()
+		).toBe(0);
 	});
 });

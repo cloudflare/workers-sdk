@@ -35,7 +35,7 @@ export const Route = createRootRoute({
 			const workers = workersResponse.data?.result ?? [];
 			return { bootstrapAuthoritative: true, workers };
 		} catch (error) {
-			if (/\/cron-triggers\/?$/.test(location.pathname)) {
+			if (/\/cron-triggers(?:\/.*)?$/.test(location.pathname)) {
 				return { bootstrapAuthoritative: false, workers: [] };
 			}
 			throw error;

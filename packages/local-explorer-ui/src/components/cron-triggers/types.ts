@@ -74,7 +74,6 @@ export interface CronRow {
 	cron: string;
 	cronInputMode: CronInputMode;
 	cronBuilder: CronBuilderDraft;
-	builderApplied?: boolean;
 	timeMode: TimeMode;
 	customTimeInputMode: CustomTimeInputMode;
 	customEpochMs?: number;
@@ -88,4 +87,5 @@ export interface CronWorkerState {
 	crons?: string[];
 	rows: CronRow[];
 	stale: boolean;
+	timePresets: number[];
 }

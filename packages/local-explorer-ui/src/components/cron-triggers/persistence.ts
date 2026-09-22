@@ -1,5 +1,7 @@
 import { createCronRow } from "./row-state";
 import {
+	MAX_DATE_EPOCH_MS,
+	MIN_DATE_EPOCH_MS,
 	parseEpochMilliseconds,
 	resolveUtcCalendarTime,
 } from "./scheduled-time";
@@ -7,10 +9,11 @@ import type { CronBuilderDraft, CronRow, CronWeekday } from "./types";
 
 export const CRON_CUSTOM_ROWS_STORAGE_PREFIX =
 	"local-explorer.cron-triggers.custom-rows.v1";
+export const CRON_TIME_PRESETS_STORAGE_PREFIX =
+	"local-explorer.cron-triggers.time-presets.v1";
 
 type PersistedCustomRow = Pick<
 	CronRow,
-	| "builderApplied"
 	| "calendarValue"
 	| "cron"
 	| "cronBuilder"
@@ -31,7 +34,6 @@ const WEEKDAYS = new Set<CronWeekday>([
 ]);
 
 const ROW_KEYS = new Set([
-	"builderApplied",
 	"calendarValue",
 	"cron",
 	"cronBuilder",
@@ -162,8 +164,6 @@ function parsePersistedCustomRow(
 		(value.customTimeInputMode !== "calendar" &&
 			value.customTimeInputMode !== "epoch") ||
 		(value.timeMode !== "now" && value.timeMode !== "custom") ||
-		(value.builderApplied !== undefined &&
-			typeof value.builderApplied !== "boolean") ||
 		(value.calendarValue !== undefined &&
 			typeof value.calendarValue !== "string") ||
 		(value.epochValue !== undefined && typeof value.epochValue !== "string")
@@ -175,9 +175,6 @@ function parsePersistedCustomRow(
 		return undefined;
 	}
 	return {
-		...(value.builderApplied === undefined
-			? {}
-			: { builderApplied: value.builderApplied }),
 		...(value.calendarValue === undefined
 			? {}
 			: { calendarValue: value.calendarValue }),
@@ -204,6 +201,15 @@ export function cronCustomRowsStorageKey(
 ): string | undefined {
 	return persistenceScope
 		? `${CRON_CUSTOM_ROWS_STORAGE_PREFIX}.${persistenceScope}.${encodeURIComponent(workerName)}`
+		: undefined;
+}
+
+export function cronTimePresetsStorageKey(
+	persistenceScope: string | undefined,
+	workerName: string
+): string | undefined {
+	return persistenceScope
+		? `${CRON_TIME_PRESETS_STORAGE_PREFIX}.${persistenceScope}.${encodeURIComponent(workerName)}`
 		: undefined;
 }
 
@@ -259,9 +265,6 @@ export function readPersistedCustomCronRows(
 
 function persistedDraft(row: CronRow): PersistedCustomRow {
 	return {
-		...(row.builderApplied === undefined
-			? {}
-			: { builderApplied: row.builderApplied }),
 		...(row.calendarValue === undefined
 			? {}
 			: { calendarValue: row.calendarValue }),
@@ -290,6 +293,62 @@ export function writePersistedCustomCronRows(
 	const raw = JSON.stringify(customRows);
 	try {
 		storage.setItem(key, raw);
+	} catch {
+		// Quota, privacy, and security errors must not break the editor.
+	}
+}
+
+/** Read validated, worker-scoped scheduled-time presets. */
+export function readPersistedCronTimePresets(
+	storage: Storage,
+	key: string
+): number[] {
+	let raw: string | null;
+	try {
+		raw = storage.getItem(key);
+	} catch {
+		return [];
+	}
+	if (raw === null) {
+		return [];
+	}
+	let value: unknown;
+	try {
+		value = JSON.parse(raw);
+	} catch {
+		remove(storage, key);
+		return [];
+	}
+	if (
+		!Array.isArray(value) ||
+		value.length === 0 ||
+		value.some(
+			(preset) =>
+				typeof preset !== "number" ||
+				!Number.isSafeInteger(preset) ||
+				preset < MIN_DATE_EPOCH_MS ||
+				preset > MAX_DATE_EPOCH_MS
+		) ||
+		new Set(value).size !== value.length
+	) {
+		remove(storage, key);
+		return [];
+	}
+	return value;
+}
+
+/** Persist reusable scheduled-time presets without an application-level cap. */
+export function writePersistedCronTimePresets(
+	storage: Storage,
+	key: string,
+	presets: number[]
+): void {
+	if (presets.length === 0) {
+		remove(storage, key);
+		return;
+	}
+	try {
+		storage.setItem(key, JSON.stringify(presets));
 	} catch {
 		// Quota, privacy, and security errors must not break the editor.
 	}

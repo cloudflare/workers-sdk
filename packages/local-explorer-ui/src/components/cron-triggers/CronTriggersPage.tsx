@@ -1,9 +1,13 @@
 import { Button, RefreshButton, Tooltip } from "@cloudflare/kumo";
 import { ClockCountdownIcon, InfoIcon, PlusIcon } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Breadcrumbs } from "../Breadcrumbs";
 import { CronRowCard } from "./CronRowCard";
 import { useCronTriggers } from "./CronTriggersContext";
+import {
+	ScheduledTimeControl,
+	type ScheduledTimeSelection,
+} from "./ScheduledTimeControl";
 import type { CronRow } from "./types";
 import type { JSX } from "react";
 
@@ -12,50 +16,69 @@ const CRON_CONFIGURATION_DOCS =
 const SCHEDULED_HANDLER_DOCS =
 	"https://developers.cloudflare.com/workers/runtime-apis/handlers/scheduled/";
 
+export type CronTriggersView = "configured" | "ad-hoc";
+
 export function CronTriggersPage({
-	activeWorkerName,
+	view,
 }: {
-	activeWorkerName?: string;
+	view: CronTriggersView;
 }): JSX.Element {
 	const cron = useCronTriggers();
-	const workerName = activeWorkerName ?? cron.fallbackWorkerName;
+	const workerName =
+		cron.activeWorkerName &&
+		(cron.visibleWorkerNames.length === 0 ||
+			cron.visibleWorkerNames.includes(cron.activeWorkerName))
+			? cron.activeWorkerName
+			: cron.fallbackWorkerName;
 	const entry = cron.entry(workerName);
 	const [focusRow, setFocusRow] = useState<string>();
+	const [timeSelection, setTimeSelection] =
+		useState<ScheduledTimeSelection>("now");
 	const focusedRow = useRef<string | undefined>(undefined);
 	const configured = entry.crons ?? [];
-	const configuredRows = entry.rows.filter((row) => row.source !== "custom");
-	const customRows = entry.rows.filter((row) => row.source === "custom");
-	const previousPaneRows = useRef({
-		configured: configuredRows.map((row) => row.id),
-		custom: customRows.map((row) => row.id),
-	});
+	const configuredRows = useMemo(
+		() => entry.rows.filter((row) => row.source !== "custom"),
+		[entry.rows]
+	);
+	const customRows = useMemo(
+		() => entry.rows.filter((row) => row.source === "custom"),
+		[entry.rows]
+	);
+	const rows = view === "configured" ? configuredRows : customRows;
+	const previousRows = useRef(rows.map((row) => row.id));
 	const showNoConfiguration = entry.authoritative && configured.length === 0;
-	const canAddCustom = configured.length > 0;
+	const showPureNoConfiguration =
+		showNoConfiguration &&
+		!entry.rows.some(
+			(row) => row.source === "custom" || row.source === "no-longer-configured"
+		);
+	const title = view === "configured" ? "Configured Crons" : "Ad-Hoc Triggers";
 
 	useEffect(() => {
-		const nextPaneRows = {
-			configured: entry.rows
-				.filter((row) => row.source !== "custom")
-				.map((row) => row.id),
-			custom: entry.rows
-				.filter((row) => row.source === "custom")
-				.map((row) => row.id),
-		};
+		setTimeSelection("now");
+	}, [workerName]);
+
+	useEffect(() => {
+		setTimeSelection((current) =>
+			current !== "now" && !entry.timePresets.includes(current)
+				? "now"
+				: current
+		);
+	}, [entry.timePresets]);
+
+	useEffect(() => {
+		const nextRows = rows.map((row) => row.id);
 		const focused = focusedRow.current;
 		const activeElement = document.activeElement as HTMLElement | null;
 		const activeRow =
 			activeElement?.closest<HTMLElement>("[data-row-id]")?.dataset.rowId;
 		if (
 			focused &&
-			!entry.rows.some((row) => row.id === focused) &&
+			!rows.some((row) => row.id === focused) &&
 			activeRow === undefined &&
 			(activeElement === document.body || activeElement === null)
 		) {
-			const pane = previousPaneRows.current.custom.includes(focused)
-				? "custom"
-				: "configured";
-			const previousIndex = previousPaneRows.current[pane].indexOf(focused);
-			const nextRows = nextPaneRows[pane];
+			const previousIndex = previousRows.current.indexOf(focused);
 			const target =
 				nextRows[previousIndex] ?? nextRows[Math.max(0, previousIndex - 1)];
 			requestAnimationFrame(() => {
@@ -64,28 +87,22 @@ export function CronTriggersPage({
 						.querySelector<HTMLElement>(`[data-row-id="${target}"] button`)
 						?.focus();
 				} else {
-					focusPane(pane);
+					focusView(view);
 				}
 			});
 		} else if (activeRow !== focused) {
 			focusedRow.current = activeRow;
 		}
-		previousPaneRows.current = nextPaneRows;
-	}, [entry.rows]);
+		previousRows.current = nextRows;
+	}, [rows, view]);
 
-	function focusSoon(rowId: string | undefined, pane?: CronPaneKind): void {
+	function focusSoon(rowId: string | undefined): void {
 		if (rowId) {
 			setFocusRow(rowId);
 			return;
 		}
 		requestAnimationFrame(() => {
-			if (pane) {
-				focusPane(pane);
-			} else {
-				document
-					.querySelector<HTMLElement>("[data-add-custom], [data-cron-heading]")
-					?.focus();
-			}
+			focusView(view);
 		});
 	}
 
@@ -95,23 +112,34 @@ export function CronTriggersPage({
 				focusRequested={focusRow === row.id}
 				key={row.id}
 				onFocusHandled={() => setFocusRow(undefined)}
-				onDuplicate={() => focusSoon(cron.duplicateRow(workerName, row.id))}
 				onRemove={() => {
-					const pane = row.source === "custom" ? "custom" : "configured";
-					const paneRows = pane === "custom" ? customRows : configuredRows;
-					const index = paneRows.findIndex(
-						(candidate) => candidate.id === row.id
-					);
-					const nextFocus = paneRows[index + 1]?.id ?? paneRows[index - 1]?.id;
+					const index = rows.findIndex((candidate) => candidate.id === row.id);
+					const nextFocus = rows[index + 1]?.id ?? rows[index - 1]?.id;
 					cron.removeRow(workerName, row.id);
-					focusSoon(nextFocus, pane);
+					focusSoon(nextFocus);
 				}}
 				onUpdate={(update) => cron.updateRow(workerName, row.id, update)}
 				row={row}
 				triggerEnabled={!showNoConfiguration}
-				trigger={(scheduledTime) =>
-					void cron.invoke(workerName, row.id, scheduledTime)
-				}
+				trigger={() => {
+					void cron.invoke(
+						workerName,
+						row.id,
+						timeSelection === "now" ? Date.now() : timeSelection
+					);
+				}}
+			/>
+		);
+	}
+
+	function scheduledTimeControl(): JSX.Element {
+		return (
+			<ScheduledTimeControl
+				onAddPreset={(epochMs) => cron.addTimePreset(workerName, epochMs)}
+				onRemovePreset={(epochMs) => cron.removeTimePreset(workerName, epochMs)}
+				onSelectionChange={setTimeSelection}
+				presets={entry.timePresets}
+				selection={timeSelection}
 			/>
 		);
 	}
@@ -120,8 +148,8 @@ export function CronTriggersPage({
 		<div className="flex min-h-full flex-col lg:h-full lg:min-h-0">
 			<Breadcrumbs
 				icon={ClockCountdownIcon}
-				items={[<span key="cron-triggers">Cron Triggers</span>]}
-				title="Cron Triggers"
+				items={[<span key={view}>{title}</span>]}
+				title={title}
 			>
 				<div className="ml-auto flex items-center gap-2">
 					<Tooltip
@@ -155,107 +183,91 @@ export function CronTriggersPage({
 				{entry.stale && entry.authoritative ? <RefreshWarning /> : null}
 				{!entry.authoritative ? (
 					<UnavailableState onRefresh={() => void cron.refresh(workerName)} />
+				) : showPureNoConfiguration ? (
+					<NoConfigurationState />
+				) : view === "configured" ? (
+					<CronView title={title} view={view}>
+						{showNoConfiguration ? (
+							<NoConfigurationState />
+						) : (
+							scheduledTimeControl()
+						)}
+						<RowList>{configuredRows.map(renderRow)}</RowList>
+					</CronView>
 				) : (
-					<>
-						{showNoConfiguration ? <NoConfigurationState /> : null}
-						{entry.rows.length > 0 ? (
-							<div className="grid lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-rows-1">
-								<CronPane pane="configured" title="Configured crons">
-									{configuredRows.map(renderRow)}
-								</CronPane>
-
-								<CronPane
-									action={
-										canAddCustom ? (
-											<Button
-												data-add-custom
-												icon={PlusIcon}
-												onClick={() => focusSoon(cron.addCustom(workerName))}
-												size="sm"
-												variant="secondary"
-											>
-												Add draft
-											</Button>
-										) : null
-									}
-									help="Draft crons are stored locally and do not modify your Worker configuration."
-									pane="custom"
-									title="Draft crons"
+					<CronView title={title} view={view}>
+						{showNoConfiguration ? (
+							<NoConfigurationState />
+						) : (
+							scheduledTimeControl()
+						)}
+						<div className="flex flex-wrap items-center justify-between gap-3 border-b border-kumo-fill bg-kumo-base px-5 py-4">
+							<p className="text-sm text-kumo-subtle">
+								Ad-hoc triggers are stored locally and do not modify your Worker
+								configuration.
+							</p>
+							{showNoConfiguration ? null : (
+								<Button
+									data-add-custom
+									icon={PlusIcon}
+									onClick={() => focusSoon(cron.addCustom(workerName))}
+									size="sm"
+									variant="secondary"
 								>
-									{customRows.length === 0 ? (
-										<p className="px-1 py-2 text-sm text-kumo-subtle">
-											Draft crons you add or duplicate appear here.
-										</p>
-									) : null}
-									{customRows.map(renderRow)}
-								</CronPane>
-							</div>
-						) : null}
-					</>
+									Add trigger
+								</Button>
+							)}
+						</div>
+						<RowList>
+							{customRows.length === 0 ? (
+								<p className="px-1 py-2 text-sm text-kumo-subtle">
+									Ad-hoc triggers you add appear here.
+								</p>
+							) : null}
+							{customRows.map(renderRow)}
+						</RowList>
+					</CronView>
 				)}
 			</div>
 		</div>
 	);
 }
 
-function CronPane({
-	action,
+function CronView({
 	children,
-	help,
-	pane,
 	title,
+	view,
 }: {
-	action?: JSX.Element | null;
 	children: React.ReactNode;
-	help?: string;
-	pane: CronPaneKind;
 	title: string;
+	view: CronTriggersView;
 }): JSX.Element {
 	return (
 		<section
 			aria-label={title}
-			className={`flex min-w-0 flex-col overflow-hidden border border-kumo-fill bg-kumo-elevated lg:min-h-0 ${pane === "configured" ? "border-b-0 lg:border-r-0 lg:border-b" : "lg:border-l-0"}`}
-			data-cron-pane={pane}
+			className="flex min-w-0 flex-1 flex-col overflow-hidden bg-kumo-elevated lg:min-h-0"
+			data-cron-view={view}
 		>
-			<header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-kumo-fill bg-kumo-base px-5">
-				<div className="inline-flex items-center gap-1">
-					<h2
-						className="text-base font-semibold text-kumo-default"
-						data-cron-pane-heading
-						tabIndex={-1}
-					>
-						{title}
-					</h2>
-					{help ? (
-						<Tooltip asChild content={help}>
-							<button
-								aria-label={`${title} help`}
-								className="focus-visible:ring-kumo-ring inline-flex h-5 w-5 items-center justify-center rounded-md text-kumo-subtle outline-none hover:bg-kumo-tint focus-visible:ring-2"
-								type="button"
-							>
-								<InfoIcon size={14} />
-							</button>
-						</Tooltip>
-					) : null}
-				</div>
-				{action}
-			</header>
-			<div
-				className={`grid content-start gap-4 p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${pane === "configured" ? "lg:pr-2" : "lg:pl-2"}`}
-				data-cron-pane-scroll
-			>
-				{children}
-			</div>
+			{children}
 		</section>
 	);
 }
 
-type CronPaneKind = "configured" | "custom";
+function RowList({ children }: { children: React.ReactNode }): JSX.Element {
+	return (
+		<div
+			className="grid content-start gap-4 p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+			data-cron-row-list
+		>
+			{children}
+		</div>
+	);
+}
 
-function focusPane(pane: CronPaneKind): void {
+function focusView(view: CronTriggersView): void {
 	document
 		.querySelector<HTMLElement>(
-			`[data-cron-pane="${pane}"] [data-add-custom], [data-cron-pane="${pane}"] [data-cron-pane-heading], [data-cron-heading]`
+			`[data-cron-view="${view}"] [data-add-custom], [data-cron-view="${view}"] [data-row-id] button, [data-cron-heading]`
 		)
 		?.focus();
 }

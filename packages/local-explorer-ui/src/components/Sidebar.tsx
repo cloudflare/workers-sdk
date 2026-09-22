@@ -246,13 +246,23 @@ export function AppSidebar({
 			icon: ClockCountdownIcon,
 			items: [
 				{
-					id: "cron-triggers",
-					isActive: currentPath.startsWith("/cron-triggers"),
-					label: "Cron Triggers",
+					id: "configured-crons",
+					isActive: currentPath === "/cron-triggers/configured",
+					label: "Configured Crons",
 					link: {
 						params: {},
 						search: workerSearch,
-						to: "/cron-triggers",
+						to: "/cron-triggers/configured",
+					},
+				},
+				{
+					id: "ad-hoc-triggers",
+					isActive: currentPath === "/cron-triggers/ad-hoc",
+					label: "Ad-Hoc Triggers",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/cron-triggers/ad-hoc",
 					},
 				},
 			],

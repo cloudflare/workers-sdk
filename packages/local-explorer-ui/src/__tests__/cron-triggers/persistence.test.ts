@@ -1,8 +1,12 @@
 import { describe, it } from "vitest";
 import {
 	CRON_CUSTOM_ROWS_STORAGE_PREFIX,
+	CRON_TIME_PRESETS_STORAGE_PREFIX,
 	cronCustomRowsStorageKey,
+	cronTimePresetsStorageKey,
+	readPersistedCronTimePresets,
 	readPersistedCustomCronRows,
+	writePersistedCronTimePresets,
 	writePersistedCustomCronRows,
 } from "../../components/cron-triggers/persistence";
 import { createCronRow } from "../../components/cron-triggers/row-state";
@@ -172,5 +176,40 @@ describe("Cron Trigger custom-row persistence", () => {
 		expect(() =>
 			writePersistedCustomCronRows(throwing, "key", [createCronRow("cron")])
 		).not.toThrow();
+	});
+});
+
+describe("Cron Trigger time-preset persistence", () => {
+	it("uses a separate versioned project and encoded Worker key", ({
+		expect,
+	}) => {
+		expect(cronTimePresetsStorageKey(undefined, "worker")).toBeUndefined();
+		expect(cronTimePresetsStorageKey("project-scope", "a Worker/name")).toBe(
+			`${CRON_TIME_PRESETS_STORAGE_PREFIX}.project-scope.a%20Worker%2Fname`
+		);
+	});
+
+	it("round trips valid scheduled-time presets", ({ expect }) => {
+		const storage = new MemoryStorage();
+		writePersistedCronTimePresets(storage, "key", [-1, 0, 123456789]);
+		expect(readPersistedCronTimePresets(storage, "key")).toEqual([
+			-1, 0, 123456789,
+		]);
+	});
+
+	it("removes malformed presets and preserves the last successful write", ({
+		expect,
+	}) => {
+		const malformed = new MemoryStorage();
+		malformed.setItem("key", JSON.stringify([1, 1]));
+		expect(readPersistedCronTimePresets(malformed, "key")).toEqual([]);
+		expect(malformed.getItem("key")).toBeNull();
+
+		const quotaStorage = new MemoryStorage();
+		writePersistedCronTimePresets(quotaStorage, "key", [1]);
+		const previous = quotaStorage.getItem("key");
+		quotaStorage.writesBlocked = true;
+		writePersistedCronTimePresets(quotaStorage, "key", [2]);
+		expect(quotaStorage.getItem("key")).toBe(previous);
 	});
 });

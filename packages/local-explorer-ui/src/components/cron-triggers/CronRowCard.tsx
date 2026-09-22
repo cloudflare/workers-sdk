@@ -1,18 +1,12 @@
 import { Button, Tooltip } from "@cloudflare/kumo";
 import { CopyIcon, InfoIcon, TrashIcon } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
 	changeCronBuilderKind,
 	cronBuilderKinds,
 	cronWeekdays,
 	generateCronExpression,
 } from "./cron-builder";
-import {
-	enterCustomTimeMode,
-	parseEpochMilliseconds,
-	resolveUtcCalendarTime,
-} from "./scheduled-time";
-import type { UtcCalendarResolution } from "./scheduled-time";
 import type { CronBuilderDraft, CronRow, CronWeekday } from "./types";
 import type { JSX } from "react";
 
@@ -21,18 +15,16 @@ const CRON_CONFIGURATION_DOCS =
 
 interface CronRowCardProps {
 	focusRequested: boolean;
-	onDuplicate: () => void;
 	onFocusHandled: () => void;
 	onRemove: () => void;
 	onUpdate: (update: (row: CronRow) => CronRow) => void;
 	row: CronRow;
-	trigger: (scheduledTime: number) => void;
+	trigger: () => void;
 	triggerEnabled: boolean;
 }
 
 export function CronRowCard({
 	focusRequested,
-	onDuplicate,
 	onFocusHandled,
 	onRemove,
 	onUpdate,
@@ -43,23 +35,8 @@ export function CronRowCard({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const actionRef = useRef<HTMLButtonElement>(null);
 	const pending = row.invocation?.status === "pending";
-	const builder = generateCronExpression(row.cronBuilder);
-	const calendar = useMemo(
-		() =>
-			row.timeMode === "custom" &&
-			row.customTimeInputMode === "calendar" &&
-			row.calendarValue
-				? resolveUtcCalendarTime(row.calendarValue)
-				: undefined,
-		[row.calendarValue, row.customTimeInputMode, row.timeMode]
-	);
-	const scheduledTime = getScheduledTime(row, calendar);
-	const cronValid =
-		row.cron.trim() !== "" &&
-		(row.cronInputMode !== "builder" ||
-			(row.builderApplied === true && builder.expression === row.cron));
-	const canTrigger =
-		triggerEnabled && !pending && cronValid && scheduledTime.valid;
+	const cronValid = row.cron.trim() !== "";
+	const canTrigger = triggerEnabled && !pending && cronValid;
 
 	useEffect(() => {
 		if (focusRequested) {
@@ -76,7 +53,7 @@ export function CronRowCard({
 		if (!canTrigger) {
 			return;
 		}
-		trigger(row.timeMode === "now" ? Date.now() : scheduledTime.epochMs);
+		trigger();
 	}
 
 	return (
@@ -109,8 +86,12 @@ export function CronRowCard({
 			>
 				<div className="grid min-w-0 flex-1 gap-1">
 					<input
-						aria-describedby={!cronValid ? `${row.id}-cron-error` : undefined}
-						aria-invalid={!cronValid}
+						aria-describedby={
+							!cronValid && row.cronInputMode !== "builder"
+								? `${row.id}-cron-error`
+								: undefined
+						}
+						aria-invalid={!cronValid && row.cronInputMode !== "builder"}
 						aria-label="Cron expression"
 						className="focus-visible:ring-kumo-ring h-9 w-full min-w-0 rounded-md border border-kumo-fill bg-kumo-elevated px-3 font-mono text-sm text-kumo-default outline-none focus:border-kumo-brand focus-visible:ring-2 disabled:text-kumo-subtle"
 						disabled={pending}
@@ -119,21 +100,18 @@ export function CronRowCard({
 								...current,
 								cron: event.target.value,
 								cronInputMode: "expression",
-								builderApplied: false,
 							}))
 						}
 						ref={inputRef}
 						readOnly={row.source === "configured"}
 						value={row.cron}
 					/>
-					{!cronValid ? (
+					{!cronValid && row.cronInputMode !== "builder" ? (
 						<span
 							className="text-sm font-normal text-kumo-danger"
 							id={`${row.id}-cron-error`}
 						>
-							{row.cronInputMode === "builder"
-								? "Complete the builder before triggering."
-								: "Enter a non-empty cron expression."}
+							Enter a non-empty cron expression.
 						</span>
 					) : null}
 				</div>
@@ -142,16 +120,18 @@ export function CronRowCard({
 						aria-disabled={!canTrigger}
 						className="h-9"
 						onClick={activateTrigger}
+						ref={actionRef}
 					>
 						{pending ? "Running…" : "Trigger"}
 					</Button>
-					<Tooltip asChild content="Duplicate cron">
+					<Tooltip asChild content="Copy cron expression">
 						<Button
-							aria-label="Duplicate cron"
+							aria-label="Copy expression"
 							className="h-9 w-9"
 							icon={CopyIcon}
-							onClick={onDuplicate}
-							ref={actionRef}
+							onClick={() => {
+								void navigator.clipboard.writeText(row.cron).catch(() => {});
+							}}
 							shape="square"
 							variant="ghost"
 						/>
@@ -169,7 +149,7 @@ export function CronRowCard({
 									}
 								}}
 								shape="square"
-								variant="ghost"
+								variant="secondary-destructive"
 							/>
 						</Tooltip>
 					) : null}
@@ -177,133 +157,50 @@ export function CronRowCard({
 			</div>
 
 			<div className="mt-3 grid gap-3">
-				<div
-					className={`grid min-w-0 items-start gap-3 ${row.source === "configured" ? "" : "@2xl/cron-row:grid-cols-2"}`}
-					data-cron-row-controls
-				>
-					{row.source !== "configured" ? (
-						<div
-							className="grid min-w-0 content-start gap-3"
-							data-cron-expression-controls
-						>
-							<ModeGroup
-								label="Cron entry mode"
+				{row.source !== "configured" ? (
+					<div
+						className="grid min-w-0 content-start gap-3"
+						data-cron-expression-controls
+					>
+						<ModeGroup
+							label="Cron entry mode"
+							disabled={pending}
+							onChange={(mode) =>
+								onUpdate((current) => ({
+									...current,
+									cronInputMode: mode,
+								}))
+							}
+							options={[
+								{ label: "Expression", value: "expression" },
+								{ label: "Build expression", value: "builder" },
+							]}
+							value={row.cronInputMode}
+						/>
+
+						{row.cronInputMode === "builder" ? (
+							<CronBuilder
 								disabled={pending}
-								onChange={(mode) =>
+								onUpdate={(draft) =>
 									onUpdate((current) => {
-										const firstBuilderUse =
-											mode === "builder" && current.cron.trim() === "";
-										const generated = generateCronExpression(
-											current.cronBuilder
-										);
+										const generated = generateCronExpression(draft);
 										return {
 											...current,
-											builderApplied:
-												mode === "builder"
-													? firstBuilderUse
-													: current.builderApplied,
-											cron:
-												firstBuilderUse && generated.expression
-													? generated.expression
-													: current.cron,
-											cronInputMode: mode,
+											cron: generated.expression ?? current.cron,
+											cronBuilder: draft,
 										};
 									})
 								}
-								options={[
-									{ label: "Expression", value: "expression" },
-									{ label: "Build expression", value: "builder" },
-								]}
-								value={row.cronInputMode}
-							/>
-
-							{row.cronInputMode === "builder" ? (
-								<CronBuilder
-									disabled={pending}
-									onUpdate={(draft) =>
-										onUpdate((current) => {
-											const generated = generateCronExpression(draft);
-											return {
-												...current,
-												cron:
-													current.builderApplied && generated.expression
-														? generated.expression
-														: current.cron,
-												cronBuilder: draft,
-											};
-										})
-									}
-									onUse={() => {
-										const expression = builder.expression;
-										if (!expression) {
-											return;
-										}
-										onUpdate((current) => ({
-											...current,
-											builderApplied: true,
-											cron: expression,
-										}));
-									}}
-									rowId={row.id}
-									value={row.cronBuilder}
-								/>
-							) : null}
-						</div>
-					) : null}
-
-					<div
-						className="grid min-w-0 content-start gap-3"
-						data-cron-time-controls
-					>
-						<ModeGroup
-							label="Scheduled time"
-							disabled={pending}
-							onChange={(mode) =>
-								onUpdate((current) =>
-									mode === "custom"
-										? enterCustomTimeMode(current, Date.now())
-										: { ...current, timeMode: "now" }
-								)
-							}
-							options={[
-								{ label: "Now", value: "now" },
-								{ label: "Custom time", value: "custom" },
-							]}
-							value={row.timeMode}
-						/>
-
-						{row.timeMode === "custom" ? (
-							<CustomTimeEditor
-								calendar={calendar}
-								disabled={pending}
-								onChange={(update) => onUpdate((current) => update(current))}
-								row={row}
+								rowId={row.id}
+								value={row.cronBuilder}
 							/>
 						) : null}
 					</div>
-				</div>
+				) : null}
 				<InvocationResult row={row} />
 			</div>
 		</section>
 	);
-}
-
-function getScheduledTime(
-	row: CronRow,
-	calendar: UtcCalendarResolution | undefined
-): { valid: boolean; epochMs: number } {
-	if (row.timeMode === "now") {
-		return { valid: true, epochMs: 0 };
-	}
-	if (row.customTimeInputMode === "epoch") {
-		return row.customEpochMs === undefined
-			? { valid: false, epochMs: 0 }
-			: { valid: true, epochMs: row.customEpochMs };
-	}
-	if (calendar?.kind === "exact") {
-		return { valid: true, epochMs: calendar.epochMs };
-	}
-	return { valid: false, epochMs: 0 };
 }
 
 function ModeGroup<T extends string>({
@@ -340,13 +237,11 @@ function ModeGroup<T extends string>({
 function CronBuilder({
 	disabled,
 	onUpdate,
-	onUse,
 	rowId,
 	value,
 }: {
 	disabled: boolean;
 	onUpdate: (draft: CronBuilderDraft) => void;
-	onUse: () => void;
 	rowId: string;
 	value: CronBuilderDraft;
 }): JSX.Element {
@@ -478,8 +373,9 @@ function CronBuilder({
 					aria-describedby={
 						generated.errors.weekdays ? `${rowId}-weekdays-error` : undefined
 					}
+					aria-invalid={Boolean(generated.errors.weekdays)}
 					aria-label="Weekdays"
-					className="flex flex-wrap gap-3"
+					className="flex flex-wrap items-center gap-3"
 					role="group"
 				>
 					{cronWeekdays.map((weekday) => (
@@ -501,7 +397,7 @@ function CronBuilder({
 					))}
 					{generated.errors.weekdays ? (
 						<span
-							className="w-full text-sm text-kumo-danger"
+							className="text-sm text-kumo-danger"
 							id={`${rowId}-weekdays-error`}
 						>
 							{generated.errors.weekdays}
@@ -509,20 +405,6 @@ function CronBuilder({
 					) : null}
 				</div>
 			) : null}
-			<div className="flex justify-end">
-				<Button
-					aria-disabled={!generated.expression}
-					onClick={() => {
-						if (generated.expression) {
-							onUse();
-						}
-					}}
-					size="sm"
-					variant="secondary"
-				>
-					Use generated expression
-				</Button>
-			</div>
 		</fieldset>
 	);
 }
@@ -543,156 +425,33 @@ function BuilderNumber({
 	value: string;
 }): JSX.Element {
 	const error = errors[field];
+	const errorSeparator = error?.indexOf(" must ") ?? -1;
+	const errorMessage =
+		error && errorSeparator >= 0
+			? `must ${error.slice(errorSeparator + " must ".length)}`
+			: error;
+	const inputId = `${rowId}-${field}-input`;
 	return (
-		<label className="grid min-w-0 gap-1 text-sm text-kumo-default">
-			{label}
+		<div className="grid min-w-0 gap-1 text-sm">
+			<div className="flex min-w-0 flex-wrap items-baseline gap-x-1">
+				<label className="text-kumo-default" htmlFor={inputId}>
+					{label}
+				</label>
+				{errorMessage ? (
+					<span className="text-kumo-danger" id={`${rowId}-${field}-error`}>
+						{errorMessage}
+					</span>
+				) : null}
+			</div>
 			<input
 				aria-describedby={error ? `${rowId}-${field}-error` : undefined}
 				aria-invalid={Boolean(error)}
 				className="h-9 w-full min-w-0 rounded-md border border-kumo-fill bg-kumo-base px-3"
+				id={inputId}
 				inputMode="numeric"
 				onChange={(event) => onChange(field, event.target.value)}
 				value={value}
 			/>
-			{error ? (
-				<span
-					className="text-sm text-kumo-danger"
-					id={`${rowId}-${field}-error`}
-				>
-					{error}
-				</span>
-			) : null}
-		</label>
-	);
-}
-
-function CustomTimeEditor({
-	calendar,
-	disabled,
-	onChange,
-	row,
-}: {
-	calendar?: UtcCalendarResolution;
-	disabled: boolean;
-	onChange: (update: (row: CronRow) => CronRow) => void;
-	row: CronRow;
-}): JSX.Element {
-	return (
-		<div className="grid min-w-0 gap-3 rounded-md border border-kumo-fill px-4 py-3">
-			<ModeGroup
-				disabled={disabled}
-				label="Custom time input"
-				onChange={(mode) =>
-					onChange((current) => ({
-						...current,
-						customEpochMs:
-							mode === "epoch"
-								? parseEpochMilliseconds(current.epochValue ?? "").epochMs
-								: current.customEpochMs,
-						customTimeInputMode: mode,
-					}))
-				}
-				options={[
-					{ label: "Date and Time (UTC)", value: "calendar" as const },
-					{ label: "Epoch milliseconds", value: "epoch" as const },
-				]}
-				value={row.customTimeInputMode}
-			/>
-			{row.customTimeInputMode === "calendar" ? (
-				<div className="grid min-w-0 gap-1">
-					<label className="grid min-w-0 gap-1 text-sm text-kumo-default">
-						<input
-							aria-label="Date and Time (UTC)"
-							aria-describedby={
-								calendar?.kind === "invalid"
-									? `${row.id}-calendar-error`
-									: undefined
-							}
-							aria-invalid={calendar?.kind === "invalid"}
-							className="h-9 w-full min-w-0 rounded-md border border-kumo-fill bg-kumo-base px-3"
-							disabled={disabled}
-							onChange={(event) => {
-								const calendarValue = event.target.value;
-								onChange((current) => {
-									const resolution = resolveUtcCalendarTime(calendarValue);
-									const customEpochMs =
-										resolution.kind === "exact"
-											? resolution.epochMs
-											: undefined;
-									return {
-										...current,
-										calendarValue,
-										customEpochMs,
-										epochValue:
-											customEpochMs === undefined
-												? undefined
-												: String(customEpochMs),
-									};
-								});
-							}}
-							step="0.001"
-							type="datetime-local"
-							value={row.calendarValue ?? ""}
-						/>
-					</label>
-					{calendar?.kind === "invalid" ? (
-						<p
-							className="text-sm text-kumo-danger"
-							id={`${row.id}-calendar-error`}
-						>
-							{calendar.error}
-						</p>
-					) : null}
-					{calendar?.kind === "exact" ? (
-						<p className="text-sm text-kumo-subtle">
-							UTC:{" "}
-							<span className="font-mono text-[0.9em]">{calendar.utc}</span> (
-							{calendar.epochMs} ms)
-						</p>
-					) : null}
-				</div>
-			) : (
-				<div className="grid min-w-0 gap-1">
-					<label className="grid min-w-0 gap-1 text-sm text-kumo-default">
-						<input
-							aria-label="Epoch milliseconds"
-							aria-describedby={
-								parseEpochMilliseconds(row.epochValue ?? "").error
-									? `${row.id}-epoch-error`
-									: undefined
-							}
-							aria-invalid={
-								parseEpochMilliseconds(row.epochValue ?? "").error !== undefined
-							}
-							className="h-9 w-full min-w-0 rounded-md border border-kumo-fill bg-kumo-base px-3 font-mono text-sm"
-							disabled={disabled}
-							inputMode="numeric"
-							onChange={(event) => {
-								const epochValue = event.target.value;
-								const parsed = parseEpochMilliseconds(epochValue);
-								onChange((current) => ({
-									...current,
-									customEpochMs: parsed.epochMs,
-									epochValue,
-								}));
-							}}
-							value={row.epochValue ?? ""}
-						/>
-					</label>
-					{parseEpochMilliseconds(row.epochValue ?? "").error ? (
-						<span
-							className="text-sm text-kumo-danger"
-							id={`${row.id}-epoch-error`}
-						>
-							{parseEpochMilliseconds(row.epochValue ?? "").error}
-						</span>
-					) : row.customEpochMs !== undefined ? (
-						<span className="text-sm text-kumo-subtle">
-							UTC: {new Date(row.customEpochMs).toISOString()}
-						</span>
-					) : null}
-				</div>
-			)}
 		</div>
 	);
 }

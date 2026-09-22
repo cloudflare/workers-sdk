@@ -12,14 +12,14 @@ import { LOCAL_EXPLORER_API_PATH } from "../../constants";
 import { filterVisibleWorkers } from "../WorkerSelector";
 import {
 	cronCustomRowsStorageKey,
+	cronTimePresetsStorageKey,
+	readPersistedCronTimePresets,
 	readPersistedCustomCronRows,
+	writePersistedCronTimePresets,
 	writePersistedCustomCronRows,
 } from "./persistence";
-import {
-	createCronRow,
-	duplicateCronRow,
-	reconcileConfiguredRows,
-} from "./row-state";
+import { createCronRow, reconcileConfiguredRows } from "./row-state";
+import { MAX_DATE_EPOCH_MS, MIN_DATE_EPOCH_MS } from "./scheduled-time";
 import type { LocalExplorerWorker } from "../../api";
 import type { CronRow, CronWorkerState, FetcherScheduledResult } from "./types";
 import type { PropsWithChildren } from "react";
@@ -33,8 +33,9 @@ interface ScheduledEnvelope {
 }
 
 export interface CronTriggersContextValue {
+	activeWorkerName?: string;
 	addCustom(workerName: string): string;
-	duplicateRow(workerName: string, rowId: string): string;
+	addTimePreset(workerName: string, epochMs: number): void;
 	entry: (workerName: string) => CronWorkerState;
 	fallbackWorkerName: string;
 	isRefreshing(workerName: string): boolean;
@@ -45,6 +46,7 @@ export interface CronTriggersContextValue {
 	): Promise<void>;
 	refresh(workerName: string, automatic?: boolean): Promise<void>;
 	removeRow(workerName: string, rowId: string): void;
+	removeTimePreset(workerName: string, epochMs: number): void;
 	updateRow(
 		workerName: string,
 		rowId: string,
@@ -89,6 +91,7 @@ export function createCronStateFromSeed(
 					crons,
 					rows: reconcileConfiguredRows([], crons),
 					stale: false,
+					timePresets: [],
 				} satisfies CronWorkerState,
 			];
 		})
@@ -96,7 +99,7 @@ export function createCronStateFromSeed(
 }
 
 function emptyState(): CronWorkerState {
-	return { authoritative: false, rows: [], stale: true };
+	return { authoritative: false, rows: [], stale: true, timePresets: [] };
 }
 
 function localStorageIfAvailable(): Storage | undefined {
@@ -108,14 +111,15 @@ function localStorageIfAvailable(): Storage | undefined {
 }
 
 function persistenceKeysForMetadata(
-	metadata: LocalExplorerWorker[]
+	metadata: LocalExplorerWorker[],
+	keyForWorker: (
+		persistenceScope: string | undefined,
+		workerName: string
+	) => string | undefined = cronCustomRowsStorageKey
 ): Record<string, string> {
 	return Object.fromEntries(
 		metadata.flatMap((worker) => {
-			const key = cronCustomRowsStorageKey(
-				worker.persistenceScope,
-				worker.name
-			);
+			const key = keyForWorker(worker.persistenceScope, worker.name);
 			return key ? [[worker.name, key]] : [];
 		})
 	);
@@ -123,10 +127,14 @@ function persistenceKeysForMetadata(
 
 export function reconcilePersistenceKeysForRefresh(
 	previousKeys: Record<string, string>,
-	metadata: LocalExplorerWorker[]
+	metadata: LocalExplorerWorker[],
+	keyForWorker: (
+		persistenceScope: string | undefined,
+		workerName: string
+	) => string | undefined = cronCustomRowsStorageKey
 ): Record<string, string> {
 	const nextKeys = { ...previousKeys };
-	const returnedKeys = persistenceKeysForMetadata(metadata);
+	const returnedKeys = persistenceKeysForMetadata(metadata, keyForWorker);
 	for (const worker of metadata) {
 		const key = returnedKeys[worker.name];
 		if (key === undefined) {
@@ -149,9 +157,10 @@ export function shouldReplaceCustomRowsForPersistenceScope(
 	);
 }
 
-function hydrateInitialCustomRows(
+function hydrateInitialPersistence(
 	workers: Record<string, CronWorkerState>,
-	keys: Record<string, string>,
+	customRowKeys: Record<string, string>,
+	timePresetKeys: Record<string, string>,
 	storage: Storage | undefined
 ): Record<string, CronWorkerState> {
 	if (!storage) {
@@ -159,18 +168,22 @@ function hydrateInitialCustomRows(
 	}
 	return Object.fromEntries(
 		Object.entries(workers).map(([workerName, entry]) => {
-			const key = keys[workerName];
+			const customRowKey = customRowKeys[workerName];
+			const timePresetKey = timePresetKeys[workerName];
 			return [
 				workerName,
-				key
-					? {
-							...entry,
-							rows: [
+				{
+					...entry,
+					rows: customRowKey
+						? [
 								...entry.rows,
-								...readPersistedCustomCronRows(storage, key),
-							],
-						}
-					: entry,
+								...readPersistedCustomCronRows(storage, customRowKey),
+							]
+						: entry.rows,
+					timePresets: timePresetKey
+						? readPersistedCronTimePresets(storage, timePresetKey)
+						: [],
+				},
 			];
 		})
 	);
@@ -208,11 +221,17 @@ export function CronTriggersProvider({
 	const [initialPersistence] = useState(() => {
 		const metadata = bootstrapAuthoritative ? seedWorkers : [];
 		const keys = persistenceKeysForMetadata(metadata);
+		const timePresetKeys = persistenceKeysForMetadata(
+			metadata,
+			cronTimePresetsStorageKey
+		);
 		return {
 			keys,
-			workers: hydrateInitialCustomRows(
+			timePresetKeys,
+			workers: hydrateInitialPersistence(
 				createCronStateFromSeed(seedWorkers, bootstrapAuthoritative),
 				keys,
+				timePresetKeys,
 				storage.current
 			),
 		};
@@ -223,12 +242,22 @@ export function CronTriggersProvider({
 	const [persistenceKeys, setPersistenceKeys] = useState(
 		initialPersistence.keys
 	);
+	const [timePresetPersistenceKeys, setTimePresetPersistenceKeys] = useState(
+		initialPersistence.timePresetKeys
+	);
 	const persistenceKeysRef = useRef(initialPersistence.keys);
+	const timePresetPersistenceKeysRef = useRef(
+		initialPersistence.timePresetKeys
+	);
 	const lastScopedPersistenceKeys = useRef(initialPersistence.keys);
 	const hydratedPersistenceKeys = useRef(
 		new Set(Object.values(initialPersistence.keys))
 	);
 	const lastPersistedCustomRows = useRef(new Map<string, CronRow[]>());
+	const hydratedTimePresetPersistenceKeys = useRef(
+		new Set(Object.values(initialPersistence.timePresetKeys))
+	);
+	const lastPersistedTimePresets = useRef(new Map<string, number[]>());
 	const [fallbackWorkerName, setFallbackWorkerName] = useState(() => {
 		return selectCronFallbackWorker(seedWorkers);
 	});
@@ -268,6 +297,28 @@ export function CronTriggersProvider({
 		}
 	}, [persistenceKeys, workers]);
 
+	useEffect(() => {
+		if (!storage.current) {
+			return;
+		}
+		for (const [workerName, key] of Object.entries(timePresetPersistenceKeys)) {
+			if (!hydratedTimePresetPersistenceKeys.current.has(key)) {
+				continue;
+			}
+			const timePresets = workers[workerName]?.timePresets ?? [];
+			const previous = lastPersistedTimePresets.current.get(key);
+			if (
+				previous &&
+				previous.length === timePresets.length &&
+				previous.every((preset, index) => preset === timePresets[index])
+			) {
+				continue;
+			}
+			writePersistedCronTimePresets(storage.current, key, timePresets);
+			lastPersistedTimePresets.current.set(key, timePresets);
+		}
+	}, [timePresetPersistenceKeys, workers]);
+
 	const updateRow = useCallback(
 		(workerName: string, id: string, update: (row: CronRow) => CronRow) => {
 			setWorkers((current) => {
@@ -306,9 +357,18 @@ export function CronTriggersProvider({
 			setVisibleWorkerNames(visibleWorkers.map((worker) => worker.name));
 			const previousScopedPersistenceKeys = lastScopedPersistenceKeys.current;
 			const returnedPersistenceKeys = persistenceKeysForMetadata(metadata);
+			const returnedTimePresetPersistenceKeys = persistenceKeysForMetadata(
+				metadata,
+				cronTimePresetsStorageKey
+			);
 			const nextPersistenceKeys = reconcilePersistenceKeysForRefresh(
 				persistenceKeysRef.current,
 				metadata
+			);
+			const nextTimePresetPersistenceKeys = reconcilePersistenceKeysForRefresh(
+				timePresetPersistenceKeysRef.current,
+				metadata,
+				cronTimePresetsStorageKey
 			);
 			setWorkers((current) => {
 				const next = { ...current };
@@ -316,6 +376,8 @@ export function CronTriggersProvider({
 					const entry = current[worker.name] ?? emptyState();
 					const crons = worker.triggers?.crons ?? [];
 					const persistenceKey = returnedPersistenceKeys[worker.name];
+					const timePresetPersistenceKey =
+						returnedTimePresetPersistenceKeys[worker.name];
 					const persistenceScopeChanged =
 						shouldReplaceCustomRowsForPersistenceScope(
 							previousScopedPersistenceKeys[worker.name],
@@ -338,11 +400,30 @@ export function CronTriggersProvider({
 						];
 						hydratedPersistenceKeys.current.add(persistenceKey);
 					}
+					let timePresets = persistenceScopeChanged ? [] : entry.timePresets;
+					if (
+						timePresetPersistenceKey &&
+						(persistenceScopeChanged ||
+							!hydratedTimePresetPersistenceKeys.current.has(
+								timePresetPersistenceKey
+							))
+					) {
+						timePresets = storage.current
+							? readPersistedCronTimePresets(
+									storage.current,
+									timePresetPersistenceKey
+								)
+							: [];
+						hydratedTimePresetPersistenceKeys.current.add(
+							timePresetPersistenceKey
+						);
+					}
 					next[worker.name] = {
 						authoritative: true,
 						crons,
 						rows,
 						stale: false,
+						timePresets,
 					};
 				}
 				if (
@@ -360,6 +441,8 @@ export function CronTriggersProvider({
 			};
 			persistenceKeysRef.current = nextPersistenceKeys;
 			setPersistenceKeys(nextPersistenceKeys);
+			timePresetPersistenceKeysRef.current = nextTimePresetPersistenceKeys;
+			setTimePresetPersistenceKeys(nextTimePresetPersistenceKeys);
 		} catch {
 			if (!generation.current.isLatest(requestGeneration)) {
 				return;
@@ -409,6 +492,7 @@ export function CronTriggersProvider({
 
 	const value = useMemo<CronTriggersContextValue>(
 		() => ({
+			activeWorkerName,
 			addCustom(workerName) {
 				const row = createCronRow("");
 				setWorkers((current) => {
@@ -420,21 +504,27 @@ export function CronTriggersProvider({
 				});
 				return row.id;
 			},
-			duplicateRow(workerName, id) {
-				const duplicateId = `custom-${crypto.randomUUID()}`;
+			addTimePreset(workerName, epochMs) {
+				if (
+					!Number.isSafeInteger(epochMs) ||
+					epochMs < MIN_DATE_EPOCH_MS ||
+					epochMs > MAX_DATE_EPOCH_MS
+				) {
+					return;
+				}
 				setWorkers((current) => {
 					const entry = current[workerName] ?? emptyState();
-					const row = entry.rows.find((candidate) => candidate.id === id);
-					if (!row) {
+					if (entry.timePresets.includes(epochMs)) {
 						return current;
 					}
-					const duplicate = duplicateCronRow(row, duplicateId);
 					return {
 						...current,
-						[workerName]: { ...entry, rows: [...entry.rows, duplicate] },
+						[workerName]: {
+							...entry,
+							timePresets: [...entry.timePresets, epochMs],
+						},
 					};
 				});
-				return duplicateId;
 			},
 			entry: (workerName) => workers[workerName] ?? emptyState(),
 			fallbackWorkerName,
@@ -529,10 +619,25 @@ export function CronTriggersProvider({
 					};
 				});
 			},
+			removeTimePreset(workerName, epochMs) {
+				setWorkers((current) => {
+					const entry = current[workerName] ?? emptyState();
+					return {
+						...current,
+						[workerName]: {
+							...entry,
+							timePresets: entry.timePresets.filter(
+								(preset) => preset !== epochMs
+							),
+						},
+					};
+				});
+			},
 			updateRow,
 			visibleWorkerNames,
 		}),
 		[
+			activeWorkerName,
 			fallbackWorkerName,
 			refresh,
 			refreshingWorkers,

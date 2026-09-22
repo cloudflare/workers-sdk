@@ -1,7 +1,6 @@
 import { describe, it } from "vitest";
 import {
 	createCronRow,
-	duplicateCronRow,
 	reconcileConfiguredRows,
 } from "../../components/cron-triggers/row-state";
 
@@ -38,9 +37,7 @@ describe("Cron Trigger row state", () => {
 		expect(reconciled[0]?.source).toBe("no-longer-configured");
 	});
 
-	it("never changes custom rows and duplicates without result state", ({
-		expect,
-	}) => {
+	it("never changes custom rows", ({ expect }) => {
 		const custom = createCronRow("0 0 * * *");
 		custom.invocation = {
 			cron: custom.cron,
@@ -51,9 +48,5 @@ describe("Cron Trigger row state", () => {
 		};
 		const reconciled = reconcileConfiguredRows([custom], ["configured"]);
 		expect(reconciled[1]).toBe(custom);
-		const duplicate = duplicateCronRow(custom, "custom-duplicate");
-		expect(duplicate.invocation).toBeUndefined();
-		expect(duplicate.cron).toBe(custom.cron);
-		expect(duplicate.id).toBe("custom-duplicate");
 	});
 });
