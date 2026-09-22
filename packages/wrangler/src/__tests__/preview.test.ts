@@ -4284,9 +4284,10 @@ describe("wrangler preview", () => {
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
 						deploymentRequestBodies.push(
-							(await readPreviewDeploymentRequest(
-								request
-							)) as Record<string, unknown>
+							(await readPreviewDeploymentRequest(request)) as Record<
+								string,
+								unknown
+							>
 						);
 						return HttpResponse.json(
 							{
