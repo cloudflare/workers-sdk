@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { vitestCodemods } from "./codemods/vitest";
+import { ensureCleanGitWorktree } from "./git";
 import type { Codemod, CodemodContext, CodemodResult } from "./types";
 
 export const availableCodemods: Codemod[] = [...vitestCodemods];
@@ -25,7 +26,7 @@ export function getCodemod(name: string): Codemod | undefined {
  * Runs a named codemod and writes its staged outputs unless this is a dry run.
  *
  * @param name Codemod name or alias.
- * @param context Working directory, dry-run mode, and optional file restrictions.
+ * @param context Working directory, dry-run mode, optional file restrictions, and safety override.
  * @returns The files changed by the codemod.
  */
 export async function runCodemod(
@@ -36,6 +37,7 @@ export async function runCodemod(
 	if (!codemod) {
 		throw new Error(`Unknown codemod: ${name}`);
 	}
+	await ensureCleanGitWorktree(context.cwd, context.force ?? false);
 
 	const stagedFiles = new Map<string, string>();
 	const result = await codemod.run({ ...context, stagedFiles });
