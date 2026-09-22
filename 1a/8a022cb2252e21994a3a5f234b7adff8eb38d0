@@ -1,0 +1,19 @@
+.changeset/tidy-previews-observability.md
+  s_e1a63d0aa9b40e::t_ef9f91e4ef0a0f 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1a8a022cb2252e21994a3a5f234b7adff8eb38d0",
+  "prompts": {},
+  "sessions": {
+    "s_e1a63d0aa9b40e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b5d72c7ffe8r7FT1i3vVJTpi",
+        "model": "cloudflare/auto"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}
