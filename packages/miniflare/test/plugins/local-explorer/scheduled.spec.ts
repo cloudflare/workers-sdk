@@ -56,7 +56,6 @@ describe("Local Explorer scheduled dispatch", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "local",
 						compatibilityDate: "2026-01-01",
 						manifest: workerManifest("local"),
@@ -98,7 +97,6 @@ describe("Local Explorer scheduled dispatch", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "alpha",
 						compatibilityDate: "2026-01-01",
 						manifest: workerManifest("alpha"),
@@ -107,7 +105,6 @@ describe("Local Explorer scheduled dispatch", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "beta",
 						compatibilityDate: "2026-01-01",
 						manifest: workerManifest("beta"),
@@ -116,7 +113,6 @@ describe("Local Explorer scheduled dispatch", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "exception",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(`
@@ -130,7 +126,6 @@ describe("Local Explorer scheduled dispatch", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "wait-until",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(`
@@ -269,7 +264,6 @@ describe("Local Explorer scheduled dispatch", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2026-01-01",
 						manifest: workerManifest("worker"),
@@ -319,7 +313,6 @@ describe("Local Explorer scheduled dispatch", () => {
 					{
 						dev: { unsafeRegisterWorker: true },
 						config: {
-							type: "worker",
 							name,
 							compatibilityDate: "2026-01-01",
 							manifest: workerManifest(name),
@@ -427,7 +420,6 @@ describe("Local Explorer scheduled dispatch", () => {
 			workers: ["alpha", "beta"].map((name) => ({
 				dev: { unsafeRegisterWorker: true },
 				config: {
-					type: "worker",
 					name,
 					compatibilityDate: "2026-01-01",
 					manifest: workerManifest(name),
@@ -485,7 +477,6 @@ describe("Local Explorer scheduled dispatch", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "explorer",
 						compatibilityDate: "2026-01-01",
 						manifest: workerManifest("explorer"),
@@ -500,7 +491,6 @@ describe("Local Explorer scheduled dispatch", () => {
 				(name, index) => ({
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name,
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(`
