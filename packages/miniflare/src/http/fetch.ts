@@ -174,6 +174,8 @@ function convertUndiciHeadersToStandard(
  */
 export class DispatchFetchDispatcher extends undici.Dispatcher {
 	private readonly cfBlobJson?: string;
+	private readonly retryRuntimeDispatcher: undici.Dispatcher;
+	private readonly nonRetryableRuntimeDispatcher: undici.Dispatcher;
 
 	/**
 	 * @param globalDispatcher 		Dispatcher to use for all non-runtime requests
@@ -184,15 +186,26 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 	 * @param userRuntimeOrigin 	Origin to treat as runtime request
 	 * 														(initial URL passed by user to `dispatchFetch()`)
 	 * @param cfBlob							`request.cf` blob override for runtime requests
+	 * @param nonRetryableRuntimeDispatcher Dispatcher for methods that shouldn't be retried
 	 */
 	constructor(
 		private readonly globalDispatcher: undici.Dispatcher,
 		private readonly runtimeDispatcher: undici.Dispatcher,
 		private readonly actualRuntimeOrigin: string,
 		private readonly userRuntimeOrigin: string,
-		cfBlob?: IncomingRequestCfProperties
+		cfBlob?: IncomingRequestCfProperties,
+		nonRetryableRuntimeDispatcher?: undici.Dispatcher
 	) {
 		super();
+		this.retryRuntimeDispatcher = new undici.RetryAgent(runtimeDispatcher, {
+			methods: ["GET", "HEAD"],
+			statusCodes: [],
+			maxRetries: 1,
+			minTimeout: 0,
+			maxTimeout: 0,
+		});
+		this.nonRetryableRuntimeDispatcher =
+			nonRetryableRuntimeDispatcher ?? runtimeDispatcher;
 		if (cfBlob !== undefined) {
 			this.cfBlobJson = JSON.stringify(cfBlob);
 		}
@@ -242,16 +255,18 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 
 			options.headers = headers;
 
-			// Don't set `options.reset = true` here: closing the connection after
-			// every request burns one ephemeral port per `dispatchFetch()` call in
-			// the machine-wide `TIME_WAIT` pool, which exhausts it under CI load
-			// (https://github.com/cloudflare/workers-sdk/issues/15716). Reused
-			// keep-alive connections are safe — undici retries idempotent requests
-			// if a pooled connection has gone stale.
-
-			// Dispatch with runtime dispatcher to avoid certificate errors if using
-			// self-signed certificate
-			return this.runtimeDispatcher.dispatch(options, handler);
+			// Keep GET/HEAD connections alive to avoid consuming one ephemeral port
+			// per dispatch in TIME_WAIT. A pooled connection may go stale between
+			// requests, so retry these safe methods once on network failure.
+			// Other methods use a separate pool and still reset their connection after
+			// each request, so they cannot inherit a stale reusable socket or be
+			// retried after potentially reaching the Worker.
+			const canRetry = options.method === "GET" || options.method === "HEAD";
+			if (canRetry) {
+				return this.retryRuntimeDispatcher.dispatch(options, handler);
+			}
+			options.reset = true;
+			return this.nonRetryableRuntimeDispatcher.dispatch(options, handler);
 		} else {
 			// If this wasn't a request to the runtime (e.g. redirect to somewhere
 			// else), use the regular global dispatcher, without special headers
@@ -262,10 +277,11 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 	close(): Promise<void>;
 	close(callback: () => void): void;
 	async close(callback?: () => void): Promise<void> {
-		await Promise.all([
-			this.globalDispatcher.close(),
-			this.runtimeDispatcher.close(),
-		]);
+		const dispatchers = [this.globalDispatcher, this.runtimeDispatcher];
+		if (this.nonRetryableRuntimeDispatcher !== this.runtimeDispatcher) {
+			dispatchers.push(this.nonRetryableRuntimeDispatcher);
+		}
+		await Promise.all(dispatchers.map((dispatcher) => dispatcher.close()));
 		callback?.();
 	}
 
@@ -285,10 +301,11 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			err = errCallback;
 		}
 
-		await Promise.all([
-			this.globalDispatcher.destroy(err),
-			this.runtimeDispatcher.destroy(err),
-		]);
+		const dispatchers = [this.globalDispatcher, this.runtimeDispatcher];
+		if (this.nonRetryableRuntimeDispatcher !== this.runtimeDispatcher) {
+			dispatchers.push(this.nonRetryableRuntimeDispatcher);
+		}
+		await Promise.all(dispatchers.map((dispatcher) => dispatcher.destroy(err)));
 		callback?.();
 	}
 

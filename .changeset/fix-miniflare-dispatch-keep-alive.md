@@ -2,6 +2,6 @@
 "miniflare": patch
 ---
 
-Reuse keep-alive connections for `dispatchFetch()` requests
+Reduce `dispatchFetch()` connection exhaustion under sustained local and CI workloads
 
-Miniflare no longer forces runtime dispatch connections to close after every request. This prevents repeated dispatches from accumulating sockets in `TIME_WAIT` and exhausting the host's ephemeral port range, while retaining Undici's normal stale keep-alive handling.
+Repeated `GET` and `HEAD` dispatches now reuse runtime connections instead of creating a new connection for every request. This prevents read-heavy Miniflare test suites from exhausting the host's available ephemeral ports while preserving safe handling for requests that cannot be transparently retried.

@@ -814,6 +814,7 @@ export class Miniflare {
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
+	#nonRetryableRuntimeDispatcher?: Dispatcher;
 	#dispatchConnectSockets = new Set<net.Socket>();
 	#proxyClient?: ProxyClient;
 	#runtimeRestartError?: MiniflareCoreError;
@@ -2712,15 +2713,24 @@ export class Miniflare {
 
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			// Close the previous dispatcher if the entry URL changed, to avoid
-			// leaking sockets from the old Pool.
+			// leaking sockets from the old Pools.
 			void this.#runtimeDispatcher?.close().catch(() => {});
-			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
+			void this.#nonRetryableRuntimeDispatcher?.close().catch(() => {});
+			const runtimePoolOptions = {
 				connect: { rejectUnauthorized: false },
 				// Disable timeouts for local dev — long-running responses (streaming,
 				// slow uploads, long-polling) should not be killed by undici defaults.
 				headersTimeout: 0,
 				bodyTimeout: 0,
-			});
+			};
+			this.#runtimeDispatcher = new Pool(
+				this.#runtimeEntryURL,
+				runtimePoolOptions
+			);
+			this.#nonRetryableRuntimeDispatcher = new Pool(
+				this.#runtimeEntryURL,
+				runtimePoolOptions
+			);
 		}
 
 		// Set up a direct dispatcher to the dev-registry-proxy socket so we can
@@ -3059,6 +3069,7 @@ export class Miniflare {
 
 		assert(this.#runtimeEntryURL !== undefined);
 		assert(this.#runtimeDispatcher !== undefined);
+		assert(this.#nonRetryableRuntimeDispatcher !== undefined);
 
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
@@ -3084,7 +3095,8 @@ export class Miniflare {
 			this.#runtimeDispatcher,
 			actualRuntimeOrigin,
 			userRuntimeOrigin,
-			cfBlob
+			cfBlob,
+			this.#nonRetryableRuntimeDispatcher
 		);
 
 		const forwardInit = forward as RequestInit;
@@ -3744,6 +3756,9 @@ export class Miniflare {
 		// all connections broke), so ignore ClientDestroyedError.
 		try {
 			await this.#runtimeDispatcher?.close();
+		} catch {}
+		try {
+			await this.#nonRetryableRuntimeDispatcher?.close();
 		} catch {}
 		// Also close the dev-registry dispatcher (same issue as above).
 		try {

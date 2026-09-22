@@ -7,7 +7,7 @@ import {
 	fetch,
 	FormData,
 } from "miniflare";
-import { Pool } from "undici";
+import { errors, MockAgent, Pool } from "undici";
 import { assert, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
 import { useServer } from "../test-shared";
@@ -297,3 +297,63 @@ test(
 		await runtimeDispatcher.close();
 	}
 );
+test("fetch: DispatchFetchDispatcher retries stale GET connections", async ({
+	expect,
+}) => {
+	const origin = "http://runtime.test";
+	const runtimeDispatcher = new MockAgent();
+	runtimeDispatcher.disableNetConnect();
+	onTestFinished(() => runtimeDispatcher.close());
+
+	const runtimePool = runtimeDispatcher.get(origin);
+	runtimePool
+		.intercept({ path: "/" })
+		.replyWithError(new errors.SocketError("stale connection"));
+	runtimePool.intercept({ path: "/" }).reply(200, "ok");
+
+	const dispatcher = new DispatchFetchDispatcher(
+		runtimeDispatcher,
+		runtimeDispatcher,
+		origin,
+		origin
+	);
+	const res = await fetch(origin, { dispatcher });
+	expect(await res.text()).toBe("ok");
+	runtimeDispatcher.assertNoPendingInterceptors();
+});
+test("fetch: DispatchFetchDispatcher isolates non-retryable requests", async ({
+	expect,
+}) => {
+	const origin = "http://runtime.test";
+	const runtimeDispatcher = new MockAgent();
+	const nonRetryableRuntimeDispatcher = new MockAgent();
+	runtimeDispatcher.disableNetConnect();
+	nonRetryableRuntimeDispatcher.disableNetConnect();
+	onTestFinished(async () => {
+		await Promise.all([
+			runtimeDispatcher.close(),
+			nonRetryableRuntimeDispatcher.close(),
+		]);
+	});
+
+	nonRetryableRuntimeDispatcher
+		.get(origin)
+		.intercept({ path: "/", method: "POST", body: "hello" })
+		.reply(200, "ok");
+
+	const dispatcher = new DispatchFetchDispatcher(
+		runtimeDispatcher,
+		runtimeDispatcher,
+		origin,
+		origin,
+		undefined,
+		nonRetryableRuntimeDispatcher
+	);
+	const res = await fetch(origin, {
+		method: "POST",
+		body: "hello",
+		dispatcher,
+	});
+	expect(await res.text()).toBe("ok");
+	nonRetryableRuntimeDispatcher.assertNoPendingInterceptors();
+});
