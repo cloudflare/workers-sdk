@@ -3608,6 +3608,7 @@ test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect()
 						{
 							type: "connect",
 							protocol: "udp",
+							address: "::1",
 							port: 0,
 							idleTimeoutMs: 1_000,
 							maxPendingBytes: 65_536,

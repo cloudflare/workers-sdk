@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import dgram from "node:dgram";
+import { lookup } from "node:dns/promises";
 import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
@@ -3264,7 +3265,8 @@ export class Miniflare {
 				? DEFAULT_HOST
 				: configuredHost);
 		if (protocol === "udp") {
-			const socket = dgram.createSocket(net.isIPv6(host) ? "udp6" : "udp4");
+			const { address, family } = await lookup(host);
+			const socket = dgram.createSocket(family === 6 ? "udp6" : "udp4");
 			this.#dispatchConnectDatagramSockets.add(socket);
 			socket.once("close", () =>
 				this.#dispatchConnectDatagramSockets.delete(socket)
@@ -3287,7 +3289,7 @@ export class Miniflare {
 
 					socket.once("error", onError);
 					socket.once("close", onClose);
-					socket.connect(port, host, () => {
+					socket.connect(port, address, () => {
 						cleanup();
 						resolve();
 					});
