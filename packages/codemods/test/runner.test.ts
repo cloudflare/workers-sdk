@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { afterEach, describe, it } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { transformFiles } from "../src/files";
 import { availableCodemods, runCodemod } from "../src/runner";
 
@@ -131,6 +131,35 @@ export default defineWorkersProject({
 		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
 
 		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+	});
+
+	it("runs outside a Git worktree when Git is unavailable", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"vitest.config.ts":
+				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
+		});
+		vi.stubEnv("PATH", "");
+
+		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+	});
+
+	it("rejects a Git worktree when Git is unavailable", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await commitProject(cwd);
+		vi.stubEnv("PATH", "");
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Unable to verify that the Git worktree is clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
 	});
 
 	it("rejects staged changes", async ({ expect }) => {
