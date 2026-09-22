@@ -1,6 +1,6 @@
 import childProcess from "node:child_process";
 import path from "node:path";
-import { Miniflare, ProxyClient } from "miniflare";
+import { Miniflare, ProxyClient, Runtime } from "miniflare";
 import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { singleModuleManifest } from "./test-shared";
@@ -73,6 +73,77 @@ test("Miniflare: dispose requests workerd termination while proxy cleanup is pen
 		releaseProxyDispose();
 		proxyDispose.mockRestore();
 		await disposePromise;
+	}
+});
+
+test("Miniflare: dispose terminates dispatch WebSockets before graceful shutdown", async ({
+	expect,
+}) => {
+	const originalUpdateConfig = Runtime.prototype.updateConfig;
+	const updateConfig = vi
+		.spyOn(Runtime.prototype, "updateConfig")
+		.mockImplementation(function (
+			this: Runtime,
+			...[config, options, workerNames, abortSignal]: Parameters<
+				Runtime["updateConfig"]
+			>
+		) {
+			return originalUpdateConfig.call(
+				this,
+				config,
+				{ ...options, requiresGracefulShutdown: true },
+				workerNames,
+				abortSignal
+			);
+		});
+	let mf: Miniflare | undefined;
+	try {
+		mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`export default {
+							fetch() {
+								const pair = new WebSocketPair();
+								pair[1].accept();
+								return new Response(null, {
+									status: 101,
+									webSocket: pair[0]
+								});
+							}
+						}`),
+					},
+				},
+			],
+		});
+		const response = await mf.dispatchFetch("http://localhost", {
+			headers: { Upgrade: "websocket" },
+		});
+		const webSocket = response.webSocket;
+		if (webSocket == null) {
+			throw new Error("Expected dispatchFetch() to return a WebSocket");
+		}
+		webSocket.accept();
+
+		const kill = vi.spyOn(childProcess.ChildProcess.prototype, "kill");
+		try {
+			await mf.dispose();
+			const signals = kill.mock.calls.flatMap(([signal], index) => {
+				const child = kill.mock.contexts[index];
+				return child instanceof childProcess.ChildProcess &&
+					path.basename(child.spawnfile).toLowerCase().startsWith("workerd")
+					? [signal]
+					: [];
+			});
+			expect(signals).toEqual(["SIGTERM"]);
+		} finally {
+			kill.mockRestore();
+		}
+	} finally {
+		updateConfig.mockRestore();
+		await mf?.dispose().catch(() => {});
 	}
 });
 

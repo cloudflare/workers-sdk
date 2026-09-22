@@ -28,6 +28,7 @@ import {
 } from "./config/schema";
 import { exitHook } from "./exit-hook";
 import {
+	_terminateWebSocket,
 	coupleWebSocket,
 	DispatchFetchDispatcher,
 	fetch,
@@ -36,6 +37,7 @@ import {
 	Headers,
 	Request,
 	Response,
+	type WebSocket,
 } from "./http";
 import {
 	D1_PLUGIN_NAME,
@@ -837,6 +839,7 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#dispatchConnectTcpSockets = new Set<net.Socket>();
 	#dispatchConnectDatagramSockets = new Set<dgram.Socket>();
+	#dispatchWebSockets = new Set<WebSocket>();
 	#proxyClient?: ProxyClient;
 	#runtimeRestartError?: MiniflareCoreError;
 	// Number of times workerd has crashed and been restarted for this instance.
@@ -3053,6 +3056,15 @@ export class Miniflare {
 		// As `init`, only the body stream is copied and it's sent chunked, which
 		// APIs like `R2Bucket#put()` reject. `dispatcher` routes it to the runtime.
 		const response = await fetch(forward, { dispatcher });
+		if (response.webSocket != null) {
+			const webSocket = response.webSocket;
+			this.#dispatchWebSockets.add(webSocket);
+			webSocket.addEventListener(
+				"close",
+				() => this.#dispatchWebSockets.delete(webSocket),
+				{ once: true }
+			);
+		}
 
 		// If the Worker threw an uncaught exception, propagate it to the caller
 		const stack = response.headers.get(CoreHeaders.ERROR_STACK);
@@ -3671,6 +3683,14 @@ export class Miniflare {
 			closeDatagramSocket(socket);
 		}
 		this.#dispatchConnectDatagramSockets.clear();
+		const dispatchWebSocketTerminationPromise = Promise.all(
+			[...this.#dispatchWebSockets].map(async (webSocket) => {
+				try {
+					await _terminateWebSocket(webSocket);
+				} catch {}
+			})
+		);
+		this.#dispatchWebSockets.clear();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
 		// invalidating all existing native references. Mark all proxies as invalid.
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
@@ -3685,6 +3705,9 @@ export class Miniflare {
 			waitForReadyFailed = true;
 			waitForReadyError = error;
 		}
+		// workerd drains active request contexts after receiving SIGTERM. Reset
+		// upgraded dispatch connections first so they cannot block managed shutdown.
+		await dispatchWebSocketTerminationPromise;
 
 		// Runtime.dispose() requests workerd termination synchronously before
 		// returning its child-exit promise. Start it before awaiting independent
