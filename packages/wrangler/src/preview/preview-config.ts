@@ -15,20 +15,22 @@ import type {
 export const REPLACE_ME = "<REPLACE_ME>";
 
 export type PreviewTopLevelSettings = {
-	[K in keyof Pick<
-		Environment,
-		| "define"
-		| "observability"
-		| "logpush"
-		| "limits"
-		| "placement"
-		| "cache"
-		| "containers"
-		| "tail_consumers"
-		| "streaming_tail_consumers"
-		| "queues"
-		| "triggers"
-	>]: Environment[K] | undefined;
+	[
+		K in keyof Pick<
+			Environment,
+			| "define"
+			| "observability"
+			| "logpush"
+			| "limits"
+			| "placement"
+			| "cache"
+			| "containers"
+			| "tail_consumers"
+			| "streaming_tail_consumers"
+			| "queues"
+			| "triggers"
+		>
+	]: Environment[K] | undefined;
 };
 
 export type PreviewSettingConversion =

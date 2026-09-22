@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/containers-shared",
-	"version": "0.18.0",
+	"version": "0.19.1",
 	"description": "Internal-only shared container helpers for workers-sdk. Do not use directly; APIs are unstable and may change or disappear without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/containers-shared#readme",
 	"bugs": {
@@ -41,9 +41,11 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:default",
+		"@types/ws": "^8.5.7",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"ws": "catalog:default"
 	},
 	"engines": {
 		"node": ">=22.0.0"

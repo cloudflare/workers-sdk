@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/deploy-helpers",
-	"version": "0.14.0",
+	"version": "0.14.2",
 	"description": "Internal deploy helpers for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/deploy-helpers#readme",
 	"bugs": {
@@ -68,6 +68,7 @@
 		"@types/json-diff": "^1.0.3",
 		"@types/node": "catalog:default",
 		"@types/ws": "^8.5.7",
+		"cloudflare": "^5.2.0",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
 		"json-diff": "^1.0.6",

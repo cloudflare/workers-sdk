@@ -48,6 +48,7 @@ export type {
 	LoadAndParseConfigResult,
 } from "./config-loader";
 export type {
+	InputWorkerConfig,
 	ParsedInputConfig,
 	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,

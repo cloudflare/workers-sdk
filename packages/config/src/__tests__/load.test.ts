@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { InputWorkerSchema } from "../schema";
+import { resolveAndParseConfig } from "../config-loader";
 
 // Vitest's module runner intercepts dynamic imports before Node's
 // `module.registerHooks` can see them, so we cannot exercise `loadConfig`
@@ -162,14 +162,16 @@ describe("loadConfig", () => {
 		});
 	});
 
-	it("produces an entrypoint namespace that InputWorkerSchema.parse collapses to a string", async ({
+	it("produces an entrypoint namespace that config parsing converts to a string", async ({
 		expect,
 	}) => {
 		await seed({
 			"src/index.ts": `// not executed`,
 			"cloudflare.config.ts": `
 				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
-				export default { name: "worker", compatibilityDate: "2026-06-01", entrypoint };
+				export default {
+					worker: { name: "worker", compatibilityDate: "2026-06-01", entrypoint },
+				};
 			`,
 		});
 
@@ -177,9 +179,15 @@ describe("loadConfig", () => {
 			cwd: process.cwd(),
 			configPath: "./cloudflare.config.ts",
 		});
-		const parsed = InputWorkerSchema.parse(result.config);
+		const parsed = await resolveAndParseConfig(result.config, {
+			isPreview: false,
+			mode: undefined,
+		});
 
-		expect(parsed.entrypoint).toBe(path.resolve("src/index.ts"));
+		expect(parsed.success).toBe(true);
+		if (parsed.success) {
+			expect(parsed.data.worker?.entrypoint).toBe(path.resolve("src/index.ts"));
+		}
 	});
 
 	it("reloads the config when the file changes between calls in the same process", async ({

@@ -102,6 +102,18 @@ async function normalizeWorkerReferences(
 	return { ...resolved, env };
 }
 
+function normalizeWorkerEntrypoint(resolved: unknown): unknown {
+	if (
+		!isRecord(resolved) ||
+		!isRecord(resolved.entrypoint) ||
+		!("default" in resolved.entrypoint)
+	) {
+		return resolved;
+	}
+
+	return { ...resolved, entrypoint: resolved.entrypoint.default };
+}
+
 async function normalizeContainerReferences(
 	resolved: unknown,
 	resolveDefinition: ResolveDefinition,
@@ -166,7 +178,7 @@ async function normalizeWorkerConfig(
 	containers: unknown[]
 ): Promise<NormalizeWorkerResult> {
 	const partiallyNormalizedConfig = await normalizeWorkerReferences(
-		resolved,
+		normalizeWorkerEntrypoint(resolved),
 		resolveDefinition
 	);
 	return normalizeContainerReferences(

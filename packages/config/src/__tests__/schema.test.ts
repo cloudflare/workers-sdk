@@ -308,18 +308,13 @@ describe("InputWorkerSchema", () => {
 			}
 		});
 
-		it("accepts a namespace-like object and collapses it to the default export string", ({
-			expect,
-		}) => {
+		it("rejects a namespace-like object", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
 				entrypoint: { default: "./src/index.ts" },
 			});
 
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.entrypoint).toBe("./src/index.ts");
-			}
+			expect(result.success).toBe(false);
 		});
 
 		it("rejects a namespace object whose default is not a string", ({
