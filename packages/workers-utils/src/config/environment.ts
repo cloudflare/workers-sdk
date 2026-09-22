@@ -226,8 +226,9 @@ export type ContainerApp = {
 	 * The scheduling policy of the application
 	 * @optional
 	 * `"durable_object"` makes each Durable Object instance own its Container.
-	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`, and
-	 * application-wide log `observability` are supported on this entry.
+	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`,
+	 * application-wide log `observability`, `ssh`, and `authorized_keys` are
+	 * supported on this entry.
 	 *
 	 * @default "default"
 	 */
