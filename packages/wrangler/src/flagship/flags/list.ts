@@ -2,9 +2,9 @@ import { dim } from "@cloudflare/cli-shared-helpers/colors";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { listAllFlags, listFlags } from "../client";
 import { statusBadge } from "../render";
 import { validateLimit } from "../shared";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 import type { Flag } from "../client";
 
 export const flagshipFlagsListCommand = createCommand({
@@ -40,9 +40,11 @@ export const flagshipFlagsListCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id"],
-	async handler({ appId, limit, cursor, all, json }, { config }) {
+	async handler(args, { config }) {
+		const { appId, limit, cursor, all, json } = args;
 		if (all && (limit !== undefined || cursor !== undefined)) {
 			throw new UserError(
 				"Cannot use --all together with --limit or --cursor.",
@@ -50,15 +52,15 @@ export const flagshipFlagsListCommand = createCommand({
 			);
 		}
 		validateLimit(limit, "flagship list invalid limit");
-		let items: Flag[];
-		let nextCursor: string | null = null;
-		if (all) {
-			items = await listAllFlags(config, appId);
-		} else {
-			const page = await listFlags(config, appId, limit, cursor);
-			items = page.items;
-			nextCursor = page.cursor;
-		}
+		const { items, cursor: nextCursor } = await withFlagStore(
+			args,
+			config,
+			appId,
+			async (store): Promise<{ items: Flag[]; cursor: string | null }> =>
+				all
+					? { items: await store.listAllFlags(), cursor: null }
+					: store.listFlags(limit, cursor)
+		);
 		if (json) {
 			logger.json({ items, cursor: nextCursor });
 			return;

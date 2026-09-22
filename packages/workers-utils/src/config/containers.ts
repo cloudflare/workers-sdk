@@ -3,10 +3,6 @@ import { getDurableObjectExports } from "./durable-object-exports";
 import type { Config } from "./config";
 import type { ContainerApp, Exports } from "./environment";
 
-/** Temporary Wrangler-owned image map until native Container image metadata is available. */
-export const CONTAINER_IMAGES_BINDING =
-	"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES";
-
 export type DurableObjectContainerApp = ContainerApp & {
 	name: string;
 	scheduling_policy: "durable_object";

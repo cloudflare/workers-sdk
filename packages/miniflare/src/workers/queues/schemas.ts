@@ -18,8 +18,10 @@ export const QueueProducerSchema = /* @__PURE__ */ z.intersection(
 	z.object({ workerName: z.string() })
 );
 export type QueueProducer = z.infer<typeof QueueProducerSchema>;
-export const QueueProducersSchema =
-	/* @__PURE__ */ z.record(z.string(), QueueProducerSchema);
+export const QueueProducersSchema = /* @__PURE__ */ z.record(
+	z.string(),
+	QueueProducerSchema
+);
 
 export const QueueConsumerOptionsSchema = /* @__PURE__ */ z.object({
 	// https://developers.cloudflare.com/queues/platform/configuration/#consumer
@@ -39,8 +41,10 @@ export type QueueConsumer = z.infer<typeof QueueConsumerSchema>;
 // can only be consumed by one Worker, but one Worker may consume multiple
 // queues. Support for multiple consumers of a single queue is not planned
 // anytime soon.
-export const QueueConsumersSchema =
-	/* @__PURE__ */ z.record(z.string(), QueueConsumerSchema);
+export const QueueConsumersSchema = /* @__PURE__ */ z.record(
+	z.string(),
+	QueueConsumerSchema
+);
 
 export const QueueContentTypeSchema = /* @__PURE__ */ z
 	.enum(["text", "json", "bytes", "v8"])

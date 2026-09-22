@@ -1110,7 +1110,10 @@ export async function getSentEmail(
 	worker?: string
 ): Promise<Response> {
 	const store = getEmailStore(c);
-	using email = (await store.findSent(messageIdToStorageId(emailId), worker)) as
+	using email = (await store.findSent(
+		messageIdToStorageId(emailId),
+		worker
+	)) as
 		| (NonNullable<Awaited<ReturnType<EmailStoreService["findSent"]>>> &
 				Disposable)
 		| undefined;

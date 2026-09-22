@@ -9,6 +9,7 @@ import {
 	fetchPagedListResult,
 	fetchResult,
 } from "../../cfetch";
+import { createCloudflareClient } from "../../cfetch/internal";
 import {
 	isBuildFailure,
 	isBuildFailureFromCause,
@@ -40,6 +41,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	async startWorker(options: WranglerStartDevWorkerInput): Promise<Worker> {
 		initDeployHelpersContext({
 			logger,
+			createCloudflareClient,
 			fetchResult,
 			fetchListResult,
 			fetchPagedListResult,

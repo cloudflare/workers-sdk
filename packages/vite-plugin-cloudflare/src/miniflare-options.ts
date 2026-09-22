@@ -6,6 +6,7 @@ import * as timers from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { format } from "node:util";
 import {
+	createContainerDevPlan,
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
@@ -35,7 +36,7 @@ import {
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
-import { getContainerOptions, getDockerPath } from "./containers";
+import { getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
@@ -391,17 +392,15 @@ export async function getDevMiniflareOptions(
 								const dockerPath = getDockerPath();
 								containerEngine = resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
-
-								const options = getContainerOptions({
-									containersConfig: worker.config.containers,
-									exports: worker.config.exports,
-									containerBuildId,
-									configPath: worker.config.configPath,
-								});
-								for (const option of options ?? []) {
-									containerTagToOptionsMap.set(option.image_tag, option);
-								}
 							}
+							const containerPlan = worker.config.dev.enable_containers
+								? createContainerDevPlan({
+										containers: worker.config.containers,
+										exports: worker.config.exports,
+										containerBuildId,
+										configPath: worker.config.configPath,
+									})
+								: undefined;
 
 							const miniflareWorkerOptions =
 								wrangler.unstable_getMiniflareWorkerOptions(
@@ -418,6 +417,12 @@ export async function getDevMiniflareOptions(
 										containerBuildId,
 									}
 								);
+							for (const option of containerPlan?.containerOptions ?? []) {
+								containerTagToOptionsMap.set(option.image_tag, {
+									containerOptions: option,
+									workerConfig: worker.config,
+								});
+							}
 
 							const { externalWorkers } = miniflareWorkerOptions;
 							const workerOptions =
@@ -813,17 +818,15 @@ export async function getPreviewMiniflareOptions(
 					const dockerPath = getDockerPath();
 					containerEngine = resolveDockerHost(dockerPath);
 					containerBuildId = generateContainerBuildId();
-
-					const options = getContainerOptions({
-						containersConfig: workerConfig.containers,
-						exports: workerConfig.exports,
-						containerBuildId,
-						configPath: workerConfig.configPath,
-					});
-					for (const option of options ?? []) {
-						containerTagToOptionsMap.set(option.image_tag, option);
-					}
 				}
+				const containerPlan = workerConfig.dev.enable_containers
+					? createContainerDevPlan({
+							containers: workerConfig.containers,
+							exports: workerConfig.exports,
+							containerBuildId,
+							configPath: workerConfig.configPath,
+						})
+					: undefined;
 
 				const miniflareWorkerOptions =
 					wrangler.unstable_getMiniflareWorkerOptions(workerConfig, undefined, {
@@ -832,6 +835,12 @@ export async function getPreviewMiniflareOptions(
 
 						containerBuildId,
 					});
+				for (const option of containerPlan?.containerOptions ?? []) {
+					containerTagToOptionsMap.set(option.image_tag, {
+						containerOptions: option,
+						workerConfig,
+					});
+				}
 
 				const { externalWorkers } = miniflareWorkerOptions;
 

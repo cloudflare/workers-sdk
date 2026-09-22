@@ -182,10 +182,11 @@ export type ContainerApp = {
 
 	/**
 	 * Named images available to a Durable Object-managed container through
-	 * `ctx.container.images` and
-	 * `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES[className]`.
+	 * `ctx.container.images`.
 	 *
 	 * Only supported when `scheduling_policy` is `"durable_object"`.
+	 * When omitted, run `wrangler deploy` to provision the application before
+	 * uploading versions. Version deployments use its existing application.
 	 */
 	images?: Record<string, DurableObjectContainerImage>;
 
@@ -1738,7 +1739,7 @@ export interface EnvironmentNonInheritable {
 		/** The Flagship app ID to bind to. */
 		app_id?: string;
 
-		/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
+		/** Set to `true` to evaluate flags against the remote Flagship app during local dev, instead of the local simulator. */
 		remote?: boolean;
 	}[];
 
@@ -1915,6 +1916,11 @@ export interface Observability {
 	 * @default false
 	 */
 	redact_query_string?: boolean;
+	/** Real-time Issues settings for this Worker. */
+	issues?: {
+		/** Whether real-time Issues are enabled. */
+		enabled?: boolean;
+	};
 	logs?: {
 		enabled?: boolean;
 		/** The sampling rate */
@@ -1992,7 +1998,7 @@ export type ContainerEngine =
  *
  * The `previews` block contains any intentionally divergent configuration intended solely for Previews, including:
  * - All non-inheritable properties (environment variables and bindings like KV, D1, R2, etc.)
- * - Select inheritable properties: `logpush`, `observability`, `limits`, `cache`
+ * - Select inheritable properties: `logpush`, `observability`, `limits`, `placement`, `cache`
  *
  * @inheritable
  */
@@ -2002,6 +2008,6 @@ export interface PreviewsConfig
 		Partial<
 			Pick<
 				EnvironmentInheritable,
-				"logpush" | "observability" | "limits" | "cache"
+				"logpush" | "observability" | "limits" | "placement" | "cache"
 			>
 		> {}

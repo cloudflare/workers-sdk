@@ -1,8 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
-import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
-import { Minimatch } from "minimatch";
+import {
+	compareMigrationPaths,
+	configFileName,
+	getD1MigrationFiles,
+	isNonInteractiveOrCI,
+	normalizeRelativePath,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
@@ -10,6 +15,8 @@ import { executeSql } from "../execute";
 import type { QueryResult } from "../execute";
 import type { Database, Migration } from "../types";
 import type { Config } from "@cloudflare/workers-utils";
+
+export { compareMigrationPaths, normalizeRelativePath };
 
 function getDefaultMigrationsPattern(migrationsDir: string) {
 	return normalizeRelativePath(`${migrationsDir}/*.sql`);
@@ -113,14 +120,6 @@ export function resolveMigrationsConfig({
 }
 
 /**
- * Normalize a relative path or glob into a canonical form for string-prefix
- * comparisons:
- *
- *  - Backslashes flipped to forward slashes.
- *  - Leading `./` and `//` runs collapsed (via `path.posix.normalize`).
- *  - Trailing `/` stripped (`normalize("foo/")` keeps it; we don't want it).
- */
-/**
  * Rewrite `pattern` relative to `dir` by stripping the `${dir}/` prefix. Both
  * `pattern` and `dir` must already be normalized (see
  * {@link normalizeRelativePath}).
@@ -138,15 +137,6 @@ function stripDirPrefix(pattern: string, dir: string): string {
 		);
 	}
 	return pattern.slice(prefix.length);
-}
-
-export function normalizeRelativePath(p: string): string {
-	const forwardSlashed = p.replace(/\\/g, "/");
-	const normalized = path.posix.normalize(forwardSlashed);
-	if (normalized.endsWith("/")) {
-		return normalized.slice(0, -1);
-	}
-	return normalized;
 }
 
 export function escapeIdentifier(id: string): string {
@@ -300,98 +290,6 @@ const listAppliedMigrations = async ({
 };
 
 /**
- * Recursively list regular files under `dir` whose `dir`-relative path
- * matches `matcher` (a `Minimatch` whose pattern is also `dir`-relative).
- *
- * Paths use forward-slash separators (so they match globs the same on POSIX
- * and Windows), sorted by {@link compareMigrationPaths}.
- *
- * Prunes the walk with minimatch's `partial: true` mode: before descending
- * into a subdirectory we ask whether its relative path could be a prefix of
- * something matching `matcher.pattern`. If not, we skip the descent. So a
- * `*.sql` pattern never recurses, `*\/migration.sql` only descends one
- * level, `**\/*.sql` recurses unconditionally.
- */
-function listFilesRelative(dir: string, matcher: Minimatch): string[] {
-	const out: string[] = [];
-	const stack: Array<{ abs: string; rel: string }> = [{ abs: dir, rel: "" }];
-
-	while (stack.length > 0) {
-		const { abs, rel } = stack.pop() as { abs: string; rel: string };
-		let entries: fs.Dirent[];
-		try {
-			entries = fs.readdirSync(abs, { withFileTypes: true });
-		} catch {
-			continue;
-		}
-		for (const entry of entries) {
-			const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
-			if (entry.isDirectory()) {
-				if (matcher.match(childRel, true /* partial */)) {
-					stack.push({ abs: path.join(abs, entry.name), rel: childRel });
-				}
-			} else if (entry.isFile() && matcher.match(childRel)) {
-				out.push(childRel);
-			}
-		}
-	}
-
-	return out.sort(compareMigrationPaths);
-}
-
-/**
- * Compare two migration paths by the leading integer of in each path
- * segment, falling back to lex order on ties. Numbered files sort before
- * unnumbered ones.
- *
- * Numeric ordering matters for users with inconsistently-padded numeric
- * prefixes (`1_a.sql`, `9_b.sql`, `10_c.sql`); a pure lex sort would put
- * `10_c.sql` between `1_a.sql` and `9_b.sql`.
- */
-export function compareMigrationPaths(a: string, b: string): number {
-	const aSegments = a.split("/");
-	const bSegments = b.split("/");
-	const shared = Math.min(aSegments.length, bSegments.length);
-	for (let i = 0; i < shared; i++) {
-		const cmp = compareSegments(aSegments[i], bSegments[i]);
-		if (cmp !== 0) {
-			return cmp;
-		}
-	}
-	// Every shared segment is equal: the shorter path sorts first (e.g.
-	// `0001_a` before `0001_a/migration.sql`). This is impossible because
-	// listFilesRelative() will never output a directory.
-	return aSegments.length - bSegments.length;
-}
-
-function compareSegments(a: string, b: string): number {
-	const aNum = leadingMigrationNumber(a);
-	const bNum = leadingMigrationNumber(b);
-	if (aNum !== bNum) {
-		// `NaN !== NaN` is true, so unprefixed paths hit this branch. Guard
-		// with isFinite to fall through to the lex tiebreaker below.
-		if (Number.isFinite(aNum) && Number.isFinite(bNum)) {
-			return aNum - bNum;
-		}
-		// Numbered files sort before unnumbered ones.
-		if (Number.isFinite(aNum)) {
-			return -1;
-		}
-		if (Number.isFinite(bNum)) {
-			return 1;
-		}
-	}
-	// Same number, or both unnumbered: lex order for determinism.
-	if (a < b) {
-		return -1;
-	}
-	if (a > b) {
-		return 1;
-	}
-	return 0;
-}
-
-/**
  * Parse the leading integer from a migration's first path segment.
  * - `0001_init.sql` → `1`
  * - `0001_init/migration.sql` → `1` (directory carries the number, as in
@@ -420,23 +318,11 @@ export function getMigrationNames(
 		logHint?: boolean;
 	} = {}
 ): Array<string> {
-	const walkRoot = path.resolve(
-		migrationsConfig.projectPath,
-		migrationsConfig.migrationsDir
-	);
-
-	// `listFilesRelative` returns paths relative to `walkRoot`, so the
-	// matcher must also be `migrationsDir`-relative. The MigrationsConfig
-	// invariant guarantees the pattern is under migrationsDir, so this never
-	// throws.
-	const dirRelativePattern = stripDirPrefix(
-		migrationsConfig.migrationsPattern,
-		migrationsConfig.migrationsDir
-	);
-	const matches = listFilesRelative(
-		walkRoot,
-		new Minimatch(dirRelativePattern, { dot: false })
-	);
+	const matches = getD1MigrationFiles({
+		projectPath: migrationsConfig.projectPath,
+		migrationsDir: migrationsConfig.migrationsDir,
+		migrationsPattern: migrationsConfig.migrationsPattern,
+	}).map((file) => file.name);
 
 	if (options.logHint && matches.length === 0) {
 		maybeLogHint(migrationsConfig);
@@ -479,11 +365,11 @@ export function maybeLogHint({
 	MigrationsConfig,
 	"projectPath" | "migrationsDir" | "migrationsPattern" | "configFile"
 >) {
-	const walkRoot = path.resolve(projectPath, migrationsDir);
-	const drizzleFiles = listFilesRelative(
-		walkRoot,
-		new Minimatch("*/migration.sql", { dot: false })
-	);
+	const drizzleFiles = getD1MigrationFiles({
+		projectPath,
+		migrationsDir,
+		migrationsPattern: `${migrationsDir}/*/migration.sql`,
+	});
 	if (drizzleFiles.length === 0) {
 		return;
 	}

@@ -14,7 +14,7 @@ export const previewSecretNamespace = createNamespace({
 		description: "Manage secrets for Worker Previews",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 });
 

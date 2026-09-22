@@ -1459,6 +1459,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected "observability.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.traces.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.issues.enabled" to be of type boolean but got undefined.
 				  - Expected "observability.head_sampling_rate" to be of type number but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.head_sampling_rate" to be of type number but got "INVALID".
@@ -4693,7 +4694,7 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 				],
 			])(
-				"reserves the experimental image binding name with containers %j",
+				"allows the former experimental image binding name with containers %j",
 				(containers, { expect }) => {
 					const { diagnostics } = normalizeAndValidateConfig(
 						{
@@ -4707,10 +4708,7 @@ describe("normalizeAndValidateConfig()", () => {
 						{ env: undefined }
 					);
 
-					expect(diagnostics.hasErrors()).toBe(true);
-					expect(diagnostics.renderErrors()).toContain(
-						"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES assigned to Environment Variable and Container images bindings"
-					);
+					expect(diagnostics.hasErrors()).toBe(false);
 				}
 			);
 
@@ -12611,7 +12609,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.issues.enabled" is required.
 					  - Expected "observability.head_sampling_rate" to be of type number but got true.
 					  - Expected "observability.redact_query_string" to be of type boolean but got "true"."
 				`);
@@ -12630,6 +12628,25 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "observability" should be an object but got null."
+				`);
+			});
+
+			it("should error if observability issues is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: { issues: null },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.issues.enabled" is required.
+					  - "observability.issues" should be an object but got null."
 				`);
 			});
 
@@ -13644,6 +13661,27 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject invalid targeted placement in previews config", ({
+				expect,
+			}) => {
+				const invalidPlacements = [
+					{ mode: "targeted" },
+					{ mode: "targeted", region: "" },
+					{ mode: "off", region: "WEU" },
+				];
+
+				for (const placement of invalidPlacements) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ previews: { placement } } as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.renderErrors()).toContain('"previews.placement');
+				}
 			});
 
 			it("should accept previews.queues as an object with producers", ({

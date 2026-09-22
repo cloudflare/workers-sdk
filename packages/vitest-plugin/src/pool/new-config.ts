@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import {
 	convertToWranglerConfig,
-	loadAndValidateConfig,
+	loadAndParseConfig,
 } from "@cloudflare/config";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
@@ -16,7 +16,7 @@ export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
  * the project uses.
  *
  * This mirrors the `@cloudflare/vite-plugin` implementation of
- * `experimental.newConfig`: load and validate via `@cloudflare/config`, convert
+ * `experimental.newConfig`: load and parse via `@cloudflare/config`, convert
  * the result to a Wrangler `RawConfig`, then run it through the standard
  * Wrangler normalisation/validation pipeline.
  *
@@ -34,7 +34,10 @@ export async function loadNewConfig(
 		);
 	}
 
-	const { result } = await loadAndValidateConfig(configPath, { mode });
+	const { result } = await loadAndParseConfig(configPath, {
+		isPreview: false,
+		mode,
+	});
 
 	if (!result.success) {
 		throw new TypeError(
@@ -42,21 +45,15 @@ export async function loadNewConfig(
 		);
 	}
 
-	const worker =
-		result.data.default?.type === "worker" ? result.data.default : undefined;
+	const worker = result.data.worker;
 
 	if (worker === undefined) {
 		throw new TypeError(
-			`\`${NEW_CONFIG_FILENAME}\` must have a default worker export.`
+			`\`${NEW_CONFIG_FILENAME}\` must define a Worker using the \`worker\` property.`
 		);
 	}
 
-	const settings =
-		result.data.settings?.type === "settings"
-			? result.data.settings
-			: undefined;
-
-	const rawConfig: RawConfig = convertToWranglerConfig(worker, settings);
+	const rawConfig: RawConfig = convertToWranglerConfig(result.data);
 
 	// Passing `configPath` as both the config path and the user config path
 	// resolves `main` relative to the config file's directory, and lets

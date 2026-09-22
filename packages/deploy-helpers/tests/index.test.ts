@@ -11,6 +11,7 @@ describe("context singleton", () => {
 
 		initDeployHelpersContext({
 			logger: mockLogger as never,
+			createCloudflareClient: (() => {}) as never,
 			fetchResult: (() => {}) as never,
 			fetchListResult: (() => {}) as never,
 			fetchPagedListResult: (() => {}) as never,
