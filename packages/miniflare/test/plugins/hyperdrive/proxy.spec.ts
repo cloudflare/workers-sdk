@@ -209,6 +209,11 @@ function createMockPostgresNoSslServer(): Promise<{
 	});
 }
 
+/**
+ * Creates a mock Postgres server that accepts the SSL upgrade and then writes
+ * large chunks continuously, so there is always data in flight towards the
+ * client. Used to exercise what happens when the client goes away mid-stream.
+ */
 function createMockPostgresPumpServer(
 	serverCert: CertPair,
 	caCert: string
