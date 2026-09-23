@@ -192,6 +192,33 @@ describe("kv", () => {
 				expect(std.out).toContain("✨ Success!");
 			});
 
+			it("should create an Instant namespace", async ({ expect }) => {
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/storage/kv/namespaces",
+						async ({ request, params }) => {
+							expect(params.accountId).toEqual("some-account-id");
+							const body = (await request.json()) as Record<string, string>;
+							expect(body.title).toEqual("UnitTestNamespace");
+							expect(body.mode).toEqual("instant");
+							return HttpResponse.json(
+								createFetchResult({ id: "some-namespace-id" }),
+								{ status: 200 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler(
+					"kv namespace create UnitTestNamespace --binding MY_NS --mode instant"
+				);
+				expect(std.out).toContain(
+					'Creating namespace with title "UnitTestNamespace" (mode: instant)'
+				);
+				expect(std.out).toContain("✨ Success!");
+			});
+
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
 				it("should create a namespace", async ({ expect }) => {
 					writeWranglerConfig({ name: "worker" }, configPath);
@@ -301,9 +328,16 @@ describe("kv", () => {
 		});
 
 		describe("list", () => {
+			it("should hide the mode option from help", async ({ expect }) => {
+				await runWrangler("kv namespace list --help");
+
+				expect(std.out).not.toContain("--mode");
+			});
+
 			function mockListRequest(
 				expect: ExpectStatic,
-				namespaces: KVNamespaceInfo[]
+				namespaces: KVNamespaceInfo[],
+				mode?: string
 			) {
 				const requests = { count: 0 };
 				msw.use(
@@ -316,6 +350,9 @@ describe("kv", () => {
 							expect(params.accountId).toEqual("some-account-id");
 							expect(url.searchParams.get("order")).toEqual("title");
 							expect(url.searchParams.get("direction")).toEqual("asc");
+							expect(url.searchParams.get("filter")).toEqual(
+								mode ? `mode:${mode}` : null
+							);
 
 							const pageSize = Number(url.searchParams.get("per_page"));
 							const page = Number(url.searchParams.get("page") ?? 1);
@@ -340,6 +377,18 @@ describe("kv", () => {
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
+			});
+
+			it("should filter namespaces by mode", async ({ expect }) => {
+				const kvNamespaces: KVNamespaceInfo[] = [
+					{ title: "instant-namespace", id: "instant-id" },
+				];
+				const requests = mockListRequest(expect, kvNamespaces, "instant");
+				await runWrangler("kv namespace list --mode instant");
+
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
+				expect(requests.count).toBeGreaterThan(1);
 			});
 
 			it("should make multiple requests for paginated results", async ({

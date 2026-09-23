@@ -103,6 +103,13 @@ export const kvNamespaceCreateCommand = createCommand({
 			requiresArg: true,
 			hidden: true,
 		},
+		mode: {
+			type: "string",
+			describe: "The storage mode for the new namespace",
+			choices: ["instant"] as const,
+			requiresArg: true,
+			hidden: true,
+		},
 		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["namespace"],
@@ -111,7 +118,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
 		const title = `${environment}${args.namespace}${preview}`;
-		const { jurisdiction } = args;
+		const { jurisdiction, mode } = args;
 
 		const accountId = await requireAuth(config);
 		printResourceLocation("remote");
@@ -119,17 +126,19 @@ export const kvNamespaceCreateCommand = createCommand({
 		logger.log(
 			`🌀 Creating namespace with title "${title}"${
 				jurisdiction ? ` (jurisdiction: ${jurisdiction})` : ""
-			}`
+			}${mode ? ` (mode: ${mode})` : ""}`
 		);
 
 		let namespaceId: string;
 		try {
 			const createParams: Cloudflare.KV.Namespaces.NamespaceCreateParams & {
 				jurisdiction?: string;
+				mode?: string;
 			} = {
 				account_id: accountId,
 				title,
 				jurisdiction,
+				mode,
 			};
 			const result = await sdk.kv.namespaces.create(createParams);
 			namespaceId = result.id;
@@ -183,24 +192,36 @@ export const kvNamespaceListCommand = createCommand({
 		owner: "Product: KV",
 	},
 
-	args: {},
+	args: {
+		mode: {
+			type: "string",
+			describe: "Only list namespaces using this storage mode",
+			choices: ["instant"] as const,
+			requiresArg: true,
+			hidden: true,
+		},
+	},
 
 	behaviour: {
 		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
 	},
-	async handler(_, { config, sdk }) {
+	async handler(args, { config, sdk }) {
 		const accountId = await requireAuth(config);
 
 		const allNamespaces = [];
-
-		for await (const namespace of sdk.kv.namespaces.list({
+		const listParams: Cloudflare.KV.Namespaces.NamespaceListParams & {
+			filter?: string;
+		} = {
 			account_id: accountId,
 			per_page: 1000,
 			order: "title",
 			direction: "asc",
-		})) {
+			filter: args.mode ? `mode:${args.mode}` : undefined,
+		};
+
+		for await (const namespace of sdk.kv.namespaces.list(listParams)) {
 			allNamespaces.push(namespace);
 		}
 
