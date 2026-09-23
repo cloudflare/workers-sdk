@@ -433,7 +433,10 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		if (supportedLanguages.length > 0) {
 			if (supportedLanguages.length === 1) {
 				args.lang = supportedLanguages[0];
-			} else if (C3_DEFAULTS.lang && supportedLanguages.includes(C3_DEFAULTS.lang)) {
+			} else if (
+				C3_DEFAULTS.lang &&
+				supportedLanguages.includes(C3_DEFAULTS.lang)
+			) {
 				args.lang = C3_DEFAULTS.lang;
 			}
 		}
