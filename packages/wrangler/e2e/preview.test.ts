@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { fetch } from "undici";
+import Cloudflare from "cloudflare";
 import { afterAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
@@ -106,20 +106,72 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("preview", { timeout: 90_000 }, () => {
 		expect(await response.text()).toBe("Hello from the Preview Durable Object");
 	});
 
-	it("creates then updates a reachable Preview", async ({ expect }) => {
+	it("onboards local config, then creates and updates a reachable Preview", async ({
+		expect,
+	}) => {
+		const config = {
+			name: workerName,
+			main: "src/index.ts",
+			compatibility_date: "2025-01-01",
+		};
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
-				name: workerName,
-				main: "src/index.ts",
-				compatibility_date: "2025-01-01",
-				vars: { GREETING: "local-e2e" },
-				previews: {},
+				...config,
+				vars: {
+					GREETING: "production-greeting",
+					STRUCTURED: {
+						endpoint: "production-api.example.com",
+						nested: ["production-value", null],
+					},
+				},
+				d1_databases: [
+					{
+						binding: "DB",
+						database_name: "production-database",
+						database_id: "00000000-0000-0000-0000-000000000001",
+					},
+				],
+				observability: { enabled: true },
+				limits: { cpu_ms: 10, subrequests: 50 },
 			}),
 			"src/index.ts": `export default {
 					fetch(_request, env) {
 						return new Response(env.GREETING);
 					},
 				};`,
+		});
+		const onboarding = await helper.run(
+			`wrangler preview --name ${previewNames.localConfig} --ignore-base-config --json`
+		);
+		expect(onboarding.status).not.toBe(0);
+		expect(JSON.parse(onboarding.stdout)).toEqual({
+			error: "Your Wrangler configuration is missing a previews block",
+			suggested_config: {
+				previews: {
+					vars: {
+						GREETING: "<REPLACE_ME>",
+						STRUCTURED: {
+							endpoint: "<REPLACE_ME>",
+							nested: ["<REPLACE_ME>", null],
+						},
+					},
+					d1_databases: [{ binding: "DB", database_id: "<REPLACE_ME>" }],
+					observability: { enabled: true },
+					limits: { cpu_ms: 10, subrequests: 50 },
+				},
+			},
+			messages: [
+				"Replace each <REPLACE_ME> placeholder with a Preview-safe value. Do not use production resources unless you intend for this Preview to access them.",
+			],
+		});
+		expect(onboarding.stdout).not.toContain("production-");
+
+		await helper.seed({
+			"wrangler.json": JSON.stringify({
+				...config,
+				vars: { GREETING: "local-e2e" },
+				previews: { vars: { GREETING: "local-e2e" } },
+			}),
 		});
 		const first = await helper.run(
 			`wrangler preview --name ${previewNames.localConfig}`
@@ -146,14 +198,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("preview", { timeout: 90_000 }, () => {
 		expect(await secondResponse.text()).toBe("local-e2e");
 	});
 
-	it("applies a propagated Preview Base on update", async ({ expect }) => {
+	it("onboards a propagated Preview Base on update", async ({ expect }) => {
+		const config = {
+			name: workerName,
+			main: "src/index.ts",
+			compatibility_date: "2025-01-01",
+		};
 		await helper.seed({
-			"wrangler.json": JSON.stringify({
-				name: workerName,
-				main: "src/index.ts",
-				compatibility_date: "2025-01-01",
-				previews: {},
-			}),
+			"wrangler.json": JSON.stringify({ ...config, previews: {} }),
 			"src/index.ts": `export default {
 					fetch(_request, env) {
 						return new Response(env.BASE_GREETING ?? "without-base");
@@ -162,55 +214,61 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("preview", { timeout: 90_000 }, () => {
 		});
 		const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 		assert(apiToken, "CLOUDFLARE_API_TOKEN environment variable is required");
+		const client = new Cloudflare({ apiToken });
 
 		const first = await helper.run(
 			`wrangler preview --name ${previewNames.remoteBase}`
 		);
 		expect(first.stdout).toContain(`Preview: ${previewNames.remoteBase} (new)`);
 
-		const endpoint = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/workers/${workerName}`;
-		const patchResponse = await fetch(endpoint, {
-			method: "PATCH",
-			headers: {
-				Authorization: `Bearer ${apiToken}`,
-				"Content-Type": "application/merge-patch+json",
-			},
-			body: JSON.stringify({
-				previews_base_config: {
-					env: {
-						BASE_GREETING: {
-							type: "plain_text",
-							text: "from-base-e2e",
-						},
+		await client.workers.beta.workers.edit(workerName, {
+			account_id: CLOUDFLARE_ACCOUNT_ID,
+			previews_base_config: {
+				env: {
+					BASE_GREETING: {
+						type: "plain_text",
+						text: "from-base-e2e",
 					},
 				},
-			}),
-		});
-		assert(
-			patchResponse.ok,
-			`Failed to update Preview Base: ${await patchResponse.text()}`
-		);
+			},
+		} as unknown as Parameters<typeof client.workers.beta.workers.edit>[1]);
 
 		await retry(
 			(response) =>
-				response.result?.previews_base_config?.env?.BASE_GREETING === undefined,
+				response.previews_base_config?.env?.BASE_GREETING === undefined,
 			async () => {
-				const response = await fetch(endpoint, {
-					headers: { Authorization: `Bearer ${apiToken}` },
-				});
-				assert(
-					response.ok,
-					`Failed to read Preview Base: ${await response.text()}`
-				);
-				return (await response.json()) as {
-					result?: {
-						previews_base_config?: {
-							env?: Record<string, unknown>;
-						};
+				return (await client.workers.beta.workers.get(workerName, {
+					account_id: CLOUDFLARE_ACCOUNT_ID,
+				})) as unknown as {
+					previews_base_config?: {
+						env?: Record<string, unknown>;
 					};
 				};
 			}
 		);
+
+		await helper.seed({ "wrangler.json": JSON.stringify(config) });
+		const onboarding = await helper.run(
+			`wrangler preview --name ${previewNames.remoteBase} --json`
+		);
+		expect(onboarding.status).not.toBe(0);
+		const onboardingOutput = JSON.parse(onboarding.stdout) as {
+			suggested_config: {
+				previews: { vars: { BASE_GREETING: string } };
+			};
+		};
+		expect(onboardingOutput).toMatchObject({
+			error: "Your Wrangler configuration is missing a previews block",
+			suggested_config: {
+				previews: { vars: { BASE_GREETING: "from-base-e2e" } },
+			},
+		});
+		await helper.seed({
+			"wrangler.json": JSON.stringify({
+				...config,
+				...onboardingOutput.suggested_config,
+			}),
+		});
 
 		const second = await helper.run(
 			`wrangler preview --name ${previewNames.remoteBase}`
