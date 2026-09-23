@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { NpmPackageManager } from "@cloudflare/workers-utils";
 import {
@@ -7,6 +8,7 @@ import {
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import { getDetailsForAutoConfig } from "../src/details";
 import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
@@ -71,6 +73,64 @@ describe("runAutoConfig()", () => {
 		).rejects.toThrow(
 			'The detected framework ("Hono") cannot be automatically configured.'
 		);
+	});
+
+	it("creates a Vite Worker in an empty directory", async ({ expect }) => {
+		const installPackages = vi
+			.spyOn(cliPackages, "installPackages")
+			.mockResolvedValue();
+		const context = createMockContext();
+		const projectPath = join(process.cwd(), "project");
+		mkdirSync(projectPath);
+		const details = await getDetailsForAutoConfig({ projectPath, context });
+
+		const summary = await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			runBuild: false,
+		});
+
+		expect(summary).toMatchObject({
+			frameworkId: "new",
+			buildCommand: "npx vite build",
+			workerConfig: { entrypoint: "./src/index.js" },
+		});
+		expect(installPackages).toHaveBeenCalledWith("npm", ["cf@latest"], {
+			dev: true,
+			isWorkspaceRoot: false,
+		});
+		expect(installPackages).toHaveBeenCalledWith("npm", ["vite@latest"], {
+			dev: true,
+			isWorkspaceRoot: false,
+		});
+		expect(installPackages).toHaveBeenCalledWith(
+			"npm",
+			["@cloudflare/vite-plugin@beta"],
+			expect.objectContaining({
+				dev: true,
+				isWorkspaceRoot: false,
+			})
+		);
+		expect(
+			JSON.parse(readFileSync(join(projectPath, "package.json"), "utf8"))
+		).toMatchObject({
+			private: true,
+			type: "module",
+			scripts: {
+				build: "vite build",
+				deploy: "cf deploy",
+				dev: "vite dev",
+			},
+		});
+		expect(readFileSync(join(projectPath, "src/index.js"), "utf8")).toContain(
+			'return new Response("Hello, World!")'
+		);
+		expect(readFileSync(join(projectPath, "vite.config.js"), "utf8")).toContain(
+			'cloudflare } from "@cloudflare/vite-plugin"'
+		);
+		expect(
+			readFileSync(join(projectPath, "cloudflare.config.ts"), "utf8")
+		).toContain('"entrypoint": "./src/index.js"');
 	});
 
 	it("creates new configuration and cf scripts by default", async ({
