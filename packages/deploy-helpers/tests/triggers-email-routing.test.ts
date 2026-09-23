@@ -13,12 +13,13 @@ const WORKER_NAME = "test-name";
 const WORKER_TAG = "a7e6fb77503c41d8a7f3113c6918f10c";
 
 describe("triggersDeploy Email Routing integration", () => {
-	let metadataRequests: number;
+	// The Worker GET serves both the subdomain lookup and the owner tag lookup.
+	let workerGetRequests: number;
 	let planRequests: number;
 	let planError: Error | undefined;
 
 	beforeEach(() => {
-		metadataRequests = 0;
+		workerGetRequests = 0;
 		planRequests = 0;
 		planError = undefined;
 
@@ -27,12 +28,17 @@ describe("triggersDeploy Email Routing integration", () => {
 				workers: {
 					beta: {
 						workers: {
-							get: async () => ({
-								subdomain: {
-									enabled: false,
-									previews_enabled: false,
-								},
-							}),
+							get: async () => {
+								workerGetRequests++;
+								return {
+									id: WORKER_TAG,
+									name: WORKER_NAME,
+									subdomain: {
+										enabled: false,
+										previews_enabled: false,
+									},
+								};
+							},
 						},
 					},
 				},
@@ -51,10 +57,6 @@ describe("triggersDeploy Email Routing integration", () => {
 			) => {
 				if (path.endsWith("/subdomain")) {
 					return { enabled: false, previews_enabled: false };
-				}
-				if (path.endsWith(`/workers/services/${WORKER_NAME}`)) {
-					metadataRequests++;
-					return { default_environment: { script: { tag: WORKER_TAG } } };
 				}
 				if (path.endsWith("/schedules")) {
 					throw new Error("trigger deployment failed");
@@ -106,7 +108,8 @@ describe("triggersDeploy Email Routing integration", () => {
 		});
 
 		expect(planRequests).toBe(1);
-		expect(metadataRequests).toBe(0);
+		// Subdomain lookup only.
+		expect(workerGetRequests).toBe(1);
 	});
 
 	it("reconciles once and resolves the tag for standalone trigger deploy", async ({
@@ -124,7 +127,8 @@ describe("triggersDeploy Email Routing integration", () => {
 		});
 
 		expect(planRequests).toBe(1);
-		expect(metadataRequests).toBe(1);
+		// Subdomain lookup plus owner tag lookup.
+		expect(workerGetRequests).toBe(2);
 	});
 
 	it("rethrows an email routing failure when no other trigger failed", async ({
@@ -189,6 +193,8 @@ describe("triggersDeploy preflight", () => {
 							) => {
 								workerGetRequests.push([workerName, params.account_id]);
 								return {
+									id: WORKER_TAG,
+									name: WORKER_NAME,
 									subdomain: {
 										enabled: false,
 										previews_enabled: false,
@@ -216,9 +222,6 @@ describe("triggersDeploy preflight", () => {
 				fetchResultRequests.push(`${init?.method ?? "GET"} ${path}`);
 				if (path.endsWith("/subdomain")) {
 					return { enabled: false, previews_enabled: false };
-				}
-				if (path.endsWith(`/workers/services/${WORKER_NAME}`)) {
-					return { default_environment: { script: { tag: WORKER_TAG } } };
 				}
 				if (
 					init?.method === "POST" &&

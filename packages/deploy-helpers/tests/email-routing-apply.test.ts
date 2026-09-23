@@ -66,7 +66,9 @@ describe("applyEmailRoutingAddresses", () => {
 		releaseRuleWrites = [];
 
 		initDeployHelpersContext({
-			createCloudflareClient: (() => {}) as never,
+			createCloudflareClient: (() => ({
+				workers: { beta: { workers: { get: getWorker } } },
+			})) as never,
 			logger: {
 				debug() {},
 				info() {},
@@ -87,6 +89,22 @@ describe("applyEmailRoutingAddresses", () => {
 		});
 	});
 
+	async function getWorker(
+		workerName: string,
+		params: { account_id: string }
+	): Promise<unknown> {
+		if (workerName !== WORKER_NAME || params.account_id !== ACCOUNT_ID) {
+			throw new Error(`Unexpected Worker: ${params.account_id}/${workerName}`);
+		}
+		metadataRequests++;
+		const code = metadataFailures.shift();
+		if (code !== undefined) {
+			// Mirrors the Cloudflare SDK's APIError shape.
+			throw { status: 404, errors: [{ code }] };
+		}
+		return { id: WORKER_TAG, name: WORKER_NAME };
+	}
+
 	async function fetchResult(
 		_config: Config,
 		path: string,
@@ -95,14 +113,6 @@ describe("applyEmailRoutingAddresses", () => {
 		const body =
 			typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
 
-		if (path.endsWith(`/workers/services/${WORKER_NAME}`)) {
-			metadataRequests++;
-			const code = metadataFailures.shift();
-			if (code !== undefined) {
-				throw { code };
-			}
-			return { default_environment: { script: { tag: WORKER_TAG } } };
-		}
 		if (path.endsWith("/email/routing/rules/plan")) {
 			const error = planFailures.shift();
 			if (error) {

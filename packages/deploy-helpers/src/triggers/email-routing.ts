@@ -6,6 +6,7 @@ import {
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
+import { fetchWorker } from "../deploy/helpers/workers-api";
 import { confirm, fetchResult, logger } from "../shared/context";
 import {
 	buildEmailRoutingPlanRequest,
@@ -105,10 +106,8 @@ async function resolveOwnerWorkerTag(
 	const deadline = Date.now() + PLAN_RETRY_TIMEOUT_MS;
 	for (;;) {
 		try {
-			const { default_environment } = await fetchResult<{
-				default_environment: { script: { tag: string } };
-			}>(config, `/accounts/${accountId}/workers/services/${scriptName}`);
-			return default_environment.script.tag;
+			// The Worker ID is the same value as the legacy script tag.
+			return (await fetchWorker(config, accountId, scriptName)).id;
 		} catch (error) {
 			if (!isWorkerNotFoundError(error)) {
 				throw error;
