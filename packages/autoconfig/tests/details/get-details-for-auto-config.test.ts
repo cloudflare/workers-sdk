@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { chmod, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
 	mockConsoleMethods,
@@ -327,6 +327,27 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			outputDir: "public",
 		});
 	});
+
+	it.skipIf(process.platform === "win32")(
+		"outputDir should ignore inaccessible child directories",
+		async ({ expect }) => {
+			await seed({
+				".Trash/placeholder": "",
+				"public/index.html": `<h1>Hello World</h1>`,
+			});
+
+			await chmod(".Trash", 0o000);
+			try {
+				await expect(
+					details.getDetailsForAutoConfig({ context })
+				).resolves.toMatchObject({
+					outputDir: "public",
+				});
+			} finally {
+				await chmod(".Trash", 0o700);
+			}
+		}
+	);
 
 	it("outputDir should prioritize the project directory over its child directories", async ({
 		expect,

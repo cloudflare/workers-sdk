@@ -42,14 +42,22 @@ export function assertNonConfigured(
 }
 
 async function hasIndexHtml(dir: string): Promise<boolean> {
-	const children = await readdir(dir);
-	for (const child of children) {
-		const stats = await stat(join(dir, child));
-		if (stats.isFile() && child === "index.html") {
-			return true;
+	try {
+		return (await stat(join(dir, "index.html"))).isFile();
+	} catch (error) {
+		if (
+			typeof error === "object" &&
+			error !== null &&
+			"code" in error &&
+			(error.code === "ENOENT" ||
+				error.code === "ENOTDIR" ||
+				error.code === "EACCES" ||
+				error.code === "EPERM")
+		) {
+			return false;
 		}
+		throw error;
 	}
-	return false;
 }
 
 /**
