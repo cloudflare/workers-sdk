@@ -139,6 +139,22 @@ async function saveFlag(): Promise<void> {
 describe("Flagship", () => {
 	beforeEach(cleanupFlags);
 
+	test("closes an open dialog when the selected worker changes", async () => {
+		await seedFlag(STRING_FLAG);
+		await navigateToFlagshipApp();
+		await openEditDialog(STRING_FLAG.key);
+		await page.evaluate(() => {
+			const url = new URL(window.location.href);
+			url.searchParams.set("worker", "worker-w-resources");
+			window.history.pushState(window.history.state, "", url);
+			window.dispatchEvent(new PopStateEvent("popstate"));
+		});
+		await page.waitForSelector('[role="dialog"]', {
+			state: "hidden",
+			timeout: 10_000,
+		});
+	});
+
 	test("creates, edits, and deletes a flag", async ({ expect }) => {
 		await navigateToFlagshipApp();
 		await waitForBreadcrumbText("Flagship");
@@ -177,6 +193,23 @@ describe("Flagship", () => {
 			.getByRole("button", { name: "Delete" })
 			.click();
 		await waitForText("No feature flags found");
+	});
+
+	test("keeps an untouched description when saving other edits", async ({
+		expect,
+	}) => {
+		await seedFlag({ ...STRING_FLAG, description: "  beta rollout  " });
+		await navigateToFlagshipApp();
+		await openEditDialog(STRING_FLAG.key);
+		await page
+			.getByRole("dialog")
+			.getByLabel("Value for treatment")
+			.fill("green");
+		await saveFlag();
+		expect(await fetchFlag(STRING_FLAG.key)).toMatchObject({
+			description: "  beta rollout  ",
+			variations: { treatment: "green" },
+		});
 	});
 
 	test("edits targeting rules and rollouts", async ({ expect }) => {

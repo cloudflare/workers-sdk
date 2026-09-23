@@ -154,17 +154,7 @@ function ActionMenu({
 	);
 }
 
-function formatValue(value: unknown): string {
-	if (value === undefined) {
-		return "";
-	}
-	return JSON.stringify(value) ?? String(value);
-}
-
 function ValueText({ value }: { value: string }): JSX.Element {
-	if (value === "") {
-		return <span className="text-xs text-kumo-subtle">—</span>;
-	}
 	const text = (
 		<span className="max-w-40 truncate font-mono text-xs text-kumo-subtle">
 			{value}
@@ -181,9 +171,6 @@ function ValueText({ value }: { value: string }): JSX.Element {
 }
 
 function updatedTime(flag: FlagshipFlag): number {
-	if (flag.updated_at === undefined) {
-		return 0;
-	}
 	const time = new Date(flag.updated_at).getTime();
 	return Number.isNaN(time) ? 0 : time;
 }
@@ -194,7 +181,7 @@ function compareFlags(
 	column: SortColumn
 ): number {
 	if (column === "status") {
-		return Number(a.enabled === true) - Number(b.enabled === true);
+		return Number(a.enabled) - Number(b.enabled);
 	}
 	if (column === "updated") {
 		return updatedTime(a) - updatedTime(b);
@@ -222,7 +209,7 @@ export function FlagTable({
 			if (primary !== 0) {
 				return primary;
 			}
-			const byKey = (a.key ?? "").localeCompare(b.key ?? "");
+			const byKey = a.key.localeCompare(b.key);
 			return sort.column === "key" ? byKey * factor : byKey;
 		});
 	}, [flags, sort]);
@@ -280,12 +267,11 @@ export function FlagTable({
 				</Table.Header>
 				<Table.Body>
 					{sortedFlags.map((flag) => {
-						const key = flag.key ?? "";
-						const enabled = flag.enabled === true;
+						const { enabled, key } = flag;
 						const pending = pendingKey === key;
-						const defaultVariation = flag.default_variation ?? "";
-						const defaultValue = formatValue(
-							flag.variations?.[defaultVariation]
+						const defaultVariation = flag.default_variation;
+						const defaultValue = JSON.stringify(
+							flag.variations[defaultVariation]
 						);
 						const relative = timeAgo(flag.updated_at);
 						return (
@@ -324,11 +310,9 @@ export function FlagTable({
 									</div>
 								</Table.Cell>
 								<Table.Cell>
-									{flag.type === undefined ? null : (
-										<Badge variant="secondary">
-											{FLAG_TYPE_LABELS[flag.type]}
-										</Badge>
-									)}
+									<Badge variant="secondary">
+										{FLAG_TYPE_LABELS[flag.type]}
+									</Badge>
 								</Table.Cell>
 								<Table.Cell>
 									<div className="flex min-w-0 items-center gap-2">

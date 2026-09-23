@@ -1,8 +1,6 @@
 import { cn, inputVariants, Label } from "@cloudflare/kumo";
 import type { JSX, KeyboardEvent, ReactNode } from "react";
 
-type InputSize = "xs" | "sm" | "base" | "lg";
-
 interface TextInputProps {
 	ariaLabel?: string;
 	className?: string;
@@ -15,7 +13,6 @@ interface TextInputProps {
 	onEnter?: () => void;
 	onValueChange: (value: string) => void;
 	placeholder?: string;
-	size?: InputSize;
 	value: string;
 }
 
@@ -31,7 +28,6 @@ export function TextInput({
 	onEnter,
 	onValueChange,
 	placeholder,
-	size = "base",
 	value,
 }: TextInputProps): JSX.Element {
 	function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
@@ -43,22 +39,21 @@ export function TextInput({
 
 	return (
 		<input
-			aria-invalid={invalid === true ? true : undefined}
+			aria-invalid={invalid || undefined}
 			aria-label={ariaLabel}
 			autoComplete="off"
 			className={cn(
 				inputVariants({
 					focusIndicator: true,
-					size,
-					variant: invalid === true ? "error" : "default",
+					variant: invalid ? "error" : "default",
 				}),
 				"w-full min-w-0 outline-none disabled:cursor-not-allowed",
-				mono === true && "font-mono",
+				mono && "font-mono",
 				className
 			)}
 			disabled={disabled}
 			id={id}
-			inputMode={numeric === true ? "decimal" : undefined}
+			inputMode={numeric ? "decimal" : undefined}
 			maxLength={maxLength}
 			onChange={(event) => onValueChange(event.target.value)}
 			onKeyDown={handleKeyDown}

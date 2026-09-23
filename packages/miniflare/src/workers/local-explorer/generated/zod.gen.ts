@@ -408,6 +408,8 @@ export const zFlagshipBaseCondition = z.object({
 		"ends_with",
 		"in",
 		"not_in",
+		"has",
+		"not_has",
 	]),
 	value: z.unknown(),
 });
@@ -416,7 +418,14 @@ export const zFlagshipEvaluation = z.object({
 	flagKey: z.string(),
 	value: z.unknown(),
 	variant: z.string(),
-	reason: z.enum(["TARGETING_MATCH", "DEFAULT", "DISABLED", "SPLIT", "ERROR"]),
+	reason: z.enum([
+		"STATIC",
+		"TARGETING_MATCH",
+		"DEFAULT",
+		"DISABLED",
+		"SPLIT",
+		"ERROR",
+	]),
 	errorCode: z.string().optional(),
 	errorMessage: z.string().optional(),
 });

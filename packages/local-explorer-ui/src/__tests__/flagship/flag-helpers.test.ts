@@ -6,6 +6,7 @@ import {
 	inferDefaultServe,
 	parseContextValue,
 	parseVariationValue,
+	removeCondition,
 	ruleDraftsFrom,
 	ruleDraftsToRules,
 	sanitizeVariationName,
@@ -22,6 +23,21 @@ function first<T>(values: T[]): T {
 		throw new Error("Expected a value");
 	}
 	return value;
+}
+
+function splitRule(
+	priority: number,
+	percentage: number,
+	serve_variation: string,
+	attribute?: string
+): FlagshipRule {
+	return {
+		conditions: [],
+		priority,
+		rollout:
+			attribute === undefined ? { percentage } : { attribute, percentage },
+		serve_variation,
+	};
 }
 
 describe("validateFlagKey", () => {
@@ -97,6 +113,30 @@ describe("rule drafts", () => {
 		]);
 	});
 
+	test("keeps group boundaries when removing a condition", ({ expect }) => {
+		const condition = first(
+			first(ruleDraftsFrom(rules, variationIdByName)).conditions
+		);
+		const conditions = [
+			{ ...condition, attribute: "a", id: "a", joinOperator: "AND" as const },
+			{ ...condition, attribute: "b", id: "b", joinOperator: "AND" as const },
+			{ ...condition, attribute: "c", id: "c", joinOperator: "OR" as const },
+		];
+		const joins = (index: number) =>
+			removeCondition(conditions, index).map(({ id, joinOperator }) => [
+				id,
+				joinOperator,
+			]);
+		expect(joins(1)).toEqual([
+			["a", "AND"],
+			["c", "AND"],
+		]);
+		expect(joins(0)).toEqual([
+			["b", "AND"],
+			["c", "OR"],
+		]);
+	});
+
 	test("builds AND groups containing OR conditions", ({ expect }) => {
 		const draft = first(ruleDraftsFrom(rules, variationIdByName));
 		const firstCondition = first(draft.conditions);
@@ -153,6 +193,21 @@ describe("rule drafts", () => {
 				new Set(["variation-on"])
 			)
 		).toContain("between 0 and 100");
+		expect(
+			validateRuleDrafts(
+				[
+					{
+						...draft,
+						rollout: {
+							attribute: "",
+							attributeEdited: false,
+							percentage: "33.333",
+						},
+					},
+				],
+				new Set(["variation-on"])
+			)
+		).toContain("two decimal places");
 		expect(
 			validateRuleDrafts(
 				[
@@ -294,31 +349,89 @@ describe("percentage split", () => {
 	const nameById = new Map(variations.map((row) => [row.id, row.name]));
 	const idByName = new Map(variations.map((row) => [row.name, row.id]));
 
-	test("encodes a two-way split as a single rule against the default", ({
+	test("encodes a split in its displayed order", ({ expect }) => {
+		const serve = (leading: string, trailing: string) =>
+			defaultServeToRules(
+				{
+					mode: "percentage",
+					splits: [
+						{ variationId: leading, weight: leading === "a" ? "70" : "30" },
+						{ variationId: trailing, weight: trailing === "a" ? "70" : "30" },
+						{ variationId: "c", weight: "0" },
+					],
+					targetingKey: "userId",
+				},
+				1,
+				"a",
+				nameById
+			);
+		expect(serve("b", "a")).toEqual([splitRule(1, 30, "treatment", "userId")]);
+		expect(serve("a", "b")).toEqual([
+			splitRule(1, 70, "control", "userId"),
+			splitRule(2, 100, "treatment", "userId"),
+		]);
+	});
+
+	test("keeps split assignments when the default variant changes", ({
 		expect,
 	}) => {
-		const rules = defaultServeToRules(
-			{
-				mode: "percentage",
-				splits: [
-					{ variationId: "a", weight: "70" },
-					{ variationId: "b", weight: "30" },
-					{ variationId: "c", weight: "0" },
-				],
-				targetingKey: "userId",
-			},
-			1,
+		const cases: Array<[FlagshipRule[], FlagshipRule[]]> = [
+			[
+				[splitRule(1, 30, "treatment"), splitRule(2, 100, "control")],
+				[splitRule(1, 30, "treatment"), splitRule(2, 100, "control")],
+			],
+			[
+				[splitRule(1, 30, "treatment")],
+				[splitRule(1, 30, "treatment"), splitRule(2, 100, "control")],
+			],
+		];
+		for (const [saved, expected] of cases) {
+			const { defaultServe } = inferDefaultServe(
+				saved,
+				"a",
+				variations,
+				idByName
+			);
+			expect(defaultServeToRules(defaultServe, 1, "b", nameById)).toEqual(
+				expected
+			);
+		}
+	});
+
+	test("round-trips an uneven three-way split", ({ expect }) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 33.33, "treatment"),
+			splitRule(2, 66.67, "holdback"),
+			splitRule(3, 100, "control"),
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
 			"a",
-			nameById
+			variations,
+			idByName
 		);
-		expect(rules).toEqual([
-			{
-				conditions: [],
-				priority: 1,
-				rollout: { attribute: "userId", percentage: 30 },
-				serve_variation: "treatment",
-			},
+		expect(targetingRules).toEqual([]);
+		expect(defaultServe.splits.map((split) => split.weight)).toEqual([
+			"33.33",
+			"33.34",
+			"33.33",
 		]);
+		expect(defaultServeToRules(defaultServe, 1, "a", nameById)).toEqual(saved);
+	});
+
+	test("preserves an unreachable final default rule", ({ expect }) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 100, "treatment"),
+			splitRule(2, 100, "control"),
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
 	});
 
 	test("encodes an n-way split with cumulative thresholds", ({ expect }) => {
@@ -337,35 +450,15 @@ describe("percentage split", () => {
 			nameById
 		);
 		expect(rules).toEqual([
-			{
-				conditions: [],
-				priority: 3,
-				rollout: { percentage: 25 },
-				serve_variation: "treatment",
-			},
-			{
-				conditions: [],
-				priority: 4,
-				rollout: { percentage: 50 },
-				serve_variation: "holdback",
-			},
+			splitRule(3, 25, "treatment"),
+			splitRule(4, 50, "holdback"),
 		]);
 	});
 
 	test("round-trips a split through infer and encode", ({ expect }) => {
 		const saved: FlagshipRule[] = [
-			{
-				conditions: [],
-				priority: 1,
-				rollout: { attribute: "userId", percentage: 25 },
-				serve_variation: "treatment",
-			},
-			{
-				conditions: [],
-				priority: 2,
-				rollout: { attribute: "userId", percentage: 60 },
-				serve_variation: "holdback",
-			},
+			splitRule(1, 25, "treatment", "userId"),
+			splitRule(2, 60, "holdback", "userId"),
 		];
 		const { defaultServe, targetingRules } = inferDefaultServe(
 			saved,
@@ -375,6 +468,7 @@ describe("percentage split", () => {
 		);
 		expect(targetingRules).toEqual([]);
 		expect(defaultServe).toEqual({
+			explicitDefaultRule: false,
 			mode: "percentage",
 			splits: [
 				{ variationId: "b", weight: "25" },
@@ -406,17 +500,19 @@ describe("percentage split", () => {
 				],
 			})
 		).toBeNull();
+		expect(
+			validateDefaultServe({
+				...serve,
+				splits: [
+					{ variationId: "a", weight: "33.333" },
+					{ variationId: "b", weight: "66.667" },
+				],
+			})
+		).toContain("two decimal places");
 	});
 
 	test("round-trips decimal split weights", ({ expect }) => {
-		const saved: FlagshipRule[] = [
-			{
-				conditions: [],
-				priority: 1,
-				rollout: { attribute: "userId", percentage: 33.5 },
-				serve_variation: "treatment",
-			},
-		];
+		const saved: FlagshipRule[] = [splitRule(1, 33.5, "treatment", "userId")];
 		const { defaultServe } = inferDefaultServe(
 			saved,
 			"a",
@@ -432,46 +528,106 @@ describe("percentage split", () => {
 		expect(defaultServeToRules(defaultServe, 1, "a", nameById)).toEqual(saved);
 	});
 
-	test("credits the uncovered remainder to the default variant", ({
-		expect,
-	}) => {
-		const { defaultServe } = inferDefaultServe(
-			[
-				{
-					conditions: [],
-					priority: 1,
-					rollout: { percentage: 30 },
-					serve_variation: "control",
-				},
-			],
+	test("preserves a lone rule serving the default variant", ({ expect }) => {
+		const saved: FlagshipRule[] = [splitRule(1, 30, "control")];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
 			"a",
 			variations,
 			idByName
 		);
-		expect(defaultServe.splits).toEqual([
-			{ variationId: "a", weight: "100" },
-			{ variationId: "b", weight: "0" },
-			{ variationId: "c", weight: "0" },
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
+	});
+
+	test("preserves a catch-all rule without a rollout after a split", ({
+		expect,
+	}) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 30, "treatment"),
+			{ conditions: [], priority: 2, serve_variation: "holdback" },
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
+	});
+
+	test("round-trips a Wrangler split ending with the default variant", ({
+		expect,
+	}) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 30, "treatment", "userId"),
+			splitRule(2, 100, "control", "userId"),
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(targetingRules).toEqual([]);
+		expect(defaultServe.mode).toBe("percentage");
+		expect(defaultServe.splits.slice(0, 2)).toEqual([
+			{ variationId: "b", weight: "30" },
+			{ variationId: "a", weight: "70" },
 		]);
-		expect(validateDefaultServe(defaultServe)).toBeNull();
+		expect(defaultServeToRules(defaultServe, 1, "a", nameById)).toEqual(saved);
+	});
+
+	test("preserves a partial default-variant rule ending a split", ({
+		expect,
+	}) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 30, "treatment"),
+			splitRule(2, 60, "control"),
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
+	});
+
+	test("round-trips a full split to a non-default variant", ({ expect }) => {
+		const rules = defaultServeToRules(
+			{
+				mode: "percentage",
+				splits: [
+					{ variationId: "b", weight: "100" },
+					{ variationId: "a", weight: "0" },
+					{ variationId: "c", weight: "0" },
+				],
+				targetingKey: "",
+			},
+			1,
+			"a",
+			nameById
+		);
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			rules,
+			"a",
+			variations,
+			idByName
+		);
+		expect(targetingRules).toEqual([]);
+		expect(defaultServe.mode).toBe("percentage");
+		expect(defaultServeToRules(defaultServe, 1, "a", nameById)).toEqual(rules);
 	});
 
 	test("keeps rules bucketed by different attributes editable", ({
 		expect,
 	}) => {
 		const mixed: FlagshipRule[] = [
-			{
-				conditions: [],
-				priority: 1,
-				rollout: { attribute: "userId", percentage: 25 },
-				serve_variation: "treatment",
-			},
-			{
-				conditions: [],
-				priority: 2,
-				rollout: { attribute: "accountId", percentage: 100 },
-				serve_variation: "holdback",
-			},
+			splitRule(1, 25, "treatment", "userId"),
+			splitRule(2, 100, "holdback", "accountId"),
 		];
 		const { defaultServe, targetingRules } = inferDefaultServe(
 			mixed,
@@ -483,37 +639,68 @@ describe("percentage split", () => {
 		expect(targetingRules).toEqual(mixed);
 	});
 
-	test("sums repeated variants instead of dropping a rule", ({ expect }) => {
-		const { defaultServe } = inferDefaultServe(
-			[
-				{
-					conditions: [],
-					priority: 1,
-					rollout: { percentage: 25 },
-					serve_variation: "treatment",
-				},
-				{
-					conditions: [],
-					priority: 2,
-					rollout: { percentage: 50 },
-					serve_variation: "treatment",
-				},
-				{
-					conditions: [],
-					priority: 3,
-					rollout: { percentage: 100 },
-					serve_variation: "holdback",
-				},
-			],
+	test("preserves repeated ranges for the same variant", ({ expect }) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 25, "treatment"),
+			splitRule(2, 50, "treatment"),
+			splitRule(3, 100, "holdback"),
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
 			"a",
 			variations,
 			idByName
 		);
-		expect(defaultServe.splits).toEqual([
-			{ variationId: "b", weight: "50" },
-			{ variationId: "c", weight: "50" },
-			{ variationId: "a", weight: "0" },
-		]);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
+	});
+
+	test("preserves nonadjacent ranges for the same variant", ({ expect }) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 25, "treatment"),
+			splitRule(2, 50, "holdback"),
+			splitRule(3, 75, "treatment"),
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
+	});
+
+	test("preserves decreasing thresholds for unrelated edits", ({ expect }) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 80, "treatment"),
+			splitRule(2, 30, "holdback"),
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
+	});
+
+	test("round-trips a default variant range before another variant", ({
+		expect,
+	}) => {
+		const saved: FlagshipRule[] = [
+			splitRule(1, 30, "control"),
+			splitRule(2, 100, "treatment"),
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(targetingRules).toEqual([]);
+		expect(defaultServeToRules(defaultServe, 1, "a", nameById)).toEqual(saved);
 	});
 });
 
@@ -521,35 +708,16 @@ describe("canonicalRules", () => {
 	test("ignores rule order and priority gaps", ({ expect }) => {
 		const saved: FlagshipRule[] = [
 			{ conditions: [], priority: 9, serve_variation: "b" },
-			{
-				conditions: [],
-				priority: 4,
-				rollout: { percentage: 25 },
-				serve_variation: "a",
-			},
+			splitRule(4, 25, "a"),
 		];
 		const resent: FlagshipRule[] = [
-			{
-				conditions: [],
-				priority: 1,
-				rollout: { percentage: 25 },
-				serve_variation: "a",
-			},
+			splitRule(1, 25, "a"),
 			{ conditions: [], priority: 2, serve_variation: "b" },
 		];
 		expect(canonicalRules(resent)).toBe(canonicalRules(saved));
 		expect(
 			canonicalRules([{ conditions: [], priority: 1, serve_variation: "a" }])
-		).not.toBe(
-			canonicalRules([
-				{
-					conditions: [],
-					priority: 1,
-					rollout: { percentage: 100 },
-					serve_variation: "a",
-				},
-			])
-		);
+		).not.toBe(canonicalRules([splitRule(1, 100, "a")]));
 	});
 });
 

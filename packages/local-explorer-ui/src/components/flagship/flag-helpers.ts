@@ -14,10 +14,12 @@ export const FLAGSHIP_OPERATOR_LABELS: Record<FlagshipOperator, string> = {
 	equals: "Equals",
 	greater_than: "Greater than",
 	greater_than_or_equals: "Greater than or equal",
+	has: "Has",
 	in: "Is one of",
 	less_than: "Less than",
 	less_than_or_equals: "Less than or equal",
 	not_equals: "Does not equal",
+	not_has: "Does not have",
 	not_in: "Is not one of",
 	starts_with: "Starts with",
 };
@@ -50,15 +52,15 @@ export interface RuleDraft {
 	serveVariationId: string;
 }
 
-export type DefaultServeMode = "percentage" | "variation";
-
-export interface SplitDraft {
+interface SplitDraft {
 	variationId: string;
 	weight: string;
 }
 
 export interface DefaultServeDraft {
-	mode: DefaultServeMode;
+	/** Keep a final rule serving the default variant, as Wrangler writes it. */
+	explicitDefaultRule?: boolean;
+	mode: "percentage" | "variation";
 	splits: SplitDraft[];
 	targetingKey: string;
 }
@@ -96,7 +98,7 @@ function draftCondition(
 	};
 }
 
-export function flattenRuleConditions(
+function flattenRuleConditions(
 	conditions: FlagshipCondition[]
 ): RuleConditionDraft[] | null {
 	const drafts: RuleConditionDraft[] = [];
@@ -230,6 +232,22 @@ export function buildRuleConditions(
 		: [{ clauses, logical_operator: "AND" }];
 }
 
+/**
+ * Remove a condition, promoting its successor to `AND` when the removed
+ * condition started a group, so that the remaining groups keep their meaning.
+ */
+export function removeCondition(
+	conditions: RuleConditionDraft[],
+	index: number
+): RuleConditionDraft[] {
+	const next = conditions.filter((_, current) => current !== index);
+	const successor = next[index];
+	if (conditions[index]?.joinOperator === "AND" && successor !== undefined) {
+		next[index] = { ...successor, joinOperator: "AND" };
+	}
+	return next;
+}
+
 function comparableConditions(conditions: RuleConditionDraft[]): unknown {
 	return conditions.map(
 		({
@@ -248,7 +266,7 @@ export function canonicalRules(rules: FlagshipRule[] = []): string {
 		[...rules]
 			.sort((a, b) => a.priority - b.priority)
 			.map((rule, index) => ({
-				conditions: rule.conditions ?? [],
+				conditions: rule.conditions,
 				priority: index + 1,
 				rollout:
 					rule.rollout === undefined
@@ -336,31 +354,22 @@ export function validateRuleDrafts(
 				return `Rule ${ruleIndex + 1} matches every request and must be last.`;
 			}
 		}
-		if (rule.rollout !== null) {
-			const percentage = Number(rule.rollout.percentage);
-			if (
-				rule.rollout.percentage.trim() === "" ||
-				!Number.isFinite(percentage) ||
-				percentage < 0 ||
-				percentage > 100
-			) {
-				return `Rule ${ruleIndex + 1} rollout must be between 0 and 100%.`;
-			}
+		if (rule.rollout !== null && !isValidPercentage(rule.rollout.percentage)) {
+			return `Rule ${ruleIndex + 1} rollout must be between 0 and 100% with at most two decimal places.`;
 		}
 	}
 	return null;
 }
 
-/**
- * A lone rule that always matches stays an ordinary catch-all rule, so that the
- * editor keeps showing it verbatim rather than folding it into a split.
- */
-function isSplitGroup(trailing: FlagshipRule[]): boolean {
-	if (trailing.length >= 2) {
-		return true;
-	}
-	const [only] = trailing;
-	return only?.rollout !== undefined && only.rollout.percentage < 100;
+function isValidPercentage(raw: string): boolean {
+	const percentage = Number(raw);
+	return (
+		raw.trim() !== "" &&
+		Number.isFinite(percentage) &&
+		percentage >= 0 &&
+		percentage <= 100 &&
+		Math.abs(percentage * 100 - Math.round(percentage * 100)) <= 1e-9
+	);
 }
 
 /**
@@ -389,16 +398,38 @@ export function alignSplits(
 	return ordered;
 }
 
-export function evenSplits(variations: VariationDraft[]): SplitDraft[] {
-	if (variations.length === 0) {
-		return [];
-	}
-	const base = Math.floor(100 / variations.length);
-	const remainder = 100 - base * variations.length;
-	return variations.map((variation, index) => ({
+/**
+ * Split evenly with the default variant last, so that it is served by falling
+ * through rather than by an extra rule.
+ */
+export function evenSplits(
+	variations: VariationDraft[],
+	defaultVariationId: string
+): SplitDraft[] {
+	const ordered = [
+		...variations.filter((variation) => variation.id !== defaultVariationId),
+		...variations.filter((variation) => variation.id === defaultVariationId),
+	];
+	const base = Math.floor(100 / ordered.length);
+	const remainder = 100 - base * ordered.length;
+	return ordered.map((variation, index) => ({
 		variationId: variation.id,
 		weight: String(base + (index < remainder ? 1 : 0)),
 	}));
+}
+
+export function serveDefaultVariation(
+	variations: VariationDraft[],
+	defaultVariationId: string
+): DefaultServeDraft {
+	return {
+		mode: "variation",
+		splits: variations.map((variation) => ({
+			variationId: variation.id,
+			weight: variation.id === defaultVariationId ? "100" : "0",
+		})),
+		targetingKey: "",
+	};
 }
 
 /**
@@ -418,26 +449,15 @@ export function inferDefaultServe(
 		splitStart -= 1;
 	}
 	const trailing = sorted.slice(splitStart);
-	const servesKnownVariants = trailing.every((rule) =>
-		variationIdByName.has(rule.serve_variation)
-	);
-	// A single targeting key drives the whole split, so rules bucketed by
-	// different attributes cannot be merged into one without changing them.
-	const sharesTargetingKey =
-		new Set(trailing.map((rule) => rule.rollout?.attribute ?? "")).size <= 1;
-
-	if (!isSplitGroup(trailing) || !servesKnownVariants || !sharesTargetingKey) {
-		return {
-			defaultServe: {
-				mode: "variation",
-				splits: variations.map((variation) => ({
-					variationId: variation.id,
-					weight: variation.id === defaultVariationId ? "100" : "0",
-				})),
-				targetingKey: "",
-			},
-			targetingRules: sorted,
-		};
+	const unchanged = {
+		defaultServe: serveDefaultVariation(variations, defaultVariationId),
+		targetingRules: sorted,
+	};
+	if (
+		trailing.length === 0 ||
+		!trailing.every((rule) => variationIdByName.has(rule.serve_variation))
+	) {
+		return unchanged;
 	}
 
 	const weightById = new Map<string, number>();
@@ -445,7 +465,7 @@ export function inferDefaultServe(
 	let previous = 0;
 	for (const rule of trailing) {
 		const cumulative = rule.rollout?.percentage ?? 100;
-		const weight = Math.max(0, cumulative - previous);
+		const weight = Math.max(0, toHundredths(cumulative - previous));
 		previous = cumulative;
 		const variationId = variationIdByName.get(rule.serve_variation) ?? "";
 		if (!weightById.has(variationId)) {
@@ -454,7 +474,7 @@ export function inferDefaultServe(
 		weightById.set(variationId, (weightById.get(variationId) ?? 0) + weight);
 	}
 	// Whatever the split does not cover falls through to the default variant.
-	const remainder = Math.max(0, 100 - previous);
+	const remainder = Math.max(0, toHundredths(100 - previous));
 	if (remainder > 0) {
 		if (!weightById.has(defaultVariationId)) {
 			order.push(defaultVariationId);
@@ -465,27 +485,36 @@ export function inferDefaultServe(
 		);
 	}
 
-	const known = new Set(variations.map((variation) => variation.id));
-	const splits: SplitDraft[] = order.flatMap((variationId) =>
-		known.has(variationId)
-			? [{ variationId, weight: String(weightById.get(variationId) ?? 0) }]
-			: []
-	);
-	for (const variation of variations) {
-		if (!weightById.has(variation.id)) {
-			splits.push({ variationId: variation.id, weight: "0" });
-		}
-	}
-
-	const [firstSplitRule] = trailing;
-	return {
-		defaultServe: {
-			mode: "percentage",
-			splits,
-			targetingKey: firstSplitRule?.rollout?.attribute ?? "",
-		},
-		targetingRules: sorted.slice(0, splitStart),
+	const defaultServe: DefaultServeDraft = {
+		explicitDefaultRule:
+			variationIdByName.get(trailing.at(-1)?.serve_variation ?? "") ===
+			defaultVariationId,
+		mode: "percentage",
+		splits: alignSplits(
+			order.map((variationId) => ({
+				variationId,
+				weight: String(weightById.get(variationId) ?? 0),
+			})),
+			variations
+		),
+		targetingKey: trailing[0]?.rollout?.attribute ?? "",
 	};
+	// Only read the rules back as a split if saving it unchanged rewrites them
+	// exactly, so that unrelated edits cannot move any bucket assignment.
+	const encoded = defaultServeToRules(
+		defaultServe,
+		1,
+		defaultVariationId,
+		new Map(variations.map((variation) => [variation.id, variation.name]))
+	);
+	if (canonicalRules(encoded) !== canonicalRules(trailing)) {
+		return unchanged;
+	}
+	return { defaultServe, targetingRules: sorted.slice(0, splitStart) };
+}
+
+function toHundredths(value: number): number {
+	return Math.round(value * 100) / 100;
 }
 
 /**
@@ -495,7 +524,8 @@ export function inferDefaultServe(
  * Percentages accumulate so that the bucket, which depends only on the
  * targeting key and is therefore identical for every rule, selects exactly one
  * variant. The final rule uses 100% so it always matches, and is dropped when
- * it serves the default variant because falling through has the same result.
+ * it serves the default variant because falling through has the same result,
+ * unless the split was read from rules that kept it explicitly.
  */
 export function defaultServeToRules(
 	serve: DefaultServeDraft,
@@ -525,43 +555,10 @@ export function defaultServeToRules(
 		percentage,
 	});
 
-	const [onlyActive] = active;
-	if (active.length === 1 && onlyActive !== undefined) {
-		return onlyActive.variationId === defaultVariationId
-			? []
-			: [
-					{
-						conditions: [],
-						priority: startPriority,
-						rollout: rollout(100),
-						serve_variation: onlyActive.name,
-					},
-				];
-	}
-
-	if (active.length === 2) {
-		const target = active.find(
-			(split) => split.variationId !== defaultVariationId
-		);
-		const servesDefault = active.some(
-			(split) => split.variationId === defaultVariationId
-		);
-		if (target !== undefined && servesDefault) {
-			return [
-				{
-					conditions: [],
-					priority: startPriority,
-					rollout: rollout(target.weight),
-					serve_variation: target.name,
-				},
-			];
-		}
-	}
-
 	const rules: FlagshipRule[] = [];
 	let cumulative = 0;
 	active.forEach((split, index) => {
-		cumulative += split.weight;
+		cumulative = toHundredths(cumulative + split.weight);
 		const isLast = index === active.length - 1;
 		rules.push({
 			conditions: [],
@@ -571,7 +568,10 @@ export function defaultServeToRules(
 		});
 	});
 
-	if (active.at(-1)?.variationId === defaultVariationId) {
+	if (
+		active.at(-1)?.variationId === defaultVariationId &&
+		serve.explicitDefaultRule !== true
+	) {
 		rules.pop();
 	}
 	return rules;
@@ -583,16 +583,10 @@ export function validateDefaultServe(serve: DefaultServeDraft): string | null {
 	}
 	let total = 0;
 	for (const split of serve.splits) {
-		const weight = Number(split.weight);
-		if (
-			split.weight.trim() === "" ||
-			!Number.isFinite(weight) ||
-			weight < 0 ||
-			weight > 100
-		) {
-			return "Each percentage split must be between 0 and 100.";
+		if (!isValidPercentage(split.weight)) {
+			return "Each percentage split must be between 0 and 100 with at most two decimal places.";
 		}
-		total += weight;
+		total += Number(split.weight);
 	}
 	return Math.abs(total - 100) < 1e-9
 		? null
@@ -605,9 +599,9 @@ export function sanitizeVariationName(raw: string): string {
 
 export const FLAG_TYPE_LABELS: Record<FlagType, string> = {
 	boolean: "Boolean",
-	json: "JSON",
 	number: "Number",
 	string: "String",
+	json: "JSON",
 };
 
 export interface VariationDraft {
@@ -650,26 +644,7 @@ export function defaultVariationsForType(
 	];
 }
 
-export function inferFlagType(
-	variations: Record<string, unknown> | undefined
-): FlagType {
-	const [first] = Object.values(variations ?? {});
-	if (typeof first === "boolean") {
-		return "boolean";
-	}
-	if (typeof first === "number") {
-		return "number";
-	}
-	if (typeof first === "string") {
-		return "string";
-	}
-	return "json";
-}
-
-export function serializeVariationValue(
-	type: FlagType,
-	value: unknown
-): string {
+function serializeVariationValue(type: FlagType, value: unknown): string {
 	if (type === "boolean") {
 		return value === true ? "true" : "false";
 	}
@@ -684,7 +659,7 @@ export function serializeVariationValue(
 
 export function variationDraftsFrom(
 	type: FlagType,
-	variations: Record<string, unknown> | undefined
+	variations: Record<string, unknown>
 ): [VariationDraft, ...VariationDraft[]] {
 	function toDraft([name, value]: [string, unknown]): VariationDraft {
 		return {
@@ -694,7 +669,7 @@ export function variationDraftsFrom(
 		};
 	}
 
-	const [first, ...rest] = Object.entries(variations ?? {});
+	const [first, ...rest] = Object.entries(variations);
 	if (first === undefined) {
 		return defaultVariationsForType(type);
 	}
@@ -753,12 +728,7 @@ export function parseVariationValue(
 	return { ok: true, value: raw };
 }
 
-export type ContextValueType =
-	| "boolean"
-	| "json"
-	| "null"
-	| "number"
-	| "string";
+type ContextValueType = "boolean" | "json" | "null" | "number" | "string";
 
 export function parseContextValue(raw: string): {
 	type: ContextValueType;

@@ -25,6 +25,7 @@ const REASON_VARIANTS: Record<EvaluationReason, BadgeVariant> = {
 	DISABLED: "warning",
 	ERROR: "error",
 	SPLIT: "info",
+	STATIC: "secondary",
 	TARGETING_MATCH: "success",
 };
 

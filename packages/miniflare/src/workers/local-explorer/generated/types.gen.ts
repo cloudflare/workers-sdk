@@ -492,7 +492,9 @@ export type FlagshipBaseCondition = {
 		| "starts_with"
 		| "ends_with"
 		| "in"
-		| "not_in";
+		| "not_in"
+		| "has"
+		| "not_has";
 	value: unknown;
 };
 
@@ -541,7 +543,7 @@ export type FlagshipFlag = {
 	 */
 	description?: string | null;
 	/**
-	 * Whether targeting rules are evaluated
+	 * Whether the flag is enabled
 	 */
 	enabled: boolean;
 	/**
@@ -577,7 +579,13 @@ export type FlagshipEvaluation = {
 	/**
 	 * Why this value was served
 	 */
-	reason: "TARGETING_MATCH" | "DEFAULT" | "DISABLED" | "SPLIT" | "ERROR";
+	reason:
+		| "STATIC"
+		| "TARGETING_MATCH"
+		| "DEFAULT"
+		| "DISABLED"
+		| "SPLIT"
+		| "ERROR";
 	errorCode?: string;
 	errorMessage?: string;
 };
@@ -2928,29 +2936,29 @@ export type FlagshipListFlagsResponse =
 export type FlagshipCreateFlagData = {
 	body: {
 		/**
-		 * Flag key.
+		 * Flag key
 		 */
 		key: string;
 		/**
-		 * Human readable description.
+		 * Human readable description
 		 */
 		description?: string | null;
 		/**
-		 * Whether targeting rules are evaluated.
+		 * Whether the flag is enabled
 		 */
 		enabled?: boolean;
 		/**
-		 * Variation served when no rule matches.
+		 * Variation served when no rule matches
 		 */
 		default_variation: string;
 		/**
-		 * Named values the flag can serve.
+		 * Named values the flag can serve
 		 */
 		variations: {
 			[key: string]: unknown;
 		};
 		/**
-		 * Targeting rules, in priority order.
+		 * Targeting rules, in priority order
 		 */
 		rules?: Array<FlagshipRule>;
 	};
@@ -3030,25 +3038,25 @@ export type FlagshipDeleteFlagResponse =
 export type FlagshipUpdateFlagData = {
 	body: {
 		/**
-		 * Human readable description.
+		 * Human readable description
 		 */
 		description?: string | null;
 		/**
-		 * Whether the flag is enabled.
+		 * Whether the flag is enabled
 		 */
 		enabled?: boolean;
 		/**
-		 * The variation served when no targeting rule matches.
+		 * Variation served when no rule matches
 		 */
 		default_variation?: string;
 		/**
-		 * Named values the flag can serve.
+		 * Named values the flag can serve
 		 */
 		variations?: {
 			[key: string]: unknown;
 		};
 		/**
-		 * Targeting rules, in priority order. Replaces the existing rules.
+		 * Targeting rules, in priority order
 		 */
 		rules?: Array<FlagshipRule>;
 	};

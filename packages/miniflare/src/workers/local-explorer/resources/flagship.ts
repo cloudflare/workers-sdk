@@ -52,25 +52,22 @@ function flagPath(appId: string, flagKey: string, suffix = ""): string {
 	return appPath(appId, `/flags/${encodeURIComponent(flagKey)}${suffix}`);
 }
 
-async function findAppOwner(
+/** Returns the first peer whose list at `path` contains a matching entry. */
+async function findPeer<T>(
 	c: AppContext,
-	appId: string
+	path: string,
+	matches: (entry: T) => boolean
 ): Promise<string | null> {
 	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) {
-		return null;
-	}
 	const owners = await Promise.all(
 		peerUrls.map(async (url) => {
-			const response = await fetchFromPeer(url, APPS_PATH);
+			const response = await fetchFromPeer(url, path);
 			if (!response?.ok) {
 				return null;
 			}
 			try {
-				const data = (await response.json()) as { result?: FlagshipApp[] };
-				return data.result?.some((app) => app.id === appId) === true
-					? url
-					: null;
+				const data = (await response.json()) as { result?: T[] };
+				return data.result?.some(matches) === true ? url : null;
 			} catch {
 				return null;
 			}
@@ -79,39 +76,23 @@ async function findAppOwner(
 	return owners.find((url) => url !== null) ?? null;
 }
 
-function workerHasApp(worker: LocalExplorerWorker, appId: string): boolean {
-	return (
-		worker.bindings?.flagship?.some((binding) => binding.id === appId) === true
-	);
+function findAppOwner(c: AppContext, appId: string): Promise<string | null> {
+	return findPeer<FlagshipApp>(c, APPS_PATH, (app) => app.id === appId);
 }
 
-async function findWorkerOwner(
+function findWorkerOwner(
 	c: AppContext,
 	workerName: string,
 	appId: string
 ): Promise<string | null> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
-	const owners = await Promise.all(
-		peerUrls.map(async (url) => {
-			const response = await fetchFromPeer(url, "/local/workers");
-			if (!response?.ok) {
-				return null;
-			}
-			try {
-				const data = (await response.json()) as {
-					result?: LocalExplorerWorker[];
-				};
-				return data.result?.some(
-					(worker) => worker.name === workerName && workerHasApp(worker, appId)
-				) === true
-					? url
-					: null;
-			} catch {
-				return null;
-			}
-		})
+	return findPeer<LocalExplorerWorker>(
+		c,
+		"/local/workers",
+		(worker) =>
+			worker.name === workerName &&
+			worker.bindings?.flagship?.some((binding) => binding.id === appId) ===
+				true
 	);
-	return owners.find((url) => url !== null) ?? null;
 }
 
 function withWorkerQuery(path: string, worker: string): string {
@@ -224,19 +205,15 @@ export async function createFlagshipFlag(
 		c,
 		appId,
 		appPath(appId, "/flags"),
-		async (admin) => {
-			try {
-				const created = await admin.createFlag({
+		(admin) =>
+			flagResult(c, body.key, 400, () =>
+				admin.createFlag({
 					...body,
 					description: body.description ?? undefined,
 					enabled: body.enabled ?? false,
 					rules: body.rules ?? [],
-				});
-				return c.json(wrapResponse(created));
-			} catch (error) {
-				return flagError(error, body.key, 400);
-			}
-		},
+				})
+			),
 		jsonInit("POST", body)
 	);
 }
@@ -251,13 +228,8 @@ export async function updateFlagshipFlag(
 		c,
 		appId,
 		flagPath(appId, flagKey),
-		async (admin) => {
-			try {
-				return c.json(wrapResponse(await admin.patchFlag(flagKey, body)));
-			} catch (error) {
-				return flagError(error, flagKey, 400);
-			}
-		},
+		(admin) =>
+			flagResult(c, flagKey, 400, () => admin.patchFlag(flagKey, body)),
 		jsonInit("PATCH", body)
 	);
 }
@@ -271,14 +243,11 @@ export async function deleteFlagshipFlag(
 		c,
 		appId,
 		flagPath(appId, flagKey),
-		async (admin) => {
-			try {
+		(admin) =>
+			flagResult(c, flagKey, 400, async () => {
 				await admin.deleteFlag(flagKey);
-				return c.json(wrapResponse({ success: true }));
-			} catch (error) {
-				return flagError(error, flagKey, 400);
-			}
-		},
+				return { success: true };
+			}),
 		{ method: "DELETE" }
 	);
 }
@@ -293,33 +262,34 @@ export async function evaluateFlagshipFlag(
 		c,
 		appId,
 		flagPath(appId, flagKey, "/evaluate"),
-		async (admin) => {
-			try {
-				return c.json(wrapResponse(await admin.evaluateFlag(flagKey, context)));
-			} catch (error) {
-				return flagError(error, flagKey, 500);
-			}
-		},
+		(admin) =>
+			flagResult(c, flagKey, 500, () => admin.evaluateFlag(flagKey, context)),
 		jsonInit("POST", { context })
 	);
 }
 
-function flagError(
-	error: unknown,
+/** Runs a flag operation, mapping store errors to API error responses. */
+async function flagResult(
+	c: AppContext,
 	flagKey: string,
-	fallbackStatus: 400 | 500
-): Response {
-	const message = error instanceof Error ? error.message : String(error);
-	if (message === flagNotFoundMessage(flagKey)) {
+	fallbackStatus: 400 | 500,
+	operation: () => Promise<unknown>
+): Promise<Response> {
+	try {
+		return c.json(wrapResponse(await operation()));
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		if (message === flagNotFoundMessage(flagKey)) {
+			return errorResponse(
+				404,
+				FLAGSHIP_ERROR_NOT_FOUND,
+				`Flag '${flagKey}' not found.`
+			);
+		}
 		return errorResponse(
-			404,
-			FLAGSHIP_ERROR_NOT_FOUND,
-			`Flag '${flagKey}' not found.`
+			fallbackStatus,
+			fallbackStatus === 400 ? FLAGSHIP_ERROR_INVALID_FLAG : 10001,
+			message
 		);
 	}
-	return errorResponse(
-		fallbackStatus,
-		fallbackStatus === 400 ? FLAGSHIP_ERROR_INVALID_FLAG : 10001,
-		message
-	);
 }

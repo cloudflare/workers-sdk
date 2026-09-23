@@ -59,6 +59,11 @@ export const Route = createFileRoute("/flagship/$appId")({
 		return { flags: response.data?.result ?? [] };
 	},
 	notFoundComponent: NotFound,
+	// Reset open dialogs so they cannot write one worker's flag to another.
+	remountDeps: ({ loaderDeps, params }) => ({
+		appId: params.appId,
+		worker: loaderDeps.worker,
+	}),
 	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
 		worker: typeof search.worker === "string" ? search.worker : undefined,
 	}),
@@ -126,9 +131,6 @@ function FlagshipAppView(): JSX.Element {
 	}
 
 	async function toggleFlag(flag: FlagshipFlag): Promise<void> {
-		if (flag.key === undefined) {
-			return;
-		}
 		setPendingKey(flag.key);
 		try {
 			await flagshipUpdateFlag({
@@ -150,7 +152,7 @@ function FlagshipAppView(): JSX.Element {
 	}
 
 	async function confirmDelete(): Promise<void> {
-		if (deleteTarget?.key === undefined) {
+		if (deleteTarget === null) {
 			return;
 		}
 		setDeleting(true);

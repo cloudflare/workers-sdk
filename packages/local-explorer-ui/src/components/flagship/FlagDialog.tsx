@@ -19,11 +19,11 @@ import {
 	FLAG_TYPE_LABELS,
 	flagshipErrorMessage,
 	inferDefaultServe,
-	inferFlagType,
 	parseVariationValue,
 	ruleDraftsFrom,
 	ruleDraftsToRules,
 	sanitizeVariationName,
+	serveDefaultVariation,
 	validateDefaultServe,
 	validateFlagKey,
 	validateRuleDrafts,
@@ -38,13 +38,13 @@ import { RuleEditor } from "./RuleEditor";
 import type { FlagshipFlag, FlagshipUpdateFlagData } from "../../api";
 import type { JSX } from "react";
 
-const TYPE_TABS: Array<{ className: string; label: string; value: FlagType }> =
-	[
-		{ className: "flex-1 justify-center", label: "Boolean", value: "boolean" },
-		{ className: "flex-1 justify-center", label: "Number", value: "number" },
-		{ className: "flex-1 justify-center", label: "String", value: "string" },
-		{ className: "flex-1 justify-center", label: "JSON", value: "json" },
-	];
+const TYPE_TABS = (
+	Object.entries(FLAG_TYPE_LABELS) as Array<[FlagType, string]>
+).map(([value, label]) => ({
+	className: "flex-1 justify-center",
+	label,
+	value,
+}));
 
 interface FlagDialogProps {
 	appId: string;
@@ -74,20 +74,6 @@ interface FormError {
 	message: string;
 	variationId?: string;
 	variationField?: "name" | "value";
-}
-
-function serveDefaultVariation(
-	variations: VariationDraft[],
-	defaultVariationId: string
-): DefaultServeDraft {
-	return {
-		mode: "variation",
-		splits: variations.map((variation) => ({
-			variationId: variation.id,
-			weight: variation.id === defaultVariationId ? "100" : "0",
-		})),
-		targetingKey: "",
-	};
 }
 
 function emptyForm(): FormState {
@@ -136,7 +122,7 @@ function changedFields(flag: FlagshipFlag, next: SavedValues): UpdateBody {
 }
 
 function formFromFlag(flag: FlagshipFlag): FormState {
-	const type = flag.type ?? inferFlagType(flag.variations);
+	const { type } = flag;
 	const variations = variationDraftsFrom(type, flag.variations);
 	const current = variations.find((row) => row.name === flag.default_variation);
 	const defaultVariationId = current?.id ?? variations[0].id;
@@ -196,9 +182,7 @@ export function FlagDialog({
 	const existing = useMemo(
 		() =>
 			new Set(
-				flags.flatMap((entry) =>
-					entry.key === undefined || entry.key === flag?.key ? [] : [entry.key]
-				)
+				flags.flatMap((entry) => (entry.key === flag?.key ? [] : [entry.key]))
 			),
 		[flag?.key, flags]
 	);
@@ -239,14 +223,12 @@ export function FlagDialog({
 		patch: Partial<Pick<VariationDraft, "name" | "value">>
 	): void {
 		setError((current) => (current?.variationId === id ? null : current));
-		setForm((current) => {
-			return {
-				...current,
-				variations: current.variations.map((row) =>
-					row.id === id ? { ...row, ...patch } : row
-				),
-			};
-		});
+		setForm((current) => ({
+			...current,
+			variations: current.variations.map((row) =>
+				row.id === id ? { ...row, ...patch } : row
+			),
+		}));
 	}
 
 	function addVariation(): void {
@@ -368,10 +350,7 @@ export function FlagDialog({
 			usesSplit
 		);
 		if (ruleError !== null) {
-			setError({
-				field: "rules",
-				message: ruleError,
-			});
+			setError({ field: "rules", message: ruleError });
 			return;
 		}
 		const splitError = usesSplit ? validateDefaultServe(defaultServe) : null;
@@ -393,7 +372,11 @@ export function FlagDialog({
 		];
 
 		const defaultVariation = defaultRow.name.trim();
-		const description = form.description.trim() || null;
+		const savedDescription = flag?.description ?? null;
+		const description =
+			form.description === (savedDescription ?? "")
+				? savedDescription
+				: form.description.trim() || null;
 
 		setSaving(true);
 		try {
