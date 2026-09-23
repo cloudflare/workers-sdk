@@ -21,6 +21,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { defu } from "defu";
+import * as vite from "vite";
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
 import { isPreviewBuild } from "./build-output-env";
 import { readBuildOutputPreview } from "./build-output-preview";
@@ -34,7 +35,6 @@ import type {
 } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
-import * as vite from "vite";
 
 type ParsedInputConfigWithWorker = Omit<ParsedInputConfig, "worker"> & {
 	worker: ParsedInputWorkerConfig;
