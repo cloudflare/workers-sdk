@@ -2112,9 +2112,6 @@ importers:
       '@types/ws':
         specifier: ^8.5.7
         version: 8.5.13
-      cloudflare:
-        specifier: ^5.2.0
-        version: 5.2.0(encoding@0.1.13)
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2

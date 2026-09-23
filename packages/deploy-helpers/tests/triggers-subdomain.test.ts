@@ -12,7 +12,6 @@ const ACCOUNT_ID = "some-account-id";
 describe("getWorkersDevSubdomain", () => {
 	const confirm = vi.fn();
 	const fetchResult = vi.fn();
-	const getWorker = vi.fn();
 	const prompt = vi.fn();
 
 	beforeEach(() => {
@@ -33,24 +32,23 @@ describe("getWorkersDevSubdomain", () => {
 					if (path.endsWith("/workers/subdomain") && init?.method === "PUT") {
 						return { subdomain: "my-project" };
 					}
+					if (path.endsWith("/workers/workers/my-worker")) {
+						return {
+							subdomain: {
+								enabled: true,
+								previews_enabled: true,
+								url: "https://my-worker.example.workers.dev",
+								preview_url_suffix: "-my-worker.example.workers.dev",
+							},
+						};
+					}
 					throw new Error(
 						`Unexpected request: ${init?.method ?? "GET"} ${path}`
 					);
 				}
 			);
-		getWorker.mockReset().mockResolvedValue({
-			subdomain: {
-				enabled: true,
-				previews_enabled: true,
-				url: "https://my-worker.example.workers.dev",
-				preview_url_suffix: "-my-worker.example.workers.dev",
-			},
-		});
 		initDeployHelpersContext({
 			confirm,
-			createCloudflareClient: (() => ({
-				workers: { beta: { workers: { get: getWorker } } },
-			})) as never,
 			fetchKVGetValue: (() => {}) as never,
 			fetchListResult: (() => {}) as never,
 			fetchPagedListResult: (() => {}) as never,
@@ -96,14 +94,13 @@ describe("getWorkersDevSubdomain", () => {
 		).resolves.toBeUndefined();
 	});
 
-	it("gets the Worker subdomain through the Cloudflare SDK", async ({
-		expect,
-	}) => {
+	it("gets the Worker subdomain through the REST API", async ({ expect }) => {
 		const subdomain = await getWorkerSubdomain({}, ACCOUNT_ID, "my-worker");
 
-		expect(getWorker).toHaveBeenCalledWith("my-worker", {
-			account_id: ACCOUNT_ID,
-		});
+		expect(fetchResult).toHaveBeenCalledWith(
+			{},
+			`/accounts/${ACCOUNT_ID}/workers/workers/my-worker`
+		);
 		expect(subdomain).toEqual({
 			enabled: true,
 			previews_enabled: true,
