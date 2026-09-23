@@ -37,6 +37,24 @@ describe("installCloudflareVitePlugin", () => {
 			);
 		});
 
+		it("installs a requested plugin version or tag", async ({ expect }) => {
+			await installCloudflareVitePlugin({
+				packageManager: "npm",
+				projectPath: "/test/project",
+				isWorkspaceRoot: false,
+				version: "beta",
+			});
+
+			expect(installSpy).toHaveBeenCalledWith(
+				"npm",
+				["@cloudflare/vite-plugin@beta"],
+				expect.objectContaining({
+					dev: true,
+					doneText: expect.stringContaining("@cloudflare/vite-plugin@beta"),
+				})
+			);
+		});
+
 		it("does not attempt to upgrade Vite", async ({ expect }) => {
 			await installCloudflareVitePlugin({
 				packageManager: "npm",

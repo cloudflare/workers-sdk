@@ -10,7 +10,7 @@ import type { AutoConfigFrameworkPackageInfo } from "../../src/frameworks";
 const context = createMockContext();
 
 const BASE_OPTIONS = {
-	target: "cf" as const,
+	target: "wrangler" as const,
 	projectPath: process.cwd(),
 	workerName: "my-angular-app",
 	outputDir: "dist/my-angular-app/",

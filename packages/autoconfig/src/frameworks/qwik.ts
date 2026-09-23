@@ -8,6 +8,7 @@ import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import * as typescriptParser from "recast/parsers/typescript";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
 import type {
@@ -21,7 +22,15 @@ export class Qwik extends Framework {
 		projectPath,
 		dryRun,
 		packageManager,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		if (target === "cf") {
+			throw new AutoConfigFrameworkConfigurationError(
+				`cf does not support automatic configuration for ${this.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
+				{ telemetryMessage: "autoconfig framework unsupported for cf" }
+			);
+		}
+
 		if (!dryRun) {
 			// Add the workers integration
 			const cmd = [
