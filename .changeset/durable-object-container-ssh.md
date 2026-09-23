@@ -2,7 +2,7 @@
 "wrangler": minor
 "@cloudflare/workers-utils": minor
 "@cloudflare/deploy-helpers": minor
-"@cloudflare/containers-shared": patch
+"@cloudflare/containers-shared": minor
 ---
 
 Configure SSH for experimental Durable Object-managed Containers
