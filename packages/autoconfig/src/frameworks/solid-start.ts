@@ -7,6 +7,7 @@ import {
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
 import type {
@@ -18,7 +19,15 @@ export class SolidStart extends Framework {
 	async configure({
 		projectPath,
 		dryRun,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		if (target === "cf") {
+			throw new AutoConfigFrameworkConfigurationError(
+				`cf does not support automatic configuration for ${this.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
+				{ telemetryMessage: "autoconfig framework unsupported for cf" }
+			);
+		}
+
 		if (!dryRun) {
 			const solidStartVersion = this.frameworkVersion;
 

@@ -19,7 +19,7 @@ const context = createMockContext();
 
 function getBaseOptions() {
 	return {
-		target: "cf" as const,
+		target: "wrangler" as const,
 		projectPath: process.cwd(),
 		workerName: "my-vike-app",
 		outputDir: "",

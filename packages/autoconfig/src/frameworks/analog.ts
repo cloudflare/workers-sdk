@@ -8,6 +8,7 @@ import {
 } from "@cloudflare/shared-ast-primitives";
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
 import type {
 	ConfigurationOptions,
@@ -18,7 +19,15 @@ export class Analog extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		if (target === "cf") {
+			throw new AutoConfigFrameworkConfigurationError(
+				`cf does not support automatic configuration for ${this.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
+				{ telemetryMessage: "autoconfig framework unsupported for cf" }
+			);
+		}
+
 		if (!dryRun) {
 			await updateViteConfig(projectPath);
 		}
