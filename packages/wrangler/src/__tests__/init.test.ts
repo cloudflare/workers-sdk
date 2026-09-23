@@ -663,19 +663,25 @@ describe("init", () => {
 
 		function mockSupportingDashRequests(expectedAccountId: string) {
 			msw.use(
-				// This is fetched twice in normal usage
+				// Checks that the Worker exists before downloading it.
 				http.get(
-					`*/accounts/:accountId/workers/services/:scriptName`,
+					`*/accounts/:accountId/workers/workers/:workerName`,
 					({ params }) => {
 						expect(params.accountId).toEqual(expectedAccountId);
-						expect(params.scriptName).toEqual(worker.service.id);
+						expect(params.workerName).toEqual(worker.service.id);
 
 						return HttpResponse.json(
 							{
 								success: true,
 								errors: [],
 								messages: [],
-								result: worker.service,
+								result: {
+									id: `tag:${worker.service.id}`,
+									name: worker.service.id,
+									tags: [],
+									created_on: "1987-09-27",
+									updated_on: "1987-09-27",
+								},
 							},
 							{ status: 200 }
 						);
@@ -980,19 +986,19 @@ describe("init", () => {
 		it("should fail on init --from-dash on non-existent worker name", async () => {
 			msw.use(
 				http.get(
-					`*/accounts/:accountId/workers/services/:scriptName`,
+					`*/accounts/:accountId/workers/workers/:workerName`,
 					() => {
 						return HttpResponse.json(
 							{
 								success: false,
 								errors: [
 									{
-										code: 10090,
-										message: "workers.api.error.service_not_found",
+										code: 10007,
+										message: "This Worker does not exist on your account.",
 									},
 								],
 								messages: [],
-								result: worker.service,
+								result: null,
 							},
 							{ status: 404 }
 						);

@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
+import { fetchWorker } from "@cloudflare/deploy-helpers";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
@@ -81,10 +82,11 @@ export const init = createCommand({
 		if (args.fromDash && !args.delegateC3) {
 			const accountId = await requireAuth({});
 			try {
-				await fetchResult<ServiceMetadataRes>(
+				await fetchWorker(
 					// `wrangler init` is not run from within a Workers project, so there will be no config file to define the compliance region.
 					COMPLIANCE_REGION_CONFIG_UNKNOWN,
-					`/accounts/${accountId}/workers/services/${args.fromDash}`
+					accountId,
+					args.fromDash
 				);
 			} catch (err) {
 				if (isWorkerNotFoundError(err)) {
