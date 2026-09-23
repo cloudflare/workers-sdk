@@ -250,6 +250,41 @@ describe("parseJSONC", () => {
 		});
 	});
 
+	it("should fail to parse duplicate object keys when disallowed", ({
+		expect,
+	}) => {
+		const file = "wrangler.jsonc";
+		const fileText = `{
+	"name": "test-worker",
+	"previews": {},
+	"observability": { "enabled": true },
+	"previews": {}
+}`;
+		try {
+			parseJSONC(fileText, file, {
+				allowTrailingComma: true,
+				disallowDuplicateObjectKeys: true,
+			});
+			expect.fail("parseJSONC did not throw");
+		} catch (err) {
+			expect({ ...(err as Error) }).toStrictEqual({
+				name: "ParseError",
+				text: 'Duplicate property "previews" is not allowed.',
+				kind: "error",
+				location: {
+					file,
+					fileText,
+					length: 10,
+					line: 5,
+					column: 1,
+					lineText: '\t"previews": {}',
+				},
+				notes: [],
+				telemetryMessage: "JSON(C) duplicate property",
+			});
+		}
+	});
+
 	it("should fail to parse jsonc with invalid string", ({ expect }) => {
 		try {
 			parseJSONC(`\n{\n"version" "1\n}\n`);

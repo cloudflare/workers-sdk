@@ -134,7 +134,10 @@ const parseRawConfigFile = (configPath: string): RawConfig => {
 	}
 
 	if (configPath.endsWith(".json") || configPath.endsWith(".jsonc")) {
-		return parseJSONC(readFileSync(configPath), configPath) as RawConfig;
+		return parseJSONC(readFileSync(configPath), configPath, {
+			allowTrailingComma: true,
+			disallowDuplicateObjectKeys: true,
+		}) as RawConfig;
 	}
 
 	return {};
