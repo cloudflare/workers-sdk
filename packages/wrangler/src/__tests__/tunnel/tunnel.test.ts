@@ -11,9 +11,9 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { CloudflareTunnel } from "../../tunnel/client";
+import type { ChildProcess } from "node:child_process";
 
-// Mock spawnCloudflared so `tunnel run` tests don't need a real binary.
-// The mock emits "exit" on next tick so the handler's Promise resolves.
+// Mock spawnCloudflared so tunnel command tests don't need a real binary.
 vi.mock("@cloudflare/workers-utils", async () => {
 	const actual = await vi.importActual("@cloudflare/workers-utils");
 	return {
@@ -30,9 +30,13 @@ vi.mock("@cloudflare/workers-utils", async () => {
 				cp.killed = true;
 				return true;
 			};
-			process.nextTick(() => cp.emit("exit", 0, null));
 			return cp;
 		}),
+		createChildProcessController: vi.fn((child: ChildProcess) => ({
+			exited: Promise.resolve({ code: 0, signal: null }),
+			terminationRequested: false,
+			terminate: () => child.kill(),
+		})),
 	};
 });
 
@@ -261,13 +265,15 @@ describe("tunnel commands", () => {
 		it("should spawn cloudflared with correct args for quick tunnel", async ({
 			expect,
 		}) => {
-			const { spawnCloudflared } = await import("@cloudflare/workers-utils");
+			const { createChildProcessController, spawnCloudflared } =
+				await import("@cloudflare/workers-utils");
 
 			await runWrangler("tunnel quick-start http://localhost:3000");
 
 			expect(spawnCloudflared).toHaveBeenCalledTimes(1);
 			const [calledArgs] = vi.mocked(spawnCloudflared).mock.calls[0] as [
 				string[],
+				unknown,
 			];
 
 			// Verify quick tunnel args: no auth, uses --url
@@ -275,6 +281,10 @@ describe("tunnel commands", () => {
 			expect(calledArgs).toContain("--url");
 			expect(calledArgs).toContain("http://localhost:3000");
 			expect(calledArgs).toContain("--no-autoupdate");
+			expect(createChildProcessController).toHaveBeenCalledWith(
+				expect.anything(),
+				{ forwardSignals: true }
+			);
 		});
 
 		it("should require a URL argument", async ({ expect }) => {
@@ -288,7 +298,8 @@ describe("tunnel commands", () => {
 		it("should pass token via TUNNEL_TOKEN env var, not CLI args", async ({
 			expect,
 		}) => {
-			const { spawnCloudflared } = await import("@cloudflare/workers-utils");
+			const { createChildProcessController, spawnCloudflared } =
+				await import("@cloudflare/workers-utils");
 
 			await runWrangler("tunnel run --token TEST_TOKEN");
 
@@ -302,6 +313,10 @@ describe("tunnel commands", () => {
 
 			// Token must be passed via env var
 			expect(calledOpts?.env?.TUNNEL_TOKEN).toBe("TEST_TOKEN");
+			expect(createChildProcessController).toHaveBeenCalledWith(
+				expect.anything(),
+				{ forwardSignals: true }
+			);
 		});
 
 		it("should require tunnel or token", async ({ expect }) => {

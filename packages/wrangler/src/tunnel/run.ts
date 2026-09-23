@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import {
+	createChildProcessController,
 	getGlobalConfigPath,
 	spawnCloudflared,
 	UserError,
@@ -104,117 +105,66 @@ export const tunnelRunCommand = createCommand({
 
 		// Spawn cloudflared process with automatic binary management.
 		// Token is passed via env var to avoid leaking in `ps` output.
-		const cloudflared = await spawnCloudflared(cloudflaredArgs, {
+		const child = await spawnCloudflared(cloudflaredArgs, {
 			env: { TUNNEL_TOKEN: tokenStr },
 			confirmDownload: (message) => confirm(message),
 			logger,
 		});
-
-		// Track if we've already started shutting down
-		let isShuttingDown = false;
-
-		// Handle SIGINT/SIGTERM to gracefully shut down
-		const shutdownHandler = () => {
-			if (isShuttingDown) {
-				return;
-			}
-			isShuttingDown = true;
-
-			logger.log("\n\nShutting down tunnel...");
-
-			// Give cloudflared time to clean up
-			cloudflared.kill("SIGTERM");
-
-			// Force kill after timeout
-			const forceKillTimer = setTimeout(() => {
-				if (!cloudflared.killed) {
-					logger.debug("Force killing cloudflared...");
-					cloudflared.kill("SIGKILL");
-				}
-			}, 5000);
-			forceKillTimer.unref();
-		};
-
-		process.on("SIGINT", shutdownHandler);
-		process.on("SIGTERM", shutdownHandler);
-
-		const cleanup = () => {
-			process.removeListener("SIGINT", shutdownHandler);
-			process.removeListener("SIGTERM", shutdownHandler);
-		};
+		const controller = createChildProcessController(child, {
+			forwardSignals: true,
+		});
 
 		// Handle stderr for cloudflared output
-		if (cloudflared.stderr) {
-			cloudflared.stderr.on("data", (data: Buffer) => {
+		if (child.stderr) {
+			child.stderr.on("data", (data: Buffer) => {
 				// cloudflared outputs info to stderr
 				process.stderr.write(data.toString());
 			});
 		}
 
-		// Return a promise that resolves/rejects based on the child process lifecycle.
-		// This avoids calling process.exit() and lets the command infrastructure handle exit.
-		return new Promise<void>((resolve, reject) => {
-			cloudflared.on("error", (error) => {
-				cleanup();
-				if (isShuttingDown) {
-					resolve();
-					return;
-				}
+		let exit;
+		try {
+			exit = await controller.exited;
+		} catch (error) {
+			if (controller.terminationRequested) {
+				return;
+			}
 
-				let message = `Failed to run cloudflared: ${error.message}`;
-
-				if (error.message.includes("ENOENT")) {
-					message +=
-						`\n\nThe cloudflared binary could not be executed.\n` +
-						`This might be a permissions issue or the binary is corrupted.\n\n` +
-						`Try removing the cache and running again:\n` +
-						`  rm -rf ${join(getGlobalConfigPath(), "cloudflared")}\n` +
-						`  wrangler tunnel run ${tunnelId || "--token <token>"}`;
-				}
-
-				reject(
-					new UserError(message, {
-						telemetryMessage: "tunnel run cloudflared spawn failed",
-					})
-				);
+			let message = `Failed to run cloudflared: ${error instanceof Error ? error.message : String(error)}`;
+			if (error instanceof Error && error.message.includes("ENOENT")) {
+				message +=
+					`\n\nThe cloudflared binary could not be executed.\n` +
+					`This might be a permissions issue or the binary is corrupted.\n\n` +
+					`Try removing the cache and running again:\n` +
+					`  rm -rf ${join(getGlobalConfigPath(), "cloudflared")}\n` +
+					`  wrangler tunnel run ${tunnelId || "--token <token>"}`;
+			}
+			throw new UserError(message, {
+				telemetryMessage: "tunnel run cloudflared spawn failed",
 			});
+		}
 
-			cloudflared.on("exit", (code, signal) => {
-				cleanup();
-				if (isShuttingDown) {
-					logger.log("Tunnel stopped.");
-					resolve();
-					return;
-				}
-
-				if (signal) {
-					logger.log(`\ncloudflared terminated by signal: ${signal}`);
-					resolve();
-					return;
-				}
-
-				if (code !== 0 && code !== null) {
-					let message = `cloudflared exited with code ${code}`;
-
-					if (code === 1) {
-						message +=
-							`\n\nThis might indicate:\n` +
-							`  - Invalid tunnel configuration\n` +
-							`  - Network connectivity issues\n` +
-							`  - Authentication problems\n\n` +
-							`Try running with --log-level debug for more information.`;
-					}
-
-					reject(
-						new UserError(message, {
-							telemetryMessage: "tunnel run cloudflared exited",
-						})
-					);
-					return;
-				}
-
-				resolve();
+		if (controller.terminationRequested) {
+			logger.log("Tunnel stopped.");
+			return;
+		}
+		if (exit.signal) {
+			logger.log(`\ncloudflared terminated by signal: ${exit.signal}`);
+			return;
+		}
+		if (exit.code !== 0 && exit.code !== null) {
+			let message = `cloudflared exited with code ${exit.code}`;
+			if (exit.code === 1) {
+				message +=
+					`\n\nThis might indicate:\n` +
+					`  - Invalid tunnel configuration\n` +
+					`  - Network connectivity issues\n` +
+					`  - Authentication problems\n\n` +
+					`Try running with --log-level debug for more information.`;
+			}
+			throw new UserError(message, {
+				telemetryMessage: "tunnel run cloudflared exited",
 			});
-		});
+		}
 	},
 });
