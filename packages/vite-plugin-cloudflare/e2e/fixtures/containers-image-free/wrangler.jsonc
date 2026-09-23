@@ -1,0 +1,12 @@
+{
+	"name": "containers-image-free",
+	"main": "index.js",
+	"compatibility_date": "2026-09-21",
+	"containers": [
+		{ "class_name": "Probe", "scheduling_policy": "durable_object" },
+	],
+	"durable_objects": {
+		"bindings": [{ "name": "PROBE", "class_name": "Probe" }],
+	},
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["Probe"] }],
+}
