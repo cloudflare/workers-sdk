@@ -3266,6 +3266,7 @@ export class Miniflare {
 				: configuredHost);
 		if (protocol === "udp") {
 			const { address, family } = await lookup(host);
+			this.#checkDisposed();
 			const socket = dgram.createSocket(family === 6 ? "udp6" : "udp4");
 			this.#dispatchConnectDatagramSockets.add(socket);
 			socket.once("close", () =>
