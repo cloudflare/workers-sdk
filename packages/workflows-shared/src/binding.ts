@@ -218,22 +218,25 @@ export type WorkflowBatchCreateResult = {
 	}[];
 };
 
-const retentionDurationSchema = z.union([
-	z.number(),
-	z.string().refine(
-		(value) => {
-			try {
-				return Number.isFinite(ms(value));
-			} catch {
-				return false;
-			}
-		},
-		{
-			message:
-				"Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.",
+// Numeric durations are whole milliseconds; both forms must be positive. A
+// single refinement keeps one error message for every invalid duration.
+const retentionDurationSchema = z.union([z.number(), z.string()]).refine(
+	(value) => {
+		if (typeof value === "number") {
+			return Number.isInteger(value) && value > 0;
 		}
-	),
-]);
+		try {
+			const duration = ms(value);
+			return Number.isFinite(duration) && duration > 0;
+		} catch {
+			return false;
+		}
+	},
+	{
+		message:
+			"Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.",
+	}
+);
 
 const workflowInstanceCreateOptionsSchema = z.object({
 	id: z.string().optional(),
@@ -449,11 +452,16 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 					"body"
 				);
 			}
+			// Reserved ids are only rejected by the object form; the deprecated
+			// array form keeps accepting every id that create() accepts.
 			if (
 				instanceOptions.id !== undefined &&
 				(!isValidWorkflowInstanceId(instanceOptions.id) ||
-					["batch", "terminate", "terminateAll"].includes(instanceOptions.id) ||
-					/^cf_[0-9a-f]{64}$/.test(instanceOptions.id))
+					(!isLegacyBatch &&
+						(["batch", "terminate", "terminateAll"].includes(
+							instanceOptions.id
+						) ||
+							/^cf_[0-9a-f]{64}$/.test(instanceOptions.id))))
 			) {
 				if (isLegacyBatch) {
 					throw new WorkflowError("Workflow instance has invalid id");
@@ -474,6 +482,11 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 					.filter((id): id is string => id !== undefined)
 			),
 		];
+		// Finish every pending persistence deletion before probing, so a queued
+		// deletion cannot remove an instance this batch recreates.
+		await Promise.all(
+			providedIds.map((id) => waitForPersistedInstanceDelete(this.env, id))
+		);
 		const existing = new Set<string>();
 		await Promise.all(
 			providedIds.map(async (id) => {

@@ -589,6 +589,34 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
+		it("should only accept positive retention durations", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+
+			for (const successRetention of [-1, 0, 0.5, "0 days", "-1 day"]) {
+				await expect(
+					binding.createBatch({
+						count: 1,
+						retention: { successRetention },
+					} as unknown as WorkflowBatchCreateOptions)
+				).rejects.toThrow(
+					"(body) Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc."
+				);
+			}
+
+			const result = await binding.createBatch({
+				count: 1,
+				retention: { successRetention: 1000, errorRetention: "1 day" },
+			});
+			expect(result.created).toHaveLength(1);
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(result.created[0].id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+		});
+
 		it("should prefer count when instances are also provided", async ({
 			expect,
 		}) => {
@@ -674,6 +702,94 @@ describe("WorkflowBinding", () => {
 				await expect(
 					binding.createBatch({ instances: [{ id }] })
 				).rejects.toThrow("(instance.invalid_id) Instance ID is invalid");
+			}
+		});
+
+		it("should keep accepting reserved ids in the array form", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			const ids = [
+				"batch",
+				"terminate",
+				"terminateAll",
+				`cf_${"1".repeat(64)}`,
+			];
+			setTestWorkflowCallback(async () => "done");
+
+			const results = await binding.createBatch(ids.map((id) => ({ id })));
+
+			expect(results.map((r) => r.id)).toEqual(ids);
+			for (const id of ids) {
+				await waitUntilLogEvent(
+					env.ENGINE.get(env.ENGINE.idFromName(id)),
+					InstanceEvent.WORKFLOW_SUCCESS
+				);
+			}
+		});
+
+		it("should not create anything when a pending deletion cannot complete", async ({
+			expect,
+		}) => {
+			const id = uniqueId("batch-cleanup-failed");
+			const binding = new WorkflowBinding(createExecutionContext(), {
+				ENGINE: env.ENGINE,
+				BINDING_NAME: "TEST_WORKFLOW",
+				WORKFLOW_NAME: "test-workflow",
+				MINIFLARE_LOOPBACK: {
+					fetch: () => Promise.resolve(new Response(null, { status: 500 })),
+				} as unknown as Fetcher,
+			});
+			const deletionError = `Failed to wait for persisted workflow instance '${id}' deletion`;
+
+			await expect(binding.createBatch([{ id }])).rejects.toThrow(
+				deletionError
+			);
+			await expect(
+				binding.createBatch({ instances: [{ id }] })
+			).rejects.toThrow(deletionError);
+			await expect(createBinding().get(id)).rejects.toThrow(
+				"instance.not_found"
+			);
+		});
+
+		it("should wait once for each provided id's pending deletion", async ({
+			expect,
+		}) => {
+			const first = uniqueId("batch-pending-delete");
+			const second = uniqueId("batch-pending-delete");
+			const loopbackFetch = vi.fn((_url: string) =>
+				Promise.resolve(new Response(null, { status: 204 }))
+			);
+			const binding = new WorkflowBinding(createExecutionContext(), {
+				ENGINE: env.ENGINE,
+				BINDING_NAME: "TEST_WORKFLOW",
+				WORKFLOW_NAME: "test-workflow",
+				MINIFLARE_LOOPBACK: { fetch: loopbackFetch } as unknown as Fetcher,
+			});
+			setTestWorkflowCallback(async () => "done");
+
+			const explicit = await binding.createBatch({
+				instances: [{ id: first }, { id: second }, { id: first }],
+			});
+			expect(loopbackFetch.mock.calls.map(([url]) => url).sort()).toEqual(
+				[first, second]
+					.map(
+						(id) =>
+							`http://localhost/core/workflow-storage/test-workflow/${env.ENGINE.idFromName(id).toString()}?waitForPendingDelete=1`
+					)
+					.sort()
+			);
+
+			loopbackFetch.mockClear();
+			const counted = await binding.createBatch({ count: 2 });
+			expect(loopbackFetch).not.toHaveBeenCalled();
+
+			for (const { id } of [...explicit.created, ...counted.created]) {
+				await waitUntilLogEvent(
+					env.ENGINE.get(env.ENGINE.idFromName(id)),
+					InstanceEvent.WORKFLOW_SUCCESS
+				);
 			}
 		});
 
