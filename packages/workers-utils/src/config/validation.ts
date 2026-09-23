@@ -3570,7 +3570,6 @@ function validateContainerSshConfig(
 		(typeof port === "number" &&
 			(!Number.isInteger(port) || port < 1 || port > 65535))
 	) {
-	) {
 		diagnostics.errors.push(
 			`${field}.port must be a number between 1 and 65535 inclusive`
 		);
