@@ -122,9 +122,10 @@ export type TemplateConfig = {
 	/**
 	 * The `--lang` values this template can be created with.
 	 *
-	 * Only needed for templates that ship a single set of files: templates with
-	 * `copyFiles` variants already declare their languages through the variant
-	 * keys. Defaults to `DEFAULT_TEMPLATE_LANGUAGES` when omitted.
+	 * Required for every template that ships a single set of files, including a
+	 * framework whose own CLI writes the project: `--lang` is not passed to that
+	 * CLI, so this lists what it can actually produce. Templates with `copyFiles`
+	 * variants declare their languages through the variant keys instead.
 	 */
 	languages?: string[];
 
@@ -196,20 +197,12 @@ const defaultSelectVariant = async (ctx: C3Context) => {
 };
 
 /**
- * The languages assumed for a template that ships a single set of files and
- * doesn't declare its `languages`.
- *
- * Python is deliberately excluded: it is only ever offered through an explicit
- * `copyFiles` variant, so a template that doesn't declare one cannot produce it.
- */
-const DEFAULT_TEMPLATE_LANGUAGES = ["js", "ts"];
-
-/**
  * The `--lang` values a template can be created with.
  *
  * Templates with `copyFiles` variants support exactly the variants they declare.
- * Everything else ships a single set of files, so its language is fixed and has
- * to be declared with `languages`.
+ * Everything else ships a single set of files and declares its `languages`;
+ * nothing is assumed for one that does not, because a framework CLI that only
+ * writes TypeScript would otherwise be offered for `--lang js`.
  */
 const getTemplateLanguages = (config: TemplateConfig): string[] => {
 	const { copyFiles } = config;
@@ -218,7 +211,7 @@ const getTemplateLanguages = (config: TemplateConfig): string[] => {
 		return Object.keys(copyFiles.variants);
 	}
 
-	return config.languages ?? DEFAULT_TEMPLATE_LANGUAGES;
+	return config.languages ?? [];
 };
 
 /**

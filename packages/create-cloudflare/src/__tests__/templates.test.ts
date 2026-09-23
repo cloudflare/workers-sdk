@@ -16,6 +16,7 @@ import {
 	updatePackageName,
 	writeAgentsMd,
 } from "../templates";
+import type { MultiPlatformTemplateConfig, TemplateConfig } from "../templates";
 import type { C3Args, C3Context } from "types";
 import type { Mock } from "vitest";
 
@@ -254,6 +255,90 @@ describe("filterTemplatesByLanguage", () => {
 		expect(
 			Object.keys(filterTemplatesByLanguage(getFrameworkMap({}), "js"))
 		).not.toContain("react-router");
+	});
+
+	test("should drop frameworks whose CLI only writes TypeScript when JavaScript is requested", ({
+		expect,
+	}) => {
+		// `--lang` is not passed to these CLIs, so `--lang js` used to create a
+		// TypeScript project, e.g. `--framework qwik --lang js` ran
+		// `create-qwik playground` and got its TypeScript playground.
+		const frameworks = Object.keys(
+			filterTemplatesByLanguage(getFrameworkMap({}), "js")
+		);
+
+		for (const typescriptOnly of [
+			"analog",
+			"angular",
+			"hono",
+			"next",
+			"nuxt",
+			"qwik",
+			"redwood",
+			"tanstack-start",
+			"vike",
+			"waku",
+		]) {
+			expect(frameworks).not.toContain(typescriptOnly);
+		}
+	});
+
+	test("should keep frameworks whose own CLI lets the user pick JavaScript", ({
+		expect,
+	}) => {
+		const frameworks = Object.keys(
+			filterTemplatesByLanguage(getFrameworkMap({}), "js")
+		);
+
+		expect(frameworks).toEqual(
+			expect.arrayContaining(["docusaurus", "gatsby", "solid", "svelte", "vue"])
+		);
+		expect(
+			Object.keys(
+				filterTemplatesByLanguage(getFrameworkMap({ experimental: true }), "js")
+			)
+		).toContain("next");
+	});
+
+	test("should declare the languages of every template that ships a single set of files", ({
+		expect,
+	}) => {
+		// Nothing is assumed for a template that does not declare them, so one
+		// missing here would be hidden from every `--lang`.
+		const undeclared: string[] = [];
+
+		for (const experimental of [false, true]) {
+			const maps: Record<
+				string,
+				TemplateConfig | MultiPlatformTemplateConfig
+			>[] = [
+				getFrameworkMap({ experimental }),
+				getHelloWorldTemplateMap({ experimental }),
+				getOtherTemplateMap({ experimental }),
+			];
+
+			for (const map of maps) {
+				for (const [name, config] of Object.entries(map)) {
+					const leaves: [string, TemplateConfig][] =
+						"platformVariants" in config
+							? [
+									[`${name}:pages`, config.platformVariants.pages],
+									[`${name}:workers`, config.platformVariants.workers],
+								]
+							: [[name, config]];
+
+					for (const [leafName, leaf] of leaves) {
+						const hasVariants =
+							leaf.copyFiles !== undefined && "variants" in leaf.copyFiles;
+						if (!hasVariants && !leaf.languages?.length) {
+							undeclared.push(leafName);
+						}
+					}
+				}
+			}
+		}
+
+		expect(undeclared).toEqual([]);
 	});
 
 	test("should drop templates that cannot be created in Python", ({
