@@ -1,5 +1,13 @@
 # @cloudflare/deploy-helpers
 
+## 0.15.0
+
+### Minor Changes
+
+- [#15804](https://github.com/cloudflare/workers-sdk/pull/15804) [`2f5781a`](https://github.com/cloudflare/workers-sdk/commit/2f5781a5916ec2bc5ca0a2047c4c28cc9399227c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Remove the Cloudflare SDK dependency from deploy helpers
+
+  `DeployHelpersContext` no longer requires `createCloudflareClient`; Worker subdomain lookups now use the injected `fetchResult` helper with retries. Consumers should remove the client factory from their deploy-helpers context initialization.
+
 ## 0.14.2
 
 ### Patch Changes
