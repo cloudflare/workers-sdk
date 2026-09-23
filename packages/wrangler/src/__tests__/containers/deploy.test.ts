@@ -4606,6 +4606,40 @@ describe("wrangler deploy with containers dry run", () => {
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);
 	});
+
+	it("accepts an applied migration history that deletes a class no earlier tag creates", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			migrations: [
+				...DEFAULT_DURABLE_OBJECTS.migrations,
+				{ tag: "v2", deleted_classes: ["LegacyDurableObject"] },
+			],
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		});
+
+		await runWrangler("deploy --dry-run index.js");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Your Worker has access to the following bindings:
+			Binding                                            Resource
+			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
+
+			--dry-run: exiting now."
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
 });
 
 describe("wrangler deploy with containers and dispatch namespace", () => {
