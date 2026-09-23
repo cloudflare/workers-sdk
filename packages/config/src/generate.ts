@@ -16,7 +16,7 @@ interface GenerateTypesOptions {
 }
 
 /**
- * Generate the content for worker-configuration.d.ts
+ * Generate the content for a Worker types declaration file.
  *
  * @example
  * ```typescript
@@ -24,10 +24,10 @@ interface GenerateTypesOptions {
  * import { writeFileSync } from "node:fs";
  *
  * const content = generateTypes({
- *   configPath: "./cloudflare.config.ts",
+ *   configPath: "../../cloudflare.config.ts",
  * });
  *
- * writeFileSync("worker-configuration.d.ts", content);
+ * writeFileSync(".cloudflare/types/index.d.ts", content);
  * ```
  */
 export function generateTypes({

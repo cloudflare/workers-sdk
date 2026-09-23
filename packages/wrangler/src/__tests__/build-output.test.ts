@@ -10,6 +10,13 @@ vi.mock("@cloudflare/config", async (importOriginal) => {
 	return createConfigMock(importOriginal);
 });
 
+vi.mock("../type-generation/runtime", () => ({
+	generateRuntimeTypes: vi.fn().mockResolvedValue({
+		runtimeHeader: "// Runtime types generated for test",
+		runtimeTypes: "declare type BuildRuntimeType = true;",
+	}),
+}));
+
 const WORKER_NAME = "build-output-test-worker";
 
 // The Build Output Specification holds a single Worker in the `default`
@@ -83,6 +90,14 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
 
 		expect(fs.existsSync(bundlePath("index.js"))).toBe(true);
+		const generatedTypes = fs.readFileSync(
+			path.resolve(".cloudflare/types/index.d.ts"),
+			"utf8"
+		);
+		expect(generatedTypes).toContain(
+			'import("../../cloudflare.config").default'
+		);
+		expect(generatedTypes).toContain("declare type BuildRuntimeType = true;");
 	});
 
 	it("uses the .js extension for the manifest key even when the entrypoint is .ts", async ({

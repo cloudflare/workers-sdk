@@ -69,31 +69,19 @@ export function normalizeContainerImageUris(
 }
 
 /**
- * Prepares each Worker's Container images with that Worker's registry account
- * and compliance settings.
+ * Prepares the sidecar and each Worker's Container images with that Worker's
+ * registry account and compliance settings, including Workers whose images
+ * are selected at start time.
  *
  * @param args - Planned images, Docker executable, and Vite logger.
  * @returns No value.
  */
 export async function prepareContainerImagesForVite(args: {
 	dockerPath: string;
-	containerTagToOptionsMap: ContainerTagToOptionsMap;
+	containerOptionsByWorker: ContainerOptionsByWorker;
 	logger: ViteLogger;
 }): Promise<void> {
-	const optionsByWorkerConfig = new Map<
-		ContainerWorkerConfig,
-		ContainerDevOptions[]
-	>();
-	for (const {
-		containerOptions,
-		workerConfig,
-	} of args.containerTagToOptionsMap.values()) {
-		const options = optionsByWorkerConfig.get(workerConfig) ?? [];
-		options.push(containerOptions);
-		optionsByWorkerConfig.set(workerConfig, options);
-	}
-
-	for (const [workerConfig, plannedOptions] of optionsByWorkerConfig) {
+	for (const [workerConfig, plannedOptions] of args.containerOptionsByWorker) {
 		let containerOptions = plannedOptions;
 		const hasCloudflareRegistryImages = containerOptions.some(
 			(options) =>
@@ -147,10 +135,8 @@ export function getDockerPath(): string {
 	return process.env[dockerPathEnvVar] || defaultDockerPath;
 }
 
-export type ContainerTagToOptionsMap = Map<
-	string,
-	{
-		containerOptions: ContainerDevOptions;
-		workerConfig: ContainerWorkerConfig;
-	}
+// Include every Worker with enabled Containers, even when it has no images.
+export type ContainerOptionsByWorker = Map<
+	ContainerWorkerConfig,
+	ContainerDevOptions[]
 >;
