@@ -770,9 +770,9 @@ export class ConfigController extends Controller {
 
 			// Under `--experimental-new-config`, run the new-config type-gen path
 			// instead of the legacy `checkTypesDiff`.
-			if (newConfig && fileConfig.configPath) {
+			if (newConfig) {
 				await regenerateNewConfigTypes({
-					cloudflareConfigPath: fileConfig.configPath,
+					cloudflareConfigPath: newConfig.cloudflareConfigPath,
 					workerConfig: newConfig.parsedConfig.worker,
 					types: newConfig.types,
 				});
