@@ -89,6 +89,21 @@ describe("assets base path route validation", () => {
 		expect(warn).not.toHaveBeenCalled();
 	});
 
+	it("warns when a custom domain is disabled", ({ expect }) => {
+		validate(
+			[
+				{
+					pattern: "assets.example.com",
+					custom_domain: true,
+					enabled: false,
+				},
+			],
+			"/blog/"
+		);
+
+		expect(warn).toHaveBeenCalledOnce();
+	});
+
 	it("does not warn when workers.dev is enabled", ({ expect }) => {
 		validate(["example.com/api/*"], "/blog/", true);
 

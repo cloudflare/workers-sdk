@@ -86,7 +86,7 @@ export const validateRoutes = (
 
 function routeMatchesPath(route: Route, pathname: string): boolean {
 	if (typeof route !== "string" && route.custom_domain) {
-		return true;
+		return !("enabled" in route) || route.enabled !== false;
 	}
 
 	const pattern = typeof route === "string" ? route : route.pattern;
