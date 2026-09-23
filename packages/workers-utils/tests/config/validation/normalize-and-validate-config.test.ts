@@ -2330,6 +2330,178 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
+			it("accepts a Workflow declared by both a binding and a matching export", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+								limits: { steps: 10 },
+							},
+							{
+								binding: "BATCH",
+								name: "batch",
+								class_name: "BatchWorkflow",
+								script_name: "my-worker",
+							},
+						],
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 10 },
+							},
+							BatchWorkflow: {
+								type: "workflow",
+								name: "batch",
+								limits: { steps: 5 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("errors when a binding and an export declare the same Workflow with different classes", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "OtherWorkflow",
+							},
+						],
+						exports: {
+							GreetingWorkflow: { type: "workflow", name: "greeting" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"workflows[0]" and "exports.GreetingWorkflow" both declare the Workflow "greeting", but with different classes ("OtherWorkflow" and "GreetingWorkflow").'
+				);
+			});
+
+			it("errors when a binding and an export declare the same Workflow with different limits", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+								limits: { steps: 10 },
+							},
+						],
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 20 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"workflows[0].limits" and "exports.GreetingWorkflow.limits" both configure the Workflow "greeting", but with different values. Set "limits" in only one of them.'
+				);
+			});
+
+			it("does not compare an export against a binding to another Worker's Workflow", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "OtherWorkflow",
+								script_name: "other-worker",
+							},
+						],
+						exports: {
+							GreetingWorkflow: { type: "workflow", name: "greeting" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).not.toContain("both declare");
+			});
+
+			it("errors when two exports declare the same Workflow", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: { type: "workflow", name: "greeting" },
+							OtherWorkflow: { type: "workflow", name: "greeting" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow" and "exports.OtherWorkflow" both declare the Workflow "greeting". Workflow names must be unique.'
+				);
+			});
+
+			it("errors when a binding and an inherited export declare the same Workflow with different classes", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: { type: "workflow", name: "greeting" },
+						},
+						env: {
+							staging: {
+								workflows: [
+									{
+										binding: "GREETING",
+										name: "greeting",
+										class_name: "OtherWorkflow",
+									},
+								],
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"workflows[0]" and "exports.GreetingWorkflow" both declare the Workflow "greeting", but with different classes ("OtherWorkflow" and "GreetingWorkflow").'
+				);
+			});
+
 			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{

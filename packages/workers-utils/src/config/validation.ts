@@ -14,6 +14,7 @@ import { getContainerNameToClassNameMap } from "./containers";
 import { Diagnostics } from "./diagnostics";
 import { getDurableObjectExports } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
+import { partitionExports } from "./exports";
 import {
 	all,
 	appendEnvName,
@@ -59,6 +60,7 @@ import type {
 	Rule,
 	StreamingTailConsumer,
 	TailConsumer,
+	WorkflowExport,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
 
@@ -2215,6 +2217,13 @@ function normalizeAndValidateEnvironment(
 		diagnostics,
 		environment.migrations,
 		environment.exports
+	);
+
+	validateWorkflowExportConflicts(
+		diagnostics,
+		environment.workflows,
+		environment.exports,
+		environment.name
 	);
 
 	// `exports` is inherited by named environments but `containers` is not, so the
@@ -7784,6 +7793,72 @@ function errorIfMigrationsAndExportsBothSet(
 		diagnostics.errors.push(
 			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
 		);
+	}
+}
+
+/**
+ * Deploy provisions each Workflow name once, merging a `workflows` binding
+ * owned by this Worker with the `workflow` export of the same name, so the two
+ * declarations must agree. Two exports cannot share a Workflow name.
+ */
+function validateWorkflowExportConflicts(
+	diagnostics: Diagnostics,
+	workflows: Config["workflows"],
+	exports: Config["exports"],
+	scriptName: string | undefined
+) {
+	const exportsByWorkflowName = new Map<
+		string,
+		{ className: string; workflowExport: WorkflowExport }
+	>();
+	for (const [className, workflowExport] of Object.entries(
+		partitionExports(exports).workflow
+	)) {
+		if (typeof workflowExport.name !== "string") {
+			continue;
+		}
+		const existing = exportsByWorkflowName.get(workflowExport.name);
+		if (existing !== undefined) {
+			diagnostics.errors.push(
+				`"exports.${existing.className}" and "exports.${className}" both declare the Workflow "${workflowExport.name}". Workflow names must be unique.`
+			);
+			continue;
+		}
+		exportsByWorkflowName.set(workflowExport.name, {
+			className,
+			workflowExport,
+		});
+	}
+
+	if (!Array.isArray(workflows)) {
+		return;
+	}
+	for (const [index, workflow] of workflows.entries()) {
+		if (
+			workflow.script_name !== undefined &&
+			workflow.script_name !== scriptName
+		) {
+			continue;
+		}
+		const match = exportsByWorkflowName.get(workflow.name);
+		if (match === undefined) {
+			continue;
+		}
+		const { className, workflowExport } = match;
+		if (workflow.class_name !== className) {
+			diagnostics.errors.push(
+				`"workflows[${index}]" and "exports.${className}" both declare the Workflow "${workflow.name}", but with different classes ("${workflow.class_name}" and "${className}").`
+			);
+		}
+		if (
+			workflow.limits !== undefined &&
+			workflowExport.limits !== undefined &&
+			workflow.limits.steps !== workflowExport.limits.steps
+		) {
+			diagnostics.errors.push(
+				`"workflows[${index}].limits" and "exports.${className}.limits" both configure the Workflow "${workflow.name}", but with different values. Set "limits" in only one of them.`
+			);
+		}
 	}
 }
 

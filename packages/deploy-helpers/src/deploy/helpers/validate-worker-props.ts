@@ -313,14 +313,12 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	if (config.workflows?.length) {
-		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
+	const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
 
-		if (workflowCheck.hasConflicts) {
-			logger.warn(workflowCheck.message);
-			if (!(await deployConfirm("Do you want to continue?"))) {
-				return { workerTag, tags, workerExists, aborted: true };
-			}
+	if (workflowCheck.hasConflicts) {
+		logger.warn(workflowCheck.message);
+		if (!(await deployConfirm("Do you want to continue?"))) {
+			return { workerTag, tags, workerExists, aborted: true };
 		}
 	}
 
