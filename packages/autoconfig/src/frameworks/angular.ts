@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { posix, resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
@@ -49,10 +49,39 @@ export class Angular extends Framework {
 			return {
 				buildTool: "wrangler",
 				workerConfig: {},
-				buildConfig: { assetsDirectory: outputDir },
+				buildConfig: {
+					assetsDirectory: getBrowserOutputPath(
+						angularJson,
+						workerName,
+						outputDir
+					),
+				},
 			};
 		}
 	}
+}
+
+/**
+ * Resolves the directory containing browser assets for an Angular application.
+ * The application builder writes browser assets to a nested directory, while
+ * the legacy browser builder writes directly to its configured output path.
+ */
+function getBrowserOutputPath(
+	angularJson: AngularJson,
+	projectName: string,
+	fallbackOutputDir: string
+): string {
+	const build = angularJson.projects[projectName]?.architect?.build;
+	if (!build?.builder?.endsWith(":application")) {
+		return fallbackOutputDir;
+	}
+
+	const { outputPath } = build.options;
+	if (typeof outputPath === "object") {
+		return posix.join(outputPath.base, outputPath.browser ?? "browser");
+	}
+
+	return posix.join(outputPath ?? `dist/${projectName}`, "browser");
 }
 
 /**
@@ -141,8 +170,14 @@ type AngularJson = {
 		{
 			architect: {
 				build: {
+					builder?: string;
 					options: {
-						outputPath: string;
+						outputPath?:
+							| string
+							| {
+									base: string;
+									browser?: string;
+							  };
 						outputMode: string;
 						ssr?: Record<string, unknown> | boolean | null;
 						assets: string[];
