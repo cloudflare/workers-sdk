@@ -25,6 +25,7 @@ import { FLAGSHIP_PLUGIN, FLAGSHIP_PLUGIN_NAME } from "./flagship";
 import { HELLO_WORLD_PLUGIN, HELLO_WORLD_PLUGIN_NAME } from "./hello-world";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
+import { K2_PLUGIN, K2_PLUGIN_NAME } from "./k2";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
 import { MEDIA_PLUGIN, MEDIA_PLUGIN_NAME } from "./media";
 import { MTLS_PLUGIN, MTLS_PLUGIN_NAME } from "./mtls";
@@ -61,6 +62,7 @@ export const PLUGINS = {
 	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
 	[WORKFLOWS_PLUGIN_NAME]: WORKFLOWS_PLUGIN,
 	[PIPELINES_PLUGIN_NAME]: PIPELINE_PLUGIN,
+	[K2_PLUGIN_NAME]: K2_PLUGIN,
 	[SECRET_STORE_PLUGIN_NAME]: SECRET_STORE_PLUGIN,
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
@@ -126,6 +128,7 @@ export * from "./ratelimit";
 export * from "./assets";
 export * from "./workflows";
 export * from "./pipelines";
+export * from "./k2";
 export * from "./secret-store";
 export * from "./email";
 export * from "./analytics-engine";

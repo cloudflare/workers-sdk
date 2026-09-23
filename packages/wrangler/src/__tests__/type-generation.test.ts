@@ -527,6 +527,7 @@ const bindingsConfigMock: Omit<
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
 	pipelines: [{ binding: "PIPELINE", stream: "my-pipeline" }],
+	k2: [],
 	assets: {
 		binding: "ASSETS_BINDING",
 		directory: "/assets",

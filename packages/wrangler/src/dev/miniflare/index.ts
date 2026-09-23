@@ -459,6 +459,7 @@ type WorkerOptionsBindings = Pick<
 	| "queueProducers"
 	| "queueConsumers"
 	| "pipelines"
+	| "k2"
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
@@ -527,6 +528,7 @@ export function buildMiniflareBindingOptions(
 	const d1Databases = extractBindingsOfType("d1", bindings);
 	const queues = extractBindingsOfType("queue", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const hyperdrives = extractBindingsOfType("hyperdrive", bindings);
 	const workflows = extractBindingsOfType("workflow", bindings);
 	const durableObjects = extractBindingsOfType(
@@ -876,6 +878,19 @@ export function buildMiniflareBindingOptions(
 			pipelines.map((pipeline) =>
 				pipelineEntry(pipeline, remoteProxyConnectionString)
 			)
+		),
+		k2: Object.fromEntries(
+			k2.map(({ binding, stream, remote }) => {
+				validateBindingRemoteSetting("k2", remote, logger.warn);
+				return [
+					binding,
+					{
+						stream,
+						...(remote &&
+							remoteProxyConnectionString && { remoteProxyConnectionString }),
+					},
+				];
+			})
 		),
 		hyperdrives: Object.fromEntries(hyperdrives.map(hyperdriveEntry)),
 		analyticsEngineDatasets: Object.fromEntries(

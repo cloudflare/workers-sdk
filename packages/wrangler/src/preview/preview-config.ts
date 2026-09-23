@@ -674,6 +674,19 @@ export function convertBinding(
 				],
 			};
 			break;
+		case "k2":
+			if (binding.stream === undefined) {
+				break;
+			}
+			config = {
+				k2: [
+					{
+						binding: name,
+						stream: usePlaceholderValue ? REPLACE_ME : binding.stream,
+					},
+				],
+			};
+			break;
 		case "secrets_store_secret":
 			if (binding.store_id === undefined || binding.secret_name === undefined) {
 				break;

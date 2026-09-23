@@ -68,6 +68,10 @@
 		"test:e2e": {
 			"inputs": ["e2e/**"],
 			"dependsOn": ["build", "create-cloudflare#build"],
+			"passThroughEnv": [
+				"CLOUDFLARE_ACCESS_CLIENT_ID",
+				"CLOUDFLARE_ACCESS_CLIENT_SECRET"
+			],
 			"env": [
 				"$TURBO_EXTENDS$",
 				"VITEST",

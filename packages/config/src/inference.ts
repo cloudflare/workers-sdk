@@ -2,6 +2,7 @@
 
 import type {
 	JsonBinding,
+	K2Producer,
 	TextBinding,
 	TypedAiBinding,
 	TypedKvBinding,
@@ -78,6 +79,7 @@ type ExtractInstance<T, TInstance> =
  * widen the import to a wildcard or to the plain `*Binding` interfaces.
  */
 interface BindingTypeMap<TBinding> {
+	k2: K2Producer;
 	// Parameterized bindings - refine via nominal match on the binding instance
 	ai: TBinding extends TypedAiBinding<infer T> ? Ai<T> : Ai;
 	json: TBinding extends JsonBinding<infer T> ? T : never;

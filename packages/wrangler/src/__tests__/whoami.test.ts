@@ -335,6 +335,8 @@ describe("whoami", () => {
 
 			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
 
+			  - k2.read
+			  - k2.write
 			  - account:read
 			  - user:read
 			  - workers:write
@@ -412,6 +414,8 @@ describe("whoami", () => {
 
 			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
 
+			  - k2.read
+			  - k2.write
 			  - account:read
 			  - user:read
 			  - workers:write
@@ -543,6 +547,8 @@ describe("whoami", () => {
 
 			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
 
+			  - k2.read
+			  - k2.write
 			  - account:read
 			  - user:read
 			  - workers:write

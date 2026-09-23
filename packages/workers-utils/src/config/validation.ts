@@ -116,6 +116,7 @@ export type ConfigBindingFieldName =
 	| "mtls_certificates"
 	| "workflows"
 	| "pipelines"
+	| "k2"
 	| "secrets_store_secrets"
 	| "artifacts"
 	| "ratelimits"
@@ -156,6 +157,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	mtls_certificates: "mTLS Certificate",
 	workflows: "Workflow",
 	pipelines: "Pipeline",
+	k2: "K2 Stream",
 	secrets_store_secrets: "Secrets Store Secret",
 	artifacts: "Artifacts",
 	ratelimits: "Rate Limit",
@@ -202,6 +204,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	dispatch_namespace: "Dispatch Namespace",
 	mtls_certificate: "mTLS Certificate",
 	pipeline: "Pipeline",
+	k2: "K2 Stream",
 	secrets_store_secret: "Secrets Store Secret",
 	artifacts: "Artifacts",
 	logfwdr: "logfwdr",
@@ -2013,6 +2016,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validatePipelineBinding),
 			[]
 		),
+		k2: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"k2",
+			validateBindingArray(envName, validateK2Binding),
+			[]
+		),
 		secrets_store_secrets: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3621,6 +3634,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"logfwdr",
 			"mtls_certificate",
 			"pipeline",
+			"k2",
 			"worker_loader",
 			"vpc_service",
 			"flagship",
@@ -6165,6 +6179,33 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateK2Binding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(`"${field}" must have a string "binding" field.`);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "stream", "string")) {
+		diagnostics.errors.push(`"${field}" must have a string "stream" field.`);
+		isValid = false;
+	}
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"stream",
+		"remote",
+	]);
+	return isValid;
+};
+
 const validateSecretsStoreSecretBinding: ValidatorFn = (
 	diagnostics,
 	field,
@@ -6509,6 +6550,7 @@ const validatePreviewsConfig =
 				"stream",
 				"media",
 				"pipelines",
+				"k2",
 				"secrets_store_secrets",
 				"artifacts",
 				"unsafe_hello_world",
@@ -6760,6 +6802,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.secrets_store_secrets`,
 				previews.secrets_store_secrets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateK2Binding)(
+				diagnostics,
+				`${field}.k2`,
+				previews.k2,
 				undefined
 			) && isValid;
 

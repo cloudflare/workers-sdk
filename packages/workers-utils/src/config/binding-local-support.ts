@@ -60,6 +60,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	flagship: "local-and-remote",
 
 	vectorize: "remote",
+	k2: "remote",
 	mtls_certificate: "remote",
 	dispatch_namespace: "remote",
 

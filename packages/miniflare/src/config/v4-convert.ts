@@ -708,6 +708,13 @@ function addProductBindings(
 		};
 	}
 	addPipelineBindings(env, worker.pipelines, isRemote);
+	for (const [name, binding] of Object.entries(worker.k2 ?? {})) {
+		env[name] = {
+			type: "k2",
+			stream: binding.stream,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const binding of worker.email?.send_email ?? []) {
 		env[binding.name] = {
 			type: "send-email",

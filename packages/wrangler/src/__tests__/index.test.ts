@@ -84,6 +84,7 @@ describe("wrangler", () => {
 				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler k2                     Manage K2 streams [open beta]
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler r2                     📦 Manage R2 buckets & objects
@@ -185,6 +186,7 @@ describe("wrangler", () => {
 				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler k2                     Manage K2 streams [open beta]
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler r2                     📦 Manage R2 buckets & objects
