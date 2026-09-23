@@ -153,7 +153,7 @@ export const deleteCommand = createCommand({
 
 			await fetchResult(
 				config,
-				`/accounts/${accountId}/workers/services/${scriptName}`,
+				`/accounts/${accountId}/workers/workers/${scriptName}`,
 				{ method: "DELETE" },
 				new URLSearchParams({ force: needsForceDelete.toString() })
 			);

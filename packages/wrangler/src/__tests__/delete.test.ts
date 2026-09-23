@@ -692,7 +692,7 @@ function mockDeleteWorkerRequest(
 	const { env, name } = options;
 	msw.use(
 		http.delete(
-			"*/accounts/:accountId/workers/services/:scriptName",
+			"*/accounts/:accountId/workers/workers/:scriptName",
 			({ request, params }) => {
 				const url = new URL(request.url);
 
