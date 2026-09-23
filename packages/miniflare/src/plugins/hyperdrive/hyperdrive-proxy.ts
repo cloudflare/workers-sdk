@@ -24,6 +24,23 @@ const schemes = {
 	mysql: "mysql",
 };
 
+/**
+ * Swallow a socket error so it cannot crash the Node process.
+ *
+ * `pipe()` does not leave an error listener on the source. A client reset
+ * during or after the Hyperdrive handshake otherwise becomes an unhandled
+ * `error` event and takes down wrangler dev or the test runner.
+ *
+ * @param socket - Socket that may emit `error`
+ * @param peer - Other end of the proxy, destroyed along with `socket`
+ */
+function guardSocketError(socket: net.Socket, peer?: net.Socket): void {
+	socket.on("error", () => {
+		socket.destroy();
+		peer?.destroy();
+	});
+}
+
 // Initial postgres ssl request packet
 export const POSTGRES_SSL_REQUEST_PACKET = Buffer.from([
 	0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f,
@@ -177,6 +194,8 @@ export class HyperdriveProxyController {
 	) {
 		// Connect to real database
 		const dbSocket = net.connect({ host: targetHost, port: targetPort });
+		guardSocketError(clientSocket, dbSocket);
+		guardSocketError(dbSocket, clientSocket);
 		const sslmodeRequire = sslmode === "require";
 		const sslmodePrefer = sslmode === "prefer";
 		const sslmodeVerifyFull = sslmode === "verify-full";
@@ -428,6 +447,7 @@ async function createPlainTCPConnection(
 	dbSocket.on("error", () => {
 		clientSocket.destroy();
 	});
+	guardSocketError(clientSocket, dbSocket);
 
 	return dbSocket;
 }
@@ -438,10 +458,8 @@ function setupTLSConnection(
 	tlsSocket: tls.TLSSocket
 ): void {
 	// Set up error handler for runtime TLS errors
-	tlsSocket.on("error", () => {
-		clientSocket.destroy();
-		tlsSocket.destroy();
-	});
+	guardSocketError(tlsSocket, clientSocket);
+	guardSocketError(clientSocket, tlsSocket);
 
 	// Pipe sockets
 	clientSocket.pipe(tlsSocket);

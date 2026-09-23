@@ -709,3 +709,56 @@ describe("sslrootcert connection string parsing", () => {
 		expect(url.searchParams.get("sslrootcert")).toBeNull();
 	});
 });
+
+describe("Hyperdrive proxy client socket errors", () => {
+	test("a client reset does not become an unhandled error", async ({
+		expect,
+	}) => {
+		const dbServer = net.createServer((socket) => {
+			socket.on("error", () => {
+				socket.destroy();
+			});
+		});
+		await new Promise<void>((resolve) => {
+			dbServer.listen(0, "127.0.0.1", () => resolve());
+		});
+		const dbAddress = dbServer.address();
+		if (dbAddress == null || typeof dbAddress === "string") {
+			throw new Error("Expected the database server to listen on a TCP port");
+		}
+
+		const controller = new HyperdriveProxyController();
+		const proxyPort = await controller.createProxyServer({
+			name: "hd",
+			targetHost: "127.0.0.1",
+			targetPort: String(dbAddress.port),
+			scheme: "postgres",
+			sslmode: "disable",
+		});
+
+		const unhandled: unknown[] = [];
+		const onUnhandled = (error: unknown) => {
+			unhandled.push(error);
+		};
+		process.on("uncaughtException", onUnhandled);
+
+		try {
+			const client = net.connect(proxyPort, "127.0.0.1");
+			await new Promise<void>((resolve, reject) => {
+				client.once("connect", () => resolve());
+				client.once("error", reject);
+			});
+			await new Promise<void>((resolve) => {
+				client.once("close", () => resolve());
+				client.destroy(new Error("ECONNRESET"));
+			});
+			expect(unhandled).toEqual([]);
+		} finally {
+			process.off("uncaughtException", onUnhandled);
+			controller.dispose();
+			await new Promise<void>((resolve) => {
+				dbServer.close(() => resolve());
+			});
+		}
+	});
+});
