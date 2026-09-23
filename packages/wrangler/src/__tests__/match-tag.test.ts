@@ -18,22 +18,21 @@ describe("match-tag", () => {
 	mockApiToken();
 	function mockWorker(workerName: string, tag: string) {
 		const dummyWorker = {
-			id: workerName,
-			default_environment: {
-				environment: "production",
-				created_on: "1987-09-27",
-				modified_on: "1987-09-27",
-				script: {
-					id: workerName,
-					tag,
-				},
-			},
+			id: tag,
+			name: workerName,
+			tags: [],
 			created_on: "1987-09-27",
-			modified_on: "1987-09-27",
+			updated_on: "1987-09-27",
+			deployed_on: "1987-09-27",
 		};
 		msw.use(
+			// Not `once`: the SDK retries connection errors, so every attempt must fail.
 			http.get(
-				`*/accounts/:accountId/workers/services/:workerName`,
+				`*/accounts/:accountId/workers/workers/network-error-worker`,
+				() => HttpResponse.error()
+			),
+			http.get(
+				`*/accounts/:accountId/workers/workers/:workerName`,
 				({ params }) => {
 					if (params.workerName === workerName) {
 						return HttpResponse.json(
@@ -45,8 +44,6 @@ describe("match-tag", () => {
 							},
 							{ status: 200 }
 						);
-					} else if (params.workerName === "network-error-worker") {
-						return HttpResponse.error();
 					} else if (params.workerName === "auth-error-worker") {
 						return HttpResponse.json(
 							{
@@ -66,12 +63,13 @@ describe("match-tag", () => {
 								success: false,
 								errors: [
 									{
-										code: 10090,
+										code: 10007,
+										message: "This Worker does not exist on your account.",
 									},
 								],
 								messages: [],
 							},
-							{ status: 200 }
+							{ status: 404 }
 						);
 					}
 				},
@@ -136,7 +134,7 @@ describe("match-tag", () => {
 			).rejects.toMatchInlineSnapshot(
 				`
 				[Error: An error occurred while trying to validate that the Worker name matches what is expected by the build system.
-				A request to the Cloudflare API (/accounts/some-account-id/workers/services/auth-error-worker) failed.
+				A request to the Cloudflare API (/accounts/some-account-id/workers/workers/auth-error-worker) failed.
 				Authentication error [code: 10000]]
 			`
 			);
@@ -219,7 +217,7 @@ describe("match-tag", () => {
 				).rejects.toMatchInlineSnapshot(
 					`
 					[Error: An error occurred while trying to validate that the Worker name matches what is expected by the build system.
-					A request to the Cloudflare API (/accounts/some-account-id/workers/services/auth-error-worker) failed.
+					A request to the Cloudflare API (/accounts/some-account-id/workers/workers/auth-error-worker) failed.
 					Authentication error [code: 10000]]
 				`
 				);

@@ -6,12 +6,10 @@ import {
 	getCIMatchTag,
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
-import { fetchResult, logger } from "../../shared/context";
+import { logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type {
-	ComplianceConfig,
-	ServiceMetadataRes,
-} from "@cloudflare/workers-utils";
+import { fetchWorker } from "./workers-api";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_ACCOUNT_ID",
@@ -49,11 +47,8 @@ export async function verifyWorkerMatchesCITag(
 	let tag;
 
 	try {
-		const worker = await fetchResult<ServiceMetadataRes>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/services/${workerName}`
-		);
-		tag = worker.default_environment.script.tag;
+		// The Worker ID is the same value as the legacy script tag.
+		tag = (await fetchWorker(complianceConfig, accountId, workerName)).id;
 		logger.debug(`API returned with tag: ${tag} for worker: ${workerName}`);
 	} catch (e) {
 		logger.debug(e);

@@ -219,6 +219,20 @@ describe("deploy", () => {
 		mockSubDomainRequest();
 		mockGetWorkerSubdomain({ enabled: false });
 		mockUpdateWorkerSubdomain({ enabled: true });
+		// Registered last so it handles the CI tag lookup, which runs before the
+		// workers.dev subdomain lookup.
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/workers/:workerName",
+				({ params }) => {
+					expect(params.workerName).toEqual("test-name");
+					return HttpResponse.json(
+						createFetchResult({ id: "abc123", name: "test-name", tags: [] })
+					);
+				},
+				{ once: true }
+			)
+		);
 		mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
 
 		await runWrangler("deploy ./index.js");
