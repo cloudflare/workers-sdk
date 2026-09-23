@@ -884,7 +884,7 @@ export type EmailBase = {
 	from: string;
 	subject: string;
 	/**
-	 * RFC Message-ID header value. Identifies the email in the store.
+	 * RFC Message-ID header value carried by the email.
 	 */
 	messageId: string;
 	/**
@@ -895,7 +895,7 @@ export type EmailBase = {
 
 export type EmailRoutingItem = {
 	/**
-	 * Worker associated with the email, if known.
+	 * Worker that handled this captured delivery.
 	 */
 	worker?: string;
 	/**
@@ -904,13 +904,26 @@ export type EmailRoutingItem = {
 	from: string;
 	subject: string;
 	/**
-	 * RFC Message-ID header value. Identifies the email in the store.
+	 * RFC Message-ID header value. This is message content and compatibility lookup material; captureId identifies the Routing record.
 	 */
 	messageId: string;
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
 	attachments: Array<EmailAttachment>;
+	/**
+	 * Opaque identifier for this exact captured delivery.
+	 */
+	captureId?: string;
+	/**
+	 * Whether this capture can be projected into the email composer.
+	 */
+	editAndResendAvailable?: boolean;
+	editAndResendUnavailableReason?: string;
+	/**
+	 * Whether this capture contains only a portion of the original message.
+	 */
+	capturedPortion?: boolean;
 	/**
 	 * Envelope RCPT TO address.
 	 */
@@ -939,23 +952,24 @@ export type EmailRoutingItem = {
 };
 
 export type EmailRoutingDetail = {
-	/**
-	 * Worker associated with the email, if known.
-	 */
-	worker?: string;
+	worker: string;
 	/**
 	 * Envelope MAIL FROM address.
 	 */
 	from: string;
 	subject: string;
 	/**
-	 * RFC Message-ID header value. Identifies the email in the store.
+	 * RFC Message-ID header value. This is message content and compatibility lookup material; captureId identifies the Routing record.
 	 */
 	messageId: string;
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
 	attachments: Array<EmailAttachment>;
+	captureId: string;
+	editAndResendAvailable: boolean;
+	editAndResendUnavailableReason?: string;
+	capturedPortion: boolean;
 	/**
 	 * Envelope RCPT TO address.
 	 */
@@ -1077,7 +1091,7 @@ export type EmailSendingItem = {
 	from: string;
 	subject: string;
 	/**
-	 * RFC Message-ID header value. Identifies the email in the store.
+	 * RFC Message-ID header value that identifies this Sending record for detail lookup.
 	 */
 	messageId: string;
 	/**
@@ -1105,7 +1119,7 @@ export type EmailSendingDetail = {
 	from: string;
 	subject: string;
 	/**
-	 * RFC Message-ID header value. Identifies the email in the store.
+	 * RFC Message-ID header value that identifies this Sending record for detail lookup.
 	 */
 	messageId: string;
 	/**
@@ -2020,9 +2034,13 @@ export type EmailListRoutingData = {
 		 */
 		worker?: string;
 		/**
-		 * Return the details for this email instead of a paginated list.
+		 * Compatibility lookup by RFC Message-ID. Returns the newest match and accepts bracketed or bracket-stripped values.
 		 */
 		email_id?: string;
+		/**
+		 * Canonical identifier for one captured delivery. Requires `worker` and never falls back to Message-ID lookup.
+		 */
+		capture_id?: string;
 		/**
 		 * Opaque cursor for the next page of emails.
 		 */
@@ -2062,6 +2080,87 @@ export type EmailListRoutingResponses = {
 
 export type EmailListRoutingResponse =
 	EmailListRoutingResponses[keyof EmailListRoutingResponses];
+
+export type EmailResendRoutingData = {
+	body?: never;
+	path?: never;
+	query: {
+		/**
+		 * Worker that owns the exact Routing capture.
+		 */
+		worker: string;
+		/**
+		 * Opaque identifier for the exact captured delivery.
+		 */
+		capture_id: string;
+	};
+	url: "/local/email/routing/resend";
+};
+
+export type EmailResendRoutingErrors = {
+	/**
+	 * Email resend failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailResendRoutingError =
+	EmailResendRoutingErrors[keyof EmailResendRoutingErrors];
+
+export type EmailResendRoutingResponses = {
+	/**
+	 * Email resend result.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			messageId: string;
+			outcome: "ok" | "exception";
+			rejectReason?: string;
+			capturedPortion: boolean;
+		};
+	};
+};
+
+export type EmailResendRoutingResponse =
+	EmailResendRoutingResponses[keyof EmailResendRoutingResponses];
+
+export type EmailResendDraftRoutingData = {
+	body?: never;
+	path?: never;
+	query: {
+		/**
+		 * Worker that owns the exact Routing capture.
+		 */
+		worker: string;
+		/**
+		 * Opaque identifier for the exact captured delivery.
+		 */
+		capture_id: string;
+	};
+	url: "/local/email/routing/resend/draft";
+};
+
+export type EmailResendDraftRoutingErrors = {
+	/**
+	 * Composer projection failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailResendDraftRoutingError =
+	EmailResendDraftRoutingErrors[keyof EmailResendDraftRoutingErrors];
+
+export type EmailResendDraftRoutingResponses = {
+	/**
+	 * Composer projection response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: EmailSendRequest;
+	};
+};
+
+export type EmailResendDraftRoutingResponse =
+	EmailResendDraftRoutingResponses[keyof EmailResendDraftRoutingResponses];
 
 export type EmailSendRoutingData = {
 	body: EmailSendRequest;
