@@ -169,6 +169,12 @@ export type { Counter } from "./prometheus-metrics";
 export type { Tunnel, TunnelOptions } from "./tunnel";
 export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
+export {
+	createChildProcessController,
+	type ChildProcessController,
+	type ChildProcessControllerOptions,
+	type ChildProcessExit,
+} from "./child-process-controller";
 
 export * from "./cfetch";
 
