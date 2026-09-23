@@ -3567,7 +3567,9 @@ function validateContainerSshConfig(
 	const port = "port" in sshConfig ? sshConfig.port : undefined;
 	if (
 		!isOptionalProperty<{ port: number }>(sshConfig, "port", "number") ||
-		(typeof port === "number" && (port < 1 || port > 65535))
+		(typeof port === "number" &&
+			(!Number.isInteger(port) || port < 1 || port > 65535))
+	) {
 	) {
 		diagnostics.errors.push(
 			`${field}.port must be a number between 1 and 65535 inclusive`
