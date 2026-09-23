@@ -1102,6 +1102,10 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "redwood",
+			// quarantined because redwood v1.7.4 has failed to be released but that is currently
+			// the version that create-rwsdk tried to use
+			// TODO: unquarantine once the upstream redwood issue is resolved
+			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
