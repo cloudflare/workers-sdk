@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { describe, test } from "vitest";
 import {
 	createInboxRefreshCoordinator,
@@ -25,14 +26,6 @@ function deferred<T>(): Deferred<T> {
 		reject: (cause) => rejectPromise?.(cause),
 		resolve: (value) => resolvePromise?.(value),
 	};
-}
-
-function at<T>(values: T[], index: number): T {
-	const value = values[index];
-	if (value === undefined) {
-		throw new Error(`Missing deferred value at index ${index}.`);
-	}
-	return value;
 }
 
 async function flushPromises(): Promise<void> {
@@ -152,10 +145,9 @@ describe("email resend UI helpers", () => {
 	}) => {
 		let active = 0;
 		let maximumActive = 0;
-		const refreshes = [
-			deferred<"success" | "stale">(),
-			deferred<"success" | "stale">(),
-		];
+		const first = deferred<"success" | "stale">();
+		const second = deferred<"success" | "stale">();
+		const refreshes = [first, second];
 		let refreshIndex = 0;
 		const coordinator = createInboxRefreshCoordinator({
 			currentGeneration: () => 1,
@@ -164,7 +156,9 @@ describe("email resend UI helpers", () => {
 				active++;
 				maximumActive = Math.max(maximumActive, active);
 				try {
-					return await at(refreshes, refreshIndex++).promise;
+					const refresh = refreshes[refreshIndex++];
+					assert(refresh);
+					return await refresh.promise;
 				} finally {
 					active--;
 				}
@@ -176,11 +170,11 @@ describe("email resend UI helpers", () => {
 		await flushPromises();
 		expect(refreshIndex).toBe(1);
 		coordinator.request(1);
-		at(refreshes, 0).resolve("success");
+		first.resolve("success");
 		await flushPromises();
 		expect(refreshIndex).toBe(2);
 		expect(maximumActive).toBe(1);
-		at(refreshes, 1).resolve("success");
+		second.resolve("success");
 		await flushPromises();
 		expect(refreshIndex).toBe(2);
 	});
@@ -195,7 +189,11 @@ describe("email resend UI helpers", () => {
 		const coordinator = createInboxRefreshCoordinator({
 			currentGeneration: () => 1,
 			isDisposed: () => false,
-			refreshFirstPage: () => at(refreshes, refreshIndex++).promise,
+			refreshFirstPage: () => {
+				const refresh = refreshes[refreshIndex++];
+				assert(refresh);
+				return refresh.promise;
+			},
 		});
 
 		coordinator.request(1);
@@ -236,7 +234,11 @@ describe("email resend UI helpers", () => {
 		const coordinator = createInboxRefreshCoordinator({
 			currentGeneration: () => generation,
 			isDisposed: () => disposed,
-			refreshFirstPage: () => at(refreshes, refreshIndex++).promise,
+			refreshFirstPage: () => {
+				const refresh = refreshes[refreshIndex++];
+				assert(refresh);
+				return refresh.promise;
+			},
 		});
 
 		coordinator.request(1);
