@@ -150,7 +150,7 @@ npm i https://pkg.pr.new/wrangler@main
 
 We welcome new contributors! Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details.
 
-## Community
+## Cloudflare Community
 
 Join us in the official [Cloudflare Discord](https://discord.cloudflare.com/) to meet other developers, ask questions, or learn more in general.
 
