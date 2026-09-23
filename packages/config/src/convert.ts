@@ -860,7 +860,7 @@ function convertExports(
 	const converted: Exports = {};
 	const unknownExports: typeof exports = {};
 	for (const [exportName, value] of Object.entries(exports)) {
-		if (value.type === "worker") {
+		if (value.type === "worker" || value.type === "workflow") {
 			converted[exportName] = value;
 			continue;
 		}

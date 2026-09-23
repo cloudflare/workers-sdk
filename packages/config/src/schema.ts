@@ -588,6 +588,14 @@ export const WorkerEntrypointExportSchema = z.strictObject({
 	cache: z.strictObject({ enabled: z.boolean() }).optional(),
 });
 
+export const WorkflowExportSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	limits: z
+		.strictObject({ steps: z.number().int().min(1).optional() })
+		.optional(),
+});
+
 // Containers are only supported on the SQLite storage engine, so each live
 // variant enters the union split by `storage`: `container` exists on the
 // `sqlite` branch and is absent from the `legacy-kv` one. Splitting rather than
@@ -619,12 +627,7 @@ export const ExportSchema = z.union([
 	DurableObjectExpectingTransferSqliteExportSchema,
 	DurableObjectExpectingTransferLegacyKvExportSchema,
 	WorkerEntrypointExportSchema,
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	name: z.string(),
-	// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	// }),
+	WorkflowExportSchema,
 ]);
 
 const LimitsSchema = z.strictObject({

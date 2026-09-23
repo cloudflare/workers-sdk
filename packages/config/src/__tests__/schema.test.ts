@@ -1462,6 +1462,58 @@ describe("ExportSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts a workflow export", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: exportConfig.workflow({ name: "greeting" }),
+			BatchWorkflow: exportConfig.workflow({
+				name: "batch",
+				limits: { steps: 10 },
+			}),
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.data?.exports).toEqual({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: { type: "workflow", name: "batch", limits: { steps: 10 } },
+		});
+	});
+
+	it("rejects a workflow export without a name", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: { type: "workflow" },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a workflow step limit that is not a positive integer", ({
+		expect,
+	}) => {
+		for (const steps of [0, -1, 1.5]) {
+			const result = parseExports({
+				GreetingWorkflow: {
+					type: "workflow",
+					name: "greeting",
+					limits: { steps },
+				},
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+
+	it("rejects Durable Object fields on a workflow export", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: {
+				type: "workflow",
+				name: "greeting",
+				storage: "sqlite",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
 	// Containers require the SQLite storage engine. The check below is the type
 	// half of that rule: `tsc` checks this body (it is never called), so a missing
 	// error fails `check:type` via the unused `@ts-expect-error` directives.

@@ -1050,6 +1050,32 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("passes workflow exports through", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				GreetingWorkflow: { type: "workflow", name: "greeting" },
+				BatchWorkflow: {
+					type: "workflow",
+					name: "batch",
+					limits: { steps: 10 },
+				},
+			});
+		});
+
 		it("emits no exports key when the map is empty", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -1065,13 +1091,13 @@ describe("convertToWranglerConfig", () => {
 			const config = {
 				...baseWorker,
 				exports: {
-					FutureExport: { type: "workflow" },
+					FutureExport: { type: "future" },
 				},
 			} as unknown as NonNullable<ParsedInputConfig["worker"]>;
 
 			expect(() =>
 				convertToWranglerConfig({ worker: config, containers: [] })
-			).toThrow(/Unknown export types found: - FutureExport : workflow/);
+			).toThrow(/Unknown export types found: - FutureExport : future/);
 		});
 	});
 

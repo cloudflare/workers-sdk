@@ -161,6 +161,22 @@ export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 	type: "worker";
 }
 
+export interface WorkflowExportOptions {
+	/**
+	 * The name of the Workflow. It identifies the Workflow's instances and must
+	 * be unique within the account.
+	 */
+	name: string;
+	limits?: {
+		/** Maximum number of steps a single Workflow instance may run. */
+		steps?: number;
+	};
+}
+
+export interface WorkflowExport extends WorkflowExportOptions {
+	type: "workflow";
+}
+
 /**
  * Configuration for named exports declared by the Worker. Each entry's
  * key is the exported class name; the value configures the export.
@@ -215,6 +231,15 @@ export interface Exports {
 
 	/** Declares a WorkerEntrypoint export defined by this Worker. */
 	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
+
+	/**
+	 * Declares a Workflow defined by this Worker. The export's key must name a
+	 * class that extends `WorkflowEntrypoint`.
+	 *
+	 * For more information about Workflows, see the documentation at
+	 * https://developers.cloudflare.com/workflows/
+	 */
+	workflow(options: WorkflowExportOptions): WorkflowExport;
 }
 
 function durableObject<
@@ -253,6 +278,10 @@ function worker(
 	return { type: "worker", ...options };
 }
 
+function workflow(options: WorkflowExportOptions): WorkflowExport {
+	return { type: "workflow", ...options };
+}
+
 /**
  * Exports builder for configuring Worker exports.
  *
@@ -273,6 +302,7 @@ function worker(
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
  *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),
  *     Incoming:        exports.durableObject({ state: "expecting-transfer", storage: "sqlite", transferFrom: "source-worker" }),
+ *     MyWorkflow:      exports.workflow({ name: "my-workflow", limits: { steps: 100 } }),
  *   },
  * });
  *
@@ -282,4 +312,5 @@ function worker(
 export const exports: Exports = {
 	durableObject,
 	worker,
+	workflow,
 };
