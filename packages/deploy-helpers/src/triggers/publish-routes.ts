@@ -1,4 +1,4 @@
-import { ParseError, UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import {
 	confirm,
@@ -83,8 +83,22 @@ export function renderRoute(route: Route): string {
 	return result;
 }
 
-function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
+/**
+ * Whether a bulk route update should fall back to the per-zone API.
+ *
+ * Tokens without All Zones usually get HTTP 403 and code 10000. The same
+ * rejection is sometimes returned with `code: null`, which cfetch leaves
+ * unset, so a strict `code === 10000` check skips the fallback.
+ *
+ * @param e - Error thrown by the routes request
+ * @returns Whether this 403 should use the zone-based route update
+ */
+export function isRoutesPermissionError(e: unknown): e is APIError {
+	if (!(e instanceof APIError) || e.status !== 403) {
+		return false;
+	}
+
+	return e.code === 10000 || e.code == null;
 }
 
 /**
@@ -117,7 +131,7 @@ export async function publishRoutes(
 			},
 		});
 	} catch (e) {
-		if (isAuthenticationError(e)) {
+		if (isRoutesPermissionError(e)) {
 			// An authentication error is probably due to a known issue,
 			// where the user is logged in via an API token that does not have "All Zones".
 			return await publishRoutesFallback(complianceConfig, routes, {
@@ -192,7 +206,7 @@ async function publishRoutesFallback(
 						}
 					}
 				} catch (e) {
-					if (isAuthenticationError(e)) {
+					if (isRoutesPermissionError(e)) {
 						e.notes.push({
 							text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
 						});
