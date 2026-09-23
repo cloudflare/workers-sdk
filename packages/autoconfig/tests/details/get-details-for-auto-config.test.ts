@@ -15,6 +15,7 @@ const fileSystemErrors = vi.hoisted(() => ({
 	readdir: new Map<string, string>(),
 	stat: new Map<string, string>(),
 }));
+const statAliases = vi.hoisted(() => new Map<string, string>());
 
 vi.mock("node:fs/promises", async (importOriginal) => {
 	const original = await importOriginal<typeof import("node:fs/promises")>();
@@ -38,6 +39,13 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 		},
 		stat: (...args: Parameters<typeof original.stat>) => {
 			throwConfiguredError(fileSystemErrors.stat, args[0]);
+			const alias = statAliases.get(String(args[0]));
+			if (alias !== undefined) {
+				return Reflect.apply(original.stat, undefined, [
+					alias,
+					...args.slice(1),
+				]);
+			}
 			return Reflect.apply(original.stat, undefined, args);
 		},
 	};
@@ -51,6 +59,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	afterEach(() => {
 		fileSystemErrors.readdir.clear();
 		fileSystemErrors.stat.clear();
+		statAliases.clear();
 		vi.unstubAllGlobals();
 	});
 
@@ -360,6 +369,24 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({
 			outputDir: "public",
 		});
+	});
+
+	it("outputDir should require index.html to use exact casing", async ({
+		expect,
+	}) => {
+		await seed({
+			"public/INDEX.HTML": `<h1>Hello World</h1>`,
+		});
+		statAliases.set(
+			join(process.cwd(), "public", "index.html"),
+			join(process.cwd(), "public", "INDEX.HTML")
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
+		);
 	});
 
 	it("outputDir should ignore inaccessible child directories", async ({

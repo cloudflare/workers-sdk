@@ -41,19 +41,23 @@ export function assertNonConfigured(
 	);
 }
 
+function isExpectedFileSystemError(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error.code === "ENOENT" ||
+			error.code === "ENOTDIR" ||
+			error.code === "EACCES" ||
+			error.code === "EPERM")
+	);
+}
+
 async function getPathStats(path: string): Promise<Stats | undefined> {
 	try {
 		return await stat(path);
 	} catch (error) {
-		if (
-			typeof error === "object" &&
-			error !== null &&
-			"code" in error &&
-			(error.code === "ENOENT" ||
-				error.code === "ENOTDIR" ||
-				error.code === "EACCES" ||
-				error.code === "EPERM")
-		) {
+		if (isExpectedFileSystemError(error)) {
 			return undefined;
 		}
 		throw error;
@@ -61,7 +65,19 @@ async function getPathStats(path: string): Promise<Stats | undefined> {
 }
 
 async function hasIndexHtml(dir: string): Promise<boolean> {
-	return (await getPathStats(join(dir, "index.html")))?.isFile() ?? false;
+	const stats = await getPathStats(join(dir, "index.html"));
+	if (!stats?.isFile()) {
+		return false;
+	}
+
+	try {
+		return (await readdir(dir)).includes("index.html");
+	} catch (error) {
+		if (isExpectedFileSystemError(error)) {
+			return false;
+		}
+		throw error;
+	}
 }
 
 /**
