@@ -2,6 +2,7 @@ import {
 	APIError,
 	configFileName,
 	getComplianceRegionSubdomain,
+	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -159,9 +160,13 @@ export async function getWorkerSubdomain(
 	accountId: string,
 	workerName: string
 ): Promise<WorkerSubdomain> {
-	const worker = await fetchResult<{ subdomain: Partial<WorkerSubdomain> }>(
-		complianceConfig,
-		`/accounts/${accountId}/workers/workers/${workerName}`
+	const worker = await retryOnAPIFailure(
+		() =>
+			fetchResult<{ subdomain: Partial<WorkerSubdomain> }>(
+				complianceConfig,
+				`/accounts/${accountId}/workers/workers/${workerName}`
+			),
+		logger
 	);
 	return {
 		...worker.subdomain,

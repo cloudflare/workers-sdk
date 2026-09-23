@@ -108,4 +108,26 @@ describe("getWorkersDevSubdomain", () => {
 			preview_url_suffix: "-my-worker.example.workers.dev",
 		});
 	});
+
+	it("retries transient Worker subdomain lookup failures", async ({
+		expect,
+	}) => {
+		fetchResult.mockRejectedValueOnce(
+			new APIError({
+				status: 503,
+				text: "Service unavailable",
+				telemetryMessage: false,
+			})
+		);
+
+		await expect(
+			getWorkerSubdomain({}, ACCOUNT_ID, "my-worker")
+		).resolves.toEqual({
+			enabled: true,
+			previews_enabled: true,
+			url: "https://my-worker.example.workers.dev",
+			preview_url_suffix: "-my-worker.example.workers.dev",
+		});
+		expect(fetchResult).toHaveBeenCalledTimes(2);
+	});
 });
