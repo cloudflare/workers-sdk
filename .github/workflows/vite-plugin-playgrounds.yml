@@ -33,6 +33,10 @@ jobs:
           - os: ubuntu-latest
             vite: "vite-7"
     runs-on: ${{ matrix.os }}
+    env:
+      # Miniflare build outputs contain platform-specific paths. Include the OS
+      # in both the build cache key and the exported plugin build hash.
+      CI_OS: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -89,14 +93,16 @@ jobs:
               }
               console.log(`VITE_PLUGIN_BUILD_HASH=${task.hash}`);
             ' >> "$GITHUB_ENV"
+      # The exact Vite 8 workspace patch is intentionally unused after these
+      # compatibility-job downgrades.
       - name: Downgrade to Vite 6
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
         run: |
-          pnpm update -r --no-save vite@^6.1.0
+          pnpm --config.allow-unused-patches=true update -r --no-save vite@^6.1.0
       - name: Downgrade to Vite 7
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-7'
         run: |
-          pnpm update -r --no-save vite@^7.0.0
+          pnpm --config.allow-unused-patches=true update -r --no-save vite@^7.0.0
       - name: Run dev playground tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
@@ -111,7 +117,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           NODE_DEBUG: "@cloudflare:vite-plugin"
-          CI_OS: ${{ matrix.os }}
       - name: Run build/preview playground tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
@@ -126,7 +131,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           NODE_DEBUG: "@cloudflare:vite-plugin"
-          CI_OS: ${{ matrix.os }}
       - name: Upload turbo logs
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

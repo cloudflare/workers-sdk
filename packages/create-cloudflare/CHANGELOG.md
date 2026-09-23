@@ -1,5 +1,89 @@
 # create-cloudflare
 
+## 2.72.11
+
+### Patch Changes
+
+- [#15662](https://github.com/cloudflare/workers-sdk/pull/15662) [`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.8.0
+
+  This updates the bundled TOML parser that reads `wrangler.toml` to a version that addresses two advisories against 1.5.2: `GHSA-7w5x-hrqm-74c2` (a value followed by a comment with no trailing newline, such as `a=[1 #`, put the parser in an infinite loop) and `GHSA-v3rj-xjv7-4jmq` (thousands of consecutive comment lines overflowed the stack). On the old version, `wrangler deploy` against a `wrangler.toml` ending in `a=[1 #` never returned; it now fails with `Invalid TOML document: cannot find end of structure`.
+
+## 2.72.10
+
+### Patch Changes
+
+- [#15724](https://github.com/cloudflare/workers-sdk/pull/15724) [`b675116`](https://github.com/cloudflare/workers-sdk/commit/b6751167920afc4ccfa6b6b32add9bf3c6eee73e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From         | To           |
+  | ----------------- | ------------ | ------------ |
+  | create-vinext-app | 1.0.0-beta.2 | 1.0.0-beta.3 |
+
+- [#15725](https://github.com/cloudflare/workers-sdk/pull/15725) [`30f08f7`](https://github.com/cloudflare/workers-sdk/commit/30f08f73b0e954865386e997a29889185096451c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.23.0 | 3.24.0 |
+
+- [#15726](https://github.com/cloudflare/workers-sdk/pull/15726) [`61dc2b9`](https://github.com/cloudflare/workers-sdk/commit/61dc2b99a23e0c86322a6d85e3722c52220dda3f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.3.1 | 8.4.0 |
+
+## 2.72.9
+
+### Patch Changes
+
+- [#15666](https://github.com/cloudflare/workers-sdk/pull/15666) [`6d37984`](https://github.com/cloudflare/workers-sdk/commit/6d37984c644a98d48651ba2e77731d38bf019012) Thanks [@NuroDev](https://github.com/NuroDev)! - Prevent the common template's proxy and redirect examples from accepting arbitrary destinations
+
+  The examples now use fixed destinations that developers can change in the generated source instead of destinations supplied by unauthenticated requests.
+
+## 2.72.8
+
+### Patch Changes
+
+- [#14775](https://github.com/cloudflare/workers-sdk/pull/14775) [`1be7b97`](https://github.com/cloudflare/workers-sdk/commit/1be7b97035241c91edf78b4c1f0a79f3b276ff18) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Sync Local Explorer endpoint lists across agent hints
+
+  The Local Explorer endpoint list is now consistent across the three places it appears: the AGENTS.md template in `create-cloudflare`, the runtime agent hint in `wrangler dev`, and the Vite plugin agent hint. All three now include the `observability/clear` endpoint, use the canonical `/cdn-cgi/local/explorer` path, and have cross-reference comments pointing to each other.
+
+- [#15627](https://github.com/cloudflare/workers-sdk/pull/15627) [`14ed9af`](https://github.com/cloudflare/workers-sdk/commit/14ed9afbe401cbf6b19b3f5cc4265088ec8dcd07) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.3.4 | 16.3.5 |
+
+- [#15628](https://github.com/cloudflare/workers-sdk/pull/15628) [`da6a505`](https://github.com/cloudflare/workers-sdk/commit/da6a50513936a50d2a6672484567d141297a336f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.7.1 | 2.7.2 |
+
+- [#15629](https://github.com/cloudflare/workers-sdk/pull/15629) [`13e6372`](https://github.com/cloudflare/workers-sdk/commit/13e6372638c48f7be9b8b07e765b081e5eb52d9b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.1.7 | 22.1.8 |
+
+- [#15630](https://github.com/cloudflare/workers-sdk/pull/15630) [`4e5f2b9`](https://github.com/cloudflare/workers-sdk/commit/4e5f2b99da60c7d0115934eafe211f634eafe7e2) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 9.2.0 | 9.2.1 |
+
 ## 2.72.7
 
 ### Patch Changes

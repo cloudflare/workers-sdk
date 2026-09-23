@@ -33,7 +33,6 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-compatibility-flags-worker",
 					compatibilityDate: "2024-11-20",
 					compatibilityFlags: [
@@ -71,7 +70,6 @@ test("subscribes to Workflow instance events through an RPC target", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-subscription-worker",
 					compatibilityDate: "2026-08-28",
 					manifest: singleModuleManifest(`
@@ -157,7 +155,6 @@ test("subscribes to structured and streamed step outputs", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-step-output-subscription-worker",
 					compatibilityDate: "2026-08-28",
 					manifest: singleModuleManifest(`
@@ -238,7 +235,6 @@ test("persists Workflow data on file-system between runs", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2024-11-20",
 					manifest: singleModuleManifest(WORKFLOW_SCRIPT()),
@@ -395,7 +391,6 @@ function lifecycleMiniflareOpts(tmp: string): MiniflareOptions {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "lifecycle-worker",
 					compatibilityDate: "2026-03-09",
 					manifest: singleModuleManifest(LIFECYCLE_WORKFLOW_SCRIPT()),
@@ -481,6 +476,21 @@ async function waitForStepOutput(
 	}
 	throw new Error(
 		`Timed out waiting for step output "${expectedOutput}" after ${timeoutMs}ms`
+	);
+}
+
+function updateLocalExplorerWorkflowInstanceStatus(
+	mf: Miniflare,
+	id: string,
+	body: Record<string, unknown>
+): Promise<Response> {
+	return mf.dispatchFetch(
+		`http://localhost${CorePaths.EXPLORER}/api/workflows/LIFECYCLE_WORKFLOW/instances/${id}/status`,
+		{
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		}
 	);
 }
 
@@ -772,6 +782,259 @@ describe("workflow instance lifecycle methods", () => {
 		// After restart, the workflow restarts from scratch and runs to completion
 		const finalStatus = await waitForStatus(mf, "restart-test", "complete");
 		expect(finalStatus.output).toBe("workflow-complete");
+	});
+});
+
+describe("Local Explorer workflow instance status endpoint", () => {
+	test("pauses and resumes an instance using the production request schema", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+		const id = "explorer-pause-resume";
+
+		const createResponse = await mf.dispatchFetch(
+			`http://localhost/create?id=${id}`
+		);
+		await createResponse.text();
+		await waitForStepOutput(mf, id, "step-1-done");
+
+		const pauseResponse = await updateLocalExplorerWorkflowInstanceStatus(
+			mf,
+			id,
+			{ status: "pause" }
+		);
+		expect(pauseResponse.status).toBe(200);
+		const pauseBody = (await pauseResponse.json()) as {
+			result: { status: string; timestamp: string };
+			success: boolean;
+		};
+		expect(pauseBody).toMatchObject({
+			success: true,
+			result: {
+				timestamp: expect.any(String),
+			},
+		});
+		expect(["waitingForPause", "paused"]).toContain(pauseBody.result.status);
+		await waitForStatus(mf, id, "paused");
+
+		const pausedResponse = await updateLocalExplorerWorkflowInstanceStatus(
+			mf,
+			id,
+			{ status: "pause" }
+		);
+		expect(pausedResponse.status).toBe(200);
+		expect(await pausedResponse.json()).toMatchObject({
+			success: true,
+			result: {
+				status: "paused",
+				timestamp: expect.any(String),
+			},
+		});
+
+		const resumeResponse = await updateLocalExplorerWorkflowInstanceStatus(
+			mf,
+			id,
+			{ status: "resume" }
+		);
+		expect(resumeResponse.status).toBe(200);
+		const resumeBody = (await resumeResponse.json()) as {
+			result: { status: string; timestamp: string };
+			success: boolean;
+		};
+		expect(resumeBody).toMatchObject({
+			success: true,
+			result: {
+				timestamp: expect.any(String),
+			},
+		});
+		expect(["queued", "running"]).toContain(resumeBody.result.status);
+		await waitForStatus(mf, id, "complete");
+	});
+
+	test("restarts an instance from a step using the production request schema", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+		const id = "explorer-restart";
+
+		const createResponse = await mf.dispatchFetch(
+			`http://localhost/create?id=${id}`
+		);
+		await createResponse.text();
+		await waitForStepOutput(mf, id, "step-1-done");
+		const pauseResponse = await mf.dispatchFetch(
+			`http://localhost/pause?id=${id}`
+		);
+		await pauseResponse.text();
+		await waitForStatus(mf, id, "paused");
+
+		const response = await updateLocalExplorerWorkflowInstanceStatus(mf, id, {
+			status: "restart",
+			from: { name: "first step", type: "do" },
+		});
+		expect(response.status).toBe(200);
+		const responseBody = (await response.json()) as {
+			result: { status: string; timestamp: string };
+			success: boolean;
+		};
+		expect(responseBody).toMatchObject({
+			success: true,
+			result: {
+				timestamp: expect.any(String),
+			},
+		});
+		expect(["queued", "running"]).toContain(responseBody.result.status);
+		await waitForStatus(mf, id, "complete");
+	});
+
+	test("returns a conflict when restarting from an unknown step", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+		const id = "explorer-restart-unknown-step";
+
+		const createResponse = await mf.dispatchFetch(
+			`http://localhost/create?id=${id}`
+		);
+		await createResponse.text();
+		await waitForStepOutput(mf, id, "step-1-done");
+		const pauseResponse = await mf.dispatchFetch(
+			`http://localhost/pause?id=${id}`
+		);
+		await pauseResponse.text();
+		await waitForStatus(mf, id, "paused");
+
+		const response = await updateLocalExplorerWorkflowInstanceStatus(mf, id, {
+			status: "restart",
+			from: { name: "unknown step", type: "do" },
+		});
+		const body = (await response.json()) as {
+			errors: Array<{ code: number; message: string }>;
+			messages: string[];
+			result: null;
+			success: boolean;
+		};
+
+		expect(response.status).toBe(409);
+		expect(body).toEqual({
+			success: false,
+			errors: [
+				{
+					code: 10001,
+					message: expect.stringContaining("(instance.cannot_restart)"),
+				},
+			],
+			messages: [],
+			result: null,
+		});
+	});
+
+	test("terminates an instance with rollback using the production request schema", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+		const id = "explorer-terminate";
+
+		const createResponse = await mf.dispatchFetch(
+			`http://localhost/create?id=${id}`
+		);
+		await createResponse.text();
+		await waitForStepOutput(mf, id, "step-1-done");
+
+		const response = await updateLocalExplorerWorkflowInstanceStatus(mf, id, {
+			status: "terminate",
+			rollback: true,
+		});
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({
+			success: true,
+			result: {
+				status: "terminated",
+				timestamp: expect.any(String),
+			},
+		});
+		await waitForStatus(mf, id, "terminated");
+	});
+
+	test("rejects rollback for non-terminate statuses", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		for (const status of ["pause", "resume", "restart"] as const) {
+			const response = await updateLocalExplorerWorkflowInstanceStatus(
+				mf,
+				`rollback-${status}`,
+				{ status, rollback: true }
+			);
+			const body = (await response.json()) as {
+				errors: Array<{ code: number; message: string }>;
+				messages: string[];
+				result: null;
+				success: boolean;
+			};
+
+			expect(response.status).toBe(400);
+			expect(body).toEqual({
+				success: false,
+				errors: [
+					{
+						code: 10001,
+						message: "'rollback' is only valid when terminating.",
+					},
+				],
+				messages: [],
+				result: null,
+			});
+		}
+	});
+
+	test("rejects the legacy action request field", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const response = await updateLocalExplorerWorkflowInstanceStatus(
+			mf,
+			"legacy-action",
+			{ action: "pause" }
+		);
+		const body = (await response.json()) as {
+			errors: Array<{ code: number; message: string }>;
+			success: boolean;
+		};
+
+		expect(response.status).toBe(400);
+		expect(body).toMatchObject({
+			success: false,
+			errors: [{ code: 10001 }],
+		});
 	});
 });
 

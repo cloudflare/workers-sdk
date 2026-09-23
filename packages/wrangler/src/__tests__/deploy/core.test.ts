@@ -60,14 +60,6 @@ import type { OutputEntry } from "../../output";
 import type { Framework } from "@cloudflare/autoconfig";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -1257,10 +1249,18 @@ describe("deploy", () => {
 						}
 					),
 					http.get(
-						"*/accounts/preview-account-id/workers/scripts/:scriptName/subdomain",
-						() => {
+						"*/accounts/preview-account-id/workers/workers/:scriptName",
+						({ params }) => {
+							const workerName = String(params.scriptName);
 							return HttpResponse.json(
-								createFetchResult({ enabled: true, previews_enabled: true })
+								createFetchResult({
+									subdomain: {
+										enabled: true,
+										previews_enabled: true,
+										url: `https://${workerName}.test-sub-domain.workers.dev`,
+										preview_url_suffix: `-${workerName}.test-sub-domain.workers.dev`,
+									},
+								})
 							);
 						}
 					),

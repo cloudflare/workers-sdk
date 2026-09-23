@@ -481,15 +481,13 @@ export function printBindings(
 
 	if (flagship.length > 0) {
 		output.push(
-			...flagship.map(({ binding, app_id }) => {
+			...flagship.map(({ binding, app_id, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("flagship"),
 					value: app_id,
 					mode: getMode({
-						isSimulatedLocally: !context.remoteBindingsDisabled
-							? false
-							: undefined,
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
 				};
 			})
@@ -941,7 +939,7 @@ export function printBindings(
 			`${containersTitle}\n${containers
 				.map((container) =>
 					container.scheduling_policy === "durable_object"
-						? `- ${container.class_name} (durable_object)`
+						? `- ${container.class_name ?? container.name} (durable_object)`
 						: `- ${container.name} (${container.image})`
 				)
 				.join("\n")}`

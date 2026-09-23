@@ -1,5 +1,104 @@
 # @cloudflare/autoconfig
 
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+  - @cloudflare/cli-shared-helpers@0.1.36
+  - @cloudflare/config@0.17.0
+
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`ec5251a`](https://github.com/cloudflare/workers-sdk/commit/ec5251a92f561dbbba77694ac954d85298f44039)]:
+  - @cloudflare/config@0.17.0
+
+## 0.6.0
+
+### Minor Changes
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Define experimental Cloudflare configuration with a single default export
+
+  Experimental `cloudflare.config.ts` files now define settings and resources together in a default-exported `defineConfig()` call. Add a Worker under `worker`, add Containers to the `containers` array, or omit both to provide settings only.
+
+  ```ts
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineConfig({
+  	accountId: "...",
+  	complianceRegion: "public",
+  	worker: {
+  		name: "my-worker",
+  		compatibilityDate: "2026-09-18",
+  		entrypoint,
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c), [`95af41d`](https://github.com/cloudflare/workers-sdk/commit/95af41d564f7476cdda8c5923208c3b8a3ec2a11)]:
+  - @cloudflare/config@0.16.0
+  - @cloudflare/workers-utils@0.41.0
+  - @cloudflare/cli-shared-helpers@0.1.35
+
+## 0.5.1
+
+### Patch Changes
+
+- [#15694](https://github.com/cloudflare/workers-sdk/pull/15694) [`6e7c12e`](https://github.com/cloudflare/workers-sdk/commit/6e7c12eaf4cbd4545f9ba7144525198e9cf5f072) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Defer configured unsupported frameworks to an installed Cloudflare dev server
+
+  Configured `cf` projects whose detected framework is not supported by autoconfig no longer run inferred package scripts: `npm run build` as these may be invalid, e.g a build script `cf build` causes recursive calls `cf build -> npm run build -> cf build`. This allows `cf` to use its existing Cloudflare dev-server delegation instead.
+
+- Updated dependencies [[`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036), [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac), [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6)]:
+  - @cloudflare/config@0.15.0
+  - @cloudflare/workers-utils@0.40.1
+  - @cloudflare/cli-shared-helpers@0.1.34
+
+## 0.5.0
+
+### Minor Changes
+
+- [#15593](https://github.com/cloudflare/workers-sdk/pull/15593) [`e24795b`](https://github.com/cloudflare/workers-sdk/commit/e24795bcd04fdf0d27a38f4f46b58009fde197ca) Thanks [@edmundhung](https://github.com/edmundhung)! - Expose mode support for autoconfigured framework commands
+
+  Detected Astro and Vite frameworks now report that their build and development commands support `--mode`. Other frameworks remain unsupported by default.
+
+### Patch Changes
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114)]:
+  - @cloudflare/config@0.14.0
+  - @cloudflare/workers-utils@0.40.0
+  - @cloudflare/cli-shared-helpers@0.1.33
+
+## 0.4.7
+
+### Patch Changes
+
+- [#15651](https://github.com/cloudflare/workers-sdk/pull/15651) [`53c2189`](https://github.com/cloudflare/workers-sdk/commit/53c21892922f93a11b75d13d663acf327dad1695) Thanks [@edmundhung](https://github.com/edmundhung)! - Stop adding a `preview` script when configuring projects for `cf`
+
+  Projects can continue using their existing development and preview scripts, or invoke `cf dev` directly. Wrangler-targeted autoconfiguration continues to add its existing `preview` script.
+
+- Updated dependencies [[`9515011`](https://github.com/cloudflare/workers-sdk/commit/9515011dc5ecdc5abf3a0c685d80f78e307fb513)]:
+  - @cloudflare/workers-utils@0.39.1
+  - @cloudflare/cli-shared-helpers@0.1.32
+  - @cloudflare/config@0.13.0
+
+## 0.4.6
+
+### Patch Changes
+
+- [#15491](https://github.com/cloudflare/workers-sdk/pull/15491) [`6c15da1`](https://github.com/cloudflare/workers-sdk/commit/6c15da10a6f486b0cf29cbbe30cabe50b16f4b4a) Thanks [@penalosa](https://github.com/penalosa)! - Recognize Astro 7 as officially supported by autoconfig
+
+  Astro 7 projects no longer receive an unsupported-version warning during automatic configuration. Astro 7 uses the existing native `astro add cloudflare` configuration path introduced for Astro 6.
+
+- Updated dependencies [[`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`cb0955f`](https://github.com/cloudflare/workers-sdk/commit/cb0955f274102afb30b8502193edf66c0d3cb4d6), [`fa79b26`](https://github.com/cloudflare/workers-sdk/commit/fa79b26ef442303797013c70078c7acdd2c79247), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78)]:
+  - @cloudflare/workers-utils@0.39.0
+  - @cloudflare/config@0.13.0
+  - @cloudflare/cli-shared-helpers@0.1.31
+
 ## 0.4.5
 
 ### Patch Changes

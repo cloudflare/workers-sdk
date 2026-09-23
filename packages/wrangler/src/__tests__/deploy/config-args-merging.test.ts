@@ -47,14 +47,6 @@ import {
 import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -854,6 +846,33 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			});
 			await runWrangler("deploy ./index.js --route cli-route.example.com/*");
 			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("--route with --zone overrides config.routes with zone_name routes", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				routes: [
+					{ pattern: "config-route.example.com/*", zone_name: "example.com" },
+				],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerSubdomain({ enabled: false });
+			mockUploadWorkerRequest();
+			mockGetZones(expect, "example.net", [{ id: "example-net-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-net-id");
+			mockPublishRoutesRequest({
+				routes: [
+					{ pattern: "cli-route.example.net/*", zone_name: "example.net" },
+				],
+			});
+			await runWrangler(
+				"deploy ./index.js --x-route-zones --route cli-route.example.net/* --zone example.net"
+			);
+			expect(std.out).toContain("Uploaded test-name");
+			expect(std.out).toContain(
+				"cli-route.example.net/* (zone name: example.net)"
+			);
 		});
 
 		it("uses config.routes when --route is not provided", async ({

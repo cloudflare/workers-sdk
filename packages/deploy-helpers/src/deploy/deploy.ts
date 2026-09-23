@@ -36,10 +36,6 @@ import {
 } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwriteAndGetLatest } from "./helpers/confirm-latest-deployment-overwrite";
 import {
-	addContainerImagesBinding,
-	clearRemovedContainerImagesBindings,
-} from "./helpers/container-image-bindings";
-import {
 	getContainerMetadata,
 	getContainerMetadataForRolloutSkip,
 } from "./helpers/container-metadata";
@@ -126,9 +122,12 @@ export type DeployCallbacks = {
 				namespace: string | undefined;
 		  }>)
 		| undefined;
-	analyseBundle:
-		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
-		| undefined;
+	/**
+	 * @deprecated Startup profiling is provided by deploy-helpers automatically.
+	 */
+	analyseBundle?: (
+		workerBundle: string | FormData
+	) => Promise<Record<string, unknown>>;
 };
 
 type DeployResult = {
@@ -267,7 +266,9 @@ async function deployWorker(
 		: undefined;
 	const containerMetadata = rolloutSkipContainerState
 		? rolloutSkipContainerState.containers
-		: getContainerMetadata(props.containers.source, preparedContainerImages);
+		: getContainerMetadata(props.containers.source, preparedContainerImages, {
+				exports: config.exports,
+			});
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
 	const { migrations, exports } = await resolveExportsUploadPayload({
@@ -338,25 +339,6 @@ async function deployWorker(
 		type: "deploy",
 		workerExists,
 	});
-	if (!skipContainerChanges && keepVars && !isDryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(
-			config,
-			durableObjectContainerConfig,
-			bindings,
-			workerUrl
-		);
-	}
-	addContainerImagesBinding(
-		durableObjectContainerConfig,
-		bindings,
-		preparedContainerImages ?? {},
-		{
-			preserveExisting: skipContainerChanges,
-			workerExists,
-			hasExistingBinding:
-				rolloutSkipContainerState?.hasExistingContainerImagesBinding,
-		}
-	);
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
@@ -367,7 +349,7 @@ async function deployWorker(
 		});
 	}
 
-	const placement = parseConfigPlacement(config);
+	const placement = parseConfigPlacement(config.placement);
 
 	const entryPointName = path.basename(resolvedEntryPointPath);
 	const main: CfModule = {
@@ -700,6 +682,7 @@ async function deployWorker(
 				dependencies,
 				workerBundle,
 				projectRoot,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
 				callbacks.analyseBundle
 			);
 			if (message !== null) {
@@ -830,7 +813,7 @@ async function deployWorker(
 			);
 		} catch (error) {
 			throw new UserError(
-				"The Worker version was deployed, but Wrangler could not finish creating its Durable Object-managed Container applications. Re-run the same `wrangler deploy` command to retry the idempotent application creation and finish deployment.",
+				"The Worker version was deployed, but Wrangler could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command to retry and finish deployment.",
 				{
 					telemetryMessage:
 						"deploy durable object container application creation failed after deployment",

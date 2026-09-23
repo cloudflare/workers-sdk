@@ -1,139 +1,59 @@
 import { describe, it } from "vitest";
 import { DefaultScopeKeys, validateScopeKeys } from "../../src/cf";
-import { CF_REGISTERED_SCOPES } from "../../src/cf/scopes";
-import type { Scope } from "../../src/cf";
+import {
+	CF_CLIENT_REGISTERED_SCOPES,
+	CF_REQUESTABLE_SCOPES,
+} from "../../src/cf/scopes";
 
-const EXPECTED_DEFAULT_SCOPE_KEYS = [
-	"openid",
-	"offline",
-	"user:read",
-	"account:read",
-	"access:read",
-	"access:write",
-	"agw:read",
-	"agw:run",
-	"agw:write",
-	"ai:read",
-	"ai:write",
-	"ai-search:read",
-	"ai-search:run",
-	"ai-search:write",
-	"aiaudit:read",
-	"aiaudit:write",
-	"aig:read",
-	"aig:write",
-	"auditlogs:read",
-	"browser:read",
-	"browser:write",
-	"cfone:read",
-	"cfone:write",
-	"cloudchamber:write",
-	"connectivity:admin",
-	"connectivity:bind",
-	"connectivity:read",
-	"constellation:write",
-	"containers:write",
-	"d1:write",
-	"dex:read",
-	"dex:write",
-	"dns_analytics:read",
-	"dns_records:edit",
-	"dns_records:read",
-	"dns_settings:read",
-	"email_routing:write",
-	"email_sending:write",
-	"firstpartytags:write",
-	"images:read",
-	"images:write",
-	"lb:edit",
-	"lb:read",
-	"logpush:read",
-	"logpush:write",
-	"mcp_portals:read",
-	"mcp_portals:write",
-	"notebook-examples:read",
-	"notification:read",
-	"notification:write",
-	"pages:read",
-	"pages:write",
-	"pipelines:read",
-	"pipelines:setup",
-	"pipelines:write",
-	"query_cache:write",
-	"queues:write",
-	"r2_catalog:write",
-	"radar:read",
-	"rag:read",
-	"rag:write",
-	"registrar:read",
-	"registrar:write",
-	"secrets_store:read",
-	"secrets_store:write",
-	"sso-connector:read",
-	"sso-connector:write",
-	"ssl_certs:write",
-	"teams:pii",
-	"teams:read",
-	"teams:secure_location",
-	"teams:write",
-	"url_scanner:read",
-	"url_scanner:write",
-	"vectorize:write",
-	"workers:read",
-	"workers:write",
-	"workers_builds:read",
-	"workers_builds:write",
-	"workers_deployments:read",
-	"workers_kv:write",
-	"workers_observability:read",
-	"workers_observability:write",
-	"workers_observability_telemetry:write",
-	"workers_routes:write",
-	"workers_scripts:write",
-	"workers_tail:read",
-	"zone:read",
-] as const;
+const CLIENT_REGISTERED_BUT_NON_CONSENTABLE_SCOPES = [
+	"billing:read",
+	"billing:write",
+	"email_routing:read",
+	"email_sending:read",
+	"notebook-managed:read",
+	"oauth_account_ssl_and_certificates_write",
+];
 
 describe("cf OAuth scopes", () => {
-	it("preserves the existing default login scope set exactly", ({ expect }) => {
-		expect(DefaultScopeKeys).toEqual(EXPECTED_DEFAULT_SCOPE_KEYS);
-		expect(DefaultScopeKeys).toHaveLength(88);
+	it("requests the complete requestable scope catalog by default", ({
+		expect,
+	}) => {
+		expect(DefaultScopeKeys).toEqual(CF_REQUESTABLE_SCOPES);
 		expect(new Set(DefaultScopeKeys).size).toBe(DefaultScopeKeys.length);
 		expect(validateScopeKeys(DefaultScopeKeys)).toBe(true);
 	});
 
-	it("matches the canonical production registration", ({ expect }) => {
-		expect(CF_REGISTERED_SCOPES).toHaveLength(474);
-		expect(new Set(CF_REGISTERED_SCOPES).size).toBe(
-			CF_REGISTERED_SCOPES.length
+	it("matches the production client registration", ({ expect }) => {
+		expect(CF_CLIENT_REGISTERED_SCOPES).toHaveLength(474);
+		expect(new Set(CF_CLIENT_REGISTERED_SCOPES).size).toBe(
+			CF_CLIENT_REGISTERED_SCOPES.length
 		);
-		expect(validateScopeKeys([...CF_REGISTERED_SCOPES])).toBe(true);
 	});
 
-	it("accepts registered scopes without adding them to login defaults", ({
+	it("matches the known-grantable production catalog", ({ expect }) => {
+		expect(CF_REQUESTABLE_SCOPES).toHaveLength(468);
+		expect(new Set(CF_REQUESTABLE_SCOPES).size).toBe(
+			CF_REQUESTABLE_SCOPES.length
+		);
+		expect(validateScopeKeys([...CF_REQUESTABLE_SCOPES])).toBe(true);
+	});
+
+	it("rejects client-registered scopes that consent cannot grant", ({
 		expect,
 	}) => {
-		const dnsReadScope: Scope = "dns.read";
-
-		expect(validateScopeKeys([dnsReadScope])).toBe(true);
-		expect(DefaultScopeKeys).not.toContain(dnsReadScope);
-		expect(
-			validateScopeKeys([
-				"billing:read",
-				"billing:write",
-				"email_routing:read",
-				"email_sending:read",
-				"notebook-managed:read",
-				"oauth_account_ssl_and_certificates_write",
-			])
-		).toBe(true);
+		for (const scope of CLIENT_REGISTERED_BUT_NON_CONSENTABLE_SCOPES) {
+			expect(CF_CLIENT_REGISTERED_SCOPES).toContain(scope);
+			expect(CF_REQUESTABLE_SCOPES).not.toContain(scope);
+			expect(validateScopeKeys([scope])).toBe(false);
+		}
 	});
 
 	it("rejects values outside the requestable scope catalog", ({ expect }) => {
 		const rejectedScopes = ["dns_read", "not-a-real-scope", "offline_access"];
 
 		for (const scope of rejectedScopes) {
-			expect(CF_REGISTERED_SCOPES).not.toContain(scope);
+			expect(CF_CLIENT_REGISTERED_SCOPES).not.toContain(scope);
+			expect(CF_REQUESTABLE_SCOPES).not.toContain(scope);
 			expect(validateScopeKeys([scope])).toBe(false);
 		}
 	});

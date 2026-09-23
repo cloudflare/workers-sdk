@@ -205,9 +205,8 @@ declare module "cloudflare:test" {
 	/**
 	 * Applies all un-applied `migrations` to database `db`, recording migrations
 	 * state in the `migrationsTableName` table. `migrationsTableName` defaults to
-	 * `d1_migrations`. Call the `readD1Migrations()` function from the
-	 * `@cloudflare/vitest-plugin/config` package inside Node.js to get the
-	 * `migrations` array.
+	 * `d1_migrations`. Call the `readD1Migrations()` function from
+	 * `@cloudflare/vitest-plugin` inside Node.js to get the `migrations` array.
 	 */
 	export function applyD1Migrations(
 		db: D1Database,
@@ -231,6 +230,12 @@ declare module "cloudflare:test" {
 		list(): Promise<{ name: string; metadata?: { uuid: string } }[]>;
 		/** Get a secret's name by ID. */
 		get(id: string): Promise<string>;
+		/**
+		 * Releases the RPC stubs behind this admin API. Declare the result with
+		 * `using` so they are released at the end of the scope, since a stub left
+		 * for the garbage collector makes workerd warn that it was not disposed.
+		 */
+		[Symbol.dispose](): void;
 	}
 
 	/**
@@ -243,7 +248,7 @@ declare module "cloudflare:test" {
 	 * import { adminSecretsStore } from "cloudflare:test";
 	 * import { env } from "cloudflare:workers";
 	 *
-	 * const admin = adminSecretsStore(env.MY_SECRET);
+	 * using admin = adminSecretsStore(env.MY_SECRET);
 	 * await admin.create("my-secret-value");
 	 *
 	 * // Now env.MY_SECRET.get() will return "my-secret-value"

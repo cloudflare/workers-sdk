@@ -16,7 +16,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
-import { getWorkersDevSubdomain } from "../triggers/subdomain";
+import { getWorkerSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import {
@@ -24,10 +24,6 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
-import {
-	addContainerImagesBinding,
-	clearRemovedContainerImagesBindings,
-} from "./helpers/container-image-bindings";
 import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
@@ -70,6 +66,7 @@ import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
+/** Compatibility callback shape for existing deploy-helpers consumers. */
 export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
 type VersionsUploadResult = {
@@ -85,7 +82,7 @@ export default async function versionsUpload(
 	props: VersionsUploadProps,
 	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks
+	callbacks: VersionsUploadCallbacks = {}
 ): Promise<VersionsUploadResult> {
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
@@ -132,10 +129,7 @@ async function uploadWorkerVersion(
 	const { name } = validateWorkerProps(props, config);
 
 	// any validation that DOES require API calls should go in preUploadApiChecks()
-	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
-		props,
-		config
-	);
+	const { workerTag, tags, aborted } = await preUploadApiChecks(props, config);
 	if (aborted) {
 		return { versionId: null, workerTag };
 	}
@@ -202,6 +196,7 @@ async function uploadWorkerVersion(
 				accountId,
 				dryRun: Boolean(props.dryRun),
 				scriptName,
+				requireExistingImageLessApplications: true,
 			}
 		);
 
@@ -227,21 +222,8 @@ async function uploadWorkerVersion(
 	}
 
 	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
-	if (keepVars && !props.dryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(
-			config,
-			durableObjectContainerConfig,
-			bindings,
-			workerUrl
-		);
-	}
-	addContainerImagesBinding(
-		durableObjectContainerConfig,
-		bindings,
-		preparedContainerImages ?? {}
-	);
 
-	const placement = parseConfigPlacement(config);
+	const placement = parseConfigPlacement(config.placement);
 
 	const entryPointName = path.basename(resolvedEntryPointPath);
 	const main = {
@@ -258,7 +240,8 @@ async function uploadWorkerVersion(
 		modules,
 		containers: getContainerMetadata(
 			props.containers.source,
-			preparedContainerImages
+			preparedContainerImages,
+			{ exports: config.exports }
 		),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
@@ -411,6 +394,7 @@ async function uploadWorkerVersion(
 				dependencies,
 				workerBundle,
 				projectRoot,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
 				callbacks.analyseBundle
 			);
 			if (message) {
@@ -492,11 +476,14 @@ async function uploadWorkerVersion(
 		assert(versionId);
 		await deployDurableObjectContainerApplications(
 			config,
-			durableObjectContainerConfig,
+			durableObjectContainerConfig.filter(
+				(container) => Object.keys(container.images ?? {}).length > 0
+			),
 			{
 				versionId,
 				accountId,
 				scriptName,
+				updateExisting: false,
 			}
 		);
 	}
@@ -510,21 +497,23 @@ async function uploadWorkerVersion(
 	let versionPreviewAliasUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
-		const { previews_enabled: previews_available_on_subdomain } =
-			await fetchResult<{
-				previews_enabled: boolean;
-			}>(config, `${workerUrl}/subdomain`);
+		const workerSubdomain = await getWorkerSubdomain(
+			config,
+			accountId,
+			workerName
+		);
 
-		if (previews_available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-				configPath: config.configPath,
-			});
+		if (
+			workerSubdomain.previews_enabled &&
+			workerSubdomain.preview_url_suffix
+		) {
 			const shortVersion = versionId.slice(0, 8);
-			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
+			// The API-provided suffix includes the leading "-" separator.
+			versionPreviewUrl = `https://${shortVersion}${workerSubdomain.preview_url_suffix}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 
 			if (props.previewAlias) {
-				versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}`;
+				versionPreviewAliasUrl = `https://${props.previewAlias}${workerSubdomain.preview_url_suffix}`;
 				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
 			}
 		}

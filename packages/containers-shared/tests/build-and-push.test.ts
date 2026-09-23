@@ -21,7 +21,7 @@ import {
 	pushCommand,
 	SchedulingPolicy,
 } from "../index";
-import type { BuiltContainerImage } from "../src/build";
+import type { BuiltContainerImage, BuiltImage } from "../src/build";
 import type { CompleteAccountCustomer } from "../src/client";
 import type { ContainerNormalizedConfig } from "../src/types";
 import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
@@ -29,6 +29,7 @@ import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
 vi.mock("node:child_process");
 
 const dockerfile = "FROM node:22\n";
+const TEST_LOCAL_TAG = "test-app:wrangler-11111111-1111-4111-8111-111111111111";
 
 const logger: Logger = {
 	debug: vi.fn(),
@@ -402,7 +403,7 @@ describe("deploy container image build and push", () => {
 		).resolves.toStrictEqual([
 			{
 				container,
-				localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+				localTag: TEST_LOCAL_TAG,
 			},
 		]);
 	});
@@ -424,7 +425,7 @@ describe("deploy container image build and push", () => {
 		).resolves.toStrictEqual([
 			{
 				container,
-				localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+				localTag: TEST_LOCAL_TAG,
 			},
 		]);
 		expect(getContainerImageTag(container, "Galaxy-Class")).toBe(
@@ -452,7 +453,7 @@ describe("deploy container image build and push", () => {
 			"build",
 			"--load",
 			"-t",
-			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+			TEST_LOCAL_TAG,
 			"--platform",
 			"linux/amd64",
 			"--provenance=false",
@@ -469,7 +470,7 @@ describe("deploy container image build and push", () => {
 	}) => {
 		const builtImage: BuiltContainerImage = {
 			container: dockerfileContainer,
-			localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+			localTag: TEST_LOCAL_TAG,
 		};
 
 		await expect(
@@ -492,27 +493,23 @@ describe("deploy container image build and push", () => {
 		expectSpawnWith([
 			"image",
 			"inspect",
-			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+			TEST_LOCAL_TAG,
 			"--format",
 			"{{ json .RepoDigests }}",
 		]);
 		expectSpawnWith([
 			"image",
 			"inspect",
-			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+			TEST_LOCAL_TAG,
 			"--format",
 			"{{ .Size }} {{ len .RootFS.Layers }}",
 		]);
 		expectSpawnWith([
 			"tag",
-			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+			TEST_LOCAL_TAG,
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 		]);
-		expectSpawnWith([
-			"image",
-			"rm",
-			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
-		]);
+		expectSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
 		expectSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
@@ -524,7 +521,7 @@ describe("deploy container image build and push", () => {
 					JSON.stringify(args) ===
 					JSON.stringify([
 						"tag",
-						"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+						TEST_LOCAL_TAG,
 						`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 					])
 			);
@@ -533,11 +530,7 @@ describe("deploy container image build and push", () => {
 			.mock.calls.findIndex(
 				([, args]) =>
 					JSON.stringify(args) ===
-					JSON.stringify([
-						"image",
-						"rm",
-						"test-app:wrangler-11111111-1111-4111-8111-111111111111",
-					])
+					JSON.stringify(["image", "rm", TEST_LOCAL_TAG])
 			);
 		const pushCallIndex = vi
 			.mocked(spawn)
@@ -559,16 +552,12 @@ describe("deploy container image build and push", () => {
 	}) => {
 		const builtImage: BuiltContainerImage = {
 			container: dockerfileContainer,
-			localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+			localTag: TEST_LOCAL_TAG,
 		};
 
 		await cleanupBuiltImages([builtImage], "docker");
 
-		expectSpawnWith([
-			"image",
-			"rm",
-			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
-		]);
+		expectSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
 		expect(builtImage.localTagCleaned).toBe(true);
 	});
 
@@ -577,18 +566,82 @@ describe("deploy container image build and push", () => {
 			[
 				{
 					container: dockerfileContainer,
-					localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+					localTag: TEST_LOCAL_TAG,
 					localTagCleaned: true,
 				},
 			],
 			"docker"
 		);
 
-		expectNoSpawnWith([
-			"image",
-			"rm",
-			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+		expectNoSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
+	});
+
+	it("cleans a shared local tag once and marks all aliases cleaned", async ({
+		expect,
+	}) => {
+		const localTag = "test-app:wrangler-shared";
+		const builtImages: BuiltImage[] = [
+			{ localTag },
+			{ localTag },
+			{ localTag },
+		];
+
+		await cleanupBuiltImages(builtImages, "docker");
+
+		expect(vi.mocked(spawn).mock.calls.map(([, args]) => args)).toEqual([
+			["image", "rm", localTag],
 		]);
+		expect(builtImages.map((builtImage) => builtImage.localTagCleaned)).toEqual(
+			[true, true, true]
+		);
+	});
+
+	it("treats a later cleaned alias as authoritative for all aliases", async ({
+		expect,
+	}) => {
+		const localTag = "test-app:wrangler-shared";
+		const builtImages: BuiltImage[] = [
+			{ localTag },
+			{ localTag, localTagCleaned: true },
+			{ localTag },
+		];
+
+		await cleanupBuiltImages(builtImages, "docker");
+
+		expect(spawn).not.toHaveBeenCalled();
+		expect(builtImages.map((builtImage) => builtImage.localTagCleaned)).toEqual(
+			[true, true, true]
+		);
+	});
+
+	it("does not retry failed cleanup for aliases and continues cleaning other tags", async ({
+		expect,
+	}) => {
+		const localTag = "test-app:wrangler-shared";
+		const otherLocalTag = "test-app:wrangler-other";
+		const builtImages: BuiltImage[] = [
+			{ localTag },
+			{ localTag: otherLocalTag },
+			{ localTag },
+		];
+		vi.mocked(spawn).mockImplementationOnce(() => {
+			throw new Error("Docker is unavailable");
+		});
+
+		await expect(
+			cleanupBuiltImages(builtImages, "docker")
+		).resolves.toBeUndefined();
+
+		expect(vi.mocked(spawn).mock.calls.map(([, args]) => args)).toEqual([
+			["image", "rm", localTag],
+			["image", "rm", otherLocalTag],
+		]);
+		expect(builtImages.map((builtImage) => builtImage.localTagCleaned)).toEqual(
+			[undefined, true, undefined]
+		);
+		expect(logger.debug).toHaveBeenCalledWith(
+			`Cleaning up built image ${localTag} failed with error: Docker is unavailable`
+		);
 	});
 
 	it("derives production tags from version IDs, not Worker tags", ({

@@ -7,6 +7,7 @@ import {
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
 import { runAutoConfig } from "../src/run";
@@ -48,6 +49,30 @@ describe("runAutoConfig()", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
+	it("rejects autoconfiguration for an unsupported framework", async ({
+		expect,
+	}) => {
+		await expect(
+			runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "hono-app",
+					framework: getFrameworkClassInstance("hono"),
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				},
+				{
+					context: createMockContext(),
+					skipConfirmations: true,
+					runBuild: false,
+				}
+			)
+		).rejects.toThrow(
+			'The detected framework ("Hono") cannot be automatically configured.'
+		);
+	});
+
 	it("creates new configuration and cf scripts by default", async ({
 		expect,
 	}) => {
@@ -56,7 +81,10 @@ describe("runAutoConfig()", () => {
 			.mockResolvedValue();
 		const packageJson = {
 			name: "my-static-app",
-			scripts: { build: "generate && vite build" },
+			scripts: {
+				build: "generate && vite build",
+				preview: "vite preview",
+			},
 		};
 		await seed({
 			"package.json": JSON.stringify(packageJson),
@@ -94,7 +122,7 @@ describe("runAutoConfig()", () => {
 		expect(summary.deployCommand).toBe("npx cf deploy");
 		expect(summary.versionCommand).toBe("npx cf versions upload");
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
-			'import { defineWorker } from "cf/config";\n\nexport default defineWorker({\n  "name": "my-static-app"'
+			'import { defineConfig } from "cf/config";\n\nexport default defineConfig({\n  worker: {\n    "name": "my-static-app"'
 		);
 		expect(readFileSync("wrangler.config.ts", "utf8")).toContain(
 			'import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig({\n  "assetsDirectory": "public"'
@@ -110,7 +138,7 @@ describe("runAutoConfig()", () => {
 			scripts: {
 				build: "generate && vite build",
 				deploy: "cf deploy",
-				preview: "cf dev",
+				preview: "vite preview",
 			},
 		});
 	});

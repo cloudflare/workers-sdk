@@ -1,37 +1,49 @@
+import assert from "node:assert";
 import { isDeepStrictEqual } from "node:util";
 import {
-	CONTAINER_IMAGES_BINDING,
+	getResolvedDurableObjectContainerApps,
 	isDurableObjectContainerApp,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetchVersions } from "./versions-api";
 import type { ContainerlessConfig } from "../../shared/types";
 import type { ApiDeployment } from "./versions-types";
-import type { CfWorkerInit, ContainerApp } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInit,
+	ContainerApp,
+	Exports,
+} from "@cloudflare/workers-utils";
 
 type ContainerImages = Record<string, Record<string, string>>;
 
 export function getContainerMetadata(
 	containers: ContainerApp[] | undefined,
 	preparedContainerImages: ContainerImages = {},
-	options: { allowUnprepared?: boolean } = {}
+	options: { allowUnprepared?: boolean; exports?: Exports } = {}
 ): CfWorkerInit["containers"] {
+	const managedClasses = new Map(
+		getResolvedDurableObjectContainerApps(containers, options.exports).map(
+			({ name, class_name }) => [name, class_name]
+		)
+	);
 	return containers?.map((container) => {
 		if (isDurableObjectContainerApp(container)) {
+			const className = managedClasses.get(container.name);
+			assert(className, "managed container class should have been resolved");
 			const configuredImages = Object.keys(container.images ?? {});
-			const images = preparedContainerImages[container.class_name];
+			const images = preparedContainerImages[className];
 			if (
 				configuredImages.length > 0 &&
 				images === undefined &&
 				!options.allowUnprepared
 			) {
 				throw new Error(
-					`Container images for Durable Object class "${container.class_name}" were not prepared before upload.`
+					`Container images for Durable Object class "${className}" were not prepared before upload.`
 				);
 			}
 			return {
 				name: container.name,
-				class_name: container.class_name,
+				class_name: className,
 				...(images !== undefined && { images }),
 			};
 		}
@@ -65,19 +77,17 @@ export async function getContainerMetadataForRolloutSkip(
 	}
 ): Promise<{
 	containers: CfWorkerInit["containers"];
-	hasExistingContainerImagesBinding: boolean;
 }> {
-	const configuredMetadata = getContainerMetadata(
-		containers,
-		{},
-		{
-			allowUnprepared: true,
-		}
-	);
 	if (dryRun || !workerExists) {
 		return {
-			containers: configuredMetadata,
-			hasExistingContainerImagesBinding: false,
+			containers: getContainerMetadata(
+				containers,
+				{},
+				{
+					allowUnprepared: true,
+					exports: config.exports,
+				}
+			),
 		};
 	}
 
@@ -115,26 +125,6 @@ export async function getContainerMetadataForRolloutSkip(
 		undefined,
 		latestDeployment.versions.map(({ version_id }) => version_id)
 	);
-	const containerImagesBindingByVersion = versions.map((version) =>
-		version.resources.bindings.some(
-			(binding) => binding.name === CONTAINER_IMAGES_BINDING
-		)
-	);
-	const hasExistingContainerImagesBinding =
-		containerImagesBindingByVersion[0] ?? false;
-	if (
-		containerImagesBindingByVersion.some(
-			(hasBinding) => hasBinding !== hasExistingContainerImagesBinding
-		)
-	) {
-		throw new UserError(
-			`All currently deployed Worker Versions must have identical ${CONTAINER_IMAGES_BINDING} binding presence when using --containers-rollout=none.`,
-			{
-				telemetryMessage:
-					"rollout none inconsistent durable object container image binding",
-			}
-		);
-	}
 	const containerMetadataByVersion = versions.map(
 		(version) => version.resources?.script_runtime?.containers
 	);
@@ -145,7 +135,6 @@ export async function getContainerMetadataForRolloutSkip(
 	if (existingMetadata.length === 0) {
 		return {
 			containers: undefined,
-			hasExistingContainerImagesBinding,
 		};
 	}
 
@@ -167,6 +156,5 @@ export async function getContainerMetadataForRolloutSkip(
 
 	return {
 		containers: existingMetadata[0],
-		hasExistingContainerImagesBinding,
 	};
 }

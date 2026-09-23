@@ -1,9 +1,10 @@
 import assert from "node:assert";
-import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { isDeepStrictEqual } from "node:util";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import {
 	ApplicationsService,
+	ApiError,
 	ContainerImagePreparationsService,
 	ContainerImagePreparationStatus,
 	createDurableObjectNamespaceResolver,
@@ -13,7 +14,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import {
-	CONTAINER_IMAGES_BINDING,
+	getResolvedDurableObjectContainerApps,
 	getDockerPath,
 	getDurableObjectClassNameToUseSQLiteMap,
 	UserError,
@@ -24,11 +25,15 @@ import type {
 	ContainerlessConfig,
 } from "../../shared/types";
 import type { ApiVersion } from "./versions-types";
-import type { CreateDurableObjectApplicationRequest } from "@cloudflare/containers-shared";
+import type {
+	Application,
+	CreateDurableObjectApplicationRequest,
+} from "@cloudflare/containers-shared";
 import type {
 	Config,
 	DurableObjectContainerApp,
 	DurableObjectContainerImage,
+	ResolvedDurableObjectContainerApp,
 } from "@cloudflare/workers-utils";
 
 const IMAGE_PREPARATION_POLL_INTERVAL_MS = 2_000;
@@ -39,6 +44,8 @@ type DeployDurableObjectContainerApplicationsArgs = {
 	versionId: string;
 	accountId: string;
 	scriptName: string;
+	/** Version uploads may initialize a missing application, but never update one. */
+	updateExisting?: boolean;
 };
 
 type PrepareDurableObjectContainerApplicationsArgs = {
@@ -46,10 +53,12 @@ type PrepareDurableObjectContainerApplicationsArgs = {
 	dispatchNamespace?: string;
 	dryRun: boolean;
 	scriptName: string;
+	/** Version uploads cannot initialize applications without named images. */
+	requireExistingImageLessApplications?: boolean;
 };
 
 export type DurableObjectContainerApplication = Pick<
-	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
 	"class_name" | "name"
 >;
 
@@ -60,6 +69,41 @@ export type VersionedDurableObjectContainerApplication =
 
 export type PreparedContainerImages = Record<string, Record<string, string>>;
 
+// Keep the DO request narrower than the generated scheduler configuration.
+type DurableObjectApplicationSettings = {
+	configuration?: { experimental_flags: string[] };
+	observability?: { logs: { enabled: boolean } };
+};
+
+type DurableObjectApplicationState = Pick<
+	Application,
+	"id" | "name" | "scheduling_policy" | "durable_objects" | "observability"
+> & { configuration?: { experimental_flags?: string[] } };
+
+function getApplicationSettings(
+	container: DurableObjectContainerApp
+): DurableObjectApplicationSettings {
+	const flags = container.unsafe?.configuration?.experimental_flags;
+	return {
+		...(flags !== undefined && {
+			configuration: { experimental_flags: flags },
+		}),
+		...(container.observability !== undefined && {
+			observability: {
+				logs: {
+					enabled:
+						container.observability.enabled === true ||
+						container.observability.logs?.enabled === true,
+				},
+			},
+		}),
+	};
+}
+
+function normalizeFlags(flags: string[] = []): string[] {
+	return [...new Set(flags)].sort();
+}
+
 function isRegistryImage(
 	image: DurableObjectContainerImage
 ): image is Extract<DurableObjectContainerImage, { image: string }> {
@@ -68,12 +112,14 @@ function isRegistryImage(
 
 function toCreateApplicationRequest(
 	{ name }: DurableObjectContainerApplication,
-	namespaceId: string
-): CreateDurableObjectApplicationRequest {
+	namespaceId: string,
+	settings: DurableObjectApplicationSettings = {}
+): CreateDurableObjectApplicationRequest & DurableObjectApplicationSettings {
 	return {
 		name,
 		scheduling_policy: SchedulingPolicy.DURABLE_OBJECT,
 		durable_objects: { namespace_id: namespaceId },
+		...settings,
 	};
 }
 
@@ -84,35 +130,6 @@ export async function createDurableObjectContainerApplication(
 	await ApplicationsService.createApplication(
 		toCreateApplicationRequest(application, namespaceId)
 	);
-}
-
-function getContainerImageClasses(
-	version: ApiVersion
-): Set<string> | undefined {
-	// The temporary image binding is reserved for Wrangler, including empty maps.
-	const binding = version.resources.bindings.find(
-		(candidate) => candidate.name === CONTAINER_IMAGES_BINDING
-	);
-	if (binding === undefined) {
-		return undefined;
-	}
-
-	if (
-		binding.type !== "json" ||
-		typeof binding.json !== "object" ||
-		binding.json === null ||
-		Array.isArray(binding.json)
-	) {
-		throw new UserError(
-			`Worker Version ${version.id} has invalid ${CONTAINER_IMAGES_BINDING} metadata.`,
-			{
-				telemetryMessage:
-					"versions deploy invalid durable object container image binding",
-			}
-		);
-	}
-
-	return new Set(Object.keys(binding.json));
 }
 
 function getNamespaceId(
@@ -134,20 +151,24 @@ function getNamespaceId(
 
 function getDurableObjectContainerApplicationsFromVersion(
 	version: ApiVersion,
-	scriptName: string
+	scriptName: string,
+	containerClasses: Set<string | undefined>
 ): VersionedDurableObjectContainerApplication[] {
-	const containerClasses = getContainerImageClasses(version);
-	if (containerClasses === undefined) {
-		return [];
-	}
-
 	const containers = version.resources.script_runtime.containers ?? [];
-	return [...containerClasses].sort().map((className) => {
+	return [...containerClasses].sort().flatMap((className) => {
 		const matchingContainers = containers.filter(
 			(container) => container.class_name === className
 		);
+		if (matchingContainers.length === 0) {
+			return [];
+		}
 		const [container] = matchingContainers;
-		if (matchingContainers.length !== 1 || container?.name === undefined) {
+		if (
+			typeof className !== "string" ||
+			className.length === 0 ||
+			matchingContainers.length !== 1 ||
+			!container?.name
+		) {
 			throw new UserError(
 				`Worker Version ${version.id} has invalid Durable Object-managed Container metadata for class "${className}".`,
 				{
@@ -165,12 +186,32 @@ function getDurableObjectContainerApplicationsFromVersion(
 	});
 }
 
+/**
+ * Read managed application identities from native images on selected Worker versions.
+ *
+ * Named images identify managed classes. Versions may add or remove images, but
+ * must agree on those classes' names and known namespace IDs. Image-less classes
+ * rely on applications provisioned by a normal deploy.
+ * Application-wide settings are deliberately not read from local config or
+ * restored with a Worker version.
+ */
 export function getVersionedDurableObjectContainerApplications(
 	versions: ApiVersion[],
 	scriptName: string
 ): VersionedDurableObjectContainerApplication[] {
+	const containerClasses = new Set(
+		versions.flatMap((version) =>
+			(version.resources.script_runtime.containers ?? [])
+				.filter((container) => Object.keys(container.images ?? {}).length > 0)
+				.map((container) => container.class_name)
+		)
+	);
 	const applicationsByVersion = versions.map((version) =>
-		getDurableObjectContainerApplicationsFromVersion(version, scriptName)
+		getDurableObjectContainerApplicationsFromVersion(
+			version,
+			scriptName,
+			containerClasses
+		)
 	);
 	const [firstApplications = []] = applicationsByVersion;
 	const expectedDefinition = JSON.stringify(
@@ -214,6 +255,121 @@ export function getVersionedDurableObjectContainerApplications(
 			namespaceId: namespaceIds.values().next().value,
 		};
 	});
+}
+
+function validateApplicationIdentity(
+	application: DurableObjectContainerApplication,
+	namespaceId: string,
+	existing: DurableObjectApplicationState
+): void {
+	if (
+		existing.id !== namespaceId ||
+		existing.durable_objects?.namespace_id !== namespaceId ||
+		existing.scheduling_policy !== SchedulingPolicy.DURABLE_OBJECT ||
+		existing.name !== application.name
+	) {
+		throw new UserError(
+			`The application for Durable Object namespace "${namespaceId}" does not match Container "${application.name}". The existing name, namespace, and scheduling policy must match before its settings can be applied.`,
+			{
+				telemetryMessage:
+					"durable object container application identity mismatch",
+			}
+		);
+	}
+}
+
+/**
+ * Require existing applications for version uploads without named images.
+ * These versions carry no managed-policy discriminator, so versions deploy
+ * cannot initialize their applications. A normal deploy must provision them first.
+ */
+export async function validateImageLessContainerApplicationsForUpload(
+	config: ContainerlessConfig,
+	containers: DurableObjectContainerApp[],
+	{ accountId, scriptName }: { accountId: string; scriptName: string }
+): Promise<void> {
+	const imageLessContainers = getResolvedDurableObjectContainerApps(
+		containers,
+		config.exports
+	).filter((container) => Object.keys(container.images ?? {}).length === 0);
+	if (imageLessContainers.length === 0) {
+		return;
+	}
+	const namespaces = await listDurableObjects(config, accountId);
+	for (const container of imageLessContainers) {
+		const namespace = namespaces.find(
+			(candidate) =>
+				candidate.class === container.class_name &&
+				candidate.script === scriptName &&
+				candidate.preview === undefined &&
+				candidate.dispatch_namespace === undefined
+		);
+		let existing: DurableObjectApplicationState | undefined;
+		if (namespace !== undefined) {
+			try {
+				existing = await ApplicationsService.getApplication(namespace.id);
+			} catch (error) {
+				if (!(error instanceof ApiError) || error.status !== 404) {
+					throw error;
+				}
+			}
+		}
+		if (namespace === undefined || existing === undefined) {
+			throw new UserError(
+				`Container "${container.name}" has no named images and has not been provisioned. Run \`wrangler deploy\` to create its Durable Object-managed application before using \`wrangler versions upload\`, or configure at least one named image.`,
+				{
+					telemetryMessage:
+						"versions upload image less container application missing",
+				}
+			);
+		}
+		validateApplicationIdentity(container, namespace.id, existing);
+	}
+}
+
+async function applyApplication(
+	application: DurableObjectContainerApplication,
+	namespaceId: string,
+	settings: DurableObjectApplicationSettings = {},
+	updateExisting = false
+): Promise<void> {
+	let existing: DurableObjectApplicationState;
+	try {
+		existing = await ApplicationsService.getApplication(namespaceId);
+	} catch (error) {
+		if (!(error instanceof ApiError) || error.status !== 404) {
+			throw error;
+		}
+		await ApplicationsService.createApplication(
+			toCreateApplicationRequest(application, namespaceId, settings)
+		);
+		return;
+	}
+
+	validateApplicationIdentity(application, namespaceId, existing);
+	if (!updateExisting) {
+		return;
+	}
+
+	const patch: DurableObjectApplicationSettings = {};
+	if (
+		settings.configuration !== undefined &&
+		!isDeepStrictEqual(
+			normalizeFlags(settings.configuration.experimental_flags),
+			normalizeFlags(existing.configuration?.experimental_flags)
+		)
+	) {
+		patch.configuration = settings.configuration;
+	}
+	if (
+		settings.observability !== undefined &&
+		!isDeepStrictEqual(settings.observability, existing.observability)
+	) {
+		patch.observability = settings.observability;
+	}
+	if (Object.keys(patch).length > 0) {
+		await ApplicationsService.modifyApplication(namespaceId, patch);
+	}
 }
 
 /** Resolve every versioned application's namespace without creating applications. */
@@ -266,7 +422,12 @@ export async function resolveVersionedDurableObjectContainerApplications(
 	});
 }
 
-/** Create applications only after every deployed namespace has been resolved. */
+/**
+ * Ensure selected versions have applications after every namespace is resolved.
+ *
+ * Existing settings are preserved. Missing applications are created with API
+ * defaults, so rolling back a Worker never rolls back application-wide settings.
+ */
 export async function deployVersionedDurableObjectContainerApplications(
 	config: Config,
 	args: {
@@ -285,17 +446,32 @@ export async function deployVersionedDurableObjectContainerApplications(
 	for (const application of applications) {
 		// The strict resolution above checks the whole set before any mutation.
 		if (application.namespaceId !== undefined) {
-			await createDurableObjectContainerApplication(
-				application,
-				application.namespaceId
-			);
+			await applyApplication(application, application.namespaceId);
 		}
 	}
 }
 
-async function buildOrResolveImage(
+function getBuiltImage(
+	container: ResolvedDurableObjectContainerApp,
+	imageName: string,
+	builtImages: BuiltDurableObjectContainerImage[]
+): BuiltDurableObjectContainerImage {
+	const builtImage = builtImages.find(
+		(candidate) =>
+			candidate.className === container.class_name &&
+			candidate.imageName === imageName
+	);
+	if (builtImage === undefined) {
+		throw new Error(
+			`Container image "${imageName}" for Durable Object class "${container.class_name}" was not built before upload.`
+		);
+	}
+	return builtImage;
+}
+
+async function pushOrResolveImage(
 	config: ContainerlessConfig,
-	container: DurableObjectContainerApp,
+	container: ResolvedDurableObjectContainerApp,
 	imageName: string,
 	imageConfig: DurableObjectContainerImage,
 	builtImages: BuiltDurableObjectContainerImage[],
@@ -310,16 +486,7 @@ async function buildOrResolveImage(
 		return resolveImageName(accountId, imageConfig.image, config);
 	}
 
-	const builtImage = builtImages.find(
-		(candidate) =>
-			candidate.className === container.class_name &&
-			candidate.imageName === imageName
-	);
-	if (builtImage === undefined) {
-		throw new Error(
-			`Container image "${imageName}" for Durable Object class "${container.class_name}" was not built before upload.`
-		);
-	}
+	const builtImage = getBuiltImage(container, imageName, builtImages);
 	if (dryRun) {
 		return builtImage.localTag;
 	}
@@ -333,7 +500,11 @@ async function buildOrResolveImage(
 			complianceConfig: config,
 			cleanupSourceTag: true,
 		});
-		builtImage.localTagCleaned = true;
+		for (const image of builtImages) {
+			if (image.localTag === builtImage.localTag) {
+				image.localTagCleaned = true;
+			}
+		}
 
 		return "remoteDigest" in imageRef ? imageRef.remoteDigest : imageRef.newTag;
 	} catch (error) {
@@ -388,6 +559,7 @@ async function waitForImagePreparation(image: string): Promise<void> {
 	);
 }
 
+/** Validate managed classes and prepare their named images before Worker upload. */
 export async function prepareDurableObjectContainerApplications(
 	config: ContainerlessConfig,
 	durableObjectContainerConfig: DurableObjectContainerApp[],
@@ -397,11 +569,16 @@ export async function prepareDurableObjectContainerApplications(
 		dryRun,
 		scriptName,
 		dispatchNamespace,
+		requireExistingImageLessApplications = false,
 	}: PrepareDurableObjectContainerApplicationsArgs
 ): Promise<PreparedContainerImages> {
 	validateDurableObjectContainerApplications(
 		config,
 		durableObjectContainerConfig
+	);
+	const managedContainers = getResolvedDurableObjectContainerApps(
+		durableObjectContainerConfig,
+		config.exports
 	);
 	if (!dryRun) {
 		assert(accountId, "Expected accountId to prepare container applications");
@@ -409,7 +586,7 @@ export async function prepareDurableObjectContainerApplications(
 			config.migrations,
 			config.exports
 		);
-		const unknownStorage = durableObjectContainerConfig.filter(
+		const unknownStorage = managedContainers.filter(
 			(container) => storageByClass.get(container.class_name) === undefined
 		);
 		if (unknownStorage.length > 0) {
@@ -437,7 +614,16 @@ export async function prepareDurableObjectContainerApplications(
 		}
 	}
 
-	const containers = durableObjectContainerConfig.filter(
+	if (!dryRun && requireExistingImageLessApplications) {
+		assert(accountId);
+		await validateImageLessContainerApplicationsForUpload(
+			config,
+			durableObjectContainerConfig,
+			{ accountId, scriptName }
+		);
+	}
+
+	const containers = managedContainers.filter(
 		(container) => Object.keys(container.images ?? {}).length > 0
 	);
 	if (containers.length === 0) {
@@ -453,13 +639,10 @@ export async function prepareDurableObjectContainerApplications(
 		)) {
 			const source = isRegistryImage(imageConfig)
 				? `image:${imageConfig.image}`
-				: `dockerfile:${path.resolve(
-						config.configPath ? path.dirname(config.configPath) : process.cwd(),
-						imageConfig.dockerfile
-					)}`;
+				: `built:${getBuiltImage(container, imageName, builtImages).localTag}`;
 			let image = preparedImages.get(source);
 			if (image === undefined) {
-				image = await buildOrResolveImage(
+				image = await pushOrResolveImage(
 					config,
 					container,
 					imageName,
@@ -488,6 +671,13 @@ export async function prepareDurableObjectContainerApplications(
 	return Object.fromEntries(imagesByClass);
 }
 
+/**
+ * Apply explicit application settings after an uploaded Worker's namespaces exist.
+ *
+ * Resolve all namespaces before writing. Normal deployments initialize missing
+ * applications and patch supplied changes; `updateExisting: false` makes version
+ * uploads create-only. Omitted settings and root Worker observability are ignored.
+ */
 export async function deployDurableObjectContainerApplications(
 	config: ContainerlessConfig,
 	durableObjectContainerConfig: DurableObjectContainerApp[],
@@ -496,9 +686,13 @@ export async function deployDurableObjectContainerApplications(
 		accountId,
 		scriptName,
 		dispatchNamespace,
+		updateExisting = true,
 	}: DeployDurableObjectContainerApplicationsArgs
 ): Promise<void> {
-	const containers = durableObjectContainerConfig;
+	const containers = getResolvedDurableObjectContainerApps(
+		durableObjectContainerConfig,
+		config.exports
+	);
 	if (containers.length === 0) {
 		return;
 	}
@@ -519,6 +713,11 @@ export async function deployDurableObjectContainerApplications(
 		});
 	}
 	for (const { container, namespaceId } of applications) {
-		await createDurableObjectContainerApplication(container, namespaceId);
+		await applyApplication(
+			container,
+			namespaceId,
+			getApplicationSettings(container),
+			updateExisting
+		);
 	}
 }

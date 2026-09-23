@@ -7,8 +7,8 @@ import type {
 	TypedKvBinding,
 	TypedPipelineBinding,
 	TypedQueueBinding,
-	WorkerReference,
 } from "./bindings";
+import type { WorkerReference } from "./definition";
 import type { Pipeline } from "cloudflare:pipelines";
 
 // ═══════════════════════════════════════════════════════════════════════════

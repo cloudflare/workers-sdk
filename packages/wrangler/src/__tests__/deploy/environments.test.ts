@@ -36,14 +36,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -275,6 +267,7 @@ describe("deploy", () => {
 					enabled: true,
 					head_sampling_rate: 0.5,
 					redact_query_string: true,
+					issues: { enabled: true },
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
@@ -284,6 +277,7 @@ describe("deploy", () => {
 					enabled: true,
 					head_sampling_rate: 0.5,
 					redact_query_string: true,
+					issues: { enabled: true },
 				},
 			});
 

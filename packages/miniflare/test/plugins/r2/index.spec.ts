@@ -62,7 +62,6 @@ const opts: Partial<MiniflareOptions> = {
 	workers: [
 		{
 			config: {
-				type: "worker",
 				name: "",
 				compatibilityDate: "2025-05-01",
 				env: { BUCKET: { type: "r2", name: "bucket" } },
@@ -574,7 +573,6 @@ test("put: can copy values", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -1042,7 +1040,6 @@ test("operations persist stored data", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -1105,7 +1102,6 @@ test("operations permit strange bucket names", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { BUCKET: { type: "r2", name: id } },
