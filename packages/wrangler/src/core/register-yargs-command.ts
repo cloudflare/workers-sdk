@@ -321,7 +321,6 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					// sets these values in the scope of deploy-helpers
 					initDeployHelpersContext({
 						logger,
-						createCloudflareClient,
 						fetchResult,
 						fetchListResult,
 						fetchPagedListResult,

@@ -1,5 +1,15 @@
 # @cloudflare/runtime-types
 
+## 0.1.0
+
+### Minor Changes
+
+- [#15789](https://github.com/cloudflare/workers-sdk/pull/15789) [`1c96111`](https://github.com/cloudflare/workers-sdk/commit/1c9611129fb8615f5402ff2e0f5a537b6a15eea8) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Publish `@cloudflare/runtime-types` as a standalone package
+
+  Consumers can now share the runtime type generator used by Wrangler and the Cloudflare Vite and Vitest integrations.
+
+  This package is not yet stable enough for external use — APIs may change without notice.
+
 ## 0.0.31
 
 ### Patch Changes
