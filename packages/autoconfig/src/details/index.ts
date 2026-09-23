@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, statSync, type Stats } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
@@ -41,9 +41,9 @@ export function assertNonConfigured(
 	);
 }
 
-async function hasIndexHtml(dir: string): Promise<boolean> {
+async function getPathStats(path: string): Promise<Stats | undefined> {
 	try {
-		return (await stat(join(dir, "index.html"))).isFile();
+		return await stat(path);
 	} catch (error) {
 		if (
 			typeof error === "object" &&
@@ -54,10 +54,14 @@ async function hasIndexHtml(dir: string): Promise<boolean> {
 				error.code === "EACCES" ||
 				error.code === "EPERM")
 		) {
-			return false;
+			return undefined;
 		}
 		throw error;
 	}
+}
+
+async function hasIndexHtml(dir: string): Promise<boolean> {
+	return (await getPathStats(join(dir, "index.html")))?.isFile() ?? false;
 }
 
 /**
@@ -72,8 +76,8 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 	const children = await readdir(from);
 	for (const child of children) {
 		const path = join(from, child);
-		const stats = await stat(path);
-		if (stats.isDirectory() && (await hasIndexHtml(path))) {
+		const stats = await getPathStats(path);
+		if (stats?.isDirectory() && (await hasIndexHtml(path))) {
 			return relative(from, path);
 		}
 	}

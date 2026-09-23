@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { chmod, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
 	mockConsoleMethods,
@@ -11,12 +11,46 @@ import * as details from "../../src/details";
 import { createMockContext } from "../helpers/mock-context";
 import type { Config } from "@cloudflare/workers-utils";
 
+const fileSystemErrors = vi.hoisted(() => ({
+	readdir: new Map<string, string>(),
+	stat: new Map<string, string>(),
+}));
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const original = await importOriginal<typeof import("node:fs/promises")>();
+
+	function throwConfiguredError(errors: Map<string, string>, path: unknown) {
+		const stringPath = String(path);
+		const code = errors.get(stringPath);
+		if (code !== undefined) {
+			throw Object.assign(new Error(`${code}: ${stringPath}`), {
+				code,
+				path: stringPath,
+			});
+		}
+	}
+
+	return {
+		...original,
+		readdir: (...args: Parameters<typeof original.readdir>) => {
+			throwConfiguredError(fileSystemErrors.readdir, args[0]);
+			return Reflect.apply(original.readdir, undefined, args);
+		},
+		stat: (...args: Parameters<typeof original.stat>) => {
+			throwConfiguredError(fileSystemErrors.stat, args[0]);
+			return Reflect.apply(original.stat, undefined, args);
+		},
+	};
+});
+
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 	const context = createMockContext();
 
 	afterEach(() => {
+		fileSystemErrors.readdir.clear();
+		fileSystemErrors.stat.clear();
 		vi.unstubAllGlobals();
 	});
 
@@ -328,26 +362,41 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it.skipIf(process.platform === "win32")(
-		"outputDir should ignore inaccessible child directories",
-		async ({ expect }) => {
-			await seed({
-				".Trash/placeholder": "",
-				"public/index.html": `<h1>Hello World</h1>`,
-			});
+	it("outputDir should ignore inaccessible child directories", async ({
+		expect,
+	}) => {
+		await seed({
+			".Trash/placeholder": "",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+		fileSystemErrors.readdir.set(join(process.cwd(), ".Trash"), "EPERM");
+		fileSystemErrors.stat.set(
+			join(process.cwd(), ".Trash", "index.html"),
+			"EPERM"
+		);
 
-			await chmod(".Trash", 0o000);
-			try {
-				await expect(
-					details.getDetailsForAutoConfig({ context })
-				).resolves.toMatchObject({
-					outputDir: "public",
-				});
-			} finally {
-				await chmod(".Trash", 0o700);
-			}
-		}
-	);
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
+	it("outputDir should ignore child directories that cannot be statted", async ({
+		expect,
+	}) => {
+		await seed({
+			"0-cache/placeholder": "",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+		fileSystemErrors.stat.set(join(process.cwd(), "0-cache"), "EACCES");
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
 
 	it("outputDir should prioritize the project directory over its child directories", async ({
 		expect,
