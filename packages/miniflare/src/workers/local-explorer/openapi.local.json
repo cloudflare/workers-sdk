@@ -2957,29 +2957,29 @@
 								"required": ["key", "default_variation", "variations"],
 								"properties": {
 									"key": {
-										"description": "Flag key.",
+										"description": "Flag key",
 										"type": "string"
 									},
 									"description": {
-										"description": "Human readable description.",
+										"description": "Human readable description",
 										"nullable": true,
 										"type": "string"
 									},
 									"enabled": {
-										"description": "Whether targeting rules are evaluated.",
+										"description": "Whether the flag is enabled",
 										"type": "boolean"
 									},
 									"default_variation": {
-										"description": "Variation served when no rule matches.",
+										"description": "Variation served when no rule matches",
 										"type": "string"
 									},
 									"variations": {
 										"additionalProperties": true,
-										"description": "Named values the flag can serve.",
+										"description": "Named values the flag can serve",
 										"type": "object"
 									},
 									"rules": {
-										"description": "Targeting rules, in priority order.",
+										"description": "Targeting rules, in priority order",
 										"items": {
 											"$ref": "#/components/schemas/flagship_rule"
 										},
@@ -3032,7 +3032,7 @@
 		},
 		"/flagship/apps/{app_id}/flags/{flag_key}": {
 			"patch": {
-				"description": "Updates a flag. Omitted fields, including targeting rules, keep their current values.",
+				"description": "Updates a flag. Omitted fields keep their current values; provided rules replace the existing ones.",
 				"operationId": "flagship-update-flag",
 				"parameters": [
 					{
@@ -3067,25 +3067,25 @@
 							"schema": {
 								"properties": {
 									"description": {
-										"description": "Human readable description.",
+										"description": "Human readable description",
 										"nullable": true,
 										"type": "string"
 									},
 									"enabled": {
-										"description": "Whether the flag is enabled.",
+										"description": "Whether the flag is enabled",
 										"type": "boolean"
 									},
 									"default_variation": {
-										"description": "The variation served when no targeting rule matches.",
+										"description": "Variation served when no rule matches",
 										"type": "string"
 									},
 									"variations": {
 										"additionalProperties": true,
-										"description": "Named values the flag can serve.",
+										"description": "Named values the flag can serve",
 										"type": "object"
 									},
 									"rules": {
-										"description": "Targeting rules, in priority order. Replaces the existing rules.",
+										"description": "Targeting rules, in priority order",
 										"items": {
 											"$ref": "#/components/schemas/flagship_rule"
 										},
@@ -4281,7 +4281,9 @@
 							"starts_with",
 							"ends_with",
 							"in",
-							"not_in"
+							"not_in",
+							"has",
+							"not_has"
 						]
 					},
 					"value": {}
@@ -4339,7 +4341,8 @@
 							"percentage": {
 								"type": "number",
 								"minimum": 0,
-								"maximum": 100
+								"maximum": 100,
+								"multipleOf": 0.01
 							},
 							"attribute": {
 								"type": "string"
@@ -4371,29 +4374,29 @@
 						"description": "Type shared by the flag's variations"
 					},
 					"description": {
-						"type": "string",
+						"description": "Human readable description",
 						"nullable": true,
-						"description": "Human readable description"
+						"type": "string"
 					},
 					"enabled": {
-						"type": "boolean",
-						"description": "Whether targeting rules are evaluated"
+						"description": "Whether the flag is enabled",
+						"type": "boolean"
 					},
 					"default_variation": {
-						"type": "string",
-						"description": "Variation served when no rule matches"
+						"description": "Variation served when no rule matches",
+						"type": "string"
 					},
 					"variations": {
-						"type": "object",
 						"additionalProperties": true,
-						"description": "Named values the flag can serve"
+						"description": "Named values the flag can serve",
+						"type": "object"
 					},
 					"rules": {
-						"type": "array",
+						"description": "Targeting rules, in priority order",
 						"items": {
 							"$ref": "#/components/schemas/flagship_rule"
 						},
-						"description": "Targeting rules, in priority order"
+						"type": "array"
 					},
 					"updated_at": {
 						"type": "string",

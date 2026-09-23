@@ -18,6 +18,7 @@ import {
 	alignSplits,
 	evenSplits,
 	FLAGSHIP_OPERATOR_LABELS,
+	removeCondition,
 	type DefaultServeDraft,
 	type FlagshipOperator,
 	type RuleConditionDraft,
@@ -89,10 +90,6 @@ function ConditionRow({
 		"less_than_or_equals",
 	].includes(condition.operator);
 
-	function changeOperator(operator: FlagshipOperator): void {
-		onChange({ ...condition, operator });
-	}
-
 	return (
 		<div className="grid grid-cols-[2rem_minmax(0,1fr)_2.25rem] items-start gap-2">
 			<span className="pt-2.5 text-xs font-semibold text-kumo-subtle">
@@ -112,7 +109,7 @@ function ConditionRow({
 					disabled={disabled}
 					items={FLAGSHIP_OPERATOR_LABELS}
 					onValueChange={(operator) =>
-						changeOperator(String(operator) as FlagshipOperator)
+						onChange({ ...condition, operator: operator as FlagshipOperator })
 					}
 					value={condition.operator}
 				>
@@ -160,6 +157,35 @@ function ConditionRow({
 				onClick={onRemove}
 				shape="square"
 				variant="ghost"
+			/>
+		</div>
+	);
+}
+
+function PercentInput({
+	ariaLabel,
+	disabled,
+	onValueChange,
+	value,
+}: {
+	ariaLabel: string;
+	disabled: boolean;
+	onValueChange: (value: string) => void;
+	value: string;
+}): JSX.Element {
+	return (
+		<div className="relative w-24">
+			<TextInput
+				ariaLabel={ariaLabel}
+				className="pr-7 text-right tabular-nums"
+				disabled={disabled}
+				numeric
+				onValueChange={onValueChange}
+				value={value}
+			/>
+			<PercentIcon
+				className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-kumo-subtle"
+				size={12}
 			/>
 		</div>
 	);
@@ -213,21 +239,6 @@ function RuleCard({
 				index === conditionIndex ? condition : current
 			),
 		});
-	}
-
-	function removeCondition(conditionIndex: number): void {
-		if (rule.conditions.length === 1) {
-			onChange({ ...rule, conditions: [] });
-			return;
-		}
-		const conditions = rule.conditions.filter(
-			(_, index) => index !== conditionIndex
-		);
-		const [first] = conditions;
-		if (first !== undefined) {
-			conditions[0] = { ...first, joinOperator: "AND" };
-		}
-		onChange({ ...rule, conditions });
 	}
 
 	function addOrCondition(afterIndex: number): void {
@@ -311,7 +322,15 @@ function RuleCard({
 											key={condition.id}
 											label={conditionOffset === 0 ? "IF" : "OR"}
 											onChange={(next) => updateCondition(conditionIndex, next)}
-											onRemove={() => removeCondition(conditionIndex)}
+											onRemove={() =>
+												onChange({
+													...rule,
+													conditions: removeCondition(
+														rule.conditions,
+														conditionIndex
+													),
+												})
+											}
 										/>
 									);
 								})}
@@ -398,30 +417,17 @@ function RuleCard({
 				) : (
 					<div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-lg bg-kumo-elevated p-2">
 						<span className="text-xs text-kumo-subtle">to</span>
-						<div className="relative w-24">
-							<TextInput
-								ariaLabel="Rollout percentage"
-								className="pr-7 text-right tabular-nums"
-								disabled={disabled}
-								numeric
-								onValueChange={(percentage) =>
-									onChange({
-										...rule,
-										rollout: {
-											attribute: rule.rollout?.attribute ?? "",
-											attributeEdited: rule.rollout?.attributeEdited ?? false,
-											originalAttribute: rule.rollout?.originalAttribute,
-											percentage,
-										},
-									})
-								}
-								value={rule.rollout.percentage}
-							/>
-							<PercentIcon
-								className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-kumo-subtle"
-								size={12}
-							/>
-						</div>
+						<PercentInput
+							ariaLabel="Rollout percentage"
+							disabled={disabled}
+							onValueChange={(percentage) =>
+								onChange({
+									...rule,
+									rollout: rule.rollout && { ...rule.rollout, percentage },
+								})
+							}
+							value={rule.rollout.percentage}
+						/>
 						<span className="text-xs text-kumo-subtle">of matches by</span>
 						<TextInput
 							ariaLabel="Rollout attribute"
@@ -430,11 +436,10 @@ function RuleCard({
 							onValueChange={(attribute) =>
 								onChange({
 									...rule,
-									rollout: {
+									rollout: rule.rollout && {
+										...rule.rollout,
 										attribute,
 										attributeEdited: true,
-										originalAttribute: rule.rollout?.originalAttribute,
-										percentage: rule.rollout?.percentage ?? "",
 									},
 								})
 							}
@@ -616,22 +621,14 @@ function DefaultServeEditor({
 					<div className="flex flex-col gap-2">
 						{splits.map((split, index) => (
 							<div className="flex items-center gap-3" key={split.variationId}>
-								<div className="relative w-24">
-									<TextInput
-										ariaLabel={`Percentage for ${nameById.get(split.variationId) ?? "variant"}`}
-										className="pr-7 text-right tabular-nums"
-										disabled={disabled}
-										numeric
-										onValueChange={(weight) =>
-											changeWeight(split.variationId, weight)
-										}
-										value={split.weight}
-									/>
-									<PercentIcon
-										className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-kumo-subtle"
-										size={12}
-									/>
-								</div>
+								<PercentInput
+									ariaLabel={`Percentage for ${nameById.get(split.variationId) ?? "variant"}`}
+									disabled={disabled}
+									onValueChange={(weight) =>
+										changeWeight(split.variationId, weight)
+									}
+									value={split.weight}
+								/>
 								<span
 									className="size-2 shrink-0 rounded-full"
 									style={{ backgroundColor: splitColor(index) }}
@@ -698,18 +695,8 @@ export function RuleEditor({
 			return;
 		}
 		const next = [...rules];
-		onChange(
-			next.map((rule, currentIndex) => {
-				let moved = rule;
-				if (currentIndex === index) {
-					moved = next[target] ?? rule;
-				}
-				if (currentIndex === target) {
-					moved = next[index] ?? rule;
-				}
-				return { ...moved, priority: currentIndex + 1 };
-			})
-		);
+		next.splice(target, 0, ...next.splice(index, 1));
+		onChange(next.map((rule, i) => ({ ...rule, priority: i + 1 })));
 	}
 
 	return (

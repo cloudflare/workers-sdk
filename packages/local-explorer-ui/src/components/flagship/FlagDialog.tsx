@@ -24,6 +24,7 @@ import {
 	ruleDraftsFrom,
 	ruleDraftsToRules,
 	sanitizeVariationName,
+	serveDefaultVariation,
 	validateDefaultServe,
 	validateFlagKey,
 	validateRuleDrafts,
@@ -38,13 +39,13 @@ import { RuleEditor } from "./RuleEditor";
 import type { FlagshipFlag, FlagshipUpdateFlagData } from "../../api";
 import type { JSX } from "react";
 
-const TYPE_TABS: Array<{ className: string; label: string; value: FlagType }> =
-	[
-		{ className: "flex-1 justify-center", label: "Boolean", value: "boolean" },
-		{ className: "flex-1 justify-center", label: "Number", value: "number" },
-		{ className: "flex-1 justify-center", label: "String", value: "string" },
-		{ className: "flex-1 justify-center", label: "JSON", value: "json" },
-	];
+const TYPE_TABS = (
+	Object.entries(FLAG_TYPE_LABELS) as Array<[FlagType, string]>
+).map(([value, label]) => ({
+	className: "flex-1 justify-center",
+	label,
+	value,
+}));
 
 interface FlagDialogProps {
 	appId: string;
@@ -74,20 +75,6 @@ interface FormError {
 	message: string;
 	variationId?: string;
 	variationField?: "name" | "value";
-}
-
-function serveDefaultVariation(
-	variations: VariationDraft[],
-	defaultVariationId: string
-): DefaultServeDraft {
-	return {
-		mode: "variation",
-		splits: variations.map((variation) => ({
-			variationId: variation.id,
-			weight: variation.id === defaultVariationId ? "100" : "0",
-		})),
-		targetingKey: "",
-	};
 }
 
 function emptyForm(): FormState {
@@ -239,14 +226,12 @@ export function FlagDialog({
 		patch: Partial<Pick<VariationDraft, "name" | "value">>
 	): void {
 		setError((current) => (current?.variationId === id ? null : current));
-		setForm((current) => {
-			return {
-				...current,
-				variations: current.variations.map((row) =>
-					row.id === id ? { ...row, ...patch } : row
-				),
-			};
-		});
+		setForm((current) => ({
+			...current,
+			variations: current.variations.map((row) =>
+				row.id === id ? { ...row, ...patch } : row
+			),
+		}));
 	}
 
 	function addVariation(): void {
@@ -368,10 +353,7 @@ export function FlagDialog({
 			usesSplit
 		);
 		if (ruleError !== null) {
-			setError({
-				field: "rules",
-				message: ruleError,
-			});
+			setError({ field: "rules", message: ruleError });
 			return;
 		}
 		const splitError = usesSplit ? validateDefaultServe(defaultServe) : null;

@@ -6,6 +6,7 @@ import {
 	inferDefaultServe,
 	parseContextValue,
 	parseVariationValue,
+	removeCondition,
 	ruleDraftsFrom,
 	ruleDraftsToRules,
 	sanitizeVariationName,
@@ -97,6 +98,30 @@ describe("rule drafts", () => {
 		]);
 	});
 
+	test("keeps group boundaries when removing a condition", ({ expect }) => {
+		const condition = first(
+			first(ruleDraftsFrom(rules, variationIdByName)).conditions
+		);
+		const conditions = [
+			{ ...condition, attribute: "a", id: "a", joinOperator: "AND" as const },
+			{ ...condition, attribute: "b", id: "b", joinOperator: "AND" as const },
+			{ ...condition, attribute: "c", id: "c", joinOperator: "OR" as const },
+		];
+		const joins = (index: number) =>
+			removeCondition(conditions, index).map(({ id, joinOperator }) => [
+				id,
+				joinOperator,
+			]);
+		expect(joins(1)).toEqual([
+			["a", "AND"],
+			["c", "AND"],
+		]);
+		expect(joins(0)).toEqual([
+			["b", "AND"],
+			["c", "OR"],
+		]);
+	});
+
 	test("builds AND groups containing OR conditions", ({ expect }) => {
 		const draft = first(ruleDraftsFrom(rules, variationIdByName));
 		const firstCondition = first(draft.conditions);
@@ -153,6 +178,21 @@ describe("rule drafts", () => {
 				new Set(["variation-on"])
 			)
 		).toContain("between 0 and 100");
+		expect(
+			validateRuleDrafts(
+				[
+					{
+						...draft,
+						rollout: {
+							attribute: "",
+							attributeEdited: false,
+							percentage: "33.333",
+						},
+					},
+				],
+				new Set(["variation-on"])
+			)
+		).toContain("two decimal places");
 		expect(
 			validateRuleDrafts(
 				[
@@ -406,6 +446,15 @@ describe("percentage split", () => {
 				],
 			})
 		).toBeNull();
+		expect(
+			validateDefaultServe({
+				...serve,
+				splits: [
+					{ variationId: "a", weight: "33.333" },
+					{ variationId: "b", weight: "66.667" },
+				],
+			})
+		).toContain("two decimal places");
 	});
 
 	test("round-trips decimal split weights", ({ expect }) => {
@@ -514,6 +563,89 @@ describe("percentage split", () => {
 			{ variationId: "c", weight: "50" },
 			{ variationId: "a", weight: "0" },
 		]);
+	});
+
+	test("preserves nonadjacent ranges for the same variant", ({ expect }) => {
+		const saved: FlagshipRule[] = [
+			{
+				conditions: [],
+				priority: 1,
+				rollout: { percentage: 25 },
+				serve_variation: "treatment",
+			},
+			{
+				conditions: [],
+				priority: 2,
+				rollout: { percentage: 50 },
+				serve_variation: "holdback",
+			},
+			{
+				conditions: [],
+				priority: 3,
+				rollout: { percentage: 75 },
+				serve_variation: "treatment",
+			},
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
+	});
+
+	test("preserves decreasing thresholds for unrelated edits", ({ expect }) => {
+		const saved: FlagshipRule[] = [
+			{
+				conditions: [],
+				priority: 1,
+				rollout: { percentage: 80 },
+				serve_variation: "treatment",
+			},
+			{
+				conditions: [],
+				priority: 2,
+				rollout: { percentage: 30 },
+				serve_variation: "holdback",
+			},
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
+	});
+
+	test("preserves a default variant range before another variant", ({
+		expect,
+	}) => {
+		const saved: FlagshipRule[] = [
+			{
+				conditions: [],
+				priority: 1,
+				rollout: { percentage: 30 },
+				serve_variation: "control",
+			},
+			{
+				conditions: [],
+				priority: 2,
+				rollout: { percentage: 100 },
+				serve_variation: "treatment",
+			},
+		];
+		const { defaultServe, targetingRules } = inferDefaultServe(
+			saved,
+			"a",
+			variations,
+			idByName
+		);
+		expect(defaultServe.mode).toBe("variation");
+		expect(targetingRules).toEqual(saved);
 	});
 });
 

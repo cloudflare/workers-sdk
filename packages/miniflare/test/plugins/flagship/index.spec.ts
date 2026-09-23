@@ -384,9 +384,17 @@ describe("flagship plugin", () => {
 		}
 		const fractional = await admin.putFlag({
 			...BOOL_FLAG,
-			rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.333333 } }],
+			rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.33 } }],
 		});
-		expect(fractional.rules[0].rollout?.percentage).toBe(33.333333);
+		expect(fractional.rules[0].rollout?.percentage).toBe(33.33);
+		expect(
+			await rejection(() =>
+				admin.putFlag({
+					...BOOL_FLAG,
+					rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.333 } }],
+				})
+			)
+		).toContain("rollout percentage");
 		const partialRollout = await admin.putFlag({
 			...BOOL_FLAG,
 			rules: [

@@ -14,10 +14,12 @@ export const FLAGSHIP_OPERATOR_LABELS: Record<FlagshipOperator, string> = {
 	equals: "Equals",
 	greater_than: "Greater than",
 	greater_than_or_equals: "Greater than or equal",
+	has: "Has",
 	in: "Is one of",
 	less_than: "Less than",
 	less_than_or_equals: "Less than or equal",
 	not_equals: "Does not equal",
+	not_has: "Does not have",
 	not_in: "Is not one of",
 	starts_with: "Starts with",
 };
@@ -230,6 +232,22 @@ export function buildRuleConditions(
 		: [{ clauses, logical_operator: "AND" }];
 }
 
+/**
+ * Remove a condition, promoting its successor to `AND` when the removed
+ * condition started a group, so that the remaining groups keep their meaning.
+ */
+export function removeCondition(
+	conditions: RuleConditionDraft[],
+	index: number
+): RuleConditionDraft[] {
+	const next = conditions.filter((_, current) => current !== index);
+	const successor = next[index];
+	if (conditions[index]?.joinOperator === "AND" && successor !== undefined) {
+		next[index] = { ...successor, joinOperator: "AND" };
+	}
+	return next;
+}
+
 function comparableConditions(conditions: RuleConditionDraft[]): unknown {
 	return conditions.map(
 		({
@@ -336,19 +354,22 @@ export function validateRuleDrafts(
 				return `Rule ${ruleIndex + 1} matches every request and must be last.`;
 			}
 		}
-		if (rule.rollout !== null) {
-			const percentage = Number(rule.rollout.percentage);
-			if (
-				rule.rollout.percentage.trim() === "" ||
-				!Number.isFinite(percentage) ||
-				percentage < 0 ||
-				percentage > 100
-			) {
-				return `Rule ${ruleIndex + 1} rollout must be between 0 and 100%.`;
-			}
+		if (rule.rollout !== null && !isValidPercentage(rule.rollout.percentage)) {
+			return `Rule ${ruleIndex + 1} rollout must be between 0 and 100% with at most two decimal places.`;
 		}
 	}
 	return null;
+}
+
+function isValidPercentage(raw: string): boolean {
+	const percentage = Number(raw);
+	return (
+		raw.trim() !== "" &&
+		Number.isFinite(percentage) &&
+		percentage >= 0 &&
+		percentage <= 100 &&
+		Math.abs(percentage * 100 - Math.round(percentage * 100)) <= 1e-9
+	);
 }
 
 /**
@@ -390,15 +411,26 @@ export function alignSplits(
 }
 
 export function evenSplits(variations: VariationDraft[]): SplitDraft[] {
-	if (variations.length === 0) {
-		return [];
-	}
 	const base = Math.floor(100 / variations.length);
 	const remainder = 100 - base * variations.length;
 	return variations.map((variation, index) => ({
 		variationId: variation.id,
 		weight: String(base + (index < remainder ? 1 : 0)),
 	}));
+}
+
+export function serveDefaultVariation(
+	variations: VariationDraft[],
+	defaultVariationId: string
+): DefaultServeDraft {
+	return {
+		mode: "variation",
+		splits: variations.map((variation) => ({
+			variationId: variation.id,
+			weight: variation.id === defaultVariationId ? "100" : "0",
+		})),
+		targetingKey: "",
+	};
 }
 
 /**
@@ -425,17 +457,37 @@ export function inferDefaultServe(
 	// different attributes cannot be merged into one without changing them.
 	const sharesTargetingKey =
 		new Set(trailing.map((rule) => rule.rollout?.attribute ?? "")).size <= 1;
+	const defaultVariationName = variations.find(
+		(variation) => variation.id === defaultVariationId
+	)?.name;
+	const seenVariations = new Set<string>();
+	let previousThreshold = 0;
+	let lastVariation = "";
+	const preservesRanges = trailing.every((rule, index) => {
+		const threshold = rule.rollout?.percentage ?? 100;
+		if (
+			threshold < previousThreshold ||
+			(rule.serve_variation !== lastVariation &&
+				seenVariations.has(rule.serve_variation)) ||
+			(rule.serve_variation === defaultVariationName &&
+				index < trailing.length - 1)
+		) {
+			return false;
+		}
+		previousThreshold = threshold;
+		lastVariation = rule.serve_variation;
+		seenVariations.add(lastVariation);
+		return true;
+	});
 
-	if (!isSplitGroup(trailing) || !servesKnownVariants || !sharesTargetingKey) {
+	if (
+		!isSplitGroup(trailing) ||
+		!servesKnownVariants ||
+		!sharesTargetingKey ||
+		!preservesRanges
+	) {
 		return {
-			defaultServe: {
-				mode: "variation",
-				splits: variations.map((variation) => ({
-					variationId: variation.id,
-					weight: variation.id === defaultVariationId ? "100" : "0",
-				})),
-				targetingKey: "",
-			},
+			defaultServe: serveDefaultVariation(variations, defaultVariationId),
 			targetingRules: sorted,
 		};
 	}
@@ -465,23 +517,17 @@ export function inferDefaultServe(
 		);
 	}
 
-	const known = new Set(variations.map((variation) => variation.id));
-	const splits: SplitDraft[] = order.flatMap((variationId) =>
-		known.has(variationId)
-			? [{ variationId, weight: String(weightById.get(variationId) ?? 0) }]
-			: []
-	);
-	for (const variation of variations) {
-		if (!weightById.has(variation.id)) {
-			splits.push({ variationId: variation.id, weight: "0" });
-		}
-	}
-
 	const [firstSplitRule] = trailing;
 	return {
 		defaultServe: {
 			mode: "percentage",
-			splits,
+			splits: alignSplits(
+				order.map((variationId) => ({
+					variationId,
+					weight: String(weightById.get(variationId) ?? 0),
+				})),
+				variations
+			),
 			targetingKey: firstSplitRule?.rollout?.attribute ?? "",
 		},
 		targetingRules: sorted.slice(0, splitStart),
@@ -525,37 +571,10 @@ export function defaultServeToRules(
 		percentage,
 	});
 
-	const [onlyActive] = active;
-	if (active.length === 1 && onlyActive !== undefined) {
-		return onlyActive.variationId === defaultVariationId
-			? []
-			: [
-					{
-						conditions: [],
-						priority: startPriority,
-						rollout: rollout(100),
-						serve_variation: onlyActive.name,
-					},
-				];
-	}
-
-	if (active.length === 2) {
-		const target = active.find(
-			(split) => split.variationId !== defaultVariationId
-		);
-		const servesDefault = active.some(
-			(split) => split.variationId === defaultVariationId
-		);
-		if (target !== undefined && servesDefault) {
-			return [
-				{
-					conditions: [],
-					priority: startPriority,
-					rollout: rollout(target.weight),
-					serve_variation: target.name,
-				},
-			];
-		}
+	// A two-way split against the default becomes a single rule for the other
+	// variant, so move the default last where it is dropped below.
+	if (active.length === 2 && active[0]?.variationId === defaultVariationId) {
+		active.reverse();
 	}
 
 	const rules: FlagshipRule[] = [];
@@ -583,16 +602,10 @@ export function validateDefaultServe(serve: DefaultServeDraft): string | null {
 	}
 	let total = 0;
 	for (const split of serve.splits) {
-		const weight = Number(split.weight);
-		if (
-			split.weight.trim() === "" ||
-			!Number.isFinite(weight) ||
-			weight < 0 ||
-			weight > 100
-		) {
-			return "Each percentage split must be between 0 and 100.";
+		if (!isValidPercentage(split.weight)) {
+			return "Each percentage split must be between 0 and 100 with at most two decimal places.";
 		}
-		total += weight;
+		total += Number(split.weight);
 	}
 	return Math.abs(total - 100) < 1e-9
 		? null
@@ -605,9 +618,9 @@ export function sanitizeVariationName(raw: string): string {
 
 export const FLAG_TYPE_LABELS: Record<FlagType, string> = {
 	boolean: "Boolean",
-	json: "JSON",
 	number: "Number",
 	string: "String",
+	json: "JSON",
 };
 
 export interface VariationDraft {

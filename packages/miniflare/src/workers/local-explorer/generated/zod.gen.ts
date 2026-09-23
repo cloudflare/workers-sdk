@@ -398,6 +398,8 @@ export const zFlagshipBaseCondition = z.object({
 		"ends_with",
 		"in",
 		"not_in",
+		"has",
+		"not_has",
 	]),
 	value: z.unknown(),
 });

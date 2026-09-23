@@ -18,7 +18,9 @@ export type Operator =
 	| "starts_with"
 	| "ends_with"
 	| "in"
-	| "not_in";
+	| "not_in"
+	| "has"
+	| "not_has";
 
 export interface BaseCondition {
 	attribute: string;
@@ -85,6 +87,8 @@ const OPERATORS = new Set<Operator>([
 	"ends_with",
 	"in",
 	"not_in",
+	"has",
+	"not_has",
 ]);
 
 const LIST_OPERATORS = new Set<Operator>(["in", "not_in"]);
@@ -193,6 +197,15 @@ function validateCondition(
 	if (LIST_OPERATORS.has(operator as Operator) && !Array.isArray(value)) {
 		throw new Error(
 			`Flag '${key}' has a '${operator}' condition whose value is not a list`
+		);
+	}
+	if (
+		(operator === "has" || operator === "not_has") &&
+		value !== null &&
+		typeof value === "object"
+	) {
+		throw new Error(
+			`Flag '${key}' '${operator}' condition value must be a scalar`
 		);
 	}
 	if (value === undefined) {
@@ -315,7 +328,8 @@ export function validateFlagInput(input: unknown): asserts input is FlagInput {
 				typeof percentage !== "number" ||
 				!Number.isFinite(percentage) ||
 				percentage < 0 ||
-				percentage > 100
+				percentage > 100 ||
+				Math.abs(percentage * 100 - Math.round(percentage * 100)) > 1e-9
 			) {
 				throw new Error(
 					`Flag '${key}' rollout percentage must be a number between 0 and 100`

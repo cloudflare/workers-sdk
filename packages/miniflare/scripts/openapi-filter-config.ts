@@ -1,15 +1,13 @@
 import { EMAIL_OPENAPI_SCHEMAS } from "./email-openapi";
 import type { FilterConfig } from "./filter-openapi";
 
-function flagshipWorkerParameter() {
-	return {
-		description: "Worker whose local Flagship store should be used.",
-		in: "query" as const,
-		name: "worker",
-		required: false,
-		schema: { type: "string" as const },
-	};
-}
+const FLAGSHIP_WORKER_PARAMETER = {
+	description: "Worker whose local Flagship store should be used.",
+	in: "query" as const,
+	name: "worker",
+	required: false,
+	schema: { type: "string" as const },
+};
 
 function flagshipPathParameter(name: "app_id" | "flag_key") {
 	return {
@@ -55,34 +53,31 @@ function flagshipRequestBody(schema: object) {
 	};
 }
 
-function flagshipFlagProperties(
-	enabledDescription: string,
-	defaultDescription: string,
-	rulesDescription: string
-) {
-	return {
-		description: {
-			description: "Human readable description.",
-			nullable: true,
-			type: "string" as const,
-		},
-		enabled: { description: enabledDescription, type: "boolean" as const },
-		default_variation: {
-			description: defaultDescription,
-			type: "string" as const,
-		},
-		variations: {
-			additionalProperties: true,
-			description: "Named values the flag can serve.",
-			type: "object" as const,
-		},
-		rules: {
-			description: rulesDescription,
-			items: { $ref: "#/components/schemas/flagship_rule" },
-			type: "array" as const,
-		},
-	};
-}
+const FLAGSHIP_FLAG_PROPERTIES = {
+	description: {
+		description: "Human readable description",
+		nullable: true,
+		type: "string" as const,
+	},
+	enabled: {
+		description: "Whether the flag is enabled",
+		type: "boolean" as const,
+	},
+	default_variation: {
+		description: "Variation served when no rule matches",
+		type: "string" as const,
+	},
+	variations: {
+		additionalProperties: true,
+		description: "Named values the flag can serve",
+		type: "object" as const,
+	},
+	rules: {
+		description: "Targeting rules, in priority order",
+		items: { $ref: "#/components/schemas/flagship_rule" },
+		type: "array" as const,
+	},
+};
 
 /**
  * Configuration for filtering Cloudflare's OpenAPI spec for local explorer.
@@ -1821,7 +1816,7 @@ const config = {
 					operationId: "flagship-list-flags",
 					parameters: [
 						flagshipPathParameter("app_id"),
-						flagshipWorkerParameter(),
+						FLAGSHIP_WORKER_PARAMETER,
 					],
 					responses: flagshipResponses("List Flagship Flags", {
 						items: { $ref: "#/components/schemas/flagship_flag" },
@@ -1835,17 +1830,13 @@ const config = {
 					operationId: "flagship-create-flag",
 					parameters: [
 						flagshipPathParameter("app_id"),
-						flagshipWorkerParameter(),
+						FLAGSHIP_WORKER_PARAMETER,
 					],
 					requestBody: flagshipRequestBody({
 						required: ["key", "default_variation", "variations"],
 						properties: {
-							key: { description: "Flag key.", type: "string" },
-							...flagshipFlagProperties(
-								"Whether targeting rules are evaluated.",
-								"Variation served when no rule matches.",
-								"Targeting rules, in priority order."
-							),
+							key: { description: "Flag key", type: "string" },
+							...FLAGSHIP_FLAG_PROPERTIES,
 						},
 						type: "object",
 					}),
@@ -1859,19 +1850,15 @@ const config = {
 			"/flagship/apps/{app_id}/flags/{flag_key}": {
 				patch: {
 					description:
-						"Updates a flag. Omitted fields, including targeting rules, keep their current values.",
+						"Updates a flag. Omitted fields keep their current values; provided rules replace the existing ones.",
 					operationId: "flagship-update-flag",
 					parameters: [
 						flagshipPathParameter("app_id"),
 						flagshipPathParameter("flag_key"),
-						flagshipWorkerParameter(),
+						FLAGSHIP_WORKER_PARAMETER,
 					],
 					requestBody: flagshipRequestBody({
-						properties: flagshipFlagProperties(
-							"Whether the flag is enabled.",
-							"The variation served when no targeting rule matches.",
-							"Targeting rules, in priority order. Replaces the existing rules."
-						),
+						properties: FLAGSHIP_FLAG_PROPERTIES,
 						type: "object",
 					}),
 					responses: flagshipResponses("Update Flagship Flag", {
@@ -1886,7 +1873,7 @@ const config = {
 					parameters: [
 						flagshipPathParameter("app_id"),
 						flagshipPathParameter("flag_key"),
-						flagshipWorkerParameter(),
+						FLAGSHIP_WORKER_PARAMETER,
 					],
 					responses: flagshipResponses("Delete Flagship Flag", {
 						properties: { success: { type: "boolean" } },
@@ -1904,7 +1891,7 @@ const config = {
 					parameters: [
 						flagshipPathParameter("app_id"),
 						flagshipPathParameter("flag_key"),
-						flagshipWorkerParameter(),
+						FLAGSHIP_WORKER_PARAMETER,
 					],
 					requestBody: flagshipRequestBody({
 						properties: {
@@ -1961,6 +1948,8 @@ const config = {
 							"ends_with",
 							"in",
 							"not_in",
+							"has",
+							"not_has",
 						],
 					},
 					value: {},
@@ -2004,7 +1993,12 @@ const config = {
 						type: "object",
 						required: ["percentage"],
 						properties: {
-							percentage: { type: "number", minimum: 0, maximum: 100 },
+							percentage: {
+								type: "number",
+								minimum: 0,
+								maximum: 100,
+								multipleOf: 0.01,
+							},
 							attribute: { type: "string" },
 						},
 						description: "Percentage rollout applied to matching contexts",
@@ -2029,29 +2023,7 @@ const config = {
 						enum: ["boolean", "string", "number", "json"],
 						description: "Type shared by the flag's variations",
 					},
-					description: {
-						type: "string",
-						nullable: true,
-						description: "Human readable description",
-					},
-					enabled: {
-						type: "boolean",
-						description: "Whether targeting rules are evaluated",
-					},
-					default_variation: {
-						type: "string",
-						description: "Variation served when no rule matches",
-					},
-					variations: {
-						type: "object",
-						additionalProperties: true,
-						description: "Named values the flag can serve",
-					},
-					rules: {
-						type: "array",
-						items: { $ref: "#/components/schemas/flagship_rule" },
-						description: "Targeting rules, in priority order",
-					},
+					...FLAGSHIP_FLAG_PROPERTIES,
 					updated_at: {
 						type: "string",
 						description: "When the flag was last written locally",
