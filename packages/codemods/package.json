@@ -42,13 +42,11 @@
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
-	"dependencies": {
-		"@cloudflare/cli-shared-helpers": "workspace:*",
-		"@cloudflare/workers-utils": "workspace:*"
-	},
 	"devDependencies": {
+		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
 		"tinyglobby": "catalog:default",
 		"tsup": "8.3.0",
