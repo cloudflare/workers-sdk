@@ -297,14 +297,22 @@ export async function planCfDependencyInstallation(
 		return { action: "missing-manifest" };
 	}
 
-	const packageJson = await readPackageJson(packageJsonPath);
-	if (hasCfDependency(packageJson)) {
-		return { action: "already-installed" };
-	}
-
 	const packageDirectory = path.dirname(packageJsonPath);
 	if (packageDirectory !== projectDirectory) {
 		return { action: "skipped-ancestor-package" };
+	}
+	let packageJson: PackageJson;
+	try {
+		packageJson = await readPackageJson(packageJsonPath);
+	} catch {
+		return {
+			action: "install",
+			isWorkspaceRoot: false,
+			packageDirectory,
+		};
+	}
+	if (hasCfDependency(packageJson)) {
+		return { action: "already-installed" };
 	}
 	const isWorkspaceRoot =
 		packageJson.workspaces !== undefined ||

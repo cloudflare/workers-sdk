@@ -360,6 +360,28 @@ describe("migrateWranglerToCf", () => {
 		expect(result.requiresInstall).toBe(false);
 	});
 
+	it("skips unreadable dependency state when installation is disabled", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": "{",
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			installDependencies: false,
+		});
+
+		expect(result).toMatchObject({
+			changedFiles: ["cloudflare.config.ts"],
+			requiresInstall: true,
+		});
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+	});
+
 	it("does not inspect ancestor manifests when installation is disabled", async ({
 		expect,
 	}) => {
@@ -541,6 +563,30 @@ describe("migrateWranglerToCf", () => {
 				readFile(path.join(cwd, filePath), "utf8")
 			).rejects.toMatchObject({ code: "ENOENT" });
 		}
+	});
+
+	it("retains output when the package manifest cannot be read", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": "{",
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(result).toMatchObject({
+			changedFiles: ["cloudflare.config.ts"],
+			followUps: [{ blocking: true, code: "cf-install-failed" }],
+			requiresInstall: true,
+			status: "needs-intervention",
+		});
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).resolves.toContain('from "cf/config"');
 	});
 
 	it("writes Wrangler tooling only for the Wrangler bundler", async ({
