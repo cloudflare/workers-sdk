@@ -264,19 +264,19 @@ export function isCronBuilderDraft(value: unknown): value is CronBuilderDraft {
 	}
 
 	return expectedKeys.every((key) => {
-		const field = value[key];
+		const fieldValue = value[key];
 		if (key === "weekdays") {
 			return (
-				Array.isArray(field) &&
-				field.length <= WEEKDAYS.length &&
-				field.every(isCronWeekday) &&
-				new Set(field).size === field.length
+				Array.isArray(fieldValue) &&
+				fieldValue.length <= WEEKDAYS.length &&
+				fieldValue.every(isCronWeekday) &&
+				new Set(fieldValue).size === fieldValue.length
 			);
 		}
 		if (key === "weekday") {
-			return isCronWeekday(field);
+			return isCronWeekday(fieldValue);
 		}
-		return typeof field === typeof template[key];
+		return typeof fieldValue === typeof template[key];
 	});
 }
 
