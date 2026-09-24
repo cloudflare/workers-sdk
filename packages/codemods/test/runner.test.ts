@@ -621,6 +621,37 @@ export default defineWorkersProject({
 		);
 	});
 
+	it("previews a Wrangler migration in a dirty worktree", async ({
+		expect,
+	}) => {
+		const configPath = "wrangler.json";
+		const cwd = await createProject({
+			[configPath]: JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "dry-run-test",
+			}),
+		});
+		await commitProject(cwd);
+		await writeFile(
+			path.join(cwd, configPath),
+			JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "dirty-dry-run-test",
+			})
+		);
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: true,
+			installDependencies: false,
+		});
+
+		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
+	});
+
 	it("is a no-op for an up-to-date project", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": JSON.stringify({
