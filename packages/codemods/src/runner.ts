@@ -41,7 +41,9 @@ export async function runCodemod(
 	if (!codemod) {
 		throw new Error(`Unknown codemod: ${name}`);
 	}
-	await ensureCleanGitWorktree(context.cwd, context.force ?? false);
+	if (!codemod.managesGitWorktreeSafety) {
+		await ensureCleanGitWorktree(context.cwd, context.force ?? false);
+	}
 
 	const stagedFiles = new Map<string, string>();
 	const result = await codemod.run({ ...context, stagedFiles });

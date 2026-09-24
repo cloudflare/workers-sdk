@@ -137,6 +137,39 @@ describe("codemod runner", () => {
 		expect(includedResult.changedFiles).toEqual(["cloudflare.config.ts"]);
 	});
 
+	it("skips an excluded Wrangler config in a dirty worktree", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"README.md": "before",
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "restricted-test",
+			}),
+		});
+		await commitProject(cwd);
+		await writeFile(path.join(cwd, "README.md"), "after");
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["unrelated/**"],
+		});
+
+		expect(result).toMatchObject({
+			changedFiles: [],
+			message: "wrangler.jsonc is excluded by --files.",
+			status: "skipped",
+		});
+		await expect(
+			runCodemod("wrangler-to-cf", {
+				cwd,
+				dryRun: false,
+				files: ["wrangler.jsonc"],
+			})
+		).rejects.toThrow("Git worktree is not clean");
+	});
+
 	it("accepts an exact Wrangler config and bundler", async ({ expect }) => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({

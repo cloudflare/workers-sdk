@@ -33,5 +33,7 @@ export interface Codemod {
 	name: string;
 	aliases?: string[];
 	description: string;
+	/** Whether the codemod enforces worktree safety after its own preflight. */
+	managesGitWorktreeSafety?: boolean;
 	run(context: RunContext): Promise<CodemodResult>;
 }
