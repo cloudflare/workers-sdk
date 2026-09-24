@@ -74,7 +74,9 @@ export async function migrateWranglerToCf(
 	);
 
 	await assertTargetsDoNotExist([cloudflareConfigPath]);
-	await ensureCleanGitWorktree(projectDirectory, force);
+	if (!dryRun) {
+		await ensureCleanGitWorktree(projectDirectory, force);
+	}
 
 	const [rawConfig, secretFiles] = await Promise.all([
 		readWranglerConfig(absoluteConfigPath),
