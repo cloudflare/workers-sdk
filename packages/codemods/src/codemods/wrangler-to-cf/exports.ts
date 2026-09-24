@@ -80,6 +80,24 @@ export function convertExports(
 			continue;
 		}
 
+		if (value.type === "workflow") {
+			imports.add("exports");
+			properties.push({
+				key: name,
+				value: call(
+					"exports.workflow",
+					optionsFromRecord(value, [
+						["name", "name"],
+						["limits", "limits"],
+						["concurrency", "concurrency"],
+						["schedules", "schedules"],
+						["default_retention", "default_retention"],
+					])
+				),
+			});
+			continue;
+		}
+
 		report(
 			createFollowUp(
 				"unsupported-export",

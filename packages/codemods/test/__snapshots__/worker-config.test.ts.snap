@@ -78,6 +78,23 @@ export default defineConfig({
 					enabled: true,
 				},
 			}),
+			Workflow: exports.workflow({
+				name: "example-workflow",
+				limits: {
+					steps: 10,
+				},
+				concurrency: {
+					limit: 2,
+				},
+				schedules: [
+					"0 * * * *",
+					"30 * * * *",
+				],
+				default_retention: {
+					error_retention: 86400000,
+					success_retention: "3 days",
+				},
+			}),
 		},
 		/**
 		 * TODO(@cloudflare): cf migrate: Durable Object exports require manual review after migration.

@@ -50,6 +50,17 @@ describe("Wrangler Worker configuration conversion", () => {
 			exports: {
 				Counter: { storage: "sqlite", type: "durable-object" },
 				Entrypoint: { cache: { enabled: true }, type: "worker" },
+				Workflow: {
+					concurrency: { limit: 2 },
+					default_retention: {
+						error_retention: 86_400_000,
+						success_retention: "3 days",
+					},
+					limits: { steps: 10 },
+					name: "example-workflow",
+					schedules: ["0 * * * *", "30 * * * *"],
+					type: "workflow",
+				},
 			},
 			kv_namespaces: [{ binding: "CACHE", id: "namespace-id" }],
 			main: "src/index.ts",
