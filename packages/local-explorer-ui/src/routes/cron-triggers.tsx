@@ -14,6 +14,7 @@ import {
 	filterVisibleWorkers,
 	getSelectedWorker,
 } from "../components/WorkerSelector";
+import { isEqual } from "../utils/is-equal";
 import type { LocalExplorerWorker } from "../api";
 import type { JSX } from "react";
 
@@ -62,13 +63,13 @@ function CronTriggersLayout(): JSX.Element {
 			if (visibleMetadata.length === 0) {
 				return;
 			}
-			const knownNames = new Set(
-				loaderData.workers.map((worker) => worker.name)
+			const knownWorkers = new Map(
+				loaderData.workers.map((worker) => [worker.name, worker])
 			);
-			const discoveredWorker = visibleMetadata.some(
-				(worker) => !knownNames.has(worker.name)
+			const metadataChanged = visibleMetadata.some(
+				(worker) => !isEqual(knownWorkers.get(worker.name), worker)
 			);
-			if (loaderData.bootstrapAuthoritative && !discoveredWorker) {
+			if (loaderData.bootstrapAuthoritative && !metadataChanged) {
 				return;
 			}
 			const refreshedNames = new Set(metadata.map((worker) => worker.name));

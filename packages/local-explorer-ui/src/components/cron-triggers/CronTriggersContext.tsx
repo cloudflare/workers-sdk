@@ -305,8 +305,9 @@ export function CronTriggersProvider({
 			) {
 				continue;
 			}
-			writePersistedCustomCronRows(storage.current, key, customRows);
-			lastPersistedCustomRows.current.set(key, customRows);
+			if (writePersistedCustomCronRows(storage.current, key, customRows)) {
+				lastPersistedCustomRows.current.set(key, customRows);
+			}
 		}
 	}, [persistenceKeys, workers]);
 
@@ -327,8 +328,9 @@ export function CronTriggersProvider({
 			) {
 				continue;
 			}
-			writePersistedCronTimePresets(storage.current, key, timePresets);
-			lastPersistedTimePresets.current.set(key, timePresets);
+			if (writePersistedCronTimePresets(storage.current, key, timePresets)) {
+				lastPersistedTimePresets.current.set(key, timePresets);
+			}
 		}
 	}, [timePresetPersistenceKeys, workers]);
 

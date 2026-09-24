@@ -37,8 +37,8 @@ export function CronTriggersPage({
 	const previousRows = useRef(rows.map((row) => row.id));
 	const showNoConfiguration = entry.authoritative && configured.length === 0;
 	const showPureNoConfiguration =
+		view === "configured" &&
 		showNoConfiguration &&
-		customRows.length === 0 &&
 		!configuredRows.some((row) => row.source === "no-longer-configured");
 	const title = view === "configured" ? "Configured Crons" : "Ad-Hoc Triggers";
 
@@ -108,7 +108,7 @@ export function CronTriggersPage({
 				}}
 				onUpdate={(update) => cron.updateRow(workerName, row.id, update)}
 				row={row}
-				triggerEnabled={!showNoConfiguration}
+				triggerEnabled={view === "ad-hoc" || !showNoConfiguration}
 				trigger={() => {
 					void cron.invoke(
 						workerName,
@@ -184,27 +184,21 @@ export function CronTriggersPage({
 					</CronView>
 				) : (
 					<CronView title={title} view={view}>
-						{showNoConfiguration ? (
-							<NoConfigurationState />
-						) : (
-							scheduledTimeControl()
-						)}
+						{scheduledTimeControl()}
 						<div className="flex flex-wrap items-center justify-between gap-3 border-b border-kumo-fill bg-kumo-base px-5 py-4">
 							<p className="text-sm text-kumo-subtle">
 								Ad-hoc triggers are stored locally and do not modify your Worker
 								configuration.
 							</p>
-							{showNoConfiguration ? null : (
-								<Button
-									data-add-custom
-									icon={PlusIcon}
-									onClick={() => focusSoon(cron.addCustom(workerName))}
-									size="sm"
-									variant="secondary"
-								>
-									Add trigger
-								</Button>
-							)}
+							<Button
+								data-add-custom
+								icon={PlusIcon}
+								onClick={() => focusSoon(cron.addCustom(workerName))}
+								size="sm"
+								variant="secondary"
+							>
+								Add trigger
+							</Button>
 						</div>
 						<RowList>
 							{customRows.length === 0 ? (

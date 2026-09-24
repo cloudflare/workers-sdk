@@ -146,19 +146,32 @@ describe("Cron Trigger custom-row persistence", () => {
 	it("removes empty state and tolerates storage failures", ({ expect }) => {
 		const storage = new MemoryStorage();
 		storage.setItem("key", "old");
-		writePersistedCustomCronRows(storage, "key", []);
+		expect(writePersistedCustomCronRows(storage, "key", [])).toBe(true);
 		expect(storage.getItem("key")).toBeNull();
 
 		const quotaStorage = new MemoryStorage();
-		writePersistedCustomCronRows(quotaStorage, "key", [
-			createCronRow("persisted"),
-		]);
+		expect(
+			writePersistedCustomCronRows(quotaStorage, "key", [
+				createCronRow("persisted"),
+			])
+		).toBe(true);
 		const previous = quotaStorage.getItem("key");
 		quotaStorage.writesBlocked = true;
-		writePersistedCustomCronRows(quotaStorage, "key", [
-			createCronRow("not persisted"),
-		]);
+		expect(
+			writePersistedCustomCronRows(quotaStorage, "key", [
+				createCronRow("not persisted"),
+			])
+		).toBe(false);
 		expect(quotaStorage.getItem("key")).toBe(previous);
+		quotaStorage.writesBlocked = false;
+		expect(
+			writePersistedCustomCronRows(quotaStorage, "key", [
+				createCronRow("retried"),
+			])
+		).toBe(true);
+		expect(readPersistedCustomCronRows(quotaStorage, "key")[0]?.cron).toBe(
+			"retried"
+		);
 
 		const throwing = {
 			getItem: () => {
@@ -172,9 +185,9 @@ describe("Cron Trigger custom-row persistence", () => {
 			},
 		} as unknown as Storage;
 		expect(() => readPersistedCustomCronRows(throwing, "key")).not.toThrow();
-		expect(() =>
+		expect(
 			writePersistedCustomCronRows(throwing, "key", [createCronRow("cron")])
-		).not.toThrow();
+		).toBe(false);
 	});
 });
 
@@ -205,10 +218,13 @@ describe("Cron Trigger time-preset persistence", () => {
 		expect(malformed.getItem("key")).toBeNull();
 
 		const quotaStorage = new MemoryStorage();
-		writePersistedCronTimePresets(quotaStorage, "key", [1]);
+		expect(writePersistedCronTimePresets(quotaStorage, "key", [1])).toBe(true);
 		const previous = quotaStorage.getItem("key");
 		quotaStorage.writesBlocked = true;
-		writePersistedCronTimePresets(quotaStorage, "key", [2]);
+		expect(writePersistedCronTimePresets(quotaStorage, "key", [2])).toBe(false);
 		expect(quotaStorage.getItem("key")).toBe(previous);
+		quotaStorage.writesBlocked = false;
+		expect(writePersistedCronTimePresets(quotaStorage, "key", [2])).toBe(true);
+		expect(readPersistedCronTimePresets(quotaStorage, "key")).toEqual([2]);
 	});
 });

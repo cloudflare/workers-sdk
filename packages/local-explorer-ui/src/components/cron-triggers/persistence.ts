@@ -77,11 +77,13 @@ function parsePersistedCustomRow(
 	};
 }
 
-function remove(storage: Storage, key: string): void {
+function remove(storage: Storage, key: string): boolean {
 	try {
 		storage.removeItem(key);
+		return true;
 	} catch {
 		// Storage can be unavailable in privacy modes or restricted frames.
+		return false;
 	}
 }
 
@@ -169,21 +171,22 @@ function persistedDraft(row: CustomCronRow): PersistedCustomRow {
 	};
 }
 
-/** Persist only editable custom-row drafts; transient and configured state is omitted. */
+/** Persist editable custom-row drafts, returning whether storage was updated. */
 export function writePersistedCustomCronRows(
 	storage: Storage,
 	key: string,
 	rows: CustomCronRow[]
-): void {
+): boolean {
 	if (rows.length === 0) {
-		remove(storage, key);
-		return;
+		return remove(storage, key);
 	}
 	const raw = JSON.stringify(rows.map(persistedDraft));
 	try {
 		storage.setItem(key, raw);
+		return true;
 	} catch {
 		// Quota, privacy, and security errors must not break the editor.
+		return false;
 	}
 }
 
@@ -226,19 +229,20 @@ export function readPersistedCronTimePresets(
 	return value;
 }
 
-/** Persist reusable scheduled-time presets without an application-level cap. */
+/** Persist scheduled-time presets, returning whether storage was updated. */
 export function writePersistedCronTimePresets(
 	storage: Storage,
 	key: string,
 	presets: number[]
-): void {
+): boolean {
 	if (presets.length === 0) {
-		remove(storage, key);
-		return;
+		return remove(storage, key);
 	}
 	try {
 		storage.setItem(key, JSON.stringify(presets));
+		return true;
 	} catch {
 		// Quota, privacy, and security errors must not break the editor.
+		return false;
 	}
 }

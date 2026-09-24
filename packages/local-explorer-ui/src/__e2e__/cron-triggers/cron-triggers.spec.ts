@@ -7,6 +7,9 @@ const SCHEDULED_ROUTE =
 const STORAGE_PREFIX = "local-explorer.cron-triggers.";
 
 interface MockWorkerMetadata {
+	bindings?: {
+		kv: Array<{ bindingName: string; id: string }>;
+	};
 	isSelf?: boolean;
 	name: string;
 	persistenceScope?: string;
@@ -64,10 +67,23 @@ afterEach(async () => {
 });
 
 describe("Cron Triggers", () => {
-	test("shows the authoritative empty state without test controls", async ({
+	test("keeps ad-hoc triggers available without configured crons", async ({
 		expect,
 	}) => {
 		await mockWorkers([]);
+		const bodies: Array<{ cron: string; scheduled_time: number }> = [];
+		await page.route(SCHEDULED_ROUTE, async (route) => {
+			bodies.push(route.request().postDataJSON());
+			await route.fulfill({
+				body: JSON.stringify({
+					errors: [],
+					messages: [],
+					result: { noRetry: false, outcome: "ok" },
+					success: true,
+				}),
+				contentType: "application/json",
+			});
+		});
 		await openCronTriggers();
 		await expect
 			.poll(() => new URL(page.url()).searchParams.get("worker"))
@@ -81,6 +97,18 @@ describe("Cron Triggers", () => {
 		expect(
 			await page.getByRole("button", { name: "Trigger", exact: true }).count()
 		).toBe(0);
+
+		await page.getByRole("link", { name: "Ad-Hoc Triggers" }).click();
+		expect(
+			await page
+				.getByRole("heading", { name: "No Cron Triggers configured" })
+				.count()
+		).toBe(0);
+		await page.getByRole("button", { name: "Add trigger" }).click();
+		await page.getByLabel("Cron expression").fill("15 4 * * *");
+		await page.getByRole("button", { name: "Trigger", exact: true }).click();
+		await expect.poll(() => bodies.length).toBe(1);
+		expect(bodies[0]?.cron).toBe("15 4 * * *");
 	});
 
 	test("recovers Worker selection after bootstrap fails", async ({
@@ -186,6 +214,11 @@ describe("Cron Triggers", () => {
 	test("canonicalizes Worker selection and retains it across metadata refreshes", async ({
 		expect,
 	}) => {
+		const workerTwo: MockWorkerMetadata = {
+			name: "worker-2",
+			persistenceScope: "cron-project-2",
+			triggers: { crons: ["second-worker-cron"] },
+		};
 		const workers: MockWorkerMetadata[] = [
 			{
 				isSelf: true,
@@ -193,11 +226,7 @@ describe("Cron Triggers", () => {
 				persistenceScope: "cron-project-1",
 				triggers: { crons: ["first-worker-cron"] },
 			},
-			{
-				name: "worker-2",
-				persistenceScope: "cron-project-2",
-				triggers: { crons: ["second-worker-cron"] },
-			},
+			workerTwo,
 		];
 		await mockWorkerMetadata(workers);
 		const requestedWorkers: Array<string | null> = [];
@@ -253,6 +282,12 @@ describe("Cron Triggers", () => {
 		);
 		await page.getByRole("button", { name: "Trigger", exact: true }).click();
 		await expect.poll(() => requestedWorkers).toEqual(["worker-2"]);
+		workerTwo.bindings = {
+			kv: [{ bindingName: "CACHE", id: "kv-namespace-id" }],
+		};
+		await page.getByRole("button", { name: "Refresh Cron Triggers" }).click();
+		await page.getByRole("link", { name: "CACHE" }).waitFor();
+		expect(new URL(page.url()).searchParams.get("worker")).toBe("worker-2");
 
 		requestedWorkers.length = 0;
 		workers.splice(1, 1);
@@ -640,9 +675,11 @@ describe("Cron Triggers", () => {
 
 		configuredCrons.length = 0;
 		await page.getByRole("button", { name: "Refresh Cron Triggers" }).click();
-		await page
-			.getByRole("heading", { name: "No Cron Triggers configured" })
-			.waitFor();
+		expect(
+			await page
+				.getByRole("heading", { name: "No Cron Triggers configured" })
+				.count()
+		).toBe(0);
 		expect(await page.getByLabel("Cron expression").inputValue()).toBe(
 			"15 4 * * *"
 		);
@@ -650,9 +687,9 @@ describe("Cron Triggers", () => {
 			await page
 				.getByRole("button", { name: "Trigger", exact: true })
 				.getAttribute("aria-disabled")
-		).toBe("true");
+		).toBe("false");
 		expect(
 			await page.getByRole("button", { name: "Add trigger" }).count()
-		).toBe(0);
+		).toBe(1);
 	});
 });
