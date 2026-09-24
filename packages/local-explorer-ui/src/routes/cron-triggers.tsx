@@ -60,31 +60,37 @@ function CronTriggersLayout(): JSX.Element {
 	const handleWorkerMetadata = useCallback(
 		(metadata: LocalExplorerWorker[]) => {
 			const visibleMetadata = filterVisibleWorkers(metadata);
-			if (visibleMetadata.length === 0) {
+			if (visibleMetadata.length === 0 && !loaderData.bootstrapAuthoritative) {
 				return;
 			}
 			const knownWorkers = new Map(
 				loaderData.workers.map((worker) => [worker.name, worker])
 			);
-			const metadataChanged = visibleMetadata.some(
-				(worker) => !isEqual(knownWorkers.get(worker.name), worker)
-			);
+			const refreshedNames = new Set(metadata.map((worker) => worker.name));
+			const selectedWorkerMetadata = activeWorkerName
+				? knownWorkers.get(activeWorkerName)
+				: undefined;
+			const workers =
+				selectedWorkerMetadata &&
+				!refreshedNames.has(selectedWorkerMetadata.name)
+					? [...metadata, selectedWorkerMetadata]
+					: metadata;
+			const metadataChanged = !isEqual(loaderData.workers, workers);
 			if (loaderData.bootstrapAuthoritative && !metadataChanged) {
 				return;
 			}
-			const refreshedNames = new Set(metadata.map((worker) => worker.name));
-			const workers = [
-				...metadata,
-				...loaderData.workers.filter(
-					(worker) => !refreshedNames.has(worker.name)
-				),
-			];
 			router.updateMatch(rootMatchId, (match) => ({
 				...match,
 				loaderData: { bootstrapAuthoritative: true, workers },
 			}));
 		},
-		[loaderData.bootstrapAuthoritative, loaderData.workers, rootMatchId, router]
+		[
+			activeWorkerName,
+			loaderData.bootstrapAuthoritative,
+			loaderData.workers,
+			rootMatchId,
+			router,
+		]
 	);
 
 	useEffect(() => {

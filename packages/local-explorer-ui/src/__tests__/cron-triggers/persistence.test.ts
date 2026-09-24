@@ -71,51 +71,51 @@ describe("Cron Trigger custom-row persistence", () => {
 		writePersistedCustomCronRows(storage, "key", [custom]);
 		const raw = storage.getItem("key") ?? "";
 		expect(raw).not.toContain(custom.id);
+		expect(raw).not.toContain("calendarValue");
 		expect(raw).not.toContain("customEpochMs");
 		expect(raw).not.toContain("request-id");
 		expect(raw).not.toContain("source");
+		expect(raw).not.toContain("timeMode");
 
 		const restored = readPersistedCustomCronRows(storage, "key");
 		expect(restored).toHaveLength(1);
 		expect(restored[0]).toMatchObject({
-			calendarValue: "2026-09-10T12:34:56.789",
 			cron: "0 12 * * *",
-			customEpochMs: Date.UTC(2026, 8, 10, 12, 34, 56, 789),
 			source: "custom",
-			timeMode: "custom",
+			timeMode: "now",
 		});
+		expect(restored[0]?.calendarValue).toBeUndefined();
+		expect(restored[0]?.customEpochMs).toBeUndefined();
 		expect(restored[0]?.id).not.toBe(custom.id);
 		expect(restored[0]?.invocation).toBeUndefined();
 	});
 
-	it("recomputes valid epoch input and retains invalid editable input", ({
-		expect,
-	}) => {
+	it("accepts legacy per-row times without restoring them", ({ expect }) => {
 		const storage = new MemoryStorage();
-		const valid = {
-			...createCronRow("valid"),
-			customTimeInputMode: "epoch" as const,
-			epochValue: "123456789",
-			timeMode: "custom" as const,
-		};
-		const invalid = {
-			...createCronRow("invalid"),
-			cronBuilder: { kind: "daily" as const, hour: "", minute: "7" },
-			cronInputMode: "builder" as const,
-			customTimeInputMode: "epoch" as const,
-			epochValue: "not-an-integer",
-			timeMode: "custom" as const,
-		};
-		writePersistedCustomCronRows(storage, "key", [valid, invalid]);
+		storage.setItem(
+			"key",
+			JSON.stringify([
+				{
+					calendarValue: "2026-09-10T12:34:56.789",
+					cron: "legacy",
+					cronBuilder: { kind: "daily", hour: "", minute: "7" },
+					cronInputMode: "builder",
+					customTimeInputMode: "epoch",
+					epochValue: "123456789",
+					timeMode: "custom",
+				},
+			])
+		);
 
 		const restored = readPersistedCustomCronRows(storage, "key");
-		expect(restored[0]?.customEpochMs).toBe(123456789);
-		expect(restored[1]?.epochValue).toBe("not-an-integer");
-		expect(restored[1]?.customEpochMs).toBeUndefined();
-		expect(restored[1]).toMatchObject({
+		expect(restored[0]).toMatchObject({
 			cronBuilder: { kind: "daily", hour: "", minute: "7" },
 			cronInputMode: "builder",
+			timeMode: "now",
 		});
+		expect(restored[0]?.calendarValue).toBeUndefined();
+		expect(restored[0]?.customEpochMs).toBeUndefined();
+		expect(restored[0]?.epochValue).toBeUndefined();
 	});
 
 	for (const [label, raw] of [

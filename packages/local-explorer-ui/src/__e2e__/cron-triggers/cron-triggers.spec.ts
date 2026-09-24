@@ -316,6 +316,14 @@ describe("Cron Triggers", () => {
 		await expect
 			.poll(() => new URL(page.url()).searchParams.get("worker"))
 			.toBe("worker-3");
+		await page.getByRole("button", { name: "Refresh Cron Triggers" }).click();
+		const refreshedWorkerSelector = page
+			.getByRole("combobox")
+			.filter({ hasText: "worker-3" });
+		await refreshedWorkerSelector.click();
+		await expect
+			.poll(() => page.getByRole("option", { name: "worker-2" }).count())
+			.toBe(0);
 	});
 
 	test("clears configured results when persistence scope changes", async ({

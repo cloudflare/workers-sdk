@@ -1,11 +1,6 @@
 import { isCronBuilderDraft } from "./cron-builder";
 import { createCronRow } from "./row-state";
-import {
-	MAX_DATE_EPOCH_MS,
-	MIN_DATE_EPOCH_MS,
-	parseEpochMilliseconds,
-	resolveUtcCalendarTime,
-} from "./scheduled-time";
+import { MAX_DATE_EPOCH_MS, MIN_DATE_EPOCH_MS } from "./scheduled-time";
 import type { CustomCronRow } from "./types";
 
 export const CRON_CUSTOM_ROWS_STORAGE_PREFIX =
@@ -15,16 +10,12 @@ export const CRON_TIME_PRESETS_STORAGE_PREFIX =
 
 type PersistedCustomRow = Pick<
 	CustomCronRow,
-	| "calendarValue"
-	| "cron"
-	| "cronBuilder"
-	| "cronInputMode"
-	| "customTimeInputMode"
-	| "epochValue"
-	| "timeMode"
+	"cron" | "cronBuilder" | "cronInputMode"
 >;
 
-const ROW_KEYS = new Set([
+const ACCEPTED_ROW_KEYS = new Set([
+	// Accept fields written by the earlier per-row scheduled-time UI, but do not
+	// restore or write them now that scheduled time is selected at page level.
 	"calendarValue",
 	"cron",
 	"cronBuilder",
@@ -46,18 +37,9 @@ function parsePersistedCustomRow(
 		!("cron" in value) ||
 		!("cronBuilder" in value) ||
 		!("cronInputMode" in value) ||
-		!("customTimeInputMode" in value) ||
-		!("timeMode" in value) ||
-		Object.keys(value).some((key) => !ROW_KEYS.has(key)) ||
+		Object.keys(value).some((key) => !ACCEPTED_ROW_KEYS.has(key)) ||
 		typeof value.cron !== "string" ||
-		(value.cronInputMode !== "expression" &&
-			value.cronInputMode !== "builder") ||
-		(value.customTimeInputMode !== "calendar" &&
-			value.customTimeInputMode !== "epoch") ||
-		(value.timeMode !== "now" && value.timeMode !== "custom") ||
-		(value.calendarValue !== undefined &&
-			typeof value.calendarValue !== "string") ||
-		(value.epochValue !== undefined && typeof value.epochValue !== "string")
+		(value.cronInputMode !== "expression" && value.cronInputMode !== "builder")
 	) {
 		return undefined;
 	}
@@ -65,15 +47,9 @@ function parsePersistedCustomRow(
 		return undefined;
 	}
 	return {
-		...(value.calendarValue === undefined
-			? {}
-			: { calendarValue: value.calendarValue }),
 		cron: value.cron,
 		cronBuilder: value.cronBuilder,
 		cronInputMode: value.cronInputMode,
-		customTimeInputMode: value.customTimeInputMode,
-		...(value.epochValue === undefined ? {} : { epochValue: value.epochValue }),
-		timeMode: value.timeMode,
 	};
 }
 
@@ -106,19 +82,9 @@ export function cronTimePresetsStorageKey(
 }
 
 function hydrateRow(draft: PersistedCustomRow): CustomCronRow {
-	let customEpochMs: number | undefined;
-	if (draft.timeMode === "custom") {
-		if (draft.customTimeInputMode === "calendar") {
-			const resolved = resolveUtcCalendarTime(draft.calendarValue ?? "");
-			customEpochMs = resolved.kind === "exact" ? resolved.epochMs : undefined;
-		} else {
-			customEpochMs = parseEpochMilliseconds(draft.epochValue ?? "").epochMs;
-		}
-	}
 	return {
 		...createCronRow(draft.cron),
 		...draft,
-		...(customEpochMs === undefined ? {} : { customEpochMs }),
 	};
 }
 
@@ -159,15 +125,9 @@ export function readPersistedCustomCronRows(
 
 function persistedDraft(row: CustomCronRow): PersistedCustomRow {
 	return {
-		...(row.calendarValue === undefined
-			? {}
-			: { calendarValue: row.calendarValue }),
 		cron: row.cron,
 		cronBuilder: row.cronBuilder,
 		cronInputMode: row.cronInputMode,
-		customTimeInputMode: row.customTimeInputMode,
-		...(row.epochValue === undefined ? {} : { epochValue: row.epochValue }),
-		timeMode: row.timeMode,
 	};
 }
 
