@@ -1808,6 +1808,10 @@ importers:
         version: 0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(typescript@5.9.3)
 
   packages/codemods:
+    dependencies:
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
     devDependencies:
       '@cloudflare/shared-ast-primitives':
         specifier: workspace:*

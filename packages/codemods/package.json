@@ -42,6 +42,9 @@
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
+	"dependencies": {
+		"@cloudflare/workers-utils": "workspace:*"
+	},
 	"devDependencies": {
 		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",

@@ -1,0 +1,214 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`migrateWranglerToCf > does not create \`wrangler.config.ts\` for the Vite bundler > cloudflare.config.ts 1`] = `
+"import { defineConfig } from "cf/config";
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: dev,rules: Wrangler-specific tooling fields were not migrated because the Vite bundler is selected: dev, rules.
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in cloudflare.config.ts.");
+
+export default defineConfig({
+	worker: {
+		name: "example-worker",
+		compatibilityDate: "2026-09-23",
+	},
+});
+"
+`;
+
+exports[`migrateWranglerToCf > leaves guarded TODOs for unsupported resource migrations > cloudflare.config.ts 1`] = `
+"import { bindings, defineConfig } from "cf/config";
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: hyperdrive.0: The options \`localConnectionString\` at \`hyperdrive.0\` require manual migration.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: durable_objects.bindings.0: Durable Object bindings require manual review after migration.
+ * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
+ */
+/**
+ * TODO(@cloudflare): cf migrate: workflows: Workflow bindings are not supported by the new config and were not migrated.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: migrations: Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example \`exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }\`.
+ * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
+ */
+/**
+ * TODO(@cloudflare): cf migrate: containers: Containers require manual review and were not migrated.
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in cloudflare.config.ts.");
+
+export default defineConfig({
+	worker: {
+		name: "example-worker",
+		compatibilityDate: "2026-09-23",
+		env: {
+			DATABASE: bindings.hyperdrive({
+				id: "hyperdrive-id",
+			}),
+			COUNTER: bindings.durableObject({
+				worker: "example-worker",
+				exportName: "Counter",
+			}),
+		},
+		/**
+		 * TODO(@cloudflare): cf migrate: The options \`localConnectionString\` at \`hyperdrive.0\` require manual migration.
+		 */
+		/**
+		 * TODO(@cloudflare): cf migrate: Durable Object bindings require manual review after migration.
+		 * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
+		 */
+		/**
+		 * TODO(@cloudflare): cf migrate: Workflow bindings are not supported by the new config and were not migrated.
+		 */
+		/**
+		 * TODO(@cloudflare): cf migrate: Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example \`exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }\`.
+		 * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
+		 */
+		/**
+		 * TODO(@cloudflare): cf migrate: Containers require manual review and were not migrated.
+		 */
+	},
+});
+"
+`;
+
+exports[`migrateWranglerToCf > migrates environments, compliance, previews, and warns without reading secret files > cloudflare.config.ts 1`] = `
+"import { bindings, defineConfig } from "cf/config";
+
+/**
+ * Secret-like files were detected but not read or migrated: .env.example. Only \`secrets.required\` entries are migrated.
+ * @see https://developers.cloudflare.com/workers/configuration/secrets/
+ */
+
+/**
+ * Wrangler environments are selected through ctx.mode and the cf --mode flag.
+ * @see https://developers.cloudflare.com/workers/wrangler/environments/
+ */
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: env.staging.previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in cloudflare.config.ts.");
+
+export default defineConfig((ctx) => {
+	switch (ctx.mode) {
+		case "staging": {
+			if (ctx.isPreview) {
+				return {
+					complianceRegion: "fedramp-high",
+					worker: {
+						name: "example-worker-staging",
+						compatibilityDate: "2026-09-23",
+						env: {
+							PREVIEW: bindings.text("yes"),
+						},
+					},
+				};
+			}
+			return {
+				complianceRegion: "fedramp-high",
+				worker: {
+					name: "example-worker-staging",
+					compatibilityDate: "2026-09-23",
+					env: {
+						MODE: bindings.text("staging"),
+					},
+					/**
+					 * TODO(@cloudflare): cf migrate: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+					 * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+					 */
+				},
+			};
+		}
+		default: {
+			return {
+				worker: {
+					name: "example-worker",
+					compatibilityDate: "2026-09-23",
+				},
+			};
+		}
+	}
+});
+"
+`;
+
+exports[`migrateWranglerToCf > writes Wrangler tooling config only when requested and needed > cloudflare.config.ts 1`] = `
+"import { defineConfig } from "cf/config";
+
+export default defineConfig({
+	worker: {
+		name: "example-worker",
+		compatibilityDate: "2026-09-23",
+		assets: {
+			htmlHandling: "auto-trailing-slash",
+		},
+	},
+});
+"
+`;
+
+exports[`migrateWranglerToCf > writes Wrangler tooling config only when requested and needed > wrangler.config.ts 1`] = `
+"import { defineWranglerConfig } from "wrangler/experimental-config";
+
+export default defineWranglerConfig({
+	noBundle: true,
+	rules: [
+		{
+			globs: [
+				"**/*.txt",
+			],
+			type: "Text",
+		},
+	],
+	dev: {
+		port: 9000,
+	},
+	assetsDirectory: "public",
+});
+"
+`;
+
+exports[`migrateWranglerToCf > writes a complete Vite config with optional options omitted > cloudflare.config.ts 1`] = `
+"import { bindings, defineConfig, triggers } from "cf/config";
+
+export default defineConfig({
+	accountId: "account-id",
+	worker: {
+		name: "example-worker",
+		compatibilityDate: "2026-09-23",
+		entrypoint: "src/index.ts",
+		triggers: [
+			triggers.fetch({
+				pattern: "example.com/*",
+			}),
+			triggers.scheduled({
+				schedule: "0 * * * *",
+			}),
+		],
+		env: {
+			TEXT: bindings.text("value"),
+			JSON: bindings.json({
+				enabled: true,
+			}),
+			API_TOKEN: bindings.secret(),
+			CACHE: bindings.kv({
+				id: "abc",
+			}),
+		},
+	},
+});
+"
+`;
