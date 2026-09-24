@@ -199,6 +199,54 @@ describe("migrateWranglerToCf", () => {
 		expect(textLockResult.changedFiles).toContain("bun.lock");
 	});
 
+	it("reports an npm shrinkwrap in previews and installation results", async ({
+		expect,
+	}) => {
+		const packageJson = {
+			name: "shrinkwrapped-worker",
+			packageManager: "npm@11.0.0",
+		};
+		const cwd = await createProject({
+			"npm-shrinkwrap.json": JSON.stringify({
+				lockfileVersion: 3,
+				name: "shrinkwrapped-worker",
+			}),
+			"package.json": JSON.stringify(packageJson),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "shrinkwrapped-worker",
+			}),
+		});
+
+		const previewResult = await migrateWranglerToCf(
+			path.join(cwd, "wrangler.json"),
+			{ dryRun: true }
+		);
+		vi.mocked(installPackages).mockImplementationOnce(async () => {
+			await writeFile(
+				path.join(cwd, "package.json"),
+				JSON.stringify({
+					...packageJson,
+					devDependencies: { cf: "latest" },
+				})
+			);
+			await writeFile(
+				path.join(cwd, "npm-shrinkwrap.json"),
+				JSON.stringify({
+					lockfileVersion: 3,
+					name: "shrinkwrapped-worker",
+					packages: { "": { devDependencies: { cf: "latest" } } },
+				})
+			);
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(previewResult.changedFiles).toContain("npm-shrinkwrap.json");
+		expect(previewResult.changedFiles).not.toContain("package-lock.json");
+		expect(result.changedFiles).toContain("npm-shrinkwrap.json");
+	});
+
 	it("skips dependency installation when requested", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": JSON.stringify({ name: "example-worker" }),
