@@ -1,4 +1,5 @@
 import {
+	mkdir,
 	mkdtemp,
 	readFile,
 	readdir,
@@ -20,7 +21,9 @@ async function createProject(files: Record<string, string>): Promise<string> {
 	temporaryDirectories.push(directory);
 
 	for (const [filePath, contents] of Object.entries(files)) {
-		await writeFile(path.join(directory, filePath), contents);
+		const absolutePath = path.join(directory, filePath);
+		await mkdir(path.dirname(absolutePath), { recursive: true });
+		await writeFile(absolutePath, contents);
 	}
 
 	return directory;
@@ -195,6 +198,69 @@ describe("migrateWranglerToCf", () => {
 		expect(wranglerConfig).toContain("rules: [");
 		expect(getSyntaxErrors(cloudflareConfig)).toEqual([]);
 		expect(getSyntaxErrors(wranglerConfig)).toEqual([]);
+	});
+
+	it("migrates each Worker in a multi-Worker project independently", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"workers/auth/wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				main: "src/index.ts",
+				name: "auth-worker",
+			}),
+			"workers/entry/wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				main: "src/index.ts",
+				name: "entry-worker",
+				services: [
+					{
+						binding: "AUTH",
+						service: "auth-worker",
+					},
+					{
+						binding: "AUTH_ADMIN",
+						entrypoint: "Admin",
+						service: "auth-worker",
+					},
+				],
+				tail_consumers: [{ service: "tail-worker" }],
+			}),
+		});
+		const entryConfigPath = path.join(cwd, "workers/entry/wrangler.jsonc");
+		const authConfigPath = path.join(cwd, "workers/auth/wrangler.jsonc");
+
+		const [entryResult, authResult] = await Promise.all([
+			migrateWranglerToCf(entryConfigPath),
+			migrateWranglerToCf(authConfigPath),
+		]);
+		const [entryConfig, authConfig] = await Promise.all([
+			readFile(path.join(cwd, "workers/entry/cloudflare.config.ts"), "utf8"),
+			readFile(path.join(cwd, "workers/auth/cloudflare.config.ts"), "utf8"),
+		]);
+
+		expect(entryResult).toMatchObject({
+			changedFiles: ["cloudflare.config.ts"],
+			followUps: [],
+			status: "complete",
+		});
+		expect(authResult).toMatchObject({
+			changedFiles: ["cloudflare.config.ts"],
+			followUps: [],
+			status: "complete",
+		});
+		expect(entryConfig).toMatchSnapshot("entry/cloudflare.config.ts");
+		expect(authConfig).toMatchSnapshot("auth/cloudflare.config.ts");
+		expect(entryConfig).toContain(
+			'AUTH: bindings.worker({\n\t\t\t\tworker: "auth-worker",'
+		);
+		expect(entryConfig).toContain('exportName: "Admin"');
+		expect(entryConfig).toContain('worker: "tail-worker"');
+		expect(getSyntaxErrors(entryConfig)).toEqual([]);
+		expect(getSyntaxErrors(authConfig)).toEqual([]);
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
 	});
 
 	it("does not create `wrangler.config.ts` for the Vite bundler", async ({
