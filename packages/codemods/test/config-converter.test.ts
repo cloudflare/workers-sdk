@@ -60,7 +60,7 @@ describe("Wrangler environment and tooling conversion", () => {
 		);
 		expect(
 			result.cloudflareConfig.match(/LOGS: bindings\.logfwdr/g)
-		).toHaveLength(4);
+		).toHaveLength(2);
 		expect(result).toMatchSnapshot();
 	});
 

@@ -223,6 +223,7 @@ function createPreviewSource(
 	for (const field of NON_INHERITABLE_FIELDS) {
 		delete merged[field];
 	}
+	delete merged.logfwdr;
 
 	Object.assign(merged, overrides);
 	delete merged.previews;
