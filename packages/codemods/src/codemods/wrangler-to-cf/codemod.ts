@@ -46,6 +46,7 @@ export const wranglerToCfCodemod: Codemod = {
 	name: "wrangler-to-cf",
 	aliases: ["wrangler to cf"],
 	description: `Migrate a Wrangler configuration to the cf configuration format`,
+	managesGitWorktreeSafety: true,
 	run: async (context) => {
 		const configPath = await getConfigPath(context);
 		const [includedConfigPath] = await filterByFileRestrictions(context, [

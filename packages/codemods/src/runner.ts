@@ -41,7 +41,7 @@ export async function runCodemod(
 	if (!codemod) {
 		throw new Error(`Unknown codemod: ${name}`);
 	}
-	if (!context.dryRun) {
+	if (!context.dryRun && !codemod.managesGitWorktreeSafety) {
 		await ensureCleanGitWorktree(context.cwd, context.force ?? false);
 	}
 
