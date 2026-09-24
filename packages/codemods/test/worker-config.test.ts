@@ -107,4 +107,32 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result.output).toContain("Migration incomplete");
 		expect(result).toMatchSnapshot();
 	});
+
+	it("reports zone-qualified custom domains for manual review", ({
+		expect,
+	}) => {
+		const result = convert({
+			routes: [
+				{
+					custom_domain: true,
+					pattern: "api.example.com",
+					zone_id: "zone-id",
+				},
+				{
+					custom_domain: true,
+					pattern: "app.example.com",
+					zone_name: "example.com",
+				},
+			],
+		});
+
+		expect(
+			result.followUps
+				.filter(({ code }) => code === "custom-domain-options")
+				.map(({ blocking, sourcePath }) => ({ blocking, sourcePath }))
+		).toEqual([
+			{ blocking: true, sourcePath: "config.routes.0" },
+			{ blocking: true, sourcePath: "config.routes.1" },
+		]);
+	});
 });

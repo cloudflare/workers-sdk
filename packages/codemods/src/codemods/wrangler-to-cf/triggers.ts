@@ -56,7 +56,12 @@ export function convertTriggers(
 		if (route.custom_domain === true) {
 			domains.push(route.pattern);
 
-			if (hasOwn(route, "enabled") || hasOwn(route, "previews_enabled")) {
+			if (
+				hasOwn(route, "enabled") ||
+				hasOwn(route, "previews_enabled") ||
+				hasOwn(route, "zone_id") ||
+				hasOwn(route, "zone_name")
+			) {
 				report(
 					createFollowUp(
 						"custom-domain-options",
