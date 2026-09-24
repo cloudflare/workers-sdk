@@ -68,9 +68,8 @@ export interface InvocationSnapshot {
 	error?: string;
 }
 
-export interface CronRow {
+interface CronRowBase {
 	id: string;
-	source: CronRowSource;
 	cron: string;
 	cronInputMode: CronInputMode;
 	cronBuilder: CronBuilderDraft;
@@ -82,10 +81,21 @@ export interface CronRow {
 	invocation?: InvocationSnapshot;
 }
 
+export interface ConfiguredCronRow extends CronRowBase {
+	source: "configured" | "no-longer-configured";
+}
+
+export interface CustomCronRow extends CronRowBase {
+	source: "custom";
+}
+
+export type CronRow = ConfiguredCronRow | CustomCronRow;
+
 export interface CronWorkerState {
 	authoritative: boolean;
+	configuredRows: ConfiguredCronRow[];
 	crons?: string[];
-	rows: CronRow[];
+	customRows: CustomCronRow[];
 	stale: boolean;
 	timePresets: number[];
 }

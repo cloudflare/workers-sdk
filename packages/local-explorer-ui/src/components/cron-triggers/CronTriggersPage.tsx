@@ -1,6 +1,6 @@
 import { Button, RefreshButton, Tooltip } from "@cloudflare/kumo";
 import { ClockCountdownIcon, InfoIcon, PlusIcon } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Breadcrumbs } from "../Breadcrumbs";
 import { CronRowCard } from "./CronRowCard";
 import { useCronTriggers } from "./CronTriggersContext";
@@ -31,22 +31,15 @@ export function CronTriggersPage({
 		useState<ScheduledTimeSelection>("now");
 	const focusedRow = useRef<string | undefined>(undefined);
 	const configured = entry.crons ?? [];
-	const configuredRows = useMemo(
-		() => entry.rows.filter((row) => row.source !== "custom"),
-		[entry.rows]
-	);
-	const customRows = useMemo(
-		() => entry.rows.filter((row) => row.source === "custom"),
-		[entry.rows]
-	);
+	const configuredRows = entry.configuredRows;
+	const customRows = entry.customRows;
 	const rows = view === "configured" ? configuredRows : customRows;
 	const previousRows = useRef(rows.map((row) => row.id));
 	const showNoConfiguration = entry.authoritative && configured.length === 0;
 	const showPureNoConfiguration =
 		showNoConfiguration &&
-		!entry.rows.some(
-			(row) => row.source === "custom" || row.source === "no-longer-configured"
-		);
+		customRows.length === 0 &&
+		!configuredRows.some((row) => row.source === "no-longer-configured");
 	const title = view === "configured" ? "Configured Crons" : "Ad-Hoc Triggers";
 
 	useEffect(() => {

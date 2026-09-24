@@ -1,5 +1,49 @@
 import { describe, it } from "vitest";
-import { generateCronExpression } from "../../components/cron-triggers/cron-builder";
+import {
+	changeCronBuilderKind,
+	cronBuilderKinds,
+	generateCronExpression,
+	isCronBuilderDraft,
+} from "../../components/cron-triggers/cron-builder";
+
+describe("isCronBuilderDraft", () => {
+	it("accepts every builder shape", ({ expect }) => {
+		for (const kind of cronBuilderKinds) {
+			expect(isCronBuilderDraft(changeCronBuilderKind(kind.value))).toBe(true);
+		}
+	});
+
+	it("rejects unknown, incomplete, and malformed builder state", ({
+		expect,
+	}) => {
+		expect(isCronBuilderDraft({ kind: "unknown" })).toBe(false);
+		expect(isCronBuilderDraft({ kind: "daily", hour: "0" })).toBe(false);
+		expect(
+			isCronBuilderDraft({
+				kind: "daily",
+				hour: "0",
+				minute: "0",
+				unknown: true,
+			})
+		).toBe(false);
+		expect(
+			isCronBuilderDraft({
+				kind: "weekdays",
+				weekdays: ["mon", "mon"],
+				hour: "0",
+				minute: "0",
+			})
+		).toBe(false);
+		expect(
+			isCronBuilderDraft({
+				kind: "last-named-weekday",
+				weekday: "not-a-weekday",
+				hour: "0",
+				minute: "0",
+			})
+		).toBe(false);
+	});
+});
 
 describe("generateCronExpression", () => {
 	it("generates interval and calendar expressions", ({ expect }) => {

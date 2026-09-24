@@ -230,4 +230,54 @@ export function changeCronBuilderKind(
 	}
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isCronBuilderKind(value: unknown): value is CronBuilderDraft["kind"] {
+	return (
+		typeof value === "string" &&
+		cronBuilderKinds.some((kind) => kind.value === value)
+	);
+}
+
+function isCronWeekday(value: unknown): value is CronWeekday {
+	return (
+		typeof value === "string" && WEEKDAYS.some((weekday) => weekday === value)
+	);
+}
+
+/** Validate persisted builder state against the shapes used by the editor. */
+export function isCronBuilderDraft(value: unknown): value is CronBuilderDraft {
+	if (!isRecord(value) || !isCronBuilderKind(value.kind)) {
+		return false;
+	}
+
+	const template: Record<string, unknown> = changeCronBuilderKind(value.kind);
+	const expectedKeys = Object.keys(template);
+	const actualKeys = Object.keys(value);
+	if (
+		actualKeys.length !== expectedKeys.length ||
+		expectedKeys.some((key) => !actualKeys.includes(key))
+	) {
+		return false;
+	}
+
+	return expectedKeys.every((key) => {
+		const field = value[key];
+		if (key === "weekdays") {
+			return (
+				Array.isArray(field) &&
+				field.length <= WEEKDAYS.length &&
+				field.every(isCronWeekday) &&
+				new Set(field).size === field.length
+			);
+		}
+		if (key === "weekday") {
+			return isCronWeekday(field);
+		}
+		return typeof field === typeof template[key];
+	});
+}
+
 export { WEEKDAYS as cronWeekdays };

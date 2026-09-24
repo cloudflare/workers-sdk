@@ -20,6 +20,8 @@ describe("Cron Triggers provider state", () => {
 		);
 		expect(state.absent?.authoritative).toBe(true);
 		expect(state.absent?.crons).toEqual([]);
+		expect(state.absent?.configuredRows).toEqual([]);
+		expect(state.absent?.customRows).toEqual([]);
 		expect(state.empty?.crons).toEqual([]);
 	});
 

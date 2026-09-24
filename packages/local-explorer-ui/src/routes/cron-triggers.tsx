@@ -77,7 +77,6 @@ function CronTriggersLayout(): JSX.Element {
 
 	return (
 		<CronTriggersProvider
-			active={true}
 			activeWorkerName={activeWorkerName}
 			bootstrapAuthoritative={loaderData.bootstrapAuthoritative}
 			seedWorkers={loaderData.workers}

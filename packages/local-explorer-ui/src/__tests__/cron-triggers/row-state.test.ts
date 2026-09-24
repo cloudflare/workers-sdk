@@ -37,16 +37,18 @@ describe("Cron Trigger row state", () => {
 		expect(reconciled[0]?.source).toBe("no-longer-configured");
 	});
 
-	it("never changes custom rows", ({ expect }) => {
-		const custom = createCronRow("0 0 * * *");
-		custom.invocation = {
-			cron: custom.cron,
+	it("retains rows that were previously removed from configuration", ({
+		expect,
+	}) => {
+		const removed = createCronRow("0 0 * * *", "no-longer-configured");
+		removed.invocation = {
+			cron: removed.cron,
 			requestId: "request",
 			scheduledTime: 10,
 			status: "error",
 			error: "failed",
 		};
-		const reconciled = reconcileConfiguredRows([custom], ["configured"]);
-		expect(reconciled[1]).toBe(custom);
+		const reconciled = reconcileConfiguredRows([removed], ["configured"]);
+		expect(reconciled[1]).toBe(removed);
 	});
 });

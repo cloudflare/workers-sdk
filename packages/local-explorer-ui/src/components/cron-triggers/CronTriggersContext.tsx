@@ -21,7 +21,12 @@ import {
 import { createCronRow, reconcileConfiguredRows } from "./row-state";
 import { MAX_DATE_EPOCH_MS, MIN_DATE_EPOCH_MS } from "./scheduled-time";
 import type { LocalExplorerWorker } from "../../api";
-import type { CronRow, CronWorkerState, FetcherScheduledResult } from "./types";
+import type {
+	CronRow,
+	CronWorkerState,
+	CustomCronRow,
+	FetcherScheduledResult,
+} from "./types";
 import type { PropsWithChildren } from "react";
 
 const REFRESH_HEADER = "X-Miniflare-Explorer-Refresh";
@@ -88,8 +93,9 @@ export function createCronStateFromSeed(
 				worker.name,
 				{
 					authoritative: true,
+					configuredRows: reconcileConfiguredRows([], crons),
 					crons,
-					rows: reconcileConfiguredRows([], crons),
+					customRows: [],
 					stale: false,
 					timePresets: [],
 				} satisfies CronWorkerState,
@@ -99,7 +105,13 @@ export function createCronStateFromSeed(
 }
 
 function emptyState(): CronWorkerState {
-	return { authoritative: false, rows: [], stale: true, timePresets: [] };
+	return {
+		authoritative: false,
+		configuredRows: [],
+		customRows: [],
+		stale: true,
+		timePresets: [],
+	};
 }
 
 function localStorageIfAvailable(): Storage | undefined {
@@ -174,12 +186,9 @@ function hydrateInitialPersistence(
 				workerName,
 				{
 					...entry,
-					rows: customRowKey
-						? [
-								...entry.rows,
-								...readPersistedCustomCronRows(storage, customRowKey),
-							]
-						: entry.rows,
+					customRows: customRowKey
+						? readPersistedCustomCronRows(storage, customRowKey)
+						: entry.customRows,
 					timePresets: timePresetKey
 						? readPersistedCronTimePresets(storage, timePresetKey)
 						: [],
@@ -206,7 +215,6 @@ function scheduledResult(value: unknown): FetcherScheduledResult | undefined {
 }
 
 export function CronTriggersProvider({
-	active,
 	activeWorkerName,
 	bootstrapAuthoritative,
 	children,
@@ -215,7 +223,6 @@ export function CronTriggersProvider({
 	activeWorkerName?: string;
 	bootstrapAuthoritative: boolean;
 	seedWorkers: LocalExplorerWorker[];
-	active: boolean;
 }>) {
 	const storage = useRef<Storage | undefined>(localStorageIfAvailable());
 	const [initialPersistence] = useState(() => {
@@ -249,11 +256,13 @@ export function CronTriggersProvider({
 	const timePresetPersistenceKeysRef = useRef(
 		initialPersistence.timePresetKeys
 	);
-	const lastScopedPersistenceKeys = useRef(initialPersistence.keys);
+	// Unlike the active persistence map, this retains a Worker's last known scope
+	// while a refresh temporarily reports no scope, so a later change is detected.
+	const lastKnownScopedPersistenceKeys = useRef(initialPersistence.keys);
 	const hydratedPersistenceKeys = useRef(
 		new Set(Object.values(initialPersistence.keys))
 	);
-	const lastPersistedCustomRows = useRef(new Map<string, CronRow[]>());
+	const lastPersistedCustomRows = useRef(new Map<string, CustomCronRow[]>());
 	const hydratedTimePresetPersistenceKeys = useRef(
 		new Set(Object.values(initialPersistence.timePresetKeys))
 	);
@@ -281,9 +290,7 @@ export function CronTriggersProvider({
 			if (!hydratedPersistenceKeys.current.has(key)) {
 				continue;
 			}
-			const customRows = (workers[workerName]?.rows ?? []).filter(
-				(row) => row.source === "custom"
-			);
+			const customRows = workers[workerName]?.customRows ?? [];
 			const previous = lastPersistedCustomRows.current.get(key);
 			if (
 				previous &&
@@ -323,11 +330,26 @@ export function CronTriggersProvider({
 		(workerName: string, id: string, update: (row: CronRow) => CronRow) => {
 			setWorkers((current) => {
 				const entry = current[workerName] ?? emptyState();
+				const configuredRows = entry.configuredRows.map((row) => {
+					if (row.id !== id) {
+						return row;
+					}
+					const updated = update(row);
+					return updated.source === "custom" ? row : updated;
+				});
+				const customRows = entry.customRows.map((row) => {
+					if (row.id !== id) {
+						return row;
+					}
+					const updated = update(row);
+					return updated.source === "custom" ? updated : row;
+				});
 				return {
 					...current,
 					[workerName]: {
 						...entry,
-						rows: entry.rows.map((row) => (row.id === id ? update(row) : row)),
+						configuredRows,
+						customRows,
 					},
 				};
 			});
@@ -355,7 +377,8 @@ export function CronTriggersProvider({
 			const visibleWorkers = visibleCronWorkers(metadata);
 			setFallbackWorkerName(selectCronFallbackWorker(metadata));
 			setVisibleWorkerNames(visibleWorkers.map((worker) => worker.name));
-			const previousScopedPersistenceKeys = lastScopedPersistenceKeys.current;
+			const previousScopedPersistenceKeys =
+				lastKnownScopedPersistenceKeys.current;
 			const returnedPersistenceKeys = persistenceKeysForMetadata(metadata);
 			const returnedTimePresetPersistenceKeys = persistenceKeysForMetadata(
 				metadata,
@@ -370,58 +393,77 @@ export function CronTriggersProvider({
 				metadata,
 				cronTimePresetsStorageKey
 			);
+			const persistenceScopeChanged = new Map<string, boolean>();
+			const hydratedCustomRows = new Map<string, CustomCronRow[]>();
+			const hydratedTimePresets = new Map<string, number[]>();
+			for (const worker of metadata) {
+				const persistenceKey = returnedPersistenceKeys[worker.name];
+				const timePresetPersistenceKey =
+					returnedTimePresetPersistenceKeys[worker.name];
+				const scopeChanged = shouldReplaceCustomRowsForPersistenceScope(
+					previousScopedPersistenceKeys[worker.name],
+					persistenceKey
+				);
+				persistenceScopeChanged.set(worker.name, scopeChanged);
+				if (
+					persistenceKey &&
+					(scopeChanged || !hydratedPersistenceKeys.current.has(persistenceKey))
+				) {
+					hydratedCustomRows.set(
+						worker.name,
+						storage.current
+							? readPersistedCustomCronRows(storage.current, persistenceKey)
+							: []
+					);
+					hydratedPersistenceKeys.current.add(persistenceKey);
+				}
+				if (
+					timePresetPersistenceKey &&
+					(scopeChanged ||
+						!hydratedTimePresetPersistenceKeys.current.has(
+							timePresetPersistenceKey
+						))
+				) {
+					hydratedTimePresets.set(
+						worker.name,
+						storage.current
+							? readPersistedCronTimePresets(
+									storage.current,
+									timePresetPersistenceKey
+								)
+							: []
+					);
+					hydratedTimePresetPersistenceKeys.current.add(
+						timePresetPersistenceKey
+					);
+				}
+			}
 			setWorkers((current) => {
 				const next = { ...current };
 				for (const worker of metadata) {
 					const entry = current[worker.name] ?? emptyState();
 					const crons = worker.triggers?.crons ?? [];
-					const persistenceKey = returnedPersistenceKeys[worker.name];
-					const timePresetPersistenceKey =
-						returnedTimePresetPersistenceKeys[worker.name];
-					const persistenceScopeChanged =
-						shouldReplaceCustomRowsForPersistenceScope(
-							previousScopedPersistenceKeys[worker.name],
-							persistenceKey
-						);
-					const existingRows = persistenceScopeChanged
-						? entry.rows.filter((row) => row.source !== "custom")
-						: entry.rows;
-					let rows = reconcileConfiguredRows(existingRows, crons);
-					if (
-						persistenceKey &&
-						(persistenceScopeChanged ||
-							!hydratedPersistenceKeys.current.has(persistenceKey))
-					) {
-						rows = [
-							...rows,
-							...(storage.current
-								? readPersistedCustomCronRows(storage.current, persistenceKey)
-								: []),
-						];
-						hydratedPersistenceKeys.current.add(persistenceKey);
-					}
-					let timePresets = persistenceScopeChanged ? [] : entry.timePresets;
-					if (
-						timePresetPersistenceKey &&
-						(persistenceScopeChanged ||
-							!hydratedTimePresetPersistenceKeys.current.has(
-								timePresetPersistenceKey
-							))
-					) {
-						timePresets = storage.current
-							? readPersistedCronTimePresets(
-									storage.current,
-									timePresetPersistenceKey
-								)
-							: [];
-						hydratedTimePresetPersistenceKeys.current.add(
-							timePresetPersistenceKey
-						);
-					}
+					const scopeChanged =
+						persistenceScopeChanged.get(worker.name) ?? false;
+					const restoredCustomRows = hydratedCustomRows.get(worker.name);
+					const customRows = restoredCustomRows
+						? scopeChanged
+							? restoredCustomRows
+							: [...entry.customRows, ...restoredCustomRows]
+						: scopeChanged
+							? []
+							: entry.customRows;
+					const restoredTimePresets = hydratedTimePresets.get(worker.name);
+					const timePresets =
+						restoredTimePresets ?? (scopeChanged ? [] : entry.timePresets);
 					next[worker.name] = {
 						authoritative: true,
+						configuredRows: reconcileConfiguredRows(
+							entry.configuredRows,
+							crons
+						),
 						crons,
-						rows,
+						customRows,
 						stale: false,
 						timePresets,
 					};
@@ -435,7 +477,7 @@ export function CronTriggersProvider({
 				}
 				return next;
 			});
-			lastScopedPersistenceKeys.current = {
+			lastKnownScopedPersistenceKeys.current = {
 				...previousScopedPersistenceKeys,
 				...nextPersistenceKeys,
 			};
@@ -466,9 +508,6 @@ export function CronTriggersProvider({
 	}, []);
 
 	useEffect(() => {
-		if (!active) {
-			return;
-		}
 		const refreshWorker = activeWorkerName ?? "";
 		void refresh(refreshWorker, true);
 		const poll = window.setInterval(() => {
@@ -488,7 +527,7 @@ export function CronTriggersProvider({
 			window.removeEventListener("focus", refreshWhenVisible);
 			document.removeEventListener("visibilitychange", refreshWhenVisible);
 		};
-	}, [active, activeWorkerName, refresh]);
+	}, [activeWorkerName, refresh]);
 
 	const value = useMemo<CronTriggersContextValue>(
 		() => ({
@@ -499,7 +538,10 @@ export function CronTriggersProvider({
 					const entry = current[workerName] ?? emptyState();
 					return {
 						...current,
-						[workerName]: { ...entry, rows: [...entry.rows, row] },
+						[workerName]: {
+							...entry,
+							customRows: [...entry.customRows, row],
+						},
 					};
 				});
 				return row.id;
@@ -531,9 +573,11 @@ export function CronTriggersProvider({
 			isRefreshing: (workerName) => refreshingWorkers.has(workerName),
 			async invoke(workerName, id, scheduledTime) {
 				const pendingKey = `${workerName}\u0000${id}`;
-				const row = workers[workerName]?.rows.find(
-					(candidate) => candidate.id === id
-				);
+				const entry = workers[workerName];
+				const row = [
+					...(entry?.configuredRows ?? []),
+					...(entry?.customRows ?? []),
+				].find((candidate) => candidate.id === id);
 				if (
 					!row ||
 					pendingRows.current.has(pendingKey) ||
@@ -606,7 +650,9 @@ export function CronTriggersProvider({
 			removeRow(workerName, id) {
 				setWorkers((current) => {
 					const entry = current[workerName] ?? emptyState();
-					const row = entry.rows.find((candidate) => candidate.id === id);
+					const row = [...entry.configuredRows, ...entry.customRows].find(
+						(candidate) => candidate.id === id
+					);
 					if (!row || row.invocation?.status === "pending") {
 						return current;
 					}
@@ -614,7 +660,12 @@ export function CronTriggersProvider({
 						...current,
 						[workerName]: {
 							...entry,
-							rows: entry.rows.filter((candidate) => candidate.id !== id),
+							configuredRows: entry.configuredRows.filter(
+								(candidate) => candidate.id !== id
+							),
+							customRows: entry.customRows.filter(
+								(candidate) => candidate.id !== id
+							),
 						},
 					};
 				});

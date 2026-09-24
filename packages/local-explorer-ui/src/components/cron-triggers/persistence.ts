@@ -1,3 +1,4 @@
+import { isCronBuilderDraft } from "./cron-builder";
 import { createCronRow } from "./row-state";
 import {
 	MAX_DATE_EPOCH_MS,
@@ -5,7 +6,7 @@ import {
 	parseEpochMilliseconds,
 	resolveUtcCalendarTime,
 } from "./scheduled-time";
-import type { CronBuilderDraft, CronRow, CronWeekday } from "./types";
+import type { CustomCronRow } from "./types";
 
 export const CRON_CUSTOM_ROWS_STORAGE_PREFIX =
 	"local-explorer.cron-triggers.custom-rows.v1";
@@ -13,7 +14,7 @@ export const CRON_TIME_PRESETS_STORAGE_PREFIX =
 	"local-explorer.cron-triggers.time-presets.v1";
 
 type PersistedCustomRow = Pick<
-	CronRow,
+	CustomCronRow,
 	| "calendarValue"
 	| "cron"
 	| "cronBuilder"
@@ -22,16 +23,6 @@ type PersistedCustomRow = Pick<
 	| "epochValue"
 	| "timeMode"
 >;
-
-const WEEKDAYS = new Set<CronWeekday>([
-	"sun",
-	"mon",
-	"tue",
-	"wed",
-	"thu",
-	"fri",
-	"sat",
-]);
 
 const ROW_KEYS = new Set([
 	"calendarValue",
@@ -45,106 +36,6 @@ const ROW_KEYS = new Set([
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function hasOnlyKeys(
-	value: Record<string, unknown>,
-	required: string[],
-	optional: string[] = []
-): boolean {
-	const requiredKeys = new Set(required);
-	const allowedKeys = new Set([...required, ...optional]);
-	return (
-		required.every((key) => key in value) &&
-		Object.keys(value).every((key) => allowedKeys.has(key)) &&
-		Object.keys(value).length >= requiredKeys.size
-	);
-}
-
-function stringFields(
-	value: Record<string, unknown>,
-	fields: string[]
-): boolean {
-	return fields.every((field) => typeof value[field] === "string");
-}
-
-function parseCronBuilderDraft(value: unknown): CronBuilderDraft | undefined {
-	if (!isRecord(value) || typeof value.kind !== "string") {
-		return undefined;
-	}
-
-	let required: string[];
-	switch (value.kind) {
-		case "minute-interval":
-			required = ["kind", "every"];
-			break;
-		case "hour-interval":
-			required = ["kind", "every", "minute"];
-			break;
-		case "day-of-month-interval":
-			required = ["kind", "every", "hour", "minute"];
-			break;
-		case "month-interval":
-			required = ["kind", "every", "dayOfMonth", "hour", "minute"];
-			break;
-		case "daily":
-		case "last-day-of-month":
-		case "last-weekday-of-month":
-			required = ["kind", "hour", "minute"];
-			break;
-		case "weekdays":
-			required = ["kind", "weekdays", "hour", "minute"];
-			if (
-				!Array.isArray(value.weekdays) ||
-				value.weekdays.length > WEEKDAYS.size ||
-				value.weekdays.some(
-					(weekday) =>
-						typeof weekday !== "string" || !WEEKDAYS.has(weekday as CronWeekday)
-				) ||
-				new Set(value.weekdays).size !== value.weekdays.length
-			) {
-				return undefined;
-			}
-			break;
-		case "monthly":
-		case "nearest-weekday":
-			required = ["kind", "dayOfMonth", "hour", "minute"];
-			break;
-		case "last-named-weekday":
-			required = ["kind", "weekday", "hour", "minute"];
-			if (
-				typeof value.weekday !== "string" ||
-				!WEEKDAYS.has(value.weekday as CronWeekday)
-			) {
-				return undefined;
-			}
-			break;
-		case "nth-weekday":
-			required = ["kind", "weekday", "occurrence", "hour", "minute"];
-			if (
-				typeof value.weekday !== "string" ||
-				!WEEKDAYS.has(value.weekday as CronWeekday)
-			) {
-				return undefined;
-			}
-			break;
-		default:
-			return undefined;
-	}
-
-	if (!hasOnlyKeys(value, required)) {
-		return undefined;
-	}
-	const nonStringFields = new Set(["kind", "weekday", "weekdays"]);
-	if (
-		!stringFields(
-			value,
-			required.filter((key) => !nonStringFields.has(key))
-		)
-	) {
-		return undefined;
-	}
-	return value as unknown as CronBuilderDraft;
 }
 
 function parsePersistedCustomRow(
@@ -170,8 +61,7 @@ function parsePersistedCustomRow(
 	) {
 		return undefined;
 	}
-	const cronBuilder = parseCronBuilderDraft(value.cronBuilder);
-	if (!cronBuilder) {
+	if (!isCronBuilderDraft(value.cronBuilder)) {
 		return undefined;
 	}
 	return {
@@ -179,7 +69,7 @@ function parsePersistedCustomRow(
 			? {}
 			: { calendarValue: value.calendarValue }),
 		cron: value.cron,
-		cronBuilder,
+		cronBuilder: value.cronBuilder,
 		cronInputMode: value.cronInputMode,
 		customTimeInputMode: value.customTimeInputMode,
 		...(value.epochValue === undefined ? {} : { epochValue: value.epochValue }),
@@ -213,7 +103,7 @@ export function cronTimePresetsStorageKey(
 		: undefined;
 }
 
-function hydrateRow(draft: PersistedCustomRow): CronRow {
+function hydrateRow(draft: PersistedCustomRow): CustomCronRow {
 	let customEpochMs: number | undefined;
 	if (draft.timeMode === "custom") {
 		if (draft.customTimeInputMode === "calendar") {
@@ -234,7 +124,7 @@ function hydrateRow(draft: PersistedCustomRow): CronRow {
 export function readPersistedCustomCronRows(
 	storage: Storage,
 	key: string
-): CronRow[] {
+): CustomCronRow[] {
 	let raw: string | null;
 	try {
 		raw = storage.getItem(key);
@@ -256,14 +146,16 @@ export function readPersistedCustomCronRows(
 		return [];
 	}
 	const drafts = value.map(parsePersistedCustomRow);
-	if (drafts.some((draft) => draft === undefined)) {
+	if (
+		!drafts.every((draft): draft is PersistedCustomRow => draft !== undefined)
+	) {
 		remove(storage, key);
 		return [];
 	}
-	return (drafts as PersistedCustomRow[]).map(hydrateRow);
+	return drafts.map(hydrateRow);
 }
 
-function persistedDraft(row: CronRow): PersistedCustomRow {
+function persistedDraft(row: CustomCronRow): PersistedCustomRow {
 	return {
 		...(row.calendarValue === undefined
 			? {}
@@ -281,16 +173,13 @@ function persistedDraft(row: CronRow): PersistedCustomRow {
 export function writePersistedCustomCronRows(
 	storage: Storage,
 	key: string,
-	rows: CronRow[]
+	rows: CustomCronRow[]
 ): void {
-	const customRows = rows
-		.filter((row) => row.source === "custom")
-		.map(persistedDraft);
-	if (customRows.length === 0) {
+	if (rows.length === 0) {
 		remove(storage, key);
 		return;
 	}
-	const raw = JSON.stringify(customRows);
+	const raw = JSON.stringify(rows.map(persistedDraft));
 	try {
 		storage.setItem(key, raw);
 	} catch {

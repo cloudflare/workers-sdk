@@ -51,11 +51,10 @@ describe("Cron Trigger custom-row persistence", () => {
 		);
 	});
 
-	it("persists only editable custom drafts and rebuilds transient state", ({
+	it("persists editable custom drafts and rebuilds transient state", ({
 		expect,
 	}) => {
 		const storage = new MemoryStorage();
-		const configured = createCronRow("configured", "configured");
 		const custom = {
 			...createCronRow("0 12 * * *"),
 			calendarValue: "2026-09-10T12:34:56.789",
@@ -69,7 +68,7 @@ describe("Cron Trigger custom-row persistence", () => {
 			timeMode: "custom" as const,
 		};
 
-		writePersistedCustomCronRows(storage, "key", [configured, custom]);
+		writePersistedCustomCronRows(storage, "key", [custom]);
 		const raw = storage.getItem("key") ?? "";
 		expect(raw).not.toContain(custom.id);
 		expect(raw).not.toContain("customEpochMs");

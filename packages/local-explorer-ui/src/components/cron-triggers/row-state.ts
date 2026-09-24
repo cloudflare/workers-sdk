@@ -1,5 +1,10 @@
 import { createDefaultCronBuilderDraft } from "./cron-builder";
-import type { CronRow } from "./types";
+import type {
+	ConfiguredCronRow,
+	CronRow,
+	CronRowSource,
+	CustomCronRow,
+} from "./types";
 
 function rowId(prefix: string): string {
 	return `${prefix}-${crypto.randomUUID()}`;
@@ -14,9 +19,14 @@ function configuredKeys(crons: string[]): string[] {
 	});
 }
 
+export function createCronRow(cron: string): CustomCronRow;
 export function createCronRow(
 	cron: string,
-	source: CronRow["source"] = "custom"
+	source: ConfiguredCronRow["source"]
+): ConfiguredCronRow;
+export function createCronRow(
+	cron: string,
+	source: CronRowSource = "custom"
 ): CronRow {
 	return {
 		id: rowId(source),
@@ -31,12 +41,12 @@ export function createCronRow(
 
 /** Merge configured rows by exact expression plus duplicate occurrence ordinal. */
 export function reconcileConfiguredRows(
-	rows: CronRow[],
+	rows: ConfiguredCronRow[],
 	crons: string[]
-): CronRow[] {
+): ConfiguredCronRow[] {
 	const oldConfigured = rows.filter((row) => row.source === "configured");
 	const oldKeys = configuredKeys(oldConfigured.map((row) => row.cron));
-	const oldByKey = new Map<string, CronRow>();
+	const oldByKey = new Map<string, ConfiguredCronRow>();
 	oldKeys.forEach((key, index) => {
 		const row = oldConfigured[index];
 		if (row) {
@@ -57,8 +67,10 @@ export function reconcileConfiguredRows(
 	const staleSettled = oldConfigured
 		.filter((row) => !retainedIds.has(row.id) && row.invocation !== undefined)
 		.map((row) => ({ ...row, source: "no-longer-configured" as const }));
-	const local = rows.filter((row) => row.source !== "configured");
-	return [...configured, ...local, ...staleSettled];
+	const previouslyRemoved = rows.filter(
+		(row) => row.source === "no-longer-configured"
+	);
+	return [...configured, ...previouslyRemoved, ...staleSettled];
 }
 
 export function rowIsPending(row: CronRow): boolean {
