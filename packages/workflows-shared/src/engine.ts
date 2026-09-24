@@ -79,6 +79,18 @@ interface Env {
 	MINIFLARE_LOOPBACK?: Fetcher;
 	WORKFLOW_NAME?: string;
 	STEP_LIMIT?: string; // JSON-encoded number from miniflare binding
+	STEP_LIMITS?: Record<string, number>;
+}
+
+/**
+ * Set by workerd when the Engine runs a Workflow exposed on `ctx.exports`. A
+ * single Engine class then serves every Workflow of a Worker, so these replace
+ * the per-Workflow `USER_WORKFLOW` and `WORKFLOW_NAME` bindings (which are then
+ * absent), and the step limit is looked up by name in `STEP_LIMITS`.
+ */
+interface EngineProps {
+	workflowClass?: WorkflowEntrypoint;
+	workflowName?: string;
 }
 
 export type DatabaseWorkflow = {
@@ -430,7 +442,7 @@ async function buildWorkflowSubscriptionEvent(
 	}
 }
 
-export class Engine extends DurableObject<Env> {
+export class Engine extends DurableObject<Env, EngineProps> {
 	logs: Array<unknown> = [];
 
 	isRunning: boolean = false;
@@ -461,9 +473,12 @@ export class Engine extends DurableObject<Env> {
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
 
-		this.stepLimit = env.STEP_LIMIT
-			? JSON.parse(env.STEP_LIMIT)
-			: DEFAULT_STEP_LIMIT;
+		const { workflowName } = this.ctx.props;
+		this.stepLimit =
+			(workflowName === undefined
+				? undefined
+				: env.STEP_LIMITS?.[workflowName]) ??
+			(env.STEP_LIMIT ? JSON.parse(env.STEP_LIMIT) : DEFAULT_STEP_LIMIT);
 
 		void this.ctx.blockConcurrencyWhile(async () => {
 			this.ctx.storage.transactionSync(() => {
@@ -1400,7 +1415,7 @@ export class Engine extends DurableObject<Env> {
 		const stubStep = this.createRollbackContext();
 		this.setRollbackPhase("replay");
 		try {
-			await this.env.USER_WORKFLOW.run(
+			await (this.ctx.props.workflowClass ?? this.env.USER_WORKFLOW).run(
 				metadata.event,
 				stubStep as unknown as WorkflowStep
 			);
@@ -1467,13 +1482,14 @@ export class Engine extends DurableObject<Env> {
 
 		await this.ctx.storage.deleteAll();
 
+		const workflowName = this.ctx.props.workflowName ?? this.env.WORKFLOW_NAME;
 		if (
 			this.env.MINIFLARE_LOOPBACK !== undefined &&
-			this.env.WORKFLOW_NAME !== undefined
+			workflowName !== undefined
 		) {
 			try {
 				const response = await this.env.MINIFLARE_LOOPBACK.fetch(
-					`http://localhost/core/workflow-storage/${encodeURIComponent(this.env.WORKFLOW_NAME)}/${this.ctx.id.toString()}?defer=1`,
+					`http://localhost/core/workflow-storage/${encodeURIComponent(workflowName)}/${this.ctx.id.toString()}?defer=1`,
 					{ method: "DELETE" }
 				);
 				if (!response.ok && response.status !== 404) {
@@ -1732,7 +1748,7 @@ export class Engine extends DurableObject<Env> {
 
 		void workflowRunningHandler();
 		try {
-			const target = this.env.USER_WORKFLOW;
+			const target = this.ctx.props.workflowClass ?? this.env.USER_WORKFLOW;
 			const result = await target.run(
 				event,
 				stubStep as unknown as WorkflowStep
