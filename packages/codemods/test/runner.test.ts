@@ -252,9 +252,16 @@ export default defineWorkersProject({
 			ignore: "*.generated.ts\n",
 		});
 		const globalConfigPath = path.join(gitSettings, "config");
-		await writeFile(
-			globalConfigPath,
-			`[core]\n\texcludesFile = ${path.join(gitSettings, "ignore")}\n`
+		await execFileAsync(
+			"git",
+			[
+				"config",
+				"--file",
+				globalConfigPath,
+				"core.excludesFile",
+				path.join(gitSettings, "ignore"),
+			],
+			{ cwd }
 		);
 		vi.stubEnv("GIT_CONFIG_GLOBAL", globalConfigPath);
 
