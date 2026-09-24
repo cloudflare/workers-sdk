@@ -454,6 +454,122 @@ export type WorkersKvResultInfo = {
 	count?: number;
 };
 
+export type FlagshipApp = {
+	/**
+	 * The Flagship app id the bindings point at
+	 */
+	id: string;
+	/**
+	 * Binding names in this instance using the app
+	 */
+	bindings: Array<string>;
+};
+
+export type FlagshipBaseCondition = {
+	attribute: string;
+	operator:
+		| "equals"
+		| "not_equals"
+		| "greater_than"
+		| "less_than"
+		| "greater_than_or_equals"
+		| "less_than_or_equals"
+		| "contains"
+		| "starts_with"
+		| "ends_with"
+		| "in"
+		| "not_in"
+		| "has"
+		| "not_has";
+	value: unknown;
+};
+
+export type FlagshipLogicalCondition = {
+	logical_operator: "AND" | "OR";
+	clauses: Array<FlagshipCondition>;
+};
+
+export type FlagshipCondition =
+	| FlagshipBaseCondition
+	| FlagshipLogicalCondition;
+
+export type FlagshipRule = {
+	/**
+	 * Evaluation order, lowest first
+	 */
+	priority: number;
+	/**
+	 * Conditions that must match for the rule to apply
+	 */
+	conditions: Array<FlagshipCondition>;
+	/**
+	 * Variation served when the rule matches
+	 */
+	serve_variation: string;
+	/**
+	 * Percentage rollout applied to matching contexts
+	 */
+	rollout?: {
+		percentage: number;
+		attribute?: string;
+	};
+};
+
+export type FlagshipFlag = {
+	/**
+	 * Flag key
+	 */
+	key: string;
+	/**
+	 * Type shared by the flag's variations
+	 */
+	type: "boolean" | "string" | "number" | "json";
+	/**
+	 * Human readable description
+	 */
+	description?: string | null;
+	/**
+	 * Whether the flag is enabled
+	 */
+	enabled: boolean;
+	/**
+	 * Variation served when no rule matches
+	 */
+	default_variation: string;
+	/**
+	 * Named values the flag can serve
+	 */
+	variations: {
+		[key: string]: unknown;
+	};
+	/**
+	 * Targeting rules, in priority order
+	 */
+	rules: Array<FlagshipRule>;
+	/**
+	 * When the flag was last written locally
+	 */
+	updated_at: string;
+};
+
+export type FlagshipEvaluation = {
+	flagKey: string;
+	/**
+	 * The resolved flag value
+	 */
+	value: unknown;
+	/**
+	 * Name of the variation served
+	 */
+	variant: string;
+	/**
+	 * Why this value was served
+	 */
+	reason: "TARGETING_MATCH" | "DEFAULT" | "DISABLED" | "SPLIT" | "ERROR";
+	errorCode?: string;
+	errorMessage?: string;
+};
+
 export type R2Object = {
 	/**
 	 * Object key (path)
@@ -644,6 +760,10 @@ export type LocalExplorerWorkerBindings = {
 	 * Send Email bindings
 	 */
 	sendEmail?: Array<LocalExplorerNamedBinding>;
+	/**
+	 * Flagship app bindings
+	 */
+	flagship?: Array<LocalExplorerResourceBinding>;
 };
 
 export type LocalExplorerNamedBinding = {
@@ -2678,3 +2798,274 @@ export type ObservabilityClearResponses = {
 
 export type ObservabilityClearResponse =
 	ObservabilityClearResponses[keyof ObservabilityClearResponses];
+
+export type FlagshipListAppsData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/flagship/apps";
+};
+
+export type FlagshipListAppsErrors = {
+	/**
+	 * List Flagship Apps response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipListAppsError =
+	FlagshipListAppsErrors[keyof FlagshipListAppsErrors];
+
+export type FlagshipListAppsResponses = {
+	/**
+	 * List Flagship Apps response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<FlagshipApp>;
+	};
+};
+
+export type FlagshipListAppsResponse =
+	FlagshipListAppsResponses[keyof FlagshipListAppsResponses];
+
+export type FlagshipListFlagsData = {
+	body?: never;
+	path: {
+		app_id: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags";
+};
+
+export type FlagshipListFlagsErrors = {
+	/**
+	 * List Flagship Flags response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipListFlagsError =
+	FlagshipListFlagsErrors[keyof FlagshipListFlagsErrors];
+
+export type FlagshipListFlagsResponses = {
+	/**
+	 * List Flagship Flags response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<FlagshipFlag>;
+	};
+};
+
+export type FlagshipListFlagsResponse =
+	FlagshipListFlagsResponses[keyof FlagshipListFlagsResponses];
+
+export type FlagshipCreateFlagData = {
+	body: {
+		/**
+		 * Flag key
+		 */
+		key: string;
+		/**
+		 * Human readable description
+		 */
+		description?: string | null;
+		/**
+		 * Whether the flag is enabled
+		 */
+		enabled?: boolean;
+		/**
+		 * Variation served when no rule matches
+		 */
+		default_variation: string;
+		/**
+		 * Named values the flag can serve
+		 */
+		variations: {
+			[key: string]: unknown;
+		};
+		/**
+		 * Targeting rules, in priority order
+		 */
+		rules?: Array<FlagshipRule>;
+	};
+	path: {
+		app_id: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags";
+};
+
+export type FlagshipCreateFlagErrors = {
+	/**
+	 * Create Flagship Flag response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipCreateFlagError =
+	FlagshipCreateFlagErrors[keyof FlagshipCreateFlagErrors];
+
+export type FlagshipCreateFlagResponses = {
+	/**
+	 * Create Flagship Flag response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: FlagshipFlag;
+	};
+};
+
+export type FlagshipCreateFlagResponse =
+	FlagshipCreateFlagResponses[keyof FlagshipCreateFlagResponses];
+
+export type FlagshipDeleteFlagData = {
+	body?: never;
+	path: {
+		app_id: string;
+		flag_key: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags/{flag_key}";
+};
+
+export type FlagshipDeleteFlagErrors = {
+	/**
+	 * Delete Flagship Flag response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipDeleteFlagError =
+	FlagshipDeleteFlagErrors[keyof FlagshipDeleteFlagErrors];
+
+export type FlagshipDeleteFlagResponses = {
+	/**
+	 * Delete Flagship Flag response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			success?: boolean;
+		};
+	};
+};
+
+export type FlagshipDeleteFlagResponse =
+	FlagshipDeleteFlagResponses[keyof FlagshipDeleteFlagResponses];
+
+export type FlagshipUpdateFlagData = {
+	body: {
+		/**
+		 * Human readable description
+		 */
+		description?: string | null;
+		/**
+		 * Whether the flag is enabled
+		 */
+		enabled?: boolean;
+		/**
+		 * Variation served when no rule matches
+		 */
+		default_variation?: string;
+		/**
+		 * Named values the flag can serve
+		 */
+		variations?: {
+			[key: string]: unknown;
+		};
+		/**
+		 * Targeting rules, in priority order
+		 */
+		rules?: Array<FlagshipRule>;
+	};
+	path: {
+		app_id: string;
+		flag_key: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags/{flag_key}";
+};
+
+export type FlagshipUpdateFlagErrors = {
+	/**
+	 * Update Flagship Flag response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipUpdateFlagError =
+	FlagshipUpdateFlagErrors[keyof FlagshipUpdateFlagErrors];
+
+export type FlagshipUpdateFlagResponses = {
+	/**
+	 * Update Flagship Flag response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: FlagshipFlag;
+	};
+};
+
+export type FlagshipUpdateFlagResponse =
+	FlagshipUpdateFlagResponses[keyof FlagshipUpdateFlagResponses];
+
+export type FlagshipEvaluateFlagData = {
+	body: {
+		/**
+		 * Attributes used for rule matching and rollout bucketing.
+		 */
+		context?: {
+			[key: string]: unknown;
+		};
+	};
+	path: {
+		app_id: string;
+		flag_key: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags/{flag_key}/evaluate";
+};
+
+export type FlagshipEvaluateFlagErrors = {
+	/**
+	 * Evaluate Flagship Flag response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipEvaluateFlagError =
+	FlagshipEvaluateFlagErrors[keyof FlagshipEvaluateFlagErrors];
+
+export type FlagshipEvaluateFlagResponses = {
+	/**
+	 * Evaluate Flagship Flag response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: FlagshipEvaluation;
+	};
+};
+
+export type FlagshipEvaluateFlagResponse =
+	FlagshipEvaluateFlagResponses[keyof FlagshipEvaluateFlagResponses];

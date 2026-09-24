@@ -16,7 +16,9 @@ export type Operator =
 	| "starts_with"
 	| "ends_with"
 	| "in"
-	| "not_in";
+	| "not_in"
+	| "has"
+	| "not_has";
 
 export type LogicalOperator = "AND" | "OR";
 

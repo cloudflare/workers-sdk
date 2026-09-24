@@ -1,4 +1,4 @@
-import { describe, test } from "vitest";
+import { describe, test, vi } from "vitest";
 import { evaluateFlag } from "../../../src/workers/flagship/evaluate";
 import type { EvaluationContext } from "../../../src/workers/flagship/evaluate";
 import type { FlagInput, Rule } from "../../../src/workers/flagship/flags";
@@ -150,6 +150,51 @@ describe("flagship evaluation", () => {
 		).toBe(false);
 	});
 
+	test("resolves nested attributes and matches array membership like Flagship", ({
+		expect,
+	}) => {
+		expect(
+			matches(
+				[{ attribute: "profile.plan", operator: "equals", value: "pro" }],
+				{
+					profile: { plan: "pro" },
+				}
+			)
+		).toBe(true);
+		expect(
+			matches(
+				[{ attribute: "profile.plan", operator: "equals", value: "pro" }],
+				{
+					"profile.plan": "free",
+					profile: { plan: "pro" },
+				}
+			)
+		).toBe(false);
+		expect(
+			matches(
+				[{ attribute: "profile.plan", operator: "equals", value: "pro" }],
+				{
+					profile: Object.create({ plan: "pro" }),
+				}
+			)
+		).toBe(false);
+		expect(
+			matches([{ attribute: "groups", operator: "has", value: "beta" }], {
+				groups: ["beta"],
+			})
+		).toBe(true);
+		expect(
+			matches([{ attribute: "groups", operator: "not_has", value: "beta" }], {
+				groups: ["alpha"],
+			})
+		).toBe(true);
+		expect(
+			matches([{ attribute: "groups", operator: "has", value: "beta" }], {
+				groups: [{ name: "beta" }],
+			})
+		).toBe(false);
+	});
+
 	describe("rollouts", () => {
 		test("matches upstream hash vectors and stringifies targeting keys", ({
 			expect,
@@ -193,6 +238,39 @@ describe("flagship evaluation", () => {
 			);
 		});
 
+		test("preserves integer buckets and splits fractional boundary buckets", ({
+			expect,
+		}) => {
+			const split = rolloutFlag(50.5);
+			split.key = "rollout_fractional";
+			expect(
+				evaluateFlag(split, { targetingKey: "199" }, ACCOUNT_TAG).reason
+			).toBe("SPLIT");
+			expect(
+				evaluateFlag(split, { targetingKey: "137" }, ACCOUNT_TAG).reason
+			).toBe("DEFAULT");
+			expect(
+				evaluateFlag(
+					{
+						...split,
+						rules: [{ ...split.rules[0], rollout: { percentage: 50 } }],
+					},
+					{ targetingKey: "199" },
+					ACCOUNT_TAG
+				).reason
+			).toBe("DEFAULT");
+		});
+
+		test("resolves nested rollout attributes", ({ expect }) => {
+			const split = rolloutFlag(50, "profile.id");
+			expect(
+				evaluateFlag(split, { profile: { id: "1" } }, ACCOUNT_TAG).reason
+			).toBe("SPLIT");
+			expect(
+				evaluateFlag(split, { profile: { id: "2" } }, ACCOUNT_TAG).reason
+			).toBe("DEFAULT");
+		});
+
 		test("seeds buckets by account and flag", ({ expect }) => {
 			const reasons = (flagKey: string, accountTag: string) =>
 				["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map(
@@ -205,6 +283,33 @@ describe("flagship evaluation", () => {
 			const baseline = reasons("rollout_test", ACCOUNT_TAG);
 			expect(reasons("rollout_test", "local")).not.toEqual(baseline);
 			expect(reasons("other", ACCOUNT_TAG)).not.toEqual(baseline);
+		});
+
+		test("reuses a random bucket when the rollout attribute is missing", ({
+			expect,
+			onTestFinished,
+		}) => {
+			const getRandomValues = vi.spyOn(crypto, "getRandomValues");
+			onTestFinished(() => getRandomValues.mockRestore());
+			const unkeyed = flag({
+				rules: [
+					{
+						conditions: [],
+						priority: 1,
+						rollout: { percentage: 0 },
+						serve_variation: "on",
+					},
+					{
+						conditions: [],
+						priority: 2,
+						rollout: { percentage: 0 },
+						serve_variation: "on",
+					},
+				],
+			});
+
+			expect(evaluateFlag(unkeyed, {}, ACCOUNT_TAG).reason).toBe("DEFAULT");
+			expect(getRandomValues).toHaveBeenCalledTimes(1);
 		});
 	});
 });

@@ -1,6 +1,6 @@
 import type { Condition, FlagInput, FlagValue, Rule } from "./flags";
 
-// Vendored from Flagship data-plane commit f32a8bf1607a7493175ea3a919f56dcd6b8a4fca.
+// Vendored from Flagship data-plane commit 35f288ebcd96a9c96bf4e6dee6ce6880aaaa4c22.
 // Hashing and matching must remain byte-compatible with production.
 
 export type EvaluationReason =
@@ -50,17 +50,58 @@ export class FlagConfigError extends Error {
 
 const ISO_8601_REGEX =
 	/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const MAX_PATH_DEPTH = 5;
 
 const encoder = new TextEncoder();
 const randomBuf = new Uint32Array(1);
+const MAX_RETAINED_HASH_BYTES = 32 * 1024;
+const HASH_QUOTIENT_RANGE = Math.ceil(2 ** 32 / 100);
 let hashBuf = new Uint8Array(512);
 
-function murmurhash3(str: string, seed: number): number {
-	if (hashBuf.byteLength < str.length * 3) {
-		hashBuf = new Uint8Array(str.length * 3);
+function isPrimitive(value: unknown): boolean {
+	return (
+		value === null || (typeof value !== "object" && typeof value !== "function")
+	);
+}
+
+function getContextValue(
+	context: EvaluationContext,
+	attribute: string
+): unknown {
+	if (Object.hasOwn(context, attribute)) {
+		return context[attribute];
 	}
-	const { written: n } = encoder.encodeInto(str, hashBuf);
-	const b = hashBuf;
+	if (!attribute.includes(".")) {
+		return undefined;
+	}
+	const path = attribute.split(".");
+	if (path.length > MAX_PATH_DEPTH) {
+		return undefined;
+	}
+	let value: unknown = context;
+	for (const segment of path) {
+		if (isPrimitive(value) || !Object.hasOwn(value as object, segment)) {
+			return undefined;
+		}
+		value = (value as Record<string, unknown>)[segment];
+	}
+	return value;
+}
+
+function murmurhash3(str: string, seed: number): number {
+	const requiredBytes = str.length * 3;
+	let b: Uint8Array;
+	let n: number;
+	if (requiredBytes > MAX_RETAINED_HASH_BYTES) {
+		b = encoder.encode(str);
+		n = b.byteLength;
+	} else {
+		if (hashBuf.byteLength < requiredBytes) {
+			hashBuf = new Uint8Array(requiredBytes);
+		}
+		b = hashBuf;
+		n = encoder.encodeInto(str, b).written;
+	}
 	let h = seed >>> 0;
 	let i = 0;
 	while (i + 4 <= n) {
@@ -93,7 +134,11 @@ function murmurhash3(str: string, seed: number): number {
 	h ^= h >>> 13;
 	h = Math.imul(h, 0xc2b2ae35) >>> 0;
 	h ^= h >>> 16;
-	return (h >>> 0) % 100;
+	return h >>> 0;
+}
+
+function bucketForHash(hash: number): number {
+	return (hash % 100) + Math.floor(hash / 100) / HASH_QUOTIENT_RANGE;
 }
 
 function compareTemporalOrNumeric(
@@ -101,6 +146,9 @@ function compareTemporalOrNumeric(
 	target: unknown,
 	compare: (a: number, b: number) => boolean
 ): boolean {
+	if (!isPrimitive(attrValue) || !isPrimitive(target)) {
+		return false;
+	}
 	if (
 		typeof target === "string" &&
 		ISO_8601_REGEX.test(target) &&
@@ -112,6 +160,16 @@ function compareTemporalOrNumeric(
 		}
 	}
 	return compare(Number(attrValue), Number(target));
+}
+
+function containsValue(values: unknown[], target: unknown): boolean {
+	return values.some((value) => String(value) === String(target));
+}
+
+function containsPrimitiveValue(values: unknown[], target: unknown): boolean {
+	return values.some(
+		(value) => isPrimitive(value) && String(value) === String(target)
+	);
 }
 
 function evaluateCondition(
@@ -137,22 +195,34 @@ function evaluateCondition(
 	}
 
 	const { attribute, operator, value: target } = condition;
-	const attrValue = context[attribute];
+	const attrValue = getContextValue(context, attribute);
 	if (attrValue === undefined) {
 		return false;
 	}
 
 	switch (operator) {
 		case "equals":
-			return String(attrValue) === String(target);
 		case "not_equals":
-			return String(attrValue) !== String(target);
 		case "contains":
-			return String(attrValue).includes(String(target));
 		case "starts_with":
-			return String(attrValue).startsWith(String(target));
-		case "ends_with":
-			return String(attrValue).endsWith(String(target));
+		case "ends_with": {
+			if (!isPrimitive(attrValue) || !isPrimitive(target)) {
+				return false;
+			}
+			switch (operator) {
+				case "equals":
+					return String(attrValue) === String(target);
+				case "not_equals":
+					return String(attrValue) !== String(target);
+				case "contains":
+					return String(attrValue).includes(String(target));
+				case "starts_with":
+					return String(attrValue).startsWith(String(target));
+				case "ends_with":
+					return String(attrValue).endsWith(String(target));
+			}
+			return false;
+		}
 		case "greater_than":
 			return compareTemporalOrNumeric(attrValue, target, (a, b) => a > b);
 		case "less_than":
@@ -162,15 +232,19 @@ function evaluateCondition(
 		case "less_than_or_equals":
 			return compareTemporalOrNumeric(attrValue, target, (a, b) => a <= b);
 		case "in":
-			return (
-				Array.isArray(target) &&
-				target.some((value) => String(value) === String(attrValue))
-			);
 		case "not_in":
-			return (
-				Array.isArray(target) &&
-				!target.some((value) => String(value) === String(attrValue))
-			);
+			return Array.isArray(target)
+				? operator === "in"
+					? containsValue(target, attrValue)
+					: !containsValue(target, attrValue)
+				: false;
+		case "has":
+		case "not_has":
+			return Array.isArray(attrValue) && isPrimitive(target)
+				? operator === "has"
+					? containsPrimitiveValue(attrValue, target)
+					: !containsPrimitiveValue(attrValue, target)
+				: false;
 		default:
 			return false;
 	}
@@ -202,6 +276,7 @@ export function evaluateFlag(
 	// Seeded per account+flag so the same targetingKey lands in different
 	// buckets across flags, preventing correlated rollouts.
 	let seed: number | undefined;
+	let randomBucket: number | undefined;
 
 	const rules = [...flagDef.rules].sort((a, b) => {
 		const aPriority = "priority" in a ? a.priority : 0;
@@ -223,12 +298,17 @@ export function evaluateFlag(
 			rule.rollout !== undefined &&
 			rule.rollout.percentage < 100
 		) {
-			seed ??= murmurhash3(`${accountId}:${flagDef.key}`, 0);
-			const attr = context[rule.rollout.attribute || "targetingKey"];
+			// Keep the original 100-bucket seed so existing assignments stay stable.
+			seed ??= murmurhash3(`${accountId}:${flagDef.key}`, 0) % 100;
+			const attr = getContextValue(
+				context,
+				rule.rollout.attribute || "targetingKey"
+			);
 			const bucket =
 				attr !== null && attr !== undefined
-					? murmurhash3(String(attr), seed)
-					: (crypto.getRandomValues(randomBuf)[0] / 0x100000000) * 100;
+					? bucketForHash(murmurhash3(String(attr), seed))
+					: (randomBucket ??=
+							(crypto.getRandomValues(randomBuf)[0] / 0x100000000) * 100);
 			if (bucket >= rule.rollout.percentage) {
 				ruleMatches = false;
 			}

@@ -10,6 +10,7 @@ import { CoreBindings } from "../../workers";
 import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
 import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
+import { getFlagshipService } from "../flagship";
 import {
 	getEnvBindingsOfType,
 	getRemoteProxyConnectionString,
@@ -33,6 +34,7 @@ import type {
 import type {
 	BindingIdMap,
 	ExplorerWorkerOpts,
+	FlagshipBindingInfo,
 	WorkerResourceBindings,
 	WorkflowBindingInfo,
 } from "./types";
@@ -193,6 +195,15 @@ export function getExplorerServices(
 		});
 	}
 
+	// Bind each locally simulated Flagship app's binding worker, so the
+	// explorer can read and write its flag store through the admin API.
+	for (const flagshipInfo of Object.values(bindingIdMap.flagship)) {
+		explorerBindings.push({
+			name: flagshipInfo.binding,
+			service: getFlagshipService(flagshipInfo.appId, sharedOptions),
+		});
+	}
+
 	return [
 		// Disk service for serving explorer UI assets
 		{
@@ -233,9 +244,24 @@ export function constructExplorerBindingMap(
 		do: {},
 		r2: {},
 		workflows: {},
+		flagship: Object.create(null) as BindingIdMap["flagship"],
 	};
 
 	for (const workerOpts of allWorkerOpts) {
+		for (const { id: appId, bindingName } of getLocalFlagshipBindings(
+			workerOpts
+		)) {
+			const existing = IDToBindingName.flagship[appId];
+			if (existing === undefined) {
+				IDToBindingName.flagship[appId] = {
+					appId,
+					binding: `EXPLORER_FLAGSHIP_${appId}`,
+					bindings: [bindingName],
+				} satisfies FlagshipBindingInfo;
+			} else {
+				existing.bindings.push(bindingName);
+			}
+		}
 		for (const [bindingName, binding] of getEnvBindingsOfType(
 			workerOpts.config,
 			"d1"
@@ -337,6 +363,18 @@ export function constructExplorerBindingMap(
 	return IDToBindingName;
 }
 
+/** Returns the locally simulated Flagship bindings configured for a worker. */
+export function getLocalFlagshipBindings(
+	workerOpts: ParsedWorkerOptions
+): WorkerResourceBindings["flagship"] {
+	return getEnvBindingsOfType(workerOpts.config, "flagship")
+		.filter(
+			([, binding]) =>
+				getRemoteProxyConnectionString(binding, workerOpts.dev) === undefined
+		)
+		.map(([bindingName, binding]) => ({ id: binding.id, bindingName }));
+}
+
 /**
  * Build per-worker resource bindings map for the local explorer.
  * Maps worker names to their resource bindings with IDs.
@@ -359,6 +397,7 @@ export function constructExplorerWorkerOpts(
 			do: [],
 			workflows: [],
 			sendEmail: [],
+			flagship: [],
 		};
 
 		for (const [bindingName, binding] of getEnvBindingsOfType(
@@ -422,6 +461,8 @@ export function constructExplorerWorkerOpts(
 		) ?? {}) {
 			bindings.sendEmail.push({ bindingName });
 		}
+
+		bindings.flagship.push(...getLocalFlagshipBindings(workerOpts));
 
 		result[workerName] = bindings;
 	}

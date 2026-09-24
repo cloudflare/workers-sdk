@@ -1,5 +1,83 @@
 import type { FilterConfig } from "./filter-openapi";
 
+const FLAGSHIP_WORKER_PARAMETER = {
+	description: "Worker whose local Flagship store should be used.",
+	in: "query" as const,
+	name: "worker",
+	required: false,
+	schema: { type: "string" as const },
+};
+
+function flagshipPathParameter(name: "app_id" | "flag_key") {
+	return {
+		in: "path" as const,
+		name,
+		required: true,
+		schema: { type: "string" as const },
+	};
+}
+
+function flagshipResponses(description: string, result: object) {
+	return {
+		"200": {
+			content: {
+				"application/json": {
+					schema: {
+						allOf: [
+							{ $ref: "#/components/schemas/workers_api-response-common" },
+							{ properties: { result }, type: "object" as const },
+						],
+					},
+				},
+			},
+			description: `${description} response.`,
+		},
+		"4XX": {
+			content: {
+				"application/json": {
+					schema: {
+						$ref: "#/components/schemas/workers_api-response-common-failure",
+					},
+				},
+			},
+			description: `${description} response failure.`,
+		},
+	};
+}
+
+function flagshipRequestBody(schema: object) {
+	return {
+		content: { "application/json": { schema } },
+		required: true,
+	};
+}
+
+const FLAGSHIP_FLAG_PROPERTIES = {
+	description: {
+		description: "Human readable description",
+		nullable: true,
+		type: "string" as const,
+	},
+	enabled: {
+		description: "Whether the flag is enabled",
+		type: "boolean" as const,
+	},
+	default_variation: {
+		description: "Variation served when no rule matches",
+		type: "string" as const,
+	},
+	variations: {
+		additionalProperties: true,
+		description: "Named values the flag can serve",
+		type: "object" as const,
+	},
+	rules: {
+		description: "Targeting rules, in priority order",
+		items: { $ref: "#/components/schemas/flagship_rule" },
+		type: "array" as const,
+	},
+};
+
 /**
  * Configuration for filtering Cloudflare's OpenAPI spec for local explorer.
  * This defines which endpoints to include and what features to ignore.
@@ -1856,8 +1934,259 @@ const config = {
 					tags: ["Observability"],
 				},
 			},
+			// Flagship endpoints (local-only, feature flags are not in the public API)
+			"/flagship/apps": {
+				get: {
+					description: "Returns the Flagship apps bound for local development.",
+					operationId: "flagship-list-apps",
+					parameters: [],
+					responses: flagshipResponses("List Flagship Apps", {
+						items: { $ref: "#/components/schemas/flagship_app" },
+						type: "array",
+					}),
+					summary: "List Flagship Apps",
+					tags: ["Flagship"],
+				},
+			},
+			"/flagship/apps/{app_id}/flags": {
+				get: {
+					description: "Returns the flags in a local Flagship app.",
+					operationId: "flagship-list-flags",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					responses: flagshipResponses("List Flagship Flags", {
+						items: { $ref: "#/components/schemas/flagship_flag" },
+						type: "array",
+					}),
+					summary: "List Flagship Flags",
+					tags: ["Flagship"],
+				},
+				post: {
+					description: "Creates a flag in a local Flagship app.",
+					operationId: "flagship-create-flag",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					requestBody: flagshipRequestBody({
+						required: ["key", "default_variation", "variations"],
+						properties: {
+							key: { description: "Flag key", type: "string" },
+							...FLAGSHIP_FLAG_PROPERTIES,
+						},
+						type: "object",
+					}),
+					responses: flagshipResponses("Create Flagship Flag", {
+						$ref: "#/components/schemas/flagship_flag",
+					}),
+					summary: "Create Flagship Flag",
+					tags: ["Flagship"],
+				},
+			},
+			"/flagship/apps/{app_id}/flags/{flag_key}": {
+				patch: {
+					description:
+						"Updates a flag. Omitted fields keep their current values; provided rules replace the existing ones.",
+					operationId: "flagship-update-flag",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						flagshipPathParameter("flag_key"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					requestBody: flagshipRequestBody({
+						properties: FLAGSHIP_FLAG_PROPERTIES,
+						type: "object",
+					}),
+					responses: flagshipResponses("Update Flagship Flag", {
+						$ref: "#/components/schemas/flagship_flag",
+					}),
+					summary: "Update Flagship Flag",
+					tags: ["Flagship"],
+				},
+				delete: {
+					description: "Deletes a flag from a local Flagship app.",
+					operationId: "flagship-delete-flag",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						flagshipPathParameter("flag_key"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					responses: flagshipResponses("Delete Flagship Flag", {
+						properties: { success: { type: "boolean" } },
+						type: "object",
+					}),
+					summary: "Delete Flagship Flag",
+					tags: ["Flagship"],
+				},
+			},
+			"/flagship/apps/{app_id}/flags/{flag_key}/evaluate": {
+				post: {
+					description:
+						"Evaluates a flag against an evaluation context, as a Worker binding would.",
+					operationId: "flagship-evaluate-flag",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						flagshipPathParameter("flag_key"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					requestBody: flagshipRequestBody({
+						properties: {
+							context: {
+								additionalProperties: true,
+								description:
+									"Attributes used for rule matching and rollout bucketing.",
+								type: "object",
+							},
+						},
+						type: "object",
+					}),
+					responses: flagshipResponses("Evaluate Flagship Flag", {
+						$ref: "#/components/schemas/flagship_evaluation",
+					}),
+					summary: "Evaluate Flagship Flag",
+					tags: ["Flagship"],
+				},
+			},
 		},
 		schemas: {
+			// Flagship schemas — the local flag store's management shapes
+			flagship_app: {
+				type: "object",
+				required: ["id", "bindings"],
+				properties: {
+					id: {
+						type: "string",
+						description: "The Flagship app id the bindings point at",
+					},
+					bindings: {
+						type: "array",
+						items: { type: "string" },
+						description: "Binding names in this instance using the app",
+					},
+				},
+			},
+			"flagship_base-condition": {
+				type: "object",
+				required: ["attribute", "operator", "value"],
+				properties: {
+					attribute: { type: "string" },
+					operator: {
+						type: "string",
+						enum: [
+							"equals",
+							"not_equals",
+							"greater_than",
+							"less_than",
+							"greater_than_or_equals",
+							"less_than_or_equals",
+							"contains",
+							"starts_with",
+							"ends_with",
+							"in",
+							"not_in",
+							"has",
+							"not_has",
+						],
+					},
+					value: {},
+				},
+			},
+			"flagship_logical-condition": {
+				type: "object",
+				required: ["logical_operator", "clauses"],
+				properties: {
+					logical_operator: { type: "string", enum: ["AND", "OR"] },
+					clauses: {
+						type: "array",
+						items: { $ref: "#/components/schemas/flagship_condition" },
+					},
+				},
+			},
+			flagship_condition: {
+				oneOf: [
+					{ $ref: "#/components/schemas/flagship_base-condition" },
+					{ $ref: "#/components/schemas/flagship_logical-condition" },
+				],
+			},
+			flagship_rule: {
+				type: "object",
+				required: ["priority", "conditions", "serve_variation"],
+				properties: {
+					priority: {
+						type: "integer",
+						description: "Evaluation order, lowest first",
+					},
+					conditions: {
+						type: "array",
+						items: { $ref: "#/components/schemas/flagship_condition" },
+						description: "Conditions that must match for the rule to apply",
+					},
+					serve_variation: {
+						type: "string",
+						description: "Variation served when the rule matches",
+					},
+					rollout: {
+						type: "object",
+						required: ["percentage"],
+						properties: {
+							percentage: {
+								type: "number",
+								minimum: 0,
+								maximum: 100,
+								multipleOf: 0.01,
+							},
+							attribute: { type: "string" },
+						},
+						description: "Percentage rollout applied to matching contexts",
+					},
+				},
+			},
+			flagship_flag: {
+				type: "object",
+				required: [
+					"key",
+					"type",
+					"enabled",
+					"default_variation",
+					"variations",
+					"rules",
+					"updated_at",
+				],
+				properties: {
+					key: { type: "string", description: "Flag key" },
+					type: {
+						type: "string",
+						enum: ["boolean", "string", "number", "json"],
+						description: "Type shared by the flag's variations",
+					},
+					...FLAGSHIP_FLAG_PROPERTIES,
+					updated_at: {
+						type: "string",
+						description: "When the flag was last written locally",
+					},
+				},
+			},
+			flagship_evaluation: {
+				type: "object",
+				required: ["flagKey", "value", "variant", "reason"],
+				properties: {
+					flagKey: { type: "string" },
+					value: { description: "The resolved flag value" },
+					variant: {
+						type: "string",
+						description: "Name of the variation served",
+					},
+					reason: {
+						type: "string",
+						enum: ["TARGETING_MATCH", "DEFAULT", "DISABLED", "SPLIT", "ERROR"],
+						description: "Why this value was served",
+					},
+					errorCode: { type: "string" },
+					errorMessage: { type: "string" },
+				},
+			},
 			// R2 schemas - matches stratus dashboard API shapes
 			// Note: storage_class and jurisdiction/location not supported locally
 			r2_object: {
@@ -2103,6 +2432,13 @@ const config = {
 							$ref: "#/components/schemas/local-explorer_named-binding",
 						},
 						description: "Send Email bindings",
+					},
+					flagship: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_resource-binding",
+						},
+						description: "Flagship app bindings",
 					},
 				},
 			},
