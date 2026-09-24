@@ -47,9 +47,15 @@ interface CfDependencyInstallResult {
 	changedFiles: string[];
 }
 
+interface DeclaredPackageManager {
+	packageManager: PackageManager;
+	version?: string;
+}
+
 interface DetectedPackageManager {
 	directory: string;
 	packageManager: PackageManager;
+	version?: string;
 }
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
@@ -76,13 +82,30 @@ export async function findPackageJson(
 
 function getDeclaredPackageManager(
 	packageJson: PackageJson
-): PackageManager | undefined {
+): DeclaredPackageManager | undefined {
 	if (typeof packageJson.packageManager !== "string") {
 		return undefined;
 	}
 
-	const packageManagerName = packageJson.packageManager.split("@", 1)[0];
-	return PACKAGE_MANAGERS.find(({ type }) => type === packageManagerName);
+	const versionSeparator = packageJson.packageManager.lastIndexOf("@");
+	const packageManagerName =
+		versionSeparator > 0
+			? packageJson.packageManager.slice(0, versionSeparator)
+			: packageJson.packageManager;
+	const packageManager = PACKAGE_MANAGERS.find(
+		({ type }) => type === packageManagerName
+	);
+	if (!packageManager) {
+		return undefined;
+	}
+
+	return {
+		packageManager,
+		version:
+			versionSeparator > 0
+				? packageJson.packageManager.slice(versionSeparator + 1)
+				: undefined,
+	};
 }
 
 async function hasLockFile(
@@ -104,13 +127,13 @@ async function detectPackageManager(
 	while (true) {
 		const packageJsonPath = path.join(currentDirectory, "package.json");
 		if (await fileExists(packageJsonPath)) {
-			const declaredPackageManager = getDeclaredPackageManager(
+			const declared = getDeclaredPackageManager(
 				await readPackageJson(packageJsonPath)
 			);
-			if (declaredPackageManager) {
+			if (declared) {
 				return {
 					directory: currentDirectory,
-					packageManager: declaredPackageManager,
+					...declared,
 				};
 			}
 		}
@@ -132,9 +155,24 @@ async function detectPackageManager(
 	}
 }
 
+function usesTextBunLockfile(version: string | undefined): boolean {
+	if (!version) {
+		return true;
+	}
+
+	const match = /^(\d+)\.(\d+)/.exec(version);
+	if (!match) {
+		return true;
+	}
+	const major = Number.parseInt(match[1], 10);
+	const minor = Number.parseInt(match[2], 10);
+	return major > 1 || (major === 1 && minor >= 2);
+}
+
 async function getPlannedLockFiles(
 	packageDirectory: string,
-	packageManager: PackageManager
+	packageManager: PackageManager,
+	packageManagerVersion: string | undefined
 ): Promise<string[]> {
 	const lockFilePaths = packageManager.lockFiles.map((lockFile) =>
 		path.join(packageDirectory, lockFile)
@@ -152,6 +190,14 @@ async function getPlannedLockFiles(
 
 	if (existingLockFiles.length > 0) {
 		return existingLockFiles;
+	}
+	if (packageManager.type === "bun") {
+		return [
+			path.join(
+				packageDirectory,
+				usesTextBunLockfile(packageManagerVersion) ? "bun.lock" : "bun.lockb"
+			),
+		];
 	}
 	return lockFilePaths.length === 1 ? lockFilePaths : [];
 }
@@ -243,10 +289,13 @@ export async function installCfDependency(
 	options: CfDependencyInstallOptions
 ): Promise<CfDependencyInstallResult> {
 	const { isWorkspaceRoot, packageDirectory } = plan;
-	const { directory: lockFileDirectory, packageManager } =
-		await detectPackageManager(packageDirectory);
+	const {
+		directory: lockFileDirectory,
+		packageManager,
+		version,
+	} = await detectPackageManager(packageDirectory);
 	const lockFilePaths = options.dryRun
-		? await getPlannedLockFiles(lockFileDirectory, packageManager)
+		? await getPlannedLockFiles(lockFileDirectory, packageManager, version)
 		: packageManager.lockFiles.map((lockFile) =>
 				path.join(lockFileDirectory, lockFile)
 			);
