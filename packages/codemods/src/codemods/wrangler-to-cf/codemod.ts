@@ -54,6 +54,11 @@ export const wranglerToCfCodemod: Codemod = {
 		if (!includedConfigPath) {
 			return {
 				changedFiles: [],
+				message: `${path
+					.relative(context.cwd, configPath)
+					.split(path.sep)
+					.join(path.posix.sep)} is excluded by --files.`,
+				status: "skipped",
 			};
 		}
 

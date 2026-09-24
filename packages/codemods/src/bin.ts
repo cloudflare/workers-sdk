@@ -2,7 +2,11 @@
 
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { formatFollowUps, getCodemodExitCode } from "./cli-output";
+import {
+	formatFollowUps,
+	getCodemodExitCode,
+	getCodemodSummary,
+} from "./cli-output";
 import { availableCodemods, runCodemod } from "./runner";
 
 /** Prints command usage and the available codemods. */
@@ -87,13 +91,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 			console.log(line);
 		}
 	}
-	console.log(
-		result.changedFiles.length === 0
-			? "Project is already up to date."
-			: values["dry-run"]
-				? `Would update ${result.changedFiles.length} file(s).`
-				: `Updated ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`
-	);
+	console.log(getCodemodSummary(result, values["dry-run"]));
 	const exitCode = getCodemodExitCode(result.status);
 	if (exitCode !== 0) {
 		process.exitCode = exitCode;

@@ -1,5 +1,22 @@
 import type { CodemodFollowUp, CodemodResult } from "./types";
 
+/** Returns the final CLI summary for a codemod result. */
+export function getCodemodSummary(
+	result: CodemodResult,
+	dryRun: boolean
+): string {
+	if (result.status === "skipped") {
+		return `Skipped: ${result.message ?? "The codemod did not run."}`;
+	}
+	if (result.changedFiles.length === 0) {
+		return "Project is already up to date.";
+	}
+	if (dryRun) {
+		return `Would update ${result.changedFiles.length} file(s).`;
+	}
+	return `Updated ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`;
+}
+
 /** Returns a failing exit code when a codemod requires manual intervention. */
 export function getCodemodExitCode(status: CodemodResult["status"]): 0 | 1 {
 	return status === "needs-intervention" ? 1 : 0;

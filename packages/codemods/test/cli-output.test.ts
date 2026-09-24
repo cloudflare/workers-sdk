@@ -1,5 +1,9 @@
 import { describe, it } from "vitest";
-import { formatFollowUps, getCodemodExitCode } from "../src/cli-output";
+import {
+	formatFollowUps,
+	getCodemodExitCode,
+	getCodemodSummary,
+} from "../src/cli-output";
 
 describe("getCodemodExitCode", () => {
 	it("fails when manual intervention is required", ({ expect }) => {
@@ -8,7 +12,23 @@ describe("getCodemodExitCode", () => {
 
 	it("succeeds for complete and unspecified statuses", ({ expect }) => {
 		expect(getCodemodExitCode("complete")).toBe(0);
+		expect(getCodemodExitCode("skipped")).toBe(0);
 		expect(getCodemodExitCode(undefined)).toBe(0);
+	});
+});
+
+describe("getCodemodSummary", () => {
+	it("reports excluded inputs as skipped", ({ expect }) => {
+		expect(
+			getCodemodSummary(
+				{
+					changedFiles: [],
+					message: "wrangler.json is excluded by --files.",
+					status: "skipped",
+				},
+				false
+			)
+		).toBe("Skipped: wrangler.json is excluded by --files.");
 	});
 });
 

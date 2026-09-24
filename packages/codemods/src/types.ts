@@ -24,7 +24,8 @@ export interface RunContext extends CodemodContext {
 export interface CodemodResult {
 	changedFiles: string[];
 	followUps?: CodemodFollowUp[];
-	status?: "complete" | "needs-intervention";
+	message?: string;
+	status?: "complete" | "needs-intervention" | "skipped";
 }
 
 export interface Codemod {
