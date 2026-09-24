@@ -34,6 +34,7 @@ export * from "./deploy/helpers/environments";
 export * from "./deploy/helpers/friendly-validator-errors";
 export * from "./deploy/helpers/versions-types";
 export * from "./deploy/helpers/versions-api";
+export * from "./deploy/helpers/workers-api";
 export * from "./deploy/helpers/check-workflow-conflicts";
 export * from "./deploy/helpers/download-worker-config";
 export * from "./deploy/helpers/durable";
