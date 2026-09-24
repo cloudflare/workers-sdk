@@ -1,0 +1,8 @@
+{
+	"name": "worker",
+	"main": "./src/exports.ts",
+	"compatibility_date": "2026-08-28",
+	"exports": {
+		"MyWorkflow": { "type": "workflow", "name": "workflow" },
+	},
+}
