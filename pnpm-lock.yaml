@@ -1809,12 +1809,18 @@ importers:
 
   packages/codemods:
     devDependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
       '@cloudflare/shared-ast-primitives':
         specifier: workspace:*
         version: link:../shared-ast-primitives
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
