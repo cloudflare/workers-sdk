@@ -22,6 +22,10 @@ function getGlobOptions(cwd: string) {
 	} as const;
 }
 
+function normalizeFilePath(cwd: string, filePath: string): string {
+	return path.resolve(cwd, filePath).split(path.sep).join(path.posix.sep);
+}
+
 /**
  * Filters absolute or working-directory-relative paths using a codemod's file
  * restrictions.
@@ -39,11 +43,13 @@ export async function filterByFileRestrictions(
 	}
 
 	const restrictedPaths = new Set(
-		await glob(context.files, getGlobOptions(context.cwd))
+		(await glob(context.files, getGlobOptions(context.cwd))).map((filePath) =>
+			normalizeFilePath(context.cwd, filePath)
+		)
 	);
 
 	return filePaths.filter((filePath) =>
-		restrictedPaths.has(path.resolve(context.cwd, filePath))
+		restrictedPaths.has(normalizeFilePath(context.cwd, filePath))
 	);
 }
 
