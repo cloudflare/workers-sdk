@@ -23,6 +23,8 @@ import type { RawConfig } from "@cloudflare/workers-utils";
 
 type UnknownRecord = Record<string, unknown>;
 
+const VITE_DEFAULT_MODES = new Set(["development", "production"]);
+
 const NON_INHERITABLE_FIELDS = new Set([
 	"agent_memory",
 	"ai_search_namespaces",
@@ -1771,6 +1773,18 @@ export function convertWranglerConfig(
 	for (const [name, environment] of Object.entries(environments)) {
 		if (isRecord(environment)) {
 			addUnknownFieldFollowUps(environment, `env.${name}`, followUps);
+			if (bundler === "vite" && VITE_DEFAULT_MODES.has(name)) {
+				followUps.push(
+					createFollowUp(
+						"vite-mode-environment-conflict",
+						`The Wrangler environment \`${name}\` conflicts with Vite's default \`${name}\` mode. Rename or remap this environment before using the generated config so Vite does not select it implicitly.`,
+						{
+							docsUrl: ENVIRONMENTS_DOCS_URL,
+							sourcePath: `env.${name}`,
+						}
+					)
+				);
+			}
 			continue;
 		}
 

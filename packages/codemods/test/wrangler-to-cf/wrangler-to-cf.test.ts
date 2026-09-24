@@ -147,6 +147,52 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(output)).toEqual([]);
 	});
 
+	it("blocks Vite environments that conflict with default modes", async ({
+		expect,
+	}) => {
+		const source = JSON.stringify({
+			compatibility_date: "2026-09-23",
+			env: {
+				development: { vars: { MODE: "development" } },
+				production: { vars: { MODE: "production" } },
+			},
+			name: "example-worker",
+		});
+		const cwd = await createProject({
+			"wrangler.json": source,
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+		const output = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+
+		expect(result.status).toBe("needs-intervention");
+		expect(
+			result.followUps
+				.filter(({ code }) => code === "vite-mode-environment-conflict")
+				.map(({ sourcePath }) => sourcePath)
+		).toEqual(["env.development", "env.production"]);
+		expect(output).toContain("Migration incomplete");
+		expect(output).toContain('case "development"');
+		expect(output).toContain('case "production"');
+		expect(output).toMatchSnapshot("cloudflare.config.ts");
+		expect(getSyntaxErrors(output)).toEqual([]);
+
+		const wranglerCwd = await createProject({ "wrangler.json": source });
+		const wranglerResult = await migrateWranglerToCf(
+			path.join(wranglerCwd, "wrangler.json"),
+			{ bundler: "wrangler" }
+		);
+		expect(wranglerResult.status).toBe("complete");
+		expect(wranglerResult.followUps).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ code: "vite-mode-environment-conflict" }),
+			])
+		);
+	});
+
 	it("does not inherit non-inheritable bindings into previews", async ({
 		expect,
 	}) => {

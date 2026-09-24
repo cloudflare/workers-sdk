@@ -1,5 +1,63 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`migrateWranglerToCf > blocks Vite environments that conflict with default modes > cloudflare.config.ts 1`] = `
+"import { bindings, defineConfig } from "cf/config";
+
+/**
+ * Wrangler environments are selected through ctx.mode and the cf --mode flag.
+ * @see https://developers.cloudflare.com/workers/wrangler/environments/
+ */
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: env.development: The Wrangler environment \`development\` conflicts with Vite's default \`development\` mode. Rename or remap this environment before using the generated config so Vite does not select it implicitly.
+ * @see https://developers.cloudflare.com/workers/wrangler/environments/
+ */
+/**
+ * TODO(@cloudflare): cf migrate: env.production: The Wrangler environment \`production\` conflicts with Vite's default \`production\` mode. Rename or remap this environment before using the generated config so Vite does not select it implicitly.
+ * @see https://developers.cloudflare.com/workers/wrangler/environments/
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+export default defineConfig((ctx) => {
+	switch (ctx.mode) {
+		case "development": {
+			return {
+				worker: {
+					name: "example-worker-development",
+					compatibilityDate: "2026-09-23",
+					env: {
+						MODE: bindings.text("development"),
+					},
+				},
+			};
+		}
+		case "production": {
+			return {
+				worker: {
+					name: "example-worker-production",
+					compatibilityDate: "2026-09-23",
+					env: {
+						MODE: bindings.text("production"),
+					},
+				},
+			};
+		}
+		default: {
+			return {
+				worker: {
+					name: "example-worker",
+					compatibilityDate: "2026-09-23",
+				},
+			};
+		}
+	}
+});
+"
+`;
+
 exports[`migrateWranglerToCf > does not create \`wrangler.config.ts\` for the Vite bundler > cloudflare.config.ts 1`] = `
 "import { defineConfig } from "cf/config";
 
