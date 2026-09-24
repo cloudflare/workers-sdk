@@ -256,8 +256,9 @@ function getWorkflowClasses(
 		// `designator` hasn't been validated at this point
 		if (isWorkflowDesignatorToSelf(designator, workerName)) {
 			result.add(designator.className);
-			// Shallow clone to avoid mutating config
-			worker.workflows[key] = { ...designator };
+			// Shallow clone to avoid mutating config. The runner Worker is renamed,
+			// so drop `scriptName` to point the binding at the runner instead.
+			worker.workflows[key] = { ...designator, scriptName: undefined };
 		}
 	}
 	return result;
