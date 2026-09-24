@@ -49,6 +49,7 @@ interface CfDependencyInstallOptions {
 
 interface CfDependencyInstallResult {
 	changedFiles: string[];
+	requiresInstall: boolean;
 }
 
 interface DeclaredPackageManager {
@@ -317,7 +318,10 @@ export async function installCfDependency(
 		...lockFilePaths,
 	];
 	if (options.dryRun) {
-		return { changedFiles: packageFilePaths };
+		return {
+			changedFiles: packageFilePaths,
+			requiresInstall: true,
+		};
 	}
 
 	const before = await readFiles(packageFilePaths);
@@ -330,5 +334,6 @@ export async function installCfDependency(
 
 	return {
 		changedFiles: getChangedFiles(before, await readFiles(packageFilePaths)),
+		requiresInstall: false,
 	};
 }

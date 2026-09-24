@@ -14,6 +14,9 @@ export function getCodemodSummary(
 	if (dryRun) {
 		return `Would update ${result.changedFiles.length} file(s).`;
 	}
+	if (result.requiresInstall === false) {
+		return `Updated ${result.changedFiles.length} file(s).`;
+	}
 	return `Updated ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`;
 }
 

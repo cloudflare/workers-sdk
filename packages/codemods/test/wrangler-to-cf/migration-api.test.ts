@@ -117,6 +117,7 @@ describe("migrateWranglerToCf", () => {
 			"package.json",
 			"pnpm-lock.yaml",
 		]);
+		expect(result.requiresInstall).toBe(false);
 	});
 
 	it("reports planned dependency files during a dry run", async ({
@@ -306,6 +307,7 @@ describe("migrateWranglerToCf", () => {
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
 			followUps: [{ blocking: true, code: "cf-install-disabled" }],
+			requiresInstall: true,
 			status: "needs-intervention",
 		});
 		await expect(
@@ -420,6 +422,7 @@ describe("migrateWranglerToCf", () => {
 		expect(result).toMatchObject({
 			changedFiles: ["cloudflare.config.ts"],
 			followUps: [{ blocking: true, code: "cf-install-failed" }],
+			requiresInstall: true,
 			status: "needs-intervention",
 		});
 		const cloudflareConfig = await readFile(

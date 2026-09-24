@@ -19,6 +19,7 @@ export interface MigrationFollowUp {
 export interface WranglerToCfMigrationResult {
 	changedFiles: string[];
 	followUps: MigrationFollowUp[];
+	requiresInstall: boolean;
 	status: "complete" | "needs-intervention";
 }
 

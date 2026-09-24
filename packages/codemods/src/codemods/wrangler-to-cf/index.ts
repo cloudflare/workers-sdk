@@ -126,6 +126,7 @@ export async function migrateWranglerToCf(
 		);
 	}
 	const changedFiles = Array.from(outputs.keys());
+	let requiresInstall = dependencyPlan.action !== "already-installed";
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
@@ -142,6 +143,7 @@ export async function migrateWranglerToCf(
 				dryRun,
 			});
 			changedFiles.push(...installResult.changedFiles);
+			requiresInstall = installResult.requiresInstall;
 		} catch (error) {
 			if (dryRun) {
 				throw error;
@@ -152,6 +154,7 @@ export async function migrateWranglerToCf(
 				"cf-install-failed",
 				`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
 			);
+			requiresInstall = true;
 		}
 
 		if (dependencyFollowUp) {
@@ -177,6 +180,7 @@ export async function migrateWranglerToCf(
 			path.relative(projectDirectory, filePath)
 		),
 		followUps,
+		requiresInstall,
 		status: followUps.some(({ blocking }) => blocking)
 			? "needs-intervention"
 			: "complete",
