@@ -140,9 +140,8 @@ export async function loadNewConfig(options: {
 
 	// ── Normalised types ────────────────────────────────────────────────
 	const types: NormalizedTypes = {
-		generate: parsedWranglerConfig?.data.dev?.types?.generate ?? true,
-		includeRuntime:
-			parsedWranglerConfig?.data.dev?.types?.includeRuntime ?? true,
+		generate: parsedWranglerConfig?.data.types?.generate ?? true,
+		includeRuntime: parsedWranglerConfig?.data.types?.includeRuntime ?? true,
 	};
 
 	// ── Dependencies (union of both files) ──────────────────────────────

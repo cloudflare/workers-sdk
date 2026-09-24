@@ -234,17 +234,18 @@ describe("convertToolingConfig", () => {
 			});
 		});
 
-		it("does NOT map dev.types into the output (consumed separately)", ({
+		it("does NOT map types into the output (consumed separately)", ({
 			expect,
 		}) => {
 			const result = convertToolingConfig({
-				dev: { port: 8787, types: { generate: false } },
+				types: { generate: false },
+				dev: { port: 8787 },
 			});
-			// `dev.types` is intentionally not threaded through `RawConfig` —
+			// `types` is intentionally not threaded through `RawConfig` —
 			// it is consumed via `NormalizedTypes` on `LoadNewConfigResult`.
 			expect(result.dev).toBeDefined();
-			expect((result.dev as Record<string, unknown>).types).toBeUndefined();
-			expect(JSON.stringify(result.dev)).not.toContain("generate");
+			expect((result as Record<string, unknown>).types).toBeUndefined();
+			expect(JSON.stringify(result)).not.toContain("generate");
 		});
 
 		it("emits dev with undefined sub-fields for absent options", ({
