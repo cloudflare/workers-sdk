@@ -86,19 +86,19 @@ export function renderRoute(route: Route): string {
 /**
  * Whether a bulk route update should fall back to the per-zone API.
  *
- * Tokens without All Zones usually get HTTP 403 and code 10000. The same
- * rejection is sometimes returned with `code: null`, which cfetch leaves
- * unset, so a strict `code === 10000` check skips the fallback.
+ * Code 10000 is the original missing-All-Zones signal and is enough on its
+ * own, including when the HTTP status is not 403. The same rejection is
+ * sometimes returned as HTTP 403 with `code: null`, which cfetch leaves unset.
  *
  * @param e - Error thrown by the routes request
- * @returns Whether this 403 should use the zone-based route update
+ * @returns Whether this error should use the zone-based route update
  */
 export function isRoutesPermissionError(e: unknown): e is APIError {
-	if (!(e instanceof APIError) || e.status !== 403) {
+	if (!(e instanceof APIError)) {
 		return false;
 	}
 
-	return e.code === 10000 || e.code == null;
+	return e.code === 10000 || (e.status === 403 && e.code == null);
 }
 
 /**

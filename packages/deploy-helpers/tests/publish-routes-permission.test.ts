@@ -15,10 +15,11 @@ function apiError(status: number, code?: number): APIError {
 }
 
 describe("isRoutesPermissionError", () => {
-	it("treats a 403 with code 10000 as a missing All Zones token", ({
+	it("treats code 10000 as a missing All Zones token at any status", ({
 		expect,
 	}) => {
 		expect(isRoutesPermissionError(apiError(403, 10000))).toBe(true);
+		expect(isRoutesPermissionError(apiError(200, 10000))).toBe(true);
 	});
 
 	it("treats a 403 with a missing code as the same permission rejection", ({
@@ -33,9 +34,11 @@ describe("isRoutesPermissionError", () => {
 		expect(isRoutesPermissionError(apiError(403, 9109))).toBe(false);
 	});
 
-	it("does not fall back for non-403 API errors", ({ expect }) => {
+	it("does not fall back for other statuses that omit code 10000", ({
+		expect,
+	}) => {
 		expect(isRoutesPermissionError(apiError(400))).toBe(false);
-		expect(isRoutesPermissionError(apiError(500, 10000))).toBe(false);
+		expect(isRoutesPermissionError(apiError(200))).toBe(false);
 	});
 
 	it("does not treat parse errors as route permission errors", ({ expect }) => {
