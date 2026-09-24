@@ -1,6 +1,5 @@
-import { access } from "node:fs/promises";
 import path from "node:path";
-import { filterByFileRestrictions } from "../../files";
+import { fileExists, filterByFileRestrictions } from "../../files";
 import { migrateWranglerToCf } from ".";
 import type { Codemod, CodemodContext } from "../../types";
 
@@ -9,19 +8,6 @@ const DEFAULT_CONFIG_FILES = [
 	"wrangler.jsonc",
 	"wrangler.toml",
 ] as const;
-
-async function fileExists(filePath: string): Promise<boolean> {
-	try {
-		await access(filePath);
-		return true;
-	} catch (error) {
-		if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-			return false;
-		}
-
-		throw error;
-	}
-}
 
 async function getConfigPath(context: CodemodContext): Promise<string> {
 	if (context.configPath) {

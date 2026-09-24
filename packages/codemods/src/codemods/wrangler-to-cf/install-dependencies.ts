@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
@@ -8,6 +8,7 @@ import {
 	PnpmPackageManager,
 	YarnPackageManager,
 } from "@cloudflare/workers-utils";
+import { fileExists } from "../../files";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 const PACKAGE_MANAGERS = [
@@ -24,19 +25,6 @@ type PackageJson = {
 	packageManager?: unknown;
 	workspaces?: unknown;
 };
-
-async function fileExists(filePath: string): Promise<boolean> {
-	try {
-		await access(filePath);
-		return true;
-	} catch (error) {
-		if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-			return false;
-		}
-
-		throw error;
-	}
-}
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;

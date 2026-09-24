@@ -1,5 +1,5 @@
-import { access } from "node:fs/promises";
 import path from "node:path";
+import { fileExists } from "../../files";
 import { ensureCleanGitWorktree } from "../../git";
 import { convertWranglerConfig } from "./config-converter";
 import { findSecretFiles, readWranglerConfig } from "./config-reader";
@@ -21,19 +21,6 @@ export type {
 	WranglerToCfMigrationOptions,
 	WranglerToCfMigrationResult,
 } from "./types";
-
-async function fileExists(filePath: string): Promise<boolean> {
-	try {
-		await access(filePath);
-		return true;
-	} catch (error) {
-		if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-			return false;
-		}
-
-		throw error;
-	}
-}
 
 async function assertTargetsDoNotExist(filePaths: string[]): Promise<void> {
 	const targetsExist = await Promise.all(filePaths.map(fileExists));
