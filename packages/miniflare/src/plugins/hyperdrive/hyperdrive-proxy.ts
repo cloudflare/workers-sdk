@@ -426,6 +426,9 @@ async function createPlainTCPConnection(
 	clientSocket: net.Socket
 ): Promise<net.Socket> {
 	const dbSocket = net.connect({ host: targetHost, port: targetPort });
+	// Guard before connect resolves. A client reset during DNS or TCP setup
+	// otherwise leaves this replacement socket connected after the client is gone.
+	guardSocketError(clientSocket, dbSocket);
 
 	// Wait for connection to be established
 	await new Promise<void>((resolve, reject) => {
@@ -447,7 +450,6 @@ async function createPlainTCPConnection(
 	dbSocket.on("error", () => {
 		clientSocket.destroy();
 	});
-	guardSocketError(clientSocket, dbSocket);
 
 	return dbSocket;
 }
