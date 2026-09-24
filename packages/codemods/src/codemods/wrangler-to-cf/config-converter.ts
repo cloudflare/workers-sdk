@@ -440,11 +440,11 @@ function convertToolingBranch(
 }
 
 export function convertWranglerConfig(
-	rawConfig: UnknownRecord,
+	rawConfig: RawConfig,
 	bundler: MigrationBundler,
 	secretFiles: string[]
 ): ConvertedWranglerConfig {
-	const source = rawConfig;
+	const source = rawConfig as UnknownRecord;
 	const imports = new Set<string>();
 	const followUps: MigrationFollowUp[] = [];
 	addUnknownFieldFollowUps(source, "", followUps);
