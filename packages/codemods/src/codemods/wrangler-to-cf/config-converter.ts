@@ -1166,7 +1166,7 @@ function convertTriggers(
 	}
 
 	const addresses = getStrings(source, "addresses");
-	if (addresses.length > 0) {
+	if (Array.isArray(source.addresses)) {
 		imports.add("triggers");
 		converted.push(
 			call("triggers.email", {

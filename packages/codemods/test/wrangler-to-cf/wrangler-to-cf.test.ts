@@ -294,6 +294,27 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(output)).toEqual([]);
 	});
 
+	it("preserves an explicitly empty email address list", async ({ expect }) => {
+		const cwd = await createProject({
+			"wrangler.json": JSON.stringify({
+				addresses: [],
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+		const output = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+
+		expect(output).toContain("triggers.email({");
+		expect(output).toContain("addresses: []");
+		expect(output).toMatchSnapshot("cloudflare.config.ts");
+		expect(getSyntaxErrors(output)).toEqual([]);
+	});
+
 	it("writes Wrangler tooling config only when requested and needed", async ({
 		expect,
 	}) => {
