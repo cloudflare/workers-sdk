@@ -38,6 +38,7 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/local\/observability\/clear$/, "observability.clear"],
 	[/^\/local\/email\/routing\/resend\/draft$/, "email.routing.resend.draft"],
 	[/^\/local\/email\/routing\/resend$/, "email.routing.resend"],
+	[/^\/local\/scheduled$/, "scheduled.dispatch"],
 	[/^\/local\/email\/routing\/send$/, "email.routing.send"],
 	[/^\/local\/email\/routing$/, "email.routing.list"],
 	[/^\/local\/email\/sending$/, "email.sending.list"],
