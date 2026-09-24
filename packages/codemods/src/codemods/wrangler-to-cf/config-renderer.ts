@@ -169,7 +169,7 @@ function renderMigrationGuard(followUps: MigrationFollowUp[]): string {
 				0
 			).join("\n")
 		),
-		'throw new Error("Migration incomplete. Resolve every cf migrate TODO in cloudflare.config.ts.");',
+		'throw new Error("Migration incomplete. Resolve every cf migrate TODO in `cloudflare.config.ts`.");',
 	].join("\n");
 }
 

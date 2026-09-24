@@ -9,7 +9,7 @@ exports[`migrateWranglerToCf > does not create \`wrangler.config.ts\` for the Vi
 /**
  * TODO(@cloudflare): cf migrate: dev,rules: Wrangler-specific tooling fields were not migrated because the Vite bundler is selected: dev, rules.
  */
-throw new Error("Migration incomplete. Resolve every cf migrate TODO in cloudflare.config.ts.");
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
 export default defineConfig({
 	worker: {
@@ -43,7 +43,7 @@ exports[`migrateWranglerToCf > leaves guarded TODOs for unsupported resource mig
 /**
  * TODO(@cloudflare): cf migrate: containers: Containers require manual review and were not migrated.
  */
-throw new Error("Migration incomplete. Resolve every cf migrate TODO in cloudflare.config.ts.");
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
 export default defineConfig({
 	worker: {
@@ -100,7 +100,7 @@ exports[`migrateWranglerToCf > migrates environments, compliance, previews, and 
  * TODO(@cloudflare): cf migrate: env.staging.previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
  * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
  */
-throw new Error("Migration incomplete. Resolve every cf migrate TODO in cloudflare.config.ts.");
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
 export default defineConfig((ctx) => {
 	switch (ctx.mode) {
