@@ -37,7 +37,6 @@ type CfDependencyInstallPlan =
 			action: "install";
 			isWorkspaceRoot: boolean;
 			packageDirectory: string;
-			packageManager: PackageManager;
 	  };
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
@@ -142,7 +141,6 @@ export async function planCfDependencyInstallation(
 		return { action: "skipped-ancestor-package" };
 	}
 
-	const packageManager = await detectPackageManager(packageDirectory);
 	const isWorkspaceRoot =
 		packageJson.workspaces !== undefined ||
 		(await fileExists(path.join(packageDirectory, "pnpm-workspace.yaml")));
@@ -151,7 +149,6 @@ export async function planCfDependencyInstallation(
 		action: "install",
 		isWorkspaceRoot,
 		packageDirectory,
-		packageManager,
 	};
 }
 
@@ -163,7 +160,8 @@ export async function planCfDependencyInstallation(
 export async function installCfDependency(
 	plan: Extract<CfDependencyInstallPlan, { action: "install" }>
 ): Promise<void> {
-	const { isWorkspaceRoot, packageDirectory, packageManager } = plan;
+	const { isWorkspaceRoot, packageDirectory } = plan;
+	const packageManager = await detectPackageManager(packageDirectory);
 
 	await installPackages(packageManager.type, ["cf@latest"], {
 		cwd: packageDirectory,

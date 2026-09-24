@@ -115,6 +115,34 @@ describe("migrateWranglerToCf", () => {
 		).resolves.toContain("Migration incomplete.");
 	});
 
+	it("does not inspect ancestor manifests when installation is disabled", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": "{",
+			"worker/package.json": JSON.stringify({ name: "example-worker" }),
+			"worker/wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+		const workerDirectory = path.join(cwd, "worker");
+
+		const result = await migrateWranglerToCf(
+			path.join(workerDirectory, "wrangler.json"),
+			{ installDependencies: false }
+		);
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		expect(result).toMatchObject({
+			followUps: [{ blocking: true, code: "cf-install-disabled" }],
+			status: "needs-intervention",
+		});
+		await expect(
+			readFile(path.join(workerDirectory, "cloudflare.config.ts"), "utf8")
+		).resolves.toContain("Migration incomplete.");
+	});
+
 	it("reports skipped ancestor installation in writes and dry runs", async ({
 		expect,
 	}) => {
