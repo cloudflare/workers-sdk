@@ -101,7 +101,6 @@ export const kvNamespaceCreateCommand = createCommand({
 			describe:
 				'The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")',
 			requiresArg: true,
-			hidden: true,
 		},
 		...sharedResourceCreationArgs,
 	},
