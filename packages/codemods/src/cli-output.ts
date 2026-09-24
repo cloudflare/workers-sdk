@@ -1,5 +1,24 @@
 import type { CodemodFollowUp, CodemodResult } from "./types";
 
+/** Formats the final summary for a codemod run. */
+export function formatCompletionMessage(
+	changedFileCount: number,
+	dryRun: boolean,
+	suggestInstall: boolean
+): string {
+	if (changedFileCount === 0) {
+		return "Project is already up to date.";
+	}
+	if (dryRun) {
+		return `Would update ${changedFileCount} file(s).`;
+	}
+
+	const installMessage = suggestInstall
+		? " Run your package manager's install command to refresh its lockfile."
+		: "";
+	return `Updated ${changedFileCount} file(s).${installMessage}`;
+}
+
 /** Returns a failing exit code when a codemod requires manual intervention. */
 export function getCodemodExitCode(status: CodemodResult["status"]): 0 | 1 {
 	return status === "needs-intervention" ? 1 : 0;
