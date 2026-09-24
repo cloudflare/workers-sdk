@@ -1,5 +1,19 @@
 # miniflare
 
+## 5.20260921.1-alpha
+
+### Minor Changes
+
+- [#15567](https://github.com/cloudflare/workers-sdk/pull/15567) [`a71237a`](https://github.com/cloudflare/workers-sdk/commit/a71237a662d50d51caed454f0a47f4a29f9cd2b1) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add row-level email resend tools to the Local Explorer
+
+  Routing captures can now be resent directly or loaded into the test email composer for editing. Routing rows expose and use a UUID-based capture ID for identity, detail lookup, and resend operations instead of relying on the email's Message-ID. Message-ID detail lookup remains available for compatibility, and resends preserve partial-capture warnings across replayed messages.
+
+### Patch Changes
+
+- [#15806](https://github.com/cloudflare/workers-sdk/pull/15806) [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3) Thanks [@NuroDev](https://github.com/NuroDev)! - Standardize Zod validation error output
+
+  Format validation errors with Zod's built-in `prettifyError()` helper so Miniflare, Wrangler, the Vite plugin, and the Vitest plugin show consistent messages and property paths.
+
 ## 5.20260921.0-alpha
 
 ### Minor Changes
