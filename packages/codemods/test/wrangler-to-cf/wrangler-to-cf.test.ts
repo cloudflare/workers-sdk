@@ -248,15 +248,22 @@ describe("migrateWranglerToCf", () => {
 			path.join(cwd, "wrangler.json"),
 			{ bundler: "wrangler" }
 		);
+		const cloudflareConfig = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
 		const wranglerConfig = await readFile(
 			path.join(cwd, "wrangler.config.ts"),
 			"utf8"
 		);
 
 		expect(result.changedFiles).toContain("wrangler.config.ts");
+		expect(cloudflareConfig).toContain('MODE: bindings.text("preview")');
+		expect(cloudflareConfig).toMatchSnapshot("cloudflare.config.ts");
 		expect(wranglerConfig.match(/PRODUCTION_ONLY/g)).toHaveLength(1);
 		expect(wranglerConfig.match(/PREVIEW_ONLY/g)).toHaveLength(1);
 		expect(wranglerConfig).toMatchSnapshot("wrangler.config.ts");
+		expect(getSyntaxErrors(cloudflareConfig)).toEqual([]);
 		expect(getSyntaxErrors(wranglerConfig)).toEqual([]);
 	});
 

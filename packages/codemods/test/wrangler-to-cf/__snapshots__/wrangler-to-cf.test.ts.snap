@@ -249,6 +249,77 @@ export default defineConfig((ctx) => {
 "
 `;
 
+exports[`migrateWranglerToCf > migrates preview-only Wrangler tooling without inheriting production defines > cloudflare.config.ts 1`] = `
+"import { bindings, defineConfig } from "cf/config";
+
+/**
+ * Wrangler environments are selected through ctx.mode and the cf --mode flag.
+ * @see https://developers.cloudflare.com/workers/wrangler/environments/
+ */
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+ */
+/**
+ * TODO(@cloudflare): cf migrate: env.staging.previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+export default defineConfig((ctx) => {
+	switch (ctx.mode) {
+		case "staging": {
+			if (ctx.isPreview) {
+				return {
+					worker: {
+						name: "example-worker-staging",
+						compatibilityDate: "2026-09-23",
+						env: {
+							MODE: bindings.text("preview"),
+						},
+					},
+				};
+			}
+			return {
+				worker: {
+					name: "example-worker-staging",
+					compatibilityDate: "2026-09-23",
+					/**
+					 * TODO(@cloudflare): cf migrate: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+					 * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+					 */
+				},
+			};
+		}
+		default: {
+			if (ctx.isPreview) {
+				return {
+					worker: {
+						name: "example-worker",
+						compatibilityDate: "2026-09-23",
+					},
+				};
+			}
+			return {
+				worker: {
+					name: "example-worker",
+					compatibilityDate: "2026-09-23",
+					/**
+					 * TODO(@cloudflare): cf migrate: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+					 * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+					 */
+				},
+			};
+		}
+	}
+});
+"
+`;
+
 exports[`migrateWranglerToCf > migrates preview-only Wrangler tooling without inheriting production defines > wrangler.config.ts 1`] = `
 "import { defineWranglerConfig } from "wrangler/experimental-config";
 
