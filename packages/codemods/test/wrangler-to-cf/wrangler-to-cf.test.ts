@@ -12,6 +12,7 @@ import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { afterEach, describe, it, vi } from "vitest";
 import { migrateWranglerToCf } from "../../src";
+import { formatFollowUps } from "../../src/cli-output";
 import { writeMigrationOutputs } from "../../src/codemods/wrangler-to-cf/file-writer";
 import { getSyntaxErrors } from "./test-helpers";
 
@@ -131,6 +132,40 @@ describe("migrateWranglerToCf", () => {
 		).rejects.toThrow("write failed");
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+	});
+
+	it("keeps generated config and reports a failed cf installation", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({ name: "example-worker" }),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+		vi.mocked(installPackages).mockRejectedValueOnce(
+			new Error("Registry unavailable.")
+		);
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(result).toMatchObject({
+			changedFiles: ["cloudflare.config.ts"],
+			followUps: [
+				{
+					blocking: true,
+					code: "cf-install-failed",
+				},
+			],
+			status: "needs-intervention",
+		});
+		expect(formatFollowUps(result.followUps)).toContain(
+			"  - [required] The generated configuration was written, but `cf` could not be installed automatically. Install `cf@latest` as a dev dependency with your package manager before using it. Installation failed: Registry unavailable."
+		);
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).resolves.toContain('from "cf/config"');
 	});
 
 	it("writes a complete Vite config with optional options omitted", async ({

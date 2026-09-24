@@ -8,6 +8,7 @@ import {
 	renderWranglerConfig,
 } from "./config-renderer";
 import { writeMigrationOutputs } from "./file-writer";
+import { createFollowUp } from "./follow-ups";
 import { installCfDependency } from "./install-dependencies";
 import { assertCompatibleWranglerVersion } from "./wrangler-version";
 import type {
@@ -84,6 +85,7 @@ export async function migrateWranglerToCf(
 		bundler,
 		secretFiles
 	);
+	const followUps = [...convertedConfig.followUps];
 	const cloudflareConfig = renderCloudflareConfig(convertedConfig);
 	const wranglerConfig = renderWranglerConfig(convertedConfig);
 
@@ -105,7 +107,20 @@ export async function migrateWranglerToCf(
 		}
 		await writeMigrationOutputs(outputs);
 		if (installDependencies) {
-			await installCfDependency(projectDirectory);
+			try {
+				await installCfDependency(projectDirectory);
+			} catch (error) {
+				const reason =
+					error instanceof Error
+						? ` Installation failed: ${error.message}`
+						: "";
+				followUps.push(
+					createFollowUp(
+						"cf-install-failed",
+						`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+					)
+				);
+			}
 		}
 	}
 
@@ -113,8 +128,8 @@ export async function migrateWranglerToCf(
 		changedFiles: Array.from(outputs.keys()).map((filePath) =>
 			path.relative(projectDirectory, filePath)
 		),
-		followUps: convertedConfig.followUps,
-		status: convertedConfig.followUps.some(({ blocking }) => blocking)
+		followUps,
+		status: followUps.some(({ blocking }) => blocking)
 			? "needs-intervention"
 			: "complete",
 	};
