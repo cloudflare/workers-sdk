@@ -121,7 +121,7 @@ async function getGitStatus(cwd: string): Promise<string | undefined> {
 		);
 		return stdout;
 	} catch (error) {
-		if (isOutsideGitWorktree(error)) {
+		if (isOutsideGitWorktree(error) && !(await hasGitMetadata(cwd))) {
 			return undefined;
 		}
 		if (isGitUnavailable(error) && !(await hasGitMetadata(cwd))) {

@@ -187,6 +187,20 @@ export default defineWorkersProject({
 		);
 	});
 
+	it("rejects broken Git worktree metadata", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await writeFile(path.join(cwd, ".git"), "gitdir: missing.git\n");
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Unable to verify that the Git worktree is clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
 	it("rejects staged changes", async ({ expect }) => {
 		const source =
 			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
