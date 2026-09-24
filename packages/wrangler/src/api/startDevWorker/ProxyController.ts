@@ -328,18 +328,19 @@ export class ProxyController extends Controller {
 	}
 
 	runtimeMessageMutex = new Mutex();
+	latestReloadCompleteMessage = Promise.resolve(true);
 	async sendMessageToProxyWorker(
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
-	): Promise<void> {
+	): Promise<boolean> {
 		if (this._torndown) {
-			return;
+			return false;
 		}
 
 		// Don't do any async work here. Enqueue the message with the mutex immediately.
 
 		try {
-			await this.runtimeMessageMutex.runWith(async () => {
+			const response = await this.runtimeMessageMutex.runWith(async () => {
 				const { proxyWorker } = await this.ready.promise;
 
 				const ready = await proxyWorker.ready.catch(() => undefined);
@@ -355,9 +356,11 @@ export class ProxyController extends Controller {
 					}
 				);
 			});
+
+			return response?.status === 204;
 		} catch (cause) {
 			if (this._torndown) {
-				return;
+				return false;
 			}
 
 			const error = castErrorCause(cause);
@@ -370,6 +373,7 @@ export class ProxyController extends Controller {
 				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
 				error
 			);
+			return false;
 		}
 	}
 	async sendMessageToInspectorProxyWorker(
@@ -456,7 +460,7 @@ export class ProxyController extends Controller {
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
 
-		void this.sendMessageToProxyWorker({
+		this.latestReloadCompleteMessage = this.sendMessageToProxyWorker({
 			type: "play",
 			proxyData: data.proxyData,
 		});
