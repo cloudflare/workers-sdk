@@ -302,6 +302,32 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(worker?.config.name).toBe("worker-development");
 	});
 
+	test("sets ctx.isPreview from CLOUDFLARE_PREVIEW_BUILD", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", "true");
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig((ctx) => ({ worker: {",
+				"  name: ctx.isPreview ? 'preview-worker' : 'production-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"} }));",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{ experimental: { newConfig: true } },
+			{ root: tempDir },
+			viteBuildEnv
+		)) as WorkersResolvedConfig;
+
+		const worker = result.environmentNameToWorkerMap.get("preview_worker");
+		expect(worker?.config.name).toBe("preview-worker");
+	});
+
 	test("adds cloudflare.config.ts to configPaths for watching", async ({
 		expect,
 	}) => {
