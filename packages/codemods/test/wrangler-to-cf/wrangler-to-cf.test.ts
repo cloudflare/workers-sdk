@@ -269,6 +269,10 @@ describe("migrateWranglerToCf", () => {
 		expect,
 	}) => {
 		const cwd = await createProject({
+			"node_modules/wrangler/package.json": JSON.stringify({
+				name: "wrangler",
+				version: "4.100.0",
+			}),
 			"wrangler.jsonc": JSON.stringify({
 				assets: {
 					directory: "public",
@@ -318,10 +322,39 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(wranglerConfig)).toEqual([]);
 	});
 
+	it("rejects Wrangler versions without experimental config support", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"node_modules/wrangler/package.json": JSON.stringify({
+				name: "wrangler",
+				version: "4.99.0",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+				no_bundle: true,
+			}),
+		});
+
+		await expect(
+			migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+				bundler: "wrangler",
+			})
+		).rejects.toThrow("requires wrangler 4.100.0 or newer");
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
+	});
+
 	it("does not inherit base defines into named environment tooling", async ({
 		expect,
 	}) => {
 		const cwd = await createProject({
+			"node_modules/wrangler/package.json": JSON.stringify({
+				name: "wrangler",
+				version: "4.100.0",
+			}),
 			"wrangler.json": JSON.stringify({
 				compatibility_date: "2026-09-23",
 				define: { BASE_ONLY: '"base"' },
@@ -350,6 +383,10 @@ describe("migrateWranglerToCf", () => {
 		expect,
 	}) => {
 		const cwd = await createProject({
+			"node_modules/wrangler/package.json": JSON.stringify({
+				name: "wrangler",
+				version: "4.100.0",
+			}),
 			"wrangler.json": JSON.stringify({
 				compatibility_date: "2026-09-23",
 				env: {

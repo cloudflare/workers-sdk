@@ -50,11 +50,20 @@ describe("Wrangler configuration corpus", () => {
 
 			for (const bundler of BUNDLERS) {
 				const projectDirectory = path.join(process.cwd(), bundler);
+				const wranglerPackageDirectory = path.join(
+					projectDirectory,
+					"node_modules",
+					"wrangler"
+				);
 				const targetConfigPath = path.join(
 					projectDirectory,
 					path.basename(configPath)
 				);
-				await mkdir(projectDirectory);
+				await mkdir(wranglerPackageDirectory, { recursive: true });
+				await writeFile(
+					path.join(wranglerPackageDirectory, "package.json"),
+					JSON.stringify({ name: "wrangler", version: "4.100.0" })
+				);
 				await writeFile(targetConfigPath, source);
 
 				const result = await migrateWranglerToCf(targetConfigPath, {

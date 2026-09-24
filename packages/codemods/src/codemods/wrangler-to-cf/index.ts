@@ -9,6 +9,7 @@ import {
 } from "./config-renderer";
 import { writeMigrationOutputs } from "./file-writer";
 import { installCfDependency } from "./install-dependencies";
+import { assertCompatibleWranglerVersion } from "./wrangler-version";
 import type {
 	WranglerToCfMigrationOptions,
 	WranglerToCfMigrationResult,
@@ -99,6 +100,9 @@ export async function migrateWranglerToCf(
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
 	if (!dryRun) {
+		if (wranglerConfig) {
+			assertCompatibleWranglerVersion(projectDirectory);
+		}
 		if (installDependencies) {
 			await installCfDependency(projectDirectory);
 		}
