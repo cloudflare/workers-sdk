@@ -5,6 +5,16 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
+function getGitEnvironment(): NodeJS.ProcessEnv {
+	const environment: NodeJS.ProcessEnv = { ...process.env, LC_ALL: "C" };
+	for (const name of Object.keys(environment)) {
+		if (name.startsWith("GIT_")) {
+			delete environment[name];
+		}
+	}
+	return environment;
+}
+
 /**
  * Checks whether a failed Git command indicates that its working directory is
  * outside a Git worktree.
@@ -90,10 +100,7 @@ async function getGitStatus(cwd: string): Promise<string | undefined> {
 			{
 				cwd,
 				encoding: "utf8",
-				env: {
-					...process.env,
-					LC_ALL: "C",
-				},
+				env: getGitEnvironment(),
 			}
 		);
 		return stdout;

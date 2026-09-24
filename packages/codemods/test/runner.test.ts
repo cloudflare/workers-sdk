@@ -217,6 +217,30 @@ export default defineWorkersProject({
 		);
 	});
 
+	it("checks the target when Git environment variables point elsewhere", async ({
+		expect,
+	}) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await commitProject(cwd);
+		await writeFile(path.join(cwd, "vitest.config.ts"), `${source}\n`);
+
+		const unrelatedRepository = await createProject({
+			"README.md": "clean repository",
+		});
+		await commitProject(unrelatedRepository);
+		vi.stubEnv("GIT_DIR", path.join(unrelatedRepository, ".git"));
+		vi.stubEnv("GIT_WORK_TREE", unrelatedRepository);
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Git worktree is not clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			`${source}\n`
+		);
+	});
+
 	it("rejects untracked changes", async ({ expect }) => {
 		const source =
 			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
