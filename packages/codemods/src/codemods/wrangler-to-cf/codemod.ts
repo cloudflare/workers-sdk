@@ -52,7 +52,9 @@ export const wranglerToCfCodemod: Codemod = {
 			configPath,
 		]);
 		if (!includedConfigPath) {
-			return { changedFiles: [] };
+			return {
+				changedFiles: [],
+			};
 		}
 
 		const result = await migrateWranglerToCf(includedConfigPath, {

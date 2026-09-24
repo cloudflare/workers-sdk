@@ -1,6 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
-import { glob } from "tinyglobby";
+import { glob, type GlobOptions } from "tinyglobby";
 import type { CodemodContext, RunContext } from "./types";
 
 const DEFAULT_IGNORES = [
@@ -13,7 +13,7 @@ const DEFAULT_IGNORES = [
 	"**/npm-shrinkwrap.json",
 ];
 
-function getGlobOptions(cwd: string) {
+function getGlobOptions(cwd: string): GlobOptions {
 	return {
 		cwd,
 		absolute: true,
@@ -30,6 +30,7 @@ function normalizeFilePath(cwd: string, filePath: string): string {
  * Checks whether a filesystem path exists without suppressing other errors.
  *
  * @param filePath Path to check.
+ *
  * @returns Whether the path exists.
  */
 export async function fileExists(filePath: string): Promise<boolean> {
@@ -51,6 +52,7 @@ export async function fileExists(filePath: string): Promise<boolean> {
  *
  * @param context Working directory and optional file restriction globs.
  * @param filePaths Candidate file paths.
+ *
  * @returns Candidate paths included by the restrictions.
  */
 export async function filterByFileRestrictions(

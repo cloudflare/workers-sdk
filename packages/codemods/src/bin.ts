@@ -62,7 +62,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 		values.bundler !== "vite" &&
 		values.bundler !== "wrangler"
 	) {
-		throw new Error("Expected --bundler to be either vite or wrangler");
+		throw new Error("Expected --bundler to be either `vite` or `wrangler`");
 	}
 	const cwd = path.resolve(values.cwd ?? process.cwd());
 	const result = await runCodemod(name, {

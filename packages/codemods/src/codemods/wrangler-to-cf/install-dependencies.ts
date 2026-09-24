@@ -19,12 +19,12 @@ const PACKAGE_MANAGERS = [
 	NpmPackageManager,
 ] as const satisfies readonly PackageManager[];
 
-type PackageJson = {
+interface PackageJson {
 	dependencies?: Record<string, unknown>;
 	devDependencies?: Record<string, unknown>;
 	packageManager?: unknown;
 	workspaces?: unknown;
-};
+}
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
