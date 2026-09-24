@@ -7,6 +7,7 @@ describe("partitionExports", () => {
 		expect(partitionExports(undefined)).toEqual({
 			"durable-object": {},
 			worker: {},
+			workflow: {},
 		});
 	});
 
@@ -14,13 +15,22 @@ describe("partitionExports", () => {
 		expect(partitionExports({})).toEqual({
 			"durable-object": {},
 			worker: {},
+			workflow: {},
 		});
 	});
 
-	test("partitions Durable Object and Worker exports by type", ({ expect }) => {
+	test("partitions Durable Object, Worker, and Workflow exports by type", ({
+		expect,
+	}) => {
 		const exports: Exports = {
 			Counter: { type: "durable-object", storage: "sqlite" },
 			Admin: { type: "worker", cache: { enabled: true } },
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: {
+				type: "workflow",
+				name: "batch",
+				limits: { steps: 10 },
+			},
 		};
 
 		expect(partitionExports(exports)).toEqual({
@@ -29,6 +39,14 @@ describe("partitionExports", () => {
 			},
 			worker: {
 				Admin: { type: "worker", cache: { enabled: true } },
+			},
+			workflow: {
+				GreetingWorkflow: { type: "workflow", name: "greeting" },
+				BatchWorkflow: {
+					type: "workflow",
+					name: "batch",
+					limits: { steps: 10 },
+				},
 			},
 		});
 	});

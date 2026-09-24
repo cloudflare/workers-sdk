@@ -98,6 +98,34 @@ describe("resolvePluginConfig", () => {
 		);
 	});
 
+	test("sets the config context from CLOUDFLARE_PREVIEW_BUILD", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", "true");
+		writeSource("src/index.ts");
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig((ctx) => ({ worker: {",
+				"  name: ctx.isPreview ? 'preview-worker' : 'production-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"} }));",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		expect(result.environmentNameToWorkerMap.get("ssr")?.config.name).toBe(
+			"preview-worker"
+		);
+	});
+
 	test("preserves package entrypoints for Vite to resolve", async ({
 		expect,
 	}) => {

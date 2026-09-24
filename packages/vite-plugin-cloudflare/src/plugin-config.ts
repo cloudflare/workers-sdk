@@ -17,6 +17,7 @@ import {
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	DEFAULT_COMPAT_DATE,
+	formatZodError,
 	getWorkerNameFromProject,
 } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
@@ -694,7 +695,9 @@ async function loadCloudflareConfig(options: {
 	});
 
 	if (!result.success) {
-		throw new Error(`Invalid \`${CONFIG_FILENAME}\`:\n${result.error.message}`);
+		throw new Error(
+			`Invalid \`${CONFIG_FILENAME}\`:\n${formatZodError(result.error)}`
+		);
 	}
 
 	const worker = result.data.worker;

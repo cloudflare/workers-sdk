@@ -13,7 +13,6 @@ export interface DevArgs {
 
 export interface BuildArgs {
 	mode?: string; // maps to wrangler's `env` (named environment)
-	preview?: boolean;
 }
 
 export class ArgParseError extends Error {
@@ -80,7 +79,6 @@ export function parseBuildArgs(argv: string[]): BuildArgs {
 			args: argv,
 			options: {
 				mode: { type: "string" },
-				preview: { type: "boolean" },
 			},
 			strict: true,
 			allowPositionals: false,
@@ -92,9 +90,6 @@ export function parseBuildArgs(argv: string[]): BuildArgs {
 	const out: BuildArgs = {};
 	if (parsed.values.mode !== undefined) {
 		out.mode = parsed.values.mode;
-	}
-	if (parsed.values.preview !== undefined) {
-		out.preview = parsed.values.preview;
 	}
 
 	return out;

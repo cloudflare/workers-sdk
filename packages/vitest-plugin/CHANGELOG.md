@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.2.5
+
+### Patch Changes
+
+- [#15806](https://github.com/cloudflare/workers-sdk/pull/15806) [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3) Thanks [@NuroDev](https://github.com/NuroDev)! - Standardize Zod validation error output
+
+  Format validation errors with Zod's built-in `prettifyError()` helper so Miniflare, Wrangler, the Vite plugin, and the Vitest plugin show consistent messages and property paths.
+
+- Updated dependencies [[`a71237a`](https://github.com/cloudflare/workers-sdk/commit/a71237a662d50d51caed454f0a47f4a29f9cd2b1), [`b03f960`](https://github.com/cloudflare/workers-sdk/commit/b03f960f3631003cd11d798f7d2fa3591834b5b4), [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3), [`6e77c53`](https://github.com/cloudflare/workers-sdk/commit/6e77c53425044c8ae22b6cf796131aed2899413e)]:
+  - miniflare@5.20260921.1-alpha
+  - wrangler@4.138.0
+
 ## 1.2.4
 
 ### Patch Changes

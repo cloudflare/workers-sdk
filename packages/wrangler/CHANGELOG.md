@@ -1,5 +1,26 @@
 # wrangler
 
+## 4.138.0
+
+### Minor Changes
+
+- [#15776](https://github.com/cloudflare/workers-sdk/pull/15776) [`b03f960`](https://github.com/cloudflare/workers-sdk/commit/b03f960f3631003cd11d798f7d2fa3591834b5b4) Thanks [@edevil](https://github.com/edevil)! - Add event-code support to temporary Worker deployments
+
+  Use `wrangler deploy --temporary --event-code <code>` to provision an account for an event. Wrangler requires explicit server acknowledgement before caching the account and keeps the event code out of its cache and telemetry.
+
+- [#15817](https://github.com/cloudflare/workers-sdk/pull/15817) [`6e77c53`](https://github.com/cloudflare/workers-sdk/commit/6e77c53425044c8ae22b6cf796131aed2899413e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Allow framework commands to produce Preview Build Output with the experimental config
+
+  When `cf previews deploy` invokes a framework build command, Preview intent is now preserved. Function-based `cloudflare.config.ts` files receive `isPreview: true`, and generated Build Output is marked as a Preview build.
+
+### Patch Changes
+
+- [#15806](https://github.com/cloudflare/workers-sdk/pull/15806) [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3) Thanks [@NuroDev](https://github.com/NuroDev)! - Standardize Zod validation error output
+
+  Format validation errors with Zod's built-in `prettifyError()` helper so Miniflare, Wrangler, the Vite plugin, and the Vitest plugin show consistent messages and property paths.
+
+- Updated dependencies [[`a71237a`](https://github.com/cloudflare/workers-sdk/commit/a71237a662d50d51caed454f0a47f4a29f9cd2b1), [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - miniflare@5.20260921.1-alpha
+
 ## 4.137.0
 
 ### Minor Changes

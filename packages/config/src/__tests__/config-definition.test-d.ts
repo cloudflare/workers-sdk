@@ -23,9 +23,13 @@ const projectConfig = defineConfig({
 		env: { MESSAGE: bindings.text("hello") },
 		exports: {
 			Counter: workerExports.durableObject({ storage: "sqlite" }),
+			Greeting: workerExports.workflow({ name: "greeting" }),
 		},
 	}),
 });
+
+// @ts-expect-error a workflow export requires a name
+workerExports.workflow({ limits: { steps: 10 } });
 
 defineConfig({ accountId: "account-id", complianceRegion: "public" });
 const plainConfig = {

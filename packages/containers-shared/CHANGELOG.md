@@ -1,5 +1,15 @@
 # @cloudflare/containers-shared
 
+## 0.19.2
+
+### Patch Changes
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+  - @cloudflare/build-output-utils@0.7.1
+  - @cloudflare/cli-shared-helpers@0.1.37
+  - @cloudflare/config@0.17.0
+
 ## 0.19.1
 
 ### Patch Changes

@@ -10,6 +10,11 @@ import {
 import chalk from "chalk";
 import PQueue from "p-queue";
 import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
+import {
+	getWorkflowsOwnedByScript,
+	isWorkflowDefinedInThisScript,
+	validateOwnedWorkflowDeclarations,
+} from "../deploy/helpers/owned-workflows";
 import { fetchListResult, fetchResult, logger } from "../shared/context";
 import { applyEmailRoutingAddresses } from "./email-routing";
 import {
@@ -37,6 +42,7 @@ export async function triggersDeploy(
 
 	if (props.validated !== true) {
 		validateEventTriggerTargets(config, scriptName);
+		validateOwnedWorkflowDeclarations(config, scriptName);
 	}
 
 	if (props.dryRun) {
@@ -72,9 +78,7 @@ export async function triggersDeploy(
 		name: string;
 		deployment: Promise<TriggerDeployment>;
 	}[] = [];
-	const hasWorkflowsDefinedInThisScript = config.workflows.some((workflow) =>
-		isWorkflowDefinedInThisScript(workflow, scriptName)
-	);
+	const ownedWorkflows = getWorkflowsOwnedByScript(config, scriptName);
 
 	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
 		props,
@@ -182,7 +186,7 @@ export async function triggersDeploy(
 		}
 	}
 
-	if (!wantWorkersDev && hasWorkflowsDefinedInThisScript) {
+	if (!wantWorkersDev && ownedWorkflows.length > 0) {
 		await getWorkersDevSubdomain(config, accountId, {
 			configPath: config.configPath,
 			registrationContext: "workflows",
@@ -277,119 +281,117 @@ export async function triggersDeploy(
 		);
 	}
 
-	if (config.workflows?.length) {
-		// NOTE: if the user provides a script_name thats not this script (aka bounds to another worker)
-		// we don't want to send this worker's config.
-		// TODO: move this earlier.
-		for (const workflow of config.workflows) {
-			if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
-				if (workflow.limits) {
-					throw new UserError(
-						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-							`Configure limits on the worker that defines the workflow.`,
-						{
-							telemetryMessage:
-								"triggers deploy workflow limits external script",
-						}
-					);
-				}
-				if (workflow.concurrency) {
-					throw new UserError(
-						`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
-							`Configure concurrency on the worker that defines the workflow.`,
-						{
-							telemetryMessage:
-								"triggers deploy workflow concurrency external script",
-						}
-					);
-				}
-				if (workflow.schedules) {
-					throw new UserError(
-						`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
-							`Configure schedules on the worker that defines the workflow.`,
-						{
-							telemetryMessage:
-								"triggers deploy workflow schedules external script",
-						}
-					);
-				}
-				if (workflow.default_retention) {
-					throw new UserError(
-						`Workflow "${workflow.name}" has "default_retention" configured but references external script "${workflow.script_name}". ` +
-							`Configure default_retention on the worker that defines the workflow.`,
-						{
-							telemetryMessage:
-								"triggers deploy workflow default_retention external script",
-						}
-					);
-				}
-				continue;
-			}
-
-			workflowDeployments.push({
-				name: workflow.name,
-				deployment: fetchResult(
-					config,
-					`/accounts/${accountId}/workflows/${workflow.name}`,
+	// NOTE: if the user provides a script_name that's not this script (in other words, bound to another worker)
+	// we don't want to send this worker's config.
+	// TODO: move this earlier.
+	for (const workflow of config.workflows) {
+		if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
+			if (workflow.limits) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+						`Configure limits on the worker that defines the workflow.`,
 					{
-						method: "PUT",
-						body: JSON.stringify({
-							script_name: scriptName,
-							class_name: workflow.class_name,
-							...(workflow.limits && { limits: workflow.limits }),
-							...(workflow.concurrency && {
-								concurrency: workflow.concurrency,
-							}),
-							...(workflow.schedules && {
-								schedules: (Array.isArray(workflow.schedules)
-									? workflow.schedules
-									: [workflow.schedules]
-								).map((cron) => ({ cron })),
-							}),
-							...(workflow.default_retention && {
-								default_retention: workflow.default_retention,
-							}),
-						}),
-						headers: {
-							"Content-Type": "application/json",
-						},
+						telemetryMessage: "triggers deploy workflow limits external script",
 					}
-				).then(
-					() => ({
-						category: "Workflows",
-						targets: [`workflow: ${workflow.name}`],
-					}),
-					(error) => {
-						if (
-							error instanceof APIError &&
-							error.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE &&
-							workflow.schedules
-						) {
-							error.preventReport();
-							return {
-								category: "Workflows",
-								targets: [],
-								error: new UserError(
-									`Workflow "${workflow.name}" has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
-									{
-										cause: error,
-										telemetryMessage:
-											"triggers deploy workflow cron requires paid plan",
-									}
-								),
-							};
-						}
+				);
+			}
+			if (workflow.concurrency) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
+						`Configure concurrency on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow concurrency external script",
+					}
+				);
+			}
+			if (workflow.schedules) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+						`Configure schedules on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow schedules external script",
+					}
+				);
+			}
+			if (workflow.default_retention) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "default_retention" configured but references external script "${workflow.script_name}". ` +
+						`Configure default_retention on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow default_retention external script",
+					}
+				);
+			}
+		}
+	}
 
+	for (const workflow of ownedWorkflows) {
+		workflowDeployments.push({
+			name: workflow.name,
+			deployment: fetchResult(
+				config,
+				`/accounts/${accountId}/workflows/${workflow.name}`,
+				{
+					method: "PUT",
+					body: JSON.stringify({
+						script_name: scriptName,
+						class_name: workflow.class_name,
+						...(workflow.limits && { limits: workflow.limits }),
+						...(workflow.concurrency && {
+							concurrency: workflow.concurrency,
+						}),
+						...(workflow.schedules && {
+							schedules: (Array.isArray(workflow.schedules)
+								? workflow.schedules
+								: [workflow.schedules]
+							).map((cron) => ({ cron })),
+						}),
+						...(workflow.default_retention && {
+							default_retention: workflow.default_retention,
+						}),
+					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}
+			).then(
+				() => ({
+					category: "Workflows",
+					targets: [`workflow: ${workflow.name}`],
+				}),
+				(error) => {
+					if (
+						error instanceof APIError &&
+						error.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE &&
+						workflow.schedules
+					) {
+						error.preventReport();
 						return {
 							category: "Workflows",
-							resource: `Workflow "${workflow.name}"`,
 							targets: [],
-							error,
+							error: new UserError(
+								`Workflow "${workflow.name}" has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
+								{
+									cause: error,
+									telemetryMessage:
+										"triggers deploy workflow cron requires paid plan",
+								}
+							),
 						};
 					}
-				),
-			});
-		}
+
+					return {
+						category: "Workflows",
+						resource: `Workflow "${workflow.name}"`,
+						targets: [],
+						error,
+					};
+				}
+			),
+		});
 	}
 
 	const completedWorkflowDeployments = await Promise.all(
@@ -821,14 +823,12 @@ export function validateEventTriggerTargets(
 	config: Config,
 	scriptName: string
 ): void {
+	const ownedWorkflowNames = new Set(
+		getWorkflowsOwnedByScript(config, scriptName).map(({ name }) => name)
+	);
 	for (const event of config.triggers?.events ?? []) {
 		for (const target of event.targets) {
-			const isDefinedByThisWorker = config.workflows.some(
-				(workflow) =>
-					workflow.name === target.workflow_name &&
-					isWorkflowDefinedInThisScript(workflow, scriptName)
-			);
-			if (!isDefinedByThisWorker) {
+			if (!ownedWorkflowNames.has(target.workflow_name)) {
 				throw new UserError(
 					`Event trigger "${event.type}" targets Workflow "${target.workflow_name}", but that Workflow is not defined by this Worker.\n\nAdd it to the "workflows" configuration or remove the event trigger target.`,
 					{
@@ -839,13 +839,4 @@ export function validateEventTriggerTargets(
 			}
 		}
 	}
-}
-
-function isWorkflowDefinedInThisScript(
-	workflow: Config["workflows"][number],
-	scriptName: string
-): boolean {
-	return (
-		workflow.script_name === undefined || workflow.script_name === scriptName
-	);
 }
