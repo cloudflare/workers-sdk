@@ -195,17 +195,26 @@ export function convertBindings(
 	for (const [index, entry] of getRecords(source, "hyperdrive").entries()) {
 		const options = optionsFromRecord(entry, [["id", "id"]]);
 		const sourcePath = pathFor("hyperdrive", index);
+		const localConnectionString = entry.localConnectionString;
+		if (typeof localConnectionString === "string") {
+			options.properties.push({
+				key: "dev",
+				value: objectFromRecord({ connectionString: localConnectionString }),
+			});
+		} else {
+			reportUnsupportedOptions(
+				entry,
+				["localConnectionString"],
+				sourcePath,
+				report
+			);
+		}
+
 		imports.add("bindings");
 		addBinding(
 			bindings,
 			entry.binding,
 			call("bindings.hyperdrive", options),
-			sourcePath,
-			report
-		);
-		reportUnsupportedOptions(
-			entry,
-			["localConnectionString"],
 			sourcePath,
 			report
 		);

@@ -96,4 +96,56 @@ describe("Wrangler binding conversion", () => {
 			"binding-name-collision",
 		]);
 	});
+
+	it("converts a Hyperdrive local connection string", ({ expect }) => {
+		const followUps: MigrationFollowUp[] = [];
+		const bindings = convertBindings(
+			{
+				hyperdrive: [
+					{
+						binding: "DATABASE",
+						id: "hyperdrive-id",
+						localConnectionString: "postgres://localhost/database",
+					},
+				],
+			},
+			"",
+			new Set(),
+			(followUp) => followUps.push(followUp)
+		);
+
+		expect(bindings).toEqual({
+			kind: "object",
+			properties: [
+				{
+					key: "DATABASE",
+					value: {
+						args: [
+							{
+								kind: "object",
+								properties: [
+									{ key: "id", value: "hyperdrive-id" },
+									{
+										key: "dev",
+										value: {
+											kind: "object",
+											properties: [
+												{
+													key: "connectionString",
+													value: "postgres://localhost/database",
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+						callee: "bindings.hyperdrive",
+						kind: "call",
+					},
+				},
+			],
+		});
+		expect(followUps).toEqual([]);
+	});
 });
