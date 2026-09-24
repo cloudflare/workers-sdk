@@ -565,28 +565,45 @@ describe("migrateWranglerToCf", () => {
 		}
 	});
 
-	it("retains output when the package manifest cannot be read", async ({
+	it("reports unreadable package manifests in writes and dry runs", async ({
 		expect,
 	}) => {
-		const cwd = await createProject({
-			"package.json": "{",
-			"wrangler.json": JSON.stringify({
-				compatibility_date: "2026-09-23",
-				name: "example-worker",
+		function createUnreadableManifestProject(): Promise<string> {
+			return createProject({
+				"package.json": "{",
+				"wrangler.json": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					name: "example-worker",
+				}),
+			});
+		}
+		const [writeCwd, dryRunCwd] = await Promise.all([
+			createUnreadableManifestProject(),
+			createUnreadableManifestProject(),
+		]);
+
+		const [writeResult, dryRunResult] = await Promise.all([
+			migrateWranglerToCf(path.join(writeCwd, "wrangler.json")),
+			migrateWranglerToCf(path.join(dryRunCwd, "wrangler.json"), {
+				dryRun: true,
 			}),
-		});
+		]);
 
-		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
-
-		expect(result).toMatchObject({
-			changedFiles: ["cloudflare.config.ts"],
-			followUps: [{ blocking: true, code: "cf-install-failed" }],
-			requiresInstall: true,
-			status: "needs-intervention",
-		});
+		for (const result of [writeResult, dryRunResult]) {
+			expect(result).toMatchObject({
+				changedFiles: ["cloudflare.config.ts"],
+				followUps: [{ blocking: true, code: "cf-install-failed" }],
+				requiresInstall: true,
+				status: "needs-intervention",
+			});
+		}
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		await expect(
-			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
-		).resolves.toContain('from "cf/config"');
+			readFile(path.join(writeCwd, "cloudflare.config.ts"), "utf8")
+		).resolves.toContain("Package manifest error:");
+		await expect(
+			readFile(path.join(dryRunCwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
 	});
 
 	it("writes Wrangler tooling only for the Wrangler bundler", async ({

@@ -38,6 +38,10 @@ type CfDependencyInstallPlan =
 				| "skipped-ancestor-package";
 	  }
 	| {
+			action: "unreadable-manifest";
+			reason?: string;
+	  }
+	| {
 			action: "install";
 			isWorkspaceRoot: boolean;
 			packageDirectory: string;
@@ -304,11 +308,10 @@ export async function planCfDependencyInstallation(
 	let packageJson: PackageJson;
 	try {
 		packageJson = await readPackageJson(packageJsonPath);
-	} catch {
+	} catch (error) {
 		return {
-			action: "install",
-			isWorkspaceRoot: false,
-			packageDirectory,
+			action: "unreadable-manifest",
+			...(error instanceof Error ? { reason: error.message } : {}),
 		};
 	}
 	if (hasCfDependency(packageJson)) {

@@ -104,7 +104,22 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (!installDependencies && dependencyPlan.action === "install") {
+	if (installDependencies && dependencyPlan.action === "unreadable-manifest") {
+		const reason = dependencyPlan.reason
+			? ` Package manifest error: ${dependencyPlan.reason}`
+			: "";
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"cf-install-failed",
+				`The local package.json could not be read, so \`cf\` could not be installed automatically. Fix the manifest, then install \`cf@latest\` as a dev dependency before using the generated configuration.${reason}`
+			)
+		);
+	}
+	if (
+		!installDependencies &&
+		(dependencyPlan.action === "install" ||
+			dependencyPlan.action === "unreadable-manifest")
+	) {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-disabled",
