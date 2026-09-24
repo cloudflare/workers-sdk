@@ -124,6 +124,38 @@ describe("migrateWranglerToCf", () => {
 		});
 	});
 
+	it("reports a missing package manifest in writes and dry runs", async ({
+		expect,
+	}) => {
+		function createManifestFreeProject(): Promise<string> {
+			return createProject({
+				"wrangler.json": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					name: "example-worker",
+				}),
+			});
+		}
+		const [writeCwd, dryRunCwd] = await Promise.all([
+			createManifestFreeProject(),
+			createManifestFreeProject(),
+		]);
+
+		const [writeResult, dryRunResult] = await Promise.all([
+			migrateWranglerToCf(path.join(writeCwd, "wrangler.json")),
+			migrateWranglerToCf(path.join(dryRunCwd, "wrangler.json"), {
+				dryRun: true,
+			}),
+		]);
+
+		for (const result of [writeResult, dryRunResult]) {
+			expect(result).toMatchObject({
+				followUps: [{ blocking: true, code: "cf-install-missing-manifest" }],
+				status: "needs-intervention",
+			});
+		}
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+	});
+
 	it("installs only after writing outputs", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": JSON.stringify({ name: "example-worker" }),
