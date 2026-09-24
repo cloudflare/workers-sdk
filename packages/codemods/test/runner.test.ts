@@ -241,6 +241,31 @@ export default defineWorkersProject({
 		);
 	});
 
+	it("preserves custom global Git configuration", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await commitProject(cwd);
+		await writeFile(path.join(cwd, "types.generated.ts"), "generated");
+
+		const gitSettings = await createProject({
+			ignore: "*.generated.ts\n",
+		});
+		const globalConfigPath = path.join(gitSettings, "config");
+		await writeFile(
+			globalConfigPath,
+			`[core]\n\texcludesFile = ${path.join(gitSettings, "ignore")}\n`
+		);
+		vi.stubEnv("GIT_CONFIG_GLOBAL", globalConfigPath);
+
+		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+		expect(
+			await readFile(path.join(cwd, "vitest.config.ts"), "utf8")
+		).toContain("@cloudflare/vitest-plugin");
+	});
+
 	it("rejects untracked changes", async ({ expect }) => {
 		const source =
 			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
