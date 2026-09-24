@@ -244,10 +244,9 @@ describe("migrateWranglerToCf", () => {
 			}),
 		});
 
-		const result = await migrateWranglerToCf(
-			path.join(cwd, "wrangler.json"),
-			{ bundler: "wrangler" }
-		);
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 		const cloudflareConfig = await readFile(
 			path.join(cwd, "cloudflare.config.ts"),
 			"utf8"

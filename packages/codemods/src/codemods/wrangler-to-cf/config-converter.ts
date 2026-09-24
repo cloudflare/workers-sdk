@@ -1800,12 +1800,7 @@ export function convertWranglerConfig(
 	if (bundler === "vite") {
 		addViteToolingFollowUp(source, "", "", followUps);
 		if (sourcePreviews) {
-			addViteToolingFollowUp(
-				sourcePreviews,
-				"previews",
-				"previews",
-				followUps
-			);
+			addViteToolingFollowUp(sourcePreviews, "previews", "previews", followUps);
 		}
 	}
 

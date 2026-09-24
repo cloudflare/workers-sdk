@@ -2,12 +2,12 @@ import { access } from "node:fs/promises";
 import path from "node:path";
 import { ensureCleanGitWorktree } from "../../git";
 import { convertWranglerConfig } from "./config-converter";
-import { writeMigrationOutputs } from "./file-writer";
 import { findSecretFiles, readWranglerConfig } from "./config-reader";
 import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "./config-renderer";
+import { writeMigrationOutputs } from "./file-writer";
 import type {
 	WranglerToCfMigrationOptions,
 	WranglerToCfMigrationResult,
