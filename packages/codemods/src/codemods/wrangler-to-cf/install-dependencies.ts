@@ -55,6 +55,13 @@ async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
 }
 
+function hasCfDependency(packageJson: PackageJson): boolean {
+	return (
+		packageJson.dependencies?.cf !== undefined ||
+		packageJson.devDependencies?.cf !== undefined
+	);
+}
+
 /** Finds the nearest package manifest at or above the migration directory. */
 export async function findPackageJson(
 	projectDirectory: string
@@ -72,6 +79,16 @@ export async function findPackageJson(
 		}
 		currentDirectory = parentDirectory;
 	}
+}
+
+/** Checks whether the nearest package manifest already declares cf. */
+export async function hasDeclaredCfDependency(
+	projectDirectory: string
+): Promise<boolean> {
+	const packageJsonPath = await findPackageJson(projectDirectory);
+	return packageJsonPath
+		? hasCfDependency(await readPackageJson(packageJsonPath))
+		: false;
 }
 
 function getDeclaredPackageManager(
@@ -281,10 +298,7 @@ export async function installCfDependency(
 	}
 
 	const packageJson = await readPackageJson(packageJsonPath);
-	if (
-		packageJson.dependencies?.cf !== undefined ||
-		packageJson.devDependencies?.cf !== undefined
-	) {
+	if (hasCfDependency(packageJson)) {
 		return { changedFiles: [], requiresInstall: false, status: "complete" };
 	}
 

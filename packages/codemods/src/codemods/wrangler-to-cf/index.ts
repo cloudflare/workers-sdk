@@ -9,7 +9,11 @@ import {
 } from "./config-renderer";
 import { writeMigrationOutputs } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
-import { findPackageJson, installCfDependency } from "./install-dependencies";
+import {
+	findPackageJson,
+	hasDeclaredCfDependency,
+	installCfDependency,
+} from "./install-dependencies";
 import { assertCompatibleWranglerVersion } from "./wrangler-version";
 import type {
 	WranglerToCfMigrationOptions,
@@ -96,7 +100,7 @@ export async function migrateWranglerToCf(
 		);
 	}
 	const changedFiles = Array.from(outputs.keys());
-	let requiresInstall = !installDependencies;
+	let requiresInstall = !(await hasDeclaredCfDependency(projectDirectory));
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
