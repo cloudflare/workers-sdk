@@ -1,5 +1,18 @@
 # @cloudflare/autoconfig
 
+## 0.6.3
+
+### Patch Changes
+
+- [#15812](https://github.com/cloudflare/workers-sdk/pull/15812) [`b37c5df`](https://github.com/cloudflare/workers-sdk/commit/b37c5df9b23fd2c06116d54bbeaf8da65014847c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Prevent static-site detection from failing on inaccessible child directories
+
+  Autoconfig now checks each candidate directory's `index.html` directly and ignores expected missing-file and permission errors. This allows commands such as `cf build` to run from directories containing protected folders, including a macOS home directory with `.Trash`.
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+  - @cloudflare/cli-shared-helpers@0.1.37
+  - @cloudflare/config@0.17.0
+
 ## 0.6.2
 
 ### Patch Changes
