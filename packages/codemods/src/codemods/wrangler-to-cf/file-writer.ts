@@ -1,6 +1,33 @@
 import { open, unlink, writeFile } from "node:fs/promises";
 
 /**
+ * Removes outputs created by a failed migration write and rethrows the failure.
+ *
+ * @param filePaths Absolute paths created by the current migration invocation.
+ * @param error The write failure that triggered cleanup.
+ */
+export async function cleanupMigrationOutputs(
+	filePaths: Iterable<string>,
+	error: unknown
+): Promise<never> {
+	const cleanupResults = await Promise.allSettled(
+		Array.from(filePaths, (filePath) => unlink(filePath))
+	);
+	const cleanupErrors = cleanupResults.flatMap((result) =>
+		result.status === "rejected" ? [result.reason] : []
+	);
+
+	if (cleanupErrors.length > 0) {
+		throw new AggregateError(
+			[error, ...cleanupErrors],
+			"Failed to write migration outputs and clean up partial files."
+		);
+	}
+
+	throw error;
+}
+
+/**
  * Rewrites an output created by the current migration invocation.
  *
  * @param filePath Absolute path to the generated migration file.
@@ -35,20 +62,6 @@ export async function writeMigrationOutputs(
 			}
 		}
 	} catch (error) {
-		const cleanupResults = await Promise.allSettled(
-			createdFiles.map((filePath) => unlink(filePath))
-		);
-		const cleanupErrors = cleanupResults.flatMap((result) =>
-			result.status === "rejected" ? [result.reason] : []
-		);
-
-		if (cleanupErrors.length > 0) {
-			throw new AggregateError(
-				[error, ...cleanupErrors],
-				"Failed to write migration outputs and clean up partial files."
-			);
-		}
-
-		throw error;
+		await cleanupMigrationOutputs(createdFiles, error);
 	}
 }

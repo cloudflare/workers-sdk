@@ -7,7 +7,11 @@ import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "./config-renderer";
-import { rewriteMigrationOutput, writeMigrationOutputs } from "./file-writer";
+import {
+	cleanupMigrationOutputs,
+	rewriteMigrationOutput,
+	writeMigrationOutputs,
+} from "./file-writer";
 import { createFollowUp } from "./follow-ups";
 import {
 	installCfDependency,
@@ -138,10 +142,14 @@ export async function migrateWranglerToCf(
 					followUps,
 				});
 				outputs.set(cloudflareConfigPath, updatedCloudflareConfig);
-				await rewriteMigrationOutput(
-					cloudflareConfigPath,
-					updatedCloudflareConfig
-				);
+				try {
+					await rewriteMigrationOutput(
+						cloudflareConfigPath,
+						updatedCloudflareConfig
+					);
+				} catch (error) {
+					await cleanupMigrationOutputs(outputs.keys(), error);
+				}
 			}
 		}
 	}

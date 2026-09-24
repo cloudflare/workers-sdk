@@ -12,7 +12,10 @@ import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { afterEach, describe, it, vi } from "vitest";
 import { migrateWranglerToCf } from "../../src";
-import { writeMigrationOutputs } from "../../src/codemods/wrangler-to-cf/file-writer";
+import {
+	rewriteMigrationOutput,
+	writeMigrationOutputs,
+} from "../../src/codemods/wrangler-to-cf/file-writer";
 
 const temporaryDirectories: string[] = [];
 
@@ -29,6 +32,7 @@ vi.mock(
 			>();
 		return {
 			...original,
+			rewriteMigrationOutput: vi.fn(original.rewriteMigrationOutput),
 			writeMigrationOutputs: vi.fn(original.writeMigrationOutputs),
 		};
 	}
@@ -219,6 +223,41 @@ describe("migrateWranglerToCf", () => {
 		);
 		expect(cloudflareConfig).toContain("Registry unavailable.");
 		expect(cloudflareConfig).toContain("Migration incomplete.");
+	});
+
+	it("removes outputs when an installation failure cannot be written", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"node_modules/wrangler/package.json": JSON.stringify({
+				name: "wrangler",
+				version: "4.100.0",
+			}),
+			"package.json": JSON.stringify({ name: "example-worker" }),
+			"wrangler.json": JSON.stringify({
+				assets: { directory: "public" },
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+				no_bundle: true,
+			}),
+		});
+		vi.mocked(installPackages).mockRejectedValueOnce(
+			new Error("Registry unavailable.")
+		);
+		vi.mocked(rewriteMigrationOutput).mockRejectedValueOnce(
+			new Error("rewrite failed")
+		);
+
+		await expect(
+			migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+				bundler: "wrangler",
+			})
+		).rejects.toThrow("rewrite failed");
+		for (const filePath of ["cloudflare.config.ts", "wrangler.config.ts"]) {
+			await expect(
+				readFile(path.join(cwd, filePath), "utf8")
+			).rejects.toMatchObject({ code: "ENOENT" });
+		}
 	});
 
 	it("writes Wrangler tooling only for the Wrangler bundler", async ({
