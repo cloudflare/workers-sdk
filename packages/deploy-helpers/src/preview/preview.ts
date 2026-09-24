@@ -9,6 +9,7 @@ import {
 	getBindingTypeFriendlyName,
 	getDurableObjectExports,
 	getDockerPath,
+	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -244,11 +245,8 @@ function convertBuildOutputContainers(
 		getDurableObjectExports(exports)
 	)) {
 		if (
-			"container" in configExport &&
-			configExport.container !== undefined &&
-			(configExport.state === undefined ||
-				configExport.state === "created" ||
-				configExport.state === "expecting-transfer")
+			isLiveDurableObjectExport(configExport) &&
+			configExport.container !== undefined
 		) {
 			containerClassNames.set(configExport.container, className);
 		}
