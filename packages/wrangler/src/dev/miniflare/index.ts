@@ -886,8 +886,7 @@ export function buildMiniflareBindingOptions(
 					binding,
 					{
 						stream,
-						...(remote &&
-							remoteProxyConnectionString && { remoteProxyConnectionString }),
+						...(remoteProxyConnectionString && { remoteProxyConnectionString }),
 					},
 				];
 			})

@@ -6198,6 +6198,12 @@ const validateK2Binding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
+	if ("remote" in value && value.remote === false) {
+		diagnostics.errors.push(
+			`"${field}" does not support \`remote: false\`. K2 bindings always access remote resources; omit "remote" or set \`remote: true\`.`
+		);
+		isValid = false;
+	}
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"stream",

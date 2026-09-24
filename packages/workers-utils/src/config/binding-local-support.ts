@@ -60,11 +60,11 @@ const BINDING_LOCAL_SUPPORT: Record<
 	flagship: "local-and-remote",
 
 	vectorize: "remote",
-	k2: "remote",
 	mtls_certificate: "remote",
 	dispatch_namespace: "remote",
 
 	// Reach out to the @cloudflare/wrangler team before adding anything here
+	k2: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	ai: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	ai_search: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	ai_search_namespace:

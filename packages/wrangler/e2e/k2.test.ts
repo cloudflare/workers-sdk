@@ -37,7 +37,7 @@ export default {
 async function seedProducer(
 	helper: WranglerE2ETestHelper,
 	stream: string,
-	remote = true
+	remote?: boolean
 ) {
 	const name = generateResourceName("k2");
 	await helper.seed({
@@ -204,16 +204,17 @@ describe("K2 producer configuration", () => {
 		expect(result.output).toContain('must have a string "stream" field');
 	});
 
-	it("reports unsupported local simulation instead of accepting and dropping records", async ({
+	it("rejects remote: false before starting development", async ({
 		expect,
 	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await seedProducer(helper, streamId, false);
-		const worker = helper.runLongLived("wrangler dev");
-		await worker.readUntil(
-			/K2 Stream bindings do not support local development/
+		const result = await helper.run("wrangler dev");
+		expect(result.status).not.toBe(0);
+		expect(result.output).toContain(
+			"K2 bindings always access remote resources"
 		);
-		expect(worker.currentOutput).toContain("remote: true");
+		expect(result.output).toContain("remote: true");
 	});
 });
 
@@ -250,13 +251,15 @@ async function createStream(helper: WranglerE2ETestHelper) {
 	);
 	helper.onTeardown(async () => {
 		try {
-			await client.delete(`${collection}/${encodeURIComponent(stream.id)}`);
+			await client.delete(`${collection}/${encodeURIComponent(stream.id)}`, {
+				timeout: 20_000,
+			});
 		} catch (error) {
 			if (!(error instanceof Cloudflare.NotFoundError)) {
 				throw error;
 			}
 		}
-	});
+	}, 30_000);
 	return stream;
 }
 
@@ -280,6 +283,21 @@ function workerAccessHeaders(workerName: string, url: string) {
 		"CF-Access-Client-Id": clientId,
 		"CF-Access-Client-Secret": clientSecret,
 	};
+}
+
+async function readProducerJsonResponse(
+	response: Awaited<ReturnType<typeof fetch>>
+): Promise<unknown> {
+	const contentType = response.headers.get("content-type");
+	if (response.status !== 200 || !contentType?.includes("application/json")) {
+		const title = (await response.text())
+			.match(/<title>([^<]*)<\/title>/i)?.[1]
+			.slice(0, 200);
+		throw new Error(
+			`Producer response: HTTP ${response.status}; content-type: ${contentType}; cf-ray: ${response.headers.get("cf-ray")}; page title: ${title ?? "none"}`
+		);
+	}
+	return response.json();
 }
 
 // Follow the shared remote E2E account configuration for stream management.
@@ -327,9 +345,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("K2 stream management live E2E", () => {
 
 // Stream setup/cleanup needs K2 Config Write. Binding sends use the Worker's
 // capability, not a K2 Produce token.
-// TODO: Verify persisted records through Consume once the Consume API ships,
-// and add direct authenticated HTTP Produce coverage after K2 permissions reach
-// GA. Until then these tests assert only the binding's send results.
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("K2 producer live E2E", () => {
 	it("appends ArrayBuffers through getPlatformProxy", async ({ expect }) => {
 		const helper = new WranglerE2ETestHelper();
@@ -398,19 +413,23 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("K2 producer live E2E", () => {
 				headers: accessHeaders,
 				redirect: "manual",
 			});
-			expect(await produced.json()).toEqual({ success: true });
+			expect(await readProducerJsonResponse(produced)).toEqual({
+				success: true,
+			});
 			const arrayBuffer = await fetch(new URL("/produce?array-buffer", url), {
 				method: "POST",
 				headers: accessHeaders,
 				redirect: "manual",
 			});
-			expect(await arrayBuffer.json()).toEqual({ success: true });
+			expect(await readProducerJsonResponse(arrayBuffer)).toEqual({
+				success: true,
+			});
 			const invalid = await fetch(new URL("/produce?invalid", url), {
 				method: "POST",
 				headers: accessHeaders,
 				redirect: "manual",
 			});
-			expect(await invalid.json()).toMatchObject({
+			expect(await readProducerJsonResponse(invalid)).toMatchObject({
 				success: false,
 				error: { code: 10204, retryable: false },
 			});

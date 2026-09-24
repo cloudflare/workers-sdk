@@ -358,7 +358,7 @@ interface PipelineBindingOptions {
 interface K2BindingOptions {
 	/** The ID of the K2 stream. */
 	stream: string;
-	/** Use the real stream during development. Local simulation is not supported. */
+	/** Always uses the real stream in development. Set remote to true to suppress the usage warning; false is unsupported. */
 	dev?: BindingDevOptions;
 }
 

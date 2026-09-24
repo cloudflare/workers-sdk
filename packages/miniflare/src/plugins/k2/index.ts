@@ -21,7 +21,10 @@ export const K2_PLUGIN: Plugin = {
 				service: {
 					name: K2_REMOTE_SERVICE_NAME,
 					props: buildRemoteProxyProps(
-						getRemoteProxyConnectionString(binding, options.dev),
+						getRemoteProxyConnectionString(
+							{ dev: { remote: binding.dev?.remote ?? true } },
+							options.dev
+						),
 						name
 					),
 				},

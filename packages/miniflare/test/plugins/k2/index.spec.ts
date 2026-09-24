@@ -4,6 +4,7 @@ import { describe, test, vi } from "vitest";
 import { singleModuleManifest, useDispose, useServer } from "../../test-shared";
 import type { K2ProduceResult, K2Producer, K2Record } from "@cloudflare/config";
 import type { RemoteProxyConnectionString } from "miniflare";
+import type { RequestListener } from "node:http";
 
 const stream = "0123456789abcdef0123456789abcdef";
 const script = `export default {
@@ -36,7 +37,7 @@ class Producer extends RpcTarget {
 	}
 }
 
-function producerWorker(proxyUrl?: URL) {
+function producerWorker(proxyUrl?: URL, remote?: boolean) {
 	return {
 		config: {
 			name: "producer",
@@ -46,7 +47,7 @@ function producerWorker(proxyUrl?: URL) {
 				ORDERS: {
 					type: "k2" as const,
 					stream,
-					dev: { remote: Boolean(proxyUrl) },
+					...(remote === undefined ? {} : { dev: { remote } }),
 				},
 			},
 		},
@@ -115,66 +116,87 @@ describe("K2 producer binding", () => {
 		await vi.waitFor(() => expect(closed).toBe(opened));
 	});
 
-	test("preserves bytes, headers and success/failure results across the remote RPC proxy", async ({
-		expect,
-	}) => {
-		const producer = new Producer();
-		const { http: proxyUrl } = await useServer(
-			(_req, res) => {
-				res.statusCode = 500;
-				res.end("Expected RPC WebSocket");
-			},
-			(socket) => {
-				newWebSocketRpcSession(socket as unknown as WebSocket, producer);
-			}
-		);
-		const mf = new Miniflare({ workers: [producerWorker(proxyUrl)] });
-		useDispose(mf);
-		const response = await mf.dispatchFetch("http://localhost/");
-		expect(await response.json()).toEqual({ success: true });
-		expect(producer.batches).toEqual([
-			[
+	test.for([undefined, true])(
+		"preserves bytes, headers and success/failure results across the remote RPC proxy with remote=%s",
+		async (remote, { expect }) => {
+			const producer = new Producer();
+			const { http: proxyUrl } = await useServer(
+				(_req, res) => {
+					res.statusCode = 500;
+					res.end("Expected RPC WebSocket");
+				},
+				(socket) => {
+					newWebSocketRpcSession(socket as unknown as WebSocket, producer);
+				}
+			);
+			const mf = new Miniflare({ workers: [producerWorker(proxyUrl, remote)] });
+			useDispose(mf);
+			const response = await mf.dispatchFetch("http://localhost/");
+			expect(await response.json()).toEqual({ success: true });
+			expect(producer.batches).toEqual([
+				[
+					{
+						content: new Uint8Array([1, 2, 3]),
+						headers: { event: "order.created" },
+					},
+				],
+			]);
+
+			producer.result = {
+				success: false,
+				error: {
+					code: 10212,
+					message: "The batch could not be appended",
+					retryable: false,
+				},
+			};
+			const failed = await mf.dispatchFetch("http://localhost/");
+			expect(await failed.json()).toEqual(producer.result);
+			expect(producer.batches).toHaveLength(2);
+
+			producer.result = { success: true };
+			const arrayBufferResponse = await mf.dispatchFetch(
+				"http://localhost/?array-buffer"
+			);
+			const arrayBufferBody = await arrayBufferResponse.text();
+			expect(arrayBufferResponse.status, arrayBufferBody).toBe(200);
+			expect(JSON.parse(arrayBufferBody)).toEqual({ success: true });
+			expect(producer.batches).toHaveLength(3);
+			expect(producer.batches[2]).toEqual([
 				{
 					content: new Uint8Array([1, 2, 3]),
 					headers: { event: "order.created" },
 				},
-			],
-		]);
-
-		producer.result = {
-			success: false,
-			error: {
-				code: 10212,
-				message: "The batch could not be appended",
-				retryable: false,
-			},
-		};
-		const failed = await mf.dispatchFetch("http://localhost/");
-		expect(await failed.json()).toEqual(producer.result);
-		expect(producer.batches).toHaveLength(2);
-
-		producer.result = { success: true };
-		const arrayBufferResponse = await mf.dispatchFetch(
-			"http://localhost/?array-buffer"
-		);
-		const arrayBufferBody = await arrayBufferResponse.text();
-		expect(arrayBufferResponse.status, arrayBufferBody).toBe(200);
-		expect(JSON.parse(arrayBufferBody)).toEqual({ success: true });
-		expect(producer.batches).toHaveLength(3);
-		expect(producer.batches[2]).toEqual([
-			{
-				content: new Uint8Array([1, 2, 3]),
-				headers: { event: "order.created" },
-			},
-		]);
-		for (const query of ["mixed", "mixed&array-buffer"]) {
-			const mixed = await mf.dispatchFetch(`http://localhost/?${query}`);
-			expect(mixed.status).toBe(500);
-			expect(await mixed.text()).toContain(
-				"Cannot serialize value: [object ArrayBuffer]"
-			);
-			expect(producer.batches).toHaveLength(3);
+			]);
+			for (const query of ["mixed", "mixed&array-buffer"]) {
+				const mixed = await mf.dispatchFetch(`http://localhost/?${query}`);
+				expect(mixed.status).toBe(500);
+				expect(await mixed.text()).toContain(
+					"Cannot serialize value: [object ArrayBuffer]"
+				);
+				expect(producer.batches).toHaveLength(3);
+			}
 		}
+	);
+
+	test("does not use the proxy when remote is explicitly false", async ({
+		expect,
+	}) => {
+		const requests = vi.fn<RequestListener>((_request, response) => {
+			response.statusCode = 500;
+			response.end("Unexpected remote request");
+		});
+		const { http: proxyUrl } = await useServer(requests);
+		const mf = new Miniflare({
+			workers: [producerWorker(proxyUrl, false)],
+		});
+		useDispose(mf);
+		const response = await mf.dispatchFetch("http://localhost/");
+		expect(response.status).toBe(500);
+		expect(await response.text()).toContain(
+			"Binding ORDERS needs to be run remotely"
+		);
+		expect(requests).not.toHaveBeenCalled();
 	});
 
 	test("exposes the RPC binding through getBindings", async ({ expect }) => {

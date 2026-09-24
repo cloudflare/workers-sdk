@@ -7,7 +7,6 @@ const config = defineWorker({
 	env: {
 		ORDERS: bindings.k2({
 			stream: "0123456789abcdef0123456789abcdef",
-			dev: { remote: true },
 		}),
 	},
 });

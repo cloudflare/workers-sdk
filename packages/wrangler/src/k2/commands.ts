@@ -14,6 +14,7 @@ import {
 import type { K2Stream } from "./client";
 
 const metadata = { owner: "Product: Pipelines", status: "open beta" } as const;
+const MIN_RETENTION_SECONDS = 60 * 60;
 const MAX_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 const jsonArg = {
 	describe: "Output in JSON format",
@@ -24,7 +25,7 @@ const jsonArg = {
 export const k2Namespace = createNamespace({
 	metadata: {
 		...metadata,
-		description: "Manage K2 streams",
+		description: "⛰️ Manage K2 streams",
 		category: "Storage & databases",
 	},
 });
@@ -106,8 +107,7 @@ export const k2StreamsCreateCommand = createCommand({
 			demandOption: true,
 		},
 		"retention-seconds": {
-			describe:
-				"Record retention in seconds (3600–2592000; defaults to the API default)",
+			describe: `Record retention in seconds (${MIN_RETENTION_SECONDS}–${MAX_RETENTION_SECONDS}; defaults to the API default)`,
 			type: "number",
 		},
 		"http-enabled": {
@@ -136,11 +136,11 @@ export const k2StreamsCreateCommand = createCommand({
 		if (
 			args.retentionSeconds !== undefined &&
 			(!Number.isInteger(args.retentionSeconds) ||
-				args.retentionSeconds < 3600 ||
+				args.retentionSeconds < MIN_RETENTION_SECONDS ||
 				args.retentionSeconds > MAX_RETENTION_SECONDS)
 		) {
 			throw new CommandLineArgsError(
-				`Retention must be an integer between 3600 and ${MAX_RETENTION_SECONDS} seconds.`,
+				`Retention must be an integer between ${MIN_RETENTION_SECONDS} and ${MAX_RETENTION_SECONDS} seconds.`,
 				{ telemetryMessage: "k2 streams invalid retention" }
 			);
 		}
@@ -191,7 +191,7 @@ export const k2StreamsCreateCommand = createCommand({
 				}),
 				config.configPath,
 				args.env,
-				{ useRemote: true, updateConfig: false }
+				{ updateConfig: false }
 			);
 			logger.log(
 				'Replace "YOUR_BINDING_NAME" with your chosen Worker binding name (for example, "EVENTS" for env.EVENTS).'

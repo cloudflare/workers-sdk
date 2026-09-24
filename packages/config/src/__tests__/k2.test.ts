@@ -9,7 +9,7 @@ describe("K2 producer bindings", () => {
 	it.for([stream, "stream-v2:orders", ""])(
 		"preserves the stream identifier when converting shared configuration: %j",
 		(streamId, { expect }) => {
-			const binding = bindings.k2({ stream: streamId, dev: { remote: true } });
+			const binding = bindings.k2({ stream: streamId });
 			expect(BindingSchema.parse(binding)).toEqual(binding);
 			expect(
 				convertToWranglerConfig({
@@ -23,7 +23,7 @@ describe("K2 producer bindings", () => {
 			).toEqual({
 				name: "producer",
 				compatibility_date: "2025-04-28",
-				k2: [{ binding: "ORDERS", stream: streamId, remote: true }],
+				k2: [{ binding: "ORDERS", stream: streamId }],
 			});
 		}
 	);
