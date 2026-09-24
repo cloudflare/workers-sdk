@@ -850,9 +850,9 @@ export class Miniflare {
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
-  #nonRetryableRuntimeDispatcher?: Dispatcher;                                                            
-  #dispatchConnectTcpSockets = new Set<net.Socket>();                                                     
-  #dispatchConnectDatagramSockets = new Set<dgram.Socket>();
+	#nonRetryableRuntimeDispatcher?: Dispatcher;
+	#dispatchConnectTcpSockets = new Set<net.Socket>();
+	#dispatchConnectDatagramSockets = new Set<dgram.Socket>();
 	#proxyClient?: ProxyClient;
 	#runtimeRestartError?: MiniflareCoreError;
 	// Number of times workerd has crashed and been restarted for this instance.
