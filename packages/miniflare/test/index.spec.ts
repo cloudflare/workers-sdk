@@ -11,10 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
-import {
-	_forceColour,
-	NODEJS_COMPAT_DEFAULT_ON_DATE,
-} from "@cloudflare/workers-utils";
+import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
@@ -73,7 +70,7 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
+test("Miniflare: validates options", async ({ expect }) => {
 	// Check empty workers array rejected
 	expect(() => new Miniflare({ workers: [] })).toThrow(
 		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
@@ -141,10 +138,6 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 		)
 	);
 
-	// Disable colours for easier to read expectations
-	_forceColour(false);
-	onTestFinished(() => _forceColour());
-
 	// Check throws validation error with incorrect options
 	let error: MiniflareCoreError | undefined = undefined;
 	try {
@@ -166,17 +159,8 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.code).toEqual("ERR_VALIDATION");
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
-{
-  workers: [
-    /* [0] */ {
-      config: {
-        name: 42,
-              ^ Invalid input: expected string, received number
-        ...,
-      },
-    },
-  ],
-}`
+✖ Invalid input: expected string, received number
+  → at workers[0].config.name`
 	);
 
 	// Check throws validation error with primitive option
@@ -191,8 +175,7 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.code).toEqual("ERR_VALIDATION");
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
-'addEventListener(...)'
-^ Invalid input: expected object, received string`
+✖ Invalid input: expected object, received string`
 	);
 });
 

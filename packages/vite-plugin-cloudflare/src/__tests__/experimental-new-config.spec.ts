@@ -101,6 +101,22 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		);
 	});
 
+	test("formats cloudflare.config.ts validation errors", async ({ expect }) => {
+		writeWorkerConfig(
+			"export default { worker: { name: 42, compatibilityDate: false } };"
+		);
+
+		await expect(
+			resolvePluginConfig(
+				{ experimental: { newConfig: true } },
+				{ root: tempDir },
+				viteEnv
+			)
+		).rejects.toThrow(
+			/✖ Invalid input: expected string, received number[\s\S]*→ at worker\.name[\s\S]*→ at worker\.compatibilityDate/
+		);
+	});
+
 	test("throws when configPath is combined with experimental.newConfig", async ({
 		expect,
 	}) => {
