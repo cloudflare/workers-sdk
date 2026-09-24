@@ -1648,6 +1648,37 @@ function convertToolingObject(source: UnknownRecord): OutputObject | undefined {
 	return properties.length > 0 ? { kind: "object", properties } : undefined;
 }
 
+function addViteToolingFollowUp(
+	source: UnknownRecord,
+	location: string,
+	sourcePrefix: string,
+	followUps: MigrationFollowUp[]
+): void {
+	const toolingFields = [...TOOLING_FIELDS].filter((field) =>
+		hasOwn(source, field)
+	);
+	const assets = getRecord(source, "assets");
+	if (assets && hasOwn(assets, "directory")) {
+		toolingFields.push("assets.directory");
+	}
+
+	if (toolingFields.length === 0) {
+		return;
+	}
+
+	followUps.push(
+		createFollowUp(
+			"vite-tooling-config",
+			`Wrangler-specific tooling fields${location ? ` in ${location}` : ""} were not migrated because the Vite bundler is selected: ${toolingFields.join(", ")}.`,
+			{
+				sourcePath: sourcePrefix
+					? `${sourcePrefix}.${toolingFields.join(",")}`
+					: toolingFields.join(","),
+			}
+		)
+	);
+}
+
 function convertBranch(
 	source: UnknownRecord,
 	sourcePrefix: string,
@@ -1709,15 +1740,19 @@ function convertToolingBranch(
 	source: UnknownRecord
 ): ConvertedBranch | undefined {
 	const config = convertToolingObject(source);
-	if (!config) {
+	const previews = getRecord(source, "previews");
+	const previewConfig = previews
+		? convertToolingObject(createPreviewSource(source, previews))
+		: undefined;
+
+	if (!config && !previewConfig) {
 		return undefined;
 	}
 
-	const previews = getRecord(source, "previews");
 	return {
-		config,
+		config: config ?? { kind: "object", properties: [] },
 		previewConfig: previews
-			? convertToolingObject(createBranchSource(source, previews))
+			? (previewConfig ?? { kind: "object", properties: [] })
 			: undefined,
 	};
 }
@@ -1761,22 +1796,17 @@ export function convertWranglerConfig(
 		);
 	}
 
-	const toolingFields = [...TOOLING_FIELDS].filter((field) =>
-		hasOwn(source, field)
-	);
-	const sourceAssets = getRecord(source, "assets");
-	if (sourceAssets && hasOwn(sourceAssets, "directory")) {
-		toolingFields.push("assets.directory");
-	}
-
-	if (bundler === "vite" && toolingFields.length > 0) {
-		followUps.push(
-			createFollowUp(
-				"vite-tooling-config",
-				`Wrangler-specific tooling fields were not migrated because the Vite bundler is selected: ${toolingFields.join(", ")}.`,
-				{ sourcePath: toolingFields.join(",") }
-			)
-		);
+	const sourcePreviews = getRecord(source, "previews");
+	if (bundler === "vite") {
+		addViteToolingFollowUp(source, "", "", followUps);
+		if (sourcePreviews) {
+			addViteToolingFollowUp(
+				sourcePreviews,
+				"previews",
+				"previews",
+				followUps
+			);
+		}
 	}
 
 	const isWranglerBundle = bundler === "wrangler";
@@ -1799,24 +1829,20 @@ export function convertWranglerConfig(
 				continue;
 			}
 
-			const environmentToolingFields = [...TOOLING_FIELDS].filter((field) =>
-				hasOwn(environment, field)
+			addViteToolingFollowUp(
+				environment,
+				`environment \`${name}\``,
+				`env.${name}`,
+				followUps
 			);
 
-			const environmentAssets = getRecord(environment, "assets");
-			if (environmentAssets && hasOwn(environmentAssets, "directory")) {
-				environmentToolingFields.push("assets.directory");
-			}
-
-			if (environmentToolingFields.length > 0) {
-				followUps.push(
-					createFollowUp(
-						"vite-tooling-config",
-						`Wrangler-specific tooling fields in environment \`${name}\` were not migrated because the Vite bundler is selected: ${environmentToolingFields.join(", ")}.`,
-						{
-							sourcePath: `env.${name}.${environmentToolingFields.join(",")}`,
-						}
-					)
+			const environmentPreviews = getRecord(environment, "previews");
+			if (environmentPreviews) {
+				addViteToolingFollowUp(
+					environmentPreviews,
+					`environment \`${name}\` previews`,
+					`env.${name}.previews`,
+					followUps
 				);
 			}
 		}

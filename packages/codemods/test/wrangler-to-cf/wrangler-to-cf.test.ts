@@ -225,6 +225,41 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(wranglerConfig)).toEqual([]);
 	});
 
+	it("migrates preview-only Wrangler tooling without inheriting production defines", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				env: {
+					staging: {
+						define: { PRODUCTION_ONLY: '"production"' },
+						previews: { vars: { MODE: "preview" } },
+					},
+				},
+				name: "example-worker",
+				previews: {
+					define: { PREVIEW_ONLY: '"preview"' },
+				},
+			}),
+		});
+
+		const result = await migrateWranglerToCf(
+			path.join(cwd, "wrangler.json"),
+			{ bundler: "wrangler" }
+		);
+		const wranglerConfig = await readFile(
+			path.join(cwd, "wrangler.config.ts"),
+			"utf8"
+		);
+
+		expect(result.changedFiles).toContain("wrangler.config.ts");
+		expect(wranglerConfig.match(/PRODUCTION_ONLY/g)).toHaveLength(1);
+		expect(wranglerConfig.match(/PREVIEW_ONLY/g)).toHaveLength(1);
+		expect(wranglerConfig).toMatchSnapshot("wrangler.config.ts");
+		expect(getSyntaxErrors(wranglerConfig)).toEqual([]);
+	});
+
 	it("migrates each Worker in a multi-Worker project independently", async ({
 		expect,
 	}) => {
@@ -298,6 +333,9 @@ describe("migrateWranglerToCf", () => {
 					port: 9000,
 				},
 				name: "example-worker",
+				previews: {
+					define: { PREVIEW_ONLY: '"preview"' },
+				},
 				rules: [
 					{
 						globs: ["**/*.txt"],
@@ -317,6 +355,10 @@ describe("migrateWranglerToCf", () => {
 		expect(result.followUps).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ code: "vite-tooling-config" }),
+				expect.objectContaining({
+					code: "vite-tooling-config",
+					sourcePath: "previews.define",
+				}),
 			])
 		);
 		expect(cloudflareConfig).toMatchSnapshot("cloudflare.config.ts");
