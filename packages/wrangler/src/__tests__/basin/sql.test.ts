@@ -7,7 +7,7 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
-describe("r2 sql", () => {
+describe("basin sql", () => {
 	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
@@ -15,21 +15,30 @@ describe("r2 sql", () => {
 
 	describe("help", () => {
 		it("should show help when no subcommand is passed", async ({ expect }) => {
-			await runWrangler("r2 sql");
+			await runWrangler("basin sql");
 			await endEventLoop();
-			expect(std.out).toContain("wrangler r2 sql");
-			expect(std.out).toContain("Send queries and manage R2 SQL");
-			expect(std.out).toContain("wrangler r2 sql query <warehouse> <query>");
+			expect(std.out).toContain("wrangler basin sql");
+			expect(std.out).toContain("Send queries and manage Basin SQL");
+			expect(std.out).toContain("wrangler basin sql query <warehouse> <query>");
 		});
 
 		it("should show help for query command", async ({ expect }) => {
-			await runWrangler("r2 sql query --help");
+			await runWrangler("basin sql query --help");
 			await endEventLoop();
-			expect(std.out).toContain("Execute SQL query against R2 Data Catalog");
+			expect(std.out).toContain("Execute SQL query against Basin Catalog");
 			expect(std.out).toContain("warehouse");
-			expect(std.out).toContain("R2 Data Catalog warehouse name");
+			expect(std.out).toContain("Basin Catalog warehouse name");
 			expect(std.out).toContain("query");
 			expect(std.out).toContain("The SQL query to execute");
+		});
+
+		it("should show help through the legacy r2 sql alias", async ({
+			expect,
+		}) => {
+			await runWrangler("r2 sql");
+			await endEventLoop();
+			expect(std.out).toContain("wrangler r2 sql");
+			expect(std.out).toContain("wrangler r2 sql query <warehouse> <query>");
 		});
 	});
 
@@ -43,11 +52,13 @@ describe("r2 sql", () => {
 		});
 
 		it("should require warehouse and query arguments", async ({ expect }) => {
-			await expect(runWrangler("r2 sql query")).rejects.toThrow(
+			await expect(runWrangler("basin sql query")).rejects.toThrow(
 				"Not enough non-option arguments: got 0, need at least 2"
 			);
 
-			await expect(runWrangler("r2 sql query testWarehouse")).rejects.toThrow(
+			await expect(
+				runWrangler("basin sql query testWarehouse")
+			).rejects.toThrow(
 				"Not enough non-option arguments: got 1, need at least 2"
 			);
 		});
@@ -61,7 +72,7 @@ describe("r2 sql", () => {
 			delete process.env.CLOUDFLARE_API_TOKEN;
 
 			await expect(
-				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
+				runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`)
 			).rejects.toThrow(
 				"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable"
 			);
@@ -69,7 +80,7 @@ describe("r2 sql", () => {
 
 		it("should validate warehouse name format", async ({ expect }) => {
 			await expect(
-				runWrangler(`r2 sql query invalidwarehouse "${mockQuery}"`)
+				runWrangler(`basin sql query invalidwarehouse "${mockQuery}"`)
 			).rejects.toThrow("Invalid warehouse name format");
 		});
 
@@ -101,7 +112,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
 					async ({ request, params }) => {
 						const { accountId, bucketName } = params;
 						expect(accountId).toEqual("account123");
@@ -123,7 +134,7 @@ describe("r2 sql", () => {
 				)
 			);
 
-			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			await runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`);
 
 			// Check that results are displayed in a table format.
 			expect(std.out).toContain("id");
@@ -154,7 +165,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.json(mockResponse);
 					},
@@ -162,7 +173,7 @@ describe("r2 sql", () => {
 				)
 			);
 
-			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			await runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`);
 			expect(std.out).toContain("Query executed successfully with no results");
 		});
 
@@ -179,7 +190,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.json(mockResponse, { status: 500 });
 					},
@@ -187,7 +198,7 @@ describe("r2 sql", () => {
 				)
 			);
 
-			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			await runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`);
 			expect(std.err).toContain(
 				"Query failed because of the following errors:"
 			);
@@ -198,7 +209,7 @@ describe("r2 sql", () => {
 		it("should handle API connection errors", async ({ expect }) => {
 			msw.use(
 				http.post(
-					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.error();
 					},
@@ -207,14 +218,14 @@ describe("r2 sql", () => {
 			);
 
 			await expect(
-				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
-			).rejects.toThrow("Failed to connect to R2 SQL API");
+				runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`)
+			).rejects.toThrow("Failed to connect to Basin SQL API");
 		});
 
 		it("should handle invalid JSON responses", async ({ expect }) => {
 			msw.use(
 				http.post(
-					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.text("Invalid JSON", { status: 200 });
 					},
@@ -223,7 +234,7 @@ describe("r2 sql", () => {
 			);
 
 			await expect(
-				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)
+				runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`)
 			).rejects.toThrow("Received a malformed response from the API");
 		});
 
@@ -284,7 +295,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.json(mockResponse);
 					},
@@ -292,7 +303,7 @@ describe("r2 sql", () => {
 				)
 			);
 
-			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			await runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`);
 
 			const startOfTable = std.out.indexOf("┌");
 			const endOfTable = std.out.indexOf("┘") + 1;
@@ -331,7 +342,7 @@ describe("r2 sql", () => {
 
 			msw.use(
 				http.post(
-					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
 					async () => {
 						return HttpResponse.json(mockResponse);
 					},
@@ -339,10 +350,44 @@ describe("r2 sql", () => {
 				)
 			);
 
-			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			await runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`);
 			// The output should handle null values gracefully (displayed as empty strings).
 			expect(std.out).toContain("Alice");
 			expect(std.out).toContain("bob@example.com");
+		});
+
+		it("should execute queries through the legacy r2 sql alias", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.post(
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							warehouse: string;
+							query: string;
+						};
+						expect(body).toEqual({
+							warehouse: mockWarehouse,
+							query: mockQuery,
+						});
+
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								schema: [],
+								rows: [],
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			expect(std.out).toContain("Query executed successfully with no results");
 		});
 	});
 });
