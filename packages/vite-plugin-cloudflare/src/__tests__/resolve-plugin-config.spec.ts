@@ -186,12 +186,12 @@ describe("resolvePluginConfig", () => {
 	test("resolves an entry Worker config customizer result", async ({
 		expect,
 	}) => {
-		writeEntryConfig({ compatibilityFlags: ["flag-a"] });
+		writeEntryConfig({ compatibilityFlags: ["nodejs_compat"] });
 		const result = (await resolvePluginConfig(
 			{
 				config: (workerConfig) => ({
 					name: `customized-${workerConfig.name}`,
-					compatibilityFlags: ["flag-b"],
+					compatibilityFlags: ["global_fetch_strictly_public"],
 				}),
 			},
 			{ root },
@@ -201,7 +201,7 @@ describe("resolvePluginConfig", () => {
 		const entryWorker = result.environmentNameToWorkerMap.get("ssr");
 		expect(entryWorker?.config.name).toBe("customized-entry-worker");
 		expect(entryWorker?.config.compatibilityFlags).toEqual(
-			expect.arrayContaining(["flag-a", "flag-b"])
+			expect.arrayContaining(["nodejs_compat", "global_fetch_strictly_public"])
 		);
 	});
 
@@ -263,7 +263,7 @@ describe("resolvePluginConfig", () => {
 			{ mode: "development", command: "serve" }
 		);
 
-		expect(fs.existsSync(path.join(root, "worker-configuration.d.ts"))).toBe(
+		expect(fs.existsSync(path.join(root, ".cloudflare/types/index.d.ts"))).toBe(
 			false
 		);
 	});

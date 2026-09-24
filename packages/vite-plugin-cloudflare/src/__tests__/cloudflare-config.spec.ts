@@ -29,6 +29,9 @@ const FIXTURES_ROOT = path.resolve(__dirname, "fixtures", "cloudflare-config");
 
 describe("cloudflare.config.ts", () => {
 	let root: string;
+	function typesPath(): string {
+		return path.join(root, ".cloudflare/types/index.d.ts");
+	}
 
 	beforeEach(() => {
 		generateRuntimeTypesMock.mockReset();
@@ -124,14 +127,11 @@ describe("cloudflare.config.ts", () => {
 			compatibilityFlags: [],
 			existingContent: undefined,
 		});
-		const content = fs.readFileSync(
-			path.join(root, "worker-configuration.d.ts"),
-			"utf8"
-		);
+		const content = fs.readFileSync(typesPath(), "utf8");
 		expect(content).toContain(
 			'import("@cloudflare/vite-plugin/experimental-config")'
 		);
-		expect(content).toContain('import("./cloudflare.config").default');
+		expect(content).toContain('import("../../cloudflare.config").default');
 		expect(content).toContain(RUNTIME_MARKER);
 		expect(content).toContain(FAKE_RUNTIME_TYPES);
 	});
@@ -144,28 +144,22 @@ describe("cloudflare.config.ts", () => {
 			{ root },
 			viteEnv
 		);
-		expect(fs.existsSync(path.join(root, "worker-configuration.d.ts"))).toBe(
-			false
-		);
+		expect(fs.existsSync(typesPath())).toBe(false);
 
 		await resolvePluginConfig(
 			{ types: { includeRuntime: false } },
 			{ root },
 			viteEnv
 		);
-		const content = fs.readFileSync(
-			path.join(root, "worker-configuration.d.ts"),
-			"utf8"
-		);
+		const content = fs.readFileSync(typesPath(), "utf8");
 		expect(content).not.toContain(RUNTIME_MARKER);
 		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
 	});
 
-	test("does not generate types during build", async ({ expect }) => {
+	test("generates types during build", async ({ expect }) => {
 		seedWorker();
 		await resolvePluginConfig({}, { root }, viteBuildEnv);
-		expect(fs.existsSync(path.join(root, "worker-configuration.d.ts"))).toBe(
-			false
-		);
+		expect(fs.existsSync(typesPath())).toBe(true);
+		expect(generateRuntimeTypesMock).toHaveBeenCalledOnce();
 	});
 });

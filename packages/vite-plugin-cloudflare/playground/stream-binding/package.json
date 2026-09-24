@@ -3,7 +3,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check:type": "tsc --build",
+		"build:default": "vite build --app",
+		"check:type": "pnpm run build:default && tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
 	},

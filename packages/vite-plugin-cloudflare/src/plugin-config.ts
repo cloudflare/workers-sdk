@@ -21,6 +21,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { defu } from "defu";
+import * as vite from "vite";
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
 import { isPreviewBuild } from "./build-output-env";
 import { readBuildOutputPreview } from "./build-output-preview";
@@ -34,7 +35,6 @@ import type {
 } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
-import type * as vite from "vite";
 
 type ParsedInputConfigWithWorker = Omit<ParsedInputConfig, "worker"> & {
 	worker: ParsedInputWorkerConfig;
@@ -84,14 +84,14 @@ interface PrerenderWorkerOptions extends BaseWorkerOptions {
 
 interface TypeGenerationOptions {
 	/**
-	 * Whether to auto-generate `worker-configuration.d.ts` at the project
-	 * root. Defaults to `true`.
+	 * Whether to auto-generate `.cloudflare/types/index.d.ts`. Defaults to
+	 * `true`.
 	 */
 	generate?: boolean;
 	/**
 	 * Whether to include the Worker's runtime types (generated from the
 	 * project's compatibility date and flags) in the generated
-	 * `worker-configuration.d.ts`. Defaults to `true`.
+	 * `.cloudflare/types/index.d.ts`. Defaults to `true`.
 	 */
 	includeRuntime?: boolean;
 }
@@ -353,7 +353,6 @@ export async function resolvePluginConfig(
 	const loadedConfig = await loadCloudflareConfig({
 		root,
 		mode,
-		command: viteEnv.command,
 		types,
 	});
 	const settings = {
@@ -660,7 +659,7 @@ function resolveWorker(
 }
 
 const CONFIG_FILENAME = "cloudflare.config.ts";
-const TYPES_OUTPUT_FILENAME = "worker-configuration.d.ts";
+const TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
 const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
 
 /**
@@ -668,14 +667,12 @@ const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
  * exists. Returns the parsed default export, the absolute path of the loaded file, and
  * the files imported while resolving the config (for watch-mode).
  *
- * When `types.generate` is true, also writes `worker-configuration.d.ts` next
- * to the config when the generated content differs from what's already on disk.
- * Type generation only runs in dev.
+ * When `types.generate` is true, also writes `.cloudflare/types/index.d.ts`
+ * when the generated content differs from what's already on disk.
  */
 async function loadCloudflareConfig(options: {
 	root: string;
 	mode: string;
-	command: "build" | "serve";
 	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<
 	| {
@@ -707,8 +704,8 @@ async function loadCloudflareConfig(options: {
 		);
 	}
 
-	if (options.command === "serve" && options.types.generate) {
-		await writeWorkerConfigurationDts({
+	if (options.types.generate) {
+		await writeCloudflareTypes({
 			root: options.root,
 			configPath,
 			includeRuntime: options.types.includeRuntime,
@@ -725,7 +722,7 @@ async function loadCloudflareConfig(options: {
 }
 
 /**
- * Write `worker-configuration.d.ts` to the project root using
+ * Write `.cloudflare/types/index.d.ts` using
  * `@cloudflare/config`'s `generateTypes`, targeting the vite-plugin's
  * `experimental-config` subpath (so users don't need a direct dependency on
  * `@cloudflare/config`).
@@ -739,16 +736,21 @@ async function loadCloudflareConfig(options: {
  * check and the diff-before-write (only writes if content differs, to avoid
  * touching mtimes unnecessarily).
  */
-async function writeWorkerConfigurationDts(options: {
+async function writeCloudflareTypes(options: {
 	root: string;
 	configPath: string;
 	includeRuntime: boolean;
 	compatibilityDate: string;
 	compatibilityFlags: string[];
 }): Promise<void> {
-	const outputPath = path.resolve(options.root, TYPES_OUTPUT_FILENAME);
-	const relativeConfigPath =
-		"./" + path.relative(options.root, options.configPath);
+	const outputPath = path.resolve(options.root, TYPES_OUTPUT_PATH);
+	const outputDir = path.dirname(outputPath);
+	const relativeConfigPath = vite.normalizePath(
+		path.relative(outputDir, options.configPath)
+	);
+	const configImportPath = relativeConfigPath.startsWith(".")
+		? relativeConfigPath
+		: `./${relativeConfigPath}`;
 
 	let existingContent: string | undefined;
 	try {
@@ -758,7 +760,7 @@ async function writeWorkerConfigurationDts(options: {
 	}
 
 	let content = generateTypes({
-		configPath: relativeConfigPath,
+		configPath: configImportPath,
 		packageName: EXPERIMENTAL_CONFIG_PKG,
 	});
 
@@ -772,6 +774,7 @@ async function writeWorkerConfigurationDts(options: {
 	}
 
 	if (existingContent !== content) {
+		await fsp.mkdir(outputDir, { recursive: true });
 		await fsp.writeFile(outputPath, content);
 	}
 }

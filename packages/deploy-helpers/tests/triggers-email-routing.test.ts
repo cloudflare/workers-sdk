@@ -23,20 +23,6 @@ describe("triggersDeploy Email Routing integration", () => {
 		planError = undefined;
 
 		initDeployHelpersContext({
-			createCloudflareClient: (() => ({
-				workers: {
-					beta: {
-						workers: {
-							get: async () => ({
-								subdomain: {
-									enabled: false,
-									previews_enabled: false,
-								},
-							}),
-						},
-					},
-				},
-			})) as never,
 			logger: {
 				debug() {},
 				info() {},
@@ -51,6 +37,11 @@ describe("triggersDeploy Email Routing integration", () => {
 			) => {
 				if (path.endsWith("/subdomain")) {
 					return { enabled: false, previews_enabled: false };
+				}
+				if (path.endsWith(`/workers/workers/${WORKER_NAME}`)) {
+					return {
+						subdomain: { enabled: false, previews_enabled: false },
+					};
 				}
 				if (path.endsWith(`/workers/services/${WORKER_NAME}`)) {
 					metadataRequests++;
@@ -169,36 +160,14 @@ describe("triggersDeploy Email Routing integration", () => {
 describe("triggersDeploy preflight", () => {
 	let fetchResultRequests: string[];
 	let fetchPagedListRequests: string[];
-	let workerGetRequests: Array<[string, string]>;
 	let logs: string[];
 
 	beforeEach(() => {
 		fetchResultRequests = [];
 		fetchPagedListRequests = [];
-		workerGetRequests = [];
 		logs = [];
 
 		initDeployHelpersContext({
-			createCloudflareClient: (() => ({
-				workers: {
-					beta: {
-						workers: {
-							get: async (
-								workerName: string,
-								params: { account_id: string }
-							) => {
-								workerGetRequests.push([workerName, params.account_id]);
-								return {
-									subdomain: {
-										enabled: false,
-										previews_enabled: false,
-									},
-								};
-							},
-						},
-					},
-				},
-			})) as never,
 			logger: {
 				debug() {},
 				info() {},
@@ -216,6 +185,11 @@ describe("triggersDeploy preflight", () => {
 				fetchResultRequests.push(`${init?.method ?? "GET"} ${path}`);
 				if (path.endsWith("/subdomain")) {
 					return { enabled: false, previews_enabled: false };
+				}
+				if (path.endsWith(`/workers/workers/${WORKER_NAME}`)) {
+					return {
+						subdomain: { enabled: false, previews_enabled: false },
+					};
 				}
 				if (path.endsWith(`/workers/services/${WORKER_NAME}`)) {
 					return { default_environment: { script: { tag: WORKER_TAG } } };
@@ -353,8 +327,8 @@ describe("triggersDeploy preflight", () => {
 		});
 
 		expect(fetchPagedListRequests).toEqual([]);
-		expect(workerGetRequests).toEqual([[WORKER_NAME, ACCOUNT_ID]]);
 		expect(fetchResultRequests).toEqual([
+			`GET /accounts/${ACCOUNT_ID}/workers/workers/${WORKER_NAME}`,
 			`POST /accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/subdomain`,
 		]);
 	});
