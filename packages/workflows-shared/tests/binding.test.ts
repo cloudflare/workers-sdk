@@ -753,7 +753,7 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
-		it("should wait once for each provided id's pending deletion", async ({
+		it("should wait once for each batch id's pending deletion", async ({
 			expect,
 		}) => {
 			const first = uniqueId("batch-pending-delete");
@@ -783,7 +783,14 @@ describe("WorkflowBinding", () => {
 
 			loopbackFetch.mockClear();
 			const counted = await binding.createBatch({ count: 2 });
-			expect(loopbackFetch).not.toHaveBeenCalled();
+			expect(loopbackFetch.mock.calls.map(([url]) => url).sort()).toEqual(
+				counted.created
+					.map(
+						({ id }) =>
+							`http://localhost/core/workflow-storage/test-workflow/${env.ENGINE.idFromName(id).toString()}?waitForPendingDelete=1`
+					)
+					.sort()
+			);
 
 			for (const { id } of [...explicit.created, ...counted.created]) {
 				await waitUntilLogEvent(

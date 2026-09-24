@@ -482,11 +482,6 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 					.filter((id): id is string => id !== undefined)
 			),
 		];
-		// Finish every pending persistence deletion before probing, so a queued
-		// deletion cannot remove an instance this batch recreates.
-		await Promise.all(
-			providedIds.map((id) => waitForPersistedInstanceDelete(this.env, id))
-		);
 		const existing = new Set<string>();
 		await Promise.all(
 			providedIds.map(async (id) => {
