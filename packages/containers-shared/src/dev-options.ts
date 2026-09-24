@@ -6,6 +6,7 @@ import {
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
 } from "@cloudflare/workers-utils";
+import { resolveInputContainerImage } from "./input-container-image";
 import { getDevContainerImageName } from "./knobs";
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
 import type {
@@ -13,6 +14,12 @@ import type {
 	ContainerDevPlan,
 	ContainerDevRuntimeOptions,
 } from "./types";
+import type {
+	ParsedInputContainerConfig,
+	ParsedInputWorkerConfig,
+	ParsedOutputContainerConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
 import type { Config } from "@cloudflare/workers-utils";
 
 type CreateContainerDevPlanOptions = {
@@ -23,6 +30,27 @@ type CreateContainerDevPlanOptions = {
 };
 
 type NamedContainerDevOptions = ContainerDevOptions & { image_name: string };
+
+type ContainerPlanExports =
+	| ParsedInputWorkerConfig["exports"]
+	| ParsedOutputWorkerConfig["exports"];
+
+type ContainerPlanDefinition<TImage> =
+	| {
+			name: string;
+			schedulingPolicy: "durable-object";
+			images?: Record<string, TImage>;
+	  }
+	| {
+			name: string;
+			schedulingPolicy?: "default" | "regional";
+			image: TImage;
+	  };
+
+type ContainerImagePlan = {
+	reference: string;
+	containerOption?: ContainerDevOptions;
+};
 
 const MAX_DOCKER_REPOSITORY_NAME_LENGTH = 255;
 const MAX_NAMED_IMAGE_SLUG_LENGTH =
@@ -183,4 +211,181 @@ export function createContainerDevPlan(
 	return containerOptions.length === 0 && containerRuntimeOptions.size === 0
 		? undefined
 		: { containerOptions, containerRuntimeOptions };
+}
+
+/**
+ * Builds the local image and runtime plan directly from parsed
+ * `cloudflare.config.ts` Container configuration.
+ *
+ * @param options - Input Container definitions, Worker exports, project root, and build ID.
+ * @returns The image preparation and runtime plan, or `undefined` when no export links a Container.
+ * @throws If a linked Container is missing or image preparation has no build ID.
+ */
+export function createV2ContainerDevPlan(options: {
+	containers: ParsedInputContainerConfig[];
+	exports: ParsedInputWorkerConfig["exports"];
+	root: string;
+	containerBuildId?: string;
+}): ContainerDevPlan | undefined {
+	return createV2ContainerPlan({
+		containers: options.containers,
+		exports: options.exports,
+		containerDescription: "Container",
+		createImagePlan: ({ image, className, imageName }) => {
+			const buildId = requireContainerBuildId(options.containerBuildId);
+			const imageTag =
+				imageName === undefined
+					? getDevContainerImageName(className, buildId)
+					: getNamedContainerImageTag(className, imageName, buildId);
+			const resolvedImage = resolveInputContainerImage({
+				image,
+				root: options.root,
+			});
+			const containerOptionBase = {
+				class_name: className,
+				image_tag: imageTag,
+				...(imageName === undefined ? {} : { image_name: imageName }),
+			};
+			return {
+				reference: imageTag,
+				containerOption:
+					"reference" in resolvedImage
+						? {
+								...containerOptionBase,
+								image_uri: resolvedImage.reference,
+							}
+						: {
+								...containerOptionBase,
+								dockerfile: resolvedImage.dockerfile,
+								image_build_context: resolvedImage.buildContext,
+								image_vars: resolvedImage.buildVars,
+							},
+			};
+		},
+	});
+}
+
+/**
+ * Builds Container runtime metadata directly from Build Output references.
+ * Local references need no preparation; remote references also produce a
+ * pull-only preparation option without generating a replacement tag.
+ *
+ * @param options - Parsed Container and Worker Build Output configuration.
+ * @returns Runtime metadata keyed by Durable Object export, or `undefined` when none use Containers.
+ * @throws If Build Output omits a Container referenced by a Worker export.
+ */
+export function createV2ContainerPreviewPlan(options: {
+	containers: ParsedOutputContainerConfig[];
+	exports: ParsedOutputWorkerConfig["exports"];
+}): ContainerDevPlan | undefined {
+	return createV2ContainerPlan({
+		containers: options.containers,
+		exports: options.exports,
+		containerDescription: "Build Output Container",
+		createImagePlan: ({ image, className, imageName }) => {
+			const reference =
+				"reference" in image ? image.reference : image.localReference;
+			if (!("reference" in image)) {
+				return { reference };
+			}
+
+			return {
+				reference,
+				containerOption: {
+					image_uri: reference,
+					image_tag: reference,
+					class_name: className,
+					...(imageName === undefined ? {} : { image_name: imageName }),
+				},
+			};
+		},
+	});
+}
+
+function createV2ContainerPlan<TImage>(options: {
+	containers: ContainerPlanDefinition<TImage>[];
+	exports: ContainerPlanExports;
+	containerDescription: string;
+	createImagePlan: (options: {
+		image: TImage;
+		className: string;
+		imageName?: string;
+	}) => ContainerImagePlan;
+}): ContainerDevPlan | undefined {
+	const containersByName = indexContainersByName(options.containers);
+	const containerOptions: ContainerDevOptions[] = [];
+	const containerRuntimeOptions = new Map<string, ContainerDevRuntimeOptions>();
+
+	for (const [className, containerName] of getContainerLinks(options.exports)) {
+		const container = containersByName.get(containerName);
+		if (container === undefined) {
+			throw new Error(
+				`Expected ${options.containerDescription} "${containerName}" referenced by Durable Object export "${className}" to be defined`
+			);
+		}
+
+		if (container.schedulingPolicy === "durable-object") {
+			const images = Object.entries(container.images ?? {}).map(
+				([name, image]) => {
+					const imagePlan = options.createImagePlan({
+						image,
+						className,
+						imageName: name,
+					});
+					if (imagePlan.containerOption !== undefined) {
+						containerOptions.push(imagePlan.containerOption);
+					}
+					return { name, image: imagePlan.reference };
+				}
+			);
+			containerRuntimeOptions.set(
+				className,
+				images.length === 0 ? {} : { images }
+			);
+			continue;
+		}
+
+		const imagePlan = options.createImagePlan({
+			image: container.image,
+			className,
+		});
+		if (imagePlan.containerOption !== undefined) {
+			containerOptions.push(imagePlan.containerOption);
+		}
+		containerRuntimeOptions.set(className, { imageName: imagePlan.reference });
+	}
+
+	return containerRuntimeOptions.size === 0
+		? undefined
+		: { containerOptions, containerRuntimeOptions };
+}
+
+function getContainerLinks(
+	exports: ContainerPlanExports
+): Array<[className: string, containerName: string]> {
+	const links: Array<[className: string, containerName: string]> = [];
+	for (const [className, workerExport] of Object.entries(exports ?? {})) {
+		if (
+			workerExport.type !== "durable-object" ||
+			!("container" in workerExport) ||
+			workerExport.container === undefined
+		) {
+			continue;
+		}
+		links.push([className, workerExport.container]);
+	}
+	return links;
+}
+
+function indexContainersByName<T extends { name: string }>(
+	containers: T[]
+): Map<string, T> {
+	const containersByName = new Map<string, T>();
+	for (const container of containers) {
+		if (containersByName.has(container.name)) {
+			throw new Error(`Duplicate Container name "${container.name}"`);
+		}
+		containersByName.set(container.name, container);
+	}
+	return containersByName;
 }

@@ -12,6 +12,8 @@ import * as vite from "vite";
 import { PROXY_SHARED_SECRET } from "./constants";
 import { warnIfQuickTunnelSseResponse } from "./plugins/tunnel";
 import type { PluginContext } from "./context";
+import type { ParsedInputSettingsConfig } from "@cloudflare/config";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type * as http from "node:http";
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
@@ -55,6 +57,12 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
 export type MaybePromise<T> = Promise<T> | T;
 
 export type Defined<T> = Exclude<T, undefined>;
+
+export function toApiComplianceRegion(
+	region: ParsedInputSettingsConfig["complianceRegion"]
+): ComplianceConfig["compliance_region"] {
+	return region === "fedramp-high" ? "fedramp_high" : region;
+}
 
 export function withTrailingSlash(path: string): string {
 	return path.endsWith("/") ? path : `${path}/`;

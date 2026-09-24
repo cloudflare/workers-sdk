@@ -1,5 +1,6 @@
 import { describe, test, vi } from "vitest";
 import {
+	getJsonResponse,
 	getTextResponse,
 	isCINonLinux,
 	isLocalWithoutDockerRunning,
@@ -7,7 +8,7 @@ import {
 	WAIT_FOR_OPTIONS,
 } from "../../__test-utils__";
 
-// The Cloudflare-managed registry image referenced in `wrangler.registry.jsonc`
+// The Cloudflare-managed registry image referenced in `cloudflare.config.ts`
 // lives under this account, so we can only successfully pull it when running
 // against that account. The account id must match the path segment in the image
 // URL (`registry.cloudflare.com/<ACCOUNT_ID>/ci-container-dont-delete:latest`).
@@ -22,8 +23,7 @@ const skipContainerTests =
 	// If the test is being run locally and docker is not running we just skip these tests
 	isLocalWithoutDockerRunning;
 
-// TODO: Reinstate when Containers are supported by cloudflare.config.ts.
-describe.skip("Containers", () => {
+describe("Containers", () => {
 	test.skipIf(skipContainerTests)(
 		"starts container built from local Dockerfile",
 		async ({ expect }) => {
@@ -35,6 +35,26 @@ describe.skip("Containers", () => {
 
 			await vi.waitFor(async () => {
 				const fetchResponse = await fetch(`${viteTestUrl}/dockerfile/fetch`, {
+					signal: AbortSignal.timeout(500),
+				});
+				expect(await fetchResponse.text()).toBe("Hello World!");
+			}, WAIT_FOR_OPTIONS);
+		}
+	);
+
+	test.skipIf(skipContainerTests)(
+		"starts a named Container image built from a local Dockerfile",
+		async ({ expect }) => {
+			expect(await getJsonResponse("/named-images/images")).toEqual(["app"]);
+
+			const startResponse = await getTextResponse("/named-images/start");
+			expect(startResponse).toBe("Container create request sent...");
+
+			const statusResponse = await getTextResponse("/named-images/status");
+			expect(statusResponse).toBe("true");
+
+			await vi.waitFor(async () => {
+				const fetchResponse = await fetch(`${viteTestUrl}/named-images/fetch`, {
 					signal: AbortSignal.timeout(500),
 				});
 				expect(await fetchResponse.text()).toBe("Hello World!");

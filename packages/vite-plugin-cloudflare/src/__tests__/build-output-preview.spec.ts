@@ -33,6 +33,7 @@ describe("readBuildOutputPreview", () => {
 	}) => {
 		readBuildOutputMock.mockResolvedValue({
 			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
 			workers: {
 				default: createWorker("entry-worker"),
 				"auxiliary-worker": createWorker("auxiliary-worker"),
@@ -53,6 +54,7 @@ describe("readBuildOutputPreview", () => {
 	}) => {
 		readBuildOutputMock.mockResolvedValue({
 			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
 			workers: {
 				default: createWorker("entry-worker"),
 				"auxiliary-worker": createWorker("auxiliary-worker"),
@@ -73,6 +75,7 @@ describe("readBuildOutputPreview", () => {
 	}) => {
 		readBuildOutputMock.mockResolvedValue({
 			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
 			workers: {
 				default: createWorker("entry-worker"),
 				"auxiliary-worker": createWorker("auxiliary-worker"),
@@ -85,5 +88,28 @@ describe("readBuildOutputPreview", () => {
 			"entry-worker",
 			"auxiliary-worker",
 		]);
+	});
+
+	test("returns parsed Container Build Output without transforming image references", async ({
+		expect,
+	}) => {
+		const container = {
+			name: "api",
+			image: { localReference: "cloudflare-build/project/api:123" },
+		};
+		readBuildOutputMock.mockResolvedValue({
+			rootConfig: { buildContext: { isPreview: false } },
+			containers: [
+				{
+					configPath: "/project/containers/api/container.config.json",
+					config: container,
+				},
+			],
+			workers: { default: createWorker("entry-worker") },
+		});
+
+		const result = await readBuildOutputPreview("/project", false);
+
+		expect(result.containers).toEqual([container]);
 	});
 });

@@ -47,9 +47,11 @@ contract so the parent can drive either impl interchangeably.
   a build and exit `2`). Preview build context is supplied through
   `CLOUDFLARE_PREVIEW_BUILD`, which also works when a framework runs Vite as
   part of its own build command.
-- **Build Output Specification enabled for every verb.** The v2 plugin always
-  installs its build-output plugin, so `cf-vite` does not need the internal
-  force-build-output flag used by v1.
+- **Build Output Specification is the core build pipeline.** Every build emits
+  Build Output; there is no feature flag or legacy output-config path. Preview
+  reads Workers and Containers exclusively from that output. The v2 plugin
+  always installs its build-output plugin, so `cf-vite` does not need the
+  internal force-build-output flag used by v1.
 - **`dev`** `cf-vite dev` boots Vite via `createServer()`
   against the user's own `vite.config.ts` (which must include
   `cloudflare()`). Plugin-owned flags are bridged via env vars the plugin

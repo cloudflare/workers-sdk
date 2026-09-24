@@ -79,7 +79,7 @@ export async function pullImage(
 		"linux/amd64",
 	]);
 	const ready = pull.ready.then(async ({ aborted }: { aborted: boolean }) => {
-		if (!aborted) {
+		if (!aborted && options.image_uri !== options.image_tag) {
 			// re-tag image with the expected dev-formatted image tag for consistency
 			await runDockerCmd(dockerPath, [
 				"tag",

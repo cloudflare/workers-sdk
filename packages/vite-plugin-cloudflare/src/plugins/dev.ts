@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
@@ -8,6 +9,8 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
+import { getDevContainerCleanup } from "../container-cleanup";
+import { prepareContainerImagesForVite } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
 	compareExportTypes,
@@ -27,9 +30,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 	return {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
+			const containerCleanup = getDevContainerCleanup(viteDevServer);
 
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
-			await ctx.startOrUpdateMiniflare(initialOptions);
+			let containerOptions = initialOptions.containerOptions;
+			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
 			// Dispose Miniflare when the dev server shuts down.
 			// Note Vite's `restartServer` calls `server.close()` on every restart, so we skip
@@ -93,7 +98,8 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						ctx,
 						viteDevServer
 					);
-					await ctx.startOrUpdateMiniflare(updatedOptions);
+					containerOptions = updatedOptions.containerOptions;
+					await ctx.startOrUpdateMiniflare(updatedOptions.miniflareOptions);
 					await initRunners(
 						ctx.resolvedPluginConfig,
 						viteDevServer,
@@ -194,8 +200,35 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 				}
 
-				// TODO: Reinstate Container development support when Containers are
-				// supported by cloudflare.config.ts.
+				if (containerOptions !== undefined) {
+					const dockerPath = getDockerPath();
+					viteDevServer.config.logger.info(
+						colors.dim(
+							colors.yellow(
+								"∷ Building container images for local development...\n"
+							)
+						)
+					);
+
+					await prepareContainerImagesForVite({
+						dockerPath,
+						containerOptions,
+						settings: ctx.resolvedPluginConfig.settings,
+						logger: viteDevServer.config.logger,
+					});
+
+					containerCleanup.track(
+						dockerPath,
+						containerOptions.map(({ image_tag }) => image_tag)
+					);
+					viteDevServer.config.logger.info(
+						colors.dim(
+							colors.yellow(
+								"\n⚡️ Containers successfully built. To rebuild your containers during development, restart the Vite dev server (r + enter)."
+							)
+						)
+					);
+				}
 			}
 
 			return () => {

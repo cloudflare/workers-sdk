@@ -29,10 +29,12 @@ import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
 import type {
+	ParsedInputContainerConfig,
 	InputWorkerConfig,
 	ParsedInputConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
+	ParsedOutputContainerConfig,
 } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
@@ -176,6 +178,7 @@ interface BaseResolvedConfig {
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
+	containers: ParsedInputContainerConfig[];
 	configPaths: Set<string>;
 	environmentNameToWorkerMap: Map<string, Worker>;
 	environmentNameToChildEnvironmentNamesMap: Map<string, string[]>;
@@ -195,6 +198,7 @@ export interface WorkersResolvedConfig extends NonPreviewResolvedConfig {
 
 export interface PreviewResolvedConfig extends BaseResolvedConfig {
 	type: "preview";
+	containers: ParsedOutputContainerConfig[];
 	workers: BuildOutputPreviewWorker[];
 }
 
@@ -344,6 +348,7 @@ export async function resolvePluginConfig(
 			remoteBindings,
 			type: "preview",
 			settings: { accountId, complianceRegion },
+			containers: preview.containers,
 			workers: preview.workers,
 		};
 	}
@@ -360,6 +365,7 @@ export async function resolvePluginConfig(
 		accountId: loadedConfig?.parsedConfig.accountId,
 		complianceRegion: loadedConfig?.parsedConfig.complianceRegion,
 	};
+	const containers = loadedConfig?.parsedConfig.containers ?? [];
 	if (loadedConfig) {
 		configPaths.add(loadedConfig.configPath);
 		for (const dep of loadedConfig.dependencies) {
@@ -433,6 +439,7 @@ export async function resolvePluginConfig(
 			type: "assets-only",
 			config: entryWorkerResolvedConfig.config,
 			settings,
+			containers,
 			environmentNameToWorkerMap,
 			environmentNameToChildEnvironmentNamesMap,
 			prerenderWorkerEnvironmentName,
@@ -494,6 +501,7 @@ export async function resolvePluginConfig(
 		environmentNameToChildEnvironmentNamesMap,
 		prerenderWorkerEnvironmentName,
 		settings,
+		containers,
 		entryWorkerEnvironmentName,
 		staticRouting,
 		remoteBindings,

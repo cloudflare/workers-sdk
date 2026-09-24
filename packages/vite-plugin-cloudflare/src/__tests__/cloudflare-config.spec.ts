@@ -98,6 +98,48 @@ describe("cloudflare.config.ts", () => {
 		});
 	});
 
+	test("carries input Container config and export links", async ({
+		expect,
+	}) => {
+		fs.mkdirSync(path.join(root, "src"), { recursive: true });
+		fs.writeFileSync(path.join(root, "src/index.ts"), "export default {};");
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			[
+				"import { defineConfig, defineContainer, exports as workerExports } from '@cloudflare/config';",
+				"import * as entrypoint from './src/index.ts' with { type: 'cf-worker' };",
+				"const api = defineContainer({ name: 'api', image: { dockerfile: './Dockerfile' } });",
+				"export default defineConfig({",
+				"  containers: [api],",
+				"  worker: {",
+				"    name: 'entry-worker',",
+				"    entrypoint,",
+				"    compatibilityDate: '2024-12-30',",
+				"    exports: { ContainerDO: workerExports.durableObject({ storage: 'sqlite', container: api }) },",
+				"  },",
+				"});",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{},
+			{ root },
+			viteEnv
+		)) as WorkersResolvedConfig;
+
+		expect(result.containers).toEqual([
+			expect.objectContaining({
+				name: "api",
+				image: { dockerfile: "./Dockerfile" },
+			}),
+		]);
+		expect(
+			result.environmentNameToWorkerMap.get("ssr")?.config.exports
+		).toMatchObject({
+			ContainerDO: { container: "api" },
+		});
+	});
+
 	test("generates types from the config file before applying the entry customizer", async ({
 		expect,
 	}) => {
