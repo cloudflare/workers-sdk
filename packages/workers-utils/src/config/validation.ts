@@ -12,7 +12,10 @@ import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { getContainerNameToClassNameMap } from "./containers";
 import { Diagnostics } from "./diagnostics";
-import { getDurableObjectExports } from "./durable-object-exports";
+import {
+	getDurableObjectExports,
+	isLiveDurableObjectExport,
+} from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
 import { partitionExports } from "./exports";
 import {
@@ -7826,8 +7829,7 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 		if (entry === undefined || entry.type !== "durable-object") {
 			return false;
 		}
-		const state = entry.state ?? "created";
-		return state === "created" || state === "expecting-transfer";
+		return isLiveDurableObjectExport(entry);
 	};
 	const uncoveredByExports = exportedDurableObjects.filter(
 		(binding) =>
