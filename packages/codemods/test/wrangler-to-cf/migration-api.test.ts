@@ -162,6 +162,43 @@ describe("migrateWranglerToCf", () => {
 		]);
 	});
 
+	it("reports the Bun lockfile planned by the declared version", async ({
+		expect,
+	}) => {
+		const binaryLockCwd = await createProject({
+			"package.json": JSON.stringify({
+				name: "binary-lock-worker",
+				packageManager: "bun@1.1.0",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "binary-lock-worker",
+			}),
+		});
+		const textLockCwd = await createProject({
+			"package.json": JSON.stringify({
+				name: "text-lock-worker",
+				packageManager: "bun@1.2.0",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "text-lock-worker",
+			}),
+		});
+
+		const [binaryLockResult, textLockResult] = await Promise.all([
+			migrateWranglerToCf(path.join(binaryLockCwd, "wrangler.json"), {
+				dryRun: true,
+			}),
+			migrateWranglerToCf(path.join(textLockCwd, "wrangler.json"), {
+				dryRun: true,
+			}),
+		]);
+
+		expect(binaryLockResult.changedFiles).toContain("bun.lockb");
+		expect(textLockResult.changedFiles).toContain("bun.lock");
+	});
+
 	it("skips dependency installation when requested", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": JSON.stringify({ name: "example-worker" }),
