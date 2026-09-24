@@ -70,10 +70,10 @@ export const wranglerToCfCodemod: Codemod = {
 		return {
 			...result,
 			changedFiles: result.changedFiles.map((filePath) =>
-				path.relative(
-					context.cwd,
-					path.join(path.dirname(configPath), filePath)
-				)
+				path
+					.relative(context.cwd, path.join(path.dirname(configPath), filePath))
+					.split(path.sep)
+					.join(path.posix.sep)
 			),
 		};
 	},
