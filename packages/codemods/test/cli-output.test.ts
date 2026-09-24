@@ -30,6 +30,18 @@ describe("getCodemodSummary", () => {
 			)
 		).toBe("Skipped: wrangler.json is excluded by --files.");
 	});
+
+	it("omits install instructions when dependencies are ready", ({ expect }) => {
+		expect(
+			getCodemodSummary(
+				{
+					changedFiles: ["cloudflare.config.ts", "package.json"],
+					requiresInstall: false,
+				},
+				false
+			)
+		).toBe("Updated 2 file(s).");
+	});
 });
 
 describe("formatFollowUps", () => {

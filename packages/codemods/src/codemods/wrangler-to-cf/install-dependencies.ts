@@ -36,6 +36,7 @@ interface CfDependencyInstallOptions {
 
 interface CfDependencyInstallResult {
 	changedFiles: string[];
+	requiresInstall: boolean;
 	status: "complete" | "skipped-ancestor-package";
 }
 
@@ -253,7 +254,7 @@ export async function installCfDependency(
 ): Promise<CfDependencyInstallResult> {
 	const packageJsonPath = await findPackageJson(projectDirectory);
 	if (!packageJsonPath) {
-		return { changedFiles: [], status: "complete" };
+		return { changedFiles: [], requiresInstall: true, status: "complete" };
 	}
 
 	const packageJson = await readPackageJson(packageJsonPath);
@@ -261,12 +262,16 @@ export async function installCfDependency(
 		packageJson.dependencies?.cf !== undefined ||
 		packageJson.devDependencies?.cf !== undefined
 	) {
-		return { changedFiles: [], status: "complete" };
+		return { changedFiles: [], requiresInstall: false, status: "complete" };
 	}
 
 	const packageDirectory = path.dirname(packageJsonPath);
 	if (packageDirectory !== projectDirectory) {
-		return { changedFiles: [], status: "skipped-ancestor-package" };
+		return {
+			changedFiles: [],
+			requiresInstall: true,
+			status: "skipped-ancestor-package",
+		};
 	}
 
 	const {
@@ -281,7 +286,11 @@ export async function installCfDependency(
 			);
 	const packageFilePaths = [packageJsonPath, ...lockFilePaths];
 	if (options.dryRun) {
-		return { changedFiles: packageFilePaths, status: "complete" };
+		return {
+			changedFiles: packageFilePaths,
+			requiresInstall: true,
+			status: "complete",
+		};
 	}
 
 	const before = await readFiles(packageFilePaths);
@@ -297,6 +306,7 @@ export async function installCfDependency(
 
 	return {
 		changedFiles: getChangedFiles(before, await readFiles(packageFilePaths)),
+		requiresInstall: false,
 		status: "complete",
 	};
 }

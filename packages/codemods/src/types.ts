@@ -25,6 +25,7 @@ export interface CodemodResult {
 	changedFiles: string[];
 	followUps?: CodemodFollowUp[];
 	message?: string;
+	requiresInstall?: boolean;
 	status?: "complete" | "needs-intervention" | "skipped";
 }
 
