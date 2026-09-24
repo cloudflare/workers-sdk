@@ -97,7 +97,19 @@ describe("Cron Triggers", () => {
 			refreshHeaders.push(
 				route.request().headers()["x-miniflare-explorer-refresh"]
 			);
-			if (requestCount > 1) {
+			if (requestCount === 2) {
+				await route.fulfill({
+					body: JSON.stringify({
+						errors: [],
+						messages: [],
+						result: [],
+						success: true,
+					}),
+					contentType: "application/json",
+				});
+				return;
+			}
+			if (requestCount > 2) {
 				await delayedRefresh;
 				await route.fulfill({
 					body: JSON.stringify({
@@ -147,6 +159,8 @@ describe("Cron Triggers", () => {
 			"requested-worker"
 		);
 
+		await expect.poll(() => requestCount).toBe(2);
+		await page.getByRole("button", { name: "Refresh Cron Triggers" }).click();
 		releaseRefresh?.();
 		await expect
 			.poll(() => new URL(page.url()).searchParams.get("worker"))
@@ -169,7 +183,7 @@ describe("Cron Triggers", () => {
 			.toBe("peer-cron");
 	});
 
-	test("canonicalizes missing and invalid workers before dispatch", async ({
+	test("canonicalizes Worker selection and retains it across metadata refreshes", async ({
 		expect,
 	}) => {
 		const workers: MockWorkerMetadata[] = [
@@ -252,6 +266,52 @@ describe("Cron Triggers", () => {
 		);
 		await page.getByRole("button", { name: "Trigger", exact: true }).click();
 		await expect.poll(() => requestedWorkers).toEqual(["worker-2"]);
+
+		workers.push({
+			name: "worker-3",
+			persistenceScope: "cron-project-3",
+			triggers: { crons: ["third-worker-cron"] },
+		});
+		await page.getByRole("button", { name: "Refresh Cron Triggers" }).click();
+		const workerSelector = page
+			.getByRole("combobox")
+			.filter({ hasText: "worker-2" });
+		await workerSelector.click();
+		await page.getByRole("option", { name: "worker-3" }).click();
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBe("worker-3");
+	});
+
+	test("clears configured results when persistence scope changes", async ({
+		expect,
+	}) => {
+		const worker: MockWorkerMetadata = {
+			isSelf: true,
+			name: "cron-worker",
+			persistenceScope: "project-a",
+			triggers: { crons: ["0 17 * * sun"] },
+		};
+		const workers = [worker];
+		await mockWorkerMetadata(workers);
+		await page.route(SCHEDULED_ROUTE, async (route) => {
+			await route.fulfill({
+				body: JSON.stringify({
+					errors: [],
+					messages: [],
+					result: { noRetry: false, outcome: "project-a-result" },
+					success: true,
+				}),
+				contentType: "application/json",
+			});
+		});
+		await openCronTriggers();
+		await page.getByRole("button", { name: "Trigger", exact: true }).click();
+		await page.getByText("project-a-result").waitFor();
+
+		worker.persistenceScope = "project-b";
+		await page.getByRole("button", { name: "Refresh Cron Triggers" }).click();
+		await expect.poll(() => page.getByText("project-a-result").count()).toBe(0);
 	});
 
 	test("uses full-width routed views and removes cron duplication", async ({

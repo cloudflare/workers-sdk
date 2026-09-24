@@ -5,7 +5,7 @@ import {
 	redirect,
 	useRouter,
 } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import {
 	CronTriggersProvider,
 	useCronTriggers,
@@ -14,6 +14,7 @@ import {
 	filterVisibleWorkers,
 	getSelectedWorker,
 } from "../components/WorkerSelector";
+import type { LocalExplorerWorker } from "../api";
 import type { JSX } from "react";
 
 export const Route = createFileRoute("/cron-triggers")({
@@ -40,6 +41,8 @@ const rootRoute = getRouteApi("__root__");
 function CronTriggersLayout(): JSX.Element {
 	const loaderData = rootRoute.useLoaderData();
 	const navigate = Route.useNavigate();
+	const rootMatchId = rootRoute.useMatch({ select: (match) => match.id });
+	const router = useRouter();
 	const search = Route.useSearch();
 	const visibleWorkerCount = filterVisibleWorkers(loaderData.workers).length;
 	const selectedWorker = loaderData.bootstrapAuthoritative
@@ -53,6 +56,35 @@ function CronTriggersLayout(): JSX.Element {
 	const activeWorkerName = loaderData.bootstrapAuthoritative
 		? selectedWorker?.name
 		: search.worker;
+	const handleWorkerMetadata = useCallback(
+		(metadata: LocalExplorerWorker[]) => {
+			const visibleMetadata = filterVisibleWorkers(metadata);
+			if (visibleMetadata.length === 0) {
+				return;
+			}
+			const knownNames = new Set(
+				loaderData.workers.map((worker) => worker.name)
+			);
+			const discoveredWorker = visibleMetadata.some(
+				(worker) => !knownNames.has(worker.name)
+			);
+			if (loaderData.bootstrapAuthoritative && !discoveredWorker) {
+				return;
+			}
+			const refreshedNames = new Set(metadata.map((worker) => worker.name));
+			const workers = [
+				...metadata,
+				...loaderData.workers.filter(
+					(worker) => !refreshedNames.has(worker.name)
+				),
+			];
+			router.updateMatch(rootMatchId, (match) => ({
+				...match,
+				loaderData: { bootstrapAuthoritative: true, workers },
+			}));
+		},
+		[loaderData.bootstrapAuthoritative, loaderData.workers, rootMatchId, router]
+	);
 
 	useEffect(() => {
 		if (!loaderData.bootstrapAuthoritative || !selectedWorker) {
@@ -79,6 +111,7 @@ function CronTriggersLayout(): JSX.Element {
 		<CronTriggersProvider
 			activeWorkerName={activeWorkerName}
 			bootstrapAuthoritative={loaderData.bootstrapAuthoritative}
+			onWorkerMetadata={handleWorkerMetadata}
 			seedWorkers={loaderData.workers}
 		>
 			<CronTriggersContent
@@ -95,9 +128,7 @@ function CronTriggersContent({
 }): JSX.Element {
 	const cron = useCronTriggers();
 	const navigate = Route.useNavigate();
-	const router = useRouter();
 	const search = Route.useSearch();
-	const rootRecoveryInFlight = useRef(false);
 
 	useEffect(() => {
 		if (bootstrapAuthoritative || cron.visibleWorkerNames.length === 0) {
@@ -123,20 +154,6 @@ function CronTriggersContent({
 		navigate,
 		search.worker,
 	]);
-
-	useEffect(() => {
-		if (
-			bootstrapAuthoritative ||
-			cron.visibleWorkerNames.length === 0 ||
-			rootRecoveryInFlight.current
-		) {
-			return;
-		}
-		rootRecoveryInFlight.current = true;
-		void router.invalidate().finally(() => {
-			rootRecoveryInFlight.current = false;
-		});
-	}, [bootstrapAuthoritative, cron.visibleWorkerNames, router]);
 
 	return <Outlet />;
 }

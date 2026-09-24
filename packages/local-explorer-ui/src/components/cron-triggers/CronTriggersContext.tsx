@@ -158,7 +158,7 @@ export function reconcilePersistenceKeysForRefresh(
 	return nextKeys;
 }
 
-export function shouldReplaceCustomRowsForPersistenceScope(
+export function didPersistenceScopeChange(
 	previousKey: string | undefined,
 	nextKey: string | undefined
 ): boolean {
@@ -218,10 +218,12 @@ export function CronTriggersProvider({
 	activeWorkerName,
 	bootstrapAuthoritative,
 	children,
+	onWorkerMetadata,
 	seedWorkers,
 }: PropsWithChildren<{
 	activeWorkerName?: string;
 	bootstrapAuthoritative: boolean;
+	onWorkerMetadata: (metadata: LocalExplorerWorker[]) => void;
 	seedWorkers: LocalExplorerWorker[];
 }>) {
 	const storage = useRef<Storage | undefined>(localStorageIfAvailable());
@@ -280,7 +282,11 @@ export function CronTriggersProvider({
 		new Set()
 	);
 	const generation = useRef(new RefreshGenerationTracker());
+	const onWorkerMetadataRef = useRef(onWorkerMetadata);
 	const pendingRows = useRef(new Set<string>());
+	useEffect(() => {
+		onWorkerMetadataRef.current = onWorkerMetadata;
+	}, [onWorkerMetadata]);
 
 	useEffect(() => {
 		if (!storage.current) {
@@ -374,6 +380,7 @@ export function CronTriggersProvider({
 			if (!generation.current.isLatest(requestGeneration)) {
 				return;
 			}
+			onWorkerMetadataRef.current(metadata);
 			const visibleWorkers = visibleCronWorkers(metadata);
 			setFallbackWorkerName(selectCronFallbackWorker(metadata));
 			setVisibleWorkerNames(visibleWorkers.map((worker) => worker.name));
@@ -400,7 +407,7 @@ export function CronTriggersProvider({
 				const persistenceKey = returnedPersistenceKeys[worker.name];
 				const timePresetPersistenceKey =
 					returnedTimePresetPersistenceKeys[worker.name];
-				const scopeChanged = shouldReplaceCustomRowsForPersistenceScope(
+				const scopeChanged = didPersistenceScopeChange(
 					previousScopedPersistenceKeys[worker.name],
 					persistenceKey
 				);
@@ -459,7 +466,7 @@ export function CronTriggersProvider({
 					next[worker.name] = {
 						authoritative: true,
 						configuredRows: reconcileConfiguredRows(
-							entry.configuredRows,
+							scopeChanged ? [] : entry.configuredRows,
 							crons
 						),
 						crons,

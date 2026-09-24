@@ -1,10 +1,10 @@
 import { describe, it } from "vitest";
 import {
 	createCronStateFromSeed,
+	didPersistenceScopeChange,
 	reconcilePersistenceKeysForRefresh,
 	RefreshGenerationTracker,
 	selectCronFallbackWorker,
-	shouldReplaceCustomRowsForPersistenceScope,
 } from "../../components/cron-triggers/CronTriggersContext";
 
 describe("Cron Triggers provider state", () => {
@@ -75,24 +75,12 @@ describe("Cron Triggers provider state", () => {
 		).toEqual({});
 	});
 
-	it("only replaces drafts when one explicit scope changes to another", ({
-		expect,
-	}) => {
-		expect(
-			shouldReplaceCustomRowsForPersistenceScope("scope-a", "scope-b")
-		).toBe(true);
-		expect(
-			shouldReplaceCustomRowsForPersistenceScope("scope-a", "scope-a")
-		).toBe(false);
-		expect(
-			shouldReplaceCustomRowsForPersistenceScope("scope-a", undefined)
-		).toBe(false);
-		expect(
-			shouldReplaceCustomRowsForPersistenceScope(undefined, "scope-a")
-		).toBe(false);
-		expect(
-			shouldReplaceCustomRowsForPersistenceScope(undefined, undefined)
-		).toBe(false);
+	it("detects only explicit persistence scope changes", ({ expect }) => {
+		expect(didPersistenceScopeChange("scope-a", "scope-b")).toBe(true);
+		expect(didPersistenceScopeChange("scope-a", "scope-a")).toBe(false);
+		expect(didPersistenceScopeChange("scope-a", undefined)).toBe(false);
+		expect(didPersistenceScopeChange(undefined, "scope-a")).toBe(false);
+		expect(didPersistenceScopeChange(undefined, undefined)).toBe(false);
 	});
 
 	it("recovers a self-first fallback without exposing internal workers", ({
