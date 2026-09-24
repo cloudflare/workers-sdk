@@ -338,6 +338,28 @@ describe("migrateWranglerToCf", () => {
 		).resolves.toContain("Migration incomplete.");
 	});
 
+	it("does not require an existing cf dependency to be installed", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { cf: "1.0.0" },
+				name: "example-worker",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			installDependencies: false,
+		});
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		expect(result.requiresInstall).toBe(false);
+	});
+
 	it("does not inspect ancestor manifests when installation is disabled", async ({
 		expect,
 	}) => {

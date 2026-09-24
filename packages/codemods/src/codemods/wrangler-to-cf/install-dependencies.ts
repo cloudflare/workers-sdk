@@ -67,6 +67,13 @@ async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
 }
 
+function hasCfDependency(packageJson: PackageJson): boolean {
+	return (
+		packageJson.dependencies?.cf !== undefined ||
+		packageJson.devDependencies?.cf !== undefined
+	);
+}
+
 /** Finds the nearest package manifest at or above the migration directory. */
 export async function findPackageJson(
 	projectDirectory: string
@@ -291,10 +298,7 @@ export async function planCfDependencyInstallation(
 	}
 
 	const packageJson = await readPackageJson(packageJsonPath);
-	if (
-		packageJson.dependencies?.cf !== undefined ||
-		packageJson.devDependencies?.cf !== undefined
-	) {
+	if (hasCfDependency(packageJson)) {
 		return { action: "already-installed" };
 	}
 
