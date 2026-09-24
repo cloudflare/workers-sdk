@@ -1,0 +1,10 @@
+{
+	"name": "workflow-exports-test",
+	"main": "src/index.ts",
+	// `index.ts` doesn't actually export `MyWorkflow`, but `getPlatformProxy()`
+	// discards all user code anyway, so it must ignore the Workflow export.
+	"compatibility_date": "2026-08-28",
+	"exports": {
+		"MyWorkflow": { "type": "workflow", "name": "my-workflow" },
+	},
+}
