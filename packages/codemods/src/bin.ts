@@ -2,6 +2,7 @@
 
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { formatFollowUps } from "./cli-output";
 import { availableCodemods, runCodemod } from "./runner";
 
 /** Prints command usage and the available codemods. */
@@ -77,6 +78,13 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 		console.log(`${name}: ${result.changedFiles.length} file(s)`);
 		for (const changedFile of result.changedFiles) {
 			console.log(`  ${changedFile}`);
+		}
+	}
+	const followUpLines = formatFollowUps(result.followUps ?? []);
+	if (followUpLines.length > 0) {
+		console.log("");
+		for (const line of followUpLines) {
+			console.log(line);
 		}
 	}
 	console.log(

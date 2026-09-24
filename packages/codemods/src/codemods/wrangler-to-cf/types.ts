@@ -1,4 +1,4 @@
-import type { CodemodResult } from "../../types";
+import type { CodemodFollowUp, CodemodResult } from "../../types";
 
 export type MigrationBundler = "vite" | "wrangler";
 
@@ -9,12 +9,8 @@ export interface WranglerToCfMigrationOptions {
 	installDependencies?: boolean;
 }
 
-export interface MigrationFollowUp {
-	blocking: boolean;
+export interface MigrationFollowUp extends CodemodFollowUp {
 	code: string;
-	docsUrl?: string;
-	message: string;
-	sourcePath?: string;
 }
 
 export interface WranglerToCfMigrationResult extends CodemodResult {

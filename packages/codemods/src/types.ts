@@ -8,6 +8,13 @@ export interface CodemodContext {
 	installDependencies?: boolean;
 }
 
+export interface CodemodFollowUp {
+	blocking: boolean;
+	docsUrl?: string;
+	message: string;
+	sourcePath?: string;
+}
+
 /** Context for a single codemod within an ordered run. */
 export interface RunContext extends CodemodContext {
 	/** In-memory writes shared by an ordered codemod run. */
@@ -16,6 +23,7 @@ export interface RunContext extends CodemodContext {
 
 export interface CodemodResult {
 	changedFiles: string[];
+	followUps?: CodemodFollowUp[];
 }
 
 export interface Codemod {
