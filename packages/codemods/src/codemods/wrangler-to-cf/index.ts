@@ -1,7 +1,8 @@
-import { access, writeFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import path from "node:path";
 import { ensureCleanGitWorktree } from "../../git";
 import { convertWranglerConfig } from "./config-converter";
+import { writeMigrationOutputs } from "./file-writer";
 import { findSecretFiles, readWranglerConfig } from "./config-reader";
 import {
 	renderCloudflareConfig,
@@ -92,11 +93,7 @@ export async function migrateWranglerToCf(
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
 	if (!dryRun) {
-		for (const [filePath, contents] of outputs) {
-			await writeFile(filePath, contents, {
-				flag: "wx",
-			});
-		}
+		await writeMigrationOutputs(outputs);
 	}
 
 	return {
