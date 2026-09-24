@@ -80,10 +80,8 @@ export async function migrateWranglerToCf(
 		bundler,
 		secretFiles
 	);
-	const dependencyPlan = installDependencies
-		? await planCfDependencyInstallation(projectDirectory)
-		: undefined;
-	if (dependencyPlan?.action === "missing-manifest") {
+	const dependencyPlan = await planCfDependencyInstallation(projectDirectory);
+	if (dependencyPlan.action === "missing-manifest") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-missing-manifest",
@@ -91,11 +89,19 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (dependencyPlan?.action === "skipped-ancestor-package") {
+	if (dependencyPlan.action === "skipped-ancestor-package") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-skipped",
 				"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
+			)
+		);
+	}
+	if (!installDependencies && dependencyPlan.action === "install") {
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"cf-install-disabled",
+				"Automatic dependency installation was disabled. Install `cf@latest` as a dev dependency before using the generated configuration."
 			)
 		);
 	}
@@ -120,7 +126,7 @@ export async function migrateWranglerToCf(
 	}
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
-		if (dependencyPlan?.action === "install") {
+		if (installDependencies && dependencyPlan.action === "install") {
 			let dependencyFollowUp: MigrationFollowUp | undefined;
 			try {
 				await installCfDependency(dependencyPlan);

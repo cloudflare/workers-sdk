@@ -47,4 +47,4 @@ const result = await migrateWranglerToCf("./wrangler.jsonc", {
 });
 ```
 
-The options object and all of its fields are optional. The defaults are the Vite bundler, writes enabled, and dirty-worktree protection enabled. The migration always creates `cloudflare.config.ts`; selecting the Wrangler bundler also creates `wrangler.config.ts` when Wrangler-specific tooling config exists. Existing target files are never overwritten. Inspect `result.followUps` when `result.status` is `needs-intervention`.
+The options object and all of its fields are optional. The defaults are the Vite bundler, writes enabled, dirty-worktree protection enabled, and automatic installation of `cf` enabled. Set `installDependencies` to `false` to prevent dependency changes; missing `cf` is then returned as a blocking follow-up. The migration always creates `cloudflare.config.ts`; selecting the Wrangler bundler also creates `wrangler.config.ts` when Wrangler-specific tooling config exists. Existing target files are never overwritten. Inspect `result.followUps` when `result.status` is `needs-intervention`.

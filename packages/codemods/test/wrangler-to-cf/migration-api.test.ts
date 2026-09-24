@@ -101,11 +101,18 @@ describe("migrateWranglerToCf", () => {
 			}),
 		});
 
-		await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
 			installDependencies: false,
 		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		expect(result).toMatchObject({
+			followUps: [{ blocking: true, code: "cf-install-disabled" }],
+			status: "needs-intervention",
+		});
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).resolves.toContain("Migration incomplete.");
 	});
 
 	it("reports skipped ancestor installation in writes and dry runs", async ({
