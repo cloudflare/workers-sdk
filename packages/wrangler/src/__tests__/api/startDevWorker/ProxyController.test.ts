@@ -4,6 +4,7 @@ import { ProxyController } from "../../../api/startDevWorker/ProxyController";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { SerializedError } from "../../../api/startDevWorker/events";
+import type { StartDevWorkerOptions } from "../../../api/startDevWorker/types";
 
 describe("ProxyController", () => {
 	mockConsoleMethods();
@@ -61,5 +62,52 @@ describe("ProxyController", () => {
 		expect(event.text).toBe("Uncaught Error: boom");
 		expect(event.stack).toContain("Error: boom");
 		expect(event.exceptionDetails?.exceptionId).toBe(1);
+	});
+
+	test("ProxyWorker answers with a 503 once a control request arrives without its payload", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		// Regression test for https://github.com/cloudflare/workers-sdk/issues/15717:
+		// Bun's `fetch()` ignores the undici dispatcher that attaches the
+		// `cf.hostMetadata` payload, so control requests arrive authorised but
+		// empty, no `play` ever lands, and queued requests used to hang forever.
+		const bus = new FakeBus();
+		const controller = new ProxyController(bus);
+		onTestFinished(() => controller.teardown());
+
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: {
+				dev: { inspector: false, server: { hostname: "127.0.0.1", port: 0 } },
+			} as StartDevWorkerOptions,
+		});
+		const { proxyWorker } = await controller.ready.promise;
+
+		// The same control request delivered with its payload is acknowledged,
+		// so the 400 below comes from the missing payload alone.
+		await expect(
+			controller.sendMessageToProxyWorker({ type: "pause" })
+		).resolves.toBe(true);
+
+		// Whether this request reaches the ProxyWorker before or after the empty
+		// control request, it must be answered rather than left in the queue.
+		const sentBefore = proxyWorker.dispatchFetch("http://example.com/before");
+
+		const control = await proxyWorker.dispatchFetch(
+			"http://dummy/cdn-cgi/ProxyWorker/play",
+			{ headers: { Authorization: controller.secret } }
+		);
+		expect(control.status).toBe(400);
+
+		for (const response of [
+			await sentBefore,
+			await proxyWorker.dispatchFetch("http://example.com/after"),
+		]) {
+			expect(response.status).toBe(503);
+			expect(await response.text()).toContain(
+				"https://github.com/oven-sh/bun/issues/39247"
+			);
+		}
 	});
 });

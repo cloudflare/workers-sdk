@@ -45,6 +45,14 @@ export class ProxyWorker implements DurableObject {
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
 	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
 
+	/**
+	 * Set when a ProxyController request arrives without its `cf.hostMetadata`
+	 * payload. Bun's `fetch()` ignores the undici `dispatcher` that Miniflare
+	 * uses to attach that payload, so under Bun no `play` message can ever
+	 * reach this ProxyWorker, and a queued request would wait forever.
+	 */
+	controlPayloadMissing = false;
+
 	fetch(request: Request) {
 		if (isRequestForLiveReloadWebsocket(request)) {
 			// requests for live-reload websocket
@@ -56,6 +64,10 @@ export class ProxyWorker implements DurableObject {
 			// requests from ProxyController
 
 			return this.processProxyControllerRequest(request);
+		}
+
+		if (this.controlPayloadMissing) {
+			return controlPayloadMissingResponse();
 		}
 
 		// regular requests to be proxied
@@ -85,10 +97,12 @@ export class ProxyWorker implements DurableObject {
 		const event = request.cf?.hostMetadata;
 		switch (event?.type) {
 			case "pause":
+				this.controlPayloadMissing = false;
 				this.proxyData = undefined;
 				break;
 
 			case "play":
+				this.controlPayloadMissing = false;
 				this.proxyData = event.proxyData;
 				this.processQueue();
 				this.state
@@ -99,7 +113,10 @@ export class ProxyWorker implements DurableObject {
 
 			default:
 				// Bun currently drops `cf.hostMetadata`, so acknowledge only control
-				// requests whose payload actually reached the ProxyWorker.
+				// requests whose payload actually reached the ProxyWorker, and fail
+				// requests instead of queueing them for a `play` that cannot arrive.
+				this.controlPayloadMissing = true;
+				this.failQueuedRequests();
 				return new Response(null, { status: 400 });
 		}
 
@@ -114,6 +131,18 @@ export class ProxyWorker implements DurableObject {
 	*getOrderedQueue() {
 		yield* this.requestRetryQueue;
 		yield* this.requestQueue;
+	}
+
+	/**
+	 * Answers every queued request with the same 503 that new requests get once
+	 * `controlPayloadMissing` is set.
+	 */
+	failQueuedRequests() {
+		for (const [request, deferredResponse] of this.getOrderedQueue()) {
+			this.requestRetryQueue.delete(request);
+			this.requestQueue.delete(request);
+			deferredResponse.resolve(controlPayloadMissingResponse());
+		}
 	}
 
 	processQueue() {
@@ -328,6 +357,19 @@ export class ProxyWorker implements DurableObject {
 			attemptUserWorkerFetch();
 		}
 	}
+}
+
+/**
+ * Builds the response for requests that the ProxyWorker cannot forward because
+ * its control requests arrive without their payload.
+ *
+ * @returns A 503 response naming the cause and the ways around it.
+ */
+function controlPayloadMissingResponse(): Response {
+	return new Response(
+		"The Wrangler ProxyWorker received a control request without its payload, so it cannot forward requests to your Worker. This happens when the JavaScript runtime's `fetch()` ignores undici's `dispatcher` option, which Bun does today (https://github.com/oven-sh/bun/issues/39247). Run under Node.js, or, with `createTestHarness()`, use `server.getWorker().fetch()`, which does not go through this proxy.",
+		{ status: 503 }
+	);
 }
 
 function isRequestFromProxyController(req: Request, env: Env): boolean {
