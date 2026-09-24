@@ -1,0 +1,207 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Wrangler Worker configuration conversion > converts core settings, triggers, bindings, and exports 1`] = `
+{
+  "followUps": [
+    {
+      "blocking": true,
+      "code": "durable-object-review",
+      "docsUrl": "https://developers.cloudflare.com/workers/runtime-apis/context/#exports",
+      "message": "Durable Object exports require manual review after migration.",
+      "sourcePath": "exports.Counter",
+    },
+  ],
+  "output": "import { bindings, defineConfig, exports, triggers } from "cf/config";
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: exports.Counter: Durable Object exports require manual review after migration.
+ * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+export default defineConfig({
+	accountId: "account-id",
+	worker: {
+		name: "example-worker",
+		compatibilityDate: "2026-09-23",
+		compatibilityFlags: [
+			"nodejs_compat",
+		],
+		entrypoint: "src/index.ts",
+		observability: {
+			enabled: true,
+			headSamplingRate: 0.5,
+		},
+		assets: {
+			htmlHandling: "auto-trailing-slash",
+			notFoundHandling: "404-page",
+		},
+		domains: [
+			"api.example.com",
+		],
+		triggers: [
+			triggers.fetch({
+				pattern: "example.com/*",
+			}),
+			triggers.scheduled({
+				schedule: "0 * * * *",
+			}),
+			triggers.queue({
+				maxBatchSize: 10,
+				name: "jobs",
+			}),
+			triggers.connect({
+				idleTimeoutMs: 5000,
+				maxPendingBytes: 65536,
+				port: 53,
+				protocol: "udp",
+			}),
+			triggers.email({
+				addresses: [],
+			}),
+		],
+		env: {
+			MODE: bindings.text("production"),
+			CACHE: bindings.kv({
+				id: "namespace-id",
+			}),
+		},
+		exports: {
+			Counter: exports.durableObject({
+				storage: "sqlite",
+			}),
+			Entrypoint: exports.worker({
+				cache: {
+					enabled: true,
+				},
+			}),
+		},
+		/**
+		 * TODO(@cloudflare): cf migrate: Durable Object exports require manual review after migration.
+		 * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
+		 */
+	},
+});
+",
+}
+`;
+
+exports[`Wrangler Worker configuration conversion > guards output that requires manual migration 1`] = `
+{
+  "followUps": [
+    {
+      "blocking": true,
+      "code": "missing-name",
+      "docsUrl": undefined,
+      "message": "Wrangler config has no Worker name. Replace the generated placeholder.",
+      "sourcePath": "name",
+    },
+    {
+      "blocking": true,
+      "code": "missing-compatibility-date",
+      "docsUrl": undefined,
+      "message": "Wrangler config has no compatibility date. Replace the generated placeholder.",
+      "sourcePath": "compatibility_date",
+    },
+    {
+      "blocking": true,
+      "code": "zone-id-route",
+      "docsUrl": undefined,
+      "message": "A route uses a zone ID. Verify the generated fetch trigger target.",
+      "sourcePath": "config.routes.0",
+    },
+    {
+      "blocking": true,
+      "code": "durable-object-migrations",
+      "docsUrl": "https://developers.cloudflare.com/workers/runtime-apis/context/#exports",
+      "message": "Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example \`exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }\`.",
+      "sourcePath": "migrations",
+    },
+    {
+      "blocking": true,
+      "code": "container-review",
+      "docsUrl": undefined,
+      "message": "Containers require manual review and were not migrated.",
+      "sourcePath": "containers",
+    },
+    {
+      "blocking": true,
+      "code": "unsupported-field",
+      "docsUrl": "https://developers.cloudflare.com/workers/wrangler/configuration/",
+      "message": "The Workers Sites configuration is not supported by the new config and was not migrated.",
+      "sourcePath": "site",
+    },
+  ],
+  "output": "import { defineConfig, triggers } from "cf/config";
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: name: Wrangler config has no Worker name. Replace the generated placeholder.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: compatibility_date: Wrangler config has no compatibility date. Replace the generated placeholder.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: config.routes.0: A route uses a zone ID. Verify the generated fetch trigger target.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: migrations: Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example \`exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }\`.
+ * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
+ */
+/**
+ * TODO(@cloudflare): cf migrate: containers: Containers require manual review and were not migrated.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: site: The Workers Sites configuration is not supported by the new config and was not migrated.
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+export default defineConfig({
+	worker: {
+		/**
+		 * TODO(@cloudflare): cf migrate: Wrangler config has no Worker name. Replace the generated placeholder.
+		 */
+		name: "TODO",
+		/**
+		 * TODO(@cloudflare): cf migrate: Wrangler config has no compatibility date. Replace the generated placeholder.
+		 */
+		compatibilityDate: "YYYY-MM-DD",
+		triggers: [
+			triggers.fetch({
+				pattern: "example.com/*",
+				zone: "zone-id",
+			}),
+		],
+		unsafe: {
+			metadata: {
+				build: "test",
+			},
+			capnp: {
+				basePath: "./schemas",
+			},
+		},
+		/**
+		 * TODO(@cloudflare): cf migrate: A route uses a zone ID. Verify the generated fetch trigger target.
+		 */
+		/**
+		 * TODO(@cloudflare): cf migrate: Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example \`exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }\`.
+		 * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
+		 */
+		/**
+		 * TODO(@cloudflare): cf migrate: Containers require manual review and were not migrated.
+		 */
+		/**
+		 * TODO(@cloudflare): cf migrate: The Workers Sites configuration is not supported by the new config and was not migrated.
+		 * @see https://developers.cloudflare.com/workers/wrangler/configuration/
+		 */
+	},
+});
+",
+}
+`;
