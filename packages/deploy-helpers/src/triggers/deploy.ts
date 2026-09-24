@@ -13,6 +13,7 @@ import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-c
 import {
 	getWorkflowsOwnedByScript,
 	isWorkflowDefinedInThisScript,
+	validateOwnedWorkflowDeclarations,
 } from "../deploy/helpers/owned-workflows";
 import { fetchListResult, fetchResult, logger } from "../shared/context";
 import { applyEmailRoutingAddresses } from "./email-routing";
@@ -41,6 +42,7 @@ export async function triggersDeploy(
 
 	if (props.validated !== true) {
 		validateEventTriggerTargets(config, scriptName);
+		validateOwnedWorkflowDeclarations(config, scriptName);
 	}
 
 	if (props.dryRun) {

@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { isDeepStrictEqual } from "node:util";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
 import {
@@ -61,7 +60,6 @@ import type {
 	Rule,
 	StreamingTailConsumer,
 	TailConsumer,
-	WorkflowExport,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
 
@@ -2220,12 +2218,7 @@ function normalizeAndValidateEnvironment(
 		environment.exports
 	);
 
-	validateWorkflowExportConflicts(
-		diagnostics,
-		environment.workflows,
-		environment.exports,
-		environment.name
-	);
+	validateWorkflowExportConflicts(diagnostics, environment.exports);
 
 	// `exports` is inherited by named environments but `containers` is not, so the
 	// idiomatic multi-environment layout declares `exports` once at the top level
@@ -7834,78 +7827,29 @@ function errorIfMigrationsAndExportsBothSet(
 }
 
 /**
- * Deploy provisions each Workflow name once, merging a `workflows` binding
- * owned by this Worker with the `workflow` export of the same name, so the two
- * declarations must agree. Two exports cannot share a Workflow name.
+ * Two exports cannot share a Workflow name. Whether a `workflows` binding
+ * agrees with an export of the same name is checked at deploy time, since it
+ * depends on the name the Worker is deployed under.
  */
 function validateWorkflowExportConflicts(
 	diagnostics: Diagnostics,
-	workflows: Config["workflows"],
-	exports: Config["exports"],
-	scriptName: string | undefined
+	exports: Config["exports"]
 ) {
-	const exportsByWorkflowName = new Map<
-		string,
-		{ className: string; workflowExport: WorkflowExport }
-	>();
+	const classNamesByWorkflowName = new Map<string, string>();
 	for (const [className, workflowExport] of Object.entries(
 		partitionExports(exports).workflow
 	)) {
 		if (typeof workflowExport.name !== "string") {
 			continue;
 		}
-		const existing = exportsByWorkflowName.get(workflowExport.name);
+		const existing = classNamesByWorkflowName.get(workflowExport.name);
 		if (existing !== undefined) {
 			diagnostics.errors.push(
-				`"exports.${existing.className}" and "exports.${className}" both declare the Workflow "${workflowExport.name}". Workflow names must be unique.`
+				`"exports.${existing}" and "exports.${className}" both declare the Workflow "${workflowExport.name}". Workflow names must be unique.`
 			);
 			continue;
 		}
-		exportsByWorkflowName.set(workflowExport.name, {
-			className,
-			workflowExport,
-		});
-	}
-
-	if (!Array.isArray(workflows)) {
-		return;
-	}
-	for (const [index, workflow] of workflows.entries()) {
-		if (
-			workflow.script_name !== undefined &&
-			workflow.script_name !== scriptName
-		) {
-			continue;
-		}
-		const match = exportsByWorkflowName.get(workflow.name);
-		if (match === undefined) {
-			continue;
-		}
-		const { className, workflowExport } = match;
-		if (workflow.class_name !== className) {
-			diagnostics.errors.push(
-				`"workflows[${index}]" and "exports.${className}" both declare the Workflow "${workflow.name}", but with different classes ("${workflow.class_name}" and "${className}").`
-			);
-		}
-		for (const key of [
-			"limits",
-			"concurrency",
-			"schedules",
-			"default_retention",
-		] as const) {
-			const bindingValue = workflow[key];
-			const exportValue = workflowExport[key];
-			// `schedules` accepts a string or an array; compare both as arrays.
-			if (
-				bindingValue !== undefined &&
-				exportValue !== undefined &&
-				!isDeepStrictEqual([bindingValue].flat(), [exportValue].flat())
-			) {
-				diagnostics.errors.push(
-					`"workflows[${index}].${key}" and "exports.${className}.${key}" both configure the Workflow "${workflow.name}", but with different values. Set "${key}" in only one of them.`
-				);
-			}
-		}
+		classNamesByWorkflowName.set(workflowExport.name, className);
 	}
 }
 

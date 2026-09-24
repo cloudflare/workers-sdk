@@ -1290,6 +1290,33 @@ describe("deploy", () => {
 				]);
 			});
 
+			it("should check a binding against an export using the name passed to --name", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					name: "original-name",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "OldWorkflow",
+							script_name: "deployed-name",
+						},
+					],
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				await expect(
+					runWrangler("deploy --name deployed-name")
+				).rejects.toThrow(
+					'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow", but with different classes ("OldWorkflow" and "MyWorkflow").'
+				);
+			});
+
 			it("should allow event triggers to target workflow exports", async ({
 				expect,
 			}) => {

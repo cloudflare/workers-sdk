@@ -21,6 +21,7 @@ import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import { getDeployConfirmFunction } from "./deploy-confirm";
 import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
+import { validateOwnedWorkflowDeclarations } from "./owned-workflows";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
@@ -102,6 +103,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.command === "deploy") {
 		validateEventTriggerTargets(config, name);
+		validateOwnedWorkflowDeclarations(config, name);
 		validateRoutes(props.routes, props.assetsOptions);
 		assert(
 			!config.site || config.site.bucket,
