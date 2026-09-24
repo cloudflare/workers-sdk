@@ -29,6 +29,16 @@ export function getDurableObjectContainerApps(
 		: [];
 }
 
+export function getDefaultDurableObjectContainerAppName(
+	workerName: string,
+	className: string,
+	envName?: string
+): string {
+	return `${workerName}-${className}${envName === undefined ? "" : `-${envName}`}`
+		.toLowerCase()
+		.replace(/ /g, "-");
+}
+
 /**
  * Resolve validated Durable Object-managed Containers to their owning classes.
  * Keep the original configuration unchanged so export-link validation can still

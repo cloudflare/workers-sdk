@@ -3,6 +3,7 @@ import {
 	DEFAULT_COMPAT_DATE,
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
+	getDefaultDurableObjectContainerAppName,
 	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -33,9 +34,74 @@ import type {
 } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions } from "@cloudflare/workers-utils";
 import type { EphemeralDirectory } from "@cloudflare/workers-utils";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config, ContainerApp } from "@cloudflare/workers-utils";
 
 type SharedArgs = HandlerArgs<typeof sharedDeployVersionsArgs>;
+
+function applyWorkerNameOverrideToContainerDefaults(
+	containers: Config["containers"],
+	config: Config,
+	workerName: string | undefined
+): ContainerApp[] | undefined {
+	if (
+		containers === undefined ||
+		config.name === undefined ||
+		workerName === undefined ||
+		workerName === config.name
+	) {
+		return containers;
+	}
+
+	const configName = config.name;
+	let didChange = false;
+	const renamedContainers = containers.map((container) => {
+		if (
+			container.scheduling_policy !== "durable_object" ||
+			typeof container.class_name !== "string" ||
+			typeof container.name !== "string"
+		) {
+			return container;
+		}
+
+		const defaultNames = new Set([
+			getDefaultDurableObjectContainerAppName(configName, container.class_name),
+		]);
+		const targetEnvironment = config.targetEnvironment;
+		if (targetEnvironment !== undefined) {
+			if (config.topLevelName !== undefined) {
+				defaultNames.add(
+					getDefaultDurableObjectContainerAppName(
+						config.topLevelName,
+						container.class_name,
+						targetEnvironment
+					)
+				);
+			}
+			defaultNames.add(
+				getDefaultDurableObjectContainerAppName(
+					configName,
+					container.class_name,
+					targetEnvironment
+				)
+			);
+		}
+
+		if (!defaultNames.has(container.name)) {
+			return container;
+		}
+
+		didChange = true;
+		return {
+			...container,
+			name: getDefaultDurableObjectContainerAppName(
+				workerName,
+				container.class_name
+			),
+		};
+	});
+
+	return didChange ? renamedContainers : containers;
+}
 
 async function mergeSharedConfigArgs(
 	command: "deploy" | "versions upload",
@@ -98,7 +164,11 @@ async function mergeSharedConfigArgs(
 		skipProvisioningConfigWriteback: false,
 		strict: args.strict ?? false,
 		containers: {
-			source: config.containers,
+			source: applyWorkerNameOverrideToContainerDefaults(
+				config.containers,
+				config,
+				name
+			),
 			standard: { normalized: [], builtImages: [] },
 			durableObjects: { builtImages: [] },
 		},

@@ -16,6 +16,7 @@ export {
 export {
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDefaultDurableObjectContainerAppName,
 	getDurableObjectClassNameToUseSQLiteMap,
 	getDurableObjectContainerApps,
 	getResolvedDurableObjectContainerApps,
