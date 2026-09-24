@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.43.0
+
+### Minor Changes
+
+- [#15822](https://github.com/cloudflare/workers-sdk/pull/15822) [`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Expose a helper for identifying live Durable Object exports
+
+  Use `isLiveDurableObjectExport()` to distinguish created and incoming-transfer exports from deleted, renamed, and transferred tombstones.
+
 ## 0.42.0
 
 ### Minor Changes

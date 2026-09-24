@@ -1,5 +1,16 @@
 # wrangler
 
+## 4.140.0
+
+### Minor Changes
+
+- [#15822](https://github.com/cloudflare/workers-sdk/pull/15822) [`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Support Containers in Worker Preview deployments with the Build Output.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - miniflare@5.20260923.0-alpha
+
 ## 4.139.0
 
 ### Minor Changes
