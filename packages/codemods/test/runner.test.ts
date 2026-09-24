@@ -462,12 +462,14 @@ export default defineWorkersProject({
 		const source =
 			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
 		const cwd = await createProject({ "vitest.config.ts": source });
+		await commitProject(cwd);
+		await writeFile(path.join(cwd, "vitest.config.ts"), `${source}\n`);
 
 		const result = await runCodemod("vitest v1", { cwd, dryRun: true });
 
 		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
 		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
-			source
+			`${source}\n`
 		);
 	});
 
