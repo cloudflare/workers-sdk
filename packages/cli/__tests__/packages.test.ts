@@ -111,7 +111,7 @@ describe("Package Helpers", () => {
 		);
 
 		test("runs in the requested directory", async ({ expect }) => {
-			const cwd = "/project";
+			const cwd = resolve("project");
 			const mockPkgJson = {
 				devDependencies: {
 					cf: "latest",
