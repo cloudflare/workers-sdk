@@ -12,7 +12,7 @@ import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { readFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { isInsideGitRepo } from "./git";
 import { chooseAccount, wranglerLogin } from "./wrangler/accounts";
 import {

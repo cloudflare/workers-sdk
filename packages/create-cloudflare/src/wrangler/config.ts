@@ -13,7 +13,7 @@ import {
 	readJSONWithComments,
 	writeJSONWithComments,
 } from "helpers/json";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import type { CommentObject, Reviver } from "comment-json";
 import type { TomlTable } from "smol-toml";
 import type { C3Context } from "types";
