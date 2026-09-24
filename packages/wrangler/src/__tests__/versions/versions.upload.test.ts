@@ -3027,6 +3027,43 @@ describe("versions upload", () => {
 			});
 			expect(workflowPuts).toBe(0);
 		});
+
+		test("rejects a binding and an export that declare the same Workflow with different classes", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "OldWorkflow",
+						},
+					],
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				},
+				"./wrangler.json"
+			);
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import { WorkflowEntrypoint } from "cloudflare:workers";
+					export default {};
+					export class OldWorkflow extends WorkflowEntrypoint {}
+					export class MyWorkflow extends WorkflowEntrypoint {}
+				`
+			);
+
+			await expect(
+				runWrangler("versions upload --config ./wrangler.json")
+			).rejects.toThrow(
+				'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow", but with different classes ("OldWorkflow" and "MyWorkflow").'
+			);
+		});
 	});
 
 	describe("CI override", () => {

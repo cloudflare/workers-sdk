@@ -94,7 +94,7 @@ describe("validateOwnedWorkflowDeclarations", () => {
 		`);
 	});
 
-	it("does not compare an export against a binding to another Worker's Workflow", ({
+	it("errors when a binding to another Worker's Workflow shares a name with an export", ({
 		expect,
 	}) => {
 		expect(() =>
@@ -104,7 +104,32 @@ describe("validateOwnedWorkflowDeclarations", () => {
 						{
 							binding: "GREETING",
 							name: "greeting",
-							class_name: "OtherWorkflow",
+							class_name: "GreetingWorkflow",
+							script_name: "other-worker",
+						},
+					],
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+					},
+				},
+				"my-worker"
+			)
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: "workflows[0]" binds the Workflow "greeting" of the Worker "other-worker", but "exports.GreetingWorkflow" declares it in this Worker. Workflow names are unique per account, so remove "script_name" from the binding or give the export a different name.]`
+		);
+	});
+
+	it("ignores bindings to another Worker's Workflow with a different name", ({
+		expect,
+	}) => {
+		expect(() =>
+			validateOwnedWorkflowDeclarations(
+				{
+					workflows: [
+						{
+							binding: "ORDERS",
+							name: "orders",
+							class_name: "OrdersWorkflow",
 							script_name: "other-worker",
 						},
 					],

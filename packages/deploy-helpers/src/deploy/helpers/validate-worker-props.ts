@@ -101,9 +101,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	validateOwnedWorkflowDeclarations(config, name);
+
 	if (props.command === "deploy") {
 		validateEventTriggerTargets(config, name);
-		validateOwnedWorkflowDeclarations(config, name);
 		validateRoutes(props.routes, props.assetsOptions);
 		assert(
 			!config.site || config.site.bucket,

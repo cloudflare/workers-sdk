@@ -54,14 +54,17 @@ export function getWorkflowsOwnedByScript(
 /**
  * Checks that each `workflows` binding owned by this script agrees with the
  * `workflow` export of the same name, so {@link getWorkflowsOwnedByScript} can
- * merge them. This can't run during config validation: ownership depends on
- * the name the script is deployed under, which `--name` or a CI override can
- * change after the config is validated.
+ * merge them, and that no binding to another script's Workflow shares a name
+ * with an export, since the export makes this script the Workflow's owner.
+ * This can't run during config validation: ownership depends on the name the
+ * script is deployed under, which `--name` or a CI override can change after
+ * the config is validated.
  *
  * @param config - The Worker config
  * @param scriptName - The name of the script being deployed
  * @throws {UserError} If a binding and an export for the same Workflow use
- * different classes or set the same setting to different values
+ * different classes, set the same setting to different values, or disagree
+ * about which script owns the Workflow
  */
 export function validateOwnedWorkflowDeclarations(
 	config: Pick<Config, "workflows" | "exports">,
@@ -78,13 +81,16 @@ export function validateOwnedWorkflowDeclarations(
 	const errors: string[] = [];
 	for (const [index, workflow] of (config.workflows ?? []).entries()) {
 		const match = exportsByWorkflowName.get(workflow.name);
-		if (
-			match === undefined ||
-			!isWorkflowDefinedInThisScript(workflow, scriptName)
-		) {
+		if (match === undefined) {
 			continue;
 		}
 		const { className, workflowExport } = match;
+		if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
+			errors.push(
+				`"workflows[${index}]" binds the Workflow "${workflow.name}" of the Worker "${workflow.script_name}", but "exports.${className}" declares it in this Worker. Workflow names are unique per account, so remove "script_name" from the binding or give the export a different name.`
+			);
+			continue;
+		}
 		if (workflow.class_name !== className) {
 			errors.push(
 				`"workflows[${index}]" and "exports.${className}" both declare the Workflow "${workflow.name}", but with different classes ("${workflow.class_name}" and "${className}").`
