@@ -8,9 +8,24 @@ export default {
 		const id = url.searchParams.get("id");
 
 		if (url.pathname === "/create") {
-			const instance = await env.MY_WORKFLOW.create(
-				id === null ? undefined : { id }
-			);
+			let instance: WorkflowInstance;
+			try {
+				instance = await env.MY_WORKFLOW.create(
+					id === null ? undefined : { id }
+				);
+			} catch (e) {
+				// Deterministic ids are unique: create() throws once the instance
+				// exists, so read the existing instance instead. Any other
+				// failure is real and should surface.
+				const isDuplicate =
+					id !== null &&
+					e instanceof Error &&
+					e.message.includes("instance.already_exists");
+				if (!isDuplicate) {
+					throw e;
+				}
+				instance = await env.MY_WORKFLOW.get(id);
+			}
 
 			return Response.json({
 				id: instance.id,
