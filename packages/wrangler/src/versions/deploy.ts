@@ -11,6 +11,7 @@ import { initContainersSharedContext } from "@cloudflare/containers-shared";
 import {
 	type ApiVersion,
 	deployVersionedDurableObjectContainerApplications,
+	fetchWorker,
 	getVersionedDurableObjectContainerApplications,
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
 	printVersions,
@@ -322,10 +323,8 @@ export const versionsDeployCommand = createCommand({
 
 		let workerTag: string | null = null;
 		try {
-			const serviceMetaData = await fetchResult<{
-				default_environment: { script: { tag: string } };
-			}>(config, `/accounts/${accountId}/workers/services/${workerName}`);
-			workerTag = serviceMetaData.default_environment.script.tag;
+			// The Worker ID is the same value as the legacy script tag.
+			workerTag = (await fetchWorker(config, accountId, workerName)).id;
 		} catch {
 			// If the fetch fails then we just output a null for the workerTag.
 		}

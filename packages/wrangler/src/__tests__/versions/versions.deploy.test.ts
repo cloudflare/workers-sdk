@@ -1,11 +1,15 @@
+import assert from "node:assert";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { HttpResponse, http } from "msw";
-import { beforeEach, describe, it, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, test, vi } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
+import { clearOutputFilePath } from "../../output";
 import {
 	assignAndDistributePercentages,
 	parseTagSpecs,
@@ -26,6 +30,7 @@ import {
 	createFetchResult,
 	msw,
 	mswGetVersion,
+	mswGetWorker,
 	mswListNewDeployments,
 	mswListVersions,
 	mswPatchNonVersionedScriptSettings,
@@ -255,7 +260,7 @@ describe("versions deploy", () => {
 			mswGetVersion(),
 			mswPostNewDeployment,
 			mswPatchNonVersionedScriptSettings,
-			...mswSuccessDeploymentScriptMetadata
+			...mswGetWorker
 		);
 	});
 
@@ -992,6 +997,69 @@ describe("versions deploy", () => {
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 			`);
+		});
+
+		describe("output file", () => {
+			function readVersionDeployOutputEntry() {
+				const outputFilePaths = fs.readdirSync("output");
+				assert(outputFilePaths[0]);
+				return fs
+					.readFileSync(path.join("output", outputFilePaths[0]), "utf8")
+					.split("\n")
+					.filter(Boolean)
+					.map((e) => JSON.parse(e))
+					.find((e) => e.type === "version-deploy");
+			}
+
+			beforeEach(() => {
+				clearOutputFilePath();
+				vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "output");
+				vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "");
+			});
+
+			afterEach(() => {
+				clearOutputFilePath();
+			});
+
+			test("includes the worker tag from the Workers API", async ({
+				expect,
+			}) => {
+				await runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+				);
+
+				expect(readVersionDeployOutputEntry()).toMatchObject({
+					type: "version-deploy",
+					version: 1,
+					worker_name: "test-name",
+					worker_tag: "tag:test-name",
+				});
+			});
+
+			test("outputs a null worker tag when the Worker lookup fails", async ({
+				expect,
+			}) => {
+				msw.use(
+					http.get("*/accounts/:accountId/workers/workers/:workerName", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10007, message: "Worker not found" },
+							]),
+							{ status: 404 }
+						)
+					)
+				);
+
+				await runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+				);
+
+				expect(readVersionDeployOutputEntry()).toMatchObject({
+					type: "version-deploy",
+					worker_name: "test-name",
+					worker_tag: null,
+				});
+			});
 		});
 
 		test("1 version @ (implicit) 100% without --yes", async ({ expect }) => {

@@ -97,6 +97,29 @@ export const mswSuccessDeploymentScriptMetadata = [
 	),
 ];
 
+/**
+ * Mocks the Workers "Get Worker" endpoint. The Worker `id` is the same
+ * value as the legacy script tag, so it is returned as `tag:<scriptName>`.
+ */
+export const mswGetWorker = [
+	http.get(
+		"*/accounts/:accountId/workers/workers/:workerName",
+		({ params }) => {
+			const workerName = String(params["workerName"]);
+			return HttpResponse.json(
+				createFetchResult({
+					id: `tag:${workerName}`,
+					name: workerName,
+					tags: [],
+					created_on: "2021-01-01T00:00:00.000000Z",
+					updated_on: "2021-01-01T00:00:00.000000Z",
+				})
+			);
+		},
+		{ once: true }
+	),
+];
+
 export const mswSuccessDeploymentScriptAPI = [
 	http.get(
 		"*/accounts/:accountId/workers/services/:scriptName",

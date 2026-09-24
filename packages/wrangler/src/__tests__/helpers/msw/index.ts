@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/workers-auth/test-helpers";
 import { setupServer } from "msw/node";
 import {
+	mswGetWorker,
 	mswSuccessDeploymentDetails,
 	mswSuccessDeployments,
 	mswSuccessDeploymentScriptAPI,
@@ -68,6 +69,7 @@ export {
 	mswAccessHandlers,
 	mswSuccessDeploymentScriptMetadata,
 	mswSuccessDeploymentScriptAPI,
+	mswGetWorker,
 	mswPostNewDeployment,
 	mswGetVersion,
 	mswListNewDeployments,
