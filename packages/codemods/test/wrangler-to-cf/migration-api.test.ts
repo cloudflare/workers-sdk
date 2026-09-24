@@ -379,6 +379,7 @@ describe("migrateWranglerToCf", () => {
 		for (const result of [writeResult, dryRunResult]) {
 			expect(result).toMatchObject({
 				followUps: [{ blocking: true, code: "cf-install-missing-manifest" }],
+				requiresInstall: true,
 				status: "needs-intervention",
 			});
 		}

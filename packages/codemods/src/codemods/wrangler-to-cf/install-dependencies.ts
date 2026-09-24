@@ -67,6 +67,7 @@ async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
 }
 
+/** Finds the nearest package manifest at or above the migration directory. */
 export async function findPackageJson(
 	projectDirectory: string
 ): Promise<string | undefined> {
