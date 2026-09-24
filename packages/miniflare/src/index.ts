@@ -1,5 +1,7 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
+import dgram from "node:dgram";
+import { lookup } from "node:dns/promises";
 import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
@@ -261,7 +263,7 @@ function validateOptions(
 		if (e instanceof z.ZodError) {
 			let formatted: string | undefined;
 			try {
-				formatted = formatZodError(e, opts);
+				formatted = formatZodError(e);
 			} catch (formatError) {
 				// If formatting failed for some reason, we'd like to know, so log a
 				// bunch of debugging information, including the full validation error
@@ -775,6 +777,40 @@ export interface DispatchConnectOptions {
 	workerName?: string;
 	/** The configured trigger port, including `0` for an OS-assigned port. */
 	port?: number;
+	/** Defaults to TCP. */
+	protocol?: "tcp";
+}
+
+/** Selects the Worker UDP trigger used by `Miniflare#dispatchConnect()`. */
+export interface DispatchUdpConnectOptions {
+	/** Defaults to the entrypoint Worker. */
+	workerName?: string;
+	/** The configured trigger port, including `0` for an OS-assigned port. */
+	port?: number;
+	protocol: "udp";
+}
+
+export interface DispatchConnect {
+	(options?: DispatchConnectOptions): Promise<net.Socket>;
+	(options: DispatchUdpConnectOptions): Promise<dgram.Socket>;
+}
+
+type DispatchConnectProtocolOptions =
+	| DispatchConnectOptions
+	| DispatchUdpConnectOptions;
+
+function closeDatagramSocket(socket: dgram.Socket): void {
+	try {
+		socket.close();
+	} catch (error) {
+		if (
+			!(error instanceof Error) ||
+			!("code" in error) ||
+			(error as NodeJS.ErrnoException).code !== "ERR_SOCKET_DGRAM_NOT_RUNNING"
+		) {
+			throw error;
+		}
+	}
 }
 
 const WORKFLOW_STORAGE_EXTENSIONS = [".sqlite", ".sqlite-shm", ".sqlite-wal"];
@@ -814,7 +850,8 @@ export class Miniflare {
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
-	#dispatchConnectSockets = new Set<net.Socket>();
+	#dispatchConnectTcpSockets = new Set<net.Socket>();
+	#dispatchConnectDatagramSockets = new Set<dgram.Socket>();
 	#proxyClient?: ProxyClient;
 	#runtimeRestartError?: MiniflareCoreError;
 	// Number of times workerd has crashed and been restarted for this instance.
@@ -2329,12 +2366,34 @@ export class Miniflare {
 					connectHandler.port,
 					reusePorts
 				);
+				const protocolName = connectHandler.protocol;
+				let protocol;
+				switch (protocolName) {
+					case "tcp":
+						protocol = { tcp: {} };
+						break;
+					case "udp":
+						protocol = {
+							udp: {
+								idleTimeoutMs: connectHandler.idleTimeoutMs,
+								maxPendingBytes: connectHandler.maxPendingBytes,
+							},
+						};
+						break;
+					default: {
+						// Config validation should make this unreachable.
+						const unsupportedProtocol: never = protocolName;
+						throw new TypeError(
+							`Unsupported connect protocol: ${JSON.stringify(unsupportedProtocol)}`
+						);
+					}
+				}
 
 				sockets.push({
 					name,
 					address,
 					service: { name: getUserServiceName(workerName) },
-					tcp: {},
+					...protocol,
 				});
 			}
 		}
@@ -3142,20 +3201,25 @@ export class Miniflare {
 	};
 
 	/**
-	 * Opens a TCP connection to a Worker's connect trigger.
+	 * Opens a connection to a Worker's connect trigger.
 	 *
 	 * @param options Worker and trigger selection options
 	 * @returns A connected Node.js socket
 	 */
-	dispatchConnect = async (
-		options: DispatchConnectOptions = {}
-	): Promise<net.Socket> => {
+	dispatchConnect = (async (
+		options: DispatchConnectProtocolOptions = {}
+	): Promise<net.Socket | dgram.Socket> => {
 		this.#checkDisposed();
 		await this.ready;
 
+		const protocol = options.protocol ?? "tcp";
+		const protocolName = protocol.toUpperCase();
 		const workerIndex = this.#findAndAssertWorkerIndex(options.workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
-		const connectTriggers = getTriggersOfType(workerOpts.config, "connect");
+		const connectTriggers = getTriggersOfType(
+			workerOpts.config,
+			"connect"
+		).filter((trigger) => trigger.protocol === protocol);
 		const workerDescription =
 			options.workerName === undefined
 				? "entrypoint worker"
@@ -3165,12 +3229,12 @@ export class Miniflare {
 		if (options.port === undefined) {
 			if (connectTriggers.length === 0) {
 				throw new TypeError(
-					`No TCP connect triggers configured for ${workerDescription}`
+					`No ${protocolName} connect triggers configured for ${workerDescription}`
 				);
 			}
 			if (connectTriggers.length > 1) {
 				throw new TypeError(
-					`Multiple TCP connect triggers configured for ${workerDescription}; specify a port`
+					`Multiple ${protocolName} connect triggers configured for ${workerDescription}; specify a port`
 				);
 			}
 			trigger = connectTriggers[0];
@@ -3178,7 +3242,7 @@ export class Miniflare {
 			trigger = connectTriggers.find(({ port }) => port === options.port);
 			if (trigger === undefined) {
 				throw new TypeError(
-					`TCP connect trigger on port ${options.port} not found for ${workerDescription}`
+					`${protocolName} connect trigger on port ${options.port} not found for ${workerDescription}`
 				);
 			}
 		}
@@ -3200,41 +3264,84 @@ export class Miniflare {
 			configuredHost === "::"
 				? DEFAULT_HOST
 				: configuredHost);
-		const socket = net.connect({ host, port });
-		this.#dispatchConnectSockets.add(socket);
-		socket.once("close", () => this.#dispatchConnectSockets.delete(socket));
+		if (protocol === "udp") {
+			const { address, family } = await lookup(host);
+			this.#checkDisposed();
+			const socket = dgram.createSocket(family === 6 ? "udp6" : "udp4");
+			this.#dispatchConnectDatagramSockets.add(socket);
+			socket.once("close", () =>
+				this.#dispatchConnectDatagramSockets.delete(socket)
+			);
 
-		try {
-			await new Promise<void>((resolve, reject) => {
-				function cleanup() {
-					socket.off("connect", onConnect);
-					socket.off("error", onError);
-					socket.off("close", onClose);
-				}
-				function onConnect() {
-					cleanup();
-					resolve();
-				}
-				function onError(error: Error) {
-					cleanup();
-					reject(error);
-				}
-				function onClose() {
-					cleanup();
-					reject(new Error("Socket closed before connecting"));
-				}
+			try {
+				await new Promise<void>((resolve, reject) => {
+					function cleanup() {
+						socket.off("error", onError);
+						socket.off("close", onClose);
+					}
+					function onError(error: Error) {
+						cleanup();
+						reject(error);
+					}
+					function onClose() {
+						cleanup();
+						reject(new Error("Socket closed before connecting"));
+					}
 
-				socket.once("connect", onConnect);
-				socket.once("error", onError);
-				socket.once("close", onClose);
-			});
-		} catch (error) {
-			socket.destroy();
-			throw error;
+					socket.once("error", onError);
+					socket.once("close", onClose);
+					socket.connect(port, address, () => {
+						cleanup();
+						resolve();
+					});
+				});
+			} catch (error) {
+				closeDatagramSocket(socket);
+				throw error;
+			}
+
+			return socket;
+		} else if (protocol === "tcp") {
+			const socket = net.connect({ host, port });
+			this.#dispatchConnectTcpSockets.add(socket);
+			socket.once("close", () =>
+				this.#dispatchConnectTcpSockets.delete(socket)
+			);
+
+			try {
+				await new Promise<void>((resolve, reject) => {
+					function cleanup() {
+						socket.off("connect", onConnect);
+						socket.off("error", onError);
+						socket.off("close", onClose);
+					}
+					function onConnect() {
+						cleanup();
+						resolve();
+					}
+					function onError(error: Error) {
+						cleanup();
+						reject(error);
+					}
+					function onClose() {
+						cleanup();
+						reject(new Error("Socket closed before connecting"));
+					}
+
+					socket.once("connect", onConnect);
+					socket.once("error", onError);
+					socket.once("close", onClose);
+				});
+			} catch (error) {
+				socket.destroy();
+				throw error;
+			}
+
+			return socket;
 		}
 
-		return socket;
-	};
+		throw new TypeError(`Unsupported connect protocol: ${protocol}`);
+	}) as DispatchConnect;
 
 	/** @internal */
 	async _getProxyClient(): Promise<ProxyClient> {
@@ -3670,10 +3777,14 @@ export class Miniflare {
 
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
-		for (const socket of this.#dispatchConnectSockets) {
+		for (const socket of this.#dispatchConnectTcpSockets) {
 			socket.destroy();
 		}
-		this.#dispatchConnectSockets.clear();
+		this.#dispatchConnectTcpSockets.clear();
+		for (const socket of this.#dispatchConnectDatagramSockets) {
+			closeDatagramSocket(socket);
+		}
+		this.#dispatchConnectDatagramSockets.clear();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
 		// invalidating all existing native references. Mark all proxies as invalid.
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but

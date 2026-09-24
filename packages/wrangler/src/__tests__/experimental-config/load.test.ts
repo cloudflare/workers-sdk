@@ -310,9 +310,7 @@ describe("loadNewConfig", () => {
 			});
 		});
 
-		it("formats Zod errors as a bulleted list with dotted paths", async ({
-			expect,
-		}) => {
+		it("formats Zod errors with dotted paths", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
 					'export default { worker: { name: 42, compatibilityDate: "2026-05-18" } };',
@@ -320,7 +318,7 @@ describe("loadNewConfig", () => {
 
 			await expect(
 				loadNewConfig({ cwd: process.cwd(), args: {} })
-			).rejects.toThrow(/\s*•\s+worker\.name:/);
+			).rejects.toThrow(/→ at worker\.name/);
 		});
 	});
 

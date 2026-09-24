@@ -333,8 +333,16 @@ async function resolveTriggers(
 
 	const connectHandlers =
 		config.connect?.map<Extract<Trigger, { type: "connect" }>>((c) => ({
-			...c,
 			type: "connect",
+			protocol: c.protocol,
+			port: c.port,
+			address: c.address,
+			...(c.protocol === "udp"
+				? {
+						idleTimeoutMs: c.idle_timeout_ms,
+						maxPendingBytes: c.max_pending_bytes,
+					}
+				: {}),
 		})) ?? [];
 
 	return [...devRoutes, ...queueConsumers, ...crons, ...connectHandlers];

@@ -43,20 +43,13 @@ contract so the parent can drive either impl interchangeably.
   app build via `createBuilder().buildApp()` (NOT the legacy
   single-environment `build()` helper, which would skip the plugin's
   worker/build-output orchestration — mirrors Vite's own `vite build`
-  CLI). It accepts `--mode` and `--preview` (`--port`/`--host`/`--local`
-  don't apply to a build and exit `2`).
-- **Build Output Specification forced for every verb.** `main()` sets
-  `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` unconditionally (before Vite
-  loads the user's config), enabling `experimental.newConfig` +
-  `experimental.newConfig.cfBuildOutput` (overriding plugin config),
-  which requires a `cloudflare.config.ts` at the project root. The env
-  var name and read logic live in `build-output-env.ts`
-  (`FORCE_BUILD_OUTPUT_ENV_VAR` / `isForcedBuildOutput()`), shared by the
-  two read sites that MUST agree: `index.ts` (selects the build-output
-  plugin at construction) and `resolvePluginConfig`. Both read directly
-  from `process.env` (NOT Vite's `loadEnv`), since `index.ts` runs before
-  Vite resolves a root/mode and this is an internal bridge, not a
-  `.env`-file knob.
+  CLI). It accepts only `--mode` (`--port`/`--host`/`--local` don't apply to
+  a build and exit `2`). Preview build context is supplied through
+  `CLOUDFLARE_PREVIEW_BUILD`, which also works when a framework runs Vite as
+  part of its own build command.
+- **Build Output Specification enabled for every verb.** The v2 plugin always
+  installs its build-output plugin, so `cf-vite` does not need the internal
+  force-build-output flag used by v1.
 - **`dev`** `cf-vite dev` boots Vite via `createServer()`
   against the user's own `vite.config.ts` (which must include
   `cloudflare()`). Plugin-owned flags are bridged via env vars the plugin

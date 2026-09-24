@@ -7,7 +7,12 @@
 import { writeBuildOutput } from "../build/write-build-output";
 import type { BuildArgs } from "./args";
 
+const PREVIEW_BUILD_ENV_VAR = "CLOUDFLARE_PREVIEW_BUILD";
+
 export async function runCfWranglerBuild(args: BuildArgs): Promise<number> {
-	await writeBuildOutput({ env: args.mode, isPreview: args.preview });
+	await writeBuildOutput({
+		env: args.mode,
+		isPreview: process.env[PREVIEW_BUILD_ENV_VAR] === "true",
+	});
 	return 0;
 }

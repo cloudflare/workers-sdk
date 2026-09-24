@@ -2977,6 +2977,95 @@ describe("versions upload", () => {
 		});
 	});
 
+	describe("workflow exports", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("sends workflow exports by name without provisioning the Workflow", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+			let workflowPuts = 0;
+			msw.use(
+				http.get("*/accounts/:accountId/workflows/:workflowName", () =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10200, message: "Workflow not found" },
+						]),
+						{ status: 404 }
+					)
+				),
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					workflowPuts++;
+					return HttpResponse.json(createFetchResult({}));
+				})
+			);
+
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload --config ./wrangler.json");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.exports).toEqual({
+				MyWorkflow: { type: "workflow", name: "my-workflow" },
+			});
+			expect(workflowPuts).toBe(0);
+		});
+
+		test("rejects a binding and an export that declare the same Workflow with different classes", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "OldWorkflow",
+						},
+					],
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				},
+				"./wrangler.json"
+			);
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import { WorkflowEntrypoint } from "cloudflare:workers";
+					export default {};
+					export class OldWorkflow extends WorkflowEntrypoint {}
+					export class MyWorkflow extends WorkflowEntrypoint {}
+				`
+			);
+
+			await expect(
+				runWrangler("versions upload --config ./wrangler.json")
+			).rejects.toThrow(
+				'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow", but with different classes ("OldWorkflow" and "MyWorkflow").'
+			);
+		});
+	});
+
 	describe("CI override", () => {
 		beforeEach(() => {
 			setIsTTY(false);

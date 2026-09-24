@@ -29,10 +29,17 @@ import type { ThemeMode } from "../utils/theme-state";
 export const Route = createRootRoute({
 	component: RootLayout,
 	notFoundComponent: NotFound,
-	loader: async () => {
-		const workersResponse = await localExplorerListWorkers();
-		const workers = workersResponse.data?.result ?? [];
-		return { workers };
+	loader: async ({ location }) => {
+		try {
+			const workersResponse = await localExplorerListWorkers();
+			const workers = workersResponse.data?.result ?? [];
+			return { bootstrapAuthoritative: true, workers };
+		} catch (error) {
+			if (/\/cron-triggers(?:\/.*)?$/.test(location.pathname)) {
+				return { bootstrapAuthoritative: false, workers: [] };
+			}
+			throw error;
+		}
 	},
 });
 
