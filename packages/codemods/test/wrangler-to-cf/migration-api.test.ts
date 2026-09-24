@@ -296,6 +296,12 @@ describe("migrateWranglerToCf", () => {
 			})
 		).rejects.toThrow("requires wrangler 4.100.0 or newer");
 		await expect(
+			migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+				bundler: "wrangler",
+				dryRun: true,
+			})
+		).rejects.toThrow("requires wrangler 4.100.0 or newer");
+		await expect(
 			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
 		).rejects.toMatchObject({ code: "ENOENT" });
 	});

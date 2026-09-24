@@ -89,10 +89,10 @@ export async function migrateWranglerToCf(
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
+	if (wranglerConfig) {
+		assertCompatibleWranglerVersion(projectDirectory);
+	}
 	if (!dryRun) {
-		if (wranglerConfig) {
-			assertCompatibleWranglerVersion(projectDirectory);
-		}
 		await writeMigrationOutputs(outputs);
 	}
 	if (installDependencies) {
