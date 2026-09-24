@@ -148,6 +148,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "analog",
+			// @analogjs/vite-plugin-angular is incompatible with @angular/build 22.2.0.
+			// See https://github.com/analogjs/analog/issues/2574.
+			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -1126,6 +1129,9 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "analog",
+			// @analogjs/vite-plugin-angular is incompatible with @angular/build 22.2.0.
+			// See https://github.com/analogjs/analog/issues/2574.
+			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
