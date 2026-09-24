@@ -103,10 +103,10 @@ export async function migrateWranglerToCf(
 		if (wranglerConfig) {
 			assertCompatibleWranglerVersion(projectDirectory);
 		}
+		await writeMigrationOutputs(outputs);
 		if (installDependencies) {
 			await installCfDependency(projectDirectory);
 		}
-		await writeMigrationOutputs(outputs);
 	}
 
 	return {

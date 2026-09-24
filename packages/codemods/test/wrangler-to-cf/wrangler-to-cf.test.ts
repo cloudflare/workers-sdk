@@ -12,6 +12,7 @@ import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { afterEach, describe, it, vi } from "vitest";
 import { migrateWranglerToCf } from "../../src";
+import { writeMigrationOutputs } from "../../src/codemods/wrangler-to-cf/file-writer";
 import { getSyntaxErrors } from "./test-helpers";
 
 const temporaryDirectories: string[] = [];
@@ -19,6 +20,20 @@ const temporaryDirectories: string[] = [];
 vi.mock("@cloudflare/cli-shared-helpers/packages", () => ({
 	installPackages: vi.fn(),
 }));
+
+vi.mock(
+	"../../src/codemods/wrangler-to-cf/file-writer",
+	async (importOriginal) => {
+		const original =
+			await importOriginal<
+				typeof import("../../src/codemods/wrangler-to-cf/file-writer")
+			>();
+		return {
+			...original,
+			writeMigrationOutputs: vi.fn(original.writeMigrationOutputs),
+		};
+	}
+);
 
 async function createProject(files: Record<string, string>): Promise<string> {
 	const directory = await mkdtemp(path.join(tmpdir(), "wrangler-to-cf-"));
@@ -93,6 +108,27 @@ describe("migrateWranglerToCf", () => {
 		await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
 			installDependencies: false,
 		});
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+	});
+
+	it("does not install cf when writing migration outputs fails", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({ name: "example-worker" }),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+		vi.mocked(writeMigrationOutputs).mockRejectedValueOnce(
+			new Error("write failed")
+		);
+
+		await expect(
+			migrateWranglerToCf(path.join(cwd, "wrangler.json"))
+		).rejects.toThrow("write failed");
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 	});
