@@ -6,6 +6,7 @@ export interface WranglerToCfMigrationOptions {
 	bundler?: MigrationBundler;
 	dryRun?: boolean;
 	force?: boolean;
+	installDependencies?: boolean;
 }
 
 export interface MigrationFollowUp {

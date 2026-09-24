@@ -9,11 +9,16 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, it } from "vitest";
+import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
+import { afterEach, describe, it, vi } from "vitest";
 import { migrateWranglerToCf } from "../../src";
 import { getSyntaxErrors } from "./test-helpers";
 
 const temporaryDirectories: string[] = [];
+
+vi.mock("@cloudflare/cli-shared-helpers/packages", () => ({
+	installPackages: vi.fn(),
+}));
 
 async function createProject(files: Record<string, string>): Promise<string> {
 	const directory = await mkdtemp(path.join(tmpdir(), "wrangler-to-cf-"));
@@ -44,12 +49,54 @@ async function removeDirectory(directory: string): Promise<void> {
 }
 
 afterEach(async () => {
+	vi.clearAllMocks();
 	for (const directory of temporaryDirectories.splice(0)) {
 		await removeDirectory(directory);
 	}
 });
 
 describe("migrateWranglerToCf", () => {
+	it("installs cf with the detected package manager", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				name: "example-worker",
+				packageManager: "pnpm@10.27.0",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
+			"pnpm",
+			["cf@latest"],
+			{
+				cwd,
+				dev: true,
+				isWorkspaceRoot: false,
+			}
+		);
+	});
+
+	it("can skip installing cf programmatically", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({ name: "example-worker" }),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			installDependencies: false,
+		});
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+	});
+
 	it("writes a complete Vite config with optional options omitted", async ({
 		expect,
 	}) => {

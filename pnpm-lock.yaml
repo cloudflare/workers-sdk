@@ -1809,6 +1809,9 @@ importers:
 
   packages/codemods:
     dependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils

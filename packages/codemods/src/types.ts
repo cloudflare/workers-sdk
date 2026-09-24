@@ -5,6 +5,7 @@ export interface CodemodContext {
 	dryRun: boolean;
 	files?: string[];
 	force?: boolean;
+	installDependencies?: boolean;
 }
 
 /** Context for a single codemod within an ordered run. */

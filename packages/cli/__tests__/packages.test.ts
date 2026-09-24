@@ -109,6 +109,28 @@ describe("Package Helpers", () => {
 				}
 			}
 		);
+
+		test("runs in the requested directory", async ({ expect }) => {
+			const cwd = "/project";
+			const mockPkgJson = {
+				devDependencies: {
+					cf: "latest",
+				},
+			};
+			vi.mocked(readFileSync).mockReturnValue(JSON.stringify(mockPkgJson));
+			vi.mocked(parsePackageJSON).mockReturnValue(mockPkgJson);
+
+			await installPackages("npm", ["cf@latest"], { cwd, dev: true });
+
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				["npm", "install", "--save-dev", "cf@latest"],
+				expect.objectContaining({ cwd })
+			);
+			expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+				resolve(cwd, "package.json"),
+				expect.any(String)
+			);
+		});
 	});
 
 	test("installWrangler", async ({ expect }) => {

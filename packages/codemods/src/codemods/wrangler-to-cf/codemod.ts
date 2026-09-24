@@ -73,6 +73,7 @@ export const wranglerToCfCodemod: Codemod = {
 			bundler: context.bundler,
 			dryRun: context.dryRun,
 			force: context.force,
+			installDependencies: context.installDependencies,
 		});
 
 		return {

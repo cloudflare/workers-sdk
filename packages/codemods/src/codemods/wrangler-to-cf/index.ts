@@ -8,6 +8,7 @@ import {
 	renderWranglerConfig,
 } from "./config-renderer";
 import { writeMigrationOutputs } from "./file-writer";
+import { installCfDependency } from "./install-dependencies";
 import type {
 	WranglerToCfMigrationOptions,
 	WranglerToCfMigrationResult,
@@ -56,7 +57,12 @@ export async function migrateWranglerToCf(
 	configPath: string,
 	options: WranglerToCfMigrationOptions = {}
 ): Promise<WranglerToCfMigrationResult> {
-	const { bundler = "vite", force = false, dryRun = false } = options;
+	const {
+		bundler = "vite",
+		dryRun = false,
+		force = false,
+		installDependencies = true,
+	} = options;
 
 	const absoluteConfigPath = path.resolve(configPath);
 	const projectDirectory = path.dirname(absoluteConfigPath);
@@ -93,6 +99,9 @@ export async function migrateWranglerToCf(
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
 	if (!dryRun) {
+		if (installDependencies) {
+			await installCfDependency(projectDirectory);
+		}
 		await writeMigrationOutputs(outputs);
 	}
 
