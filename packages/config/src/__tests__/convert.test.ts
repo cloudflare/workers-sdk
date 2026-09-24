@@ -1060,6 +1060,9 @@ describe("convertToWranglerConfig", () => {
 							type: "workflow",
 							name: "batch",
 							limits: { steps: 10 },
+							concurrency: { limit: 2 },
+							schedules: "0 * * * *",
+							default_retention: { success_retention: "3 days" },
 						},
 					},
 				},
@@ -1072,6 +1075,9 @@ describe("convertToWranglerConfig", () => {
 					type: "workflow",
 					name: "batch",
 					limits: { steps: 10 },
+					concurrency: { limit: 2 },
+					schedules: "0 * * * *",
+					default_retention: { success_retention: "3 days" },
 				},
 			});
 		});

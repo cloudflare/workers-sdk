@@ -520,15 +520,15 @@ export interface WorkerEntrypointExport {
  * A single declarative Workflow export entry in the `exports` config map. The
  * map key is the exported class name (the class extending `WorkflowEntrypoint`);
  * `name` is the workflow's stable identity, used for instance and storage
- * namespacing, and is required.
+ * namespacing, and is required. The remaining settings match the ones accepted
+ * by `workflows` bindings.
  */
-export interface WorkflowExport {
+export interface WorkflowExport extends Pick<
+	WorkflowBinding,
+	"limits" | "concurrency" | "schedules" | "default_retention"
+> {
 	type: "workflow";
 	name: string;
-	limits?: {
-		/** Maximum number of steps a single workflow instance may run. */
-		steps?: number;
-	};
 }
 
 export type ConfiguredExport =

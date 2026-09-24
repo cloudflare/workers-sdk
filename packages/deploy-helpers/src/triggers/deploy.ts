@@ -279,7 +279,7 @@ export async function triggersDeploy(
 		);
 	}
 
-	// NOTE: if the user provides a script_name thats not this script (aka bounds to another worker)
+	// NOTE: if the user provides a script_name that's not this script (in other words, bound to another worker)
 	// we don't want to send this worker's config.
 	// TODO: move this earlier.
 	for (const workflow of config.workflows) {

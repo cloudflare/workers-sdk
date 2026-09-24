@@ -2196,6 +2196,17 @@ describe("normalizeAndValidateConfig()", () => {
 							name: "batch",
 							limits: { steps: 10 },
 						},
+						ScheduledWorkflow: {
+							type: "workflow",
+							name: "scheduled",
+							limits: { steps: 5 },
+							concurrency: { limit: 2 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+						},
 					},
 				};
 
@@ -2300,9 +2311,49 @@ describe("normalizeAndValidateConfig()", () => {
 
 					expect(diagnostics.hasErrors()).toBe(true);
 					expect(diagnostics.renderErrors()).toContain(
-						'"exports.GreetingWorkflow.limits.steps" must be a positive integer'
+						`"exports.GreetingWorkflow" export "limits.steps" field must be a positive integer but got ${steps}.`
 					);
 				}
+			});
+
+			it("errors when workflow export settings are invalid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							EmptyScheduleWorkflow: {
+								type: "workflow",
+								name: "empty-schedule",
+								schedules: "",
+							},
+							EmptySchedulesWorkflow: {
+								type: "workflow",
+								name: "empty-schedules",
+								schedules: [],
+							},
+							ConcurrencyWorkflow: {
+								type: "workflow",
+								name: "concurrency",
+								concurrency: { limit: 0 },
+							},
+							RetentionWorkflow: {
+								type: "workflow",
+								name: "retention",
+								default_retention: { error_retention: -1 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.EmptyScheduleWorkflow" export "schedules" field must not be an empty string.
+					  - "exports.EmptySchedulesWorkflow" export "schedules" field must not be an empty array.
+					  - "exports.ConcurrencyWorkflow" export "concurrency.limit" field must be a positive integer but got 0.
+					  - "exports.RetentionWorkflow" export "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
 			});
 
 			it("warns when a workflow step limit exceeds the production maximum", ({
@@ -2426,6 +2477,75 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toContain(
 					'"workflows[0].limits" and "exports.GreetingWorkflow.limits" both configure the Workflow "greeting", but with different values. Set "limits" in only one of them.'
 				);
+			});
+
+			it("errors when a binding and an export configure the same Workflow with different settings", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+								concurrency: { limit: 1 },
+								schedules: "0 * * * *",
+								default_retention: { success_retention: "1 day" },
+							},
+						],
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								concurrency: { limit: 2 },
+								schedules: ["30 * * * *"],
+								default_retention: { success_retention: "2 days" },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0].concurrency" and "exports.GreetingWorkflow.concurrency" both configure the Workflow "greeting", but with different values. Set "concurrency" in only one of them.
+					  - "workflows[0].schedules" and "exports.GreetingWorkflow.schedules" both configure the Workflow "greeting", but with different values. Set "schedules" in only one of them.
+					  - "workflows[0].default_retention" and "exports.GreetingWorkflow.default_retention" both configure the Workflow "greeting", but with different values. Set "default_retention" in only one of them."
+				`);
+			});
+
+			it("accepts a binding and an export that configure the same Workflow settings in different forms", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+								concurrency: { limit: 1 },
+								schedules: "0 * * * *",
+							},
+						],
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								concurrency: { limit: 1 },
+								schedules: ["0 * * * *"],
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
 			it("does not compare an export against a binding to another Worker's Workflow", ({

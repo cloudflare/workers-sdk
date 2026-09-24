@@ -1478,6 +1478,40 @@ describe("ExportSchema", () => {
 		});
 	});
 
+	it("accepts every Workflow setting on a workflow export", ({ expect }) => {
+		const scheduled = exportConfig.workflow({
+			name: "scheduled",
+			limits: { steps: 10 },
+			concurrency: { limit: 2 },
+			schedules: ["0 * * * *"],
+			default_retention: {
+				success_retention: "3 days",
+				error_retention: 86_400_000,
+			},
+		});
+		const result = parseExports({ ScheduledWorkflow: scheduled });
+
+		expect(result.success).toBe(true);
+		expect(result.data?.exports).toEqual({ ScheduledWorkflow: scheduled });
+	});
+
+	it("rejects invalid Workflow settings on a workflow export", ({ expect }) => {
+		for (const settings of [
+			{ schedules: "" },
+			{ schedules: [] },
+			{ schedules: [""] },
+			{ concurrency: { limit: 0 } },
+			{ default_retention: { success_retention: -1 } },
+			{ default_retention: { error_retention: "" } },
+		]) {
+			const result = parseExports({
+				GreetingWorkflow: { type: "workflow", name: "greeting", ...settings },
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+
 	it("rejects a workflow export without a name", ({ expect }) => {
 		const result = parseExports({
 			GreetingWorkflow: { type: "workflow" },

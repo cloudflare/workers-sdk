@@ -37,10 +37,13 @@ export function getWorkflowsOwnedByScript(
 	)) {
 		const binding = owned.get(workflowExport.name);
 		owned.set(workflowExport.name, {
-			...binding,
 			name: workflowExport.name,
 			class_name: className,
 			limits: binding?.limits ?? workflowExport.limits,
+			concurrency: binding?.concurrency ?? workflowExport.concurrency,
+			schedules: binding?.schedules ?? workflowExport.schedules,
+			default_retention:
+				binding?.default_retention ?? workflowExport.default_retention,
 		});
 	}
 	return [...owned.values()];

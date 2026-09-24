@@ -1171,6 +1171,63 @@ describe("deploy", () => {
 				expect(std.out).toContain("workflow: my-workflow");
 			});
 
+			it("should provision every setting declared on a workflow export", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+							concurrency: { limit: 5 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				const putBodies: unknown[] = [];
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workflows/:workflowName",
+						async ({ request }) => {
+							putBodies.push(await request.json());
+							return HttpResponse.json(
+								createFetchResult({ id: "mock-new-workflow-id" })
+							);
+						}
+					)
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedExports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+
+				await runWrangler("deploy");
+
+				expect(putBodies).toEqual([
+					{
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						limits: { steps: 10 },
+						concurrency: { limit: 5 },
+						schedules: [{ cron: "0 * * * *" }, { cron: "30 * * * *" }],
+						default_retention: {
+							success_retention: "3 days",
+							error_retention: 86_400_000,
+						},
+					},
+				]);
+			});
+
 			it("should provision a workflow declared by both a binding and an export once", async ({
 				expect,
 			}) => {

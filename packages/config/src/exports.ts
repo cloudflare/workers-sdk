@@ -171,6 +171,23 @@ export interface WorkflowExportOptions {
 		/** Maximum number of steps a single Workflow instance may run. */
 		steps?: number;
 	};
+	concurrency?: {
+		/** Maximum number of Workflow instances that can run concurrently. */
+		limit?: number;
+	};
+	/** Cron schedule(s) that automatically trigger Workflow instances. */
+	schedules?: string | string[];
+	/**
+	 * Default retention for instances of this Workflow, applied when an instance
+	 * does not set its own retention. Accepts milliseconds or a duration string
+	 * such as `"3 days"`.
+	 */
+	default_retention?: {
+		/** How long to retain instances that completed successfully or were terminated. */
+		success_retention?: number | string;
+		/** How long to retain errored instances. */
+		error_retention?: number | string;
+	};
 }
 
 export interface WorkflowExport extends WorkflowExportOptions {
@@ -302,7 +319,7 @@ function workflow(options: WorkflowExportOptions): WorkflowExport {
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
  *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),
  *     Incoming:        exports.durableObject({ state: "expecting-transfer", storage: "sqlite", transferFrom: "source-worker" }),
- *     MyWorkflow:      exports.workflow({ name: "my-workflow", limits: { steps: 100 } }),
+ *     MyWorkflow:      exports.workflow({ name: "my-workflow", limits: { steps: 100 }, schedules: "0 * * * *" }),
  *   },
  * });
  *
