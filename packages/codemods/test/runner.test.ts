@@ -120,7 +120,11 @@ describe("codemod runner", () => {
 			dryRun: false,
 			files: ["unrelated/**"],
 		});
-		expect(excludedResult.changedFiles).toEqual([]);
+		expect(excludedResult).toMatchObject({
+			changedFiles: [],
+			message: "wrangler.jsonc is excluded by --files.",
+			status: "skipped",
+		});
 		await expect(
 			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
 		).rejects.toMatchObject({ code: "ENOENT" });

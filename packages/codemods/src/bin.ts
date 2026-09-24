@@ -3,11 +3,11 @@
 import path from "node:path";
 import { parseArgs } from "node:util";
 import {
-	formatCompletionMessage,
 	formatFollowUps,
 	getCodemodExitCode,
+	getCodemodSummary,
 } from "./cli-output";
-import { availableCodemods, getCodemod, runCodemod } from "./runner";
+import { availableCodemods, runCodemod } from "./runner";
 
 /** Prints command usage and the available codemods. */
 function printHelp(): void {
@@ -91,13 +91,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 			console.log(line);
 		}
 	}
-	console.log(
-		formatCompletionMessage(
-			result.changedFiles.length,
-			values["dry-run"],
-			getCodemod(name)?.name !== "wrangler-to-cf"
-		)
-	);
+	console.log(getCodemodSummary(result, values["dry-run"]));
 	const exitCode = getCodemodExitCode(result.status);
 	if (exitCode !== 0) {
 		process.exitCode = exitCode;
