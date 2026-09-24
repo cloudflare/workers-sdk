@@ -123,6 +123,7 @@ export async function migrateWranglerToCf(
 			wranglerConfig
 		);
 	}
+	const changedFiles = Array.from(outputs.keys());
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
@@ -131,42 +132,46 @@ export async function migrateWranglerToCf(
 	}
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
-		if (installDependencies && dependencyPlan.action === "install") {
-			let dependencyFollowUp: MigrationFollowUp | undefined;
-			try {
-				await installCfDependency(dependencyPlan);
-			} catch (error) {
-				const reason =
-					error instanceof Error
-						? ` Installation failed: ${error.message}`
-						: "";
-				dependencyFollowUp = createFollowUp(
-					"cf-install-failed",
-					`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
-				);
+	}
+	if (installDependencies && dependencyPlan.action === "install") {
+		let dependencyFollowUp: MigrationFollowUp | undefined;
+		try {
+			const installResult = await installCfDependency(dependencyPlan, {
+				dryRun,
+			});
+			changedFiles.push(...installResult.changedFiles);
+		} catch (error) {
+			if (dryRun) {
+				throw error;
 			}
+			const reason =
+				error instanceof Error ? ` Installation failed: ${error.message}` : "";
+			dependencyFollowUp = createFollowUp(
+				"cf-install-failed",
+				`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+			);
+		}
 
-			if (dependencyFollowUp) {
-				followUps.push(dependencyFollowUp);
-				const updatedCloudflareConfig = renderCloudflareConfig({
-					...convertedConfig,
-					followUps,
-				});
-				outputs.set(cloudflareConfigPath, updatedCloudflareConfig);
-				try {
-					await rewriteMigrationOutput(
-						cloudflareConfigPath,
-						updatedCloudflareConfig
-					);
-				} catch (error) {
-					await cleanupMigrationOutputs(outputs.keys(), error);
-				}
+		if (dependencyFollowUp) {
+			followUps.push(dependencyFollowUp);
+			const updatedCloudflareConfig = renderCloudflareConfig({
+				...convertedConfig,
+				followUps,
+			});
+			outputs.set(cloudflareConfigPath, updatedCloudflareConfig);
+			try {
+				await rewriteMigrationOutput(
+					cloudflareConfigPath,
+					updatedCloudflareConfig
+				);
+			} catch (error) {
+				await cleanupMigrationOutputs(outputs.keys(), error);
 			}
 		}
 	}
 
 	return {
-		changedFiles: Array.from(outputs.keys()).map((filePath) =>
+		changedFiles: changedFiles.map((filePath) =>
 			path.relative(projectDirectory, filePath)
 		),
 		followUps,
