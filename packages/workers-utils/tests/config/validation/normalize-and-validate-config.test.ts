@@ -5055,6 +5055,133 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
+			it("should accept ssh and authorized_keys on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								ssh: { enabled: true, port: 2222 },
+								authorized_keys: [
+									{
+										name: "laptop",
+										public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+									},
+								],
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						scheduling_policy: "durable_object",
+						name: "sandboxes",
+						ssh: { enabled: true, port: 2222 },
+						authorized_keys: [
+							{
+								name: "laptop",
+								public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+							},
+						],
+					},
+				]);
+			});
+
+			it("should reject deprecated wrangler_ssh on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								wrangler_ssh: { enabled: true },
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'Unsupported fields for Durable Object-managed Containers in containers: "wrangler_ssh"'
+				);
+			});
+
+			it("should keep ssh when re-validating a normalized Durable Object-managed container", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					containers: [
+						{
+							class_name: "Sandbox",
+							scheduling_policy: "durable_object",
+							name: "sandboxes",
+							ssh: { enabled: true },
+						},
+					],
+				} as RawConfig;
+				const first = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				const second = normalizeAndValidateConfig(
+					{ containers: first.config.containers } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(second.diagnostics.hasErrors()).toBe(false);
+				expect(second.config.containers?.[0].ssh).toEqual({ enabled: true });
+			});
+
+			it("should reject invalid ssh and authorized_keys on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								ssh: { enabled: "yes", port: 70000 },
+								authorized_keys: [
+									{ name: "laptop", public_key: "ssh-rsa AAAAB3NzaC1yc2E" },
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.ssh.enabled must be a boolean
+					  - containers.ssh.port must be a number between 1 and 65535 inclusive
+					  - containers.authorized_keys[0].public_key is an unsupported key type. Please provide an ED25519 public key."
+				`);
+			});
+
 			it("should require a name or class name for a Durable Object-managed container", ({
 				expect,
 			}) => {

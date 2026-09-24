@@ -3615,6 +3615,35 @@ function validateSshPublicKeys(
 }
 
 /**
+ * Validate a container SSH config object, as set by `containers.ssh` or the
+ * deprecated `containers.wrangler_ssh`.
+ */
+function validateContainerSshConfig(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): void {
+	const sshConfig = typeof value === "object" && value !== null ? value : {};
+
+	if (
+		!isRequiredProperty<{ enabled: boolean }>(sshConfig, "enabled", "boolean")
+	) {
+		diagnostics.errors.push(`${field}.enabled must be a boolean`);
+	}
+
+	const port = "port" in sshConfig ? sshConfig.port : undefined;
+	if (
+		!isOptionalProperty<{ port: number }>(sshConfig, "port", "number") ||
+		(typeof port === "number" &&
+			(!Number.isInteger(port) || port < 1 || port > 65535))
+	) {
+		diagnostics.errors.push(
+			`${field}.port must be a number between 1 and 65535 inclusive`
+		);
+	}
+}
+
+/**
  * Validate `previews.containers`. Mirrors `validateContainerApp`, but rejects
  * the application name outright. Every preview container is named at deploy
  * time from the resolved worker name, preview slug, and class name, so that
@@ -3991,12 +4020,31 @@ function validateContainerApp(
 							"scheduling_policy",
 							"images",
 							"observability",
+							"ssh",
+							"authorized_keys",
 							"unsafe",
 						].includes(key)
 				);
 				if (unsupportedFields.length > 0) {
 					diagnostics.errors.push(
-						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", "images", "observability", and restricted "unsafe" settings are supported.`
+						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", "images", "observability", "ssh", "authorized_keys", and restricted "unsafe" settings are supported.`
+					);
+				}
+				// Unlike other containers, `ssh` is not renamed to `wrangler_ssh` here, so
+				// normalized config (e.g. the Vite plugin's output config) still validates.
+				if ("ssh" in containerAppOptional) {
+					validateContainerSshConfig(
+						diagnostics,
+						`${field}.ssh`,
+						containerAppOptional.ssh
+					);
+				}
+				if ("authorized_keys" in containerAppOptional) {
+					validateSshPublicKeys(
+						diagnostics,
+						`${field}.authorized_keys`,
+						containerAppOptional.authorized_keys,
+						true
 					);
 				}
 				continue;
@@ -4270,42 +4318,21 @@ function validateContainerApp(
 				);
 			}
 
-			let sshField: "ssh" | "wrangler_ssh" | undefined;
-			let sshConfig:
-				| ContainerApp["ssh"]
-				| ContainerApp["wrangler_ssh"]
-				| undefined;
-
 			if ("ssh" in containerAppOptional) {
-				sshField = "ssh";
-				sshConfig = containerAppOptional.ssh;
+				validateContainerSshConfig(
+					diagnostics,
+					`${field}.ssh`,
+					containerAppOptional.ssh
+				);
+				// The Containers API calls this field `wrangler_ssh`.
 				containerAppOptional.wrangler_ssh = containerAppOptional.ssh;
 				delete containerAppOptional.ssh;
 			} else if ("wrangler_ssh" in containerAppOptional) {
-				sshField = "wrangler_ssh";
-				sshConfig = containerAppOptional.wrangler_ssh;
-			}
-
-			if (sshField !== undefined) {
-				const sshConfigObject =
-					typeof sshConfig === "object" && sshConfig !== null ? sshConfig : {};
-
-				if (!isRequiredProperty(sshConfigObject, "enabled", "boolean")) {
-					diagnostics.errors.push(
-						`${field}.${sshField}.enabled must be a boolean`
-					);
-				}
-
-				const sshPort =
-					"port" in sshConfigObject ? sshConfigObject.port : undefined;
-				if (
-					!isOptionalProperty(sshConfigObject, "port", "number") ||
-					(typeof sshPort === "number" && (sshPort < 1 || sshPort > 65535))
-				) {
-					diagnostics.errors.push(
-						`${field}.${sshField}.port must be a number between 1 and 65535 inclusive`
-					);
-				}
+				validateContainerSshConfig(
+					diagnostics,
+					`${field}.wrangler_ssh`,
+					containerAppOptional.wrangler_ssh
+				);
 			}
 
 			if ("authorized_keys" in containerAppOptional) {
