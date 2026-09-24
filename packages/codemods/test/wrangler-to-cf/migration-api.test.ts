@@ -248,6 +248,58 @@ describe("migrateWranglerToCf", () => {
 		expect(result.changedFiles).toContain("npm-shrinkwrap.json");
 	});
 
+	it("reports an ancestor workspace lockfile", async ({ expect }) => {
+		const packageJson = {
+			name: "workspace-worker",
+			packageManager: "pnpm@10.27.0",
+		};
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				name: "workspace",
+				private: true,
+				workspaces: ["worker"],
+			}),
+			"pnpm-lock.yaml": "lockfileVersion: 9",
+			"worker/package.json": JSON.stringify(packageJson),
+			"worker/wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "workspace-worker",
+			}),
+		});
+		const workerDirectory = path.join(cwd, "worker");
+		const rootLockFile = path.join("..", "pnpm-lock.yaml");
+
+		const previewResult = await migrateWranglerToCf(
+			path.join(workerDirectory, "wrangler.json"),
+			{ dryRun: true }
+		);
+		vi.mocked(installPackages).mockImplementationOnce(async () => {
+			await writeFile(
+				path.join(workerDirectory, "package.json"),
+				JSON.stringify({
+					...packageJson,
+					devDependencies: { cf: "latest" },
+				})
+			);
+			await writeFile(
+				path.join(cwd, "pnpm-lock.yaml"),
+				"lockfileVersion: 9\npackages:"
+			);
+		});
+
+		const result = await migrateWranglerToCf(
+			path.join(workerDirectory, "wrangler.json")
+		);
+
+		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
+			"pnpm",
+			["cf@latest"],
+			{ cwd: workerDirectory, dev: true, isWorkspaceRoot: false }
+		);
+		expect(previewResult.changedFiles).toContain(rootLockFile);
+		expect(result.changedFiles).toContain(rootLockFile);
+	});
+
 	it("skips dependency installation when requested", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": JSON.stringify({ name: "example-worker" }),
