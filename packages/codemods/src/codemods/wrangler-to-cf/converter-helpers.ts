@@ -91,21 +91,24 @@ function snakeToCamel(value: string): string {
 	);
 }
 
+function toCamelOutputValue(value: unknown): OutputValue | undefined {
+	if (isRecord(value)) {
+		return camelObject(value);
+	}
+
+	if (Array.isArray(value)) {
+		return value
+			.map(toCamelOutputValue)
+			.filter((entry): entry is OutputValue => entry !== undefined);
+	}
+
+	return toOutputValue(value);
+}
+
 export function camelObject(record: UnknownRecord): OutputObject {
 	const properties: OutputProperty[] = [];
 	for (const [key, value] of Object.entries(record)) {
-		let converted: OutputValue | undefined;
-		if (isRecord(value)) {
-			converted = camelObject(value);
-		} else if (Array.isArray(value)) {
-			converted = value
-				.map((entry) =>
-					isRecord(entry) ? camelObject(entry) : toOutputValue(entry)
-				)
-				.filter((entry): entry is OutputValue => entry !== undefined);
-		} else {
-			converted = toOutputValue(value);
-		}
+		const converted = toCamelOutputValue(value);
 
 		if (converted !== undefined) {
 			properties.push({ key: snakeToCamel(key), value: converted });
