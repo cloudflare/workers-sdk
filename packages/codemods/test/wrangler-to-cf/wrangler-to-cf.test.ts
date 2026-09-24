@@ -336,6 +336,32 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(output)).toEqual([]);
 	});
 
+	it("reports unknown preview fields", async ({ expect }) => {
+		const cwd = await createProject({
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				env: {
+					staging: {
+						previews: { environment_custom_option: true },
+					},
+				},
+				name: "example-worker",
+				previews: { custom_option: true },
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(
+			result.followUps
+				.filter(({ code }) => code === "unsupported-field")
+				.map(({ sourcePath }) => sourcePath)
+		).toEqual([
+			"previews.custom_option",
+			"env.staging.previews.environment_custom_option",
+		]);
+	});
+
 	it("inherits log forwarding bindings into environments and previews", async ({
 		expect,
 	}) => {

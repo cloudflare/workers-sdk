@@ -1767,11 +1767,23 @@ export function convertWranglerConfig(
 	const imports = new Set<string>();
 	const followUps: MigrationFollowUp[] = [];
 	addUnknownFieldFollowUps(source, "", followUps);
+	const sourcePreviews = getRecord(source, "previews");
+	if (sourcePreviews) {
+		addUnknownFieldFollowUps(sourcePreviews, "previews", followUps);
+	}
 
 	const environments = getRecord(source, "env") ?? {};
 	for (const [name, environment] of Object.entries(environments)) {
 		if (isRecord(environment)) {
 			addUnknownFieldFollowUps(environment, `env.${name}`, followUps);
+			const environmentPreviews = getRecord(environment, "previews");
+			if (environmentPreviews) {
+				addUnknownFieldFollowUps(
+					environmentPreviews,
+					`env.${name}.previews`,
+					followUps
+				);
+			}
 			if (bundler === "vite" && VITE_DEFAULT_MODES.has(name)) {
 				followUps.push(
 					createFollowUp(
@@ -1809,7 +1821,6 @@ export function convertWranglerConfig(
 		);
 	}
 
-	const sourcePreviews = getRecord(source, "previews");
 	if (bundler === "vite") {
 		addViteToolingFollowUp(source, "", "", followUps);
 		if (sourcePreviews) {
