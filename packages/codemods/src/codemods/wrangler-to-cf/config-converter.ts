@@ -1162,7 +1162,7 @@ function convertTriggers(
 
 	for (const connection of getRecords(source, "connect")) {
 		imports.add("triggers");
-		converted.push(call("triggers.connect", objectFromRecord(connection)));
+		converted.push(call("triggers.connect", camelObject(connection)));
 	}
 
 	const addresses = getStrings(source, "addresses");

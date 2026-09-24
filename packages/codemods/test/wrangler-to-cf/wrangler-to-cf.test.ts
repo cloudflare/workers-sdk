@@ -386,6 +386,35 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(output)).toEqual([]);
 	});
 
+	it("converts UDP socket options to camel case", async ({ expect }) => {
+		const cwd = await createProject({
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				connect: [
+					{
+						idle_timeout_ms: 5_000,
+						max_pending_bytes: 65_536,
+						port: 53,
+						protocol: "udp",
+					},
+				],
+				name: "example-worker",
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+		const output = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+
+		expect(output).toContain("idleTimeoutMs: 5000");
+		expect(output).toContain("maxPendingBytes: 65536");
+		expect(output).not.toContain("idle_timeout_ms");
+		expect(output).not.toContain("max_pending_bytes");
+		expect(getSyntaxErrors(output)).toEqual([]);
+	});
+
 	it("writes Wrangler tooling config only when requested and needed", async ({
 		expect,
 	}) => {
