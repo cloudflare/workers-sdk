@@ -33,26 +33,22 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 	async function loadConfig(configPath: string) {
 		const exports = await importSeeded(configPath);
 		return {
-			exports,
+			config: exports.default,
 			dependencies: new Set<string>([path.resolve(configPath)]),
 		};
 	}
 
-	async function loadAndValidateConfig(configPath: string, ctx: unknown) {
-		const { exports } = await loadConfig(configPath);
-		const resolved: Record<string, unknown> = {};
-		for (const [name, value] of Object.entries(exports)) {
-			resolved[name] = await actual.resolveExportDefinition(value, ctx);
-		}
+	async function loadAndParseConfig(configPath: string, ctx: unknown) {
+		const { config, dependencies } = await loadConfig(configPath);
 		return {
-			result: actual.ConfigExportsSchema.safeParse(resolved),
-			dependencies: new Set<string>([path.resolve(configPath)]),
+			result: await actual.resolveAndParseConfig(config, ctx),
+			dependencies,
 		};
 	}
 
 	return {
 		...actual,
 		loadConfig,
-		loadAndValidateConfig,
+		loadAndParseConfig,
 	};
 }

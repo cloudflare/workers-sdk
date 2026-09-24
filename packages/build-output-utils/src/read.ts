@@ -1,12 +1,18 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { OutputSettingsSchema, OutputWorkerSchema } from "@cloudflare/config";
+import {
+	OutputContainerSchema,
+	OutputRootConfigSchema,
+	OutputWorkerSchema,
+} from "@cloudflare/config";
 import { BuildOutputError } from "./errors";
 import {
 	BUILD_OUTPUT_VERSION,
 	DEFAULT_WORKER_DIRECTORY_NAME,
-	getSettingsConfigPath,
+	getContainerConfigPath,
+	getContainersDir,
+	getRootConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
@@ -14,7 +20,8 @@ import {
 } from "./paths";
 import type {
 	ModuleType,
-	ParsedOutputSettingsConfig,
+	ParsedOutputContainerConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 
@@ -27,7 +34,7 @@ type CompleteManifest = Omit<
 	"type"
 > & { type: "complete" };
 
-/** A schema-validated Worker config whose manifest has been fully resolved. */
+/** A parsed Worker config whose manifest has been fully resolved. */
 export type ResolvedOutputWorkerConfig = Omit<
 	ParsedOutputWorkerConfig,
 	"manifest"
@@ -36,7 +43,7 @@ export type ResolvedOutputWorkerConfig = Omit<
 };
 
 interface BuildOutputWorkerBase {
-	/** Absolute path to the Worker's `config.json`. */
+	/** Absolute path to the Worker's `worker.config.json`. */
 	configPath: string;
 	/** The parsed Worker config, including its fully resolved `manifest`. */
 	config: ResolvedOutputWorkerConfig;
@@ -68,82 +75,152 @@ export type BuildOutputWorker = BuildOutputWorkerBase &
 	);
 
 export type BuildOutputWorkers = Record<string, BuildOutputWorker> & {
-	/** The Worker in the default directory. */
+	/** The default Worker. */
 	default: BuildOutputWorker;
 };
+
+/** A Container found in the Build Output Specification tree. */
+export interface BuildOutputContainer {
+	/** Absolute path to the Container's `container.config.json`. */
+	configPath: string;
+	/** The parsed Container config. */
+	config: ParsedOutputContainerConfig;
+}
+
+/** Containers found in the Build Output Specification tree. */
+export type BuildOutputContainers = BuildOutputContainer[];
 
 /**
  * The result of reading a Build Output Specification tree.
  */
 export interface BuildOutput {
-	/** Project root the output was read from. */
+	/** Absolute project root from which the output was read. */
 	root: string;
 	/** Version of the spec the tree conforms to. */
 	version: string;
 	/**
-	 * The parsed, schema-validated project-level settings shared by every
-	 * Worker, including the `mode` the build was produced in. Current writers
-	 * always emit the top-level `config.json`; `undefined` is retained for
-	 * compatibility with third-party build output.
+	 * The parsed root `config.json`.
 	 */
-	settings: ParsedOutputSettingsConfig | undefined;
+	rootConfig: ParsedOutputRootConfig;
 	/**
 	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`, keyed by
 	 * their directory names. Guaranteed to contain the `default` Worker.
 	 */
 	workers: BuildOutputWorkers;
+	/**
+	 * The Containers found under
+	 * `<root>/.cloudflare/output/v0/containers/`. Their order has no semantic
+	 * meaning.
+	 */
+	containers: BuildOutputContainers;
 }
 
 /**
- * Read and validate the Build Output Specification tree at
+ * Read and parse the Build Output Specification tree at
  * `<root>/.cloudflare/output/v0/`.
  *
- * Reads the optional top-level settings `config.json`, then reads and
- * schema-validates the Worker's `config.json` and resolves its
+ * Reads the root `config.json`, then reads and parses each
+ * `worker.config.json` and `container.config.json`, and resolves each Worker's
  * `bundle/` / `assets/` directories. Partial manifests are resolved into
  * complete manifests using the files in `bundle/`.
  *
- * @throws {BuildOutputError} if the top-level `config.json` is invalid, or if
- * the Worker config is missing, is not valid JSON, or fails schema validation.
+ * @throws {BuildOutputError} if the root `config.json` is missing or
+ * invalid, or if a Worker or Container config is missing, is not valid JSON,
+ * or does not match its schema.
  */
 export async function readBuildOutput(root: string): Promise<BuildOutput> {
-	const settings = await readSettings(root);
+	const absoluteRoot = path.resolve(root);
+	const rootConfig = await readRootConfig(absoluteRoot);
+	const [workers, containers] = await Promise.all([
+		readWorkers(absoluteRoot),
+		readContainers(absoluteRoot),
+	]);
+
+	return {
+		root: absoluteRoot,
+		version: BUILD_OUTPUT_VERSION,
+		rootConfig,
+		workers,
+		containers,
+	};
+}
+
+/** Read and parse the default Worker and any additional Worker configs. */
+async function readWorkers(root: string): Promise<BuildOutputWorkers> {
+	const workersDir = getWorkersDir(root);
 	const defaultWorker = await readWorker(root, DEFAULT_WORKER_DIRECTORY_NAME);
 	const additionalWorkerDirectoryNames = (
-		await fsp.readdir(getWorkersDir(root), {
-			withFileTypes: true,
-		})
+		await fsp.readdir(workersDir, { withFileTypes: true })
 	)
 		.filter(
 			(entry) =>
 				entry.isDirectory() && entry.name !== DEFAULT_WORKER_DIRECTORY_NAME
 		)
-		.map((entry) => entry.name)
-		.sort();
+		.map((entry) => entry.name);
 	const additionalWorkers = await Promise.all(
-		additionalWorkerDirectoryNames.map(
-			async (workerDirectoryName) =>
-				[
-					workerDirectoryName,
-					await readWorker(root, workerDirectoryName),
-				] as const
-		)
+		additionalWorkerDirectoryNames.map(async (workerDirectoryName) => {
+			const worker = await readWorker(root, workerDirectoryName);
+			return [workerDirectoryName, worker] as const;
+		})
 	);
-	const workers: BuildOutputWorkers = {
+
+	return {
 		default: defaultWorker,
 		...Object.fromEntries(additionalWorkers),
 	};
+}
 
-	return { root, version: BUILD_OUTPUT_VERSION, settings, workers };
+/** Read and parse all Container configs, if any. */
+async function readContainers(root: string): Promise<BuildOutputContainers> {
+	const containersDir = getContainersDir(root);
+	if (!fs.existsSync(containersDir)) {
+		return [];
+	}
+
+	const containerDirectoryNames = (
+		await fsp.readdir(containersDir, { withFileTypes: true })
+	)
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => entry.name);
+
+	return Promise.all(
+		containerDirectoryNames.map((containerDirectoryName) =>
+			readContainer(root, containerDirectoryName)
+		)
+	);
+}
+
+/** Read and parse one Container config. */
+async function readContainer(
+	root: string,
+	containerDirectoryName: string
+): Promise<BuildOutputContainer> {
+	const configPath = getContainerConfigPath(root, containerDirectoryName);
+
+	if (!fs.existsSync(configPath)) {
+		throw new BuildOutputError(`no Container config found at ${configPath}.`);
+	}
+
+	const contents = await fsp.readFile(configPath, "utf-8");
+	const result = OutputContainerSchema.safeParse(
+		parseJson(contents, configPath)
+	);
+	if (!result.success) {
+		throw new BuildOutputError(
+			`invalid Container config at ${configPath}.\n${result.error.message}`
+		);
+	}
+
+	return { configPath, config: result.data };
 }
 
 /**
- * Read and schema-validate the Worker's `config.json` and resolve its
+ * Read and parse the Worker's `worker.config.json` and resolve its
  * `bundle/` / `assets/` directories.
  *
  * @returns the Worker, with whichever of its directories exist resolved.
  * @throws {BuildOutputError} if the config is missing, is not valid JSON, or
- * fails schema validation.
+ * does not match its schema.
  */
 async function readWorker(
 	root: string,
@@ -272,33 +349,26 @@ function inferModuleType(modulePath: string): ModuleType | undefined {
 }
 
 /**
- * Read and schema-validate the optional top-level `config.json` holding the
- * project-level settings shared by every Worker, including the mode the build
- * was produced in.
+ * Read and parse the root `config.json`.
  *
- * Returned whole: consumers that need only the settings the user declared
- * narrow it themselves.
- *
- * @returns the parsed settings, or `undefined` when the file is absent.
- * @throws {BuildOutputError} if the file is not valid JSON or fails schema
- * validation.
+ * @returns the parsed root config.
+ * @throws {BuildOutputError} if the file is missing, is not valid JSON, or
+ * does not match its schema.
  */
-async function readSettings(
-	root: string
-): Promise<ParsedOutputSettingsConfig | undefined> {
-	const configPath = getSettingsConfigPath(root);
+async function readRootConfig(root: string): Promise<ParsedOutputRootConfig> {
+	const configPath = getRootConfigPath(root);
 
 	if (!fs.existsSync(configPath)) {
-		return undefined;
+		throw new BuildOutputError(`no root config found at ${configPath}.`);
 	}
 
 	const contents = await fsp.readFile(configPath, "utf-8");
-	const result = OutputSettingsSchema.safeParse(
+	const result = OutputRootConfigSchema.safeParse(
 		parseJson(contents, configPath)
 	);
 	if (!result.success) {
 		throw new BuildOutputError(
-			`invalid settings config at ${configPath}.\n${result.error.message}`
+			`invalid root config at ${configPath}.\n${result.error.message}`
 		);
 	}
 

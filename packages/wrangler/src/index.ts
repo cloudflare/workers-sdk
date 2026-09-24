@@ -191,6 +191,7 @@ import {
 import { flagshipFlagsEvaluateCommand } from "./flagship/flags/evaluate";
 import { flagshipFlagsGetCommand } from "./flagship/flags/get";
 import { flagshipFlagsListCommand } from "./flagship/flags/list";
+import { flagshipFlagsPullCommand } from "./flagship/flags/pull";
 import { flagshipFlagsRolloutCommand } from "./flagship/flags/rollout";
 import { flagshipFlagsRulesDeleteCommand } from "./flagship/flags/rules/delete";
 import { flagshipFlagsRulesListCommand } from "./flagship/flags/rules/list";
@@ -328,10 +329,6 @@ import { previewSecretBulkCommand } from "./preview/secrets/bulk";
 import { previewSecretDeleteCommand } from "./preview/secrets/delete";
 import { previewSecretListCommand } from "./preview/secrets/list";
 import { previewSecretPutCommand } from "./preview/secrets/put";
-import {
-	previewSettingsCommand,
-	previewSettingsUpdateCommand,
-} from "./preview/settings";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -541,8 +538,6 @@ import { vpcServiceGetCommand } from "./vpc/get";
 import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
 import { vpcServiceListCommand } from "./vpc/list";
 import { vpcServiceUpdateCommand } from "./vpc/update";
-import { websearchNamespace } from "./websearch/index";
-import { websearchSearchCommand } from "./websearch/search";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
@@ -569,6 +564,22 @@ if (proxy) {
 	logger.warn(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
+}
+
+function redactEventCode(argv: string[]): string[] {
+	return argv.map((arg, index) => {
+		const previousArg = argv[index - 1];
+		if (previousArg === "--event-code" || previousArg === "--eventCode") {
+			return "<redacted>";
+		}
+		if (arg.startsWith("--event-code=")) {
+			return "--event-code=<redacted>";
+		}
+		if (arg.startsWith("--eventCode=")) {
+			return "--eventCode=<redacted>";
+		}
+		return arg;
+	});
 }
 
 export function createCLIParser(argv: string[]) {
@@ -686,7 +697,7 @@ export function createCLIParser(argv: string[]) {
 				type: "wrangler-session",
 				version: 1,
 				wrangler_version: wranglerVersion,
-				command_line_args: argv,
+				command_line_args: redactEventCode(argv),
 				log_file_path: debugLogFilepath,
 			});
 
@@ -917,14 +928,6 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler preview", definition: previewCommand },
 		{ command: "wrangler preview delete", definition: previewDeleteCommand },
-		{
-			command: "wrangler preview settings",
-			definition: previewSettingsCommand,
-		},
-		{
-			command: "wrangler preview settings update",
-			definition: previewSettingsUpdateCommand,
-		},
 		{ command: "wrangler preview secret", definition: previewSecretNamespace },
 		{
 			command: "wrangler preview secret put",
@@ -1655,6 +1658,10 @@ export function createCLIParser(argv: string[]) {
 			definition: flagshipFlagsGetCommand,
 		},
 		{
+			command: "wrangler flagship flags pull",
+			definition: flagshipFlagsPullCommand,
+		},
+		{
 			command: "wrangler flagship flags inspect",
 			definition: flagshipFlagsGetAlias,
 		},
@@ -1854,16 +1861,6 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("ai-search");
-
-	// websearch
-	registry.define([
-		{ command: "wrangler websearch", definition: websearchNamespace },
-		{
-			command: "wrangler websearch search",
-			definition: websearchSearchCommand,
-		},
-	]);
-	registry.registerNamespace("websearch");
 
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([

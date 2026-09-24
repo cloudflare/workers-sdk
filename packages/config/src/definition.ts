@@ -1,4 +1,9 @@
+import type { CloudflareConfig, ContainerConfig, WorkerConfig } from "./types";
+
 export interface ConfigContext {
+	/** Whether the config is being evaluated for a Preview build. */
+	isPreview: boolean;
+
 	/**
 	 * The mode the config is being evaluated in.
 	 * Set via the `--mode` CLI flag.
@@ -8,49 +13,77 @@ export interface ConfigContext {
 	mode: string | undefined;
 }
 
-// We currently use Symbol.for rather than Symbol so that the symbol matches if duplicated across bundles
-// This wouldn't be necessary if @cloudflare/config was published and included as a dependency
-export const DEFINITION = Symbol.for("@cloudflare/config:definition");
-
 /**
- * The authored config in any of its supported shapes: a plain value, a promise,
- * or a function of {@link ConfigContext}.
+ * A configuration value, promise, or factory. Factories can be passed directly
+ * for automatic resolution with the current context or called explicitly with
+ * another context before they are used.
  */
 export type ConfigInput<T> =
 	| T
 	| Promise<T>
 	| ((ctx: ConfigContext) => T | Promise<T>);
 
-/**
- * Unwrap an authored config from its value / promise / function shape, awaiting
- * the result. A function config is invoked with {@link ConfigContext}.
- */
-async function unwrap(config: unknown, ctx: ConfigContext): Promise<unknown> {
-	return typeof config === "function"
-		? await (config as (ctx: ConfigContext) => unknown)(ctx)
-		: await config;
+/** Create a type-safe identity helper for a configuration value or factory. */
+export function createConfigDefiner<TConfig>() {
+	return function define<const TInput extends ConfigInput<TConfig>>(
+		config: TInput
+	): TInput {
+		return config;
+	};
 }
 
+export type ContainerDefinition<T extends ContainerConfig = ContainerConfig> =
+	ConfigInput<T>;
+
+export type WorkerDefinition<T extends WorkerConfig = WorkerConfig> =
+	ConfigInput<T>;
+
+/** A Worker name, value, promise, or context-aware factory. */
+export type WorkerReference = string | WorkerDefinition;
+
 /**
- * Resolve any `cloudflare.config.ts` export to its plain config value.
+ * Used to define the default export in `cloudflare.config.ts`.
  *
- * A `define*` helper stores its authored config plus `type` under the
- * {@link DEFINITION} symbol; here we unwrap the config and stamp `type` back on.
- * Every other export — a raw object/promise/function — is unwrapped as-is and
- * already carries its own `type`. Discrimination happens afterwards via `type`.
+ * @example
+ * ```typescript
+ * import { defineConfig } from "@cloudflare/config";
+ *
+ * export default defineConfig({
+ *   worker: {
+ *     name: "my-worker",
+ *     compatibilityDate: "2026-09-17",
+ *   },
+ * });
+ * ```
  */
-export async function resolveExportDefinition(
-	def: unknown,
-	ctx: ConfigContext
-): Promise<unknown> {
-	if (typeof def === "object" && def !== null && DEFINITION in def) {
-		const { config, type } = (def as Record<symbol, unknown>)[DEFINITION] as {
-			config: unknown;
-			type: string;
-		};
-		const resolved = await unwrap(config, ctx);
-		return { ...(resolved as object), type };
-	}
+export const defineConfig = createConfigDefiner<CloudflareConfig>();
 
-	return await unwrap(def, ctx);
-}
+/**
+ * Define a Container.
+ *
+ * @example
+ * ```typescript
+ * import { defineContainer } from "@cloudflare/config";
+ *
+ * const container = defineContainer({
+ *   name: "my-container",
+ *   image: { dockerfile: "./Dockerfile" },
+ * });
+ * ```
+ */
+export const defineContainer = createConfigDefiner<ContainerConfig>();
+
+/**
+ * Define a Worker.
+ *
+ * @example
+ * ```typescript
+ * import { defineWorker } from "@cloudflare/config";
+ *
+ * const worker = defineWorker({
+ *   name: "my-worker",
+ *   compatibilityDate: "2026-09-17",
+ * });
+ * ```
+ */
+export const defineWorker = createConfigDefiner<WorkerConfig>();

@@ -35,14 +35,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -443,7 +435,7 @@ describe("deploy", () => {
 				Worker Startup Time: 100 ms
 				Uploaded test-name-testEnv (TIMINGS)
 				Deployed test-name-testEnv triggers (TIMINGS)
-				  https://test-name-testEnv.test-sub-domain.workers.dev
+				  https://test-name-testenv.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1074,6 +1066,9 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
+			// The startup profiler runs Miniflare, whose HTTP server expects real
+			// Node.js timeout handles (including `unref()`).
+			vi.unstubAllGlobals();
 			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{

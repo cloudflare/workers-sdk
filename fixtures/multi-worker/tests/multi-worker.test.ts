@@ -9,11 +9,15 @@ describe("Multi Worker", () => {
 			["-c=workers/sentry/wrangler.jsonc", "-c=workers/default/wrangler.jsonc"]
 		);
 		try {
-			await vi.waitFor(async () => {
-				const response = await fetch(`http://${ip}:${port}/`);
-				const text = await response.text();
-				expect(text).toBe(`Hello World!`);
-			});
+			await vi.waitFor(
+				async () => {
+					const response = await fetch(`http://${ip}:${port}/`);
+					const text = await response.text();
+					expect(text).toBe(`Hello World!`);
+				},
+				// The TCP listener can be ready before the multi-worker runtime and Sentry integration can serve requests under Windows load
+				{ timeout: 10_000, interval: 100 }
+			);
 		} finally {
 			await stop();
 		}

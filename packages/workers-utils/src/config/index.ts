@@ -43,7 +43,16 @@ export type { ExportType, PartitionedExports } from "./exports";
 export {
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
+} from "./containers";
+export type {
+	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
 } from "./containers";
 
 export function configFormat(

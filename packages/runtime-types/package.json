@@ -1,7 +1,7 @@
 {
 	"name": "@cloudflare/runtime-types",
-	"version": "0.0.21",
-	"private": true,
+	"version": "0.1.0",
+	"description": "Utilities for generating Cloudflare Workers runtime types from compatibility dates and flags. This is not yet stable enough for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/runtime-types#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
@@ -41,5 +41,8 @@
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
+	},
+	"workers-sdk": {
+		"prerelease": true
 	}
 }

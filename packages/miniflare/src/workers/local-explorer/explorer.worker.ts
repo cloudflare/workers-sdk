@@ -3,6 +3,7 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
+import { z } from "miniflare:zod";
 import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
@@ -17,12 +18,14 @@ import {
 	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 	zObservabilityQueryData,
 	zWorkflowsBatchDeleteInstancesData,
-	zWorkflowsChangeInstanceStatusData,
+	zWorChangeStatusWorkflowInstanceData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
@@ -30,13 +33,18 @@ import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
 	getReceivedEmail,
+	getReceivedEmailByCaptureId,
+	getResendDraft,
 	getSentEmail,
 	listReceivedEmails,
 	listSentEmails,
+	resendCapturedEmail,
 	sendTestEmail,
 } from "./resources/email";
 import {
+	bulkDeleteKVValues,
 	bulkGetKVValues,
+	bulkWriteKVValues,
 	deleteKVValue,
 	getKVValue,
 	listKVKeys,
@@ -73,6 +81,23 @@ import type { CoreBindings } from "../core";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
 import type { EmailStoreService } from "../email/storage";
 import type { LocalExplorerWorker } from "./generated";
+
+// Generated object schemas strip unknown keys, so reject invalid rollback
+// combinations before parsing rather than silently dropping the option.
+const zWorkflowInstanceStatusBody = z.preprocess((value, ctx) => {
+	if (
+		typeof value === "object" &&
+		value !== null &&
+		Object.hasOwn(value, "rollback") &&
+		(value as { status?: unknown }).status !== "terminate"
+	) {
+		ctx.addIssue({
+			code: "custom",
+			message: "'rollback' is only valid when terminating.",
+		});
+	}
+	return value;
+}, zWorChangeStatusWorkflowInstanceData.shape.body);
 
 export type Env = {
 	[key: string]: unknown;
@@ -235,6 +260,24 @@ app.delete("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
 	deleteKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
 
+app.put(
+	"/api/storage/kv/namespaces/:namespace_id/bulk",
+	validateRequestBody(
+		zWorkersKvNamespaceWriteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkWriteKVValues(c, c.req.valid("json"))
+);
+
+app.post(
+	"/api/storage/kv/namespaces/:namespace_id/bulk/delete",
+	validateRequestBody(
+		zWorkersKvNamespaceDeleteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkDeleteKVValues(c, c.req.valid("json"))
+);
+
 app.post(
 	"/api/storage/kv/namespaces/:namespace_id/bulk/get",
 	validateRequestBody(
@@ -354,7 +397,7 @@ app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 
 app.patch(
 	"/api/workflows/:workflow_name/instances/:instance_id/status",
-	validateRequestBody(zWorkflowsChangeInstanceStatusData.shape.body),
+	validateRequestBody(zWorkflowInstanceStatusBody),
 	(c) =>
 		changeWorkflowInstanceStatus(
 			c,
@@ -399,14 +442,58 @@ app.post("/api/local/observability/clear", (c) => clearTraces(c));
 // Email Endpoints
 // ============================================================================
 
-app.get(
-	"/api/local/email/routing",
-	validateQuery(zEmailListRoutingData.shape.query.unwrap()),
+const zEmailRoutingQuery = zEmailListRoutingData.shape.query
+	.unwrap()
+	.extend({ capture_id: z.uuid().optional() })
+	.superRefine((query, context) => {
+		if (query.capture_id !== undefined && query.email_id !== undefined) {
+			context.addIssue({
+				code: "custom",
+				message: "capture_id and email_id are mutually exclusive",
+			});
+		}
+		if (
+			query.capture_id !== undefined &&
+			(query.worker === undefined || query.worker.trim() === "")
+		) {
+			context.addIssue({
+				code: "custom",
+				path: ["worker"],
+				message: "Worker is required with capture_id",
+			});
+		}
+	});
+
+const zEmailCaptureOperationQuery = z.object({
+	worker: z.string().trim().min(1),
+	capture_id: z.uuid(),
+});
+
+app.get("/api/local/email/routing", validateQuery(zEmailRoutingQuery), (c) => {
+	const query = c.req.valid("query");
+	if (query.capture_id !== undefined) {
+		return getReceivedEmailByCaptureId(c, query.capture_id, query.worker ?? "");
+	}
+	return query.email_id === undefined
+		? listReceivedEmails(c, query)
+		: getReceivedEmail(c, query.email_id, query.worker);
+});
+
+app.post(
+	"/api/local/email/routing/resend",
+	validateQuery(zEmailCaptureOperationQuery),
 	(c) => {
 		const query = c.req.valid("query");
-		return query.email_id === undefined
-			? listReceivedEmails(c, query)
-			: getReceivedEmail(c, query.email_id, query.worker);
+		return resendCapturedEmail(c, query.worker, query.capture_id);
+	}
+);
+
+app.get(
+	"/api/local/email/routing/resend/draft",
+	validateQuery(zEmailCaptureOperationQuery),
+	(c) => {
+		const query = c.req.valid("query");
+		return getResendDraft(c, query.worker, query.capture_id);
 	}
 );
 

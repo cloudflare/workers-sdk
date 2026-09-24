@@ -120,9 +120,7 @@ describe("getConfigPatch", () => {
 			})
 		).toEqual({
 			kv_namespaces: [
-				{
-					/* unmodified kv */
-				},
+				{/* unmodified kv */},
 				{
 					id: "<my-kv-a>",
 					binding: "MY_KV_A",
@@ -173,9 +171,7 @@ describe("getConfigPatch", () => {
 			})
 		).toEqual({
 			kv_namespaces: [
-				{
-					/* unmodified kv */
-				},
+				{/* unmodified kv */},
 				{
 					id: "<my-kv-a>",
 					binding: "MY_KV_A",
@@ -203,12 +199,8 @@ describe("getConfigPatch", () => {
 			})
 		).toEqual({
 			kv_namespaces: [
-				{
-					/* unmodified kv */
-				},
-				{
-					/* unmodified kv */
-				},
+				{/* unmodified kv */},
+				{/* unmodified kv */},
 				{
 					/* deleted kv put back */
 					id: "<my-kv-a>",

@@ -62,7 +62,6 @@ const opts: Partial<MiniflareOptions> = {
 	workers: [
 		{
 			config: {
-				type: "worker",
 				name: "",
 				compatibilityDate: "2025-05-01",
 				env: { BUCKET: { type: "r2", name: "bucket" } },
@@ -154,6 +153,28 @@ test("head: returns metadata for existing keys", async ({ expect }) => {
 
 	// Test proxying of `writeHttpMetadata()`
 	const headers = new Headers({ "X-Key": "value" });
+	expect(object.writeHttpMetadata(headers)).toBeUndefined();
+	expect(headers.get("Content-Type")).toBe("text/plain");
+	expect(headers.get("X-Key")).toBe("value");
+});
+test("head: writeHttpMetadata() accepts a `Headers` instance from another realm", async ({
+	expect,
+}) => {
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/6047:
+	// user code (e.g. inside Next.js, Astro, or SvelteKit) typically constructs
+	// `Headers` using the platform global, which is backed by a different
+	// `Headers` implementation than the `undici` copy Miniflare uses
+	// internally. This previously caused a `DevalueError` when serialising the
+	// argument to send across the proxy.
+	const { r2 } = ctx;
+	await r2.put("key", "value", {
+		httpMetadata: { contentType: "text/plain" },
+	});
+	const object = await r2.head("key");
+	assert(object !== null);
+
+	const headers = new globalThis.Headers({ "X-Key": "value" });
+	expect(headers).not.toBeInstanceOf(Headers);
 	expect(object.writeHttpMetadata(headers)).toBeUndefined();
 	expect(headers.get("Content-Type")).toBe("text/plain");
 	expect(headers.get("X-Key")).toBe("value");
@@ -552,7 +573,6 @@ test("put: can copy values", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -1020,7 +1040,6 @@ test("operations persist stored data", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -1083,7 +1102,6 @@ test("operations permit strange bucket names", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { BUCKET: { type: "r2", name: id } },

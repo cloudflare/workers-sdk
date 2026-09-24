@@ -1,5 +1,210 @@
 # @cloudflare/vite-plugin
 
+## 1.58.0
+
+### Minor Changes
+
+- [#15778](https://github.com/cloudflare/workers-sdk/pull/15778) [`cd7508c`](https://github.com/cloudflare/workers-sdk/commit/cd7508cccf2de1ea010320d6f3e70ec80e6e5e2e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Generate types during development and supported builds with Vite's `experimental.newConfig` option or Wrangler's `--experimental-new-config` flag (and `--experimental-cf-build-output` for builds)
+
+  When Wrangler's `--experimental-new-config` flag or Vite's `experimental.newConfig` option is enabled, inferred configuration and runtime declarations are now kept in `.cloudflare/types/index.d.ts`. Vite refreshes them during development and production builds. Wrangler refreshes them during development and when building with both `--experimental-new-config` and `--experimental-cf-build-output`. In the experimental `wrangler.config.ts` format, the `types` option is now top-level because it applies to both commands.
+
+### Patch Changes
+
+- [#15765](https://github.com/cloudflare/workers-sdk/pull/15765) [`1bdb96d`](https://github.com/cloudflare/workers-sdk/commit/1bdb96da2fc0811fe24bb98b11d3921883c219f1) Thanks [@th0m](https://github.com/th0m)! - Prepare the required egress sidecar for local Containers without configured images
+
+  Wrangler dev and Vite dev/preview now pull the required sidecar for Durable Object-managed Containers that select their application image at start time. Previously, these Containers failed to start unless the sidecar image was already cached in Docker.
+
+- Updated dependencies [[`1bdb96d`](https://github.com/cloudflare/workers-sdk/commit/1bdb96da2fc0811fe24bb98b11d3921883c219f1), [`cd7508c`](https://github.com/cloudflare/workers-sdk/commit/cd7508cccf2de1ea010320d6f3e70ec80e6e5e2e), [`f5605f5`](https://github.com/cloudflare/workers-sdk/commit/f5605f5cb75eab7ecb7413a9432529ac062ee052)]:
+  - wrangler@4.137.0
+
+## 1.57.3
+
+### Patch Changes
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb), [`6906bf0`](https://github.com/cloudflare/workers-sdk/commit/6906bf06d9eb1045605c71c345d37e7c300a5bbc), [`354ebdb`](https://github.com/cloudflare/workers-sdk/commit/354ebdb61180ef67cebd34276a3a1935e5151d13)]:
+  - wrangler@4.136.3
+  - miniflare@5.20260921.0-alpha
+
+## 1.57.2
+
+### Patch Changes
+
+- Updated dependencies [[`ad20547`](https://github.com/cloudflare/workers-sdk/commit/ad205472db4b66c1a14d0a2360093587a877e863), [`02c1d83`](https://github.com/cloudflare/workers-sdk/commit/02c1d83417e1f8f63af720a4de731ea4fe74f10d), [`275184d`](https://github.com/cloudflare/workers-sdk/commit/275184d38b936c7ebed60d282fc33f002b4ca7b1), [`bd59eca`](https://github.com/cloudflare/workers-sdk/commit/bd59ecae8aaac2820efaa6f60be129a1dd94cd05)]:
+  - wrangler@4.136.2
+  - miniflare@5.20260921.0-alpha
+
+## 1.57.1
+
+### Patch Changes
+
+- Updated dependencies [[`0ed4c54`](https://github.com/cloudflare/workers-sdk/commit/0ed4c54cce958e937addac517f5aa9819ebe0379), [`703922d`](https://github.com/cloudflare/workers-sdk/commit/703922dbcaaeef3d2c17d4d4450cc2dd2a713f0e), [`14d946d`](https://github.com/cloudflare/workers-sdk/commit/14d946d5b5573d856f3b2ddaa0e75c3aa5fb7bfa)]:
+  - wrangler@4.136.1
+  - @cloudflare/unenv-preset@2.16.2
+
+## 1.57.0
+
+### Minor Changes
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Identify experimental Build Output resource configs by filename and location
+
+  The root remains `config.json`, Worker configs are now `worker.config.json`, and Container configs are now `container.config.json`. Resource configs no longer contain top-level `type` discriminators, while settings and build context are stored together in the root config.
+
+- [#15713](https://github.com/cloudflare/workers-sdk/pull/15713) [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Define experimental Cloudflare configuration with a single default export
+
+  Experimental `cloudflare.config.ts` files now define settings and resources together in a default-exported `defineConfig()` call. Add a Worker under `worker`, add Containers to the `containers` array, or omit both to provide settings only.
+
+  ```ts
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export default defineConfig({
+  	accountId: "...",
+  	complianceRegion: "public",
+  	worker: {
+  		name: "my-worker",
+  		compatibilityDate: "2026-09-18",
+  		entrypoint,
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- [#15711](https://github.com/cloudflare/workers-sdk/pull/15711) [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Allow local Container images without exposed ports
+
+  Wrangler and the Cloudflare Vite plugin no longer reject images that omit Docker `EXPOSE` metadata. Local Containers can run command-only workloads or serve traffic through workerd without declaring an unused image port.
+
+- Updated dependencies [[`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`91e2f86`](https://github.com/cloudflare/workers-sdk/commit/91e2f86d4c53339b8083d7622dd356f1f6d62e3f), [`c5913a6`](https://github.com/cloudflare/workers-sdk/commit/c5913a61e155cebf597c8081e445b64343bf2484), [`35668d7`](https://github.com/cloudflare/workers-sdk/commit/35668d7226f63b0a9e262ae1b187186409be8804), [`3c75cad`](https://github.com/cloudflare/workers-sdk/commit/3c75cad95ce8dc80973d4aba33a59a406f791e63), [`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c), [`8235e6a`](https://github.com/cloudflare/workers-sdk/commit/8235e6a7e03d4910f1de78d67324a11974c393a0), [`0751490`](https://github.com/cloudflare/workers-sdk/commit/0751490b357fc85022dbc9ff5e6642c0f33a2f0a), [`43b1f85`](https://github.com/cloudflare/workers-sdk/commit/43b1f85fe26d4b1568f6d7aacc7ffba2b408419b), [`731a2ee`](https://github.com/cloudflare/workers-sdk/commit/731a2ee747d3904564ea45188dbf848d62bcc6e8)]:
+  - wrangler@4.136.0
+  - miniflare@5.20260921.0-alpha
+
+## 1.56.0
+
+### Minor Changes
+
+- [#15609](https://github.com/cloudflare/workers-sdk/pull/15609) [`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036) Thanks [@emily-shen](https://github.com/emily-shen)! - Build Containers when emitting experimental Build Output
+
+  Wrangler and the Cloudflare Vite plugin now build Dockerfile-backed Container images when experimental Build Output is enabled. Container configs are emitted under `.cloudflare/output/v0/containers` with local image references, while existing registry references pass through unchanged.
+
+- [#15329](https://github.com/cloudflare/workers-sdk/pull/15329) [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Evaluate Flagship flags locally during development
+
+  Flagship bindings now use the local Miniflare store by default in Wrangler and the Vite plugin, keeping development offline and isolated from production flags. Set `remote: true` on a binding to continue using its remote app.
+
+  Use `wrangler flagship flags pull <APP_ID>` to seed the store from a remote app. Flag management commands also accept `--local` to read and update the local store directly.
+
+- [#15701](https://github.com/cloudflare/workers-sdk/pull/15701) [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Pass Preview intent to `defineWorker` and upload its resolved configuration
+
+  Preview builds now evaluate programmatic Worker configuration with `ctx.isPreview` set to `true` and record that intent in Build Output. The shared Preview uploader deploys the resolved bindings and settings while preserving configured Preview base values when it creates a Preview.
+
+### Patch Changes
+
+- Updated dependencies [[`1f070c8`](https://github.com/cloudflare/workers-sdk/commit/1f070c8a5a0b12247071551ed58d19444a427036), [`a0485d5`](https://github.com/cloudflare/workers-sdk/commit/a0485d5a5e2293b16e77d1302a470537281c2622), [`629ddef`](https://github.com/cloudflare/workers-sdk/commit/629ddef4adb201d808b4b998668261a212632ffe), [`c4c9b75`](https://github.com/cloudflare/workers-sdk/commit/c4c9b75c54a095dc4b7ac82e44330f5650a2e4ac), [`643e5cc`](https://github.com/cloudflare/workers-sdk/commit/643e5ccb9e2ad7d85966af241e001465c0e1b1c6)]:
+  - wrangler@4.135.0
+  - miniflare@5.20260918.0-alpha
+
+## 1.55.0
+
+### Minor Changes
+
+- [#15674](https://github.com/cloudflare/workers-sdk/pull/15674) [`a939a6c`](https://github.com/cloudflare/workers-sdk/commit/a939a6cccd0868ec4c30ab2a4cfd3f29129e6a19) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Support explicit named Container image selection in local development
+
+  The Vite plugin builds or pulls named images from Wrangler configuration and exposes their local tags through `ctx.container.images`. Pass one of those references to `ctx.container.start({ image })` to select the image.
+
+  This extends the experimental Durable Object-managed Containers interface.
+
+### Patch Changes
+
+- Updated dependencies [[`6874aa9`](https://github.com/cloudflare/workers-sdk/commit/6874aa978144469927831de59834e8cdc47a5114), [`2298cf1`](https://github.com/cloudflare/workers-sdk/commit/2298cf1697692efb55ea75b67fe25ec6f841dbef), [`d96b319`](https://github.com/cloudflare/workers-sdk/commit/d96b3193bfb7371da5a28fe36e6b56fb1c6108b0), [`876eea1`](https://github.com/cloudflare/workers-sdk/commit/876eea1c9a8a6d5856ccf05399eece93d8acfed8), [`2b39fc2`](https://github.com/cloudflare/workers-sdk/commit/2b39fc2c79f7919b0af21603e278dce030c48870)]:
+  - wrangler@4.134.0
+  - miniflare@5.20260917.0-alpha
+
+## 1.54.11
+
+### Patch Changes
+
+- Updated dependencies [[`71b6f10`](https://github.com/cloudflare/workers-sdk/commit/71b6f102f258e14e2b1dc23e9643cc74685d35cb), [`ad23e6e`](https://github.com/cloudflare/workers-sdk/commit/ad23e6e42dc81c9dc894248e787ed6c0abbe9028), [`bac0c6a`](https://github.com/cloudflare/workers-sdk/commit/bac0c6a4f0dcf34008a0f67f4a97d068311b57dc), [`be2437a`](https://github.com/cloudflare/workers-sdk/commit/be2437a8b32215dc404266c930db148fc3feb17b), [`bac0c6a`](https://github.com/cloudflare/workers-sdk/commit/bac0c6a4f0dcf34008a0f67f4a97d068311b57dc), [`6f3d7b5`](https://github.com/cloudflare/workers-sdk/commit/6f3d7b58b1f6cd036aca3e5946807bba37776065)]:
+  - miniflare@5.20260916.0-alpha
+  - wrangler@4.133.0
+
+## 1.54.10
+
+### Patch Changes
+
+- [#14775](https://github.com/cloudflare/workers-sdk/pull/14775) [`1be7b97`](https://github.com/cloudflare/workers-sdk/commit/1be7b97035241c91edf78b4c1f0a79f3b276ff18) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Sync Local Explorer endpoint lists across agent hints
+
+  The Local Explorer endpoint list is now consistent across the three places it appears: the AGENTS.md template in `create-cloudflare`, the runtime agent hint in `wrangler dev`, and the Vite plugin agent hint. All three now include the `observability/clear` endpoint, use the canonical `/cdn-cgi/local/explorer` path, and have cross-reference comments pointing to each other.
+
+- [#15399](https://github.com/cloudflare/workers-sdk/pull/15399) [`982b806`](https://github.com/cloudflare/workers-sdk/commit/982b8060d99d9bb303ef7b7f15bf6c8b1f83c72a) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Improve over-limit `run_worker_first` errors when duplicate rules are present
+
+  The error now reports distinct and duplicate-entry counts and lists duplicated rules, making it clear when removing redundant entries can bring the configuration within the limit.
+
+  ```
+  Too many `run_worker_first` rules were provided; 105 rules provided (99 distinct, 6 duplicate entries) exceeds max of 100. Note: duplicate entries count towards the route limit. Ensure that no duplicate rules are present in your `run_worker_first` configuration.
+
+  The duplicated rules found are:
+  - "/rule/0"
+  - "/rule/1"
+  - "/rule/2"
+  - "/rule/3"
+  - "/rule/4"
+  ...and 1 more duplicated rule.
+  ```
+
+- Updated dependencies [[`1be7b97`](https://github.com/cloudflare/workers-sdk/commit/1be7b97035241c91edf78b4c1f0a79f3b276ff18), [`b149147`](https://github.com/cloudflare/workers-sdk/commit/b149147a1746d30fd8a868dbef7a4aac463444f1), [`7db596c`](https://github.com/cloudflare/workers-sdk/commit/7db596c153ae0cda7e30aa351955b1781902435f), [`76c0ce6`](https://github.com/cloudflare/workers-sdk/commit/76c0ce6cb35c741de4564787a45a8b3fe8246c1f), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`a0856da`](https://github.com/cloudflare/workers-sdk/commit/a0856da679b025cb076dd94f7300b47a2a3a1bc0), [`e35c4a1`](https://github.com/cloudflare/workers-sdk/commit/e35c4a154ea16a96b47cb2e68a4930c1d833e81d), [`d3565a5`](https://github.com/cloudflare/workers-sdk/commit/d3565a5326d879fbebba72b16c0f14ba2a4fba99), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`cb0955f`](https://github.com/cloudflare/workers-sdk/commit/cb0955f274102afb30b8502193edf66c0d3cb4d6), [`fa79b26`](https://github.com/cloudflare/workers-sdk/commit/fa79b26ef442303797013c70078c7acdd2c79247), [`16d1310`](https://github.com/cloudflare/workers-sdk/commit/16d1310a2a598f9a71878ba3746c8cf02e24386b), [`ca71205`](https://github.com/cloudflare/workers-sdk/commit/ca71205bb45d9182e6c748e7097baed67739a891), [`1015cfb`](https://github.com/cloudflare/workers-sdk/commit/1015cfb2a780d57b13d137324c83af53d3a3a8a2), [`982b806`](https://github.com/cloudflare/workers-sdk/commit/982b8060d99d9bb303ef7b7f15bf6c8b1f83c72a), [`ffabe74`](https://github.com/cloudflare/workers-sdk/commit/ffabe7489ad09f80b19a98e698c4590bba7b8452), [`7db596c`](https://github.com/cloudflare/workers-sdk/commit/7db596c153ae0cda7e30aa351955b1781902435f), [`e03822a`](https://github.com/cloudflare/workers-sdk/commit/e03822a3bc54a411b5795f77acbe603a010a9100), [`a83d7ac`](https://github.com/cloudflare/workers-sdk/commit/a83d7ac4d4d52811e11b61753aa60c10ca5c8c78), [`641df47`](https://github.com/cloudflare/workers-sdk/commit/641df4774f19313ffecf53cf7443ac3dd79abb31), [`c4a6279`](https://github.com/cloudflare/workers-sdk/commit/c4a627945775646bde6e0164e6deaee516150e89)]:
+  - wrangler@4.132.0
+  - miniflare@5.20260915.0-alpha
+
+## 1.54.9
+
+### Patch Changes
+
+- [#15574](https://github.com/cloudflare/workers-sdk/pull/15574) [`164e4fb`](https://github.com/cloudflare/workers-sdk/commit/164e4fb11c32ae4ad255998bcdc17dc5a3a74ec6) Thanks [@RealBhupesh](https://github.com/RealBhupesh)! - Ignore `.wrangler` persistence writes in Vite's file watcher
+
+  Miniflare stores local D1, KV, R2, and observability state under `.wrangler/state`. Those writes were watched as source changes on Linux and Windows, which fired every plugin `hotUpdate` hook and could make page loads take seconds. The plugin now ignores `**/.wrangler/**` while preserving any `server.watch.ignored` patterns already set by the user.
+
+- Updated dependencies [[`8997652`](https://github.com/cloudflare/workers-sdk/commit/8997652577fdbe97e39fb29bebd6777d3f82d3a3)]:
+  - miniflare@5.20260911.1-alpha
+  - wrangler@4.131.2
+
+## 1.54.8
+
+### Patch Changes
+
+- Updated dependencies [[`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b), [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b), [`47d906f`](https://github.com/cloudflare/workers-sdk/commit/47d906f52d109509f61b1c801c1b08ecad583c0d), [`c2699bf`](https://github.com/cloudflare/workers-sdk/commit/c2699bf625134a2425d7142c72c4f31c4b6f8eab), [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b), [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b)]:
+  - wrangler@4.131.1
+  - miniflare@5.20260911.0-alpha
+
+## 1.54.7
+
+### Patch Changes
+
+- [#15432](https://github.com/cloudflare/workers-sdk/pull/15432) [`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94) Thanks [@razethion](https://github.com/razethion)! - Prevent delayed internal errors from fetch-only remote bindings
+
+  Fetch-only remote bindings such as D1 and R2 previously opened an unused WebSocket RPC session. RPC sessions are now created only when an RPC method is called.
+
+- Updated dependencies [[`0b43395`](https://github.com/cloudflare/workers-sdk/commit/0b433956a805d7aa86b39ebffc2c2d476a40cc89), [`9d75006`](https://github.com/cloudflare/workers-sdk/commit/9d75006728cb1f6a7df6b30cd7f80cc5194d5ad5), [`b605aa6`](https://github.com/cloudflare/workers-sdk/commit/b605aa60b4c9ed2546a0fd1a6ebc677c15422bc0), [`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94), [`f69f95a`](https://github.com/cloudflare/workers-sdk/commit/f69f95aa2da329dcfa9888cfeb204cdda634d979), [`a549e58`](https://github.com/cloudflare/workers-sdk/commit/a549e58af707e84d6aeddaadc6566103ae236dbb), [`36aed7f`](https://github.com/cloudflare/workers-sdk/commit/36aed7f0f2db5056af9df917cf6c22a2be950b1e), [`493e635`](https://github.com/cloudflare/workers-sdk/commit/493e63548f75f8f1d9847f5576835e2e1f1682a5), [`bff525d`](https://github.com/cloudflare/workers-sdk/commit/bff525d66dd3785481148353d782dd33c3a644ed), [`dbb3ff4`](https://github.com/cloudflare/workers-sdk/commit/dbb3ff4ebe7579be76f42591957c429f26da319b), [`fea3cd0`](https://github.com/cloudflare/workers-sdk/commit/fea3cd0f2ef5af6c8f2b50c794a89b8ef03ca82b), [`96688b3`](https://github.com/cloudflare/workers-sdk/commit/96688b3ccada3b56ad6cc42e1cbd63f4c268db1a), [`6bd7b6c`](https://github.com/cloudflare/workers-sdk/commit/6bd7b6cae44d441e415130991e3f181694bd3b6d), [`15cd6e1`](https://github.com/cloudflare/workers-sdk/commit/15cd6e16129af3dad09d53d6cd03f963f9203970), [`be1caec`](https://github.com/cloudflare/workers-sdk/commit/be1caeca44ccd9660a81420805fb0958ca422589), [`ed5797a`](https://github.com/cloudflare/workers-sdk/commit/ed5797a17d837c381ebb63f50ea3fdc155df88fe), [`dbc9506`](https://github.com/cloudflare/workers-sdk/commit/dbc9506e48d99237be701685d08582966f62f59f), [`128235a`](https://github.com/cloudflare/workers-sdk/commit/128235a8c08ca40d93b96d408297d21cbdcc9eb6), [`f8aea7e`](https://github.com/cloudflare/workers-sdk/commit/f8aea7e325357fc490c8f37dc2f750fe35dfd59e), [`24ef86b`](https://github.com/cloudflare/workers-sdk/commit/24ef86ba87da44cda2ae4cc42b5cb57dc5ff6669)]:
+  - wrangler@4.131.0
+  - miniflare@5.20260910.0-alpha
+
+## 1.54.6
+
+### Patch Changes
+
+- Updated dependencies [[`edb3631`](https://github.com/cloudflare/workers-sdk/commit/edb3631666677b51d58000d23ed693d83da9ff48), [`dbf6aad`](https://github.com/cloudflare/workers-sdk/commit/dbf6aad7b85fad3a2848191804bf627c591b5821), [`bcebf08`](https://github.com/cloudflare/workers-sdk/commit/bcebf080bc65759fe43cffff10b3f708693941a8), [`e20df20`](https://github.com/cloudflare/workers-sdk/commit/e20df2042a73fc6d861f07113efc5804b4c0a119), [`e20df20`](https://github.com/cloudflare/workers-sdk/commit/e20df2042a73fc6d861f07113efc5804b4c0a119), [`63c7ff1`](https://github.com/cloudflare/workers-sdk/commit/63c7ff17b3ac5ca0b977297456fe3bcbe71e90f4), [`a4e41df`](https://github.com/cloudflare/workers-sdk/commit/a4e41df43cc93686bf57a16b1de0a4b06860f2b9)]:
+  - miniflare@5.20260908.0-alpha
+  - wrangler@4.130.0
+
+## 1.54.5
+
+### Patch Changes
+
+- [#15519](https://github.com/cloudflare/workers-sdk/pull/15519) [`e004845`](https://github.com/cloudflare/workers-sdk/commit/e004845157fd9a65f67e1c52118116599a5ae0ef) Thanks [@devaniketh](https://github.com/devaniketh)! - Preserve HTTP/2 `:authority` header and non-default port in dev server requests
+
+  When Vite runs over HTTPS with HTTP/2 enabled, browsers send authority via the `:authority` pseudo-header rather than `Host`. Previously, pseudo-headers were omitted when creating Fetch requests, causing non-default ports to be dropped from `request.url` and `X-Forwarded-Host`. Authority and scheme are now preserved from HTTP/2 pseudo-headers and request properties.
+
+- Updated dependencies [[`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84), [`2b42d6f`](https://github.com/cloudflare/workers-sdk/commit/2b42d6f2b971fa54de0648e8e9bea03cbf6f702a), [`ea5634e`](https://github.com/cloudflare/workers-sdk/commit/ea5634ee165ae54fbb07dcbd77b50a44b40c71d6), [`c0c6504`](https://github.com/cloudflare/workers-sdk/commit/c0c650424c983c02de8ed008d3de0eb90cdc2396), [`ffc7efd`](https://github.com/cloudflare/workers-sdk/commit/ffc7efdc93b09a6345ecb7073ed56731d439e6fc), [`682cd44`](https://github.com/cloudflare/workers-sdk/commit/682cd44fcd18940e143b2c63bb7ebf17f3254531)]:
+  - miniflare@5.20260907.0-alpha
+  - wrangler@4.129.1
+
 ## 1.54.4
 
 ### Patch Changes

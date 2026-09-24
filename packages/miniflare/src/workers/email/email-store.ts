@@ -16,23 +16,22 @@
  * directory).
  */
 import { DurableObject } from "cloudflare:workers";
-import { z } from "zod";
 import {
 	base64ToBytes,
 	bytesToBase64,
 	MAX_EMAIL_ROW_VALUE_BYTES,
 } from "./capture";
-import {
-	zEmailBase,
-	zEmailHeaders,
-	zEmailHandlerEvent,
-	zEmailHandlerForward,
-	zEmailHandlerReplyApi,
-	zEmailSendingDetail,
-} from "./contracts";
 import { messageIdToStorageId } from "./message-id";
+import { missingReceivedCaptureBody } from "./received-capture";
+import {
+	zStoredRoutingEmailListMetadata,
+	zStoredRoutingEmailMetadata,
+	zStoredRoutingEmailSummary,
+	zStoredSendingEmail,
+} from "./storage";
 import type {
 	EmailListPage,
+	ReceivedCaptureOperationLookup,
 	StoredRoutingEmail,
 	StoredRoutingEmailMetadata,
 	StoredRoutingEmailSummary,
@@ -43,7 +42,15 @@ import type {
 export type { StoredSendingEmail };
 
 function decodeCapturedRaw(rawBase64: string, truncated: boolean): string {
-	const bytes = base64ToBytes(rawBase64);
+	let bytes: Uint8Array;
+	try {
+		bytes = base64ToBytes(rawBase64);
+	} catch {
+		// Preserve the stored Base64 for operation-specific validation. A corrupt
+		// dev-only capture must not prevent callers from returning a structured
+		// Local Explorer error.
+		return "";
+	}
 	return new TextDecoder().decode(
 		truncated ? trimIncompleteUtf8Suffix(bytes) : bytes
 	);
@@ -78,7 +85,7 @@ function trimIncompleteUtf8Suffix(bytes: Uint8Array): Uint8Array {
 }
 
 function materialiseReceivedEmail(
-	email: StoredRoutingEmailMetadata,
+	email: StoredRoutingEmailMetadata & { captureId: string },
 	rawBase64: string,
 	replyRawBase64: Map<number, string>
 ): StoredRoutingEmail {
@@ -130,6 +137,11 @@ const SCHEMA = [
 			kind, created_at DESC, seq DESC
 		)`,
 	`CREATE INDEX IF NOT EXISTS emails_by_kind_id ON emails (kind, id)`,
+	`CREATE UNIQUE INDEX IF NOT EXISTS received_emails_by_id ON emails (id)
+		WHERE kind = 'received'`,
+	`CREATE INDEX IF NOT EXISTS received_emails_by_message_id_seq ON emails (
+		trim(json_extract(data, '$.messageId'), '<>'), seq DESC
+		) WHERE kind = 'received'`,
 	`CREATE INDEX IF NOT EXISTS emails_by_kind_worker_seq ON emails (
 			kind, json_extract(data, '$.worker'), seq DESC
 		)`,
@@ -142,43 +154,10 @@ const SCHEMA = [
 			raw_base64 TEXT NOT NULL,
 			PRIMARY KEY (capture_id, part)
 		)`,
+	`CREATE TABLE IF NOT EXISTS received_email_capture_attempts (
+			capture_id TEXT PRIMARY KEY
+		)`,
 ];
-
-const zStoredEmailReply = zEmailHandlerReplyApi.omit({
-	raw: true,
-	rawBase64: true,
-});
-const zStoredEmailReplyMetadata = zStoredEmailReply.extend({
-	captureTruncated: z.boolean().optional(),
-});
-export const zStoredRoutingEmailSummary = zEmailBase.extend({
-	to: z.string(),
-	cc: z.array(z.string()).optional(),
-	headers: z.record(z.string(), z.string()).optional(),
-	headerEntries: zEmailHeaders.optional(),
-	receivedAt: z.string(),
-	rawSize: z.number(),
-	outcome: z.enum(["ok", "exception"]),
-	rejectReason: z.string().optional(),
-	forwards: z.array(zEmailHandlerForward),
-	replies: z.array(zStoredEmailReply),
-	events: z.array(zEmailHandlerEvent),
-});
-const zStoredRoutingEmailMetadata = zStoredRoutingEmailSummary.extend({
-	captureTruncated: z.boolean().optional(),
-	replies: z.array(zStoredEmailReplyMetadata),
-});
-export const zStoredRoutingEmail = zStoredRoutingEmailMetadata.extend({
-	raw: z.string(),
-	rawBase64: z.string(),
-	replies: z.array(
-		zEmailHandlerReplyApi.extend({
-			raw: z.string(),
-			rawBase64: z.string(),
-			captureTruncated: z.boolean().optional(),
-		})
-	),
-});
 
 type EmailTable = "received" | "sent";
 type EmailCursor = { createdAt: string; seq: number };
@@ -196,17 +175,17 @@ function createStatements(kind: EmailTable) {
 	return {
 		insert: `INSERT INTO emails (kind, id, created_at, data)
 			VALUES ('${kind}', ?, ?, ?) RETURNING seq`,
-		list: `SELECT seq, created_at, data FROM emails
+		list: `SELECT id, seq, created_at, data FROM emails
 			WHERE kind = '${kind}'
 			ORDER BY created_at DESC, seq DESC LIMIT ?`,
-		listForWorker: `SELECT seq, created_at, data FROM emails
+		listForWorker: `SELECT id, seq, created_at, data FROM emails
 			WHERE kind = '${kind}' AND json_extract(data, '$.worker') = ?
 			ORDER BY created_at DESC, seq DESC LIMIT ?`,
-		listAfter: `SELECT seq, created_at, data FROM emails
+		listAfter: `SELECT id, seq, created_at, data FROM emails
 			WHERE kind = '${kind}'
 			AND (created_at < ? OR (created_at = ? AND seq < ?))
 			ORDER BY created_at DESC, seq DESC LIMIT ?`,
-		listAfterForWorker: `SELECT seq, created_at, data FROM emails
+		listAfterForWorker: `SELECT id, seq, created_at, data FROM emails
 			WHERE kind = '${kind}'
 			AND (created_at < ? OR (created_at = ? AND seq < ?))
 			AND json_extract(data, '$.worker') = ?
@@ -225,6 +204,21 @@ const STATEMENTS = {
 	sent: createStatements("sent"),
 	insertReceivedBody: `INSERT INTO received_email_bodies
 		(capture_id, part, raw_base64) VALUES (?, ?, ?)`,
+	beginReceivedCapture: `INSERT OR IGNORE INTO received_email_capture_attempts
+		(capture_id) VALUES (?) RETURNING capture_id`,
+	findAnyReceivedCapture: `SELECT id FROM emails WHERE kind = 'received'
+		AND id = ? LIMIT 1`,
+	findReceivedCaptureAttempt: `SELECT capture_id
+		FROM received_email_capture_attempts WHERE capture_id = ?`,
+	findReceivedCapture: `SELECT data FROM emails WHERE kind = 'received'
+		AND id = ? AND json_extract(data, '$.worker') = ? LIMIT 1`,
+	findReceivedMessage: `SELECT id, data FROM emails WHERE kind = 'received'
+		AND trim(json_extract(data, '$.messageId'), '<>') = ?
+		ORDER BY seq DESC LIMIT 1`,
+	findReceivedMessageForWorker: `SELECT id, data FROM emails
+		WHERE kind = 'received'
+		AND trim(json_extract(data, '$.messageId'), '<>') = ?
+		AND json_extract(data, '$.worker') = ? ORDER BY seq DESC LIMIT 1`,
 	countReceivedBodies: `SELECT COUNT(*) AS count, MIN(part) AS first_part,
 		MAX(part) AS last_part FROM received_email_bodies WHERE capture_id = ?`,
 	findReceivedBodies: `SELECT part, raw_base64 FROM received_email_bodies
@@ -232,11 +226,12 @@ const STATEMENTS = {
 	discardReceivedBodies:
 		"DELETE FROM received_email_bodies WHERE capture_id = ?",
 	discardReceivedMetadata:
-		"DELETE FROM emails WHERE kind = 'received' AND json_extract(data, '$.bodyId') = ?",
+		"DELETE FROM received_email_capture_attempts WHERE capture_id = ?",
 	insertMetadata: `INSERT OR IGNORE INTO email_store_metadata (key, value)
 		VALUES (?, ?)`,
 	findMetadata: "SELECT value FROM email_store_metadata WHERE key = ?",
 	clearReceivedBodies: "DELETE FROM received_email_bodies",
+	clearReceivedCaptureAttempts: "DELETE FROM received_email_capture_attempts",
 	clear: "DELETE FROM emails",
 } as const;
 
@@ -334,7 +329,7 @@ export class EmailStore extends DurableObject {
 	/** Newest-first cursor page of records from a table. */
 	#list<T>(
 		table: EmailTable,
-		parse: (data: string) => T,
+		parse: (data: string, id: string) => T,
 		cursor: string | undefined,
 		limit: number | undefined,
 		worker: string | undefined
@@ -343,7 +338,12 @@ export class EmailStore extends DurableObject {
 		const rows =
 			cursor === undefined
 				? this.sql
-						.exec<{ seq: number; created_at: string; data: string }>(
+						.exec<{
+							id: string;
+							seq: number;
+							created_at: string;
+							data: string;
+						}>(
 							worker === undefined
 								? STATEMENTS[table].list
 								: STATEMENTS[table].listForWorker,
@@ -355,7 +355,12 @@ export class EmailStore extends DurableObject {
 				: (() => {
 						const decoded = decodeCursor(cursor);
 						return this.sql
-							.exec<{ seq: number; created_at: string; data: string }>(
+							.exec<{
+								id: string;
+								seq: number;
+								created_at: string;
+								data: string;
+							}>(
 								worker === undefined
 									? STATEMENTS[table].listAfter
 									: STATEMENTS[table].listAfterForWorker,
@@ -380,7 +385,7 @@ export class EmailStore extends DurableObject {
 		const pageRows = rows.slice(0, pageSize);
 		const last = pageRows.at(-1);
 		return {
-			items: pageRows.map(({ data }) => parse(data)),
+			items: pageRows.map(({ data, id }) => parse(data, id)),
 			hasMore,
 			...(hasMore && last !== undefined
 				? {
@@ -406,9 +411,40 @@ export class EmailStore extends DurableObject {
 		return row === undefined ? undefined : (JSON.parse(row.data) as T);
 	}
 
+	beginReceivedCapture(captureId: string): boolean {
+		return this.ctx.storage.transactionSync(() => {
+			const existing = this.sql
+				.exec<{ id: string }>(STATEMENTS.findAnyReceivedCapture, captureId)
+				.toArray()[0];
+			const bodies = this.sql
+				.exec<{ count: number }>(STATEMENTS.countReceivedBodies, captureId)
+				.toArray()[0];
+			if (existing !== undefined || (bodies?.count ?? 0) !== 0) {
+				return false;
+			}
+			return (
+				this.sql
+					.exec<{ capture_id: string }>(
+						STATEMENTS.beginReceivedCapture,
+						captureId
+					)
+					.toArray()[0] !== undefined
+			);
+		});
+	}
+
 	storeReceivedBody(captureId: string, part: number, rawBase64: string): void {
 		if (!Number.isSafeInteger(part) || part < 0) {
 			throw new RangeError("Invalid received email body part");
+		}
+		const attempt = this.sql
+			.exec<{ capture_id: string }>(
+				STATEMENTS.findReceivedCaptureAttempt,
+				captureId
+			)
+			.toArray()[0];
+		if (attempt === undefined) {
+			throw new Error("Received email capture attempt is unavailable");
 		}
 		assertEmailRowValueFits(rawBase64, "Received email body");
 		this.sql.exec(STATEMENTS.insertReceivedBody, captureId, part, rawBase64);
@@ -423,6 +459,15 @@ export class EmailStore extends DurableObject {
 			throw new RangeError("Invalid received email body count");
 		}
 		this.ctx.storage.transactionSync(() => {
+			const attempt = this.sql
+				.exec<{ capture_id: string }>(
+					STATEMENTS.findReceivedCaptureAttempt,
+					captureId
+				)
+				.toArray()[0];
+			if (attempt === undefined) {
+				throw new Error("Received email capture attempt is unavailable");
+			}
 			const bodies = this.sql
 				.exec<{
 					count: number;
@@ -440,57 +485,52 @@ export class EmailStore extends DurableObject {
 					`Received email ${email.messageId} has incomplete captured bodies`
 				);
 			}
-			this.#insert(
-				"received",
-				messageIdToStorageId(email.messageId),
-				email.receivedAt,
-				{ ...email, bodyId: captureId }
-			);
+			this.#insert("received", captureId, email.receivedAt, email);
+			this.sql.exec(STATEMENTS.discardReceivedMetadata, captureId);
 		});
 	}
 
 	discardReceived(captureId: string): void {
 		this.ctx.storage.transactionSync(() => {
+			const attempt = this.sql
+				.exec<{ capture_id: string }>(
+					STATEMENTS.findReceivedCaptureAttempt,
+					captureId
+				)
+				.toArray()[0];
+			if (attempt === undefined) {
+				return;
+			}
 			this.sql.exec(STATEMENTS.discardReceivedBodies, captureId);
 			this.sql.exec(STATEMENTS.discardReceivedMetadata, captureId);
 		});
 	}
 
-	findReceived(id: string, worker?: string): StoredRoutingEmail | undefined {
-		const row = this.sql
-			.exec<{ data: string }>(
-				worker === undefined
-					? STATEMENTS.received.find
-					: STATEMENTS.received.findForWorker,
-				...(worker === undefined ? [id] : [id, worker])
-			)
-			.toArray()[0];
+	#materialiseReceived(
+		row: { id: string; data: string } | undefined
+	): StoredRoutingEmail | undefined {
 		if (row === undefined) {
 			return undefined;
 		}
 		const stored = JSON.parse(row.data) as unknown;
-		const bodyId =
-			typeof stored === "object" &&
-			stored !== null &&
-			"bodyId" in stored &&
-			typeof stored.bodyId === "string"
-				? stored.bodyId
-				: undefined;
-		if (bodyId === undefined) {
-			throw new Error(`Received email ${id} has no body identifier`);
-		}
 		const bodies = this.sql
 			.exec<{ part: number; raw_base64: string }>(
 				STATEMENTS.findReceivedBodies,
-				bodyId
+				row.id
 			)
 			.toArray();
 		const rawBase64 = bodies.find(({ part }) => part === 0)?.raw_base64;
 		if (rawBase64 === undefined) {
-			throw new Error(`Received email ${id} has no captured body`);
+			throw new Error(`Received email ${row.id} has no captured body`);
 		}
+		const metadata = zStoredRoutingEmailMetadata.parse(stored);
 		return materialiseReceivedEmail(
-			zStoredRoutingEmailMetadata.parse(stored),
+			{
+				...metadata,
+				captureId: row.id,
+				capturedPortion:
+					metadata.capturedPortion ?? metadata.captureTruncated === true,
+			},
 			rawBase64,
 			new Map(
 				bodies
@@ -500,6 +540,65 @@ export class EmailStore extends DurableObject {
 		);
 	}
 
+	findReceivedByCaptureId(
+		captureId: string,
+		worker: string
+	): StoredRoutingEmail | undefined {
+		const row = this.sql
+			.exec<{ data: string }>(STATEMENTS.findReceivedCapture, captureId, worker)
+			.toArray()[0];
+		return this.#materialiseReceived(
+			row === undefined ? undefined : { id: captureId, data: row.data }
+		);
+	}
+
+	findReceivedForOperation(
+		captureId: string,
+		worker: string
+	): ReceivedCaptureOperationLookup {
+		const row = this.sql
+			.exec<{ data: string }>(STATEMENTS.findReceivedCapture, captureId, worker)
+			.toArray()[0];
+		if (row === undefined) {
+			return { found: false };
+		}
+		const metadata = zStoredRoutingEmailMetadata.parse(JSON.parse(row.data));
+		try {
+			const email = this.#materialiseReceived({
+				id: captureId,
+				data: row.data,
+			});
+			if (email === undefined) {
+				return { found: false };
+			}
+			return {
+				found: true,
+				capturedPortion:
+					email.capturedPortion ?? email.captureTruncated === true,
+				email,
+			};
+		} catch {
+			return missingReceivedCaptureBody(metadata);
+		}
+	}
+
+	findReceivedByMessageId(
+		messageId: string,
+		worker?: string
+	): StoredRoutingEmail | undefined {
+		const row = this.sql
+			.exec<{ id: string; data: string }>(
+				worker === undefined
+					? STATEMENTS.findReceivedMessage
+					: STATEMENTS.findReceivedMessageForWorker,
+				...(worker === undefined
+					? [messageIdToStorageId(messageId)]
+					: [messageIdToStorageId(messageId), worker])
+			)
+			.toArray()[0];
+		return this.#materialiseReceived(row);
+	}
+
 	listReceived(
 		cursor?: string,
 		limit?: number,
@@ -507,7 +606,15 @@ export class EmailStore extends DurableObject {
 	): EmailListPage<StoredRoutingEmailSummary> {
 		return this.#list(
 			"received",
-			(data) => zStoredRoutingEmailSummary.parse(JSON.parse(data)),
+			(data, captureId) => {
+				const email = zStoredRoutingEmailListMetadata.parse(JSON.parse(data));
+				return zStoredRoutingEmailSummary.parse({
+					...email,
+					captureId,
+					capturedPortion:
+						email.capturedPortion ?? email.captureTruncated === true,
+				});
+			},
 			cursor,
 			limit,
 			worker
@@ -535,7 +642,7 @@ export class EmailStore extends DurableObject {
 	): EmailListPage<StoredSendingEmailSummary> {
 		return this.#list(
 			"sent",
-			(data) => getSentSummary(zEmailSendingDetail.parse(JSON.parse(data))),
+			(data) => getSentSummary(zStoredSendingEmail.parse(JSON.parse(data))),
 			cursor,
 			limit,
 			worker
@@ -545,6 +652,7 @@ export class EmailStore extends DurableObject {
 	clear(): void {
 		this.ctx.storage.transactionSync(() => {
 			this.sql.exec(STATEMENTS.clearReceivedBodies);
+			this.sql.exec(STATEMENTS.clearReceivedCaptureAttempts);
 			this.sql.exec(STATEMENTS.clear);
 		});
 	}

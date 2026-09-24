@@ -11,12 +11,55 @@ import * as details from "../../src/details";
 import { createMockContext } from "../helpers/mock-context";
 import type { Config } from "@cloudflare/workers-utils";
 
+const fileSystemErrors = vi.hoisted(() => ({
+	readdir: new Map<string, string>(),
+	stat: new Map<string, string>(),
+}));
+const statAliases = vi.hoisted(() => new Map<string, string>());
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const original = await importOriginal<typeof import("node:fs/promises")>();
+
+	function throwConfiguredError(errors: Map<string, string>, path: unknown) {
+		const stringPath = String(path);
+		const code = errors.get(stringPath);
+		if (code !== undefined) {
+			throw Object.assign(new Error(`${code}: ${stringPath}`), {
+				code,
+				path: stringPath,
+			});
+		}
+	}
+
+	return {
+		...original,
+		readdir: (...args: Parameters<typeof original.readdir>) => {
+			throwConfiguredError(fileSystemErrors.readdir, args[0]);
+			return Reflect.apply(original.readdir, undefined, args);
+		},
+		stat: (...args: Parameters<typeof original.stat>) => {
+			throwConfiguredError(fileSystemErrors.stat, args[0]);
+			const alias = statAliases.get(String(args[0]));
+			if (alias !== undefined) {
+				return Reflect.apply(original.stat, undefined, [
+					alias,
+					...args.slice(1),
+				]);
+			}
+			return Reflect.apply(original.stat, undefined, args);
+		},
+	};
+});
+
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 	const context = createMockContext();
 
 	afterEach(() => {
+		fileSystemErrors.readdir.clear();
+		fileSystemErrors.stat.clear();
+		statAliases.clear();
 		vi.unstubAllGlobals();
 	});
 
@@ -61,9 +104,32 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
 			configured: true,
-			framework: { id: "astro" },
+			framework: { id: "astro", supportsMode: true },
 			buildCommand: "npx astro build",
 			devCommand: "npx astro dev",
+			packageManager: { type: "npm" },
+		});
+	});
+
+	it("should defer a configured unsupported framework to a Cloudflare dev server", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				scripts: { build: "cf build", dev: "cf dev" },
+				dependencies: { hono: "4", vite: "8" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "hono" },
+			buildCommand: undefined,
+			devCommand: undefined,
 			packageManager: { type: "npm" },
 		});
 	});
@@ -97,6 +163,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
 				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
+				framework: { supportsMode: true },
 				configured: false,
 				outputDir: "dist",
 				packageJson: {
@@ -296,6 +363,60 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			"public/index.html": `<h1>Hello World</h1>`,
 			"random/index.html": `<h1>Hello World</h1>`,
 		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
+	it("outputDir should require index.html to use exact casing", async ({
+		expect,
+	}) => {
+		await seed({
+			"public/INDEX.HTML": `<h1>Hello World</h1>`,
+		});
+		statAliases.set(
+			join(process.cwd(), "public", "index.html"),
+			join(process.cwd(), "public", "INDEX.HTML")
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
+		);
+	});
+
+	it("outputDir should ignore inaccessible child directories", async ({
+		expect,
+	}) => {
+		await seed({
+			".Trash/placeholder": "",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+		fileSystemErrors.readdir.set(join(process.cwd(), ".Trash"), "EPERM");
+		fileSystemErrors.stat.set(
+			join(process.cwd(), ".Trash", "index.html"),
+			"EPERM"
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
+	it("outputDir should ignore child directories that cannot be statted", async ({
+		expect,
+	}) => {
+		await seed({
+			"0-cache/placeholder": "",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+		fileSystemErrors.stat.set(join(process.cwd(), "0-cache"), "EACCES");
 
 		await expect(
 			details.getDetailsForAutoConfig({ context })

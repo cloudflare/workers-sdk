@@ -127,7 +127,6 @@ function convertWorkerOptions(
 	);
 
 	const config: MiniflareWorkerConfig = {
-		type: "worker",
 		name: worker.name ?? "",
 		compatibilityDate: worker.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE,
 		compatibilityFlags: worker.compatibilityFlags,
@@ -658,12 +657,6 @@ function addProductBindings(
 		env[name] = {
 			type: "ai-search",
 			name: binding.instance_name ?? binding.namespace ?? name,
-			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
-		};
-	}
-	for (const [name, binding] of Object.entries(worker.websearch ?? {})) {
-		env[name] = {
-			type: "web-search",
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}

@@ -1,7 +1,7 @@
 /**
  * The shape of `wrangler.config.ts` — tooling / bundling / dev-server
  * configuration that complements the Worker configuration authored in
- * `cloudflare.config.ts` via `defineWorker`.
+ * `cloudflare.config.ts` via `defineConfig`.
  */
 export interface WranglerConfig {
 	// Bundling
@@ -37,9 +37,18 @@ export interface WranglerConfig {
 	/**
 	 * Assets directory — the only tooling-side asset setting. The runtime
 	 * asset fields (`binding`, `htmlHandling`, `notFoundHandling`,
-	 * `runWorkerFirst`) live in `cloudflare.config.ts` under `assets`.
+	 * `runWorkerFirst`) live in `cloudflare.config.ts` under `worker.assets`.
 	 */
 	assetsDirectory?: string;
+	/**
+	 * Type-generation settings used by Wrangler dev and build. Defaults to
+	 * `{ generate: true, includeRuntime: true }`.
+	 *
+	 * - `generate`: emit `.cloudflare/types/index.d.ts`.
+	 * - `includeRuntime`: append the Workers runtime types generated from the
+	 *   project's compatibility date and flags.
+	 */
+	types?: { generate?: boolean; includeRuntime?: boolean };
 	// Dev/local
 	dev?: {
 		ip?: string;
@@ -49,17 +58,6 @@ export interface WranglerConfig {
 		localProtocol?: "http" | "https";
 		upstreamProtocol?: "http" | "https";
 		host?: string;
-		/**
-		 * Type-generation settings. Consumed directly by the new-config
-		 * type-generation path (`regenerateNewConfigTypes`) — NOT threaded
-		 * through the merged `RawConfig`. Default:
-		 * `{ generate: true, includeRuntime: true }`.
-		 *
-		 * - `generate`: emit `worker-configuration.d.ts`.
-		 * - `includeRuntime`: append the Workers runtime types (generated from
-		 *   the project's compatibility date/flags).
-		 */
-		types?: { generate?: boolean; includeRuntime?: boolean };
 		/**
 		 * Container-related dev settings. `containers` itself is currently not
 		 * supported under `--experimental-new-config`, but these dev-time settings are

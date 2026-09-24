@@ -13,7 +13,9 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 - `e2e/` — E2E tests, requires Cloudflare credentials
 - `bin/wrangler.js` — Shim that spawns Node to run `wrangler-dist/cli.js`, forwarding stdio and IPC
 - `bin/cf-wrangler.js` — `cf-wrangler` delegate entrypoint. Owns verb dispatch, argv parsing (`parseCfWranglerArgs`), and the `StartDevOptions` literal; hands off to `runCfWranglerDev` from `wrangler-dist/cli.js` in-process (no re-spawn — the parent tool owns the Node runtime)
+- `src/containers/ssh.ts` — Thin command adapter; SSH options, authorization request, and transport live in `@cloudflare/containers-shared/src/ssh.ts`, shared with cf.
 - `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint (see below)
+- `src/containers/images.ts` — Command/presentation adapter; registry image operations live in `containers-shared/src/registry-images.ts`, shared with cf.
 - `templates/` — Worker templates
 
 ## Entry Points
@@ -21,14 +23,19 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 - `src/cli.ts` — Build entry AND library API surface (dual-purpose). Calls `main()` when run directly; re-exports `./api` when imported as library. Also re-exports `parseCfWranglerArgs`, `parseCfWranglerBuildArgs`, `ArgParseError`, `runCfWranglerDev`, and `runCfWranglerBuild` for the `cf-wrangler` bin to call in-process.
 - `src/index.ts` — Yargs CLI tree builder (large file). Exports `main()`. NOT the package entry point despite the name.
 - `src/api/index.ts` — Public programmatic API barrel.
-- `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint, an experimental escape hatch for projects that can't use `@cloudflare/vite-plugin`. It exposes `dev` + four flags (`--mode`, `--port`, `--host`, `--local`) and `build` + `--mode`; the wrangler config file is found via wrangler's standard discovery (no `--config` flag). It is NOT a separate package and does NOT use the `unstable_dev` test harness. It shares its spawn contract (verb dispatch, flag vocabulary, exit-2 feature detection) with the sibling `cf-vite` delegate in `@cloudflare/vite-plugin`. `bin/cf-wrangler.js` owns verb dispatch, argv parsing, and the `StartDevOptions` literal; `src/cf-wrangler/dev.ts` (exported as `runCfWranglerDev`) wraps `startDev` in the experimental-flags context and waits for teardown. `src/cf-wrangler/build.ts` (exported as `runCfWranglerBuild`) runs the Build Output Specification path used by `wrangler build --experimental-new-config --experimental-cf-build-output`, producing `.cloudflare/output/v0`. `src/cf-wrangler/args.ts` (exported as `parseCfWranglerArgs`, `parseCfWranglerBuildArgs`, and `ArgParseError`) does the strict argv parse. The "unknown subcommand" error doubles as a feature-detection signal for the parent CLI.
+- `src/cf-wrangler/` — The `cf-wrangler` delegate entrypoint, an experimental escape hatch for projects that can't use `@cloudflare/vite-plugin`. It exposes `dev` + four flags (`--mode`, `--port`, `--host`, `--local`) and `build` + `--mode`/`--preview`; the wrangler config file is found via wrangler's standard discovery (no `--config` flag). It is NOT a separate package and does NOT use the `unstable_dev` test harness. It shares its spawn contract (verb dispatch, flag vocabulary, exit-2 feature detection) with the sibling `cf-vite` delegate in `@cloudflare/vite-plugin`. `bin/cf-wrangler.js` owns verb dispatch, argv parsing, and the `StartDevOptions` literal; `src/cf-wrangler/dev.ts` (exported as `runCfWranglerDev`) wraps `startDev` in the experimental-flags context and waits for teardown. `src/cf-wrangler/build.ts` (exported as `runCfWranglerBuild`) runs the Build Output Specification path used by `wrangler build --experimental-new-config --experimental-cf-build-output`, producing `.cloudflare/output/v0`. `src/cf-wrangler/args.ts` (exported as `parseCfWranglerArgs`, `parseCfWranglerBuildArgs`, and `ArgParseError`) does the strict argv parse. The "unknown subcommand" error doubles as a feature-detection signal for the parent CLI.
 
 ## Conventions (Wrangler-Specific)
 
 - No `console.*` — use `logger` singleton
 - No `__dirname` / `__filename` — use `getBasePath()`
 - No global `fetch` — use undici's fetch
-- No direct Cloudflare REST API calls — use the Cloudflare TypeScript SDK
+- Route Cloudflare v4 API calls through the existing `cfetch` helpers such as
+  `fetchResult`, `fetchListResult`, and `fetchPagedListResult` when possible;
+  do not use global or undici `fetch` directly. Prefer these helpers over
+  adding or passing the `cloudflare` package solely for a simple request, and
+  use the Cloudflare TypeScript SDK when its generated API surface or behavior
+  is materially useful.
 - `telemetryMessage` values for `UserError`-compatible errors must be static, safe labels. Do not use `telemetryMessage: true` unless the user-facing message cannot include user input, file paths, resource names, IDs, secret names, raw API messages, or command input. Even when safe, `telemetryMessage: true` is usually less useful because user-facing copy is harder to group and parse than a stable telemetry label.
 - Format `telemetryMessage` values as lower-case phrases: `<service or area> <command or sub-area> <failure>`, for example `kv namespace binding not found in config`, `r2 object put file not found`, or `pages deploy project name missing`.
 - Keep the service/area first and the failure last so telemetry groups consistently. Prefer stable categories over user-facing copy; telemetry labels should not change just because CLI wording changes.

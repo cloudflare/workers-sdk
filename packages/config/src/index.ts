@@ -4,7 +4,6 @@ export {
 	AssetsSchema,
 	BindingSchema,
 	BrowserBindingSchema,
-	ConfigExportsSchema,
 	D1BindingSchema,
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
@@ -12,11 +11,14 @@ export {
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
 	ExportSchema,
+	InputConfigSchema,
+	InputContainerSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
 	KnownBindingSchema,
 	KVBindingSchema,
-	OutputSettingsSchema,
+	OutputContainerSchema,
+	OutputRootConfigSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
 	QueueBindingSchema,
@@ -32,15 +34,27 @@ export {
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
-export { loadAndValidateConfig } from "./config-loader";
-export { resolveExportDefinition } from "./definition";
+export {
+	loadAndParseConfig,
+	loadAndParseConfigSettings,
+	resolveAndParseConfig,
+	resolveAndParseConfigSettings,
+} from "./config-loader";
 export type { LoadConfigResult } from "./load";
-export type { LoadAndValidateConfigResult } from "./config-loader";
 export type {
-	ParsedConfigExports,
+	ConfigParseResult,
+	ConfigSettingsParseResult,
+	LoadAndParseConfigSettingsResult,
+	LoadAndParseConfigResult,
+} from "./config-loader";
+export type {
+	InputWorkerConfig,
+	ParsedInputConfig,
+	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
-	ParsedOutputSettingsConfig,
+	ParsedOutputContainerConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 	ModuleType,
 } from "./schema";

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
@@ -164,6 +165,131 @@ describe("ConfigController", () => {
 		});
 	});
 
+	it("should plan named Container images for local runtime", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			Dockerfile: "FROM scratch",
+			"wrangler.json": JSON.stringify({
+				name: "named-images-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		await controller.set({
+			config: "./wrangler.json",
+			dev: {
+				containerBuildId: "build-id",
+				containerEngine: "unix:///tmp/docker.sock",
+			},
+		});
+
+		const { config } = await event;
+		const containerOptions = config.containerDevPlan?.containerOptions;
+		const appTag = containerOptions?.[0]?.image_tag;
+		expect(config.containers).toEqual([]);
+		expect(containerOptions).toEqual([
+			expect.objectContaining({
+				class_name: "ManagedDO",
+				image_name: "app",
+				image_tag: expect.stringMatching(
+					/^cloudflare-dev\/manageddo-app-[a-f0-9]{12}:build-id$/
+				),
+			}),
+		]);
+		expect(
+			config.containerDevPlan?.containerRuntimeOptions.get("ManagedDO")
+		).toEqual({
+			images: [{ name: "app", image: appTag }],
+		});
+	});
+
+	it("should not plan named Container images in remote mode", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			Dockerfile: "FROM scratch",
+			"wrangler.json": JSON.stringify({
+				name: "remote-named-images-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		const config = await controller.set(
+			{
+				config: "./wrangler.json",
+				dev: { remote: true, watch: false },
+			},
+			true
+		);
+
+		expect(config?.containerDevPlan).toBeUndefined();
+		expect(std.warn).toContain("Containers are only supported in local mode");
+	});
+
+	it("should not plan Container images when Containers are disabled", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			Dockerfile: "FROM scratch",
+			"wrangler.json": JSON.stringify({
+				name: "disabled-containers-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				dev: { enable_containers: false },
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		await controller.set({ config: "./wrangler.json" }, true);
+
+		const { config } = await event;
+		expect(config.dev.enableContainers).toBe(false);
+		expect(config.containerDevPlan).toBeUndefined();
+	});
+
 	it("should accept wrangler-specific dev fields through the public input", async ({
 		expect,
 	}) => {
@@ -189,6 +315,34 @@ describe("ConfigController", () => {
 
 		const { config } = await event;
 		expect(config.dev?.structuredLogsHandler).toBe(structuredLogsHandler);
+	});
+
+	it("runs a programmatic custom build command supplied only through input.build.custom", async ({
+		expect,
+	}) => {
+		// `BundlerController` assumes `getEntry()` already ran the effective
+		// custom build command for the current config before it sees a
+		// `configUpdate` event, and skips running it again itself. That's only
+		// true if `getEntry()` runs the *merged* command (config file `[build]`
+		// overridden by a programmatic `input.build.custom`), not just the
+		// config file's own `command` (which is absent here).
+		await seed({
+			"build.mjs": dedent /* javascript */ `
+				import { writeFileSync } from "node:fs";
+				writeFileSync("out.ts", 'export default { fetch() { return new Response("from custom build") } };');
+			`,
+		});
+
+		const event = bus.waitFor("configUpdate");
+		await controller.set({
+			entrypoint: "out.ts",
+			build: {
+				custom: { command: "node build.mjs" },
+			},
+		});
+		await event;
+
+		expect(existsSync("out.ts")).toBe(true);
 	});
 
 	it("should derive nodejsCompatMode from the config like the CLI", async ({

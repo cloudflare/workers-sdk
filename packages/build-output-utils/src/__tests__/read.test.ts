@@ -1,17 +1,30 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { InputSettingsSchema, InputWorkerSchema } from "@cloudflare/config";
+import {
+	InputSettingsSchema,
+	InputWorkerSchema,
+	OutputContainerSchema,
+} from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { BuildOutputError } from "../errors";
 import {
-	getSettingsConfigPath,
+	DEFAULT_WORKER_DIRECTORY_NAME,
+	getContainerConfigPath,
+	getContainerDir,
+	getRootConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
+	getWorkerDir,
 } from "../paths";
 import { readBuildOutput } from "../read";
-import { writeSettingsConfig, writeWorkerConfig } from "../write";
+import {
+	writeContainerConfig,
+	writeRootConfig,
+	writeWorkerConfig,
+} from "../write";
+import type { BuildOutputWorker, BuildOutputWorkers } from "../read";
 import type { ParsedOutputWorkerConfig } from "@cloudflare/config";
 
 const completeManifest: ParsedOutputWorkerConfig["manifest"] = {
@@ -21,18 +34,40 @@ const completeManifest: ParsedOutputWorkerConfig["manifest"] = {
 };
 
 const parsedSettingsConfig = InputSettingsSchema.parse({
-	type: "settings",
 	accountId: "1234567890",
 	complianceRegion: "public",
 });
 
+const parsedStandardContainerConfig = OutputContainerSchema.parse({
+	name: "api-container",
+	image: { reference: "registry.example.com/api:latest" },
+});
+
+const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
+	name: "session-container",
+	schedulingPolicy: "durable-object",
+	images: {
+		default: { localReference: "session-container:latest" },
+	},
+});
+
 function inputWorkerConfig(name: string) {
 	return InputWorkerSchema.parse({
-		type: "worker",
 		name,
 		compatibilityDate: "2026-06-01",
 		entrypoint: "index.js",
 	});
+}
+
+function getWorker(
+	workers: BuildOutputWorkers,
+	directoryName: string
+): BuildOutputWorker {
+	const worker = workers[directoryName];
+	if (worker === undefined) {
+		throw new Error(`Expected Worker ${JSON.stringify(directoryName)}.`);
+	}
+	return worker;
 }
 
 async function writeBundleFiles(
@@ -59,13 +94,13 @@ async function writeBundleFiles(
 async function seedWorker(
 	root: string,
 	{
-		workerDirectoryName = "default",
+		directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
 		name = "my-worker",
 		hasBundle = true,
 		bundleDir = hasBundle,
 		assets = false,
 	}: {
-		workerDirectoryName?: string;
+		directoryName?: string;
 		name?: string;
 		hasBundle?: boolean;
 		bundleDir?: boolean;
@@ -76,15 +111,15 @@ async function seedWorker(
 		root,
 		config: inputWorkerConfig(name),
 		manifest: hasBundle ? completeManifest : undefined,
-		workerDirectoryName,
+		directoryName,
 	});
 	if (bundleDir) {
-		await fsp.mkdir(getWorkerBundleDir(root, workerDirectoryName), {
+		await fsp.mkdir(getWorkerBundleDir(root, directoryName), {
 			recursive: true,
 		});
 	}
 	if (assets) {
-		await fsp.mkdir(getWorkerAssetsDir(root, workerDirectoryName), {
+		await fsp.mkdir(getWorkerAssetsDir(root, directoryName), {
 			recursive: true,
 		});
 	}
@@ -92,40 +127,150 @@ async function seedWorker(
 
 describe("readBuildOutput", () => {
 	runInTempDir();
+	beforeEach(async () => {
+		await writeRootConfig(process.cwd(), parsedSettingsConfig, {
+			isPreview: false,
+			mode: undefined,
+		});
+	});
 
-	it("reads and validates the default Worker, keeping the manifest", async ({
+	it("reads the default Worker, keeping the manifest", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+
+		const output = await readBuildOutput(root);
+		const worker = output.workers.default;
+
+		expect(output.version).toBe("v0");
+		expect(output.root).toBe(root);
+		expect(worker.configPath).toBe(getWorkerConfigPath(root));
+		expect(worker.bundleDir).toBe(getWorkerBundleDir(root));
+		expect(worker.assetsDir).toBeUndefined();
+
+		expect(worker.config.name).toBe("my-worker");
+		expect(worker.config.manifest).toEqual(completeManifest);
+		expect(worker.config).not.toHaveProperty("entrypoint");
+	});
+
+	it("returns an absolute project root", async ({ expect }) => {
+		await seedWorker(process.cwd());
+
+		const output = await readBuildOutput(".");
+
+		expect(output.root).toBe(process.cwd());
+	});
+
+	it("reads additional Workers keyed by directory name", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root, {
+			directoryName: "additional-worker",
+			name: "additional-worker",
+		});
+		await seedWorker(root);
+
+		const { workers } = await readBuildOutput(root);
+		const additionalWorker = getWorker(workers, "additional-worker");
+
+		expect(Object.keys(workers)).toHaveLength(2);
+		expect(Object.keys(workers)).toEqual(
+			expect.arrayContaining(["default", "additional-worker"])
+		);
+		expect(additionalWorker.config.name).toBe("additional-worker");
+		expect(additionalWorker.bundleDir).toBe(
+			getWorkerBundleDir(root, "additional-worker")
+		);
+	});
+
+	it("reads Containers", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeContainerConfig({
+			root,
+			config: parsedDurableObjectContainerConfig,
+			directoryName: parsedDurableObjectContainerConfig.name,
+		});
+		await writeContainerConfig({
+			root,
+			config: parsedStandardContainerConfig,
+			directoryName: parsedStandardContainerConfig.name,
+		});
+
+		const { containers } = await readBuildOutput(root);
+
+		expect(containers).toHaveLength(2);
+		expect(containers).toEqual(
+			expect.arrayContaining([
+				{
+					configPath: getContainerConfigPath(root, "api-container"),
+					config: parsedStandardContainerConfig,
+				},
+				{
+					configPath: getContainerConfigPath(root, "session-container"),
+					config: parsedDurableObjectContainerConfig,
+				},
+			])
+		);
+	});
+
+	it("returns no Containers when the Containers directory is absent", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
 
-		const output = await readBuildOutput(root);
+		const { containers } = await readBuildOutput(root);
 
-		expect(output.version).toBe("v0");
-		expect(output.root).toBe(root);
-		expect(output.workers.default.configPath).toBe(getWorkerConfigPath(root));
-		expect(output.workers.default.bundleDir).toBe(getWorkerBundleDir(root));
-		expect(output.workers.default.assetsDir).toBeUndefined();
-
-		expect(output.workers.default.config.name).toBe("my-worker");
-		expect(output.workers.default.config.manifest).toEqual(completeManifest);
-		expect(output.workers.default.config).not.toHaveProperty("entrypoint");
+		expect(containers).toEqual([]);
 	});
 
-	it("reads Workers keyed by directory name", async ({ expect }) => {
+	it("requires the default Worker when Containers are present", async ({
+		expect,
+	}) => {
 		const root = process.cwd();
-		await seedWorker(root);
-		await seedWorker(root, {
-			workerDirectoryName: "additional",
-			name: "additional-worker",
+		await writeContainerConfig({
+			root,
+			config: parsedStandardContainerConfig,
+			directoryName: parsedStandardContainerConfig.name,
 		});
 
-		const { workers } = await readBuildOutput(root);
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/no Worker config found/
+		);
+	});
 
-		expect(Object.keys(workers)).toEqual(["default", "additional"]);
-		expect(workers.additional?.config.name).toBe("additional-worker");
-		expect(workers.additional?.bundleDir).toBe(
-			getWorkerBundleDir(root, "additional")
+	it("throws when a Container config is missing", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+
+		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/no Container config found/
+		);
+	});
+
+	it("throws when a Container config is not valid JSON", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+		await fsp.writeFile(getContainerConfigPath(root, "api"), "{ not json");
+
+		await expect(readBuildOutput(root)).rejects.toThrow(/could not parse JSON/);
+	});
+
+	it("throws when a Container config does not match its schema", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
+		await fsp.writeFile(
+			getContainerConfigPath(root, "api"),
+			JSON.stringify({ name: "api" })
+		);
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/invalid Container config/
 		);
 	});
 
@@ -154,8 +299,8 @@ describe("readBuildOutput", () => {
 			"ignored.json": "{}",
 		});
 
-		const { manifest: resolvedManifest } = (await readBuildOutput(root)).workers
-			.default.config;
+		const { workers } = await readBuildOutput(root);
+		const { manifest: resolvedManifest } = workers.default.config;
 
 		expect(resolvedManifest).toEqual({
 			type: "complete",
@@ -179,8 +324,8 @@ describe("readBuildOutput", () => {
 			"unlisted.js": "export default {};",
 		});
 
-		const { manifest: resolvedManifest } = (await readBuildOutput(root)).workers
-			.default.config;
+		const { workers } = await readBuildOutput(root);
+		const { manifest: resolvedManifest } = workers.default.config;
 
 		expect(resolvedManifest).toEqual(completeManifest);
 	});
@@ -233,9 +378,10 @@ describe("readBuildOutput", () => {
 		await seedWorker(root, { hasBundle: false, assets: true });
 
 		const { workers } = await readBuildOutput(root);
+		const worker = workers.default;
 
-		expect(workers.default.bundleDir).toBeUndefined();
-		expect(workers.default.assetsDir).toBe(getWorkerAssetsDir(root));
+		expect(worker.bundleDir).toBeUndefined();
+		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));
 	});
 
 	it("throws when the config has a manifest but no bundle directory", async ({
@@ -264,6 +410,7 @@ describe("readBuildOutput", () => {
 
 	it("throws when the Worker config is missing", async ({ expect }) => {
 		const root = process.cwd();
+		await fsp.mkdir(getWorkerDir(root), { recursive: true });
 
 		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
 		await expect(readBuildOutput(root)).rejects.toThrow(
@@ -279,124 +426,107 @@ describe("readBuildOutput", () => {
 		await expect(readBuildOutput(root)).rejects.toThrow(/could not parse JSON/);
 	});
 
-	it("throws when the config fails schema validation", async ({ expect }) => {
+	it("throws when the Worker config does not match its schema", async ({
+		expect,
+	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		await fsp.writeFile(
-			getWorkerConfigPath(root),
-			JSON.stringify({ type: "worker" })
-		);
+		await fsp.writeFile(getWorkerConfigPath(root), JSON.stringify({}));
 
 		await expect(readBuildOutput(root)).rejects.toThrow(
 			/invalid Worker config/
 		);
 	});
 
-	it("returns the top-level settings when present", async ({ expect }) => {
+	it("returns the root config", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		await writeSettingsConfig(root, parsedSettingsConfig);
+		await writeRootConfig(root, parsedSettingsConfig, {
+			isPreview: false,
+			mode: undefined,
+		});
 
-		const { settings } = await readBuildOutput(root);
+		const { rootConfig } = await readBuildOutput(root);
 
-		expect(settings).toEqual(parsedSettingsConfig);
+		expect(rootConfig).toEqual({
+			...parsedSettingsConfig,
+			buildContext: { isPreview: false },
+		});
 	});
 
-	it("returns undefined settings when the top-level config is absent", async ({
+	it("throws when the root config is absent", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.rm(getRootConfigPath(root));
+
+		await expect(readBuildOutput(root)).rejects.toThrow(/no root config found/);
+	});
+
+	it("returns the build context recorded in the root config", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
+		await writeRootConfig(root, parsedSettingsConfig, {
+			isPreview: true,
+			mode: "staging",
+		});
 
-		const { settings } = await readBuildOutput(root);
+		const { rootConfig } = await readBuildOutput(root);
 
-		expect(settings).toBeUndefined();
+		expect(rootConfig).toEqual({
+			...parsedSettingsConfig,
+			buildContext: { isPreview: true, mode: "staging" },
+		});
 	});
 
-	it("returns the mode recorded in the top-level config", async ({
+	it("returns the build context when no mode was selected", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		await writeSettingsConfig(root, parsedSettingsConfig, "staging");
+		await writeRootConfig(root, parsedSettingsConfig, {
+			isPreview: false,
+			mode: undefined,
+		});
 
-		const { settings } = await readBuildOutput(root);
+		const { rootConfig } = await readBuildOutput(root);
 
-		// The settings are returned whole, so `mode` sits alongside the fields
-		// the user declared.
-		expect(settings).toEqual({ ...parsedSettingsConfig, mode: "staging" });
-	});
-
-	it("returns an undefined mode when the top-level config records none", async ({
-		expect,
-	}) => {
-		const root = process.cwd();
-		await seedWorker(root);
-		await writeSettingsConfig(root, parsedSettingsConfig);
-
-		const { settings } = await readBuildOutput(root);
-
-		expect(settings?.mode).toBeUndefined();
-	});
-
-	it("returns an undefined mode when the top-level config is absent", async ({
-		expect,
-	}) => {
-		const root = process.cwd();
-		await seedWorker(root);
-
-		const { settings } = await readBuildOutput(root);
-
-		expect(settings?.mode).toBeUndefined();
+		expect(rootConfig.buildContext).toEqual({ isPreview: false });
 	});
 
 	it("throws when the recorded mode is not a string", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		const configPath = getSettingsConfigPath(root);
+		const configPath = getRootConfigPath(root);
 		await fsp.mkdir(path.dirname(configPath), { recursive: true });
 		await fsp.writeFile(
 			configPath,
-			JSON.stringify({ type: "settings", mode: 123 })
+			JSON.stringify({ buildContext: { isPreview: false, mode: 123 } })
 		);
 
-		await expect(readBuildOutput(root)).rejects.toThrow(
-			/invalid settings config/
-		);
+		await expect(readBuildOutput(root)).rejects.toThrow(/invalid root config/);
 	});
 
-	it("throws when the top-level config fails schema validation", async ({
+	it("throws when the root config does not match its schema", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		const configPath = getSettingsConfigPath(root);
+		const configPath = getRootConfigPath(root);
 		await fsp.mkdir(path.dirname(configPath), { recursive: true });
-		await fsp.writeFile(
-			configPath,
-			JSON.stringify({ type: "settings", nope: 1 })
-		);
+		await fsp.writeFile(configPath, JSON.stringify({ nope: 1 }));
 
-		await expect(readBuildOutput(root)).rejects.toThrow(
-			/invalid settings config/
-		);
+		await expect(readBuildOutput(root)).rejects.toThrow(/invalid root config/);
 	});
 
-	it("reads the top-level settings before the Worker config", async ({
-		expect,
-	}) => {
+	it("reads the root config before Worker configs", async ({ expect }) => {
 		const root = process.cwd();
-		// Invalid settings plus a missing Worker config: the settings error
-		// surfaces first because settings are read first.
-		const configPath = getSettingsConfigPath(root);
-		await fsp.mkdir(path.dirname(configPath), { recursive: true });
-		await fsp.writeFile(
-			configPath,
-			JSON.stringify({ type: "settings", nope: 1 })
-		);
+		await fsp.mkdir(getWorkerDir(root), { recursive: true });
+		await fsp.writeFile(getWorkerConfigPath(root), "{ not json");
+		const configPath = getRootConfigPath(root);
+		await fsp.writeFile(configPath, JSON.stringify({ nope: 1 }));
 
-		await expect(readBuildOutput(root)).rejects.toThrow(
-			/invalid settings config/
-		);
+		await expect(readBuildOutput(root)).rejects.toThrow(/invalid root config/);
 	});
 });

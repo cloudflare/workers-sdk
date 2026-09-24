@@ -211,7 +211,6 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const worker = {
 			config: {
-				type: "worker",
 				name: "worker",
 				compatibilityDate: "2025-05-01",
 				compatibilityFlags: ["experimental"],
@@ -249,7 +248,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -270,7 +268,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -317,7 +314,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -354,7 +350,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -393,7 +388,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -444,7 +438,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -496,7 +489,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -533,7 +525,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -579,7 +570,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -620,7 +610,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -668,7 +657,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -690,7 +678,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -736,7 +723,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -777,7 +763,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -831,7 +816,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -873,7 +857,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -922,7 +905,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -963,7 +945,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1008,7 +989,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1043,7 +1023,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1093,7 +1072,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1134,7 +1112,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1186,7 +1163,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1231,7 +1207,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1278,7 +1253,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2024-11-20",
 						env: {
@@ -1319,7 +1293,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2024-11-20",
 						manifest: singleModuleManifest(`
@@ -1362,7 +1335,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1395,7 +1367,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1445,7 +1416,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1495,7 +1465,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1517,7 +1486,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1559,7 +1527,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1595,7 +1562,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1634,7 +1600,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1671,7 +1636,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1712,7 +1676,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1755,7 +1718,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1802,7 +1764,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1844,7 +1805,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1895,7 +1855,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1923,7 +1882,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2004,7 +1962,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2043,7 +2000,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2083,7 +2039,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2125,7 +2080,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2188,7 +2142,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2224,7 +2177,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "unrelated-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2254,7 +2206,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2310,7 +2261,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2370,7 +2320,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "consumer-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2405,7 +2354,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "consumer-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2437,7 +2385,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2455,13 +2402,12 @@ describe.sequential("DevRegistry", () => {
 		await remote.ready;
 
 		const logs: string[] = [];
-		const local = new Miniflare({
+		const localOptions: MiniflareOptions = {
 			unsafeDevRegistryPath,
 			handleStructuredLogs: ({ message }) => void logs.push(message),
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2477,7 +2423,8 @@ describe.sequential("DevRegistry", () => {
 					},
 				},
 			],
-		});
+		};
+		const local = new Miniflare(localOptions);
 		useDispose(local);
 		await local.ready;
 
@@ -2490,11 +2437,20 @@ describe.sequential("DevRegistry", () => {
 			{ timeout: 10_000, interval: 100 }
 		);
 
-		// Drop the peer without letting it deregister, so `local` keeps a registry
-		// entry pointing at a debug port that is no longer accepting connections.
+		const remoteDefinitionPath = path.join(
+			unsafeDevRegistryPath,
+			"remote-worker"
+		);
+		const remoteDefinition = await fs.readFile(remoteDefinitionPath, "utf8");
+
+		// Restore the registry entry removed by disposal to model a peer that exited
+		// without cleaning up. This leaves `local` pointing at a debug port that is
+		// no longer accepting connections, regardless of watcher timing.
 		// The forwarding RPC now rejects; that rejection must be reported rather
 		// than escaping as an unhandled rejection.
 		await remote.dispose();
+		await fs.writeFile(remoteDefinitionPath, remoteDefinition);
+		await local.setOptions(localOptions);
 		logs.length = 0;
 
 		await vi.waitFor(
@@ -2516,7 +2472,6 @@ describe("registry churn across config updates", () => {
 		({
 			dev: { unsafeRegisterWorker: true },
 			config: {
-				type: "worker",
 				name,
 				compatibilityDate: "2025-05-01",
 				compatibilityFlags,

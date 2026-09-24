@@ -7,10 +7,14 @@ import {
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { shortHash, truncateWithSuffix } from "../shared/names";
-import type { Binding, EnvBindings, PreviewDefaults } from "./api";
-import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+import type { Binding, EnvBindings, UpdatePreviewRequestParams } from "./api";
+import type {
+	Config,
+	PreviewsConfig,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils";
 
 const MAX_CONTAINER_APP_NAME_LENGTH = 253;
 
@@ -390,6 +394,10 @@ export function getBindingValue(binding: Binding): string {
 			return String(binding.queue_name ?? "");
 		case "vectorize":
 			return String(binding.index_name ?? "");
+		case "ai_search_namespace":
+			return String(binding.namespace ?? "");
+		case "ai_search":
+			return String(binding.instance_name ?? "");
 		case "hyperdrive":
 			return String(binding.id ?? "");
 		case "analytics_engine":
@@ -419,8 +427,11 @@ export function getBindingValue(binding: Binding): string {
 	}
 }
 
-export function extractConfigBindings(config: Config): EnvBindings {
-	const previews = config.previews as PreviewsConfig | undefined;
+function extractBindings(
+	previews: RawEnvironment | undefined,
+	assets: Config["assets"],
+	omitIdentifierlessBindings = false
+): EnvBindings {
 	const env: EnvBindings = {};
 
 	const vars = previews?.vars ?? {};
@@ -440,10 +451,16 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	for (const kv of previews?.kv_namespaces ?? []) {
+		if (omitIdentifierlessBindings && kv.id === undefined) {
+			continue;
+		}
 		env[kv.binding] = { type: "kv_namespace", namespace_id: kv.id };
 	}
 
 	for (const d1 of previews?.d1_databases ?? []) {
+		if (omitIdentifierlessBindings && d1.database_id === undefined) {
+			continue;
+		}
 		env[d1.binding] = {
 			type: "d1",
 			database_id: d1.database_id,
@@ -452,21 +469,56 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	for (const r2 of previews?.r2_buckets ?? []) {
-		env[r2.binding] = { type: "r2_bucket", bucket_name: r2.bucket_name };
+		if (omitIdentifierlessBindings && r2.bucket_name === undefined) {
+			continue;
+		}
+		env[r2.binding] = {
+			type: "r2_bucket",
+			bucket_name: r2.bucket_name,
+			jurisdiction: r2.jurisdiction,
+		};
 	}
 
 	for (const service of previews?.services ?? []) {
 		// `cross_account_grant` is internal/non-public-facing, so we access it
 		// through the runtime shape instead of the public type.
-		const crossAccountGrant = (service as { cross_account_grant?: string })
-			.cross_account_grant;
+		const { cross_account_grant: crossAccountGrant, environment } = service as {
+			cross_account_grant?: string;
+			environment?: string;
+		};
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
+			environment,
 			entrypoint: service.entrypoint,
+			props: service.props,
 			...(crossAccountGrant !== undefined && {
 				cross_account_grant: crossAccountGrant,
 			}),
+		};
+	}
+
+	for (const memory of previews?.agent_memory ?? []) {
+		env[memory.binding] = {
+			type: "agent_memory",
+			namespace: memory.namespace,
+		};
+	}
+
+	for (const vpc of previews?.vpc_networks ?? []) {
+		const binding: Binding = { type: "vpc_network" };
+		if ("tunnel_id" in vpc) {
+			binding.tunnel_id = vpc.tunnel_id;
+		} else {
+			binding.network_id = vpc.network_id;
+		}
+		env[vpc.binding] = binding;
+	}
+
+	for (const binding of previews?.logfwdr?.bindings ?? []) {
+		env[binding.name] = {
+			type: "logfwdr",
+			destination: binding.destination,
 		};
 	}
 
@@ -508,6 +560,20 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[vectorize.binding] = {
 			type: "vectorize",
 			index_name: vectorize.index_name,
+		};
+	}
+
+	for (const ns of previews?.ai_search_namespaces ?? []) {
+		env[ns.binding] = {
+			type: "ai_search_namespace",
+			namespace: ns.namespace,
+		};
+	}
+
+	for (const search of previews?.ai_search ?? []) {
+		env[search.binding] = {
+			type: "ai_search",
+			instance_name: search.instance_name,
 		};
 	}
 
@@ -618,8 +684,8 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[previews.version_metadata.binding] = { type: "version_metadata" };
 	}
 
-	if (config.assets?.binding) {
-		env[config.assets.binding] = { type: "assets" };
+	if (assets?.binding) {
+		env[assets.binding] = { type: "assets" };
 	}
 
 	for (const binding of previews?.unsafe?.bindings ?? []) {
@@ -628,6 +694,14 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	return env;
+}
+
+export function extractConfigBindings(config: Config): EnvBindings {
+	return extractBindings(config.previews, config.assets);
+}
+
+export function extractBuildOutputBindings(config: RawConfig): EnvBindings {
+	return extractBindings(config, config.assets, true);
 }
 
 /**
@@ -738,9 +812,11 @@ export function previewContainerAppName(
 	);
 }
 
-export function assemblePreviewScriptSettings(config: Config) {
+export function assemblePreviewScriptSettings(
+	config: Config
+): UpdatePreviewRequestParams {
 	const previews = config.previews;
-	const result: Record<string, unknown> = {};
+	const result: UpdatePreviewRequestParams = {};
 
 	const observability = previews?.observability ?? config.observability;
 	if (observability !== undefined) {
@@ -759,30 +835,4 @@ export function assemblePreviewScriptSettings(config: Config) {
 	}
 
 	return result;
-}
-
-export function assemblePreviewDefaults(config: Config): PreviewDefaults {
-	const previews = config.previews as PreviewsConfig | undefined;
-	const previewDefaults: PreviewDefaults = {
-		...assemblePreviewScriptSettings(config),
-	};
-
-	const previewEnv = extractConfigBindings(config);
-	if (Object.keys(previewEnv).length > 0) {
-		previewDefaults.env = previewEnv;
-	}
-
-	if (previews?.limits || config.limits) {
-		previewDefaults.limits = previews?.limits ?? config.limits;
-	}
-
-	if (previews?.cache !== undefined || config.cache !== undefined) {
-		previewDefaults.cache = previews?.cache ?? config.cache;
-	}
-
-	if (config.placement) {
-		previewDefaults.placement = parseConfigPlacement(config);
-	}
-
-	return previewDefaults;
 }

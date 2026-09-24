@@ -14,6 +14,29 @@ const port = await getPort();
 const inspectorPort = await getPort();
 const cmd = "wrangler pages dev";
 describe.sequential("wrangler pages dev", () => {
+	it("should redirect Unicode HTML paths and serve the decoded filename", async ({
+		expect,
+	}) => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"WHAT’S YOUR DREAM JOB/index.html": "<h1>hello</h1>",
+		});
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+		);
+		const { url } = await worker.waitForReady();
+		const requestUrl = `${url}/WHAT%E2%80%99S%20YOUR%20DREAM%20JOB/index.html?lang=en`;
+		const redirect = await fetch(requestUrl, { redirect: "manual" });
+		expect(redirect.status).toBe(308);
+		expect(redirect.headers.get("Location")).toBe(
+			"/WHAT%E2%80%99S%20YOUR%20DREAM%20JOB/?lang=en"
+		);
+		await redirect.body?.cancel();
+		const response = await fetch(requestUrl);
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("<h1>hello</h1>");
+	});
+
 	it("should warn if no [--compatibility_date] command line arg was specified", async ({
 		expect,
 	}) => {

@@ -31,8 +31,6 @@ export type BuildArgs = {
 	args?: Record<string, string>;
 	/** platform to build for. defaults to linux/amd64 */
 	platform?: string;
-	/** sets --network=host at build time. only used by workers CI. */
-	setNetworkToHost?: boolean;
 };
 
 export type ContainerNormalizedConfig = SharedContainerConfig &
@@ -91,7 +89,11 @@ export type SharedContainerConfig = {
 		colocation?: ApplicationAffinityColocation;
 		hardware_generation?: ApplicationAffinityHardwareGeneration;
 	};
-	observability: { logs_enabled: boolean };
+	observability: {
+		logs_enabled: boolean;
+		target_instance_percentage?: number;
+		target_instance_count?: number;
+	};
 } & InstanceTypeOrLimits;
 
 /** build/pull agnostic container options */
@@ -100,4 +102,21 @@ export type ContainerDevOptions = {
 	image_tag: string;
 	/** container's DO class name */
 	class_name: string;
+	/** configured image key for Durable Object-managed Containers */
+	image_name?: string;
 } & (DockerfileConfig | ImageURIConfig);
+
+/**
+ * Runtime configuration for one Durable Object class with an attached
+ * Container. This structurally matches workerd's ContainerOptions.
+ */
+export type ContainerDevRuntimeOptions = {
+	imageName?: string;
+	images?: { name: string; image: string }[];
+};
+
+/** Complete local image and runtime plan derived from Worker configuration. */
+export type ContainerDevPlan = {
+	containerOptions: ContainerDevOptions[];
+	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions>;
+};

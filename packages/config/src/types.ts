@@ -40,12 +40,12 @@ import type {
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
-	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
 	// TODO: re-enable when workflow bindings return.
 	// WorkflowBinding,
 } from "./bindings";
+import type { ConfigInput } from "./definition";
 import type {
 	DurableObjectDeletedExport,
 	DurableObjectExpectingTransferExport,
@@ -62,6 +62,28 @@ import type {
 	QueueConsumerTrigger,
 	ScheduledTrigger,
 } from "./triggers";
+
+/** Account-level values shared by the resources in a configuration. */
+export interface Settings {
+	/**
+	 * This is the ID of the account associated with your zone. It can also be
+	 * specified through the `CLOUDFLARE_ACCOUNT_ID` environment variable.
+	 */
+	accountId?: string;
+	/**
+	 * The compliance boundary in which commands should operate. When omitted,
+	 * this can be supplied through `CLOUDFLARE_COMPLIANCE_REGION`.
+	 */
+	complianceRegion?: "public" | "fedramp-high";
+}
+
+/** The authored shape of `cloudflare.config.ts`'s default export. */
+export interface CloudflareConfig extends Settings {
+	/** The Worker defined by this configuration. */
+	worker?: ConfigInput<WorkerConfig>;
+	/** Container applications defined by this configuration. */
+	containers?: ConfigInput<ContainerConfig>[];
+}
 
 /**
  * Union of all binding definitions accepted in `env`.
@@ -100,7 +122,6 @@ type Binding =
 	| VersionMetadataBinding
 	| VpcNetworkBinding
 	| VpcServiceBinding
-	| WebSearchBinding
 	| WorkerBinding
 	| WorkerLoaderBinding;
 // TODO: re-enable when workflow bindings return.
@@ -130,22 +151,221 @@ type Export =
 	| WorkerEntrypointExport;
 // TODO: support Workflows
 
+/** An image source accepted in an authored Container configuration. */
+type ContainerImage =
+	| {
+			/** The path to a Dockerfile. */
+			dockerfile: string;
+			/**
+			 * Build context of the application.
+			 *
+			 * @default The directory containing `dockerfile`.
+			 */
+			buildContext?: string;
+			/** Image variables available to the image at build time only. */
+			buildVars?: Record<string, string>;
+	  }
+	| {
+			/**
+			 * Reference to an existing image.
+			 *
+			 * For supported registries, refer to
+			 * https://developers.cloudflare.com/containers/guides/image-management/#use-pre-built-container-images
+			 */
+			reference: string;
+	  };
+
+/** Application-wide observability settings shared by all Containers. */
+interface ContainerObservabilityConfig {
+	/** Whether observability is enabled. */
+	enabled?: boolean;
+	logs?: {
+		/** Whether log collection is enabled. */
+		enabled?: boolean;
+	};
+}
+
+/** Observability settings for a standard Container application. */
+type StandardContainerObservabilityConfig = ContainerObservabilityConfig &
+	(
+		| {
+				/** Percentage of Container instances targeted for observability. */
+				targetInstancePercentage?: number;
+				targetInstanceCount?: never;
+		  }
+		| {
+				targetInstancePercentage?: never;
+				/** Number of Container instances targeted for observability. */
+				targetInstanceCount?: number;
+		  }
+	);
+
+/** Fields shared by all Container application configurations. */
+interface BaseContainerConfig {
+	/**
+	 * Name of the application.
+	 *
+	 * This is also the identifier used to reference the Container from a Durable
+	 * Object's `exports` entry via its `container` field.
+	 */
+	name: string;
+
+	/**
+	 * Passed through without client-side validation or transformation.
+	 *
+	 * @hidden
+	 */
+	unsafe?: Record<string, unknown>;
+}
+
+/** A Container application managed with a standard scheduling policy. */
+interface StandardContainerConfig extends BaseContainerConfig {
+	/** Configures observability and optional targeting for Container instances. */
+	observability?: StandardContainerObservabilityConfig;
+
+	/** The image to build or deploy. */
+	image: ContainerImage;
+
+	/**
+	 * Maximum number of application instances.
+	 *
+	 * @default 20
+	 */
+	maxInstances?: number;
+
+	/**
+	 * The instance type to be used for the Container.
+	 * Select from one of the following named instance types:
+	 *
+	 * - lite: 1/16 vCPU, 256 MiB memory, and 2 GB disk
+	 * - basic: 1/4 vCPU, 1 GiB memory, and 4 GB disk
+	 * - standard-1: 1/2 vCPU, 4 GiB memory, and 8 GB disk
+	 * - standard-2: 1 vCPU, 6 GiB memory, and 12 GB disk
+	 * - standard-3: 2 vCPU, 8 GiB memory, and 16 GB disk
+	 * - standard-4: 4 vCPU, 12 GiB memory, and 20 GB disk
+	 *
+	 * Customers on an enterprise plan have the additional option to set custom
+	 * limits.
+	 *
+	 * @default "lite"
+	 */
+	instanceType?:
+		| "basic"
+		| "lite"
+		| "standard-1"
+		| "standard-2"
+		| "standard-3"
+		| "standard-4"
+		| {
+				/** @default 0.0625 (1/16 vCPU) */
+				vcpu?: number;
+				/** @default 256 MiB */
+				memoryMib?: number;
+				/** @default 2 GB */
+				diskMb?: number;
+		  };
+
+	/**
+	 * The scheduling policy of the application.
+	 *
+	 * @default "default"
+	 */
+	schedulingPolicy?: "default" | "regional";
+
+	ssh?: {
+		/**
+		 * If enabled, users with write access to the Container application can
+		 * connect to it over SSH.
+		 *
+		 * @default false
+		 */
+		enabled: boolean;
+		/**
+		 * Port that the SSH service is running on.
+		 *
+		 * @default 22
+		 */
+		port?: number;
+	};
+
+	/** SSH public keys to put in the Container's authorized_keys file. */
+	authorizedKeys?: Array<{ name: string; publicKey: string }>;
+
+	/** Scheduling constraints for Container placement. */
+	constraints?: {
+		/** Limit Container placement to specific geographic regions. */
+		regions?: Array<
+			"ENAM" | "WNAM" | "EEUR" | "WEUR" | "APAC" | "SAM" | "ME" | "OC" | "AFR"
+		>;
+		/** Restrict Containers to compliance boundaries. */
+		jurisdiction?: "eu" | "fedramp";
+	};
+
+	rollout?: {
+		/**
+		 * How a rollout should be created. It supports the following modes:
+		 *
+		 * - full-auto: The Container application will be rolled out fully
+		 *   automatically.
+		 * - none: The Container application will not have a rollout or update.
+		 * - full-manual: The Container application will be rolled out by manually
+		 *   progressing through the rollout steps.
+		 *
+		 * @default "full-auto"
+		 * @hidden
+		 */
+		kind?: "full-auto" | "none" | "full-manual";
+		/**
+		 * Configures what percentage of instances should be updated at each step of
+		 * a rollout. You can specify this as a single number or an array of numbers.
+		 *
+		 * If this is a single number, each step will progress by that percentage.
+		 * The options are 5, 10, 20, 25, 50, or 100.
+		 *
+		 * If this is an array, each step specifies the cumulative rollout progress.
+		 * The final step must be 100.
+		 *
+		 * @default [10, 100]
+		 */
+		stepPercentage?: number | number[];
+		/**
+		 * Configures the grace period, in seconds, for active instances before they
+		 * are shut down during a rollout.
+		 *
+		 * @default 0
+		 */
+		activeGracePeriod?: number;
+	};
+}
+
+/** A Container application managed by a Durable Object. */
+interface DurableObjectContainerConfig extends BaseContainerConfig {
+	schedulingPolicy: "durable-object";
+	/**
+	 * Configures application-wide observability. Instance targeting is not
+	 * supported for Durable Object-managed Containers.
+	 */
+	observability?: ContainerObservabilityConfig;
+	/** Named images that the Durable Object can start. */
+	images?: Record<string, ContainerImage>;
+}
+
+/**
+ * Container application configuration. This is the input shape passed to
+ * `defineContainer` and parsed at runtime by `InputContainerSchema`.
+ */
+export type ContainerConfig =
+	| DurableObjectContainerConfig
+	| StandardContainerConfig;
+
 /**
  * Worker configuration. This is the input shape passed to
  * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *
- * Fields are validated at runtime by `InputWorkerSchema` and normalised before
+ * Fields are parsed and normalised at runtime by `InputWorkerSchema` before
  * being passed to downstream tooling.
  */
 export interface WorkerConfig {
-	/**
-	 * Discriminates this config as a Worker config.
-	 *
-	 * Injected automatically by `defineWorker`; only needs to be written by
-	 * hand when authoring a raw config object without the helper.
-	 */
-	type: "worker";
-
 	/**
 	 * The name of your Worker.
 	 */
@@ -177,8 +397,10 @@ export interface WorkerConfig {
 	 *
 	 * @example
 	 * ```ts
+	 * import { defineConfig, defineWorker } from "@cloudflare/config";
 	 * import * as entrypoint from "./src" with { type: "cf-worker" };
-	 * export default defineWorker({ entrypoint });
+	 * const worker = defineWorker({ entrypoint });
+	 * export default defineConfig({ worker });
 	 * ```
 	 */
 	entrypoint?: string | WorkerModule;
@@ -302,6 +524,11 @@ export interface WorkerConfig {
 		 * @default false
 		 */
 		redactQueryString?: boolean;
+		/** Real-time Issues settings for this Worker. */
+		issues?: {
+			/** Whether real-time Issues are enabled. */
+			enabled?: boolean;
+		};
 		logs?: {
 			enabled?: boolean;
 			/** The sampling rate. */
@@ -413,36 +640,4 @@ export interface WorkerConfig {
 	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
 	 */
 	exports?: Record<string, Export>;
-}
-
-/**
- * Settings shared by the other exports.
- * Authored as a named `settings` export via
- * `defineSettings`.
- */
-export interface SettingsConfig {
-	/**
-	 * Discriminates this config as a settings config.
-	 *
-	 * Injected automatically by `defineSettings`; only needs to be written by
-	 * hand when authoring a raw config object without the helper.
-	 */
-	type: "settings";
-
-	/**
-	 * This is the ID of the account associated with your zone.
-	 * You might have more than one account, so make sure to use
-	 * the ID of the account associated with the zone/route you
-	 * provide, if you provide one. It can also be specified through
-	 * the CLOUDFLARE_ACCOUNT_ID environment variable.
-	 */
-	accountId?: string;
-
-	/**
-	 * Specify the compliance region mode of the Worker.
-	 *
-	 * Although if the user does not specify a compliance region, the default is `public`,
-	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
-	 */
-	complianceRegion?: "public" | "fedramp-high";
 }

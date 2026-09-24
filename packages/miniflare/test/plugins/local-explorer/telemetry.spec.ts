@@ -30,6 +30,24 @@ describe("getRouteName", () => {
 		expect(
 			getRouteName(`/cdn-cgi/local/explorer/api/storage/kv/namespaces`)
 		).toBe("kv.namespaces");
+		expect(
+			getRouteName(
+				`/cdn-cgi/local/explorer/api/storage/kv/namespaces/test-id/bulk`
+			)
+		).toBe("kv.bulk_write");
+		expect(
+			getRouteName(
+				`/cdn-cgi/local/explorer/api/storage/kv/namespaces/test-id/bulk/delete`
+			)
+		).toBe("kv.bulk_delete");
+		expect(
+			getRouteName(`/cdn-cgi/local/explorer/api/local/email/routing/resend`)
+		).toBe("email.routing.resend");
+		expect(
+			getRouteName(
+				`/cdn-cgi/local/explorer/api/local/email/routing/resend/draft`
+			)
+		).toBe("email.routing.resend.draft");
 	});
 
 	test("returns unknown for unrecognized paths", ({ expect }) => {

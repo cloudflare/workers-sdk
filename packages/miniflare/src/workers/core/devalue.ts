@@ -160,22 +160,66 @@ export interface PlatformImpl<RS> {
 	unbufferReadableStream(buffer: ArrayBuffer): RS;
 }
 
+// `instanceof` checks against a specific `Headers`/`Request`/`Response`
+// implementation fail for values created against a *different* copy of that
+// class. This happens more often than you'd expect: for example, Node's
+// built-in global `Headers` is backed by an internal copy of `undici` that
+// isn't `instanceof` the `undici` package Miniflare imports, so a `Headers`
+// instance created with `new Headers()` in user code (e.g. inside Next.js,
+// Astro, or SvelteKit) would previously fail to serialise across the proxy
+// with a confusing `DevalueError: Cannot stringify arbitrary non-POJOs`.
+// All spec-compliant implementations set `Symbol.toStringTag` though, so use
+// that as a realm-independent fallback discriminator.
+function hasStringTag(value: unknown, tag: string): boolean {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		(value as { [Symbol.toStringTag]?: unknown })[Symbol.toStringTag] === tag
+	);
+}
+// Beyond the tag, also check for a couple of members the real class always
+// has: `Symbol.toStringTag` is otherwise just an own/inherited property, so
+// an unrelated object could set it to force its way through these reducers,
+// and then have devalue invoke its (possibly side-effecting) getters/methods
+// while walking the "entries"/"headers"/"body" shape below.
+export function isHeadersLike(value: unknown): value is WorkerHeaders {
+	return (
+		hasStringTag(value, "Headers") &&
+		typeof (value as WorkerHeaders).entries === "function" &&
+		typeof (value as WorkerHeaders).get === "function"
+	);
+}
+function isRequestLike(value: unknown): value is WorkerRequest {
+	return (
+		hasStringTag(value, "Request") &&
+		typeof (value as WorkerRequest).method === "string" &&
+		isHeadersLike((value as WorkerRequest).headers)
+	);
+}
+function isResponseLike(value: unknown): value is WorkerResponse {
+	return (
+		hasStringTag(value, "Response") &&
+		typeof (value as WorkerResponse).status === "number" &&
+		isHeadersLike((value as WorkerResponse).headers)
+	);
+}
+
 export function createHTTPReducers(
 	impl: PlatformImpl<unknown>
 ): ReducersRevivers {
 	return {
 		Headers(val) {
-			if (val instanceof impl.Headers) {
+			if (val instanceof impl.Headers || isHeadersLike(val)) {
 				return [...val.entries()];
 			}
 		},
 		Request(val) {
-			if (val instanceof impl.Request) {
+			if (val instanceof impl.Request || isRequestLike(val)) {
 				return [val.method, val.url, val.headers, val.cf, val.body];
 			}
 		},
 		Response(val) {
-			if (val instanceof impl.Response) {
+			if (val instanceof impl.Response || isResponseLike(val)) {
 				return [val.status, val.statusText, val.headers, val.cf, val.body];
 			}
 		},

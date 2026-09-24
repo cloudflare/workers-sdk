@@ -2017,12 +2017,19 @@ function collectAllVars(
  * @returns a string representing the types of such array
  *
  * @example
+ * `[]` => `unknown[]`
  * `[1, 2, 3]` => `number[]`
  * `[1, 2, 'three']` => `(number|string)[]`
  * `['false', true]` => `(string|boolean)[]`
  */
 function typeofArray(array: unknown[]): string {
 	const typesInArray = [...new Set(array.map((item) => typeof item))].sort();
+
+	if (typesInArray.length === 0) {
+		// An empty array tells us nothing about its element type, and joining an
+		// empty list below would emit `()[]`, which is not valid TypeScript.
+		return "unknown[]";
+	}
 
 	if (typesInArray.length === 1) {
 		return `${typesInArray[0]}[]`;
@@ -2432,20 +2439,6 @@ function collectCoreBindings(
 			}
 
 			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
-		}
-
-		if (env.websearch) {
-			if (!env.websearch.binding) {
-				throwMissingBindingError({
-					binding: env.websearch,
-					bindingType: "websearch",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-				});
-			} else {
-				addBinding(env.websearch.binding, "WebSearch", "websearch", envName);
-			}
 		}
 
 		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
@@ -3612,24 +3605,6 @@ function collectCoreBindingsPerEnvironment(
 				name: aiSearch.binding,
 				type: "AiSearchInstance",
 			});
-		}
-
-		if (env.websearch) {
-			if (!env.websearch.binding) {
-				throwMissingBindingError({
-					binding: env.websearch,
-					bindingType: "websearch",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-				});
-			} else {
-				bindings.push({
-					bindingCategory: "websearch",
-					name: env.websearch.binding,
-					type: "WebSearch",
-				});
-			}
 		}
 
 		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
