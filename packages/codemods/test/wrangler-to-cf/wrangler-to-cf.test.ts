@@ -147,6 +147,31 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(output)).toEqual([]);
 	});
 
+	it("does not inherit non-inheritable bindings into previews", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				kv_namespaces: [{ binding: "CACHE", id: "production-cache" }],
+				name: "example-worker",
+				previews: {
+					vars: { MODE: "preview" },
+				},
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+		const output = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+
+		expect(output.match(/CACHE: bindings\.kv/g)).toHaveLength(1);
+		expect(output).toMatchSnapshot("cloudflare.config.ts");
+		expect(getSyntaxErrors(output)).toEqual([]);
+	});
+
 	it("writes Wrangler tooling config only when requested and needed", async ({
 		expect,
 	}) => {

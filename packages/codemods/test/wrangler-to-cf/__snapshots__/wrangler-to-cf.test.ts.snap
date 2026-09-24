@@ -20,6 +20,49 @@ export default defineConfig({
 "
 `;
 
+exports[`migrateWranglerToCf > does not inherit non-inheritable bindings into previews > cloudflare.config.ts 1`] = `
+"import { bindings, defineConfig } from "cf/config";
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+export default defineConfig((ctx) => {
+	if (ctx.isPreview) {
+		return {
+			worker: {
+				name: "example-worker",
+				compatibilityDate: "2026-09-23",
+				env: {
+					MODE: bindings.text("preview"),
+				},
+			},
+		};
+	}
+	return {
+		worker: {
+			name: "example-worker",
+			compatibilityDate: "2026-09-23",
+			env: {
+				CACHE: bindings.kv({
+					id: "production-cache",
+				}),
+			},
+			/**
+			 * TODO(@cloudflare): cf migrate: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+			 * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+			 */
+		},
+	};
+});
+"
+`;
+
 exports[`migrateWranglerToCf > leaves guarded TODOs for unsupported resource migrations > cloudflare.config.ts 1`] = `
 "import { bindings, defineConfig } from "cf/config";
 

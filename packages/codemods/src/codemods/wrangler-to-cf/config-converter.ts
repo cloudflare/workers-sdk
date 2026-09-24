@@ -362,6 +362,22 @@ function createBranchSource(
 	return merged;
 }
 
+function createPreviewSource(
+	base: UnknownRecord,
+	overrides: UnknownRecord
+): UnknownRecord {
+	const merged = createBranchSource(base, {});
+
+	for (const field of NON_INHERITABLE_FIELDS) {
+		delete merged[field];
+	}
+
+	Object.assign(merged, overrides);
+	delete merged.previews;
+
+	return merged;
+}
+
 function addUnknownFieldFollowUps(
 	record: UnknownRecord,
 	sourcePrefix: string,
@@ -1675,8 +1691,7 @@ function convertBranch(
 		];
 	}
 
-	const previewSource = createBranchSource(source, previews);
-	delete previewSource.previews;
+	const previewSource = createPreviewSource(source, previews);
 
 	return {
 		config,
