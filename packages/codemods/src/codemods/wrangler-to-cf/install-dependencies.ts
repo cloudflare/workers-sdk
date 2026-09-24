@@ -18,6 +18,10 @@ const PACKAGE_MANAGERS = [
 	BunPackageManager,
 	NpmPackageManager,
 ] as const satisfies readonly PackageManager[];
+const NPM_LOCK_FILES = [
+	"npm-shrinkwrap.json",
+	...NpmPackageManager.lockFiles,
+] as const;
 
 interface PackageJson {
 	dependencies?: Record<string, unknown>;
@@ -113,11 +117,17 @@ async function hasLockFile(
 	packageManager: PackageManager
 ): Promise<boolean> {
 	const lockFilesExist = await Promise.all(
-		packageManager.lockFiles.map((lockFile) =>
+		getLockFiles(packageManager).map((lockFile) =>
 			fileExists(path.join(directory, lockFile))
 		)
 	);
 	return lockFilesExist.some(Boolean);
+}
+
+function getLockFiles(packageManager: PackageManager): readonly string[] {
+	return packageManager.type === "npm"
+		? NPM_LOCK_FILES
+		: packageManager.lockFiles;
 }
 
 async function detectPackageManager(
@@ -174,7 +184,7 @@ async function getPlannedLockFiles(
 	packageManager: PackageManager,
 	packageManagerVersion: string | undefined
 ): Promise<string[]> {
-	const lockFilePaths = packageManager.lockFiles.map((lockFile) =>
+	const lockFilePaths = getLockFiles(packageManager).map((lockFile) =>
 		path.join(packageDirectory, lockFile)
 	);
 	const existingLockFiles = (
@@ -198,6 +208,9 @@ async function getPlannedLockFiles(
 				usesTextBunLockfile(packageManagerVersion) ? "bun.lock" : "bun.lockb"
 			),
 		];
+	}
+	if (packageManager.type === "npm") {
+		return [path.join(packageDirectory, "package-lock.json")];
 	}
 	return lockFilePaths.length === 1 ? lockFilePaths : [];
 }
@@ -296,7 +309,7 @@ export async function installCfDependency(
 	} = await detectPackageManager(packageDirectory);
 	const lockFilePaths = options.dryRun
 		? await getPlannedLockFiles(lockFileDirectory, packageManager, version)
-		: packageManager.lockFiles.map((lockFile) =>
+		: getLockFiles(packageManager).map((lockFile) =>
 				path.join(lockFileDirectory, lockFile)
 			);
 	const packageFilePaths = [
