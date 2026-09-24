@@ -1,0 +1,21 @@
+.changeset/warm-cats-preview.md
+  s_53d1742b2e4536::t_f0ddb8839ddd77 1-7
+packages/wrangler/src/preview/preview.ts
+  s_53d1742b2e4536::t_c0191e2db60ad4 1,138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "24659c501b49cdad0732ce846b3251896402b84c",
+  "prompts": {},
+  "sessions": {
+    "s_53d1742b2e4536": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3abd8134ffejO8t7ToIRRSIdy",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+.changeset/dry-camels-buy.md
+  s_7c85d6d0a50d01::t_9a768fa37bca32 1-7
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_7c85d6d0a50d01::t_d0fb73b669bbc5 389
+packages/deploy-helpers/src/deploy/helpers/placement.ts
+  s_7c85d6d0a50d01::t_75cd2106ee8cae 6-10
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_7c85d6d0a50d01::t_a667a3146db6bd 225
+packages/deploy-helpers/src/preview/api.ts
+  s_7c85d6d0a50d01::t_98b9ec270a57b1 29,127
+packages/deploy-helpers/src/preview/preview.ts
+  s_7c85d6d0a50d01::t_af4665e549f8d5 510-513
+packages/workers-utils/src/config/environment.ts
+  s_7c85d6d0a50d01::t_b8e77226d70294 2003,2013
+packages/workers-utils/src/config/validation.ts
+  s_7c85d6d0a50d01::t_f586ddb483f690 1219-1220,1222-1239,1252,1268,1281,1286,1295,1306,1315,1324,1345,1353,6192,6212-6218
+packages/wrangler/src/api/pages/create-worker-bundle-contents.ts
+  s_7c85d6d0a50d01::t_f750fe2c4e9a41 51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0d4792322086408a287375e49be6b9515c52c417",
+  "prompts": {},
+  "sessions": {
+    "s_7c85d6d0a50d01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f72f8060effeY1xn8zZSffVU7y",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}
