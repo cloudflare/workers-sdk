@@ -248,19 +248,65 @@ export function convertBindings(
 			report
 		);
 	}
-	convertArrayBindings(
-		"r2_buckets",
-		"binding",
-		"bindings.r2",
-		[
+	for (const [index, entry] of getRecords(source, "r2_buckets").entries()) {
+		const options = optionsFromRecord(entry, [
 			["bucket_name", "name"],
 			["jurisdiction", "jurisdiction"],
-		],
-		{
-			remote: true,
-			unsupported: ["local_dev", "preview_bucket_name"],
+		]);
+		const sourcePath = pathFor("r2_buckets", index);
+		const dev: UnknownRecord = {};
+		if (typeof entry.remote === "boolean") {
+			dev.remote = entry.remote;
 		}
-	);
+
+		const localDev = getRecord(entry, "local_dev");
+		const credentials =
+			localDev && getRecord(localDev, "experimental_s3_credentials");
+		const hasValidCredentials =
+			credentials !== undefined &&
+			typeof credentials.accessKeyId === "string" &&
+			typeof credentials.secretAccessKey === "string";
+		if (hasValidCredentials) {
+			dev.experimentalS3Credentials = {
+				accessKeyId: credentials.accessKeyId,
+				secretAccessKey: credentials.secretAccessKey,
+			};
+		}
+
+		const hasUnsupportedLocalDevOptions =
+			localDev !== undefined &&
+			Object.keys(localDev).some(
+				(key) => key !== "experimental_s3_credentials"
+			);
+		if (
+			hasOwn(entry, "local_dev") &&
+			(!localDev ||
+				hasUnsupportedLocalDevOptions ||
+				(hasOwn(localDev, "experimental_s3_credentials") &&
+					!hasValidCredentials))
+		) {
+			reportUnsupportedOptions(entry, ["local_dev"], sourcePath, report);
+		}
+
+		if (Object.keys(dev).length > 0) {
+			options.properties.push({ key: "dev", value: objectFromRecord(dev) });
+		}
+
+		imports.add("bindings");
+		addBinding(
+			bindings,
+			entry.binding,
+			call("bindings.r2", options),
+			sourcePath,
+			report
+		);
+		reportUnsupportedOptions(
+			entry,
+			["preview_bucket_name"],
+			sourcePath,
+			report
+		);
+	}
 	convertArrayBindings(
 		"secrets_store_secrets",
 		"binding",

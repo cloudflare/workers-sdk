@@ -148,4 +148,77 @@ describe("Wrangler binding conversion", () => {
 		});
 		expect(followUps).toEqual([]);
 	});
+
+	it("converts R2 local S3 credentials with remote development", ({
+		expect,
+	}) => {
+		const followUps: MigrationFollowUp[] = [];
+		const bindings = convertBindings(
+			{
+				r2_buckets: [
+					{
+						binding: "BUCKET",
+						bucket_name: "bucket-name",
+						local_dev: {
+							experimental_s3_credentials: {
+								accessKeyId: "access-key-id",
+								secretAccessKey: "secret-access-key",
+							},
+						},
+						remote: true,
+					},
+				],
+			},
+			"",
+			new Set(),
+			(followUp) => followUps.push(followUp)
+		);
+
+		expect(bindings).toEqual({
+			kind: "object",
+			properties: [
+				{
+					key: "BUCKET",
+					value: {
+						args: [
+							{
+								kind: "object",
+								properties: [
+									{ key: "name", value: "bucket-name" },
+									{
+										key: "dev",
+										value: {
+											kind: "object",
+											properties: [
+												{ key: "remote", value: true },
+												{
+													key: "experimentalS3Credentials",
+													value: {
+														kind: "object",
+														properties: [
+															{
+																key: "accessKeyId",
+																value: "access-key-id",
+															},
+															{
+																key: "secretAccessKey",
+																value: "secret-access-key",
+															},
+														],
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+						callee: "bindings.r2",
+						kind: "call",
+					},
+				},
+			],
+		});
+		expect(followUps).toEqual([]);
+	});
 });
