@@ -9,7 +9,7 @@ import {
 } from "./config-renderer";
 import { writeMigrationOutputs } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
-import { installCfDependency } from "./install-dependencies";
+import { findPackageJson, installCfDependency } from "./install-dependencies";
 import { assertCompatibleWranglerVersion } from "./wrangler-version";
 import type {
 	WranglerToCfMigrationOptions,
@@ -74,6 +74,14 @@ export async function migrateWranglerToCf(
 		bundler,
 		secretFiles
 	);
+	if (installDependencies && !(await findPackageJson(projectDirectory))) {
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"cf-install-missing-manifest",
+				"No package.json was found. Create or locate the package that owns this Worker, then install `cf@latest` as a dev dependency before using the generated configuration."
+			)
+		);
+	}
 	const followUps = [...convertedConfig.followUps];
 	const cloudflareConfig = renderCloudflareConfig(convertedConfig);
 	const wranglerConfig = renderWranglerConfig(convertedConfig);
