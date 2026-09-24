@@ -95,7 +95,15 @@ export async function migrateWranglerToCf(
 		await writeMigrationOutputs(outputs);
 		if (installDependencies) {
 			try {
-				await installCfDependency(projectDirectory);
+				const installResult = await installCfDependency(projectDirectory);
+				if (installResult === "skipped-ancestor-package") {
+					followUps.push(
+						createFollowUp(
+							"cf-install-skipped",
+							"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
+						)
+					);
+				}
 			} catch (error) {
 				const reason =
 					error instanceof Error

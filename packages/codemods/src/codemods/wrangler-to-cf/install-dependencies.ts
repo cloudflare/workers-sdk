@@ -26,6 +26,8 @@ interface PackageJson {
 	workspaces?: unknown;
 }
 
+type CfDependencyInstallResult = "complete" | "skipped-ancestor-package";
+
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
 }
@@ -104,13 +106,15 @@ async function detectPackageManager(
  * Installs cf when the migrated project has a package manifest that lacks it.
  *
  * @param projectDirectory Directory containing the Wrangler configuration.
+ *
+ * @returns Whether installation completed or an ancestor package was skipped.
  */
 export async function installCfDependency(
 	projectDirectory: string
-): Promise<void> {
+): Promise<CfDependencyInstallResult> {
 	const packageJsonPath = await findPackageJson(projectDirectory);
 	if (!packageJsonPath) {
-		return;
+		return "complete";
 	}
 
 	const packageJson = await readPackageJson(packageJsonPath);
@@ -118,10 +122,14 @@ export async function installCfDependency(
 		packageJson.dependencies?.cf !== undefined ||
 		packageJson.devDependencies?.cf !== undefined
 	) {
-		return;
+		return "complete";
 	}
 
 	const packageDirectory = path.dirname(packageJsonPath);
+	if (packageDirectory !== projectDirectory) {
+		return "skipped-ancestor-package";
+	}
+
 	const packageManager = await detectPackageManager(packageDirectory);
 	const isWorkspaceRoot =
 		packageJson.workspaces !== undefined ||
@@ -132,4 +140,6 @@ export async function installCfDependency(
 		dev: true,
 		isWorkspaceRoot,
 	});
+
+	return "complete";
 }

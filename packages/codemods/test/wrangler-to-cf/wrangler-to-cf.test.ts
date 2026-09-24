@@ -113,6 +113,31 @@ describe("migrateWranglerToCf", () => {
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 	});
 
+	it("does not install cf into an ancestor package", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({ name: "parent-project" }),
+			"worker/wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(
+			path.join(cwd, "worker/wrangler.json")
+		);
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		expect(result).toMatchObject({
+			followUps: [
+				{
+					blocking: true,
+					code: "cf-install-skipped",
+				},
+			],
+			status: "needs-intervention",
+		});
+	});
+
 	it("does not install cf when writing migration outputs fails", async ({
 		expect,
 	}) => {
