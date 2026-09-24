@@ -87,6 +87,34 @@ describe("codemod runner", () => {
 		).toContain('name: "runner-test"');
 	});
 
+	it("applies file restrictions to the selected Wrangler config", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "restricted-test",
+			}),
+		});
+
+		const excludedResult = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["unrelated/**"],
+		});
+		expect(excludedResult.changedFiles).toEqual([]);
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
+
+		const includedResult = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["wrangler.jsonc"],
+		});
+		expect(includedResult.changedFiles).toEqual(["cloudflare.config.ts"]);
+	});
+
 	it("accepts an exact Wrangler config and bundler", async ({ expect }) => {
 		const cwd = await createProject({
 			"worker/custom.json": JSON.stringify({

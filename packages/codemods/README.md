@@ -28,7 +28,7 @@ To migrate a Wrangler project with the default Vite bundler:
 npx @cloudflare/codemods wrangler-to-cf --cwd ./path/to/project
 ```
 
-The CLI detects a single root `wrangler.json`, `wrangler.jsonc`, or `wrangler.toml`. Pass `--config <path>` to select another file, or pass `--bundler wrangler` to retain Wrangler-specific tooling configuration.
+The CLI detects a single root `wrangler.json`, `wrangler.jsonc`, or `wrangler.toml`. Pass `--config <path>` to select another file, or pass `--bundler wrangler` to retain Wrangler-specific tooling configuration. For this codemod, `--files` filters the selected Wrangler config and skips the migration when it does not match.
 
 ## Programmatic usage
 

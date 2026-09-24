@@ -1,5 +1,6 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
+import { filterByFileRestrictions } from "../../files";
 import { migrateWranglerToCf } from ".";
 import type { Codemod, CodemodContext } from "../../types";
 
@@ -61,7 +62,14 @@ export const wranglerToCfCodemod: Codemod = {
 	description: `Migrate a Wrangler configuration to the cf configuration format`,
 	run: async (context) => {
 		const configPath = await getConfigPath(context);
-		const result = await migrateWranglerToCf(configPath, {
+		const [includedConfigPath] = await filterByFileRestrictions(context, [
+			configPath,
+		]);
+		if (!includedConfigPath) {
+			return { changedFiles: [] };
+		}
+
+		const result = await migrateWranglerToCf(includedConfigPath, {
 			bundler: context.bundler,
 			dryRun: context.dryRun,
 			force: context.force,
@@ -71,7 +79,10 @@ export const wranglerToCfCodemod: Codemod = {
 			...result,
 			changedFiles: result.changedFiles.map((filePath) =>
 				path
-					.relative(context.cwd, path.join(path.dirname(configPath), filePath))
+					.relative(
+						context.cwd,
+						path.join(path.dirname(includedConfigPath), filePath)
+					)
 					.split(path.sep)
 					.join(path.posix.sep)
 			),
