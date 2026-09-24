@@ -35,6 +35,7 @@ import type {
 	CfR2Bucket,
 	CfScriptFormat,
 	CfWorkflow,
+	ConnectHandler,
 	Config,
 	ContainerEngine,
 	LegacyAssetPaths,
@@ -90,7 +91,7 @@ export interface ConfigBundle {
 	crons: Config["triggers"]["crons"];
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
-	connectHandlers: Config["connect"];
+	connectHandlers: ConnectHandler[];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";

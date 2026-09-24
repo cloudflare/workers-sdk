@@ -97,23 +97,33 @@ export interface EmailTrigger extends EmailTriggerOptions {
 	type: "email";
 }
 
-interface ConnectTriggerOptions {
-	/** The transport protocol to listen for. */
-	protocol: "tcp";
+interface ConnectTriggerOptionsBase {
 	/** The port to listen on. */
 	port: number;
 	/** The address to bind to. Defaults to `127.0.0.1`. */
 	address?: string;
 }
 
+type TcpConnectTriggerOptions = ConnectTriggerOptionsBase & { protocol: "tcp" };
+
+type UdpConnectTriggerOptions = ConnectTriggerOptionsBase & {
+	protocol: "udp";
+	/** The idle timeout in milliseconds after which a peer flow is closed. */
+	idleTimeoutMs?: number;
+	/** The maximum number of pending datagram bytes per peer flow. */
+	maxPendingBytes?: number;
+};
+
+type ConnectTriggerOptions =
+	| TcpConnectTriggerOptions
+	| UdpConnectTriggerOptions;
+
 /**
  * Connect trigger — invokes this Worker's `connect(socket, env, ctx)`
  * handler for raw socket connections received on the configured
  * protocol/port.
  */
-export interface ConnectTrigger extends ConnectTriggerOptions {
-	type: "connect";
-}
+export type ConnectTrigger = ConnectTriggerOptions & { type: "connect" };
 
 /**
  * Event triggers — fetch routes, queue consumers, cron schedules, Email

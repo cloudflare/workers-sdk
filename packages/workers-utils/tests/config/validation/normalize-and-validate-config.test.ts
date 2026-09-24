@@ -6987,7 +6987,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of "tcp" but got {"port":8081}."
+					  - "connect[0]" should have a "protocol" field of "tcp" or "udp" but got {"port":8081}."
 				`);
 			});
 
@@ -7005,7 +7005,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of "tcp" but got "ftp"."
+					  - "connect[0]" should have a "protocol" field of "tcp" or "udp" but got "ftp"."
 				`);
 			});
 
@@ -7100,6 +7100,49 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should warn if UDP options are configured for TCP", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [{ protocol: "tcp", port: 8081, idle_timeout_ms: 1_000 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in connect[0] field: "idle_timeout_ms""
+				`);
+			});
+
+			it("should error if UDP options are not unsigned 32-bit integers", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{
+								protocol: "udp",
+								port: 8081,
+								idle_timeout_ms: 1.5,
+								max_pending_bytes: 0x100000000,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have an integer "idle_timeout_ms" field between 0 and 4294967295 but got {"protocol":"udp","port":8081,"idle_timeout_ms":1.5,"max_pending_bytes":4294967296}.
+					  - "connect[0]" should have an integer "max_pending_bytes" field between 0 and 4294967295 but got {"protocol":"udp","port":8081,"idle_timeout_ms":1.5,"max_pending_bytes":4294967296}."
+				`);
+			});
+
 			it("should accept a valid connect config with multiple unique protocol/port combinations", ({
 				expect,
 			}) => {
@@ -7108,6 +7151,7 @@ describe("normalizeAndValidateConfig()", () => {
 						connect: [
 							{ protocol: "tcp", port: 8081, address: "*" },
 							{ protocol: "tcp", port: 8082 },
+							{ protocol: "udp", port: 8081 },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -7120,6 +7164,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.connect).toEqual([
 					{ protocol: "tcp", port: 8081, address: "*" },
 					{ protocol: "tcp", port: 8082 },
+					{ protocol: "udp", port: 8081 },
 				]);
 			});
 

@@ -5775,26 +5775,40 @@ const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	let isValid = true;
+	const connectHandler = value as Record<string, unknown>;
 	if (
-		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-			"protocol",
-			"port",
-			"address",
-		])
+		!validateAdditionalProperties(
+			diagnostics,
+			field,
+			Object.keys(value),
+			connectHandler.protocol === "udp"
+				? [
+						"protocol",
+						"port",
+						"address",
+						"idle_timeout_ms",
+						"max_pending_bytes",
+					]
+				: ["protocol", "port", "address"]
+		)
 	) {
 		isValid = false;
 	}
 
-	if ("protocol" in value && value.protocol !== "tcp") {
+	if (
+		"protocol" in value &&
+		value.protocol !== "tcp" &&
+		value.protocol !== "udp"
+	) {
 		diagnostics.errors.push(
-			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+			`"${field}" should have a "protocol" field of "tcp" or "udp" but got ${JSON.stringify(
 				value.protocol
 			)}.`
 		);
 		isValid = false;
 	} else if (!("protocol" in value)) {
 		diagnostics.errors.push(
-			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+			`"${field}" should have a "protocol" field of "tcp" or "udp" but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -5828,6 +5842,26 @@ const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 			)}.`
 		);
 		isValid = false;
+	}
+
+	if (connectHandler.protocol === "udp") {
+		for (const option of ["idle_timeout_ms", "max_pending_bytes"] as const) {
+			if (!(option in connectHandler)) {
+				continue;
+			}
+			const optionValue = connectHandler[option];
+			if (
+				typeof optionValue !== "number" ||
+				!Number.isInteger(optionValue) ||
+				optionValue < 0 ||
+				optionValue > 0xffffffff
+			) {
+				diagnostics.errors.push(
+					`"${field}" should have an integer "${option}" field between 0 and 4294967295 but got ${JSON.stringify(value)}.`
+				);
+				isValid = false;
+			}
+		}
 	}
 
 	return isValid;

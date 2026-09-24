@@ -705,12 +705,22 @@ const TriggerSchema = z.discriminatedUnion("type", [
 		type: z.literal("scheduled"),
 		schedule: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("connect"),
-		protocol: z.enum(["tcp"]),
-		port: z.number(),
-		address: z.string().optional(),
-	}),
+	z.discriminatedUnion("protocol", [
+		z.strictObject({
+			type: z.literal("connect"),
+			protocol: z.literal("tcp"),
+			port: z.number(),
+			address: z.string().optional(),
+		}),
+		z.strictObject({
+			type: z.literal("connect"),
+			protocol: z.literal("udp"),
+			port: z.number(),
+			address: z.string().optional(),
+			idleTimeoutMs: z.number().int().min(0).max(0xffffffff).optional(),
+			maxPendingBytes: z.number().int().min(0).max(0xffffffff).optional(),
+		}),
+	]),
 ]);
 
 const UnsafeSchema = z.strictObject({

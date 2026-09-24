@@ -3566,6 +3566,53 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 	expect(await text(socket)).toBe("hello");
 });
 
+test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect() handler", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const reader = socket.readable.getReader();
+								const writer = socket.writable.getWriter();
+								const { value } = await reader.read();
+								await writer.write(value);
+							},
+						};
+					`),
+					triggers: [
+						{
+							type: "connect",
+							protocol: "udp",
+							address: "::1",
+							port: 0,
+							idleTimeoutMs: 1_000,
+							maxPendingBytes: 65_536,
+						},
+					],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+	await mf.ready;
+	await expect(mf.dispatchConnect()).rejects.toThrow(
+		"No TCP connect triggers configured for entrypoint worker"
+	);
+
+	const client = await mf.dispatchConnect({ protocol: "udp" });
+	client.send("hello");
+	const [message] = await once(client, "message");
+	expect(message.toString()).toBe("hello");
+});
+
 test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	expect,
 	onTestFinished,
@@ -3646,7 +3693,10 @@ test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
 							},
 						};
 					`),
-					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+					triggers: [
+						{ type: "connect", protocol: "tcp", port: 0 },
+						{ type: "connect", protocol: "udp", port: 0 },
+					],
 				},
 			},
 		],
@@ -3660,9 +3710,11 @@ test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
 
 	const socket = await mf.dispatchConnect();
 	const closed = once(socket, "close");
+	const datagramSocket = await mf.dispatchConnect({ protocol: "udp" });
+	const datagramClosed = once(datagramSocket, "close");
 	await mf.dispose();
 	disposed = true;
-	await closed;
+	await Promise.all([closed, datagramClosed]);
 	expect(socket.destroyed).toBe(true);
 });
 
