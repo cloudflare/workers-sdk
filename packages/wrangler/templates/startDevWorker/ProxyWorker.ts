@@ -145,6 +145,26 @@ export class ProxyWorker implements DurableObject {
 		}
 	}
 
+	/**
+	 * Puts a request back on the retry queue, unless a control request has
+	 * already arrived without its payload. Retries settle asynchronously, so one
+	 * can land after `failQueuedRequests()` has drained the queues, and no `play`
+	 * would ever release it.
+	 *
+	 * @param request The request to retry.
+	 * @param deferredResponse The response promise its caller is waiting on.
+	 */
+	requeueForRetry(
+		request: Request,
+		deferredResponse: DeferredPromise<Response>
+	) {
+		if (this.controlPayloadMissing) {
+			deferredResponse.resolve(controlPayloadMissingResponse());
+			return;
+		}
+		this.requestRetryQueue.set(request, deferredResponse);
+	}
+
 	processQueue() {
 		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) return;
@@ -276,7 +296,7 @@ export class ProxyWorker implements DurableObject {
 										// the pre-reload Worker or send a stale preview token.
 										// Requeue instead and let the current proxyData rebuild it.
 										if (this.proxyData !== proxyData) {
-											this.requestRetryQueue.set(request, deferredResponse);
+											this.requeueForRetry(request, deferredResponse);
 											this.processQueue();
 											return;
 										}
@@ -327,7 +347,7 @@ export class ProxyWorker implements DurableObject {
 
 						// if the request can be retried (subset of idempotent requests which have no body), requeue it
 						else if (request.method === "GET" || request.method === "HEAD") {
-							this.requestRetryQueue.set(request, deferredResponse);
+							this.requeueForRetry(request, deferredResponse);
 							// we would only end up here if the downstream UserWorker is chang*ing*
 							// i.e. we are in a `pause`d state and expecting a `play` message soon
 							// this request will be processed (retried) when the `play` message arrives
