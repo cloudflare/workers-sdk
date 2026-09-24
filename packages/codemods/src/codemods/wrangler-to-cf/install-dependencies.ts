@@ -26,7 +26,19 @@ interface PackageJson {
 	workspaces?: unknown;
 }
 
-type CfDependencyInstallResult = "complete" | "skipped-ancestor-package";
+interface CfDependencyInstallOptions {
+	dryRun: boolean;
+}
+
+interface CfDependencyInstallResult {
+	changedFiles: string[];
+	status: "complete" | "skipped-ancestor-package";
+}
+
+interface DetectedPackageManager {
+	directory: string;
+	packageManager: PackageManager;
+}
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
@@ -75,7 +87,7 @@ async function hasLockFile(
 
 async function detectPackageManager(
 	packageDirectory: string
-): Promise<PackageManager> {
+): Promise<DetectedPackageManager> {
 	let currentDirectory = packageDirectory;
 	while (true) {
 		const packageJsonPath = path.join(currentDirectory, "package.json");
@@ -84,37 +96,105 @@ async function detectPackageManager(
 				await readPackageJson(packageJsonPath)
 			);
 			if (declaredPackageManager) {
-				return declaredPackageManager;
+				return {
+					directory: currentDirectory,
+					packageManager: declaredPackageManager,
+				};
 			}
 		}
 
 		for (const packageManager of PACKAGE_MANAGERS) {
 			if (await hasLockFile(currentDirectory, packageManager)) {
-				return packageManager;
+				return { directory: currentDirectory, packageManager };
 			}
 		}
 
 		const parentDirectory = path.dirname(currentDirectory);
 		if (parentDirectory === currentDirectory) {
-			return NpmPackageManager;
+			return {
+				directory: packageDirectory,
+				packageManager: NpmPackageManager,
+			};
 		}
 		currentDirectory = parentDirectory;
 	}
+}
+
+async function getPlannedLockFiles(
+	packageDirectory: string,
+	packageManager: PackageManager
+): Promise<string[]> {
+	const lockFilePaths = packageManager.lockFiles.map((lockFile) =>
+		path.join(packageDirectory, lockFile)
+	);
+	const existingLockFiles = (
+		await Promise.all(
+			lockFilePaths.map(async (lockFilePath) => ({
+				exists: await fileExists(lockFilePath),
+				lockFilePath,
+			}))
+		)
+	)
+		.filter(({ exists }) => exists)
+		.map(({ lockFilePath }) => lockFilePath);
+
+	if (existingLockFiles.length > 0) {
+		return existingLockFiles;
+	}
+	return lockFilePaths.length === 1 ? lockFilePaths : [];
+}
+
+async function readFiles(
+	filePaths: string[]
+): Promise<Map<string, Buffer | undefined>> {
+	return new Map(
+		await Promise.all(
+			filePaths.map(
+				async (filePath) =>
+					[
+						filePath,
+						(await fileExists(filePath)) ? await readFile(filePath) : undefined,
+					] as const
+			)
+		)
+	);
+}
+
+function getChangedFiles(
+	before: Map<string, Buffer | undefined>,
+	after: Map<string, Buffer | undefined>
+): string[] {
+	return Array.from(before).flatMap(([filePath, beforeContents]) => {
+		const afterContents = after.get(filePath);
+		if (beforeContents === undefined && afterContents === undefined) {
+			return [];
+		}
+		if (
+			beforeContents === undefined ||
+			afterContents === undefined ||
+			!beforeContents.equals(afterContents)
+		) {
+			return [filePath];
+		}
+		return [];
+	});
 }
 
 /**
  * Installs cf when the migrated project has a package manifest that lacks it.
  *
  * @param projectDirectory Directory containing the Wrangler configuration.
+ * @param options Whether to report planned changes without installing.
  *
- * @returns Whether installation completed or an ancestor package was skipped.
+ * @returns The changed package files and whether an ancestor package was skipped.
  */
 export async function installCfDependency(
-	projectDirectory: string
+	projectDirectory: string,
+	options: CfDependencyInstallOptions
 ): Promise<CfDependencyInstallResult> {
 	const packageJsonPath = await findPackageJson(projectDirectory);
 	if (!packageJsonPath) {
-		return "complete";
+		return { changedFiles: [], status: "complete" };
 	}
 
 	const packageJson = await readPackageJson(packageJsonPath);
@@ -122,15 +202,27 @@ export async function installCfDependency(
 		packageJson.dependencies?.cf !== undefined ||
 		packageJson.devDependencies?.cf !== undefined
 	) {
-		return "complete";
+		return { changedFiles: [], status: "complete" };
 	}
 
 	const packageDirectory = path.dirname(packageJsonPath);
 	if (packageDirectory !== projectDirectory) {
-		return "skipped-ancestor-package";
+		return { changedFiles: [], status: "skipped-ancestor-package" };
 	}
 
-	const packageManager = await detectPackageManager(packageDirectory);
+	const { directory: lockFileDirectory, packageManager } =
+		await detectPackageManager(packageDirectory);
+	const lockFilePaths = options.dryRun
+		? await getPlannedLockFiles(lockFileDirectory, packageManager)
+		: packageManager.lockFiles.map((lockFile) =>
+				path.join(lockFileDirectory, lockFile)
+			);
+	const packageFilePaths = [packageJsonPath, ...lockFilePaths];
+	if (options.dryRun) {
+		return { changedFiles: packageFilePaths, status: "complete" };
+	}
+
+	const before = await readFiles(packageFilePaths);
 	const isWorkspaceRoot =
 		packageJson.workspaces !== undefined ||
 		(await fileExists(path.join(packageDirectory, "pnpm-workspace.yaml")));
@@ -141,5 +233,8 @@ export async function installCfDependency(
 		isWorkspaceRoot,
 	});
 
-	return "complete";
+	return {
+		changedFiles: getChangedFiles(before, await readFiles(packageFilePaths)),
+		status: "complete",
+	};
 }

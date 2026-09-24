@@ -85,6 +85,7 @@ export async function migrateWranglerToCf(
 			wranglerConfig
 		);
 	}
+	const changedFiles = Array.from(outputs.keys());
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
@@ -93,34 +94,38 @@ export async function migrateWranglerToCf(
 			assertCompatibleWranglerVersion(projectDirectory);
 		}
 		await writeMigrationOutputs(outputs);
-		if (installDependencies) {
-			try {
-				const installResult = await installCfDependency(projectDirectory);
-				if (installResult === "skipped-ancestor-package") {
-					followUps.push(
-						createFollowUp(
-							"cf-install-skipped",
-							"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
-						)
-					);
-				}
-			} catch (error) {
-				const reason =
-					error instanceof Error
-						? ` Installation failed: ${error.message}`
-						: "";
+	}
+	if (installDependencies) {
+		try {
+			const installResult = await installCfDependency(projectDirectory, {
+				dryRun,
+			});
+			changedFiles.push(...installResult.changedFiles);
+			if (installResult.status === "skipped-ancestor-package") {
 				followUps.push(
 					createFollowUp(
-						"cf-install-failed",
-						`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+						"cf-install-skipped",
+						"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
 					)
 				);
 			}
+		} catch (error) {
+			if (dryRun) {
+				throw error;
+			}
+			const reason =
+				error instanceof Error ? ` Installation failed: ${error.message}` : "";
+			followUps.push(
+				createFollowUp(
+					"cf-install-failed",
+					`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+				)
+			);
 		}
 	}
 
 	return {
-		changedFiles: Array.from(outputs.keys()).map((filePath) =>
+		changedFiles: changedFiles.map((filePath) =>
 			path.relative(projectDirectory, filePath)
 		),
 		followUps,

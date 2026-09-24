@@ -78,14 +78,88 @@ describe("migrateWranglerToCf", () => {
 				name: "example-worker",
 			}),
 		});
+		vi.mocked(installPackages).mockImplementationOnce(async () => {
+			await writeFile(
+				path.join(cwd, "package.json"),
+				JSON.stringify({
+					devDependencies: { cf: "latest" },
+					name: "example-worker",
+					packageManager: "pnpm@10.27.0",
+				})
+			);
+			await writeFile(path.join(cwd, "pnpm-lock.yaml"), "lockfileVersion: 9");
+		});
 
-		await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"pnpm",
 			["cf@latest"],
 			{ cwd, dev: true, isWorkspaceRoot: false }
 		);
+		expect(result.changedFiles).toEqual([
+			"cloudflare.config.ts",
+			"package.json",
+			"pnpm-lock.yaml",
+		]);
+	});
+
+	it("reports planned dependency files during a dry run", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				name: "example-worker",
+				packageManager: "pnpm@10.27.0",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			dryRun: true,
+		});
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		expect(result.changedFiles).toEqual([
+			"cloudflare.config.ts",
+			"package.json",
+			"pnpm-lock.yaml",
+		]);
+	});
+
+	it("reports the lockfile created by Bun", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				name: "example-worker",
+				packageManager: "bun@1.2.0",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+		vi.mocked(installPackages).mockImplementationOnce(async () => {
+			await writeFile(
+				path.join(cwd, "package.json"),
+				JSON.stringify({
+					devDependencies: { cf: "latest" },
+					name: "example-worker",
+					packageManager: "bun@1.2.0",
+				})
+			);
+			await writeFile(path.join(cwd, "bun.lock"), "lockfile");
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(result.changedFiles).toEqual([
+			"cloudflare.config.ts",
+			"package.json",
+			"bun.lock",
+		]);
 	});
 
 	it("skips dependency installation when requested", async ({ expect }) => {
