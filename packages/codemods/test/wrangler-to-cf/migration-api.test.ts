@@ -122,6 +122,11 @@ describe("migrateWranglerToCf", () => {
 			followUps: [{ blocking: true, code: "cf-install-skipped" }],
 			status: "needs-intervention",
 		});
+		await expect(
+			readFile(path.join(cwd, "worker/cloudflare.config.ts"), "utf8")
+		).resolves.toContain(
+			"An ancestor package.json was found, but it was not modified"
+		);
 	});
 
 	it("reports a missing package manifest in writes and dry runs", async ({
@@ -195,9 +200,12 @@ describe("migrateWranglerToCf", () => {
 			followUps: [{ blocking: true, code: "cf-install-failed" }],
 			status: "needs-intervention",
 		});
-		await expect(
-			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
-		).resolves.toContain('from "cf/config"');
+		const cloudflareConfig = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+		expect(cloudflareConfig).toContain("Registry unavailable.");
+		expect(cloudflareConfig).toContain("Migration incomplete.");
 	});
 
 	it("writes Wrangler tooling only for the Wrangler bundler", async ({

@@ -1,4 +1,17 @@
-import { open, unlink } from "node:fs/promises";
+import { open, unlink, writeFile } from "node:fs/promises";
+
+/**
+ * Rewrites an output created by the current migration invocation.
+ *
+ * @param filePath Absolute path to the generated migration file.
+ * @param contents Updated generated contents.
+ */
+export async function rewriteMigrationOutput(
+	filePath: string,
+	contents: string
+): Promise<void> {
+	await writeFile(filePath, contents);
+}
 
 /**
  * Writes generated migration files and removes files created by this invocation

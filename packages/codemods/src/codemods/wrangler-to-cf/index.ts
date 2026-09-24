@@ -7,11 +7,12 @@ import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "./config-renderer";
-import { writeMigrationOutputs } from "./file-writer";
+import { rewriteMigrationOutput, writeMigrationOutputs } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
 import { findPackageJson, installCfDependency } from "./install-dependencies";
 import { assertCompatibleWranglerVersion } from "./wrangler-version";
 import type {
+	MigrationFollowUp,
 	WranglerToCfMigrationOptions,
 	WranglerToCfMigrationResult,
 } from "./types";
@@ -102,14 +103,13 @@ export async function migrateWranglerToCf(
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
 		if (installDependencies) {
+			let dependencyFollowUp: MigrationFollowUp | undefined;
 			try {
 				const installResult = await installCfDependency(projectDirectory);
 				if (installResult === "skipped-ancestor-package") {
-					followUps.push(
-						createFollowUp(
-							"cf-install-skipped",
-							"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
-						)
+					dependencyFollowUp = createFollowUp(
+						"cf-install-skipped",
+						"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
 					);
 				}
 			} catch (error) {
@@ -117,11 +117,22 @@ export async function migrateWranglerToCf(
 					error instanceof Error
 						? ` Installation failed: ${error.message}`
 						: "";
-				followUps.push(
-					createFollowUp(
-						"cf-install-failed",
-						`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
-					)
+				dependencyFollowUp = createFollowUp(
+					"cf-install-failed",
+					`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+				);
+			}
+
+			if (dependencyFollowUp) {
+				followUps.push(dependencyFollowUp);
+				const updatedCloudflareConfig = renderCloudflareConfig({
+					...convertedConfig,
+					followUps,
+				});
+				outputs.set(cloudflareConfigPath, updatedCloudflareConfig);
+				await rewriteMigrationOutput(
+					cloudflareConfigPath,
+					updatedCloudflareConfig
 				);
 			}
 		}
