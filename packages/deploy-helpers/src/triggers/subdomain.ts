@@ -5,13 +5,8 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import {
-	confirm,
-	createCloudflareClient,
-	fetchResult,
-	logger,
-	prompt,
-} from "../shared/context";
+import { fetchWorker } from "../deploy/helpers/workers-api";
+import { confirm, fetchResult, logger, prompt } from "../shared/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { Worker } from "cloudflare/resources/workers/beta/workers/workers";
 
@@ -166,9 +161,7 @@ export async function getWorkerSubdomain(
 	accountId: string,
 	workerName: string
 ): Promise<WorkerSubdomain> {
-	const worker = await createCloudflareClient(
-		complianceConfig
-	).workers.beta.workers.get(workerName, { account_id: accountId });
+	const worker = await fetchWorker(complianceConfig, accountId, workerName);
 	return {
 		...worker.subdomain,
 		enabled: worker.subdomain.enabled ?? false,
