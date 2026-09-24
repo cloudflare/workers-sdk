@@ -15,7 +15,7 @@ describe("waitForBunProxyMessages", () => {
 			waitForBunProxyMessages(() => Promise.resolve(false), 1)
 		).rejects.toMatchObject({
 			message:
-				"`createTestHarness()` could not start because Bun does not support the custom `fetch()` dispatcher required to deliver Miniflare's proxy control request. Run your tests using Node.js instead.",
+				"`server.fetch()` cannot reach the Worker because Bun does not support the custom `fetch()` dispatcher required to deliver Miniflare's proxy control request. Use `server.getWorker().fetch()`, which dispatches to the Worker directly, or run your tests using Node.js.",
 			telemetryMessage: "test harness bun proxy request failed",
 		});
 	});
@@ -30,7 +30,7 @@ describe("waitForBunProxyMessages", () => {
 				waitForBunProxyMessages(() => new Promise<boolean>(() => {}), 100)
 			).rejects.toMatchObject({
 				message:
-					"`createTestHarness()` could not start because Bun does not support the custom `fetch()` dispatcher required to deliver Miniflare's proxy control request. Run your tests using Node.js instead.",
+					"`server.fetch()` cannot reach the Worker because Bun does not support the custom `fetch()` dispatcher required to deliver Miniflare's proxy control request. Use `server.getWorker().fetch()`, which dispatches to the Worker directly, or run your tests using Node.js.",
 				telemetryMessage: "test harness bun proxy request failed",
 			});
 

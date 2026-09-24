@@ -318,6 +318,11 @@ export type TestHarness = {
 	 * await server.fetch("http://example.com/api/data");
 	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
 	 * ```
+	 *
+	 * Under Bun, this method and the URL returned by `listen()` cannot reach the
+	 * Worker, because Bun's `fetch()` ignores the undici `dispatcher` that the
+	 * proxy relies on. This method throws a `UserError` and the URL answers with a
+	 * 503. `server.getWorker().fetch()` dispatches directly and works under Bun.
 	 */
 	fetch: DispatchFetch;
 	/**
@@ -450,8 +455,6 @@ type DebugLog = {
  * const response = await server.fetch("/api/users");
  * await server.close();
  * ```
- * @throws {UserError} If Bun cannot deliver the proxy control request required
- * to start the server.
  */
 export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	let initialOptions = options;
@@ -684,11 +687,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				waitForReloadComplete(session),
 				updateConfig(session, inputs),
 			]);
-			if (isBun()) {
-				await waitForBunProxyMessages(
-					() => session.primaryDevEnv.proxy.latestReloadCompleteMessage
-				);
-			}
 			debugLog("startup - completed");
 			return session;
 		} catch (error) {
@@ -1027,6 +1025,13 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		},
 		async fetch(input, init) {
 			const session = await resolveSession();
+			// Only this door and the `listen()` URL go through the ProxyWorker.
+			// `getWorker()` dispatches directly, so it keeps working under Bun.
+			if (isBun()) {
+				await waitForBunProxyMessages(
+					() => session.primaryDevEnv.proxy.latestReloadCompleteMessage
+				);
+			}
 			const miniflare = session.primaryDevEnv.proxy.proxyWorker;
 			assert(
 				miniflare,

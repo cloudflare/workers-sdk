@@ -7,14 +7,14 @@ const BUN_PROXY_MESSAGE_TIMEOUT_MS = 5_000;
 
 function createBunProxyMessageError(): UserError {
 	return new UserError(
-		"`createTestHarness()` could not start because Bun does not support the custom `fetch()` dispatcher required to deliver Miniflare's proxy control request. Run your tests using Node.js instead.",
+		"`server.fetch()` cannot reach the Worker because Bun does not support the custom `fetch()` dispatcher required to deliver Miniflare's proxy control request. Use `server.getWorker().fetch()`, which dispatches to the Worker directly, or run your tests using Node.js.",
 		{ telemetryMessage: "test harness bun proxy request failed" }
 	);
 }
 
 /**
  * Waits for Bun to deliver the control message that unlocks the test harness
- * proxy. Current Bun releases are affected by an upstream dispatcher issue and
+ * proxy, before `server.fetch()` sends a request through it. Current Bun releases are affected by an upstream dispatcher issue and
  * do not deliver this message. A possible future compatible release can resolve
  * normally; until then, the timeout prevents requests from hanging indefinitely.
  *
