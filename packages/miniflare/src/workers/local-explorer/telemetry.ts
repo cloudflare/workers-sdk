@@ -1,4 +1,8 @@
 import { NO_AGGREGATE_HEADER } from "./aggregation";
+import {
+	EXPLORER_REFRESH_HEADER,
+	isAutomaticWorkersRefresh,
+} from "./explorer-refresh";
 import { getRouteName } from "./route-names";
 import type { AppContext } from "./common";
 import type { Next } from "hono";
@@ -49,6 +53,17 @@ export async function telemetryMiddleware(
 ): Promise<void> {
 	await next();
 
+	const routeName = getRouteName(c.req.path);
+	if (
+		isAutomaticWorkersRefresh(
+			c.req.method,
+			routeName,
+			c.req.header(EXPLORER_REFRESH_HEADER)
+		)
+	) {
+		return;
+	}
+
 	if (
 		!c.res.ok ||
 		!SPARROW_SOURCE_KEY ||
@@ -60,7 +75,7 @@ export async function telemetryMiddleware(
 		return;
 	}
 
-	const route = `${getRouteName(c.req.path)}.${c.req.method.toLowerCase()}`;
+	const route = `${routeName}.${c.req.method.toLowerCase()}`;
 	const userAgent = c.req.header("User-Agent") ?? "unknown";
 
 	// Base properties for all routes

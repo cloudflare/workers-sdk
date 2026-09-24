@@ -367,6 +367,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 	compatibilityFlags: z.array(z.string()).optional(),
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
+	cronTriggers: z.array(z.string()).optional(),
 	bindings: z.record(z.string(), JsonSchema).optional(),
 	/** WASM binding file paths; string values are relative to `rootPath` if not absolute. */
 	wasmBindings: z
@@ -793,6 +794,7 @@ export type V4WorkerOptionsShape = {
 	compatibilityFlags?: string[];
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
+	cronTriggers?: string[];
 	bindings?: Record<string, Json>;
 	wasmBindings?: Record<string, string | Uint8Array>;
 	textBlobBindings?: Record<string, string>;
