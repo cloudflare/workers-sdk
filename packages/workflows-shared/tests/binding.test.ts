@@ -728,6 +728,28 @@ describe("WorkflowBinding", () => {
 			}
 		});
 
+		it("should keep accepting unvalidated options in the array form", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			const id = uniqueId("legacy-batch-options");
+			setTestWorkflowCallback(async () => "done");
+
+			const results = await binding.createBatch([
+				{
+					id,
+					retention: { successRetention: "invalid" },
+					locationHint: "invalid",
+				},
+			] as unknown as WorkflowInstanceCreateOptions<unknown>[]);
+
+			expect(results).toEqual([{ id }]);
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+		});
+
 		it("should not create anything when a pending deletion cannot complete", async ({
 			expect,
 		}) => {

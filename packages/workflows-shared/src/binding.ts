@@ -441,16 +441,18 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		// Reject malformed options before anything is probed or created: probing
-		// an id constructs its engine Durable Object, which persists storage.
+		// Validate only object-form entries before probing ids, which persists storage;
+		// the deprecated array form retains create()'s option validation behavior.
 		for (const instanceOptions of batch) {
-			const validation =
-				workflowInstanceCreateOptionsSchema.safeParse(instanceOptions);
-			if (!validation.success) {
-				throw createWorkflowError(
-					validation.error.issues.map((issue) => issue.message).join("; "),
-					"body"
-				);
+			if (!isLegacyBatch) {
+				const validation =
+					workflowInstanceCreateOptionsSchema.safeParse(instanceOptions);
+				if (!validation.success) {
+					throw createWorkflowError(
+						validation.error.issues.map((issue) => issue.message).join("; "),
+						"body"
+					);
+				}
 			}
 			// Reserved ids are only rejected by the object form; the deprecated
 			// array form keeps accepting every id that create() accepts.
