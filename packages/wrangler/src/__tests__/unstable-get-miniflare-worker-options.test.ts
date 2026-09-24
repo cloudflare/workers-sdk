@@ -269,6 +269,35 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 				},
 			});
 		});
+
+		it("surfaces configured workflow exports as workflowExports for the local runtime", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+			expect(workerOptions.workflowExports).toEqual({
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			});
+		});
 	});
 
 	describe("typed services bindings with `dev.plugin`", () => {

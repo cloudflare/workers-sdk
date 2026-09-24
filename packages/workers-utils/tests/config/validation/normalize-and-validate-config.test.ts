@@ -2187,6 +2187,259 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("accepts workflow entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+						ScheduledWorkflow: {
+							type: "workflow",
+							name: "scheduled",
+							limits: { steps: 5 },
+							concurrency: { limit: 2 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when a workflow entry is missing a name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							GreetingWorkflow: { type: "workflow" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow.name" is a required field.'
+				);
+			});
+
+			it("warns when workflow entries include unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								storage: "sqlite",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in exports.GreetingWorkflow field: "storage"'
+				);
+			});
+
+			it("errors when a workflow entry name has an invalid format", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							SpacedWorkflow: { type: "workflow", name: "bad name" },
+							EmptyWorkflow: { type: "workflow", name: "" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.SpacedWorkflow.name" is invalid.'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.EmptyWorkflow.name" is invalid.'
+				);
+			});
+
+			it("errors when a workflow step limit is not a positive integer", ({
+				expect,
+			}) => {
+				for (const steps of [0, -1, 1.5]) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							exports: {
+								GreetingWorkflow: {
+									type: "workflow",
+									name: "greeting",
+									limits: { steps },
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(
+						`"exports.GreetingWorkflow" export "limits.steps" field must be a positive integer but got ${steps}.`
+					);
+				}
+			});
+
+			it("errors when workflow export settings are invalid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							EmptyScheduleWorkflow: {
+								type: "workflow",
+								name: "empty-schedule",
+								schedules: "",
+							},
+							EmptySchedulesWorkflow: {
+								type: "workflow",
+								name: "empty-schedules",
+								schedules: [],
+							},
+							ConcurrencyWorkflow: {
+								type: "workflow",
+								name: "concurrency",
+								concurrency: { limit: 0 },
+							},
+							RetentionWorkflow: {
+								type: "workflow",
+								name: "retention",
+								default_retention: { error_retention: -1 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.EmptyScheduleWorkflow" export "schedules" field must not be an empty string.
+					  - "exports.EmptySchedulesWorkflow" export "schedules" field must not be an empty array.
+					  - "exports.ConcurrencyWorkflow" export "concurrency.limit" field must be a positive integer but got 0.
+					  - "exports.RetentionWorkflow" export "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("warns when a workflow step limit exceeds the production maximum", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 30_000 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					"exceeds the production maximum of 25,000"
+				);
+			});
+
+			it("accepts a Workflow declared by both a binding and a matching export", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+								limits: { steps: 10 },
+							},
+							{
+								binding: "BATCH",
+								name: "batch",
+								class_name: "BatchWorkflow",
+								script_name: "my-worker",
+							},
+						],
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 10 },
+							},
+							BatchWorkflow: {
+								type: "workflow",
+								name: "batch",
+								limits: { steps: 5 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("errors when two exports declare the same Workflow", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: { type: "workflow", name: "greeting" },
+							OtherWorkflow: { type: "workflow", name: "greeting" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow" and "exports.OtherWorkflow" both declare the Workflow "greeting". Workflow names must be unique.'
+				);
+			});
+
 			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -2430,7 +2683,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
+					  - "exports.Weird.type" must be "durable-object", "worker", or "workflow", but got "container"."
 				`);
 			});
 

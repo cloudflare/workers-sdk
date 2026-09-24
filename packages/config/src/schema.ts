@@ -588,6 +588,31 @@ export const WorkerEntrypointExportSchema = z.strictObject({
 	cache: z.strictObject({ enabled: z.boolean() }).optional(),
 });
 
+const WorkflowRetentionSchema = z.union([
+	z.number().int().min(1),
+	z.string().min(1),
+]);
+
+export const WorkflowExportSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	limits: z
+		.strictObject({ steps: z.number().int().min(1).optional() })
+		.optional(),
+	concurrency: z
+		.strictObject({ limit: z.number().int().min(1).optional() })
+		.optional(),
+	schedules: z
+		.union([z.string().min(1), z.array(z.string().min(1)).min(1)])
+		.optional(),
+	default_retention: z
+		.strictObject({
+			success_retention: WorkflowRetentionSchema.optional(),
+			error_retention: WorkflowRetentionSchema.optional(),
+		})
+		.optional(),
+});
+
 // Containers are only supported on the SQLite storage engine, so each live
 // variant enters the union split by `storage`: `container` exists on the
 // `sqlite` branch and is absent from the `legacy-kv` one. Splitting rather than
@@ -619,12 +644,7 @@ export const ExportSchema = z.union([
 	DurableObjectExpectingTransferSqliteExportSchema,
 	DurableObjectExpectingTransferLegacyKvExportSchema,
 	WorkerEntrypointExportSchema,
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	name: z.string(),
-	// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	// }),
+	WorkflowExportSchema,
 ]);
 
 const LimitsSchema = z.strictObject({
