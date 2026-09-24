@@ -8,28 +8,11 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import ts from "typescript";
 import { afterEach, describe, it } from "vitest";
 import { migrateWranglerToCf } from "../../src";
+import { getSyntaxErrors } from "./test-helpers";
 
 const temporaryDirectories: string[] = [];
-
-function getSyntaxErrors(source: string): string[] {
-	return (
-		ts.transpileModule(source, {
-			compilerOptions: {
-				module: ts.ModuleKind.ESNext,
-				target: ts.ScriptTarget.ESNext,
-			},
-			fileName: "cloudflare.config.ts",
-			reportDiagnostics: true,
-		}).diagnostics ?? []
-	)
-		.filter(({ category }) => category === ts.DiagnosticCategory.Error)
-		.map((diagnostic) =>
-			ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
-}
 
 async function createProject(files: Record<string, string>): Promise<string> {
 	const directory = await mkdtemp(path.join(tmpdir(), "wrangler-to-cf-"));

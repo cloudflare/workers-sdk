@@ -90,7 +90,7 @@ const TOOLING_FIELDS = new Set([
 	"wasm_modules",
 ]);
 
-const KNOWN_FIELDS = new Set([
+export const KNOWN_FIELDS = new Set([
 	"$schema",
 	"access",
 	"account_id",
