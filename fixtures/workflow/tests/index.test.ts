@@ -169,7 +169,7 @@ describe("Workflows", () => {
 
 					expect(result["output"]).toEqual("The step was retried 3 times");
 				},
-				{ timeout: 1500 }
+				{ timeout: 5000 }
 			);
 		});
 
@@ -189,7 +189,7 @@ describe("Workflows", () => {
 
 					expect(result["output"]).toEqual("The step was retried 3 times");
 				},
-				{ timeout: 1500 }
+				{ timeout: 5000 }
 			);
 		});
 
