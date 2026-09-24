@@ -186,12 +186,18 @@ export default defineWranglerConfig((ctx) => {
 		case "staging": {
 			if (ctx.isPreview) {
 				return {
+					types: {
+						generate: false,
+					},
 					assetsDirectory: "public",
 				};
 			}
 			return {
 				define: {
 					PRODUCTION_ONLY: "\\"production\\"",
+				},
+				types: {
+					generate: false,
 				},
 				assetsDirectory: "public",
 			};
@@ -202,12 +208,18 @@ export default defineWranglerConfig((ctx) => {
 					define: {
 						PREVIEW_ONLY: "\\"preview\\"",
 					},
+					types: {
+						generate: false,
+					},
 					assetsDirectory: "public",
 				};
 			}
 			return {
 				define: {
 					BASE_ONLY: "\\"base\\"",
+				},
+				types: {
+					generate: false,
 				},
 				assetsDirectory: "public",
 			};

@@ -112,6 +112,25 @@ describe("Wrangler environment and tooling conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("preserves Wrangler type generation behavior", ({ expect }) => {
+		const baseConfig = {
+			compatibility_date: "2026-09-23",
+			name: "example-worker",
+		};
+
+		expect(convert(baseConfig, "wrangler").wranglerConfig).toContain(
+			"generate: false"
+		);
+		expect(
+			convert({ ...baseConfig, dev: { generate_types: true } }, "wrangler")
+				.wranglerConfig
+		).toContain("generate: true");
+		expect(
+			convert({ ...baseConfig, dev: { generate_types: false } }, "wrangler")
+				.wranglerConfig
+		).toContain("generate: false");
+	});
+
 	it("reports unknown preview fields", ({ expect }) => {
 		const result = convert({
 			compatibility_date: "2026-09-23",

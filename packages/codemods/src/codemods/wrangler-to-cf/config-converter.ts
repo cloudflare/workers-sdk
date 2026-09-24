@@ -310,16 +310,16 @@ function convertToolingObject(source: UnknownRecord): OutputObject | undefined {
 		if (devOptions.properties.length > 0) {
 			properties.push({ key: "dev", value: devOptions });
 		}
-		if (typeof dev.generate_types === "boolean") {
-			properties.push({
-				key: "types",
-				value: {
-					kind: "object",
-					properties: [{ key: "generate", value: dev.generate_types }],
-				},
-			});
-		}
 	}
+	const generateTypes =
+		typeof dev?.generate_types === "boolean" ? dev.generate_types : false;
+	properties.push({
+		key: "types",
+		value: {
+			kind: "object",
+			properties: [{ key: "generate", value: generateTypes }],
+		},
+	});
 
 	const assets = getRecord(source, "assets");
 	if (assets && typeof assets.directory === "string") {
