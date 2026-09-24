@@ -228,7 +228,8 @@ function getDurableObjectClasses(worker: SourcelessWorkerOptions): Set<string> {
 }
 
 /**
- * Gets a set of class names for Workflows defined in the SELF Worker.
+ * Gets a set of class names for Workflows defined in the SELF Worker, either
+ * declared in its `exports` or bound to it.
  */
 function getWorkflowClasses(
 	worker: SourcelessWorkerOptions,
@@ -237,7 +238,7 @@ function getWorkflowClasses(
 	// TODO(someday): may need to extend this to take into account other workers
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
-	const result = new Set<string>();
+	const result = new Set<string>(Object.keys(worker.workflowExports ?? {}));
 	if (worker.workflows === undefined) {
 		return result;
 	}
