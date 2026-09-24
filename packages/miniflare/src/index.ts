@@ -52,6 +52,7 @@ import {
 	getPersistPath,
 	getStorageScope,
 	getTriggersOfType,
+	getWorkflowExporters,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	IMAGES_PLUGIN_NAME,
@@ -2109,6 +2110,7 @@ export class Miniflare {
 			: null;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
+		const workflowExporters = getWorkflowExporters(allWorkerOpts);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		// When the dev registry is enabled, queue brokers bind to the dev-registry
@@ -2264,6 +2266,7 @@ export class Miniflare {
 				loopbackPort,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
+				workflowExporters,
 				queueProducers,
 				queueConsumers,
 				containerPrivilegesCache: this.#containerPrivilegesCache,
@@ -2522,6 +2525,7 @@ export class Miniflare {
 			log: this.#log,
 			proxyBindings,
 			durableObjectClassNames,
+			workflowExporters,
 			allWorkerOpts,
 		});
 		for (const service of globalServices) {

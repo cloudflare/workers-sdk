@@ -20,6 +20,7 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
+import { getWorkflowNamespaceKey } from "../workflows";
 import {
 	EMAIL_STORE_SERVICE_NAME,
 	getUserServiceName,
@@ -31,6 +32,7 @@ import type {
 	DurableObjectClassNames,
 	ParsedInstanceOptions,
 	ParsedWorkerOptions,
+	WorkflowExporters,
 	WorkflowOption,
 } from "../shared";
 import type {
@@ -47,6 +49,7 @@ export interface ExplorerServicesOptions {
 	hasDurableObjects: boolean;
 	workerNames: string[];
 	explorerWorkerOpts: ExplorerWorkerOpts;
+	workflowExporters: WorkflowExporters;
 	telemetry: {
 		enabled: boolean;
 		deviceId?: string;
@@ -72,6 +75,7 @@ export function getExplorerServices(
 		hasDurableObjects,
 		workerNames,
 		explorerWorkerOpts,
+		workflowExporters,
 		telemetry,
 		observabilityEnabled,
 		sharedOptions,
@@ -186,13 +190,21 @@ export function getExplorerServices(
 	// for the instance detail view. Same pattern as DO namespace bindings above.
 	// The Engine DO has no alarms and its constructor is idempotent, so waking
 	// it up for reads is safe.
+	// Exported Workflows run their Engines in the Worker that exports them.
 	for (const workflowInfo of Object.values(bindingIdMap.workflows)) {
+		const exporter = workflowExporters.get(workflowInfo.name);
 		explorerBindings.push({
 			name: workflowInfo.engineBinding,
-			durableObjectNamespace: {
-				className: "Engine",
-				serviceName: `workflows:${workflowInfo.name}`,
-			},
+			durableObjectNamespace:
+				exporter === undefined
+					? {
+							className: "Engine",
+							serviceName: `workflows:${workflowInfo.name}`,
+						}
+					: {
+							className: getWorkflowNamespaceKey(workflowInfo.name),
+							serviceName: getUserServiceName(exporter.workerName),
+						},
 		});
 	}
 
