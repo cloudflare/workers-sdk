@@ -1,4 +1,8 @@
 import { describe, test } from "vitest";
+import {
+	EXPLORER_REFRESH_HEADER,
+	isAutomaticWorkersRefresh,
+} from "../../../src/workers/local-explorer/explorer-refresh";
 import openApiSpec from "../../../src/workers/local-explorer/openapi.local.json";
 import { getRouteName } from "../../../src/workers/local-explorer/route-names";
 
@@ -40,11 +44,40 @@ describe("getRouteName", () => {
 				`/cdn-cgi/local/explorer/api/storage/kv/namespaces/test-id/bulk/delete`
 			)
 		).toBe("kv.bulk_delete");
+		expect(
+			getRouteName(`/cdn-cgi/local/explorer/api/local/email/routing/resend`)
+		).toBe("email.routing.resend");
+		expect(
+			getRouteName(
+				`/cdn-cgi/local/explorer/api/local/email/routing/resend/draft`
+			)
+		).toBe("email.routing.resend.draft");
 	});
 
 	test("returns unknown for unrecognized paths", ({ expect }) => {
 		expect(getRouteName("/cdn-cgi/local/explorer/api/unknown/path")).toBe(
 			"unknown"
+		);
+	});
+});
+
+describe("automatic workers refresh telemetry", () => {
+	test("skips only poll refreshes of GET /local/workers", ({ expect }) => {
+		expect(EXPLORER_REFRESH_HEADER).toBe("X-Miniflare-Explorer-Refresh");
+		expect(isAutomaticWorkersRefresh("GET", "local.workers", "poll")).toBe(
+			true
+		);
+		expect(isAutomaticWorkersRefresh("POST", "local.workers", "poll")).toBe(
+			false
+		);
+		expect(isAutomaticWorkersRefresh("GET", "scheduled.dispatch", "poll")).toBe(
+			false
+		);
+		expect(isAutomaticWorkersRefresh("GET", "local.workers", "manual")).toBe(
+			false
+		);
+		expect(isAutomaticWorkersRefresh("GET", "local.workers", undefined)).toBe(
+			false
 		);
 	});
 });

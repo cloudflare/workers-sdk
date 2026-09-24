@@ -30,6 +30,7 @@ import type { Account } from "./shared";
 import type {
 	CredentialStore,
 	LoginOrRefreshResult,
+	TemporaryAccountRequest,
 	UserAuthConfig,
 } from "@cloudflare/workers-auth";
 import type {
@@ -91,8 +92,11 @@ export function getCredentialStore(): CredentialStore {
 /**
  * Mark whether `--temporary` is permitted for the current invocation.
  */
-export function setTemporaryAllowed(allowed: boolean): void {
-	auth.setTemporaryAllowed(allowed);
+export function setTemporaryAllowed(
+	allowed: boolean,
+	request?: TemporaryAccountRequest
+): void {
+	auth.setTemporaryAllowed(allowed, request);
 }
 
 /**

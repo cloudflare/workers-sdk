@@ -1,5 +1,8 @@
 import { UserError } from "../errors";
-import { getDurableObjectExports } from "./durable-object-exports";
+import {
+	getDurableObjectExports,
+	isLiveDurableObjectExport,
+} from "./durable-object-exports";
 import type { Config } from "./config";
 import type { ContainerApp, Exports } from "./environment";
 
@@ -201,11 +204,7 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 		if (entry.type !== "durable-object") {
 			continue;
 		}
-		if (
-			entry.state === undefined ||
-			entry.state === "created" ||
-			entry.state === "expecting-transfer"
-		) {
+		if (isLiveDurableObjectExport(entry)) {
 			durableObjectClassNameToUseSQLiteMap.set(
 				className,
 				entry.storage === "sqlite"

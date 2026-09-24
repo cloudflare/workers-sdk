@@ -1,5 +1,18 @@
 # @cloudflare/build-output-utils
 
+## 0.8.0
+
+### Minor Changes
+
+- [#15844](https://github.com/cloudflare/workers-sdk/pull/15844) [`43f7ffb`](https://github.com/cloudflare/workers-sdk/commit/43f7ffbcbe020bc4c30809c6bd408059a6eeac87) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Allow frameworks to remove Worker bundles after prerendering
+
+  Build Output readers now ignore stale manifests when only static assets remain and omit non-default Workers that have neither a bundle nor assets. A default Worker must still contain deployable output.
+
+### Patch Changes
+
+- Updated dependencies [[`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/config@0.18.0
+
 ## 0.7.1
 
 ### Patch Changes

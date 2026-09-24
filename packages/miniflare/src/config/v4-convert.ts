@@ -140,6 +140,11 @@ function convertWorkerOptions(
 		config.triggers.push({ type: "fetch", pattern: route });
 	}
 
+	for (const cron of worker.cronTriggers ?? []) {
+		config.triggers ??= [];
+		config.triggers.push({ type: "scheduled", schedule: cron });
+	}
+
 	for (const connectHandler of worker.connectHandlers ?? []) {
 		config.triggers ??= [];
 		config.triggers.push({ type: "connect", ...connectHandler });
@@ -150,6 +155,7 @@ function convertWorkerOptions(
 	addNamespaceBindings(env, "d1", worker.d1Databases, isRemote);
 	addR2Bindings(env, worker.r2Buckets, isRemote);
 	addDurableObjectBindings(env, exports, config.name, worker, isRemote);
+	addWorkflowExports(exports, worker);
 	addQueueBindings(
 		env,
 		config,
@@ -443,6 +449,28 @@ function addDurableObjectExport(
 		container: object.container,
 	};
 	exports[object.className] = exported as Exports[string];
+}
+
+/**
+ * Translate the declarative `workflowExports` carrier (keyed by the exported
+ * class name) into `exports` entries. This is the export-side counterpart to
+ * the `workflows` binding loop in `addProductBindings`: bindings expose a
+ * workflow to another Worker via `env`, whereas exports declare a workflow this
+ * Worker owns on `ctx.exports`.
+ */
+function addWorkflowExports(exports: Exports, worker: ParsedV4WorkerOptions) {
+	for (const [className, workflow] of Object.entries(
+		worker.workflowExports ?? {}
+	)) {
+		exports[className] = {
+			type: "workflow",
+			name: workflow.name,
+			limits:
+				workflow.stepLimit === undefined
+					? undefined
+					: { steps: workflow.stepLimit },
+		} as Exports[string];
+	}
 }
 
 function addQueueBindings(

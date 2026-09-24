@@ -4225,6 +4225,10 @@ describe("wrangler deploy with containers", () => {
 							name: "managed-app",
 							scheduling_policy: "durable_object",
 							observability: { logs: { enabled: true } },
+							ssh: { enabled: true },
+							authorized_keys: [
+								{ name: "laptop", public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1" },
+							],
 							unsafe: { configuration: { experimental_flags: ["test-flag"] } },
 							...(imageMap === "populated" && { images: { app: { image } } }),
 						},
@@ -4292,7 +4296,16 @@ describe("wrangler deploy with containers", () => {
 							"managed-app",
 							namespaceId
 						),
-						configuration: { experimental_flags: ["test-flag"] },
+						configuration: {
+							experimental_flags: ["test-flag"],
+							wrangler_ssh: { enabled: true },
+							authorized_keys: [
+								{
+									name: "laptop",
+									public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+								},
+							],
+						},
 						observability: { logs: { enabled: true } },
 					},
 				]);

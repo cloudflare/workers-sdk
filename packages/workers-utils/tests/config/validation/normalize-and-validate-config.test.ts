@@ -1,5 +1,5 @@
 import path from "node:path";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { assert, describe, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
@@ -2187,6 +2187,259 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("accepts workflow entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+						ScheduledWorkflow: {
+							type: "workflow",
+							name: "scheduled",
+							limits: { steps: 5 },
+							concurrency: { limit: 2 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when a workflow entry is missing a name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							GreetingWorkflow: { type: "workflow" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow.name" is a required field.'
+				);
+			});
+
+			it("warns when workflow entries include unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								storage: "sqlite",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in exports.GreetingWorkflow field: "storage"'
+				);
+			});
+
+			it("errors when a workflow entry name has an invalid format", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							SpacedWorkflow: { type: "workflow", name: "bad name" },
+							EmptyWorkflow: { type: "workflow", name: "" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.SpacedWorkflow.name" is invalid.'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.EmptyWorkflow.name" is invalid.'
+				);
+			});
+
+			it("errors when a workflow step limit is not a positive integer", ({
+				expect,
+			}) => {
+				for (const steps of [0, -1, 1.5]) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							exports: {
+								GreetingWorkflow: {
+									type: "workflow",
+									name: "greeting",
+									limits: { steps },
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(
+						`"exports.GreetingWorkflow" export "limits.steps" field must be a positive integer but got ${steps}.`
+					);
+				}
+			});
+
+			it("errors when workflow export settings are invalid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							EmptyScheduleWorkflow: {
+								type: "workflow",
+								name: "empty-schedule",
+								schedules: "",
+							},
+							EmptySchedulesWorkflow: {
+								type: "workflow",
+								name: "empty-schedules",
+								schedules: [],
+							},
+							ConcurrencyWorkflow: {
+								type: "workflow",
+								name: "concurrency",
+								concurrency: { limit: 0 },
+							},
+							RetentionWorkflow: {
+								type: "workflow",
+								name: "retention",
+								default_retention: { error_retention: -1 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.EmptyScheduleWorkflow" export "schedules" field must not be an empty string.
+					  - "exports.EmptySchedulesWorkflow" export "schedules" field must not be an empty array.
+					  - "exports.ConcurrencyWorkflow" export "concurrency.limit" field must be a positive integer but got 0.
+					  - "exports.RetentionWorkflow" export "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("warns when a workflow step limit exceeds the production maximum", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 30_000 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					"exceeds the production maximum of 25,000"
+				);
+			});
+
+			it("accepts a Workflow declared by both a binding and a matching export", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+								limits: { steps: 10 },
+							},
+							{
+								binding: "BATCH",
+								name: "batch",
+								class_name: "BatchWorkflow",
+								script_name: "my-worker",
+							},
+						],
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 10 },
+							},
+							BatchWorkflow: {
+								type: "workflow",
+								name: "batch",
+								limits: { steps: 5 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("errors when two exports declare the same Workflow", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: { type: "workflow", name: "greeting" },
+							OtherWorkflow: { type: "workflow", name: "greeting" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow" and "exports.OtherWorkflow" both declare the Workflow "greeting". Workflow names must be unique.'
+				);
+			});
+
 			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -2430,7 +2683,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
+					  - "exports.Weird.type" must be "durable-object", "worker", or "workflow", but got "container"."
 				`);
 			});
 
@@ -4802,6 +5055,133 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
+			it("should accept ssh and authorized_keys on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								ssh: { enabled: true, port: 2222 },
+								authorized_keys: [
+									{
+										name: "laptop",
+										public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+									},
+								],
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						scheduling_policy: "durable_object",
+						name: "sandboxes",
+						ssh: { enabled: true, port: 2222 },
+						authorized_keys: [
+							{
+								name: "laptop",
+								public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+							},
+						],
+					},
+				]);
+			});
+
+			it("should reject deprecated wrangler_ssh on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								wrangler_ssh: { enabled: true },
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'Unsupported fields for Durable Object-managed Containers in containers: "wrangler_ssh"'
+				);
+			});
+
+			it("should keep ssh when re-validating a normalized Durable Object-managed container", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					containers: [
+						{
+							class_name: "Sandbox",
+							scheduling_policy: "durable_object",
+							name: "sandboxes",
+							ssh: { enabled: true },
+						},
+					],
+				} as RawConfig;
+				const first = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				const second = normalizeAndValidateConfig(
+					{ containers: first.config.containers } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(second.diagnostics.hasErrors()).toBe(false);
+				expect(second.config.containers?.[0].ssh).toEqual({ enabled: true });
+			});
+
+			it("should reject invalid ssh and authorized_keys on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								ssh: { enabled: "yes", port: 70000 },
+								authorized_keys: [
+									{ name: "laptop", public_key: "ssh-rsa AAAAB3NzaC1yc2E" },
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.ssh.enabled must be a boolean
+					  - containers.ssh.port must be a number between 1 and 65535 inclusive
+					  - containers.authorized_keys[0].public_key is an unsupported key type. Please provide an ED25519 public key."
+				`);
+			});
+
 			it("should require a name or class name for a Durable Object-managed container", ({
 				expect,
 			}) => {
@@ -6987,7 +7367,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of "tcp" but got {"port":8081}."
+					  - "connect[0]" should have a "protocol" field of "tcp" or "udp" but got {"port":8081}."
 				`);
 			});
 
@@ -7005,7 +7385,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of "tcp" but got "ftp"."
+					  - "connect[0]" should have a "protocol" field of "tcp" or "udp" but got "ftp"."
 				`);
 			});
 
@@ -7100,6 +7480,49 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should warn if UDP options are configured for TCP", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [{ protocol: "tcp", port: 8081, idle_timeout_ms: 1_000 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in connect[0] field: "idle_timeout_ms""
+				`);
+			});
+
+			it("should error if UDP options are not unsigned 32-bit integers", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{
+								protocol: "udp",
+								port: 8081,
+								idle_timeout_ms: 1.5,
+								max_pending_bytes: 0x100000000,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have an integer "idle_timeout_ms" field between 0 and 4294967295 but got {"protocol":"udp","port":8081,"idle_timeout_ms":1.5,"max_pending_bytes":4294967296}.
+					  - "connect[0]" should have an integer "max_pending_bytes" field between 0 and 4294967295 but got {"protocol":"udp","port":8081,"idle_timeout_ms":1.5,"max_pending_bytes":4294967296}."
+				`);
+			});
+
 			it("should accept a valid connect config with multiple unique protocol/port combinations", ({
 				expect,
 			}) => {
@@ -7108,6 +7531,7 @@ describe("normalizeAndValidateConfig()", () => {
 						connect: [
 							{ protocol: "tcp", port: 8081, address: "*" },
 							{ protocol: "tcp", port: 8082 },
+							{ protocol: "udp", port: 8081 },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -7120,6 +7544,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.connect).toEqual([
 					{ protocol: "tcp", port: 8081, address: "*" },
 					{ protocol: "tcp", port: 8082 },
+					{ protocol: "udp", port: 8081 },
 				]);
 			});
 

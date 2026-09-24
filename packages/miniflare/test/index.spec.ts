@@ -11,10 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
-import {
-	_forceColour,
-	NODEJS_COMPAT_DEFAULT_ON_DATE,
-} from "@cloudflare/workers-utils";
+import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
@@ -73,7 +70,7 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
+test("Miniflare: validates options", async ({ expect }) => {
 	// Check empty workers array rejected
 	expect(() => new Miniflare({ workers: [] })).toThrow(
 		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
@@ -141,10 +138,6 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 		)
 	);
 
-	// Disable colours for easier to read expectations
-	_forceColour(false);
-	onTestFinished(() => _forceColour());
-
 	// Check throws validation error with incorrect options
 	let error: MiniflareCoreError | undefined = undefined;
 	try {
@@ -166,17 +159,8 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.code).toEqual("ERR_VALIDATION");
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
-{
-  workers: [
-    /* [0] */ {
-      config: {
-        name: 42,
-              ^ Invalid input: expected string, received number
-        ...,
-      },
-    },
-  ],
-}`
+✖ Invalid input: expected string, received number
+  → at workers[0].config.name`
 	);
 
 	// Check throws validation error with primitive option
@@ -191,8 +175,7 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.code).toEqual("ERR_VALIDATION");
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
-'addEventListener(...)'
-^ Invalid input: expected object, received string`
+✖ Invalid input: expected object, received string`
 	);
 });
 
@@ -2067,8 +2050,19 @@ test("Miniflare: python modules", async ({ expect }) => {
 						modules: {
 							"index.py": {
 								type: "python",
-								contents:
-									"from test_module import add; from workers import Response, WorkerEntrypoint;\nclass Default(WorkerEntrypoint):\n  def fetch(self, request):\n    return Response(str(add(2,2)))",
+								contents: `from test_module import add
+from workers import Response, WorkerEntrypoint
+
+last_cron = ""
+
+class Default(WorkerEntrypoint):
+  def fetch(self, request):
+    return Response(str(add(2,2)) + ":" + last_cron)
+
+  async def scheduled(self, controller, env, ctx):
+    global last_cron
+    last_cron = controller.cron
+    controller.noRetry()`,
 							},
 							"test_module.py": {
 								type: "python",
@@ -2081,8 +2075,18 @@ test("Miniflare: python modules", async ({ expect }) => {
 		],
 	});
 	useDispose(mf);
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe("4");
+	let res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("4:");
+
+	const worker = await mf.getWorker();
+	expect(
+		await worker.scheduled({
+			cron: "python-cron",
+			scheduledTime: new Date(0),
+		})
+	).toEqual({ outcome: "ok", noRetry: true });
+	res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("4:python-cron");
 });
 
 test("Miniflare: HTTPS fetches using browser CA certificates", async ({
@@ -2181,6 +2185,7 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		log,
+		unsafeLocalExplorer: true,
 		unsafeTriggerHandlers: true,
 		workers: [
 			{
@@ -2195,6 +2200,7 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 				},
 				scheduled(controller) {
 					scheduledRun = true;
+					if (controller.cron === "failure") throw new Error("failure");
 					controller.noRetry();
 				}
 			}`),
@@ -2217,6 +2223,12 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("true");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/scheduled?format=json&cron=failure"
+	);
+	expect(res.status).toBe(500);
+	expect(await res.json()).toEqual({ outcome: "exception", noRetry: false });
 });
 
 test("Miniflare: manually triggered scheduled events with assets", async ({
@@ -3583,6 +3595,53 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 	expect(await text(socket)).toBe("hello");
 });
 
+test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect() handler", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const reader = socket.readable.getReader();
+								const writer = socket.writable.getWriter();
+								const { value } = await reader.read();
+								await writer.write(value);
+							},
+						};
+					`),
+					triggers: [
+						{
+							type: "connect",
+							protocol: "udp",
+							address: "::1",
+							port: 0,
+							idleTimeoutMs: 1_000,
+							maxPendingBytes: 65_536,
+						},
+					],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+	await mf.ready;
+	await expect(mf.dispatchConnect()).rejects.toThrow(
+		"No TCP connect triggers configured for entrypoint worker"
+	);
+
+	const client = await mf.dispatchConnect({ protocol: "udp" });
+	client.send("hello");
+	const [message] = await once(client, "message");
+	expect(message.toString()).toBe("hello");
+});
+
 test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	expect,
 	onTestFinished,
@@ -3663,7 +3722,10 @@ test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
 							},
 						};
 					`),
-					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+					triggers: [
+						{ type: "connect", protocol: "tcp", port: 0 },
+						{ type: "connect", protocol: "udp", port: 0 },
+					],
 				},
 			},
 		],
@@ -3677,9 +3739,11 @@ test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
 
 	const socket = await mf.dispatchConnect();
 	const closed = once(socket, "close");
+	const datagramSocket = await mf.dispatchConnect({ protocol: "udp" });
+	const datagramClosed = once(datagramSocket, "close");
 	await mf.dispose();
 	disposed = true;
-	await closed;
+	await Promise.all([closed, datagramClosed]);
 	expect(socket.destroyed).toBe(true);
 });
 

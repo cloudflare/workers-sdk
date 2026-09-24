@@ -282,7 +282,7 @@ export async function pushImageIfChanged({
 	pathToDocker: string;
 	sourceTag: string;
 	targetTag: string;
-	containerConfig?: DockerfileContainerConfig;
+	containerConfig?: ContainerNormalizedConfig;
 	accountId?: string;
 	complianceConfig?: ComplianceConfig;
 	cleanupSourceTag?: boolean;
@@ -353,11 +353,12 @@ export async function pushImageIfChanged({
 
 		if (parsedRemoteManifest.Descriptor.digest === hash) {
 			logger.log("Image already exists remotely, skipping push");
-			logger.debug(
-				`Untagging built image: ${sourceTag} since there was no change.`
-			);
-
-			await runDockerCmd(pathToDocker, ["image", "rm", sourceTag]);
+			if (cleanupSourceTag !== false) {
+				logger.debug(
+					`Untagging built image: ${sourceTag} since there was no change.`
+				);
+				await runDockerCmd(pathToDocker, ["image", "rm", sourceTag]);
+			}
 
 			return { remoteDigest };
 		}

@@ -7,6 +7,7 @@ import {
 	getLocalObservabilityEnabledFromEnv,
 	getWranglerHiddenDirPath,
 	isUnsafeBindingType,
+	partitionExports,
 	UserError,
 	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
@@ -35,6 +36,7 @@ import type {
 	CfR2Bucket,
 	CfScriptFormat,
 	CfWorkflow,
+	ConnectHandler,
 	Config,
 	ContainerEngine,
 	LegacyAssetPaths,
@@ -90,7 +92,7 @@ export interface ConfigBundle {
 	crons: Config["triggers"]["crons"];
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
-	connectHandlers: Config["connect"];
+	connectHandlers: ConnectHandler[];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
@@ -462,6 +464,7 @@ type WorkerOptionsBindings = Pick<
 	| "serviceBindings"
 	| "ratelimits"
 	| "workflows"
+	| "workflowExports"
 	| "secretsStoreSecrets"
 	| "images"
 	| "email"
@@ -785,6 +788,24 @@ export function buildMiniflareBindingOptions(
 		vars[binding.binding] = binding.value as Json;
 	}
 
+	// Workflows declared under `exports` (accessible via `ctx.exports`) are
+	// carried to Miniflare separately from `workflows[]` env bindings, keyed by
+	// the exported class name.
+	const workflowExports: NonNullable<WorkerOptionsBindings["workflowExports"]> =
+		Object.fromEntries(
+			Object.entries(partitionExports(config.exports).workflow).map(
+				([className, workflow]) => [
+					className,
+					{
+						name: workflow.name,
+						...(workflow.limits?.steps !== undefined && {
+							stepLimit: workflow.limits.steps,
+						}),
+					},
+				]
+			)
+		);
+
 	const bindingOptions: WorkerOptionsBindings = {
 		bindings: vars,
 		versionMetadata: versionMetadataBindings[0]?.binding,
@@ -894,6 +915,7 @@ export function buildMiniflareBindingOptions(
 				return workflowEntry(workflow);
 			})
 		),
+		workflowExports,
 		secretsStoreSecrets: Object.fromEntries(
 			secretsStoreSecrets.map((binding) => [binding.binding, binding])
 		),
@@ -1186,6 +1208,7 @@ export async function buildMiniflareOptions(
 				...sitesOptions,
 				...assetOptions,
 				routes: config.routes,
+				cronTriggers: config.crons,
 				outboundService: config.outboundService,
 				zone: config.zone,
 				access: config.access?.dev,

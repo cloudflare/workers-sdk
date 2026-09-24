@@ -22,7 +22,11 @@ export {
 	getAccessHeaders,
 } from "./access";
 
-export type { OAuthFlowContext, OAuthFlowLogger } from "./context";
+export type {
+	OAuthFlowContext,
+	OAuthFlowLogger,
+	TemporaryAccountRequest,
+} from "./context";
 
 export {
 	getAuthUrlFromEnv,
