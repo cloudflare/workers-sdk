@@ -265,6 +265,35 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(output)).toEqual([]);
 	});
 
+	it("inherits log forwarding bindings into environments and previews", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				env: {
+					staging: {
+						previews: { vars: { MODE: "preview" } },
+					},
+				},
+				logfwdr: {
+					bindings: [{ destination: "logs", name: "LOGS" }],
+				},
+				name: "example-worker",
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+		const output = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+
+		expect(output.match(/LOGS: bindings\.logfwdr/g)).toHaveLength(3);
+		expect(output).toMatchSnapshot("cloudflare.config.ts");
+		expect(getSyntaxErrors(output)).toEqual([]);
+	});
+
 	it("writes Wrangler tooling config only when requested and needed", async ({
 		expect,
 	}) => {

@@ -44,7 +44,6 @@ const NON_INHERITABLE_FIELDS = new Set([
 	"hyperdrive",
 	"images",
 	"kv_namespaces",
-	"logfwdr",
 	"media",
 	"mtls_certificates",
 	"pipelines",
