@@ -226,6 +226,33 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts cron triggers in exact input order", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			cronTriggers: ["*/5 * * * *", " 0 17 * * SUN "],
+		});
+
+		expect(converted.workers[0].config.triggers).toEqual([
+			{ type: "scheduled", schedule: "*/5 * * * *" },
+			{ type: "scheduled", schedule: " 0 17 * * SUN " },
+		]);
+	});
+
+	test.for([
+		{ label: "missing", cronTriggers: undefined },
+		{ label: "empty", cronTriggers: [] as string[] },
+	])(
+		"converts $label cron triggers to no scheduled entries",
+		({ cronTriggers }, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				cronTriggers,
+			});
+
+			expect(converted.workers[0].config.triggers).toBeUndefined();
+		}
+	);
+
 	test("resolves worker rootPath relative to shared rootPath", ({ expect }) => {
 		const sharedRootPath = path.join(__dirname, "project");
 		const workerRootPath = path.join(sharedRootPath, "workers", "api");

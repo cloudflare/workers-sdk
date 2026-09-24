@@ -523,6 +523,7 @@ export function unstable_getMiniflareWorkerOptions(
 					}
 				: {}),
 		})),
+		cronTriggers: config.triggers.crons,
 
 		...bindingOptions,
 		...sitesOptions,
