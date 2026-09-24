@@ -99,6 +99,26 @@ export default defineConfig((ctx) => {
 "
 `;
 
+exports[`migrateWranglerToCf > does not inherit base defines into named environment tooling > wrangler.config.ts 1`] = `
+"import { defineWranglerConfig } from "wrangler/experimental-config";
+
+export default defineWranglerConfig((ctx) => {
+	switch (ctx.mode) {
+		case "staging": {
+			return {};
+		}
+		default: {
+			return {
+				define: {
+					BASE_ONLY: "\\"base\\"",
+				},
+			};
+		}
+	}
+});
+"
+`;
+
 exports[`migrateWranglerToCf > does not inherit non-inheritable bindings into previews > cloudflare.config.ts 1`] = `
 "import { bindings, defineConfig } from "cf/config";
 

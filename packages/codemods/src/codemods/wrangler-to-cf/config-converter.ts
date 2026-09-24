@@ -1859,6 +1859,9 @@ export function convertWranglerConfig(
 
 	const baseSource = createBranchSource(source, {});
 	const base = convertBranch(baseSource, "", bundler, imports, followUps);
+	const toolingBase = isWranglerBundle
+		? convertToolingBranch(baseSource)
+		: undefined;
 	const convertedEnvironments = new Map<string, ConvertedBranch>();
 	const toolingEnvironments = new Map<string, ConvertedBranch>();
 
@@ -1880,8 +1883,11 @@ export function convertWranglerConfig(
 		);
 		if (isWranglerBundle) {
 			const tooling = convertToolingBranch(environmentSource);
-			if (tooling) {
-				toolingEnvironments.set(name, tooling);
+			if (tooling || toolingBase) {
+				toolingEnvironments.set(
+					name,
+					tooling ?? { config: { kind: "object", properties: [] } }
+				);
 			}
 		}
 	}
@@ -1901,9 +1907,7 @@ export function convertWranglerConfig(
 		environments: convertedEnvironments,
 		followUps: deduplicateFollowUps(followUps),
 		imports,
-		toolingBase: isWranglerBundle
-			? convertToolingBranch(baseSource)
-			: undefined,
+		toolingBase,
 		toolingEnvironments,
 	};
 }

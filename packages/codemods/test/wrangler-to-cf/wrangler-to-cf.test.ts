@@ -271,6 +271,34 @@ describe("migrateWranglerToCf", () => {
 		expect(getSyntaxErrors(wranglerConfig)).toEqual([]);
 	});
 
+	it("does not inherit base defines into named environment tooling", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				define: { BASE_ONLY: '"base"' },
+				env: {
+					staging: { vars: { MODE: "staging" } },
+				},
+				name: "example-worker",
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
+		const wranglerConfig = await readFile(
+			path.join(cwd, "wrangler.config.ts"),
+			"utf8"
+		);
+
+		expect(wranglerConfig.match(/BASE_ONLY/g)).toHaveLength(1);
+		expect(wranglerConfig).toContain('case "staging"');
+		expect(wranglerConfig).toMatchSnapshot("wrangler.config.ts");
+		expect(getSyntaxErrors(wranglerConfig)).toEqual([]);
+	});
+
 	it("migrates preview-only Wrangler tooling without inheriting production defines", async ({
 		expect,
 	}) => {
