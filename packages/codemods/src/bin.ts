@@ -13,6 +13,8 @@ Run a codemod by name:
 
 Options:
   --cwd <path>     Project directory (default: current directory)
+  --config <path>  Exact Wrangler config path (wrangler-to-cf only)
+  --bundler <name> Bundler to migrate to: vite or wrangler (default: vite)
   --files <glob>   Restrict files considered; may be repeated
   --dry-run        List changes without writing files
   --force          Run even if the Git worktree is not clean
@@ -32,6 +34,8 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 		args,
 		allowPositionals: true,
 		options: {
+			bundler: { type: "string" },
+			config: { type: "string" },
 			cwd: { type: "string" },
 			files: { type: "string", multiple: true },
 			"dry-run": { type: "boolean", default: false },
@@ -52,8 +56,17 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 	if (!name) {
 		throw new Error("Expected a codemod name");
 	}
+	if (
+		values.bundler !== undefined &&
+		values.bundler !== "vite" &&
+		values.bundler !== "wrangler"
+	) {
+		throw new Error("Expected --bundler to be either vite or wrangler");
+	}
 	const cwd = path.resolve(values.cwd ?? process.cwd());
 	const result = await runCodemod(name, {
+		bundler: values.bundler,
+		configPath: values.config,
 		cwd,
 		dryRun: values["dry-run"],
 		files: values.files,

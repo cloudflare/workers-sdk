@@ -1,4 +1,6 @@
 export interface CodemodContext {
+	bundler?: "vite" | "wrangler";
+	configPath?: string;
 	cwd: string;
 	dryRun: boolean;
 	files?: string[];

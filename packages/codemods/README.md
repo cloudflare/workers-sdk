@@ -10,8 +10,8 @@ npx @cloudflare/codemods vitest:v3-to-v4
 
 Available codemods:
 
-- `wrangler-to-cf` (programmatic API) - migrate a Wrangler configuration to the
-  new `cf` configuration format
+- `wrangler-to-cf` - migrate a Wrangler configuration to the new `cf`
+  configuration format
 - `vitest:v3-to-v4` — migrate `@cloudflare/vitest-pool-workers` configuration from
   Vitest v3 to v4
 - `vitest:pool-workers-to-vitest-plugin` — rename `@cloudflare/vitest-pool-workers`
@@ -21,6 +21,14 @@ Use `--dry-run` to list changes without writing them, `--cwd <path>` to target
 another project, or repeat `--files <glob>` to restrict the files considered.
 When the target is inside a Git worktree, the worktree must be clean. Use
 `--force` to bypass this safety check.
+
+To migrate a Wrangler project with the default Vite bundler:
+
+```sh
+npx @cloudflare/codemods wrangler-to-cf --cwd ./path/to/project
+```
+
+The CLI detects a single root `wrangler.json`, `wrangler.jsonc`, or `wrangler.toml`. Pass `--config <path>` to select another file, or pass `--bundler wrangler` to retain Wrangler-specific tooling configuration.
 
 ## Programmatic usage
 
