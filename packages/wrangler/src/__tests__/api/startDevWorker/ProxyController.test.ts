@@ -1,10 +1,12 @@
-import { describe, test } from "vitest";
+import { createServer } from "node:net";
+import { describe, test, vi } from "vitest";
 import { serialiseError } from "../../../api/startDevWorker/events";
 import { ProxyController } from "../../../api/startDevWorker/ProxyController";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { SerializedError } from "../../../api/startDevWorker/events";
 import type { StartDevWorkerOptions } from "../../../api/startDevWorker/types";
+import type { AddressInfo, Socket } from "node:net";
 
 describe("ProxyController", () => {
 	mockConsoleMethods();
@@ -109,5 +111,74 @@ describe("ProxyController", () => {
 				"https://github.com/oven-sh/bun/issues/39247"
 			);
 		}
+	});
+
+	test("ProxyWorker answers with a 503 when a request in flight is retried after a control request arrives without its payload", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		// A request that is already forwarded is in neither queue when the empty
+		// control request drains them, and its retry is requeued asynchronously
+		// once the connection to the old UserWorker fails. With no `play` to
+		// come, that retry must get the same 503 rather than wait forever.
+		const sockets: Socket[] = [];
+		const userWorker = createServer((socket) => sockets.push(socket));
+		await new Promise<void>((resolve) =>
+			userWorker.listen(0, "127.0.0.1", resolve)
+		);
+		onTestFinished(
+			() => new Promise<void>((resolve) => userWorker.close(() => resolve()))
+		);
+		const { port } = userWorker.address() as AddressInfo;
+
+		const bus = new FakeBus();
+		const controller = new ProxyController(bus);
+		onTestFinished(() => controller.teardown());
+
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: {
+				dev: { inspector: false, server: { hostname: "127.0.0.1", port: 0 } },
+			} as StartDevWorkerOptions,
+		});
+		const { proxyWorker } = await controller.ready.promise;
+
+		await expect(
+			controller.sendMessageToProxyWorker({
+				type: "play",
+				proxyData: {
+					userWorkerUrl: {
+						protocol: "http:",
+						hostname: "127.0.0.1",
+						port: String(port),
+					},
+					headers: {},
+				},
+			})
+		).resolves.toBe(true);
+
+		const inFlight = proxyWorker.dispatchFetch("http://example.com/in-flight");
+		await vi.waitFor(() => expect(sockets.length).toBeGreaterThan(0));
+
+		// A reload pauses the proxy, so the failed request is requeued rather
+		// than reported, and then the next control request arrives empty.
+		await expect(
+			controller.sendMessageToProxyWorker({ type: "pause" })
+		).resolves.toBe(true);
+		const control = await proxyWorker.dispatchFetch(
+			"http://dummy/cdn-cgi/ProxyWorker/play",
+			{ headers: { Authorization: controller.secret } }
+		);
+		expect(control.status).toBe(400);
+
+		for (const socket of sockets) {
+			socket.destroy();
+		}
+
+		const response = await inFlight;
+		expect(response.status).toBe(503);
+		expect(await response.text()).toContain(
+			"https://github.com/oven-sh/bun/issues/39247"
+		);
 	});
 });
