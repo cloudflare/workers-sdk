@@ -132,6 +132,24 @@ function getLockFiles(packageManager: PackageManager): readonly string[] {
 		: packageManager.lockFiles;
 }
 
+async function findLockFileDirectory(
+	packageDirectory: string,
+	packageManager: PackageManager
+): Promise<string | undefined> {
+	let currentDirectory = packageDirectory;
+	while (true) {
+		if (await hasLockFile(currentDirectory, packageManager)) {
+			return currentDirectory;
+		}
+
+		const parentDirectory = path.dirname(currentDirectory);
+		if (parentDirectory === currentDirectory) {
+			return undefined;
+		}
+		currentDirectory = parentDirectory;
+	}
+}
+
 async function detectPackageManager(
 	packageDirectory: string
 ): Promise<DetectedPackageManager> {
@@ -144,7 +162,11 @@ async function detectPackageManager(
 			);
 			if (declared) {
 				return {
-					directory: currentDirectory,
+					directory:
+						(await findLockFileDirectory(
+							packageDirectory,
+							declared.packageManager
+						)) ?? currentDirectory,
 					...declared,
 				};
 			}
