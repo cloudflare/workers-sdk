@@ -279,7 +279,6 @@ describe("the real workspace", () => {
 			  [
 			    "@cloudflare/build-output-utils",
 			    "@cloudflare/cli-shared-helpers",
-			    "@cloudflare/codemods",
 			    "@cloudflare/pages-shared",
 			    "@cloudflare/runtime-types",
 			    "@cloudflare/workers-auth",
@@ -287,6 +286,7 @@ describe("the real workspace", () => {
 			  ],
 			  [
 			    "@cloudflare/autoconfig",
+			    "@cloudflare/codemods",
 			    "@cloudflare/containers-shared",
 			    "@cloudflare/vite-plugin",
 			    "@cloudflare/vitest-plugin",
