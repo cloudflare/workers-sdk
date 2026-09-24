@@ -1,4 +1,4 @@
-import { unlink, writeFile } from "node:fs/promises";
+import { open, unlink } from "node:fs/promises";
 
 /**
  * Writes generated migration files and removes files created by this invocation
@@ -13,8 +13,13 @@ export async function writeMigrationOutputs(
 
 	try {
 		for (const [filePath, contents] of outputs) {
-			await writeFile(filePath, contents, { flag: "wx" });
+			const file = await open(filePath, "wx");
 			createdFiles.push(filePath);
+			try {
+				await file.writeFile(contents);
+			} finally {
+				await file.close();
+			}
 		}
 	} catch (error) {
 		const cleanupResults = await Promise.allSettled(
