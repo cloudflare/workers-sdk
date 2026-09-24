@@ -1,4 +1,9 @@
-import type { CodemodFollowUp } from "./types";
+import type { CodemodFollowUp, CodemodResult } from "./types";
+
+/** Returns a failing exit code when a codemod requires manual intervention. */
+export function getCodemodExitCode(status: CodemodResult["status"]): 0 | 1 {
+	return status === "needs-intervention" ? 1 : 0;
+}
 
 /**
  * Formats migration follow-ups for terminal output.

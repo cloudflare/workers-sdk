@@ -2,7 +2,7 @@
 
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { formatFollowUps } from "./cli-output";
+import { formatFollowUps, getCodemodExitCode } from "./cli-output";
 import { availableCodemods, runCodemod } from "./runner";
 
 /** Prints command usage and the available codemods. */
@@ -94,6 +94,10 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 				? `Would update ${result.changedFiles.length} file(s).`
 				: `Updated ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`
 	);
+	const exitCode = getCodemodExitCode(result.status);
+	if (exitCode !== 0) {
+		process.exitCode = exitCode;
+	}
 }
 
 try {

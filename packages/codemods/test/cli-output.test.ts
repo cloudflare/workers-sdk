@@ -1,5 +1,16 @@
 import { describe, it } from "vitest";
-import { formatFollowUps } from "../src/cli-output";
+import { formatFollowUps, getCodemodExitCode } from "../src/cli-output";
+
+describe("getCodemodExitCode", () => {
+	it("fails when manual intervention is required", ({ expect }) => {
+		expect(getCodemodExitCode("needs-intervention")).toBe(1);
+	});
+
+	it("succeeds for complete and unspecified statuses", ({ expect }) => {
+		expect(getCodemodExitCode("complete")).toBe(0);
+		expect(getCodemodExitCode(undefined)).toBe(0);
+	});
+});
 
 describe("formatFollowUps", () => {
 	it("formats blocking and informational follow-ups", ({ expect }) => {
