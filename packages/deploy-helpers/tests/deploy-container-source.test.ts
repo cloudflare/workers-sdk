@@ -1,6 +1,8 @@
 import {
 	deployContainers,
+	InstanceType,
 	pushBuiltContainerImage,
+	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { beforeEach, describe, it, vi } from "vitest";
@@ -13,7 +15,7 @@ import type {
 } from "../src/shared/types";
 import type {
 	BuiltContainerImage,
-	ContainerNormalizedConfig,
+	DockerfileContainerConfig,
 } from "@cloudflare/containers-shared";
 import type {
 	ContainerApp,
@@ -78,23 +80,33 @@ describe("deploy container source", () => {
 		name: "sandbox",
 		class_name: "Sandbox",
 		dockerfile: "./Dockerfile",
-	} as ContainerNormalizedConfig;
+		image_build_context: ".",
+		max_instances: 1,
+		scheduling_policy: SchedulingPolicy.DEFAULT,
+		rollout_step_percentage: [100],
+		rollout_kind: "full_auto",
+		rollout_active_grace_period: 0,
+		instance_type: InstanceType.DEV,
+		constraints: {},
+		observability: { logs_enabled: false },
+	} satisfies DockerfileContainerConfig;
 	const builtImage = {
 		container: normalizedContainer,
 		localTag: "sandbox:local",
 	} satisfies BuiltContainerImage;
-	const fetchResult = vi.fn<FetchResultFetcher>();
-
-	beforeEach(() => {
-		vi.clearAllMocks();
-		fetchResult.mockResolvedValue({
+	const fetchResult = vi.fn(<ResponseType>() =>
+		Promise.resolve({
 			deployment_id: "00000000000000000000000000000001",
 			etag: null,
 			id: null,
 			mutable_pipeline_id: null,
 			pipeline_hash: null,
 			startup_time_ms: 0,
-		});
+		} as unknown as ResponseType)
+	) as FetchResultFetcher;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
 		vi.mocked(pushBuiltContainerImage).mockResolvedValue({
 			newTag: "sandbox:remote",
 		});
@@ -148,6 +160,7 @@ describe("deploy container source", () => {
 				format: "modules",
 				moduleRoot: ".",
 				projectRoot: ".",
+				exports: [],
 			},
 			env: undefined,
 			experimentalAutoCreate: false,
