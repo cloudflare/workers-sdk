@@ -26,7 +26,19 @@ interface PackageJson {
 	workspaces?: unknown;
 }
 
-type CfDependencyInstallResult = "complete" | "skipped-ancestor-package";
+type CfDependencyInstallPlan =
+	| {
+			action:
+				| "already-installed"
+				| "missing-manifest"
+				| "skipped-ancestor-package";
+	  }
+	| {
+			action: "install";
+			isWorkspaceRoot: boolean;
+			packageDirectory: string;
+			packageManager: PackageManager;
+	  };
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
@@ -103,18 +115,18 @@ async function detectPackageManager(
 }
 
 /**
- * Installs cf when the migrated project has a package manifest that lacks it.
+ * Plans cf dependency installation without modifying the project.
  *
  * @param projectDirectory Directory containing the Wrangler configuration.
  *
- * @returns Whether installation completed or an ancestor package was skipped.
+ * @returns The dependency action required by the migrated project.
  */
-export async function installCfDependency(
+export async function planCfDependencyInstallation(
 	projectDirectory: string
-): Promise<CfDependencyInstallResult> {
+): Promise<CfDependencyInstallPlan> {
 	const packageJsonPath = await findPackageJson(projectDirectory);
 	if (!packageJsonPath) {
-		return "complete";
+		return { action: "missing-manifest" };
 	}
 
 	const packageJson = await readPackageJson(packageJsonPath);
@@ -122,12 +134,12 @@ export async function installCfDependency(
 		packageJson.dependencies?.cf !== undefined ||
 		packageJson.devDependencies?.cf !== undefined
 	) {
-		return "complete";
+		return { action: "already-installed" };
 	}
 
 	const packageDirectory = path.dirname(packageJsonPath);
 	if (packageDirectory !== projectDirectory) {
-		return "skipped-ancestor-package";
+		return { action: "skipped-ancestor-package" };
 	}
 
 	const packageManager = await detectPackageManager(packageDirectory);
@@ -135,11 +147,27 @@ export async function installCfDependency(
 		packageJson.workspaces !== undefined ||
 		(await fileExists(path.join(packageDirectory, "pnpm-workspace.yaml")));
 
+	return {
+		action: "install",
+		isWorkspaceRoot,
+		packageDirectory,
+		packageManager,
+	};
+}
+
+/**
+ * Installs cf using a dependency installation plan.
+ *
+ * @param plan Planned package manager invocation for the migrated project.
+ */
+export async function installCfDependency(
+	plan: Extract<CfDependencyInstallPlan, { action: "install" }>
+): Promise<void> {
+	const { isWorkspaceRoot, packageDirectory, packageManager } = plan;
+
 	await installPackages(packageManager.type, ["cf@latest"], {
 		cwd: packageDirectory,
 		dev: true,
 		isWorkspaceRoot,
 	});
-
-	return "complete";
 }

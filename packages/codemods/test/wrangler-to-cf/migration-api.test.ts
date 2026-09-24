@@ -104,26 +104,39 @@ describe("migrateWranglerToCf", () => {
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 	});
 
-	it("does not install into an ancestor package", async ({ expect }) => {
-		const cwd = await createProject({
-			"package.json": JSON.stringify({ name: "parent-project" }),
-			"worker/wrangler.json": JSON.stringify({
-				compatibility_date: "2026-09-23",
-				name: "example-worker",
-			}),
-		});
+	it("reports skipped ancestor installation in writes and dry runs", async ({
+		expect,
+	}) => {
+		function createNestedProject(): Promise<string> {
+			return createProject({
+				"package.json": JSON.stringify({ name: "parent-project" }),
+				"worker/wrangler.json": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					name: "example-worker",
+				}),
+			});
+		}
+		const [writeCwd, dryRunCwd] = await Promise.all([
+			createNestedProject(),
+			createNestedProject(),
+		]);
 
-		const result = await migrateWranglerToCf(
-			path.join(cwd, "worker/wrangler.json")
-		);
+		const [writeResult, dryRunResult] = await Promise.all([
+			migrateWranglerToCf(path.join(writeCwd, "worker/wrangler.json")),
+			migrateWranglerToCf(path.join(dryRunCwd, "worker/wrangler.json"), {
+				dryRun: true,
+			}),
+		]);
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
-		expect(result).toMatchObject({
-			followUps: [{ blocking: true, code: "cf-install-skipped" }],
-			status: "needs-intervention",
-		});
+		for (const result of [writeResult, dryRunResult]) {
+			expect(result).toMatchObject({
+				followUps: [{ blocking: true, code: "cf-install-skipped" }],
+				status: "needs-intervention",
+			});
+		}
 		await expect(
-			readFile(path.join(cwd, "worker/cloudflare.config.ts"), "utf8")
+			readFile(path.join(writeCwd, "worker/cloudflare.config.ts"), "utf8")
 		).resolves.toContain(
 			"An ancestor package.json was found, but it was not modified"
 		);

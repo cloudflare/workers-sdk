@@ -9,7 +9,10 @@ import {
 } from "./config-renderer";
 import { rewriteMigrationOutput, writeMigrationOutputs } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
-import { findPackageJson, installCfDependency } from "./install-dependencies";
+import {
+	installCfDependency,
+	planCfDependencyInstallation,
+} from "./install-dependencies";
 import { assertCompatibleWranglerVersion } from "./wrangler-version";
 import type {
 	MigrationFollowUp,
@@ -73,11 +76,22 @@ export async function migrateWranglerToCf(
 		bundler,
 		secretFiles
 	);
-	if (installDependencies && !(await findPackageJson(projectDirectory))) {
+	const dependencyPlan = installDependencies
+		? await planCfDependencyInstallation(projectDirectory)
+		: undefined;
+	if (dependencyPlan?.action === "missing-manifest") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-missing-manifest",
 				"No package.json was found. Create or locate the package that owns this Worker, then install `cf@latest` as a dev dependency before using the generated configuration."
+			)
+		);
+	}
+	if (dependencyPlan?.action === "skipped-ancestor-package") {
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"cf-install-skipped",
+				"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
 			)
 		);
 	}
@@ -102,16 +116,10 @@ export async function migrateWranglerToCf(
 	}
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
-		if (installDependencies) {
+		if (dependencyPlan?.action === "install") {
 			let dependencyFollowUp: MigrationFollowUp | undefined;
 			try {
-				const installResult = await installCfDependency(projectDirectory);
-				if (installResult === "skipped-ancestor-package") {
-					dependencyFollowUp = createFollowUp(
-						"cf-install-skipped",
-						"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
-					);
-				}
+				await installCfDependency(dependencyPlan);
 			} catch (error) {
 				const reason =
 					error instanceof Error
