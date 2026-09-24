@@ -1,5 +1,5 @@
 import path from "node:path";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { assert, describe, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
