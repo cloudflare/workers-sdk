@@ -1226,7 +1226,6 @@ test("enqueues more undelayed messages than workerd's active timeout limit", asy
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
