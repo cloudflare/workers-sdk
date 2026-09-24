@@ -302,7 +302,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(worker?.config.name).toBe("worker-development");
 	});
 
-	test("passes Preview build context from the environment", async ({
+	test("sets ctx.isPreview from CLOUDFLARE_PREVIEW_BUILD", async ({
 		expect,
 	}) => {
 		vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", "true");

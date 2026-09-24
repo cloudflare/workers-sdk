@@ -3,6 +3,6 @@
 "wrangler": minor
 ---
 
-Support Preview builds through `CLOUDFLARE_PREVIEW_BUILD` environment variable when using the experimental config
+Allow framework commands to produce Preview Build Output with the experimental config
 
-Framework-owned build commands can now preserve Preview build context while producing Cloudflare Build Output. The internal Vite and Wrangler delegates consume the same environment variable instead of requiring a delegate-specific `--preview` flag.
+When `cf previews deploy` invokes a framework build command, Preview intent is now preserved. Function-based `cloudflare.config.ts` files receive `isPreview: true`, and generated Build Output is marked as a Preview build.
