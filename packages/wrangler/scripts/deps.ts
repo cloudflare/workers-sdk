@@ -8,9 +8,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Wrangler depends on a pinned version of esbuild.
 	"esbuild",
 
-	// This blows up when bundled, and has WASM dependencies. Wrangler depends on a pinned version.
-	"blake3-wasm",
-
 	// Wrangler depends on a pinned version of Miniflare.
 	"miniflare",
 
