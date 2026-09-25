@@ -23,12 +23,12 @@ describe("getCodemodSummary", () => {
 			getCodemodSummary(
 				{
 					changedFiles: [],
-					message: "wrangler.json is excluded by --files.",
+					message: "wrangler.json does not match any --files pattern.",
 					status: "skipped",
 				},
 				false
 			)
-		).toBe("Skipped: wrangler.json is excluded by --files.");
+		).toBe("Skipped: wrangler.json does not match any --files pattern.");
 	});
 
 	it("omits install instructions when dependencies are ready", ({ expect }) => {

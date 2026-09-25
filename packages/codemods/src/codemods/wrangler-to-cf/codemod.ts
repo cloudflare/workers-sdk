@@ -58,7 +58,7 @@ export const wranglerToCfCodemod: Codemod = {
 				message: `${path
 					.relative(context.cwd, configPath)
 					.split(path.sep)
-					.join(path.posix.sep)} is excluded by --files.`,
+					.join(path.posix.sep)} does not match any --files pattern.`,
 				status: "skipped",
 			};
 		}
