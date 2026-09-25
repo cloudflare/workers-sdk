@@ -43,6 +43,10 @@
 			"import": "./dist/compatibility-date.mjs",
 			"types": "./dist/compatibility-date.d.mts"
 		},
+		"./decorators": {
+			"import": "./dist/decorators.mjs",
+			"types": "./dist/decorators.d.mts"
+		},
 		"./docker-path": {
 			"import": "./dist/docker-path.mjs",
 			"types": "./dist/docker-path.d.mts"
@@ -92,6 +96,7 @@
 		"concurrently": "^8.2.2",
 		"dotenv-expand": "13.0.0",
 		"empathic": "^2.0.0",
+		"esbuild": "catalog:default",
 		"jsonc-parser": "catalog:default",
 		"minimatch": "^5.1.0",
 		"open": "catalog:default",
@@ -107,9 +112,13 @@
 		"zod": "catalog:default"
 	},
 	"peerDependencies": {
+		"esbuild": "catalog:default",
 		"vitest": "^4.1.0"
 	},
 	"peerDependenciesMeta": {
+		"esbuild": {
+			"optional": true
+		},
 		"vitest": {
 			"optional": true
 		}
