@@ -14,13 +14,13 @@ export function clearAccessCaches(): void {
 }
 
 export async function domainUsesAccess(domain: string): Promise<boolean> {
-	return packageDomainUsesAccess(logger, domain);
+	return packageDomainUsesAccess(domain, logger);
 }
 
 export async function getAccessHeaders(
 	domain: string,
-	previewToken?: string,
-	signal?: AbortSignal
+	signal?: AbortSignal,
+	previewToken?: string
 ): Promise<Record<string, string>> {
 	return packageGetAccessHeaders(domain, {
 		logger,

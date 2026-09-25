@@ -97,10 +97,10 @@ describe("access", () => {
 			expect,
 		}) => {
 			expect(
-				await domainUsesAccess(silentLogger, "access-protected.com")
+				await domainUsesAccess("access-protected.com", silentLogger)
 			).toBeTruthy();
 			expect(
-				await domainUsesAccess(silentLogger, "not-access-protected.com")
+				await domainUsesAccess("not-access-protected.com", silentLogger)
 			).toBeFalsy();
 		});
 
@@ -114,7 +114,7 @@ describe("access", () => {
 			// `getAccessHeaders` must check the env vars before calling
 			// `domainUsesAccess`.
 			expect(
-				await domainUsesAccess(silentLogger, "access-service-auth-only.com")
+				await domainUsesAccess("access-service-auth-only.com", silentLogger)
 			).toBeFalsy();
 		});
 
@@ -141,12 +141,12 @@ describe("access", () => {
 			);
 
 			expect(
-				await domainUsesAccess(silentLogger, "unpublished.workers.dev")
+				await domainUsesAccess("unpublished.workers.dev", silentLogger)
 			).toBeFalsy();
 			expect(
 				await domainUsesAccess(
-					silentLogger,
 					"unpublished.workers.dev",
+					silentLogger,
 					"preview-token"
 				)
 			).toBeTruthy();

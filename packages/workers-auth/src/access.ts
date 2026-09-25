@@ -45,8 +45,8 @@ export function clearAccessCaches(): void {
  * anonymous probes of the same host don't poison each other.
  */
 export async function domainUsesAccess(
-	logger: OAuthFlowLogger,
 	domain: string,
+	logger: OAuthFlowLogger,
 	previewToken?: string
 ): Promise<boolean> {
 	logger.debug("Checking if domain has Access enabled:", domain);
@@ -155,7 +155,7 @@ export async function getAccessHeaders(
 		);
 	}
 
-	if (!(await domainUsesAccess(logger, domain, options.previewToken))) {
+	if (!(await domainUsesAccess(domain, logger, options.previewToken))) {
 		return {};
 	}
 	logger.debug("Getting Access headers for domain:", domain);

@@ -312,7 +312,7 @@ export async function fetchAuthToken(
 		"fetching auth token",
 		`grant_type=${body.get("grant_type") ?? "<unknown>"}`
 	);
-	if (await domainUsesAccess(logger, getAuthDomainFromEnv())) {
+	if (await domainUsesAccess(getAuthDomainFromEnv(), logger)) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the auth request"
 		);

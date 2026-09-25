@@ -211,7 +211,7 @@ async function buildDeviceAuthHeaders(
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
 	};
-	if (await domainUsesAccess(logger, getAuthDomainFromEnv())) {
+	if (await domainUsesAccess(getAuthDomainFromEnv(), logger)) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the device authorization request"
 		);
