@@ -181,6 +181,48 @@ describe("resolveAndParseConfig", () => {
 		}
 	});
 
+	it("resolves a Worker reference in a Workflow binding", async ({
+		expect,
+	}) => {
+		const workflowWorker = defineWorker({
+			name: "workflow-worker",
+			compatibilityDate,
+			exports: {
+				GreetingWorkflow: workerExports.workflow({ name: "greeting" }),
+			},
+		});
+		const config = defineConfig({
+			worker: defineWorker({
+				name: "web",
+				compatibilityDate,
+				env: {
+					GREETING: bindings.workflow({
+						name: "greeting",
+						worker: workflowWorker,
+						exportName: "GreetingWorkflow",
+					}),
+				},
+			}),
+		});
+
+		const result = await resolveAndParseConfig(config, {
+			isPreview: false,
+			mode: undefined,
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.worker?.env).toMatchObject({
+				GREETING: {
+					type: "workflow",
+					name: "greeting",
+					worker: "workflow-worker",
+					exportName: "GreetingWorkflow",
+				},
+			});
+		}
+	});
+
 	it("allows a cross-project Worker factory to use an explicit context", async ({
 		expect,
 	}) => {

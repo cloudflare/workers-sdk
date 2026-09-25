@@ -20,6 +20,7 @@ import {
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowBindingSchema,
 	WorkflowExportSchema,
 	TailConsumerSchema,
 	validateSingletonBindings,
@@ -204,11 +205,7 @@ const HelloWorldBindingSchema = z.strictObject({
 	enable_timer: z.boolean().optional(),
 });
 
-const MiniflareWorkflowBindingSchema = z.strictObject({
-	type: z.literal("workflow"),
-	name: z.string(),
-	worker: z.string(),
-	exportName: z.string(),
+const MiniflareWorkflowBindingSchema = WorkflowBindingSchema.extend({
 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
 });
 
@@ -219,6 +216,7 @@ const OVERRIDDEN_BASE_BINDING_SCHEMAS = [
 	BrowserBindingSchema,
 	WorkerBindingSchema,
 	HyperdriveBindingSchema,
+	WorkflowBindingSchema,
 ] as const;
 
 // `Array.prototype.filter` removes the overridden base schemas at runtime, but

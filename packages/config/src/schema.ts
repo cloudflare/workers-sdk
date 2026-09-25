@@ -35,6 +35,13 @@ export const WorkerBindingSchema = z.strictObject({
 	dev: RemoteBindingDevSchema.optional(),
 });
 
+export const WorkflowBindingSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	worker: z.string(),
+	exportName: z.string(),
+});
+
 export const D1BindingSchema = z.strictObject({
 	type: z.literal("d1"),
 	name: z.string().optional(),
@@ -230,12 +237,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		),
 	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	worker: z.string(),
-	// 	exportName: z.string(),
-	// }),
+	WorkflowBindingSchema,
 ]);
 
 export const UnsafeBindingSchema = z.looseObject({

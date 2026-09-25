@@ -293,6 +293,29 @@ describe("InputWorkerSchema", () => {
 		});
 	});
 
+	describe("workflow bindings", () => {
+		const workflowBinding = {
+			type: "workflow",
+			name: "greeting",
+			worker: "workflow-worker",
+			exportName: "GreetingWorkflow",
+		} as const;
+
+		it("accepts a cross-Worker Workflow binding", ({ expect }) => {
+			expect(BindingSchema.safeParse(workflowBinding).success).toBe(true);
+		});
+
+		it.for(["name", "worker", "exportName"] as const)(
+			"requires %s",
+			(field, { expect }) => {
+				const binding: Record<string, unknown> = { ...workflowBinding };
+				delete binding[field];
+
+				expect(BindingSchema.safeParse(binding).success).toBe(false);
+			}
+		);
+	});
+
 	describe("entrypoint", () => {
 		it("accepts a string entrypoint and passes it through unchanged", ({
 			expect,
