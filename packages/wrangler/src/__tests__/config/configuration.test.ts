@@ -105,6 +105,57 @@ describe("readConfig()", () => {
 	});
 });
 
+describe.each(["jsonc", "toml"])("Durable Object retry in %s", (configType) => {
+	runInTempDir();
+
+	it("preserves top-level and named-environment policies", ({ expect }) => {
+		const configPath = `wrangler.${configType}`;
+		writeWranglerConfig(
+			{
+				durable_objects: {
+					bindings: [
+						{
+							name: "MY_DO",
+							class_name: "MyDurableObject",
+							script_name: "do-worker",
+							retry: { max_attempts: 5, timeout_ms: 10_000 },
+						},
+					],
+				},
+				env: {
+					staging: {
+						durable_objects: {
+							bindings: [
+								{
+									name: "MY_DO",
+									class_name: "MyDurableObject",
+									script_name: "do-worker-staging",
+									retry: { max_attempts: 0 },
+								},
+							],
+						},
+					},
+					production: {},
+				},
+			},
+			configPath
+		);
+
+		expect(
+			readConfig({ config: configPath }).durable_objects.bindings[0].retry
+		).toEqual({ max_attempts: 5, timeout_ms: 10_000 });
+		expect(
+			readConfig({ config: configPath, env: "staging" }).durable_objects
+				.bindings[0].retry
+		).toEqual({ max_attempts: 0 });
+		// Durable Object bindings, and so their retry policies, are not inherited.
+		expect(
+			readConfig({ config: configPath, env: "production" }).durable_objects
+				.bindings
+		).toEqual([]);
+	});
+});
+
 describe("experimental_readRawConfig()", () => {
 	describe.each(["json", "jsonc", "toml"])(
 		`with %s config files`,

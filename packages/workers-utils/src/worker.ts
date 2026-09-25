@@ -1,6 +1,7 @@
 import type {
 	CacheOptions,
 	DurableObjectCodeUpdateStrategy,
+	DurableObjectRetryPolicy,
 	Exports,
 	LocalS3Credentials,
 	Observability,
@@ -197,6 +198,7 @@ export interface CfDurableObject {
 	class_name: string;
 	script_name?: string;
 	environment?: string;
+	retry?: DurableObjectRetryPolicy;
 }
 
 export interface CfWorkflow {

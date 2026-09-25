@@ -3009,6 +3009,18 @@ const validateDurableObjectBinding: ValidatorFn = (
 		isValid = false;
 	}
 
+	if (
+		"retry" in value &&
+		value.retry !== undefined &&
+		!validateDurableObjectRetryPolicy(
+			diagnostics,
+			`${field}.retry`,
+			value.retry
+		)
+	) {
+		isValid = false;
+	}
+
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
@@ -3017,11 +3029,67 @@ const validateDurableObjectBinding: ValidatorFn = (
 		"class_name",
 		"environment",
 		"name",
+		"retry",
 		"script_name",
 	]);
 
 	return isValid;
 };
+
+/**
+ * Validate a Durable Object binding's `retry` policy against the limits the
+ * runtime and API accept. Unknown properties are errors, matching the API.
+ *
+ * @param diagnostics - Collector for validation errors.
+ * @param field - Config path of the `retry` field, used in error messages.
+ * @param value - The raw `retry` value.
+ * @returns `true` when the policy is valid.
+ */
+function validateDurableObjectRetryPolicy(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): boolean {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`Expected "${field}" to be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const retry = value as Record<string, unknown>;
+	let isValid = true;
+	for (const [name, minimum, maximum] of [
+		["max_attempts", 0, 10],
+		["timeout_ms", 500, 60_000],
+	] as const) {
+		const limit = retry[name];
+		if (
+			limit !== undefined &&
+			(typeof limit !== "number" ||
+				!Number.isInteger(limit) ||
+				limit < minimum ||
+				limit > maximum)
+		) {
+			diagnostics.errors.push(
+				`"${field}.${name}" must be an integer between ${minimum} and ${maximum}, but got ${JSON.stringify(limit)}.`
+			);
+			isValid = false;
+		}
+	}
+
+	const unexpectedFields = Object.keys(retry).filter(
+		(key) => key !== "max_attempts" && key !== "timeout_ms"
+	);
+	if (unexpectedFields.length > 0) {
+		diagnostics.errors.push(
+			`Unexpected fields found in ${field} field: ${unexpectedFields.map((key) => `"${key}"`).join(", ")}`
+		);
+		isValid = false;
+	}
+
+	return isValid;
+}
 
 const workflowNameFormatMessage = `Workflow names must be 1-64 characters long, start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or hyphens.`;
 

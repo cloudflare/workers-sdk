@@ -2058,6 +2058,92 @@ describe("normalizeAndValidateConfig()", () => {
 					    - binding should have a "script_name" field if "environment" is present."
 				`);
 			});
+
+			it("should not add a retry policy when it is omitted", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects.bindings[0]).not.toHaveProperty("retry");
+			});
+
+			it.for([
+				{},
+				{ max_attempts: 5 },
+				{ timeout_ms: 10_000 },
+				{ max_attempts: 0 },
+				{ max_attempts: 0, timeout_ms: 500 },
+				{ max_attempts: 10, timeout_ms: 60_000 },
+			])("should preserve the valid retry policy %o", (retry, { expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [
+								{ name: "MY_DO", class_name: "MyDurableObject", retry },
+							],
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects.bindings[0].retry).toEqual(retry);
+			});
+
+			it.for([
+				[null, 'Expected "durable_objects.bindings[0].retry" to be an object'],
+				[false, 'Expected "durable_objects.bindings[0].retry" to be an object'],
+				[[], 'Expected "durable_objects.bindings[0].retry" to be an object'],
+				[
+					{ max_attempts: -1 },
+					'"durable_objects.bindings[0].retry.max_attempts" must be an integer between 0 and 10, but got -1.',
+				],
+				[{ max_attempts: 11 }, "retry.max_attempts"],
+				[{ max_attempts: 1.5 }, "retry.max_attempts"],
+				[{ max_attempts: "5" }, "retry.max_attempts"],
+				[{ timeout_ms: -1 }, "retry.timeout_ms"],
+				[{ timeout_ms: 0 }, "retry.timeout_ms"],
+				[
+					{ timeout_ms: 499 },
+					'"durable_objects.bindings[0].retry.timeout_ms" must be an integer between 500 and 60000, but got 499.',
+				],
+				[{ timeout_ms: 60_001 }, "retry.timeout_ms"],
+				[{ timeout_ms: 1.5 }, "retry.timeout_ms"],
+				[{ timeout_ms: "10000" }, "retry.timeout_ms"],
+				[
+					{ enabled: true },
+					'Unexpected fields found in durable_objects.bindings[0].retry field: "enabled"',
+				],
+			] as const)(
+				"should reject the invalid retry policy %o",
+				([retry, expectedError], { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							durable_objects: {
+								bindings: [
+									{ name: "MY_DO", class_name: "MyDurableObject", retry },
+								],
+							},
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(expectedError);
+				}
+			);
 		});
 
 		describe("[migrations]", () => {
