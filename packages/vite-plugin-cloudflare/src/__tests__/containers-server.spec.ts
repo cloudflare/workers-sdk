@@ -70,52 +70,51 @@ describe.each(["dev", "preview"] as const)(
 		});
 
 		if (mode === "dev") {
-			test("retries pending cleanup on close after a config reload removes the Cloudflare plugin", async ({
-				expect,
-				onTestFinished,
-			}) => {
-				fs.writeFileSync(
-					"index.js",
-					`import { DurableObject } from "cloudflare:workers";
+			test.for(["single", "concurrent"] as const)(
+				"retries pending cleanup once on close after %s restart removes the Cloudflare plugin",
+				async (restartMode, { expect, onTestFinished }) => {
+					fs.writeFileSync(
+						"index.js",
+						`import { DurableObject } from "cloudflare:workers";
 export class Probe extends DurableObject {}
 export default { fetch() { return new Response("ready"); } };`
-				);
-				fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-				fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-				fs.writeFileSync(
-					"wrangler.jsonc",
-					JSON.stringify({
-						name: "container-cleanup-plugin-removal-test",
-						main: "index.js",
-						compatibility_date: "2026-09-21",
-						containers: [
-							{
-								class_name: "Probe",
-								scheduling_policy: "durable_object",
-								images: { app: { dockerfile: "./Dockerfile" } },
+					);
+					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
+					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
+					fs.writeFileSync(
+						"wrangler.jsonc",
+						JSON.stringify({
+							name: "container-cleanup-plugin-removal-test",
+							main: "index.js",
+							compatibility_date: "2026-09-21",
+							containers: [
+								{
+									class_name: "Probe",
+									scheduling_policy: "durable_object",
+									images: { app: { dockerfile: "./Dockerfile" } },
+								},
+							],
+							durable_objects: {
+								bindings: [{ name: "PROBE", class_name: "Probe" }],
 							},
-						],
-						durable_objects: {
-							bindings: [{ name: "PROBE", class_name: "Probe" }],
-						},
-						migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-					})
-				);
-				const require = createRequire(import.meta.url);
-				const bridgePath = path.resolve("factory.cjs");
-				fs.writeFileSync(bridgePath, "module.exports = {};\n");
-				const bridge = require(bridgePath) as {
-					cloudflare: typeof cloudflare;
-					includeCloudflare: boolean;
-				};
-				bridge.cloudflare = cloudflare;
-				bridge.includeCloudflare = true;
-				onTestFinished(() => {
-					delete require.cache[bridgePath];
-				});
-				fs.writeFileSync(
-					"vite.config.mjs",
-					`
+							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
+						})
+					);
+					const require = createRequire(import.meta.url);
+					const bridgePath = path.resolve("factory.cjs");
+					fs.writeFileSync(bridgePath, "module.exports = {};\n");
+					const bridge = require(bridgePath) as {
+						cloudflare: typeof cloudflare;
+						includeCloudflare: boolean;
+					};
+					bridge.cloudflare = cloudflare;
+					bridge.includeCloudflare = true;
+					onTestFinished(() => {
+						delete require.cache[bridgePath];
+					});
+					fs.writeFileSync(
+						"vite.config.mjs",
+						`
 import { createRequire } from "node:module";
 const bridge = createRequire(import.meta.url)("./factory.cjs");
 export default {
@@ -124,48 +123,57 @@ export default {
     : [],
 };
 `
-				);
-				const initialExitListeners = new Set(process.listeners("exit"));
-				const server = await createServer({
-					configFile: path.resolve("vite.config.mjs"),
-					logLevel: "silent",
-					server: { port: 0 },
-				});
-				onTestFinished(async () => {
-					await server.close();
-					vi.mocked(cleanupContainers).mockReturnValue(true);
-					for (const listener of process.listeners("exit")) {
-						if (
-							!initialExitListeners.has(listener) &&
-							listener.name === "cleanupContainerImages"
-						) {
-							listener(0);
+					);
+					const initialExitListeners = new Set(process.listeners("exit"));
+					const server = await createServer({
+						configFile: path.resolve("vite.config.mjs"),
+						logLevel: "silent",
+						server: { port: 0 },
+					});
+					onTestFinished(async () => {
+						await server.close();
+						vi.mocked(cleanupContainers).mockReturnValue(true);
+						for (const listener of process.listeners("exit")) {
+							if (
+								!initialExitListeners.has(listener) &&
+								listener.name === "cleanupContainerImages"
+							) {
+								listener(0);
+							}
 						}
+					});
+					await server.listen();
+					const pendingTags = new Set(
+						vi
+							.mocked(prepareContainerImagesForDev)
+							.mock.calls[0]?.[0].containerOptions.map(
+								({ image_tag }) => image_tag
+							)
+					);
+					expect(pendingTags.size).toBeGreaterThan(0);
+					if (restartMode === "concurrent") {
+						vi.mocked(cleanupContainers).mockReturnValue(false);
+					} else {
+						vi.mocked(cleanupContainers).mockReturnValueOnce(false);
 					}
-				});
-				await server.listen();
-				const pendingTags = new Set(
-					vi
-						.mocked(prepareContainerImagesForDev)
-						.mock.calls[0]?.[0].containerOptions.map(
-							({ image_tag }) => image_tag
-						)
-				);
-				expect(pendingTags.size).toBeGreaterThan(0);
-				vi.mocked(cleanupContainers).mockReturnValueOnce(false);
-				bridge.includeCloudflare = false;
-				await server.restart();
-				expect(cleanupContainers).toHaveBeenCalledExactlyOnceWith(
-					expect.any(String),
-					pendingTags
-				);
-				await server.close();
-				expect(cleanupContainers).toHaveBeenCalledTimes(2);
-				expect(cleanupContainers).toHaveBeenLastCalledWith(
-					expect.any(String),
-					pendingTags
-				);
-			});
+					bridge.includeCloudflare = false;
+					if (restartMode === "concurrent") {
+						await Promise.all([server.restart(), server.restart()]);
+					} else {
+						await server.restart();
+					}
+					expect(cleanupContainers).toHaveBeenCalledExactlyOnceWith(
+						expect.any(String),
+						pendingTags
+					);
+					await server.close();
+					expect(cleanupContainers).toHaveBeenCalledTimes(2);
+					expect(cleanupContainers).toHaveBeenLastCalledWith(
+						expect.any(String),
+						pendingTags
+					);
+				}
+			);
 			test.for(["configured", "absent"] as const)(
 				"keeps dependency optimizer hashes stable on the first restart with Containers %s",
 				async (scenario, { expect, onTestFinished }) => {
