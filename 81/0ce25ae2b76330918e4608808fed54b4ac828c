@@ -1,0 +1,49 @@
+.changeset/quiet-durable-retries.md
+  s_bf1ef2329fbd5a::t_582aaca9cd6941 12
+packages/wrangler/src/__tests__/deploy/build.test.ts
+  s_bf1ef2329fbd5a::t_66dc2004d40699 103-148
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_bf1ef2329fbd5a::t_1cd426d449e080 1940,1942-1943,1977-1980,1982
+packages/workers-utils/tests/map-worker-metadata-bindings.test.ts
+  s_bf1ef2329fbd5a::t_e6658feb8ce4ae 86,97
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_bf1ef2329fbd5a::t_07810abd131f20 44,51
+packages/wrangler/src/__tests__/config-validation-pages.test.ts
+  s_bf1ef2329fbd5a::t_a055d126b3cd1f 306,329,336
+packages/wrangler/src/__tests__/config/configuration.test.ts
+  s_bf1ef2329fbd5a::t_3cc4df6c5e6053 121,134,147,151
+packages/wrangler/src/__tests__/create-worker-upload-form/bindings.test.ts
+  s_bf1ef2329fbd5a::t_6b25de8651a82e 187,197
+packages/wrangler/src/__tests__/deploy/bindings.test.ts
+  s_bf1ef2329fbd5a::t_001035138f02d1 1439,1461
+packages/wrangler/src/__tests__/preview.test.ts
+  s_bf1ef2329fbd5a::t_d5ad1bc031b278 676,687
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_bf1ef2329fbd5a::t_5feca5120046ad 1903,1967
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_e6ef9db3485b14::t_86f819e0bf7540 1256,1287,1308-1310
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "810ce25ae2b76330918e4608808fed54b4ac828c",
+  "prompts": {},
+  "sessions": {
+    "s_bf1ef2329fbd5a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f853bc28bffe5fdudebM6gGEQz",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_e6ef9db3485b14": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f940fb7bdffeOOke2jjtQ9MxFI",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}
