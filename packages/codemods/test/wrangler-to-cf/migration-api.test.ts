@@ -71,6 +71,17 @@ afterEach(async () => {
 });
 
 describe("migrateWranglerToCf", () => {
+	it("rejects unsupported bundlers", async ({ expect }) => {
+		await expect(
+			migrateWranglerToCf("wrangler.json", {
+				// @ts-expect-error Verifies runtime validation for JavaScript callers.
+				bundler: "esbuild",
+			})
+		).rejects.toThrow(
+			'Unsupported bundler "esbuild". Expected "vite" or "wrangler".'
+		);
+	});
+
 	it("installs cf with the detected package manager", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": JSON.stringify({

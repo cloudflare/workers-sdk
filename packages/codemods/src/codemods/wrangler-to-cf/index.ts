@@ -60,6 +60,11 @@ export async function migrateWranglerToCf(
 		force = false,
 		installDependencies = true,
 	} = options;
+	if (bundler !== "vite" && bundler !== "wrangler") {
+		throw new Error(
+			`Unsupported bundler "${String(bundler)}". Expected "vite" or "wrangler".`
+		);
+	}
 
 	const absoluteConfigPath = path.resolve(configPath);
 	const projectDirectory = path.dirname(absoluteConfigPath);
