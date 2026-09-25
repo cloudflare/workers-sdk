@@ -47,6 +47,13 @@ export type DurableObjectClassNames = Map<
 	>
 >;
 
+// Maps the names of Workflows declared in a Worker's `exports` to the Worker
+// and class that define them
+export type WorkflowExporters = Map<
+	/* workflowName */ string,
+	{ workerName: string; className: string; stepLimit?: number }
+>;
+
 // Maps queue names to producer worker options.
 export type QueueProducers = Map<string, z.infer<typeof QueueProducerSchema>>;
 
@@ -71,6 +78,7 @@ export interface PluginServicesOptions {
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	durableObjectClassNames: DurableObjectClassNames;
 	unsafeEphemeralDurableObjects: boolean;
+	workflowExporters: WorkflowExporters;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
 	// True when the dev registry is enabled, i.e. workers in other dev

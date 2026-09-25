@@ -92,7 +92,19 @@ export type Worker = (
 	containerEngine?: Worker_ContainerEngine;
 	accessBlobHeader?: string;
 	accessBindingService?: ServiceDesignator;
+	workflowsEngine?: WorkflowsEngine;
 };
+
+export interface WorkflowsEngine {
+	actorClass?: ServiceDesignator;
+	workflows?: WorkflowsEngine_Workflow[];
+}
+
+export interface WorkflowsEngine_Workflow {
+	className?: string;
+	name?: string;
+	bindingService?: ServiceDesignator;
+}
 
 export type Worker_DurableObjectStorage =
 	| { none?: Void }

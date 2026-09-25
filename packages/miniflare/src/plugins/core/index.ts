@@ -54,6 +54,10 @@ import {
 } from "../shared";
 import { getStreamService } from "../stream";
 import {
+	getWorkflowBindingServiceName,
+	getWorkflowsEngineServiceName,
+} from "../workflows";
+import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
 	EMAIL_STORE_SERVICE_NAME,
@@ -96,6 +100,7 @@ import type {
 	ParsedMiniflareWorkerConfig,
 	ParsedWorkerOptions,
 	Plugin,
+	WorkflowExporters,
 	WorkflowOption,
 } from "../shared";
 import type { BindingIdMap } from "./types";
@@ -530,6 +535,7 @@ export const CORE_PLUGIN: Plugin = {
 		const containerPrivileges = hasContainers
 			? await containerPrivilegesCache.get(containerEngine)
 			: undefined;
+		const exportedWorkflows = getExportsOfType(config, "workflow");
 
 		// Wrap Durable Object classes for the local explorer
 		// This injects a method onto user defined DO classes to allow
@@ -644,6 +650,23 @@ export const CORE_PLUGIN: Plugin = {
 							},
 						}
 					: {}),
+				workflowsEngine:
+					exportedWorkflows.length === 0
+						? undefined
+						: {
+								actorClass: {
+									name: getWorkflowsEngineServiceName(config.name),
+									entrypoint: "Engine",
+								},
+								workflows: exportedWorkflows.map(([className, workflow]) => ({
+									className,
+									name: workflow.name,
+									bindingService: {
+										name: getWorkflowBindingServiceName(workflow.name),
+										entrypoint: "WorkflowBinding",
+									},
+								})),
+							},
 			},
 		});
 
@@ -739,6 +762,7 @@ export interface GlobalServicesOptions {
 	proxyBindings: Worker_Binding[];
 	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
 	durableObjectClassNames: DurableObjectClassNames;
+	workflowExporters: WorkflowExporters;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: ParsedWorkerOptions[];
 }
@@ -750,6 +774,7 @@ export function getGlobalServices({
 	log,
 	proxyBindings,
 	durableObjectClassNames,
+	workflowExporters,
 	allWorkerOpts,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
@@ -987,6 +1012,7 @@ export function getGlobalServices({
 			allWorkerOpts ?? [],
 			proxyBindings,
 			durableObjectClassNames,
+			workflowExporters,
 			workflowOptions
 		);
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
@@ -1003,6 +1029,7 @@ export function getGlobalServices({
 				hasDurableObjects,
 				workerNames,
 				explorerWorkerOpts,
+				workflowExporters,
 				telemetry: sharedOptions.telemetry,
 				observabilityEnabled: sharedOptions.unsafeObservability === true,
 				sharedOptions,
