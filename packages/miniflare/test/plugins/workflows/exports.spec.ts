@@ -380,39 +380,77 @@ describe("Workflows on ctx.exports", () => {
 		]);
 	});
 
-	test("shows instances in the Local Explorer", async ({ expect }) => {
-		const mf = new Miniflare({
-			unsafeLocalExplorer: true,
-			workers: [
-				worker("exporter", {
-					exports: MY_WORKFLOW_EXPORT,
-					env: {
-						MY_WORKFLOW: {
-							type: "workflow",
-							name: "my-workflow",
-							worker: "exporter",
-							exportName: "MyWorkflow",
-						},
+	test.for([
+		{ label: "declared only in exports", bound: false },
+		{ label: "also bound in env", bound: true },
+	])(
+		"manages instances in the Local Explorer when $label",
+		async ({ bound }, { expect }) => {
+			const mf = new Miniflare({
+				unsafeLocalExplorer: true,
+				workers: [
+					worker("exporter", {
+						exports: MY_WORKFLOW_EXPORT,
+						env: bound
+							? {
+									MY_WORKFLOW: {
+										type: "workflow",
+										name: "my-workflow",
+										worker: "exporter",
+										exportName: "MyWorkflow",
+									},
+								}
+							: {},
+					}),
+				],
+			});
+			useDispose(mf);
+			const fetch: Fetch = (url) => mf.dispatchFetch(url);
+			const api = `${CorePaths.EXPLORER}/api/workflows`;
+
+			expect(await fetchJson(fetch, api)).toMatchObject({
+				success: true,
+				result: [
+					{
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "exporter",
 					},
-				}),
-			],
-		});
-		useDispose(mf);
-		const fetch: Fetch = (url) => mf.dispatchFetch(url);
+				],
+			});
 
-		await fetchJson(fetch, "/create?id=explorer");
-		await waitForStatus(fetch, "id=explorer", "complete");
+			const created = await mf.dispatchFetch(
+				`http://localhost${api}/my-workflow/instances`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ id: "from-explorer" }),
+				}
+			);
+			expect(await created.json()).toMatchObject({
+				success: true,
+				result: { id: "from-explorer" },
+			});
+			await fetchJson(fetch, "/create?id=from-worker");
+			await waitForStatus(fetch, "id=from-explorer", "complete");
+			await waitForStatus(fetch, "id=from-worker", "complete");
 
-		expect(
-			await fetchJson(
+			const listed = (await fetchJson(
 				fetch,
-				`${CorePaths.EXPLORER}/api/workflows/my-workflow/instances/explorer`
-			)
-		).toMatchObject({
-			success: true,
-			result: { status: "complete", output: ["step-0"] },
-		});
-	});
+				`${api}/my-workflow/instances`
+			)) as { result: { id: string }[] };
+			expect(listed.result.map(({ id }) => id).sort()).toEqual([
+				"from-explorer",
+				"from-worker",
+			]);
+			expect(
+				await fetchJson(fetch, `${api}/my-workflow/instances/from-explorer`)
+			).toMatchObject({
+				success: true,
+				result: { status: "complete", output: ["step-0"] },
+			});
+		}
+	);
 
 	test("rejects two Workers exporting the same Workflow", async ({
 		expect,

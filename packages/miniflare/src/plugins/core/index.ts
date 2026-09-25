@@ -1012,6 +1012,7 @@ export function getGlobalServices({
 			allWorkerOpts ?? [],
 			proxyBindings,
 			durableObjectClassNames,
+			workflowExporters,
 			workflowOptions
 		);
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
