@@ -186,12 +186,27 @@ export class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 	}
 
 	private async disposeInstanceIntrospectors(): Promise<void> {
+		const introspectors = Array.from(this.#instanceIntrospectors.values());
+		let firstError: unknown;
+		let failed = false;
 		try {
-			await Promise.all(
-				Array.from(this.#instanceIntrospectors.values(), (introspector) =>
-					introspector.dispose()
-				)
-			);
+			// Keep cleanup bounded even when a workflow recorded many instances.
+			for (let index = 0; index < introspectors.length; index += 32) {
+				const results = await Promise.allSettled(
+					introspectors
+						.slice(index, index + 32)
+						.map((introspector) => introspector.dispose())
+				);
+				for (const result of results) {
+					if (result.status === "rejected" && !failed) {
+						firstError = result.reason;
+						failed = true;
+					}
+				}
+			}
+			if (failed) {
+				throw firstError;
+			}
 		} finally {
 			this.#instanceIntrospectors.clear();
 		}
@@ -220,28 +235,31 @@ export class WorkflowIntrospectorHandle implements WorkflowIntrospector {
 }
 
 export class WorkflowInstanceIntrospectorHandle implements WorkflowInstanceIntrospector {
+	#disposed = false;
 	#instanceModifier: WorkflowInstanceModifier | undefined;
 	#instanceModifierPromise: Promise<WorkflowInstanceModifier> | undefined;
 
 	constructor(
 		private readonly workflow: WorkflowBinding,
 		private readonly instanceId: string
-	) {
-		this.#instanceModifierPromise = workflow
-			.unsafeGetInstanceModifier(instanceId)
-			.then((modifier) => {
-				this.#instanceModifier = modifier as WorkflowInstanceModifier;
-				this.#instanceModifierPromise = undefined;
-				return this.#instanceModifier;
-			});
-
-		// To avoid an unhandled rejection when the handle is used without modify()
-		void this.#instanceModifierPromise.catch(() => {});
-	}
+	) {}
 
 	async modify(fn: ModifierCallback): Promise<WorkflowInstanceIntrospector> {
-		if (this.#instanceModifierPromise !== undefined) {
+		if (this.#disposed) {
+			throw new Error("Workflow instance introspector has been disposed.");
+		}
+		if (this.#instanceModifier === undefined) {
+			this.#instanceModifierPromise ??= this.workflow
+				.unsafeGetInstanceModifier(this.instanceId)
+				.then((modifier) => {
+					this.#instanceModifier = modifier as WorkflowInstanceModifier;
+					this.#instanceModifierPromise = undefined;
+					return this.#instanceModifier;
+				});
 			this.#instanceModifier = await this.#instanceModifierPromise;
+		}
+		if (this.#disposed) {
+			throw new Error("Workflow instance introspector has been disposed.");
 		}
 		if (this.#instanceModifier === undefined) {
 			throw new Error(
@@ -283,6 +301,10 @@ export class WorkflowInstanceIntrospectorHandle implements WorkflowInstanceIntro
 
 	/** Keep this bound; explicit resource management may call the disposer unbound. */
 	dispose = async (): Promise<void> => {
+		if (this.#disposed) {
+			return;
+		}
+		this.#disposed = true;
 		await this.workflow.unsafeAbort(this.instanceId, "Instance dispose");
 	};
 
