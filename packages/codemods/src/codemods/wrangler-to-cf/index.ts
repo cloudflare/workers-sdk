@@ -111,7 +111,7 @@ export async function migrateWranglerToCf(
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-failed",
-				`The local package.json could not be read, so \`cf\` could not be installed automatically. Fix the manifest, then install \`cf@latest\` as a dev dependency before using the generated configuration.${reason}`
+				`The local package.json could not be read, so \`cf\` could not be installed automatically. Resolve the reported package.json error, then install \`cf@latest\` as a dev dependency before using the generated configuration.${reason}`
 			)
 		);
 	}

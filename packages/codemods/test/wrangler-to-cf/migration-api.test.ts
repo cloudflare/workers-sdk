@@ -598,9 +598,14 @@ describe("migrateWranglerToCf", () => {
 			});
 		}
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
-		await expect(
-			readFile(path.join(writeCwd, "cloudflare.config.ts"), "utf8")
-		).resolves.toContain("Package manifest error:");
+		const generatedConfig = await readFile(
+			path.join(writeCwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+		expect(generatedConfig).toContain(
+			"Resolve the reported package.json error"
+		);
+		expect(generatedConfig).toContain("Package manifest error:");
 		await expect(
 			readFile(path.join(dryRunCwd, "cloudflare.config.ts"), "utf8")
 		).rejects.toMatchObject({ code: "ENOENT" });
