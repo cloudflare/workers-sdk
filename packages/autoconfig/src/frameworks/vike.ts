@@ -5,7 +5,6 @@ import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
-import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
 import { isPackageInstalled } from "./utils/packages";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
@@ -30,12 +29,7 @@ export class Vike extends Framework {
 		isWorkspaceRoot,
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		if (target === "cf") {
-			throw new AutoConfigFrameworkConfigurationError(
-				`cf does not support automatic configuration for ${this.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
-				{ telemetryMessage: "autoconfig framework unsupported for cf" }
-			);
-		}
+		this.validateWranglerOnlyTarget(target);
 
 		const vikeServerIsInstalled = isPackageInstalled(
 			"vike-server",

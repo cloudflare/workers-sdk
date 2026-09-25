@@ -8,7 +8,6 @@ import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import dedent from "ts-dedent";
-import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import type {
@@ -28,12 +27,7 @@ export class Waku extends Framework {
 		isWorkspaceRoot,
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		if (target === "cf") {
-			throw new AutoConfigFrameworkConfigurationError(
-				`cf does not support automatic configuration for ${this.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
-				{ telemetryMessage: "autoconfig framework unsupported for cf" }
-			);
-		}
+		this.validateWranglerOnlyTarget(target);
 
 		if (!dryRun) {
 			await installPackages(packageManager.type, ["hono"], {
