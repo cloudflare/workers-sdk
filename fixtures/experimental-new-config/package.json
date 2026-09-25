@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"build": "wrangler build --x-new-config --x-cf-build-output",
-		"check:type": "pnpm run build && tsc --build",
+		"check:type": "tsc --build",
 		"deploy": "wrangler deploy --x-new-config",
 		"dev": "wrangler dev --x-new-config",
 		"test:ci": "vitest run",
