@@ -5,9 +5,25 @@ export default defineConfig(() => [
 	{
 		treeshake: true,
 		keepNames: true,
+		// Keep the browser export free of the Node-only banner used below.
+		entry: ["src/browser.ts"],
+		platform: "node",
+		format: "esm",
+		dts: true,
+		outDir: "dist",
+		tsconfig: "tsconfig.json",
+		metafile: true,
+		sourcemap: process.env.SOURCEMAPS !== "false",
+		define: {
+			"process.env.NODE_ENV": `'${"production"}'`,
+		},
+		external: ["@cloudflare/*", "vitest", ...EXTERNAL_DEPENDENCIES],
+	},
+	{
+		treeshake: true,
+		keepNames: true,
 		entry: [
 			"src/index.ts",
-			"src/browser.ts",
 			"src/prometheus-metrics.ts",
 			"src/test-helpers/index.ts",
 			// Leaf entry points let consumers bundle individual utilities without
@@ -22,6 +38,11 @@ export default defineConfig(() => [
 			"src/zod-format.ts",
 		],
 		platform: "node",
+		// Provide require for bundled CommonJS dependencies. The __filename
+		// fallback keeps the output working when it is rebundled to CommonJS.
+		banner: {
+			js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url || (typeof __filename === "string" ? __filename : "/"));',
+		},
 		format: "esm",
 		dts: true,
 		outDir: "dist",
