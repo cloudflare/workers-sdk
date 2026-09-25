@@ -1,12 +1,36 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { retryOnAPIFailure, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
+import { logger } from "../logger";
 import type {
 	Instance,
 	InstanceStatus,
 	InstanceTriggerName,
 	WorkflowInstanceRestartFrom,
 } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config, Logger } from "@cloudflare/workers-utils";
+
+/**
+ * Returns the logger to pass to `retryOnAPIFailure`.
+ *
+ * The retry helper reports `Retry-After` waits with `info`, which writes to
+ * stdout. Under `--json` those notices are sent to stderr instead, so stdout
+ * only ever carries the JSON payload.
+ *
+ * @param json whether the command is producing `--json` output
+ * @returns a logger that is safe to use alongside the command's output
+ */
+export function getRetryLogger(json: boolean | undefined): Logger {
+	if (!json) {
+		return logger;
+	}
+	return {
+		debug: logger.debug,
+		log: logger.warn,
+		info: logger.warn,
+		warn: logger.warn,
+		error: (...args: unknown[]) => logger.error(...args),
+	};
+}
 
 /**
  * Shared `--json` CLI arg for Workflows commands.
@@ -181,16 +205,20 @@ export function validateInstanceDate(
 
 export async function getInstanceIdFromArgs(
 	accountId: string,
-	args: { id: string; name: string },
+	args: { id: string; name: string; json?: boolean },
 	config: Config
 ) {
 	let id = args.id;
 
 	if (id == "latest") {
 		const instances = (
-			await fetchResult<Instance[]>(
-				config,
-				`/accounts/${accountId}/workflows/${args.name}/instances/`
+			await retryOnAPIFailure(
+				() =>
+					fetchResult<Instance[]>(
+						config,
+						`/accounts/${accountId}/workflows/${args.name}/instances/`
+					),
+				getRetryLogger(args.json)
 			)
 		).sort((a, b) => b.created_on.localeCompare(a.created_on));
 

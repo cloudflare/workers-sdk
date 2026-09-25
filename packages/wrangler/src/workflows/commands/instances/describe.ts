@@ -1,5 +1,6 @@
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { red, white } from "@cloudflare/cli-shared-helpers/colors";
+import { retryOnAPIFailure } from "@cloudflare/workers-utils";
 import {
 	addMilliseconds,
 	formatDistanceStrict,
@@ -21,6 +22,7 @@ import {
 	emojifyInstanceTriggerName,
 	emojifyStepType,
 	getInstanceIdFromArgs,
+	getRetryLogger,
 	jsonWorkflowArgs,
 } from "../../utils";
 import type {
@@ -85,9 +87,13 @@ export const workflowsInstancesDescribeCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			instance = await fetchResult<InstanceStatusAndLogs>(
-				config,
-				`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
+			instance = await retryOnAPIFailure(
+				() =>
+					fetchResult<InstanceStatusAndLogs>(
+						config,
+						`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
+					),
+				getRetryLogger(args.json)
 			);
 		}
 
