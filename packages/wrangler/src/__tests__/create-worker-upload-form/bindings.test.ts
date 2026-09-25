@@ -184,6 +184,7 @@ describe("createWorkerUploadForm — bindings", () => {
 					class_name: "MyDO",
 					script_name: "other-worker",
 					environment: "production",
+					retry: { max_attempts: 0, timeout_ms: 500 },
 				},
 			};
 			const form = createWorkerUploadForm(createEsmWorker(), bindings);
@@ -193,6 +194,7 @@ describe("createWorkerUploadForm — bindings", () => {
 				class_name: "MyDO",
 				script_name: "other-worker",
 				environment: "production",
+				retry: { max_attempts: 0, timeout_ms: 500 },
 			});
 		});
 
@@ -210,6 +212,7 @@ describe("createWorkerUploadForm — bindings", () => {
 			expect(doBinding).toBeDefined();
 			expect(doBinding?.script_name).toBeUndefined();
 			expect(doBinding?.environment).toBeUndefined();
+			expect(doBinding?.retry).toBeUndefined();
 		});
 	});
 

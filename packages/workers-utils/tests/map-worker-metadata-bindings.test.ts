@@ -83,6 +83,7 @@ describe("mapWorkerMetadataBindings", () => {
 					class_name: "MyDurableObject",
 					script_name: "my-worker",
 					environment: "production",
+					retry: { max_attempts: 0, timeout_ms: 500 },
 				},
 			];
 			const result = mapWorkerMetadataBindings(bindings);
@@ -93,6 +94,7 @@ describe("mapWorkerMetadataBindings", () => {
 						class_name: "MyDurableObject",
 						script_name: "my-worker",
 						environment: "production",
+						retry: { max_attempts: 0, timeout_ms: 500 },
 					},
 				],
 			});

@@ -1427,6 +1427,7 @@ describe("deploy", () => {
 							{
 								name: "EXAMPLE_DO_BINDING",
 								class_name: "ExampleDurableObject",
+								retry: { max_attempts: 5, timeout_ms: 10_000 },
 							},
 						],
 					},
@@ -1445,6 +1446,7 @@ describe("deploy", () => {
 						{
 							class_name: "ExampleDurableObject",
 							name: "EXAMPLE_DO_BINDING",
+							retry: { max_attempts: 5, timeout_ms: 10_000 },
 							type: "durable_object_namespace",
 						},
 					],

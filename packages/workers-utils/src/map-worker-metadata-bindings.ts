@@ -56,6 +56,7 @@ export function mapWorkerMetadataBindings(
 										class_name: binding.class_name,
 										script_name: binding.script_name,
 										environment: binding.environment,
+										retry: binding.retry,
 									},
 								],
 							};

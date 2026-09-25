@@ -41,6 +41,12 @@ type WranglerSchema = {
 				required?: string[];
 			}[];
 		};
+		DurableObjectRetryPolicy?: {
+			properties?: Record<
+				string,
+				{ type?: string; minimum?: number; maximum?: number }
+			>;
+		};
 	};
 };
 
@@ -133,5 +139,23 @@ describe("config schema", () => {
 		});
 		expect(registry?.properties).not.toHaveProperty("build_context");
 		expect(registry?.properties).not.toHaveProperty("build_vars");
+	});
+
+	it("describes Durable Object retry limits as bounded integers", ({
+		expect,
+	}) => {
+		const properties =
+			readSchema().definitions?.DurableObjectRetryPolicy?.properties;
+
+		expect(properties?.max_attempts).toMatchObject({
+			type: "integer",
+			minimum: 0,
+			maximum: 10,
+		});
+		expect(properties?.timeout_ms).toMatchObject({
+			type: "integer",
+			minimum: 500,
+			maximum: 60_000,
+		});
 	});
 });

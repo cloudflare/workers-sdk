@@ -244,15 +244,18 @@ export function createWorkerUploadForm(
 		}
 	});
 
-	durable_objects.forEach(({ name, class_name, script_name, environment }) => {
-		metadataBindings.push({
-			name,
-			type: "durable_object_namespace",
-			class_name: class_name,
-			...(script_name && { script_name }),
-			...(environment && { environment }),
-		});
-	});
+	durable_objects.forEach(
+		({ name, class_name, script_name, environment, retry }) => {
+			metadataBindings.push({
+				name,
+				type: "durable_object_namespace",
+				class_name: class_name,
+				...(script_name && { script_name }),
+				...(environment && { environment }),
+				...(retry && { retry }),
+			});
+		}
+	);
 
 	workflows.forEach(({ binding, name, class_name, script_name, raw }) => {
 		metadataBindings.push({
