@@ -56,6 +56,9 @@ const containerCleanupKey = Symbol("vite-plugin-cloudflare:container-cleanup");
 type InlineConfigWithCleanup = InlineConfig & {
 	[containerCleanupKey]?: ContainerCleanup;
 };
+type CloseWithCleanup = ViteDevServer["close"] & {
+	[containerCleanupKey]?: ContainerCleanup;
+};
 
 /**
  * Retains Container cleanup across config reloads for one server session.
@@ -84,6 +87,11 @@ function attachContainerCleanup(
 	server: ViteDevServer,
 	cleanup: ContainerCleanup
 ) {
+	// Vite replaces close on restart, so a marker on the function tracks the
+	// current server implementation without leaking to the replacement.
+	if ((server.close as CloseWithCleanup)[containerCleanupKey] === cleanup) {
+		return;
+	}
 	const restartServer = server.restart.bind(server);
 	server.restart = (...args) =>
 		cleanup.restart(async () => {
@@ -100,7 +108,7 @@ function attachContainerCleanup(
 		});
 
 	const closeServer = server.close.bind(server);
-	server.close = async () => {
+	const closeWithCleanup: CloseWithCleanup = async () => {
 		try {
 			await closeServer();
 		} finally {
@@ -109,4 +117,6 @@ function attachContainerCleanup(
 			}
 		}
 	};
+	closeWithCleanup[containerCleanupKey] = cleanup;
+	server.close = closeWithCleanup;
 }
