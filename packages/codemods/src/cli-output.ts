@@ -1,22 +1,23 @@
 import type { CodemodFollowUp, CodemodResult } from "./types";
 
-/** Formats the final summary for a codemod run. */
-export function formatCompletionMessage(
-	changedFileCount: number,
-	dryRun: boolean,
-	suggestInstall: boolean
+/** Returns the final CLI summary for a codemod result. */
+export function getCodemodSummary(
+	result: CodemodResult,
+	dryRun: boolean
 ): string {
-	if (changedFileCount === 0) {
+	if (result.status === "skipped") {
+		return `Skipped: ${result.message ?? "The codemod did not run."}`;
+	}
+	if (result.changedFiles.length === 0) {
 		return "Project is already up to date.";
 	}
 	if (dryRun) {
-		return `Would update ${changedFileCount} file(s).`;
+		return `Would update ${result.changedFiles.length} file(s).`;
 	}
-
-	const installMessage = suggestInstall
-		? " Run your package manager's install command to refresh its lockfile."
-		: "";
-	return `Updated ${changedFileCount} file(s).${installMessage}`;
+	if (result.requiresInstall === false) {
+		return `Updated ${result.changedFiles.length} file(s).`;
+	}
+	return `Updated ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`;
 }
 
 /** Returns a failing exit code when a codemod requires manual intervention. */

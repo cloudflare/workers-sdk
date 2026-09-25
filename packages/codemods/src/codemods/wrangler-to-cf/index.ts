@@ -74,7 +74,9 @@ export async function migrateWranglerToCf(
 	);
 
 	await assertTargetsDoNotExist([cloudflareConfigPath]);
-	await ensureCleanGitWorktree(projectDirectory, force);
+	if (!dryRun) {
+		await ensureCleanGitWorktree(projectDirectory, force);
+	}
 
 	const [rawConfig, secretFiles] = await Promise.all([
 		readWranglerConfig(absoluteConfigPath),
@@ -102,7 +104,22 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (!installDependencies && dependencyPlan.action === "install") {
+	if (installDependencies && dependencyPlan.action === "unreadable-manifest") {
+		const reason = dependencyPlan.reason
+			? ` Package manifest error: ${dependencyPlan.reason}`
+			: "";
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"cf-install-failed",
+				`The local package.json could not be read, so \`cf\` could not be installed automatically. Resolve the reported package.json error, then install \`cf@latest\` as a dev dependency before using the generated configuration.${reason}`
+			)
+		);
+	}
+	if (
+		!installDependencies &&
+		(dependencyPlan.action === "install" ||
+			dependencyPlan.action === "unreadable-manifest")
+	) {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-disabled",
@@ -123,6 +140,8 @@ export async function migrateWranglerToCf(
 			wranglerConfig
 		);
 	}
+	const changedFiles = Array.from(outputs.keys());
+	let requiresInstall = dependencyPlan.action !== "already-installed";
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
@@ -131,45 +150,52 @@ export async function migrateWranglerToCf(
 	}
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
-		if (installDependencies && dependencyPlan.action === "install") {
-			let dependencyFollowUp: MigrationFollowUp | undefined;
-			try {
-				await installCfDependency(dependencyPlan);
-			} catch (error) {
-				const reason =
-					error instanceof Error
-						? ` Installation failed: ${error.message}`
-						: "";
-				dependencyFollowUp = createFollowUp(
-					"cf-install-failed",
-					`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
-				);
+	}
+	if (installDependencies && dependencyPlan.action === "install") {
+		let dependencyFollowUp: MigrationFollowUp | undefined;
+		try {
+			const installResult = await installCfDependency(dependencyPlan, {
+				dryRun,
+			});
+			changedFiles.push(...installResult.changedFiles);
+			requiresInstall = installResult.requiresInstall;
+		} catch (error) {
+			if (dryRun) {
+				throw error;
 			}
+			const reason =
+				error instanceof Error ? ` Installation failed: ${error.message}` : "";
+			dependencyFollowUp = createFollowUp(
+				"cf-install-failed",
+				`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+			);
+			requiresInstall = true;
+		}
 
-			if (dependencyFollowUp) {
-				followUps.push(dependencyFollowUp);
-				const updatedCloudflareConfig = renderCloudflareConfig({
-					...convertedConfig,
-					followUps,
-				});
-				outputs.set(cloudflareConfigPath, updatedCloudflareConfig);
-				try {
-					await rewriteMigrationOutput(
-						cloudflareConfigPath,
-						updatedCloudflareConfig
-					);
-				} catch (error) {
-					await cleanupMigrationOutputs(outputs.keys(), error);
-				}
+		if (dependencyFollowUp) {
+			followUps.push(dependencyFollowUp);
+			const updatedCloudflareConfig = renderCloudflareConfig({
+				...convertedConfig,
+				followUps,
+			});
+			outputs.set(cloudflareConfigPath, updatedCloudflareConfig);
+			try {
+				await rewriteMigrationOutput(
+					cloudflareConfigPath,
+					updatedCloudflareConfig
+				);
+			} catch (error) {
+				await cleanupMigrationOutputs(outputs.keys(), error);
 			}
 		}
 	}
 
 	return {
-		changedFiles: Array.from(outputs.keys()).map((filePath) =>
+		changedFiles: changedFiles.map((filePath) =>
 			path.relative(projectDirectory, filePath)
 		),
 		followUps,
+		requiresInstall,
 		status: followUps.some(({ blocking }) => blocking)
 			? "needs-intervention"
 			: "complete",

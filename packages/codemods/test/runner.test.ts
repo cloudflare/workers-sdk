@@ -120,7 +120,11 @@ describe("codemod runner", () => {
 			dryRun: false,
 			files: ["unrelated/**"],
 		});
-		expect(excludedResult.changedFiles).toEqual([]);
+		expect(excludedResult).toMatchObject({
+			changedFiles: [],
+			message: "wrangler.jsonc does not match any --files pattern.",
+			status: "skipped",
+		});
 		await expect(
 			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
 		).rejects.toMatchObject({ code: "ENOENT" });
@@ -131,6 +135,39 @@ describe("codemod runner", () => {
 			files: ["wrangler.jsonc"],
 		});
 		expect(includedResult.changedFiles).toEqual(["cloudflare.config.ts"]);
+	});
+
+	it("skips an excluded Wrangler config in a dirty worktree", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"README.md": "before",
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "restricted-test",
+			}),
+		});
+		await commitProject(cwd);
+		await writeFile(path.join(cwd, "README.md"), "after");
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["unrelated/**"],
+		});
+
+		expect(result).toMatchObject({
+			changedFiles: [],
+			message: "wrangler.jsonc does not match any --files pattern.",
+			status: "skipped",
+		});
+		await expect(
+			runCodemod("wrangler-to-cf", {
+				cwd,
+				dryRun: false,
+				files: ["wrangler.jsonc"],
+			})
+		).rejects.toThrow("Git worktree is not clean");
 	});
 
 	it("accepts an exact Wrangler config and bundler", async ({ expect }) => {
@@ -572,6 +609,46 @@ export default defineWorkersProject({
 		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
 			source
 		);
+	});
+
+	it("previews a Wrangler migration in a dirty worktree", async ({
+		expect,
+	}) => {
+		const configPath = "wrangler.json";
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { cf: "1.0.0" },
+				name: "dry-run-test",
+			}),
+			[configPath]: JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "dry-run-test",
+			}),
+		});
+		await commitProject(cwd);
+		await writeFile(
+			path.join(cwd, configPath),
+			JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "dirty-dry-run-test",
+			})
+		);
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: true,
+			installDependencies: false,
+		});
+
+		expect(result).toMatchObject({
+			changedFiles: ["cloudflare.config.ts"],
+			followUps: [],
+			requiresInstall: false,
+			status: "complete",
+		});
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
 	});
 
 	it("is a no-op for an up-to-date project", async ({ expect }) => {

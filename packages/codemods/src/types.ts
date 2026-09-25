@@ -24,12 +24,16 @@ export interface RunContext extends CodemodContext {
 export interface CodemodResult {
 	changedFiles: string[];
 	followUps?: CodemodFollowUp[];
-	status?: "complete" | "needs-intervention";
+	message?: string;
+	requiresInstall?: boolean;
+	status?: "complete" | "needs-intervention" | "skipped";
 }
 
 export interface Codemod {
 	name: string;
 	aliases?: string[];
 	description: string;
+	/** Whether the codemod enforces worktree safety after its own preflight. */
+	managesGitWorktreeSafety?: boolean;
 	run(context: RunContext): Promise<CodemodResult>;
 }
