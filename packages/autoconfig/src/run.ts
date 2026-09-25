@@ -550,7 +550,11 @@ export async function buildOperationsSummary(
 			packagesToInstall.add(target);
 		}
 		if (configurationResults.buildTool === "vite") {
-			packagesToInstall.add("@cloudflare/vite-plugin");
+			packagesToInstall.add(
+				target === "cf"
+					? "@cloudflare/vite-plugin@beta"
+					: "@cloudflare/vite-plugin"
+			);
 		} else if (
 			target === "cf" &&
 			configurationResults.buildTool === "wrangler"

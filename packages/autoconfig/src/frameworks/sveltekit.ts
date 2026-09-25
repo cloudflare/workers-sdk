@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
 import type {
 	ConfigurationOptions,
@@ -13,7 +14,15 @@ export class SvelteKit extends Framework {
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		if (target === "cf") {
+			throw new AutoConfigFrameworkConfigurationError(
+				`cf does not support automatic configuration for ${this.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
+				{ telemetryMessage: "autoconfig framework unsupported for cf" }
+			);
+		}
+
 		const { dlx } = packageManager;
 		if (!dryRun) {
 			await runCommand(
