@@ -52,10 +52,10 @@ export function createContainerCleanup() {
 }
 
 type ContainerCleanup = ReturnType<typeof createContainerCleanup>;
-
-// Vite reuses the inline config when it creates a new server during a restart.
-// Keep the cleanup state with that config without changing its plugin list.
-const cleanupByInlineConfig = new WeakMap<InlineConfig, ContainerCleanup>();
+const containerCleanupKey = Symbol("vite-plugin-cloudflare:container-cleanup");
+type InlineConfigWithCleanup = InlineConfig & {
+	[containerCleanupKey]?: ContainerCleanup;
+};
 
 /**
  * Retains Container cleanup across config reloads for one server session.
@@ -63,13 +63,17 @@ const cleanupByInlineConfig = new WeakMap<InlineConfig, ContainerCleanup>();
 export function getDevContainerCleanup(
 	server: ViteDevServer
 ): ContainerCleanup {
-	let cleanup = cleanupByInlineConfig.get(server.config.inlineConfig);
+	let cleanup = (server.config.inlineConfig as InlineConfigWithCleanup)[
+		containerCleanupKey
+	];
 	if (!cleanup) {
 		cleanup = createContainerCleanup();
-		// Clone the inline config so callers can use the same options to create
-		// independent servers.
-		const inlineConfig = { ...server.config.inlineConfig };
-		cleanupByInlineConfig.set(inlineConfig, cleanup);
+		// Vite reuses its inline config on restart. Clone it so independently
+		// created servers do not share cleanup state.
+		const inlineConfig: InlineConfigWithCleanup = {
+			...server.config.inlineConfig,
+			[containerCleanupKey]: cleanup,
+		};
 		server.config = { ...server.config, inlineConfig };
 	}
 	attachContainerCleanup(server, cleanup);
@@ -81,7 +85,19 @@ function attachContainerCleanup(
 	cleanup: ContainerCleanup
 ) {
 	const restartServer = server.restart.bind(server);
-	server.restart = (...args) => cleanup.restart(() => restartServer(...args));
+	server.restart = (...args) =>
+		cleanup.restart(async () => {
+			await restartServer(...args);
+			// Vite replaces the server's close method on restart. If the reloaded
+			// config removed Cloudflare, no plugin hook reattaches cleanup.
+			if (
+				!server.config.plugins.some(
+					(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
+				)
+			) {
+				attachContainerCleanup(server, cleanup);
+			}
+		});
 
 	const closeServer = server.close.bind(server);
 	server.close = async () => {
