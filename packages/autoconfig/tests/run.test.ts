@@ -94,7 +94,7 @@ describe("runAutoConfig()", () => {
 				}
 			)
 		).rejects.toThrow(
-			"cf does not support automatic configuration for Qwik projects yet. You can still use Wrangler to develop and deploy this project."
+			"cf does not support Qwik projects yet. You can still use Wrangler to develop and deploy this project."
 		);
 	});
 

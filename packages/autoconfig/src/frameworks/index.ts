@@ -83,7 +83,7 @@ export function validateFrameworkTargetSupport(
 	}
 
 	throw new AutoConfigFrameworkConfigurationError(
-		`cf does not support automatic configuration for ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
+		`cf does not support ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
 		{ telemetryMessage: "autoconfig framework unsupported for cf" }
 	);
 }
