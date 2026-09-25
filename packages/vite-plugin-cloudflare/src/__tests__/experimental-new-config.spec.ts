@@ -41,6 +41,9 @@ const FIXTURES_ROOT = path.resolve(
 
 describe("resolvePluginConfig - experimental.newConfig", () => {
 	let tempDir: string;
+	function typesPath(): string {
+		return path.join(tempDir, ".cloudflare/types/index.d.ts");
+	}
 
 	beforeEach(() => {
 		generateRuntimeTypesMock.mockReset();
@@ -95,6 +98,22 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 			)
 		).rejects.toThrow(
 			"`cloudflare.config.ts` must define a Worker using the `worker` property."
+		);
+	});
+
+	test("formats cloudflare.config.ts validation errors", async ({ expect }) => {
+		writeWorkerConfig(
+			"export default { worker: { name: 42, compatibilityDate: false } };"
+		);
+
+		await expect(
+			resolvePluginConfig(
+				{ experimental: { newConfig: true } },
+				{ root: tempDir },
+				viteEnv
+			)
+		).rejects.toThrow(
+			/✖ Invalid input: expected string, received number[\s\S]*→ at worker\.name[\s\S]*→ at worker\.compatibilityDate/
 		);
 	});
 
@@ -299,6 +318,32 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(worker?.config.name).toBe("worker-development");
 	});
 
+	test("sets ctx.isPreview from CLOUDFLARE_PREVIEW_BUILD", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", "true");
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig((ctx) => ({ worker: {",
+				"  name: ctx.isPreview ? 'preview-worker' : 'production-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"} }));",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{ experimental: { newConfig: true } },
+			{ root: tempDir },
+			viteBuildEnv
+		)) as WorkersResolvedConfig;
+
+		const worker = result.environmentNameToWorkerMap.get("preview_worker");
+		expect(worker?.config.name).toBe("preview-worker");
+	});
+
 	test("adds cloudflare.config.ts to configPaths for watching", async ({
 		expect,
 	}) => {
@@ -330,7 +375,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		// (covered by its own unit tests) are also merged into configPaths.
 	});
 
-	test("writes worker-configuration.d.ts pointing at the vite-plugin subpath", async ({
+	test("writes .cloudflare/types/index.d.ts pointing at the vite-plugin subpath", async ({
 		expect,
 	}) => {
 		seedWorkerSource();
@@ -351,13 +396,13 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 			viteEnv
 		);
 
-		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		const dtsPath = typesPath();
 		expect(fs.existsSync(dtsPath)).toBe(true);
 		const content = fs.readFileSync(dtsPath, "utf8");
 		expect(content).toContain(
 			`import("@cloudflare/vite-plugin/experimental-config")`
 		);
-		expect(content).toContain(`import("./cloudflare.config").default`);
+		expect(content).toContain(`import("../../cloudflare.config").default`);
 		// Runtime types are appended by default (includeRuntime defaults to true).
 		expect(content).toContain(RUNTIME_MARKER);
 		expect(content).toContain(FAKE_RUNTIME_TYPES);
@@ -389,7 +434,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 			viteEnv
 		);
 
-		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		const dtsPath = typesPath();
 		expect(fs.existsSync(dtsPath)).toBe(false);
 		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
 	});
@@ -415,18 +460,16 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 			viteEnv
 		);
 
-		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		const dtsPath = typesPath();
 		expect(fs.existsSync(dtsPath)).toBe(true);
 		const content = fs.readFileSync(dtsPath, "utf8");
 		// Inference block still present, runtime types absent.
-		expect(content).toContain(`import("./cloudflare.config").default`);
+		expect(content).toContain(`import("../../cloudflare.config").default`);
 		expect(content).not.toContain(RUNTIME_MARKER);
 		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
 	});
 
-	test("does not generate types during build (dev-only)", async ({
-		expect,
-	}) => {
+	test("generates types during build", async ({ expect }) => {
 		seedWorkerSource();
 		writeWorkerConfig(
 			[
@@ -445,9 +488,9 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 			viteBuildEnv
 		);
 
-		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
-		expect(fs.existsSync(dtsPath)).toBe(false);
-		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
+		const dtsPath = typesPath();
+		expect(fs.existsSync(dtsPath)).toBe(true);
+		expect(generateRuntimeTypesMock).toHaveBeenCalledOnce();
 	});
 
 	test.for([
@@ -573,7 +616,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		]);
 	});
 
-	test("does not rewrite worker-configuration.d.ts when content is unchanged", async ({
+	test("does not rewrite generated types when content is unchanged", async ({
 		expect,
 	}) => {
 		seedWorkerSource();
@@ -592,7 +635,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		};
 
 		await resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv);
-		const dtsPath = path.join(tempDir, "worker-configuration.d.ts");
+		const dtsPath = typesPath();
 		const firstMtime = fs.statSync(dtsPath).mtimeMs;
 
 		// Ensure mtime resolution boundary is crossed before the second run.

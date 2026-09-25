@@ -1,5 +1,23 @@
 # create-cloudflare
 
+## 2.72.12
+
+### Patch Changes
+
+- [#15838](https://github.com/cloudflare/workers-sdk/pull/15838) [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.9.0 to fix slow parsing of very large TOML files
+
+  Parse time for TOML config files now grows linearly with their size, instead of with its square: a 40,000-line file that took 259 ms to parse now takes 17 ms, while typical `wrangler.toml` files parse in the same time as before. This addresses the `GHSA-r4xh-jqrq-34v2` advisory against earlier versions of the parser.
+
+  Some TOML syntax errors now point at the character that caused them. For example, a `wrangler.toml` containing `INVALID "FILE` is now reported as `illegal character in key` at the `"`, rather than `incomplete key-value` at the start of the line.
+
+## 2.72.11
+
+### Patch Changes
+
+- [#15662](https://github.com/cloudflare/workers-sdk/pull/15662) [`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.8.0
+
+  This updates the bundled TOML parser that reads `wrangler.toml` to a version that addresses two advisories against 1.5.2: `GHSA-7w5x-hrqm-74c2` (a value followed by a comment with no trailing newline, such as `a=[1 #`, put the parser in an infinite loop) and `GHSA-v3rj-xjv7-4jmq` (thousands of consecutive comment lines overflowed the stack). On the old version, `wrangler deploy` against a `wrangler.toml` ending in `a=[1 #` never returned; it now fails with `Invalid TOML document: cannot find end of structure`.
+
 ## 2.72.10
 
 ### Patch Changes

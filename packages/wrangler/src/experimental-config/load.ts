@@ -5,7 +5,11 @@ import {
 	loadAndParseConfig,
 	loadConfig,
 } from "@cloudflare/config";
-import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
+import {
+	formatZodError,
+	getCloudflareEnv,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { convertToolingConfig } from "./convert";
 import {
 	WORKER_CONFIG_FIELD_HINTS,
@@ -140,9 +144,8 @@ export async function loadNewConfig(options: {
 
 	// ── Normalised types ────────────────────────────────────────────────
 	const types: NormalizedTypes = {
-		generate: parsedWranglerConfig?.data.dev?.types?.generate ?? true,
-		includeRuntime:
-			parsedWranglerConfig?.data.dev?.types?.includeRuntime ?? true,
+		generate: parsedWranglerConfig?.data.types?.generate ?? true,
+		includeRuntime: parsedWranglerConfig?.data.types?.includeRuntime ?? true,
 	};
 
 	// ── Dependencies (union of both files) ──────────────────────────────
@@ -208,20 +211,6 @@ interface ZodLikeError {
 
 function dottedPath(issuePath: PropertyKey[]): string {
 	return issuePath.filter((p) => typeof p !== "symbol").join(".");
-}
-
-function formatZodError(err: ZodLikeError): string {
-	if (!err.issues || err.issues.length === 0) {
-		return err.message ?? "Unknown validation error";
-	}
-	return err.issues
-		.map((issue) => {
-			const dotted = dottedPath(issue.path);
-			return dotted
-				? `  • ${dotted}: ${issue.message}`
-				: `  • ${issue.message}`;
-		})
-		.join("\n");
 }
 
 function formatWranglerConfigZodError(err: ZodLikeError): string {

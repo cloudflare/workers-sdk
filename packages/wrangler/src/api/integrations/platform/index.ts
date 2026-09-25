@@ -512,6 +512,18 @@ export function unstable_getMiniflareWorkerOptions(
 		modulesRules,
 		zone: getZoneFromConfig(config),
 		access: config.access?.dev,
+		connectHandlers: config.connect.map((handler) => ({
+			protocol: handler.protocol,
+			port: handler.port,
+			address: handler.address,
+			...(handler.protocol === "udp"
+				? {
+						idleTimeoutMs: handler.idle_timeout_ms,
+						maxPendingBytes: handler.max_pending_bytes,
+					}
+				: {}),
+		})),
+		cronTriggers: config.triggers.crons,
 
 		...bindingOptions,
 		...sitesOptions,

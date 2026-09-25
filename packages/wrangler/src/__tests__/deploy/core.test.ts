@@ -859,6 +859,109 @@ describe("deploy", () => {
 			expect(std.out).toContain("Temporary account ready:");
 		});
 
+		it("requires --temporary when --event-code is passed", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("deploy index.js --event-code ABCD-EFGH-JKMN")
+			).rejects.toThrow("--event-code requires --temporary");
+		});
+
+		it("rejects a blank event code", async ({ expect }) => {
+			await expect(
+				runWrangler('deploy index.js --temporary --event-code "   "')
+			).rejects.toThrow("--event-code cannot be empty");
+		});
+
+		it("does not accept --event-code on versions upload", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"versions upload index.js --temporary --event-code ABCD-EFGH-JKMN"
+				)
+			).rejects.toThrow(/Unknown argument.*event-code/);
+		});
+
+		it("rejects repeated event codes without exposing their values", async ({
+			expect,
+		}) => {
+			const firstCode = "SECRET-CODE-ONE";
+			const secondCode = "SECRET-CODE-TWO";
+			const error = await runWrangler(
+				`deploy index.js --temporary --event-code ${firstCode} --event-code ${secondCode}`
+			).catch((cause: unknown) => cause);
+
+			expect(String(error)).toContain("--event-code expects a single value");
+			expect(String(error)).not.toContain(firstCode);
+			expect(String(error)).not.toContain(secondCode);
+			expect(std.out).not.toContain(firstCode);
+			expect(std.err).not.toContain(firstCode);
+		});
+
+		it("provisions an event account before deploying", async ({ expect }) => {
+			setIsTTY(true);
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest({ expectedAccountId: "preview-account-id" });
+			mockTemporaryPreviewChallenge();
+
+			let previewRequestBody: unknown;
+			msw.use(
+				http.get(
+					"*/accounts/preview-account-id/workers/services/:scriptName",
+					() =>
+						HttpResponse.json(
+							createFetchResult({
+								default_environment: {
+									script: { last_deployed_from: "wrangler" },
+								},
+							})
+						)
+				),
+				http.post(temporaryPreviewAccountUrl, async ({ request }) => {
+					previewRequestBody = await request.json();
+					return HttpResponse.json({
+						success: true,
+						result: {
+							account: {
+								id: "preview-account-id",
+								name: "Preview Account Alpha",
+								apiToken: "preview-account-token",
+								expiresAt: "2027-01-01T00:00:00.000Z",
+							},
+							claim: {
+								url: "https://dash.cloudflare.com/claim-preview",
+								expiresAt: "2027-01-02T00:00:00.000Z",
+							},
+							eventCodeAccepted: true,
+						},
+						errors: [],
+						messages: [],
+					});
+				})
+			);
+
+			await expect(
+				runWrangler(
+					'deploy index.js --temporary --event-code " ABCD-EFGH-JKMN "'
+				)
+			).resolves.toBeUndefined();
+
+			expect(previewRequestBody).toMatchObject({
+				eventCode: "ABCD-EFGH-JKMN",
+			});
+			const cache = fs.readFileSync(
+				path.join(getGlobalConfigPath(), "wrangler-temporary-account.toml"),
+				"utf8"
+			);
+			expect(cache).not.toContain("ABCD-EFGH-JKMN");
+			expect(std.out).not.toContain("ABCD-EFGH-JKMN");
+			expect(std.err).not.toContain("ABCD-EFGH-JKMN");
+		});
+
 		it("aborts in interactive mode when the terms are not accepted", async ({
 			expect,
 		}) => {

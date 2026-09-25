@@ -1,5 +1,105 @@
 # @cloudflare/deploy-helpers
 
+## 0.17.0
+
+### Minor Changes
+
+- [#15822](https://github.com/cloudflare/workers-sdk/pull/15822) [`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Support Containers in Worker Preview deployments with the Build Output.
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+  - @cloudflare/cli-shared-helpers@0.1.39
+  - @cloudflare/config@0.18.0
+  - @cloudflare/containers-shared@0.20.1
+  - miniflare@5.20260923.0-alpha
+
+## 0.16.0
+
+### Minor Changes
+
+- [#15792](https://github.com/cloudflare/workers-sdk/pull/15792) [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f) Thanks [@flakey5](https://github.com/flakey5)! - Configure SSH for experimental Durable Object-managed Containers
+
+  Set `containers[].ssh` and `containers[].authorized_keys` when using `scheduling_policy: "durable_object"`. These are application-wide settings that follow the same rules as the existing Durable Object-managed Container settings: normal deployments create missing applications and update explicitly configured values, while omitted settings preserve the existing application configuration.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "containers": [
+      {
+        "name": "sandbox",
+        "class_name": "Sandbox",
+        "scheduling_policy": "durable_object",
+        "ssh": { "enabled": true },
+        "authorized_keys": [
+          { "name": "laptop", "public_key": "ssh-ed25519 AAAA..." }
+        ]
+      }
+    ]
+  }
+  ```
+
+- [#15779](https://github.com/cloudflare/workers-sdk/pull/15779) [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2) Thanks [@Naapperas](https://github.com/Naapperas)! - Support `workflow` entries in the `exports` configuration map
+
+  A Worker can now declare the Workflows it defines in `exports`, keyed by the `WorkflowEntrypoint` class name:
+
+  ```jsonc
+  {
+    "exports": {
+      "MyWorkflow": {
+        "type": "workflow",
+        "name": "my-workflow",
+        "limits": { "steps": 100 },
+        "schedules": "0 * * * *"
+      }
+    }
+  }
+  ```
+
+  A `workflow` export accepts the same settings as a `workflows` binding: `limits`, `concurrency`, `schedules`, and `default_retention`. `wrangler deploy` and `wrangler versions upload` send these entries to the upload API by name, and `wrangler deploy` and `wrangler triggers deploy` provision the Workflow with its settings, just as they do for `workflows` bindings owned by the Worker. A Workflow may be declared both as a binding and as an export, as long as both declarations use the same class and do not set the same setting to different values. A binding to another Worker's Workflow cannot share a name with an export. `@cloudflare/config` adds the matching `exports.workflow()` helper. Local development does not yet act on these entries.
+
+### Patch Changes
+
+- Updated dependencies [[`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7), [`44f5295`](https://github.com/cloudflare/workers-sdk/commit/44f52951a699f77a35fa5d3b0ba1d33c7e2e3a31), [`be72815`](https://github.com/cloudflare/workers-sdk/commit/be728157f7b1f59f5878d09ca4f23b96f338f75d), [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`940c692`](https://github.com/cloudflare/workers-sdk/commit/940c6925b887faa4f43eccc957766385f6cc2d47), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - miniflare@5.20260923.0-alpha
+  - @cloudflare/workers-utils@0.42.0
+  - @cloudflare/containers-shared@0.20.0
+  - @cloudflare/config@0.18.0
+  - @cloudflare/cli-shared-helpers@0.1.38
+
+## 0.15.1
+
+### Patch Changes
+
+- Updated dependencies [[`a71237a`](https://github.com/cloudflare/workers-sdk/commit/a71237a662d50d51caed454f0a47f4a29f9cd2b1), [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - miniflare@5.20260921.1-alpha
+  - @cloudflare/workers-utils@0.41.2
+  - @cloudflare/cli-shared-helpers@0.1.37
+  - @cloudflare/config@0.17.0
+  - @cloudflare/containers-shared@0.19.2
+
+## 0.15.0
+
+### Minor Changes
+
+- [#15804](https://github.com/cloudflare/workers-sdk/pull/15804) [`2f5781a`](https://github.com/cloudflare/workers-sdk/commit/2f5781a5916ec2bc5ca0a2047c4c28cc9399227c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Remove the Cloudflare SDK dependency from deploy helpers
+
+  `DeployHelpersContext` no longer requires `createCloudflareClient`; Worker subdomain lookups now use the injected `fetchResult` helper with retries. Consumers should remove the client factory from their deploy-helpers context initialization.
+
+## 0.14.2
+
+### Patch Changes
+
+- [#15760](https://github.com/cloudflare/workers-sdk/pull/15760) [`6906bf0`](https://github.com/cloudflare/workers-sdk/commit/6906bf06d9eb1045605c71c345d37e7c300a5bbc) Thanks [@yomna-shousha](https://github.com/yomna-shousha)! - Warn when `wrangler preview` returns only non-custom-domain URLs even though custom-domain Preview URLs are configured.
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+  - @cloudflare/cli-shared-helpers@0.1.36
+  - @cloudflare/config@0.17.0
+  - @cloudflare/containers-shared@0.19.1
+  - miniflare@5.20260921.0-alpha
+
 ## 0.14.1
 
 ### Patch Changes

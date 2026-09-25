@@ -1,5 +1,45 @@
 # @cloudflare/autoconfig
 
+## 0.6.5
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+  - @cloudflare/cli-shared-helpers@0.1.39
+  - @cloudflare/config@0.18.0
+
+## 0.6.4
+
+### Patch Changes
+
+- Updated dependencies [[`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/workers-utils@0.42.0
+  - @cloudflare/config@0.18.0
+  - @cloudflare/cli-shared-helpers@0.1.38
+
+## 0.6.3
+
+### Patch Changes
+
+- [#15812](https://github.com/cloudflare/workers-sdk/pull/15812) [`b37c5df`](https://github.com/cloudflare/workers-sdk/commit/b37c5df9b23fd2c06116d54bbeaf8da65014847c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Prevent static-site detection from failing on inaccessible child directories
+
+  Autoconfig now checks each candidate directory's `index.html` directly and ignores expected missing-file and permission errors. This allows commands such as `cf build` to run from directories containing protected folders, including a macOS home directory with `.Trash`.
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+  - @cloudflare/cli-shared-helpers@0.1.37
+  - @cloudflare/config@0.17.0
+
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+  - @cloudflare/cli-shared-helpers@0.1.36
+  - @cloudflare/config@0.17.0
+
 ## 0.6.1
 
 ### Patch Changes

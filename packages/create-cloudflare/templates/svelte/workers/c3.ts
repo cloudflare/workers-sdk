@@ -103,6 +103,7 @@ const config: TemplateConfig = {
 	frameworkCli: "sv",
 	displayName: "SvelteKit",
 	platform: "workers",
+	languages: ["js", "ts"],
 	copyFiles: {
 		path: "./templates",
 	},

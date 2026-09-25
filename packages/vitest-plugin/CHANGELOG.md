@@ -1,5 +1,52 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.2.7
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - wrangler@4.140.0
+  - miniflare@5.20260923.0-alpha
+
+## 1.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7), [`44f5295`](https://github.com/cloudflare/workers-sdk/commit/44f52951a699f77a35fa5d3b0ba1d33c7e2e3a31), [`be72815`](https://github.com/cloudflare/workers-sdk/commit/be728157f7b1f59f5878d09ca4f23b96f338f75d), [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`940c692`](https://github.com/cloudflare/workers-sdk/commit/940c6925b887faa4f43eccc957766385f6cc2d47), [`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7), [`cd60c9c`](https://github.com/cloudflare/workers-sdk/commit/cd60c9c946bb3bcb9f6c32d426c2d4ee2992e03a), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - miniflare@5.20260923.0-alpha
+  - wrangler@4.139.0
+
+## 1.2.5
+
+### Patch Changes
+
+- [#15806](https://github.com/cloudflare/workers-sdk/pull/15806) [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3) Thanks [@NuroDev](https://github.com/NuroDev)! - Standardize Zod validation error output
+
+  Format validation errors with Zod's built-in `prettifyError()` helper so Miniflare, Wrangler, the Vite plugin, and the Vitest plugin show consistent messages and property paths.
+
+- Updated dependencies [[`a71237a`](https://github.com/cloudflare/workers-sdk/commit/a71237a662d50d51caed454f0a47f4a29f9cd2b1), [`b03f960`](https://github.com/cloudflare/workers-sdk/commit/b03f960f3631003cd11d798f7d2fa3591834b5b4), [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3), [`6e77c53`](https://github.com/cloudflare/workers-sdk/commit/6e77c53425044c8ae22b6cf796131aed2899413e)]:
+  - miniflare@5.20260921.1-alpha
+  - wrangler@4.138.0
+
+## 1.2.4
+
+### Patch Changes
+
+- [#15706](https://github.com/cloudflare/workers-sdk/pull/15706) [`f5341a4`](https://github.com/cloudflare/workers-sdk/commit/f5341a464d28a813693b17b5b600a8cf6f07dd0b) Thanks [@Om-singhaI](https://github.com/Om-singhaI)! - Declare the `adminSecretsStore()` result as disposable and show `using` in its example
+
+  The admin API it returns is backed by RPC stubs. Its type left out `Symbol.dispose` and the documented example never released them, so a test that followed it made workerd warn that an RPC stub was not disposed properly. `using admin = adminSecretsStore(env.MY_SECRET)` now type checks and releases the stubs at the end of the scope.
+
+- Updated dependencies [[`1bdb96d`](https://github.com/cloudflare/workers-sdk/commit/1bdb96da2fc0811fe24bb98b11d3921883c219f1), [`cd7508c`](https://github.com/cloudflare/workers-sdk/commit/cd7508cccf2de1ea010320d6f3e70ec80e6e5e2e), [`f5605f5`](https://github.com/cloudflare/workers-sdk/commit/f5605f5cb75eab7ecb7413a9432529ac062ee052)]:
+  - wrangler@4.137.0
+
+## 1.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb), [`6906bf0`](https://github.com/cloudflare/workers-sdk/commit/6906bf06d9eb1045605c71c345d37e7c300a5bbc), [`354ebdb`](https://github.com/cloudflare/workers-sdk/commit/354ebdb61180ef67cebd34276a3a1935e5151d13)]:
+  - wrangler@4.136.3
+  - miniflare@5.20260921.0-alpha
+
 ## 1.2.2
 
 ### Patch Changes

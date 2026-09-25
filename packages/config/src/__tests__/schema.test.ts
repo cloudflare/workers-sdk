@@ -535,6 +535,39 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts a UDP connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "udp",
+						port: 5432,
+						idleTimeoutMs: 1_000,
+						maxPendingBytes: 65_536,
+					},
+				],
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects UDP options on a TCP connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						idleTimeoutMs: 1_000,
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
@@ -1460,6 +1493,92 @@ describe("ExportSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("accepts a workflow export", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: exportConfig.workflow({ name: "greeting" }),
+			BatchWorkflow: exportConfig.workflow({
+				name: "batch",
+				limits: { steps: 10 },
+			}),
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.data?.exports).toEqual({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: { type: "workflow", name: "batch", limits: { steps: 10 } },
+		});
+	});
+
+	it("accepts every Workflow setting on a workflow export", ({ expect }) => {
+		const scheduled = exportConfig.workflow({
+			name: "scheduled",
+			limits: { steps: 10 },
+			concurrency: { limit: 2 },
+			schedules: ["0 * * * *"],
+			default_retention: {
+				success_retention: "3 days",
+				error_retention: 86_400_000,
+			},
+		});
+		const result = parseExports({ ScheduledWorkflow: scheduled });
+
+		expect(result.success).toBe(true);
+		expect(result.data?.exports).toEqual({ ScheduledWorkflow: scheduled });
+	});
+
+	it("rejects invalid Workflow settings on a workflow export", ({ expect }) => {
+		for (const settings of [
+			{ schedules: "" },
+			{ schedules: [] },
+			{ schedules: [""] },
+			{ concurrency: { limit: 0 } },
+			{ default_retention: { success_retention: -1 } },
+			{ default_retention: { error_retention: "" } },
+		]) {
+			const result = parseExports({
+				GreetingWorkflow: { type: "workflow", name: "greeting", ...settings },
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+
+	it("rejects a workflow export without a name", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: { type: "workflow" },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a workflow step limit that is not a positive integer", ({
+		expect,
+	}) => {
+		for (const steps of [0, -1, 1.5]) {
+			const result = parseExports({
+				GreetingWorkflow: {
+					type: "workflow",
+					name: "greeting",
+					limits: { steps },
+				},
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+
+	it("rejects Durable Object fields on a workflow export", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: {
+				type: "workflow",
+				name: "greeting",
+				storage: "sqlite",
+			},
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	// Containers require the SQLite storage engine. The check below is the type

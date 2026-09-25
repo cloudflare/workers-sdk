@@ -1,5 +1,152 @@
 # wrangler
 
+## 4.140.0
+
+### Minor Changes
+
+- [#15822](https://github.com/cloudflare/workers-sdk/pull/15822) [`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Support Containers in Worker Preview deployments with the Build Output.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - miniflare@5.20260923.0-alpha
+
+## 4.139.0
+
+### Minor Changes
+
+- [#15792](https://github.com/cloudflare/workers-sdk/pull/15792) [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f) Thanks [@flakey5](https://github.com/flakey5)! - Configure SSH for experimental Durable Object-managed Containers
+
+  Set `containers[].ssh` and `containers[].authorized_keys` when using `scheduling_policy: "durable_object"`. These are application-wide settings that follow the same rules as the existing Durable Object-managed Container settings: normal deployments create missing applications and update explicitly configured values, while omitted settings preserve the existing application configuration.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "containers": [
+      {
+        "name": "sandbox",
+        "class_name": "Sandbox",
+        "scheduling_policy": "durable_object",
+        "ssh": { "enabled": true },
+        "authorized_keys": [
+          { "name": "laptop", "public_key": "ssh-ed25519 AAAA..." }
+        ]
+      }
+    ]
+  }
+  ```
+
+- [#15648](https://github.com/cloudflare/workers-sdk/pull/15648) [`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Expose configured Cron Triggers to local development consumers
+
+  Wrangler now passes the active environment's exact Cron Trigger expressions to Miniflare so Local Explorer can display them. Headless agent sessions also advertise the Local Explorer scheduled invocation API.
+
+- [#15786](https://github.com/cloudflare/workers-sdk/pull/15786) [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Support UDP connect handlers in local development
+
+  The experimental `connect` configuration now accepts `protocol: "udp"`, with optional `idle_timeout_ms` and `max_pending_bytes` settings. UDP datagrams are delivered to the Worker's `connect()` handler using workerd's value-mode socket streams, and can be tested with `Miniflare#dispatchConnect({ protocol: "udp" })`.
+
+- [#15779](https://github.com/cloudflare/workers-sdk/pull/15779) [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2) Thanks [@Naapperas](https://github.com/Naapperas)! - Support `workflow` entries in the `exports` configuration map
+
+  A Worker can now declare the Workflows it defines in `exports`, keyed by the `WorkflowEntrypoint` class name:
+
+  ```jsonc
+  {
+    "exports": {
+      "MyWorkflow": {
+        "type": "workflow",
+        "name": "my-workflow",
+        "limits": { "steps": 100 },
+        "schedules": "0 * * * *"
+      }
+    }
+  }
+  ```
+
+  A `workflow` export accepts the same settings as a `workflows` binding: `limits`, `concurrency`, `schedules`, and `default_retention`. `wrangler deploy` and `wrangler versions upload` send these entries to the upload API by name, and `wrangler deploy` and `wrangler triggers deploy` provision the Workflow with its settings, just as they do for `workflows` bindings owned by the Worker. A Workflow may be declared both as a binding and as an export, as long as both declarations use the same class and do not set the same setting to different values. A binding to another Worker's Workflow cannot share a name with an export. `@cloudflare/config` adds the matching `exports.workflow()` helper. Local development does not yet act on these entries.
+
+### Patch Changes
+
+- [#15796](https://github.com/cloudflare/workers-sdk/pull/15796) [`be72815`](https://github.com/cloudflare/workers-sdk/commit/be728157f7b1f59f5878d09ca4f23b96f338f75d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260921.1 | ^5.20260923.1 |
+  | workerd                   | 1.20260921.1  | 1.20260923.1  |
+
+- [#14847](https://github.com/cloudflare/workers-sdk/pull/14847) [`940c692`](https://github.com/cloudflare/workers-sdk/commit/940c6925b887faa4f43eccc957766385f6cc2d47) Thanks [@TheSaiEaranti](https://github.com/TheSaiEaranti)! - Emulate the deterministic-ID uniqueness contract in the local Workflows binding
+
+  The local Workflows binding now matches the documented production behavior for deterministic instance IDs: `create({ id })` with an ID that already exists throws `(instance.already_exists)` and retains the existing instance, and `createBatch()` skips IDs that already exist or repeat within the batch, excluding them from the result instead of creating duplicate executions. Previously both paths silently created duplicates, so code relying on deterministic IDs for idempotency (for example a Queue consumer creating one workflow per message) appeared to work locally while double-executing workflow bodies.
+
+- [#15803](https://github.com/cloudflare/workers-sdk/pull/15803) [`cd60c9c`](https://github.com/cloudflare/workers-sdk/commit/cd60c9c946bb3bcb9f6c32d426c2d4ee2992e03a) Thanks [@pmiguel](https://github.com/pmiguel)! - Show `--jurisdiction` in help for `wrangler kv namespace create`
+
+  The option was supported but omitted from the command's help output. Users can now discover how to create KV namespaces in a specific jurisdiction.
+
+- [#15838](https://github.com/cloudflare/workers-sdk/pull/15838) [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.9.0 to fix slow parsing of very large TOML files
+
+  Parse time for TOML config files now grows linearly with their size, instead of with its square: a 40,000-line file that took 259 ms to parse now takes 17 ms, while typical `wrangler.toml` files parse in the same time as before. This addresses the `GHSA-r4xh-jqrq-34v2` advisory against earlier versions of the parser.
+
+  Some TOML syntax errors now point at the character that caused them. For example, a `wrangler.toml` containing `INVALID "FILE` is now reported as `illegal character in key` at the `"`, rather than `incomplete key-value` at the start of the line.
+
+- Updated dependencies [[`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7), [`44f5295`](https://github.com/cloudflare/workers-sdk/commit/44f52951a699f77a35fa5d3b0ba1d33c7e2e3a31), [`be72815`](https://github.com/cloudflare/workers-sdk/commit/be728157f7b1f59f5878d09ca4f23b96f338f75d), [`940c692`](https://github.com/cloudflare/workers-sdk/commit/940c6925b887faa4f43eccc957766385f6cc2d47), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - miniflare@5.20260923.0-alpha
+
+## 4.138.0
+
+### Minor Changes
+
+- [#15776](https://github.com/cloudflare/workers-sdk/pull/15776) [`b03f960`](https://github.com/cloudflare/workers-sdk/commit/b03f960f3631003cd11d798f7d2fa3591834b5b4) Thanks [@edevil](https://github.com/edevil)! - Add event-code support to temporary Worker deployments
+
+  Use `wrangler deploy --temporary --event-code <code>` to provision an account for an event. Wrangler requires explicit server acknowledgement before caching the account and keeps the event code out of its cache and telemetry.
+
+- [#15817](https://github.com/cloudflare/workers-sdk/pull/15817) [`6e77c53`](https://github.com/cloudflare/workers-sdk/commit/6e77c53425044c8ae22b6cf796131aed2899413e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Allow framework commands to produce Preview Build Output with the experimental config
+
+  When `cf previews deploy` invokes a framework build command, Preview intent is now preserved. Function-based `cloudflare.config.ts` files receive `isPreview: true`, and generated Build Output is marked as a Preview build.
+
+### Patch Changes
+
+- [#15806](https://github.com/cloudflare/workers-sdk/pull/15806) [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3) Thanks [@NuroDev](https://github.com/NuroDev)! - Standardize Zod validation error output
+
+  Format validation errors with Zod's built-in `prettifyError()` helper so Miniflare, Wrangler, the Vite plugin, and the Vitest plugin show consistent messages and property paths.
+
+- Updated dependencies [[`a71237a`](https://github.com/cloudflare/workers-sdk/commit/a71237a662d50d51caed454f0a47f4a29f9cd2b1), [`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - miniflare@5.20260921.1-alpha
+
+## 4.137.0
+
+### Minor Changes
+
+- [#15778](https://github.com/cloudflare/workers-sdk/pull/15778) [`cd7508c`](https://github.com/cloudflare/workers-sdk/commit/cd7508cccf2de1ea010320d6f3e70ec80e6e5e2e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Generate types during development and supported builds with Vite's `experimental.newConfig` option or Wrangler's `--experimental-new-config` flag (and `--experimental-cf-build-output` for builds)
+
+  When Wrangler's `--experimental-new-config` flag or Vite's `experimental.newConfig` option is enabled, inferred configuration and runtime declarations are now kept in `.cloudflare/types/index.d.ts`. Vite refreshes them during development and production builds. Wrangler refreshes them during development and when building with both `--experimental-new-config` and `--experimental-cf-build-output`. In the experimental `wrangler.config.ts` format, the `types` option is now top-level because it applies to both commands.
+
+### Patch Changes
+
+- [#15765](https://github.com/cloudflare/workers-sdk/pull/15765) [`1bdb96d`](https://github.com/cloudflare/workers-sdk/commit/1bdb96da2fc0811fe24bb98b11d3921883c219f1) Thanks [@th0m](https://github.com/th0m)! - Prepare the required egress sidecar for local Containers without configured images
+
+  Wrangler dev and Vite dev/preview now pull the required sidecar for Durable Object-managed Containers that select their application image at start time. Previously, these Containers failed to start unless the sidecar image was already cached in Docker.
+
+- [#15712](https://github.com/cloudflare/workers-sdk/pull/15712) [`f5605f5`](https://github.com/cloudflare/workers-sdk/commit/f5605f5cb75eab7ecb7413a9432529ac062ee052) Thanks [@alsuren](https://github.com/alsuren)! - Match D1 SQL statement splitting to the local SQLite runtime
+
+  Wrangler now uses SQLite's statement-completion state machine when splitting D1 SQL files. This keeps trigger, quoted identifier, comment, and keyword handling consistent with local execution.
+
+## 4.136.3
+
+### Patch Changes
+
+- [#15662](https://github.com/cloudflare/workers-sdk/pull/15662) [`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.8.0
+
+  This updates the bundled TOML parser that reads `wrangler.toml` to a version that addresses two advisories against 1.5.2: `GHSA-7w5x-hrqm-74c2` (a value followed by a comment with no trailing newline, such as `a=[1 #`, put the parser in an infinite loop) and `GHSA-v3rj-xjv7-4jmq` (thousands of consecutive comment lines overflowed the stack). On the old version, `wrangler deploy` against a `wrangler.toml` ending in `a=[1 #` never returned; it now fails with `Invalid TOML document: cannot find end of structure`.
+
+- [#15760](https://github.com/cloudflare/workers-sdk/pull/15760) [`6906bf0`](https://github.com/cloudflare/workers-sdk/commit/6906bf06d9eb1045605c71c345d37e7c300a5bbc) Thanks [@yomna-shousha](https://github.com/yomna-shousha)! - Warn when `wrangler preview` returns only non-custom-domain URLs even though custom-domain Preview URLs are configured.
+
+- [#15761](https://github.com/cloudflare/workers-sdk/pull/15761) [`354ebdb`](https://github.com/cloudflare/workers-sdk/commit/354ebdb61180ef67cebd34276a3a1935e5151d13) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Fix Preview output artifacts to always include the resolved parent Worker name
+
+  Preview artifacts now use Wrangler's resolved Worker name instead of relying on the Preview API response to include it.
+
+- Updated dependencies []:
+  - miniflare@5.20260921.0-alpha
+
 ## 4.136.2
 
 ### Patch Changes

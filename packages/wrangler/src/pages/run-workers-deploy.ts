@@ -5,7 +5,6 @@ import {
 	fetchPagedListResult,
 	fetchResult,
 } from "../cfetch";
-import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { runDeployCommandHandler, type DeployArgs } from "../deploy";
 import { confirm, prompt, select } from "../dialogs";
@@ -48,6 +47,7 @@ export async function runPagesToWorkersDeploy(
 		envFile: undefined,
 		experimentalProvision: undefined,
 		profile: undefined,
+		eventCode: undefined,
 		triggers: undefined,
 		routes: undefined,
 		zone: undefined,
@@ -101,7 +101,6 @@ export async function runPagesToWorkersDeploy(
 		await run(experimentalFlags, async () => {
 			initDeployHelpersContext({
 				logger,
-				createCloudflareClient,
 				fetchResult,
 				fetchListResult,
 				fetchPagedListResult,

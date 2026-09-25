@@ -19,6 +19,7 @@ import {
 	InstanceType,
 	pushBuiltContainerImage,
 	pushCommand,
+	pushImageIfChanged,
 	SchedulingPolicy,
 } from "../index";
 import type { BuiltContainerImage, BuiltImage } from "../src/build";
@@ -308,6 +309,64 @@ describe("buildCommand", () => {
 		).resolves.toBeUndefined();
 
 		expectSpawnWith(["image", "rm", "test-app:tag"]);
+		expectNoSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
+	it("preserves a reusable Build Output image tag across uploads", async ({
+		expect,
+	}) => {
+		const digest =
+			"registry.cloudflare.com/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+		inspectOutputs = [
+			"[]",
+			"53387881 2",
+			`["${digest}"]`,
+			`["${digest}"]`,
+			"53387881 2",
+		];
+		vi.mocked(execFileSync).mockReturnValue(
+			'{"Descriptor":{"digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}'
+		);
+
+		for (let attempt = 0; attempt < 2; attempt++) {
+			await expect(
+				pushImageIfChanged({
+					pathToDocker: "docker",
+					sourceTag: "test-app:tag",
+					targetTag: "test-app:tag",
+					accountId: "some-account-id",
+					containerConfig: dockerfileContainer,
+					cleanupSourceTag: false,
+				})
+			).resolves.toEqual({
+				remoteDigest: `${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`,
+			});
+		}
+
+		expectNoSpawnWith(["image", "rm", "test-app:tag"]);
+		expect(
+			vi.mocked(spawn).mock.calls.filter(([, args]) => args?.[0] === "push")
+		).toHaveLength(1);
+	});
+
+	it("validates a local image against its container disk limit", async ({
+		expect,
+	}) => {
+		inspectOutputs = ["[]", "2200000000 2"];
+
+		await expect(
+			pushImageIfChanged({
+				pathToDocker: "docker",
+				sourceTag: "test-app:tag",
+				targetTag: "test-app:tag",
+				accountId: "some-account-id",
+				containerConfig: dockerfileContainer,
+				cleanupSourceTag: false,
+			})
+		).rejects.toThrow(/Image too large/);
 		expectNoSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,

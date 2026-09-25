@@ -566,6 +566,22 @@ if (proxy) {
 	);
 }
 
+function redactEventCode(argv: string[]): string[] {
+	return argv.map((arg, index) => {
+		const previousArg = argv[index - 1];
+		if (previousArg === "--event-code" || previousArg === "--eventCode") {
+			return "<redacted>";
+		}
+		if (arg.startsWith("--event-code=")) {
+			return "--event-code=<redacted>";
+		}
+		if (arg.startsWith("--eventCode=")) {
+			return "--eventCode=<redacted>";
+		}
+		return arg;
+	});
+}
+
 export function createCLIParser(argv: string[]) {
 	const globalFlags = {
 		v: {
@@ -681,7 +697,7 @@ export function createCLIParser(argv: string[]) {
 				type: "wrangler-session",
 				version: 1,
 				wrangler_version: wranglerVersion,
-				command_line_args: argv,
+				command_line_args: redactEventCode(argv),
 				log_file_path: debugLogFilepath,
 			});
 
