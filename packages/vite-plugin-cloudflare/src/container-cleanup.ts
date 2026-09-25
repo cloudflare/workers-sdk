@@ -1,5 +1,5 @@
 import { cleanupContainers } from "@cloudflare/containers-shared";
-import type { Plugin, ViteDevServer } from "vite";
+import type { InlineConfig, ViteDevServer } from "vite";
 
 /** Owns Container cleanup for one server session, including failed attempts. */
 export function createContainerCleanup() {
@@ -52,42 +52,26 @@ export function createContainerCleanup() {
 }
 
 type ContainerCleanup = ReturnType<typeof createContainerCleanup>;
-type ContainerCleanupPlugin = Plugin<ContainerCleanup>;
+
+// Vite reuses the inline config when it creates a new server during a restart.
+// Keep the cleanup state with that config without changing its plugin list.
+const cleanupByInlineConfig = new WeakMap<InlineConfig, ContainerCleanup>();
 
 /**
- * Retains Container cleanup across config reloads using Vite's inline plugins.
- * The state belongs to this server, not the re-evaluated cloudflare() factory.
+ * Retains Container cleanup across config reloads for one server session.
  */
 export function getDevContainerCleanup(
 	server: ViteDevServer
 ): ContainerCleanup {
-	const pluginName = "vite-plugin-cloudflare:container-cleanup";
-	const retainedPlugin = server.config.plugins.find(
-		(plugin): plugin is ContainerCleanupPlugin => plugin.name === pluginName
-	);
-	if (retainedPlugin?.api) {
-		return retainedPlugin.api;
+	let cleanup = cleanupByInlineConfig.get(server.config.inlineConfig);
+	if (!cleanup) {
+		cleanup = createContainerCleanup();
+		// Clone the inline config so callers can use the same options to create
+		// independent servers.
+		const inlineConfig = { ...server.config.inlineConfig };
+		cleanupByInlineConfig.set(inlineConfig, cleanup);
+		server.config = { ...server.config, inlineConfig };
 	}
-
-	const cleanup = createContainerCleanup();
-	const plugin: ContainerCleanupPlugin = {
-		name: pluginName,
-		api: cleanup,
-		configureServer(nextServer) {
-			attachContainerCleanup(nextServer, cleanup);
-		},
-	};
-	// Clone the inline config so callers can use the same options to create
-	// independent servers. Vite retains these plugins when reloading its config.
-	server.config = {
-		...server.config,
-		inlineConfig: {
-			...server.config.inlineConfig,
-			plugins: [...(server.config.inlineConfig.plugins ?? []), plugin],
-		},
-	};
-	// The new inline plugin participates in subsequent restarts. Attach its
-	// lifecycle hooks explicitly for the server already being configured.
 	attachContainerCleanup(server, cleanup);
 	return cleanup;
 }
