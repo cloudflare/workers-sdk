@@ -1,5 +1,5 @@
 import { cleanupContainers } from "@cloudflare/containers-shared";
-import type { Plugin, ViteDevServer } from "vite";
+import type { InlineConfig, ViteDevServer } from "vite";
 
 /** Owns Container cleanup for one server session, including failed attempts. */
 export function createContainerCleanup() {
@@ -52,42 +52,33 @@ export function createContainerCleanup() {
 }
 
 type ContainerCleanup = ReturnType<typeof createContainerCleanup>;
-type ContainerCleanupPlugin = Plugin<ContainerCleanup>;
+const containerCleanupKey = Symbol("vite-plugin-cloudflare:container-cleanup");
+type InlineConfigWithCleanup = InlineConfig & {
+	[containerCleanupKey]?: ContainerCleanup;
+};
+type CloseWithCleanup = ViteDevServer["close"] & {
+	[containerCleanupKey]?: ContainerCleanup;
+};
 
 /**
- * Retains Container cleanup across config reloads using Vite's inline plugins.
- * The state belongs to this server, not the re-evaluated cloudflare() factory.
+ * Retains Container cleanup across config reloads for one server session.
  */
 export function getDevContainerCleanup(
 	server: ViteDevServer
 ): ContainerCleanup {
-	const pluginName = "vite-plugin-cloudflare:container-cleanup";
-	const retainedPlugin = server.config.plugins.find(
-		(plugin): plugin is ContainerCleanupPlugin => plugin.name === pluginName
-	);
-	if (retainedPlugin?.api) {
-		return retainedPlugin.api;
-	}
-
-	const cleanup = createContainerCleanup();
-	const plugin: ContainerCleanupPlugin = {
-		name: pluginName,
-		api: cleanup,
-		configureServer(nextServer) {
-			attachContainerCleanup(nextServer, cleanup);
-		},
-	};
-	// Clone the inline config so callers can use the same options to create
-	// independent servers. Vite retains these plugins when reloading its config.
-	server.config = {
-		...server.config,
-		inlineConfig: {
+	let cleanup = (server.config.inlineConfig as InlineConfigWithCleanup)[
+		containerCleanupKey
+	];
+	if (!cleanup) {
+		cleanup = createContainerCleanup();
+		// Vite reuses its inline config on restart. Clone it so independently
+		// created servers do not share cleanup state.
+		const inlineConfig: InlineConfigWithCleanup = {
 			...server.config.inlineConfig,
-			plugins: [...(server.config.inlineConfig.plugins ?? []), plugin],
-		},
-	};
-	// The new inline plugin participates in subsequent restarts. Attach its
-	// lifecycle hooks explicitly for the server already being configured.
+			[containerCleanupKey]: cleanup,
+		};
+		server.config = { ...server.config, inlineConfig };
+	}
 	attachContainerCleanup(server, cleanup);
 	return cleanup;
 }
@@ -96,11 +87,28 @@ function attachContainerCleanup(
 	server: ViteDevServer,
 	cleanup: ContainerCleanup
 ) {
+	// Vite replaces close on restart, so a marker on the function tracks the
+	// current server implementation without leaking to the replacement.
+	if ((server.close as CloseWithCleanup)[containerCleanupKey] === cleanup) {
+		return;
+	}
 	const restartServer = server.restart.bind(server);
-	server.restart = (...args) => cleanup.restart(() => restartServer(...args));
+	server.restart = (...args) =>
+		cleanup.restart(async () => {
+			await restartServer(...args);
+			// Vite replaces the server's close method on restart. If the reloaded
+			// config removed Cloudflare, no plugin hook reattaches cleanup.
+			if (
+				!server.config.plugins.some(
+					(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
+				)
+			) {
+				attachContainerCleanup(server, cleanup);
+			}
+		});
 
 	const closeServer = server.close.bind(server);
-	server.close = async () => {
+	const closeWithCleanup: CloseWithCleanup = async () => {
 		try {
 			await closeServer();
 		} finally {
@@ -109,4 +117,6 @@ function attachContainerCleanup(
 			}
 		}
 	};
+	closeWithCleanup[containerCleanupKey] = cleanup;
+	server.close = closeWithCleanup;
 }
