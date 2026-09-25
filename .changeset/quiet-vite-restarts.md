@@ -4,4 +4,4 @@
 
 Keep dependency optimization caches stable on the first Vite dev server restart.
 
-Container cleanup state now survives config reloads without adding a plugin after the initial config is resolved. This also avoids unnecessary re-optimization for Workers that do not declare Containers.
+The first dev server restart no longer re-optimizes unchanged dependencies, including in projects without Containers. Container images are still cleaned up when the server closes, even after a config reload removes the Cloudflare plugin.
