@@ -223,10 +223,6 @@ type Stream = K2Stream & { endpoint: string };
 /** Creates an isolated stream through the CLI and registers API cleanup. */
 async function createStream(helper: WranglerE2ETestHelper) {
 	assert(
-		CLOUDFLARE_ACCOUNT_ID,
-		"CLOUDFLARE_ACCOUNT_ID is required for live K2 E2E tests"
-	);
-	assert(
 		process.env.CLOUDFLARE_API_TOKEN,
 		"CLOUDFLARE_API_TOKEN is required for live K2 E2E tests"
 	);

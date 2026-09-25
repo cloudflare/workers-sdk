@@ -7,6 +7,7 @@ import type { RemoteProxyConnectionString } from "miniflare";
 import type { RequestListener } from "node:http";
 
 const stream = "0123456789abcdef0123456789abcdef";
+const remoteRequiredError = "Binding ORDERS needs to be run remotely";
 const script = `export default {
 	async fetch(request, env) {
 		try {
@@ -193,9 +194,7 @@ describe("K2 producer binding", () => {
 		useDispose(mf);
 		const response = await mf.dispatchFetch("http://localhost/");
 		expect(response.status).toBe(500);
-		expect(await response.text()).toContain(
-			"Binding ORDERS needs to be run remotely"
-		);
+		expect(await response.text()).toBe(remoteRequiredError);
 		expect(requests).not.toHaveBeenCalled();
 	});
 
@@ -203,18 +202,21 @@ describe("K2 producer binding", () => {
 		const mf = new Miniflare({ workers: [producerWorker()] });
 		useDispose(mf);
 		const env = await mf.getBindings<{ ORDERS: K2Producer }>();
+		// Without a remote proxy the call can't succeed; this error comes from
+		// the K2 binding worker, so it proves `send` was routed to it. A missing
+		// binding would fail with a different error.
 		await expect(async () =>
 			env.ORDERS.send([{ content: new Uint8Array([4, 5]).buffer }])
-		).rejects.toThrow("remote");
+		).rejects.toThrow(remoteRequiredError);
 	});
 
-	test("does not pretend that local-only ingestion succeeds", async ({
+	test("fails rather than silently dropping records without a remote proxy", async ({
 		expect,
 	}) => {
 		const mf = new Miniflare({ workers: [producerWorker()] });
 		useDispose(mf);
 		const response = await mf.dispatchFetch("http://localhost/");
 		expect(response.status).toBe(500);
-		expect(await response.text()).toContain("remote");
+		expect(await response.text()).toBe(remoteRequiredError);
 	});
 });
