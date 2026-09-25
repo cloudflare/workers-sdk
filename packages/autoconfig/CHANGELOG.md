@@ -1,5 +1,18 @@
 # @cloudflare/autoconfig
 
+## 0.6.6
+
+### Patch Changes
+
+- [#15870](https://github.com/cloudflare/workers-sdk/pull/15870) [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Keep Node.js ESM packages working when consumers rebundle them as CommonJS
+
+  Node.js-targeted ESM bundles now provide a real `require` implementation for bundled CommonJS dependencies. This avoids downstream patches for dynamic require calls and keeps the packages usable when a consumer rebundles them to CommonJS.
+
+- Updated dependencies [[`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33), [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b), [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd)]:
+  - @cloudflare/config@0.19.0
+  - @cloudflare/workers-utils@0.44.0
+  - @cloudflare/cli-shared-helpers@0.2.0
+
 ## 0.6.5
 
 ### Patch Changes

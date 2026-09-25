@@ -1,5 +1,18 @@
 # @cloudflare/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- [#15851](https://github.com/cloudflare/workers-sdk/pull/15851) [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd) Thanks [@NuroDev](https://github.com/NuroDev)! - Add a `cwd` option to package installation helpers
+
+  Package installations can now run in a specified working directory. npm package manifest updates also use that directory.
+
+### Patch Changes
+
+- Updated dependencies [[`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b)]:
+  - @cloudflare/workers-utils@0.44.0
+
 ## 0.1.39
 
 ### Patch Changes
