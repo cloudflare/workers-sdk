@@ -13,7 +13,7 @@ export default defineConfig(() => [
 		// Bundled ws uses CommonJS imports for Node builtins. Miniflare bundles
 		// this package into CJS, where import.meta.url is unavailable.
 		banner: {
-			js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(typeof __filename === "string" ? __filename : import.meta.url);',
+			js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url || (typeof __filename === "string" ? __filename : "/"));',
 		},
 		format: "esm",
 		dts: true,

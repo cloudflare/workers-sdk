@@ -14,7 +14,7 @@ export default defineConfig(() => [
 		// Provide require for bundled CommonJS dependencies. The __filename
 		// fallback keeps the output working when it is rebundled to CommonJS.
 		banner: {
-			js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(typeof __filename === "string" ? __filename : import.meta.url);',
+			js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url || (typeof __filename === "string" ? __filename : "/"));',
 		},
 		format: "esm",
 		dts: true,
