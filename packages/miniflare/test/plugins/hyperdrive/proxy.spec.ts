@@ -777,7 +777,7 @@ test("retiring a proxy stops new connections but preserves an active one", async
 	try {
 		controller.beginUpdate();
 		const oldPort = await controller.createProxyServer(config);
-		controller.commitUpdate();
+		controller.commitUpdate(new Set([`127.0.0.1:${oldPort}`]));
 
 		client = net.connect(oldPort, "127.0.0.1");
 		await new Promise<void>((resolve, reject) => {
@@ -794,11 +794,11 @@ test("retiring a proxy stops new connections but preserves an active one", async
 		expect(await exchange("before")).toBe("before");
 
 		controller.beginUpdate();
-		await controller.createProxyServer({
+		const newPort = await controller.createProxyServer({
 			...config,
 			targetPort: String(address.port + 1),
 		});
-		controller.commitUpdate();
+		controller.commitUpdate(new Set([`127.0.0.1:${newPort}`]));
 
 		expect(await exchange("after")).toBe("after");
 		await expect(

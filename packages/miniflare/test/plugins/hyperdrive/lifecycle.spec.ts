@@ -97,3 +97,23 @@ test("failed config assembly closes new proxies and keeps the old listener", asy
 	}
 	await vi.waitFor(() => expect(listeningServers()).toBe(before));
 });
+
+test("duplicate Hyperdrive binding names do not retain unused listeners", async ({
+	expect,
+}) => {
+	const first = "postgresql://user:password@127.0.0.1:5432/db?sslmode=require";
+	const second = "postgresql://user:password@127.0.0.1:5433/db?sslmode=require";
+	const mf = new Miniflare({
+		workers: [worker("first", first), worker("second")],
+	});
+	try {
+		await mf.ready;
+		const active = listeningServers();
+		await mf.setOptions({
+			workers: [worker("first", first), worker("second", second)],
+		});
+		await vi.waitFor(() => expect(listeningServers()).toBe(active));
+	} finally {
+		await mf.dispose();
+	}
+});
