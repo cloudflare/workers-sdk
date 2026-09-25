@@ -20,4 +20,23 @@ export default defineConfig(() => [
 		},
 		noExternal: [/.*/],
 	},
+	{
+		banner: {
+			js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);',
+		},
+		dts: true,
+		entry: {
+			index: "src/index.ts",
+		},
+		format: "esm",
+		keepNames: true,
+		metafile: true,
+		noExternal: [/.*/],
+		outDir: "dist",
+		outExtension: () => ({ js: ".mjs" }),
+		platform: "node",
+		sourcemap: process.env.SOURCEMAPS !== "false",
+		treeshake: true,
+		tsconfig: "tsconfig.json",
+	},
 ]);
