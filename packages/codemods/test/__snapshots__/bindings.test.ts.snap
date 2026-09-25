@@ -1,0 +1,307 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Wrangler binding conversion > converts supported bindings and reports manual work 1`] = `
+{
+  "bindings": {
+    "kind": "object",
+    "properties": [
+      {
+        "key": "JSON",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "enabled",
+                  "value": true,
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.json",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "TEXT",
+        "value": {
+          "args": [
+            "value",
+          ],
+          "callee": "bindings.text",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "API_TOKEN",
+        "value": {
+          "args": [],
+          "callee": "bindings.secret",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "DB",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "name",
+                  "value": "database",
+                },
+                {
+                  "key": "id",
+                  "value": "database-id",
+                },
+                {
+                  "key": "dev",
+                  "value": {
+                    "kind": "object",
+                    "properties": [
+                      {
+                        "key": "remote",
+                        "value": true,
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.d1",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "CACHE",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "id",
+                  "value": "namespace-id",
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.kv",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "DISPATCH",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "namespace",
+                  "value": "namespace",
+                },
+                {
+                  "key": "outbound",
+                  "value": {
+                    "kind": "object",
+                    "properties": [
+                      {
+                        "key": "worker",
+                        "value": "outbound-staging",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.dispatchNamespace",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "EMAIL",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "allowedDestinationAddresses",
+                  "value": [],
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.sendEmail",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "QUEUE",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "name",
+                  "value": "jobs",
+                },
+                {
+                  "key": "deliveryDelay",
+                  "value": 5,
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.queue",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "SERVICE",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "worker",
+                  "value": "backend-staging",
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.worker",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "COUNTER",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "worker",
+                  "value": "worker",
+                },
+                {
+                  "key": "exportName",
+                  "value": "Counter",
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.durableObject",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "AI",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [
+                {
+                  "key": "dev",
+                  "value": {
+                    "kind": "object",
+                    "properties": [
+                      {
+                        "key": "remote",
+                        "value": true,
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+          "callee": "bindings.ai",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "VERSION",
+        "value": {
+          "args": [],
+          "callee": "bindings.versionMetadata",
+          "kind": "call",
+        },
+      },
+      {
+        "key": "UNSAFE",
+        "value": {
+          "kind": "object",
+          "properties": [
+            {
+              "key": "type",
+              "value": "unsafe:example",
+            },
+            {
+              "key": "value",
+              "value": true,
+            },
+          ],
+        },
+      },
+      {
+        "key": "ASSETS",
+        "value": {
+          "args": [],
+          "callee": "bindings.assets",
+          "kind": "call",
+        },
+      },
+    ],
+  },
+  "followUps": [
+    {
+      "blocking": true,
+      "code": "unsupported-binding-options",
+      "docsUrl": undefined,
+      "message": "The options \`preview_database_id\` at \`d1_databases.0\` require manual migration.",
+      "sourcePath": "d1_databases.0",
+    },
+    {
+      "blocking": true,
+      "code": "service-environment",
+      "docsUrl": undefined,
+      "message": "A dispatch namespace uses a legacy service environment. Verify its target Worker name.",
+      "sourcePath": "dispatch_namespaces.0",
+    },
+    {
+      "blocking": true,
+      "code": "service-environment",
+      "docsUrl": undefined,
+      "message": "A service binding used a legacy service environment. Verify the generated Worker name.",
+      "sourcePath": "services.0",
+    },
+    {
+      "blocking": true,
+      "code": "durable-object-review",
+      "docsUrl": "https://developers.cloudflare.com/workers/runtime-apis/context/#exports",
+      "message": "Durable Object bindings require manual review after migration.",
+      "sourcePath": "durable_objects.bindings.0",
+    },
+    {
+      "blocking": true,
+      "code": "workflows-unsupported",
+      "docsUrl": undefined,
+      "message": "Workflow bindings are not supported by the new config and were not migrated.",
+      "sourcePath": "workflows",
+    },
+  ],
+  "imports": [
+    "bindings",
+  ],
+}
+`;
