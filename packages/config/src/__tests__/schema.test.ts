@@ -1517,9 +1517,9 @@ describe("ExportSchema", () => {
 			limits: { steps: 10 },
 			concurrency: { limit: 2 },
 			schedules: ["0 * * * *"],
-			default_retention: {
-				success_retention: "3 days",
-				error_retention: 86_400_000,
+			defaultRetention: {
+				successRetention: "3 days",
+				errorRetention: 86_400_000,
 			},
 		});
 		const result = parseExports({ ScheduledWorkflow: scheduled });
@@ -1534,8 +1534,8 @@ describe("ExportSchema", () => {
 			{ schedules: [] },
 			{ schedules: [""] },
 			{ concurrency: { limit: 0 } },
-			{ default_retention: { success_retention: -1 } },
-			{ default_retention: { error_retention: "" } },
+			{ defaultRetention: { successRetention: -1 } },
+			{ defaultRetention: { errorRetention: "" } },
 		]) {
 			const result = parseExports({
 				GreetingWorkflow: { type: "workflow", name: "greeting", ...settings },

@@ -182,11 +182,11 @@ export interface WorkflowExportOptions {
 	 * does not set its own retention. Accepts milliseconds or a duration string
 	 * such as `"3 days"`.
 	 */
-	default_retention?: {
+	defaultRetention?: {
 		/** How long to retain instances that completed successfully or were terminated. */
-		success_retention?: number | string;
+		successRetention?: number | string;
 		/** How long to retain errored instances. */
-		error_retention?: number | string;
+		errorRetention?: number | string;
 	};
 }
 
