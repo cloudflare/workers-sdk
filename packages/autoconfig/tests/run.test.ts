@@ -73,6 +73,66 @@ describe("runAutoConfig()", () => {
 		);
 	});
 
+	it("rejects a Wrangler-only framework when passed preconstructed cf details", async ({
+		expect,
+	}) => {
+		await expect(
+			runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "qwik-app",
+					framework: getFrameworkClassInstance("qwik"),
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				},
+				{
+					target: "cf",
+					context: createMockContext(),
+					skipConfirmations: true,
+					runBuild: false,
+				}
+			)
+		).rejects.toThrow(
+			"cf does not support Qwik projects yet. You can still use Wrangler to develop and deploy this project."
+		);
+	});
+
+	it("allows selecting a cf-supported framework during confirmation", async ({
+		expect,
+	}) => {
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+		const context = createMockContext({
+			dialogs: {
+				confirm: vi.fn().mockResolvedValue(true),
+				prompt: vi
+					.fn()
+					.mockResolvedValueOnce("static-app")
+					.mockResolvedValueOnce("dist"),
+				select: vi.fn().mockResolvedValue("static"),
+			},
+		});
+
+		const summary = await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "qwik-app",
+				framework: getFrameworkClassInstance("qwik"),
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			},
+			{
+				target: "cf",
+				context,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(summary.frameworkId).toBe("static");
+	});
+
 	it("creates new configuration and cf scripts by default", async ({
 		expect,
 	}) => {
