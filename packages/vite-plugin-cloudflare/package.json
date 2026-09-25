@@ -54,6 +54,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/unenv-preset": "workspace:*",
+		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "catalog:default",

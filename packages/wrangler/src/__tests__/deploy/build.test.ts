@@ -92,6 +92,39 @@ describe("deploy", () => {
 		clearOutputFilePath();
 	});
 
+	it.for(["js", "ts"])(
+		"should bundle the standard @retryable decorator in a %s Worker",
+		async (extension, { expect }) => {
+			writeWranglerConfig({ main: `index.${extension}` });
+			fs.writeFileSync(
+				`index.${extension}`,
+				`
+					import { DurableObject, retryable } from "cloudflare:durable-objects";
+
+					export class Counter extends DurableObject {
+						@retryable
+						async fetch() {
+							return new Response("ok");
+						}
+					}
+
+					export default {
+						fetch() {
+							return new Response("ok");
+						}
+					};
+				`
+			);
+
+			await runWrangler("build");
+			const output = fs.readFileSync("dist/index.js", "utf-8");
+
+			expect(output).toContain('from "cloudflare:durable-objects"');
+			expect(output).toContain("__decoratorContext");
+			expect(output).not.toContain("@retryable");
+		}
+	);
+
 	describe("[define]", () => {
 		it("should be able to define values that will be substituted into top-level identifiers", async ({
 			expect,

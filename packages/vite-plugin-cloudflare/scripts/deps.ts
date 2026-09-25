@@ -5,6 +5,11 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
+	// esbuild contains a native binary, so must be external. Used to lower
+	// standard decorators in Worker code, which Vite does not do. This is the
+	// same pinned version that wrangler, a required peer dependency, installs.
+	"esbuild",
+
 	// Must be external - resolved at runtime when bundling user's worker code
 	// to provide Node.js compatibility polyfills
 	"unenv",
