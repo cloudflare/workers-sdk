@@ -58,6 +58,25 @@ describe("getCodemodSummary", () => {
 			"Updated 1 file(s). Run your package manager's install command to refresh its lockfile."
 		);
 	});
+
+	it("formats unchanged projects and dry runs", ({ expect }) => {
+		expect(
+			getCodemodSummary(
+				{
+					changedFiles: [],
+				},
+				false
+			)
+		).toBe("Project is already up to date.");
+		expect(
+			getCodemodSummary(
+				{
+					changedFiles: ["cloudflare.config.ts"],
+				},
+				true
+			)
+		).toBe("Would update 1 file(s).");
+	});
 });
 
 describe("formatFollowUps", () => {
