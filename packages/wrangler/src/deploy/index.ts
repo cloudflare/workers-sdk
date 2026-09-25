@@ -37,6 +37,7 @@ import * as metrics from "../metrics";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
+import { durableObjectsCodeUpdateModeArg } from "../versions/deployment-args";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 import type { Config } from "@cloudflare/workers-utils";
@@ -69,6 +70,7 @@ export const deployCommand = createCommand({
 	args: {
 		...experimentalNewConfigArg,
 		...sharedDeployVersionsArgs,
+		...durableObjectsCodeUpdateModeArg,
 		"event-code": {
 			describe: "Create a temporary account for an event",
 			type: "string",
