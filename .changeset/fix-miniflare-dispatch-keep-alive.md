@@ -4,4 +4,4 @@
 
 Reduce `dispatchFetch()` connection exhaustion under sustained local and CI workloads
 
-Repeated `GET` and `HEAD` dispatches now reuse runtime connections instead of creating a new connection for every request. This prevents read-heavy Miniflare test suites from exhausting the host's available ephemeral ports while preserving safe handling for requests that cannot be transparently retried.
+Repeated dispatches now reuse runtime connections for all HTTP methods, including `POST`, `PUT`, `DELETE`, and `PATCH`, instead of creating a new connection for every request. This prevents read-heavy and write-heavy Miniflare test suites from exhausting the host's available ephemeral ports. Transport failures are surfaced without automatically replaying requests, since Worker handlers can have side effects even for `GET` and `HEAD`.

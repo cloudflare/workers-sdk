@@ -174,7 +174,6 @@ function convertUndiciHeadersToStandard(
  */
 export class DispatchFetchDispatcher extends undici.Dispatcher {
 	private readonly cfBlobJson?: string;
-	private readonly retryRuntimeDispatcher: undici.Dispatcher;
 	private readonly nonRetryableRuntimeDispatcher: undici.Dispatcher;
 
 	/**
@@ -197,13 +196,6 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		nonRetryableRuntimeDispatcher?: undici.Dispatcher
 	) {
 		super();
-		this.retryRuntimeDispatcher = new undici.RetryAgent(runtimeDispatcher, {
-			methods: ["GET", "HEAD"],
-			statusCodes: [],
-			maxRetries: 1,
-			minTimeout: 0,
-			maxTimeout: 0,
-		});
 		this.nonRetryableRuntimeDispatcher =
 			nonRetryableRuntimeDispatcher ?? runtimeDispatcher;
 		if (cfBlob !== undefined) {
@@ -255,22 +247,16 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 
 			options.headers = headers;
 
-			// Keep GET/HEAD connections alive to avoid consuming one ephemeral port
-			// per dispatch in TIME_WAIT. A pooled connection may go stale between
-			// requests, so retry these safe methods once on network failure.
-			// Other methods use a separate pool and still reset their connection after
-			// each request, so they cannot inherit a stale reusable socket or be
-			// retried after potentially reaching the Worker.
-			const canRetry = options.method === "GET" || options.method === "HEAD";
-			if (canRetry) {
-				options.reset = false;
-				// RetryHandler spreads headers when resuming an interrupted response.
-				// Convert to a plain object so user and Miniflare headers survive that
-				// retry path.
-				options.headers = Object.fromEntries(headers.entries());
-				return this.retryRuntimeDispatcher.dispatch(options, handler);
+			// Worker handlers can have side effects even for GET/HEAD, so never
+			// replay a request after a transport failure or pipeline it behind another
+			options.idempotent = false;
+
+			// Reuse successful connections for every method to avoid consuming one
+			// ephemeral port per dispatch, but surface failures instead of retrying
+			options.reset = false;
+			if (options.method === "GET" || options.method === "HEAD") {
+				return this.runtimeDispatcher.dispatch(options, handler);
 			}
-			options.reset = true;
 			return this.nonRetryableRuntimeDispatcher.dispatch(options, handler);
 		} else {
 			// If this wasn't a request to the runtime (e.g. redirect to somewhere

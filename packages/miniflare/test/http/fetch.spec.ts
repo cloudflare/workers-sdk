@@ -251,10 +251,9 @@ test("fetch: returns regular response if no WebSocket response returned", async 
 	expect(res.headers.get("Content-Type")).toBe("text/html");
 	expect(await res.text()).toBe("<p>Not Found</p>");
 });
-test(
-	"fetch: DispatchFetchDispatcher reuses connections across requests",
-	{ retry: 3 },
-	async ({ expect }) => {
+test.for(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"])(
+	"fetch: DispatchFetchDispatcher reuses connections across %s requests",
+	async (method, { expect }) => {
 		// Forcing `options.reset = true` closed the connection after every request, burning
 		// one ephemeral port per dispatch in `TIME_WAIT` until it expired
 		let connectionCount = 0;
@@ -275,92 +274,154 @@ test(
 
 		const origin = `http://127.0.0.1:${port}`;
 		const runtimeDispatcher = new Pool(origin);
+		const nonRetryableRuntimeDispatcher = new Pool(origin);
+		onTestFinished(async () => {
+			await Promise.all([
+				runtimeDispatcher.close(),
+				nonRetryableRuntimeDispatcher.close(),
+			]);
+		});
 		// Both origins match, so requests take the runtime dispatch path
+		const dispatcher = new DispatchFetchDispatcher(
+			runtimeDispatcher,
+			runtimeDispatcher,
+			origin,
+			origin,
+			undefined,
+			nonRetryableRuntimeDispatcher
+		);
+		const requestCount = 200;
+		for (let i = 0; i < requestCount; i++) {
+			const res = await fetch(`${origin}/`, {
+				dispatcher,
+				method,
+				...(method === "GET" || method === "HEAD" ? {} : { body: "hello" }),
+			});
+			expect(await res.text()).toBe(method === "HEAD" ? "" : "ok");
+		}
+		// Allow a second connection while the first is being returned to the pool
+		// Without keep-alive this would be one connection per request
+		expect(connectionCount).toBeLessThanOrEqual(3);
+		expect(connectionCount).toBeLessThan(requestCount);
+	}
+);
+test.for(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"])(
+	"fetch: DispatchFetchDispatcher surfaces stale %s failures without replay",
+	async (method, { expect }) => {
+		const origin = "http://runtime.test";
+		const runtimeDispatcher = new MockAgent();
+		runtimeDispatcher.disableNetConnect();
+		onTestFinished(() => runtimeDispatcher.close());
+
+		const runtimePool = runtimeDispatcher.get(origin);
+		runtimePool
+			.intercept({ path: "/", method })
+			.replyWithError(new errors.SocketError("stale connection"));
+		runtimePool.intercept({ path: "/", method }).reply(200, "ok");
+
 		const dispatcher = new DispatchFetchDispatcher(
 			runtimeDispatcher,
 			runtimeDispatcher,
 			origin,
 			origin
 		);
-		const requestCount = 20;
-		for (let i = 0; i < requestCount; i++) {
-			const res = await fetch(`${origin}/`, { dispatcher });
-			expect(await res.text()).toBe("ok");
-		}
-		// Reuse allows one connection, plus maybe one more opened while the first
-		// is still being returned to the pool after its body completes. Without
-		// keep-alive this would be one connection per request.
-		expect(connectionCount).toBeLessThanOrEqual(3);
-		expect(connectionCount).toBeLessThan(requestCount);
-		await runtimeDispatcher.close();
+		await expect(fetch(origin, { dispatcher, method })).rejects.toThrow(
+			"fetch failed"
+		);
+		const res = await fetch(origin, { dispatcher, method });
+		expect(await res.text()).toBe(method === "HEAD" ? "" : "ok");
+		runtimeDispatcher.assertNoPendingInterceptors();
 	}
 );
-test("fetch: DispatchFetchDispatcher retries stale GET connections", async ({
-	expect,
-}) => {
-	const origin = "http://runtime.test";
-	const runtimeDispatcher = new MockAgent();
-	runtimeDispatcher.disableNetConnect();
-	onTestFinished(() => runtimeDispatcher.close());
-
-	const runtimePool = runtimeDispatcher.get(origin);
-	runtimePool
-		.intercept({ path: "/" })
-		.replyWithError(new errors.SocketError("stale connection"));
-	runtimePool.intercept({ path: "/" }).reply(200, "ok");
-
-	const dispatcher = new DispatchFetchDispatcher(
-		runtimeDispatcher,
-		runtimeDispatcher,
-		origin,
-		origin
-	);
-	const res = await fetch(origin, { dispatcher });
-	expect(await res.text()).toBe("ok");
-	runtimeDispatcher.assertNoPendingInterceptors();
-});
-test("fetch: DispatchFetchDispatcher preserves headers on partial GET retry", async ({
-	expect,
-}) => {
-	const requests: http.IncomingMessage[] = [];
-	const server = await useServer((req, res) => {
-		requests.push(req);
-		if (requests.length === 1) {
-			res.writeHead(200, {
-				"content-length": "10",
-				etag: '"retry-test"',
-			});
-			res.write("hello", () => res.socket?.end());
-			return;
-		}
-
-		res.writeHead(206, {
-			"content-length": "5",
-			"content-range": "bytes 5-9/10",
-			etag: '"retry-test"',
+test.for(["GET", "POST", "PUT", "DELETE", "PATCH"])(
+	"fetch: DispatchFetchDispatcher does not replay a partial %s response",
+	async (method, { expect }) => {
+		const requests: http.IncomingMessage[] = [];
+		const pendingResponse = new DeferredPromise<http.ServerResponse>();
+		const server = await useServer((req, res) => {
+			requests.push(req);
+			if (requests.length === 1) {
+				res.writeHead(200, {
+					"content-length": "10",
+					etag: '"retry-test"',
+				});
+				res.write("hello");
+				pendingResponse.resolve(res);
+				return;
+			}
+			res.end("ok");
 		});
-		res.end("world");
-	});
-	const origin = server.http.origin;
-	const runtimeDispatcher = new Pool(origin);
-	onTestFinished(() => runtimeDispatcher.close());
-	const dispatcher = new DispatchFetchDispatcher(
-		runtimeDispatcher,
-		runtimeDispatcher,
-		origin,
-		origin
-	);
+		const origin = server.http.origin;
+		const runtimeDispatcher = new Pool(origin, { connections: 1 });
+		onTestFinished(() => runtimeDispatcher.close());
+		const dispatcher = new DispatchFetchDispatcher(
+			runtimeDispatcher,
+			runtimeDispatcher,
+			origin,
+			origin
+		);
 
-	const res = await fetch(new URL("/retry", server.http), {
-		headers: { "x-test-header": "preserved" },
-		dispatcher,
-	});
-	expect(await res.text()).toBe("helloworld");
-	expect(requests).toHaveLength(2);
-	expect(requests[1].headers["x-test-header"]).toBe("preserved");
-	expect(requests[1].headers["mf-original-url"]).toBe(`${origin}/retry`);
-	expect(requests[1].headers["mf-disable-pretty-error"]).toBe("true");
-});
+		const res = await fetch(new URL("/mutate", server.http), {
+			method,
+			dispatcher,
+		});
+		assert(res.body);
+		const reader = res.body.getReader();
+		expect(await reader.read()).toEqual({
+			done: false,
+			value: new TextEncoder().encode("hello"),
+		});
+		const failure = expect(reader.read()).rejects.toThrow();
+		(await pendingResponse).destroy();
+		await failure;
+		expect(requests).toHaveLength(1);
+		const recovered = await fetch(origin, { method, dispatcher });
+		expect(await recovered.text()).toBe("ok");
+		expect(requests).toHaveLength(2);
+	}
+);
+test.for(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"])(
+	"fetch: DispatchFetchDispatcher does not replay a processed %s on a reused socket",
+	async (method, { expect }) => {
+		let requests = 0;
+		const sockets = new Set<http.IncomingMessage["socket"]>();
+		const server = await useServer((req, res) => {
+			requests++;
+			sockets.add(req.socket);
+			req.resume();
+			req.on("end", () => {
+				if (requests === 2) {
+					res.destroy();
+				} else {
+					res.end("ok");
+				}
+			});
+		});
+		const origin = server.http.origin;
+		const runtimeDispatcher = new Pool(origin, { connections: 1 });
+		onTestFinished(() => runtimeDispatcher.close());
+		const dispatcher = new DispatchFetchDispatcher(
+			runtimeDispatcher,
+			runtimeDispatcher,
+			origin,
+			origin
+		);
+		const init = {
+			method,
+			dispatcher,
+			body: method === "GET" || method === "HEAD" ? undefined : "hello",
+		};
+		const warmup = await fetch(origin, init);
+		expect(await warmup.text()).toBe(method === "HEAD" ? "" : "ok");
+		await expect(fetch(origin, init)).rejects.toThrow("fetch failed");
+		expect(requests).toBe(2);
+		expect(sockets.size).toBe(1);
+		const recovered = await fetch(origin, init);
+		expect(await recovered.text()).toBe(method === "HEAD" ? "" : "ok");
+		expect(requests).toBe(3);
+		expect(sockets.size).toBe(2);
+	}
+);
 test("fetch: DispatchFetchDispatcher isolates non-retryable requests", async ({
 	expect,
 }) => {
