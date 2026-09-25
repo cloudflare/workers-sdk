@@ -27,10 +27,7 @@ export class Vike extends Framework {
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
-		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		this.validateWranglerOnlyTarget(target);
-
 		const vikeServerIsInstalled = isPackageInstalled(
 			"vike-server",
 			projectPath

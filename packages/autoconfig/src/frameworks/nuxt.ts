@@ -63,10 +63,7 @@ export class Nuxt extends Framework {
 		projectPath,
 		packageManager,
 		isWorkspaceRoot,
-		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		this.validateWranglerOnlyTarget(target);
-
 		if (!dryRun) {
 			await installPackages(packageManager.type, ["nitro-cloudflare-dev"], {
 				dev: true,

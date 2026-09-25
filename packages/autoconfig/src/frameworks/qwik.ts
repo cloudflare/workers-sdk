@@ -21,10 +21,7 @@ export class Qwik extends Framework {
 		projectPath,
 		dryRun,
 		packageManager,
-		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		this.validateWranglerOnlyTarget(target);
-
 		if (!dryRun) {
 			// Add the workers integration
 			const cmd = [

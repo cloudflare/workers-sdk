@@ -21,10 +21,7 @@ export class Angular extends Framework {
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
-		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		this.validateWranglerOnlyTarget(target);
-
 		const angularJson = parseJSONC(
 			await readFile(resolve("angular.json"), "utf8")
 		) as AngularJson;

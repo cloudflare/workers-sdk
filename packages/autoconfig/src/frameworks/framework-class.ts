@@ -46,21 +46,6 @@ export abstract class Framework {
 	configurationDescription?: string;
 
 	/**
-	 * Rejects `cf` configuration for frameworks that currently only support Wrangler.
-	 *
-	 * @param target - The requested autoconfig target.
-	 * @throws {AutoConfigFrameworkConfigurationError} If `cf` is the requested target.
-	 */
-	protected validateWranglerOnlyTarget(target: AutoConfigTarget): void {
-		if (target === "cf") {
-			throw new AutoConfigFrameworkConfigurationError(
-				`cf does not support automatic configuration for ${this.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
-				{ telemetryMessage: "autoconfig framework unsupported for cf" }
-			);
-		}
-	}
-
-	/**
 	 * Validates the installed framework version against the supported range and
 	 * stores it for later access via the `frameworkVersion` getter.
 	 * Warns via the context logger if the version exceeds `maximumKnownMajorVersion`.

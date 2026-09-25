@@ -18,10 +18,7 @@ export class Analog extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
-		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		this.validateWranglerOnlyTarget(target);
-
 		if (!dryRun) {
 			await updateViteConfig(projectPath);
 		}

@@ -18,10 +18,7 @@ export class SolidStart extends Framework {
 	async configure({
 		projectPath,
 		dryRun,
-		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		this.validateWranglerOnlyTarget(target);
-
 		if (!dryRun) {
 			const solidStartVersion = this.frameworkVersion;
 

@@ -13,10 +13,7 @@ export class SvelteKit extends Framework {
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
-		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		this.validateWranglerOnlyTarget(target);
-
 		const { dlx } = packageManager;
 		if (!dryRun) {
 			await runCommand(

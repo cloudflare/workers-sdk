@@ -25,10 +25,7 @@ export class Waku extends Framework {
 		projectPath,
 		packageManager,
 		isWorkspaceRoot,
-		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		this.validateWranglerOnlyTarget(target);
-
 		if (!dryRun) {
 			await installPackages(packageManager.type, ["hono"], {
 				dev: true,

@@ -73,6 +73,31 @@ describe("runAutoConfig()", () => {
 		);
 	});
 
+	it("rejects a Wrangler-only framework when passed preconstructed cf details", async ({
+		expect,
+	}) => {
+		await expect(
+			runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "qwik-app",
+					framework: getFrameworkClassInstance("qwik"),
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				},
+				{
+					target: "cf",
+					context: createMockContext(),
+					skipConfirmations: true,
+					runBuild: false,
+				}
+			)
+		).rejects.toThrow(
+			"cf does not support automatic configuration for Qwik projects yet. You can still use Wrangler to develop and deploy this project."
+		);
+	});
+
 	it("creates new configuration and cf scripts by default", async ({
 		expect,
 	}) => {

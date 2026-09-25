@@ -26,6 +26,7 @@ import {
 	isFrameworkSupported,
 	isKnownFramework,
 	type PackageJsonScriptsOverrides,
+	validateFrameworkTargetSupport,
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
@@ -83,6 +84,7 @@ export async function runAutoConfig(
 
 	autoConfigDetails = updatedAutoConfigDetails;
 	assertNonConfigured(autoConfigDetails);
+	validateFrameworkTargetSupport(autoConfigDetails.framework, target);
 
 	if (isKnownFramework(autoConfigDetails.framework.id)) {
 		const frameworkIsSupported = isFrameworkSupported(

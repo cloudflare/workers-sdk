@@ -344,6 +344,30 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 	});
 
+	it("rejects a Wrangler-only framework before checking its output directory", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				dependencies: { "@builder.io/qwik": "1" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ target: "cf", context })
+		).rejects.toThrow(
+			"cf does not support automatic configuration for Qwik projects yet. You can still use Wrangler to develop and deploy this project."
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ target: "wrangler", context })
+		).resolves.toMatchObject({
+			framework: { id: "qwik" },
+			outputDir: "dist",
+		});
+	});
+
 	it("outputDir should be set to cwd if an index.html file exists", async ({
 		expect,
 	}) => {
