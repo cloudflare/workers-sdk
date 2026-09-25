@@ -1,7 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
-import { glob } from "tinyglobby";
-import type { RunContext } from "./types";
+import { glob, type GlobOptions } from "tinyglobby";
+import type { CodemodContext, RunContext } from "./types";
 
 const DEFAULT_IGNORES = [
 	"**/.git/**",
@@ -12,6 +12,19 @@ const DEFAULT_IGNORES = [
 	"**/package-lock.json",
 	"**/npm-shrinkwrap.json",
 ];
+
+function getGlobOptions(cwd: string): GlobOptions {
+	return {
+		cwd,
+		absolute: true,
+		dot: true,
+		ignore: DEFAULT_IGNORES,
+	} as const;
+}
+
+function normalizeFilePath(cwd: string, filePath: string): string {
+	return path.resolve(cwd, filePath).split(path.sep).join(path.posix.sep);
+}
 
 /**
  * Checks whether a filesystem path exists without suppressing other errors.
@@ -34,6 +47,34 @@ export async function fileExists(filePath: string): Promise<boolean> {
 }
 
 /**
+ * Filters absolute or working-directory-relative paths using a codemod's file
+ * restrictions.
+ *
+ * @param context Working directory and optional file restriction globs.
+ * @param filePaths Candidate file paths.
+ *
+ * @returns Candidate paths included by the restrictions.
+ */
+export async function filterByFileRestrictions(
+	context: Pick<CodemodContext, "cwd" | "files">,
+	filePaths: readonly string[]
+): Promise<string[]> {
+	if (!context.files) {
+		return [...filePaths];
+	}
+
+	const restrictedPaths = new Set(
+		(await glob(context.files, getGlobOptions(context.cwd))).map((filePath) =>
+			normalizeFilePath(context.cwd, filePath)
+		)
+	);
+
+	return filePaths.filter((filePath) =>
+		restrictedPaths.has(normalizeFilePath(context.cwd, filePath))
+	);
+}
+
+/**
  * Applies a transform to matching files and stages changed outputs in memory.
  *
  * @param context Shared state and file restrictions for the codemod run.
@@ -46,21 +87,12 @@ export async function transformFiles(
 	patterns: string[],
 	transform: (source: string, filePath: string) => string
 ): Promise<string[]> {
-	const globOptions = {
-		cwd: context.cwd,
-		absolute: true,
-		dot: true,
-		ignore: DEFAULT_IGNORES,
-	} as const;
+	const globOptions = getGlobOptions(context.cwd);
 	const filePaths = await glob(patterns, globOptions);
-	const restrictedPaths = context.files
-		? new Set(await glob(context.files, globOptions))
-		: undefined;
+	const filteredFilePaths = await filterByFileRestrictions(context, filePaths);
 	const changes: Array<{ filePath: string; output: string }> = [];
 
-	for (const filePath of filePaths
-		.filter((candidate) => !restrictedPaths || restrictedPaths.has(candidate))
-		.sort()) {
+	for (const filePath of filteredFilePaths.sort()) {
 		const source =
 			context.stagedFiles.get(filePath) ?? (await readFile(filePath, "utf8"));
 		const output = transform(source, filePath);

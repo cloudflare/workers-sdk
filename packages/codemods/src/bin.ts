@@ -2,7 +2,12 @@
 
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { availableCodemods, runCodemod } from "./runner";
+import {
+	formatCompletionMessage,
+	formatFollowUps,
+	getCodemodExitCode,
+} from "./cli-output";
+import { availableCodemods, getCodemod, runCodemod } from "./runner";
 
 /** Prints command usage and the available codemods. */
 function printHelp(): void {
@@ -13,6 +18,8 @@ Run a codemod by name:
 
 Options:
   --cwd <path>     Project directory (default: current directory)
+  --config <path>  Exact Wrangler config path (wrangler-to-cf only)
+  --bundler <name> Bundler to migrate to: vite or wrangler (default: vite)
   --files <glob>   Restrict files considered; may be repeated
   --dry-run        List changes without writing files
   --force          Run even if the Git worktree is not clean
@@ -32,6 +39,8 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 		args,
 		allowPositionals: true,
 		options: {
+			bundler: { type: "string" },
+			config: { type: "string" },
 			cwd: { type: "string" },
 			files: { type: "string", multiple: true },
 			"dry-run": { type: "boolean", default: false },
@@ -52,8 +61,17 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 	if (!name) {
 		throw new Error("Expected a codemod name");
 	}
+	if (
+		values.bundler !== undefined &&
+		values.bundler !== "vite" &&
+		values.bundler !== "wrangler"
+	) {
+		throw new Error("Expected --bundler to be either `vite` or `wrangler`");
+	}
 	const cwd = path.resolve(values.cwd ?? process.cwd());
 	const result = await runCodemod(name, {
+		bundler: values.bundler,
+		configPath: values.config,
 		cwd,
 		dryRun: values["dry-run"],
 		files: values.files,
@@ -66,13 +84,24 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 			console.log(`  ${changedFile}`);
 		}
 	}
+	const followUpLines = formatFollowUps(result.followUps ?? []);
+	if (followUpLines.length > 0) {
+		console.log("");
+		for (const line of followUpLines) {
+			console.log(line);
+		}
+	}
 	console.log(
-		result.changedFiles.length === 0
-			? "Project is already up to date."
-			: values["dry-run"]
-				? `Would update ${result.changedFiles.length} file(s).`
-				: `Updated ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`
+		formatCompletionMessage(
+			result.changedFiles.length,
+			values["dry-run"],
+			getCodemod(name)?.name !== "wrangler-to-cf"
+		)
 	);
+	const exitCode = getCodemodExitCode(result.status);
+	if (exitCode !== 0) {
+		process.exitCode = exitCode;
+	}
 }
 
 try {

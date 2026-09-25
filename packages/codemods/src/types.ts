@@ -1,8 +1,18 @@
 export interface CodemodContext {
+	bundler?: "vite" | "wrangler";
+	configPath?: string;
 	cwd: string;
 	dryRun: boolean;
 	files?: string[];
 	force?: boolean;
+	installDependencies?: boolean;
+}
+
+export interface CodemodFollowUp {
+	blocking: boolean;
+	docsUrl?: string;
+	message: string;
+	sourcePath?: string;
 }
 
 /** Context for a single codemod within an ordered run. */
@@ -13,6 +23,8 @@ export interface RunContext extends CodemodContext {
 
 export interface CodemodResult {
 	changedFiles: string[];
+	followUps?: CodemodFollowUp[];
+	status?: "complete" | "needs-intervention";
 }
 
 export interface Codemod {

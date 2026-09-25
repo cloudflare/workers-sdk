@@ -23,7 +23,9 @@ async function createProject(files: Record<string, string>): Promise<string> {
 	const directory = await mkdtemp(path.join(tmpdir(), "cloudflare-codemods-"));
 	temporaryDirectories.push(directory);
 	for (const [filePath, contents] of Object.entries(files)) {
-		await writeFile(path.join(directory, filePath), contents);
+		const absolutePath = path.join(directory, filePath);
+		await mkdir(path.dirname(absolutePath), { recursive: true });
+		await writeFile(absolutePath, contents);
 	}
 	return directory;
 }
@@ -65,6 +67,129 @@ afterEach(async () => {
 });
 
 describe("codemod runner", () => {
+	it("runs the Wrangler-to-cf migration", async ({ expect }) => {
+		const cwd = await createProject({
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				main: "src/index.ts",
+				name: "runner-test",
+			}),
+		});
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+		});
+
+		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
+		expect(await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8"))
+			.toMatchInlineSnapshot(`
+			"import { defineConfig } from "cf/config";
+
+			/**
+			 * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+			 */
+			/**
+			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` as a dev dependency before using the generated configuration.
+			 */
+			throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+			export default defineConfig({
+				worker: {
+					name: "runner-test",
+					compatibilityDate: "2026-09-24",
+					entrypoint: "src/index.ts",
+				},
+			});
+			"
+		`);
+	});
+
+	it("applies file restrictions to the selected Wrangler config", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "restricted-test",
+			}),
+		});
+
+		const excludedResult = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["unrelated/**"],
+		});
+		expect(excludedResult.changedFiles).toEqual([]);
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
+
+		const includedResult = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["wrangler.jsonc"],
+		});
+		expect(includedResult.changedFiles).toEqual(["cloudflare.config.ts"]);
+	});
+
+	it("accepts an exact Wrangler config and bundler", async ({ expect }) => {
+		const cwd = await createProject({
+			"node_modules/wrangler/package.json": JSON.stringify({
+				name: "wrangler",
+				version: "4.100.0",
+			}),
+			"worker/custom.json": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				main: "src/index.ts",
+				name: "custom-config",
+				no_bundle: true,
+			}),
+		});
+
+		const result = await runCodemod("wrangler-to-cf", {
+			bundler: "wrangler",
+			configPath: "worker/custom.json",
+			cwd,
+			dryRun: false,
+		});
+
+		expect(result.changedFiles).toEqual([
+			"worker/cloudflare.config.ts",
+			"worker/wrangler.config.ts",
+		]);
+		expect(await readFile(path.join(cwd, "worker/wrangler.config.ts"), "utf8"))
+			.toMatchInlineSnapshot(`
+			"import { defineWranglerConfig } from "wrangler/experimental-config";
+
+			export default defineWranglerConfig({
+				noBundle: true,
+				types: {
+					generate: false,
+				},
+			});
+			"
+		`);
+	});
+
+	it("requires an exact config when discovery is ambiguous", async ({
+		expect,
+	}) => {
+		const config = JSON.stringify({
+			compatibility_date: "2026-09-24",
+			main: "src/index.ts",
+			name: "ambiguous-config",
+		});
+		const cwd = await createProject({
+			"wrangler.json": config,
+			"wrangler.toml": config,
+		});
+
+		await expect(
+			runCodemod("wrangler-to-cf", { cwd, dryRun: false })
+		).rejects.toThrow("Multiple Wrangler configs found");
+	});
+
 	it("runs the Vitest migrations manually, in sequence", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": `${JSON.stringify(
@@ -247,7 +372,9 @@ export default defineWorkersProject({
 		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
 		expect(
 			await readFile(path.join(cwd, "vitest.config.ts"), "utf8")
-		).toContain("@cloudflare/vitest-plugin");
+		).toMatchInlineSnapshot(
+			`"import { cloudflareTest } from "@cloudflare/vitest-plugin";"`
+		);
 	});
 
 	it("renames the package in package.json outside dependency groups", async ({
