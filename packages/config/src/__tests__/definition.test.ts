@@ -31,6 +31,9 @@ defineContainer({
 const testFilePath = fileURLToPath(
 	new URL("inline-worker-jsdoc.ts", import.meta.url)
 );
+const canonicalize = (fileName: string) =>
+	ts.sys.useCaseSensitiveFileNames ? fileName : fileName.toLowerCase();
+const canonicalTestFilePath = canonicalize(ts.sys.resolvePath(testFilePath));
 
 it("preserves JSDoc for define helper fields", ({ expect }) => {
 	const host: ts.LanguageServiceHost = {
@@ -45,7 +48,9 @@ it("preserves JSDoc for define helper fields", ({ expect }) => {
 		getScriptFileNames: () => [testFilePath],
 		getScriptSnapshot: (fileName) => {
 			const contents =
-				fileName === testFilePath ? source : ts.sys.readFile(fileName);
+				canonicalize(ts.sys.resolvePath(fileName)) === canonicalTestFilePath
+					? source
+					: ts.sys.readFile(fileName);
 			return contents === undefined
 				? undefined
 				: ts.ScriptSnapshot.fromString(contents);
