@@ -5,8 +5,8 @@ import * as timers from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { format } from "node:util";
 import {
-	createV2ContainerDevPlan,
-	createV2ContainerPreviewPlan,
+	createContainerDevPlanForCfConfig,
+	createContainerPreviewPlanForCfConfig,
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
@@ -476,7 +476,7 @@ export async function getDevMiniflareOptions(
 	const containerOptions: ContainerDevOptions[] = [];
 	if (resolvedPluginConfig.type === "workers") {
 		for (const worker of resolvedPluginConfig.environmentNameToWorkerMap.values()) {
-			const plan = createV2ContainerDevPlan({
+			const plan = createContainerDevPlanForCfConfig({
 				containers: resolvedPluginConfig.containers,
 				exports: worker.config.exports,
 				root: resolvedViteConfig.root,
@@ -812,7 +812,7 @@ export async function getPreviewMiniflareOptions(
 	const containerPlansByWorkerName = new Map<string, ContainerDevPlan>();
 	const containerOptions: ContainerDevOptions[] = [];
 	for (const previewWorker of resolvedPluginConfig.workers) {
-		const plan = createV2ContainerPreviewPlan({
+		const plan = createContainerPreviewPlanForCfConfig({
 			containers: resolvedPluginConfig.containers,
 			exports: previewWorker.config.exports,
 		});

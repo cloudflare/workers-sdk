@@ -221,13 +221,13 @@ export function createContainerDevPlan(
  * @returns The image preparation and runtime plan, or `undefined` when no export links a Container.
  * @throws If a linked Container is missing or image preparation has no build ID.
  */
-export function createV2ContainerDevPlan(options: {
+export function createContainerDevPlanForCfConfig(options: {
 	containers: ParsedInputContainerConfig[];
 	exports: ParsedInputWorkerConfig["exports"];
 	root: string;
 	containerBuildId?: string;
 }): ContainerDevPlan | undefined {
-	return createV2ContainerPlan({
+	return createContainerPlanForCfConfig({
 		containers: options.containers,
 		exports: options.exports,
 		containerDescription: "Container",
@@ -274,11 +274,11 @@ export function createV2ContainerDevPlan(options: {
  * @returns Runtime metadata keyed by Durable Object export, or `undefined` when none use Containers.
  * @throws If Build Output omits a Container referenced by a Worker export.
  */
-export function createV2ContainerPreviewPlan(options: {
+export function createContainerPreviewPlanForCfConfig(options: {
 	containers: ParsedOutputContainerConfig[];
 	exports: ParsedOutputWorkerConfig["exports"];
 }): ContainerDevPlan | undefined {
-	return createV2ContainerPlan({
+	return createContainerPlanForCfConfig({
 		containers: options.containers,
 		exports: options.exports,
 		containerDescription: "Build Output Container",
@@ -302,7 +302,7 @@ export function createV2ContainerPreviewPlan(options: {
 	});
 }
 
-function createV2ContainerPlan<TImage>(options: {
+function createContainerPlanForCfConfig<TImage>(options: {
 	containers: ContainerPlanDefinition<TImage>[];
 	exports: ContainerPlanExports;
 	containerDescription: string;

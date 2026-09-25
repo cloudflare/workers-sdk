@@ -70,7 +70,7 @@ export function normalizeContainerImageUris(options: {
 }
 
 /**
- * Builds or pulls the images in a v2 Container development plan.
+ * Builds or pulls the images in a Cloudflare config Container development plan.
  *
  * @param options - Planned images, project settings, Docker executable, and Vite logger.
  * @returns A promise that resolves when every image is ready.

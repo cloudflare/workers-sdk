@@ -5,11 +5,11 @@ import {
 } from "@cloudflare/config";
 import { describe, test } from "vitest";
 import {
-	createV2ContainerDevPlan,
-	createV2ContainerPreviewPlan,
+	createContainerDevPlanForCfConfig,
+	createContainerPreviewPlanForCfConfig,
 } from "../src/dev-options";
 
-describe("createV2ContainerDevPlan", () => {
+describe("createContainerDevPlanForCfConfig", () => {
 	test("plans standard and named Container images from input config", ({
 		expect,
 	}) => {
@@ -31,7 +31,7 @@ describe("createV2ContainerDevPlan", () => {
 			},
 		});
 
-		const plan = createV2ContainerDevPlan({
+		const plan = createContainerDevPlanForCfConfig({
 			containers: [standard, managed],
 			exports: {
 				StandardDO: {
@@ -83,7 +83,7 @@ describe("createV2ContainerDevPlan", () => {
 	test("does not require a build ID for an empty named-image Container", ({
 		expect,
 	}) => {
-		const plan = createV2ContainerDevPlan({
+		const plan = createContainerDevPlanForCfConfig({
 			containers: [
 				InputContainerSchema.parse({
 					name: "managed",
@@ -106,7 +106,7 @@ describe("createV2ContainerDevPlan", () => {
 
 	test("rejects missing and duplicate Container definitions", ({ expect }) => {
 		expect(() =>
-			createV2ContainerDevPlan({
+			createContainerDevPlanForCfConfig({
 				containers: [],
 				exports: {
 					ContainerDO: {
@@ -124,7 +124,7 @@ describe("createV2ContainerDevPlan", () => {
 			image: { reference: "docker.io/example:latest" },
 		});
 		expect(() =>
-			createV2ContainerDevPlan({
+			createContainerDevPlanForCfConfig({
 				containers: [container, container],
 				exports: {},
 				root: "/project",
@@ -133,11 +133,11 @@ describe("createV2ContainerDevPlan", () => {
 	});
 });
 
-describe("createV2ContainerPreviewPlan", () => {
+describe("createContainerPreviewPlanForCfConfig", () => {
 	test("passes remote and local references directly to the runtime", ({
 		expect,
 	}) => {
-		const plan = createV2ContainerPreviewPlan({
+		const plan = createContainerPreviewPlanForCfConfig({
 			containers: [
 				OutputContainerSchema.parse({
 					name: "standard",
@@ -200,7 +200,7 @@ describe("createV2ContainerPreviewPlan", () => {
 		expect,
 	}) => {
 		expect(
-			createV2ContainerPreviewPlan({
+			createContainerPreviewPlanForCfConfig({
 				containers: [],
 				exports: {},
 			})
