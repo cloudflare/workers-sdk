@@ -34,6 +34,7 @@ const config: TemplateConfig = {
 	id: "gatsby",
 	frameworkCli: "gatsby",
 	platform: "workers",
+	languages: ["js", "ts"],
 	displayName: "Gatsby",
 	copyFiles: {
 		path: "./templates",

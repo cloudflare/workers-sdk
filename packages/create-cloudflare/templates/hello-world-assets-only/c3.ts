@@ -8,6 +8,7 @@ const config: TemplateConfig = {
 	description:
 		"For static sites or when using your own backend. Uses Workers Static Assets.",
 	platform: "workers",
+	languages: ["js", "ts"],
 	copyFiles: {
 		path: "./templates",
 	},
