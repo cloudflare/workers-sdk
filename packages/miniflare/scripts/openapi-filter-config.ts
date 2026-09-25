@@ -641,6 +641,69 @@ const config = {
 					tags: ["Local Explorer"],
 				},
 			},
+			"/local/scheduled": {
+				post: {
+					description:
+						"Dispatches one scheduled invocation to the exact Worker available to Local Explorer under the requested name.",
+					operationId: "local-explorer-dispatch-scheduled",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							required: true,
+							schema: { type: "string", minLength: 1 },
+							description: "Exact Worker name available to Local Explorer.",
+						},
+					],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									$ref: "#/components/schemas/local-explorer_scheduled-request",
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												required: ["result"],
+												properties: {
+													result: {
+														$ref: "#/components/schemas/local-explorer_scheduled-result",
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Scheduled invocation result.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Scheduled invocation request failure.",
+						},
+					},
+					summary: "Dispatch Scheduled Invocation",
+					tags: ["Local Explorer"],
+				},
+			},
 
 			// Email endpoints (local-only, not pulling from upstream API)
 			"/local/email/routing": {
@@ -1858,6 +1921,29 @@ const config = {
 			},
 		},
 		schemas: {
+			"local-explorer_scheduled-request": {
+				type: "object",
+				required: ["cron"],
+				properties: {
+					cron: { type: "string", pattern: ".*\\S.*" },
+					scheduled_time: {
+						type: "integer",
+						minimum: -9223372036854,
+						maximum: 9223372036854,
+						description:
+							"Epoch milliseconds within workerd's signed 64-bit nanosecond range.",
+					},
+				},
+			},
+			"local-explorer_scheduled-result": {
+				type: "object",
+				required: ["outcome", "noRetry"],
+				additionalProperties: true,
+				properties: {
+					outcome: { type: "string" },
+					noRetry: { type: "boolean" },
+				},
+			},
 			// R2 schemas - matches stratus dashboard API shapes
 			// Note: storage_class and jurisdiction/location not supported locally
 			r2_object: {
@@ -2052,9 +2138,30 @@ const config = {
 						type: "string",
 						description: "Worker name from the dev registry",
 					},
+					persistenceScope: {
+						type: "string",
+						description:
+							"Opaque stable identifier for the worker's local project, used to scope browser persistence without exposing its filesystem path",
+					},
 					bindings: {
 						$ref: "#/components/schemas/local-explorer_worker-bindings",
 						description: "Resource bindings for this worker",
+					},
+					triggers: {
+						$ref: "#/components/schemas/local-explorer_worker-triggers",
+						description: "Configured triggers for this worker",
+					},
+				},
+			},
+			"local-explorer_worker-triggers": {
+				type: "object",
+				description: "Trigger metadata for a worker",
+				required: ["crons"],
+				properties: {
+					crons: {
+						type: "array",
+						items: { type: "string" },
+						description: "Exact configured Cron Trigger expressions",
 					},
 				},
 			},

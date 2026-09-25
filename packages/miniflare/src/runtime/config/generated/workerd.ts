@@ -249,7 +249,7 @@ export class Socket_Https extends $.Struct {
 	static readonly _capnp = {
 		displayName: "https",
 		id: "de123876383cbbdc",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	_adoptOptions(value: $.Orphan<HttpOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -295,7 +295,7 @@ export class Socket_Tcp extends $.Struct {
 	static readonly _capnp = {
 		displayName: "tcp",
 		id: "b59d8ecf6886b64c",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	_adoptTlsOptions(value: $.Orphan<TlsOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -319,20 +319,66 @@ export class Socket_Tcp extends $.Struct {
 		return "Socket_Tcp_" + super.toString();
 	}
 }
+/**
+ * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+ * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+ * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+ * datagram (see Socket.protocol).
+ *
+ * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+ * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+ *
+ */
+export class Socket_Udp extends $.Struct {
+	static readonly _capnp = {
+		displayName: "udp",
+		id: "95ae058885f84b2a",
+		size: new $.ObjectSize(16, 5),
+		defaultIdleTimeoutMs: $.getUint32Mask(30000),
+		defaultMaxPendingBytes: $.getUint32Mask(262144),
+	};
+	get idleTimeoutMs(): number {
+		return $.utils.getUint32(4, this, Socket_Udp._capnp.defaultIdleTimeoutMs);
+	}
+	set idleTimeoutMs(value: number) {
+		$.utils.setUint32(4, value, this, Socket_Udp._capnp.defaultIdleTimeoutMs);
+	}
+	get maxPendingBytes(): number {
+		return $.utils.getUint32(8, this, Socket_Udp._capnp.defaultMaxPendingBytes);
+	}
+	set maxPendingBytes(value: number) {
+		$.utils.setUint32(8, value, this, Socket_Udp._capnp.defaultMaxPendingBytes);
+	}
+	toString(): string {
+		return "Socket_Udp_" + super.toString();
+	}
+}
 export const Socket_Which = {
 	HTTP: 0,
 	HTTPS: 1,
 	TCP: 2,
+	/**
+	 * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+	 * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+	 * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+	 * datagram (see Socket.protocol).
+	 *
+	 * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+	 * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+	 *
+	 */
+	UDP: 3,
 } as const;
 export type Socket_Which = (typeof Socket_Which)[keyof typeof Socket_Which];
 export class Socket extends $.Struct {
 	static readonly HTTP = Socket_Which.HTTP;
 	static readonly HTTPS = Socket_Which.HTTPS;
 	static readonly TCP = Socket_Which.TCP;
+	static readonly UDP = Socket_Which.UDP;
 	static readonly _capnp = {
 		displayName: "Socket",
 		id: "9a0eba45530ee79f",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	/**
 	 * Each socket has a unique name which can be used on the command line to override the socket's
@@ -360,6 +406,9 @@ export class Socket extends $.Struct {
 	 * - "unix-abstract:name": On Linux, listen on the given "abstract" Unix socket name.
 	 * - "example.com:80": Perform a DNS lookup to determine the address, and then listen on it. If
 	 *     this resolves to multiple addresses, listen on all of them.
+	 *
+	 * UDP sockets currently bind only the first address when a hostname resolves to multiple
+	 * addresses. Specify a numeric address when selecting the address family matters.
 	 *
 	 * (These are the formats supported by KJ's parseAddress().)
 	 *
@@ -422,6 +471,30 @@ export class Socket extends $.Struct {
 	}
 	set tcp(_: true) {
 		$.utils.setUint16(0, 2, this);
+	}
+	/**
+	 * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+	 * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+	 * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+	 * datagram (see Socket.protocol).
+	 *
+	 * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+	 * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+	 *
+	 */
+	get udp(): Socket_Udp {
+		$.utils.testWhich("udp", $.utils.getUint16(0, this), 3, this);
+		return $.utils.getAs(Socket_Udp, this);
+	}
+	_initUdp(): Socket_Udp {
+		$.utils.setUint16(0, 3, this);
+		return $.utils.getAs(Socket_Udp, this);
+	}
+	get _isUdp(): boolean {
+		return $.utils.getUint16(0, this) === 3;
+	}
+	set udp(_: true) {
+		$.utils.setUint16(0, 3, this);
 	}
 	_adoptService(value: $.Orphan<ServiceDesignator>): void {
 		$.utils.adopt(value, $.utils.getPointer(4, this));

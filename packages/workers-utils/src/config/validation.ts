@@ -12,8 +12,12 @@ import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { getContainerNameToClassNameMap } from "./containers";
 import { Diagnostics } from "./diagnostics";
-import { getDurableObjectExports } from "./durable-object-exports";
+import {
+	getDurableObjectExports,
+	isLiveDurableObjectExport,
+} from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
+import { partitionExports } from "./exports";
 import {
 	all,
 	appendEnvName,
@@ -2221,6 +2225,8 @@ function normalizeAndValidateEnvironment(
 		environment.exports
 	);
 
+	validateWorkflowExportConflicts(diagnostics, environment.exports);
+
 	// `exports` is inherited by named environments but `containers` is not, so the
 	// idiomatic multi-environment layout declares `exports` once at the top level
 	// and repeats `containers` in every environment. Both passes then see only one
@@ -3025,6 +3031,7 @@ const workflowNameFormatMessage = `Workflow names must be 1-64 characters long, 
 function validateWorkflowRetentionValue(
 	diagnostics: Diagnostics,
 	field: string,
+	kind: string,
 	key: string,
 	value: unknown
 ): boolean {
@@ -3037,11 +3044,215 @@ function validateWorkflowRetentionValue(
 	}
 
 	diagnostics.errors.push(
-		`"${field}" bindings "default_retention.${key}" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ${JSON.stringify(
+		`"${field}" ${kind} "default_retention.${key}" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ${JSON.stringify(
 			value
 		)}.`
 	);
 	return false;
+}
+
+// The validators below check the settings shared by `workflows` bindings and
+// `workflow` exports. Messages start with `"<field>" <kind>`, where `kind` is
+// "bindings" or "export", and some quote the whole binding or export (`value`).
+
+/**
+ * Check the optional `schedules` setting of a Workflow binding or export.
+ */
+function validateWorkflowSchedules(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { schedules } = value;
+	if (schedules === undefined) {
+		return true;
+	}
+	if (typeof schedules === "string") {
+		if (schedules.length === 0) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} "schedules" field must not be an empty string.`
+			);
+			return false;
+		}
+		return true;
+	}
+	if (Array.isArray(schedules)) {
+		if (schedules.length === 0) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} "schedules" field must not be an empty array.`
+			);
+			return false;
+		}
+		if (!schedules.every((s: unknown) => typeof s === "string")) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+		if (schedules.some((s: unknown) => s === "")) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} "schedules" field must not contain empty strings.`
+			);
+			return false;
+		}
+		return true;
+	}
+	diagnostics.errors.push(
+		`"${field}" ${kind} should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
+			value
+		)}.`
+	);
+	return false;
+}
+
+/**
+ * Check the optional `limits` setting of a Workflow binding or export.
+ */
+function validateWorkflowLimits(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { limits } = value;
+	if (limits === undefined) {
+		return true;
+	}
+	if (typeof limits !== "object" || limits === null || Array.isArray(limits)) {
+		diagnostics.errors.push(
+			`"${field}" ${kind} should, optionally, have an object "limits" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	const { steps } = limits as Record<string, unknown>;
+	if (steps !== undefined) {
+		if (typeof steps !== "number" || !Number.isInteger(steps) || steps < 1) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} "limits.steps" field must be a positive integer but got ${JSON.stringify(
+					steps
+				)}.`
+			);
+			valid = false;
+		} else if (steps > 25_000) {
+			diagnostics.warnings.push(
+				`"${field}" has a step limit of ${steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
+			);
+		}
+	}
+	validateAdditionalProperties(
+		diagnostics,
+		`${field}.limits`,
+		Object.keys(limits),
+		["steps"]
+	);
+	return valid;
+}
+
+/**
+ * Check the optional `default_retention` setting of a Workflow binding or
+ * export.
+ */
+function validateWorkflowDefaultRetention(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { default_retention: defaultRetention } = value;
+	if (defaultRetention === undefined) {
+		return true;
+	}
+	if (
+		typeof defaultRetention !== "object" ||
+		defaultRetention === null ||
+		Array.isArray(defaultRetention)
+	) {
+		diagnostics.errors.push(
+			`"${field}" ${kind} should, optionally, have an object "default_retention" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	const retention = defaultRetention as Record<string, unknown>;
+	for (const key of ["success_retention", "error_retention"]) {
+		if (
+			retention[key] !== undefined &&
+			!validateWorkflowRetentionValue(
+				diagnostics,
+				field,
+				kind,
+				key,
+				retention[key]
+			)
+		) {
+			valid = false;
+		}
+	}
+	validateAdditionalProperties(
+		diagnostics,
+		`${field}.default_retention`,
+		Object.keys(retention),
+		["success_retention", "error_retention"]
+	);
+	return valid;
+}
+
+/**
+ * Check the optional `concurrency` setting of a Workflow binding or export.
+ */
+function validateWorkflowConcurrency(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { concurrency } = value;
+	if (concurrency === undefined) {
+		return true;
+	}
+	if (
+		typeof concurrency !== "object" ||
+		concurrency === null ||
+		Array.isArray(concurrency)
+	) {
+		diagnostics.errors.push(
+			`"${field}" ${kind} should, optionally, have an object "concurrency" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	const { limit } = concurrency as Record<string, unknown>;
+	if (
+		limit !== undefined &&
+		(typeof limit !== "number" || !Number.isInteger(limit) || limit < 1)
+	) {
+		diagnostics.errors.push(
+			`"${field}" ${kind} "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
+				limit
+			)}.`
+		);
+		valid = false;
+	}
+	validateAdditionalProperties(
+		diagnostics,
+		`${field}.concurrency`,
+		Object.keys(concurrency),
+		["limit"]
+	);
+	return valid;
 }
 
 /**
@@ -3098,163 +3309,22 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (hasProperty(value, "schedules") && value.schedules !== undefined) {
-		if (typeof value.schedules === "string") {
-			if (value.schedules.length === 0) {
-				diagnostics.errors.push(
-					`"${field}" bindings "schedules" field must not be an empty string.`
-				);
-				isValid = false;
-			}
-		} else if (Array.isArray(value.schedules)) {
-			if (value.schedules.length === 0) {
-				diagnostics.errors.push(
-					`"${field}" bindings "schedules" field must not be an empty array.`
-				);
-				isValid = false;
-			} else if (
-				!value.schedules.every((s: unknown) => typeof s === "string")
-			) {
-				diagnostics.errors.push(
-					`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
-						value
-					)}.`
-				);
-				isValid = false;
-			} else if (value.schedules.some((s: unknown) => s === "")) {
-				diagnostics.errors.push(
-					`"${field}" bindings "schedules" field must not contain empty strings.`
-				);
-				isValid = false;
-			}
-		} else {
-			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		}
-	}
-
-	if (hasProperty(value, "limits") && value.limits !== undefined) {
-		if (
-			typeof value.limits !== "object" ||
-			value.limits === null ||
-			Array.isArray(value.limits)
-		) {
-			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have an object "limits" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		} else {
-			const limits = value.limits as Record<string, unknown>;
-			if (limits.steps !== undefined) {
-				if (
-					typeof limits.steps !== "number" ||
-					!Number.isInteger(limits.steps) ||
-					limits.steps < 1
-				) {
-					diagnostics.errors.push(
-						`"${field}" bindings "limits.steps" field must be a positive integer but got ${JSON.stringify(
-							limits.steps
-						)}.`
-					);
-					isValid = false;
-				} else if (limits.steps > 25_000) {
-					diagnostics.warnings.push(
-						`"${field}" has a step limit of ${limits.steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
-					);
-				}
-			}
-			validateAdditionalProperties(
-				diagnostics,
-				`${field}.limits`,
-				Object.keys(limits),
-				["steps"]
-			);
-		}
-	}
-
-	if (
-		hasProperty(value, "default_retention") &&
-		value.default_retention !== undefined
-	) {
-		if (
-			typeof value.default_retention !== "object" ||
-			value.default_retention === null ||
-			Array.isArray(value.default_retention)
-		) {
-			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have an object "default_retention" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		} else {
-			const defaultRetention = value.default_retention as Record<
-				string,
-				unknown
-			>;
-			for (const key of ["success_retention", "error_retention"]) {
-				if (
-					defaultRetention[key] !== undefined &&
-					!validateWorkflowRetentionValue(
-						diagnostics,
-						field,
-						key,
-						defaultRetention[key]
-					)
-				) {
-					isValid = false;
-				}
-			}
-			validateAdditionalProperties(
-				diagnostics,
-				`${field}.default_retention`,
-				Object.keys(defaultRetention),
-				["success_retention", "error_retention"]
-			);
-		}
-	}
-
-	if (hasProperty(value, "concurrency") && value.concurrency !== undefined) {
-		if (
-			typeof value.concurrency !== "object" ||
-			value.concurrency === null ||
-			Array.isArray(value.concurrency)
-		) {
-			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have an object "concurrency" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		} else {
-			const concurrency = value.concurrency as Record<string, unknown>;
-			if (
-				concurrency.limit !== undefined &&
-				(typeof concurrency.limit !== "number" ||
-					!Number.isInteger(concurrency.limit) ||
-					concurrency.limit < 1)
-			) {
-				diagnostics.errors.push(
-					`"${field}" bindings "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
-						concurrency.limit
-					)}.`
-				);
-				isValid = false;
-			}
-			validateAdditionalProperties(
-				diagnostics,
-				`${field}.concurrency`,
-				Object.keys(concurrency),
-				["limit"]
-			);
-		}
-	}
+	const settings = value as Record<string, unknown>;
+	isValid =
+		validateWorkflowSchedules(diagnostics, field, "bindings", settings) &&
+		isValid;
+	isValid =
+		validateWorkflowLimits(diagnostics, field, "bindings", settings) && isValid;
+	isValid =
+		validateWorkflowDefaultRetention(
+			diagnostics,
+			field,
+			"bindings",
+			settings
+		) && isValid;
+	isValid =
+		validateWorkflowConcurrency(diagnostics, field, "bindings", settings) &&
+		isValid;
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
@@ -3682,6 +3752,35 @@ function validateSshPublicKeys(
 }
 
 /**
+ * Validate a container SSH config object, as set by `containers.ssh` or the
+ * deprecated `containers.wrangler_ssh`.
+ */
+function validateContainerSshConfig(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): void {
+	const sshConfig = typeof value === "object" && value !== null ? value : {};
+
+	if (
+		!isRequiredProperty<{ enabled: boolean }>(sshConfig, "enabled", "boolean")
+	) {
+		diagnostics.errors.push(`${field}.enabled must be a boolean`);
+	}
+
+	const port = "port" in sshConfig ? sshConfig.port : undefined;
+	if (
+		!isOptionalProperty<{ port: number }>(sshConfig, "port", "number") ||
+		(typeof port === "number" &&
+			(!Number.isInteger(port) || port < 1 || port > 65535))
+	) {
+		diagnostics.errors.push(
+			`${field}.port must be a number between 1 and 65535 inclusive`
+		);
+	}
+}
+
+/**
  * Validate `previews.containers`. Mirrors `validateContainerApp`, but rejects
  * the application name outright. Every preview container is named at deploy
  * time from the resolved worker name, preview slug, and class name, so that
@@ -4058,12 +4157,31 @@ function validateContainerApp(
 							"scheduling_policy",
 							"images",
 							"observability",
+							"ssh",
+							"authorized_keys",
 							"unsafe",
 						].includes(key)
 				);
 				if (unsupportedFields.length > 0) {
 					diagnostics.errors.push(
-						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", "images", "observability", and restricted "unsafe" settings are supported.`
+						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", "images", "observability", "ssh", "authorized_keys", and restricted "unsafe" settings are supported.`
+					);
+				}
+				// Unlike other containers, `ssh` is not renamed to `wrangler_ssh` here, so
+				// normalized config (e.g. the Vite plugin's output config) still validates.
+				if ("ssh" in containerAppOptional) {
+					validateContainerSshConfig(
+						diagnostics,
+						`${field}.ssh`,
+						containerAppOptional.ssh
+					);
+				}
+				if ("authorized_keys" in containerAppOptional) {
+					validateSshPublicKeys(
+						diagnostics,
+						`${field}.authorized_keys`,
+						containerAppOptional.authorized_keys,
+						true
 					);
 				}
 				continue;
@@ -4337,42 +4455,21 @@ function validateContainerApp(
 				);
 			}
 
-			let sshField: "ssh" | "wrangler_ssh" | undefined;
-			let sshConfig:
-				| ContainerApp["ssh"]
-				| ContainerApp["wrangler_ssh"]
-				| undefined;
-
 			if ("ssh" in containerAppOptional) {
-				sshField = "ssh";
-				sshConfig = containerAppOptional.ssh;
+				validateContainerSshConfig(
+					diagnostics,
+					`${field}.ssh`,
+					containerAppOptional.ssh
+				);
+				// The Containers API calls this field `wrangler_ssh`.
 				containerAppOptional.wrangler_ssh = containerAppOptional.ssh;
 				delete containerAppOptional.ssh;
 			} else if ("wrangler_ssh" in containerAppOptional) {
-				sshField = "wrangler_ssh";
-				sshConfig = containerAppOptional.wrangler_ssh;
-			}
-
-			if (sshField !== undefined) {
-				const sshConfigObject =
-					typeof sshConfig === "object" && sshConfig !== null ? sshConfig : {};
-
-				if (!isRequiredProperty(sshConfigObject, "enabled", "boolean")) {
-					diagnostics.errors.push(
-						`${field}.${sshField}.enabled must be a boolean`
-					);
-				}
-
-				const sshPort =
-					"port" in sshConfigObject ? sshConfigObject.port : undefined;
-				if (
-					!isOptionalProperty(sshConfigObject, "port", "number") ||
-					(typeof sshPort === "number" && (sshPort < 1 || sshPort > 65535))
-				) {
-					diagnostics.errors.push(
-						`${field}.${sshField}.port must be a number between 1 and 65535 inclusive`
-					);
-				}
+				validateContainerSshConfig(
+					diagnostics,
+					`${field}.wrangler_ssh`,
+					containerAppOptional.wrangler_ssh
+				);
 			}
 
 			if ("authorized_keys" in containerAppOptional) {
@@ -5909,26 +6006,40 @@ const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	let isValid = true;
+	const connectHandler = value as Record<string, unknown>;
 	if (
-		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-			"protocol",
-			"port",
-			"address",
-		])
+		!validateAdditionalProperties(
+			diagnostics,
+			field,
+			Object.keys(value),
+			connectHandler.protocol === "udp"
+				? [
+						"protocol",
+						"port",
+						"address",
+						"idle_timeout_ms",
+						"max_pending_bytes",
+					]
+				: ["protocol", "port", "address"]
+		)
 	) {
 		isValid = false;
 	}
 
-	if ("protocol" in value && value.protocol !== "tcp") {
+	if (
+		"protocol" in value &&
+		value.protocol !== "tcp" &&
+		value.protocol !== "udp"
+	) {
 		diagnostics.errors.push(
-			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+			`"${field}" should have a "protocol" field of "tcp" or "udp" but got ${JSON.stringify(
 				value.protocol
 			)}.`
 		);
 		isValid = false;
 	} else if (!("protocol" in value)) {
 		diagnostics.errors.push(
-			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+			`"${field}" should have a "protocol" field of "tcp" or "udp" but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -5962,6 +6073,26 @@ const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 			)}.`
 		);
 		isValid = false;
+	}
+
+	if (connectHandler.protocol === "udp") {
+		for (const option of ["idle_timeout_ms", "max_pending_bytes"] as const) {
+			if (!(option in connectHandler)) {
+				continue;
+			}
+			const optionValue = connectHandler[option];
+			if (
+				typeof optionValue !== "number" ||
+				!Number.isInteger(optionValue) ||
+				optionValue < 0 ||
+				optionValue > 0xffffffff
+			) {
+				diagnostics.errors.push(
+					`"${field}" should have an integer "${option}" field between 0 and 4294967295 but got ${JSON.stringify(value)}.`
+				);
+				isValid = false;
+			}
+		}
 	}
 
 	return isValid;
@@ -7150,6 +7281,68 @@ function validateWorkerExportCache(
 	return valid;
 }
 
+function validateWorkflowExport(
+	diagnostics: Diagnostics,
+	exportName: string,
+	workflowExport: { name?: unknown } & Record<string, unknown>
+): boolean {
+	const field = `exports.${exportName}`;
+	let valid = true;
+
+	valid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"name",
+			workflowExport.name,
+			"string"
+		) && valid;
+
+	if (
+		typeof workflowExport.name === "string" &&
+		!isValidWorkflowName(workflowExport.name)
+	) {
+		diagnostics.errors.push(
+			`"${field}.name" is invalid. ${workflowNameFormatMessage}`
+		);
+		valid = false;
+	}
+
+	valid =
+		validateWorkflowSchedules(diagnostics, field, "export", workflowExport) &&
+		valid;
+	valid =
+		validateWorkflowLimits(diagnostics, field, "export", workflowExport) &&
+		valid;
+	valid =
+		validateWorkflowDefaultRetention(
+			diagnostics,
+			field,
+			"export",
+			workflowExport
+		) && valid;
+	valid =
+		validateWorkflowConcurrency(diagnostics, field, "export", workflowExport) &&
+		valid;
+
+	valid =
+		validateAdditionalProperties(
+			diagnostics,
+			field,
+			Object.keys(workflowExport),
+			[
+				"type",
+				"name",
+				"limits",
+				"concurrency",
+				"schedules",
+				"default_retention",
+			]
+		) && valid;
+
+	return valid;
+}
+
 const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined || value === null) {
 		return true;
@@ -7181,10 +7374,13 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 		} else if (exportConfig.type === "worker") {
 			valid =
 				validateWorkerExport(diagnostics, exportName, exportConfig) && valid;
+		} else if (exportConfig.type === "workflow") {
+			valid =
+				validateWorkflowExport(diagnostics, exportName, exportConfig) && valid;
 		} else {
 			valid = false;
 			diagnostics.errors.push(
-				`"exports.${exportName}.type" must be "durable-object" or "worker", but got ${JSON.stringify(exportConfig.type)}.`
+				`"exports.${exportName}.type" must be "durable-object", "worker", or "workflow", but got ${JSON.stringify(exportConfig.type)}.`
 			);
 		}
 	}
@@ -7767,8 +7963,7 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 		if (entry === undefined || entry.type !== "durable-object") {
 			return false;
 		}
-		const state = entry.state ?? "created";
-		return state === "created" || state === "expecting-transfer";
+		return isLiveDurableObjectExport(entry);
 	};
 	const uncoveredByExports = exportedDurableObjects.filter(
 		(binding) =>
@@ -7825,6 +8020,33 @@ function errorIfMigrationsAndExportsBothSet(
 		diagnostics.errors.push(
 			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
 		);
+	}
+}
+
+/**
+ * Two exports cannot share a Workflow name. Whether a `workflows` binding
+ * agrees with an export of the same name is checked at deploy time, since it
+ * depends on the name the Worker is deployed under.
+ */
+function validateWorkflowExportConflicts(
+	diagnostics: Diagnostics,
+	exports: Config["exports"]
+) {
+	const classNamesByWorkflowName = new Map<string, string>();
+	for (const [className, workflowExport] of Object.entries(
+		partitionExports(exports).workflow
+	)) {
+		if (typeof workflowExport.name !== "string") {
+			continue;
+		}
+		const existing = classNamesByWorkflowName.get(workflowExport.name);
+		if (existing !== undefined) {
+			diagnostics.errors.push(
+				`"exports.${existing}" and "exports.${className}" both declare the Workflow "${workflowExport.name}". Workflow names must be unique.`
+			);
+			continue;
+		}
+		classNamesByWorkflowName.set(workflowExport.name, className);
 	}
 }
 

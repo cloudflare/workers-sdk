@@ -8,7 +8,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";

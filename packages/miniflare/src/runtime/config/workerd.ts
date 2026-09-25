@@ -28,7 +28,12 @@ export type Socket = {
 	name?: string;
 	address?: string;
 	service?: ServiceDesignator;
-} & ({ http?: HttpOptions } | { https?: Socket_Https } | { tcp?: Socket_Tcp });
+} & (
+	| { http?: HttpOptions }
+	| { https?: Socket_Https }
+	| { tcp?: Socket_Tcp }
+	| { udp?: Socket_Udp }
+);
 
 export interface Socket_Https {
 	options?: HttpOptions;
@@ -37,6 +42,11 @@ export interface Socket_Https {
 
 export interface Socket_Tcp {
 	tlsOptions?: TlsOptions;
+}
+
+export interface Socket_Udp {
+	idleTimeoutMs?: number;
+	maxPendingBytes?: number;
 }
 
 export type Service = {

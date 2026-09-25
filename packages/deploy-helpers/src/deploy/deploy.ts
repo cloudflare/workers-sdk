@@ -801,12 +801,16 @@ async function deployWorker(
 				});
 			}
 		}
-		await deployContainers(config, containerDeployments, {
-			versionId,
-			accountId,
-			scriptName,
-			dispatchNamespace: props.dispatchNamespace,
-		});
+		await deployContainers(
+			{ ...config, containers: props.containers.source },
+			containerDeployments,
+			{
+				versionId,
+				accountId,
+				scriptName,
+				dispatchNamespace: props.dispatchNamespace,
+			}
+		);
 	}
 	if (!skipContainerChanges && durableObjectContainerConfig.length > 0) {
 		assert(versionId && accountId);
