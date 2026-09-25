@@ -70,6 +70,33 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts Durable Object retry policies without filling defaults", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			durableObjects: {
+				ABSENT: { className: "Absent" },
+				PARTIAL: { className: "Partial", retryTimeoutMs: 500 },
+				CONFIGURED: {
+					className: "Configured",
+					retryMaxAttempts: 7,
+					retryTimeoutMs: 12_345,
+				},
+				DISABLED: { className: "Disabled", retryMaxAttempts: 0 },
+			},
+		});
+		const env = converted.workers[0].config.env;
+
+		expect(env?.ABSENT).not.toHaveProperty("retry");
+		expect(env?.PARTIAL).toMatchObject({ retry: { timeoutMs: 500 } });
+		expect(env?.CONFIGURED).toMatchObject({
+			retry: { maxAttempts: 7, timeoutMs: 12_345 },
+		});
+		expect(env?.DISABLED).toMatchObject({ retry: { maxAttempts: 0 } });
+	});
+
 	test("converts workflow exports to config exports", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			name: "worker",

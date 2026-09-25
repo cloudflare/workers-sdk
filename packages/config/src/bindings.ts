@@ -211,6 +211,26 @@ interface DurableObjectBindingOptions<
 	worker: TWorker;
 	/** The exported class name of the Durable Object. */
 	exportName: TExportName;
+	/**
+	 * Retry policy for calls made to the Durable Object through this binding.
+	 * Omitted properties use the runtime defaults.
+	 */
+	retry?: {
+		/**
+		 * Maximum number of retries after the initial request, not the total
+		 * number of attempts. An integer from 0 to 10, defaulting to 4. Zero
+		 * disables retries.
+		 */
+		maxAttempts?: number;
+		/**
+		 * Retry timeout in milliseconds, measured from the start of the call.
+		 * No retry starts after it expires, and a retry still running when it
+		 * expires is cancelled. This is not a request timeout: the initial request
+		 * always runs to completion. An integer from 500 to 60000, defaulting to
+		 * 10000.
+		 */
+		timeoutMs?: number;
+	};
 }
 
 /**
