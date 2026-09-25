@@ -79,7 +79,9 @@ export async function pullImage(
 		"linux/amd64",
 	]);
 	const ready = pull.ready.then(async ({ aborted }: { aborted: boolean }) => {
-		if (!aborted) {
+		// During Vite preview, remote Build Output references are pulled under the
+		// exact image tag used by the runtime, so avoid tagging an image as itself.
+		if (!aborted && options.image_uri !== options.image_tag) {
 			// re-tag image with the expected dev-formatted image tag for consistency
 			await runDockerCmd(dockerPath, [
 				"tag",

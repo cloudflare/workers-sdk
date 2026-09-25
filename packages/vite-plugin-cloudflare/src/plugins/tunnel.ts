@@ -5,7 +5,7 @@ import colors from "picocolors";
 import encodeQR from "qr";
 import { createAuth, createLogger, USER_AGENT } from "../auth";
 import { assertIsNotPreview, assertIsPreview } from "../context";
-import { debuglog, createPlugin } from "../utils";
+import { createPlugin, debuglog, toApiComplianceRegion } from "../utils";
 import type { PluginContext } from "../context";
 import type { Config, Tunnel } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
@@ -546,12 +546,6 @@ export async function setupPreviewTunnel(
 	if (shortcutPressed) {
 		server.printUrls();
 	}
-}
-
-function toApiComplianceRegion(
-	region: "public" | "fedramp-high" | undefined
-): Config["compliance_region"] {
-	return region === "fedramp-high" ? "fedramp_high" : region;
 }
 
 function patchPrintUrls(server: vite.ViteDevServer | vite.PreviewServer) {

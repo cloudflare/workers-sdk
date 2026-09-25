@@ -219,6 +219,36 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		`);
 	});
 
+	test("prints input Containers linked to the Worker", async ({ expect }) => {
+		fs.writeFileSync(
+			path.join(tempDir, "cloudflare.config.ts"),
+			[
+				"import { defineConfig, defineContainer, exports as workerExports } from '@cloudflare/config';",
+				"const app = defineContainer({ name: 'app', schedulingPolicy: 'durable-object' });",
+				"export default defineConfig({",
+				"  containers: [app],",
+				"  worker: {",
+				"    name: 'primary-worker',",
+				"    entrypoint: './src/index.ts',",
+				"    compatibilityDate: '2024-12-30',",
+				"    exports: { Container: workerExports.durableObject({ storage: 'sqlite', container: app }) },",
+				"  },",
+				"});",
+			].join("\n")
+		);
+		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+		addShortcuts(mockServer, await createMockContext());
+
+		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+		void customShortcuts
+			?.find((shortcut) => shortcut.key === "b")
+			?.action?.(mockServer);
+
+		expect(normalize(serverLogs.info)).toContain(
+			"The following containers are available:\n- Container (durable_object)"
+		);
+	});
+
 	test("prints bindings with multi Workers", async ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
 		addShortcuts(

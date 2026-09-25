@@ -1,34 +1,31 @@
 import { DurableObject } from "cloudflare:workers";
 
-interface Env {
-	CONTAINER: DurableObjectNamespace;
-}
-
-export class Container extends DurableObject<Env> {
-	container: globalThis.Container;
-	monitor?: Promise<unknown>;
-
-	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env);
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- we know that the container is defined on ctx
-		this.container = ctx.container!;
-	}
-
+class ContainerObject extends DurableObject {
 	override async fetch(req: Request) {
+		const container = this.ctx.container;
+		if (container === undefined) {
+			return new Response("Container is not configured.", { status: 404 });
+		}
 		const path = new URL(req.url).pathname;
 		switch (path) {
 			case "/status":
-				return new Response(JSON.stringify(this.container.running));
+				return new Response(JSON.stringify(container.running));
+
+			case "/images":
+				return Response.json(Object.keys(container.images));
 
 			case "/destroy":
-				if (!this.container.running) {
+				if (!container.running) {
 					throw new Error("Container is not running.");
 				}
-				await this.container.destroy();
-				return new Response(JSON.stringify(this.container.running));
+				await container.destroy();
+				return new Response(JSON.stringify(container.running));
 
 			case "/start":
-				this.container.start({
+				container.start({
+					...(container.images.app === undefined
+						? {}
+						: { image: container.images.app }),
 					entrypoint: ["node", "app.js"],
 					env: { A: "B", C: "D", L: "F", MESSAGE: "from vite" },
 					enableInternet: false,
@@ -37,7 +34,7 @@ export class Container extends DurableObject<Env> {
 				return new Response("Container create request sent...");
 
 			case "/fetch": {
-				const res = await this.container
+				const res = await container
 					.getTcpPort(8080)
 					// actual request doesn't matter
 					.fetch("http://foo/bar/baz", { method: "POST", body: "hello" });
@@ -45,11 +42,11 @@ export class Container extends DurableObject<Env> {
 			}
 
 			case "/destroy-with-monitor": {
-				// if (!this.container.running) {
+				// if (!container.running) {
 				// 	throw new Error("Container is not running.");
 				// }
-				const monitor = this.container.monitor();
-				await this.container.destroy();
+				const monitor = container.monitor();
+				await container.destroy();
 				await monitor;
 				return new Response("Container destroyed with monitor.");
 			}
@@ -60,18 +57,45 @@ export class Container extends DurableObject<Env> {
 	}
 }
 
+export class DockerfileContainer extends ContainerObject {}
+export class NamedImagesContainer extends ContainerObject {}
+export class RegistryContainer extends ContainerObject {}
+
 export default {
-	async fetch(request, env): Promise<Response> {
+	async fetch(request, _env, ctx): Promise<Response> {
 		const url = new URL(request.url);
-		if (url.pathname === "/second") {
-			// This is a second Durable Object that can be used to test multiple DOs
-			const id = env.CONTAINER.idFromName("second-container");
-			const stub = env.CONTAINER.get(id);
-			const query = url.searchParams.get("req");
-			return stub.fetch("http://example.com/" + query);
+
+		let service: Fetcher | undefined;
+		let prefix = "";
+		if (
+			url.pathname === "/dockerfile" ||
+			url.pathname.startsWith("/dockerfile/")
+		) {
+			service = ctx.exports.DockerfileContainer.getByName("container");
+			prefix = "/dockerfile";
+		} else if (
+			url.pathname === "/named-images" ||
+			url.pathname.startsWith("/named-images/")
+		) {
+			service = ctx.exports.NamedImagesContainer.getByName("container");
+			prefix = "/named-images";
+		} else if (
+			url.pathname === "/registry" ||
+			url.pathname.startsWith("/registry/")
+		) {
+			service = ctx.exports.RegistryContainer.getByName("container");
+			prefix = "/registry";
 		}
-		const id = env.CONTAINER.idFromName("container");
-		const stub = env.CONTAINER.get(id);
-		return stub.fetch(request);
+
+		if (!service) {
+			return new Response(
+				"Not found. Use `/dockerfile/...`, `/named-images/...`, or `/registry/...`.",
+				{ status: 404 }
+			);
+		}
+
+		const forwardedUrl = new URL(url);
+		forwardedUrl.pathname = url.pathname.slice(prefix.length) || "/";
+		return service.fetch(new Request(forwardedUrl.toString(), request));
 	},
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler;

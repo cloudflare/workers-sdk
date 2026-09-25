@@ -660,6 +660,13 @@ describe("resolvePluginConfig", () => {
 	}) => {
 		readBuildOutputPreviewMock.mockResolvedValue({
 			rootConfig: { buildContext: { isPreview: false } },
+			containers: [
+				{
+					name: "api",
+					image: { localReference: "cloudflare-build/project/api:123" },
+					maxInstances: 20,
+				},
+			],
 			workers: [
 				{
 					config: {
@@ -682,6 +689,12 @@ describe("resolvePluginConfig", () => {
 		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, false);
 		if (result.type === "preview") {
 			expect(result.workers[0]?.config.name).toBe("preview-worker");
+			expect(result.containers).toEqual([
+				expect.objectContaining({
+					name: "api",
+					image: { localReference: "cloudflare-build/project/api:123" },
+				}),
+			]);
 		}
 	});
 
@@ -691,6 +704,7 @@ describe("resolvePluginConfig", () => {
 		vi.stubEnv("CLOUDFLARE_VITE_BUILD", "true");
 		readBuildOutputPreviewMock.mockResolvedValue({
 			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
 			workers: [],
 		});
 
@@ -726,6 +740,7 @@ describe("resolvePluginConfig", () => {
 			rootConfig: {
 				buildContext: { isPreview: false, mode: "staging" },
 			},
+			containers: [],
 			workers: [
 				{
 					config: {
@@ -754,6 +769,7 @@ describe("resolvePluginConfig", () => {
 	}) => {
 		readBuildOutputPreviewMock.mockResolvedValue({
 			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
 			workers: [
 				{
 					config: {

@@ -1,0 +1,14 @@
+{
+	"name": "@cloudflare/vite-plugin-e2e-containers-image-free",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite --port 0",
+		"buildAndPreview": "vite build && vite preview --port 0"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "*",
+		"vite": "^8.0.0"
+	}
+}

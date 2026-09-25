@@ -14,6 +14,13 @@ import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
+import type {
+	ParsedInputContainerConfig,
+	ParsedInputWorkerConfig,
+	ParsedOutputContainerConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
+import type { ContainerApp } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
@@ -67,12 +74,13 @@ export function addShortcuts(
 					usePreviewIds: true,
 				});
 
-				// TODO: Include Containers when they are supported by
-				// cloudflare.config.ts.
 				printBindings(bindings, {
 					tailConsumers: wranglerConfig.tail_consumers,
 					streamingTailConsumers: wranglerConfig.streaming_tail_consumers,
-					containers: wranglerConfig.containers,
+					containers: getWorkerContainersForDisplay({
+						workerConfig,
+						containers: ctx.resolvedPluginConfig.containers,
+					}),
 					warnIfNoBindings: true,
 					isMultiWorker: workerConfigs.length > 1,
 					name: workerConfig.name ?? "Your Worker",
@@ -165,4 +173,54 @@ export function addShortcuts(
 			extendTunnelExpiryShortcut,
 		],
 	});
+}
+
+/**
+ * Creates the small legacy display shape consumed by `printBindings` directly
+ * from input Container definitions and Worker export links.
+ */
+export function getWorkerContainersForDisplay(options: {
+	workerConfig: ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
+	containers: Array<ParsedInputContainerConfig | ParsedOutputContainerConfig>;
+}): ContainerApp[] {
+	const containersByName = new Map(
+		options.containers.map((container) => [container.name, container])
+	);
+	const displayContainers: ContainerApp[] = [];
+	for (const [className, workerExport] of Object.entries(
+		options.workerConfig.exports ?? {}
+	)) {
+		if (
+			workerExport.type !== "durable-object" ||
+			!("container" in workerExport) ||
+			workerExport.container === undefined
+		) {
+			continue;
+		}
+		const container = containersByName.get(workerExport.container);
+		if (container === undefined) {
+			continue;
+		}
+		if (container.schedulingPolicy === "durable-object") {
+			displayContainers.push({
+				name: container.name,
+				class_name: className,
+				scheduling_policy: "durable_object",
+			});
+			continue;
+		}
+		const image = container.image;
+		displayContainers.push({
+			name: container.name,
+			class_name: className,
+			image:
+				"dockerfile" in image
+					? image.dockerfile
+					: "reference" in image
+						? image.reference
+						: image.localReference,
+			scheduling_policy: container.schedulingPolicy,
+		});
+	}
+	return displayContainers;
 }

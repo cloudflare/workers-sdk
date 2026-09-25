@@ -6,6 +6,8 @@ import {
 	writeRootConfig as writeBuildOutputRootConfig,
 	writeWorkerConfig as writeBuildOutputWorkerConfig,
 } from "@cloudflare/build-output-utils";
+import { buildAndWriteContainerOutput } from "@cloudflare/containers-shared";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import * as vite from "vite";
 import { loadViteManifest } from "../build";
 import { isPreviewBuild } from "../build-output-env";
@@ -48,6 +50,11 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					);
 				}
 
+				await buildAndWriteContainerOutput({
+					containers: ctx.resolvedPluginConfig.containers,
+					root: builder.config.root,
+					pathToDocker: getDockerPath(),
+				});
 				await writeRootConfig();
 			},
 		},

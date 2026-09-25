@@ -1,16 +1,20 @@
-import path from "node:path";
 import {
 	configureOpenAPIForContainerPull,
-	getDevContainerImageName,
+	isCloudflareRegistryImage,
+	prepareContainerImagesForDev,
+	resolveImageName,
 } from "@cloudflare/containers-shared";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getCloudflareApiBaseUrl,
-	isDockerfile,
-	isDurableObjectContainerApp,
-	resolveContainerClassName,
+	UserError,
 } from "@cloudflare/workers-utils";
-import type { ResolvedWorkerConfig } from "./plugin-config";
+import { toApiComplianceRegion } from "./utils";
+import type { ParsedInputSettingsConfig } from "@cloudflare/config";
+import type {
+	ContainerDevOptions,
+	ViteLogger,
+} from "@cloudflare/containers-shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
@@ -36,77 +40,90 @@ export function configureContainerPull(
 }
 
 /**
- * Returns the path to the Docker executable as defined by the
- * `WRANGLER_DOCKER_BIN` environment variable, or the default value
- * `"docker"`
+ * Qualifies managed-registry image references with the selected Cloudflare
+ * account before Docker pulls them.
+ *
+ * @param options - Planned images and registry settings.
+ * @returns Container options with managed-registry image references qualified.
  */
-export function getDockerPath(): string {
-	const defaultDockerPath = "docker";
-	const dockerPathEnvVar = "WRANGLER_DOCKER_BIN";
-
-	return process.env[dockerPathEnvVar] || defaultDockerPath;
+export function normalizeContainerImageUris(options: {
+	containerOptions: readonly ContainerDevOptions[];
+	accountId: string;
+	complianceConfig?: ComplianceConfig;
+}): ContainerDevOptions[] {
+	return options.containerOptions.map((containerOption) =>
+		"image_uri" in containerOption &&
+		isCloudflareRegistryImage(
+			containerOption.image_uri,
+			options.complianceConfig
+		)
+			? {
+					...containerOption,
+					image_uri: resolveImageName(
+						options.accountId,
+						containerOption.image_uri,
+						options.complianceConfig
+					),
+				}
+			: containerOption
+	);
 }
 
 /**
- * @returns Container options suitable for building or pulling images,
- * with image tag set to well-known dev format, or undefined if
- * containers are not enabled or not configured. Containers that are
- * configured but resolve to no Durable Object class are dropped, so the
- * result may also be an empty array. Both mean there is nothing to build
- * or pull, and callers treat them alike.
+ * Builds or pulls the images in a Cloudflare config Container development plan.
+ *
+ * @param options - Planned images, project settings, Docker executable, and Vite logger.
+ * @returns A promise that resolves when every image is ready.
  */
-export function getContainerOptions(options: {
-	containersConfig: ResolvedWorkerConfig["containers"];
-	exports: ResolvedWorkerConfig["exports"];
-	containerBuildId: string;
-	configPath?: string;
-}) {
-	const { containersConfig, exports, containerBuildId, configPath } = options;
+export async function prepareContainerImagesForVite(options: {
+	dockerPath: string;
+	containerOptions: ContainerDevOptions[];
+	settings: ParsedInputSettingsConfig;
+	logger: ViteLogger;
+}): Promise<void> {
+	const complianceRegion = toApiComplianceRegion(
+		options.settings.complianceRegion
+	);
+	const complianceConfig =
+		complianceRegion === undefined
+			? undefined
+			: { compliance_region: complianceRegion };
+	let containerOptions = options.containerOptions;
+	const hasCloudflareRegistryImages = containerOptions.some(
+		(containerOption) =>
+			"image_uri" in containerOption &&
+			isCloudflareRegistryImage(containerOption.image_uri, complianceConfig)
+	);
 
-	if (!containersConfig?.length) {
-		return undefined;
+	if (hasCloudflareRegistryImages) {
+		const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+		const accountId =
+			options.settings.accountId ?? process.env.CLOUDFLARE_ACCOUNT_ID;
+
+		if (!apiToken || !accountId) {
+			throw new UserError(
+				"To use images from the Cloudflare-managed registry with the Vite plugin, " +
+					"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
+					"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
+					"Alternatively, use a Dockerfile that references the image via FROM.",
+				{ telemetryMessage: false }
+			);
+		}
+
+		configureContainerPull(accountId, apiToken, complianceConfig);
+		containerOptions = normalizeContainerImageUris({
+			containerOptions,
+			accountId,
+			complianceConfig,
+		});
 	}
 
-	return containersConfig
-		.map((container) => {
-			if (
-				isDurableObjectContainerApp(container) ||
-				container.image === undefined
-			) {
-				return undefined;
-			}
-
-			// A container is linked to its Durable Object either by its own `class_name`,
-			// or by the Durable Object's `exports` entry naming it via `container`.
-			// Config validation rejects containers with neither.
-			const className = resolveContainerClassName(container, exports);
-			if (className === undefined) {
-				return undefined;
-			}
-
-			const image_tag = getDevContainerImageName(className, containerBuildId);
-
-			if (isDockerfile(container.image, configPath)) {
-				return {
-					dockerfile: container.image,
-					image_build_context:
-						container.image_build_context ?? path.dirname(container.image),
-					image_vars: container.image_vars,
-					class_name: className,
-					image_tag,
-				};
-			} else {
-				return {
-					image_uri: container.image,
-					class_name: className,
-					image_tag,
-				};
-			}
-		})
-		.filter((container) => container !== undefined);
+	await prepareContainerImagesForDev({
+		dockerPath: options.dockerPath,
+		containerOptions,
+		onContainerImagePreparationStart: () => {},
+		onContainerImagePreparationEnd: () => {},
+		logger: options.logger,
+		complianceConfig,
+	});
 }
-
-export type ContainerTagToOptionsMap = Map<
-	string,
-	NonNullable<ReturnType<typeof getContainerOptions>>[number]
->;
