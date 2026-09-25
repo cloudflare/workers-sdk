@@ -45,6 +45,7 @@
 	"devDependencies": {
 		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
 		"tinyglobby": "catalog:default",
 		"tsup": "8.3.0",

@@ -26,10 +26,11 @@ import type {
 	OutputObject,
 	OutputProperty,
 } from "./types";
+import type { RawConfig } from "@cloudflare/workers-utils";
 
 const VITE_DEFAULT_MODES = new Set(["development", "production"]);
 
-const NON_INHERITABLE_FIELDS = new Set([
+const NON_INHERITABLE_FIELDS = new Set<string>([
 	"agent_memory",
 	"ai_search_namespaces",
 	"ai_search",
@@ -70,9 +71,9 @@ const NON_INHERITABLE_FIELDS = new Set([
 	"vpc_services",
 	"worker_loaders",
 	"workflows",
-]);
+] satisfies (keyof RawConfig)[]);
 
-const TOOLING_FIELDS = new Set([
+const TOOLING_FIELDS = new Set<string>([
 	"alias",
 	"base_dir",
 	"build",
@@ -93,9 +94,9 @@ const TOOLING_FIELDS = new Set([
 	"tsconfig",
 	"upload_source_maps",
 	"wasm_modules",
-]);
+] satisfies (keyof RawConfig)[]);
 
-export const KNOWN_FIELDS = new Set([
+export const KNOWN_FIELDS = new Set<string>([
 	"$schema",
 	"access",
 	"account_id",
@@ -185,7 +186,7 @@ export const KNOWN_FIELDS = new Set([
 	"worker_loaders",
 	"workers_dev",
 	"workflows",
-]);
+] satisfies (keyof RawConfig)[]);
 
 function createBranchSource(
 	base: UnknownRecord,
@@ -254,7 +255,7 @@ function addUnknownFieldFollowUps(
 	}
 }
 
-function convertToolingObject(source: UnknownRecord): OutputObject | undefined {
+function convertToolingObject(source: UnknownRecord): OutputObject {
 	const properties: OutputProperty[] = [];
 	const mappings: Array<[string, string]> = [
 		["alias", "alias"],
@@ -326,7 +327,7 @@ function convertToolingObject(source: UnknownRecord): OutputObject | undefined {
 		properties.push({ key: "assetsDirectory", value: assets.directory });
 	}
 
-	return properties.length > 0 ? { kind: "object", properties } : undefined;
+	return { kind: "object", properties };
 }
 
 function addViteToolingFollowUp(
