@@ -28,6 +28,20 @@ const projectConfig = defineConfig({
 	}),
 });
 
+const inlineConfig = defineConfig({
+	worker: {
+		name: "inline-worker",
+		compatibilityDate: "2026-09-25",
+		env: { MESSAGE: bindings.text("inline") },
+	},
+	containers: [
+		{
+			name: "inline-container",
+			image: { dockerfile: "./Dockerfile" },
+		},
+	],
+});
+
 // @ts-expect-error a workflow export requires a name
 workerExports.workflow({ limits: { steps: 10 } });
 
@@ -41,6 +55,8 @@ const plainConfig = {
 } as const;
 
 type ProjectWorker = UnwrapConfig<UnwrapConfig<typeof projectConfig>["worker"]>;
+type InlineConfig = UnwrapConfig<typeof inlineConfig>;
+type InlineWorker = UnwrapConfig<InlineConfig["worker"]>;
 
 export type PlainConfigWorkerEnvTest = Assert<
 	Equal<
@@ -56,4 +72,13 @@ export type ProjectConfigMainModuleTest = Assert<
 >;
 export type ProjectConfigDurableNamespaceTest = Assert<
 	Equal<InferDurableNamespaces<ProjectWorker>, "Counter">
+>;
+export type InlineConfigWorkerNameTest = Assert<
+	Equal<InlineWorker["name"], "inline-worker">
+>;
+export type InlineConfigWorkerEnvTest = Assert<
+	Equal<InferEnv<InlineWorker>["MESSAGE"], "inline">
+>;
+export type InlineConfigContainerNameTest = Assert<
+	Equal<InlineConfig["containers"][0]["name"], "inline-container">
 >;
