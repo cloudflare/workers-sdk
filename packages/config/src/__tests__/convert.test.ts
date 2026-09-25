@@ -726,6 +726,32 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("maps Workflow binding to workflows", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						WORKFLOW: {
+							type: "workflow",
+							name: "greeting",
+							worker: "workflow-worker",
+							exportName: "GreetingWorkflow",
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect(result.workflows).toEqual([
+				{
+					binding: "WORKFLOW",
+					name: "greeting",
+					class_name: "GreetingWorkflow",
+					script_name: "workflow-worker",
+				},
+			]);
+		});
+
 		it("maps logfwdr binding to logfwdr.bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

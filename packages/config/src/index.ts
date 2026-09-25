@@ -30,6 +30,7 @@ export {
 	validateSingletonBindings,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowBindingSchema,
 	WorkflowExportSchema,
 } from "./schema";
 export { generateTypes } from "./generate";
