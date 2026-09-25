@@ -1,5 +1,6 @@
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import { ConfigChangeCoordinator } from "./config-change-coordinator";
+import { getDevContainerCleanup } from "./container-cleanup";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
@@ -81,20 +82,22 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			async configureServer(viteDevServer) {
 				ctx.configChangeCoordinator.registerServer(ctx, viteDevServer);
+				const containerCleanup = getDevContainerCleanup(viteDevServer);
 
-				// Patch the `server.restart` method to track whether the server is restarting or not.
+				// Coordinate Cloudflare state and Container cleanup around Vite restarts.
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
-				viteDevServer.restart = async () => {
-					try {
-						ctx.beginRestartingDevServer();
-						debuglog("From server.restart(): Restarting server...");
-						await restartServer();
-						debuglog("From server.restart(): Restarted server...");
-					} finally {
-						ctx.endRestartingDevServer();
-						ctx.configChangeCoordinator.restartCompleted();
-					}
-				};
+				viteDevServer.restart = () =>
+					containerCleanup.restart(async () => {
+						try {
+							ctx.beginRestartingDevServer();
+							debuglog("From server.restart(): Restarting server...");
+							await restartServer();
+							debuglog("From server.restart(): Restarted server...");
+						} finally {
+							ctx.endRestartingDevServer();
+							ctx.configChangeCoordinator.restartCompleted();
+						}
+					});
 			},
 		},
 		configPlugin(ctx),

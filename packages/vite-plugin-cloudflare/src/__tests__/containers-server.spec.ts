@@ -181,6 +181,7 @@ describe.each(["dev", "preview"] as const)(
 					};
 					const server = await createServer(options);
 					onTestFinished(() => server.close());
+					expect(server.config.inlineConfig).toBe(options);
 					const containerExitListeners = () =>
 						process
 							.listeners("exit")
@@ -201,6 +202,7 @@ describe.each(["dev", "preview"] as const)(
 					expect(exitListener).toBeDefined();
 					const secondServer = await createServer(options);
 					onTestFinished(() => secondServer.close());
+					expect(secondServer.config.inlineConfig).toBe(options);
 					const secondTags = latestTags();
 					const listeners = containerExitListeners();
 					expect(listeners).toHaveLength(2);
@@ -226,6 +228,7 @@ describe.each(["dev", "preview"] as const)(
 						} else {
 							expect(currentPlugin).toBe(previousPlugin);
 						}
+						expect(server.config.inlineConfig).toBe(options);
 						pendingTags = new Set([...pendingTags, ...latestTags()]);
 						expect(pendingTags.size).toBe(restart + 2);
 						expect(new Set(containerExitListeners())).toEqual(

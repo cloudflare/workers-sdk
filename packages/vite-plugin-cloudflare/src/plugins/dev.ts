@@ -31,7 +31,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
 			const containerCleanup = getDevContainerCleanup(viteDevServer);
-
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
 			let containerOptions = initialOptions.containerOptions;
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
@@ -50,6 +49,9 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						} catch (error) {
 							debuglog("Failed to dispose Miniflare instance:", error);
 						}
+					}
+					if (!containerCleanup.isRestarting) {
+						containerCleanup.cleanup();
 					}
 				}
 			};
