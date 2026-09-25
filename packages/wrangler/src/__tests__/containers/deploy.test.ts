@@ -81,12 +81,7 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	it.for([
-		{ bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES", containers: [] },
 		{ bindingName: "USER_IMAGES", containers: [] },
-		{
-			bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
-			containers: undefined,
-		},
 		{ bindingName: "USER_IMAGES", containers: undefined },
 	])(
 		"keeps variables without generating Container image bindings: %j",
@@ -500,7 +495,7 @@ describe("wrangler deploy with containers", () => {
 			[
 				defaultDOBinding,
 				{
-					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					name: "USER_IMAGES",
 					type: "json",
 					json: {
 						ExampleDurableObject: { tools: deployedImage },
@@ -585,7 +580,7 @@ describe("wrangler deploy with containers", () => {
 				[
 					defaultDOBinding,
 					{
-						name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+						name: "USER_IMAGES",
 						type: "json",
 						json: {
 							ExampleDurableObject: { tools: deployedImage },
@@ -762,7 +757,7 @@ describe("wrangler deploy with containers", () => {
 			[
 				defaultDOBinding,
 				{
-					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					name: "USER_IMAGES",
 					type: "json",
 					json: { ExampleDurableObject: {} },
 				},
@@ -795,7 +790,7 @@ describe("wrangler deploy with containers", () => {
 			"test-name:version:0",
 			[
 				{
-					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					name: "USER_IMAGES",
 					type: "json",
 					json: {
 						ManagedDurableObject: { tools: deployedImage },

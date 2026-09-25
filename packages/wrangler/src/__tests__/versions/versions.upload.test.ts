@@ -1076,15 +1076,7 @@ describe("versions upload", () => {
 		});
 
 		test.for([
-			{
-				bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
-				containers: [],
-			},
 			{ bindingName: "USER_IMAGES", containers: [] },
-			{
-				bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
-				containers: undefined,
-			},
 			{ bindingName: "USER_IMAGES", containers: undefined },
 		])(
 			"keeps variables without generating Container image bindings: %j",
@@ -2778,13 +2770,7 @@ describe("versions upload", () => {
 						...(imageMap === "populated" && { images: imageRefs }),
 					},
 				]);
-				expect(metadata.bindings).not.toEqual(
-					expect.arrayContaining([
-						expect.objectContaining({
-							name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
-						}),
-					])
-				);
+				expect(metadata.bindings).toEqual([]);
 				expect(preparationRequests).toEqual(
 					imageMap === "empty" ? [] : [{ image }]
 				);
