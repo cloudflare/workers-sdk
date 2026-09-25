@@ -48,7 +48,7 @@ describe("basin sql", () => {
 		const mockToken = "test-token-123";
 
 		beforeEach(() => {
-			vi.stubEnv("WRANGLER_R2_SQL_AUTH_TOKEN", mockToken);
+			vi.stubEnv("WRANGLER_BASIN_SQL_AUTH_TOKEN", mockToken);
 		});
 
 		it("should require warehouse and query arguments", async ({ expect }) => {
@@ -63,18 +63,18 @@ describe("basin sql", () => {
 			);
 		});
 
-		it("should require WRANGLER_R2_SQL_AUTH_TOKEN environment variable", async ({
+		it("should require WRANGLER_BASIN_SQL_AUTH_TOKEN environment variable", async ({
 			expect,
 		}) => {
 			// Use delete directly because vi.stubEnv(name, undefined) doesn't
 			// propagate through Vitest 4's env proxy deleteProperty handler.
-			delete process.env.WRANGLER_R2_SQL_AUTH_TOKEN;
+			delete process.env.WRANGLER_BASIN_SQL_AUTH_TOKEN;
 			delete process.env.CLOUDFLARE_API_TOKEN;
 
 			await expect(
 				runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`)
 			).rejects.toThrow(
-				"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable"
+				"Missing WRANGLER_BASIN_SQL_AUTH_TOKEN environment variable"
 			);
 		});
 

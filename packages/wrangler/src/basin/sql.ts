@@ -110,16 +110,16 @@ export const basinSqlQueryCommand = createCommand({
 			token = getCloudflareAPITokenFromEnv();
 			if (!token) {
 				throw new UserError(
-					"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable. " +
+					"Missing WRANGLER_BASIN_SQL_AUTH_TOKEN environment variable. " +
 						"Tried to fallback to CLOUDFLARE_API_TOKEN, didn't find it either. " +
 						"Please follow instructions in https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ to create a token. " +
-						"Once done, you can prefix the command with the variable definition like so: `WRANGLER_R2_SQL_AUTH_TOKEN=... wrangler basin sql query ...`. " +
+						"Once done, you can prefix the command with the variable definition like so: `WRANGLER_BASIN_SQL_AUTH_TOKEN=... wrangler basin sql query ...`. " +
 						"There also other ways to provide the value of this variable, see https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for more details.",
 					{ telemetryMessage: "basin sql query missing auth token" }
 				);
 			} else {
 				logger.warn(
-					"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable, falling back to CLOUDFLARE_API_TOKEN"
+					"Missing WRANGLER_BASIN_SQL_AUTH_TOKEN environment variable, falling back to CLOUDFLARE_API_TOKEN"
 				);
 			}
 		}
@@ -171,7 +171,7 @@ export const basinSqlQueryCommand = createCommand({
 
 		if (responseStatus === 403) {
 			logger.error(
-				"Please check that token in WRANGLER_R2_SQL_AUTH_TOKEN or CLOUDFLARE_API_TOKEN has the correct permissions. " +
+				"Please check that token in WRANGLER_BASIN_SQL_AUTH_TOKEN or CLOUDFLARE_API_TOKEN has the correct permissions. " +
 					"See https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ for more details."
 			);
 		}
