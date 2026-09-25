@@ -1,0 +1,29 @@
+packages/workers-shared/utils/types.ts
+  s_18c7e5cb6a2433::t_20f0afcb41c5cd 86
+packages/workers-shared/utils/base-path.ts
+  s_d9951fe8e48e61::t_845bbd5dadf61c 1-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c32983e645ee0c66620e99abdd9c92050a498ad4",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_d9951fe8e48e61": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_feffa7d2affebqHe0S1Q1Wo7uE",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

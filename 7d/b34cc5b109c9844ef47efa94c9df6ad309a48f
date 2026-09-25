@@ -1,0 +1,20 @@
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_1356a911e53448::t_89f298fac36626 349-361,363,371
+  s_1356a911e53448::t_065a48fff11b55 143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7db34cc5b109c9844ef47efa94c9df6ad309a48f",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

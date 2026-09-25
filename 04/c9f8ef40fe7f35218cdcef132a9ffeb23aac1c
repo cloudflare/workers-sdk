@@ -1,0 +1,34 @@
+packages/wrangler/src/preview/preview.ts
+  s_768bec3fe32406::t_940cc0455eaaa8 4,104
+packages/workers-utils/src/config/validation.ts
+  s_768bec3fe32406::t_0fb4ee6927af0f 2177-2181
+packages/wrangler/src/preview/containers.ts
+  s_768bec3fe32406::t_87335fb2bfe97a 3,16-19,22-26,33-35,37,51
+  s_768bec3fe32406::t_4e8adc9446aea9 91-95,112-123,136-149
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_768bec3fe32406::t_8f4ef3e0060282 11257-11285
+packages/deploy-helpers/src/preview/preview.ts
+  s_768bec3fe32406::t_9197b2f573e064 2,6,31,35,43,91-106,109-111,126-232,603-610,632-636,638-640
+  s_768bec3fe32406::t_dce338aca3771d 706-707,709,711,723-736
+packages/deploy-helpers/src/preview/shared.ts
+  s_768bec3fe32406::t_80bd108b1614b4 363-376
+packages/wrangler/src/__tests__/preview.test.ts
+  s_768bec3fe32406::t_3eb1547667e34b 7
+  s_768bec3fe32406::t_dbf21222ee5730 89-102,2493-2671,4068,4078-4081,4088-4091,4139-4145,4175-4266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "04c9f8ef40fe7f35218cdcef132a9ffeb23aac1c",
+  "prompts": {},
+  "sessions": {
+    "s_768bec3fe32406": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_01364a252ffeVNd7EcdmXU42t1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Will Taylor <williamtaylor@cloudflare.com>"
+    }
+  }
+}

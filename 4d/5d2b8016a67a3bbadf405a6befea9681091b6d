@@ -1,0 +1,70 @@
+.changeset/access-local-dev.md
+  s_684f2d2be94584::t_e040176d6fe517 15-17
+  s_684f2d2be94584::t_655e0afd87105f 1-4
+  s_684f2d2be94584::t_5fc3dd751617e9 8
+  s_684f2d2be94584::t_92586bbf0be8fd 12-14
+  s_684f2d2be94584::t_c9662951b4d364 5-7
+  s_684f2d2be94584::t_6f9c10e75c9276 9-11
+  s_0e56c3301e5173::t_bb2e6834682aed 18-23
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_0e56c3301e5173::t_ac980ca1d32574 2635,2738
+  s_0e56c3301e5173::t_6cc4bce96109ef 2632-2634
+  s_0e56c3301e5173::t_65ee6cd60bc67d 2636-2638,2735-2737
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_684f2d2be94584::t_073702593ec42a 142
+  s_0e56c3301e5173::t_e792ef426f7333 28,40-43,149-153,159-162,164-167,527,605-613
+packages/miniflare/src/config/schema.ts
+  s_0e56c3301e5173::t_065f8c63dce073 623-629
+packages/miniflare/src/config/v4-convert.ts
+  s_0e56c3301e5173::t_82a1a657361d84 187
+packages/miniflare/src/config/v4-schema.ts
+  s_0e56c3301e5173::t_c1669013b061e4 376-382,790
+packages/miniflare/src/runtime/config/workerd.ts
+  s_0e56c3301e5173::t_3904b6b73104a4 79-80
+packages/miniflare/src/workers/access/access-identity.worker.ts
+  s_0e56c3301e5173::t_0a770aa84a0e32 1-22
+packages/miniflare/src/workers/core/constants.ts
+  s_0e56c3301e5173::t_fa107fc53a718b 50,99-100
+packages/miniflare/test/plugins/core/access.spec.ts
+  s_0e56c3301e5173::t_e11beda2d4b2bc 1-156
+packages/workers-utils/src/config/config.ts
+  s_0e56c3301e5173::t_ea20355f18eee8 436
+packages/workers-utils/src/config/environment.ts
+  s_0e56c3301e5173::t_2917123cd481b5 749-755,1829-1838
+packages/workers-utils/src/config/validation.ts
+  s_0e56c3301e5173::t_397d73744af203 42,2149-2156,6566-6620
+packages/workers-utils/src/types.ts
+  s_0e56c3301e5173::t_3bfaf4ece4f69d 568-570
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_0e56c3301e5173::t_16f005c069c6fc 10701-10896
+packages/wrangler/src/api/startDevWorker/ConfigController.ts
+  s_0e56c3301e5173::t_b99b09a87f861f 462
+packages/wrangler/src/api/startDevWorker/LocalRuntimeController.ts
+  s_0e56c3301e5173::t_142f01322d1604 219
+packages/wrangler/src/dev/miniflare/index.ts
+  s_0e56c3301e5173::t_5fbb7adbebd43b 109,1208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4d5d2b8016a67a3bbadf405a6befea9681091b6d",
+  "prompts": {},
+  "sessions": {
+    "s_0e56c3301e5173": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09dbefc92ffel4Y7irj65GOs7y",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    },
+    "s_684f2d2be94584": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_684f2d2be94584",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    }
+  }
+}

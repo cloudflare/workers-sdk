@@ -1,0 +1,31 @@
+packages/deploy-helpers/tests/preview-build-output.test.ts
+  s_7352111617969e::t_24d55e16b6f87d 6-9,188-422
+packages/deploy-helpers/src/preview/preview.ts
+  s_7352111617969e::t_c2e177633d479f 124-126,176-181,188-280,412-413,445,450,1062-1063,1159-1160,1208,1302-1303,1352-1371,1379,1393,1425
+packages/wrangler/src/__tests__/preview/containers.test.ts
+  s_0649556f071dd7::t_440f701d115c4d 5,29,72,75-77,222-259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "17e6cd250bd9e25ec8647b1e99fd3b0a382396e9",
+  "prompts": {},
+  "sessions": {
+    "s_0649556f071dd7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2e1e177affes9R6r6i7tiQ8gI",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    },
+    "s_7352111617969e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2e6f6c4bffeL2g27mBqGH3E1N",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

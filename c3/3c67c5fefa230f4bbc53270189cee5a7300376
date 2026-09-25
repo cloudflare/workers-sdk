@@ -1,0 +1,27 @@
+packages/local-explorer-ui/src/routes/observability/events.tsx
+  s_1356a911e53448::t_5417e417281b17 389-391
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_1356a911e53448::t_3b902013d6fc3d 346-347
+packages/local-explorer-ui/src/__tests__/observability/query-clauses.test.ts
+  s_1356a911e53448::t_012f5b06ba4d73 80-104
+.changeset/local-explorer-observability-ui-fixes.md
+  s_1356a911e53448::t_9979ad850f14c1 2-3,8
+packages/local-explorer-ui/src/components/observability/InvocationLogs.tsx
+  s_1356a911e53448::t_51d20801a8417e 81-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c33c67c5fefa230f4bbc53270189cee5a7300376",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

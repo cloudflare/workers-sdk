@@ -1,0 +1,21 @@
+packages/miniflare/src/plugins/email/index.ts
+  s_b702d30224ef81::t_a0b9fa7e12baac 6,61-74,150,166,186,193,205-213,241,257,286-295,305,318
+packages/miniflare/src/plugins/core/explorer.ts
+  s_b702d30224ef81::t_66c06bd749ccfa 105-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2e7fa10484e99bdf9c2ae31e1fb03f1ea0a7518b",
+  "prompts": {},
+  "sessions": {
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

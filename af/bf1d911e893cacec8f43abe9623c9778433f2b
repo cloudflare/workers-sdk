@@ -1,0 +1,25 @@
+packages/local-explorer-ui/src/__e2e__/email-sending.spec.ts
+  s_2aedf88cdc76d8::t_8467051b1342e9 1-175
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_2aedf88cdc76d8::t_9c90423b992185 134-188
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_2aedf88cdc76d8::t_d84a783542bff8 1-576
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_2aedf88cdc76d8::t_599d25dabef369 2,12,43,159-168,195-196,233-239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "afbf1d911e893cacec8f43abe9623c9778433f2b",
+  "prompts": {},
+  "sessions": {
+    "s_2aedf88cdc76d8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0336c-1e6f-7863-8578-da23a2f61ef7",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

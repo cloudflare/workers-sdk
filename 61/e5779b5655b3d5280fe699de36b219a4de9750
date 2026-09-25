@@ -1,0 +1,19 @@
+packages/miniflare/src/plugins/email/index.ts
+  s_e771bd5e618774::t_ea8033c0f25934 60-70,232,248,296
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "61e5779b5655b3d5280fe699de36b219a4de9750",
+  "prompts": {},
+  "sessions": {
+    "s_e771bd5e618774": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_048515778ffe4EBFGtwSCLtvFn",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

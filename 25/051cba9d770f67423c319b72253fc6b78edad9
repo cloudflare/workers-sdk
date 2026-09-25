@@ -1,0 +1,236 @@
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_6d3bafc58e5d19::t_74a9d2fb4ac7b5 430-431,434,445,469,503-504,507,515
+  s_9bcd3249641f63::t_8b62d84ec88e3b 717,721-725,727-738,740-742,744-749,751,753-754,762-767
+  s_c06ef97bec1fc1::t_8090f03539c2c9 1397-1400,1402-1420,1426-1428,1430,1432-1438,1562-1563
+  s_27cf40cb8ff5f3::t_fb56dc53542b9d 1152,1162-1163,1165-1166,1204-1205,1207,1209-1210,1216,1382-1383,1385,1393,1395-1396,1623-1624
+  s_cfcda634814b92::t_4a0689503d1dfe 888-889,891,893,921-922,924,949
+  s_cfcda634814b92::t_39e2ffaf87ad23 474-475,479,481-482,483,498-500,512-513,533-535,537,539-540
+  s_20890f2bc2d65e::t_c2da4f04e20e3d 1328-1329,1332-1337,1344-1346,1347,1567,1578,1596-1597,1601,1623-1624
+  s_5e02feaf7769df::t_f8f671f2d167f3 3,5,327,328-330,1835,1838,1855-1856,1858-1860,1862-1864,1877-1882,1884-1887,1889-1890,1894,1900,1901,1905-1907,1921,1929,1934-1935
+packages/wrangler/e2e/createTestHarness.test.ts
+  s_bf0caaccc6ed8d::t_24d14ffa4024d4 2067-2070,2095-2098,2125-2128
+  s_cfcda634814b92::t_d5f5806bad5573 2095-2098
+packages/wrangler/e2e/dev.test.ts
+  s_bf0caaccc6ed8d::t_13c9475d81d228 2708-2710
+packages/wrangler/e2e/get-platform-proxy.test.ts
+  s_bf0caaccc6ed8d::t_3b902833fbf984 697
+packages/miniflare/src/workers/core/email.ts
+  s_c06ef97bec1fc1::t_47df8e01abf505 5,7,10,91-98
+  s_c1da0c64966116::t_35b3739a8103f8 18,22,24,175,238
+  s_cfcda634814b92::t_637371c35fe40a 279-282
+  s_e136989dfafa02::t_29695832881a50 13
+  s_20890f2bc2d65e::t_651d2ca6856ff7 22,24,217,226,327-328,351-352,360
+packages/miniflare/src/workers/email/capture.ts
+  s_c06ef97bec1fc1::t_79b2f9a1445dba 15-20
+  s_c06ef97bec1fc1::t_0d9c232996feab 21,25,31
+packages/miniflare/src/workers/email/storage.ts
+  s_20890f2bc2d65e::t_5a828e181e765c 4-6,60,63,66-67,71,73
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_cfcda634814b92::t_e8c76030c2d9aa 772-782
+  s_e136989dfafa02::t_75ac026f547f53 767-771
+  s_5e02feaf7769df::t_0a58f5c1fb73fe 638-645,670,733-736,738-739,741-742,814-821,829-830,832,845
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_c06ef97bec1fc1::t_17512d54505266 793
+  s_c1da0c64966116::t_2dbd8996867b9e 611,1891-1893,1913-1929,1937-1945,1953-1970,1983-1989,1990-1992,2012-2028,2036-2041
+  s_27cf40cb8ff5f3::t_3dcda50ae05a36 1090-1105,1110-1114,1117-1120
+  s_cfcda634814b92::t_58554c33c74bc5 792,794,814-821,823,825-836,901-908,1975-1982
+  s_e136989dfafa02::t_bfa39a2f60cddd 853-856,1971-1974
+  s_20890f2bc2d65e::t_0cfd1d4a3e531f 837-840,1054-1057,1106-1109,1155-1157,1197-1200
+  s_5e02feaf7769df::t_46f3cd991119ad 1894-1898,1911,1947,1949,1951,1993-1997,2010
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_c06ef97bec1fc1::t_397be77c2d5e4f 537
+  s_c1da0c64966116::t_fb8c71263ebfca 1163-1165,1174-1180,1192-1197,1201-1209,1213-1217,1218-1220,1229-1235,1247-1249
+  s_27cf40cb8ff5f3::t_e8495064e1a454 694-699,701-704,707-710
+  s_cfcda634814b92::t_3386ed778ed72c 536,538,550-553,555-560,1211-1212
+  s_e136989dfafa02::t_474ec52888b0fc 1210
+  s_20890f2bc2d65e::t_48f11ee6d941f5 561,686,700,718-719,720-721,736-737
+  s_5e02feaf7769df::t_150d5768b2d0e6 1166-1168,1172-1173,1221-1223,1227-1228
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_c1da0c64966116::t_acea9e9fd1020a 1286,1288,1326-1337,1366-1390,1392,1394,1406-1429,1442-1468,1470,1472,1481,1482,1484,1485-1486,1508-1521,1550-1557,1559-1567,1569-1570,1572-1574,3573
+  s_27cf40cb8ff5f3::t_19fe7b36573bca 3954,4034,4036,4037-4039,4042,4044,4420,4425-4430,4441
+  s_cfcda634814b92::t_06a43f2f187d48 1433-1441,3820,3855,3858-3870,3871,3887-3888,3891-3904
+  s_e136989dfafa02::t_81c2bf51377e70 1430-1432,3929-3930
+  s_20890f2bc2d65e::t_51db684fba20ed 3905-3908,3932-3934,4421-4424
+  s_5e02feaf7769df::t_56b92a7ebfb25a 1289-1296,1324-1325,1395-1398,1400-1402,1404-1405,1473-1480,1489-1491,1493-1495
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_27cf40cb8ff5f3::t_29405c593ed8ad 650
+  s_cfcda634814b92::t_06999c00444088 19,21-23,1031-1032
+  s_e136989dfafa02::t_59a5fc3e4b3806 1079
+  s_20890f2bc2d65e::t_8d64a2012fff24 550-551,589-597,599-601,609-612,614,616,618-625,982-985
+  s_e771bd5e618774::t_8cc32c77ad9ec7 2,1069
+  s_5e02feaf7769df::t_c6b201bd05d738 5,25,26,28-29,93-107,111-113,115,225,354,487-490,493-497,499-502,504-505,513,515-517,522-523,675,678,785-786,794-801,839-844,847-853,859-862,864-867,869,872-873,878-884,886-890,901-918,920-924,929-939,941-951,952,953-964,966-973,979-980,986,994,1000-1002,1004-1020,1034-1041,1088-1089,1091,1097-1098,1105-1108,1124-1133,1135
+  s_e771bd5e618774::t_9a35a76218a01d 84-92,108-110
+packages/miniflare/test/plugins/email/index.spec.ts
+  s_c06ef97bec1fc1::t_4ad938ef5fc43c 2412,2421-2438
+  s_20890f2bc2d65e::t_91452997845f4b 2457
+packages/local-explorer-ui/src/__tests__/utils/sidebar-state.test.ts
+  s_b702d30224ef81::t_25d8a7fa4c1219 115,163,190
+packages/local-explorer-ui/src/assets/icons/email.svg
+  s_b702d30224ef81::t_c0323c76d50b41 1-3
+packages/local-explorer-ui/src/components/Sidebar.tsx
+  s_b702d30224ef81::t_015f20ecc46120 18,212-241
+packages/local-explorer-ui/src/components/email/EmailServiceEmptyState.tsx
+  s_b702d30224ef81::t_d055c57a9058e6 1-26
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_b702d30224ef81::t_91d0614e35bf1d 1-344
+packages/local-explorer-ui/src/routes/email/shared/ConstantsCard.tsx
+  s_b702d30224ef81::t_daea0068b63d90 1-75
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_b702d30224ef81::t_90d4b15bf39118 1-231
+packages/local-explorer-ui/src/routes/email/shared/InfoFlow.tsx
+  s_b702d30224ef81::t_bb8c7681d14f1f 1-50
+packages/local-explorer-ui/src/routes/email/shared/InfoLoading.tsx
+  s_b702d30224ef81::t_2a071aab1ac411 1-32
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_b702d30224ef81::t_9e77b877792f12 1-39
+packages/local-explorer-ui/src/utils/sidebar-state.ts
+  s_b702d30224ef81::t_df3a4b405719fa 11,25
+packages/miniflare/src/plugins/email/index.ts
+  s_5e02feaf7769df::t_176cf806290632 131-133,138
+  s_e771bd5e618774::t_545d5adf339fed 33-35
+packages/miniflare/src/plugins/core/index.ts
+  s_c1da0c64966116::t_ed7a2f029811c3 34,60
+packages/miniflare/src/plugins/email/store.ts
+  s_c1da0c64966116::t_c91cd5a8b2aef3 1-55
+packages/miniflare/src/workers/email/email-store.ts
+  s_c1da0c64966116::t_7bfd18cb1ba1f7 1-9,17-18,114,118,120,122,125,143-144,194,298-299,300-306,312-314,340-341,402-403,406,413-415,553,558-559
+  s_e136989dfafa02::t_ab73b201c0e5a9 31
+  s_20890f2bc2d65e::t_b36e82043637c7 32,34,36-37,38-39,284-291,293-297,325-327,338,404,527-528,531
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_c1da0c64966116::t_b7211dba2e88b0 1-8,22-36,39-40,71-72,83-84,87-88,94-95,102-103,106-107
+  s_cfcda634814b92::t_03d02a924c47d7 104-105
+  s_20890f2bc2d65e::t_0cbf112e766a8e 14,16,18-19,20,21
+  s_e771bd5e618774::t_992d0d2f1ef566 9-13,70
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_27cf40cb8ff5f3::t_60aff5679a57f5 25,326
+  s_cfcda634814b92::t_dcc40ce4de0f24 126,293,294,368,369,378,379,385
+  s_cfcda634814b92::t_6b25aa5970fbb4 262,318
+  s_20890f2bc2d65e::t_82a53449f984ff 39-41,43-47,299-305,386,405-411
+  s_e771bd5e618774::t_6106628eaf74a9 145-151
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_27cf40cb8ff5f3::t_a042ebb2704434 49
+  s_cfcda634814b92::t_ba539fd2c94582 51-53
+packages/miniflare/test/index.spec.ts
+  s_cfcda634814b92::t_deafb3ccfd912a 2756,2779
+packages/wrangler/src/api/test-harness.ts
+  s_cfcda634814b92::t_446ec28597c33a 59,110
+packages/miniflare/src/index.ts
+  s_cfcda634814b92::t_fb6d71dade7c9e 129
+  s_20890f2bc2d65e::t_29ff24346ed61d 1178-1180,1182,1190-1192
+packages/miniflare/src/workers/email/message-id.ts
+  s_cfcda634814b92::t_c67c774f038a16 1-3,5,9,12-13,19-22,105,108,111-115
+packages/miniflare/src/plugins/core/temp-file.ts
+  s_20890f2bc2d65e::t_d25414c226f17c 17,25,27,31,34-35
+packages/miniflare/src/workers/email/validate.ts
+  s_20890f2bc2d65e::t_bcdbc80b8fb273 68
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_5e02feaf7769df::t_34db52c0f4a68d 15-16,399,401,408,414,417,419
+packages/miniflare/src/plugins/core/explorer.ts
+  s_5e02feaf7769df::t_b88a240291496c 108,110-113
+packages/miniflare/src/workers/core/constants.ts
+  s_5e02feaf7769df::t_63b2ea6e01b19c 103,105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "25051cba9d770f67423c319b72253fc6b78edad9",
+  "prompts": {},
+  "sessions": {
+    "s_20890f2bc2d65e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_037c6695cffekPS6cQICtHB2o2",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_27cf40cb8ff5f3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05b7a13f6ffewE11jNIdfs2beD",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_5e02feaf7769df": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_037a1ea80ffeSqTOx5QH6Nwys4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_6d3bafc58e5d19": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0248e72b8ffekX5Mfi7gFY2Dpy",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_9bcd3249641f63": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_014bb0183ffeNLUgKf2n5vDgsZ",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_bf0caaccc6ed8d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028716508ffe960pk9fWrTNbup",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_c06ef97bec1fc1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0236b4555ffeDj89q8wG6MyYYK",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_c1da0c64966116": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05ccc4986ffenGK49lt16xdV1M",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_cfcda634814b92": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05662ba38ffeFAbzJynmgX0Ka6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_e136989dfafa02": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_051edf047ffeURqkUgtmfuwDKf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_e771bd5e618774": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_048515778ffe4EBFGtwSCLtvFn",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

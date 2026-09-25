@@ -1,0 +1,41 @@
+pnpm-lock.yaml
+  s_abf9c14d79df75::t_6dff4b192f78b0 1843-1845
+packages/config/src/convert.ts
+  s_18c7e5cb6a2433::t_bcda1499d8b66e 1,677-684
+  s_18c7e5cb6a2433::t_9e5368f0db5d87 685
+packages/config/src/__tests__/convert.test.ts
+  s_8e48d0d480d9ad::t_9a9a6c665535aa 1036,1043,1048-1058
+  s_8e48d0d480d9ad::t_885fad757dee2d 1059
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2af41c920c225f2441c56268eca117ac8631f743",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_8e48d0d480d9ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01057-f613-77c3-9ea6-f67040cc69f7",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_abf9c14d79df75": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0103b-285c-72d3-9f33-c80696917469",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

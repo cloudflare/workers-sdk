@@ -1,0 +1,61 @@
+.changeset/fuzzy-pandas-launch.md
+  s_3725c7a238f252::t_8669a5434d5e00 1-11
+packages/containers-shared/src/client/index.ts
+  s_3725c7a238f252::t_ac415a021b47dd 49-50,187,221
+packages/containers-shared/src/client/models/ContainerInstanceGroup.ts
+  s_3725c7a238f252::t_ca4f9cb454f13d 1-13
+packages/containers-shared/src/client/models/ContainerInstanceGroupSSHConfiguration.ts
+  s_3725c7a238f252::t_ad1be76c08e708 1-10
+packages/containers-shared/src/client/models/PutContainerInstanceGroupRequestBody.ts
+  s_3725c7a238f252::t_b634cd706b2d38 1-11
+packages/containers-shared/src/client/services/ContainerInstanceGroupsService.ts
+  s_3725c7a238f252::t_d0b8a77ec93841 1-35
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_3725c7a238f252::t_f6fdfe9f6fc4d7 131-136,747-758
+packages/deploy-helpers/src/deploy/helpers/print-bindings.ts
+  s_3725c7a238f252::t_69775277106f5b 17,46,950-953,960
+packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
+  s_3725c7a238f252::t_b3a1298a33d9e9 120
+packages/workers-utils/src/config/environment.ts
+  s_3725c7a238f252::t_dbf6e9319cc9d5 100-110,117-122,266,347-375,987
+packages/workers-utils/src/config/validation.ts
+  s_3725c7a238f252::t_ec816291762d18 3369-3469,3487-3493,3495,3497,3514-3530,3536,3541-3564,3566,3568,3977,3980
+packages/workers-utils/src/types.ts
+  s_3725c7a238f252::t_4cb5a49a5c70cb 7,562
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_3725c7a238f252::t_172d64a4feda6b 3725-3855
+packages/wrangler/src/__tests__/containers/config.test.ts
+  s_3725c7a238f252::t_5d9b35b661ef01 56-99
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_0af4116e29257e 55,114-277
+packages/wrangler/src/__tests__/containers/schema.test.ts
+  s_3725c7a238f252::t_872d8e5f2facfa 10-17,44-52
+packages/wrangler/src/api/startDevWorker/ConfigController.ts
+  s_3725c7a238f252::t_f1d921a72c5fcc 141-142
+packages/wrangler/src/cloudchamber/apply.ts
+  s_3725c7a238f252::t_cc08ab8d2eda57 327-331,379
+packages/wrangler/src/containers/config.ts
+  s_3725c7a238f252::t_fe2bbe5610ba3c 61-64,93-96
+packages/wrangler/src/containers/deploy.ts
+  s_3725c7a238f252::t_2e8986b029a24d 75,78,80,85-86,100,105,107,114-115,117-124,126-128,130-133,135-153,155-158,160-161,163-172,555-562
+packages/wrangler/src/containers/instance-groups.ts
+  s_3725c7a238f252::t_5fea1540df9258 1-70
+packages/wrangler/src/deploy/index.ts
+  s_3725c7a238f252::t_5ece7cbf1b8348 10,205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d945acaf8f3d806c211fbc3cd12ba12c18176250",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

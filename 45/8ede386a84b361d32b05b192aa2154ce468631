@@ -1,0 +1,19 @@
+packages/miniflare/src/plugins/email/index.ts
+  s_c06ef97bec1fc1::t_32ceaf73e1cbce 85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "458ede386a84b361d32b05b192aa2154ce468631",
+  "prompts": {},
+  "sessions": {
+    "s_c06ef97bec1fc1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0236b4555ffeDj89q8wG6MyYYK",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

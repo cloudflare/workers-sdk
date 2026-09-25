@@ -1,0 +1,23 @@
+.changeset/bright-moles-search.md
+  s_1ac6845434ff86::t_193c7d65332c5f 1-7
+packages/wrangler/src/__tests__/containers/instances.test.ts
+  s_1ac6845434ff86::t_7cf154605654ee 120,295-512
+packages/wrangler/src/containers/instances.ts
+  s_1ac6845434ff86::t_11818962cb8031 97-111,156-177,283-287,292,316-324,346-371
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f6d93badc0dd803eb2a9038c38eab223e759e0c7",
+  "prompts": {},
+  "sessions": {
+    "s_1ac6845434ff86": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fca05-2f14-76e0-b2f9-7975dcb4102f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

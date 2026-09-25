@@ -1,0 +1,21 @@
+packages/deploy-helpers/tests/preview-build-output.test.ts
+  s_7352111617969e::t_24d55e16b6f87d 6-9,188-389
+packages/deploy-helpers/src/preview/preview.ts
+  s_7352111617969e::t_c2e177633d479f 124-126,183-256,1275-1276,1325-1340,1361,1393
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e96dd77139128c0f48740092272c4aa6ad4bc322",
+  "prompts": {},
+  "sessions": {
+    "s_7352111617969e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2e6f6c4bffeL2g27mBqGH3E1N",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}
