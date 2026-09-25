@@ -189,6 +189,27 @@ describe("V4MiniflareOptionsSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
+	test.for([
+		[{ retryMaxAttempts: 0, retryTimeoutMs: 500 }, true],
+		[{ retryMaxAttempts: 10, retryTimeoutMs: 60_000 }, true],
+		[{ retryMaxAttempts: -1 }, false],
+		[{ retryMaxAttempts: 11 }, false],
+		[{ retryMaxAttempts: 1.5 }, false],
+		[{ retryTimeoutMs: 0 }, false],
+		[{ retryTimeoutMs: 499 }, false],
+		[{ retryTimeoutMs: 60_001 }, false],
+	] as const)(
+		"validates Durable Object retry policy %o (valid: %s)",
+		([retry, valid], { expect }) => {
+			const result = V4MiniflareOptionsSchema.safeParse({
+				script: "export default {}",
+				durableObjects: { OBJECT: { className: "Object", ...retry } },
+			});
+
+			expect(result.success).toBe(valid);
+		}
+	);
+
 	test("rejects malformed known asset config fields", ({ expect }) => {
 		const routerConfigResult = V4MiniflareOptionsSchema.safeParse({
 			script: "export default {}",

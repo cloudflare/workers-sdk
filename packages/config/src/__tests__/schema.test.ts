@@ -233,6 +233,34 @@ describe("InputWorkerSchema", () => {
 		});
 	});
 
+	describe("durable-object bindings", () => {
+		it.for([
+			[{}, true],
+			[{ maxAttempts: 0, timeoutMs: 500 }, true],
+			[{ maxAttempts: 10, timeoutMs: 60_000 }, true],
+			[{ maxAttempts: -1 }, false],
+			[{ maxAttempts: 11 }, false],
+			[{ maxAttempts: 1.5 }, false],
+			[{ timeoutMs: 0 }, false],
+			[{ timeoutMs: 499 }, false],
+			[{ timeoutMs: 60_001 }, false],
+			[{ timeoutMs: 1.5 }, false],
+			[{ enabled: true }, false],
+		] as const)(
+			"validates retry policy %o (valid: %s)",
+			([retry, valid], { expect }) => {
+				const result = BindingSchema.safeParse({
+					type: "durable-object",
+					worker: "worker",
+					exportName: "Object",
+					retry,
+				});
+
+				expect(result.success).toBe(valid);
+			}
+		);
+	});
+
 	describe("send-email bindings", () => {
 		it.for([
 			["no address restrictions", { type: "send-email" }],

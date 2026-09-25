@@ -510,11 +510,18 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "durable-object": {
-				durableObjectBindings.push({
+				const entry: (typeof durableObjectBindings)[number] = {
 					name,
 					class_name: binding.exportName,
 					script_name: binding.worker,
-				});
+				};
+				if (binding.retry) {
+					entry.retry = omitUndefined({
+						max_attempts: binding.retry.maxAttempts,
+						timeout_ms: binding.retry.timeoutMs,
+					});
+				}
+				durableObjectBindings.push(entry);
 				break;
 			}
 			case "flagship": {

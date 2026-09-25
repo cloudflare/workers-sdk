@@ -414,10 +414,14 @@ function addDurableObjectBindings(
 		const objectOptions =
 			typeof object === "string" ? { className: object } : object;
 		const targetWorkerName = objectOptions.scriptName ?? workerName;
+		const { retryMaxAttempts, retryTimeoutMs } = objectOptions;
 		env[bindingName] = {
 			type: "durable-object",
 			worker: targetWorkerName,
 			exportName: objectOptions.className,
+			...((retryMaxAttempts !== undefined || retryTimeoutMs !== undefined) && {
+				retry: { maxAttempts: retryMaxAttempts, timeoutMs: retryTimeoutMs },
+			}),
 		};
 		isRemote(objectOptions.remoteProxyConnectionString);
 

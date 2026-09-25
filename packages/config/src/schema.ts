@@ -133,6 +133,12 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		type: z.literal("durable-object"),
 		worker: z.string(),
 		exportName: z.string(),
+		retry: z
+			.strictObject({
+				maxAttempts: z.number().int().min(0).max(10).optional(),
+				timeoutMs: z.number().int().min(500).max(60_000).optional(),
+			})
+			.optional(),
 	}),
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,

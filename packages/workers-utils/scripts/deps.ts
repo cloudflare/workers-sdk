@@ -15,6 +15,11 @@ export const EXTERNAL_DEPENDENCIES = [
 	// inside workers-utils.
 	"dotenv",
 
+	// esbuild contains a native binary, so must be external. Only the
+	// `./decorators` entry imports it, and its consumers (the Vite and Vitest
+	// plugins) depend on esbuild directly, so it is an optional peer dependency.
+	"esbuild",
+
 	// Bundling `undici` would produce a duplicate copy in every downstream
 	// consumer that already depends on undici (e.g. wrangler), which breaks
 	// `instanceof Request`/`Response`/`Headers` checks across the boundary

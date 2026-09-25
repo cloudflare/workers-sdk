@@ -485,6 +485,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 					type: "durable-object",
 					worker: SERVICE_DEV_REGISTRY_PROXY,
 					exportName: getOutboundDoProxyClassName(worker, exportName),
+					retry: binding.retry,
 				};
 				getEntrypoints(worker).classNames.add(exportName);
 			}

@@ -2871,6 +2871,9 @@ importers:
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
+      esbuild:
+        specifier: catalog:default
+        version: 0.28.1
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -3232,6 +3235,30 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260925.1
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vite:
+        specifier: catalog:default
+        version: 8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/decorators:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20260925.1
+      '@playground/decorators-package':
+        specifier: file:./package
+        version: file:packages/vite-plugin-cloudflare/playground/decorators/package
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4515,6 +4542,9 @@ importers:
       empathic:
         specifier: ^2.0.0
         version: 2.0.0
+      esbuild:
+        specifier: catalog:default
+        version: 0.28.1
       jsonc-parser:
         specifier: catalog:default
         version: 3.2.0
@@ -8319,6 +8349,9 @@ packages:
   '@pkgr/core@0.2.10':
     resolution: {integrity: sha512-x6fFWCeak8aCGfqZfe6CXYt5xVjxe9Os1cIPmVRcToInKLjhJkRVXvJ/L3/1KxFkjDQdbZV/YsuLKqa8t/xKpA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
+
+  '@playground/decorators-package@file:packages/vite-plugin-cloudflare/playground/decorators/package':
+    resolution: {directory: packages/vite-plugin-cloudflare/playground/decorators/package, type: directory}
 
   '@playground/main-resolution-package@file:packages/vite-plugin-cloudflare/playground/main-resolution/package':
     resolution: {directory: packages/vite-plugin-cloudflare/playground/main-resolution/package, type: directory}
@@ -20642,6 +20675,8 @@ snapshots:
 
   '@pkgr/core@0.2.10':
     optional: true
+
+  '@playground/decorators-package@file:packages/vite-plugin-cloudflare/playground/decorators/package': {}
 
   '@playground/main-resolution-package@file:packages/vite-plugin-cloudflare/playground/main-resolution/package': {}
 

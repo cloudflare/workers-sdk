@@ -243,6 +243,8 @@ const V4R2BucketsSchema = z.union([
 const V4DurableObjectSchema = z.object({
 	className: z.string(),
 	scriptName: z.string().optional(),
+	retryMaxAttempts: z.number().int().min(0).max(10).optional(),
+	retryTimeoutMs: z.number().int().min(500).max(60_000).optional(),
 	useSQLite: z.boolean().optional(),
 	unsafeUniqueKey: z
 		.union([
@@ -761,6 +763,10 @@ export type V4Namespace = Record<string, string | V4IdEntry> | string[];
 export type V4DurableObject = {
 	className: string;
 	scriptName?: string;
+	/** Maximum number of retries after the initial request (0-10, default 4). Zero disables retries. */
+	retryMaxAttempts?: number;
+	/** Retry timeout in milliseconds, measured from the start of the call (500-60000, default 10000). */
+	retryTimeoutMs?: number;
 	useSQLite?: boolean;
 	unsafeUniqueKey?: string | symbol;
 	unsafePreventEviction?: boolean;

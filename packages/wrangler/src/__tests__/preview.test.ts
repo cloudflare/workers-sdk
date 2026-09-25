@@ -958,6 +958,7 @@ describe("wrangler preview", () => {
 							name: "COUNTER",
 							class_name: "Counter",
 							script_name: "counter-worker",
+							retry: { max_attempts: 5, timeout_ms: 10_000 },
 						},
 					],
 				},
@@ -968,6 +969,7 @@ describe("wrangler preview", () => {
 					type: "durable_object_namespace",
 					class_name: "Counter",
 					script_name: "counter-worker",
+					retry: { max_attempts: 5, timeout_ms: 10_000 },
 				},
 			});
 		});

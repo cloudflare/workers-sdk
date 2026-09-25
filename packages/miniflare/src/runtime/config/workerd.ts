@@ -159,6 +159,12 @@ export type Worker_Binding_Type =
 export type Worker_Binding_DurableObjectNamespaceDesignator = {
 	className?: string;
 	serviceName?: string;
+	retryPolicy?: Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy;
+};
+
+export type Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy = {
+	maxAttempts?: number;
+	timeoutMs?: number;
 };
 
 export type Worker_Binding_CryptoKey = (
