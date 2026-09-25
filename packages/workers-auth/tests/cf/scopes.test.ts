@@ -24,14 +24,14 @@ describe("cf OAuth scopes", () => {
 	});
 
 	it("matches the production client registration", ({ expect }) => {
-		expect(CF_CLIENT_REGISTERED_SCOPES).toHaveLength(474);
+		expect(CF_CLIENT_REGISTERED_SCOPES).toHaveLength(475);
 		expect(new Set(CF_CLIENT_REGISTERED_SCOPES).size).toBe(
 			CF_CLIENT_REGISTERED_SCOPES.length
 		);
 	});
 
 	it("matches the known-grantable production catalog", ({ expect }) => {
-		expect(CF_REQUESTABLE_SCOPES).toHaveLength(468);
+		expect(CF_REQUESTABLE_SCOPES).toHaveLength(469);
 		expect(new Set(CF_REQUESTABLE_SCOPES).size).toBe(
 			CF_REQUESTABLE_SCOPES.length
 		);
