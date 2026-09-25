@@ -212,6 +212,41 @@ describe("getNormalizedContainerOptions", () => {
 		);
 	});
 
+	it("should treat a durable object script_name naming this Worker as local", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: `${getCloudflareContainerRegistry()}/test-image:latest`,
+					name: "test-container",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+						script_name: "test-worker",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			name: "test-container",
+			class_name: "TestContainer",
+		});
+	});
+
 	it("should throw early when a Durable Object-managed container uses an external class", async ({
 		expect,
 	}) => {
