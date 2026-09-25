@@ -42,6 +42,22 @@ describe("getCodemodSummary", () => {
 			)
 		).toBe("Updated 2 file(s).");
 	});
+
+	it("includes install instructions when dependencies require installation", ({
+		expect,
+	}) => {
+		expect(
+			getCodemodSummary(
+				{
+					changedFiles: ["cloudflare.config.ts"],
+					requiresInstall: true,
+				},
+				false
+			)
+		).toBe(
+			"Updated 1 file(s). Run your package manager's install command to refresh its lockfile."
+		);
+	});
 });
 
 describe("formatFollowUps", () => {
