@@ -205,7 +205,7 @@ export function validateInstanceDate(
 
 export async function getInstanceIdFromArgs(
 	accountId: string,
-	args: { id: string; name: string; json?: boolean },
+	args: { id: string; name: string; json: boolean | undefined },
 	config: Config
 ) {
 	let id = args.id;

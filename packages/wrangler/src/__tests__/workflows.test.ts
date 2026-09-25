@@ -1724,6 +1724,62 @@ describe("wrangler workflows", () => {
 			});
 		});
 
+		it("should keep Retry-After notices out of --json output when resolving latest", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 10013, message: "Service unavailable" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 503, headers: { "Retry-After": "0" } }
+						),
+					{ once: true }
+				),
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									id: "newest",
+									created_on: mockCreateDate.toISOString(),
+									modified_on: mockModifiedDate.toISOString(),
+									workflow_id: "b",
+									version_id: "c",
+									status: "complete",
+								},
+							],
+						}),
+					{ once: true }
+				)
+			);
+			mockDeleteInstances(expect, ["newest"]);
+
+			await runWrangler(
+				`workflows instances delete some-workflow latest --json`
+			);
+
+			expect(JSON.parse(std.out)).toEqual({
+				deleted: [{ id: "newest" }],
+				errors: [],
+			});
+			expect(std.info).toBe("");
+			expect(std.warn).toContain(
+				'Received a "Retry-After" header from the Cloudflare API.'
+			);
+		});
+
 		it("should emit JSON and still fail on a partial delete with --json", async ({
 			expect,
 		}) => {
