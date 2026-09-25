@@ -616,6 +616,10 @@ export default defineWorkersProject({
 	}) => {
 		const configPath = "wrangler.json";
 		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { cf: "1.0.0" },
+				name: "dry-run-test",
+			}),
 			[configPath]: JSON.stringify({
 				compatibility_date: "2026-09-24",
 				name: "dry-run-test",
@@ -636,7 +640,12 @@ export default defineWorkersProject({
 			installDependencies: false,
 		});
 
-		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
+		expect(result).toMatchObject({
+			changedFiles: ["cloudflare.config.ts"],
+			followUps: [],
+			requiresInstall: false,
+			status: "complete",
+		});
 		await expect(
 			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
 		).rejects.toMatchObject({ code: "ENOENT" });
