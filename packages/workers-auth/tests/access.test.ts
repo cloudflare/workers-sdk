@@ -151,6 +151,43 @@ describe("access", () => {
 				)
 			).toBeTruthy();
 		});
+
+		it("re-probes with a later preview token after a token-bearing probe misses Access", async ({
+			expect,
+		}) => {
+			// The first token's preview route isn't live yet, so its probe 404s. A
+			// refreshed token for the same host must be probed rather than reusing
+			// that negative result.
+			msw.use(
+				http.get("https://unpublished.workers.dev/", ({ request }) => {
+					const token = new URL(request.url).searchParams.get(
+						"cf_workers_preview_token"
+					);
+					if (token !== "live-token") {
+						return HttpResponse.json(null, { status: 404 });
+					}
+					return HttpResponse.json(null, {
+						status: 302,
+						headers: { location: "unpublished.cloudflareaccess.com" },
+					});
+				})
+			);
+
+			expect(
+				await domainUsesAccess(
+					"unpublished.workers.dev",
+					silentLogger,
+					"stale-token"
+				)
+			).toBeFalsy();
+			expect(
+				await domainUsesAccess(
+					"unpublished.workers.dev",
+					silentLogger,
+					"live-token"
+				)
+			).toBeTruthy();
+		});
 	});
 
 	describe("getAccessHeaders", () => {

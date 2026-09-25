@@ -77,9 +77,13 @@ export async function domainUsesAccess(
 			output.status === 302 &&
 			output.headers.get("location")?.includes("cloudflareaccess.com")
 		);
-		logger.debug("Caching access switch for:", domain);
-
-		usesAccessCache.set(cacheKey, usesAccess);
+		// A token-bearing probe can miss Access if its preview route isn't live
+		// yet, and refreshed tokens reuse the same host. Only cache positive
+		// results for those probes so a later token is probed again.
+		if (usesAccess || !previewToken) {
+			logger.debug("Caching access switch for:", domain);
+			usesAccessCache.set(cacheKey, usesAccess);
+		}
 		return usesAccess;
 	} catch {
 		// Don't cache errors, or else transient failures will continue to fail forever
