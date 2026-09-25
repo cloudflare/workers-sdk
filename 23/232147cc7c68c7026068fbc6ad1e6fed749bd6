@@ -1,0 +1,61 @@
+.changeset/durable-object-binding-retry-local.md
+  s_6aa689848a6f25::t_62280e6eb1dd8d 1-9
+packages/config/src/__tests__/convert.test.ts
+  s_6aa689848a6f25::t_88e9b4497b6a25 729-765
+packages/config/src/bindings.ts
+  s_f98067fbda6810::t_9755b6f9122983 214-233
+packages/config/src/convert.ts
+  s_f70c3d9c923e90::t_bab300b94d5965 513,517-524
+packages/config/src/schema.ts
+  s_f98067fbda6810::t_7a0b6ed2d8485f 136-141
+packages/miniflare/src/config/v4-convert.ts
+  s_f98067fbda6810::t_87f1fff6ec8e42 417,422-424
+packages/miniflare/src/config/v4-schema.ts
+  s_f98067fbda6810::t_693a24944e189c 246-247,766-769
+packages/miniflare/src/index.ts
+  s_f98067fbda6810::t_2da1dcc7e4b657 488
+packages/miniflare/src/plugins/do/index.ts
+  s_f98067fbda6810::t_bbde6ea4478573 30
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_6aa689848a6f25::t_bbc4498bfca343 1319-1384,1390-1391,1395,1425-1459
+packages/miniflare/test/config/v4-convert.spec.ts
+  s_f98067fbda6810::t_a9a3d12c235dae 73-99
+packages/miniflare/test/config/v4-schema.spec.ts
+  s_f98067fbda6810::t_438bd03e39f83b 192-212
+packages/miniflare/test/plugins/do/index.spec.ts
+  s_f70c3d9c923e90::t_c7f1cc26fc340c 61-133
+packages/miniflare/test/runtime/config.spec.ts
+  s_6aa689848a6f25::t_d2446224c12a0f 86-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "23232147cc7c68c7026068fbc6ad1e6fed749bd6",
+  "prompts": {},
+  "sessions": {
+    "s_6aa689848a6f25": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2861135affeN8CpyDm2tLcoX2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_f70c3d9c923e90": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2fdf8364ffeOHX8yTIJunIGkw",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_f98067fbda6810": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2820fb49ffetEI2q5vlBa0udc",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}
