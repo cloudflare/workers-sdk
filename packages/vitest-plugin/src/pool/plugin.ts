@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+	decoratorsTransformFilter,
+	lowerDecorators,
+} from "@cloudflare/workers-utils/decorators";
 import { cloudflarePool } from "./pool";
 import type { WorkersPoolOptions } from "./config";
 import type { ProvidedContext } from "vitest";
@@ -155,6 +159,12 @@ export function cloudflareTest(
 				}
 				return contents;
 			}
+		},
+		// Tests and the Worker run in workerd, which cannot parse decorator syntax.
+		// This runs after Vite has stripped TypeScript.
+		transform: {
+			filter: decoratorsTransformFilter,
+			handler: lowerDecorators,
 		},
 	};
 }

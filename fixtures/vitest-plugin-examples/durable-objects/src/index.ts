@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { positive } from "./positive";
 
 export class Counter extends DurableObject {
 	count: number = 0;
@@ -11,6 +12,7 @@ export class Counter extends DurableObject {
 		});
 	}
 
+	@positive
 	increment(by = 1) {
 		this.count += by;
 		void this.ctx.storage.put("count", this.count);

@@ -1,9 +1,6 @@
 import * as esbuild from "esbuild";
 import { describe, test } from "vitest";
-import {
-	decoratorsTransformFilter,
-	lowerDecorators,
-} from "../plugins/decorators";
+import { decoratorsTransformFilter, lowerDecorators } from "../src/decorators";
 
 describe("lowerDecorators", () => {
 	test.for([
