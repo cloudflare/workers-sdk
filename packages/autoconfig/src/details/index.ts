@@ -11,10 +11,7 @@ import {
 	readFileSync,
 } from "@cloudflare/workers-utils";
 import { AutoConfigDetectionError } from "../errors";
-import {
-	getFrameworkClassInstance,
-	validateFrameworkTargetSupport,
-} from "../frameworks";
+import { getFrameworkClassInstance } from "../frameworks";
 import {
 	allFrameworksInfos,
 	staticFramework,
@@ -170,9 +167,6 @@ export async function getDetailsForAutoConfig({
 
 	const configured =
 		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
-	if (!configured) {
-		validateFrameworkTargetSupport(framework, target);
-	}
 
 	const outputDir =
 		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
