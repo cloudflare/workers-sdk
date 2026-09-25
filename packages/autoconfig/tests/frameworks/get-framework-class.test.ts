@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import { getFrameworkClassInstance } from "../../src/frameworks";
+import { NewProject } from "../../src/frameworks/new-project";
 import { NextJs } from "../../src/frameworks/next";
 import { NoOpFramework } from "../../src/frameworks/no-op";
 import { Static } from "../../src/frameworks/static";
@@ -23,6 +24,16 @@ describe("getFrameworkClassInstance()", () => {
 		expect(framework).toBeInstanceOf(NextJs);
 		expect(framework.id).toBe("next");
 		expect(framework.name).toBe("Next.js");
+	});
+
+	it("should return a New project type for the new project id", ({
+		expect,
+	}) => {
+		const framework = getFrameworkClassInstance("new");
+
+		expect(framework).toBeInstanceOf(NewProject);
+		expect(framework.id).toBe("new");
+		expect(framework.name).toBe("Vite");
 	});
 
 	it("should return a NoOpFramework for an unsupported framework (hono)", ({

@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { NewProject } from "./new-project";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
 import { Qwik } from "./qwik";
@@ -237,8 +238,16 @@ export const staticFramework = {
 	supported: true,
 } as const satisfies StaticFrameworkInfo;
 
+export const newProject = {
+	id: "new",
+	name: "Vite",
+	class: NewProject,
+	supported: true,
+} as const;
+
 /** Information for all the possible frameworks. This includes the "static" framework */
 export const allFrameworksInfos = [
+	newProject,
 	staticFramework,
 	...allKnownFrameworks,
 ] as const satisfies (FrameworkInfo | StaticFrameworkInfo)[];
@@ -247,16 +256,19 @@ export const allFrameworksInfos = [
  * Gets the package information for a given framework, erroring if the framework
  * could not be determined or is not supported.
  *
- * Returns `undefined` for the "static" framework, which has no associated package.
+ * Returns `undefined` for project types without an associated package.
  *
  * @param frameworkId The id of the target framework
- * @returns The framework's target package info, or undefined if the framework is "static"
+ * @returns The framework's target package info, or undefined when it has no package
  */
 export function getFrameworkPackageInfo(
 	frameworkId: FrameworkInfo["id"]
 ): AutoConfigFrameworkPackageInfo | undefined {
 	if (frameworkId === staticFramework.id) {
 		// The "static" framework does not have an associated package
+		return undefined;
+	}
+	if (frameworkId === newProject.id) {
 		return undefined;
 	}
 	const targetedFramework = allKnownFrameworks.find(

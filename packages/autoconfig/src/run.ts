@@ -142,6 +142,9 @@ export async function runAutoConfig(
 		defaultWorkerConfig,
 		dryRunConfigurationResults.workerConfig
 	);
+	const usesPackageManager =
+		autoConfigDetails.packageJson !== undefined ||
+		dryRunConfigurationResults.buildTool === "vite";
 	if (
 		target === "cf" &&
 		dryRunConfigurationResults.buildTool === "wrangler" &&
@@ -202,11 +205,18 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
+	if (usesPackageManager && !autoConfigDetails.packageJson) {
+		await writeFile(
+			resolve(autoConfigDetails.projectPath, "package.json"),
+			"{}\n"
+		);
+	}
+
+	if (usesPackageManager && enableTargetCliInstallation) {
 		if (target === "cf") {
 			const hasCfDependency =
-				autoConfigDetails.packageJson.dependencies?.cf !== undefined ||
-				autoConfigDetails.packageJson.devDependencies?.cf !== undefined;
+				autoConfigDetails.packageJson?.dependencies?.cf !== undefined ||
+				autoConfigDetails.packageJson?.devDependencies?.cf !== undefined;
 			if (!hasCfDependency) {
 				await installPackages(packageManager.type, ["cf@latest"], {
 					dev: true,
@@ -219,7 +229,7 @@ export async function runAutoConfig(
 	}
 
 	if (
-		autoConfigDetails.packageJson &&
+		usesPackageManager &&
 		target === "cf" &&
 		dryRunConfigurationResults.buildTool === "wrangler"
 	) {
@@ -241,7 +251,7 @@ export async function runAutoConfig(
 		configurationResults.workerConfig
 	);
 
-	if (autoConfigDetails.packageJson) {
+	if (usesPackageManager) {
 		const packageJsonPath = resolve(
 			autoConfigDetails.projectPath,
 			"package.json"
@@ -545,11 +555,17 @@ export async function buildOperationsSummary(
 	};
 
 	const packagesToInstall = new Set<string>();
-	if (autoConfigDetails.packageJson) {
+	const usesPackageManager =
+		autoConfigDetails.packageJson !== undefined ||
+		configurationResults.buildTool === "vite";
+	if (usesPackageManager) {
 		if (enableTargetCliInstallation) {
 			packagesToInstall.add(target);
 		}
 		if (configurationResults.buildTool === "vite") {
+			if (!autoConfigDetails.packageJson) {
+				packagesToInstall.add("vite@latest");
+			}
 			packagesToInstall.add(
 				target === "cf"
 					? "@cloudflare/vite-plugin@beta"
@@ -571,7 +587,7 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	if (autoConfigDetails.packageJson) {
+	if (usesPackageManager) {
 		const scriptOverrides =
 			target === "wrangler" ? packageJsonScriptsOverrides : undefined;
 		const buildCommandPrefix =
@@ -595,7 +611,7 @@ export async function buildOperationsSummary(
 			// If there is no server side code, then there is no need to add the cf-typegen script
 			containsServerSideCode &&
 			usesTypescript(autoConfigDetails.projectPath) &&
-			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
+			!("cf-typegen" in (autoConfigDetails.packageJson?.scripts ?? {}))
 		) {
 			summary.scripts["cf-typegen"] =
 				scriptOverrides?.typegen ?? `${target} types`;

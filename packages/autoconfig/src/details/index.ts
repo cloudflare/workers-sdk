@@ -14,6 +14,7 @@ import { AutoConfigDetectionError } from "../errors";
 import { getFrameworkClassInstance } from "../frameworks";
 import {
 	allFrameworksInfos,
+	newProject,
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
@@ -315,29 +316,34 @@ export async function confirmAutoConfigDetails(
 
 	updatedAutoConfigDetails.workerName = workerName;
 
-	const frameworkId = await dialogs.select(
-		"What framework is your application using?",
-		{
-			choices: allFrameworksInfos.map((f) => ({
-				title: f.name,
-				value: f.id,
-				description:
-					f.id === staticFramework.id
-						? "No framework at all, or a static framework such as Vite, React or Gatsby."
-						: `The ${f.name} JavaScript framework`,
-			})),
-			defaultOption: allFrameworksInfos.findIndex((framework) => {
-				if (!autoConfigDetails?.framework) {
-					// If there is no framework already detected let's default to the static one
-					// (note: there should always be a framework at this point)
-					return framework.id === staticFramework.id;
-				}
-				return autoConfigDetails.framework.id === framework.id;
-			}),
-		}
-	);
+	if (autoConfigDetails.framework?.id !== newProject.id) {
+		const selectableFrameworks = allFrameworksInfos.filter(
+			(framework) => framework.id !== newProject.id
+		);
+		const frameworkId = await dialogs.select(
+			"What framework is your application using?",
+			{
+				choices: selectableFrameworks.map((f) => ({
+					title: f.name,
+					value: f.id,
+					description:
+						f.id === staticFramework.id
+							? "No framework at all, or a static framework such as Vite, React or Gatsby."
+							: `The ${f.name} JavaScript framework`,
+				})),
+				defaultOption: selectableFrameworks.findIndex((framework) => {
+					if (!autoConfigDetails?.framework) {
+						// If there is no framework already detected let's default to the static one
+						// (note: there should always be a framework at this point)
+						return framework.id === staticFramework.id;
+					}
+					return autoConfigDetails.framework.id === framework.id;
+				}),
+			}
+		);
 
-	updatedAutoConfigDetails.framework = getFrameworkClassInstance(frameworkId);
+		updatedAutoConfigDetails.framework = getFrameworkClassInstance(frameworkId);
+	}
 
 	const outputDir = await dialogs.prompt(
 		"What directory contains your applications' output/asset files?",

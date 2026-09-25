@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
 	BunPackageManager,
@@ -14,7 +14,7 @@ import { NodeFS } from "@netlify/build-info/node";
 import chalk from "chalk";
 import dedent from "ts-dedent";
 import { isFrameworkSupported, isKnownFramework } from "../frameworks";
-import { staticFramework } from "../frameworks/all-frameworks";
+import { newProject, staticFramework } from "../frameworks/all-frameworks";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { Config, TelemetryMessage } from "@cloudflare/workers-utils";
@@ -142,6 +142,21 @@ export async function detectFramework(
 		};
 	}
 
+	if (isNewProject(projectPath, target)) {
+		return {
+			detectedFramework: {
+				framework: {
+					id: newProject.id,
+					name: newProject.name,
+				},
+				devCommand: "vite dev",
+				buildCommand: "vite build",
+				dist: ".",
+			},
+			packageManager,
+		};
+	}
+
 	const detectedFramework = maybeDetectedFramework ?? {
 		framework: {
 			id: staticFramework.id,
@@ -250,6 +265,15 @@ type DetectedFramework = {
 	buildCommand?: string | undefined;
 	dist?: string;
 };
+
+function isNewProject(projectPath: string, target: AutoConfigTarget): boolean {
+	return (
+		target === "cf" &&
+		readdirSync(projectPath).every((entry) =>
+			[".DS_Store", ".git", ".gitignore"].includes(entry)
+		)
+	);
+}
 
 async function isPagesProject(
 	projectPath: string,

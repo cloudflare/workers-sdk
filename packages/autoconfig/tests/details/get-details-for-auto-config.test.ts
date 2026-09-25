@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
 	mockConsoleMethods,
@@ -86,6 +86,65 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				context,
 			})
 		).resolves.toMatchObject({ configured: false });
+	});
+
+	it("should detect an empty directory as a new cf project", async ({
+		expect,
+	}) => {
+		const projectPath = join(process.cwd(), "project");
+		await mkdir(projectPath);
+		await expect(
+			details.getDetailsForAutoConfig({ projectPath, context })
+		).resolves.toMatchObject({
+			configured: false,
+			framework: {
+				id: "new",
+				name: "Vite",
+				supportsMode: true,
+			},
+			devCommand: "npx vite dev",
+			buildCommand: "npx vite build",
+			outputDir: ".",
+			packageManager: { type: "npm" },
+		});
+	});
+
+	it("should allow Git metadata in an empty cf project", async ({ expect }) => {
+		await seed({
+			"project/.git/HEAD": "ref: refs/heads/main",
+			"project/.gitignore": "node_modules",
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({
+				projectPath: join(process.cwd(), "project"),
+				context,
+			})
+		).resolves.toMatchObject({ framework: { id: "new" } });
+	});
+
+	it("should not detect a new project for Wrangler", async ({ expect }) => {
+		const projectPath = join(process.cwd(), "project");
+		await mkdir(projectPath);
+		await expect(
+			details.getDetailsForAutoConfig({
+				projectPath,
+				target: "wrangler",
+				context,
+			})
+		).rejects.toThrow("Could not detect a directory containing static files");
+	});
+
+	it("should not treat a directory containing project files as empty", async ({
+		expect,
+	}) => {
+		const projectPath = join(process.cwd(), "project");
+		await mkdir(projectPath);
+		await writeFile(join(projectPath, "README.md"), "# Existing project");
+
+		await expect(
+			details.getDetailsForAutoConfig({ projectPath, context })
+		).rejects.toThrow("Could not detect a directory containing static files");
 	});
 
 	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({

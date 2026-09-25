@@ -1,4 +1,5 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { detectFramework } from "../../../src/details/framework-detection";
@@ -19,6 +20,20 @@ describe("detectFramework() / basic framework detection", () => {
 		const result = await detectFramework(process.cwd(), context);
 
 		expect(result.detectedFramework.framework.id).toBe("static");
+	});
+
+	it("detects an empty directory as a new cf project", async ({ expect }) => {
+		const projectPath = join(process.cwd(), "project");
+		await mkdir(projectPath);
+
+		const result = await detectFramework(projectPath, context);
+
+		expect(result.detectedFramework).toEqual({
+			framework: { id: "new", name: "Vite" },
+			devCommand: "vite dev",
+			buildCommand: "vite build",
+			dist: ".",
+		});
 	});
 
 	it("detects astro when astro is in dependencies", async ({ expect }) => {

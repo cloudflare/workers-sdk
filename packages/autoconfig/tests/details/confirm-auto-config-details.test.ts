@@ -2,6 +2,7 @@ import { NpmPackageManager } from "@cloudflare/workers-utils";
 import { describe, test, vi } from "vitest";
 import { confirmAutoConfigDetails } from "../../src/details";
 import { Astro } from "../../src/frameworks/astro";
+import { NewProject } from "../../src/frameworks/new-project";
 import { Static } from "../../src/frameworks/static";
 import { createMockContext } from "../helpers/mock-context";
 
@@ -193,6 +194,39 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 
 			expect(updatedAutoConfigDetails.framework?.id).toBe("nuxt");
 			expect(updatedAutoConfigDetails.framework?.name).toBe("Nuxt");
+		});
+
+		test("new project retains its project type when modifying settings", async ({
+			expect,
+		}) => {
+			const select = vi.fn();
+			const modifyContext = createMockContext({
+				dialogs: {
+					confirm: vi.fn().mockResolvedValue(true),
+					prompt: vi
+						.fn()
+						.mockResolvedValueOnce("my-worker")
+						.mockResolvedValueOnce(".")
+						.mockResolvedValueOnce("npm run build"),
+					select,
+				},
+			});
+
+			const updatedAutoConfigDetails = await confirmAutoConfigDetails(
+				{
+					workerName: "my-worker",
+					buildCommand: "npx vite build",
+					framework: new NewProject({ id: "new", name: "Vite" }),
+					outputDir: ".",
+					projectPath: "<PROJECT_PATH>",
+					configured: false,
+					packageManager: NpmPackageManager,
+				},
+				modifyContext
+			);
+
+			expect(select).not.toHaveBeenCalled();
+			expect(updatedAutoConfigDetails.framework).toBeInstanceOf(NewProject);
 		});
 	});
 

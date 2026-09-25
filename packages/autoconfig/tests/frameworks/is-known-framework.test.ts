@@ -16,6 +16,10 @@ describe("isKnownFramework()", () => {
 		expect(isKnownFramework("static")).toBe(true);
 	});
 
+	it('should return true for the "new" project type', ({ expect }) => {
+		expect(isKnownFramework("new")).toBe(true);
+	});
+
 	it("should return false for an unknown framework id", ({ expect }) => {
 		expect(isKnownFramework("unknown-framework")).toBe(false);
 	});
