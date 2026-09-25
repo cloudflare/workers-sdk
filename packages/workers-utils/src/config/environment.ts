@@ -933,6 +933,29 @@ export type DurableObjectBindings = {
 	environment?: string;
 }[];
 
+export type DurableObjectCodeUpdateStrategy = {
+	/** How Durable Object code updates should be applied. */
+	mode: "immediate" | "deferred";
+	/**
+	 * Maximum time, in seconds, to wait for Durable Objects to hibernate.
+	 * Defaults to 300 (5 minutes) and cannot exceed 86400 (24 hours).
+	 * @minimum 0
+	 * @maximum 86400
+	 * @multipleOf 0.001
+	 * @default 300
+	 */
+	max_delay?: number;
+};
+
+export type DurableObjectsConfig = {
+	bindings: DurableObjectBindings;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
+};
+
+export type RawDurableObjectsConfig = Omit<DurableObjectsConfig, "bindings"> & {
+	bindings?: DurableObjectBindings;
+};
+
 export const ARTIFACTS_EVENT_TYPES = [
 	"cf.artifacts.repo.created",
 	"cf.artifacts.repo.deleted",
@@ -1064,7 +1087,7 @@ export interface EnvironmentNonInheritable {
 	};
 
 	/**
-	 * A list of durable objects that your Worker should be bound to.
+	 * Durable Object bindings and code update strategy for your Worker.
 	 *
 	 * For more information about Durable Objects, see the documentation at
 	 * https://developers.cloudflare.com/workers/learning/using-durable-objects
@@ -1077,9 +1100,7 @@ export interface EnvironmentNonInheritable {
 	 * @default {bindings:[]}
 	 * @nonInheritable
 	 */
-	durable_objects: {
-		bindings: DurableObjectBindings;
-	};
+	durable_objects: DurableObjectsConfig;
 
 	/**
 	 * A list of workflows that your Worker should be bound to.
@@ -1862,7 +1883,9 @@ export interface EnvironmentNonInheritable {
  * All the properties are optional, and will be replaced with defaults in the configuration that
  * is used in the rest of the codebase.
  */
-export type RawEnvironment = Partial<Environment>;
+export type RawEnvironment = Partial<Omit<Environment, "durable_objects">> & {
+	durable_objects?: RawDurableObjectsConfig;
+};
 
 /**
  * A bundling resolver rule, defining the modules type for paths that match the specified globs.
@@ -2037,10 +2060,12 @@ export type ContainerEngine =
  */
 export interface PreviewsConfig
 	extends
-		Partial<EnvironmentNonInheritable>,
+		Partial<Omit<EnvironmentNonInheritable, "durable_objects">>,
 		Partial<
 			Pick<
 				EnvironmentInheritable,
 				"logpush" | "observability" | "limits" | "placement" | "cache"
 			>
-		> {}
+		> {
+	durable_objects?: { bindings: DurableObjectBindings };
+}

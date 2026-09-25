@@ -18,6 +18,7 @@ import type {
 	Route,
 	Entry,
 	ContainerApp,
+	DurableObjectCodeUpdateStrategy,
 } from "@cloudflare/workers-utils";
 
 /** API, logging, and prompt implementations supplied by the consumer. */
@@ -154,6 +155,8 @@ export type DeployProps = SharedDeployVersionsProps & {
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/** Controls how Durable Object code updates are applied. */
+	durableObjectsCodeUpdateStrategy?: DurableObjectCodeUpdateStrategy;
 	/**
 	 * When true, an existing Worker with the same name aborts the deploy instead
 	 * of updating it, because this run cannot confirm the local project owns the

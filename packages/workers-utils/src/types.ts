@@ -4,6 +4,7 @@ import type {
 	CustomDomainRoute,
 	ContainerApp,
 	ContainerEngine,
+	DurableObjectCodeUpdateStrategy,
 	Exports,
 	DurableObjectMigration,
 	Observability,
@@ -272,6 +273,7 @@ type WorkerMetadataPut = {
 	compatibility_flags?: string[];
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	exports?: CfExports;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];

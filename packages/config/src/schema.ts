@@ -606,10 +606,10 @@ export const WorkflowExportSchema = z.strictObject({
 	schedules: z
 		.union([z.string().min(1), z.array(z.string().min(1)).min(1)])
 		.optional(),
-	default_retention: z
+	defaultRetention: z
 		.strictObject({
-			success_retention: WorkflowRetentionSchema.optional(),
-			error_retention: WorkflowRetentionSchema.optional(),
+			successRetention: WorkflowRetentionSchema.optional(),
+			errorRetention: WorkflowRetentionSchema.optional(),
 		})
 		.optional(),
 });

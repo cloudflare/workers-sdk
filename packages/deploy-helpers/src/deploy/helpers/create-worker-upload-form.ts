@@ -68,6 +68,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		code_update_strategy,
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
@@ -883,6 +884,7 @@ export function createWorkerUploadForm(
 			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
+		...(code_update_strategy && { code_update_strategy }),
 		...(configuredExports &&
 			Object.keys(configuredExports).length > 0 && {
 				exports: configuredExports,
@@ -912,7 +914,6 @@ export function createWorkerUploadForm(
 			metadata[key] = options.unsafe.metadata[key];
 		}
 	}
-
 	formData.set("metadata", JSON.stringify(metadata));
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {

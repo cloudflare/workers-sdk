@@ -1050,7 +1050,7 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
-		it("passes workflow exports through", ({ expect }) => {
+		it("converts workflow export retention to snake_case", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
@@ -1062,7 +1062,10 @@ describe("convertToWranglerConfig", () => {
 							limits: { steps: 10 },
 							concurrency: { limit: 2 },
 							schedules: "0 * * * *",
-							default_retention: { success_retention: "3 days" },
+							defaultRetention: {
+								successRetention: "3 days",
+								errorRetention: 86_400_000,
+							},
 						},
 					},
 				},
@@ -1077,7 +1080,10 @@ describe("convertToWranglerConfig", () => {
 					limits: { steps: 10 },
 					concurrency: { limit: 2 },
 					schedules: "0 * * * *",
-					default_retention: { success_retention: "3 days" },
+					default_retention: {
+						success_retention: "3 days",
+						error_retention: 86_400_000,
+					},
 				},
 			});
 		});

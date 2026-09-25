@@ -519,6 +519,7 @@ import { vectorizeQueryCommand } from "./vectorize/query";
 import { vectorizeUpsertCommand } from "./vectorize/upsert";
 import { versionsNamespace } from "./versions";
 import { versionsDeployCommand } from "./versions/deploy";
+import { normalizeDurableObjectsCodeUpdateModeArgs } from "./versions/deployment-args";
 import { deploymentsNamespace } from "./versions/deployments";
 import { deploymentsListCommand } from "./versions/deployments/list";
 import { deploymentsStatusCommand } from "./versions/deployments/status";
@@ -643,7 +644,9 @@ export function createCLIParser(argv: string[]) {
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
-	const wrangler: CommonYargsArgv = makeCLI(argv)
+	const wrangler: CommonYargsArgv = makeCLI(
+		normalizeDurableObjectsCodeUpdateModeArgs(argv)
+	)
 		.strict()
 		// We handle errors ourselves in a try-catch around `yargs.parse`.
 		// If you want the "help info" to be displayed then throw an instance of `CommandLineArgsError`.
