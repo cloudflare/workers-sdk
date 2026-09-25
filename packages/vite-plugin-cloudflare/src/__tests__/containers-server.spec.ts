@@ -70,6 +70,80 @@ describe.each(["dev", "preview"] as const)(
 		});
 
 		if (mode === "dev") {
+			test.for(["configured", "absent"] as const)(
+				"keeps dependency optimizer hashes stable on the first restart with Containers %s",
+				async (scenario, { expect, onTestFinished }) => {
+					fs.writeFileSync(
+						"index.js",
+						`import { DurableObject } from "cloudflare:workers";
+export class Probe extends DurableObject {}
+export default { fetch() { return new Response("ready"); } };`
+					);
+					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
+					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
+					fs.writeFileSync(
+						"wrangler.jsonc",
+						JSON.stringify({
+							name: "container-restart-hash-test",
+							main: "index.js",
+							compatibility_date: "2026-09-21",
+							...(scenario === "configured"
+								? {
+										containers: [
+											{
+												class_name: "Probe",
+												scheduling_policy: "durable_object",
+												images: { app: { dockerfile: "./Dockerfile" } },
+											},
+										],
+									}
+								: {}),
+							durable_objects: {
+								bindings: [{ name: "PROBE", class_name: "Probe" }],
+							},
+							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
+						})
+					);
+					const require = createRequire(import.meta.url);
+					const bridgePath = path.resolve("factory.cjs");
+					fs.writeFileSync(bridgePath, "module.exports = {};\n");
+					const bridge = require(bridgePath) as {
+						cloudflare: typeof cloudflare;
+					};
+					bridge.cloudflare = cloudflare;
+					onTestFinished(() => {
+						delete require.cache[bridgePath];
+					});
+					fs.writeFileSync(
+						"vite.config.mjs",
+						`
+import { createRequire } from "node:module";
+const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
+export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false })] };
+`
+					);
+					const server = await createServer({
+						configFile: path.resolve("vite.config.mjs"),
+						logLevel: "silent",
+						server: { port: 0 },
+					});
+					onTestFinished(() => server.close());
+					await server.listen();
+					const configHashes = () =>
+						Object.fromEntries(
+							Object.entries(server.environments)
+								.filter(([_, environment]) => environment.depsOptimizer)
+								.map(([name, environment]) => [
+									name,
+									environment.depsOptimizer?.metadata.configHash,
+								])
+						);
+					const initialHashes = configHashes();
+					expect(Object.keys(initialHashes)).toContain("client");
+					await server.restart();
+					expect(configHashes()).toEqual(initialHashes);
+				}
+			);
 			test.for(["inline", "config-file"] as const)(
 				"retries failed cleanup across %s restarts without mixing servers",
 				async (configuration, { expect, onTestFinished }) => {
