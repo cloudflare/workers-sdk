@@ -2,6 +2,7 @@ export interface CodemodContext {
 	cwd: string;
 	dryRun: boolean;
 	files?: string[];
+	force?: boolean;
 }
 
 /** Context for a single codemod within an ordered run. */

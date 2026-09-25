@@ -1,18 +1,23 @@
+import { execFile } from "node:child_process";
 import {
+	mkdir,
 	mkdtemp,
-	readdir,
 	readFile,
+	readdir,
 	rmdir,
+	symlink,
 	unlink,
 	writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, it } from "vitest";
+import { promisify } from "node:util";
+import { afterEach, describe, it, vi } from "vitest";
 import { transformFiles } from "../src/files";
 import { availableCodemods, runCodemod } from "../src/runner";
 
 const temporaryDirectories: string[] = [];
+const execFileAsync = promisify(execFile);
 
 async function createProject(files: Record<string, string>): Promise<string> {
 	const directory = await mkdtemp(path.join(tmpdir(), "cloudflare-codemods-"));
@@ -23,12 +28,39 @@ async function createProject(files: Record<string, string>): Promise<string> {
 	return directory;
 }
 
+async function commitProject(cwd: string): Promise<void> {
+	await execFileAsync("git", ["init", "--quiet"], { cwd });
+	await execFileAsync("git", ["add", "."], { cwd });
+	await execFileAsync(
+		"git",
+		[
+			"-c",
+			"user.email=codemods@example.com",
+			"-c",
+			"user.name=Codemods Test",
+			"commit",
+			"--quiet",
+			"--message=Initial commit",
+		],
+		{ cwd }
+	);
+}
+
+async function removeDirectory(directory: string): Promise<void> {
+	for (const entry of await readdir(directory, { withFileTypes: true })) {
+		const entryPath = path.join(directory, entry.name);
+		if (entry.isDirectory()) {
+			await removeDirectory(entryPath);
+			continue;
+		}
+		await unlink(entryPath);
+	}
+	await rmdir(directory);
+}
+
 afterEach(async () => {
 	for (const directory of temporaryDirectories.splice(0)) {
-		for (const fileName of await readdir(directory)) {
-			await unlink(path.join(directory, fileName));
-		}
-		await rmdir(directory);
+		await removeDirectory(directory);
 	}
 });
 
@@ -89,6 +121,133 @@ export default defineWorkersProject({
 		expect(
 			await readFile(path.join(cwd, "vitest.config.ts"), "utf8")
 		).toContain('from "@cloudflare/vitest-plugin"');
+	});
+
+	it("runs a codemod in a clean Git worktree", async ({ expect }) => {
+		const cwd = await createProject({
+			"vitest.config.ts":
+				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
+		});
+		await commitProject(cwd);
+
+		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+	});
+
+	it("runs outside a Git worktree when Git is unavailable", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"vitest.config.ts":
+				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
+		});
+		vi.stubEnv("PATH", "");
+
+		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+	});
+
+	it("rejects a Git worktree when Git is unavailable", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await commitProject(cwd);
+		vi.stubEnv("PATH", "");
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Unable to verify that the Git worktree is clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("rejects a symlinked Git worktree when Git is unavailable", async ({
+		expect,
+	}) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const repository = await createProject({});
+		const cwd = path.join(repository, "packages", "app");
+		await mkdir(cwd, { recursive: true });
+		await writeFile(path.join(cwd, "vitest.config.ts"), source);
+		await commitProject(repository);
+		const aliasParent = await createProject({});
+		const alias = path.join(aliasParent, "alias");
+		await symlink(cwd, alias, "dir");
+		vi.stubEnv("PATH", "");
+
+		await expect(
+			runCodemod("vitest v1", { cwd: alias, dryRun: false })
+		).rejects.toThrow("Unable to verify that the Git worktree is clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("rejects staged changes", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await execFileAsync("git", ["init", "--quiet"], { cwd });
+		await execFileAsync("git", ["add", "vitest.config.ts"], { cwd });
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Git worktree is not clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("rejects unstaged changes", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await commitProject(cwd);
+		await writeFile(path.join(cwd, "vitest.config.ts"), `${source}\n`);
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Git worktree is not clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			`${source}\n`
+		);
+	});
+
+	it("rejects untracked changes", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await execFileAsync("git", ["init", "--quiet"], { cwd });
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Git worktree is not clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("allows changes when forced", async ({ expect }) => {
+		const cwd = await createProject({
+			"vitest.config.ts":
+				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
+		});
+		await execFileAsync("git", ["init", "--quiet"], { cwd });
+
+		const result = await runCodemod("vitest v1", {
+			cwd,
+			dryRun: false,
+			force: true,
+		});
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+		expect(
+			await readFile(path.join(cwd, "vitest.config.ts"), "utf8")
+		).toContain("@cloudflare/vitest-plugin");
 	});
 
 	it("renames the package in package.json outside dependency groups", async ({
