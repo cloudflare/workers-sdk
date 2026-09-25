@@ -20,7 +20,11 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
-import { getWorkflowNamespaceKey } from "../workflows";
+import {
+	getWorkflowBindingServiceName,
+	getWorkflowNamespaceKey,
+	WORKFLOWS_PLUGIN_NAME,
+} from "../workflows";
 import {
 	EMAIL_STORE_SERVICE_NAME,
 	getUserServiceName,
@@ -206,6 +210,29 @@ export function getExplorerServices(
 							serviceName: getUserServiceName(exporter.workerName),
 						},
 		});
+
+		// A Workflow declared only in `exports` has no proxy binding to reuse.
+		if (
+			!workflowProxyBindings.some(
+				(binding) => binding.name === workflowInfo.binding
+			)
+		) {
+			explorerBindings.push({
+				name: workflowInfo.binding,
+				wrapped: {
+					moduleName: `${WORKFLOWS_PLUGIN_NAME}:local-wrapped-binding`,
+					innerBindings: [
+						{
+							name: "binding",
+							service: {
+								name: getWorkflowBindingServiceName(workflowInfo.name),
+								entrypoint: "WorkflowBinding",
+							},
+						},
+					],
+				},
+			});
+		}
 	}
 
 	return [
@@ -233,13 +260,14 @@ export function getExplorerServices(
 
 /**
  * Build binding ID map from worker options, proxy bindings, Durable Object
- * class names, and workflow options.
+ * class names, exported Workflows, and workflow options.
  * Maps resource IDs to binding information for the local explorer.
  */
 export function constructExplorerBindingMap(
 	allWorkerOpts: ParsedWorkerOptions[],
 	proxyBindings: Worker_Binding[],
 	durableObjectClassNames: DurableObjectClassNames,
+	workflowExporters: WorkflowExporters,
 	workflowOptions?: Map<string, WorkflowOption>
 ): BindingIdMap {
 	const IDToBindingName: BindingIdMap = {
@@ -347,6 +375,18 @@ export function constructExplorerBindingMap(
 				engineBinding: `EXPLORER_WORKFLOW_ENGINE_${workflowName}`,
 			} satisfies WorkflowBindingInfo;
 		}
+	}
+
+	// A Workflow declared only in `exports` has no binding to find above, so the
+	// explorer gets its own binding to it (see `getExplorerServices()`).
+	for (const [workflowName, exporter] of workflowExporters) {
+		IDToBindingName.workflows[workflowName] ??= {
+			name: workflowName,
+			className: exporter.className,
+			scriptName: exporter.workerName,
+			binding: `EXPLORER_WORKFLOW_BINDING_${workflowName}`,
+			engineBinding: `EXPLORER_WORKFLOW_ENGINE_${workflowName}`,
+		};
 	}
 
 	return IDToBindingName;
