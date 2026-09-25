@@ -114,7 +114,7 @@ export class HyperdriveProxyController {
 	// Map a binding and target to the listening proxy server and port
 	#servers = new Map<string, { server: net.Server; port: number }>();
 	#starting = new Map<string, Promise<number>>();
-	#update?: { used: Set<string>; created: Set<string> };
+	#update?: { created: Set<string> };
 	#disposed = false;
 	log?: Log;
 
@@ -139,7 +139,6 @@ export class HyperdriveProxyController {
 			sslrootcert,
 		]);
 		const update = this.#update;
-		update?.used.add(key);
 		const existing = this.#servers.get(key);
 		if (existing !== undefined) {
 			return existing.port;
@@ -160,7 +159,7 @@ export class HyperdriveProxyController {
 	async #startProxyServer(
 		config: HyperdriveProxyConfig,
 		key: string,
-		update?: { used: Set<string>; created: Set<string> }
+		update?: { created: Set<string> }
 	): Promise<number> {
 		const { name, targetHost, targetPort, scheme, sslmode, sslrootcert } =
 			config;
@@ -270,23 +269,23 @@ export class HyperdriveProxyController {
 		dbSocket.pipe(clientSocket);
 	}
 
-	/** Begins tracking the proxy servers needed by the next runtime config. */
+	/** Begins tracking proxy servers created for the next runtime config. */
 	beginUpdate(): void {
 		if (this.#update !== undefined) {
 			throw new Error("Hyperdrive proxy configuration update already started");
 		}
-		this.#update = { used: new Set(), created: new Set() };
+		this.#update = { created: new Set() };
 	}
 
 	/** Stops listeners omitted by the successfully installed runtime config. */
-	commitUpdate(): void {
+	commitUpdate(activeAddresses: ReadonlySet<string>): void {
 		const update = this.#update;
 		if (update === undefined) {
 			return;
 		}
 		this.#update = undefined;
-		for (const [key, { server }] of this.#servers) {
-			if (!update.used.has(key)) {
+		for (const [key, { server, port }] of this.#servers) {
+			if (!activeAddresses.has(`127.0.0.1:${port}`)) {
 				server.close();
 				this.#servers.delete(key);
 			}
