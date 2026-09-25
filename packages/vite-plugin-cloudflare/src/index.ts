@@ -8,6 +8,7 @@ import { agentHintPlugin } from "./plugins/agent-hint";
 import { buildOutputPlugin } from "./plugins/build-output";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
+import { decoratorsPlugin } from "./plugins/decorators";
 import { devPlugin } from "./plugins/dev";
 import {
 	nodeJsAlsPlugin,
@@ -120,6 +121,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		outputPlugin,
 		wasmHelperPlugin(ctx),
 		additionalModulesPlugin(ctx),
+		decoratorsPlugin(ctx),
 		nodeJsAlsPlugin(ctx),
 		nodeJsCompatPlugin(ctx),
 		nodeJsCompatWarningsPlugin(ctx),
