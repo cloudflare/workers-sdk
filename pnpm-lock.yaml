@@ -1809,6 +1809,9 @@ importers:
 
   packages/codemods:
     devDependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
       '@cloudflare/shared-ast-primitives':
         specifier: workspace:*
         version: link:../shared-ast-primitives

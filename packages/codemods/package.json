@@ -43,6 +43,7 @@
 		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",

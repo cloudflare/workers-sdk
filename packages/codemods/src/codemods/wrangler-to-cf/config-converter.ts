@@ -96,6 +96,15 @@ const TOOLING_FIELDS = new Set<string>([
 	"wasm_modules",
 ] satisfies (keyof RawConfig)[]);
 
+const TOP_LEVEL_ONLY_TOOLING_FIELDS = new Set<string>([
+	"alias",
+	"data_blobs",
+	"dev",
+	"send_metrics",
+	"text_blobs",
+	"wasm_modules",
+] satisfies (keyof RawConfig)[]);
+
 export const KNOWN_FIELDS = new Set<string>([
 	"$schema",
 	"access",
@@ -230,6 +239,19 @@ function createPreviewSource(
 	delete merged.previews;
 
 	return merged;
+}
+
+function createToolingEnvironmentSource(
+	base: UnknownRecord,
+	overrides: UnknownRecord,
+	environmentName: string
+): UnknownRecord {
+	const environmentOverrides = { ...overrides };
+	for (const field of TOP_LEVEL_ONLY_TOOLING_FIELDS) {
+		delete environmentOverrides[field];
+	}
+
+	return createBranchSource(base, environmentOverrides, environmentName);
 }
 
 function addUnknownFieldFollowUps(
@@ -440,11 +462,11 @@ function convertToolingBranch(
 }
 
 export function convertWranglerConfig(
-	rawConfig: UnknownRecord,
+	rawConfig: RawConfig,
 	bundler: MigrationBundler,
 	secretFiles: string[]
 ): ConvertedWranglerConfig {
-	const source = rawConfig;
+	const source = rawConfig as UnknownRecord;
 	const imports = new Set<string>();
 	const followUps: MigrationFollowUp[] = [];
 	addUnknownFieldFollowUps(source, "", followUps);
@@ -573,7 +595,9 @@ export function convertWranglerConfig(
 			)
 		);
 		if (isWranglerBundle) {
-			const tooling = convertToolingBranch(environmentSource);
+			const tooling = convertToolingBranch(
+				createToolingEnvironmentSource(source, value, name)
+			);
 			if (tooling || toolingBase) {
 				toolingEnvironments.set(
 					name,

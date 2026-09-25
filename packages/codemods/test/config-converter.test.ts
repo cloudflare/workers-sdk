@@ -112,6 +112,40 @@ describe("Wrangler environment and tooling conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("ignores named-environment overrides for top-level-only Wrangler tooling", ({
+		expect,
+	}) => {
+		const result = convert(
+			{
+				alias: { shared: "./top-level.ts" },
+				compatibility_date: "2026-09-23",
+				data_blobs: { DATA: "./top-level.bin" },
+				dev: { generate_types: true, port: 8787 },
+				env: {
+					staging: {
+						alias: { shared: "./staging.ts" },
+						data_blobs: { DATA: "./staging.bin" },
+						dev: { generate_types: false, port: 9000 },
+						send_metrics: false,
+						text_blobs: { TEXT: "./staging.txt" },
+						wasm_modules: { WASM: "./staging.wasm" },
+					},
+				},
+				name: "example-worker",
+				send_metrics: true,
+				text_blobs: { TEXT: "./top-level.txt" },
+				wasm_modules: { WASM: "./top-level.wasm" },
+			},
+			"wrangler"
+		);
+
+		expect(result.wranglerConfig).not.toContain("staging.");
+		expect(result.wranglerConfig?.match(/top-level/g)).toHaveLength(8);
+		expect(result.wranglerConfig?.match(/port: 8787/g)).toHaveLength(2);
+		expect(result.wranglerConfig?.match(/sendMetrics: true/g)).toHaveLength(2);
+		expect(result.wranglerConfig?.match(/generate: true/g)).toHaveLength(2);
+	});
+
 	it("preserves Wrangler type generation behavior", ({ expect }) => {
 		const baseConfig = {
 			compatibility_date: "2026-09-23",
