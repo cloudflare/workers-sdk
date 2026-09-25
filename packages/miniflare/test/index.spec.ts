@@ -3980,16 +3980,79 @@ test("Miniflare: workerd crash during startup => ERR_RUNTIME_FAILURE", async ({
 	});
 });
 
-test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
-	const runtimeRestarted = new DeferredPromise<void>();
-	const mf = new Miniflare({
-		unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
-		workers: [
-			{
-				config: {
-					name: "",
-					compatibilityDate: "2025-05-01",
-					manifest: singleModuleManifest(`
+test.for(["GET", "POST", "PUT"])(
+	"Miniflare: dispatchFetch does not replay a processed %s after a response failure",
+	async (method, { expect }) => {
+		const pendingResponse = new DeferredPromise<http.ServerResponse>();
+		const gate = await useServer((req, res) => pendingResponse.resolve(res));
+		const mf = new Miniflare({
+			log: new TestLog(),
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2026-09-21",
+						manifest: singleModuleManifest(`
+			let counter = 0;
+			export default {
+				fetch(request) {
+					if (new URL(request.url).pathname === "/count") {
+						return new Response(String(counter));
+					}
+					counter++;
+					if (counter > 1) return new Response("unexpected replay");
+					const { readable, writable } = new FixedLengthStream(10);
+					new ReadableStream({
+						start(controller) {
+							controller.enqueue(new TextEncoder().encode("hello"));
+						},
+						async pull(controller) {
+							await fetch(${JSON.stringify(gate.http.href)});
+							controller.error(new Error("response failed after side effect"));
+						}
+					}).pipeTo(writable).catch(() => {});
+					return new Response(readable, { headers: { etag: '"replay-test"' } });
+				}
+			};
+		`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const worker = await mf.getWorker();
+		const response = await mf.dispatchFetch("http://placeholder/mutate", {
+			method,
+			headers: { "accept-encoding": "identity" },
+		});
+		assert(response.body);
+		const reader = response.body.getReader();
+		expect(await reader.read()).toEqual({
+			done: false,
+			value: utf8Encode("hello"),
+		});
+		const failedResponse = expect(reader.read()).rejects.toThrow();
+		// Fail the stream only after the client receives the first chunk
+		(await pendingResponse).end("ok");
+		await failedResponse;
+		const count = await worker.fetch("http://placeholder/count");
+		expect(await count.text()).toBe("1");
+	}
+);
+
+test.for(["GET", "POST", "PUT"])(
+	"Miniflare: workerd crash in %s handler => restart",
+	async (method, { expect }) => {
+		const runtimeRestarted = new DeferredPromise<void>();
+		const mf = new Miniflare({
+			unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
 			import { abortIsolate } from "cloudflare:workers";
 			let counter = 1;
 			export default {
@@ -4001,36 +4064,45 @@ test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
 				},
 			}
 		`),
+					},
 				},
-			},
-		],
-	});
-	useDispose(mf);
+			],
+		});
+		useDispose(mf);
 
-	const ready = await mf.ready;
-	const worker = await mf.getWorker();
-	const r1 = await mf.dispatchFetch("http://placeholder/");
-	expect(await r1.text()).toBe("ok 1");
+		const ready = await mf.ready;
+		const worker = await mf.getWorker();
+		const init = { method, body: method === "GET" ? undefined : "hello" };
+		const r1 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r1.text()).toBe("ok 1");
 
-	const r2 = await mf.dispatchFetch("http://placeholder/");
-	expect(await r2.text()).toBe("ok 2");
+		const r2 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r2.text()).toBe("ok 2");
 
-	// Trigger crash
-	await expect(
-		mf.dispatchFetch("http://placeholder/?crash=1")
-	).rejects.toThrow();
+		// Trigger crash
+		await expect(
+			mf.dispatchFetch("http://placeholder/?crash=1", init)
+		).rejects.toThrow();
 
-	await runtimeRestarted;
-	expect(await mf.ready).toEqual(ready);
-	expect(() => worker.fetch("http://placeholder/")).toThrow(/poisoned stub/);
+		await runtimeRestarted;
+		expect(await mf.ready).toEqual(ready);
+		expect(() => worker.fetch("http://placeholder/")).toThrow(/poisoned stub/);
 
-	// Starts over with counter = 1 again
-	const r3 = await fetch(ready);
-	expect(await r3.text()).toBe("ok 1");
-	const restartedWorker = await mf.getWorker();
-	const r4 = await restartedWorker.fetch("http://placeholder/");
-	expect(await r4.text()).toBe("ok 2");
-});
+		// Exercise the existing dispatch pool first, before other clients connect
+		// The counter starts over in the restarted runtime
+		for (let counter = 1; counter <= 3; counter++) {
+			const response = await mf.dispatchFetch("http://placeholder/", init);
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe(`ok ${counter}`);
+		}
+
+		const r3 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r3.text()).toBe("ok 4");
+		const restartedWorker = await mf.getWorker();
+		const r4 = await restartedWorker.fetch("http://placeholder/");
+		expect(await r4.text()).toBe("ok 5");
+	}
+);
 
 test("Miniflare: warns when workerd is restarted after a crash", async ({
 	expect,
