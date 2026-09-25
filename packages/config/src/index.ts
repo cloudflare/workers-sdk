@@ -5,6 +5,7 @@ export {
 	BindingSchema,
 	BrowserBindingSchema,
 	D1BindingSchema,
+	DurableObjectBindingSchema,
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
 	DurableObjectExpectingTransferExportSchema,

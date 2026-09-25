@@ -35,6 +35,13 @@ export const WorkerBindingSchema = z.strictObject({
 	dev: RemoteBindingDevSchema.optional(),
 });
 
+export const DurableObjectBindingSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	// Omitted for a class exported by this Worker.
+	worker: z.string().optional(),
+	exportName: z.string(),
+});
+
 export const D1BindingSchema = z.strictObject({
 	type: z.literal("d1"),
 	name: z.string().optional(),
@@ -129,11 +136,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 			.optional(),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		worker: z.string(),
-		exportName: z.string(),
-	}),
+	DurableObjectBindingSchema,
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
 	z.strictObject({
@@ -230,10 +233,11 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		),
 	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
-	// TODO: support Workflows
+	// TODO: support Workflows. As for Durable Objects, an omitted `worker`
+	// means this Worker.
 	// z.strictObject({
 	// 	type: z.literal("workflow"),
-	// 	worker: z.string(),
+	// 	worker: z.string().optional(),
 	// 	exportName: z.string(),
 	// }),
 ]);
@@ -920,11 +924,15 @@ const _assertSchemaMatchesWorkerConfig: _AssertSchemaMatchesWorkerConfig = [
 void _assertSchemaMatchesWorkerConfig;
 
 type _ResolvedBinding<TBinding> = TBinding extends {
-	type: "durable-object" | "worker" | "workflow";
-	worker: unknown;
+	type: "durable-object";
 }
-	? Omit<TBinding, "worker"> & { worker: string }
-	: TBinding;
+	? Omit<TBinding, "worker"> & { worker?: string }
+	: TBinding extends {
+				type: "worker" | "workflow";
+				worker: unknown;
+		  }
+		? Omit<TBinding, "worker"> & { worker: string }
+		: TBinding;
 
 type _ResolvedWorkerConfigEnv =
 	| Record<string, _ResolvedBinding<NonNullable<WorkerConfig["env"]>[string]>>

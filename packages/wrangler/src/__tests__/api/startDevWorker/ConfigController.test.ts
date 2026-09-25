@@ -12,6 +12,12 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runWrangler } from "../../helpers/run-wrangler";
 import type * as StartDevWorkerApi from "../../../api/startDevWorker";
 
+// The real loader relies on Node module hooks that don't run under Vitest.
+vi.mock("@cloudflare/config", async (importOriginal) => {
+	const { createConfigMock } = await import("../../helpers/mock-new-config");
+	return createConfigMock(importOriginal);
+});
+
 // Declaration-level pins for the exported input chain: a fresh object
 // literal gets excess-property checking, which fails to compile if any of
 // these signatures regresses to the base `StartDevWorkerInput` (the
@@ -292,6 +298,216 @@ describe("ConfigController", () => {
 
 		expect(config?.containerDevPlan).toBeUndefined();
 		expect(std.warn).toContain("Containers are only supported in local mode");
+	});
+
+	describe("Containers on a Durable Object bound by this Worker", () => {
+		it("should start with a binding without worker in cloudflare.config.ts", async ({
+			expect,
+		}) => {
+			await seed({
+				"src/index.ts": "export class ContainerDO {}\nexport default {}",
+				Dockerfile: "FROM scratch",
+				"cloudflare.config.ts": dedent /* javascript */ `
+					const container = {
+						name: "self-container",
+						image: { dockerfile: "./Dockerfile" },
+					};
+					export default {
+						worker: {
+							name: "self-worker",
+							entrypoint: "./src/index.ts",
+							compatibilityDate: "2026-09-05",
+							exports: {
+								ContainerDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container,
+								},
+							},
+							env: {
+								CONTAINER: {
+									type: "durable-object",
+									exportName: "ContainerDO",
+								},
+							},
+						},
+						containers: [container],
+					};
+				`,
+			});
+
+			const config = await controller.set(
+				{
+					dev: {
+						experimentalNewConfig: true,
+						watch: false,
+						containerBuildId: "build-id",
+						containerEngine: "unix:///tmp/docker.sock",
+					},
+				},
+				true
+			);
+
+			expect(config?.bindings?.CONTAINER).toEqual({
+				type: "durable_object_namespace",
+				class_name: "ContainerDO",
+			});
+			expect(config?.containerDevPlan?.containerOptions).toEqual([
+				expect.objectContaining({ class_name: "ContainerDO" }),
+			]);
+		});
+
+		it("should start with a binding whose worker names this Worker in cloudflare.config.ts", async ({
+			expect,
+		}) => {
+			await seed({
+				"src/index.ts": "export class ContainerDO {}\nexport default {}",
+				Dockerfile: "FROM scratch",
+				"cloudflare.config.ts": dedent /* javascript */ `
+					const container = {
+						name: "self-container",
+						image: { dockerfile: "./Dockerfile" },
+					};
+					export default {
+						worker: {
+							name: "self-worker",
+							entrypoint: "./src/index.ts",
+							compatibilityDate: "2026-09-05",
+							exports: {
+								ContainerDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container,
+								},
+							},
+							env: {
+								CONTAINER: {
+									type: "durable-object",
+									worker: "self-worker",
+									exportName: "ContainerDO",
+								},
+							},
+						},
+						containers: [container],
+					};
+				`,
+			});
+
+			const config = await controller.set(
+				{
+					dev: {
+						experimentalNewConfig: true,
+						watch: false,
+						containerBuildId: "build-id",
+						containerEngine: "unix:///tmp/docker.sock",
+					},
+				},
+				true
+			);
+
+			expect(config?.bindings?.CONTAINER).toEqual({
+				type: "durable_object_namespace",
+				class_name: "ContainerDO",
+				script_name: "self-worker",
+			});
+			expect(config?.containerDevPlan?.containerOptions).toEqual([
+				expect.objectContaining({ class_name: "ContainerDO" }),
+			]);
+		});
+
+		it("should start when cloudflare.config.ts reaches the class only through ctx.exports", async ({
+			expect,
+		}) => {
+			await seed({
+				"src/index.ts": "export class ContainerDO {}\nexport default {}",
+				Dockerfile: "FROM scratch",
+				"cloudflare.config.ts": dedent /* javascript */ `
+					const container = {
+						name: "self-container",
+						image: { dockerfile: "./Dockerfile" },
+					};
+					export default {
+						worker: {
+							name: "self-worker",
+							entrypoint: "./src/index.ts",
+							compatibilityDate: "2026-09-05",
+							exports: {
+								ContainerDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container,
+								},
+							},
+						},
+						containers: [container],
+					};
+				`,
+			});
+
+			const config = await controller.set(
+				{
+					dev: {
+						experimentalNewConfig: true,
+						watch: false,
+						containerBuildId: "build-id",
+						containerEngine: "unix:///tmp/docker.sock",
+					},
+				},
+				true
+			);
+
+			expect(config?.bindings?.CONTAINER).toBeUndefined();
+			expect(config?.containerDevPlan?.containerOptions).toEqual([
+				expect.objectContaining({ class_name: "ContainerDO" }),
+			]);
+		});
+
+		it("should start with a script_name naming this Worker in the Wrangler config", async ({
+			expect,
+		}) => {
+			await seed({
+				"src/index.ts": "export class ContainerDO {}\nexport default {}",
+				Dockerfile: "FROM scratch",
+				"wrangler.json": JSON.stringify({
+					name: "self-worker",
+					main: "src/index.ts",
+					compatibility_date: "2026-09-05",
+					containers: [
+						{
+							name: "self-container",
+							class_name: "ContainerDO",
+							image: "./Dockerfile",
+						},
+					],
+					durable_objects: {
+						bindings: [
+							{
+								name: "CONTAINER",
+								class_name: "ContainerDO",
+								script_name: "self-worker",
+							},
+						],
+					},
+					migrations: [{ tag: "v1", new_sqlite_classes: ["ContainerDO"] }],
+				}),
+			});
+
+			const config = await controller.set(
+				{
+					config: "./wrangler.json",
+					dev: {
+						watch: false,
+						containerBuildId: "build-id",
+						containerEngine: "unix:///tmp/docker.sock",
+					},
+				},
+				true
+			);
+
+			expect(config?.containerDevPlan?.containerOptions).toEqual([
+				expect.objectContaining({ class_name: "ContainerDO" }),
+			]);
+		});
 	});
 
 	it("should not plan Container images when Containers are disabled", async ({

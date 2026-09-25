@@ -187,45 +187,63 @@ export interface DispatchNamespaceBinding extends DispatchNamespaceBindingOption
 type ReferencedWorkerConfig<TWorker extends WorkerReference> =
 	TWorker extends string ? never : UnwrapConfig<TWorker>;
 
-type DurableObjectExportName<TWorker extends WorkerReference> =
-	TWorker extends string
-		? string
-		: InferDurableNamespaces<ReferencedWorkerConfig<TWorker>>;
+// Without a `worker`, the class is exported by the Worker being configured. Its
+// exports aren't visible from inside its own definition, so any name is allowed.
+type DurableObjectExportName<TWorker extends WorkerReference | undefined> =
+	TWorker extends WorkerReference
+		? TWorker extends string
+			? string
+			: InferDurableNamespaces<ReferencedWorkerConfig<TWorker>>
+		: string;
 
 type WorkerEntrypointExportName<TWorker extends WorkerReference> =
 	TWorker extends string
 		? string
 		: InferWorkerEntrypointExports<ReferencedWorkerConfig<TWorker>>;
 
-type WorkflowExportName<TWorker extends WorkerReference> =
-	TWorker extends string
-		? string
-		: InferExportsByType<ReferencedWorkerConfig<TWorker>, "workflow">;
+type WorkflowExportName<TWorker extends WorkerReference | undefined> =
+	TWorker extends WorkerReference
+		? TWorker extends string
+			? string
+			: InferExportsByType<ReferencedWorkerConfig<TWorker>, "workflow">
+		: string;
 
 interface DurableObjectBindingOptions<
-	TWorker extends WorkerReference = WorkerReference,
+	TWorker extends WorkerReference | undefined = WorkerReference | undefined,
 	TExportName extends DurableObjectExportName<TWorker> =
 		DurableObjectExportName<TWorker>,
 > {
-	/** The name or config of the Worker that defines the Durable Object class. */
-	worker: TWorker;
+	/**
+	 * The name or config of another Worker that defines the Durable Object
+	 * class. Omit it for a class exported by this Worker, so the binding always
+	 * refers to this Worker's own namespace, including in a Preview.
+	 */
+	worker?: TWorker;
 	/** The exported class name of the Durable Object. */
 	exportName: TExportName;
 }
 
 /**
  * Binding to a Durable Object class. `worker` is the name or config of the
- * Worker that defines the class; `exportName` is the exported class name.
+ * Worker that defines the class, omitted for a class exported by this Worker;
+ * `exportName` is the exported class name.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
-export interface DurableObjectBinding<
-	TWorker extends WorkerReference = WorkerReference,
+export type DurableObjectBinding<
+	TWorker extends WorkerReference | undefined = WorkerReference | undefined,
 	TExportName extends DurableObjectExportName<TWorker> =
 		DurableObjectExportName<TWorker>,
-> extends DurableObjectBindingOptions<TWorker, TExportName> {
+> = {
 	type: "durable-object";
-}
+	/** The exported class name of the Durable Object. */
+	exportName: TExportName;
+} & (TWorker extends WorkerReference
+	? {
+			/** The name or config of the Worker that defines the class. */
+			worker: TWorker;
+		}
+	: { worker?: undefined });
 
 interface FlagshipBindingOptions {
 	/** The Flagship app ID to bind to. */
@@ -632,26 +650,34 @@ export interface WorkerLoaderBinding {
 }
 
 interface WorkflowBindingOptions<
-	TWorker extends WorkerReference = WorkerReference,
+	TWorker extends WorkerReference | undefined = WorkerReference | undefined,
 	TExportName extends WorkflowExportName<TWorker> = WorkflowExportName<TWorker>,
 > {
-	/** The name or config of the Worker that defines the Workflow. */
-	worker: TWorker;
+	/**
+	 * The name or config of another Worker that defines the Workflow. Omit it
+	 * for a Workflow exported by this Worker, matching a Durable Object binding.
+	 */
+	worker?: TWorker;
 	/** The exported class name of the Workflow. */
 	exportName: TExportName;
 }
 
 /**
  * Binding to a Workflow. `worker` is the name or config of the Worker that
- * defines the Workflow; `exportName` is the exported `WorkflowEntrypoint`
- * class name.
+ * defines the Workflow, omitted for a Workflow exported by this Worker;
+ * `exportName` is the exported `WorkflowEntrypoint` class name.
  */
-export interface WorkflowBinding<
-	TWorker extends WorkerReference = WorkerReference,
+export type WorkflowBinding<
+	TWorker extends WorkerReference | undefined = WorkerReference | undefined,
 	TExportName extends WorkflowExportName<TWorker> = WorkflowExportName<TWorker>,
-> extends WorkflowBindingOptions<TWorker, TExportName> {
+> = Omit<WorkflowBindingOptions<TWorker, TExportName>, "worker"> & {
 	type: "workflow";
-}
+} & (TWorker extends WorkerReference
+		? {
+				/** The name or config of the Worker that defines the Workflow. */
+				worker: TWorker;
+			}
+		: { worker?: undefined });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BINDINGS API
@@ -724,16 +750,18 @@ export interface Bindings {
 	): DispatchNamespaceBinding;
 	/**
 	 * Binding to a Durable Object class. `worker` is the name or config of the
-	 * Worker that defines the class; `exportName` is the exported class name.
+	 * Worker that defines the class, omitted for a class exported by this
+	 * Worker; `exportName` is the exported class name.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
 	durableObject<
-		TWorker extends WorkerReference,
-		TExportName extends DurableObjectExportName<TWorker>,
+		TWorker extends WorkerReference | undefined = undefined,
+		TExportName extends DurableObjectExportName<TWorker> =
+			DurableObjectExportName<TWorker>,
 	>(
 		options: DurableObjectBindingOptions<TWorker, TExportName>
-	): DurableObjectBinding<TWorker, TExportName>;
+	): DurableObjectBinding<NoInfer<TWorker>, NoInfer<TExportName>>;
 	/** Binding to a Flagship feature-flag service. */
 	flagship(options?: FlagshipBindingOptions): FlagshipBinding;
 	/**
@@ -851,10 +879,13 @@ export interface Bindings {
 	): WorkerBinding<TWorker, NoInfer<TExportName>>;
 	/** Binding to a Worker Loader. */
 	workerLoader(): WorkerLoaderBinding;
-	// TODO: re-enable when workflow bindings return.
+	// TODO: re-enable when workflow bindings return. Keep `worker` optional, as
+	// for `durableObject()`: omitting it means this Worker, so a Preview binds
+	// to its own Workflow rather than the parent Worker's production one.
 	// /**
 	//  * Create a Workflow binding.
-	//  * `worker` may be a Worker config reference or a Worker name.
+	//  * `worker` may be a Worker config reference or a Worker name, omitted for
+	//  * a Workflow exported by this Worker.
 	//  * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
 	//  */
 	// workflow(options: WorkflowBindingOptions): WorkflowBinding;

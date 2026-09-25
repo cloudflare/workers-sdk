@@ -4,6 +4,7 @@ import {
 	AssetsSchema as RawAssetsConfigSchema,
 	BrowserBindingSchema,
 	D1BindingSchema,
+	DurableObjectBindingSchema,
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
 	DurableObjectExpectingTransferExportSchema,
@@ -258,6 +259,14 @@ const ParsedMiniflareD1BindingSchema = D1BindingSchema.omit({
 	id: z.string(),
 });
 
+// A Durable Object binding without `worker` refers to this Worker's own class.
+const ParsedMiniflareDurableObjectBindingSchema =
+	DurableObjectBindingSchema.omit({
+		worker: true,
+	}).extend({
+		worker: z.string(),
+	});
+
 const ParsedMiniflareFlagshipBindingSchema = FlagshipBindingSchema.omit({
 	id: true,
 }).extend({
@@ -286,6 +295,7 @@ const ParsedMiniflareQueueBindingSchema = QueueBindingSchema.omit({
 const OVERRIDDEN_PARSED_BINDING_SCHEMAS = [
 	KVBindingSchema,
 	D1BindingSchema,
+	DurableObjectBindingSchema,
 	FlagshipBindingSchema,
 	R2BindingSchema,
 	AnalyticsEngineDatasetBindingSchema,
@@ -306,6 +316,7 @@ const ParsedPassthroughBindingSchemas =
 export const ParsedMiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	ParsedMiniflareKVBindingSchema,
 	ParsedMiniflareD1BindingSchema,
+	ParsedMiniflareDurableObjectBindingSchema,
 	ParsedMiniflareFlagshipBindingSchema,
 	ParsedMiniflareR2BindingSchema,
 	ParsedMiniflareAnalyticsEngineDatasetBindingSchema,
@@ -490,6 +501,11 @@ function defaultBindingIdentifiers(
 					return [
 						bindingName,
 						{ ...binding, id: binding.id ?? defaultIdentifier },
+					];
+				case "durable-object":
+					return [
+						bindingName,
+						{ ...binding, worker: binding.worker ?? config.name },
 					];
 				case "r2":
 				case "analytics-engine-dataset":

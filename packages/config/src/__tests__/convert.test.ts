@@ -726,6 +726,48 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("omits script_name for a durable-object binding without worker", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					exports: { MyDO: { type: "durable-object", storage: "sqlite" } },
+					env: { DO: { type: "durable-object", exportName: "MyDO" } },
+				},
+				containers: [],
+			});
+			expect(result.durable_objects).toEqual({
+				bindings: [{ name: "DO", class_name: "MyDO" }],
+			});
+		});
+
+		it("keeps script_name for a durable-object binding that names this Worker", ({
+			expect,
+		}) => {
+			// An explicit name always means that script. In a Preview, that's the
+			// parent Worker's production namespace.
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					exports: { MyDO: { type: "durable-object", storage: "sqlite" } },
+					env: {
+						DO: {
+							type: "durable-object",
+							worker: baseWorker.name,
+							exportName: "MyDO",
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.durable_objects).toEqual({
+				bindings: [
+					{ name: "DO", class_name: "MyDO", script_name: baseWorker.name },
+				],
+			});
+		});
+
 		it("maps logfwdr binding to logfwdr.bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

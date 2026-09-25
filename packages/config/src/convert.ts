@@ -510,11 +510,16 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "durable-object": {
-				durableObjectBindings.push({
-					name,
-					class_name: binding.exportName,
-					script_name: binding.worker,
-				});
+				// No `worker` means this Worker's own class. Leaving `script_name`
+				// out keeps that meaning everywhere, including a Preview, where a
+				// `script_name` naming the parent resolves to production.
+				durableObjectBindings.push(
+					omitUndefined({
+						name,
+						class_name: binding.exportName,
+						script_name: binding.worker,
+					})
+				);
 				break;
 			}
 			case "flagship": {
@@ -725,7 +730,8 @@ function convertBindingsAndAssets(
 				workerLoaders.push({ binding: name });
 				break;
 			}
-			// TODO: re-enable when workflow bindings return.
+			// TODO: re-enable when workflow bindings return. An omitted `worker`
+			// leaves out `script_name`, as for Durable Objects.
 			// case "workflow": {
 			// 	workflows.push(
 			// 		omitUndefined({

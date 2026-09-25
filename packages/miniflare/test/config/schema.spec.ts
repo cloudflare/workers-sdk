@@ -179,6 +179,28 @@ describe("MiniflareWorkerConfigSchema", () => {
 		});
 	});
 
+	test("defaults a Durable Object binding without worker to this Worker", ({
+		expect,
+	}) => {
+		const parsed = MiniflareWorkerConfigSchema.parse({
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			env: {
+				OWN: { type: "durable-object", exportName: "Counter" },
+				OTHER: {
+					type: "durable-object",
+					worker: "other",
+					exportName: "Counter",
+				},
+			},
+		});
+
+		expect(parsed.env).toEqual({
+			OWN: { type: "durable-object", worker: "api", exportName: "Counter" },
+			OTHER: { type: "durable-object", worker: "other", exportName: "Counter" },
+		});
+	});
+
 	test("requires Hyperdrive dev.connectionString", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
 			name: "api",

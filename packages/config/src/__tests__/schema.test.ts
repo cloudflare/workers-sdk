@@ -1177,6 +1177,34 @@ describe("OutputContainerSchema", () => {
 });
 
 describe("OutputWorkerSchema", () => {
+	it("accepts durable-object bindings with and without worker", ({
+		expect,
+	}) => {
+		const result = OutputWorkerSchema.safeParse({
+			...baseOutputConfig,
+			env: {
+				OWN: { type: "durable-object", exportName: "MyDO" },
+				OTHER: {
+					type: "durable-object",
+					worker: "other-worker",
+					exportName: "OtherDO",
+				},
+			},
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.env).toEqual({
+				OWN: { type: "durable-object", exportName: "MyDO" },
+				OTHER: {
+					type: "durable-object",
+					worker: "other-worker",
+					exportName: "OtherDO",
+				},
+			});
+		}
+	});
+
 	it("accepts a config without manifest (assets-only mode)", ({ expect }) => {
 		const result = OutputWorkerSchema.safeParse({ ...baseOutputConfig });
 

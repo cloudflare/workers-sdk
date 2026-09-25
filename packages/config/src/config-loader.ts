@@ -87,7 +87,8 @@ async function normalizeWorkerReferences(
 			!isRecord(binding) ||
 			typeof binding.type !== "string" ||
 			!CROSS_WORKER_BINDING_TYPES.has(binding.type) ||
-			typeof binding.worker === "string"
+			typeof binding.worker === "string" ||
+			binding.worker === undefined
 		) {
 			continue;
 		}

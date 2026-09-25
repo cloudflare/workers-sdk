@@ -47,6 +47,30 @@ describe("resolveAndParseConfig", () => {
 		});
 	});
 
+	it("resolves a durable-object binding without worker", async ({ expect }) => {
+		const config = defineConfig({
+			worker: defineWorker({
+				name: "self",
+				compatibilityDate,
+				exports: {
+					Counter: workerExports.durableObject({ storage: "sqlite" }),
+				},
+				env: {
+					COUNTER: bindings.durableObject({ exportName: "Counter" }),
+				},
+			}),
+		});
+
+		const result = await resolveAndParseConfig(config, {
+			isPreview: false,
+			mode: undefined,
+		});
+
+		expect(result.success && result.data.worker?.env).toEqual({
+			COUNTER: { type: "durable-object", exportName: "Counter" },
+		});
+	});
+
 	it("resolves a project with defined and inline resources", async ({
 		expect,
 	}) => {

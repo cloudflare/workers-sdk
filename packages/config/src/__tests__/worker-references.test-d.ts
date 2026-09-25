@@ -1,9 +1,18 @@
-import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+import {
+	DurableObject,
+	WorkerEntrypoint,
+	WorkflowEntrypoint,
+} from "cloudflare:workers";
 import { bindings } from "../bindings";
 import { defineWorker } from "../definition";
 import { exports as workerExports } from "../exports";
-import type { DurableObjectBinding, WorkerBinding } from "../bindings";
+import type {
+	DurableObjectBinding,
+	WorkerBinding,
+	WorkflowBinding,
+} from "../bindings";
 import type { InferEnv, UnwrapConfig } from "../inference";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 class Admin extends WorkerEntrypoint {
 	adminMethod(): string {
@@ -68,6 +77,21 @@ const config = defineWorker({
 	},
 });
 
+// A Durable Object binding without `worker` refers to this Worker's own class.
+const selfConfig = defineWorker({
+	name: "self",
+	compatibilityDate: "2026-09-02",
+	entrypoint,
+	exports: {
+		Counter: workerExports.durableObject({ storage: "sqlite" }),
+	},
+	env: {
+		SELF_COUNTER: bindings.durableObject({ exportName: "Counter" }),
+		DIRECT_SELF_COUNTER: { type: "durable-object", exportName: "Counter" },
+		UNTYPED_SELF: bindings.durableObject({ exportName: "NotAClass" }),
+	},
+});
+
 bindings.worker({
 	worker: auxiliary,
 	// @ts-expect-error Only WorkerEntrypoint exports are accepted.
@@ -110,3 +134,45 @@ export type CounterBindingTest = Assert<
 	Equal<Env["COUNTER"], DurableObjectNamespace<Counter>>
 >;
 export type ExternalBindingTest = Assert<Equal<Env["EXTERNAL"], Fetcher>>;
+
+type SelfEnv = InferEnv<UnwrapConfig<typeof selfConfig>>;
+export type SelfCounterBindingTest = Assert<
+	Equal<SelfEnv["SELF_COUNTER"], DurableObjectNamespace<Counter>>
+>;
+export type DirectSelfCounterBindingTest = Assert<
+	Equal<SelfEnv["DIRECT_SELF_COUNTER"], DurableObjectNamespace<Counter>>
+>;
+export type UntypedSelfBindingTest = Assert<
+	Equal<SelfEnv["UNTYPED_SELF"], DurableObjectNamespace>
+>;
+export type SelfBindingShapeTest = Assert<
+	Equal<
+		ReturnType<typeof bindings.durableObject<undefined, "Counter">>,
+		DurableObjectBinding<undefined, "Counter">
+	>
+>;
+export type SelfBindingWorkerTest = Assert<
+	Equal<DurableObjectBinding<undefined, "Counter">["worker"], undefined>
+>;
+
+// Workflow bindings are disabled in `cloudflare.config.ts` for now, but their
+// public types follow the same rule: no `worker` means this Worker.
+class Pipeline extends WorkflowEntrypoint<unknown, { id: string }> {
+	override async run(
+		_event: WorkflowEvent<{ id: string }>,
+		_step: WorkflowStep
+	) {}
+}
+type SelfWorkflowEnv = InferEnv<{
+	entrypoint: { default: { fetch: () => Response }; Pipeline: typeof Pipeline };
+	env: { PIPELINE: WorkflowBinding<undefined, "Pipeline"> };
+}>;
+export type SelfWorkflowBindingTest = Assert<
+	Equal<SelfWorkflowEnv["PIPELINE"], Workflow<Readonly<{ id: string }>>>
+>;
+export type SelfWorkflowWorkerTest = Assert<
+	Equal<WorkflowBinding<undefined, "Pipeline">["worker"], undefined>
+>;
+export type ExternalWorkflowWorkerTest = Assert<
+	Equal<WorkflowBinding<"other", string>["worker"], "other">
+>;

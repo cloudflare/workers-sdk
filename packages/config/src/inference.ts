@@ -128,7 +128,7 @@ type SelectedWorkerExportName<TBinding> = TBinding extends {
 		: "default"
 	: "default";
 
-type InferBindingType<TBinding> =
+type InferBindingType<TBinding, TUnwrappedConfig> =
 	// Worker binding
 	TBinding extends {
 		type: "worker";
@@ -167,38 +167,72 @@ type InferBindingType<TBinding> =
 							>
 						: never
 					: never
-			: // Workflow binding
+			: // Durable Object binding to this Worker's own class
 				TBinding extends {
-						type: "workflow";
-						worker: infer TWorker extends WorkerReference;
+						type: "durable-object";
 						exportName: infer TExportName extends string;
 				  }
-				? TWorker extends string
-					? Workflow
-					: InferMainModule<UnwrapConfig<TWorker>> extends infer TModule extends
+				? InferMainModule<TUnwrappedConfig> extends infer TModule extends
+						WorkerModule
+					? TExportName extends keyof TModule
+						? DurableObjectNamespace<
+								ExtractInstance<TModule[TExportName], Rpc.DurableObjectBranded>
+							>
+						: DurableObjectNamespace
+					: DurableObjectNamespace
+				: // Workflow binding
+					TBinding extends {
+							type: "workflow";
+							worker: infer TWorker extends WorkerReference;
+							exportName: infer TExportName extends string;
+					  }
+					? TWorker extends string
+						? Workflow
+						: InferMainModule<
+									UnwrapConfig<TWorker>
+							  > extends infer TModule extends WorkerModule
+							? TExportName extends keyof TModule
+								? ExtractInstance<
+										TModule[TExportName],
+										Rpc.WorkflowEntrypointBranded
+									> extends infer TWorkflow
+									? TWorkflow extends {
+											run(event: { payload: infer P }, step: any): any;
+										}
+										? Workflow<P>
+										: Workflow
+									: Workflow
+								: never
+							: never
+					: // Workflow binding to this Worker's own class
+						TBinding extends {
+								type: "workflow";
+								exportName: infer TExportName extends string;
+						  }
+						? InferMainModule<TUnwrappedConfig> extends infer TModule extends
 								WorkerModule
-						? TExportName extends keyof TModule
-							? ExtractInstance<
-									TModule[TExportName],
-									Rpc.WorkflowEntrypointBranded
-								> extends infer TWorkflow
-								? TWorkflow extends {
-										run(event: { payload: infer P }, step: any): any;
-									}
-									? Workflow<P>
+							? TExportName extends keyof TModule
+								? ExtractInstance<
+										TModule[TExportName],
+										Rpc.WorkflowEntrypointBranded
+									> extends infer TWorkflow
+									? TWorkflow extends {
+											run(event: { payload: infer P }, step: any): any;
+										}
+										? Workflow<P>
+										: Workflow
 									: Workflow
 								: Workflow
-							: never
-						: never
-				: // Unsafe bindings
-					TBinding extends { type: `unsafe:${string}` }
-					? any
-					: // Other bindings
-						TBinding extends {
-								type: infer K extends keyof BindingTypeMap<TBinding>;
-						  }
-						? BindingTypeMap<TBinding>[K]
-						: never;
+							: Workflow
+						: // Unsafe bindings
+							TBinding extends { type: `unsafe:${string}` }
+							? any
+							: // Other bindings
+								TBinding extends {
+										type: infer K extends keyof BindingTypeMap<TBinding>;
+								  }
+								? BindingTypeMap<TBinding>[K]
+								: never;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CROSS-WORKER BINDING HELPERS (INTERNAL)
@@ -278,7 +312,7 @@ export type UnwrapConfig<TConfig> = TConfig extends (
 export type InferEnv<TUnwrappedConfig> = TUnwrappedConfig extends {
 	env: infer TEnv extends Record<string, any>;
 }
-	? { [K in keyof TEnv]: InferBindingType<TEnv[K]> }
+	? { [K in keyof TEnv]: InferBindingType<TEnv[K], TUnwrappedConfig> }
 	: never;
 
 /**
