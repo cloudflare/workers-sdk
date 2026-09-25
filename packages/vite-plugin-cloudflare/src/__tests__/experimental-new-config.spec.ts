@@ -101,6 +101,22 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		);
 	});
 
+	test("formats cloudflare.config.ts validation errors", async ({ expect }) => {
+		writeWorkerConfig(
+			"export default { worker: { name: 42, compatibilityDate: false } };"
+		);
+
+		await expect(
+			resolvePluginConfig(
+				{ experimental: { newConfig: true } },
+				{ root: tempDir },
+				viteEnv
+			)
+		).rejects.toThrow(
+			/✖ Invalid input: expected string, received number[\s\S]*→ at worker\.name[\s\S]*→ at worker\.compatibilityDate/
+		);
+	});
+
 	test("throws when configPath is combined with experimental.newConfig", async ({
 		expect,
 	}) => {
@@ -300,6 +316,32 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		const worker = result.environmentNameToWorkerMap.get("worker_development");
 		expect(worker).toBeDefined();
 		expect(worker?.config.name).toBe("worker-development");
+	});
+
+	test("sets ctx.isPreview from CLOUDFLARE_PREVIEW_BUILD", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", "true");
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig((ctx) => ({ worker: {",
+				"  name: ctx.isPreview ? 'preview-worker' : 'production-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"} }));",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{ experimental: { newConfig: true } },
+			{ root: tempDir },
+			viteBuildEnv
+		)) as WorkersResolvedConfig;
+
+		const worker = result.environmentNameToWorkerMap.get("preview_worker");
+		expect(worker?.config.name).toBe("preview-worker");
 	});
 
 	test("adds cloudflare.config.ts to configPaths for watching", async ({

@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.20.0
+
+### Minor Changes
+
+- [#15352](https://github.com/cloudflare/workers-sdk/pull/15352) [`fb6e499`](https://github.com/cloudflare/workers-sdk/commit/fb6e49991196badef41b006f3ae4fff7257e2aff) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add base-path routing to the Asset Worker
+
+  The Asset Worker can now serve an asset directory beneath a configured public URL prefix without changing its on-disk layout. It normalizes the prefix, applies it only to asset lookup, and preserves the original public path for user Workers, headers, redirects, and routing rules.
+
 ## 0.19.9
 
 ### Patch Changes

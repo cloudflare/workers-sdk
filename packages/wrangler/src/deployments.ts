@@ -5,7 +5,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";

@@ -70,6 +70,27 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts workflow exports to config exports", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			compatibilityDate: "2026-01-01",
+			script: "export default {};",
+			workflowExports: {
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			},
+		});
+
+		expect(converted.workers[0].config.exports).toMatchObject({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: {
+				type: "workflow",
+				name: "batch",
+				limits: { steps: 10 },
+			},
+		});
+	});
+
 	test("converts module source and representative bindings", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			rootPath: __dirname,
@@ -204,6 +225,33 @@ describe("convertV4MiniflareOptions", () => {
 			"addEventListener('fetch', () => {});"
 		);
 	});
+
+	test("converts cron triggers in exact input order", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			cronTriggers: ["*/5 * * * *", " 0 17 * * SUN "],
+		});
+
+		expect(converted.workers[0].config.triggers).toEqual([
+			{ type: "scheduled", schedule: "*/5 * * * *" },
+			{ type: "scheduled", schedule: " 0 17 * * SUN " },
+		]);
+	});
+
+	test.for([
+		{ label: "missing", cronTriggers: undefined },
+		{ label: "empty", cronTriggers: [] as string[] },
+	])(
+		"converts $label cron triggers to no scheduled entries",
+		({ cronTriggers }, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				cronTriggers,
+			});
+
+			expect(converted.workers[0].config.triggers).toBeUndefined();
+		}
+	);
 
 	test("resolves worker rootPath relative to shared rootPath", ({ expect }) => {
 		const sharedRootPath = path.join(__dirname, "project");

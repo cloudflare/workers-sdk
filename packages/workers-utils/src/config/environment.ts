@@ -226,8 +226,9 @@ export type ContainerApp = {
 	 * The scheduling policy of the application
 	 * @optional
 	 * `"durable_object"` makes each Durable Object instance own its Container.
-	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`, and
-	 * application-wide log `observability` are supported on this entry.
+	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`,
+	 * application-wide log `observability`, `ssh`, and `authorized_keys` are
+	 * supported on this entry.
 	 *
 	 * @default "default"
 	 */
@@ -516,7 +517,25 @@ export interface WorkerEntrypointExport {
 	};
 }
 
-export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;
+/**
+ * A single declarative Workflow export entry in the `exports` config map. The
+ * map key is the exported class name (the class extending `WorkflowEntrypoint`);
+ * `name` is the workflow's stable identity, used for instance and storage
+ * namespacing, and is required. The remaining settings match the ones accepted
+ * by `workflows` bindings.
+ */
+export interface WorkflowExport extends Pick<
+	WorkflowBinding,
+	"limits" | "concurrency" | "schedules" | "default_retention"
+> {
+	type: "workflow";
+	name: string;
+}
+
+export type ConfiguredExport =
+	| DurableObjectExport
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /**
  * The declarative `exports` map keyed by export name. Durable Object exports
@@ -974,6 +993,25 @@ export type WorkflowBinding = {
 	};
 };
 
+type ConnectHandlerConfigBase = {
+	/** The port to listen on. */
+	port: number;
+	/** The address to bind to. Defaults to `127.0.0.1`. */
+	address?: string;
+};
+
+type TcpConnectHandlerConfig = ConnectHandlerConfigBase & { protocol: "tcp" };
+
+type UdpConnectHandlerConfig = ConnectHandlerConfigBase & {
+	protocol: "udp";
+	/** The idle timeout in milliseconds after which a peer flow is closed. */
+	idle_timeout_ms?: number;
+	/** The maximum number of pending datagram bytes per peer flow. */
+	max_pending_bytes?: number;
+};
+
+type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
+
 /**
  * The `EnvironmentNonInheritable` interface declares all the configuration fields for an environment
  * that cannot be inherited from the top-level environment, and must be defined specifically.
@@ -1196,16 +1234,7 @@ export interface EnvironmentNonInheritable {
 	 * @default []
 	 * @nonInheritable
 	 */
-	connect: {
-		/** The transport protocol to listen for. */
-		protocol: "tcp";
-
-		/** The port to listen on. */
-		port: number;
-
-		/** The address to bind to. Defaults to `127.0.0.1`. */
-		address?: string;
-	}[];
+	connect: ConnectHandlerConfig[];
 
 	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.

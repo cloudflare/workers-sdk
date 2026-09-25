@@ -314,6 +314,74 @@ describe("Durable Object application settings", () => {
 		}
 	);
 
+	describe("SSH settings", () => {
+		const sshConfiguration = {
+			wrangler_ssh: { enabled: true, port: 2222 },
+			authorized_keys: [
+				{ name: "laptop", public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1" },
+			],
+		};
+		const sshContainers = getDurableObjectContainerApps([
+			{
+				name: "sandbox",
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+				ssh: sshConfiguration.wrangler_ssh,
+				authorized_keys: sshConfiguration.authorized_keys,
+			},
+		]);
+
+		it("initializes missing applications with SSH settings", async ({
+			expect,
+		}) => {
+			vi.mocked(ApplicationsService.getApplication).mockRejectedValue(
+				apiError(404)
+			);
+			await deployDurableObjectContainerApplications(
+				config,
+				sshContainers,
+				deployArgs
+			);
+			expect(ApplicationsService.createApplication).toHaveBeenCalledWith({
+				name: "sandbox",
+				scheduling_policy: "durable_object",
+				durable_objects: { namespace_id: "namespace" },
+				configuration: sshConfiguration,
+			});
+		});
+
+		it.for([
+			{ stored: {}, patched: true },
+			{ stored: sshConfiguration, patched: false },
+			{
+				stored: { ...sshConfiguration, wrangler_ssh: { enabled: false } },
+				patched: true,
+			},
+			{ stored: { ...sshConfiguration, authorized_keys: [] }, patched: true },
+		])(
+			"patches SSH settings only when they change: %j",
+			async ({ stored, patched }, { expect }) => {
+				vi.mocked(ApplicationsService.getApplication).mockResolvedValue({
+					...existing,
+					configuration: { image, ...stored },
+				});
+				await deployDurableObjectContainerApplications(
+					config,
+					sshContainers,
+					deployArgs
+				);
+				if (patched) {
+					expect(ApplicationsService.modifyApplication).toHaveBeenCalledWith(
+						"namespace",
+						{ configuration: sshConfiguration }
+					);
+				} else {
+					expect(ApplicationsService.modifyApplication).not.toHaveBeenCalled();
+				}
+			}
+		);
+	});
+
 	it("version deployments preserve application settings and ignore local config", async ({
 		expect,
 	}) => {

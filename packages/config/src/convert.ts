@@ -863,7 +863,7 @@ function convertExports(
 	const converted: Exports = {};
 	const unknownExports: typeof exports = {};
 	for (const [exportName, value] of Object.entries(exports)) {
-		if (value.type === "worker") {
+		if (value.type === "worker" || value.type === "workflow") {
 			converted[exportName] = value;
 			continue;
 		}
@@ -1003,6 +1003,12 @@ function convertTriggers(
 						protocol: trigger.protocol,
 						port: trigger.port,
 						address: trigger.address,
+						...(trigger.protocol === "udp"
+							? {
+									idle_timeout_ms: trigger.idleTimeoutMs,
+									max_pending_bytes: trigger.maxPendingBytes,
+								}
+							: {}),
 					})
 				);
 				break;

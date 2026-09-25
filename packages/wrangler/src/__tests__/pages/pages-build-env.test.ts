@@ -138,11 +138,11 @@ describe("pages build env", () => {
 
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid TOML document: incomplete key-value: cannot find end of key[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid TOML document: illegal character in key[0m
 
-			    <cwd>/wrangler.toml:1:0:
-			[37m      1 │ [32m[37mINVALID "FILE
-			        ╵ [32m^[0m
+			    <cwd>/wrangler.toml:1:8:
+			[37m      1 │ INVALID [32m[37m"FILE
+			        ╵         [32m^[0m
 
 			"
 		`);

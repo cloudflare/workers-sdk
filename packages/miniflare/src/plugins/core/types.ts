@@ -56,4 +56,19 @@ export type WorkerResourceBindings = {
 	}[];
 };
 
-export type ExplorerWorkerOpts = Record<string, WorkerResourceBindings>;
+export type WorkerTriggerMetadata = {
+	crons: string[];
+};
+
+export type WorkerExplorerMetadata = {
+	bindings: WorkerResourceBindings;
+	triggers: WorkerTriggerMetadata;
+	/**
+	 * Opaque, stable identifier for the Worker's project root. This allows the
+	 * Local Explorer UI to scope browser persistence without exposing a local
+	 * filesystem path.
+	 */
+	persistenceScope?: string;
+};
+
+export type ExplorerWorkerOpts = Record<string, WorkerExplorerMetadata>;
