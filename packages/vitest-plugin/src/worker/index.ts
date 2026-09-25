@@ -213,13 +213,18 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			await import("vitest/worker");
 
 		poolSocket.accept();
-		// Sending over the runner's WebSocket from another Durable Object requires
-		// I/O that cannot complete if that object's input gate breaks. Buffer console
-		// messages and flush them on the next successful post from the runner's
-		// context instead. In practice Vitest always sends further RPC messages
-		// (e.g. task updates/results) from the runner once execution returns to it,
-		// so buffered logs are flushed; there's no guarantee for logs emitted with
-		// nothing following, but dropping them is preferable to hanging teardown.
+		// Sending over the runner's WebSocket from another I/O context (a handler
+		// reached through `SELF`, a user Durable Object, a queue consumer, ...)
+		// fails. Buffer console messages and flush them from the runner's context
+		// instead: on the next successful post, and on a timer created here, in the
+		// runner's own context, because Vitest awaits every RPC call it made
+		// (`rpcDone()`) before it posts a file's result and a buffered log's call
+		// only settles once the message is sent — a log with nothing from the
+		// runner following it (a queue batch consumed as the file ends, a
+		// `waitUntil()` callback) would otherwise leave the run waiting on itself.
+		// The other context cannot resend from the runner reliably: an object
+		// whose input gate broke never completes that request (#14180), and
+		// neither does a handler that already answered.
 		const pendingConsoleLogs: unknown[] = [];
 		const sendPendingConsoleLogs = () => {
 			while (pendingConsoleLogs.length > 0) {
@@ -227,7 +232,20 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				pendingConsoleLogs.shift();
 			}
 		};
-
+		const flushPendingConsoleLogs = setInterval(() => {
+			if (pendingConsoleLogs.length === 0) {
+				return;
+			}
+			try {
+				sendPendingConsoleLogs();
+			} catch (error) {
+				clearInterval(flushPendingConsoleLogs);
+				__console.error("Error flushing console logs from the runner:", error);
+			}
+		}, 50);
+		poolSocket.addEventListener("close", () => {
+			clearInterval(flushPendingConsoleLogs);
+		});
 		init({
 			post: (response) => {
 				try {

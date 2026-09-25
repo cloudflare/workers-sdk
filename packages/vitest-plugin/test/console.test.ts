@@ -158,3 +158,56 @@ test("does not hang after logging from a rejected Durable Object input gate", as
 	expect(result.stdout).toMatch(/before rejection 1[\s\S]*before rejection 2/);
 	expect(result.stdout.match(/before rejection/g)).toHaveLength(2);
 });
+
+test("does not hang when the last console.log() of a file comes from another I/O context", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig(
+			{
+				main: "./index.ts",
+				miniflare: {
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			},
+			{ reporters: ["default", "./slow-reporter.mjs"] }
+		),
+		// Delays the replies to the file's last task updates, which is when a log
+		// from another context has no further message from the runner following
+		// it. Without the flush from the runner's context the run waits for that
+		// log's reply, which is only sent with the next message.
+		"slow-reporter.mjs": dedent`
+			const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+			export default class SlowReporter {
+				async onTaskUpdate() { await sleep(500); }
+				async onTestCaseResult() { await sleep(500); }
+				async onTestModuleEnd() { await sleep(500); }
+			}
+		`,
+		"index.ts": dedent`
+			export default {
+				fetch(request, env, ctx) {
+					ctx.waitUntil(new Promise((resolve) => setTimeout(() => {
+						console.log("late log");
+						resolve();
+					}, 200)));
+					return new Response();
+				}
+			}
+		`,
+		"index.test.ts": dedent`
+			import { SELF } from "cloudflare:test";
+			import { expect, it } from "vitest";
+			it("sends request", async () => {
+				const response = await SELF.fetch("https://example.com");
+				expect(response.ok).toBe(true);
+			});
+		`,
+	});
+	const result = await vitestRun();
+	expect(await result.exitCode).toBe(0);
+	expect(result.stdout).toMatch("late log");
+});
