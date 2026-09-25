@@ -82,9 +82,27 @@ describe("codemod runner", () => {
 		});
 
 		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
-		expect(
-			await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
-		).toContain('name: "runner-test"');
+		expect(await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8"))
+			.toMatchInlineSnapshot(`
+			"import { defineConfig } from "cf/config";
+
+			/**
+			 * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+			 */
+			/**
+			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` as a dev dependency before using the generated configuration.
+			 */
+			throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+			export default defineConfig({
+				worker: {
+					name: "runner-test",
+					compatibilityDate: "2026-09-24",
+					entrypoint: "src/index.ts",
+				},
+			});
+			"
+		`);
 	});
 
 	it("applies file restrictions to the selected Wrangler config", async ({
@@ -140,9 +158,18 @@ describe("codemod runner", () => {
 			"worker/cloudflare.config.ts",
 			"worker/wrangler.config.ts",
 		]);
-		expect(
-			await readFile(path.join(cwd, "worker/wrangler.config.ts"), "utf8")
-		).toContain("noBundle: true");
+		expect(await readFile(path.join(cwd, "worker/wrangler.config.ts"), "utf8"))
+			.toMatchInlineSnapshot(`
+			"import { defineWranglerConfig } from "wrangler/experimental-config";
+
+			export default defineWranglerConfig({
+				noBundle: true,
+				types: {
+					generate: false,
+				},
+			});
+			"
+		`);
 	});
 
 	it("requires an exact config when discovery is ambiguous", async ({
@@ -345,7 +372,9 @@ export default defineWorkersProject({
 		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
 		expect(
 			await readFile(path.join(cwd, "vitest.config.ts"), "utf8")
-		).toContain("@cloudflare/vitest-plugin");
+		).toMatchInlineSnapshot(
+			`"import { cloudflareTest } from "@cloudflare/vitest-plugin";"`
+		);
 	});
 
 	it("renames the package in package.json outside dependency groups", async ({
