@@ -1047,12 +1047,14 @@ export function buildMiniflareBindingOptions(
 		),
 		durableObjects: Object.fromEntries(
 			durableObjects.map(
-				({ name, class_name: className, script_name: scriptName }) => {
+				({ name, class_name: className, script_name: scriptName, retry }) => {
 					return [
 						name,
 						{
 							className,
 							scriptName,
+							retryMaxAttempts: retry?.max_attempts,
+							retryTimeoutMs: retry?.timeout_ms,
 							useSQLite: classNameToUseSQLite.get(className),
 							container: config.enableContainers
 								? config.containerRuntimeOptions?.get(className)

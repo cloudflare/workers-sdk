@@ -726,6 +726,43 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("maps durable-object retry policy to Wrangler's shape", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						CONFIGURED: {
+							type: "durable-object",
+							worker: "other-worker",
+							exportName: "MyDO",
+							retry: { maxAttempts: 0, timeoutMs: 500 },
+						},
+						PARTIAL: {
+							type: "durable-object",
+							worker: "other-worker",
+							exportName: "MyDO",
+							retry: { timeoutMs: 12_345 },
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.durable_objects?.bindings).toStrictEqual([
+				{
+					name: "CONFIGURED",
+					class_name: "MyDO",
+					script_name: "other-worker",
+					retry: { max_attempts: 0, timeout_ms: 500 },
+				},
+				{
+					name: "PARTIAL",
+					class_name: "MyDO",
+					script_name: "other-worker",
+					retry: { timeout_ms: 12_345 },
+				},
+			]);
+		});
+
 		it("maps logfwdr binding to logfwdr.bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

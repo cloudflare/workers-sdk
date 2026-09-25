@@ -83,3 +83,47 @@ test("serializes Durable Object container options", ({ expect }) => {
 	expect(device.cgroupPermissions).toBe("rwm");
 	expect(privileges.securityOpt.get(0)).toBe("apparmor:unconfined");
 });
+
+test("serializes Durable Object binding retry policies", ({ expect }) => {
+	const buffer = serializeConfig({
+		services: [
+			{
+				name: "worker",
+				worker: {
+					bindings: [
+						{
+							name: "DEFAULT",
+							durableObjectNamespace: { className: "Object" },
+						},
+						{
+							name: "DISABLED",
+							durableObjectNamespace: {
+								className: "Object",
+								retryPolicy: { maxAttempts: 0 },
+							},
+						},
+						{
+							name: "CONFIGURED",
+							durableObjectNamespace: {
+								className: "Object",
+								retryPolicy: { maxAttempts: 7, timeoutMs: 500 },
+							},
+						},
+					],
+				},
+			},
+		],
+	});
+	const bindings = new Message(buffer, false)
+		.getRoot(CapnpConfig)
+		.services.get(0).worker.bindings;
+	const defaultNamespace = bindings.get(0).durableObjectNamespace;
+	const disabledPolicy = bindings.get(1).durableObjectNamespace.retryPolicy;
+	const configuredPolicy = bindings.get(2).durableObjectNamespace.retryPolicy;
+
+	expect(defaultNamespace._hasRetryPolicy()).toBe(false);
+	expect(disabledPolicy.maxAttempts).toBe(0);
+	expect(disabledPolicy.timeoutMs).toBe(10_000);
+	expect(configuredPolicy.maxAttempts).toBe(7);
+	expect(configuredPolicy.timeoutMs).toBe(500);
+});

@@ -352,6 +352,49 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 		});
 	});
 
+	it("maps Durable Object retry policies without filling defaults", ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				main: "./index.js",
+				compatibility_date: "2024-10-04",
+				durable_objects: {
+					bindings: [
+						{ name: "ABSENT", class_name: "Absent" },
+						{
+							name: "PARTIAL",
+							class_name: "Partial",
+							retry: { timeout_ms: 500 },
+						},
+						{
+							name: "CONFIGURED",
+							class_name: "Configured",
+							retry: { max_attempts: 7, timeout_ms: 12_345 },
+						},
+						{
+							name: "DISABLED",
+							class_name: "Disabled",
+							retry: { max_attempts: 0 },
+						},
+					],
+				},
+			},
+			"./wrangler.json"
+		);
+
+		const { workerOptions } =
+			unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+		expect(workerOptions.durableObjects).toMatchObject({
+			ABSENT: { retryMaxAttempts: undefined, retryTimeoutMs: undefined },
+			PARTIAL: { retryMaxAttempts: undefined, retryTimeoutMs: 500 },
+			CONFIGURED: { retryMaxAttempts: 7, retryTimeoutMs: 12_345 },
+			DISABLED: { retryMaxAttempts: 0, retryTimeoutMs: undefined },
+		});
+	});
+
 	describe("typed services bindings with `dev.plugin`", () => {
 		it("routes a typed service binding with `dev.plugin` to miniflare's unsafe-binding plugin pathway", ({
 			expect,
