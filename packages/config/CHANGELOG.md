@@ -1,5 +1,13 @@
 # @cloudflare/config
 
+## 0.19.1
+
+### Patch Changes
+
+- [#15880](https://github.com/cloudflare/workers-sdk/pull/15880) [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Restore configuration field documentation in `define*` helpers
+
+  VS Code now displays JSDoc for fields passed to `defineConfig`, `defineContainer`, and `defineWorker` while retaining their exact inferred config types.
+
 ## 0.19.0
 
 ### Minor Changes
