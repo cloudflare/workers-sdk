@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { parse } from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
@@ -152,12 +153,20 @@ describe("categorisePositionalPath", () => {
 	it("categorises the current directory reference", ({ expect }) => {
 		expect(categorisePositionalPath(".")).toBe("current-dir");
 		expect(categorisePositionalPath("./")).toBe("current-dir");
+		expect(categorisePositionalPath(process.cwd())).toBe("current-dir");
 	});
 
 	it("categorises parent-relative references", ({ expect }) => {
 		expect(categorisePositionalPath("..")).toBe("parent-relative");
 		expect(categorisePositionalPath("../example")).toBe("parent-relative");
 		expect(categorisePositionalPath("../../dist")).toBe("parent-relative");
+	});
+
+	it("categorises a parent-relative reference from the filesystem root", ({
+		expect,
+	}) => {
+		process.chdir(parse(process.cwd()).root);
+		expect(categorisePositionalPath("..")).toBe("parent-relative");
 	});
 
 	it("categorises an existing directory", ({ expect }) => {
@@ -175,6 +184,7 @@ describe("categorisePositionalPath", () => {
 	it("categorises a path that does not exist as not-found", ({ expect }) => {
 		expect(categorisePositionalPath("does-not-exist")).toBe("not-found");
 		expect(categorisePositionalPath("src/missing.ts")).toBe("not-found");
+		expect(categorisePositionalPath("missing/..")).toBe("not-found");
 	});
 });
 
