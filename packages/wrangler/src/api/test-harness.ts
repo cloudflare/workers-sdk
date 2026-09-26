@@ -28,9 +28,11 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { runWithLogLevel } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
+import { isBun } from "../utils/is-bun";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
+import { waitForBunProxyMessages } from "./test-harness-runtime";
 import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
@@ -448,6 +450,8 @@ type DebugLog = {
  * const response = await server.fetch("/api/users");
  * await server.close();
  * ```
+ * @throws {UserError} If Bun cannot deliver the proxy control request required
+ * to start the server.
  */
 export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	let initialOptions = options;
@@ -680,6 +684,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				waitForReloadComplete(session),
 				updateConfig(session, inputs),
 			]);
+			if (isBun()) {
+				await waitForBunProxyMessages(
+					() => session.primaryDevEnv.proxy.latestReloadCompleteMessage
+				);
+			}
 			debugLog("startup - completed");
 			return session;
 		} catch (error) {
