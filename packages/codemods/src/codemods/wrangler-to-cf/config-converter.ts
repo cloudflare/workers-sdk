@@ -13,6 +13,7 @@ import {
 	ENVIRONMENTS_DOCS_URL,
 	PREVIEWS_DOCS_URL,
 	SECRETS_DOCS_URL,
+	SOURCE_MAPS_DOCS_URL,
 	createFollowUp,
 	deduplicateFollowUps,
 	followUpToComment,
@@ -92,7 +93,6 @@ const TOOLING_FIELDS = new Set<string>([
 	"send_metrics",
 	"text_blobs",
 	"tsconfig",
-	"upload_source_maps",
 	"wasm_modules",
 ] satisfies (keyof RawConfig)[]);
 
@@ -361,26 +361,36 @@ function addViteToolingFollowUp(
 	const toolingFields = [...TOOLING_FIELDS].filter((field) =>
 		hasOwn(source, field)
 	);
-	const assets = getRecord(source, "assets");
-	if (assets && hasOwn(assets, "directory")) {
-		toolingFields.push("assets.directory");
+
+	if (toolingFields.length > 0) {
+		followUps.push(
+			createFollowUp(
+				"vite-tooling-config",
+				`Wrangler-specific tooling fields${location ? ` in ${location}` : ""} were not migrated because the Vite bundler is selected: ${toolingFields.join(", ")}.`,
+				{
+					sourcePath: sourcePrefix
+						? `${sourcePrefix}.${toolingFields.join(",")}`
+						: toolingFields.join(","),
+				}
+			)
+		);
 	}
 
-	if (toolingFields.length === 0) {
-		return;
+	if (source.upload_source_maps === true) {
+		followUps.push(
+			createFollowUp(
+				"vite-source-maps",
+				`Wrangler \`upload_source_maps\`${location ? ` in ${location}` : ""} was not migrated because the Vite bundler is selected. To keep uploading Worker source maps, enable \`build.sourcemap\` for the Worker's Vite environment. \`cf deploy\` uploads source maps included in the build output.`,
+				{
+					blocking: false,
+					docsUrl: SOURCE_MAPS_DOCS_URL,
+					sourcePath: sourcePrefix
+						? `${sourcePrefix}.upload_source_maps`
+						: "upload_source_maps",
+				}
+			)
+		);
 	}
-
-	followUps.push(
-		createFollowUp(
-			"vite-tooling-config",
-			`Wrangler-specific tooling fields${location ? ` in ${location}` : ""} were not migrated because the Vite bundler is selected: ${toolingFields.join(", ")}.`,
-			{
-				sourcePath: sourcePrefix
-					? `${sourcePrefix}.${toolingFields.join(",")}`
-					: toolingFields.join(","),
-			}
-		)
-	);
 }
 
 function convertBranch(
