@@ -5,6 +5,59 @@ import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import type { RawConfig } from "./config";
 import type { JSONPath } from "jsonc-parser";
 
+function hasTOMLComments(source: string): boolean {
+	let quote: '"' | "'" | undefined;
+	let multiline = false;
+
+	for (let index = 0; index < source.length; index++) {
+		const character = source[index];
+		if (quote !== undefined) {
+			if (multiline && source.startsWith(quote.repeat(3), index)) {
+				if (quote === "'" || !isEscaped(source, index)) {
+					while (source[index + 1] === quote) {
+						index++;
+					}
+					quote = undefined;
+					multiline = false;
+				}
+			} else if (!multiline && character === quote) {
+				if (quote === "'" || !isEscaped(source, index)) {
+					quote = undefined;
+				}
+			}
+			continue;
+		}
+
+		if (character === "#") {
+			return true;
+		}
+		if (source.startsWith('"""', index) || source.startsWith("'''", index)) {
+			quote = character as '"' | "'";
+			multiline = true;
+			index += 2;
+		} else if (character === '"' || character === "'") {
+			quote = character;
+		}
+	}
+
+	return false;
+}
+
+/** Returns whether patching the config would preserve all of its contents. */
+export function experimental_isConfigPatchable(configPath: string): boolean {
+	return (
+		!configPath.endsWith(".toml") || !hasTOMLComments(readFileSync(configPath))
+	);
+}
+
+function isEscaped(source: string, index: number): boolean {
+	let backslashes = 0;
+	for (let previous = index - 1; source[previous] === "\\"; previous--) {
+		backslashes++;
+	}
+	return backslashes % 2 === 1;
+}
+
 export const experimental_patchConfig = (
 	configPath: string,
 	/**
@@ -22,7 +75,7 @@ export const experimental_patchConfig = (
 
 	if (configPath.endsWith("toml")) {
 		// the TOML parser we use does not preserve comments
-		if (configString.includes("#")) {
+		if (hasTOMLComments(configString)) {
 			throw new PatchConfigError(
 				"cannot patch .toml config if comments are present"
 			);
