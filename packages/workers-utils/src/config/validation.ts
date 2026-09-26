@@ -10,7 +10,10 @@ import {
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
-import { getContainerNameToClassNameMap } from "./containers";
+import {
+	getContainerNameToClassNameMap,
+	getDefaultDurableObjectContainerAppName,
+} from "./containers";
 import { Diagnostics } from "./diagnostics";
 import {
 	getDurableObjectExports,
@@ -4110,14 +4113,11 @@ function validateContainerApp(
 						`Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined.`
 					);
 				} else {
-					// if there is worker name defined but no name for this container app default to:
-					// worker_name-class_name[-envName].
-					let name = `${topLevelName}-${containerAppOptional.class_name}`;
-					// config is undefined when we are at the top level instead of in a named env
-					// If we are in a named env, append it to the generated name
-					// so that users can re-use container definitions between different envs without issue.
-					name += config === undefined ? "" : `-${envName}`;
-					containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
+					containerAppOptional.name = getDefaultDurableObjectContainerAppName(
+						topLevelName,
+						containerAppOptional.class_name,
+						config === undefined ? undefined : envName
+					);
 				}
 			}
 

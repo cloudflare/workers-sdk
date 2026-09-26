@@ -150,6 +150,53 @@ describe("wrangler deploy with containers", () => {
 		expect(applicationRequests).toBe(1);
 		expect(std.out).toContain("Uploaded test-name");
 	});
+	it("uses --name for generated Durable Object-managed container application names", async ({
+		expect,
+	}) => {
+		const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+		writeWranglerConfig({
+			name: "original-worker",
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+				},
+			],
+		});
+		mockGetVersion("Galaxy-Class", [
+			{
+				...defaultDOBinding,
+				namespace_id: namespaceId,
+			},
+		]);
+		mockUploadWorkerRequest({
+			expectedScriptName: "renamed-worker",
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "EXAMPLE_DO_BINDING",
+					type: "durable_object_namespace",
+				},
+			],
+			expectedContainers: [
+				{
+					name: "renamed-worker-exampledurableobject",
+					class_name: "ExampleDurableObject",
+				},
+			],
+			useOldUploadApi: true,
+		});
+		mockCreateApplication(
+			expect,
+			expectedDurableObjectApplicationRequest(
+				"renamed-worker-exampledurableobject",
+				namespaceId
+			)
+		);
+
+		await runWrangler("deploy index.js --name renamed-worker");
+	});
 	it.for(["deploy", "versions upload"])(
 		"rejects unknown-storage legacy classes before %s uploads",
 		async (command, { expect }) => {
