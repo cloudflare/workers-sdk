@@ -212,6 +212,7 @@ export type WorkerMetadataBinding =
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
+	base_path?: AssetConfig["base_path"];
 	run_worker_first?: boolean | string[];
 	_redirects?: string;
 	_headers?: string;

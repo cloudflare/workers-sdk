@@ -3869,6 +3869,111 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.hasErrors()).toBeFalsy();
 			});
+
+			describe("[assets.base_path]", () => {
+				it.for(["/", "/subpath", "/subpath/", "/a/../b"])(
+					"accepts the string value %s for downstream normalization",
+					(basePath, { expect }) => {
+						const { config, diagnostics } = normalizeAndValidateConfig(
+							{ assets: { directory: "./public", base_path: basePath } },
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+
+						expect(config.assets?.base_path).toBe(basePath);
+						expect(diagnostics.hasErrors()).toBe(false);
+						expect(diagnostics.hasWarnings()).toBe(false);
+					}
+				);
+
+				it.for([
+					{ value: null, rendered: "null" },
+					{ value: 123, rendered: "123" },
+				])(
+					"errors when base_path is $rendered",
+					({ value, rendered }, { expect }) => {
+						const { diagnostics } = normalizeAndValidateConfig(
+							{
+								assets: { directory: "./public", base_path: value },
+							} as unknown as RawConfig,
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+
+						expect(diagnostics.hasErrors()).toBe(true);
+						expect(diagnostics.renderErrors()).toBe(
+							`Processing wrangler configuration:\n  - Expected "assets.base_path" to be of type string but got ${rendered}.`
+						);
+					}
+				);
+
+				it("inherits base_path into a named environment", ({ expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							assets: { directory: "./public", base_path: "/subpath/" },
+							env: { staging: {} },
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.base_path).toBe("/subpath/");
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("preserves base_path in a named environment", ({ expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							env: {
+								staging: {
+									assets: {
+										directory: "./public",
+										base_path: "/subpath/",
+									},
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.base_path).toBe("/subpath/");
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("drops top-level asset fields when a named environment replaces the object", ({
+					expect,
+				}) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							assets: {
+								directory: "./public",
+								base_path: "/subpath",
+								run_worker_first: ["/*"],
+							},
+							env: {
+								staging: {
+									assets: {
+										directory: "./staging-public",
+									},
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.directory).toBe("./staging-public");
+					expect(config.assets?.base_path).toBeUndefined();
+					expect(config.assets?.run_worker_first).toBeUndefined();
+					expect(diagnostics.hasWarnings()).toBe(false);
+				});
+			});
 		});
 
 		describe("[browser]", () => {

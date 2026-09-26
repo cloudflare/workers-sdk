@@ -1950,6 +1950,10 @@ export type Assets = {
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
 	/**
+	 * The public URL prefix under which the application is served, e.g. `/subpath/`.
+	 */
+	base_path?: string;
+	/**
 	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
 	 *
 	 * Can also be `true`, indicating that every request should be routed to the User Worker.

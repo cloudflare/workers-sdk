@@ -3457,6 +3457,15 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			["single-page-application", "404-page", "none"]
 		) && isValid;
 
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"base_path",
+			(value as Assets).base_path,
+			"string"
+		) && isValid;
+
 	if ((value as Assets).run_worker_first !== undefined) {
 		if (typeof (value as Assets).run_worker_first === "boolean") {
 			isValid =
@@ -3490,6 +3499,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"html_handling",
 			"not_found_handling",
+			"base_path",
 			"run_worker_first",
 		]) && isValid;
 
