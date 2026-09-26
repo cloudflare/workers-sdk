@@ -117,14 +117,17 @@ describe("mapWorkerMetadataBindings", () => {
 	});
 
 	describe("d1_databases", () => {
-		it("maps d1 binding", ({ expect }) => {
-			const bindings: WorkerMetadataBinding[] = [
+		it("maps canonical and legacy d1 bindings", ({ expect }) => {
+			const bindings = [
+				{ type: "d1", name: "MY_DB", database_id: "db-456" },
 				{ type: "d1", name: "MY_DB", id: "db-456" },
-			];
-			const result = mapWorkerMetadataBindings(bindings);
-			expect(result.d1_databases).toEqual([
-				{ binding: "MY_DB", database_id: "db-456" },
-			]);
+			] satisfies WorkerMetadataBinding[];
+			for (const binding of bindings) {
+				const result = mapWorkerMetadataBindings([binding]);
+				expect(result.d1_databases).toEqual([
+					{ binding: "MY_DB", database_id: "db-456" },
+				]);
+			}
 		});
 	});
 
@@ -159,8 +162,15 @@ describe("mapWorkerMetadataBindings", () => {
 		});
 
 		it("maps ai binding", ({ expect }) => {
-			const bindings: WorkerMetadataBinding[] = [{ type: "ai", name: "AI" }];
+			const bindings: WorkerMetadataBinding[] = [
+				{ type: "ai", name: "AI", staging: true },
+			];
 			const result = mapWorkerMetadataBindings(bindings);
+			expect(result.ai).toEqual({ binding: "AI", staging: true });
+		});
+
+		it("omits absent ai staging", ({ expect }) => {
+			const result = mapWorkerMetadataBindings([{ type: "ai", name: "AI" }]);
 			expect(result.ai).toEqual({ binding: "AI" });
 		});
 

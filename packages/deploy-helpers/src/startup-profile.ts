@@ -413,7 +413,11 @@ async function convertWorkerBundleBindings(
 				kvNamespaces[binding.name] = { id: binding.namespace_id };
 				break;
 			case "d1":
-				d1Databases[binding.name] = { id: binding.id };
+				d1Databases[binding.name] = {
+					id:
+						// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
+						"database_id" in binding ? binding.database_id : binding.id,
+				};
 				break;
 			case "r2_bucket":
 				r2Buckets[binding.name] = { id: binding.bucket_name };

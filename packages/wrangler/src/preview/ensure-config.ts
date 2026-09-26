@@ -15,11 +15,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
-import {
-	convertPreviewBaseToPreviewsConfig,
-	convertProductionToPreviewsConfig,
-	REPLACE_ME,
-} from "./preview-config";
+import { createPreviewConfigProposal, REPLACE_ME } from "./preview-config";
 import type { ProposedPreviewsConfig } from "./preview-config";
 import type { PreviewBaseConfig } from "@cloudflare/deploy-helpers";
 import type {
@@ -119,16 +115,22 @@ export async function ensurePreviewsConfig(
 			}
 		}
 	}
-	const productionConversion = convertProductionToPreviewsConfig(config);
+	const localConfigConversion = createPreviewConfigProposal({
+		kind: "localConfig",
+		config,
+	});
 
 	const baseConversion: ProposedPreviewsConfig = baseConfig
-		? convertPreviewBaseToPreviewsConfig(baseConfig)
+		? createPreviewConfigProposal({
+				kind: "previewBase",
+				config: baseConfig,
+			})
 		: { config: {}, messages: [], blockingDeploymentMessages: [] };
 	const hasPreviewBase = hasConfiguredFields(baseConfig);
 	// preview base configuration takes precedence over local config for warnings, printed output, etc
 	const selectedConversion = hasPreviewBase
 		? baseConversion
-		: productionConversion;
+		: localConfigConversion;
 	const proposedConfig = selectedConversion.config;
 	const proposedConfigPatch: RawConfig = config.targetEnvironment
 		? { env: { [config.targetEnvironment]: { previews: proposedConfig } } }
