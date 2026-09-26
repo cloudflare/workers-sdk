@@ -92,6 +92,16 @@ export interface ServicesExtensions {
  * its own bindings out of `options.config.env` / `options.config.exports` /
  * `options.config.triggers` (plus `options.legacy` / `options.dev`).
  */
+/**
+ * Extra state a plugin may need when building its Node-side bindings. Kept
+ * separate from `ParsedWorkerOptions` because it is runtime state owned by the
+ * Miniflare instance rather than configuration.
+ */
+export interface PluginNodeBindingsContext {
+	hyperdriveProxyController: HyperdriveProxyController;
+	workerIndex: number;
+}
+
 export interface Plugin {
 	bindingTypeDescription?: string;
 	getBindings(
@@ -100,7 +110,8 @@ export interface Plugin {
 		workerIndex: number
 	): Awaitable<Worker_Binding[] | void>;
 	getNodeBindings(
-		options: ParsedWorkerOptions
+		options: ParsedWorkerOptions,
+		context: PluginNodeBindingsContext
 	): Awaitable<Record<string, unknown>>;
 	getServices(
 		options: PluginServicesOptions
