@@ -1,3 +1,7 @@
+import {
+	tailEventsReplacer,
+	tailEventsReviver,
+} from "@cloudflare/workers-utils/tail-events";
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
 import { CorePaths } from "./constants";
@@ -8,7 +12,6 @@ import {
 	resolveTarget,
 	workerNotFoundMessage,
 } from "./dev-registry-proxy-shared.worker";
-import { tailEventsReplacer, tailEventsReviver } from "./tail-events";
 import type {
 	RegistryEntry,
 	WorkerdDebugPortConnector,

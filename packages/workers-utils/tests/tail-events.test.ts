@@ -1,7 +1,7 @@
 import { describe, test } from "vitest";
-import { tailEventsReplacer, tailEventsReviver } from "../tail-events";
+import { tailEventsReplacer, tailEventsReviver } from "../src/tail-events";
 
-// Mirrors how tail events are forwarded to the user worker.
+// Mirrors how tail events are forwarded between dev sessions.
 function roundTrip<T>(value: unknown): T {
 	return JSON.parse(
 		JSON.stringify(value, tailEventsReplacer),
@@ -55,7 +55,7 @@ describe("tail event serialization", () => {
 
 	test("restores a bigint published on a diagnostics channel", ({ expect }) => {
 		// `TraceDiagnosticChannelEvent.message` is typed `any`, so anything a
-		// worker publishes lands here — including a bigint, which
+		// worker publishes lands here, including a bigint, which
 		// `JSON.stringify()` throws on rather than dropping.
 		const result = roundTrip<{
 			diagnosticsChannelEvents: [{ channel: string; message: bigint }];
@@ -82,34 +82,69 @@ describe("tail event serialization", () => {
 		expect(result.scheduledTime).toBe(null);
 	});
 
-	test("revives a payload that already contains the date tag", ({ expect }) => {
-		// The tag is a plain object key, so a payload that happens to contain it
-		// is indistinguishable from a serialized Date. Pinned here so the
-		// collision stays a known trade-off.
-		const result = roundTrip<{ logged: Date }>({
-			logged: { ___serialized_date___: "2025-05-01T12:34:56.000Z" },
-		});
+	test("keeps a payload that uses the date tag as a key", ({ expect }) => {
+		const logged = {
+			___serialized_date___: "2025-05-01T12:34:56.000Z",
+			level: "info",
+		};
 
-		expect(result.logged).toBeInstanceOf(Date);
+		const result = roundTrip<{ logged: typeof logged }>({ logged });
+
+		expect(result.logged).toEqual(logged);
 	});
 
-	test("revives a payload that already contains the bigint tag", ({
-		expect,
-	}) => {
-		// Same known trade-off as the date tag above.
-		const result = roundTrip<{ logged: bigint }>({
+	test("keeps a payload that is exactly the bigint tag shape", ({ expect }) => {
+		const result = roundTrip<{ logged: Record<string, string> }>({
 			logged: { ___serialized_bigint___: "5" },
 		});
 
-		expect(result.logged).toBe(5n);
+		expect(result.logged).toEqual({ ___serialized_bigint___: "5" });
+	});
+
+	test("keeps a payload whose key is already escaped", ({ expect }) => {
+		const logged = {
+			"~___serialized_date___": "a",
+			"~~___serialized_bigint___": "b",
+		};
+
+		const result = roundTrip<{ logged: typeof logged }>({ logged });
+
+		expect(result.logged).toEqual(logged);
+	});
+
+	test("keeps a Date inside a payload that uses a tag as a key", ({
+		expect,
+	}) => {
+		const date = new Date("2025-05-01T12:34:56.000Z");
+
+		const result = roundTrip<{
+			logged: { ___serialized_date___: string; at: Date };
+		}>({
+			logged: { ___serialized_date___: "x", at: date },
+		});
+
+		expect(result.logged.___serialized_date___).toBe("x");
+		expect(result.logged.at).toBeInstanceOf(Date);
+		expect(result.logged.at.getTime()).toBe(date.getTime());
+	});
+
+	test("reads tags written by a dev session that doesn't escape keys", ({
+		expect,
+	}) => {
+		const result = JSON.parse(
+			'{"at":{"___serialized_date___":"2025-05-01T12:34:56.000Z"},"n":{"___serialized_bigint___":"5"}}',
+			tailEventsReviver
+		);
+
+		expect(result.at).toBeInstanceOf(Date);
+		expect(result.n).toBe(5n);
 	});
 
 	test("leaves a malformed bigint tag alone", ({ expect }) => {
-		// `BigInt("not a number")` throws, so the tag has to be tolerated rather
-		// than trusted — otherwise reviving is itself a way to fail the parse.
-		const result = roundTrip<{ logged: Record<string, string> }>({
-			logged: { ___serialized_bigint___: "not a number" },
-		});
+		const result = JSON.parse(
+			'{"logged":{"___serialized_bigint___":"not a number"}}',
+			tailEventsReviver
+		);
 
 		expect(result.logged).toEqual({ ___serialized_bigint___: "not a number" });
 	});

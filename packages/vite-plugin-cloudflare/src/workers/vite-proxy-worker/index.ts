@@ -1,5 +1,8 @@
+import {
+	tailEventsReplacer,
+	tailEventsReviver,
+} from "@cloudflare/workers-utils/tail-events";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { tailEventsReplacer, tailEventsReviver } from "./tail-events";
 
 interface Env {
 	ENTRY_USER_WORKER: Service<WorkerEntrypoint>;

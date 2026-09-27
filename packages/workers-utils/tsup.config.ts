@@ -5,8 +5,10 @@ export default defineConfig(() => [
 	{
 		treeshake: true,
 		keepNames: true,
-		// Keep the browser export free of the Node-only banner used below.
-		entry: ["src/browser.ts"],
+		// Keep the browser export free of the Node-only banner used below. The
+		// tail events helpers are bundled into Workers that run in workerd, so
+		// they need the same.
+		entry: ["src/browser.ts", "src/tail-events.ts"],
 		platform: "node",
 		format: "esm",
 		dts: true,

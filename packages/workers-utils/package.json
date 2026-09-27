@@ -62,6 +62,10 @@
 		"./zod-format": {
 			"import": "./dist/zod-format.mjs",
 			"types": "./dist/zod-format.d.mts"
+		},
+		"./tail-events": {
+			"import": "./dist/tail-events.mjs",
+			"types": "./dist/tail-events.d.mts"
 		}
 	},
 	"scripts": {
