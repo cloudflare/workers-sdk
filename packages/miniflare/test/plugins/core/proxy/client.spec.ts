@@ -514,6 +514,43 @@ describe("ProxyClient", () => {
 		expect(await text(copy.body)).toBe("value");
 	});
 
+	test("puts R2ObjectBody#body from another copy of Miniflare to R2", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
+		useDispose(mf);
+
+		// Simulate a body returned by a separately loaded copy of Miniflare,
+		// which can only share the length through the global symbol registry
+		const value = "value";
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(new TextEncoder().encode(value));
+				controller.close();
+			},
+		});
+		Object.defineProperty(body, Symbol.for("miniflare.kStreamLength"), {
+			value: value.length,
+		});
+
+		const bucket = await mf.getR2Bucket("BUCKET");
+		await bucket.put("key", body);
+		const copy = await bucket.get("key");
+		assert(copy != null);
+		expect(await text(copy.body)).toBe(value);
+	});
+
 	test("can `JSON.stringify()` proxies", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [

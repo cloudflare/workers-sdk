@@ -44,7 +44,11 @@ import type {
 const kAddress = Symbol("kAddress");
 const kName = Symbol("kName");
 const kIsFunction = Symbol("kIsFunction");
-const kStreamLength = Symbol("kStreamLength");
+// Registered globally, unlike the symbols above, as streams may be passed
+// between proxies created by different loaded copies of Miniflare (e.g. the
+// Vitest plugin and Wrangler resolving separate installs), which would
+// otherwise each have their own distinct symbol and never see the length.
+const kStreamLength: unique symbol = Symbol.for("miniflare.kStreamLength");
 interface LengthTrackedStream extends ReadableStream {
 	[kStreamLength]?: number;
 }
