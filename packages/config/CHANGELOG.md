@@ -1,5 +1,19 @@
 # @cloudflare/config
 
+## 0.20.0
+
+### Minor Changes
+
+- [#15877](https://github.com/cloudflare/workers-sdk/pull/15877) [`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add cross-Worker Workflow bindings to the experimental configuration API
+
+  Workflow bindings can now identify a Workflow by name and reference the Worker and exported `WorkflowEntrypoint` class that define it.
+
+### Patch Changes
+
+- [#15880](https://github.com/cloudflare/workers-sdk/pull/15880) [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Restore configuration field documentation in `define*` helpers
+
+  VS Code now displays JSDoc for fields passed to `defineConfig`, `defineContainer`, and `defineWorker` while retaining their exact inferred config types.
+
 ## 0.19.0
 
 ### Minor Changes
