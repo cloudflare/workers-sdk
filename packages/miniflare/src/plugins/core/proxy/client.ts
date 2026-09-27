@@ -44,6 +44,10 @@ import type {
 const kAddress = Symbol("kAddress");
 const kName = Symbol("kName");
 const kIsFunction = Symbol("kIsFunction");
+const kStreamLength = Symbol("kStreamLength");
+interface LengthTrackedStream extends ReadableStream {
+	[kStreamLength]?: number;
+}
 interface NativeTarget {
 	// `kAddress` is used as a brand for `NativeTarget`. Pointer to the "heap"
 	// map in the `ProxyServer` Durable Object.
@@ -55,6 +59,7 @@ interface NativeTarget {
 	// `ProxyClientHandler`. This is a field needed because we need to treat functions ad-hoc.
 	[kIsFunction]: boolean;
 }
+
 function isNativeTarget(value: unknown): value is NativeTarget {
 	return (
 		typeof value === "object" &&
@@ -182,6 +187,37 @@ class ProxyClientBridge {
 
 	get version(): number {
 		return this.#version;
+	}
+
+	/**
+	 * Records the `Content-Length` of a stream returned by the `ProxyServer`,
+	 * so it can be restored if the same stream is passed back in.
+	 *
+	 * @param stream Stream returned to the caller of a proxied method
+	 * @param headers Headers of the response `stream` was read from
+	 */
+	trackStreamLength(
+		stream: ReadableStream,
+		headers: { get(name: string): string | null }
+	): void {
+		const contentLength = headers.get("Content-Length");
+		if (contentLength === null) {
+			return;
+		}
+		const length = parseInt(contentLength);
+		if (!Number.isNaN(length)) {
+			(stream as LengthTrackedStream)[kStreamLength] = length;
+		}
+	}
+
+	/**
+	 * @param stream Stream about to be sent as a proxied call argument
+	 * @returns The length recorded by `trackStreamLength()` for this exact
+	 * stream object, or `undefined` if it wasn't returned by the `ProxyServer`
+	 * or had no known length
+	 */
+	getStreamLength(stream: ReadableStream): number | undefined {
+		return (stream as LengthTrackedStream)[kStreamLength];
 	}
 
 	#finalizeProxy = (held: NativeTargetHeldValue) => {
@@ -425,6 +461,9 @@ class ProxyStubHandler<T extends object>
 
 		const typeHeader = res.headers.get(CoreHeaders.OP_RESULT_TYPE);
 		if (typeHeader === "Promise, ReadableStream") {
+			if (res.body !== null) {
+				this.bridge.trackStreamLength(res.body, res.headers);
+			}
 			return res.body;
 		}
 		assert(typeHeader === "Promise"); // Must be async
@@ -468,6 +507,7 @@ class ProxyStubHandler<T extends object>
 		// Unbuffered streams should only be sent as part of async responses
 		assert(syncRes.headers.get(CoreHeaders.OP_STRINGIFIED_SIZE) === null);
 		if (syncRes.body instanceof ReadableStream) {
+			this.bridge.trackStreamLength(syncRes.body, syncRes.headers);
 			return syncRes.body;
 		}
 
@@ -743,6 +783,9 @@ class ProxyStubHandler<T extends object>
 		} else {
 			const encodedArgs = Buffer.from(stringified.value);
 			const argsSize = encodedArgs.byteLength.toString();
+			const streamSize = this.bridge.getStreamLength(
+				stringified.unbufferedStream
+			);
 			const body = prefixStream(encodedArgs, stringified.unbufferedStream);
 			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 				method: "POST",
@@ -752,6 +795,9 @@ class ProxyStubHandler<T extends object>
 					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 					[CoreHeaders.OP_KEY]: key,
 					[CoreHeaders.OP_STRINGIFIED_SIZE]: argsSize,
+					...(streamSize === undefined
+						? {}
+						: { [CoreHeaders.OP_STREAM_SIZE]: streamSize.toString() }),
 				},
 				duplex: "half",
 				body,
