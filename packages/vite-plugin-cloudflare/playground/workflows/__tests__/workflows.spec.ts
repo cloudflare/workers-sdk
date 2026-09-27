@@ -1,8 +1,7 @@
 import { test, vi } from "vitest";
 import { getJsonResponse, WAIT_FOR_OPTIONS } from "../../__test-utils__";
 
-// TODO: Reinstate when Workflows are supported by cloudflare.config.ts.
-test.skip("creates a Workflow with an ID", async ({ expect }) => {
+test("creates a Workflow with an ID", async ({ expect }) => {
 	const instanceId = "workflows-test-id";
 
 	await getJsonResponse(`/create?id=${instanceId}`);
