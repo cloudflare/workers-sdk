@@ -1,5 +1,7 @@
 import { describe, test } from "vitest";
 import { DevEnv } from "../../../api/startDevWorker/DevEnv";
+import { castErrorCause } from "../../../api/startDevWorker/events";
+import { logger } from "../../../logger";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 
 describe("DevEnv", () => {
@@ -92,6 +94,50 @@ describe("DevEnv", () => {
 			});
 
 			expect(std.err).toContain("Custom build command failed");
+
+			void devEnv.teardown();
+		});
+
+		test("should log ProxyWorker request errors without tearing down the dev session", ({
+			expect,
+			onTestFinished,
+		}) => {
+			logger.loggerLevel = "debug";
+			onTestFinished(() => logger.resetLoggerLevel());
+			const devEnv = new DevEnv();
+
+			const fatalEvents: unknown[] = [];
+			devEnv.on("error", (event) => fatalEvents.push(event));
+
+			// the ProxyWorker posts its error to the ProxyController as JSON, which
+			// rehydrates it with castErrorCause. Build the cause the same way so
+			// this test exercises the shape the production path produces.
+			const reportedByProxyWorker = JSON.parse(
+				JSON.stringify({
+					name: "Error",
+					message:
+						"GET http://127.0.0.1:8787/ (failed after 3 attempts): Network connection lost.",
+					stack:
+						"Error: Network connection lost.\n    at fetch (ProxyWorker.ts:167:9)",
+					cause: { name: "TypeError", message: "socket hang up" },
+				})
+			) as unknown;
+
+			devEnv.dispatch({
+				type: "error",
+				reason: "Error inside ProxyWorker",
+				cause: castErrorCause(reportedByProxyWorker),
+				source: "ProxyController",
+				data: {},
+			});
+
+			expect(std.err).toContain("Error inside ProxyWorker");
+			expect(std.err).toContain("Network connection lost.");
+			// the stack and cause are the only clue to why the request failed
+			expect(std.debug).toContain("at fetch (ProxyWorker.ts:167:9)");
+			expect(std.debug).toContain("socket hang up");
+			// one failed proxied request must not become a fatal dev-session error
+			expect(fatalEvents).toHaveLength(0);
 
 			void devEnv.teardown();
 		});

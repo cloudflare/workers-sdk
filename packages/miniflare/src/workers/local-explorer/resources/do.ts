@@ -79,7 +79,9 @@ async function findDONamespaceOwner(
 	c: AppContext,
 	namespaceId: string
 ): Promise<string | null> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
+	const peerUrls = await getPeerUrlsIfAggregating(c, {
+		sharedStorageOnly: true,
+	});
 	if (peerUrls.length === 0) {
 		return null;
 	}
@@ -118,13 +120,14 @@ async function findDONamespaceOwner(
  */
 export async function listDONamespaces(c: AppContext) {
 	const localNamespaces = getLocalDONamespaces(c.env);
-	// note that we don't have duplication issues here like
-	// we do for listD1Namespaces etc. because DOs are tied
-	// to scripts and external DOs have already been filtered out
 	const allNamespaces = await aggregateListResults(
 		c,
 		localNamespaces,
-		"/workers/durable_objects/namespaces"
+		"/workers/durable_objects/namespaces",
+		{
+			getKey: (namespace) => namespace.id,
+			sharedStorageOnly: true,
+		}
 	);
 
 	return c.json({

@@ -249,7 +249,7 @@ export class Socket_Https extends $.Struct {
 	static readonly _capnp = {
 		displayName: "https",
 		id: "de123876383cbbdc",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	_adoptOptions(value: $.Orphan<HttpOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -295,7 +295,7 @@ export class Socket_Tcp extends $.Struct {
 	static readonly _capnp = {
 		displayName: "tcp",
 		id: "b59d8ecf6886b64c",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	_adoptTlsOptions(value: $.Orphan<TlsOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -319,20 +319,66 @@ export class Socket_Tcp extends $.Struct {
 		return "Socket_Tcp_" + super.toString();
 	}
 }
+/**
+ * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+ * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+ * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+ * datagram (see Socket.protocol).
+ *
+ * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+ * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+ *
+ */
+export class Socket_Udp extends $.Struct {
+	static readonly _capnp = {
+		displayName: "udp",
+		id: "95ae058885f84b2a",
+		size: new $.ObjectSize(16, 5),
+		defaultIdleTimeoutMs: $.getUint32Mask(30000),
+		defaultMaxPendingBytes: $.getUint32Mask(262144),
+	};
+	get idleTimeoutMs(): number {
+		return $.utils.getUint32(4, this, Socket_Udp._capnp.defaultIdleTimeoutMs);
+	}
+	set idleTimeoutMs(value: number) {
+		$.utils.setUint32(4, value, this, Socket_Udp._capnp.defaultIdleTimeoutMs);
+	}
+	get maxPendingBytes(): number {
+		return $.utils.getUint32(8, this, Socket_Udp._capnp.defaultMaxPendingBytes);
+	}
+	set maxPendingBytes(value: number) {
+		$.utils.setUint32(8, value, this, Socket_Udp._capnp.defaultMaxPendingBytes);
+	}
+	toString(): string {
+		return "Socket_Udp_" + super.toString();
+	}
+}
 export const Socket_Which = {
 	HTTP: 0,
 	HTTPS: 1,
 	TCP: 2,
+	/**
+	 * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+	 * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+	 * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+	 * datagram (see Socket.protocol).
+	 *
+	 * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+	 * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+	 *
+	 */
+	UDP: 3,
 } as const;
 export type Socket_Which = (typeof Socket_Which)[keyof typeof Socket_Which];
 export class Socket extends $.Struct {
 	static readonly HTTP = Socket_Which.HTTP;
 	static readonly HTTPS = Socket_Which.HTTPS;
 	static readonly TCP = Socket_Which.TCP;
+	static readonly UDP = Socket_Which.UDP;
 	static readonly _capnp = {
 		displayName: "Socket",
 		id: "9a0eba45530ee79f",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	/**
 	 * Each socket has a unique name which can be used on the command line to override the socket's
@@ -360,6 +406,9 @@ export class Socket extends $.Struct {
 	 * - "unix-abstract:name": On Linux, listen on the given "abstract" Unix socket name.
 	 * - "example.com:80": Perform a DNS lookup to determine the address, and then listen on it. If
 	 *     this resolves to multiple addresses, listen on all of them.
+	 *
+	 * UDP sockets currently bind only the first address when a hostname resolves to multiple
+	 * addresses. Specify a numeric address when selecting the address family matters.
 	 *
 	 * (These are the formats supported by KJ's parseAddress().)
 	 *
@@ -422,6 +471,30 @@ export class Socket extends $.Struct {
 	}
 	set tcp(_: true) {
 		$.utils.setUint16(0, 2, this);
+	}
+	/**
+	 * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+	 * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+	 * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+	 * datagram (see Socket.protocol).
+	 *
+	 * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+	 * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+	 *
+	 */
+	get udp(): Socket_Udp {
+		$.utils.testWhich("udp", $.utils.getUint16(0, this), 3, this);
+		return $.utils.getAs(Socket_Udp, this);
+	}
+	_initUdp(): Socket_Udp {
+		$.utils.setUint16(0, 3, this);
+		return $.utils.getAs(Socket_Udp, this);
+	}
+	get _isUdp(): boolean {
+		return $.utils.getUint16(0, this) === 3;
+	}
+	set udp(_: true) {
+		$.utils.setUint16(0, 3, this);
 	}
 	_adoptService(value: $.Orphan<ServiceDesignator>): void {
 		$.utils.adopt(value, $.utils.getPointer(4, this));
@@ -2608,6 +2681,33 @@ export class Worker_Binding extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Which;
 	}
 }
+export class Worker_DurableObjectNamespace_ContainerOptions_NamedImage
+	extends $.Struct
+{
+	static readonly _capnp = {
+		displayName: "NamedImage",
+		id: "ab54a21a8a2ec0c0",
+		size: new $.ObjectSize(0, 2),
+	};
+	get name(): string {
+		return $.utils.getText(0, this);
+	}
+	set name(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	get image(): string {
+		return $.utils.getText(1, this);
+	}
+	set image(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	toString(): string {
+		return (
+			"Worker_DurableObjectNamespace_ContainerOptions_NamedImage_" +
+			super.toString()
+		);
+	}
+}
 export class Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device
 	extends $.Struct
 {
@@ -2745,16 +2845,20 @@ export class Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges
 	}
 }
 export class Worker_DurableObjectNamespace_ContainerOptions extends $.Struct {
+	static readonly NamedImage =
+		Worker_DurableObjectNamespace_ContainerOptions_NamedImage;
 	static readonly ContainerPrivileges =
 		Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges;
 	static readonly _capnp = {
 		displayName: "ContainerOptions",
 		id: "a609621a4d236cd7",
-		size: new $.ObjectSize(0, 2),
+		size: new $.ObjectSize(0, 3),
 	};
+	static _Images: $.ListCtor<Worker_DurableObjectNamespace_ContainerOptions_NamedImage>;
 	/**
-	 * Image name to be used to create the container using supported provider.
-	 * By default, we pull the "latest" tag of this image.
+	 * Optional default image used when start() does not specify an image or full container
+	 * snapshot. An empty value means that no default image is configured.
+	 * When imageName omits a tag, Docker uses the "latest" tag.
 	 *
 	 */
 	get imageName(): string {
@@ -2800,6 +2904,50 @@ export class Worker_DurableObjectNamespace_ContainerOptions extends $.Struct {
 		value: Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges
 	) {
 		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	_adoptImages(
+		value: $.Orphan<
+			$.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage>
+		>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownImages(): $.Orphan<
+		$.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage>
+	> {
+		return $.utils.disown(this.images);
+	}
+	/**
+	 * Named image references exposed to the Durable Object through ctx.container.images.
+	 * These are optional; Worker code can instead supply an image reference from another source.
+	 * When imageName is empty, the local container backend requires start() to specify an image or
+	 * full container snapshot.
+	 *
+	 */
+	get images(): $.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage> {
+		return $.utils.getList(
+			2,
+			Worker_DurableObjectNamespace_ContainerOptions._Images,
+			this
+		);
+	}
+	_hasImages(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initImages(
+		length: number
+	): $.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage> {
+		return $.utils.initList(
+			2,
+			Worker_DurableObjectNamespace_ContainerOptions._Images,
+			length,
+			this
+		);
+	}
+	set images(
+		value: $.List<Worker_DurableObjectNamespace_ContainerOptions_NamedImage>
+	) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
 	toString(): string {
 		return "Worker_DurableObjectNamespace_ContainerOptions_" + super.toString();
@@ -2936,9 +3084,10 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	}
 	/**
 	 * If present, Durable Objects in this namespace have attached containers.
-	 * workerd will talk to the configured container engine to start containers for each
-	 * Durable Object based on the given image. The Durable Object can access the container via the
-	 * ctx.container API. TODO(CloudChamber): add link to docs.
+	 * workerd will talk to the configured container engine to start containers for each Durable
+	 * Object from a configured default, a runtime-selected image, or a full container snapshot. The
+	 * Durable Object can access the container via the ctx.container API.
+	 * TODO(CloudChamber): add link to docs.
 	 *
 	 */
 	get container(): Worker_DurableObjectNamespace_ContainerOptions {
@@ -4566,6 +4715,9 @@ Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges._Devices =
 	$.CompositeList(
 		Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device
 	);
+Worker_DurableObjectNamespace_ContainerOptions._Images = $.CompositeList(
+	Worker_DurableObjectNamespace_ContainerOptions_NamedImage
+);
 Worker._Modules = $.CompositeList(Worker_Module);
 Worker._Bindings = $.CompositeList(Worker_Binding);
 Worker._DurableObjectNamespaces = $.CompositeList(

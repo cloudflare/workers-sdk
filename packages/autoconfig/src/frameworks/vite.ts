@@ -15,6 +15,8 @@ import type {
 } from "./framework-class";
 
 export class Vite extends Framework {
+	override readonly supportsMode = true;
+
 	readonly env = {
 		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
 	} as const;
@@ -37,12 +39,14 @@ export class Vite extends Framework {
 		projectPath,
 		packageManager,
 		isWorkspaceRoot,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
 				isWorkspaceRoot,
 				projectPath,
+				version: target === "cf" ? "beta" : undefined,
 			});
 
 			if (hasViteConfig(projectPath)) {

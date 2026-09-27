@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import {
@@ -10,6 +10,7 @@ import * as esbuild from "esbuild";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
+import { runCustomBuild } from "../../../deployment-bundle/run-custom-build";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
@@ -28,6 +29,25 @@ function findSourceFile(source: string, name: string): string {
 function wranglerTmpDirs(): string[] {
 	const tmpRoot = path.resolve(".wrangler/tmp");
 	return existsSync(tmpRoot) ? readdirSync(tmpRoot) : [];
+}
+
+/**
+ * Runs a config's custom build command once, standing in for the call
+ * `getEntry()` makes before `BundlerController` ever sees the config (see
+ * `ConfigController`'s `resolveConfig()`). `BundlerController` relies on this
+ * having already happened, so it never re-runs the build command itself for
+ * the current config: it only does so in response to later file changes.
+ */
+async function runInitialCustomBuild(config: StartDevWorkerOptions) {
+	await runCustomBuild(
+		config.entrypoint,
+		path.relative(config.projectRoot, config.entrypoint) || ".",
+		{
+			cwd: config.build?.custom?.workingDirectory,
+			command: config.build?.custom?.command,
+		},
+		config.config
+	);
 }
 
 function configDefaults(
@@ -67,7 +87,7 @@ function configDefaults(
 }
 
 describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	runInTempDir();
 
 	// We are not using `test.extend` or `onTestFinished` helpers here to create and tear down
@@ -297,6 +317,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				},
 			});
 
+			await runInitialCustomBuild(config);
 			let ev = bus.waitFor("bundleComplete");
 			controller.onConfigUpdate({ type: "configUpdate", config });
 			expect(findSourceFile((await ev).bundle.entrypointSource, "out.ts"))
@@ -345,6 +366,53 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				},
 				{ timeout: 5_000, interval: 500 }
 			);
+		});
+
+		test("does not run the custom build command again for a config it has already been run for", async ({
+			expect,
+		}) => {
+			// Regression test for https://github.com/cloudflare/workers-sdk/issues/7934:
+			// `getEntry()` always runs the custom build command once before
+			// `BundlerController` sees a config (simulated below via
+			// `runInitialCustomBuild`). `BundlerController` must bundle that
+			// output, not run the build command a second time.
+			await seed({
+				"build.js": dedent /* javascript */ `
+					const fs = require("node:fs");
+					const count = fs.existsSync("build-count.txt")
+						? Number(fs.readFileSync("build-count.txt", "utf8")) + 1
+						: 1;
+					fs.writeFileSync("build-count.txt", String(count));
+					fs.cpSync("custom_build_dir/index.ts", "out.ts");
+				`,
+				"custom_build_dir/index.ts": dedent /* javascript */ `
+					export default {
+						fetch() {
+							return new Response("hello custom build")
+						}
+					} satisfies ExportedHandler
+				`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: path.resolve("."),
+				build: {
+					custom: {
+						command: "node build.js",
+						watch: "custom_build_dir",
+					},
+					moduleRoot: path.resolve("."),
+				},
+			});
+
+			await runInitialCustomBuild(config);
+			expect(readFileSync("build-count.txt", "utf8")).toBe("1");
+
+			const ev = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			await ev;
+
+			expect(readFileSync("build-count.txt", "utf8")).toBe("1");
 		});
 
 		test("a burst of watched file changes does not run custom builds concurrently", async ({
@@ -400,6 +468,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				},
 			});
 
+			await runInitialCustomBuild(config);
 			const firstBuild = bus.waitFor("bundleComplete");
 			controller.onConfigUpdate({ type: "configUpdate", config });
 			await firstBuild;
@@ -457,6 +526,11 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			expect,
 		}) => {
 			await seed({
+				// `getEntry()` already ran the custom build once before
+				// `BundlerController` saw this config (simulated below via
+				// `runInitialCustomBuild`), so `out.ts` exists from the start.
+				"out.ts":
+					"export default { fetch() { return new Response('initial') } };",
 				"build.js": dedent /* javascript */ `
 					const fs = require("node:fs");
 					fs.writeFileSync("out.ts", "export default { fetch() { return new Response('done') } };");
@@ -492,11 +566,32 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			});
 
 			controller.onConfigUpdate({ type: "configUpdate", config });
+			// Wait for the initial pass, which only bundles the already-built
+			// `out.ts` above, to settle before triggering a real (slow) build.
 			await vi.waitFor(() => {
-				const buildStartedEvents = bus.events.filter(
-					(event) => event.type === "bundleStart"
-				);
-				expect(buildStartedEvents).toHaveLength(1);
+				expect(
+					bus.events.filter((event) => event.type === "bundleComplete")
+				).toHaveLength(1);
+			});
+
+			// A real file change runs `node build.js` for real, which this test
+			// needs in-flight when `teardown()` is called below.
+			await seed({
+				"custom_build_dir/index.ts": dedent /* javascript */ `
+					export default {
+						fetch() {
+							return new Response("changed")
+						}
+					}
+				`,
+			});
+			// Wait for the process to log that it has started, rather than for the
+			// `bundleStart` event (which fires before the process is spawned): by
+			// the time "custom build started" is logged, `build.js` has already
+			// registered its `SIGTERM` handler on the very next line, so `teardown()`
+			// below is guaranteed to reach a process that can act on the signal.
+			await vi.waitFor(() => {
+				expect(std.out).toContain("custom build started");
 			});
 
 			await controller.teardown();
@@ -697,6 +792,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					},
 				});
 
+				await runInitialCustomBuild(configCustom);
 				const evCustom = bus.waitFor("bundleComplete", undefined, 500000);
 				controller.onConfigUpdate({
 					type: "configUpdate",
@@ -783,6 +879,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				},
 			});
 
+			await runInitialCustomBuild(configCustom);
 			const evCustom = bus.waitFor("bundleComplete");
 			await controller.onConfigUpdate({
 				type: "configUpdate",

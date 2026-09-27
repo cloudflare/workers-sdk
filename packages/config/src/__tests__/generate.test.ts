@@ -6,6 +6,9 @@ describe("generateTypes", () => {
 		const out = generateTypes({ configPath: "./cloudflare.config.ts" });
 		expect(out).toContain(`import("@cloudflare/config").UnwrapConfig`);
 		expect(out).toContain(`import("./cloudflare.config").default`);
+		expect(out).toContain(
+			`type __WorkerConfig = import("@cloudflare/config").UnwrapConfig<__Config["worker"]>;`
+		);
 	});
 
 	it("accepts a custom packageName", ({ expect }) => {

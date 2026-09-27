@@ -21,7 +21,6 @@ test("surfaces the response body when fetching Worker export types fails", async
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "test-worker",
 					compatibilityDate: "2024-12-30",
 					manifest: {

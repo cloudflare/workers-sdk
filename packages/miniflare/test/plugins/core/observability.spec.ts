@@ -17,7 +17,6 @@ import { singleModuleManifest, useDispose } from "../../test-shared";
 function plainWorker(script: string): WorkerOptions {
 	return {
 		config: {
-			type: "worker",
 			name: "user",
 			compatibilityDate: "2026-06-01",
 			manifest: singleModuleManifest(script),
@@ -206,7 +205,6 @@ export default {
 function storeWorker(): WorkerOptions {
 	return {
 		config: {
-			type: "worker",
 			name: "user",
 			compatibilityDate: "2026-06-01",
 			manifest: singleModuleManifest(STORE_HARNESS),
@@ -466,7 +464,6 @@ const CAPTURE_WORKER = `export default {
 function captureWorker(): WorkerOptions {
 	return {
 		config: {
-			type: "worker",
 			name: "user",
 			compatibilityDate: "2026-06-01",
 			manifest: singleModuleManifest(CAPTURE_WORKER),
@@ -607,7 +604,6 @@ function multiWorkerSetup(): WorkerOptions[] {
 	return [
 		{
 			config: {
-				type: "worker",
 				name: "upstream",
 				compatibilityDate: "2026-06-01",
 				manifest: singleModuleManifest(UPSTREAM_WORKER),
@@ -622,7 +618,6 @@ function multiWorkerSetup(): WorkerOptions[] {
 		},
 		{
 			config: {
-				type: "worker",
 				name: "downstream",
 				compatibilityDate: "2026-06-01",
 				manifest: singleModuleManifest(DOWNSTREAM_WORKER),
@@ -680,7 +675,6 @@ describe("unsafeObservability (workflows)", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "wf-user",
 						compatibilityDate: "2026-06-01",
 						manifest: singleModuleManifest(WORKFLOW_CAPTURE_WORKER),

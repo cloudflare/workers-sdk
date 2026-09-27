@@ -40,6 +40,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/pages-shared",
 				"@cloudflare/playground-preview-worker",
 				"@cloudflare/quick-edit",
+				"@cloudflare/runtime-types",
 				"@cloudflare/shared-ast-primitives",
 				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",

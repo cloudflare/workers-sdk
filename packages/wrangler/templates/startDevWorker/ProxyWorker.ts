@@ -163,81 +163,164 @@ export class ProxyWorker implements DurableObject {
 				}
 			}
 
-			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
-			void fetch(userWorkerUrl, new Request(request, { headers }))
-				.then(async (res) => {
-					res = new Response(res.body, res);
-					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
+			/**
+			 * Sends the request to the UserWorker and settles `deferredResponse`
+			 * with the outcome — or requeues the request if the UserWorker is
+			 * mid-reload. The promise chain is deliberately not awaited (`void`):
+			 * we are in a loop and want to process the whole queue quickly +
+			 * synchronously.
+			 *
+			 * A connection-level failure (the `fetch` itself rejects, so no
+			 * response was received) on a same-origin GET/HEAD request is retried
+			 * before being reported — see the rejection handler.
+			 *
+			 * Kept as a `const` arrow function: the handlers re-read
+			 * `this.proxyData` across async boundaries to detect UserWorker
+			 * reloads, so they need the ProxyWorker's lexical `this`.
+			 *
+			 * @param attempt the number of attempts that have already failed
+			 * (`0` on the first try)
+			 */
+			const attemptUserWorkerFetch = (attempt = 0) =>
+				void fetch(userWorkerUrl, new Request(request, { headers }))
+					.then(
+						async (res) => {
+							if (attempt > 0) {
+								console.warn(
+									`ProxyWorker: ${request.method} ${request.url} recovered on attempt ${attempt + 1} after a dropped connection to the UserWorker`
+								);
+							}
 
-					await checkForPreviewTokenError(res, this.env, proxyData);
+							res = new Response(res.body, res);
+							rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
 
-					if (isHtmlResponse(res)) {
-						res = insertLiveReloadScript(request, res, this.env, proxyData);
-					}
+							await checkForPreviewTokenError(res, this.env, proxyData);
 
-					if (isSseResponse(res)) {
-						void sendMessageToProxyController(this.env, {
-							type: "sseResponseDetected",
-						});
-					}
+							if (isHtmlResponse(res)) {
+								res = insertLiveReloadScript(request, res, this.env, proxyData);
+							}
 
-					deferredResponse.resolve(res);
-				})
-				.catch((error: Error) => {
-					// errors here are network errors or from response post-processing
-					// to catch only network errors, use the 2nd param of the fetch.then()
+							if (isSseResponse(res)) {
+								void sendMessageToProxyController(this.env, {
+									type: "sseResponseDetected",
+								});
+							}
 
-					// we have crossed an async boundary, so proxyData may have changed
-					// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
-					// and that this error is stale since it was for a request to the old UserWorker
-					// only report the error if the request still targets the current
-					// UserWorker. isSameUserWorkerOrigin compares origin (not href) so a
-					// genuine error on a non-root path isn't misread as a reload — see
-					// its docs.
-					if (
-						isSameUserWorkerOrigin(userWorkerUrl, this.proxyData?.userWorkerUrl)
-					) {
-						void sendMessageToProxyController(this.env, {
-							type: "error",
-							error: {
-								name: error.name,
-								message: error.message,
-								stack: error.stack,
-								cause: error.cause,
-							},
-						});
+							deferredResponse.resolve(res);
+						},
+						(error: Error) => {
+							// the fetch itself rejected: a connection-level failure, and no
+							// response was received. Errors thrown while post-processing a
+							// received response skip this handler and land in the .catch
+							// below, so they are reported rather than retried and can never
+							// re-run the UserWorker's handler.
+							//
+							// When the UserWorker origin is unchanged (i.e. this is not a
+							// reload — see the same check in the .catch below), the failure
+							// is most commonly the UserWorker's HTTP server closing a reused
+							// keep-alive connection at the same moment this request was
+							// written to it (kj's client pool idleTimeout and server
+							// pipelineTimeout both default to 5s, so a connection idling ~5s
+							// races the close). Retrying bodyless requests draws a fresh
+							// connection and absorbs the race, mirroring the requeue in the
+							// .catch for reloads: retry immediately, then once more after
+							// 250ms (3 attempts in total).
+							if (
+								isSameUserWorkerOrigin(
+									userWorkerUrl,
+									this.proxyData?.userWorkerUrl
+								) &&
+								(request.method === "GET" || request.method === "HEAD") &&
+								attempt < 2
+							) {
+								setTimeout(
+									() => {
+										// the UserWorker may have started reloading while this
+										// retry was queued (even at 0ms — setTimeout defers to a
+										// later task). `proxyData` carries the destination AND the
+										// headers, so retrying with the captured one could reach
+										// the pre-reload Worker or send a stale preview token.
+										// Requeue instead and let the current proxyData rebuild it.
+										if (this.proxyData !== proxyData) {
+											this.requestRetryQueue.set(request, deferredResponse);
+											this.processQueue();
+											return;
+										}
 
-						deferredResponse.reject(error);
-					}
+										attemptUserWorkerFetch(attempt + 1);
+									},
+									attempt === 0 ? 0 : 250
+								);
+								return;
+							}
 
-					// if the request can be retried (subset of idempotent requests which have no body), requeue it
-					else if (request.method === "GET" || request.method === "HEAD") {
-						this.requestRetryQueue.set(request, deferredResponse);
-						// we would only end up here if the downstream UserWorker is chang*ing*
-						// i.e. we are in a `pause`d state and expecting a `play` message soon
-						// this request will be processed (retried) when the `play` message arrives
-						// for that reason, we do not need to call `this.processQueue` here
-						// (but, also, it can't hurt to call it since it bails when
-						// in a `pause`d state i.e. `this.proxyData` is undefined)
-					}
+							throw error;
+						}
+					)
+					.catch((error: Error) => {
+						// errors here are from response post-processing, or connection-
+						// level failures rethrown by the rejection handler above (a
+						// non-retriable method, or the retry budget was exhausted)
 
-					// if the request cannot be retried, respond with 503 Service Unavailable
-					// important to note, this is not an (unexpected) error -- it is an acceptable flow of local development
-					// it would be incorrect to retry non-idempotent requests
-					// and would require cloning all body streams to avoid stream reuse (which is inefficient but not out of the question in the future)
-					// this is a good enough UX for now since it solves the most common GET use-case
-					else {
-						deferredResponse.resolve(
-							new Response(
-								"Your worker restarted mid-request. Please try sending the request again. Only GET or HEAD requests are retried automatically.",
-								{
-									status: 503,
-									headers: { "Retry-After": "0" },
-								}
+						// we have crossed an async boundary, so proxyData may have changed
+						// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
+						// and that this error is stale since it was for a request to the old UserWorker
+						// only report the error if the request still targets the current
+						// UserWorker. isSameUserWorkerOrigin compares origin (not href) so a
+						// genuine error on a non-root path isn't misread as a reload — see
+						// its docs.
+						if (
+							isSameUserWorkerOrigin(
+								userWorkerUrl,
+								this.proxyData?.userWorkerUrl
 							)
-						);
-					}
-				});
+						) {
+							const attemptsNote = ` (failed after ${attempt + 1} ${
+								attempt === 0 ? "attempt" : "attempts"
+							})`;
+							void sendMessageToProxyController(this.env, {
+								type: "error",
+								error: {
+									name: error.name,
+									message: `${request.method} ${request.url}${attemptsNote}: ${error.message}`,
+									stack: error.stack,
+									cause: error.cause,
+								},
+							});
+
+							deferredResponse.reject(error);
+						}
+
+						// if the request can be retried (subset of idempotent requests which have no body), requeue it
+						else if (request.method === "GET" || request.method === "HEAD") {
+							this.requestRetryQueue.set(request, deferredResponse);
+							// we would only end up here if the downstream UserWorker is chang*ing*
+							// i.e. we are in a `pause`d state and expecting a `play` message soon
+							// this request will be processed (retried) when the `play` message arrives
+							// for that reason, we do not need to call `this.processQueue` here
+							// (but, also, it can't hurt to call it since it bails when
+							// in a `pause`d state i.e. `this.proxyData` is undefined)
+						}
+
+						// if the request cannot be retried, respond with 503 Service Unavailable
+						// important to note, this is not an (unexpected) error -- it is an acceptable flow of local development
+						// it would be incorrect to retry non-idempotent requests
+						// and would require cloning all body streams to avoid stream reuse (which is inefficient but not out of the question in the future)
+						// this is a good enough UX for now since it solves the most common GET use-case
+						else {
+							deferredResponse.resolve(
+								new Response(
+									"Your worker restarted mid-request. Please try sending the request again. Only GET or HEAD requests are retried automatically.",
+									{
+										status: 503,
+										headers: { "Retry-After": "0" },
+									}
+								)
+							);
+						}
+					});
+
+			attemptUserWorkerFetch();
 		}
 	}
 }

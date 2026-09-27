@@ -51,7 +51,6 @@ const opts: Partial<MiniflareOptions> = {
 	workers: [
 		{
 			config: {
-				type: "worker",
 				name: "",
 				compatibilityDate: "2025-05-01",
 				env: { NAMESPACE: { type: "kv", id: "namespace" } },
@@ -784,7 +783,6 @@ test("persists in-memory between options reloads", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: {
@@ -840,7 +838,6 @@ test("persists on file-system", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: {

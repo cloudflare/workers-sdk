@@ -107,6 +107,7 @@ const config: TemplateConfig = {
 	id: "nuxt",
 	frameworkCli: "nuxi",
 	platform: "workers",
+	languages: ["ts"],
 	displayName: "Nuxt",
 	copyFiles: {
 		path: "./templates",

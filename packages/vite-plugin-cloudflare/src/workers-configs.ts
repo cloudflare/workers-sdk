@@ -195,15 +195,18 @@ function readWorkerConfig(
  * validation pipeline as on-disk Wrangler config files, then apply the
  * Vite-specific sanitization.
  */
-export function readWorkerConfigFromRaw(rawConfig: RawConfig): {
+export function readWorkerConfigFromRaw(
+	rawConfig: RawConfig,
+	configPath?: string
+): {
 	raw: RawWorkerConfig;
 	config: WorkerConfig;
 	nonApplicable: NonApplicableConfigMap;
 } {
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
-		undefined,
-		undefined,
+		configPath,
+		configPath,
 		{},
 		// Preserve the original `main` value so that Vite can resolve it
 		true

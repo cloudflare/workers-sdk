@@ -36,12 +36,10 @@ export const Route = createFileRoute("/kv/$namespaceId")({
 		}
 
 		const cursor = keysResponse.data?.result_info?.cursor ?? null;
-		const entries = keys.map(
-			(key): KVEntry => ({
-				key,
-				value: values.get(key) ?? null,
-			})
-		);
+		const entries = keys.map((key): KVEntry => ({
+			key,
+			value: values.get(key) ?? null,
+		}));
 
 		return {
 			cursor,

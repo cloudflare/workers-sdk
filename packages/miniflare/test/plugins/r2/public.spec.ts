@@ -18,7 +18,6 @@ const ctx = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { BUCKET: { type: "r2", name: "bucket" } },
@@ -631,7 +630,6 @@ test("multiple buckets are each independently reachable", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -672,7 +670,6 @@ test("buckets across multiple workers are all reachable", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker-a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -683,7 +680,6 @@ test("buckets across multiple workers are all reachable", async ({
 			},
 			{
 				config: {
-					type: "worker",
 					name: "worker-b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -721,7 +717,6 @@ test("two bindings pointing at the same underlying bucket id share the same URL"
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(

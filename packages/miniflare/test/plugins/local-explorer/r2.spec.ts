@@ -31,7 +31,6 @@ describe("R2 API", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(

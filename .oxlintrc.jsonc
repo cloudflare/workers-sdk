@@ -169,6 +169,24 @@
 			"files": ["packages/miniflare/src/workers/**/*.ts"],
 			"rules": {
 				"no-console": "off",
+				"no-restricted-imports": [
+					"error",
+					{
+						"paths": [
+							{
+								"name": "zod",
+								"allowTypeImports": true,
+								"message": "Import runtime values from `miniflare:zod` instead.",
+							},
+						],
+					},
+				],
+			},
+		},
+		{
+			"files": ["packages/miniflare/src/workers/shared/zod.worker.ts"],
+			"rules": {
+				"no-restricted-imports": "off",
 			},
 		},
 		// Relax some rules for test & script files

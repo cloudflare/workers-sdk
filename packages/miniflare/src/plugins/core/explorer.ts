@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import path from "node:path";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import {
@@ -12,6 +14,7 @@ import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
 import {
 	getEnvBindingsOfType,
+	getTriggersOfType,
 	getRemoteProxyConnectionString,
 	getStorageService,
 	WORKER_BINDING_SERVICE_LOOPBACK,
@@ -203,7 +206,7 @@ export function getExplorerServices(
 			name: SERVICE_LOCAL_EXPLORER,
 			worker: {
 				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
+				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
 				modules: [
 					{
 						name: "explorer.worker.js",
@@ -423,10 +426,39 @@ export function constructExplorerWorkerOpts(
 			bindings.sendEmail.push({ bindingName });
 		}
 
-		result[workerName] = bindings;
+		result[workerName] = {
+			bindings,
+			triggers: {
+				crons: getTriggersOfType(workerOpts.config, "scheduled").map(
+					(trigger) => trigger.schedule
+				),
+			},
+			persistenceScope: getPersistenceScope(workerOpts.dev.rootPath),
+		};
 	}
 
 	return result;
+}
+
+/**
+ * Derive a project-scoped browser persistence key without sending the project
+ * root itself to the Local Explorer UI. Normalising here keeps equivalent
+ * direct structured Miniflare paths aligned with paths from the V4 converter.
+ *
+ * Keep the domain/version prefix stable: changing it intentionally invalidates
+ * persisted Local Explorer state. Return no scope if a future caller cannot
+ * provide a usable project root, allowing the UI to fall back safely.
+ */
+export function getPersistenceScope(
+	projectRoot: string | undefined
+): string | undefined {
+	if (!projectRoot) {
+		return undefined;
+	}
+
+	return createHash("sha256")
+		.update(`local-explorer:persistence-scope:v1\0${path.resolve(projectRoot)}`)
+		.digest("hex");
 }
 
 /**

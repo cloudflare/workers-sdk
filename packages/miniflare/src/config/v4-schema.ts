@@ -197,11 +197,20 @@ const V4UnsafeDirectSocketSchema = z.object({
 	proxy: z.boolean().optional(),
 });
 
-const V4ConnectHandlerSchema = z.object({
-	protocol: z.enum(["tcp"]),
-	port: z.number(),
-	address: z.string().optional(),
-});
+const V4ConnectHandlerSchema = z.discriminatedUnion("protocol", [
+	z.strictObject({
+		protocol: z.literal("tcp"),
+		port: z.number(),
+		address: z.string().optional(),
+	}),
+	z.strictObject({
+		protocol: z.literal("udp"),
+		port: z.number(),
+		address: z.string().optional(),
+		idleTimeoutMs: z.number().int().min(0).max(0xffffffff).optional(),
+		maxPendingBytes: z.number().int().min(0).max(0xffffffff).optional(),
+	}),
+]);
 
 const V4IdEntrySchema = z.object({
 	id: z.string(),
@@ -245,7 +254,14 @@ const V4DurableObjectSchema = z.object({
 		.optional(),
 	unsafePreventEviction: z.boolean().optional(),
 	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
-	container: z.object({ imageName: z.string() }).optional(),
+	container: z
+		.object({
+			imageName: z.string().optional(),
+			images: z
+				.array(z.object({ name: z.string(), image: z.string() }))
+				.optional(),
+		})
+		.optional(),
 });
 
 const V4QueueMessageDelaySchema = z.number().int().min(0).max(86400).optional();
@@ -338,10 +354,6 @@ const V4EmailBindingOptionsSchema = z
 		])
 	);
 
-const V4RemoteBindingSchema = z.object({
-	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
-});
-
 const V4RemoteBindingWithNameSchema = z.object({
 	binding: z.string(),
 	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
@@ -355,6 +367,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 	compatibilityFlags: z.array(z.string()).optional(),
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
+	cronTriggers: z.array(z.string()).optional(),
 	bindings: z.record(z.string(), JsonSchema).optional(),
 	/** WASM binding file paths; string values are relative to `rootPath` if not absolute. */
 	wasmBindings: z
@@ -461,6 +474,15 @@ const V4WorkerOptionsShapeSchema = z.object({
 			})
 		)
 		.optional(),
+	workflowExports: z
+		.record(
+			z.string(),
+			z.object({
+				name: z.string(),
+				stepLimit: z.number().int().min(1).optional(),
+			})
+		)
+		.optional(),
 	pipelines: z
 		.union([z.record(z.string(), V4PipelineSchema), z.array(z.string())])
 		.optional(),
@@ -509,7 +531,6 @@ const V4WorkerOptionsShapeSchema = z.object({
 			})
 		)
 		.optional(),
-	websearch: z.record(z.string(), V4RemoteBindingSchema).optional(),
 	browserRendering: z
 		.object({
 			binding: z.string(),
@@ -744,7 +765,10 @@ export type V4DurableObject = {
 	unsafeUniqueKey?: string | symbol;
 	unsafePreventEviction?: boolean;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
-	container?: { imageName: string };
+	container?: {
+		imageName?: string;
+		images?: { name: string; image: string }[];
+	};
 };
 export type V4QueueProducerOptions = {
 	queueName: string;
@@ -770,6 +794,7 @@ export type V4WorkerOptionsShape = {
 	compatibilityFlags?: string[];
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
+	cronTriggers?: string[];
 	bindings?: Record<string, Json>;
 	wasmBindings?: Record<string, string | Uint8Array>;
 	textBlobBindings?: Record<string, string>;
@@ -784,11 +809,16 @@ export type V4WorkerOptionsShape = {
 		entrypoint?: string;
 		proxy?: boolean;
 	}>;
-	connectHandlers?: Array<{
-		protocol: "tcp";
-		port: number;
-		address?: string;
-	}>;
+	connectHandlers?: Array<
+		| { protocol: "tcp"; port: number; address?: string }
+		| {
+				protocol: "udp";
+				port: number;
+				address?: string;
+				idleTimeoutMs?: number;
+				maxPendingBytes?: number;
+		  }
+	>;
 	unsafeOverrideFetchWorker?: string;
 	unsafeEvalBinding?: string;
 	unsafeUseModuleFallbackService?: boolean;
@@ -852,6 +882,13 @@ export type V4WorkerOptionsShape = {
 			stepLimit?: number;
 		}
 	>;
+	workflowExports?: Record<
+		string,
+		{
+			name: string;
+			stepLimit?: number;
+		}
+	>;
 	pipelines?:
 		| Record<
 				string,
@@ -893,7 +930,6 @@ export type V4WorkerOptionsShape = {
 		string,
 		{ namespace?: string; instance_name?: string } & V4RemoteBinding
 	>;
-	websearch?: Record<string, V4RemoteBinding>;
 	browserRendering?: V4RemoteBindingWithName & { headful?: boolean };
 	dispatchNamespaces?: Record<string, { namespace: string } & V4RemoteBinding>;
 	images?: V4RemoteBindingWithName;

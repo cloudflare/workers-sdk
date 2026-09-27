@@ -183,11 +183,13 @@ export const syncAssets = async (
 	let completionJwt = "";
 	let uploadedAssetsCount = 0;
 	let uploadedBytes = 0;
+	let concurrencyThrottleGeneration = 0;
 
 	for (const [bucketIndex, bucket] of uploadBuckets.entries()) {
 		let attempts = 0;
 		let gatewayErrors = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
+			const uploadGeneration = concurrencyThrottleGeneration;
 			const uploadedFiles: string[] = [];
 			for (const manifestEntry of bucket) {
 				uploadedFiles.push(manifestEntry[0]);
@@ -246,6 +248,17 @@ export const syncAssets = async (
 						}
 					);
 				}
+				// Only requests started after the latest throttle may restore capacity.
+				// Otherwise, requests that were already in flight could immediately undo it.
+				if (
+					queue.concurrency < concurrency &&
+					uploadGeneration === concurrencyThrottleGeneration
+				) {
+					queue.concurrency++;
+					logger.debug(
+						`Asset upload concurrency recovered to ${queue.concurrency}.`
+					);
+				}
 				uploadedAssetsCount += bucket.length;
 				uploadedBytes += bucket.reduce(
 					(total, manifestEntry) => total + manifestEntry[1].size,
@@ -271,7 +284,11 @@ export const syncAssets = async (
 					);
 					if (e instanceof APIError && e.isGatewayError()) {
 						// Gateway problem, wait for some additional time and set concurrency to 1
+						concurrencyThrottleGeneration++;
 						queue.concurrency = 1;
+						logger.debug(
+							"Asset upload concurrency throttled to 1 after a gateway error."
+						);
 						await new Promise((resolvePromise) =>
 							setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
 						);

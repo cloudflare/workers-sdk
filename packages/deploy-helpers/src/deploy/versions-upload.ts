@@ -6,6 +6,8 @@ import {
 	APIError,
 	formatTime,
 	getBindings,
+	getDurableObjectContainerApps,
+	hasDurableObjectExports,
 	ParseError,
 	printBindings,
 	retryOnAPIFailure,
@@ -14,7 +16,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
-import { getWorkersDevSubdomain } from "../triggers/subdomain";
+import { getWorkerSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import {
@@ -22,7 +24,12 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
+import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
+import {
+	deployDurableObjectContainerApplications,
+	prepareDurableObjectContainerApplications,
+} from "./helpers/durable-object-container-applications";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
@@ -48,13 +55,18 @@ import {
 	validateWorkerProps,
 } from "./helpers/validate-worker-props";
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
-import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
+import type {
+	ContainerlessConfig,
+	VersionsUploadProps,
+	WorkerBuildResult,
+} from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type { CfWorkerInit } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
+/** Compatibility callback shape for existing deploy-helpers consumers. */
 export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
 type VersionsUploadResult = {
@@ -68,9 +80,9 @@ type VersionsUploadResult = {
 
 export default async function versionsUpload(
 	props: VersionsUploadProps,
-	config: Config,
+	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks
+	callbacks: VersionsUploadCallbacks = {}
 ): Promise<VersionsUploadResult> {
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
@@ -104,7 +116,7 @@ export default async function versionsUpload(
 
 async function uploadWorkerVersion(
 	props: VersionsUploadProps,
-	config: Config,
+	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
 	callbacks: VersionsUploadCallbacks
 ): Promise<VersionsUploadResult> {
@@ -165,6 +177,28 @@ async function uploadWorkerVersion(
 		config,
 		dispatchNamespace: undefined,
 	});
+	if (migrations !== undefined) {
+		throw new UserError(
+			"This Worker has a pending Durable Object migration, which cannot be applied by `wrangler versions upload`. Durable Object migrations must be applied with `wrangler deploy`. Run `wrangler deploy` to apply the migration, then retry `wrangler versions upload`.",
+			{ telemetryMessage: "versions upload pending durable object migration" }
+		);
+	}
+	const durableObjectContainerConfig = getDurableObjectContainerApps(
+		props.containers.source
+	);
+
+	const preparedContainerImages =
+		await prepareDurableObjectContainerApplications(
+			config,
+			durableObjectContainerConfig,
+			props.containers.durableObjects.builtImages,
+			{
+				accountId,
+				dryRun: Boolean(props.dryRun),
+				scriptName,
+				requireExistingImageLessApplications: true,
+			}
+		);
 
 	// Upload assets if assets is being used
 	const assetsUploadResult =
@@ -189,7 +223,7 @@ async function uploadWorkerVersion(
 
 	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
 
-	const placement = parseConfigPlacement(config);
+	const placement = parseConfigPlacement(config.placement);
 
 	const entryPointName = path.basename(resolvedEntryPointPath);
 	const main = {
@@ -204,7 +238,11 @@ async function uploadWorkerVersion(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: getContainerMetadata(
+			props.containers.source,
+			preparedContainerImages,
+			{ exports: config.exports }
+		),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -356,6 +394,7 @@ async function uploadWorkerVersion(
 				dependencies,
 				workerBundle,
 				projectRoot,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
 				callbacks.analyseBundle
 			);
 			if (message) {
@@ -428,6 +467,26 @@ async function uploadWorkerVersion(
 		return { versionId, workerTag, bundleSize };
 	}
 	assert(accountId);
+	// Declarative exports are reconciled only when this version is deployed, so
+	// only migration-managed namespaces can be resolved during version upload.
+	if (
+		!hasDurableObjectExports(config.exports) &&
+		durableObjectContainerConfig.length > 0
+	) {
+		assert(versionId);
+		await deployDurableObjectContainerApplications(
+			config,
+			durableObjectContainerConfig.filter(
+				(container) => Object.keys(container.images ?? {}).length > 0
+			),
+			{
+				versionId,
+				accountId,
+				scriptName,
+				updateExisting: false,
+			}
+		);
+	}
 
 	const uploadMs = Date.now() - start;
 
@@ -438,21 +497,23 @@ async function uploadWorkerVersion(
 	let versionPreviewAliasUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
-		const { previews_enabled: previews_available_on_subdomain } =
-			await fetchResult<{
-				previews_enabled: boolean;
-			}>(config, `${workerUrl}/subdomain`);
+		const workerSubdomain = await getWorkerSubdomain(
+			config,
+			accountId,
+			workerName
+		);
 
-		if (previews_available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-				configPath: config.configPath,
-			});
+		if (
+			workerSubdomain.previews_enabled &&
+			workerSubdomain.preview_url_suffix
+		) {
 			const shortVersion = versionId.slice(0, 8);
-			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
+			// The API-provided suffix includes the leading "-" separator.
+			versionPreviewUrl = `https://${shortVersion}${workerSubdomain.preview_url_suffix}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 
 			if (props.previewAlias) {
-				versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}`;
+				versionPreviewAliasUrl = `https://${props.previewAlias}${workerSubdomain.preview_url_suffix}`;
 				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
 			}
 		}

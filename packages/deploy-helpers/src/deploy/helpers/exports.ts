@@ -17,9 +17,17 @@ export async function resolveExportsUploadPayload(
 		await resolveDoLifecyclePayload(props);
 	// Durable Object exports replace migrations. Worker exports can upload with
 	// either path, but not both.
-	const exports = {
+	const exports: NonNullable<CfWorkerInit["exports"]> = {
 		...partitionedExports.worker,
 		...(durableObjectExports ?? {}),
+		// Workflow settings are applied when `triggers deploy` provisions the
+		// Workflow; the upload API only accepts the type and name.
+		...Object.fromEntries(
+			Object.entries(partitionedExports.workflow).map(
+				([className, { name }]) =>
+					[className, { type: "workflow", name }] as const
+			)
+		),
 	};
 
 	return {

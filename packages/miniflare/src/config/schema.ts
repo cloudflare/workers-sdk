@@ -20,10 +20,12 @@ import {
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowExportSchema,
 	TailConsumerSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
 import { z } from "zod";
+import { DOContainerOptionsSchema } from "../plugins/do/options";
 import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
 import {
 	HttpOptions_Style,
@@ -36,7 +38,6 @@ import type {
 	RemoteProxyConnectionString,
 	WorkerdStructuredLog,
 } from "../index";
-import type { DOContainerOptions } from "../plugins/do";
 import type { UnsafeUniqueKey } from "../plugins/shared/constants";
 import type { Log } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
@@ -355,20 +356,14 @@ export const MiniflareDurableObjectExportSchema =
 	DurableObjectCreatedExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
-		container: z.custom<DOContainerOptions>().optional(),
+		container: DOContainerOptionsSchema.optional(),
 	});
 export const MiniflareDurableObjectExpectingTransferExportSchema =
 	DurableObjectExpectingTransferExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
-		container: z.custom<DOContainerOptions>().optional(),
+		container: DOContainerOptionsSchema.optional(),
 	});
-
-// const MiniflareWorkflowExportSchema = z.strictObject({
-// 	type: z.literal("workflow"),
-// 	name: z.string(),
-// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-// });
 
 // Compose the unions explicitly (rather than filtering `ExportSchema.options`)
 // so the inferred type is precise: the miniflare-extended "created" variant
@@ -378,7 +373,7 @@ const MiniflareLiveExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
 	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
-	// MiniflareWorkflowExportSchema,
+	WorkflowExportSchema,
 ]);
 const MiniflareAcceptedExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
@@ -387,7 +382,7 @@ const MiniflareAcceptedExportSchema = z.union([
 	DurableObjectTransferredExportSchema,
 	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
-	// MiniflareWorkflowExportSchema,
+	WorkflowExportSchema,
 ]);
 
 const MiniflareExportsSchema = z

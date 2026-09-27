@@ -3,8 +3,11 @@ import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
 import type { TriggerDeployment } from "../shared/types";
 import type { Config, ComplianceConfig } from "@cloudflare/workers-utils";
 
+export type QueueJurisdiction = "eu" | "us" | "fedramp";
+
 export interface PostQueueBody {
 	queue_name: string;
+	jurisdiction?: QueueJurisdiction;
 	settings?: QueueSettings;
 }
 
@@ -25,6 +28,7 @@ export interface PostQueueResponse {
 export interface QueueResponse {
 	queue_id: string;
 	queue_name: string;
+	jurisdiction?: QueueJurisdiction;
 	created_on: string;
 	modified_on: string;
 	producers: Producer[];

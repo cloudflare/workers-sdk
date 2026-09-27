@@ -15,7 +15,7 @@ import { getOrCreateTemporaryPreviewAccount } from "./temporary";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
 import type { AuthConfigStorage } from "./config-file/auth";
 import type { TemporaryPreviewAccount } from "./config-file/temporary";
-import type { OAuthFlowContext } from "./context";
+import type { OAuthFlowContext, TemporaryAccountRequest } from "./context";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
@@ -177,7 +177,10 @@ export interface OAuthFlowAPI {
 	 * process (e.g. in tests) — each invocation starts a fresh temporary session.
 	 * No-op when the flow was created without a `temporary` context.
 	 */
-	setTemporaryAllowed(allowed: boolean): void;
+	setTemporaryAllowed(
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	): void;
 
 	/**
 	 * Whether `--temporary` is permitted for this invocation (see
@@ -226,7 +229,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		typeof ctx.clientId === "function" ? ctx.clientId() : ctx.clientId;
 	const consent = ctx.consent;
 
-	let temporaryAllowed = false;
+	let temporaryRequest: TemporaryAccountRequest | undefined;
 	let activeTemporaryAccount: TemporaryPreviewAccount | undefined;
 
 	const redirectUrl = new URL(ctx.redirectUri);
@@ -509,13 +512,17 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		});
 	}
 
-	function setTemporaryAllowed(allowed: boolean): void {
-		temporaryAllowed = allowed && ctx.temporary !== undefined;
+	function setTemporaryAllowed(
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	): void {
+		temporaryRequest =
+			allowed && ctx.temporary !== undefined ? (request ?? {}) : undefined;
 		activeTemporaryAccount = undefined;
 	}
 
 	function isTemporaryAllowed(): boolean {
-		return temporaryAllowed;
+		return temporaryRequest !== undefined;
 	}
 
 	function getActiveTemporaryAccount(): TemporaryPreviewAccount | undefined {
@@ -536,6 +543,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		const result = await getOrCreateTemporaryPreviewAccount({
 			...ctx.temporary,
 			logger: ctx.logger,
+			...(temporaryRequest ? { request: temporaryRequest } : {}),
 		});
 		activeTemporaryAccount = result.account;
 		return result;

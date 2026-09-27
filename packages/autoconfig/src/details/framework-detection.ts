@@ -13,7 +13,7 @@ import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import chalk from "chalk";
 import dedent from "ts-dedent";
-import { isKnownFramework } from "../frameworks";
+import { isFrameworkSupported, isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type { PackageManager } from "@cloudflare/workers-utils";
@@ -104,12 +104,19 @@ export async function detectFramework(
 		context
 	);
 	if (maybeDetectedFramework && target === "cf") {
+		const frameworkId = maybeDetectedFramework.framework.id;
+		const frameworkIsSupported =
+			isKnownFramework(frameworkId) && isFrameworkSupported(frameworkId);
+
 		// @netlify/build-info prefers package.json scripts over the framework's
-		// built-in commands. cf needs the direct commands so it can delegate without
-		// invoking a script that may itself call cf.
-		const detectedFrameworkSettings = project.frameworks
-			.get(maybeDetectedFramework.baseDirectory ?? "")
-			?.find(({ id }) => id === maybeDetectedFramework.framework.id);
+		// built-in commands. cf needs direct commands for supported frameworks, but
+		// delegates unsupported frameworks to an installed Cloudflare dev server and
+		// must not execute their generic package scripts.
+		const detectedFrameworkSettings = frameworkIsSupported
+			? project.frameworks
+					.get(maybeDetectedFramework.baseDirectory ?? "")
+					?.find(({ id }) => id === frameworkId)
+			: undefined;
 		maybeDetectedFramework.devCommand = detectedFrameworkSettings?.dev?.command;
 		maybeDetectedFramework.buildCommand =
 			detectedFrameworkSettings?.build?.command;

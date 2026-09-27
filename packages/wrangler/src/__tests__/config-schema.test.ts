@@ -6,6 +6,42 @@ type WranglerSchema = {
 	$ref?: string;
 	allOf?: { $ref: string }[];
 	allowTrailingCommas?: boolean;
+	definitions?: {
+		DurableObjectMigration?: { properties?: Record<string, unknown> };
+		RawDurableObjectsConfig?: {
+			properties?: Record<string, unknown>;
+			required?: string[];
+		};
+		DurableObjectCodeUpdateStrategy?: {
+			properties?: {
+				mode?: { enum?: string[] };
+				max_delay?: {
+					type?: string;
+					minimum?: number;
+					maximum?: number;
+					multipleOf?: number;
+					default?: number;
+				};
+			};
+			required?: string[];
+		};
+		ContainerApp?: {
+			properties?: {
+				images?: {
+					additionalProperties?: { $ref?: string };
+				};
+				scheduling_policy?: {
+					enum?: string[];
+				};
+			};
+		};
+		DurableObjectContainerImage?: {
+			anyOf?: {
+				properties?: Record<string, unknown>;
+				required?: string[];
+			}[];
+		};
+	};
 };
 
 function readSchema(): WranglerSchema {
@@ -25,5 +61,77 @@ describe("config schema", () => {
 		expect(schema.allowTrailingCommas).toBe(true);
 		expect(schema).not.toHaveProperty("$ref");
 		expect(schema.allOf).toEqual([{ $ref: "#/definitions/RawConfig" }]);
+	});
+
+	it("describes every migration operation wrangler accepts", ({ expect }) => {
+		const schema = readSchema();
+		const migration = schema.definitions?.DurableObjectMigration;
+
+		// The schema is generated from `DurableObjectMigration`, so anything missing
+		// from that type is reported by editors as an unknown key, even though
+		// `normalizeAndValidateConfig` accepts it and the deploy succeeds. All four
+		// operations below are documented on the legacy class-migrations page.
+		expect(Object.keys(migration?.properties ?? {})).toEqual(
+			expect.arrayContaining([
+				"new_classes",
+				"new_sqlite_classes",
+				"renamed_classes",
+				"transferred_classes",
+				"deleted_classes",
+			])
+		);
+	});
+
+	it("includes Durable Object code update strategy configuration", ({
+		expect,
+	}) => {
+		const schema = readSchema();
+		const durableObjects = schema.definitions?.RawDurableObjectsConfig;
+		const strategy = schema.definitions?.DurableObjectCodeUpdateStrategy;
+
+		expect(durableObjects?.properties).toHaveProperty("bindings");
+		expect(durableObjects?.properties).toHaveProperty("code_update_strategy");
+		expect(durableObjects?.required ?? []).not.toContain("bindings");
+		expect(strategy?.properties?.mode?.enum).toEqual(["immediate", "deferred"]);
+		expect(strategy?.properties?.max_delay?.type).toBe("number");
+		expect(strategy?.properties?.max_delay?.minimum).toBe(0);
+		expect(strategy?.properties?.max_delay?.maximum).toBe(86400);
+		expect(strategy?.properties?.max_delay?.multipleOf).toBe(0.001);
+		expect(strategy?.properties?.max_delay?.default).toBe(300);
+		expect(strategy?.required).toContain("mode");
+	});
+
+	it("includes Durable Object-managed container configuration", ({
+		expect,
+	}) => {
+		const schema = readSchema();
+		const container = schema.definitions?.ContainerApp;
+		const image = schema.definitions?.DurableObjectContainerImage;
+
+		expect(container?.properties?.scheduling_policy?.enum).toContain(
+			"durable_object"
+		);
+		expect(container?.properties?.images?.additionalProperties?.$ref).toBe(
+			"#/definitions/DurableObjectContainerImage"
+		);
+		expect(image?.anyOf?.map((variant) => variant.required)).toEqual([
+			["dockerfile"],
+			["image"],
+		]);
+		const dockerfile = image?.anyOf?.find((variant) =>
+			variant.required?.includes("dockerfile")
+		);
+		const registry = image?.anyOf?.find((variant) =>
+			variant.required?.includes("image")
+		);
+		expect(dockerfile?.properties?.build_context).toMatchObject({
+			type: "string",
+		});
+		expect(dockerfile?.properties?.build_vars).toMatchObject({
+			type: "object",
+			additionalProperties: { type: "string" },
+		});
+		expect(registry?.properties).not.toHaveProperty("build_context");
+		expect(registry?.properties).not.toHaveProperty("build_vars");
 	});
 });

@@ -573,7 +573,6 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(workerScript),
@@ -605,7 +604,6 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(workerScript),
@@ -637,7 +635,6 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(workerScript),

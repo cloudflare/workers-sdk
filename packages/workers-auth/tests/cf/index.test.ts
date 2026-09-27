@@ -45,7 +45,7 @@ describe("cf auth layer", () => {
 			login: "cf auth login",
 			whoami: "cf auth whoami",
 			createProfile: "cf auth create",
-			deviceLogin: "cf auth login --device",
+			deviceLogin: "cf auth login",
 		});
 		expect(CF_CLI.displayName).toBe("cf");
 	});

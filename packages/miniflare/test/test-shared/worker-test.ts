@@ -56,7 +56,6 @@ export async function runWorkerTest(
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					compatibilityFlags: ["nodejs_compat", "experimental"],

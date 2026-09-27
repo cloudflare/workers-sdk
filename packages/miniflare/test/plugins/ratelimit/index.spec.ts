@@ -61,7 +61,6 @@ function createRateLimitOptions(options: {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					...(options.env ? { env: options.env } : {}),
@@ -77,7 +76,6 @@ test("ratelimit", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -128,7 +126,6 @@ test("ratelimit validation", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -201,7 +198,6 @@ test("ratelimit counters are keyed by namespace_id", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {

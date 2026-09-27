@@ -1,0 +1,436 @@
+import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { describe, it, vi } from "vitest";
+import {
+	getContainerMetadata,
+	getContainerMetadataForRolloutSkip,
+} from "../src/deploy/helpers/container-metadata";
+import { fetchVersions } from "../src/deploy/helpers/versions-api";
+import type {
+	ApiDeployment,
+	ApiVersion,
+} from "../src/deploy/helpers/versions-types";
+import type {
+	CfWorkerInit,
+	Config,
+	ContainerApp,
+	DurableObjectContainerApp,
+} from "@cloudflare/workers-utils";
+
+vi.mock("../src/deploy/helpers/versions-api");
+
+function containerConfig(
+	options: {
+		containerMetadataConfig?: CfWorkerInit["containers"];
+		durableObjectContainerConfig?: DurableObjectContainerApp[];
+	} = {}
+) {
+	const metadata = Object.hasOwn(options, "containerMetadataConfig")
+		? options.containerMetadataConfig
+		: [];
+	return metadata === undefined
+		? undefined
+		: [
+				...(metadata as ContainerApp[]),
+				...(options.durableObjectContainerConfig ?? []),
+			];
+}
+
+describe("getContainerMetadata", () => {
+	it("returns undefined when container configuration is absent", ({
+		expect,
+	}) => {
+		expect(
+			getContainerMetadata(
+				containerConfig({ containerMetadataConfig: undefined })
+			)
+		).toBeUndefined();
+	});
+
+	it("returns an empty list when container configuration is explicitly empty", ({
+		expect,
+	}) => {
+		expect(getContainerMetadata(containerConfig({}))).toEqual([]);
+	});
+
+	it("includes standard container metadata", ({ expect }) => {
+		const metadata = getContainerMetadata(
+			containerConfig({
+				containerMetadataConfig: [
+					{
+						class_name: "Scheduled",
+						name: "scheduled-app",
+					},
+				],
+			})
+		);
+
+		expect(metadata).toEqual([
+			{ name: "scheduled-app", class_name: "Scheduled" },
+		]);
+	});
+
+	it("preserves standard container metadata without an explicit class name", ({
+		expect,
+	}) => {
+		const metadata = getContainerMetadata(
+			containerConfig({
+				containerMetadataConfig: [{ name: "scheduled-app" }],
+			})
+		);
+
+		expect(metadata).toEqual([{ name: "scheduled-app" }]);
+	});
+
+	it("includes the resolved name when no Durable Object-managed images are configured", ({
+		expect,
+	}) => {
+		const metadata = getContainerMetadata(
+			containerConfig({
+				durableObjectContainerConfig: [
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+					},
+				],
+			})
+		);
+
+		expect(metadata).toEqual([{ name: "sandbox-app", class_name: "Sandbox" }]);
+	});
+
+	it("resolves managed export links while preserving scheduler metadata and order", ({
+		expect,
+	}) => {
+		const containers: ContainerApp[] = [
+			{
+				name: "sandbox-app",
+				scheduling_policy: "durable_object",
+				images: {
+					sandbox: { dockerfile: "./container/Dockerfile" },
+				},
+			},
+			{ name: "scheduled-app", image: "./Dockerfile" },
+		];
+		const metadata = getContainerMetadata(
+			containers,
+			{
+				Sandbox: {
+					sandbox:
+						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			},
+			{
+				exports: {
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "sandbox-app",
+					},
+					Scheduled: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "scheduled-app",
+					},
+				},
+			}
+		);
+
+		expect(metadata).toEqual([
+			{
+				name: "sandbox-app",
+				class_name: "Sandbox",
+				images: {
+					sandbox:
+						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			},
+			{ name: "scheduled-app" },
+		]);
+		expect(containers[0].class_name).toBeUndefined();
+	});
+
+	it("keeps Durable Object metadata without images when preparation is skipped", ({
+		expect,
+	}) => {
+		const metadata = getContainerMetadata(
+			containerConfig({
+				durableObjectContainerConfig: [
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+						images: {
+							sandbox: { dockerfile: "./container/Dockerfile" },
+						},
+					},
+				],
+			}),
+			{},
+			{ allowUnprepared: true }
+		);
+
+		expect(metadata).toEqual([{ name: "sandbox-app", class_name: "Sandbox" }]);
+	});
+});
+
+describe("getContainerMetadataForRolloutSkip", () => {
+	const deployedImages = {
+		app: "registry.cloudflare.com/account/app@sha256:" + "a".repeat(64),
+	};
+	const deployedContainers: NonNullable<CfWorkerInit["containers"]> = [
+		{ name: "scheduled-app", class_name: "Scheduled" },
+		{
+			name: "managed-app",
+			class_name: "Managed",
+			images: deployedImages,
+		},
+	];
+	function version(
+		id: string,
+		containers: CfWorkerInit["containers"],
+		hasUserBinding = false
+	): ApiVersion {
+		return {
+			id,
+			number: 1,
+			metadata: {
+				created_on: "",
+				modified_on: "",
+				source: "api",
+				author_id: "",
+				author_email: "",
+			},
+			resources: {
+				bindings: hasUserBinding
+					? [
+							{
+								type: "json",
+								name: "USER_IMAGES",
+								json: { Managed: deployedImages },
+							},
+						]
+					: [],
+				script: { etag: "", handlers: [], last_deployed_from: "api" },
+				script_runtime: { usage_model: "standard", limits: {}, containers },
+			},
+		};
+	}
+	function recover(config: Config, versions: ApiVersion[]) {
+		const { containers, ...workerConfig } = config;
+		vi.mocked(fetchVersions).mockResolvedValue(versions);
+		return getContainerMetadataForRolloutSkip(workerConfig, containers, {
+			accountId: "account",
+			scriptName: "worker",
+			dispatchNamespace: undefined,
+			workerExists: true,
+			latestDeployment: {
+				id: "deployment",
+				source: "api",
+				strategy: "percentage",
+				author_email: "",
+				created_on: "",
+				versions: versions.map(({ id }) => ({
+					version_id: id,
+					percentage: 100 / versions.length,
+				})),
+			},
+		});
+	}
+
+	it("ignores other user variables even when their presence differs", async ({
+		expect,
+	}) => {
+		const userVersion = version("one", undefined);
+		userVersion.resources.bindings = [
+			{ name: "USER_IMAGES", type: "json", json: { user: true } },
+		];
+		const result = await recover({} as Config, [
+			userVersion,
+			version("two", undefined),
+		]);
+		expect(result.containers).toBeUndefined();
+	});
+	it("preserves Container images without a companion marker", async ({
+		expect,
+	}) => {
+		const result = await recover({} as Config, [
+			version("one", deployedContainers, true),
+		]);
+		expect(result.containers).toEqual(deployedContainers);
+	});
+	it("accepts equal metadata with different object key order", async ({
+		expect,
+	}) => {
+		const one = version(
+			"one",
+			[
+				{
+					name: "managed",
+					class_name: "Managed",
+					images: { a: "one", b: "two" },
+				},
+			],
+			true
+		);
+		const two = version(
+			"two",
+			[
+				{
+					images: { b: "two", a: "one" },
+					class_name: "Managed",
+					name: "managed",
+				},
+			],
+			true
+		);
+		const result = await recover({} as Config, [one, two]);
+		expect(result.containers).toEqual(one.resources.script_runtime.containers);
+	});
+	const emptyDeployment: ApiDeployment = {
+		id: "deployment",
+		source: "api",
+		strategy: "percentage",
+		author_email: "",
+		created_on: "",
+		versions: [],
+	};
+
+	it.for([undefined, emptyDeployment])(
+		"rejects an existing Worker without recoverable deployed versions: %j",
+		async (latestDeployment, { expect }) => {
+			await expect(
+				getContainerMetadataForRolloutSkip(
+					{} as Config,
+					containerConfig({ containerMetadataConfig: undefined }),
+					{
+						accountId: "account",
+						scriptName: "worker",
+						dispatchNamespace: undefined,
+						workerExists: true,
+						latestDeployment,
+					}
+				)
+			).rejects.toThrow("deployed Container metadata could not be recovered");
+			expect(fetchVersions).not.toHaveBeenCalled();
+		}
+	);
+
+	it("rejects an existing Worker without an account ID", async ({ expect }) => {
+		await expect(
+			getContainerMetadataForRolloutSkip(
+				{} as Config,
+				containerConfig({ containerMetadataConfig: undefined }),
+				{
+					accountId: undefined,
+					scriptName: "worker",
+					dispatchNamespace: undefined,
+					workerExists: true,
+					latestDeployment: undefined,
+				}
+			)
+		).rejects.toThrow("deployed Container metadata could not be recovered");
+	});
+
+	it.for([
+		{ workerExists: false, dryRun: false, accountId: "account" },
+		{ workerExists: true, dryRun: true, accountId: "account" },
+		{ workerExists: true, dryRun: true, accountId: undefined },
+	])(
+		"keeps local metadata for first deployments and dry runs: %j",
+		async (options, { expect }) => {
+			const result = await getContainerMetadataForRolloutSkip(
+				{
+					...defaultWranglerConfig,
+					exports: {
+						Sandbox: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "sandbox",
+						},
+					},
+				},
+				containerConfig({
+					durableObjectContainerConfig: [
+						{
+							name: "sandbox",
+							scheduling_policy: "durable_object",
+							images: { app: { dockerfile: "./Dockerfile" } },
+						},
+					],
+				}),
+				{
+					...options,
+					scriptName: "worker",
+					dispatchNamespace: undefined,
+					latestDeployment: undefined,
+				}
+			);
+			expect(result).toEqual({
+				containers: [{ name: "sandbox", class_name: "Sandbox" }],
+			});
+			expect(fetchVersions).not.toHaveBeenCalled();
+		}
+	);
+
+	it.for([undefined, []])(
+		"recovers deployed metadata with local containers %j",
+		async (containers, { expect }) => {
+			const result = await recover({ containers } as unknown as Config, [
+				version("one", deployedContainers, true),
+			]);
+			expect(result.containers).toEqual(deployedContainers);
+		}
+	);
+
+	it.for([undefined, []])(
+		"preserves deployed containers %j without adopting local additions or inheriting an absent binding",
+		async (containers, { expect }) => {
+			const result = await recover(
+				{
+					containers: [
+						{
+							name: "added-app",
+							scheduling_policy: "durable_object",
+							images: { app: { dockerfile: "./Dockerfile" } },
+						},
+					],
+				} as unknown as Config,
+				[version("one", containers)]
+			);
+			expect(result.containers).toEqual(containers);
+		}
+	);
+
+	it("preserves native Container metadata without an experimental image binding", async ({
+		expect,
+	}) => {
+		const result = await recover({} as Config, [
+			version("one", deployedContainers),
+		]);
+		expect(result.containers).toEqual(deployedContainers);
+	});
+
+	it("accepts different user bindings when native Container metadata agrees", async ({
+		expect,
+	}) => {
+		expect(
+			await recover({} as Config, [
+				version("one", deployedContainers, true),
+				version("two", deployedContainers),
+			])
+		).toEqual({ containers: deployedContainers });
+	});
+
+	it.for([undefined, [], [deployedContainers[0]]])(
+		"rejects differing deployed metadata %j across active versions",
+		async (containers, { expect }) => {
+			await expect(
+				recover({} as Config, [
+					version("one", deployedContainers, true),
+					version("two", containers),
+				])
+			).rejects.toThrow("identical Container metadata");
+		}
+	);
+});

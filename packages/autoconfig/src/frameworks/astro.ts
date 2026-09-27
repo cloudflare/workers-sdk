@@ -24,6 +24,8 @@ import type {
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 export class Astro extends Framework {
+	override readonly supportsMode = true;
+
 	async configure({
 		outputDir,
 		dryRun,

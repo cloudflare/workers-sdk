@@ -281,14 +281,18 @@ describe("the real workspace", () => {
 			    "@cloudflare/build-output-utils",
 			    "@cloudflare/cli-shared-helpers",
 			    "@cloudflare/pages-shared",
+			    "@cloudflare/runtime-types",
 			    "@cloudflare/workers-auth",
 			    "wrangler",
 			  ],
 			  [
 			    "@cloudflare/autoconfig",
-			    "@cloudflare/deploy-helpers",
+			    "@cloudflare/containers-shared",
 			    "@cloudflare/vite-plugin",
 			    "@cloudflare/vitest-plugin",
+			  ],
+			  [
+			    "@cloudflare/deploy-helpers",
 			  ],
 			]
 		`);
@@ -466,6 +470,7 @@ describe("waitForPropagation()", () => {
 	it("should poll until every version resolves", async ({ expect }) => {
 		const registry = createFakeRegistry({ published: { a: ["1.0.0"] } });
 		const clock = createFakeClock();
+		const logs: string[] = [];
 		let polls = 0;
 		const fetchImpl: FetchLike = async (url, init) => {
 			if (!url.includes("/-/tarball-")) {
@@ -484,10 +489,20 @@ describe("waitForPropagation()", () => {
 				{ name: "a", version: "1.0.0" },
 				{ name: "b", version: "1.0.0" },
 			],
-			{ ...baseOptions, fetchImpl, ...clock }
+			{
+				...baseOptions,
+				fetchImpl,
+				...clock,
+				log: (message) => logs.push(message),
+			}
 		);
 
 		expect(clock.now()).toBe(10_000);
+		expect(logs).toEqual([
+			"Waiting for 2 package version(s) to become resolvable...",
+			"  a@1.0.0: resolvable (0ms)",
+			"  b@1.0.0: resolvable (10000ms)",
+		]);
 	});
 
 	it("should keep waiting while a version resolves but its tarball is missing", async ({

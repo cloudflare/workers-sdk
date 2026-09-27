@@ -23,22 +23,16 @@ const RE_NODE_MODULES = /[/\\]node_modules[/\\]/;
 const depsStore = new AsyncLocalStorage<Set<string>>();
 
 /**
- * Dynamically import a worker config file from disk.
+ * Dynamically import a Cloudflare config file from disk.
  *
- * Returns all of the module's exports (keyed by export name, including
- * `default`), plus the set of file paths imported during resolution. Callers
- * are responsible for unwrapping function/promise/definition wrappers around
- * each export and validating them.
+ * Returns the module's default export plus the set of file paths imported
+ * during resolution.
  *
  * @param configPath Filesystem path to the config file. Relative paths are
  *   resolved against `process.cwd()`.
- * @param options.include When provided, only exports whose names are listed
- *   survive into the returned `exports` map. Filtering happens before any
- *   resolution or validation.
  */
 export async function loadConfig(
-	configPath: string,
-	options?: { include?: string[] }
+	configPath: string
 ): Promise<LoadConfigResult> {
 	registerConfigHooks();
 	const url = pathToFileURL(configPath).href;
@@ -47,24 +41,19 @@ export async function loadConfig(
 		dependencies,
 		() => import(url, { with: { [CF_ATTR]: CF_NO_CACHE_VALUE } })
 	);
-
-	const exports: Record<string, unknown> = {};
-	for (const [name, value] of Object.entries(mod as Record<string, unknown>)) {
-		if (options?.include && !options.include.includes(name)) {
-			continue;
-		}
-		exports[name] = value;
+	if (!("default" in mod)) {
+		throw new Error(
+			`The config file "${configPath}" does not have a default export. ` +
+				"Export your configuration with `export default defineConfig({ ... })`."
+		);
 	}
-
-	return { exports, dependencies };
+	const config = mod.default;
+	return { config, dependencies };
 }
 
 export interface LoadConfigResult {
-	/**
-	 * All exports of the config module, keyed by export name (including
-	 * `default`). Filtered by `options.include` when provided.
-	 */
-	exports: Record<string, unknown>;
+	/** The default export of the config module. */
+	config: unknown;
 	/**
 	 * Absolute file paths imported while resolving the config.
 	 * `cf-worker` entrypoints are NOT included — they are

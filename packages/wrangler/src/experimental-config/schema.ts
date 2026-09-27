@@ -25,6 +25,11 @@ const PythonModulesSchema = z.strictObject({
 	exclude: z.array(z.string()).optional(),
 });
 
+const TypesSchema = z.strictObject({
+	generate: z.boolean().optional(),
+	includeRuntime: z.boolean().optional(),
+});
+
 const DevSchema = z.strictObject({
 	ip: z.string().optional(),
 	port: z.number().optional(),
@@ -33,12 +38,6 @@ const DevSchema = z.strictObject({
 	localProtocol: z.enum(["http", "https"]).optional(),
 	upstreamProtocol: z.enum(["http", "https"]).optional(),
 	host: z.string().optional(),
-	types: z
-		.strictObject({
-			generate: z.boolean().optional(),
-			includeRuntime: z.boolean().optional(),
-		})
-		.optional(),
 	enableContainers: z.boolean().optional(),
 	containerEngine: z.string().optional(),
 });
@@ -68,6 +67,7 @@ export const WranglerConfigSchema = z.strictObject({
 	uploadSourceMaps: z.boolean().optional(),
 	build: BuildSchema.optional(),
 	assetsDirectory: z.string().optional(),
+	types: TypesSchema.optional(),
 	dev: DevSchema.optional(),
 	sendMetrics: z.boolean().optional(),
 });
