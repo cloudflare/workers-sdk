@@ -3992,7 +3992,7 @@ test.for(["GET", "POST", "PUT"])(
 				{
 					config: {
 						name: "",
-						compatibilityDate: "2026-09-21",
+						compatibilityDate: "2026-09-26",
 						manifest: singleModuleManifest(`
 			let counter = 0;
 			export default {
@@ -4051,7 +4051,7 @@ test("Miniflare: dispatchFetch closes idle runtime sockets before workerd", asyn
 			{
 				config: {
 					name: "",
-					compatibilityDate: "2025-05-01",
+					compatibilityDate: "2026-09-26",
 					manifest: singleModuleManifest(
 						'export default { fetch() { return new Response("ok"); } };'
 					),
@@ -4098,7 +4098,7 @@ test.for(["GET", "POST", "PUT"])(
 				{
 					config: {
 						name: "",
-						compatibilityDate: "2025-05-01",
+						compatibilityDate: "2026-09-26",
 						manifest: singleModuleManifest(`
 			import { abortIsolate } from "cloudflare:workers";
 			let counter = 1;
