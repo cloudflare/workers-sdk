@@ -130,19 +130,32 @@ export async function getAuthURL(
 
 /**
  * Refresh an access token from the remote service.
+ *
+ * @param logger - Logger for diagnostics.
+ * @param isNonInteractiveOrCI - Whether the environment is non-interactive.
+ * @param clientId - The OAuth client ID.
+ * @param storage - Auth config storage to read the refresh token from (used
+ *   only when `refreshToken` is not supplied).
+ * @param refreshToken - When provided, this value is sent instead of
+ *   re-reading from storage. Callers that already hold a snapshot of the
+ *   token should pass it here to avoid a TOCTOU race where a sibling
+ *   rotates the on-disk value between the caller's read and this function's
+ *   independent read.
+ * @returns The access context containing the new access token.
  */
 export async function exchangeRefreshTokenForAccessToken(
 	logger: OAuthFlowContext["logger"],
 	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
 	clientId: string,
-	storage: AuthConfigStorage
+	storage: AuthConfigStorage,
+	refreshToken?: string
 ): Promise<AccessContext> {
-	// Read the refresh token fresh from disk on every call so we always pick up
-	// the latest rotation written by a sibling Wrangler process.
-	const storedRefreshToken = readStoredAuthState({
-		warningLogger: logger,
-		storage,
-	}).refreshToken;
+	const storedRefreshToken = refreshToken
+		? { value: refreshToken }
+		: readStoredAuthState({
+				warningLogger: logger,
+				storage,
+			}).refreshToken;
 	if (!storedRefreshToken) {
 		logger.warn("No refresh token is present.");
 	}
