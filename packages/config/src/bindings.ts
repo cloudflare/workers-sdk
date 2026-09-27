@@ -635,6 +635,8 @@ interface WorkflowBindingOptions<
 	TWorker extends WorkerReference = WorkerReference,
 	TExportName extends WorkflowExportName<TWorker> = WorkflowExportName<TWorker>,
 > {
+	/** The name of the Workflow. */
+	name: string;
 	/** The name or config of the Worker that defines the Workflow. */
 	worker: TWorker;
 	/** The exported class name of the Workflow. */
@@ -642,9 +644,9 @@ interface WorkflowBindingOptions<
 }
 
 /**
- * Binding to a Workflow. `worker` is the name or config of the Worker that
- * defines the Workflow; `exportName` is the exported `WorkflowEntrypoint`
- * class name.
+ * Binding to a Workflow. `name` identifies the Workflow, `worker` is the name
+ * or config of the Worker that defines it, and `exportName` is the exported
+ * `WorkflowEntrypoint` class name.
  */
 export interface WorkflowBinding<
 	TWorker extends WorkerReference = WorkerReference,
@@ -851,13 +853,17 @@ export interface Bindings {
 	): WorkerBinding<TWorker, NoInfer<TExportName>>;
 	/** Binding to a Worker Loader. */
 	workerLoader(): WorkerLoaderBinding;
-	// TODO: re-enable when workflow bindings return.
-	// /**
-	//  * Create a Workflow binding.
-	//  * `worker` may be a Worker config reference or a Worker name.
-	//  * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
-	//  */
-	// workflow(options: WorkflowBindingOptions): WorkflowBinding;
+	/**
+	 * Create a Workflow binding.
+	 * `worker` may be a Worker config reference or a Worker name.
+	 * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
+	 */
+	workflow<
+		TWorker extends WorkerReference,
+		TExportName extends WorkflowExportName<TWorker>,
+	>(
+		options: WorkflowBindingOptions<TWorker, TExportName>
+	): WorkflowBinding<TWorker, NoInfer<TExportName>>;
 }
 
 export const bindings = {
@@ -907,6 +913,5 @@ export const bindings = {
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),
 	workerLoader: () => ({ type: "worker-loader" }),
-	// TODO: re-enable when workflow bindings return.
-	// workflow: (options) => ({ type: "workflow", ...options }),
+	workflow: (options) => ({ type: "workflow", ...options }),
 } as Bindings;

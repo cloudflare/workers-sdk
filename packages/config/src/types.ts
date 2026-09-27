@@ -42,8 +42,7 @@ import type {
 	VpcServiceBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
-	// TODO: re-enable when workflow bindings return.
-	// WorkflowBinding,
+	WorkflowBinding,
 } from "./bindings";
 import type { ConfigInput } from "./definition";
 import type {
@@ -124,9 +123,8 @@ type Binding =
 	| VpcNetworkBinding
 	| VpcServiceBinding
 	| WorkerBinding
-	| WorkerLoaderBinding;
-// TODO: re-enable when workflow bindings return.
-// | WorkflowBinding;
+	| WorkerLoaderBinding
+	| WorkflowBinding;
 
 /**
  * Union of all trigger definitions accepted in `triggers`.
