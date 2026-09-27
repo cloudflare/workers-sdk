@@ -1,6 +1,8 @@
 import assert from "node:assert";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { allFrameworksInfos, staticFramework } from "./all-frameworks";
 import { NoOpFramework } from "./no-op";
+import type { AutoConfigTarget } from "../context";
 import type { Framework } from "./framework-class";
 
 export type { Framework, PackageJsonScriptsOverrides } from "./framework-class";
@@ -58,6 +60,34 @@ export function isFrameworkSupported(
 	return targetedFramework.supported;
 }
 
+/**
+ * Validates that a framework supports the requested autoconfig target.
+ *
+ * @param framework - The detected framework.
+ * @param target - The requested autoconfig target.
+ * @throws {AutoConfigFrameworkConfigurationError} If a Wrangler-only framework is targeted by `cf`.
+ */
+export function validateFrameworkTargetSupport(
+	framework: Framework,
+	target: AutoConfigTarget
+): void {
+	if (target !== "cf") {
+		return;
+	}
+
+	const frameworkInfo = allFrameworksInfos.find(
+		({ id }) => id === framework.id
+	);
+	if (frameworkInfo?.supported !== true || frameworkInfo.supportsCf) {
+		return;
+	}
+
+	throw new AutoConfigFrameworkConfigurationError(
+		`cf does not support ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
+		{ telemetryMessage: "autoconfig framework unsupported for cf" }
+	);
+}
+
 export type FrameworkInfo = {
 	id: string;
 	name: string;
@@ -65,6 +95,7 @@ export type FrameworkInfo = {
 	| { supported: false }
 	| {
 			supported: true;
+			supportsCf: boolean;
 			class: typeof Framework;
 			frameworkPackageInfo: AutoConfigFrameworkPackageInfo;
 	  }

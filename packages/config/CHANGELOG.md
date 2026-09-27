@@ -1,5 +1,13 @@
 # @cloudflare/config
 
+## 0.19.0
+
+### Minor Changes
+
+- [#15874](https://github.com/cloudflare/workers-sdk/pull/15874) [`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use camelCase for Workflow export retention settings
+
+  The experimental `@cloudflare/config` API now accepts `defaultRetention`, `successRetention`, and `errorRetention`, consistently with its other authored configuration fields. These settings are converted to Wrangler's snake_case configuration shape at the integration boundary.
+
 ## 0.18.0
 
 ### Minor Changes

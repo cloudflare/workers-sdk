@@ -424,7 +424,9 @@ describe("WorkflowBinding", () => {
 	describe("createBatch()", () => {
 		it("should create multiple instances in a batch", async ({ expect }) => {
 			const binding = createBinding();
-			const ids = ["batch-1", "batch-2", "batch-3"];
+			// Unique per attempt: createBatch() skips existing IDs, so fixed IDs would
+			// make a vitest retry return [] after a failed first attempt.
+			const ids = [1, 2, 3].map((n) => uniqueId(`batch-${n}`));
 			setTestWorkflowCallback(async () => "done");
 
 			const results = await binding.createBatch(ids.map((id) => ({ id })));
