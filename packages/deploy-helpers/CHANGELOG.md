@@ -1,5 +1,104 @@
 # @cloudflare/deploy-helpers
 
+## 0.18.1
+
+### Patch Changes
+
+- Updated dependencies [[`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff), [`8dc53ae`](https://github.com/cloudflare/workers-sdk/commit/8dc53aec0d1a4133cd8c599b814cac0da30b4bb8), [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f), [`4c2993b`](https://github.com/cloudflare/workers-sdk/commit/4c2993b898c8df4ea6799897803c2c5ef18c5847)]:
+  - @cloudflare/config@0.20.0
+  - miniflare@5.20260926.0-alpha
+  - @cloudflare/containers-shared@0.20.3
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.18.0
+
+### Minor Changes
+
+- [#15658](https://github.com/cloudflare/workers-sdk/pull/15658) [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b) Thanks [@jqmmes](https://github.com/jqmmes)! - Add Durable Objects code update strategies to Worker deployments
+
+  Use `--durable-objects-code-update-mode immediate` with `wrangler deploy`, `wrangler versions deploy`, and `wrangler rollback` to update code without waiting for active instances to hibernate. Use `--durable-objects-code-update-mode deferred 30s` to set a maximum delay, or configure `durable_objects.code_update_strategy` with `mode` and `max_delay`. When unset, the strategy defaults to deferred with a 5-minute maximum delay; delays cannot exceed 24 hours and must use millisecond precision.
+
+### Patch Changes
+
+- [#15870](https://github.com/cloudflare/workers-sdk/pull/15870) [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Keep Node.js ESM packages working when consumers rebundle them as CommonJS
+
+  Node.js-targeted ESM bundles now provide a real `require` implementation for bundled CommonJS dependencies. This avoids downstream patches for dynamic require calls and keeps the packages usable when a consumer rebundles them to CommonJS.
+
+- Updated dependencies [[`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33), [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`ee2b200`](https://github.com/cloudflare/workers-sdk/commit/ee2b200ff1e8edb5d5f2acb2bf45ffbdcb59f7c1), [`c91279b`](https://github.com/cloudflare/workers-sdk/commit/c91279b497ae6195f911b17ee3da3b7af28c2f17), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b), [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd)]:
+  - @cloudflare/config@0.19.0
+  - @cloudflare/workers-utils@0.44.0
+  - miniflare@5.20260925.0-alpha
+  - @cloudflare/cli-shared-helpers@0.2.0
+  - @cloudflare/containers-shared@0.20.2
+
+## 0.17.0
+
+### Minor Changes
+
+- [#15822](https://github.com/cloudflare/workers-sdk/pull/15822) [`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Support Containers in Worker Preview deployments with the Build Output.
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+  - @cloudflare/cli-shared-helpers@0.1.39
+  - @cloudflare/config@0.18.0
+  - @cloudflare/containers-shared@0.20.1
+  - miniflare@5.20260923.0-alpha
+
+## 0.16.0
+
+### Minor Changes
+
+- [#15792](https://github.com/cloudflare/workers-sdk/pull/15792) [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f) Thanks [@flakey5](https://github.com/flakey5)! - Configure SSH for experimental Durable Object-managed Containers
+
+  Set `containers[].ssh` and `containers[].authorized_keys` when using `scheduling_policy: "durable_object"`. These are application-wide settings that follow the same rules as the existing Durable Object-managed Container settings: normal deployments create missing applications and update explicitly configured values, while omitted settings preserve the existing application configuration.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "containers": [
+      {
+        "name": "sandbox",
+        "class_name": "Sandbox",
+        "scheduling_policy": "durable_object",
+        "ssh": { "enabled": true },
+        "authorized_keys": [
+          { "name": "laptop", "public_key": "ssh-ed25519 AAAA..." }
+        ]
+      }
+    ]
+  }
+  ```
+
+- [#15779](https://github.com/cloudflare/workers-sdk/pull/15779) [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2) Thanks [@Naapperas](https://github.com/Naapperas)! - Support `workflow` entries in the `exports` configuration map
+
+  A Worker can now declare the Workflows it defines in `exports`, keyed by the `WorkflowEntrypoint` class name:
+
+  ```jsonc
+  {
+    "exports": {
+      "MyWorkflow": {
+        "type": "workflow",
+        "name": "my-workflow",
+        "limits": { "steps": 100 },
+        "schedules": "0 * * * *"
+      }
+    }
+  }
+  ```
+
+  A `workflow` export accepts the same settings as a `workflows` binding: `limits`, `concurrency`, `schedules`, and `default_retention`. `wrangler deploy` and `wrangler versions upload` send these entries to the upload API by name, and `wrangler deploy` and `wrangler triggers deploy` provision the Workflow with its settings, just as they do for `workflows` bindings owned by the Worker. A Workflow may be declared both as a binding and as an export, as long as both declarations use the same class and do not set the same setting to different values. A binding to another Worker's Workflow cannot share a name with an export. `@cloudflare/config` adds the matching `exports.workflow()` helper. Local development does not yet act on these entries.
+
+### Patch Changes
+
+- Updated dependencies [[`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7), [`44f5295`](https://github.com/cloudflare/workers-sdk/commit/44f52951a699f77a35fa5d3b0ba1d33c7e2e3a31), [`be72815`](https://github.com/cloudflare/workers-sdk/commit/be728157f7b1f59f5878d09ca4f23b96f338f75d), [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`940c692`](https://github.com/cloudflare/workers-sdk/commit/940c6925b887faa4f43eccc957766385f6cc2d47), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - miniflare@5.20260923.0-alpha
+  - @cloudflare/workers-utils@0.42.0
+  - @cloudflare/containers-shared@0.20.0
+  - @cloudflare/config@0.18.0
+  - @cloudflare/cli-shared-helpers@0.1.38
+
 ## 0.15.1
 
 ### Patch Changes

@@ -117,6 +117,7 @@ async function toEnvironment(
 		deploymentConfig.durable_object_namespaces ?? {}
 	)) {
 		configObj.durable_objects ??= { bindings: [] };
+		configObj.durable_objects.bindings ??= [];
 		if (ns.class_name && ns.class_name !== "") {
 			configObj.durable_objects.bindings.push({
 				name: name,

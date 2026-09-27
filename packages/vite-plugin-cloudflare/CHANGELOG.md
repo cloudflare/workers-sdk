@@ -1,5 +1,61 @@
 # @cloudflare/vite-plugin
 
+## 1.61.0
+
+### Minor Changes
+
+- [#15856](https://github.com/cloudflare/workers-sdk/pull/15856) [`4c2993b`](https://github.com/cloudflare/workers-sdk/commit/4c2993b898c8df4ea6799897803c2c5ef18c5847) Thanks [@Naapperas](https://github.com/Naapperas)! - Support Workflows declared in `exports` on `ctx.exports` in local development
+
+  A Workflow declared in a Worker's `exports` is now available on `ctx.exports` in `wrangler dev`, the Vite plugin and the Vitest plugin, with the same API as a Workflow binding:
+
+  ```ts
+  const instance = await ctx.exports.MyWorkflow.create({
+    params: { name: "World" },
+  });
+  ```
+
+  `ctx.exports` and `workflows` bindings with the same Workflow `name` share their instances, including instances created before the Workflow was declared in `exports`. Two Workers can't export the same Workflow name, and a binding to an exported Workflow must refer to the Worker and class that export it. `getPlatformProxy()` ignores Workflows declared in `exports`, since it doesn't run the Worker's code.
+
+  `wrangler workflows` commands run with `--local` also work with Workflows declared only in `exports`, without a `workflows` binding.
+
+  In the Vitest plugin, `introspectWorkflow()` and `introspectWorkflowInstance()` still need a Workflow binding, and now explain how to add one when passed a Workflow from `ctx.exports`. Instances created through `ctx.exports` are introspected too. A `workflows` binding whose `script_name` is the Worker's own name now resolves to the Worker itself again.
+
+### Patch Changes
+
+- Updated dependencies [[`8dc53ae`](https://github.com/cloudflare/workers-sdk/commit/8dc53aec0d1a4133cd8c599b814cac0da30b4bb8), [`4c2993b`](https://github.com/cloudflare/workers-sdk/commit/4c2993b898c8df4ea6799897803c2c5ef18c5847)]:
+  - miniflare@5.20260926.0-alpha
+  - wrangler@4.142.0
+
+## 1.60.2
+
+### Patch Changes
+
+- Updated dependencies [[`ee2b200`](https://github.com/cloudflare/workers-sdk/commit/ee2b200ff1e8edb5d5f2acb2bf45ffbdcb59f7c1), [`c91279b`](https://github.com/cloudflare/workers-sdk/commit/c91279b497ae6195f911b17ee3da3b7af28c2f17), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b), [`bd56b98`](https://github.com/cloudflare/workers-sdk/commit/bd56b98716d9306a3464fc04c66090d2846a37f9), [`805af2f`](https://github.com/cloudflare/workers-sdk/commit/805af2f0a5567c58f8259bc580883f1919039c60)]:
+  - miniflare@5.20260925.0-alpha
+  - wrangler@4.141.0
+
+## 1.60.1
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - wrangler@4.140.0
+  - miniflare@5.20260923.0-alpha
+
+## 1.60.0
+
+### Minor Changes
+
+- [#15648](https://github.com/cloudflare/workers-sdk/pull/15648) [`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Advertise Local Explorer scheduled invocations to headless agents
+
+  The Vite plugin's Local Explorer hint now documents how to invoke a Worker's scheduled handler and points agents to the OpenAPI schema for the complete request contract.
+
+### Patch Changes
+
+- Updated dependencies [[`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7), [`44f5295`](https://github.com/cloudflare/workers-sdk/commit/44f52951a699f77a35fa5d3b0ba1d33c7e2e3a31), [`be72815`](https://github.com/cloudflare/workers-sdk/commit/be728157f7b1f59f5878d09ca4f23b96f338f75d), [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`940c692`](https://github.com/cloudflare/workers-sdk/commit/940c6925b887faa4f43eccc957766385f6cc2d47), [`52c0e9f`](https://github.com/cloudflare/workers-sdk/commit/52c0e9f79d21b508466cd7508434fd8860be56f7), [`cd60c9c`](https://github.com/cloudflare/workers-sdk/commit/cd60c9c946bb3bcb9f6c32d426c2d4ee2992e03a), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - miniflare@5.20260923.0-alpha
+  - wrangler@4.139.0
+
 ## 1.59.0
 
 ### Minor Changes

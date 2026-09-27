@@ -29,6 +29,7 @@ const config: TemplateConfig = {
 		path: "./templates",
 	},
 	platform: "workers",
+	languages: ["ts"],
 	path: "templates/hono/workers",
 	generate,
 	transformPackageJson: async () => ({

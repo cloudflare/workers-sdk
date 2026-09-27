@@ -1,13 +1,26 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { exports as workerExports } from "@cloudflare/vite-plugin/experimental-config";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-	// TODO: Configure Workflows when they are supported by cloudflare.config.ts.
 	plugins: [
 		cloudflare({
 			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
+			auxiliaryWorkers: [
+				{
+					config: {
+						name: "worker-b",
+						compatibilityDate: "2024-12-30",
+						entrypoint: "./worker-b/index.ts",
+						compatibilityFlags: ["enable_ctx_exports"],
+						exports: {
+							MyWorkflow: workerExports.workflow({ name: "workflow" }),
+						},
+					},
+				},
+			],
 		}),
 	],
 });

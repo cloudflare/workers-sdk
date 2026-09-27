@@ -6,7 +6,7 @@ This repository uses [Codeowners Plus](https://github.com/multimediallc/codeowne
 
 ### Overview
 
-When a PR is opened, updated, or reviewed, the Codeowners Plus GitHub Action runs. It reads `.codeowners` and `codeowners.toml` from the **base branch** (not the PR), evaluates the ownership rules, and:
+When a PR is opened, updated, or reviewed, the Codeowners Plus GitHub Action runs. It reads `.codeowners` and `codeowners.toml` from the PR's **immediate base commit**, evaluates the ownership rules, and:
 
 - Posts a PR comment listing which teams need to approve
 - Requests reviews from those teams
@@ -88,7 +88,7 @@ This exists only so that GitHub branch protection can gate merging on the bot's 
 
 A single workflow handles PR events (`pull_request_target`). When reviews are submitted or dismissed, the `rerun-codeowners.yml` / `rerun-codeowners-privileged.yml` workflow pair re-runs the check (using the `workflow_run` pattern so it works for fork PRs too).
 
-Using `pull_request_target` (not `pull_request`) ensures the workflow has access to secrets for **fork PRs**. The checkout is always the base branch, so PR authors cannot modify ownership rules.
+Using `pull_request_target` (not `pull_request`) ensures the workflow has access to secrets for **fork PRs**. GitHub runs the workflow from the base repository's default branch. Codeowners Plus reads ownership rules from the PR's immediate base commit, which may be a parent feature branch for stacked PRs. The PR head is never checked out or executed.
 
 ## Common Scenarios
 
@@ -134,7 +134,7 @@ Repository admins can bypass all requirements by submitting an **approval review
 
 ### Fork PRs
 
-Fork PRs are fully supported. The workflow uses `pull_request_target` to run in the base repo context with access to secrets. The base branch is checked out (so ownership rules come from the protected branch), and the PR head is fetched as git objects only for diff computation. No fork code is executed.
+Fork PRs are fully supported. The workflow uses `pull_request_target` to run from the base repository's default branch with access to secrets. Codeowners Plus reads ownership rules from the PR's immediate base commit, and the PR head is fetched as git objects only for diff computation. No fork code is executed.
 
 ## Adding a New Product Team
 

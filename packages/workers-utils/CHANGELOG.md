@@ -1,5 +1,83 @@
 # @cloudflare/workers-utils
 
+## 0.44.0
+
+### Minor Changes
+
+- [#15658](https://github.com/cloudflare/workers-sdk/pull/15658) [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b) Thanks [@jqmmes](https://github.com/jqmmes)! - Add Durable Objects code update strategies to Worker deployments
+
+  Use `--durable-objects-code-update-mode immediate` with `wrangler deploy`, `wrangler versions deploy`, and `wrangler rollback` to update code without waiting for active instances to hibernate. Use `--durable-objects-code-update-mode deferred 30s` to set a maximum delay, or configure `durable_objects.code_update_strategy` with `mode` and `max_delay`. When unset, the strategy defaults to deferred with a 5-minute maximum delay; delays cannot exceed 24 hours and must use millisecond precision.
+
+### Patch Changes
+
+- [#15870](https://github.com/cloudflare/workers-sdk/pull/15870) [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Keep Node.js ESM packages working when consumers rebundle them as CommonJS
+
+  Node.js-targeted ESM bundles now provide a real `require` implementation for bundled CommonJS dependencies. This avoids downstream patches for dynamic require calls and keeps the packages usable when a consumer rebundles them to CommonJS.
+
+## 0.43.0
+
+### Minor Changes
+
+- [#15822](https://github.com/cloudflare/workers-sdk/pull/15822) [`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Expose a helper for identifying live Durable Object exports
+
+  Use `isLiveDurableObjectExport()` to distinguish created and incoming-transfer exports from deleted, renamed, and transferred tombstones.
+
+## 0.42.0
+
+### Minor Changes
+
+- [#15792](https://github.com/cloudflare/workers-sdk/pull/15792) [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f) Thanks [@flakey5](https://github.com/flakey5)! - Configure SSH for experimental Durable Object-managed Containers
+
+  Set `containers[].ssh` and `containers[].authorized_keys` when using `scheduling_policy: "durable_object"`. These are application-wide settings that follow the same rules as the existing Durable Object-managed Container settings: normal deployments create missing applications and update explicitly configured values, while omitted settings preserve the existing application configuration.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "containers": [
+      {
+        "name": "sandbox",
+        "class_name": "Sandbox",
+        "scheduling_policy": "durable_object",
+        "ssh": { "enabled": true },
+        "authorized_keys": [
+          { "name": "laptop", "public_key": "ssh-ed25519 AAAA..." }
+        ]
+      }
+    ]
+  }
+  ```
+
+- [#15786](https://github.com/cloudflare/workers-sdk/pull/15786) [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Support UDP connect handlers in local development
+
+  The experimental `connect` configuration now accepts `protocol: "udp"`, with optional `idle_timeout_ms` and `max_pending_bytes` settings. UDP datagrams are delivered to the Worker's `connect()` handler using workerd's value-mode socket streams, and can be tested with `Miniflare#dispatchConnect({ protocol: "udp" })`.
+
+- [#15779](https://github.com/cloudflare/workers-sdk/pull/15779) [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2) Thanks [@Naapperas](https://github.com/Naapperas)! - Support `workflow` entries in the `exports` configuration map
+
+  A Worker can now declare the Workflows it defines in `exports`, keyed by the `WorkflowEntrypoint` class name:
+
+  ```jsonc
+  {
+    "exports": {
+      "MyWorkflow": {
+        "type": "workflow",
+        "name": "my-workflow",
+        "limits": { "steps": 100 },
+        "schedules": "0 * * * *"
+      }
+    }
+  }
+  ```
+
+  A `workflow` export accepts the same settings as a `workflows` binding: `limits`, `concurrency`, `schedules`, and `default_retention`. `wrangler deploy` and `wrangler versions upload` send these entries to the upload API by name, and `wrangler deploy` and `wrangler triggers deploy` provision the Workflow with its settings, just as they do for `workflows` bindings owned by the Worker. A Workflow may be declared both as a binding and as an export, as long as both declarations use the same class and do not set the same setting to different values. A binding to another Worker's Workflow cannot share a name with an export. `@cloudflare/config` adds the matching `exports.workflow()` helper. Local development does not yet act on these entries.
+
+### Patch Changes
+
+- [#15838](https://github.com/cloudflare/workers-sdk/pull/15838) [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.9.0 to fix slow parsing of very large TOML files
+
+  Parse time for TOML config files now grows linearly with their size, instead of with its square: a 40,000-line file that took 259 ms to parse now takes 17 ms, while typical `wrangler.toml` files parse in the same time as before. This addresses the `GHSA-r4xh-jqrq-34v2` advisory against earlier versions of the parser.
+
+  Some TOML syntax errors now point at the character that caused them. For example, a `wrangler.toml` containing `INVALID "FILE` is now reported as `illegal character in key` at the `"`, rather than `incomplete key-value` at the start of the line.
+
 ## 0.41.2
 
 ### Patch Changes

@@ -91,11 +91,28 @@ function getWorkerNameToWorkflowEntrypointExportsMap(
 	workers: Worker[]
 ): Map<string, Set<string>> {
 	const workerNameToWorkflowEntrypointExportsMap = new Map(
-		workers.map((worker) => [worker.config.name, new Set<string>()])
+		workers.map((worker) => [
+			worker.config.name,
+			new Set(
+				Object.entries(worker.config.exports ?? {})
+					.filter(([, value]) => value.type === "workflow")
+					.map(([name]) => name)
+			),
+		])
 	);
 
-	// TODO: Add Workflow entrypoint exports when Workflows are supported by
-	// cloudflare.config.ts.
+	for (const worker of workers) {
+		for (const value of Object.values(worker.config.env ?? {})) {
+			if (value.type !== "workflow") {
+				continue;
+			}
+
+			workerNameToWorkflowEntrypointExportsMap
+				.get(value.worker)
+				?.add(value.exportName);
+		}
+	}
+
 	return workerNameToWorkflowEntrypointExportsMap;
 }
 

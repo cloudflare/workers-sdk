@@ -424,7 +424,9 @@ describe("WorkflowBinding", () => {
 	describe("createBatch()", () => {
 		it("should create multiple instances in a batch", async ({ expect }) => {
 			const binding = createBinding();
-			const ids = ["batch-1", "batch-2", "batch-3"];
+			// Unique per attempt: createBatch() skips existing IDs, so fixed IDs would
+			// make a vitest retry return [] after a failed first attempt.
+			const ids = [1, 2, 3].map((n) => uniqueId(`batch-${n}`));
 			setTestWorkflowCallback(async () => "done");
 
 			const results = await binding.createBatch(ids.map((id) => ({ id })));
@@ -1783,5 +1785,174 @@ describe("WorkflowHandle", () => {
 			expect(finalStatus.status).toBe("complete");
 			expect(finalStatus.output).toBe("completed");
 		});
+	});
+});
+
+describe("WorkflowBinding instance methods by id", () => {
+	it("getInstance() returns the id of an existing instance", async ({
+		expect,
+	}) => {
+		const id = uniqueId();
+		const binding = createBinding();
+		const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+		setTestWorkflowCallback(async () => "done");
+
+		await binding.create({ id });
+		await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+		expect(await binding.getInstance(id)).toEqual({ id });
+	});
+
+	it.for([
+		["getInstance"],
+		["pause"],
+		["resume"],
+		["terminate"],
+		["restart"],
+		["status"],
+		["sendEvent"],
+		["subscribe"],
+	] as const)(
+		"%s() rejects with instance.not_found for an unknown id",
+		async ([method], { expect }) => {
+			const binding = createBinding();
+
+			await expect(
+				binding[method](uniqueId("missing"), {
+					type: "event",
+					payload: null,
+				})
+			).rejects.toThrow("instance.not_found");
+		}
+	);
+
+	it("status() and sendEvent() address an instance by id", async ({
+		expect,
+	}) => {
+		const id = uniqueId();
+		const binding = createBinding();
+		const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+		setTestWorkflowCallback(async (_event, step) => {
+			const received = await step.waitForEvent("wait-for-event", {
+				type: "some-event",
+				timeout: "10 seconds",
+			});
+			return received.payload;
+		});
+
+		await binding.create({ id });
+		await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
+		expect((await binding.status(id)).status).toBe("running");
+
+		await binding.sendEvent(id, { type: "some-event", payload: "hello" });
+
+		await vi.waitUntil(
+			async () => (await binding.status(id)).status === "complete",
+			{ timeout: 5000 }
+		);
+		expect((await binding.status(id)).output).toBe("hello");
+	});
+
+	it("pause() and resume() address an instance by id", async ({ expect }) => {
+		const id = uniqueId();
+		const binding = createBinding();
+		const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+		setTestWorkflowCallback(async (_event, step) => {
+			await step.do("long-step", async () => {
+				await scheduler.wait(500);
+				return "result-1";
+			});
+			await step.do("step-2", async () => "result-2");
+			return "all-done";
+		});
+
+		await binding.create({ id });
+		await waitUntilLogEvent(engineStub, InstanceEvent.STEP_START);
+
+		await binding.pause(id);
+		await vi.waitUntil(
+			async () => (await binding.status(id)).status === "paused",
+			{ timeout: 5000 }
+		);
+
+		await binding.resume(id);
+		await vi.waitUntil(
+			async () => (await binding.status(id)).status === "complete",
+			{ timeout: 5000 }
+		);
+		expect((await binding.status(id)).output).toBe("all-done");
+	});
+
+	it("terminate() addresses an instance by id", async ({ expect }) => {
+		const id = uniqueId();
+		const binding = createBinding();
+		const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+		setTestWorkflowCallback(async (_event, step) => {
+			await step.waitForEvent("wait-for-event", {
+				type: "some-event",
+				timeout: "10 seconds",
+			});
+			return "should never complete";
+		});
+
+		await binding.create({ id });
+		await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
+
+		await binding.terminate(id);
+
+		expect((await binding.status(id)).status).toBe("terminated");
+	});
+
+	it("restart() addresses an instance by id", async ({ expect }) => {
+		const id = uniqueId();
+		const binding = createBinding();
+		const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+		let runs = 0;
+
+		setTestWorkflowCallback(async () => {
+			runs++;
+			return "complete";
+		});
+
+		await binding.create({ id });
+		await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+		await binding.restart(id);
+
+		await vi.waitUntil(
+			async () =>
+				runs === 2 && (await binding.status(id)).status === "complete",
+			{ timeout: 5000 }
+		);
+		expect(runs).toBe(2);
+	});
+
+	it("subscribe() addresses an instance by id", async ({ expect }) => {
+		const id = uniqueId();
+		const binding = createBinding();
+		const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+		setTestWorkflowCallback(async () => "done");
+
+		await binding.create({ id });
+		await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+		using subscription = (await binding.subscribe(
+			id
+		)) as unknown as WorkflowSubscription;
+		const types: string[] = [];
+		while (true) {
+			const result = await subscription.next();
+			if (result.done) {
+				break;
+			}
+			types.push(result.value.type);
+		}
+
+		expect(types.at(-1)).toBe("workflow_completed");
 	});
 });

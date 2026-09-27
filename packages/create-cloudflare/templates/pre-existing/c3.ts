@@ -88,6 +88,7 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./js",
 	},
+	languages: ["js"],
 	configure: buildConfigure({
 		login: wranglerLogin,
 		chooseAccount,

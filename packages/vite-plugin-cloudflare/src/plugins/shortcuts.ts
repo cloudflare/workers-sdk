@@ -70,9 +70,19 @@ export function addShortcuts(
 					worker: workerConfig,
 					containers: [],
 				});
-				const bindings = convertConfigToBindings(wranglerConfig, {
-					usePreviewIds: true,
-				});
+				const bindings = convertConfigToBindings(
+					{
+						...wranglerConfig,
+						durable_objects:
+							wranglerConfig.durable_objects === undefined
+								? undefined
+								: {
+										...wranglerConfig.durable_objects,
+										bindings: wranglerConfig.durable_objects.bindings ?? [],
+									},
+					},
+					{ usePreviewIds: true }
+				);
 
 				printBindings(bindings, {
 					tailConsumers: wranglerConfig.tail_consumers,
