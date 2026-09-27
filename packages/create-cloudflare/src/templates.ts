@@ -119,6 +119,16 @@ export type TemplateConfig = {
 	 */
 	copyFiles?: CopyFiles;
 
+	/**
+	 * The `--lang` values this template can be created with.
+	 *
+	 * Required for every template that ships a single set of files, including a
+	 * framework whose own CLI writes the project: `--lang` is not passed to that
+	 * CLI, so this lists what it can actually produce. Templates with `copyFiles`
+	 * variants declare their languages through the variant keys instead.
+	 */
+	languages?: string[];
+
 	/** A function invoked as the first step of project creation.
 	 * Used to invoke framework creation cli in the internal web framework templates.
 	 */
@@ -187,29 +197,34 @@ const defaultSelectVariant = async (ctx: C3Context) => {
 };
 
 /**
+ * The `--lang` values a template can be created with.
+ *
+ * Templates with `copyFiles` variants support exactly the variants they declare.
+ * Everything else ships a single set of files and declares its `languages`;
+ * nothing is assumed for one that does not, because a framework CLI that only
+ * writes TypeScript would otherwise be offered for `--lang js`.
+ */
+const getTemplateLanguages = (config: TemplateConfig): string[] => {
+	const { copyFiles } = config;
+
+	if (copyFiles && !isVariantInfo(copyFiles)) {
+		return Object.keys(copyFiles.variants);
+	}
+
+	return config.languages ?? [];
+};
+
+/**
  * Helper function to check if a template supports a specific language
  */
 const templateSupportsLanguage = (
 	config: TemplateConfig,
 	lang: string
 ): boolean => {
-	const { copyFiles } = config;
-	// If the template has no copyFiles or uses a single path, it doesn't support variants.
-	// In that case we assume that this template doesn't support the language specified.
-	// Note that this isn't perfect, if a template supports only Python for example then we
-	// may miss it, but we have no way of deducing the supported language based on the path
-	// alone.
-	if (!copyFiles || isVariantInfo(copyFiles)) {
-		return false;
-	}
-	// If the template has variants, check if the specified language is supported
-	if (copyFiles.variants && !copyFiles.variants[lang]) {
-		return false;
-	}
-	return true;
+	return getTemplateLanguages(config).includes(lang);
 };
 
-const filterTemplatesByLanguage = <
+export const filterTemplatesByLanguage = <
 	T extends TemplateConfig | MultiPlatformTemplateConfig,
 >(
 	templates: Record<string, T>,

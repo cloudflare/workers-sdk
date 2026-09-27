@@ -23,10 +23,42 @@ export type ConfigInput<T> =
 	| Promise<T>
 	| ((ctx: ConfigContext) => T | Promise<T>);
 
+/** Recursively apply declared config properties without expanding open records. */
+type ContextualProperties<
+	TInput extends object,
+	TConfig,
+> = TInput extends readonly unknown[]
+	? TConfig extends readonly (infer TElement)[]
+		? {
+				[K in keyof TInput]: ContextualConfig<TInput[K], TElement>;
+			}
+		: TConfig
+	: string extends keyof TConfig
+		? TConfig
+		: {
+				[K in keyof TConfig]: K extends keyof TInput
+					? ContextualConfig<TInput[K], TConfig[K]>
+					: TConfig[K];
+			};
+
+type ContextualConfig<TInput, TConfig> =
+	TInput extends Promise<infer TValue>
+		? Promise<ContextualConfig<TValue, TConfig>>
+		: TInput extends (ctx: ConfigContext) => infer TResult
+			? (ctx: ConfigContext) => ContextualConfig<TResult, TConfig>
+			: TConfig extends unknown
+				? TInput extends TConfig
+					? TInput &
+							(TInput extends object
+								? ContextualProperties<TInput, TConfig>
+								: TConfig)
+					: never
+				: never;
+
 /** Create a type-safe identity helper for a configuration value or factory. */
 export function createConfigDefiner<TConfig>() {
 	return function define<const TInput extends ConfigInput<TConfig>>(
-		config: TInput
+		config: TInput & ContextualConfig<TInput, TConfig>
 	): TInput {
 		return config;
 	};

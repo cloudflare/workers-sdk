@@ -17,6 +17,7 @@ export interface EventDestination {
 export enum EventSourceType {
 	ARTIFACTS = "artifacts",
 	ARTIFACTS_REPO = "artifacts.repo",
+	BROWSER_RUN = "browserRun",
 	EMAIL_SENDING = "email.sending",
 	IMAGES = "images",
 	KV = "kv",
@@ -33,6 +34,7 @@ export const EVENT_SOURCE_TYPES = Object.values(EventSourceType);
 export type EventSource =
 	| ArtifactsEventSource
 	| ArtifactsRepoEventSource
+	| BrowserRunEventSource
 	| EmailSendingEventSource
 	| ImagesEventSource
 	| KvEventSource
@@ -49,6 +51,10 @@ export interface ArtifactsEventSource {
 
 export interface ArtifactsRepoEventSource {
 	type: EventSourceType.ARTIFACTS_REPO;
+}
+
+export interface BrowserRunEventSource {
+	type: EventSourceType.BROWSER_RUN;
 }
 
 export interface EmailSendingEventSource {

@@ -726,6 +726,32 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("maps Workflow binding to workflows", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						WORKFLOW: {
+							type: "workflow",
+							name: "greeting",
+							worker: "workflow-worker",
+							exportName: "GreetingWorkflow",
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect(result.workflows).toEqual([
+				{
+					binding: "WORKFLOW",
+					name: "greeting",
+					class_name: "GreetingWorkflow",
+					script_name: "workflow-worker",
+				},
+			]);
+		});
+
 		it("maps logfwdr binding to logfwdr.bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -1050,7 +1076,7 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
-		it("passes workflow exports through", ({ expect }) => {
+		it("converts workflow export retention to snake_case", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
@@ -1062,7 +1088,10 @@ describe("convertToWranglerConfig", () => {
 							limits: { steps: 10 },
 							concurrency: { limit: 2 },
 							schedules: "0 * * * *",
-							default_retention: { success_retention: "3 days" },
+							defaultRetention: {
+								successRetention: "3 days",
+								errorRetention: 86_400_000,
+							},
 						},
 					},
 				},
@@ -1077,7 +1106,10 @@ describe("convertToWranglerConfig", () => {
 					limits: { steps: 10 },
 					concurrency: { limit: 2 },
 					schedules: "0 * * * *",
-					default_retention: { success_retention: "3 days" },
+					default_retention: {
+						success_retention: "3 days",
+						error_retention: 86_400_000,
+					},
 				},
 			});
 		});

@@ -293,6 +293,29 @@ describe("InputWorkerSchema", () => {
 		});
 	});
 
+	describe("workflow bindings", () => {
+		const workflowBinding = {
+			type: "workflow",
+			name: "greeting",
+			worker: "workflow-worker",
+			exportName: "GreetingWorkflow",
+		} as const;
+
+		it("accepts a cross-Worker Workflow binding", ({ expect }) => {
+			expect(BindingSchema.safeParse(workflowBinding).success).toBe(true);
+		});
+
+		it.for(["name", "worker", "exportName"] as const)(
+			"requires %s",
+			(field, { expect }) => {
+				const binding: Record<string, unknown> = { ...workflowBinding };
+				delete binding[field];
+
+				expect(BindingSchema.safeParse(binding).success).toBe(false);
+			}
+		);
+	});
+
 	describe("entrypoint", () => {
 		it("accepts a string entrypoint and passes it through unchanged", ({
 			expect,
@@ -1517,9 +1540,9 @@ describe("ExportSchema", () => {
 			limits: { steps: 10 },
 			concurrency: { limit: 2 },
 			schedules: ["0 * * * *"],
-			default_retention: {
-				success_retention: "3 days",
-				error_retention: 86_400_000,
+			defaultRetention: {
+				successRetention: "3 days",
+				errorRetention: 86_400_000,
 			},
 		});
 		const result = parseExports({ ScheduledWorkflow: scheduled });
@@ -1534,8 +1557,8 @@ describe("ExportSchema", () => {
 			{ schedules: [] },
 			{ schedules: [""] },
 			{ concurrency: { limit: 0 } },
-			{ default_retention: { success_retention: -1 } },
-			{ default_retention: { error_retention: "" } },
+			{ defaultRetention: { successRetention: -1 } },
+			{ defaultRetention: { errorRetention: "" } },
 		]) {
 			const result = parseExports({
 				GreetingWorkflow: { type: "workflow", name: "greeting", ...settings },

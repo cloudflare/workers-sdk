@@ -7,6 +7,7 @@ import { brandColor, dim } from "./colors";
 import { runCommand } from "./command";
 
 type InstallConfig = {
+	cwd?: string;
 	startText?: string;
 	doneText?: string;
 	dev?: boolean;
@@ -19,6 +20,7 @@ type InstallConfig = {
  *
  * @param packageManager - The package manager to use for installation
  * @param packages - An array of package specifiers to be installed
+ * @param config.cwd - Directory in which to install the packages
  * @param config.dev - Add packages as `devDependencies`
  * @param config.startText - Spinner start text
  * @param config.doneText - Spinner done text
@@ -29,7 +31,7 @@ export const installPackages = async (
 	packages: string[],
 	config: InstallConfig = {}
 ) => {
-	const { force, dev, startText, doneText } = config;
+	const { cwd = process.cwd(), force, dev, startText, doneText } = config;
 	const isWorkspaceRoot = config.isWorkspaceRoot ?? false;
 
 	if (packages.length === 0) {
@@ -57,7 +59,7 @@ export const installPackages = async (
 				...getWorkspaceInstallRootFlag(packageManager, isWorkspaceRoot),
 			],
 			{
-				cwd: process.cwd(),
+				cwd,
 				startText,
 				doneText,
 				silent: true,
@@ -95,6 +97,7 @@ export const installPackages = async (
 			...getWorkspaceInstallRootFlag(packageManager, isWorkspaceRoot),
 		],
 		{
+			cwd,
 			startText,
 			doneText,
 			silent: true,
@@ -105,7 +108,7 @@ export const installPackages = async (
 		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.
 		// We can't use `npm install --save-exact` because that always pins to an exact version, and we want to allow ranges too.
 		// So let's just fix that up now by rewriting the package.json.
-		const pkgJsonPath = path.join(process.cwd(), "package.json");
+		const pkgJsonPath = path.join(cwd, "package.json");
 		const pkgJson = parsePackageJSON(readFileSync(pkgJsonPath), pkgJsonPath);
 		const deps = config.dev ? pkgJson.devDependencies : pkgJson.dependencies;
 		assert(deps, "dependencies should be defined");

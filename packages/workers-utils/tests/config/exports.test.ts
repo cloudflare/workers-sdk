@@ -1,6 +1,10 @@
+import { isLiveDurableObjectExport } from "@cloudflare/workers-utils";
 import { describe, test } from "vitest";
 import { partitionExports } from "../../src/config/exports";
-import type { Exports } from "../../src/config/environment";
+import type {
+	DurableObjectExport,
+	Exports,
+} from "../../src/config/environment";
 
 describe("partitionExports", () => {
 	test("returns empty partitions when exports are undefined", ({ expect }) => {
@@ -49,5 +53,60 @@ describe("partitionExports", () => {
 				},
 			},
 		});
+	});
+});
+
+describe("isLiveDurableObjectExport", () => {
+	test("returns true for live exports and false for tombstones", ({
+		expect,
+	}) => {
+		const cases: [DurableObjectExport, boolean][] = [
+			[{ type: "durable-object", storage: "sqlite" }, true],
+			[
+				{ type: "durable-object", state: "created", storage: "legacy-kv" },
+				true,
+			],
+			[
+				{
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "sqlite",
+					transfer_from: "source-worker",
+				},
+				true,
+			],
+			[{ type: "durable-object", state: "deleted" }, false],
+			[
+				{ type: "durable-object", state: "renamed", renamed_to: "NewName" },
+				false,
+			],
+			[
+				{
+					type: "durable-object",
+					state: "transferred",
+					transferred_to: "target-worker",
+				},
+				false,
+			],
+		];
+
+		for (const [exportConfig, expected] of cases) {
+			expect(isLiveDurableObjectExport(exportConfig)).toBe(expected);
+		}
+	});
+
+	test("narrows a live export", ({ expect }) => {
+		function getStorage(exportConfig: DurableObjectExport) {
+			return isLiveDurableObjectExport(exportConfig)
+				? exportConfig.storage
+				: undefined;
+		}
+
+		expect(getStorage({ type: "durable-object", storage: "sqlite" })).toBe(
+			"sqlite"
+		);
+		expect(
+			getStorage({ type: "durable-object", state: "deleted" })
+		).toBeUndefined();
 	});
 });

@@ -5,6 +5,7 @@ import {
 	getCIOverrideName,
 	getDurableObjectExports,
 	getWorkersCIBranchName,
+	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { shortHash, truncateWithSuffix } from "../shared/names";
@@ -735,11 +736,7 @@ function getDeclaredDOClassNames(config: Config): Set<string> {
 	for (const [className, entry] of Object.entries(
 		getDurableObjectExports(config.exports)
 	)) {
-		if (
-			entry.state === undefined ||
-			entry.state === "created" ||
-			entry.state === "expecting-transfer"
-		) {
+		if (isLiveDurableObjectExport(entry)) {
 			declared.add(className);
 		}
 	}

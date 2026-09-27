@@ -1,5 +1,54 @@
 # @cloudflare/config
 
+## 0.20.0
+
+### Minor Changes
+
+- [#15877](https://github.com/cloudflare/workers-sdk/pull/15877) [`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add cross-Worker Workflow bindings to the experimental configuration API
+
+  Workflow bindings can now identify a Workflow by name and reference the Worker and exported `WorkflowEntrypoint` class that define it.
+
+### Patch Changes
+
+- [#15880](https://github.com/cloudflare/workers-sdk/pull/15880) [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Restore configuration field documentation in `define*` helpers
+
+  VS Code now displays JSDoc for fields passed to `defineConfig`, `defineContainer`, and `defineWorker` while retaining their exact inferred config types.
+
+## 0.19.0
+
+### Minor Changes
+
+- [#15874](https://github.com/cloudflare/workers-sdk/pull/15874) [`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use camelCase for Workflow export retention settings
+
+  The experimental `@cloudflare/config` API now accepts `defaultRetention`, `successRetention`, and `errorRetention`, consistently with its other authored configuration fields. These settings are converted to Wrangler's snake_case configuration shape at the integration boundary.
+
+## 0.18.0
+
+### Minor Changes
+
+- [#15786](https://github.com/cloudflare/workers-sdk/pull/15786) [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Support UDP connect handlers in local development
+
+  The experimental `connect` configuration now accepts `protocol: "udp"`, with optional `idle_timeout_ms` and `max_pending_bytes` settings. UDP datagrams are delivered to the Worker's `connect()` handler using workerd's value-mode socket streams, and can be tested with `Miniflare#dispatchConnect({ protocol: "udp" })`.
+
+- [#15779](https://github.com/cloudflare/workers-sdk/pull/15779) [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2) Thanks [@Naapperas](https://github.com/Naapperas)! - Support `workflow` entries in the `exports` configuration map
+
+  A Worker can now declare the Workflows it defines in `exports`, keyed by the `WorkflowEntrypoint` class name:
+
+  ```jsonc
+  {
+    "exports": {
+      "MyWorkflow": {
+        "type": "workflow",
+        "name": "my-workflow",
+        "limits": { "steps": 100 },
+        "schedules": "0 * * * *"
+      }
+    }
+  }
+  ```
+
+  A `workflow` export accepts the same settings as a `workflows` binding: `limits`, `concurrency`, `schedules`, and `default_retention`. `wrangler deploy` and `wrangler versions upload` send these entries to the upload API by name, and `wrangler deploy` and `wrangler triggers deploy` provision the Workflow with its settings, just as they do for `workflows` bindings owned by the Worker. A Workflow may be declared both as a binding and as an export, as long as both declarations use the same class and do not set the same setting to different values. A binding to another Worker's Workflow cannot share a name with an export. `@cloudflare/config` adds the matching `exports.workflow()` helper. Local development does not yet act on these entries.
+
 ## 0.17.0
 
 ### Minor Changes

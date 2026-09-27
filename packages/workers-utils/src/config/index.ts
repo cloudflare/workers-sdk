@@ -33,6 +33,7 @@ export type {
 	CacheOptions,
 	ConfiguredExport,
 	ConfigModuleRuleType,
+	DurableObjectCodeUpdateStrategy,
 	Environment,
 	PreviewsConfig,
 	RawEnvironment,

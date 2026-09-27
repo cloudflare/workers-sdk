@@ -725,17 +725,15 @@ function convertBindingsAndAssets(
 				workerLoaders.push({ binding: name });
 				break;
 			}
-			// TODO: re-enable when workflow bindings return.
-			// case "workflow": {
-			// 	workflows.push(
-			// 		omitUndefined({
-			// 			binding: name,
-			// 			class_name: binding.exportName,
-			// 			script_name: binding.worker,
-			// 		})
-			// 	);
-			// 	break;
-			// }
+			case "workflow": {
+				workflows.push({
+					binding: name,
+					name: binding.name,
+					class_name: binding.exportName,
+					script_name: binding.worker,
+				});
+				break;
+			}
 		}
 	}
 
@@ -860,8 +858,25 @@ function convertExports(
 	const converted: Exports = {};
 	const unknownExports: typeof exports = {};
 	for (const [exportName, value] of Object.entries(exports)) {
-		if (value.type === "worker" || value.type === "workflow") {
+		if (value.type === "worker") {
 			converted[exportName] = value;
+			continue;
+		}
+		if (value.type === "workflow") {
+			const { defaultRetention, ...workflow } = value;
+			converted[exportName] = {
+				...workflow,
+				...(defaultRetention !== undefined && {
+					default_retention: {
+						...(defaultRetention.successRetention !== undefined && {
+							success_retention: defaultRetention.successRetention,
+						}),
+						...(defaultRetention.errorRetention !== undefined && {
+							error_retention: defaultRetention.errorRetention,
+						}),
+					},
+				}),
+			};
 			continue;
 		}
 
