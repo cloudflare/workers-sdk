@@ -2,6 +2,7 @@
 
 import assert from "node:assert";
 import childProcess from "node:child_process";
+import diagnosticsChannel from "node:diagnostics_channel";
 import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -4040,6 +4041,52 @@ test.for(["GET", "POST", "PUT"])(
 		expect(await count.text()).toBe("1");
 	}
 );
+
+test("Miniflare: dispatchFetch closes idle runtime sockets before workerd", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						'export default { fetch() { return new Response("ok"); } };'
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	const runtimeOrigin = (await mf.ready).origin;
+	let runtimeSocket: net.Socket | undefined;
+	const onSendHeaders = (message: unknown) => {
+		const { request, socket } = message as {
+			request: { origin: string };
+			socket: net.Socket;
+		};
+		if (request.origin === runtimeOrigin) {
+			runtimeSocket = socket;
+		}
+	};
+	diagnosticsChannel.subscribe("undici:client:sendHeaders", onSendHeaders);
+	onTestFinished(() => {
+		diagnosticsChannel.unsubscribe("undici:client:sendHeaders", onSendHeaders);
+	});
+
+	const response = await mf.dispatchFetch("http://localhost/idle-close");
+	expect(await response.text()).toBe("ok");
+	assert(runtimeSocket);
+	const socket = runtimeSocket;
+	await expect
+		.poll(() => socket.destroyed, { interval: 50, timeout: 2_500 })
+		.toBe(true);
+
+	const nextResponse = await mf.dispatchFetch("http://localhost/idle-close");
+	expect(await nextResponse.text()).toBe("ok");
+});
 
 test.for(["GET", "POST", "PUT"])(
 	"Miniflare: workerd crash in %s handler => restart",
