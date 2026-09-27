@@ -2,7 +2,7 @@ const BUILD_OUTPUT_ERROR_PREFIX = "Build Output Specification: ";
 
 /**
  * Thrown when the Build Output Specification tree is missing, malformed, or
- * fails schema validation while being read.
+ * internally inconsistent.
  */
 export class BuildOutputError extends Error {
 	constructor(message: string) {

@@ -20,7 +20,6 @@ test("Miniflare: accepts manually defined modules", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					compatibilityFlags: ["nodejs_compat_v2"],
@@ -106,7 +105,6 @@ test("Miniflare: accepts manually defined modules", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					compatibilityFlags: ["nodejs_compat_v2"],
@@ -186,7 +184,6 @@ test("Miniflare: automatically collects modules", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					compatibilityFlags: ["nodejs_compat_v2"],
@@ -271,7 +268,6 @@ test("Miniflare: automatically collects modules", async ({ expect }) => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2023-08-01",
 						manifest: {
@@ -300,7 +296,6 @@ test("Miniflare: automatically collects modules with cycles", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					manifest: {
@@ -359,7 +354,6 @@ test("Miniflare: collects modules outside of working directory", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -381,7 +375,6 @@ test("Miniflare: parses scripts containing `using` declarations", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					manifest: singleModuleManifest(`export default {
@@ -407,7 +400,6 @@ test("Miniflare: parses scripts containing `await using` declarations", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					manifest: singleModuleManifest(`export default {
@@ -448,7 +440,6 @@ test("Miniflare: parses source phase imports without error", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					manifest: {

@@ -9,7 +9,7 @@ import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import {
 	readWranglerJsonOrJsonc,
 	readWranglerToml,

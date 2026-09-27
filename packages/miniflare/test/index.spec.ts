@@ -11,16 +11,14 @@ import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
-import {
-	_forceColour,
-	NODEJS_COMPAT_DEFAULT_ON_DATE,
-} from "@cloudflare/workers-utils";
+import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
+	Log,
 	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
@@ -72,7 +70,7 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
+test("Miniflare: validates options", async ({ expect }) => {
 	// Check empty workers array rejected
 	expect(() => new Miniflare({ workers: [] })).toThrow(
 		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
@@ -85,14 +83,12 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2025-05-01",
 						},
 					},
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2025-05-01",
 						},
@@ -111,28 +107,24 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2025-05-01",
 						},
 					},
 					{
 						config: {
-							type: "worker",
 							name: "a",
 							compatibilityDate: "2025-05-01",
 						},
 					},
 					{
 						config: {
-							type: "worker",
 							name: "b",
 							compatibilityDate: "2025-05-01",
 						},
 					},
 					{
 						config: {
-							type: "worker",
 							name: "a",
 							compatibilityDate: "2025-05-01",
 						},
@@ -146,10 +138,6 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 		)
 	);
 
-	// Disable colours for easier to read expectations
-	_forceColour(false);
-	onTestFinished(() => _forceColour());
-
 	// Check throws validation error with incorrect options
 	let error: MiniflareCoreError | undefined = undefined;
 	try {
@@ -157,7 +145,6 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						// @ts-expect-error intentionally testing incorrect types
 						name: 42,
 						compatibilityDate: "2025-05-01",
@@ -172,18 +159,8 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.code).toEqual("ERR_VALIDATION");
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
-{
-  workers: [
-    /* [0] */ {
-      config: {
-        ...,
-        name: 42,
-              ^ Invalid input: expected string, received number
-        ...,
-      },
-    },
-  ],
-}`
+✖ Invalid input: expected string, received number
+  → at workers[0].config.name`
 	);
 
 	// Check throws validation error with primitive option
@@ -198,8 +175,7 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.code).toEqual("ERR_VALIDATION");
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
-'addEventListener(...)'
-^ Invalid input: expected object, received string`
+✖ Invalid input: expected object, received string`
 	);
 });
 
@@ -208,7 +184,6 @@ test("Miniflare: accepts mixed r2Buckets record", () => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -228,7 +203,6 @@ test("Miniflare: accepts mixed kvNamespaces record", () => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -248,7 +222,6 @@ test("Miniflare: accepts mixed d1Databases record", () => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -268,7 +241,6 @@ test("Miniflare: accepts mixed pipelines record", () => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -288,7 +260,6 @@ test("Miniflare: ready returns copy of entry URL", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -311,7 +282,7 @@ test("Miniflare: setOptions: can update host/port", async ({ expect }) => {
 		inspectorPort: 0,
 		workers: [
 			{
-				config: { type: "worker", name: "", compatibilityDate: "2025-05-01" },
+				config: { name: "", compatibilityDate: "2025-05-01" },
 				legacy: {
 					serviceWorkerScript: `addEventListener("fetch", (event) => {
 			event.respondWith(new Response("<p>👋</p>", {
@@ -363,7 +334,6 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(
@@ -398,7 +368,6 @@ test("Miniflare: can use localhost as host", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -429,13 +398,119 @@ test("Miniflare: can use localhost as host", async ({ expect }) => {
 	expect(await res.text()).toBe("body");
 });
 
+test("Miniflare: replaces loopback startup error handler with persistent error logging", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const createServer = vi.spyOn(http, "createServer");
+	onTestFinished(() => createServer.mockRestore());
+	const log = new Log(LogLevel.ERROR);
+	const logWithLevel = vi
+		.spyOn(log, "logWithLevel")
+		.mockImplementation(() => {});
+	onTestFinished(() => logWithLevel.mockRestore());
+
+	const mf = new Miniflare({
+		log,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2026-09-04",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const ready = await mf.ready;
+	logWithLevel.mockClear();
+
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	for (const message of ["First loopback error", "Second loopback error"]) {
+		expect(() => server.emit("error", new Error(message))).not.toThrow();
+		expect(logWithLevel).toHaveBeenLastCalledWith(
+			LogLevel.ERROR,
+			expect.stringContaining(message)
+		);
+		expect(server.listenerCount("error")).toBe(1);
+	}
+	expect(logWithLevel).toHaveBeenCalledTimes(2);
+	expect(await mf.ready).toEqual(ready);
+	expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe("ok");
+});
+
+test("Miniflare: rejects ready when loopback server cannot bind", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const createServer = vi.spyOn(http, "createServer");
+	const close = vi.spyOn(http.Server.prototype, "close");
+	onTestFinished(() => {
+		createServer.mockRestore();
+		close.mockRestore();
+	});
+
+	const mf = new Miniflare({
+		host: "192.0.2.1",
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2026-09-04",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+
+	await expect(mf.ready).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	expect(close.mock.instances).toContain(server);
+	expect(server.listening).toBe(false);
+	await expect(mf.dispose()).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+});
+
+test("Miniflare: setOptions: recovers after loopback bind failure", async ({
+	expect,
+}) => {
+	const worker = {
+		config: {
+			name: "",
+			compatibilityDate: "2026-09-04",
+			manifest: singleModuleManifest(
+				`export default { fetch() { return new Response("ok"); } }`
+			),
+		},
+	};
+	const mf = new Miniflare({ host: "127.0.0.1", workers: [worker] });
+	useDispose(mf);
+
+	await mf.ready;
+
+	await expect(
+		mf.setOptions({ host: "192.0.2.1", workers: [worker] })
+	).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+
+	await mf.setOptions({ host: "127.0.0.1", workers: [worker] });
+
+	const res = await mf.dispatchFetch("https://example.com");
+	expect(await res.text()).toBe("ok");
+});
+
 test("Miniflare: can use IPv6 loopback as host", async ({ expect }) => {
 	const mf = new Miniflare({
 		host: "::1",
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -470,7 +545,6 @@ test("Miniflare: routes to multiple workers with fallback", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/api" }],
@@ -483,7 +557,6 @@ test("Miniflare: routes to multiple workers with fallback", async ({
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/api/*" }], // Less specific than "a"'s
@@ -539,7 +612,6 @@ test("Miniflare: custom service using Content-Encoding header", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					// `brotli_content_encoding` became the default as of 2024-04-29
 					compatibilityDate: "2025-05-01",
@@ -594,7 +666,6 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					// `brotli_content_encoding` became the default as of 2024-04-29
 					compatibilityDate: "2025-05-01",
@@ -784,7 +855,6 @@ test("Miniflare: ignores nodejs_compat flags the compatibility date enables", as
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: NODEJS_COMPAT_DEFAULT_ON_DATE,
 					compatibilityFlags: ["nodejs_compat", "nodejs_compat_v2"],
@@ -820,7 +890,6 @@ test("Miniflare: custom service using Set-Cookie header", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					// Enable `Headers#getSetCookie()`:
 					// https://github.com/cloudflare/workerd/blob/14b54764609c263ea36ab862bb8bf512f9b1387b/src/workerd/io/compatibility-date.capnp#L273-L278
@@ -893,7 +962,6 @@ test("Miniflare: web socket kitchen sink", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -958,7 +1026,6 @@ test("Miniflare: custom service binding to another Miniflare instance", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -978,7 +1045,6 @@ test("Miniflare: custom service binding to another Miniflare instance", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -1039,7 +1105,6 @@ test("Miniflare: service binding to current worker", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { SELF: { type: "worker", worker: kCurrentWorker } },
@@ -1067,7 +1132,6 @@ test("Miniflare: service binding to network", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -1091,7 +1155,6 @@ test("Miniflare: service binding to external server", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -1117,7 +1180,6 @@ test("Miniflare: service binding to disk", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -1147,7 +1209,6 @@ test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					// `rpc` became the default as of 2024-04-03
 					compatibilityDate: "2025-05-01",
@@ -1191,7 +1252,6 @@ test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -1220,7 +1280,6 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					// `rpc` became the default as of 2024-04-03
 					compatibilityDate: "2025-05-01",
@@ -1243,7 +1302,6 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -1276,7 +1334,6 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					// `rpc` became the default as of 2024-04-03
 					compatibilityDate: "2025-05-01",
@@ -1299,7 +1356,6 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -1341,7 +1397,6 @@ test("Miniflare: tail consumer called", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					tailConsumers: [{ worker: "b" }],
 					compatibilityDate: "2025-04-28",
@@ -1363,7 +1418,6 @@ test("Miniflare: tail consumer called", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-04-28",
 					manifest: singleModuleManifest(`
@@ -1395,7 +1449,6 @@ test("Miniflare: custom outbound service", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1412,7 +1465,6 @@ test("Miniflare: custom outbound service", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1464,7 +1516,6 @@ test("Miniflare: custom outbound service passes through TCP sockets", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2026-05-20",
 					compatibilityFlags: ["nodejs_compat"],
@@ -1529,7 +1580,6 @@ test("Miniflare: can send GET request with body", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2023-08-01",
 					manifest: singleModuleManifest(`export default {
@@ -1597,7 +1647,6 @@ test("Miniflare: handles redirect responses", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2024-01-01",
 					env: { EXTERNAL_URL: { type: "text", value: http.href } },
@@ -1692,7 +1741,6 @@ test("Miniflare: custom upstream as origin (with colons)", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1720,7 +1768,6 @@ test("Miniflare: custom upstream as origin", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1755,7 +1802,6 @@ test("Miniflare: custom upstream sets MF-Original-Hostname header", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1787,7 +1833,6 @@ test("Miniflare: MF-Original-Hostname header not set without upstream", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1816,7 +1861,6 @@ test("Miniflare: set origin to original URL if proxy shared secret matches", asy
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1846,7 +1890,6 @@ test("Miniflare: keep origin as listening host if proxy shared secret not provid
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1874,7 +1917,6 @@ test("Miniflare: 400 error on proxy shared secret header when not configured", a
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1906,7 +1948,6 @@ test("Miniflare: 400 error on proxy shared secret header mismatch with configura
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -1938,7 +1979,6 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["nodejs_compat", "rtti_api"],
@@ -1969,7 +2009,6 @@ test("Miniflare: modules in sub-directories", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: {
@@ -2003,7 +2042,6 @@ test("Miniflare: python modules", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["python_workers", "python_no_global_handlers"],
@@ -2012,8 +2050,19 @@ test("Miniflare: python modules", async ({ expect }) => {
 						modules: {
 							"index.py": {
 								type: "python",
-								contents:
-									"from test_module import add; from workers import Response, WorkerEntrypoint;\nclass Default(WorkerEntrypoint):\n  def fetch(self, request):\n    return Response(str(add(2,2)))",
+								contents: `from test_module import add
+from workers import Response, WorkerEntrypoint
+
+last_cron = ""
+
+class Default(WorkerEntrypoint):
+  def fetch(self, request):
+    return Response(str(add(2,2)) + ":" + last_cron)
+
+  async def scheduled(self, controller, env, ctx):
+    global last_cron
+    last_cron = controller.cron
+    controller.noRetry()`,
 							},
 							"test_module.py": {
 								type: "python",
@@ -2026,8 +2075,18 @@ test("Miniflare: python modules", async ({ expect }) => {
 		],
 	});
 	useDispose(mf);
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe("4");
+	let res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("4:");
+
+	const worker = await mf.getWorker();
+	expect(
+		await worker.scheduled({
+			cron: "python-cron",
+			scheduledTime: new Date(0),
+		})
+	).toEqual({ outcome: "ok", noRetry: true });
+	res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("4:python-cron");
 });
 
 test("Miniflare: HTTPS fetches using browser CA certificates", async ({
@@ -2042,7 +2101,6 @@ test("Miniflare: HTTPS fetches using browser CA certificates", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -2069,7 +2127,6 @@ test("Miniflare: accepts https requests", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -2102,7 +2159,6 @@ test("Miniflare: throws error messages that reflect the actual issue", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -2129,11 +2185,11 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		log,
+		unsafeLocalExplorer: true,
 		unsafeTriggerHandlers: true,
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2144,6 +2200,7 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 				},
 				scheduled(controller) {
 					scheduledRun = true;
+					if (controller.cron === "failure") throw new Error("failure");
 					controller.noRetry();
 				}
 			}`),
@@ -2166,6 +2223,12 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("true");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/scheduled?format=json&cron=failure"
+	);
+	expect(res.status).toBe(500);
+	expect(await res.json()).toEqual({ outcome: "exception", noRetry: false });
 });
 
 test("Miniflare: manually triggered scheduled events with assets", async ({
@@ -2185,7 +2248,6 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					// Unmatched requests (e.g. `/`) fall back to the user worker below,
@@ -2267,7 +2329,6 @@ test("Miniflare: manually triggered email handler - valid email", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2321,7 +2382,6 @@ test("Miniflare: manually triggered email handler - setReject does not throw", a
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2378,7 +2438,6 @@ test("Miniflare: manually triggered email handler - forward does not throw", asy
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2433,7 +2492,6 @@ test("Miniflare: manually triggered email handler - invalid email, no message id
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2488,7 +2546,6 @@ test("Miniflare: manually triggered email handler - missing email() handler", as
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2553,7 +2610,6 @@ test("Miniflare: manually triggered email handler - reply handler works", async 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2622,7 +2678,6 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2807,7 +2862,6 @@ test("Miniflare: unrecognised /cdn-cgi/local/ routes fall through to user worker
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2834,7 +2888,6 @@ test("Miniflare: other /cdn-cgi/ routes", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2863,7 +2916,6 @@ test("Miniflare: blocks non-local Host headers from reaching /cdn-cgi/ routes", 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -2924,7 +2976,6 @@ test("Miniflare: listens on ipv6", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -2957,7 +3008,6 @@ test("Miniflare: dispose() immediately after construction", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -2985,7 +3035,6 @@ test("Miniflare: getBindings() returns all bindings", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -3061,7 +3110,7 @@ test("Miniflare: getBindings() returns all bindings", async ({
 	await mf.setOptions({
 		workers: [
 			{
-				config: { type: "worker", name: "", compatibilityDate: "2025-05-01" },
+				config: { name: "", compatibilityDate: "2025-05-01" },
 				legacy: {
 					serviceWorkerScript:
 						'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
@@ -3093,7 +3142,6 @@ test("Miniflare: getWorker() allows dispatching events directly", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					// Pre-`queues_json_messages` (2024-03-18) so structured-clone
 					// message bodies (Uint8Array/Date) round-trip unchanged
@@ -3231,7 +3279,6 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -3255,7 +3302,6 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 				// 2nd worker unnamed, to validate that not specifying a name when
 				// getting bindings gives the entrypoint, not the unnamed worker
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -3270,7 +3316,6 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					env: {
@@ -3360,7 +3405,6 @@ test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "do-worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -3426,7 +3470,6 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 				},
@@ -3439,7 +3482,6 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/*" }],
@@ -3450,7 +3492,6 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "c",
 					compatibilityDate: "2025-05-01",
 				},
@@ -3463,7 +3504,6 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "d",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["experimental"],
@@ -3525,12 +3565,10 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 	expect,
 	onTestFinished,
 }) => {
-	const port = await getPort();
 	const mf = new Miniflare({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["experimental"],
@@ -3545,25 +3583,168 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 							},
 						};
 					`),
-					triggers: [{ type: "connect", protocol: "tcp", port }],
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+
+	const socket = await mf.dispatchConnect();
+	socket.write("hello");
+	expect(await text(socket)).toBe("hello");
+});
+
+test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect() handler", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const reader = socket.readable.getReader();
+								const writer = socket.writable.getWriter();
+								const { value } = await reader.read();
+								await writer.write(value);
+							},
+						};
+					`),
+					triggers: [
+						{
+							type: "connect",
+							protocol: "udp",
+							address: "::1",
+							port: 0,
+							idleTimeoutMs: 1_000,
+							maxPendingBytes: 65_536,
+						},
+					],
 				},
 			},
 		],
 	});
 	onTestFinished(() => mf.dispose());
 	await mf.ready;
+	await expect(mf.dispatchConnect()).rejects.toThrow(
+		"No TCP connect triggers configured for entrypoint worker"
+	);
 
-	const received = await new Promise<Buffer>((resolve, reject) => {
-		const socket = net.connect(port, "127.0.0.1", () => {
-			socket.write("hello");
-		});
-		const chunks: Buffer[] = [];
-		socket.on("data", (chunk) => chunks.push(chunk));
-		socket.on("end", () => resolve(Buffer.concat(chunks)));
-		socket.on("error", reject);
+	const client = await mf.dispatchConnect({ protocol: "udp" });
+	client.send("hello");
+	const [message] = await once(client, "message");
+	expect(message.toString()).toBe("hello");
+});
+
+test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const firstPort = await getPort();
+	const secondPort = await getPort({ exclude: [firstPort] });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const writer = socket.writable.getWriter();
+								await writer.write(new TextEncoder().encode("a"));
+								await writer.close();
+							},
+						};
+					`),
+					triggers: [
+						{ type: "connect", protocol: "tcp", port: firstPort },
+						{ type: "connect", protocol: "tcp", port: secondPort },
+					],
+				},
+			},
+			{
+				config: {
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const writer = socket.writable.getWriter();
+								await writer.write(new TextEncoder().encode("b"));
+								await writer.close();
+							},
+						};
+					`),
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+
+	await expect(mf.dispatchConnect()).rejects.toThrow(
+		"Multiple TCP connect triggers configured for entrypoint worker; specify a port"
+	);
+	await expect(mf.dispatchConnect({ port: 123 })).rejects.toThrow(
+		"TCP connect trigger on port 123 not found for entrypoint worker"
+	);
+
+	const firstSocket = await mf.dispatchConnect({ port: firstPort });
+	expect(await text(firstSocket)).toBe("a");
+	const secondWorkerSocket = await mf.dispatchConnect({ workerName: "b" });
+	expect(await text(secondWorkerSocket)).toBe("b");
+});
+
+test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								await socket.readable.pipeTo(socket.writable);
+							},
+						};
+					`),
+					triggers: [
+						{ type: "connect", protocol: "tcp", port: 0 },
+						{ type: "connect", protocol: "udp", port: 0 },
+					],
+				},
+			},
+		],
+	});
+	let disposed = false;
+	onTestFinished(async () => {
+		if (!disposed) {
+			await mf.dispose();
+		}
 	});
 
-	expect(received.toString()).toBe("hello");
+	const socket = await mf.dispatchConnect();
+	const closed = once(socket, "close");
+	const datagramSocket = await mf.dispatchConnect({ protocol: "udp" });
+	const datagramClosed = once(datagramSocket, "close");
+	await mf.dispose();
+	disposed = true;
+	await Promise.all([closed, datagramClosed]);
+	expect(socket.destroyed).toBe(true);
 });
 
 test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
@@ -3571,7 +3752,6 @@ test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["experimental"],
@@ -3596,7 +3776,6 @@ test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["experimental"],
@@ -3650,7 +3829,6 @@ unixSerialTest(
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},
@@ -3689,7 +3867,6 @@ unixSerialTest(
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},
@@ -3726,7 +3903,6 @@ test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match produ
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(TIMEZONE_WORKER),
@@ -3757,7 +3933,6 @@ unixSerialTest(
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(TIMEZONE_WORKER),
@@ -3780,7 +3955,6 @@ test("Miniflare: workerd crash during startup => ERR_RUNTIME_FAILURE", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -3813,7 +3987,6 @@ test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -3870,7 +4043,6 @@ test("Miniflare: warns when workerd is restarted after a crash", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -3917,7 +4089,6 @@ test("Miniflare: logs post-restart callback failures", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -3969,7 +4140,6 @@ test("Miniflare: exits cleanly", async ({ expect }) => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2025-05-01",
 							manifest: {
@@ -4022,7 +4192,6 @@ test("Miniflare: supports unsafe eval bindings", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -4053,7 +4222,6 @@ test("Miniflare: getCf() returns a standard cf object", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -4081,7 +4249,6 @@ test("Miniflare: getCf() returns a user provided cf object", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -4103,7 +4270,6 @@ test("Miniflare: dispatchFetch() can override cf", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4130,7 +4296,6 @@ test("Miniflare: CF-Connecting-IP is injected", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4143,12 +4308,7 @@ test("Miniflare: CF-Connecting-IP is injected", async ({ expect }) => {
 	useDispose(mf);
 
 	const ip = await mf.dispatchFetch("http://example.com/");
-	// Tracked in https://github.com/cloudflare/workerd/issues/3310
-	if (!isWindows) {
-		expect(await ip.text()).toEqual("127.0.0.1");
-	} else {
-		expect(await ip.text()).toEqual("");
-	}
+	expect(await ip.text()).toEqual("127.0.0.1");
 });
 
 test("Miniflare: CF-Connecting-IP is injected (ipv6)", async ({ expect }) => {
@@ -4160,7 +4320,6 @@ test("Miniflare: CF-Connecting-IP is injected (ipv6)", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4173,13 +4332,7 @@ test("Miniflare: CF-Connecting-IP is injected (ipv6)", async ({ expect }) => {
 	useDispose(mf);
 
 	const ip = await mf.dispatchFetch("http://example.com/");
-
-	// Tracked in https://github.com/cloudflare/workerd/issues/3310
-	if (!isWindows) {
-		expect(await ip.text()).toEqual("::1");
-	} else {
-		expect(await ip.text()).toEqual("");
-	}
+	expect(await ip.text()).toEqual("::1");
 });
 
 test("Miniflare: CF-Connecting-IP is preserved when present", async ({
@@ -4192,7 +4345,6 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4221,7 +4373,6 @@ test("Miniflare: strips CF-Connecting-IP", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4237,7 +4388,6 @@ test("Miniflare: strips CF-Connecting-IP", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4262,7 +4412,6 @@ test("Miniflare: does not strip CF-Connecting-IP when configured", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4278,7 +4427,6 @@ test("Miniflare: does not strip CF-Connecting-IP when configured", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4307,7 +4455,6 @@ test("Miniflare: adds CF-Worker header to outbound requests with zone option", a
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4323,7 +4470,6 @@ test("Miniflare: adds CF-Worker header to outbound requests with zone option", a
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "my-worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4351,7 +4497,6 @@ test("Miniflare: CF-Worker header defaults to worker-name.example.com when zone 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4368,7 +4513,6 @@ test("Miniflare: CF-Worker header defaults to worker-name.example.com when zone 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "my-worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4393,7 +4537,6 @@ test("Miniflare: CF-Worker header defaults to worker.example.com when neither zo
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4413,7 +4556,6 @@ test("Miniflare: CF-Worker header defaults to worker.example.com when neither zo
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -4469,7 +4611,6 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					// `export_commonjs_default` became the default on 2022-10-31, so
@@ -4502,7 +4643,6 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/b" }],
@@ -4597,7 +4737,6 @@ test("Miniflare: can use module fallback service with V2 protocol", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					// `export_commonjs_default` (default since 2022-10-31) dropped;
@@ -4654,7 +4793,6 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/a" }],
@@ -4676,7 +4814,6 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/b" }],
@@ -4695,7 +4832,6 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 			},
 			{
 				config: {
-					type: "worker",
 					name: "c",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/c" }],
@@ -4737,7 +4873,6 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -4761,7 +4896,6 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -4783,7 +4917,6 @@ test("Miniflare: custom Node service binding", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -4824,7 +4957,6 @@ test("Miniflare: custom Node outbound service", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -4875,7 +5007,6 @@ test("Miniflare: setOptions: can restart workerd multiple times in succession", 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -4901,7 +5032,6 @@ test("Miniflare: setOptions: can restart workerd multiple times in succession", 
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(`export default {
@@ -4947,7 +5077,6 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -4973,7 +5102,6 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -5000,7 +5128,6 @@ test("Miniflare: dispatchFetch handles POST/PUT with non-2xx status", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {

@@ -36,10 +36,12 @@ describe("buildDependantsGraph()", () => {
 		expect(graph["wrangler"]).toContain("@cloudflare/vite-plugin");
 		expect(graph["wrangler"]).toContain("@cloudflare/vitest-plugin");
 		expect(graph["wrangler"]).not.toContain("miniflare");
+		expect(graph["@cloudflare/containers-shared"]).toContain(
+			"@cloudflare/deploy-helpers"
+		);
 
 		// Private packages should not be in the graph
 		expect(graph).not.toHaveProperty("@cloudflare/workers-shared");
-		expect(graph).not.toHaveProperty("@cloudflare/containers-shared");
 	});
 });
 

@@ -232,18 +232,46 @@ export default defineConfig(() => ({
 				"vite.config.ts",
 				`
 import { defineConfig } from 'vite';
+import { nitro, keepMe } from 'nitro/vite';
 
 export default defineConfig(() => ({
-  plugins: [nitro(), someOther()]
+  plugins: [nitro(), keepMe(), someOther()]
 }));
 `
 			);
 
-			expect(() => transformViteConfig(".")).not.toThrow();
+			transformViteConfig(".");
 			const result = readFileSync("vite.config.ts", "utf-8");
 			expect(result).not.toContain("nitro()");
+			expect(result).toContain("import { keepMe } from 'nitro/vite'");
+			expect(result).toContain("keepMe()");
 			expect(result).toContain("someOther()");
 			expect(result).toContain("cloudflare()");
+		});
+
+		it("should preserve incompatible plugin imports that are still referenced", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`
+import { defineConfig } from 'vite';
+import { nitro, nitro as nitroPlugin } from 'nitro/vite';
+
+export default defineConfig({
+  nitroOptions: nitro,
+  plugins: [nitro(), enabled ? nitro() : undefined, nitroPlugin()]
+});
+`
+			);
+
+			transformViteConfig(".");
+			const result = readFileSync("vite.config.ts", "utf-8");
+			expect(result.match(/nitro\(\)/g)).toHaveLength(1);
+			expect(result).toContain("enabled ? nitro() : undefined");
+			expect(result).toContain("nitroPlugin()");
+			expect(result).toContain("from 'nitro/vite'");
+			expect(result).toContain("nitroOptions: nitro");
 		});
 
 		it("should throw UserError when plugins array is missing", async ({

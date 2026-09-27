@@ -30,7 +30,8 @@
 		"typegen:web-assembly": "wrangler types ./web-assembly/src/env.d.ts -c ./web-assembly/wrangler.jsonc --no-include-runtime",
 		"typegen:workers-assets": "wrangler types ./workers-assets/src/env.d.ts -c ./workers-assets/wrangler.jsonc --no-include-runtime",
 		"typegen:workers-assets-no-dir": "wrangler types ./workers-assets-no-dir/src/env.d.ts -c ./workers-assets-no-dir/wrangler.jsonc --no-include-runtime",
-		"typegen:workflows": "wrangler types ./workflows/src/env.d.ts -c ./workflows/wrangler.jsonc --no-include-runtime"
+		"typegen:workflows": "wrangler types ./workflows/src/env.d.ts -c ./workflows/wrangler.jsonc --no-include-runtime",
+		"typegen:workflows-exports": "wrangler types ./workflows-exports/src/env.d.ts -c ./workflows-exports/wrangler.jsonc --no-include-runtime"
 	},
 	"devDependencies": {
 		"@better-auth/stripe": "^1.4.6",

@@ -16,7 +16,6 @@ describe.sequential("owner presence integration", () => {
 	it("requires persistence and a dev registry", ({ expect }) => {
 		const worker = {
 			config: {
-				type: "worker" as const,
 				name: "worker",
 				compatibilityDate: "2025-01-01",
 			},
@@ -78,7 +77,6 @@ describe.sequential("owner presence integration", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						compatibilityFlags: ["experimental"],
@@ -129,7 +127,6 @@ describe.sequential("owner presence integration", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "owner",
 							compatibilityDate: "2025-01-01",
 							manifest: singleModuleManifest(
@@ -150,7 +147,6 @@ describe.sequential("owner presence integration", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "client",
 							compatibilityDate: "2025-01-01",
 							manifest: singleModuleManifest(`export default {
@@ -209,7 +205,6 @@ describe.sequential("owner presence integration", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						compatibilityFlags: ["experimental"],
@@ -321,7 +316,6 @@ describe.sequential("owner presence integration", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						compatibilityFlags: ["experimental"],
@@ -442,7 +436,6 @@ describe.sequential("owner presence integration", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						compatibilityFlags: ["experimental"],
@@ -492,7 +485,6 @@ describe.sequential("owner presence integration", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						compatibilityFlags: ["experimental"],
@@ -556,7 +548,6 @@ describe.sequential("owner presence integration", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "first",
 							compatibilityDate: "2025-01-01",
 							manifest: singleModuleManifest(
@@ -581,7 +572,6 @@ describe.sequential("owner presence integration", () => {
 					workers: [
 						{
 							config: {
-								type: "worker",
 								name: "second",
 								compatibilityDate: "2025-01-01",
 								compatibilityFlags: ["experimental"],
@@ -673,7 +663,6 @@ describe.sequential("owner presence integration", () => {
 					workers: [
 						{
 							config: {
-								type: "worker",
 								name: "worker",
 								compatibilityDate: "2025-01-01",
 								compatibilityFlags: ["experimental"],
@@ -724,7 +713,6 @@ describe.sequential("owner presence integration", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						compatibilityFlags: ["experimental"],
@@ -806,7 +794,6 @@ describe.sequential("owner presence integration", () => {
 					workers: [
 						{
 							config: {
-								type: "worker",
 								name,
 								compatibilityDate: "2025-01-01",
 								compatibilityFlags: ["experimental"],
@@ -850,7 +837,6 @@ describe.sequential("owner presence integration", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`export default {
@@ -908,7 +894,6 @@ describe.sequential("owner presence integration", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],

@@ -1,7 +1,7 @@
 import { readFileSync as fsReadFileSync } from "node:fs";
 import { resolve } from "node:path";
 import * as jsoncParser from "jsonc-parser";
-import TOML, { TomlError } from "smol-toml";
+import * as TOML from "smol-toml";
 import { UserError } from "./errors";
 import type { TelemetryMessage } from "./errors";
 import type { ParseError as JsoncParseError } from "jsonc-parser";
@@ -84,7 +84,8 @@ export class APIError extends ParseError {
 
 	isGatewayError() {
 		if (this.#status !== undefined) {
-			return [524].includes(this.#status);
+			// Pages/Workers asset upload uses this to drop concurrency and back off longer.
+			return [502, 503, 504, 524].includes(this.#status);
 		}
 		return false;
 	}
@@ -116,7 +117,7 @@ export function parseTOML(tomlContent: string, filePath?: string): unknown {
 	try {
 		return TOML.parse(tomlContent);
 	} catch (err) {
-		if (!(err instanceof TomlError)) {
+		if (!(err instanceof TOML.TomlError)) {
 			throw err;
 		}
 

@@ -6,12 +6,15 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import { useEffect, type JSX } from "react";
-import { TestEmailDraftsProvider } from "../components/email/TestEmailDraftsContext";
 import { getSelectedWorker } from "../components/WorkerSelector";
+import { isEmailCaptureId } from "./email/shared/types";
 
 export const Route = createFileRoute("/email")({
 	component: EmailLayout,
-	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
+	validateSearch: (
+		search: Record<string, unknown>
+	): { lookup?: "message-id"; worker?: string } => ({
+		lookup: search.lookup === "message-id" ? "message-id" : undefined,
 		worker: typeof search.worker === "string" ? search.worker : undefined,
 	}),
 });
@@ -29,7 +32,7 @@ function EmailLayout(): JSX.Element {
 	});
 	const routingDetailParams = matchRoute({
 		includeSearch: false,
-		to: "/email/routing/$emailId",
+		to: "/email/routing/$captureId",
 	});
 	const sendingRouteMatch = matchRoute({
 		includeSearch: false,
@@ -49,17 +52,27 @@ function EmailLayout(): JSX.Element {
 		)?.name ?? "";
 
 	useEffect(() => {
-		if (selectedWorker === "" || search.worker === selectedWorker) {
-			return;
-		}
-
+		// Detail URLs identify a specific Worker-owned resource. If that Worker is
+		// no longer visible, preserve the requested identity so the detail API can
+		// report it as missing or unavailable instead of targeting the default Worker.
 		if (routingDetailParams) {
+			if (
+				search.lookup === "message-id" ||
+				!isEmailCaptureId(routingDetailParams.captureId) ||
+				search.worker !== undefined ||
+				selectedWorker === ""
+			) {
+				return;
+			}
 			void navigate({
 				params: routingDetailParams,
 				replace: true,
 				search: (previous) => ({ ...previous, worker: selectedWorker }),
-				to: "/email/routing/$emailId",
+				to: "/email/routing/$captureId",
 			});
+			return;
+		}
+		if (selectedWorker === "" || search.worker === selectedWorker) {
 			return;
 		}
 
@@ -70,11 +83,14 @@ function EmailLayout(): JSX.Element {
 				to: listRoute,
 			});
 		}
-	}, [listRoute, navigate, routingDetailParams, search.worker, selectedWorker]);
+	}, [
+		listRoute,
+		navigate,
+		routingDetailParams,
+		search.lookup,
+		search.worker,
+		selectedWorker,
+	]);
 
-	return (
-		<TestEmailDraftsProvider>
-			<Outlet />
-		</TestEmailDraftsProvider>
-	);
+	return <Outlet />;
 }

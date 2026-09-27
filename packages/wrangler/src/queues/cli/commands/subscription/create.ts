@@ -28,6 +28,9 @@ function parseSourceArgument(
 		case EventSourceType.ARTIFACTS_REPO:
 			return { type: EventSourceType.ARTIFACTS_REPO };
 
+		case EventSourceType.BROWSER_RUN:
+			return { type: EventSourceType.BROWSER_RUN };
+
 		case EventSourceType.EMAIL_SENDING:
 			if (!args.zoneId) {
 				throw new UserError(

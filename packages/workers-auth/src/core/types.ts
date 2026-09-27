@@ -89,6 +89,12 @@ export interface CliDescriptor {
 	redirectUri: string;
 
 	/**
+	 * Whether interactive logins use the OAuth 2.0 Device Authorization Grant
+	 * unless the caller explicitly selects a flow. Defaults to `false`.
+	 */
+	useDeviceFlowByDefault?: boolean;
+
+	/**
 	 * Whether Cloudflare Global API Key + email credentials are accepted.
 	 * Defaults to `true`.
 	 */

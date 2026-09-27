@@ -17,6 +17,7 @@ import {
 } from "../autoconfig";
 import { createWranglerAutoConfigContext } from "../autoconfig-context";
 import { readConfig } from "../config";
+import { applyZoneArgsToRoutes } from "../deployment-bundle/route-zone-args";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
@@ -33,6 +34,9 @@ type DeployConfigFlags = {
 	compatibilityFlags: string[] | undefined;
 	// Routing & scheduling
 	routes: string[] | undefined;
+	zone: string[] | undefined;
+	zoneId: string[] | undefined;
+	experimentalRouteZones: boolean | undefined;
 	domains: string[] | undefined;
 	triggers: string[] | undefined;
 	// Variables & build-time substitutions
@@ -256,7 +260,10 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 			configContent.compatibility_flags = args.compatibilityFlags;
 		}
 		if (args.routes?.length || args.domains?.length) {
-			const routeEntries: unknown[] = [...(args.routes ?? [])];
+			const routeEntries: unknown[] = applyZoneArgsToRoutes(
+				args.routes ?? [],
+				args
+			);
 			for (const domain of args.domains ?? []) {
 				routeEntries.push({ pattern: domain, custom_domain: true });
 			}
@@ -329,6 +336,11 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 					? [`--compatibility-flags ${args.compatibilityFlags.join(" ")}`]
 					: []),
 				...(args.routes?.length ? [`--routes ${args.routes.join(" ")}`] : []),
+				...(args.zone?.length || args.zoneId?.length
+					? ["--x-route-zones"]
+					: []),
+				...(args.zone?.length ? [`--zone ${args.zone.join(" ")}`] : []),
+				...(args.zoneId?.length ? [`--zone-id ${args.zoneId.join(" ")}`] : []),
 				...(args.domains?.length
 					? [`--domains ${args.domains.join(" ")}`]
 					: []),

@@ -241,7 +241,6 @@ function makeEdge(targetScript: string, directSockets = false): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "proxy-server",
 					compatibilityDate: COMPAT_DATE,
 					compatibilityFlags: ["experimental"],
@@ -259,7 +258,6 @@ function makeEdge(targetScript: string, directSockets = false): Miniflare {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "vpc-target",
 					compatibilityDate: COMPAT_DATE,
 					compatibilityFlags: ["experimental"],
@@ -279,7 +277,6 @@ function makeLocal(userScript: string, edgeUrl: URL): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: COMPAT_DATE,
 					manifest: singleModuleManifest(userScript),
@@ -308,7 +305,6 @@ function makeLocalService(userScript: string, edgeUrl: URL): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: COMPAT_DATE,
 					manifest: singleModuleManifest(userScript),

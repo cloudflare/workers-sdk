@@ -1,5 +1,4 @@
 import fs from "node:fs/promises";
-import { z } from "zod";
 import { getUserServiceName } from "../core";
 import {
 	getEnvBindingsOfType,
@@ -9,13 +8,9 @@ import {
 import type { Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
-// Options for a container attached to the DO
-export const DOContainerOptionsSchema = z.object({
-	imageName: z.string(),
-});
-export type DOContainerOptions = z.infer<typeof DOContainerOptionsSchema>;
-
 export { getDurableObjectUniqueKey } from "./namespaces";
+export { DOContainerOptionsSchema } from "./options";
+export type { DOContainerOptions } from "./options";
 
 export const DURABLE_OBJECTS_PLUGIN_NAME = "do";
 

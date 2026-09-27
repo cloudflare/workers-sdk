@@ -44,7 +44,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2025-09-06",
 							manifest: {

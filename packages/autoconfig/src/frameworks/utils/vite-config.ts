@@ -161,6 +161,32 @@ function getViteConfigPath(projectPath: string): string {
  */
 const knownIncompatiblePlugins = ["nitro", "nitroV2Plugin", "netlify"];
 
+function hasIdentifierOutsideImport(
+	program: types.namedTypes.Program,
+	identifierName: string
+): boolean {
+	let hasIdentifier = false;
+
+	recast.types.visit(program, {
+		visitIdentifier(n) {
+			const parent = n.parentPath.node;
+			if (
+				n.node.name === identifierName &&
+				!t.ImportSpecifier.check(parent) &&
+				!t.ImportDefaultSpecifier.check(parent) &&
+				!t.ImportNamespaceSpecifier.check(parent)
+			) {
+				hasIdentifier = true;
+				return false;
+			}
+
+			this.traverse(n);
+		},
+	});
+
+	return hasIdentifier;
+}
+
 export function transformViteConfig(
 	projectPath: string,
 	options: {
@@ -169,6 +195,7 @@ export function transformViteConfig(
 	} = {}
 ) {
 	const filePath = getViteConfigPath(projectPath);
+	const removedIncompatiblePlugins = new Set<string>();
 
 	transformFile(filePath, {
 		visitProgram(n) {
@@ -196,7 +223,28 @@ export function transformViteConfig(
 				lastImport.insertAfter(importAst);
 			}
 
-			return this.traverse(n);
+			this.traverse(n);
+
+			// Remove imports that are now unused because their plugin was removed.
+			n.node.body = n.node.body.filter((statement) => {
+				if (
+					!t.ImportDeclaration.check(statement) ||
+					!statement.specifiers?.length
+				) {
+					return true;
+				}
+
+				statement.specifiers = statement.specifiers.filter(
+					(specifier) =>
+						!t.Identifier.check(specifier.local) ||
+						!removedIncompatiblePlugins.has(specifier.local.name) ||
+						hasIdentifierOutsideImport(n.node, specifier.local.name)
+				);
+
+				return statement.specifiers.length > 0;
+			});
+
+			return false;
 		},
 		visitCallExpression: function (n) {
 			// Add the imported plugin to the config
@@ -303,6 +351,7 @@ export function transformViteConfig(
 					el.callee.type === "Identifier" &&
 					incompatibleVitePlugins.includes(el.callee.name)
 				) {
+					removedIncompatiblePlugins.add(el.callee.name);
 					return false;
 				}
 				return true;

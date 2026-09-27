@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build:default": "vite build",
-		"check:type": "tsc --build",
+		"check:type": "pnpm run build:default && tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
 	},

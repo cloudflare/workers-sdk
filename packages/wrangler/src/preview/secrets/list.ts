@@ -86,7 +86,7 @@ export const previewSecretListCommand = createCommand({
 		description: "List all secrets on a Worker Preview's latest deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	args: {
 		name: {

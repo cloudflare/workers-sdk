@@ -1,20 +1,19 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 // `@cloudflare/config` is statically imported here. See new-config.ts for
 // documentation of the upstream build warnings this triggers.
 import { generateTypes } from "@cloudflare/config";
 import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import { logger } from "../logger";
-import {
-	DEFAULT_WORKERS_TYPES_FILE_NAME,
-	DEFAULT_WORKERS_TYPES_FILE_PATH,
-} from "./helpers";
 import { generateRuntimeTypes } from "./runtime";
 import type { NormalizedTypes } from "../experimental-config/load";
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 
+/** Default generated types path for the experimental configuration. */
+const NEW_CONFIG_TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
+
 /**
- * Re-generate `worker-configuration.d.ts` from `cloudflare.config.ts` under
+ * Re-generate `.cloudflare/types/index.d.ts` from `cloudflare.config.ts` under
  * `--experimental-new-config`. This is the new-config equivalent of the legacy
  * `checkTypesDiff` path — `checkTypesDiff` is NOT invoked when
  * `--experimental-new-config` is on.
@@ -32,20 +31,22 @@ export async function regenerateNewConfigTypes(options: {
 	// and the diff-before-write.
 	let existing: string | undefined;
 	try {
-		existing = await readFile(DEFAULT_WORKERS_TYPES_FILE_PATH, "utf-8");
+		existing = await readFile(NEW_CONFIG_TYPES_OUTPUT_PATH, "utf-8");
 	} catch {
 		// File doesn't exist yet — fall through to write.
 	}
 
 	let content: string;
 	try {
-		const outputDir = path.dirname(
-			path.resolve(DEFAULT_WORKERS_TYPES_FILE_PATH)
-		);
-		const relativeConfigPath =
-			"./" + path.relative(outputDir, options.cloudflareConfigPath);
+		const outputDir = path.dirname(path.resolve(NEW_CONFIG_TYPES_OUTPUT_PATH));
+		const relativeConfigPath = path
+			.relative(outputDir, options.cloudflareConfigPath)
+			.replaceAll("\\", "/");
+		const configImportPath = relativeConfigPath.startsWith(".")
+			? relativeConfigPath
+			: `./${relativeConfigPath}`;
 		content = generateTypes({
-			configPath: relativeConfigPath,
+			configPath: configImportPath,
 			packageName: "wrangler/experimental-config",
 		});
 
@@ -69,9 +70,12 @@ export async function regenerateNewConfigTypes(options: {
 	}
 
 	try {
-		await writeFile(DEFAULT_WORKERS_TYPES_FILE_PATH, content);
+		await mkdir(path.dirname(NEW_CONFIG_TYPES_OUTPUT_PATH), {
+			recursive: true,
+		});
+		await writeFile(NEW_CONFIG_TYPES_OUTPUT_PATH, content);
 		logger.log(
-			`📝 Regenerated ${path.relative(process.cwd(), DEFAULT_WORKERS_TYPES_FILE_NAME)} from ${path.relative(process.cwd(), options.cloudflareConfigPath)}.`
+			`📝 Regenerated ${NEW_CONFIG_TYPES_OUTPUT_PATH} from ${path.relative(process.cwd(), options.cloudflareConfigPath)}.`
 		);
 	} catch (e) {
 		logger.error(e);

@@ -23,12 +23,10 @@ test(
 			`TypeError: Unexpected options in project ${tmpPathName}`
 		);
 		let expected = dedent`
-			{
-			  miniflare: [],
-			             ^ Invalid input: expected object, received array
-			  wrangler: './wrangler.toml',
-			            ^ Invalid input: expected object, received string
-			}
+			✖ Invalid input: expected object, received array
+			  → at miniflare
+			✖ Invalid input: expected object, received string
+			  → at wrangler
 		`;
 		expect(result.stderr).toContain(expected);
 
@@ -47,12 +45,8 @@ test(
 			`TypeError: Unexpected options in project ${tmpPathName}`
 		);
 		expected = dedent`
-			{
-			  miniflare: {
-			    compatibilityDate: { year: 2024, month: 1, day: 1 },
-			                       ^ Invalid input: expected string, received object
-			  },
-			}
+			✖ Invalid input: expected string, received object
+			  → at miniflare.compatibilityDate
 		`;
 		expect(result.stderr).toContain(expected);
 	}

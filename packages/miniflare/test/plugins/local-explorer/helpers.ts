@@ -11,7 +11,6 @@ export function createUnboundStorageExplorer(): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2026-01-01",
 					manifest: singleModuleManifest(
@@ -41,7 +40,6 @@ export async function createSharedStorageExplorerPair(): Promise<{
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name,
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(

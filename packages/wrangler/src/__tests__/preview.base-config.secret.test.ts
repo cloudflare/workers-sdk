@@ -21,9 +21,6 @@ type PreviewBaseConfigWorkerResult = {
 	previews_base_config?: {
 		env?: Record<string, { type: string; text: string }>;
 	};
-	preview_defaults?: {
-		env?: Record<string, { type: string; text: string }>;
-	};
 };
 
 function mockPatchWorker(
@@ -459,27 +456,6 @@ describe("wrangler preview", () => {
 				await runWrangler("preview base-config secret list");
 
 				expect(std.out).toContain("(none)");
-			});
-
-			test("does not fall back to preview defaults when base config is missing", async ({
-				expect,
-			}) => {
-				mockGetWorkerResult({
-					preview_defaults: {
-						env: {
-							DEFAULT_SECRET: {
-								type: "secret_text",
-								text: "preview-default-secret",
-							},
-						},
-					},
-				});
-
-				await runWrangler("preview base-config secret list");
-
-				expect(std.out).toContain("(none)");
-				expect(std.out).not.toContain("DEFAULT_SECRET");
-				expect(std.out).not.toContain("preview-default-secret");
 			});
 
 			test("respects env-specific worker name when listing secrets", async ({

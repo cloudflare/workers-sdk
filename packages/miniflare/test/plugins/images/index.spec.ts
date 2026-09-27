@@ -59,7 +59,6 @@ function createMiniflare(): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-04-01",
 					env: { IMAGES: { type: "images" } },

@@ -1,4 +1,4 @@
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import type { Config, RawConfig } from "./config";
@@ -33,6 +33,7 @@ export type {
 	CacheOptions,
 	ConfiguredExport,
 	ConfigModuleRuleType,
+	DurableObjectCodeUpdateStrategy,
 	Environment,
 	PreviewsConfig,
 	RawEnvironment,
@@ -43,7 +44,16 @@ export type { ExportType, PartitionedExports } from "./exports";
 export {
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
+} from "./containers";
+export type {
+	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
 } from "./containers";
 
 export function configFormat(

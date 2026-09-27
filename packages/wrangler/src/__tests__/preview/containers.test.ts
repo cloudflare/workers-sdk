@@ -1,4 +1,10 @@
-import { SchedulingPolicy } from "@cloudflare/containers-shared";
+import {
+	apply,
+	buildAndMaybePush,
+	listDurableObjects,
+	pushImageIfChanged,
+	SchedulingPolicy,
+} from "@cloudflare/containers-shared";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { beforeEach, describe, test, vi } from "vitest";
 import { logger } from "../../logger";
@@ -15,14 +21,13 @@ vi.mock("../../cloudchamber/common", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../../cloudchamber/common")>()),
 	fillOpenAPIConfiguration: vi.fn(),
 }));
-vi.mock("../../containers/build", () => ({ buildContainer: vi.fn() }));
-vi.mock("../../containers/deploy", () => ({
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
 	apply: vi.fn(),
+	buildAndMaybePush: vi.fn(),
 	listDurableObjects: vi.fn(),
+	pushImageIfChanged: vi.fn(),
 }));
-
-const { buildContainer } = await import("../../containers/build");
-const { apply, listDurableObjects } = await import("../../containers/deploy");
 
 const PREVIEW_APP_NAME = "test-worker_my-feature_MyContainer";
 const ACCOUNT_ID = "some-account-id";
@@ -61,11 +66,15 @@ describe("deployPreviewContainers", () => {
 	const std = mockConsoleMethods();
 
 	beforeEach(() => {
-		vi.mocked(buildContainer).mockReset();
 		vi.mocked(apply).mockReset();
+		vi.mocked(buildAndMaybePush).mockReset();
 		vi.mocked(listDurableObjects).mockReset();
+		vi.mocked(pushImageIfChanged).mockReset();
 		vi.mocked(listDurableObjects).mockResolvedValue([]);
-		vi.mocked(buildContainer).mockResolvedValue({ newTag: "built:tag" });
+		vi.mocked(buildAndMaybePush).mockResolvedValue({ newTag: "built:tag" });
+		vi.mocked(pushImageIfChanged).mockResolvedValue({
+			remoteDigest: "registry.cloudflare.com/some-account-id/test@sha256:abc",
+		});
 	});
 
 	// Docker rejects uppercase characters in an image repository name, but the
@@ -84,9 +93,16 @@ describe("deployPreviewContainers", () => {
 			quiet: false,
 		});
 
-		expect(vi.mocked(buildContainer).mock.calls[0]?.[0]).toMatchObject({
-			name: "test-worker_my-feature_mycontainer",
-		});
+		expect(buildAndMaybePush).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tag: "test-worker_my-feature_mycontainer:deployment",
+			}),
+			expect.any(String),
+			true,
+			expect.objectContaining({ name: "test-worker_my-feature_mycontainer" }),
+			false,
+			config
+		);
 		expect(vi.mocked(apply).mock.calls[0]?.[1]).toMatchObject({
 			name: PREVIEW_APP_NAME,
 		});
@@ -107,8 +123,8 @@ describe("deployPreviewContainers", () => {
 			quiet: false,
 		});
 
-		expect(vi.mocked(buildContainer).mock.calls[0]?.[0]).toMatchObject({
-			name: "test-worker_feature-mybranch_mycontainer",
+		expect(vi.mocked(buildAndMaybePush).mock.calls[0]?.[0]).toMatchObject({
+			tag: "test-worker_feature-mybranch_mycontainer:deployment",
 		});
 	});
 
@@ -128,7 +144,7 @@ describe("deployPreviewContainers", () => {
 			quiet: false,
 		});
 
-		expect(vi.mocked(buildContainer).mock.calls[0]?.[5]).toMatchObject({
+		expect(vi.mocked(buildAndMaybePush).mock.calls[0]?.[5]).toMatchObject({
 			compliance_region: "fedramp_high",
 		});
 	});
@@ -195,10 +211,49 @@ describe("deployPreviewContainers", () => {
 			quiet: false,
 		});
 
-		expect(buildContainer).not.toHaveBeenCalled();
+		expect(buildAndMaybePush).not.toHaveBeenCalled();
 		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
 			imageRef: {
 				newTag: "registry.cloudflare.com/some-account-id/test:latest",
+			},
+		});
+	});
+
+	test("should push a locally built Build Output image before applying it", async ({
+		expect,
+	}) => {
+		const container = {
+			...containerConfig(),
+			dockerfile: undefined,
+			image_build_context: undefined,
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
+		} as unknown as ContainerNormalizedConfig;
+		delete (container as Record<string, unknown>).dockerfile;
+		const config = {
+			...defaultWranglerConfig,
+			containers: [container],
+		} as unknown as Config;
+
+		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {
+			quiet: false,
+			localImageReferences: new Map([
+				["MyContainer", "cloudflare-build/project/test:build-id"],
+			]),
+		});
+
+		expect(pushImageIfChanged).toHaveBeenCalledWith({
+			pathToDocker: expect.any(String),
+			sourceTag: "cloudflare-build/project/test:build-id",
+			targetTag: "cloudflare-build/project/test:build-id",
+			accountId: ACCOUNT_ID,
+			complianceConfig: config,
+			containerConfig: container,
+			cleanupSourceTag: false,
+		});
+		expect(buildAndMaybePush).not.toHaveBeenCalled();
+		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
+			imageRef: {
+				remoteDigest: "registry.cloudflare.com/some-account-id/test@sha256:abc",
 			},
 		});
 	});

@@ -46,4 +46,46 @@ describe("detectFramework() / basic framework detection", () => {
 		expect(result.detectedFramework?.buildCommand).toBeDefined();
 		expect(result.detectedFramework?.buildCommand).toContain("astro build");
 	});
+
+	it("clears commands for an unknown framework when targeting cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				scripts: { build: "cf build", dev: "cf dev" },
+				dependencies: { gatsby: "5" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		const result = await detectFramework(process.cwd(), context);
+
+		expect(result.detectedFramework).toMatchObject({
+			framework: { id: "gatsby" },
+			buildCommand: undefined,
+			devCommand: undefined,
+		});
+	});
+
+	it("preserves command inference for an unsupported framework when targeting Wrangler", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				scripts: { build: "cf build", dev: "cf dev" },
+				dependencies: { hono: "4", vite: "8" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		const result = await detectFramework(process.cwd(), context, {
+			target: "wrangler",
+		});
+
+		expect(result.detectedFramework).toMatchObject({
+			framework: { id: "hono" },
+			buildCommand: "npm run build",
+			devCommand: undefined,
+		});
+	});
 });

@@ -27,6 +27,12 @@ describe("Vite framework", () => {
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
 	});
 
+	it("accepts Cloudflare modes", ({ expect }) => {
+		const framework = new Vite({ id: "vite", name: "Vite" });
+
+		expect(framework.supportsMode).toBe(true);
+	});
+
 	describe("isConfigured()", () => {
 		it("returns false when no vite config file exists", ({ expect }) => {
 			const framework = new Vite({ id: "vite", name: "Vite" });
@@ -55,6 +61,11 @@ describe("Vite framework", () => {
 		}) => {
 			const framework = new Vite({ id: "vite", name: "Vite" });
 			const result = await framework.configure(BASE_OPTIONS);
+			expect(cliPackages.installPackages).toHaveBeenCalledWith(
+				"npm",
+				["@cloudflare/vite-plugin@beta"],
+				expect.anything()
+			);
 
 			expect(existsSync("vite.config.js")).toBe(true);
 			const content = readFileSync("vite.config.js", "utf-8");
@@ -69,6 +80,17 @@ describe("Vite framework", () => {
 				},
 			});
 			expect(result.buildTool).toBe("vite");
+		});
+
+		it("installs the stable plugin for Wrangler", async ({ expect }) => {
+			const framework = new Vite({ id: "vite", name: "Vite" });
+			await framework.configure({ ...BASE_OPTIONS, target: "wrangler" });
+
+			expect(cliPackages.installPackages).toHaveBeenCalledWith(
+				"npm",
+				["@cloudflare/vite-plugin"],
+				expect.anything()
+			);
 		});
 
 		it("uses .ts extension when the project has a tsconfig.json", async ({

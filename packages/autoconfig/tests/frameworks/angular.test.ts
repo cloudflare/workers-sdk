@@ -10,7 +10,7 @@ import type { AutoConfigFrameworkPackageInfo } from "../../src/frameworks";
 const context = createMockContext();
 
 const BASE_OPTIONS = {
-	target: "cf" as const,
+	target: "wrangler" as const,
 	projectPath: process.cwd(),
 	workerName: "my-angular-app",
 	outputDir: "dist/my-angular-app/",
@@ -80,6 +80,12 @@ describe("Angular framework configure()", () => {
 			expect(result.workerConfig).toEqual({});
 			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
 			expect(result.workerConfig).not.toHaveProperty("entrypoint");
+		});
+
+		it("does not support Cloudflare modes", ({ expect }) => {
+			const framework = new Angular({ id: "angular", name: "Angular" });
+
+			expect(framework.supportsMode).toBe(false);
 		});
 
 		it("sets configurationDescription for SPA", async ({ expect }) => {

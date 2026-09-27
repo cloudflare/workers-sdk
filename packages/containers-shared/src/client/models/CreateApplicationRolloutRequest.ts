@@ -54,12 +54,12 @@ export namespace CreateApplicationRolloutRequest {
 	 *
 	 */
 	export enum step_percentage {
-		"_5" = 5,
-		"_10" = 10,
-		"_20" = 20,
-		"_25" = 25,
-		"_50" = 50,
-		"_100" = 100,
+		_5 = 5,
+		_10 = 10,
+		_20 = 20,
+		_25 = 25,
+		_50 = 50,
+		_100 = 100,
 	}
 
 	/**

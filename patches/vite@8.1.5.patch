@@ -1,0 +1,15 @@
+diff --git a/dist/node/chunks/node.js b/dist/node/chunks/node.js
+index 46a39acd56595208450431ca141ea9db4804d154..ada5cb54ab8f99c19ad482320ee9e8aac6c8f5e6 100644
+--- a/dist/node/chunks/node.js
++++ b/dist/node/chunks/node.js
+@@ -33662,6 +33662,10 @@ function createDepsOptimizer(environment) {
+ 	let discover;
+ 	async function close() {
+ 		closed = true;
++		// Pending loads must be released even if their batch never finishes or
++		// the optimizer has not been initialized yet.
++		depOptimizationProcessing.resolve();
++		resolveEnqueuedProcessingPromises();
+ 		await Promise.allSettled([
+ 			discover?.cancel(),
+ 			depsOptimizer.scanProcessing,

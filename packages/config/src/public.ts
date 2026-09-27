@@ -35,18 +35,14 @@ export type {
 	StreamBinding,
 	TextBinding,
 	TypedAiBinding,
-	TypedDurableObjectBinding,
 	TypedKvBinding,
 	TypedPipelineBinding,
 	TypedQueueBinding,
-	TypedWorkerBinding,
-	TypedWorkflowBinding,
 	UnsafeBinding,
 	VectorizeBinding,
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
-	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
 	WorkflowBinding,
@@ -70,6 +66,8 @@ export type {
 	DurableObjectExpectingTransferExport,
 	WorkerEntrypointExport,
 	WorkerEntrypointExportOptions,
+	WorkflowExport,
+	WorkflowExportOptions,
 } from "./exports";
 export { exports } from "./exports";
 export type {
@@ -78,16 +76,16 @@ export type {
 	InferMainModule,
 	UnwrapConfig,
 } from "./inference";
-export type { ConfigContext } from "./definition";
-export type { SettingsConfig, WorkerConfig } from "./types";
 export type {
-	TypedWorkerDefinition,
-	WorkerConfigExport,
-	WorkerConfigInput,
-} from "./worker-definition";
-export { defineWorker } from "./worker-definition";
+	ConfigContext,
+	ContainerDefinition,
+	WorkerDefinition,
+	WorkerReference,
+} from "./definition";
+export { defineConfig, defineContainer, defineWorker } from "./definition";
 export type {
-	SettingsConfigInput,
-	SettingsDefinition,
-} from "./settings-definition";
-export { defineSettings } from "./settings-definition";
+	CloudflareConfig,
+	ContainerConfig,
+	Settings,
+	WorkerConfig,
+} from "./types";

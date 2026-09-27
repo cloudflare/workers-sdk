@@ -9,6 +9,7 @@ import { PaperclipIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import {
 	useCallback,
 	useEffect,
+	useLayoutEffect,
 	useRef,
 	useState,
 	type ChangeEvent,
@@ -24,14 +25,15 @@ import {
 } from "../../utils/email-headers";
 import { formatSize } from "../../utils/format";
 import type { EmailSendRequest, EmailSendRoutingError } from "../../api";
-import type { TestEmailDraft } from "./TestEmailDraftsContext";
+import type { TestEmailDraft } from "../../utils/email-resend";
 
 interface SendTestEmailDialogProps {
 	initialDraft?: TestEmailDraft;
+	onDispatchedSendSettled: (expectedWorkerGeneration: number) => void;
 	onOpenChange: (open: boolean) => void;
-	onSent: (draft: TestEmailDraft) => void;
 	open: boolean;
 	worker?: string;
+	workerGeneration: number;
 }
 
 type SelectedAttachment = TestEmailDraft["attachments"][number];
@@ -111,6 +113,7 @@ function parseAddressList(value: string): string[] {
 	let angleDepth = 0;
 	let commentDepth = 0;
 	let escaped = false;
+	let groupDepth = 0;
 	let quoted = false;
 
 	function commitAddress(): void {
@@ -146,12 +149,22 @@ function parseAddressList(value: string): string[] {
 				angleDepth++;
 			} else if (commentDepth === 0 && character === ">" && angleDepth > 0) {
 				angleDepth--;
+			} else if (commentDepth === 0 && angleDepth === 0 && character === ":") {
+				groupDepth++;
+			} else if (
+				commentDepth === 0 &&
+				angleDepth === 0 &&
+				character === ";" &&
+				groupDepth > 0
+			) {
+				groupDepth--;
 			}
 		}
 		if (
 			!quoted &&
 			angleDepth === 0 &&
 			commentDepth === 0 &&
+			groupDepth === 0 &&
 			(character === "," || character === "\n" || character === "\r")
 		) {
 			commitAddress();
@@ -165,10 +178,11 @@ function parseAddressList(value: string): string[] {
 
 export function SendTestEmailDialog({
 	initialDraft,
+	onDispatchedSendSettled,
 	onOpenChange,
-	onSent,
 	open,
 	worker,
+	workerGeneration,
 }: SendTestEmailDialogProps): JSX.Element {
 	const toast = useKumoToastManager();
 	const [sending, setSending] = useState<boolean>(false);
@@ -191,6 +205,11 @@ export function SendTestEmailDialog({
 	const attachmentReadGenerationRef = useRef<number>(0);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const nextHeaderIdRef = useRef<number>(0);
+	const sendControllerRef = useRef<AbortController | undefined>(undefined);
+	const sendGuardRef = useRef<boolean>(false);
+	const disposedRef = useRef<boolean>(false);
+	const workerGenerationRef = useRef<number>(workerGeneration);
+	workerGenerationRef.current = workerGeneration;
 
 	const loadDraft = useCallback((draft?: TestEmailDraft) => {
 		setFrom(draft?.from ?? "");
@@ -225,6 +244,17 @@ export function SendTestEmailDialog({
 		}
 	}, [initialDraft, loadDraft, open]);
 
+	useLayoutEffect(() => {
+		disposedRef.current = false;
+		return () => {
+			disposedRef.current = true;
+			attachmentReadGenerationRef.current += 1;
+			sendControllerRef.current?.abort();
+			sendControllerRef.current = undefined;
+			sendGuardRef.current = false;
+		};
+	}, []);
+
 	async function handleAttachmentsSelected(
 		e: ChangeEvent<HTMLInputElement>
 	): Promise<void> {
@@ -245,6 +275,7 @@ export function SendTestEmailDialog({
 					filename: file.name,
 					type: file.type || "application/octet-stream",
 					content: await readFileAsBase64(file),
+					id: crypto.randomUUID(),
 					size: file.size,
 				}))
 			);
@@ -320,6 +351,9 @@ export function SendTestEmailDialog({
 	}
 
 	async function handleSend(): Promise<void> {
+		if (sendGuardRef.current) {
+			return;
+		}
 		const recipients = parseAddressList(to);
 		const customHeaders = new Map<string, string>();
 		const usedHeaderNames = new Set<string>();
@@ -407,31 +441,35 @@ export function SendTestEmailDialog({
 		}
 		if (attachments.length > 0) {
 			body.attachments = attachments.map(
-				({ size: _size, ...attachment }) => attachment
+				({ id: _id, size: _size, ...attachment }) => attachment
 			);
 		}
 
+		sendGuardRef.current = true;
 		setSending(true);
-		const sentDraft: TestEmailDraft = {
-			from,
-			to,
-			cc,
-			bcc,
-			replyTo,
-			subject,
-			headers: validatedHeaders
-				.filter((header) => header.name.trim() || header.value)
-				.map(({ name, value }) => ({ name, value })),
-			text,
-			html,
-			attachments: attachments.map((attachment) => ({ ...attachment })),
-		};
+		const expectedWorkerGeneration = workerGeneration;
+		const controller = new AbortController();
+		sendControllerRef.current = controller;
+		let didDispatch = false;
+		function isCurrentRequest(): boolean {
+			return (
+				!disposedRef.current &&
+				!controller.signal.aborted &&
+				sendControllerRef.current === controller &&
+				expectedWorkerGeneration === workerGenerationRef.current
+			);
+		}
 		try {
+			didDispatch = true;
 			const { error: sendError, response } = await emailSendRouting({
 				body,
 				query: { worker },
+				signal: controller.signal,
 				throwOnError: false,
 			});
+			if (!isCurrentRequest()) {
+				return;
+			}
 			if (sendError || !response.ok) {
 				toast.add({
 					title:
@@ -443,16 +481,28 @@ export function SendTestEmailDialog({
 				}
 			}
 			loadDraft();
-			onSent(sentDraft);
 			onOpenChange(false);
 		} catch (err) {
+			if (!isCurrentRequest()) {
+				return;
+			}
 			toast.add({
 				title:
 					err instanceof Error ? err.message : "Failed to send test email.",
 				variant: "error",
 			});
 		} finally {
-			setSending(false);
+			const currentRequest = isCurrentRequest();
+			if (sendControllerRef.current === controller) {
+				sendControllerRef.current = undefined;
+				sendGuardRef.current = false;
+				if (currentRequest) {
+					setSending(false);
+				}
+			}
+			if (didDispatch && currentRequest) {
+				onDispatchedSendSettled(expectedWorkerGeneration);
+			}
 		}
 	}
 
@@ -722,7 +772,7 @@ export function SendTestEmailDialog({
 								<div className="space-y-2">
 									{attachments.map((attachment, index) => (
 										<div
-											key={`${attachment.filename}-${index}`}
+											key={attachment.id}
 											className="flex items-start gap-2 rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2"
 										>
 											<span className="flex h-lh shrink-0 items-center">

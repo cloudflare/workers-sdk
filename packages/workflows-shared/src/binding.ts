@@ -1,6 +1,7 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
+	duplicateInstanceError,
 	isUserTriggeredDelete,
 	isUserTriggeredPause,
 	isUserTriggeredRestart,
@@ -12,6 +13,7 @@ import {
 	isValidAddressableWorkflowInstanceId,
 	isValidWorkflowInstanceId,
 } from "./lib/validators";
+import { parseWorkflowSubscriptionOptions } from "./subscription";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -20,6 +22,10 @@ import type {
 	EngineLogs,
 } from "./engine";
 import type { InstanceStatus as EngineInstanceStatus } from "./instance";
+import type {
+	WorkflowSubscription,
+	WorkflowSubscriptionOptions,
+} from "./subscription";
 import type {
 	WorkflowInstanceModifier,
 	WorkflowIntrospectionOperation,
@@ -190,17 +196,48 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		super(ctx, env);
 	}
 
-	public async create({
-		id = crypto.randomUUID(),
-		params = {},
-	}: WorkflowInstanceCreateOptions = {}): Promise<{
+	async #instanceExists(id: string): Promise<boolean> {
+		// Avoid recreating the engine while its previous persistence is being deleted.
+		await waitForPersistedInstanceDelete(this.env, id);
+		const stub = this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
+		return await stub.hasInstance();
+	}
+
+	public async create(options: WorkflowInstanceCreateOptions = {}): Promise<{
 		id: string;
 	}> {
+		// Destructuring defaults apply only to absent fields: an explicit null
+		// id must reach the validation below rather than becoming a generated
+		// id.
+		const { id = crypto.randomUUID() } = options;
 		if (!isValidWorkflowInstanceId(id)) {
 			throw new WorkflowError("Workflow instance has invalid id");
 		}
 
-		await waitForPersistedInstanceDelete(this.env, id);
+		// Deterministic (caller-provided) ids carry a documented uniqueness
+		// contract: creating an instance with an id that already exists throws
+		// and the existing instance is retained. The existence marker is
+		// committed by the engine's init(), dispatched fire-and-forget below,
+		// so duplicate creates racing ahead of that commit can all resolve
+		// successfully; the engine's init() guards make the extra dispatch a
+		// no-op, so the race cannot double-execute the workflow body.
+		if (options.id !== undefined && (await this.#instanceExists(id))) {
+			throw duplicateInstanceError(id);
+		}
+
+		return this.#createUnchecked(id, options);
+	}
+
+	// Creation body shared by create() and createBatch(), which perform their
+	// own validation and existence checks before calling this.
+	async #createUnchecked(
+		id: string,
+		options: WorkflowInstanceCreateOptions
+	): Promise<{ id: string }> {
+		const { params = {} } = options;
+		if (options.id === undefined) {
+			await waitForPersistedInstanceDelete(this.env, id);
+		}
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 		const introspectionSession = workflowIntrospectionSessions.get(
@@ -273,6 +310,57 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		return handle;
 	}
 
+	// A Workflow on `ctx.exports` is built by workerd's
+	// `cloudflare-internal:workflows-api`, which addresses each instance by id
+	// on the binding rather than calling the instance returned by `get()`. Each
+	// method goes through `get()` so a missing instance still fails with
+	// `instance.not_found`.
+
+	public async getInstance(id: string): Promise<{ id: string }> {
+		await this.get(id);
+		return { id };
+	}
+
+	public async pause(id: string): Promise<void> {
+		await (await this.get(id)).pause();
+	}
+
+	public async resume(id: string): Promise<void> {
+		await (await this.get(id)).resume();
+	}
+
+	public async terminate(
+		id: string,
+		options?: WorkflowInstanceTerminateOptions
+	): Promise<void> {
+		await (await this.get(id)).terminate(options);
+	}
+
+	public async restart(
+		id: string,
+		options?: WorkflowInstanceRestartOptions
+	): Promise<void> {
+		await (await this.get(id)).restart(options);
+	}
+
+	public async status(id: string): Promise<InstanceStatus> {
+		return await (await this.get(id)).status();
+	}
+
+	public async sendEvent(
+		id: string,
+		event: { type: string; payload: unknown }
+	): Promise<void> {
+		await (await this.get(id)).sendEvent(event);
+	}
+
+	public async subscribe(
+		id: string,
+		options?: WorkflowInstanceSubscribeOptions
+	): Promise<WorkflowInstanceSubscription> {
+		return await (await this.get(id)).subscribe(options);
+	}
+
 	public async createBatch(
 		batch: WorkflowInstanceCreateOptions<unknown>[]
 	): Promise<{ id: string }[]> {
@@ -282,12 +370,50 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		return await Promise.all(
-			batch.map(async (val) => {
-				const res = await this.create(val);
-				return res;
+		// Reject malformed ids before anything is probed or created: probing
+		// an id constructs its engine Durable Object, which persists storage,
+		// and a bad batch must not be partially applied.
+		for (const options of batch) {
+			if (options.id !== undefined && !isValidWorkflowInstanceId(options.id)) {
+				throw new WorkflowError("Workflow instance has invalid id");
+			}
+		}
+
+		// Probe each distinct caller-provided id once, concurrently, instead of
+		// sequentially per entry (and a second time inside create()).
+		const providedIds = [
+			...new Set(
+				batch
+					.map((options) => options.id)
+					.filter((id): id is string => id !== undefined)
+			),
+		];
+		const existing = new Set<string>();
+		await Promise.all(
+			providedIds.map(async (id) => {
+				if (await this.#instanceExists(id)) {
+					existing.add(id);
+				}
 			})
 		);
+
+		// The documented batch contract is idempotent creation: ids that already
+		// exist, or that repeat within the batch, are skipped and excluded from
+		// the result rather than throwing, and instances are created in batch
+		// order.
+		const results: { id: string }[] = [];
+		const seenIds = new Set<string>();
+		for (const options of batch) {
+			if (options.id !== undefined) {
+				if (seenIds.has(options.id) || existing.has(options.id)) {
+					continue;
+				}
+				seenIds.add(options.id);
+			}
+			const { id = crypto.randomUUID() } = options;
+			results.push(await this.#createUnchecked(id, options));
+		}
+		return results;
 	}
 
 	/**
@@ -623,6 +749,13 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 			output: workflowOutput,
 			error: workflowError,
 		};
+	}
+
+	public async subscribe(
+		options?: WorkflowSubscriptionOptions
+	): Promise<WorkflowSubscription> {
+		const parsedOptions = parseWorkflowSubscriptionOptions(options);
+		return this.stub.subscribe(parsedOptions);
 	}
 
 	public async sendEvent(args: {

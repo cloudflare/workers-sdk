@@ -9,6 +9,7 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./ts",
 	},
+	languages: ["ts"],
 };
 
 export default config;

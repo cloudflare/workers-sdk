@@ -20,6 +20,7 @@ export default {
 	id: "next",
 	frameworkCli: "create-next-app",
 	platform: "workers",
+	languages: ["js", "ts"],
 	displayName: "Next.js",
 	generate,
 	devScript: "dev",

@@ -1,6 +1,6 @@
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
-import { getFlag } from "../../client";
+import { flagStoreArgDefinitions, withFlagStore } from "../../store";
 import { sortedRules, stringifyConditions, stringifyRollout } from "./shared";
 
 export const flagshipFlagsRulesListCommand = createCommand({
@@ -28,10 +28,14 @@ export const flagshipFlagsRulesListCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
-	async handler({ appId, key, json }, { config }) {
-		const flag = await getFlag(config, appId, key);
+	async handler(args, { config }) {
+		const { appId, key, json } = args;
+		const flag = await withFlagStore(args, config, appId, (store) =>
+			store.getFlag(key)
+		);
 		const rules = sortedRules(flag.rules);
 		if (json) {
 			logger.json(rules);

@@ -55,7 +55,6 @@ describe("cf.image local transforms", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(WORKER_SCRIPT),

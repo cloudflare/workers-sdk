@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { applyEdits, format, modify } from "jsonc-parser";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import type { RawConfig } from "./config";
 import type { JSONPath } from "jsonc-parser";
@@ -73,6 +73,9 @@ const getJSONPath = (
 	for (const [k, v] of Object.entries(obj)) {
 		const currentPath = [...prevPath, k];
 		if (Array.isArray(v)) {
+			if (v.length === 0 && !isArrayInsertion) {
+				allPaths.push([...currentPath, v as unknown as JSONPath[number]]);
+			}
 			v.forEach((x, i) => {
 				if (isArrayInsertion) {
 					// makes sure we insert new array items at the end
@@ -84,7 +87,13 @@ const getJSONPath = (
 				}
 			});
 		} else if (typeof v === "object" && v !== null) {
-			getJSONPath(v, allPaths, isArrayInsertion, currentPath);
+			if (Object.keys(v).length === 0) {
+				if (!isArrayInsertion) {
+					allPaths.push([...currentPath, v]);
+				}
+			} else {
+				getJSONPath(v, allPaths, isArrayInsertion, currentPath);
+			}
 		} else {
 			allPaths.push([...currentPath, v]);
 		}

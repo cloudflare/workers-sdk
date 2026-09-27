@@ -68,6 +68,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		code_update_strategy,
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
@@ -134,7 +135,6 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const websearch = extractBindingsOfType("websearch", bindings)[0];
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
@@ -390,13 +390,6 @@ export function createWorkerUploadForm(
 			instance_name,
 		});
 	});
-
-	if (websearch !== undefined) {
-		metadataBindings.push({
-			name: websearch.binding,
-			type: "websearch",
-		});
-	}
 
 	agent_memory.forEach(({ binding, namespace }) => {
 		if (options?.dryRun) {
@@ -882,6 +875,7 @@ export function createWorkerUploadForm(
 				: worker.containers.map((c) => ({
 						...(c.name !== undefined && { name: c.name }),
 						...(c.class_name !== undefined && { class_name: c.class_name }),
+						...(c.images !== undefined && { images: c.images }),
 					})),
 
 		...(compatibility_date && { compatibility_date }),
@@ -889,6 +883,7 @@ export function createWorkerUploadForm(
 			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
+		...(code_update_strategy && { code_update_strategy }),
 		...(configuredExports &&
 			Object.keys(configuredExports).length > 0 && {
 				exports: configuredExports,
@@ -918,7 +913,6 @@ export function createWorkerUploadForm(
 			metadata[key] = options.unsafe.metadata[key];
 		}
 	}
-
 	formData.set("metadata", JSON.stringify(metadata));
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {

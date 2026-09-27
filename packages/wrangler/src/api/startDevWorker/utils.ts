@@ -390,7 +390,6 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 			case "stream":
 			case "version_metadata":
 			case "media":
-			case "websearch":
 			case "inherit": {
 				// These have the same structure (just type and possibly some flags)
 				const { name: _name, ...rest } = binding;

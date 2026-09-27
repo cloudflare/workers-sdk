@@ -9,7 +9,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, it } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -17,7 +17,11 @@ import { clearDialogs } from "./helpers/mock-dialogs";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import type { Instance, Workflow } from "../workflows/types";
+import type {
+	Instance,
+	InstanceStatusAndLogs,
+	Workflow,
+} from "../workflows/types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { ExpectStatic } from "vitest";
 
@@ -1057,6 +1061,203 @@ describe("wrangler workflows", () => {
 			const output = JSON.parse(std.out);
 			expect(output.steps[0].output).toEqual({});
 			expect(std.out).not.toContain("[...output truncated]");
+		});
+
+		it("should describe a waiting step with dynamic retry delay without crashing", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const mockResponse = {
+				end: null,
+				output: null,
+				params: {},
+				queued: mockQueuedDate.toISOString(),
+				start: mockStartDate.toISOString(),
+				status: "running",
+				success: null,
+				trigger: {
+					source: "unknown",
+				},
+				versionId: "14707576-2549-4848-82ed-f68f8a1b47c7",
+				steps: [
+					{
+						attempts: [
+							{
+								end: mockEndDate.toISOString(),
+								error: {
+									message: "boom",
+									name: "Error",
+								},
+								start: mockStartDate.toISOString(),
+								success: false,
+							},
+						],
+						config: {
+							retries: {
+								backoff: "constant",
+								delay: "[dynamic]",
+								limit: 3,
+							},
+							timeout: "30 seconds",
+						},
+						name: "flaky",
+						output: null,
+						start: mockStartDate.toISOString(),
+						success: null,
+						type: "step",
+					},
+				],
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId`,
+					async () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockResponse,
+						});
+					}
+				)
+			);
+
+			await runWrangler(`workflows instances describe some-workflow bar`);
+
+			expect(std.out).toContain("Retries At:  unknown (dynamic delay)");
+			expect(std.err).not.toContain("Invalid time value");
+		});
+
+		it("should describe a waiting step with a missing attempt end without crashing", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId`,
+					async () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								end: null,
+								output: null,
+								params: {},
+								queued: mockQueuedDate.toISOString(),
+								start: mockStartDate.toISOString(),
+								status: "running",
+								success: null,
+								trigger: { source: "unknown" },
+								versionId: "14707576-2549-4848-82ed-f68f8a1b47c7",
+								steps: [
+									{
+										attempts: [
+											{
+												end: null,
+												error: { message: "boom", name: "Error" },
+												start: mockStartDate.toISOString(),
+												success: false,
+											},
+										],
+										config: {
+											retries: {
+												backoff: "constant",
+												delay: "30 seconds",
+												limit: 3,
+											},
+											timeout: "30 seconds",
+										},
+										name: "flaky",
+										output: null,
+										start: mockStartDate.toISOString(),
+										success: null,
+										type: "step",
+									},
+								],
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(`workflows instances describe some-workflow bar`);
+
+			expect(std.out).toContain("Retries At:  unknown");
+			expect(std.err).not.toContain("Invalid time value");
+		});
+		it("should describe a running instance and steps with duration calculated up to now", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+			vi.setSystemTime(new Date("2026-09-10T12:00:00.000Z"));
+
+			const runningResponse: InstanceStatusAndLogs = {
+				end: null,
+				error: null,
+				params: {},
+				queued: "2026-09-10T11:50:00.000Z",
+				start: "2026-09-10T11:55:00.000Z",
+				status: "running",
+				success: null,
+				trigger: {
+					source: "unknown",
+				},
+				versionId: "14707576-2549-4848-82ed-f68f8a1b47c7",
+				steps: [
+					{
+						attempts: [
+							{
+								end: null,
+								error: null,
+								start: "2026-09-10T11:58:00.000Z",
+								success: null,
+							},
+						],
+						config: {
+							retries: {
+								backoff: "constant",
+								delay: "10 seconds",
+								limit: 3,
+							},
+							timeout: "10 minutes",
+						},
+						end: null,
+						name: "running-step",
+						output: null,
+						start: "2026-09-10T11:58:00.000Z",
+						success: null,
+						type: "step",
+					},
+				],
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId`,
+					async () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: runningResponse,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			try {
+				await runWrangler(
+					`workflows instances describe some-workflow running-instance`
+				);
+				expect(std.out).toContain("Duration:  2 minutes");
+				expect(std.out).toContain("│ 2 minutes │ 🔄 Working │");
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 	});
 
@@ -2832,12 +3033,15 @@ describe("wrangler workflows", () => {
 							expect(params.workflowName).toEqual("my-workflow");
 							expect(params.instanceId).toEqual("instance-123");
 							const body = (await request.json()) as Record<string, unknown>;
-							expect(body.action).toEqual("pause");
+							expect(body.status).toEqual("pause");
 							return HttpResponse.json({
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "waitingForPause",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -2865,12 +3069,15 @@ describe("wrangler workflows", () => {
 							expect(params.workflowName).toEqual("my-workflow");
 							expect(params.instanceId).toEqual("instance-123");
 							const body = (await request.json()) as Record<string, unknown>;
-							expect(body.action).toEqual("resume");
+							expect(body.status).toEqual("resume");
 							return HttpResponse.json({
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "queued",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -2898,13 +3105,16 @@ describe("wrangler workflows", () => {
 							expect(params.workflowName).toEqual("my-workflow");
 							expect(params.instanceId).toEqual("instance-123");
 							expect(await request.json()).toEqual({
-								action: "terminate",
+								status: "terminate",
 							});
 							return HttpResponse.json({
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "terminated",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -2928,14 +3138,17 @@ describe("wrangler workflows", () => {
 							expect(params.workflowName).toEqual("my-workflow");
 							expect(params.instanceId).toEqual("instance-123");
 							expect(await request.json()).toEqual({
-								action: "terminate",
+								status: "terminate",
 								rollback: true,
 							});
 							return HttpResponse.json({
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "terminated",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3012,12 +3225,15 @@ describe("wrangler workflows", () => {
 							expect(params.workflowName).toEqual("my-workflow");
 							expect(params.instanceId).toEqual("instance-123");
 							const body = (await request.json()) as Record<string, unknown>;
-							expect(body.action).toEqual("restart");
+							expect(body.status).toEqual("restart");
 							return HttpResponse.json({
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "queued",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3044,7 +3260,7 @@ describe("wrangler workflows", () => {
 							expect(params.instanceId).toEqual("instance-123");
 							const body = (await request.json()) as Record<string, unknown>;
 							expect(body).toEqual({
-								action: "restart",
+								status: "restart",
 								from: {
 									name: "checkpoint",
 									type: "waitForEvent",
@@ -3054,7 +3270,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "queued",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3198,7 +3417,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "waitingForPause",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3238,7 +3460,10 @@ describe("wrangler workflows", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { success: true },
+								result: {
+									status: "waitingForPause",
+									timestamp: "2026-01-01T00:00:00.000Z",
+								},
 							});
 						}
 					)
@@ -3249,7 +3474,10 @@ describe("wrangler workflows", () => {
 				);
 
 				expect(std.info).toMatchInlineSnapshot(`""`);
-				expect(JSON.parse(std.out)).toEqual({ success: true });
+				expect(JSON.parse(std.out)).toEqual({
+					status: "waitingForPause",
+					timestamp: "2026-01-01T00:00:00.000Z",
+				});
 			});
 		});
 	});

@@ -71,13 +71,13 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Cloudflare docs PR\(s\): https:\/\/(github\.com\/cloudflare\/cloudflare-docs\/(pull|issues)\/\d+|developers\.cloudflare\.com\/.*)/i.test(
+			/- \[x\] Cloudflare docs PR\(s\): https:\/\/(github\.com\/cloudflare\/cloudflare-docs\/(pull|issues)\/\d+|gitlab\.cfdata\.org\/cloudflare\/ced\/cloudflare-docs\/-\/merge_requests\/\d+|developers\.cloudflare\.com\/.*)/i.test(
 				body
 			) || /- \[x\] Documentation not necessary because: .+/i.test(body)
 		)
 	) {
 		errors.push(
-			"Your PR must include documentation (in the form of a link to a Cloudflare Docs issue or PR), or provide justification for why no documentation is required"
+			"Your PR must include documentation (in the form of a link to a Cloudflare Docs issue, PR, or MR), or provide justification for why no documentation is required"
 		);
 	}
 

@@ -15,6 +15,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-vue",
 	displayName: "Vue",
 	platform: "pages",
+	languages: ["js", "ts"],
 	hidden: true,
 	path: "templates/vue/pages",
 	copyFiles: { path: "./templates" },
