@@ -1,5 +1,15 @@
 # wrangler
 
+## 4.143.0
+
+### Minor Changes
+
+- [#15914](https://github.com/cloudflare/workers-sdk/pull/15914) [`7f0734c`](https://github.com/cloudflare/workers-sdk/commit/7f0734c3174b1ec3ec1718058337626ff106b2e6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use `cf/config` for `cloudflare.config.ts` authoring
+
+  Experimental `cloudflare.config.ts` projects must now import `defineConfig`, bindings, triggers, and related helpers from `cf/config`. Generated declarations from Wrangler and the Vite plugin also reference this package, so projects using the experimental configuration flow must add `cf` as a dependency.
+
+  The Vite plugin no longer exports `@cloudflare/vite-plugin/experimental-config`. `wrangler/experimental-config` remains available for `defineWranglerConfig`, but no longer re-exports Cloudflare configuration helpers.
+
 ## 4.142.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @cloudflare/autoconfig
 
+## 0.7.1
+
+### Patch Changes
+
+- [#15913](https://github.com/cloudflare/workers-sdk/pull/15913) [`3ea1365`](https://github.com/cloudflare/workers-sdk/commit/3ea1365509e64786471bac5dfee37ff60e5f75ff) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix the type generation script added to TypeScript projects configured for `cf`.
+
+  The `cf-typegen` script now runs `cf workers types` instead of the unsupported `cf types` command. Projects configured for Wrangler continue to use `wrangler types`.
+
 ## 0.7.0
 
 ### Minor Changes
