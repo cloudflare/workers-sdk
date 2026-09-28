@@ -1,0 +1,19 @@
+packages/wrangler/src/preview/ensure-config.ts
+  s_957fad3aac7998::t_842b43ef334c7b 42,86-92,102-104,128-159,166-168,173-175,187-189,193-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "faa1478edd960b29a92618a6f915f5a48ec4ee33",
+  "prompts": {},
+  "sessions": {
+    "s_957fad3aac7998": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f59c165f2ffeWFGoU8luxR0jqO",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

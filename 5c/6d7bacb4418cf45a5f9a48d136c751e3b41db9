@@ -1,0 +1,21 @@
+packages/wrangler/src/__tests__/preview.test.ts
+  s_fbf058cd4b3a5e::t_35721bf0a16879 1100-1147
+packages/wrangler/src/preview/ensure-config.ts
+  s_fbf058cd4b3a5e::t_00a744212c10d2 48-51,154,168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5c6d7bacb4418cf45a5f9a48d136c751e3b41db9",
+  "prompts": {},
+  "sessions": {
+    "s_fbf058cd4b3a5e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f6e78d41fffes6w60EapBtq6xE",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

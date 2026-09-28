@@ -1,0 +1,35 @@
+packages/deploy-helpers/src/preview/api.ts
+  s_15e6186ba40f86::t_730c6b712ab185 10,13-19
+packages/workers-utils/src/map-worker-metadata-bindings.ts
+  s_15e6186ba40f86::t_9803d74ea0be34 66-68,73,89
+packages/wrangler/src/__tests__/preview-config.test.ts
+  s_0c5476b4984c68::t_f69a403e79241c 3-4,7,33,54-58,97-98,100,103,136-138,140,144,162-167,169,179-198,220,230-239,254-260,264-274,284-290,292-293,309-313,316,319-322,326-327,330-332,340-342,344-345,352-359,362,365,378,396-398,405,407-411,413-414,417,419-421,426,428-429,431-433,439-451
+packages/wrangler/src/preview/ensure-config.ts
+  s_0c5476b4984c68::t_270363ffb75ff9 17,117-120,123-126,132
+packages/wrangler/src/preview/preview-config.ts
+  s_0c5476b4984c68::t_29a02321db9c48 2,12,17-38,56-66,74-85,87-175,177-210,214-217,219-223,225-227,229-230,232-236,238-239,241,243,245-246,249-252,255,257-260,262-285,287-292,294-303,305-309,311-312,315-317,319-323,327-349,351-367
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "014c76430bd079869c52fd7d92ca0d8facdeba02",
+  "prompts": {},
+  "sessions": {
+    "s_0c5476b4984c68": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f4ff73b14ffeKbRCw2i8cPTWV3",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_15e6186ba40f86": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f54eaf6c3ffeexteSUCaW7FUFJ",
+        "model": "cloudflare/auto"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

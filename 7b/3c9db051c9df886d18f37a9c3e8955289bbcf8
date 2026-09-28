@@ -1,0 +1,25 @@
+packages/wrangler/src/index.ts
+  s_b6907d7992fc45::t_90861e857402aa 314-315,321-324
+packages/wrangler/src/preview/delete.ts
+  s_b6907d7992fc45::t_dd0cada2df5718 1-2,5-10,13-37,39
+packages/wrangler/src/preview/preview.ts
+  s_b6907d7992fc45::t_8fc9e233d01fee 1-3,5-9,63-64,66-89,91-94,96-115
+packages/wrangler/src/preview/settings.ts
+  s_b6907d7992fc45::t_980dfaa40433c7 5,8-15,17-37,39-45,47-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7b3c9db051c9df886d18f37a9c3e8955289bbcf8",
+  "prompts": {},
+  "sessions": {
+    "s_b6907d7992fc45": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02dc6b8e4ffew0kNOHRfl0YFYw",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

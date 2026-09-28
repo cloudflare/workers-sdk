@@ -1,0 +1,29 @@
+packages/workers-utils/src/parse.ts
+  s_93f18605f1e167::t_e3c842470d2355 184-224,228,242-244
+packages/workers-utils/tests/parse.test.ts
+  s_926fb5de1d482d::t_8a379415e1217c 253-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b2dee07a2cbc4a4f9e3387d7f4c5b846fe7b5016",
+  "prompts": {},
+  "sessions": {
+    "s_926fb5de1d482d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fac145c32ffea0itXLKBZnVT4z",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    },
+    "s_93f18605f1e167": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3a1ac29affeaj9p2Xo5RayKKA",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}

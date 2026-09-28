@@ -1,0 +1,35 @@
+packages/wrangler/src/__tests__/preview-config.test.ts
+  s_eb9505de8c205e::t_dae4f506dcb234 3-4,7,30-31,34-37,39-42,49,55,57-58,60-63,65,68-72,74,86-91,93-96,98-100,104-107,110,112,115,118,121-126,128-129,131-132,135,138,148-153,155-160,162-165,169-170,172-173,175-176,183,186,196,200-206
+.changeset/calm-previews-onboard.md
+  s_8161f07b0befea::t_8da0d3de5b6870 1-7
+packages/wrangler/src/preview/ensure-config.ts
+  s_8161f07b0befea::t_857f26a44998ba 18,118-121,124-127,133
+packages/wrangler/src/preview/preview-config.ts
+  s_8161f07b0befea::t_ba284941a4c5f7 2,12,17-33,53-58,66-77,79-167,169-170,172-206,209-217,219-220,222-226,228-229,231,233,235-236,239,242,244-247,249-272,274-279,281-290,292-296,298-299,302-304,306-310,314-335,337-353
+packages/wrangler/src/preview/preview.ts
+  s_8161f07b0befea::t_d711661d5a978c 1-5,18,86-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "85d62a9b787f175b3b1688b45037e877264634d4",
+  "prompts": {},
+  "sessions": {
+    "s_8161f07b0befea": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3632e92bffe3zoVryjsXxU4ly",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_eb9505de8c205e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3ecf0657ffeSaifwWkFycr33Y",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+packages/wrangler/src/d1/splitter.ts
+  s_be0334cb7b308b::t_adfbc11c2990d7 3-4,127-128,129,130,131-133,134,136,137,138,140,142,145-251,146-153,156-163,165,167-175,177-185,187-195,197-205,207-215,217-225,227-235,237-245,252-257,256,258-273,262,270,274,275-280,277,281,282-287,284,288,289-294,291,295,296-306,298,306,309,310-311,311-312,313-314,315,318-319,322-323,326-338,329,331,334,336,338,340
+  s_be0334cb7b308b::t_92361e47fceae5 339-341
+.changeset/split-sqlite-statements.md
+  s_be0334cb7b308b::t_aa7479c4cfe144 1-7
+packages/wrangler/src/__tests__/d1/splitter.test.ts
+  s_be0334cb7b308b::t_e6553799ad918a 142,160-163,197-198,251-259,261-263,266,268-303,313-323,546-548
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e401fc40430206312fe3a482269b659dd5ebdf84",
+  "prompts": {},
+  "sessions": {
+    "s_be0334cb7b308b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f50374ae3ffe2D128CaiQM9C29",
+        "model": "unknown"
+      },
+      "human_author": "David Laban <dlaban@cloudflare.com>"
+    }
+  }
+}

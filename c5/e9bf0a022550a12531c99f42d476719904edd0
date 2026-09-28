@@ -1,0 +1,29 @@
+packages/workers-utils/src/config/patch-config.ts
+  s_5bef8494e621c6::t_20b4e84b205136 17-19
+packages/workers-utils/tests/config/patch-config.test.ts
+  s_aff2b8043e5abf::t_9f8bf33b16f316 486-488,502-512
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c5e9bf0a022550a12531c99f42d476719904edd0",
+  "prompts": {},
+  "sessions": {
+    "s_5bef8494e621c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b20e8d7ffexDdhEzw9sgeXej",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_aff2b8043e5abf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b1a811fffeh1YHJgsrOBtfFD",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

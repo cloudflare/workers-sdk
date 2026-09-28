@@ -1,0 +1,19 @@
+packages/vite-plugin-cloudflare/src/websockets.ts
+  s_1edf91686dae51::t_bbedc18e271120 43-48,55-57,63-65,106-107,111-112,136-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f9b493ce593d2c8a36d7a01918cf4e8522d52122",
+  "prompts": {},
+  "sessions": {
+    "s_1edf91686dae51": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "43740566-f007-4c69-9eab-82a6b1f7710f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Christopher Little-Savage <clittle-savage@cloudflare.com>"
+    }
+  }
+}

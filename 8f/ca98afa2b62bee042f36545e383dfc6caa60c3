@@ -1,0 +1,39 @@
+.changeset/calm-containers-list-namespace-instances.md
+  s_87a2ac7afbb8ab::t_a1e51685fd0b8c 1-8
+packages/containers-shared/index.ts
+  s_87a2ac7afbb8ab::t_8db6c6f78e2f07 4
+packages/containers-shared/src/container-instances.ts
+  s_87a2ac7afbb8ab::t_9fbf5370956970 1-84
+packages/wrangler/src/__tests__/containers/delete.test.ts
+  s_87a2ac7afbb8ab::t_77edaef5804ec0 11-12,33,36,50,55-114,135,137,142,148-153,155-157,175,177,182,188,193-194,203,206,208
+packages/wrangler/src/__tests__/containers/info.test.ts
+  s_87a2ac7afbb8ab::t_0d098791b63692 12-13,33,36,71,81,117-165,173,187-189,194,201,211
+packages/wrangler/src/__tests__/containers/instances.test.ts
+  s_87a2ac7afbb8ab::t_cb8332b0df7ebf 59,84-116,139,152-157,241,249-265,274-440,442-584
+packages/wrangler/src/__tests__/containers/list.test.ts
+  s_87a2ac7afbb8ab::t_b16ee849d469c5 13-20,38-54,73,86,95,103-111,115-122,158,183,203,207,209,216-237,251-252,255,267,278,282,284,291-320,467-490,512,536,546,559-585,609,637
+packages/wrangler/src/containers/application-id.ts
+  s_87a2ac7afbb8ab::t_8dafe391d58e24 1-15
+packages/wrangler/src/containers/containers.ts
+  s_87a2ac7afbb8ab::t_235f30ecaaf01a 15,23-39,42,53,55,60,71,80,86,91,95,100,111,114,116,121,125,137,145,154,167,170-171,190,196
+packages/wrangler/src/containers/instances.ts
+  s_87a2ac7afbb8ab::t_1d8c887de7d638 3-7,14-17,21,76-87,90-93,103-110,119-120,122-142,154-203,207-211,213,215-217,219-234,241,247-249,251-287,289-299,301-305,308,311-317,319-328,332,340-345,348-355,358-364,384-402,406-413,417-423,430,438-444,449-459,480-481,483,494-511,518,528-532,536-543,546,568,573,592,611,614-621
+packages/wrangler/src/containers/list.ts
+  s_87a2ac7afbb8ab::t_d80b0ece5b2a40 15-24,34,72,78,83,88-102,108,111,124,134,138-144,162-163,178-180,183,200,214,229,257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8fca98afa2b62bee042f36545e383dfc6caa60c3",
+  "prompts": {},
+  "sessions": {
+    "s_87a2ac7afbb8ab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a091c0-1fb5-7952-b718-90593ae62891",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}
