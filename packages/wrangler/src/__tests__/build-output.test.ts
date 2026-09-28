@@ -97,6 +97,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect(generatedTypes).toContain(
 			'import("../../cloudflare.config").default'
 		);
+		expect(generatedTypes).toContain('import("cf/config")');
 		expect(generatedTypes).toContain("declare type BuildRuntimeType = true;");
 	});
 

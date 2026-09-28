@@ -1,5 +1,31 @@
 # @cloudflare/autoconfig
 
+## 0.7.1
+
+### Patch Changes
+
+- [#15913](https://github.com/cloudflare/workers-sdk/pull/15913) [`3ea1365`](https://github.com/cloudflare/workers-sdk/commit/3ea1365509e64786471bac5dfee37ff60e5f75ff) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix the type generation script added to TypeScript projects configured for `cf`.
+
+  The `cf-typegen` script now runs `cf workers types` instead of the unsupported `cf types` command. Projects configured for Wrangler continue to use `wrangler types`.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#15805](https://github.com/cloudflare/workers-sdk/pull/15805) [`3572193`](https://github.com/cloudflare/workers-sdk/commit/35721935014b6740f39e5ed4cea1af717f26e252) Thanks [@edmundhung](https://github.com/edmundhung)! - Install the beta Cloudflare Vite plugin for cf
+
+  When targeting cf, autoconfig now installs `@cloudflare/vite-plugin@beta` so supported projects use the Vite plugin v2 prerelease instead of the latest stable release. Wrangler autoconfiguration continues to install the latest stable release.
+
+- [#15805](https://github.com/cloudflare/workers-sdk/pull/15805) [`3572193`](https://github.com/cloudflare/workers-sdk/commit/35721935014b6740f39e5ed4cea1af717f26e252) Thanks [@edmundhung](https://github.com/edmundhung)! - Reject frameworks that cf cannot currently configure
+
+  Autoconfig now directs Analog, Angular, Nuxt, Qwik, Solid Start, SvelteKit, Vike, and Waku projects to Wrangler when invoked by cf, before changing project files. Wrangler autoconfiguration remains supported for these frameworks.
+
+### Patch Changes
+
+- Updated dependencies [[`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff), [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f)]:
+  - @cloudflare/config@0.20.0
+  - @cloudflare/workers-utils@0.44.0
+
 ## 0.6.6
 
 ### Patch Changes

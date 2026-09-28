@@ -1,5 +1,49 @@
 # wrangler
 
+## 4.143.0
+
+### Minor Changes
+
+- [#15914](https://github.com/cloudflare/workers-sdk/pull/15914) [`7f0734c`](https://github.com/cloudflare/workers-sdk/commit/7f0734c3174b1ec3ec1718058337626ff106b2e6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use `cf/config` for `cloudflare.config.ts` authoring
+
+  Experimental `cloudflare.config.ts` projects must now import `defineConfig`, bindings, triggers, and related helpers from `cf/config`. Generated declarations from Wrangler and the Vite plugin also reference this package, so projects using the experimental configuration flow must add `cf` as a dependency.
+
+  The Vite plugin no longer exports `@cloudflare/vite-plugin/experimental-config`. `wrangler/experimental-config` remains available for `defineWranglerConfig`, but no longer re-exports Cloudflare configuration helpers.
+
+## 4.142.0
+
+### Minor Changes
+
+- [#15856](https://github.com/cloudflare/workers-sdk/pull/15856) [`4c2993b`](https://github.com/cloudflare/workers-sdk/commit/4c2993b898c8df4ea6799897803c2c5ef18c5847) Thanks [@Naapperas](https://github.com/Naapperas)! - Support Workflows declared in `exports` on `ctx.exports` in local development
+
+  A Workflow declared in a Worker's `exports` is now available on `ctx.exports` in `wrangler dev`, the Vite plugin and the Vitest plugin, with the same API as a Workflow binding:
+
+  ```ts
+  const instance = await ctx.exports.MyWorkflow.create({
+    params: { name: "World" },
+  });
+  ```
+
+  `ctx.exports` and `workflows` bindings with the same Workflow `name` share their instances, including instances created before the Workflow was declared in `exports`. Two Workers can't export the same Workflow name, and a binding to an exported Workflow must refer to the Worker and class that export it. `getPlatformProxy()` ignores Workflows declared in `exports`, since it doesn't run the Worker's code.
+
+  `wrangler workflows` commands run with `--local` also work with Workflows declared only in `exports`, without a `workflows` binding.
+
+  In the Vitest plugin, `introspectWorkflow()` and `introspectWorkflowInstance()` still need a Workflow binding, and now explain how to add one when passed a Workflow from `ctx.exports`. Instances created through `ctx.exports` are introspected too. A `workflows` binding whose `script_name` is the Worker's own name now resolves to the Worker itself again.
+
+### Patch Changes
+
+- [#15891](https://github.com/cloudflare/workers-sdk/pull/15891) [`8dc53ae`](https://github.com/cloudflare/workers-sdk/commit/8dc53aec0d1a4133cd8c599b814cac0da30b4bb8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260925.1 | ^5.20260926.1 |
+  | workerd                   | 1.20260925.1  | 1.20260926.1  |
+
+- Updated dependencies [[`8dc53ae`](https://github.com/cloudflare/workers-sdk/commit/8dc53aec0d1a4133cd8c599b814cac0da30b4bb8), [`4c2993b`](https://github.com/cloudflare/workers-sdk/commit/4c2993b898c8df4ea6799897803c2c5ef18c5847)]:
+  - miniflare@5.20260926.0-alpha
+
 ## 4.141.0
 
 ### Minor Changes

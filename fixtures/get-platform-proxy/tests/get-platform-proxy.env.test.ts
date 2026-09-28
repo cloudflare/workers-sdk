@@ -312,6 +312,20 @@ describe("getPlatformProxy - env", () => {
 					"
 				`);
 		});
+
+		it("ignores Workflows declared in `exports` and doesn't crash", async ({
+			expect,
+		}) => {
+			const { dispose } = await getPlatformProxy<Env>({
+				configPath: path.join(
+					__dirname,
+					"..",
+					"wrangler_workflow_exports.jsonc"
+				),
+			});
+			await dispose();
+			expect(warn).not.toHaveBeenCalled();
+		});
 	});
 
 	describe("with a target environment", () => {

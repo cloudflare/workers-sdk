@@ -399,9 +399,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		const dtsPath = typesPath();
 		expect(fs.existsSync(dtsPath)).toBe(true);
 		const content = fs.readFileSync(dtsPath, "utf8");
-		expect(content).toContain(
-			`import("@cloudflare/vite-plugin/experimental-config")`
-		);
+		expect(content).toContain(`import("cf/config")`);
 		expect(content).toContain(`import("../../cloudflare.config").default`);
 		// Runtime types are appended by default (includeRuntime defaults to true).
 		expect(content).toContain(RUNTIME_MARKER);
