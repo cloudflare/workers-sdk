@@ -9,6 +9,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
+import { formatWorkflowUploadSettings } from "./owned-workflows";
 import type {
 	AssetConfigMetadata,
 	Binding,
@@ -255,6 +256,9 @@ export function createWorkerUploadForm(
 	});
 
 	workflows.forEach(({ binding, name, class_name, script_name, raw }) => {
+		const ownedWorkflow = worker.ownedWorkflows?.find(
+			(workflow) => workflow.name === name && workflow.class_name === class_name
+		);
 		metadataBindings.push({
 			type: "workflow",
 			name: binding,
@@ -262,6 +266,7 @@ export function createWorkerUploadForm(
 			class_name,
 			script_name,
 			raw,
+			...(ownedWorkflow && formatWorkflowUploadSettings(ownedWorkflow)),
 		});
 	});
 

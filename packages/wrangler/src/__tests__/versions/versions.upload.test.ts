@@ -2993,24 +2993,76 @@ describe("versions upload", () => {
 				{
 					name: "test-name",
 					main: "./index.js",
+					workflows: [
+						{
+							binding: "OWNED",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							schedules: "0 * * * *",
+						},
+						{
+							binding: "EXTERNAL",
+							name: "external",
+							class_name: "ExternalWorkflow",
+							script_name: "another-worker",
+						},
+					],
 					exports: {
 						MyWorkflow: {
 							type: "workflow",
 							name: "my-workflow",
 							limits: { steps: 10 },
+							concurrency: { limit: 5 },
+							default_retention: { success_retention: "3 days" },
 						},
 					},
 				},
 				"./wrangler.json"
 			);
-			writeWorkerSource();
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import { WorkflowEntrypoint } from "cloudflare:workers";
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {}
+				`
+			);
 
 			await runWrangler("versions upload --config ./wrangler.json");
 
 			const metadata = await getMetadata(requests[requests.length - 1]);
 			expect(metadata.exports).toEqual({
-				MyWorkflow: { type: "workflow", name: "my-workflow" },
+				MyWorkflow: {
+					type: "workflow",
+					name: "my-workflow",
+					class_name: "MyWorkflow",
+					provision_from_upload: true,
+					limits: { steps: 10 },
+					concurrency: { limit: 5 },
+					schedules: [{ cron: "0 * * * *" }],
+					default_retention: { success_retention: "3 days" },
+				},
 			});
+			expect(metadata.bindings).toEqual([
+				{
+					type: "workflow",
+					name: "OWNED",
+					workflow_name: "my-workflow",
+					class_name: "MyWorkflow",
+					provision_from_upload: true,
+					limits: { steps: 10 },
+					concurrency: { limit: 5 },
+					schedules: [{ cron: "0 * * * *" }],
+					default_retention: { success_retention: "3 days" },
+				},
+				{
+					type: "workflow",
+					name: "EXTERNAL",
+					workflow_name: "external",
+					class_name: "ExternalWorkflow",
+					script_name: "another-worker",
+				},
+			]);
 			expect(workflowPuts).toBe(0);
 		});
 

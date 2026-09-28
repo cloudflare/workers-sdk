@@ -10,6 +10,7 @@ import type {
 	Observability,
 	Rule,
 	TailConsumer,
+	WorkflowBinding,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "./config/environment";
@@ -66,6 +67,15 @@ export type Json =
 	| Json[]
 	| { [id: string]: Json };
 
+/** Upload-only settings persisted with owned Workflow exports and bindings. */
+export type WorkflowUploadSettings = Pick<
+	WorkflowBinding,
+	"limits" | "concurrency" | "default_retention"
+> & {
+	provision_from_upload: true;
+	schedules?: { cron: string }[];
+};
+
 export type WorkerMetadataBinding =
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
@@ -104,14 +114,14 @@ export type WorkerMetadataBinding =
 			environment?: string;
 			namespace_id?: string;
 	  }
-	| {
+	| ({
 			type: "workflow";
 			name: string;
 			workflow_name: string;
 			class_name: string;
 			script_name?: string;
 			raw?: boolean;
-	  }
+	  } & Partial<WorkflowUploadSettings>)
 	| {
 			type: "queue";
 			name: string;

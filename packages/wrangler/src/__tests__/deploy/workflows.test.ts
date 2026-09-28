@@ -148,6 +148,7 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
 					},
 				],
 			});
@@ -171,6 +172,84 @@ describe("deploy", () => {
 				  workflow: my-workflow
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+
+		it("persists owned settings but not external settings on legacy Worker PUT", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				first_party_worker: true,
+				workflows: [
+					{
+						binding: "OWNED",
+						name: "owned",
+						class_name: "OwnedWorkflow",
+						limits: { steps: 10 },
+						schedules: ["0 * * * *", "30 * * * *"],
+					},
+					{
+						binding: "EXTERNAL",
+						name: "external",
+						class_name: "ExternalWorkflow",
+						script_name: "another-worker",
+					},
+				],
+				exports: {
+					OwnedWorkflow: {
+						type: "workflow",
+						name: "owned",
+						concurrency: { limit: 5 },
+						default_retention: { success_retention: "3 days" },
+					},
+				},
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`import { WorkflowEntrypoint } from 'cloudflare:workers';
+				export default {};
+				export class OwnedWorkflow extends WorkflowEntrypoint {}`
+			);
+
+			mockDeployWorkflow(expect, "owned");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				useOldUploadApi: true,
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "OWNED",
+						workflow_name: "owned",
+						class_name: "OwnedWorkflow",
+						provision_from_upload: true,
+						limits: { steps: 10 },
+						concurrency: { limit: 5 },
+						schedules: [{ cron: "0 * * * *" }, { cron: "30 * * * *" }],
+						default_retention: { success_retention: "3 days" },
+					},
+					{
+						type: "workflow",
+						name: "EXTERNAL",
+						workflow_name: "external",
+						class_name: "ExternalWorkflow",
+						script_name: "another-worker",
+					},
+				],
+				expectedExports: {
+					OwnedWorkflow: {
+						type: "workflow",
+						name: "owned",
+						class_name: "OwnedWorkflow",
+						provision_from_upload: true,
+						limits: { steps: 10 },
+						concurrency: { limit: 5 },
+						schedules: [{ cron: "0 * * * *" }, { cron: "30 * * * *" }],
+						default_retention: { success_retention: "3 days" },
+					},
+				},
+			});
+
+			await runWrangler("deploy");
 		});
 
 		it("should deploy Artifacts event triggers after their target Workflows", async ({
@@ -253,6 +332,7 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
 					},
 				],
 			});
@@ -340,6 +420,7 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
 					},
 				],
 			});
@@ -412,6 +493,8 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
+						limits: { steps: 5000 },
 					},
 				],
 			});
@@ -475,6 +558,11 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
+						default_retention: {
+							success_retention: "3 days",
+							error_retention: 86400000,
+						},
 					},
 				],
 			});
@@ -530,6 +618,8 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
+						concurrency: { limit: 10 },
 					},
 				],
 			});
@@ -585,6 +675,8 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
+						schedules: [{ cron: "0 * * * *" }],
 					},
 				],
 			});
@@ -657,6 +749,8 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
+						schedules: [{ cron: "0 * * * *" }],
 					},
 				],
 			});
@@ -751,12 +845,14 @@ describe("deploy", () => {
 						name: "TARGET_WORKFLOW",
 						workflow_name: "target-workflow",
 						class_name: "TargetWorkflow",
+						provision_from_upload: true,
 					},
 					{
 						type: "workflow",
 						name: "UNRELATED_WORKFLOW",
 						workflow_name: "unrelated-workflow",
 						class_name: "UnrelatedWorkflow",
+						provision_from_upload: true,
 					},
 				],
 			});
@@ -814,6 +910,8 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
+						schedules: [{ cron: "0 * * * *" }, { cron: "0 9 * * 1" }],
 					},
 				],
 			});
@@ -873,6 +971,9 @@ describe("deploy", () => {
 						name: "WORKFLOW",
 						workflow_name: "my-workflow",
 						class_name: "MyWorkflow",
+						provision_from_upload: true,
+						limits: { steps: 5000 },
+						schedules: [{ cron: "*/15 * * * *" }],
 					},
 				],
 			});
@@ -1155,7 +1256,13 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							provision_from_upload: true,
+							limits: { steps: 10 },
+						},
 					},
 				});
 
@@ -1207,7 +1314,19 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							provision_from_upload: true,
+							limits: { steps: 10 },
+							concurrency: { limit: 5 },
+							schedules: [{ cron: "0 * * * *" }, { cron: "30 * * * *" }],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+						},
 					},
 				});
 
@@ -1271,10 +1390,20 @@ describe("deploy", () => {
 							name: "WORKFLOW",
 							workflow_name: "my-workflow",
 							class_name: "MyWorkflow",
+							provision_from_upload: true,
+							limits: { steps: 10 },
+							schedules: [{ cron: "0 * * * *" }],
 						},
 					],
 					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							provision_from_upload: true,
+							limits: { steps: 10 },
+							schedules: [{ cron: "0 * * * *" }],
+						},
 					},
 				});
 
@@ -1345,7 +1474,16 @@ describe("deploy", () => {
 					)
 				);
 				mockSubDomainRequest();
-				mockUploadWorkerRequest();
+				mockUploadWorkerRequest({
+					expectedExports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							provision_from_upload: true,
+						},
+					},
+				});
 
 				await runWrangler("deploy");
 
@@ -1434,6 +1572,17 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedScriptName: "my-app-staging",
+					expectedBindings: [
+						{
+							type: "workflow",
+							name: "WORKFLOW",
+							workflow_name: "my-workflow",
+							class_name: "MyWorkflow",
+							script_name: "my-app-staging",
+							provision_from_upload: true,
+							limits: { steps: 5000 },
+						},
+					],
 				});
 
 				await runWrangler("deploy --env staging");

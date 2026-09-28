@@ -1,5 +1,9 @@
 import { partitionExports } from "@cloudflare/workers-utils";
 import { resolveDoLifecyclePayload } from "./durable";
+import {
+	formatWorkflowUploadSettings,
+	getWorkflowsOwnedByScript,
+} from "./owned-workflows";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 
 type ResolveExportsUploadPayloadProps = Parameters<
@@ -20,13 +24,21 @@ export async function resolveExportsUploadPayload(
 	const exports: NonNullable<CfWorkerInit["exports"]> = {
 		...partitionedExports.worker,
 		...(durableObjectExports ?? {}),
-		// Workflow settings are applied when `triggers deploy` provisions the
-		// Workflow; the upload API only accepts the type and name.
 		...Object.fromEntries(
-			Object.entries(partitionedExports.workflow).map(
-				([className, { name }]) =>
-					[className, { type: "workflow", name }] as const
-			)
+			getWorkflowsOwnedByScript(props.config, props.scriptName)
+				.filter(
+					({ name, class_name }) =>
+						partitionedExports.workflow[class_name]?.name === name
+				)
+				.map((workflow) => [
+					workflow.class_name,
+					{
+						type: "workflow",
+						name: workflow.name,
+						class_name: workflow.class_name,
+						...formatWorkflowUploadSettings(workflow),
+					},
+				])
 		),
 	};
 

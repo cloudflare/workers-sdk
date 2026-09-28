@@ -5,9 +5,11 @@ import type {
 	LocalS3Credentials,
 	Observability,
 	Route,
+	WorkflowBinding,
+	WorkflowExport,
 } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
-import type { Json, WorkerMetadata } from "./types";
+import type { Json, WorkerMetadata, WorkflowUploadSettings } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 /**
@@ -452,8 +454,14 @@ export interface CfDurableObjectMigrations {
  * The declarative `exports` map keyed by class name.
  *
  * Durable Objects can only be configured by `exports` or `migrations`, not both.
+ * Upload-only Workflow fields are not accepted by the user config schema.
  */
-export type CfExports = Exports;
+export type CfExports = Record<
+	string,
+	| Exports[string]
+	| (Omit<WorkflowExport, "schedules"> &
+			WorkflowUploadSettings & { class_name: string })
+>;
 
 export type CfPlacement =
 	| { mode: "smart"; hint?: string }
@@ -511,6 +519,8 @@ export interface CfWorkerInit {
 	 * of `migrations`.
 	 */
 	exports: CfExports | undefined;
+	/** Same-script Workflow declarations, used to annotate owned upload bindings. */
+	ownedWorkflows?: Omit<WorkflowBinding, "binding" | "script_name">[];
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
 	keepVars: boolean | undefined;

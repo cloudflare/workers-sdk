@@ -58,6 +58,7 @@ import {
 	renderExportsReconciliationSuccess,
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { getWorkflowsOwnedByScript } from "./helpers/owned-workflows";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -363,6 +364,7 @@ async function deployWorker(
 		main,
 		migrations,
 		exports,
+		ownedWorkflows: getWorkflowsOwnedByScript(config, scriptName),
 		modules,
 		containers: containerMetadata,
 		sourceMaps,

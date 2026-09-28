@@ -1,6 +1,10 @@
 import { isDeepStrictEqual } from "node:util";
 import { partitionExports, UserError } from "@cloudflare/workers-utils";
-import type { Config, WorkflowBinding } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	WorkflowBinding,
+	WorkflowUploadSettings,
+} from "@cloudflare/workers-utils";
 
 export type OwnedWorkflow = Omit<WorkflowBinding, "binding" | "script_name">;
 
@@ -49,6 +53,31 @@ export function getWorkflowsOwnedByScript(
 		});
 	}
 	return [...owned.values()];
+}
+
+/**
+ * Format a same-script Workflow's settings for upload exports or bindings.
+ * An explicit marker distinguishes a new SDK with no settings from old uploads.
+ */
+export function formatWorkflowUploadSettings(
+	workflow: OwnedWorkflow
+): WorkflowUploadSettings {
+	return {
+		provision_from_upload: true,
+		...(workflow.limits !== undefined && { limits: workflow.limits }),
+		...(workflow.concurrency !== undefined && {
+			concurrency: workflow.concurrency,
+		}),
+		...(workflow.schedules !== undefined && {
+			schedules: (Array.isArray(workflow.schedules)
+				? workflow.schedules
+				: [workflow.schedules]
+			).map((cron) => ({ cron })),
+		}),
+		...(workflow.default_retention !== undefined && {
+			default_retention: workflow.default_retention,
+		}),
+	};
 }
 
 /**

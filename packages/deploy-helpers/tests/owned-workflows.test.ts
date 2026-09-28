@@ -1,5 +1,47 @@
 import { describe, it } from "vitest";
-import { validateOwnedWorkflowDeclarations } from "../src/deploy/helpers/owned-workflows";
+import {
+	formatWorkflowUploadSettings,
+	validateOwnedWorkflowDeclarations,
+} from "../src/deploy/helpers/owned-workflows";
+
+describe("formatWorkflowUploadSettings", () => {
+	it("formats only defined settings and normalizes schedules", ({ expect }) => {
+		expect(
+			formatWorkflowUploadSettings({
+				name: "owned",
+				class_name: "OwnedWorkflow",
+				limits: { steps: 10 },
+				concurrency: { limit: 5 },
+				schedules: "0 * * * *",
+				default_retention: { success_retention: "3 days" },
+			})
+		).toEqual({
+			provision_from_upload: true,
+			limits: { steps: 10 },
+			concurrency: { limit: 5 },
+			schedules: [{ cron: "0 * * * *" }],
+			default_retention: { success_retention: "3 days" },
+		});
+	});
+
+	it("distinguishes an empty schedule from an omitted schedule", ({
+		expect,
+	}) => {
+		expect(
+			formatWorkflowUploadSettings({
+				name: "clear",
+				class_name: "ClearWorkflow",
+				schedules: [],
+			})
+		).toEqual({ provision_from_upload: true, schedules: [] });
+		expect(
+			formatWorkflowUploadSettings({
+				name: "omitted",
+				class_name: "OmittedWorkflow",
+			})
+		).toEqual({ provision_from_upload: true });
+	});
+});
 
 describe("validateOwnedWorkflowDeclarations", () => {
 	it("accepts a binding and an export that configure the same Workflow settings in different forms", ({
