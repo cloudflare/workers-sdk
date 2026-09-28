@@ -152,6 +152,7 @@ describe("shared Container SSH", () => {
 			id: "instance",
 			identityFile: "/tmp/key",
 			option: ["A=yes", "B=no"],
+			tty: true,
 			command: ["echo", "001"],
 		});
 		const [socket] = await connected;
@@ -163,6 +164,8 @@ describe("shared Container SSH", () => {
 		expect(showCursor).toHaveBeenLastCalledWith(true);
 		expect(childArgs).toEqual(
 			expect.arrayContaining([
+				"-o",
+				"RequestTTY=force",
 				"-i",
 				"/tmp/key",
 				"-o",

@@ -15,6 +15,7 @@ export interface ContainerSshArgs {
 	id: string;
 	command?: string[];
 	stdio?: boolean;
+	tty?: boolean;
 	cipher?: string;
 	logFile?: string;
 	escapeChar?: string;
@@ -97,6 +98,12 @@ export const containersSshOptions = {
 	},
 	stdio: {
 		describe: "Proxy SSH traffic over stdin/stdout",
+		type: "boolean",
+	},
+	tty: {
+		alias: "t",
+		describe:
+			"Force pseudo-terminal allocation, e.g. for interactive commands like `-- bash`",
 		type: "boolean",
 	},
 } as const;
@@ -368,6 +375,12 @@ function buildContainerSshArgs(sshArgs: ContainerSshArgs): string[] {
 	// Hide warnings from SSH unless debug logging is enabled
 	if (process.env.WRANGLER_LOG !== "debug") {
 		flags.push("-o", "LogLevel=ERROR");
+	}
+
+	if (sshArgs.tty === true) {
+		flags.push("-o", "RequestTTY=force");
+	} else if (sshArgs.tty === false) {
+		flags.push("-o", "RequestTTY=no");
 	}
 
 	if (sshArgs.cipher !== undefined) {
