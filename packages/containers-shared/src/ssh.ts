@@ -348,10 +348,14 @@ function formatWebSocketData(data: RawData) {
 	return data instanceof ArrayBuffer ? new Uint8Array(data) : data;
 }
 
-export function shouldUseStdio(sshArgs: { stdio?: boolean }) {
+export function shouldUseStdio(sshArgs: { stdio?: boolean; tty?: boolean }) {
 	return (
 		sshArgs.stdio === true ||
-		(process.stdin.isTTY !== true && process.stdout.isTTY !== true)
+		// An explicit --tty requests an OpenSSH session, so it must not be
+		// mistaken for ProxyCommand usage when both streams are redirected.
+		(sshArgs.tty !== true &&
+			process.stdin.isTTY !== true &&
+			process.stdout.isTTY !== true)
 	);
 }
 
