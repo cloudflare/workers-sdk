@@ -34,10 +34,6 @@
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
-		},
-		"./experimental-config": {
-			"types": "./dist/experimental-config.d.mts",
-			"import": "./dist/experimental-config.mjs"
 		}
 	},
 	"publishConfig": {

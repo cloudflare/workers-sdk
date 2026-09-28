@@ -1,4 +1,4 @@
-import { bindings, defineConfig } from "wrangler/experimental-config";
+import { bindings, defineConfig } from "cf/config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
 export default defineConfig((ctx) => ({

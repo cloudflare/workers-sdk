@@ -39,14 +39,15 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
+  - "@cloudflare/*"
+  # cf is developed in a separate repository and may need to be tested here on
+  # the day it is published.
+  - "cf"
   # TEMPORARY: vite-plugin-cloudflare + vitest-plugin are pinned to the
   # published miniflare while the workspace miniflare is mid-migration. Revert
   # with the repoint.
   - "miniflare"
   - "workerd"
-  # Platform-specific workerd binaries published in lock-step with workerd.
-  - "@cloudflare/workerd-*"
-  - "@cloudflare/workers-types"
   # The below is to install the rosie-skills package and remove the problematic
   # wasm module it brings as soon as possible
   # TODO(dario): remove in a few days
@@ -109,6 +110,7 @@ patchedDependencies:
 # ──────────────────────────────────────────────────────────────────────────────
 
 catalog:
+  cf: "1.0.0-beta.2"
   chalk: "5.3.0"
   command-exists: "1.2.9"
   dotenv: "16.3.1"
