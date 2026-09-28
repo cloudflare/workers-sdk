@@ -317,7 +317,45 @@ describe("runAutoConfig()", () => {
 		expect(installWrangler).not.toHaveBeenCalled();
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
 			scripts: {
-				"cf-typegen": "cf types",
+				"cf-typegen": "cf workers types",
+			},
+		});
+	});
+
+	it("keeps the Wrangler typegen command for Wrangler projects", async ({
+		expect,
+	}) => {
+		const packageJson = { name: "my-vite-app" };
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"tsconfig.json": "{}",
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{
+				target: "wrangler",
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
+			scripts: {
+				"cf-typegen": "wrangler types",
 			},
 		});
 	});
