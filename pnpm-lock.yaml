@@ -33,6 +33,9 @@ catalogs:
     capnweb:
       specifier: 0.5.0
       version: 0.5.0
+    cf:
+      specifier: 1.0.0-beta.2
+      version: 1.0.0-beta.2
     chalk:
       specifier: 5.3.0
       version: 5.3.0
@@ -345,6 +348,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3022,6 +3028,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3040,6 +3049,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3058,6 +3070,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3076,6 +3091,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3094,6 +3112,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3112,6 +3133,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3130,6 +3154,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3148,6 +3175,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3166,6 +3196,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3184,6 +3217,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3202,6 +3238,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3220,6 +3259,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3238,6 +3280,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3256,6 +3301,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3274,6 +3322,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3292,6 +3343,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3313,6 +3367,9 @@ importers:
       '@types/mimetext':
         specifier: ^2.0.4
         version: 2.0.4
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       mimetext:
         specifier: ^3.0.27
         version: 3.0.27
@@ -3340,6 +3397,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3358,6 +3418,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3376,6 +3439,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3394,6 +3460,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3412,6 +3481,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3430,6 +3502,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3451,6 +3526,9 @@ importers:
       '@playground/main-resolution-package':
         specifier: file:./package
         version: file:packages/vite-plugin-cloudflare/playground/main-resolution/package
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3472,6 +3550,9 @@ importers:
       '@types/express':
         specifier: ^5.0.1
         version: 5.0.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       express:
         specifier: ^5.1.0
         version: 5.1.0
@@ -3508,6 +3589,9 @@ importers:
       '@types/react':
         specifier: ^18.3.11
         version: 18.3.18
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       discord-api-types:
         specifier: 0.37.98
         version: 0.37.98
@@ -3535,6 +3619,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3565,6 +3652,9 @@ importers:
       '@types/pg':
         specifier: ^8.15.4
         version: 8.15.4
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       cross-fetch:
         specifier: ^4.0.0
         version: 4.1.0(encoding@0.1.13)
@@ -3608,6 +3698,9 @@ importers:
       '@types/react-dom':
         specifier: 19.1.1
         version: 19.1.1(@types/react@19.1.0)
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3651,6 +3744,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.2.0
         version: 5.2.0(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       tailwindcss:
         specifier: ^4.0.15
         version: 4.0.15
@@ -3672,6 +3768,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3699,6 +3798,9 @@ importers:
       '@prisma/client':
         specifier: ^7.0.0
         version: 7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3)
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       prisma:
         specifier: ^7.0.0
         version: 7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)
@@ -3739,6 +3841,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.2.0
         version: 5.2.0(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3757,6 +3862,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3775,6 +3883,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3812,6 +3923,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.2.0
         version: 5.2.0(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3830,6 +3944,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3848,6 +3965,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3866,6 +3986,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3887,6 +4010,9 @@ importers:
       '@vitejs/plugin-basic-ssl':
         specifier: ^2.2.0
         version: 2.2.0(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3905,6 +4031,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3923,6 +4052,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3941,6 +4073,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3959,6 +4094,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20260926.1
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.2(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -5579,6 +5717,10 @@ packages:
 
   '@cloudflare/build-output-utils@0.8.2':
     resolution: {integrity: sha512-DHKF7p5p1ZapZbh2GyF3mfBW7D45IKtcnwMdKnVZ72A/a2rfwd1kczBYFH+O4cHnNI7e9HRwTm+Z76IDZfxVLw==}
+
+  '@cloudflare/codemods@0.2.0':
+    resolution: {integrity: sha512-UonIk10PqFQgH8DfP8cTqixR4I6KKwFeSpy7CVXl5rpcckqfHSUhiNYe+K+xL6d1x7H4N/wjCpGsFnOxORsmkg==}
+    hasBin: true
 
   '@cloudflare/component-box@4.0.2':
     resolution: {integrity: sha512-CInPo9qsB/XCFe5w3hllRhnuMIr9VpHfT4qHSMvSnXaKgeAcldGCw19EgcrkBST+Ye44cY9eO8sMycLLxG7luw==}
@@ -11183,6 +11325,11 @@ packages:
 
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
+
+  cf@1.0.0-beta.2:
+    resolution: {integrity: sha512-Xwi8GG1TOjYaz6eEhJtGR+XMRYBoRXP3Cf8bobEZRqn24ZC6k5fl7hYBSSkMWSGPZpPL8yyURvMOZBKsGvM22A==}
+    engines: {node: '>=22'}
+    hasBin: true
 
   chai@6.2.2:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
@@ -18476,6 +18623,8 @@ snapshots:
     dependencies:
       '@cloudflare/config': 0.20.0
 
+  '@cloudflare/codemods@0.2.0': {}
+
   '@cloudflare/component-box@4.0.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
@@ -23831,6 +23980,20 @@ snapshots:
   caseless@0.12.0: {}
 
   ccount@2.0.1: {}
+
+  cf@1.0.0-beta.2(@types/node@22.15.17):
+    dependencies:
+      '@cloudflare/build-output-utils': 0.8.2
+      '@cloudflare/codemods': 0.2.0
+      '@cloudflare/config': 0.20.0
+      '@cloudflare/runtime-types': 0.1.4(@types/node@22.15.17)
+      blake3-wasm: 2.1.5
+      miniflare: 5.20260926.0-alpha(@types/node@22.15.17)
+      minisearch: 7.2.0
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
 
   chai@6.2.2: {}
 

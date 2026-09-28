@@ -16,6 +16,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@vitejs/plugin-basic-ssl": "^2.2.0",
+		"cf": "catalog:default",
 		"typescript": "catalog:default",
 		"vite": "catalog:default"
 	}

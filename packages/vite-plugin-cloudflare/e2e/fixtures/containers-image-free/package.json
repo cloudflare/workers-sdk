@@ -9,6 +9,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "*",
+		"cf": "latest",
 		"vite": "^8.0.0"
 	}
 }

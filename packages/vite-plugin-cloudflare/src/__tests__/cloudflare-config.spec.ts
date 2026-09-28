@@ -170,9 +170,7 @@ describe("cloudflare.config.ts", () => {
 			existingContent: undefined,
 		});
 		const content = fs.readFileSync(typesPath(), "utf8");
-		expect(content).toContain(
-			'import("@cloudflare/vite-plugin/experimental-config")'
-		);
+		expect(content).toContain('import("cf/config")');
 		expect(content).toContain('import("../../cloudflare.config").default');
 		expect(content).toContain(RUNTIME_MARKER);
 		expect(content).toContain(FAKE_RUNTIME_TYPES);

@@ -22,6 +22,7 @@
 		"@types/react": "19.1.0",
 		"@types/react-dom": "19.1.0",
 		"@vitejs/plugin-react": "^5.2.0",
+		"cf": "catalog:default",
 		"tailwindcss": "^4.0.15",
 		"typescript": "catalog:default",
 		"vite": "catalog:default"
