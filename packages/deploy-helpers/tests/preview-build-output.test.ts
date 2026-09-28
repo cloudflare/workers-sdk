@@ -134,7 +134,6 @@ describe("previewBuildOutput", () => {
 				placement: { mode: "smart" },
 				assets: {
 					htmlHandling: "auto-trailing-slash",
-					basePath: "/docs",
 					runWorkerFirst: true,
 				},
 				observability: { enabled: true },
@@ -185,7 +184,6 @@ describe("previewBuildOutput", () => {
 				jwt: "asset-token",
 				config: {
 					html_handling: "auto-trailing-slash",
-					base_path: "/docs",
 					run_worker_first: true,
 				},
 			},

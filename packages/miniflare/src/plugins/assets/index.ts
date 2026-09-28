@@ -220,7 +220,6 @@ export const ASSETS_PLUGIN: Plugin = {
 			compatibility_flags: options.config.compatibilityFlags,
 			html_handling: assets.htmlHandling,
 			not_found_handling: assets.notFoundHandling,
-			base_path: assets.basePath,
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
 			debug: true,

@@ -19,7 +19,6 @@ export const AssetsSchema = z.strictObject({
 	notFoundHandling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
-	basePath: z.string().optional(),
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
