@@ -108,6 +108,62 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("converts Workflow bindings and exports the Workflows the Worker defines", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			exports: {
+				DeclaredWorkflow: { name: "declared-workflow", type: "workflow" },
+			},
+			main: "src/index.ts",
+			name: "example-worker",
+			workflows: [
+				{
+					binding: "LOCAL",
+					class_name: "LocalWorkflow",
+					concurrency: { limit: 2 },
+					default_retention: {
+						error_retention: 86_400_000,
+						success_retention: "3 days",
+					},
+					limits: { steps: 10 },
+					name: "local-workflow",
+					schedules: "0 * * * *",
+				},
+				{
+					binding: "DECLARED",
+					class_name: "DeclaredWorkflow",
+					name: "declared-workflow",
+				},
+				{
+					binding: "REMOTE",
+					class_name: "RemoteWorkflow",
+					limits: { steps: 5 },
+					name: "remote-workflow",
+					script_name: "other-worker",
+				},
+			],
+		});
+
+		expect(result.output).toContain("bindings.workflow({");
+		expect(result.output).toContain('worker: "other-worker"');
+		expect(result.output).toContain("LocalWorkflow: exports.workflow({");
+		expect(result.output).toContain("defaultRetention: {");
+		expect(result.output).not.toContain("RemoteWorkflow: exports.workflow(");
+		expect(
+			result.output.match(/DeclaredWorkflow: exports\.workflow\(/g)
+		).toHaveLength(1);
+		expect(
+			result.followUps
+				.filter(({ sourcePath }) => sourcePath?.includes("workflows"))
+				.map(({ code, sourcePath }) => ({ code, sourcePath }))
+		).toEqual([
+			{ code: "unsupported-binding-options", sourcePath: "workflows.2" },
+		]);
+		expect(result).toMatchSnapshot();
+	});
+
 	it("reports zone-qualified custom domains for manual review", ({
 		expect,
 	}) => {

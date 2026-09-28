@@ -524,14 +524,55 @@ export function convertBindings(
 		}
 	}
 
-	if (getRecords(source, "workflows").length > 0) {
-		report(
-			createFollowUp(
-				"workflows-unsupported",
-				"Workflow bindings are not supported by the new config and were not migrated.",
-				{ sourcePath: pathFor("workflows") }
-			)
+	for (const [index, entry] of getRecords(source, "workflows").entries()) {
+		const sourcePath = pathFor("workflows", index);
+		if (typeof entry.class_name !== "string" || entry.class_name.length === 0) {
+			report(
+				createFollowUp(
+					"workflow-missing-class",
+					`The Workflow binding at \`${sourcePath}\` has no \`class_name\` and was not migrated.`,
+					{ sourcePath }
+				)
+			);
+			continue;
+		}
+
+		// A Workflow defined by another Worker keeps its settings on that
+		// Worker's export; this Worker only binds to it. A Workflow this Worker
+		// defines also gets an `exports.workflow` entry (see convertExports).
+		const external = typeof entry.script_name === "string";
+		const worker = external
+			? entry.script_name
+			: typeof source.name === "string"
+				? source.name
+				: "TODO";
+
+		imports.add("bindings");
+		addBinding(
+			bindings,
+			entry.binding,
+			call(
+				"bindings.workflow",
+				optionsFromRecord(
+					{ name: entry.name, worker, export_name: entry.class_name },
+					[
+						["name", "name"],
+						["worker", "worker"],
+						["export_name", "exportName"],
+					]
+				)
+			),
+			sourcePath,
+			report
 		);
+		if (external) {
+			reportUnsupportedOptions(
+				entry,
+				["limits", "concurrency", "schedules", "default_retention"],
+				sourcePath,
+				report
+			);
+		}
 	}
 
 	function convertSingletonBinding(
