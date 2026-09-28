@@ -1,5 +1,5 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
-import { triggers } from "@cloudflare/vite-plugin/experimental-config";
+import { triggers } from "cf/config";
 import { defineConfig } from "vite";
 
 export default defineConfig({

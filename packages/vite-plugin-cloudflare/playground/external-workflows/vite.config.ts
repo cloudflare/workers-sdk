@@ -1,5 +1,5 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
-import { exports as workerExports } from "@cloudflare/vite-plugin/experimental-config";
+import { exports as workerExports } from "cf/config";
 import { defineConfig } from "vite";
 
 export default defineConfig({

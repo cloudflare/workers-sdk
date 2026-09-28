@@ -1,4 +1,4 @@
-import { defineConfig } from "@cloudflare/vite-plugin/experimental-config";
+import { defineConfig } from "cf/config";
 import * as workerRandomEntrypoint from "./worker-random/index.ts" with { type: "cf-worker" };
 
 export default defineConfig({

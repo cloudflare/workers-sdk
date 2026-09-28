@@ -2,7 +2,7 @@ import {
 	defineConfig,
 	defineContainer,
 	exports as workerExports,
-} from "@cloudflare/vite-plugin/experimental-config";
+} from "cf/config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
 declare const process: {

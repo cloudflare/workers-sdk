@@ -2,7 +2,7 @@ import {
 	defineConfig,
 	defineContainer,
 	exports as workerExports,
-} from "@cloudflare/vite-plugin/experimental-config";
+} from "cf/config";
 import * as entrypoint from "./index.js" with { type: "cf-worker" };
 
 const probeContainer = defineContainer({
