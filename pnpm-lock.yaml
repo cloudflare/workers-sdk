@@ -2868,28 +2868,28 @@ importers:
 
   packages/vite-plugin-cloudflare:
     dependencies:
+      '@cloudflare/build-output-utils':
+        specifier: 0.8.2
+        version: 0.8.2
       '@cloudflare/config':
         specifier: 0.20.0
         version: 0.20.0
+      '@cloudflare/runtime-types':
+        specifier: 0.1.4
+        version: 0.1.4(@types/node@22.15.17)
       '@cloudflare/unenv-preset':
         specifier: 2.16.2
-        version: 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20260918.1)
+        version: 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20260926.1)
       miniflare:
         specifier: 5.20260926.0-alpha
         version: 5.20260926.0-alpha(@types/node@22.15.17)
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
-      workerd:
-        specifier: 1.20260918.1
-        version: 1.20260918.1
       ws:
         specifier: catalog:default
         version: 8.21.0
     devDependencies:
-      '@cloudflare/build-output-utils':
-        specifier: workspace:*
-        version: link:../build-output-utils
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
@@ -2902,9 +2902,6 @@ importers:
       '@cloudflare/remote-bindings':
         specifier: workspace:*
         version: link:../remote-bindings
-      '@cloudflare/runtime-types':
-        specifier: workspace:*
-        version: link:../runtime-types
       '@cloudflare/workers-auth':
         specifier: workspace:*
         version: link:../workers-auth
@@ -5580,6 +5577,9 @@ packages:
   '@clack/prompts@1.2.0':
     resolution: {integrity: sha512-4jmztR9fMqPMjz6H/UZXj0zEmE43ha1euENwkckKKel4XpSfokExPo5AiVStdHSAlHekz4d0CA/r45Ok1E4D3w==}
 
+  '@cloudflare/build-output-utils@0.8.2':
+    resolution: {integrity: sha512-DHKF7p5p1ZapZbh2GyF3mfBW7D45IKtcnwMdKnVZ72A/a2rfwd1kczBYFH+O4cHnNI7e9HRwTm+Z76IDZfxVLw==}
+
   '@cloudflare/component-box@4.0.2':
     resolution: {integrity: sha512-CInPo9qsB/XCFe5w3hllRhnuMIr9VpHfT4qHSMvSnXaKgeAcldGCw19EgcrkBST+Ye44cY9eO8sMycLLxG7luw==}
     peerDependencies:
@@ -5744,6 +5744,9 @@ packages:
   '@cloudflare/puppeteer@1.0.4':
     resolution: {integrity: sha512-I7vh9Er1hQ/7OnOL/NEPaiR0alRQ62wEWstyizilmr69AcRqvu+ufNlTc3A2uXREEvFBZ6TFajdcrBbh78/mtA==}
     engines: {node: '>=18'}
+
+  '@cloudflare/runtime-types@0.1.4':
+    resolution: {integrity: sha512-Jp3Za6h0KybVoi/4D6La3HicW71L8nyS7AGf0WHpbKqCs17lLkCuTbOcAuUTraoib8+SR74L+AbqxwcDq3VhTw==}
 
   '@cloudflare/sandbox@0.12.4':
     resolution: {integrity: sha512-0gpkd+a58Q5aGjgXvLFZSdIDAZpvh89QlaiHBpTtkDZWqHPKfyISV76/pIUzzo9ACJzVIpUO8hNv2X+LFTTiRQ==}
@@ -18469,6 +18472,10 @@ snapshots:
       fast-wrap-ansi: 0.1.6
       sisteransi: 1.0.5
 
+  '@cloudflare/build-output-utils@0.8.2':
+    dependencies:
+      '@cloudflare/config': 0.20.0
+
   '@cloudflare/component-box@4.0.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
@@ -18700,6 +18707,15 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@cloudflare/runtime-types@0.1.4(@types/node@22.15.17)':
+    dependencies:
+      miniflare: 5.20260926.0-alpha(@types/node@22.15.17)
+      workerd: 1.20260926.1
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
+
   '@cloudflare/sandbox@0.12.4':
     dependencies:
       '@cloudflare/containers': 0.3.7
@@ -18804,11 +18820,11 @@ snapshots:
     optionalDependencies:
       workerd: 1.20260918.1
 
-  '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.24)(workerd@1.20260918.1)':
+  '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.24)(workerd@1.20260926.1)':
     dependencies:
       unenv: 2.0.0-rc.24
     optionalDependencies:
-      workerd: 1.20260918.1
+      workerd: 1.20260926.1
 
   '@cloudflare/util-en-garde@8.0.10':
     dependencies:
