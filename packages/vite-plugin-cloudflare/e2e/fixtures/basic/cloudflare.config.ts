@@ -1,7 +1,4 @@
-import {
-	bindings,
-	defineConfig,
-} from "@cloudflare/vite-plugin/experimental-config";
+import { bindings, defineConfig } from "cf/config";
 
 export default defineConfig({
 	worker: {

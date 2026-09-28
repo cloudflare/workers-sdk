@@ -5,19 +5,16 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
-	// TODO(release): Revert these three packages to workspace dependencies.
-	// Bundling them would bypass the published-version pins used by v2 prereleases.
+	// TODO(release): Revert these Cloudflare packages to workspace dependencies.
+	"@cloudflare/build-output-utils",
 	"@cloudflare/config",
+	"@cloudflare/runtime-types",
 	"@cloudflare/unenv-preset",
 	"miniflare",
 
 	// Must be external - resolved at runtime when bundling user's worker code
 	// to provide Node.js compatibility polyfills
 	"unenv",
-
-	// workerd contains a native binary, so must be external. Imported by the
-	// bundled `@cloudflare/runtime-types` (runtime type generation).
-	"workerd",
 
 	// Has optional native bindings (bufferutil, utf-8-validate) for performance;
 	// commonly shared with other packages to avoid duplication

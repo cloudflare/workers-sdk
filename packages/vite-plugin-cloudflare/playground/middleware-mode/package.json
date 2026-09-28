@@ -11,6 +11,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/express": "^5.0.1",
+		"cf": "catalog:default",
 		"express": "^5.1.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:default"

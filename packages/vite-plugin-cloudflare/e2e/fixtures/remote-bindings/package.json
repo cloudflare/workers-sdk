@@ -13,6 +13,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "*",
 		"@cloudflare/workers-types": "^5.20260706.1",
+		"cf": "latest",
 		"globals": "^15.14.0",
 		"typescript": "~5.7.2",
 		"vite": "^8.0.0",

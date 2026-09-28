@@ -20,6 +20,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/react": "19.1.0",
 		"@types/react-dom": "19.1.1",
+		"cf": "catalog:default",
 		"typescript": "catalog:default",
 		"vite": "catalog:default"
 	}

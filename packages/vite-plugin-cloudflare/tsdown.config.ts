@@ -37,19 +37,6 @@ export default defineConfig([
 		dts: false,
 		ignoreWatch,
 	},
-	// TODO: move into main build as an additional entry once tsdown has been upgraded
-	{
-		entry: {
-			"experimental-config": "src/experimental-config.ts",
-		},
-		platform: "node",
-		outDir: "dist",
-		tsconfig: "tsconfig.plugin.json",
-		dts: {
-			resolve: ["@cloudflare/config"],
-		},
-		ignoreWatch,
-	},
 	worker("asset-worker"),
 	worker("router-worker"),
 	worker("runner-worker", {

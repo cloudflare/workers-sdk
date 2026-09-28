@@ -11,6 +11,7 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"cf": "catalog:default",
 		"typescript": "catalog:default",
 		"vite": "catalog:default"
 	}

@@ -19,6 +19,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@playground/main-resolution-package": "file:./package",
+		"cf": "catalog:default",
 		"typescript": "catalog:default",
 		"vite": "catalog:default"
 	}
