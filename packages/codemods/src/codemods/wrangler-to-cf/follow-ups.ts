@@ -5,6 +5,7 @@ export const DURABLE_OBJECT_EXPORTS_DOCS_URL = `https://developers.cloudflare.co
 export const ENVIRONMENTS_DOCS_URL = `https://developers.cloudflare.com/workers/wrangler/environments/`;
 export const PREVIEWS_DOCS_URL = `https://developers.cloudflare.com/workers/wrangler/configuration/#previews`;
 export const SECRETS_DOCS_URL = `https://developers.cloudflare.com/workers/configuration/secrets/`;
+export const SOURCE_MAPS_DOCS_URL = `https://developers.cloudflare.com/workers/observability/source-maps/`;
 
 export function createFollowUp(
 	code: string,

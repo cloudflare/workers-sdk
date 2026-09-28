@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.61.0",
+	"version": "1.62.0",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -34,10 +34,6 @@
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
-		},
-		"./experimental-config": {
-			"types": "./dist/experimental-config.d.mts",
-			"import": "./dist/experimental-config.mjs"
 		}
 	},
 	"publishConfig": {

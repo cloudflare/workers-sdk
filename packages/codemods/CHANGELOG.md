@@ -1,5 +1,17 @@
 # @cloudflare/codemods
 
+## 0.2.1
+
+### Patch Changes
+
+- [#15894](https://github.com/cloudflare/workers-sdk/pull/15894) [`bfe108c`](https://github.com/cloudflare/workers-sdk/commit/bfe108cd842f76538047409d48904076515dc3ce) Thanks [@MattieTK](https://github.com/MattieTK)! - Stop blocking Vite migrations on `upload_source_maps`
+
+  The `wrangler-to-cf` codemod previously treated any `upload_source_maps` setting as unsupported Wrangler tooling when the Vite bundler was selected, which added a migration guard to `cloudflare.config.ts`. It now reports non-blocking guidance instead, because `cf deploy` uploads any Worker source maps included in the build output. For `upload_source_maps: true`, the guidance says to enable `build.sourcemap` for the Worker's Vite environment. For `upload_source_maps: false`, it says to keep that setting disabled.
+
+- [#15894](https://github.com/cloudflare/workers-sdk/pull/15894) [`bfe108c`](https://github.com/cloudflare/workers-sdk/commit/bfe108cd842f76538047409d48904076515dc3ce) Thanks [@MattieTK](https://github.com/MattieTK)! - Report an unmigrated Vite assets directory once
+
+  Vite migrations previously reported `assets.directory` both as Wrangler tooling and as a separate assets follow-up. The codemod now reports only the assets-specific follow-up, which includes a documentation link.
+
 ## 0.2.0
 
 ### Minor Changes

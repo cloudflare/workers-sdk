@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.73.0
+
+### Minor Changes
+
+- [#15636](https://github.com/cloudflare/workers-sdk/pull/15636) [`29099b1`](https://github.com/cloudflare/workers-sdk/commit/29099b1c2fc60fe3374dab31bd8ec8b255f1bd6c) Thanks [@ryanking13](https://github.com/ryanking13)! - Add Django, FastAPI, and Flask framework starters for Python Workers projects
+
+### Patch Changes
+
+- [#15885](https://github.com/cloudflare/workers-sdk/pull/15885) [`ff5039c`](https://github.com/cloudflare/workers-sdk/commit/ff5039c802790473a8d0d14f9970649633ae73c2) Thanks [@Zhong-z](https://github.com/Zhong-z)! - Validate project name format before checking for directory conflicts
+
+  Previously, when providing an invalid project name for an existing directory containing files, C3 reported that the directory already exists and contains conflicting files instead of reporting the invalid project name. Project name format validation is now performed before checking whether the directory already exists.
+
 ## 2.72.13
 
 ### Patch Changes

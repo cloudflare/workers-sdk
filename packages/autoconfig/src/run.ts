@@ -600,7 +600,8 @@ export async function buildOperationsSummary(
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
 			summary.scripts["cf-typegen"] =
-				scriptOverrides?.typegen ?? `${target} types`;
+				scriptOverrides?.typegen ??
+				(target === "cf" ? "cf workers types" : "wrangler types");
 		}
 
 		logger.log("📝 Update package.json scripts:");
