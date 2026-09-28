@@ -1,0 +1,10 @@
+{
+	"name": "workflows-exports",
+	"main": "src/index.ts",
+	// don't provide compatibility_date so that vitest will infer the latest one
+	// `GreetingWorkflow` has no `workflows` binding: it's reachable only via
+	// `ctx.exports.GreetingWorkflow` from inside the Worker.
+	"exports": {
+		"GreetingWorkflow": { "type": "workflow", "name": "greeting-workflow" },
+	},
+}

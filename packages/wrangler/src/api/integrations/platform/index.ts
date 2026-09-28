@@ -289,7 +289,15 @@ async function getMiniflareOptionsFromConfig(args: {
 			bindings,
 			queueConsumers: undefined,
 			migrations: config.migrations,
-			exports: config.exports,
+			// The platform proxy doesn't run the Worker's code, so it can't run the
+			// Workflows the Worker exports.
+			exports:
+				config.exports &&
+				Object.fromEntries(
+					Object.entries(config.exports).filter(
+						([, exported]) => exported.type !== "workflow"
+					)
+				),
 			tails: [],
 			streamingTails: [],
 			// Platform proxy does not prepare local Container images.
