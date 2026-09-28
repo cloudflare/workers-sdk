@@ -105,12 +105,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.command === "deploy") {
 		validateEventTriggerTargets(config, name);
-		const workersDevEnabled = getSubdomainValues(
-			config.workers_dev,
-			config.preview_urls,
-			props.routes
-		).workers_dev;
-		validateRoutes(props.routes, props.assetsOptions, workersDevEnabled);
+		validateRoutes(props.routes, props.assetsOptions);
 		assert(
 			!config.site || config.site.bucket,
 			"A [site] definition requires a `bucket` field with a path to the site's assets directory."
