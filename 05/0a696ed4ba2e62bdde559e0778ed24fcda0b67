@@ -1,0 +1,21 @@
+packages/deploy-helpers/src/deploy/helpers/exports.ts
+  s_a13784b2a24abc::t_ef1372e9b8584b 3-6,28-41
+packages/deploy-helpers/tests/owned-workflows.test.ts
+  s_a13784b2a24abc::t_aee6b8e77d3506 2-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "050a696ed4ba2e62bdde559e0778ed24fcda0b67",
+  "prompts": {},
+  "sessions": {
+    "s_a13784b2a24abc": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a0e8a1-f943-776c-b84b-45dd6893466f",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}
