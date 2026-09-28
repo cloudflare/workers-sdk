@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build:default": "vite build --app",
-		"check:type": "pnpm run build:default && tsc --build",
+		"check:type": "cf workers types --include-runtime=false && tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
 	},
