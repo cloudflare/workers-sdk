@@ -110,7 +110,7 @@ const BINDING_ERRORS: Partial<Record<number, S3Error>> = {
  * R2Error type is disabled (r2-rpc.c++, "all we can send back to the user
  * is a message").
  */
-function bindingError(e: unknown): Response {
+export function bindingError(e: unknown): Response {
 	const message = e instanceof Error ? e.message : String(e);
 	const v4Code = /\((\d+)\)$/.exec(message);
 	const known = v4Code === null ? undefined : BINDING_ERRORS[Number(v4Code[1])];
@@ -747,20 +747,16 @@ export const OBJECT_OPERATIONS: Record<
 			if (storageClass instanceof Response) {
 				return storageClass;
 			}
-			try {
-				const upload = await bucket.createMultipartUpload(key, {
-					httpMetadata: c.req.raw.headers,
-					customMetadata: collectCustomMetadata(c),
-					storageClass,
-				});
-				return xmlResponse("InitiateMultipartUploadResult", {
-					UploadId: upload.uploadId,
-					Bucket: bucketId,
-					Key: key,
-				});
-			} catch (e) {
-				return bindingError(e);
-			}
+			const upload = await bucket.createMultipartUpload(key, {
+				httpMetadata: c.req.raw.headers,
+				customMetadata: collectCustomMetadata(c),
+				storageClass,
+			});
+			return xmlResponse("InitiateMultipartUploadResult", {
+				UploadId: upload.uploadId,
+				Bucket: bucketId,
+				Key: key,
+			});
 		},
 	},
 };
