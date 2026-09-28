@@ -16,6 +16,7 @@ import {
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
+	getWorkerDir,
 	getWorkersDir,
 } from "./paths";
 import type {
@@ -103,8 +104,10 @@ export interface BuildOutput {
 	 */
 	rootConfig: ParsedOutputRootConfig;
 	/**
-	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`, keyed by
-	 * their directory names. Guaranteed to contain the `default` Worker.
+	 * The deployable Workers found under
+	 * `<root>/.cloudflare/output/v0/workers/`, keyed by their directory names.
+	 * Worker configs without a `bundle/` or `assets/` directory are omitted.
+	 * Guaranteed to contain the `default` Worker.
 	 */
 	workers: BuildOutputWorkers;
 	/**
@@ -149,6 +152,14 @@ export async function readBuildOutput(root: string): Promise<BuildOutput> {
 async function readWorkers(root: string): Promise<BuildOutputWorkers> {
 	const workersDir = getWorkersDir(root);
 	const defaultWorker = await readWorker(root, DEFAULT_WORKER_DIRECTORY_NAME);
+	if (defaultWorker === undefined) {
+		const workerDir = getWorkerDir(root, DEFAULT_WORKER_DIRECTORY_NAME);
+		const bundleDir = getWorkerBundleDir(root, DEFAULT_WORKER_DIRECTORY_NAME);
+		const assetsDir = getWorkerAssetsDir(root, DEFAULT_WORKER_DIRECTORY_NAME);
+		throw new BuildOutputError(
+			`Default Worker at ${workerDir} has neither a bundle directory (${bundleDir}) nor an assets directory (${assetsDir}).`
+		);
+	}
 	const additionalWorkerDirectoryNames = (
 		await fsp.readdir(workersDir, { withFileTypes: true })
 	)
@@ -160,13 +171,20 @@ async function readWorkers(root: string): Promise<BuildOutputWorkers> {
 	const additionalWorkers = await Promise.all(
 		additionalWorkerDirectoryNames.map(async (workerDirectoryName) => {
 			const worker = await readWorker(root, workerDirectoryName);
-			return [workerDirectoryName, worker] as const;
+			return worker === undefined
+				? undefined
+				: ([workerDirectoryName, worker] as const);
 		})
 	);
 
 	return {
 		default: defaultWorker,
-		...Object.fromEntries(additionalWorkers),
+		...Object.fromEntries(
+			additionalWorkers.filter(
+				(entry): entry is readonly [string, BuildOutputWorker] =>
+					entry !== undefined
+			)
+		),
 	};
 }
 
@@ -218,14 +236,15 @@ async function readContainer(
  * Read and parse the Worker's `worker.config.json` and resolve its
  * `bundle/` / `assets/` directories.
  *
- * @returns the Worker, with whichever of its directories exist resolved.
+ * @returns the Worker, with whichever of its directories exist resolved, or
+ * `undefined` when it has no deployable output.
  * @throws {BuildOutputError} if the config is missing, is not valid JSON, or
  * does not match its schema.
  */
 async function readWorker(
 	root: string,
 	workerDirectoryName: string
-): Promise<BuildOutputWorker> {
+): Promise<BuildOutputWorker | undefined> {
 	const configPath = getWorkerConfigPath(root, workerDirectoryName);
 
 	if (!fs.existsSync(configPath)) {
@@ -244,12 +263,6 @@ async function readWorker(
 	const assetsDir = getWorkerAssetsDir(root, workerDirectoryName);
 	const hasBundleDir = fs.existsSync(bundleDir);
 	const hasAssetsDir = fs.existsSync(assetsDir);
-
-	if (result.data.manifest && !hasBundleDir) {
-		throw new BuildOutputError(
-			`Worker config at ${configPath} contains a manifest, but no bundle directory exists at ${bundleDir}.`
-		);
-	}
 
 	if (hasBundleDir) {
 		const config = await resolveManifest(result.data, configPath, bundleDir);
@@ -271,9 +284,7 @@ async function readWorker(
 		};
 	}
 
-	throw new BuildOutputError(
-		`Worker config at ${configPath} has neither a bundle directory (${bundleDir}) nor an assets directory (${assetsDir}).`
-	);
+	return undefined;
 }
 
 /** Resolve the manifest against the bundle contents. */

@@ -226,8 +226,9 @@ export type ContainerApp = {
 	 * The scheduling policy of the application
 	 * @optional
 	 * `"durable_object"` makes each Durable Object instance own its Container.
-	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`, and
-	 * application-wide log `observability` are supported on this entry.
+	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`,
+	 * application-wide log `observability`, `ssh`, and `authorized_keys` are
+	 * supported on this entry.
 	 *
 	 * @default "default"
 	 */
@@ -516,7 +517,25 @@ export interface WorkerEntrypointExport {
 	};
 }
 
-export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;
+/**
+ * A single declarative Workflow export entry in the `exports` config map. The
+ * map key is the exported class name (the class extending `WorkflowEntrypoint`);
+ * `name` is the workflow's stable identity, used for instance and storage
+ * namespacing, and is required. The remaining settings match the ones accepted
+ * by `workflows` bindings.
+ */
+export interface WorkflowExport extends Pick<
+	WorkflowBinding,
+	"limits" | "concurrency" | "schedules" | "default_retention"
+> {
+	type: "workflow";
+	name: string;
+}
+
+export type ConfiguredExport =
+	| DurableObjectExport
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /**
  * The declarative `exports` map keyed by export name. Durable Object exports
@@ -914,6 +933,29 @@ export type DurableObjectBindings = {
 	environment?: string;
 }[];
 
+export type DurableObjectCodeUpdateStrategy = {
+	/** How Durable Object code updates should be applied. */
+	mode: "immediate" | "deferred";
+	/**
+	 * Maximum time, in seconds, to wait for Durable Objects to hibernate.
+	 * Defaults to 300 (5 minutes) and cannot exceed 86400 (24 hours).
+	 * @minimum 0
+	 * @maximum 86400
+	 * @multipleOf 0.001
+	 * @default 300
+	 */
+	max_delay?: number;
+};
+
+export type DurableObjectsConfig = {
+	bindings: DurableObjectBindings;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
+};
+
+export type RawDurableObjectsConfig = Omit<DurableObjectsConfig, "bindings"> & {
+	bindings?: DurableObjectBindings;
+};
+
 export const ARTIFACTS_EVENT_TYPES = [
 	"cf.artifacts.repo.created",
 	"cf.artifacts.repo.deleted",
@@ -974,6 +1016,25 @@ export type WorkflowBinding = {
 	};
 };
 
+type ConnectHandlerConfigBase = {
+	/** The port to listen on. */
+	port: number;
+	/** The address to bind to. Defaults to `127.0.0.1`. */
+	address?: string;
+};
+
+type TcpConnectHandlerConfig = ConnectHandlerConfigBase & { protocol: "tcp" };
+
+type UdpConnectHandlerConfig = ConnectHandlerConfigBase & {
+	protocol: "udp";
+	/** The idle timeout in milliseconds after which a peer flow is closed. */
+	idle_timeout_ms?: number;
+	/** The maximum number of pending datagram bytes per peer flow. */
+	max_pending_bytes?: number;
+};
+
+type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
+
 /**
  * The `EnvironmentNonInheritable` interface declares all the configuration fields for an environment
  * that cannot be inherited from the top-level environment, and must be defined specifically.
@@ -1026,7 +1087,7 @@ export interface EnvironmentNonInheritable {
 	};
 
 	/**
-	 * A list of durable objects that your Worker should be bound to.
+	 * Durable Object bindings and code update strategy for your Worker.
 	 *
 	 * For more information about Durable Objects, see the documentation at
 	 * https://developers.cloudflare.com/workers/learning/using-durable-objects
@@ -1039,9 +1100,7 @@ export interface EnvironmentNonInheritable {
 	 * @default {bindings:[]}
 	 * @nonInheritable
 	 */
-	durable_objects: {
-		bindings: DurableObjectBindings;
-	};
+	durable_objects: DurableObjectsConfig;
 
 	/**
 	 * A list of workflows that your Worker should be bound to.
@@ -1196,16 +1255,7 @@ export interface EnvironmentNonInheritable {
 	 * @default []
 	 * @nonInheritable
 	 */
-	connect: {
-		/** The transport protocol to listen for. */
-		protocol: "tcp";
-
-		/** The port to listen on. */
-		port: number;
-
-		/** The address to bind to. Defaults to `127.0.0.1`. */
-		address?: string;
-	}[];
+	connect: ConnectHandlerConfig[];
 
 	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.
@@ -1833,7 +1883,9 @@ export interface EnvironmentNonInheritable {
  * All the properties are optional, and will be replaced with defaults in the configuration that
  * is used in the rest of the codebase.
  */
-export type RawEnvironment = Partial<Environment>;
+export type RawEnvironment = Partial<Omit<Environment, "durable_objects">> & {
+	durable_objects?: RawDurableObjectsConfig;
+};
 
 /**
  * A bundling resolver rule, defining the modules type for paths that match the specified globs.
@@ -2004,10 +2056,12 @@ export type ContainerEngine =
  */
 export interface PreviewsConfig
 	extends
-		Partial<EnvironmentNonInheritable>,
+		Partial<Omit<EnvironmentNonInheritable, "durable_objects">>,
 		Partial<
 			Pick<
 				EnvironmentInheritable,
 				"logpush" | "observability" | "limits" | "placement" | "cache"
 			>
-		> {}
+		> {
+	durable_objects?: { bindings: DurableObjectBindings };
+}

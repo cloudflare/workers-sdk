@@ -13,6 +13,7 @@ import {
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	DEFAULT_COMPAT_DATE,
+	formatZodError,
 	getWorkerNameFromProject,
 } from "@cloudflare/workers-utils";
 import { defu } from "defu";
@@ -833,7 +834,7 @@ async function loadNewConfig(options: {
 
 	if (!result.success) {
 		throw new Error(
-			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${result.error.message}`
+			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${formatZodError(result.error)}`
 		);
 	}
 

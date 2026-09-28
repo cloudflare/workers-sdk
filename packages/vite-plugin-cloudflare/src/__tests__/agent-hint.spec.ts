@@ -63,6 +63,9 @@ describe("Local Explorer agent hint", () => {
 			"GET http://localhost:5173/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings"
 		);
 		expect(output).toContain(
+			"POST http://localhost:5173/cdn-cgi/local/explorer/api/local/scheduled?worker=<name> - invoke a Worker's scheduled handler; cron is required (see the OpenAPI schema for the full request)"
+		);
+		expect(output).toContain(
 			"POST http://localhost:5173/cdn-cgi/local/explorer/api/local/observability/query"
 		);
 		// The OpenAPI schema is listed last, as a fallback, so agents reach for the

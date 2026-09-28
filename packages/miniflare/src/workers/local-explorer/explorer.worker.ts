@@ -8,6 +8,7 @@ import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
+import { EXPLORER_REFRESH_HEADER } from "./explorer-refresh";
 import {
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
@@ -18,6 +19,7 @@ import {
 	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zLocalExplorerDispatchScheduledData,
 	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
@@ -33,9 +35,12 @@ import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
 	getReceivedEmail,
+	getReceivedEmailByCaptureId,
+	getResendDraft,
 	getSentEmail,
 	listReceivedEmails,
 	listSentEmails,
+	resendCapturedEmail,
 	sendTestEmail,
 } from "./resources/email";
 import {
@@ -56,6 +61,7 @@ import {
 	listR2Objects,
 	putR2Object,
 } from "./resources/r2";
+import { dispatchScheduledToWorker } from "./resources/scheduled";
 import {
 	changeWorkflowInstanceStatus,
 	createWorkflowInstance,
@@ -148,8 +154,7 @@ app.use("/api/*", async (c, next) => {
 				"Access-Control-Allow-Origin": origin ?? "*",
 				"Access-Control-Allow-Methods":
 					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers":
-					"Content-Type, cf-metadata-only, cf-r2-custom-metadata",
+				"Access-Control-Allow-Headers": `Content-Type, cf-metadata-only, cf-r2-custom-metadata, ${EXPLORER_REFRESH_HEADER}`,
 				"Access-Control-Max-Age": "86400",
 			},
 		});
@@ -436,17 +441,72 @@ app.post(
 app.post("/api/local/observability/clear", (c) => clearTraces(c));
 
 // ============================================================================
+// Scheduled Endpoints
+// ============================================================================
+
+app.post(
+	"/api/local/scheduled",
+	validateQuery(zLocalExplorerDispatchScheduledData.shape.query),
+	validateRequestBody(zLocalExplorerDispatchScheduledData.shape.body),
+	(c) => dispatchScheduledToWorker(c, c.req.valid("query"), c.req.valid("json"))
+);
+
+// ============================================================================
 // Email Endpoints
 // ============================================================================
 
-app.get(
-	"/api/local/email/routing",
-	validateQuery(zEmailListRoutingData.shape.query.unwrap()),
+const zEmailRoutingQuery = zEmailListRoutingData.shape.query
+	.unwrap()
+	.extend({ capture_id: z.uuid().optional() })
+	.superRefine((query, context) => {
+		if (query.capture_id !== undefined && query.email_id !== undefined) {
+			context.addIssue({
+				code: "custom",
+				message: "capture_id and email_id are mutually exclusive",
+			});
+		}
+		if (
+			query.capture_id !== undefined &&
+			(query.worker === undefined || query.worker.trim() === "")
+		) {
+			context.addIssue({
+				code: "custom",
+				path: ["worker"],
+				message: "Worker is required with capture_id",
+			});
+		}
+	});
+
+const zEmailCaptureOperationQuery = z.object({
+	worker: z.string().trim().min(1),
+	capture_id: z.uuid(),
+});
+
+app.get("/api/local/email/routing", validateQuery(zEmailRoutingQuery), (c) => {
+	const query = c.req.valid("query");
+	if (query.capture_id !== undefined) {
+		return getReceivedEmailByCaptureId(c, query.capture_id, query.worker ?? "");
+	}
+	return query.email_id === undefined
+		? listReceivedEmails(c, query)
+		: getReceivedEmail(c, query.email_id, query.worker);
+});
+
+app.post(
+	"/api/local/email/routing/resend",
+	validateQuery(zEmailCaptureOperationQuery),
 	(c) => {
 		const query = c.req.valid("query");
-		return query.email_id === undefined
-			? listReceivedEmails(c, query)
-			: getReceivedEmail(c, query.email_id, query.worker);
+		return resendCapturedEmail(c, query.worker, query.capture_id);
+	}
+);
+
+app.get(
+	"/api/local/email/routing/resend/draft",
+	validateQuery(zEmailCaptureOperationQuery),
+	(c) => {
+		const query = c.req.valid("query");
+		return getResendDraft(c, query.worker, query.capture_id);
 	}
 );
 
@@ -488,7 +548,7 @@ app.get("/api/local/workers", async (c) => {
 				return {
 					isSelf: true,
 					name,
-					bindings: explorerWorkerOpts[name],
+					...explorerWorkerOpts[name],
 				};
 			});
 

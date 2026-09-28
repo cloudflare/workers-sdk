@@ -3,7 +3,10 @@ import {
 	convertToWranglerConfig,
 	loadAndParseConfig,
 } from "@cloudflare/config";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
+import {
+	formatZodError,
+	normalizeAndValidateConfig,
+} from "@cloudflare/workers-utils";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 
 export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -41,7 +44,7 @@ export async function loadNewConfig(
 
 	if (!result.success) {
 		throw new TypeError(
-			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${result.error.message}`
+			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${formatZodError(result.error)}`
 		);
 	}
 

@@ -51,6 +51,14 @@ describe("kv", () => {
 				);
 			}
 
+			it("should show the jurisdiction option in help", async ({ expect }) => {
+				await runWrangler("kv namespace create --help");
+
+				expect(std.out).toMatch(
+					/--jurisdiction\s+The jurisdiction where the new namespace will be created \(e.g. "us", "eu", "fedramp"\)\s{2}\[string\]/
+				);
+			});
+
 			it("should error if no namespace is given", async ({ expect }) => {
 				await expect(
 					runWrangler("kv namespace create")
@@ -78,6 +86,7 @@ describe("kv", () => {
 
 					OPTIONS
 					      --preview        Interact with a preview namespace  [boolean]
+					      --jurisdiction   The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")  [string]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
 					      --update-config  Automatically update your config file with the newly added resource  [boolean]
 					      --binding        The binding name of this resource in your Worker  [string]"
@@ -118,6 +127,7 @@ describe("kv", () => {
 
 					OPTIONS
 					      --preview        Interact with a preview namespace  [boolean]
+					      --jurisdiction   The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")  [string]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
 					      --update-config  Automatically update your config file with the newly added resource  [boolean]
 					      --binding        The binding name of this resource in your Worker  [string]"

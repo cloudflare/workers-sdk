@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import path from "node:path";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import {
@@ -12,11 +14,17 @@ import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
 import {
 	getEnvBindingsOfType,
+	getTriggersOfType,
 	getRemoteProxyConnectionString,
 	getStorageService,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
+import {
+	getWorkflowBindingServiceName,
+	getWorkflowNamespaceKey,
+	WORKFLOWS_PLUGIN_NAME,
+} from "../workflows";
 import {
 	EMAIL_STORE_SERVICE_NAME,
 	getUserServiceName,
@@ -28,6 +36,7 @@ import type {
 	DurableObjectClassNames,
 	ParsedInstanceOptions,
 	ParsedWorkerOptions,
+	WorkflowExporters,
 	WorkflowOption,
 } from "../shared";
 import type {
@@ -44,6 +53,7 @@ export interface ExplorerServicesOptions {
 	hasDurableObjects: boolean;
 	workerNames: string[];
 	explorerWorkerOpts: ExplorerWorkerOpts;
+	workflowExporters: WorkflowExporters;
 	telemetry: {
 		enabled: boolean;
 		deviceId?: string;
@@ -69,6 +79,7 @@ export function getExplorerServices(
 		hasDurableObjects,
 		workerNames,
 		explorerWorkerOpts,
+		workflowExporters,
 		telemetry,
 		observabilityEnabled,
 		sharedOptions,
@@ -183,14 +194,45 @@ export function getExplorerServices(
 	// for the instance detail view. Same pattern as DO namespace bindings above.
 	// The Engine DO has no alarms and its constructor is idempotent, so waking
 	// it up for reads is safe.
+	// Exported Workflows run their Engines in the Worker that exports them.
 	for (const workflowInfo of Object.values(bindingIdMap.workflows)) {
+		const exporter = workflowExporters.get(workflowInfo.name);
 		explorerBindings.push({
 			name: workflowInfo.engineBinding,
-			durableObjectNamespace: {
-				className: "Engine",
-				serviceName: `workflows:${workflowInfo.name}`,
-			},
+			durableObjectNamespace:
+				exporter === undefined
+					? {
+							className: "Engine",
+							serviceName: `workflows:${workflowInfo.name}`,
+						}
+					: {
+							className: getWorkflowNamespaceKey(workflowInfo.name),
+							serviceName: getUserServiceName(exporter.workerName),
+						},
 		});
+
+		// A Workflow declared only in `exports` has no proxy binding to reuse.
+		if (
+			!workflowProxyBindings.some(
+				(binding) => binding.name === workflowInfo.binding
+			)
+		) {
+			explorerBindings.push({
+				name: workflowInfo.binding,
+				wrapped: {
+					moduleName: `${WORKFLOWS_PLUGIN_NAME}:local-wrapped-binding`,
+					innerBindings: [
+						{
+							name: "binding",
+							service: {
+								name: getWorkflowBindingServiceName(workflowInfo.name),
+								entrypoint: "WorkflowBinding",
+							},
+						},
+					],
+				},
+			});
+		}
 	}
 
 	return [
@@ -203,7 +245,7 @@ export function getExplorerServices(
 			name: SERVICE_LOCAL_EXPLORER,
 			worker: {
 				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
+				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
 				modules: [
 					{
 						name: "explorer.worker.js",
@@ -218,13 +260,14 @@ export function getExplorerServices(
 
 /**
  * Build binding ID map from worker options, proxy bindings, Durable Object
- * class names, and workflow options.
+ * class names, exported Workflows, and workflow options.
  * Maps resource IDs to binding information for the local explorer.
  */
 export function constructExplorerBindingMap(
 	allWorkerOpts: ParsedWorkerOptions[],
 	proxyBindings: Worker_Binding[],
 	durableObjectClassNames: DurableObjectClassNames,
+	workflowExporters: WorkflowExporters,
 	workflowOptions?: Map<string, WorkflowOption>
 ): BindingIdMap {
 	const IDToBindingName: BindingIdMap = {
@@ -334,6 +377,18 @@ export function constructExplorerBindingMap(
 		}
 	}
 
+	// A Workflow declared only in `exports` has no binding to find above, so the
+	// explorer gets its own binding to it (see `getExplorerServices()`).
+	for (const [workflowName, exporter] of workflowExporters) {
+		IDToBindingName.workflows[workflowName] ??= {
+			name: workflowName,
+			className: exporter.className,
+			scriptName: exporter.workerName,
+			binding: `EXPLORER_WORKFLOW_BINDING_${workflowName}`,
+			engineBinding: `EXPLORER_WORKFLOW_ENGINE_${workflowName}`,
+		};
+	}
+
 	return IDToBindingName;
 }
 
@@ -423,10 +478,39 @@ export function constructExplorerWorkerOpts(
 			bindings.sendEmail.push({ bindingName });
 		}
 
-		result[workerName] = bindings;
+		result[workerName] = {
+			bindings,
+			triggers: {
+				crons: getTriggersOfType(workerOpts.config, "scheduled").map(
+					(trigger) => trigger.schedule
+				),
+			},
+			persistenceScope: getPersistenceScope(workerOpts.dev.rootPath),
+		};
 	}
 
 	return result;
+}
+
+/**
+ * Derive a project-scoped browser persistence key without sending the project
+ * root itself to the Local Explorer UI. Normalising here keeps equivalent
+ * direct structured Miniflare paths aligned with paths from the V4 converter.
+ *
+ * Keep the domain/version prefix stable: changing it intentionally invalidates
+ * persisted Local Explorer state. Return no scope if a future caller cannot
+ * provide a usable project root, allowing the UI to fall back safely.
+ */
+export function getPersistenceScope(
+	projectRoot: string | undefined
+): string | undefined {
+	if (!projectRoot) {
+		return undefined;
+	}
+
+	return createHash("sha256")
+		.update(`local-explorer:persistence-scope:v1\0${path.resolve(projectRoot)}`)
+		.digest("hex");
 }
 
 /**

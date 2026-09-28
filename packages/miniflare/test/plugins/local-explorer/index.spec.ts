@@ -235,6 +235,9 @@ describe("Local Explorer API validation", () => {
 		expect(res.headers.get("Access-Control-Allow-Methods")).toBe(
 			"GET, POST, PUT, PATCH, DELETE, OPTIONS"
 		);
+		expect(res.headers.get("Access-Control-Allow-Headers")).toContain(
+			"X-Miniflare-Explorer-Refresh"
+		);
 		await res.arrayBuffer();
 
 		// blocked origin
@@ -628,9 +631,13 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 	let instanceA: Miniflare;
 	let instanceB: Miniflare;
 	let registryPath: string;
+	let projectARoot: string;
+	let projectBRoot: string;
 
 	beforeAll(async () => {
 		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-"));
+		projectARoot = path.join(registryPath, "project-a");
+		projectBRoot = path.join(registryPath, "project-b");
 
 		// Instance A has two workers
 		instanceA = new Miniflare({
@@ -639,10 +646,17 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
-					dev: { unsafeRegisterWorker: true },
+					dev: {
+						rootPath: projectARoot,
+						unsafeRegisterWorker: true,
+					},
 					config: {
 						name: "worker-a1",
 						compatibilityDate: "2025-01-01",
+						triggers: [
+							{ type: "scheduled", schedule: "*/5 * * * *" },
+							{ type: "scheduled", schedule: " 0 17 * * SUN " },
+						],
 						manifest: singleModuleManifest(`
 						export class TestDO {
 							constructor(state) { this.state = state; }
@@ -668,7 +682,11 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 					},
 				},
 				{
-					dev: { unsafeRegisterWorker: true },
+					dev: {
+						// Equivalent spelling must produce the same persistence scope.
+						rootPath: `${projectARoot}${path.sep}.${path.sep}`,
+						unsafeRegisterWorker: true,
+					},
 					config: {
 						name: "worker-a2",
 						compatibilityDate: "2025-01-01",
@@ -690,10 +708,14 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
-					dev: { unsafeRegisterWorker: true },
+					dev: {
+						rootPath: projectBRoot,
+						unsafeRegisterWorker: true,
+					},
 					config: {
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
+						triggers: [{ type: "scheduled", schedule: "0 0 * * *" }],
 						manifest: singleModuleManifest(
 							`export default { fetch() { return new Response("Worker B"); } }`
 						),
@@ -728,8 +750,21 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 		const res = await instanceA.dispatchFetch(`${BASE_URL}/local/workers`);
 		expect(res.status).toBe(200);
 
-		const data = await res.json();
-		expect(data).toMatchInlineSnapshot(`
+		const data = (await res.json()) as {
+			result: Array<Record<string, unknown>>;
+			[key: string]: unknown;
+		};
+		const scopes = data.result.map((worker) => worker.persistenceScope);
+		expect(scopes[0]).toEqual(expect.stringMatching(/^[0-9a-f]{64}$/));
+		expect(scopes[0]).toBe(scopes[1]);
+		expect(scopes[2]).not.toBe(scopes[0]);
+		expect(JSON.stringify(data)).not.toContain(projectARoot);
+		expect(JSON.stringify(data)).not.toContain(projectBRoot);
+		const dataWithoutPersistenceScopes = {
+			...data,
+			result: data.result.map(({ persistenceScope: _, ...worker }) => worker),
+		};
+		expect(dataWithoutPersistenceScopes).toMatchInlineSnapshot(`
 			{
 			  "errors": [],
 			  "messages": [],
@@ -775,6 +810,12 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			      },
 			      "isSelf": true,
 			      "name": "worker-a1",
+			      "triggers": {
+			        "crons": [
+			          "*/5 * * * *",
+			          " 0 17 * * SUN ",
+			        ],
+			      },
 			    },
 			    {
 			      "bindings": {
@@ -792,6 +833,9 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			      },
 			      "isSelf": true,
 			      "name": "worker-a2",
+			      "triggers": {
+			        "crons": [],
+			      },
 			    },
 			    {
 			      "bindings": {
@@ -809,6 +853,11 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			      },
 			      "isSelf": false,
 			      "name": "worker-b",
+			      "triggers": {
+			        "crons": [
+			          "0 0 * * *",
+			        ],
+			      },
 			    },
 			  ],
 			  "success": true,

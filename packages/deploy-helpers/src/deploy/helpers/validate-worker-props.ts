@@ -21,6 +21,7 @@ import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import { getDeployConfirmFunction } from "./deploy-confirm";
 import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
+import { validateOwnedWorkflowDeclarations } from "./owned-workflows";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
@@ -99,6 +100,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			{ telemetryMessage: "data_blobs with es module worker" }
 		);
 	}
+
+	validateOwnedWorkflowDeclarations(config, name);
 
 	if (props.command === "deploy") {
 		validateEventTriggerTargets(config, name);
@@ -313,14 +316,12 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	if (config.workflows?.length) {
-		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
+	const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
 
-		if (workflowCheck.hasConflicts) {
-			logger.warn(workflowCheck.message);
-			if (!(await deployConfirm("Do you want to continue?"))) {
-				return { workerTag, tags, workerExists, aborted: true };
-			}
+	if (workflowCheck.hasConflicts) {
+		logger.warn(workflowCheck.message);
+		if (!(await deployConfirm("Do you want to continue?"))) {
+			return { workerTag, tags, workerExists, aborted: true };
 		}
 	}
 

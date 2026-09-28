@@ -1,5 +1,39 @@
 # @cloudflare/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- [#15851](https://github.com/cloudflare/workers-sdk/pull/15851) [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd) Thanks [@NuroDev](https://github.com/NuroDev)! - Add a `cwd` option to package installation helpers
+
+  Package installations can now run in a specified working directory. npm package manifest updates also use that directory.
+
+### Patch Changes
+
+- Updated dependencies [[`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b)]:
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.1.39
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+
+## 0.1.38
+
+### Patch Changes
+
+- Updated dependencies [[`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/workers-utils@0.42.0
+
+## 0.1.37
+
+### Patch Changes
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+
 ## 0.1.36
 
 ### Patch Changes

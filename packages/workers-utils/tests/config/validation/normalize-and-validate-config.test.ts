@@ -1,5 +1,5 @@
 import path from "node:path";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { assert, describe, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
@@ -1770,22 +1770,150 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if durable_objects.bindings is not defined", ({
+			it("should default durable_objects.bindings when only a code update strategy is defined", ({
 				expect,
 			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ durable_objects: {} } as unknown as RawConfig,
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							code_update_strategy: {
+								mode: "deferred",
+								max_delay: 1.001,
+							},
+						},
+					},
 					undefined,
 					undefined,
 					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - The field "durable_objects" is missing the required "bindings" property."
-				`);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [],
+					code_update_strategy: { mode: "deferred", max_delay: 1.001 },
+				});
 			});
+
+			it("should support a code update strategy alongside durable object bindings", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "CHAT_ROOM", class_name: "ChatRoom" }],
+							code_update_strategy: {
+								mode: "deferred",
+								max_delay: 86400,
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [{ name: "CHAT_ROOM", class_name: "ChatRoom" }],
+					code_update_strategy: { mode: "deferred", max_delay: 86400 },
+				});
+			});
+
+			it("should accept a millisecond-precision code update delay near the maximum", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							code_update_strategy: { mode: "deferred", max_delay: 65536.001 },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects.code_update_strategy).toEqual({
+					mode: "deferred",
+					max_delay: 65536.001,
+				});
+			});
+
+			for (const { name, strategy, expectedError } of [
+				{
+					name: "is not an object",
+					strategy: [],
+					expectedError:
+						'The field "durable_objects.code_update_strategy" should be an object',
+				},
+				{
+					name: "has no mode",
+					strategy: {},
+					expectedError:
+						'"durable_objects.code_update_strategy.mode" is a required field.',
+				},
+				{
+					name: "has an unknown mode",
+					strategy: { mode: "gradual" },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.mode" field to be one of',
+				},
+				{
+					name: "has a non-number max delay",
+					strategy: { mode: "deferred", max_delay: "60" },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be of type number',
+				},
+				{
+					name: "has a negative max delay",
+					strategy: { mode: "deferred", max_delay: -1 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be between 0 and 86400 seconds',
+				},
+				{
+					name: "has a max delay greater than 24 hours",
+					strategy: { mode: "deferred", max_delay: 86400.001 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be between 0 and 86400 seconds',
+				},
+				{
+					name: "has a max delay below one millisecond",
+					strategy: { mode: "deferred", max_delay: 0.0005 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to use millisecond precision',
+				},
+				{
+					name: "has sub-millisecond precision",
+					strategy: { mode: "deferred", max_delay: 1.0005 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to use millisecond precision',
+				},
+				{
+					name: "has sub-millisecond precision near the maximum",
+					strategy: { mode: "deferred", max_delay: 86399.9995 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to use millisecond precision',
+				},
+			] as const) {
+				it(`should error if durable_objects.code_update_strategy ${name}`, ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							durable_objects: {
+								code_update_strategy: strategy,
+							},
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.renderErrors()).toContain(expectedError);
+				});
+			}
 
 			it("should error if durable_objects.bindings is an object", ({
 				expect,
@@ -2187,6 +2315,259 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("accepts workflow entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+						ScheduledWorkflow: {
+							type: "workflow",
+							name: "scheduled",
+							limits: { steps: 5 },
+							concurrency: { limit: 2 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when a workflow entry is missing a name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							GreetingWorkflow: { type: "workflow" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow.name" is a required field.'
+				);
+			});
+
+			it("warns when workflow entries include unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								storage: "sqlite",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in exports.GreetingWorkflow field: "storage"'
+				);
+			});
+
+			it("errors when a workflow entry name has an invalid format", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							SpacedWorkflow: { type: "workflow", name: "bad name" },
+							EmptyWorkflow: { type: "workflow", name: "" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.SpacedWorkflow.name" is invalid.'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.EmptyWorkflow.name" is invalid.'
+				);
+			});
+
+			it("errors when a workflow step limit is not a positive integer", ({
+				expect,
+			}) => {
+				for (const steps of [0, -1, 1.5]) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							exports: {
+								GreetingWorkflow: {
+									type: "workflow",
+									name: "greeting",
+									limits: { steps },
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(
+						`"exports.GreetingWorkflow" export "limits.steps" field must be a positive integer but got ${steps}.`
+					);
+				}
+			});
+
+			it("errors when workflow export settings are invalid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							EmptyScheduleWorkflow: {
+								type: "workflow",
+								name: "empty-schedule",
+								schedules: "",
+							},
+							EmptySchedulesWorkflow: {
+								type: "workflow",
+								name: "empty-schedules",
+								schedules: [],
+							},
+							ConcurrencyWorkflow: {
+								type: "workflow",
+								name: "concurrency",
+								concurrency: { limit: 0 },
+							},
+							RetentionWorkflow: {
+								type: "workflow",
+								name: "retention",
+								default_retention: { error_retention: -1 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.EmptyScheduleWorkflow" export "schedules" field must not be an empty string.
+					  - "exports.EmptySchedulesWorkflow" export "schedules" field must not be an empty array.
+					  - "exports.ConcurrencyWorkflow" export "concurrency.limit" field must be a positive integer but got 0.
+					  - "exports.RetentionWorkflow" export "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("warns when a workflow step limit exceeds the production maximum", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 30_000 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					"exceeds the production maximum of 25,000"
+				);
+			});
+
+			it("accepts a Workflow declared by both a binding and a matching export", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+								limits: { steps: 10 },
+							},
+							{
+								binding: "BATCH",
+								name: "batch",
+								class_name: "BatchWorkflow",
+								script_name: "my-worker",
+							},
+						],
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 10 },
+							},
+							BatchWorkflow: {
+								type: "workflow",
+								name: "batch",
+								limits: { steps: 5 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("errors when two exports declare the same Workflow", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: { type: "workflow", name: "greeting" },
+							OtherWorkflow: { type: "workflow", name: "greeting" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow" and "exports.OtherWorkflow" both declare the Workflow "greeting". Workflow names must be unique.'
+				);
+			});
+
 			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -2430,7 +2811,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
+					  - "exports.Weird.type" must be "durable-object", "worker", or "workflow", but got "container"."
 				`);
 			});
 
@@ -4694,13 +5075,13 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 				],
 			])(
-				"allows the former experimental image binding name with containers %j",
+				"allows user variables with containers %j",
 				(containers, { expect }) => {
 					const { diagnostics } = normalizeAndValidateConfig(
 						{
 							containers,
 							vars: {
-								EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: "user value",
+								USER_IMAGES: "user value",
 							},
 						} as RawConfig,
 						undefined,
@@ -4711,37 +5092,6 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(false);
 				}
 			);
-
-			it("does not reserve the former Container metadata binding name", ({
-				expect,
-			}) => {
-				const vars = {
-					EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES_METADATA: "user value",
-				};
-				const ordinary = normalizeAndValidateConfig(
-					{ vars },
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-				expect(ordinary.diagnostics.hasErrors()).toBe(false);
-				const managed = normalizeAndValidateConfig(
-					{
-						vars,
-						containers: [
-							{
-								name: "sandbox",
-								class_name: "Sandbox",
-								scheduling_policy: "durable_object",
-							},
-						],
-					},
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-				expect(managed.diagnostics.hasErrors()).toBe(false);
-			});
 
 			it("should append the environment to a generated Durable Object-managed container name", ({
 				expect,
@@ -4800,6 +5150,133 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toContain(
 					'Unsupported fields for Durable Object-managed Containers in containers: "image","max_instances"'
 				);
+			});
+
+			it("should accept ssh and authorized_keys on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								ssh: { enabled: true, port: 2222 },
+								authorized_keys: [
+									{
+										name: "laptop",
+										public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+									},
+								],
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						scheduling_policy: "durable_object",
+						name: "sandboxes",
+						ssh: { enabled: true, port: 2222 },
+						authorized_keys: [
+							{
+								name: "laptop",
+								public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+							},
+						],
+					},
+				]);
+			});
+
+			it("should reject deprecated wrangler_ssh on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								wrangler_ssh: { enabled: true },
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'Unsupported fields for Durable Object-managed Containers in containers: "wrangler_ssh"'
+				);
+			});
+
+			it("should keep ssh when re-validating a normalized Durable Object-managed container", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					containers: [
+						{
+							class_name: "Sandbox",
+							scheduling_policy: "durable_object",
+							name: "sandboxes",
+							ssh: { enabled: true },
+						},
+					],
+				} as RawConfig;
+				const first = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				const second = normalizeAndValidateConfig(
+					{ containers: first.config.containers } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(second.diagnostics.hasErrors()).toBe(false);
+				expect(second.config.containers?.[0].ssh).toEqual({ enabled: true });
+			});
+
+			it("should reject invalid ssh and authorized_keys on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								ssh: { enabled: "yes", port: 70000 },
+								authorized_keys: [
+									{ name: "laptop", public_key: "ssh-rsa AAAAB3NzaC1yc2E" },
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.ssh.enabled must be a boolean
+					  - containers.ssh.port must be a number between 1 and 65535 inclusive
+					  - containers.authorized_keys[0].public_key is an unsupported key type. Please provide an ED25519 public key."
+				`);
 			});
 
 			it("should require a name or class name for a Durable Object-managed container", ({
@@ -6987,7 +7464,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of "tcp" but got {"port":8081}."
+					  - "connect[0]" should have a "protocol" field of "tcp" or "udp" but got {"port":8081}."
 				`);
 			});
 
@@ -7005,7 +7482,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of "tcp" but got "ftp"."
+					  - "connect[0]" should have a "protocol" field of "tcp" or "udp" but got "ftp"."
 				`);
 			});
 
@@ -7100,6 +7577,49 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should warn if UDP options are configured for TCP", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [{ protocol: "tcp", port: 8081, idle_timeout_ms: 1_000 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in connect[0] field: "idle_timeout_ms""
+				`);
+			});
+
+			it("should error if UDP options are not unsigned 32-bit integers", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{
+								protocol: "udp",
+								port: 8081,
+								idle_timeout_ms: 1.5,
+								max_pending_bytes: 0x100000000,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have an integer "idle_timeout_ms" field between 0 and 4294967295 but got {"protocol":"udp","port":8081,"idle_timeout_ms":1.5,"max_pending_bytes":4294967296}.
+					  - "connect[0]" should have an integer "max_pending_bytes" field between 0 and 4294967295 but got {"protocol":"udp","port":8081,"idle_timeout_ms":1.5,"max_pending_bytes":4294967296}."
+				`);
+			});
+
 			it("should accept a valid connect config with multiple unique protocol/port combinations", ({
 				expect,
 			}) => {
@@ -7108,6 +7628,7 @@ describe("normalizeAndValidateConfig()", () => {
 						connect: [
 							{ protocol: "tcp", port: 8081, address: "*" },
 							{ protocol: "tcp", port: 8082 },
+							{ protocol: "udp", port: 8081 },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -7120,6 +7641,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.connect).toEqual([
 					{ protocol: "tcp", port: 8081, address: "*" },
 					{ protocol: "tcp", port: 8082 },
+					{ protocol: "udp", port: 8081 },
 				]);
 			});
 
@@ -11463,23 +11985,30 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if durable_objects.bindings is not defined", ({
+			it("should allow a named environment code update strategy without bindings", ({
 				expect,
 			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						env: {
+							ENV1: {
+								durable_objects: {
+									code_update_strategy: { mode: "immediate" },
+								},
+							},
+						},
+					},
 					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.ENV1" environment configuration
-					    - The field "env.ENV1.durable_objects" is missing the required "bindings" property."
-				`);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [],
+					code_update_strategy: { mode: "immediate" },
+				});
 			});
 
 			it("should error if durable_objects.bindings is an object", ({
@@ -13661,6 +14190,28 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject a preview code update strategy", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						previews: {
+							durable_objects: {
+								code_update_strategy: { mode: "immediate" },
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "previews.durable_objects" is missing the required "bindings" property.'
+				);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in previews.durable_objects field: "code_update_strategy"'
+				);
 			});
 
 			it("should reject invalid targeted placement in previews config", ({

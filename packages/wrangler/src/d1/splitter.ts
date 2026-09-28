@@ -1,13 +1,6 @@
-/**
- * @module
- * This code is inspired by that of https://www.atdatabases.org/docs/split-sql-query, which is published under MIT license,
- * and is Copyright (c) 2019 Forbes Lindesay.
- *
- * See https://github.com/ForbesLindesay/atdatabases/blob/103c1e7/packages/split-sql-query/src/index.ts
- * for the original code.
- */
-
 import { trimSqlQuery } from "./trimmer";
+
+// Port of SQLite's sqlite3_complete() scanner: https://github.com/sqlite/sqlite/blob/version-3.44.2/src/complete.c
 
 /**
  * Is the given `sql` string likely to contain multiple statements.
@@ -131,140 +124,219 @@ export function normalizeSqlLineEndings(sql: string): string {
 
 function splitSqlIntoStatements(sql: string): string[] {
 	const statements: string[] = [];
-	let str = "";
-	const compoundStatementStack: ((s: string) => boolean)[] = [];
-
-	const iterator = sql[Symbol.iterator]();
-	let next = iterator.next();
-	while (!next.done) {
-		const char = next.value;
-
-		if (compoundStatementStack[0]?.(str + char)) {
-			compoundStatementStack.shift();
-		}
-
-		switch (char) {
-			case `'`:
-			case `"`:
-			case "`":
-				str += char + consumeUntilMarker(iterator, char);
-				break;
-			case `$`: {
-				const dollarQuote =
-					"$" + consumeWhile(iterator, isDollarQuoteIdentifier);
-				str += dollarQuote;
-				if (dollarQuote.endsWith("$")) {
-					str += consumeUntilMarker(iterator, dollarQuote);
-				}
-				break;
+	let start = 0;
+	while (start < sql.length) {
+		const { end, hasUsefulToken } = findCompleteStatementEnd(sql, start);
+		if (end === undefined) {
+			if (hasUsefulToken) {
+				statements.push(sql.slice(start).trim());
 			}
-			case `-`:
-				next = iterator.next();
-				if (!next.done && next.value === "-") {
-					// Skip to the end of the comment
-					consumeUntilMarker(iterator, "\n");
-					// Maintain the newline character
-					str += "\n";
-					break;
-				} else {
-					str += char;
-					continue;
-				}
-			case `/`:
-				next = iterator.next();
-				if (!next.done && next.value === "*") {
-					// Skip to the end of the comment
-					consumeUntilMarker(iterator, "*/");
-					break;
-				} else {
-					str += char;
-					continue;
-				}
-			case `;`:
-				if (compoundStatementStack.length === 0) {
-					statements.push(str);
-					str = "";
-				} else {
-					str += char;
-				}
-				break;
-			default:
-				str += char;
-				break;
-		}
-
-		if (isCompoundStatementStart(str)) {
-			compoundStatementStack.unshift(isCompoundStatementEnd);
-		}
-
-		next = iterator.next();
-	}
-	statements.push(str);
-
-	return statements
-		.map((statement) => statement.trim())
-		.filter((statement) => statement.length > 0);
-}
-
-/**
- * Pulls characters from the string iterator while the predicate remains true.
- * Only the bounded trailing window is passed to the predicate.
- */
-function consumeWhile(
-	iterator: Iterator<string>,
-	predicate: (str: string) => boolean,
-	window: number = 16
-) {
-	let next = iterator.next();
-	let str = "";
-	let tail = "";
-	while (!next.done) {
-		str += next.value;
-		tail = (tail + next.value).slice(-window);
-		if (!predicate(tail)) {
 			break;
 		}
-		next = iterator.next();
+		const statement = sql.slice(start, end - 1).trim();
+		if (hasUsefulToken && statement.length > 0) {
+			statements.push(statement);
+		}
+		start = end;
 	}
-	return str;
+	return statements;
 }
 
-/**
- * Pulls characters from the string iterator until the `endMarker` is found.
- */
-function consumeUntilMarker(iterator: Iterator<string>, endMarker: string) {
-	return consumeWhile(
-		iterator,
-		(str) => !str.endsWith(endMarker),
-		endMarker.length
-	);
+type Token =
+	| "tkSEMI"
+	| "tkWS"
+	| "tkOTHER"
+	| "tkEXPLAIN"
+	| "tkCREATE"
+	| "tkTEMP"
+	| "tkTRIGGER"
+	| "tkEND";
+
+type State =
+	| "INVALID"
+	| "START"
+	| "NORMAL"
+	| "EXPLAIN"
+	| "CREATE"
+	| "TRIGGER"
+	| "SEMI"
+	| "END";
+
+// Port of SQLite's trans[8][8] transition table.
+const transitions: Record<State, Record<Token, State>> = {
+	INVALID: {
+		tkSEMI: "START",
+		tkWS: "INVALID",
+		tkOTHER: "NORMAL",
+		tkEXPLAIN: "EXPLAIN",
+		tkCREATE: "CREATE",
+		tkTEMP: "NORMAL",
+		tkTRIGGER: "NORMAL",
+		tkEND: "NORMAL",
+	},
+	START: {
+		tkSEMI: "START",
+		tkWS: "START",
+		tkOTHER: "NORMAL",
+		tkEXPLAIN: "EXPLAIN",
+		tkCREATE: "CREATE",
+		tkTEMP: "NORMAL",
+		tkTRIGGER: "NORMAL",
+		tkEND: "NORMAL",
+	},
+	NORMAL: {
+		tkSEMI: "START",
+		tkWS: "NORMAL",
+		tkOTHER: "NORMAL",
+		tkEXPLAIN: "NORMAL",
+		tkCREATE: "NORMAL",
+		tkTEMP: "NORMAL",
+		tkTRIGGER: "NORMAL",
+		tkEND: "NORMAL",
+	},
+	EXPLAIN: {
+		tkSEMI: "START",
+		tkWS: "EXPLAIN",
+		tkOTHER: "EXPLAIN",
+		tkEXPLAIN: "NORMAL",
+		tkCREATE: "CREATE",
+		tkTEMP: "NORMAL",
+		tkTRIGGER: "NORMAL",
+		tkEND: "NORMAL",
+	},
+	CREATE: {
+		tkSEMI: "START",
+		tkWS: "CREATE",
+		tkOTHER: "NORMAL",
+		tkEXPLAIN: "NORMAL",
+		tkCREATE: "NORMAL",
+		tkTEMP: "CREATE",
+		tkTRIGGER: "TRIGGER",
+		tkEND: "NORMAL",
+	},
+	TRIGGER: {
+		tkSEMI: "SEMI",
+		tkWS: "TRIGGER",
+		tkOTHER: "TRIGGER",
+		tkEXPLAIN: "TRIGGER",
+		tkCREATE: "TRIGGER",
+		tkTEMP: "TRIGGER",
+		tkTRIGGER: "TRIGGER",
+		tkEND: "TRIGGER",
+	},
+	SEMI: {
+		tkSEMI: "SEMI",
+		tkWS: "SEMI",
+		tkOTHER: "TRIGGER",
+		tkEXPLAIN: "TRIGGER",
+		tkCREATE: "TRIGGER",
+		tkTEMP: "TRIGGER",
+		tkTRIGGER: "TRIGGER",
+		tkEND: "END",
+	},
+	END: {
+		tkSEMI: "START",
+		tkWS: "END",
+		tkOTHER: "TRIGGER",
+		tkEXPLAIN: "TRIGGER",
+		tkCREATE: "TRIGGER",
+		tkTEMP: "TRIGGER",
+		tkTRIGGER: "TRIGGER",
+		tkEND: "TRIGGER",
+	},
+};
+
+function findCompleteStatementEnd(
+	sql: string,
+	start: number
+): {
+	end: number | undefined;
+	hasUsefulToken: boolean;
+} {
+	let state: State = "INVALID";
+	let hasUsefulToken = false;
+	for (let index = start; index < sql.length; index++) {
+		const char = sql[index];
+		let token: Token;
+		if (char === ";") {
+			token = "tkSEMI";
+		} else if (
+			char === " " ||
+			char === "\r" ||
+			char === "\t" ||
+			char === "\n" ||
+			char === "\f"
+		) {
+			token = "tkWS";
+		} else if (char === "/" && sql[index + 1] === "*") {
+			const end = sql.indexOf("*/", index + 2);
+			if (end === -1) {
+				return { end: undefined, hasUsefulToken };
+			}
+			index = end + 1;
+			token = "tkWS";
+		} else if (char === "-" && sql[index + 1] === "-") {
+			const end = sql.indexOf("\n", index + 2);
+			if (end === -1) {
+				return { end: undefined, hasUsefulToken };
+			}
+			index = end;
+			token = "tkWS";
+		} else if (char === "[") {
+			const end = sql.indexOf("]", index + 1);
+			if (end === -1) {
+				return { end: undefined, hasUsefulToken: true };
+			}
+			index = end;
+			token = "tkOTHER";
+		} else if (char === "'" || char === '"' || char === "`") {
+			const end = sql.indexOf(char, index + 1);
+			if (end === -1) {
+				return { end: undefined, hasUsefulToken: true };
+			}
+			index = end;
+			token = "tkOTHER";
+		} else if (isIdentifierChar(char)) {
+			const identifierStart = index;
+			while (index + 1 < sql.length && isIdentifierChar(sql[index + 1])) {
+				index++;
+			}
+			token = classifyIdentifier(sql.slice(identifierStart, index + 1));
+		} else {
+			token = "tkOTHER";
+		}
+
+		hasUsefulToken ||= token !== "tkSEMI" && token !== "tkWS";
+		state = getNextState(state, token);
+		if (state === "START") {
+			return { end: index + 1, hasUsefulToken };
+		}
+	}
+	return { end: undefined, hasUsefulToken };
 }
 
-/**
- * Returns true if the `str` ends with a dollar-quoted string marker.
- * See https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-DOLLAR-QUOTING.
- */
-function isDollarQuoteIdentifier(str: string) {
-	const lastChar = str.slice(-1);
-	return (
-		// The $ marks the end of the identifier
-		lastChar !== "$" &&
-		// we allow numbers, underscore and letters with diacritical marks
-		(/[0-9_]/i.test(lastChar) ||
-			lastChar.toLowerCase() !== lastChar.toUpperCase())
-	);
+function getNextState(state: State, token: Token): State {
+	return transitions[state][token];
 }
 
-/**
- * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
- */
-function isCompoundStatementStart(str: string) {
-	return /\s(BEGIN|CASE)\s$/i.test(str);
+function isIdentifierChar(char: string): boolean {
+	return /[A-Za-z0-9_$\u0080-\uffff]/.test(char);
 }
 
-/**
- * Returns true if the `str` ends with a compound statement `END` marker.
- */
-function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/i.test(str);
+function classifyIdentifier(identifier: string): Token {
+	switch (identifier.toLowerCase()) {
+		case "explain":
+			return "tkEXPLAIN";
+		case "create":
+			return "tkCREATE";
+		case "temp":
+		case "temporary":
+			return "tkTEMP";
+		case "trigger":
+			return "tkTRIGGER";
+		case "end":
+			return "tkEND";
+		default:
+			return "tkOTHER";
+	}
 }

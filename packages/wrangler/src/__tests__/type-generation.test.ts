@@ -1973,12 +1973,11 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 
 		const generated = fs.readFileSync("worker-configuration.d.ts", "utf-8");
-		expect(generated).not.toContain("SANDBOX_IMAGE");
-		expect(generated).not.toContain("TOOLS_IMAGE");
-		expect(generated).not.toContain("EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES");
-		expect(generated).toContain(
-			"SANDBOX: DurableObjectNamespace /* Sandbox */;"
-		);
+		expect(generated).toContain(dedent`
+			interface __BaseEnv_Env {
+				SANDBOX: DurableObjectNamespace /* Sandbox */;
+			}
+		`);
 	});
 
 	it("should override vars with secrets", async ({ expect }) => {

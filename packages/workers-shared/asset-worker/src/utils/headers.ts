@@ -6,8 +6,9 @@ import {
 import { CACHE_CONTROL_BROWSER } from "../constants";
 import { HEADERS_VERSION } from "../handler";
 import { generateRulesMatcher, replacer } from "./rules-engine";
-import type { AssetConfig, JaegerTracing } from "../../../utils/types";
+import type { JaegerTracing } from "../../../utils/types";
 import type { AssetIntentWithResolver } from "../handler";
+import type { NormalizedAssetConfig } from "../types";
 import type { Env } from "../worker";
 
 /**
@@ -21,7 +22,7 @@ export function getAssetHeaders(
 	contentType: string | undefined,
 	cacheStatus: string,
 	request: Request,
-	configuration: Required<AssetConfig>
+	configuration: NormalizedAssetConfig
 ) {
 	const headers = new Headers({
 		ETag: `"${eTag}"`,
@@ -63,7 +64,7 @@ function isCacheable(request: Request) {
 export function attachCustomHeaders(
 	request: Request,
 	response: Response,
-	configuration: Required<AssetConfig>,
+	configuration: NormalizedAssetConfig,
 	env: Env
 ) {
 	const jaeger: JaegerTracing = env.JAEGER ?? mockJaegerBinding();

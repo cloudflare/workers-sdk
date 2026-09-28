@@ -88,6 +88,7 @@ const config: TemplateConfig = {
 	frameworkCli: "@angular/create",
 	displayName: "Angular",
 	platform: "workers",
+	languages: ["ts"],
 	copyFiles: {
 		path: "./templates",
 	},

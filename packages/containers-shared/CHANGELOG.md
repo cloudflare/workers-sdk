@@ -1,5 +1,77 @@
 # @cloudflare/containers-shared
 
+## 0.20.3
+
+### Patch Changes
+
+- Updated dependencies [[`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff), [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f)]:
+  - @cloudflare/config@0.20.0
+  - @cloudflare/build-output-utils@0.8.2
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.20.2
+
+### Patch Changes
+
+- Updated dependencies [[`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33), [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b), [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd)]:
+  - @cloudflare/config@0.19.0
+  - @cloudflare/workers-utils@0.44.0
+  - @cloudflare/cli-shared-helpers@0.2.0
+  - @cloudflare/build-output-utils@0.8.1
+
+## 0.20.1
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+  - @cloudflare/build-output-utils@0.8.0
+  - @cloudflare/cli-shared-helpers@0.1.39
+  - @cloudflare/config@0.18.0
+
+## 0.20.0
+
+### Minor Changes
+
+- [#15792](https://github.com/cloudflare/workers-sdk/pull/15792) [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f) Thanks [@flakey5](https://github.com/flakey5)! - Configure SSH for experimental Durable Object-managed Containers
+
+  Set `containers[].ssh` and `containers[].authorized_keys` when using `scheduling_policy: "durable_object"`. These are application-wide settings that follow the same rules as the existing Durable Object-managed Container settings: normal deployments create missing applications and update explicitly configured values, while omitted settings preserve the existing application configuration.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "containers": [
+      {
+        "name": "sandbox",
+        "class_name": "Sandbox",
+        "scheduling_policy": "durable_object",
+        "ssh": { "enabled": true },
+        "authorized_keys": [
+          { "name": "laptop", "public_key": "ssh-ed25519 AAAA..." }
+        ]
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`43f7ffb`](https://github.com/cloudflare/workers-sdk/commit/43f7ffbcbe020bc4c30809c6bd408059a6eeac87), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/workers-utils@0.42.0
+  - @cloudflare/build-output-utils@0.8.0
+  - @cloudflare/config@0.18.0
+  - @cloudflare/cli-shared-helpers@0.1.38
+
+## 0.19.2
+
+### Patch Changes
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+  - @cloudflare/build-output-utils@0.7.1
+  - @cloudflare/cli-shared-helpers@0.1.37
+  - @cloudflare/config@0.17.0
+
 ## 0.19.1
 
 ### Patch Changes

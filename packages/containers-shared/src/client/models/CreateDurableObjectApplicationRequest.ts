@@ -2,6 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { DurableObjectApplicationConfiguration } from "./DurableObjectApplicationConfiguration";
+import type { DurableObjectApplicationObservability } from "./DurableObjectApplicationObservability";
 import type { DurableObjectsConfiguration } from "./DurableObjectsConfiguration";
 import type { SchedulingPolicy } from "./SchedulingPolicy";
 
@@ -18,4 +20,6 @@ export type CreateDurableObjectApplicationRequest = {
 	 * The customer-owned Durable Object namespace that owns this application and its instances.
 	 */
 	durable_objects: DurableObjectsConfiguration;
+	configuration?: DurableObjectApplicationConfiguration;
+	observability?: DurableObjectApplicationObservability;
 };

@@ -726,6 +726,32 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("maps Workflow binding to workflows", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						WORKFLOW: {
+							type: "workflow",
+							name: "greeting",
+							worker: "workflow-worker",
+							exportName: "GreetingWorkflow",
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect(result.workflows).toEqual([
+				{
+					binding: "WORKFLOW",
+					name: "greeting",
+					class_name: "GreetingWorkflow",
+					script_name: "workflow-worker",
+				},
+			]);
+		});
+
 		it("maps logfwdr binding to logfwdr.bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -1050,6 +1076,44 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("converts workflow export retention to snake_case", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+							concurrency: { limit: 2 },
+							schedules: "0 * * * *",
+							defaultRetention: {
+								successRetention: "3 days",
+								errorRetention: 86_400_000,
+							},
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				GreetingWorkflow: { type: "workflow", name: "greeting" },
+				BatchWorkflow: {
+					type: "workflow",
+					name: "batch",
+					limits: { steps: 10 },
+					concurrency: { limit: 2 },
+					schedules: "0 * * * *",
+					default_retention: {
+						success_retention: "3 days",
+						error_retention: 86_400_000,
+					},
+				},
+			});
+		});
+
 		it("emits no exports key when the map is empty", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -1065,13 +1129,13 @@ describe("convertToWranglerConfig", () => {
 			const config = {
 				...baseWorker,
 				exports: {
-					FutureExport: { type: "workflow" },
+					FutureExport: { type: "future" },
 				},
 			} as unknown as NonNullable<ParsedInputConfig["worker"]>;
 
 			expect(() =>
 				convertToWranglerConfig({ worker: config, containers: [] })
-			).toThrow(/Unknown export types found: - FutureExport : workflow/);
+			).toThrow(/Unknown export types found: - FutureExport : future/);
 		});
 	});
 
@@ -1240,6 +1304,32 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.connect).toEqual([
 				{ protocol: "tcp", port: 5432, address: "127.0.0.1" },
+			]);
+		});
+
+		it("maps UDP connect trigger to connect", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					triggers: [
+						{
+							type: "connect",
+							protocol: "udp",
+							port: 5432,
+							idleTimeoutMs: 1_000,
+							maxPendingBytes: 65_536,
+						},
+					],
+				},
+				containers: [],
+			});
+			expect(result.connect).toEqual([
+				{
+					protocol: "udp",
+					port: 5432,
+					idle_timeout_ms: 1_000,
+					max_pending_bytes: 65_536,
+				},
 			]);
 		});
 

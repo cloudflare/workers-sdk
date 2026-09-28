@@ -8,7 +8,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
@@ -117,6 +117,7 @@ async function toEnvironment(
 		deploymentConfig.durable_object_namespaces ?? {}
 	)) {
 		configObj.durable_objects ??= { bindings: [] };
+		configObj.durable_objects.bindings ??= [];
 		if (ns.class_name && ns.class_name !== "") {
 			configObj.durable_objects.bindings.push({
 				name: name,

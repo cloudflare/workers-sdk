@@ -21,6 +21,11 @@ export interface OAuthFlowTemporaryContext {
 	prompt: (question: string, notice: string) => Promise<boolean>;
 }
 
+/** Optional provisioning inputs for a newly-created temporary account. */
+export interface TemporaryAccountRequest {
+	eventCode?: string;
+}
+
 /**
  * The branded OAuth consent pages the provider redirects the browser to after
  * the user grants or denies consent.

@@ -1,5 +1,6 @@
 import type {
 	CacheOptions,
+	DurableObjectCodeUpdateStrategy,
 	Exports,
 	LocalS3Credentials,
 	Observability,
@@ -504,6 +505,7 @@ export interface CfWorkerInit {
 		| undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	/**
 	 * Declarative exports configuration. Durable Object entries are sent instead
 	 * of `migrations`.

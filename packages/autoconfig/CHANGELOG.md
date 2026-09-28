@@ -1,5 +1,67 @@
 # @cloudflare/autoconfig
 
+## 0.7.0
+
+### Minor Changes
+
+- [#15805](https://github.com/cloudflare/workers-sdk/pull/15805) [`3572193`](https://github.com/cloudflare/workers-sdk/commit/35721935014b6740f39e5ed4cea1af717f26e252) Thanks [@edmundhung](https://github.com/edmundhung)! - Install the beta Cloudflare Vite plugin for cf
+
+  When targeting cf, autoconfig now installs `@cloudflare/vite-plugin@beta` so supported projects use the Vite plugin v2 prerelease instead of the latest stable release. Wrangler autoconfiguration continues to install the latest stable release.
+
+- [#15805](https://github.com/cloudflare/workers-sdk/pull/15805) [`3572193`](https://github.com/cloudflare/workers-sdk/commit/35721935014b6740f39e5ed4cea1af717f26e252) Thanks [@edmundhung](https://github.com/edmundhung)! - Reject frameworks that cf cannot currently configure
+
+  Autoconfig now directs Analog, Angular, Nuxt, Qwik, Solid Start, SvelteKit, Vike, and Waku projects to Wrangler when invoked by cf, before changing project files. Wrangler autoconfiguration remains supported for these frameworks.
+
+### Patch Changes
+
+- Updated dependencies [[`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff), [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f)]:
+  - @cloudflare/config@0.20.0
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.6.6
+
+### Patch Changes
+
+- [#15870](https://github.com/cloudflare/workers-sdk/pull/15870) [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Keep Node.js ESM packages working when consumers rebundle them as CommonJS
+
+  Node.js-targeted ESM bundles now provide a real `require` implementation for bundled CommonJS dependencies. This avoids downstream patches for dynamic require calls and keeps the packages usable when a consumer rebundles them to CommonJS.
+
+- Updated dependencies [[`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33), [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b), [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd)]:
+  - @cloudflare/config@0.19.0
+  - @cloudflare/workers-utils@0.44.0
+  - @cloudflare/cli-shared-helpers@0.2.0
+
+## 0.6.5
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+  - @cloudflare/cli-shared-helpers@0.1.39
+  - @cloudflare/config@0.18.0
+
+## 0.6.4
+
+### Patch Changes
+
+- Updated dependencies [[`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/workers-utils@0.42.0
+  - @cloudflare/config@0.18.0
+  - @cloudflare/cli-shared-helpers@0.1.38
+
+## 0.6.3
+
+### Patch Changes
+
+- [#15812](https://github.com/cloudflare/workers-sdk/pull/15812) [`b37c5df`](https://github.com/cloudflare/workers-sdk/commit/b37c5df9b23fd2c06116d54bbeaf8da65014847c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Prevent static-site detection from failing on inaccessible child directories
+
+  Autoconfig now checks each candidate directory's `index.html` directly and ignores expected missing-file and permission errors. This allows commands such as `cf build` to run from directories containing protected folders, including a macOS home directory with `.Trash`.
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+  - @cloudflare/cli-shared-helpers@0.1.37
+  - @cloudflare/config@0.17.0
+
 ## 0.6.2
 
 ### Patch Changes

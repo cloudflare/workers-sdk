@@ -555,7 +555,7 @@ export async function parseProjectOptions(
 		}
 		let formatted: string;
 		try {
-			formatted = formatZodError(e, poolOptions);
+			formatted = formatZodError(e);
 		} catch {
 			throw e;
 		}

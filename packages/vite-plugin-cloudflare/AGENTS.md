@@ -43,8 +43,10 @@ contract so the parent can drive either impl interchangeably.
   app build via `createBuilder().buildApp()` (NOT the legacy
   single-environment `build()` helper, which would skip the plugin's
   worker/build-output orchestration — mirrors Vite's own `vite build`
-  CLI). It accepts `--mode` and `--preview` (`--port`/`--host`/`--local`
-  don't apply to a build and exit `2`).
+  CLI). It accepts only `--mode` (`--port`/`--host`/`--local` don't apply to
+  a build and exit `2`). Preview build context is supplied through
+  `CLOUDFLARE_PREVIEW_BUILD`, which also works when a framework runs Vite as
+  part of its own build command.
 - **Build Output Specification forced for every verb.** `main()` sets
   `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` unconditionally (before Vite
   loads the user's config), enabling `experimental.newConfig` +

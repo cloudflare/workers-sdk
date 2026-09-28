@@ -14,6 +14,7 @@ const config: TemplateConfig = {
 	id: "docusaurus",
 	frameworkCli: "create-docusaurus",
 	platform: "workers",
+	languages: ["js", "ts"],
 	displayName: "Docusaurus",
 	copyFiles: {
 		path: "./templates",

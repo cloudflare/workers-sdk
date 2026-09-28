@@ -20,6 +20,8 @@ import {
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowBindingSchema,
+	WorkflowExportSchema,
 	TailConsumerSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
@@ -203,11 +205,7 @@ const HelloWorldBindingSchema = z.strictObject({
 	enable_timer: z.boolean().optional(),
 });
 
-const MiniflareWorkflowBindingSchema = z.strictObject({
-	type: z.literal("workflow"),
-	name: z.string(),
-	worker: z.string(),
-	exportName: z.string(),
+const MiniflareWorkflowBindingSchema = WorkflowBindingSchema.extend({
 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
 });
 
@@ -218,6 +216,7 @@ const OVERRIDDEN_BASE_BINDING_SCHEMAS = [
 	BrowserBindingSchema,
 	WorkerBindingSchema,
 	HyperdriveBindingSchema,
+	WorkflowBindingSchema,
 ] as const;
 
 // `Array.prototype.filter` removes the overridden base schemas at runtime, but
@@ -364,12 +363,6 @@ export const MiniflareDurableObjectExpectingTransferExportSchema =
 		container: DOContainerOptionsSchema.optional(),
 	});
 
-// const MiniflareWorkflowExportSchema = z.strictObject({
-// 	type: z.literal("workflow"),
-// 	name: z.string(),
-// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-// });
-
 // Compose the unions explicitly (rather than filtering `ExportSchema.options`)
 // so the inferred type is precise: the miniflare-extended "created" variant
 // replaces the plain one, and `Array.prototype.filter` can't narrow the element
@@ -378,7 +371,7 @@ const MiniflareLiveExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
 	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
-	// MiniflareWorkflowExportSchema,
+	WorkflowExportSchema,
 ]);
 const MiniflareAcceptedExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
@@ -387,7 +380,7 @@ const MiniflareAcceptedExportSchema = z.union([
 	DurableObjectTransferredExportSchema,
 	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
-	// MiniflareWorkflowExportSchema,
+	WorkflowExportSchema,
 ]);
 
 const MiniflareExportsSchema = z

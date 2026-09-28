@@ -4,6 +4,7 @@ import type {
 	CustomDomainRoute,
 	ContainerApp,
 	ContainerEngine,
+	DurableObjectCodeUpdateStrategy,
 	Exports,
 	DurableObjectMigration,
 	Observability,
@@ -271,6 +272,7 @@ type WorkerMetadataPut = {
 	compatibility_flags?: string[];
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	exports?: CfExports;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
@@ -427,6 +429,21 @@ export type BinaryFile = File<Uint8Array>; // Note: Node's `Buffer`s are instanc
 
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 
+type ConnectHandlerBase = {
+	port: number;
+	address?: string;
+};
+
+export type TcpConnectHandler = ConnectHandlerBase & { protocol: "tcp" };
+
+export type UdpConnectHandler = ConnectHandlerBase & {
+	protocol: "udp";
+	idleTimeoutMs?: number;
+	maxPendingBytes?: number;
+};
+
+export type ConnectHandler = TcpConnectHandler | UdpConnectHandler;
+
 export type Trigger =
 	| { type: "workers.dev" }
 	| { type: "route"; pattern: string } // SimpleRoute
@@ -435,12 +452,7 @@ export type Trigger =
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
 	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">)
-	| {
-			type: "connect";
-			protocol: "tcp";
-			port: number;
-			address?: string;
-	  };
+	| ({ type: "connect" } & ConnectHandler);
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 	? Omit<T, K>
