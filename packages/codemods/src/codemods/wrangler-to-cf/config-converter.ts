@@ -376,11 +376,14 @@ function addViteToolingFollowUp(
 		);
 	}
 
-	if (source.upload_source_maps === true) {
+	if (typeof source.upload_source_maps === "boolean") {
+		const setting = `Wrangler \`upload_source_maps: ${source.upload_source_maps}\`${location ? ` in ${location}` : ""} was not migrated because the Vite bundler is selected.`;
 		followUps.push(
 			createFollowUp(
 				"vite-source-maps",
-				`Wrangler \`upload_source_maps\`${location ? ` in ${location}` : ""} was not migrated because the Vite bundler is selected. To keep uploading Worker source maps, enable \`build.sourcemap\` for the Worker's Vite environment. \`cf deploy\` uploads source maps included in the build output.`,
+				source.upload_source_maps
+					? `${setting} To keep uploading Worker source maps, enable \`build.sourcemap\` for the Worker's Vite environment. \`cf deploy\` uploads source maps included in the build output.`
+					: `${setting} \`cf deploy\` uploads every Worker source map included in the build output, so keep \`build.sourcemap\` disabled for the Worker's Vite environment to avoid uploading source maps.`,
 				{
 					blocking: false,
 					docsUrl: SOURCE_MAPS_DOCS_URL,

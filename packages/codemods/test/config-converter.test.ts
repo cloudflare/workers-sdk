@@ -117,14 +117,32 @@ describe("Wrangler environment and tooling conversion", () => {
 		);
 	});
 
-	it("does not report disabled Vite source maps", ({ expect }) => {
-		const result = convert({
-			compatibility_date: "2026-09-23",
-			name: "example-worker",
-			upload_source_maps: false,
-		});
+	it("reports disabled Vite source maps as non-blocking guidance", ({
+		expect,
+	}) => {
+		const converted = convertWranglerConfig(
+			{
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+				upload_source_maps: false,
+			},
+			"vite",
+			[]
+		);
 
-		expect(result.codes).toEqual([]);
+		expect(converted.followUps).toEqual([
+			expect.objectContaining({
+				blocking: false,
+				code: "vite-source-maps",
+				message: expect.stringContaining(
+					"keep `build.sourcemap` disabled for the Worker's Vite environment"
+				),
+				sourcePath: "upload_source_maps",
+			}),
+		]);
+		expect(renderCloudflareConfig(converted)).not.toContain(
+			"Migration incomplete"
+		);
 	});
 
 	it("reports a Vite assets directory once", ({ expect }) => {
