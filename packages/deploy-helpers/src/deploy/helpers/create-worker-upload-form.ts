@@ -91,6 +91,7 @@ export function createWorkerUploadForm(
 	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
+		base_path: assets?.assetConfig?.base_path,
 		run_worker_first: assets?.run_worker_first,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,

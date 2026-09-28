@@ -835,6 +835,9 @@ function convertBindingsAndAssets(
 		if (config.assets?.notFoundHandling !== undefined) {
 			assets.not_found_handling = config.assets.notFoundHandling;
 		}
+		if (config.assets?.basePath !== undefined) {
+			assets.base_path = config.assets.basePath;
+		}
 		if (config.assets?.runWorkerFirst !== undefined) {
 			assets.run_worker_first = config.assets.runWorkerFirst;
 		}

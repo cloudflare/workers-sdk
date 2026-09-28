@@ -4218,17 +4218,24 @@ describe("wrangler preview", () => {
 			writeFileSync("public/index.html", "<h1>Hello</h1>");
 			writeFileSync("public/_headers", "/\n  Cache-Control: max-age=3600");
 			writeFileSync("public/_redirects", "/old /new 301");
-			writeFileSync(
-				"wrangler.json",
-				JSON.stringify({
-					name: "test-worker",
-					main: "src/index.ts",
-					compatibility_date: "2025-01-01",
-					assets: { directory: "public", run_worker_first: true },
-					previews: {},
-				})
-			);
-			let deploymentRequestBody: Record<string, unknown> | undefined;
+			const writeAssetsConfig = (base_path?: string) => {
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						assets: {
+							directory: "public",
+							run_worker_first: true,
+							...(base_path === undefined ? {} : { base_path }),
+						},
+						previews: {},
+					})
+				);
+			};
+			writeAssetsConfig("/subpath");
+			const deploymentRequestBodies: Array<Record<string, unknown>> = [];
 			let uploadSessionUrl: string | undefined;
 			msw.use(
 				http.get(
@@ -4276,9 +4283,12 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await readPreviewDeploymentRequest(
-							request
-						)) as Record<string, unknown>;
+						deploymentRequestBodies.push(
+							(await readPreviewDeploymentRequest(request)) as Record<
+								string,
+								unknown
+							>
+						);
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4298,12 +4308,13 @@ describe("wrangler preview", () => {
 				)
 			);
 			await runWrangler("preview --name test-preview");
+			const deploymentRequestBody = deploymentRequestBodies.at(-1);
 			expect(uploadSessionUrl).toContain(
 				"/workers/scripts/test-worker/assets-upload-session"
 			);
 			expect(deploymentRequestBody?.assets).toMatchObject({
 				jwt: "assets-jwt-from-session",
-				config: { run_worker_first: true },
+				config: { base_path: "/subpath", run_worker_first: true },
 			});
 			expect(deploymentRequestBody?.main_module).toBeDefined();
 			expect(Array.isArray(deploymentRequestBody?.modules)).toBe(true);
@@ -4315,6 +4326,12 @@ describe("wrangler preview", () => {
 				(b) => b.type === "assets"
 			);
 			expect(assetsEntries).toHaveLength(0);
+
+			writeAssetsConfig();
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBodies.at(-1)?.assets).not.toHaveProperty(
+				"config.base_path"
+			);
 		});
 
 		test("should include the assets binding in env using the configured binding name", async ({
