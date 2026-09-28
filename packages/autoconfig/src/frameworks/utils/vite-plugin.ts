@@ -13,16 +13,20 @@ import type { PackageManager } from "@cloudflare/workers-utils";
  * @param packageManager the type of package manager to use for installation
  * @param projectPath the path of the project (used to check the installed Vite version)
  * @param isWorkspaceRoot whether the current project is a workspace root
+ * @param version optional npm version or dist-tag; defaults to the latest release
  */
 export async function installCloudflareVitePlugin({
 	packageManager,
 	projectPath,
 	isWorkspaceRoot,
+	version,
 }: {
 	packageManager: PackageManager["type"];
 	projectPath: string;
 	isWorkspaceRoot: boolean;
+	version?: string;
 }): Promise<void> {
+	const packageSpecifier = `@cloudflare/vite-plugin${version ? `@${version}` : ""}`;
 	const viteVersion = getInstalledPackageVersion("vite", projectPath);
 
 	if (
@@ -42,10 +46,10 @@ export async function installCloudflareVitePlugin({
 		});
 	}
 
-	await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
+	await installPackages(packageManager, [packageSpecifier], {
 		dev: true,
 		startText: "Installing the Cloudflare Vite plugin",
-		doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
+		doneText: `${brandColor(`installed`)} ${dim(packageSpecifier)}`,
 		isWorkspaceRoot,
 	});
 }

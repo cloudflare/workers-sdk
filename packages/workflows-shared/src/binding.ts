@@ -310,6 +310,57 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		return handle;
 	}
 
+	// A Workflow on `ctx.exports` is built by workerd's
+	// `cloudflare-internal:workflows-api`, which addresses each instance by id
+	// on the binding rather than calling the instance returned by `get()`. Each
+	// method goes through `get()` so a missing instance still fails with
+	// `instance.not_found`.
+
+	public async getInstance(id: string): Promise<{ id: string }> {
+		await this.get(id);
+		return { id };
+	}
+
+	public async pause(id: string): Promise<void> {
+		await (await this.get(id)).pause();
+	}
+
+	public async resume(id: string): Promise<void> {
+		await (await this.get(id)).resume();
+	}
+
+	public async terminate(
+		id: string,
+		options?: WorkflowInstanceTerminateOptions
+	): Promise<void> {
+		await (await this.get(id)).terminate(options);
+	}
+
+	public async restart(
+		id: string,
+		options?: WorkflowInstanceRestartOptions
+	): Promise<void> {
+		await (await this.get(id)).restart(options);
+	}
+
+	public async status(id: string): Promise<InstanceStatus> {
+		return await (await this.get(id)).status();
+	}
+
+	public async sendEvent(
+		id: string,
+		event: { type: string; payload: unknown }
+	): Promise<void> {
+		await (await this.get(id)).sendEvent(event);
+	}
+
+	public async subscribe(
+		id: string,
+		options?: WorkflowInstanceSubscribeOptions
+	): Promise<WorkflowInstanceSubscription> {
+		return await (await this.get(id)).subscribe(options);
+	}
+
 	public async createBatch(
 		batch: WorkflowInstanceCreateOptions<unknown>[]
 	): Promise<{ id: string }[]> {

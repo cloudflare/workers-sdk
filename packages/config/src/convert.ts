@@ -725,17 +725,15 @@ function convertBindingsAndAssets(
 				workerLoaders.push({ binding: name });
 				break;
 			}
-			// TODO: re-enable when workflow bindings return.
-			// case "workflow": {
-			// 	workflows.push(
-			// 		omitUndefined({
-			// 			binding: name,
-			// 			class_name: binding.exportName,
-			// 			script_name: binding.worker,
-			// 		})
-			// 	);
-			// 	break;
-			// }
+			case "workflow": {
+				workflows.push({
+					binding: name,
+					name: binding.name,
+					class_name: binding.exportName,
+					script_name: binding.worker,
+				});
+				break;
+			}
 		}
 	}
 

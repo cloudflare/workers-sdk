@@ -1,5 +1,55 @@
 # miniflare
 
+## 5.20260926.0-alpha
+
+### Minor Changes
+
+- [#15856](https://github.com/cloudflare/workers-sdk/pull/15856) [`4c2993b`](https://github.com/cloudflare/workers-sdk/commit/4c2993b898c8df4ea6799897803c2c5ef18c5847) Thanks [@Naapperas](https://github.com/Naapperas)! - Support Workflows declared in `exports` on `ctx.exports` in local development
+
+  A Workflow declared in a Worker's `exports` is now available on `ctx.exports` in `wrangler dev`, the Vite plugin and the Vitest plugin, with the same API as a Workflow binding:
+
+  ```ts
+  const instance = await ctx.exports.MyWorkflow.create({
+    params: { name: "World" },
+  });
+  ```
+
+  `ctx.exports` and `workflows` bindings with the same Workflow `name` share their instances, including instances created before the Workflow was declared in `exports`. Two Workers can't export the same Workflow name, and a binding to an exported Workflow must refer to the Worker and class that export it. `getPlatformProxy()` ignores Workflows declared in `exports`, since it doesn't run the Worker's code.
+
+  `wrangler workflows` commands run with `--local` also work with Workflows declared only in `exports`, without a `workflows` binding.
+
+  In the Vitest plugin, `introspectWorkflow()` and `introspectWorkflowInstance()` still need a Workflow binding, and now explain how to add one when passed a Workflow from `ctx.exports`. Instances created through `ctx.exports` are introspected too. A `workflows` binding whose `script_name` is the Worker's own name now resolves to the Worker itself again.
+
+### Patch Changes
+
+- [#15891](https://github.com/cloudflare/workers-sdk/pull/15891) [`8dc53ae`](https://github.com/cloudflare/workers-sdk/commit/8dc53aec0d1a4133cd8c599b814cac0da30b4bb8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260925.1 | ^5.20260926.1 |
+  | workerd                   | 1.20260925.1  | 1.20260926.1  |
+
+## 5.20260925.0-alpha
+
+### Patch Changes
+
+- [#15864](https://github.com/cloudflare/workers-sdk/pull/15864) [`ee2b200`](https://github.com/cloudflare/workers-sdk/commit/ee2b200ff1e8edb5d5f2acb2bf45ffbdcb59f7c1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260923.1 | ^5.20260925.1 |
+  | workerd                   | 1.20260923.1  | 1.20260925.1  |
+
+- [#15676](https://github.com/cloudflare/workers-sdk/pull/15676) [`c91279b`](https://github.com/cloudflare/workers-sdk/commit/c91279b497ae6195f911b17ee3da3b7af28c2f17) Thanks [@L4XB](https://github.com/L4XB)! - Fix `QuotaExceededError` when a producer sends many queue messages locally
+
+  The local Queues broker registered a timer for every message it received, including messages with no delivery delay. workerd caps a Durable Object at 10000 active timeouts and none of those timers run while the producer is still sending, so a Worker that enqueued more than 10000 messages in one go failed with `QuotaExceededError: You have exceeded the number of active timeouts you may set`.
+
+  Messages without a delivery delay are now enqueued directly, and only delayed messages use a timer. This matches what the broker already did under Miniflare's fake timers, where a zero-delay timer runs synchronously.
+
 ## 5.20260923.0-alpha
 
 ### Minor Changes

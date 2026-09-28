@@ -1,5 +1,36 @@
 # @cloudflare/autoconfig
 
+## 0.7.0
+
+### Minor Changes
+
+- [#15805](https://github.com/cloudflare/workers-sdk/pull/15805) [`3572193`](https://github.com/cloudflare/workers-sdk/commit/35721935014b6740f39e5ed4cea1af717f26e252) Thanks [@edmundhung](https://github.com/edmundhung)! - Install the beta Cloudflare Vite plugin for cf
+
+  When targeting cf, autoconfig now installs `@cloudflare/vite-plugin@beta` so supported projects use the Vite plugin v2 prerelease instead of the latest stable release. Wrangler autoconfiguration continues to install the latest stable release.
+
+- [#15805](https://github.com/cloudflare/workers-sdk/pull/15805) [`3572193`](https://github.com/cloudflare/workers-sdk/commit/35721935014b6740f39e5ed4cea1af717f26e252) Thanks [@edmundhung](https://github.com/edmundhung)! - Reject frameworks that cf cannot currently configure
+
+  Autoconfig now directs Analog, Angular, Nuxt, Qwik, Solid Start, SvelteKit, Vike, and Waku projects to Wrangler when invoked by cf, before changing project files. Wrangler autoconfiguration remains supported for these frameworks.
+
+### Patch Changes
+
+- Updated dependencies [[`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff), [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f)]:
+  - @cloudflare/config@0.20.0
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.6.6
+
+### Patch Changes
+
+- [#15870](https://github.com/cloudflare/workers-sdk/pull/15870) [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Keep Node.js ESM packages working when consumers rebundle them as CommonJS
+
+  Node.js-targeted ESM bundles now provide a real `require` implementation for bundled CommonJS dependencies. This avoids downstream patches for dynamic require calls and keeps the packages usable when a consumer rebundles them to CommonJS.
+
+- Updated dependencies [[`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33), [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b), [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd)]:
+  - @cloudflare/config@0.19.0
+  - @cloudflare/workers-utils@0.44.0
+  - @cloudflare/cli-shared-helpers@0.2.0
+
 ## 0.6.5
 
 ### Patch Changes
