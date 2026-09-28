@@ -80,6 +80,12 @@ const BINDING_ERRORS: Partial<Record<number, S3Error>> = {
 		message:
 			"Your proposed upload is smaller than the minimum allowed object size.",
 	},
+	// METADATA_TOO_LARGE
+	10012: {
+		status: 400,
+		code: "MetadataTooLarge",
+		message: "Your metadata headers exceed the maximum allowed metadata size.",
+	},
 	// NO_SUCH_UPLOAD
 	10024: NO_SUCH_UPLOAD,
 	// INVALID_PART
@@ -741,16 +747,20 @@ export const OBJECT_OPERATIONS: Record<
 			if (storageClass instanceof Response) {
 				return storageClass;
 			}
-			const upload = await bucket.createMultipartUpload(key, {
-				httpMetadata: c.req.raw.headers,
-				customMetadata: collectCustomMetadata(c),
-				storageClass,
-			});
-			return xmlResponse("InitiateMultipartUploadResult", {
-				UploadId: upload.uploadId,
-				Bucket: bucketId,
-				Key: key,
-			});
+			try {
+				const upload = await bucket.createMultipartUpload(key, {
+					httpMetadata: c.req.raw.headers,
+					customMetadata: collectCustomMetadata(c),
+					storageClass,
+				});
+				return xmlResponse("InitiateMultipartUploadResult", {
+					UploadId: upload.uploadId,
+					Bucket: bucketId,
+					Key: key,
+				});
+			} catch (e) {
+				return bindingError(e);
+			}
 		},
 	},
 };

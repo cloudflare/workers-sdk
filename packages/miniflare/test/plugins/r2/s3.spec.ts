@@ -1358,12 +1358,25 @@ test("CopyObject decodes the copy source and allows self-copies", async ({
 
 test("multipart upload lifecycle", async ({ expect }) => {
 	const client = s3();
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
+	await expectSdkError(
+		client.send(
+			new CreateMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/obj.bin",
+				Metadata: { ...customMetadata, a: "" },
+			})
+		),
+		400,
+		"MetadataTooLarge",
+		expect
+	);
 	const create = await client.send(
 		new CreateMultipartUploadCommand({
 			Bucket: "bucket",
 			Key: "mp/obj.bin",
 			ContentType: "application/x-thing",
-			Metadata: { mp: "1" },
+			Metadata: customMetadata,
 		})
 	);
 	expect(create.Bucket).toBe("bucket");
@@ -1400,7 +1413,7 @@ test("multipart upload lifecycle", async ({ expect }) => {
 	assert(get.Body !== undefined);
 	expect(await get.Body.transformToString()).toBe("part-one-data");
 	expect(get.ContentType).toBe("application/x-thing");
-	expect(get.Metadata).toEqual({ mp: "1" });
+	expect(get.Metadata).toEqual(customMetadata);
 
 	// The upload is gone after completion
 	await expectSdkError(

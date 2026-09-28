@@ -1153,6 +1153,22 @@ test("createMultipartUpload", async ({ expect }) => {
 		)
 	);
 });
+test("createMultipartUpload: validates metadata size", async ({ expect }) => {
+	const { r2 } = ctx;
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
+	const upload = await r2.createMultipartUpload("key", { customMetadata });
+	const part = await upload.uploadPart(1, "value");
+	await upload.complete([part]);
+	expect((await r2.head("key"))?.customMetadata).toEqual(customMetadata);
+
+	await expect(
+		r2.createMultipartUpload("key", {
+			customMetadata: { ...customMetadata, a: "" },
+		})
+	).rejects.toThrow(
+		"createMultipartUpload: Your metadata headers exceed the maximum allowed metadata size. (10012)"
+	);
+});
 test("uploadPart", async ({ expect }) => {
 	const { r2, object } = ctx;
 
