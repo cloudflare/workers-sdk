@@ -18,10 +18,11 @@ const USES_RE = /^\s*-?\s*uses:\s*(.+)$/;
 const SHA_RE = /^[0-9a-f]{40}$/;
 
 /**
- * First-party GitHub action prefixes that are trusted and do not
- * need to be pinned to a commit SHA.
+ * First-party action prefixes that are trusted and do not need to be
+ * pinned to a commit SHA: GitHub's own actions, and Cloudflare's Bonk
+ * action, which is tracked at main so fixes arrive without a bump.
  */
-const TRUSTED_PREFIXES = ["actions/"];
+const TRUSTED_PREFIXES = ["actions/", "Cloudflare-Studio/ask-bonk/"];
 
 /**
  * Checks that all third-party GitHub Actions in workflow and composite
@@ -63,12 +64,8 @@ export function validateActionPinning(repoRoot: string): string[] {
 				continue;
 			}
 
-			// Trusted first-party actions — skip
-			if (TRUSTED_PREFIXES.some((prefix) => raw.startsWith(prefix))) {
-				continue;
-			}
-
-			// At this point it's a third-party action.
+			// Every remote action needs a ref, trusted or not: GitHub cannot run
+			// owner/repo without one.
 			// Expected format: owner/repo@<ref>  (possibly with a trailing comment)
 			const atIndex = raw.indexOf("@");
 			if (atIndex === -1) {
@@ -77,6 +74,13 @@ export function validateActionPinning(repoRoot: string): string[] {
 				);
 				continue;
 			}
+
+			// Trusted first-party actions — skip the SHA requirement
+			if (TRUSTED_PREFIXES.some((prefix) => raw.startsWith(prefix))) {
+				continue;
+			}
+
+			// At this point it's a third-party action.
 
 			// The ref is everything after @ up to the first space (comments follow a space)
 			const afterAt = raw.slice(atIndex + 1).split(/\s/)[0];
