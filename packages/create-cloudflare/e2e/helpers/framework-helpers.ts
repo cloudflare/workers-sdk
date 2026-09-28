@@ -74,6 +74,7 @@ export async function runC3ForFrameworkTest(
 		`${runDeployTests}`,
 		"--no-open",
 		"--no-auto-update",
+		"--no-agents",
 		...argv,
 	];
 
