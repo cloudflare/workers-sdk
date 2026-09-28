@@ -1,5 +1,24 @@
 # @cloudflare/vite-plugin
 
+## 1.62.0
+
+### Minor Changes
+
+- [#15914](https://github.com/cloudflare/workers-sdk/pull/15914) [`7f0734c`](https://github.com/cloudflare/workers-sdk/commit/7f0734c3174b1ec3ec1718058337626ff106b2e6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use `cf/config` for `cloudflare.config.ts` authoring
+
+  Experimental `cloudflare.config.ts` projects must now import `defineConfig`, bindings, triggers, and related helpers from `cf/config`. Generated declarations from Wrangler and the Vite plugin also reference this package, so projects using the experimental configuration flow must add `cf` as a dependency.
+
+  The Vite plugin no longer exports `@cloudflare/vite-plugin/experimental-config`. `wrangler/experimental-config` remains available for `defineWranglerConfig`, but no longer re-exports Cloudflare configuration helpers.
+
+### Patch Changes
+
+- [#15878](https://github.com/cloudflare/workers-sdk/pull/15878) [`e7915c1`](https://github.com/cloudflare/workers-sdk/commit/e7915c1b571161aad3f5b4dc041e4bd9280659a7) Thanks [@dawNotPoi](https://github.com/dawNotPoi)! - Keep dependency optimization caches stable on the first Vite dev server restart.
+
+  The first dev server restart no longer re-optimizes unchanged dependencies, including in projects without Containers. Container images are still cleaned up when the server closes, even after a config reload removes the Cloudflare plugin.
+
+- Updated dependencies [[`7f0734c`](https://github.com/cloudflare/workers-sdk/commit/7f0734c3174b1ec3ec1718058337626ff106b2e6)]:
+  - wrangler@4.143.0
+
 ## 1.61.0
 
 ### Minor Changes
