@@ -141,7 +141,22 @@ function handleConnect(request: Request, env: Env): Response {
 	// the WebSocket with code 1011 (see pipeSocketOverWebSocket).
 	pipeSocketOverWebSocket(socket, server).catch(() => {});
 
-	return new Response(null, { status: 101, webSocket: client });
+	const headers = new Headers();
+	// Hyperdrive mints per-session credentials and checks them on the socket it
+	// just opened, so the caller has to present *this* request's values. Handing
+	// them back on the upgrade response keeps them tied to the connection they
+	// belong to — fetching them separately can land on a different instance and
+	// hand out credentials the socket will reject.
+	const connectionString = (
+		env[request.headers.get("MF-Binding") as string] as
+			| { connectionString?: unknown }
+			| undefined
+	)?.connectionString;
+	if (typeof connectionString === "string") {
+		headers.set("MF-HD-Connection-String", connectionString);
+	}
+
+	return new Response(null, { status: 101, webSocket: client, headers });
 }
 
 /**
@@ -309,9 +324,55 @@ async function pipeSocketOverWebSocket(
 	await Promise.all([toWebSocket, fromWebSocket]);
 }
 
+/**
+ * Hyperdrive credential-seeding endpoint, guarded behind the `MF-HD-Seed`
+ * header so it never intercepts ordinary connect/RPC/fetch traffic.
+ *
+ * A remote Hyperdrive binding is reached from local dev through the TCP bridge
+ * in `HyperdriveProxyController.createRemoteTcpBridge` (see the miniflare
+ * hyperdrive plugin). The edge Hyperdrive proxy mints per-session dummy
+ * credentials (user/password) and uses the config id as the database name; a
+ * database client must present *those* values to authenticate through the
+ * proxy — the local placeholder credentials only get as far as the server
+ * greeting. This endpoint returns the edge binding's `connectionString` so the
+ * local host can seed the local binding config with the matching credentials
+ * once per session.
+ *
+ * The response carries live credentials: callers MUST treat it as a secret and
+ * MUST NOT log it.
+ */
+function handleSeedConnectionString(request: Request, env: Env): Response {
+	const bindingName = request.headers.get("MF-Binding");
+	if (!bindingName) {
+		return new Response(
+			JSON.stringify({ error: "Missing MF-Binding header" }),
+			{
+				status: 400,
+				headers: { "content-type": "application/json" },
+			}
+		);
+	}
+	const binding = env[bindingName] as
+		| { connectionString?: unknown }
+		| undefined;
+	if (!binding || typeof binding.connectionString !== "string") {
+		return new Response(
+			JSON.stringify({ error: "Binding has no connectionString" }),
+			{ status: 404, headers: { "content-type": "application/json" } }
+		);
+	}
+	return new Response(
+		JSON.stringify({ connectionString: binding.connectionString }),
+		{ status: 200, headers: { "content-type": "application/json" } }
+	);
+}
+
 export default {
 	async fetch(request, env) {
 		try {
+			if (request.headers.has("MF-HD-Seed")) {
+				return handleSeedConnectionString(request, env);
+			}
 			if (isConnectBinding(request)) {
 				return handleConnect(request, env);
 			} else if (isJSRPCBinding(request)) {
