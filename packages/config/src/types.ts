@@ -298,7 +298,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 			"ENAM" | "WNAM" | "EEUR" | "WEUR" | "APAC" | "SAM" | "ME" | "OC" | "AFR"
 		>;
 		/** Restrict Containers to compliance boundaries. */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 	};
 
 	rollout?: {

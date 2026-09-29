@@ -501,7 +501,7 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 					])
 				)
 				.optional(),
-			jurisdiction: z.enum(["eu", "fedramp"]).optional(),
+			jurisdiction: z.enum(["eu", "fedramp", "us"]).optional(),
 		})
 		.optional(),
 	rollout: z

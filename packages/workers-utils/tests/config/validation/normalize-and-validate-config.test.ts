@@ -6698,7 +6698,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp""
+					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp", "us""
 				`);
 			});
 
@@ -6730,31 +6730,32 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should allow valid constraints.regions and constraints.jurisdiction", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "test-worker",
-						containers: [
-							{
-								class_name: "TestClass",
-								image: "registry.cloudflare.com/test:latest",
-								constraints: {
-									regions: ["ENAM", "WNAM"],
-									jurisdiction: "fedramp",
+			it.for(["eu", "fedramp", "us"] as const)(
+				"should allow valid constraints.regions and constraints.jurisdiction %s",
+				(jurisdiction, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "test-worker",
+							containers: [
+								{
+									class_name: "TestClass",
+									image: "registry.cloudflare.com/test:latest",
+									constraints: {
+										regions: ["ENAM", "WNAM"],
+										jurisdiction,
+									},
 								},
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.hasErrors()).toBe(false);
-			});
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(false);
+				}
+			);
 		});
 
 		describe("[kv_namespaces]", () => {
