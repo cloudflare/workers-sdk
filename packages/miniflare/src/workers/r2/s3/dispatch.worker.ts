@@ -7,6 +7,7 @@ import { stripBodyForHead } from "./common.worker";
 import { detectBucketOperation, detectObjectOperation } from "./detect.worker";
 import { noSuchBucket, notImplemented } from "./errors.worker";
 import {
+	bindingError,
 	BUCKET_OPERATIONS,
 	MULTIPART_OPERATIONS,
 	OBJECT_OPERATIONS,
@@ -78,7 +79,11 @@ async function dispatchInner(
 		return screenError;
 	}
 
-	return detected.run();
+	try {
+		return await detected.run();
+	} catch (e) {
+		return bindingError(e);
+	}
 }
 
 /** A detected operation, bound to the context its handler needs */
