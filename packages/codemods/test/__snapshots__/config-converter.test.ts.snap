@@ -187,7 +187,7 @@ export default defineWranglerConfig((ctx) => {
 			if (ctx.isPreview) {
 				return {
 					types: {
-						generate: false,
+						generate: true,
 					},
 					assetsDirectory: "public",
 				};
@@ -197,7 +197,7 @@ export default defineWranglerConfig((ctx) => {
 					PRODUCTION_ONLY: "\\"production\\"",
 				},
 				types: {
-					generate: false,
+					generate: true,
 				},
 				assetsDirectory: "public",
 			};
@@ -209,7 +209,7 @@ export default defineWranglerConfig((ctx) => {
 						PREVIEW_ONLY: "\\"preview\\"",
 					},
 					types: {
-						generate: false,
+						generate: true,
 					},
 					assetsDirectory: "public",
 				};
@@ -219,7 +219,7 @@ export default defineWranglerConfig((ctx) => {
 					BASE_ONLY: "\\"base\\"",
 				},
 				types: {
-					generate: false,
+					generate: true,
 				},
 				assetsDirectory: "public",
 			};

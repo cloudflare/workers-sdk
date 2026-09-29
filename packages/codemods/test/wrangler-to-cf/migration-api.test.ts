@@ -644,35 +644,250 @@ describe("migrateWranglerToCf", () => {
 		]);
 	});
 
-	it("requires a compatible Wrangler for tooling output", async ({
-		expect,
-	}) => {
+	it("upgrades older Wrangler for tooling output", async ({ expect }) => {
 		const cwd = await createProject({
-			"node_modules/wrangler/package.json": JSON.stringify({
-				name: "wrangler",
-				version: "4.99.0",
+			"package.json": JSON.stringify({
+				devDependencies: { cf: "^1.0.0", wrangler: "^4.100.0" },
+				name: "example-worker",
+				packageManager: "pnpm@10.27.0",
 			}),
+			"pnpm-lock.yaml": "lockfileVersion: 9",
 			"wrangler.json": JSON.stringify({
 				compatibility_date: "2026-09-23",
 				name: "example-worker",
 				no_bundle: true,
 			}),
 		});
-
-		await expect(
-			migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
-				bundler: "wrangler",
-			})
-		).rejects.toThrow("requires wrangler 4.100.0 or newer");
-		await expect(
-			migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
-				bundler: "wrangler",
-				dryRun: true,
-			})
-		).rejects.toThrow("requires wrangler 4.100.0 or newer");
+		const dryRunResult = await migrateWranglerToCf(
+			path.join(cwd, "wrangler.json"),
+			{ bundler: "wrangler", dryRun: true }
+		);
+		expect(dryRunResult.changedFiles).toContain("pnpm-lock.yaml");
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		await expect(
 			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
 		).rejects.toMatchObject({ code: "ENOENT" });
+
+		vi.mocked(installPackages).mockImplementationOnce(async () => {
+			await writeFile(
+				path.join(cwd, "package.json"),
+				JSON.stringify({
+					devDependencies: { cf: "^1.0.0", wrangler: "^4.143.0" },
+					name: "example-worker",
+					packageManager: "pnpm@10.27.0",
+				})
+			);
+			await writeFile(
+				path.join(cwd, "pnpm-lock.yaml"),
+				"lockfileVersion: 9\nupdated: true"
+			);
+		});
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
+		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
+			"pnpm",
+			["wrangler@latest"],
+			{ cwd, dev: true, isWorkspaceRoot: false }
+		);
+		expect(result.changedFiles).toEqual([
+			"cloudflare.config.ts",
+			"wrangler.config.ts",
+			"package.json",
+			"pnpm-lock.yaml",
+		]);
+		expect(result.requiresInstall).toBe(false);
+	});
+
+	it("keeps Wrangler in dependencies when adding cf", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				dependencies: { wrangler: "^4.100.0" },
+				name: "example-worker",
+				packageManager: "pnpm@10.27.0",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+		vi.mocked(installPackages).mockImplementationOnce(async () => {});
+		vi.mocked(installPackages).mockImplementationOnce(async () => {
+			await writeFile(
+				path.join(cwd, "package.json"),
+				JSON.stringify({
+					dependencies: { wrangler: "^4.143.0" },
+					devDependencies: { cf: "^1.0.0" },
+					name: "example-worker",
+					packageManager: "pnpm@10.27.0",
+				})
+			);
+			await writeFile(path.join(cwd, "pnpm-lock.yaml"), "updated lockfile");
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(
+			1,
+			"pnpm",
+			["wrangler@latest"],
+			{ cwd, dev: false, isWorkspaceRoot: false }
+		);
+		expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(
+			2,
+			"pnpm",
+			["cf@latest"],
+			{ cwd, dev: true, isWorkspaceRoot: false }
+		);
+		expect(
+			JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"))
+		).toMatchObject({
+			dependencies: { wrangler: "^4.143.0" },
+			devDependencies: { cf: "^1.0.0" },
+		});
+	});
+
+	it("refreshes a stale installed version behind a compatible declaration", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"node_modules/wrangler/package.json": JSON.stringify({
+				name: "wrangler",
+				version: "4.100.0",
+			}),
+			"package.json": JSON.stringify({
+				devDependencies: { cf: "^1.0.0", wrangler: "latest" },
+				name: "example-worker",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+			dryRun: true,
+		});
+
+		expect(result.changedFiles).toContain("package.json");
+		expect(result.changedFiles).toContain("package-lock.json");
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+	});
+
+	it("upgrades old Vite plugins with supported package managers", async ({
+		expect,
+	}) => {
+		for (const [manager, lockFile] of [
+			["npm", "package-lock.json"],
+			["pnpm", "pnpm-lock.yaml"],
+			["yarn", "yarn.lock"],
+			["bun", "bun.lock"],
+			["nub", "nub.lock"],
+		] as const) {
+			vi.mocked(installPackages).mockClear();
+			const cwd = await createProject({
+				"package.json": JSON.stringify({
+					dependencies: { "@cloudflare/vite-plugin": "^1.61.0" },
+					devDependencies: { cf: "^1.0.0" },
+					name: "example-worker",
+					packageManager: `${manager}@${manager === "bun" ? "1.2.0" : "10.0.0"}`,
+				}),
+				"wrangler.json": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					name: "example-worker",
+				}),
+			});
+			const dryRunResult = await migrateWranglerToCf(
+				path.join(cwd, "wrangler.json"),
+				{ dryRun: true }
+			);
+			expect(dryRunResult.changedFiles).toContain(lockFile);
+			expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+
+			vi.mocked(installPackages).mockImplementationOnce(async () => {
+				await writeFile(
+					path.join(cwd, "package.json"),
+					JSON.stringify({
+						dependencies: { "@cloudflare/vite-plugin": "^1.62.0" },
+						devDependencies: { cf: "^1.0.0" },
+						name: "example-worker",
+					})
+				);
+				await writeFile(path.join(cwd, lockFile), "updated lockfile");
+			});
+			const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+			expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
+				manager,
+				["@cloudflare/vite-plugin@latest"],
+				{ cwd, dev: false, isWorkspaceRoot: false }
+			);
+			expect(result.changedFiles).toContain(lockFile);
+			expect(result.requiresInstall).toBe(false);
+		}
+	});
+
+	it("keeps compatible tool versions and skips Vite upgrades for Wrangler", async ({
+		expect,
+	}) => {
+		const files = {
+			"package.json": JSON.stringify({
+				devDependencies: {
+					"@cloudflare/vite-plugin": "^1.61.0",
+					cf: "^1.0.0",
+					wrangler: "^4.143.0",
+				},
+				name: "example-worker",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		};
+		const wranglerCwd = await createProject(files);
+		const viteCwd = await createProject({
+			...files,
+			"package.json": files["package.json"].replace("^1.61.0", "^1.62.0"),
+		});
+		const [wranglerResult, viteResult] = await Promise.all([
+			migrateWranglerToCf(path.join(wranglerCwd, "wrangler.json"), {
+				bundler: "wrangler",
+			}),
+			migrateWranglerToCf(path.join(viteCwd, "wrangler.json")),
+		]);
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		expect(wranglerResult.changedFiles).toEqual([
+			"cloudflare.config.ts",
+			"wrangler.config.ts",
+		]);
+		expect(viteResult.changedFiles).toEqual(["cloudflare.config.ts"]);
+	});
+
+	it("reports required tool upgrades without installing when disabled", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { cf: "^1.0.0", wrangler: "^4.100.0" },
+				name: "example-worker",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+			installDependencies: false,
+		});
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		expect(result.requiresInstall).toBe(true);
+		expect(result.followUps).toEqual([
+			expect.objectContaining({ code: "cf-install-disabled" }),
+		]);
+		expect(result.followUps[0].message).toContain("wrangler@latest");
 	});
 
 	it("migrates each Worker relative to its config", async ({ expect }) => {

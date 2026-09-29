@@ -111,7 +111,7 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
                     "properties": [
                       {
                         "key": "worker",
-                        "value": "outbound-staging",
+                        "value": "outbound",
                       },
                     ],
                   },
@@ -172,7 +172,7 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
               "properties": [
                 {
                   "key": "worker",
-                  "value": "backend-staging",
+                  "value": "backend",
                 },
               ],
             },
@@ -273,23 +273,9 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
     },
     {
       "blocking": true,
-      "code": "service-environment",
-      "docsUrl": undefined,
-      "message": "A dispatch namespace uses a legacy service environment. Verify its target Worker name.",
-      "sourcePath": "dispatch_namespaces.0",
-    },
-    {
-      "blocking": true,
-      "code": "service-environment",
-      "docsUrl": undefined,
-      "message": "A service binding used a legacy service environment. Verify the generated Worker name.",
-      "sourcePath": "services.0",
-    },
-    {
-      "blocking": true,
       "code": "durable-object-review",
       "docsUrl": "https://developers.cloudflare.com/workers/runtime-apis/context/#exports",
-      "message": "Durable Object bindings require manual review after migration.",
+      "message": "A local Durable Object binding has no matching export in the migration history. Specify its class and storage manually.",
       "sourcePath": "durable_objects.bindings.0",
     },
     {

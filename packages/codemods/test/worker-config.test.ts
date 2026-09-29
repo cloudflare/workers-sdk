@@ -97,7 +97,6 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result.followUps.map(({ code }) => code)).toEqual(
 			expect.arrayContaining([
 				"container-review",
-				"durable-object-migrations",
 				"missing-compatibility-date",
 				"missing-name",
 				"unsupported-field",
@@ -106,6 +105,68 @@ describe("Wrangler Worker configuration conversion", () => {
 		);
 		expect(result.output).toContain("Migration incomplete");
 		expect(result).toMatchSnapshot();
+	});
+
+	it("infers Durable Object exports from migration history", ({ expect }) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			durable_objects: {
+				bindings: [{ class_name: "Final", name: "COUNTER" }],
+			},
+			migrations: [
+				{ new_classes: ["Legacy"], new_sqlite_classes: ["Removed"], tag: "v1" },
+				{
+					deleted_classes: ["Removed"],
+					renamed_classes: [{ from: "Legacy", to: "Renamed" }],
+					tag: "v2",
+				},
+				{ renamed_classes: [{ from: "Renamed", to: "Final" }], tag: "v3" },
+			],
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([]);
+		expect(result.output).toContain("Legacy: exports.durableObject({");
+		expect(result.output.match(/renamedTo: "Final"/g)).toHaveLength(2);
+		expect(result.output).toContain("Renamed: exports.durableObject({");
+		expect(result.output).toContain("Final: exports.durableObject({");
+		expect(result.output).toContain('storage: "legacy-kv"');
+		expect(result.output).toContain("Removed: exports.durableObject({");
+		expect(result.output).toContain('state: "deleted"');
+	});
+
+	it("reports Durable Object history that cannot identify storage", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			durable_objects: {
+				bindings: [{ class_name: "Unknown", name: "COUNTER" }],
+			},
+			migrations: [
+				{ renamed_classes: [{ from: "Missing", to: "Unknown" }], tag: "v1" },
+			],
+			name: "example-worker",
+		});
+
+		expect(result.followUps.map(({ code }) => code)).toContain(
+			"durable-object-review"
+		);
+		expect(result.followUps.map(({ code }) => code)).toContain(
+			"durable-object-migrations"
+		);
+	});
+
+	it("keeps tail consumer targets unchanged", ({ expect }) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			name: "example-worker",
+			tail_consumers: [{ environment: "staging", service: "tail-worker" }],
+		});
+
+		expect(result.output).toContain('worker: "tail-worker"');
+		expect(result.output).not.toContain("tail-worker-staging");
+		expect(result.followUps).toEqual([]);
 	});
 
 	it("reports zone-qualified custom domains for manual review", ({

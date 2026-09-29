@@ -9,6 +9,7 @@ import {
 	toOutputValue,
 	type UnknownRecord,
 } from "./converter-helpers";
+import { inferDurableObjectExports } from "./durable-object-migrations";
 import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputValue } from "./types";
 
@@ -71,6 +72,7 @@ export function convertBindings(
 	report: (followUp: MigrationFollowUp) => void
 ): OutputObject | undefined {
 	const bindings = new Map<string, OutputValue>();
+	const inferredDurableObjects = inferDurableObjectExports(source).exports;
 	const pathFor = (field: string, index?: number) =>
 		[sourcePrefix, field, index]
 			.filter((part) => part !== undefined && part !== "")
@@ -300,12 +302,17 @@ export function convertBindings(
 			sourcePath,
 			report
 		);
-		reportUnsupportedOptions(
-			entry,
-			["preview_bucket_name"],
-			sourcePath,
-			report
-		);
+		if (
+			hasOwn(entry, "preview_bucket_name") &&
+			entry.preview_bucket_name !== entry.bucket_name
+		) {
+			reportUnsupportedOptions(
+				entry,
+				["preview_bucket_name"],
+				sourcePath,
+				report
+			);
+		}
 	}
 	convertArrayBindings(
 		"secrets_store_secrets",
@@ -352,15 +359,7 @@ export function convertBindings(
 		);
 		const outbound = getRecord(entry, "outbound");
 		if (outbound) {
-			const outboundTarget = { ...outbound };
-			if (
-				typeof outbound.service === "string" &&
-				typeof outbound.environment === "string"
-			) {
-				outboundTarget.service = `${outbound.service}-${outbound.environment}`;
-			}
-
-			const outboundOptions = optionsFromRecord(outboundTarget, [
+			const outboundOptions = optionsFromRecord(outbound, [
 				["service", "worker"],
 				["parameters", "parameters"],
 			]);
@@ -368,16 +367,6 @@ export function convertBindings(
 				key: "outbound",
 				value: outboundOptions,
 			});
-
-			if (hasOwn(outbound, "environment")) {
-				report(
-					createFollowUp(
-						"service-environment",
-						"A dispatch namespace uses a legacy service environment. Verify its target Worker name.",
-						{ sourcePath: pathFor("dispatch_namespaces", index) }
-					)
-				);
-			}
 		}
 
 		imports.add("bindings");
@@ -438,19 +427,6 @@ export function convertBindings(
 	}
 
 	for (const [index, entry] of getRecords(source, "services").entries()) {
-		let worker = entry.service;
-		if (typeof entry.environment === "string" && typeof worker === "string") {
-			worker = `${worker}-${entry.environment}`;
-			report(
-				createFollowUp(
-					"service-environment",
-					"A service binding used a legacy service environment. Verify the generated Worker name.",
-					{ sourcePath: pathFor("services", index) }
-				)
-			);
-		}
-
-		const service = { ...entry, service: worker };
 		imports.add("bindings");
 
 		addBinding(
@@ -459,7 +435,7 @@ export function convertBindings(
 			call(
 				"bindings.worker",
 				optionsFromRecord(
-					service,
+					entry,
 					[
 						["service", "worker"],
 						["entrypoint", "exportName"],
@@ -511,16 +487,24 @@ export function convertBindings(
 				sourcePath,
 				report
 			);
-			report(
-				createFollowUp(
-					"durable-object-review",
-					"Durable Object bindings require manual review after migration.",
-					{
-						docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
-						sourcePath,
-					}
-				)
-			);
+			if (
+				(typeof entry.script_name !== "string" ||
+					entry.script_name === source.name) &&
+				(typeof entry.class_name !== "string" ||
+					(!inferredDurableObjects.get(entry.class_name)?.storage &&
+						!hasOwn(getRecord(source, "exports") ?? {}, entry.class_name)))
+			) {
+				report(
+					createFollowUp(
+						"durable-object-review",
+						"A local Durable Object binding has no matching export in the migration history. Specify its class and storage manually.",
+						{
+							docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
+							sourcePath,
+						}
+					)
+				);
+			}
 		}
 	}
 

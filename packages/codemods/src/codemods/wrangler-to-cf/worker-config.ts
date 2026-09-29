@@ -11,6 +11,7 @@ import {
 	toOutputValue,
 	type UnknownRecord,
 } from "./converter-helpers";
+import { inferDurableObjectExports } from "./durable-object-migrations";
 import { convertExports } from "./exports";
 import {
 	CONFIGURATION_DOCS_URL,
@@ -144,20 +145,8 @@ export function convertWorkerConfig(
 	}
 
 	const tailConsumers: OutputValue[] = [];
-	for (const [index, entry] of getRecords(source, "tail_consumers").entries()) {
-		let worker = entry.service;
-		if (typeof entry.environment === "string" && typeof worker === "string") {
-			worker = `${worker}-${entry.environment}`;
-			report(
-				createFollowUp(
-					"service-environment",
-					"A tail consumer used a legacy service environment. Verify the generated Worker name.",
-					{ sourcePath: `${sourcePrefix || "config"}.tail_consumers.${index}` }
-				)
-			);
-		}
-
-		const value = toOutputValue(worker);
+	for (const entry of getRecords(source, "tail_consumers")) {
+		const value = toOutputValue(entry.service);
 		if (value !== undefined) {
 			tailConsumers.push({
 				kind: "object",
@@ -246,14 +235,14 @@ export function convertWorkerConfig(
 		}
 	}
 
-	if (Array.isArray(source.migrations) && source.migrations.length > 0) {
+	for (const unresolved of inferDurableObjectExports(source).unresolved) {
 		report(
 			createFollowUp(
 				"durable-object-migrations",
-				'Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example `exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }`.',
+				`The Durable Object migration at \`${unresolved}\` cannot be inferred from the checked-in history. Define its lifecycle manually.`,
 				{
 					docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
-					sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}migrations`,
+					sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}${unresolved}`,
 				}
 			)
 		);

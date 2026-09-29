@@ -97,6 +97,64 @@ describe("Wrangler binding conversion", () => {
 		]);
 	});
 
+	it("keeps legacy service targets unchanged", ({ expect }) => {
+		const followUps: MigrationFollowUp[] = [];
+		const bindings = convertBindings(
+			{
+				dispatch_namespaces: [
+					{
+						binding: "DISPATCH",
+						namespace: "namespace",
+						outbound: { environment: "staging", service: "dispatch-worker" },
+					},
+				],
+				services: [
+					{
+						binding: "SERVICE",
+						environment: "staging",
+						service: "service-worker",
+					},
+				],
+			},
+			"",
+			new Set(),
+			(followUp) => followUps.push(followUp)
+		);
+
+		expect(JSON.stringify(bindings)).toContain("dispatch-worker");
+		expect(JSON.stringify(bindings)).toContain("service-worker");
+		expect(JSON.stringify(bindings)).not.toContain("-staging");
+		expect(followUps).toEqual([]);
+	});
+
+	it("reviews R2 preview buckets only when different", ({ expect }) => {
+		for (const [previewBucket, requiresReview] of [
+			[undefined, false],
+			["bucket", false],
+			["preview-bucket", true],
+		] as const) {
+			const followUps: MigrationFollowUp[] = [];
+			convertBindings(
+				{
+					r2_buckets: [
+						{
+							binding: "BUCKET",
+							bucket_name: "bucket",
+							...(previewBucket ? { preview_bucket_name: previewBucket } : {}),
+						},
+					],
+				},
+				"",
+				new Set(),
+				(followUp) => followUps.push(followUp)
+			);
+
+			expect(
+				followUps.some(({ code }) => code === "unsupported-binding-options")
+			).toBe(requiresReview);
+		}
+	});
+
 	it("converts a Hyperdrive local connection string", ({ expect }) => {
 		const followUps: MigrationFollowUp[] = [];
 		const bindings = convertBindings(

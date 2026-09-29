@@ -7,6 +7,7 @@ import {
 	optionsFromRecord,
 	type UnknownRecord,
 } from "./converter-helpers";
+import { inferDurableObjectExports } from "./durable-object-migrations";
 import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputProperty } from "./types";
 
@@ -16,12 +17,33 @@ export function convertExports(
 	imports: Set<string>,
 	report: (followUp: MigrationFollowUp) => void
 ): OutputObject | undefined {
-	const configuredExports = getRecord(source, "exports");
-	if (!configuredExports) {
+	const configuredExports = getRecord(source, "exports") ?? {};
+	const inferred = inferDurableObjectExports(source);
+	if (
+		Object.keys(configuredExports).length === 0 &&
+		inferred.exports.size === 0
+	) {
 		return undefined;
 	}
 
 	const properties: OutputProperty[] = [];
+	for (const [name, options] of inferred.exports) {
+		if (hasOwn(configuredExports, name)) {
+			continue;
+		}
+		imports.add("exports");
+		properties.push({
+			key: name,
+			value: call(
+				"exports.durableObject",
+				optionsFromRecord({ ...options }, [
+					["renamedTo", "renamedTo"],
+					["state", "state"],
+					["storage", "storage"],
+				])
+			),
+		});
+	}
 	for (const [name, value] of Object.entries(configuredExports)) {
 		if (!isRecord(value)) {
 			continue;
@@ -50,7 +72,17 @@ export function convertExports(
 
 		if (value.type === "durable-object") {
 			imports.add("exports");
-			const options = optionsFromRecord(value, [
+			const inferredOptions = inferred.exports.get(name);
+			const exportSource =
+				hasOwn(value, "state") || hasOwn(value, "storage")
+					? value
+					: {
+							...value,
+							renamed_to: inferredOptions?.renamedTo,
+							state: inferredOptions?.state,
+							storage: inferredOptions?.storage,
+						};
+			const options = optionsFromRecord(exportSource, [
 				["renamed_to", "renamedTo"],
 				["state", "state"],
 				["storage", "storage"],
@@ -61,13 +93,18 @@ export function convertExports(
 				key: name,
 				value: call("exports.durableObject", options),
 			});
-			report(
-				createFollowUp(
-					"durable-object-review",
-					"Durable Object exports require manual review after migration.",
-					{ docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL, sourcePath }
-				)
-			);
+			if (
+				exportSource.storage === undefined &&
+				exportSource.state === undefined
+			) {
+				report(
+					createFollowUp(
+						"durable-object-review",
+						"A Durable Object export has no storage or lifecycle state. Specify its storage from the migration history.",
+						{ docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL, sourcePath }
+					)
+				);
+			}
 			if (hasOwn(value, "container")) {
 				report(
 					createFollowUp(

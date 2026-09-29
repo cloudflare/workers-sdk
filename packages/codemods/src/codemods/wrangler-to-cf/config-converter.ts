@@ -51,6 +51,7 @@ const NON_INHERITABLE_FIELDS = new Set<string>([
 	"images",
 	"kv_namespaces",
 	"media",
+	"migrations",
 	"mtls_certificates",
 	"pipelines",
 	"queues",
@@ -334,8 +335,7 @@ function convertToolingObject(source: UnknownRecord): OutputObject {
 			properties.push({ key: "dev", value: devOptions });
 		}
 	}
-	const generateTypes =
-		typeof dev?.generate_types === "boolean" ? dev.generate_types : false;
+	const generateTypes = dev?.generate_types !== false;
 	properties.push({
 		key: "types",
 		value: {

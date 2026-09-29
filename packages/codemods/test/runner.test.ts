@@ -197,16 +197,16 @@ describe("codemod runner", () => {
 		]);
 		expect(await readFile(path.join(cwd, "worker/wrangler.config.ts"), "utf8"))
 			.toMatchInlineSnapshot(`
-			"import { defineWranglerConfig } from "wrangler/experimental-config";
+				"import { defineWranglerConfig } from "wrangler/experimental-config";
 
-			export default defineWranglerConfig({
-				noBundle: true,
-				types: {
-					generate: false,
-				},
-			});
-			"
-		`);
+				export default defineWranglerConfig({
+					noBundle: true,
+					types: {
+						generate: true,
+					},
+				});
+				"
+			`);
 	});
 
 	it("requires an exact config when discovery is ambiguous", async ({

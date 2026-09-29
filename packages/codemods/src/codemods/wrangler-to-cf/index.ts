@@ -14,10 +14,9 @@ import {
 } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
 import {
-	installCfDependency,
-	planCfDependencyInstallation,
+	installMigrationDependencies,
+	planMigrationDependencies,
 } from "./install-dependencies";
-import { assertCompatibleWranglerVersion } from "./wrangler-version";
 import type {
 	MigrationFollowUp,
 	WranglerToCfMigrationOptions,
@@ -87,7 +86,10 @@ export async function migrateWranglerToCf(
 		bundler,
 		secretFiles
 	);
-	const dependencyPlan = await planCfDependencyInstallation(projectDirectory);
+	const dependencyPlan = await planMigrationDependencies(
+		projectDirectory,
+		bundler
+	);
 	if (dependencyPlan.action === "missing-manifest") {
 		convertedConfig.followUps.push(
 			createFollowUp(
@@ -120,10 +122,16 @@ export async function migrateWranglerToCf(
 		(dependencyPlan.action === "install" ||
 			dependencyPlan.action === "unreadable-manifest")
 	) {
+		const packages =
+			dependencyPlan.action === "install"
+				? dependencyPlan.packages
+						.map(({ name }) => `\`${name}@latest\``)
+						.join(", ")
+				: "`cf@latest`";
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-disabled",
-				"Automatic dependency installation was disabled. Install `cf@latest` as a dev dependency before using the generated configuration."
+				`Automatic dependency installation was disabled. Install or upgrade ${packages} with the project's package manager before using the generated configuration.`
 			)
 		);
 	}
@@ -145,16 +153,13 @@ export async function migrateWranglerToCf(
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
-	if (wranglerConfig) {
-		assertCompatibleWranglerVersion(projectDirectory);
-	}
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
 	}
 	if (installDependencies && dependencyPlan.action === "install") {
 		let dependencyFollowUp: MigrationFollowUp | undefined;
 		try {
-			const installResult = await installCfDependency(dependencyPlan, {
+			const installResult = await installMigrationDependencies(dependencyPlan, {
 				dryRun,
 			});
 			changedFiles.push(...installResult.changedFiles);
@@ -165,9 +170,12 @@ export async function migrateWranglerToCf(
 			}
 			const reason =
 				error instanceof Error ? ` Installation failed: ${error.message}` : "";
+			const packages = dependencyPlan.packages
+				.map(({ name }) => `\`${name}@latest\``)
+				.join(", ");
 			dependencyFollowUp = createFollowUp(
 				"cf-install-failed",
-				`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+				`The generated configuration was written, but ${packages} could not be installed automatically. Install or upgrade these dependencies with your package manager before using it.${reason}`
 			);
 			requiresInstall = true;
 		}
