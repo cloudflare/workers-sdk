@@ -12,6 +12,12 @@ import { glob } from "tinyglobby";
 import { fileExists } from "../../files";
 import { getWranglerUpgradeSpec, isVersionSupported } from "./wrangler-version";
 import type { PackageManager } from "@cloudflare/workers-utils";
+import type { MigrationBundler } from "./types";
+
+const VITE_PLUGIN = "@cloudflare/vite-plugin";
+const VITE_PLUGIN_VERSION_PATTERN = /^2\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+const VITE_PLUGIN_RANGE_PATTERN =
+	/^(?:(?:\^|~)?2(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?|>=2\.0\.0-0 <3\.0\.0-0|beta)$/;
 
 const PACKAGE_MANAGERS = [
 	NubPackageManager,
@@ -258,6 +264,36 @@ function hasCfDependency(packageJson: PackageJson): boolean {
 	);
 }
 
+function needsVitePluginUpgrade(
+	packageJson: PackageJson,
+	projectDirectory: string
+): boolean {
+	const declaredVersion =
+		packageJson.dependencies?.[VITE_PLUGIN] ??
+		packageJson.devDependencies?.[VITE_PLUGIN];
+	if (typeof declaredVersion !== "string") {
+		return true;
+	}
+
+	const installedVersion = getInstalledPackageVersion(
+		VITE_PLUGIN,
+		projectDirectory
+	);
+	const compatibleInstalledVersion =
+		installedVersion !== undefined &&
+		VITE_PLUGIN_VERSION_PATTERN.test(installedVersion);
+	if (
+		!VITE_PLUGIN_RANGE_PATTERN.test(declaredVersion) &&
+		!(
+			/^(?:workspace:|file:|link:|portal:)/.test(declaredVersion) &&
+			compatibleInstalledVersion
+		)
+	) {
+		return true;
+	}
+	return installedVersion !== undefined && !compatibleInstalledVersion;
+}
+
 /** Finds the nearest package manifest at or above the migration directory. */
 export async function findPackageJson(
 	projectDirectory: string
@@ -498,6 +534,43 @@ export async function planCfDependencyInstallation(
 		return { action: "already-installed" };
 	}
 	return { action: "install" };
+}
+
+/**
+ * Plans a Vite plugin upgrade when the migrated project uses Vite.
+ *
+ * @param projectDirectory Directory containing the migrated Worker.
+ * @param bundler Bundler selected for the migrated project.
+ * @returns The plugin dependency to install, if needed.
+ */
+export async function planVitePluginDependencyUpgrade(
+	projectDirectory: string,
+	bundler: MigrationBundler
+): Promise<DependencyToInstall | undefined> {
+	if (bundler !== "vite") {
+		return undefined;
+	}
+
+	const packageJsonPath = path.join(projectDirectory, "package.json");
+	if (!(await fileExists(packageJsonPath))) {
+		return undefined;
+	}
+
+	let packageJson: PackageJson;
+	try {
+		packageJson = await readPackageJson(packageJsonPath);
+	} catch {
+		return undefined;
+	}
+	if (!needsVitePluginUpgrade(packageJson, projectDirectory)) {
+		return undefined;
+	}
+
+	return {
+		dev: packageJson.dependencies?.[VITE_PLUGIN] === undefined,
+		name: VITE_PLUGIN,
+		version: "beta",
+	};
 }
 
 /**

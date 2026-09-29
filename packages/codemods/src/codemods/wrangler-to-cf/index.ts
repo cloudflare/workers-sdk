@@ -17,6 +17,7 @@ import {
 	DependencyInstallError,
 	installProjectDependencies,
 	planCfDependencyInstallation,
+	planVitePluginDependencyUpgrade,
 	planWranglerDependencyUpgrade,
 } from "./install-dependencies";
 import { MINIMUM_WRANGLER_VERSION } from "./wrangler-version";
@@ -43,6 +44,10 @@ async function assertTargetsDoNotExist(filePaths: string[]): Promise<void> {
 	throw new Error(
 		`Cannot migrate because ${existingTarget} already exists. Inspect and finish the existing migration; it will not be overwritten. Automated agents should read its TODOs and ask the user about unresolved choices.`
 	);
+}
+
+function formatDependencies(packages: string[]): string {
+	return packages.map((packageName) => `\`${packageName}\``).join(" and ");
 }
 
 /**
@@ -91,15 +96,33 @@ export async function migrateWranglerToCf(
 		secretFiles
 	);
 	const wranglerConfig = renderWranglerConfig(convertedConfig);
-	const [cfDepPlan, wranglerDepPlan] = await Promise.all([
+	const [cfDepPlan, wranglerDepPlan, vitePluginDependency] = await Promise.all([
 		planCfDependencyInstallation(projectDirectory),
 		planWranglerDependencyUpgrade(projectDirectory, wranglerConfig !== null),
+		planVitePluginDependencyUpgrade(projectDirectory, bundler),
 	]);
+	const missingManifestPackages = formatDependencies([
+		"cf@latest",
+		...(bundler === "vite" ? ["@cloudflare/vite-plugin@beta"] : []),
+	]);
+	const dependenciesToInstall: DependencyToInstall[] = [];
+	if (cfDepPlan.action === "install") {
+		dependenciesToInstall.push({ dev: true, name: "cf", version: "latest" });
+	}
+	if (vitePluginDependency) {
+		dependenciesToInstall.push(vitePluginDependency);
+	}
+	if (wranglerDepPlan.action === "install") {
+		dependenciesToInstall.push(wranglerDepPlan.dependency);
+	}
+	const dependencyNames = formatDependencies(
+		dependenciesToInstall.map(({ name, version }) => `${name}@${version}`)
+	);
 	if (cfDepPlan.action === "missing-manifest") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-missing-manifest",
-				"No package.json was found. Create or locate the package that owns this Worker, then install `cf@latest` as a dev dependency before using the generated configuration."
+				`No package.json was found. Create or locate the package that owns this Worker, then install ${missingManifestPackages} as dev dependencies before using the generated configuration.`
 			)
 		);
 	}
@@ -107,7 +130,7 @@ export async function migrateWranglerToCf(
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-skipped",
-				"An ancestor package.json was found, but it was not modified because it may belong to another project. Install `cf@latest` as a dev dependency in the package that owns this Worker."
+				`An ancestor package.json was found, but it was not modified because it may belong to another project. Install ${missingManifestPackages} as dev dependencies in the package that owns this Worker.`
 			)
 		);
 	}
@@ -118,19 +141,23 @@ export async function migrateWranglerToCf(
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-failed",
-				`The local package.json could not be read, so \`cf\` could not be installed automatically. Resolve the reported package.json error, then install \`cf@latest\` as a dev dependency before using the generated configuration.${reason}`
+				`The local package.json could not be read, so migration dependencies could not be installed automatically. Resolve the reported package.json error, then install ${missingManifestPackages} before using the generated configuration.${reason}`
 			)
 		);
 	}
 	if (
 		!installDependencies &&
 		(cfDepPlan.action === "install" ||
-			cfDepPlan.action === "unreadable-manifest")
+			cfDepPlan.action === "unreadable-manifest" ||
+			vitePluginDependency !== undefined)
 	) {
 		convertedConfig.followUps.push(
 			createFollowUp(
-				"cf-install-disabled",
-				"Automatic dependency installation was disabled. Install `cf@latest` as a dev dependency before using the generated configuration."
+				cfDepPlan.action === "install" ||
+				cfDepPlan.action === "unreadable-manifest"
+					? "cf-install-disabled"
+					: "vite-plugin-install-disabled",
+				`Automatic dependency installation was disabled. Install ${cfDepPlan.action === "unreadable-manifest" ? missingManifestPackages : dependencyNames} before using the generated configuration.`
 			)
 		);
 	}
@@ -171,14 +198,8 @@ export async function migrateWranglerToCf(
 	const changedFiles = Array.from(outputs.keys());
 	let requiresInstall =
 		cfDepPlan.action !== "already-installed" ||
-		wranglerDepPlan.action !== "none";
-	const dependenciesToInstall: DependencyToInstall[] = [];
-	if (cfDepPlan.action === "install") {
-		dependenciesToInstall.push({ dev: true, name: "cf", version: "latest" });
-	}
-	if (wranglerDepPlan.action === "install") {
-		dependenciesToInstall.push(wranglerDepPlan.dependency);
-	}
+		wranglerDepPlan.action !== "none" ||
+		vitePluginDependency !== undefined;
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
@@ -218,7 +239,9 @@ export async function migrateWranglerToCf(
 			dependencyFollowUp = createFollowUp(
 				pendingDependencies.some(({ name }) => name === "cf")
 					? "cf-install-failed"
-					: "wrangler-upgrade-failed",
+					: pendingDependencies.some(({ name }) => name === "wrangler")
+						? "wrangler-upgrade-failed"
+						: "vite-plugin-install-failed",
 				`The generated configuration was written, but ${packageNames} could not be installed automatically. Install ${packageSpecifiers} with your package manager before using it.${reason}`
 			);
 			requiresInstall = true;
