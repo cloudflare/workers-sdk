@@ -21,6 +21,7 @@ import {
 	getTokenUrlFromEnv,
 } from "./env-vars";
 import {
+	ErrorAuthServerUnreachable,
 	ErrorInvalidReturnedStateParam,
 	ErrorUnknown,
 	toErrorClass,
@@ -344,7 +345,14 @@ export async function fetchAuthToken(
 	} catch (e) {
 		// Log at debug level — the error is re-thrown for the caller to handle.
 		logger.debug("Failed to fetch auth token:", e);
-		throw e;
+		// `fetch` only rejects when no HTTP response arrived at all, so this is a
+		// network failure rather than a verdict on the credentials.
+		const cause = (e as { cause?: { code?: unknown } } | undefined)?.cause;
+		const code = typeof cause?.code === "string" ? ` (${cause.code})` : "";
+		throw new ErrorAuthServerUnreachable(
+			`Could not reach the Cloudflare auth server at ${getTokenUrlFromEnv()}${code}.`,
+			{ cause: e, telemetryMessage: "user oauth token endpoint unreachable" }
+		);
 	}
 }
 

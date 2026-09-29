@@ -1066,6 +1066,45 @@ describe("User", () => {
 		);
 	});
 
+	it.for([false, true])(
+		"reports an unreachable auth server instead of an expired login, without starting a login (TTY: %s)",
+		async (isTTY, { expect }) => {
+			setIsTTY(isTTY);
+			writeAuthCredentials({
+				oauth_token: "hunter2",
+				refresh_token: "Order 66",
+			});
+			mockExchangeRefreshTokenForAccessToken({ respondWith: "networkError" });
+
+			await expect(
+				requireAuth({} as Config)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. This is usually a network problem (connectivity, proxy, or IPv6), not an invalid login: your stored credentials were left unchanged. Check your connection and try again.]`
+			);
+
+			// The refresh token may still be valid, so the next attempt must reuse it.
+			let refreshToken: string | null = null;
+			msw.use(
+				http.post("*/oauth2/token", async ({ request }) => {
+					refreshToken = new URLSearchParams(await request.text()).get(
+						"refresh_token"
+					);
+					return HttpResponse.json({
+						access_token: "fresh-access",
+						expires_in: 3600,
+						refresh_token: "next-refresh",
+						scope: "account:read",
+						token_type: "bearer",
+					});
+				})
+			);
+			await expect(
+				loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
+			).resolves.toEqual({ loggedIn: true });
+			expect(refreshToken).toBe("Order 66");
+		}
+	);
+
 	it("should confirm no error message when refresh is successful", async ({
 		expect,
 	}) => {
