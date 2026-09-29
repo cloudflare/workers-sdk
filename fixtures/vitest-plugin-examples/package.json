@@ -43,6 +43,7 @@
 		"@types/mime-types": "^3.0.1",
 		"@types/node": "catalog:default",
 		"@types/nunjucks": "^3.2.6",
+		"@vitest/ui": "catalog:vitest5",
 		"better-auth": "^1.4.6",
 		"cjs-wasm-module-dep": "file:./module-resolution/vendor/cjs-wasm-module-dep",
 		"discord-api-types": "0.37.98",
