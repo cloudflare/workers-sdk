@@ -1621,6 +1621,8 @@ describe("convertToWranglerConfig", () => {
 							enabled: true,
 							logs: { enabled: false },
 						},
+						ssh: { enabled: true, port: 2222 },
+						authorizedKeys: [{ name: "deploy", publicKey: "ssh-ed25519 key" }],
 						unsafe: {
 							configuration: { experimental_flags: ["allow_fast_images"] },
 						},
@@ -1644,6 +1646,8 @@ describe("convertToWranglerConfig", () => {
 						enabled: true,
 						logs: { enabled: false },
 					},
+					ssh: { enabled: true, port: 2222 },
+					authorized_keys: [{ name: "deploy", public_key: "ssh-ed25519 key" }],
 					unsafe: {
 						configuration: { experimental_flags: ["allow_fast_images"] },
 					},
