@@ -2092,6 +2092,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      dotenv-expand:
+        specifier: ^12.0.2
+        version: 12.0.2
       esbuild:
         specifier: catalog:default
         version: 0.28.2
