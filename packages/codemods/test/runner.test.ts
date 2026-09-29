@@ -174,7 +174,7 @@ describe("codemod runner", () => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.100.0",
+				version: "4.136.0",
 			}),
 			"worker/custom.json": JSON.stringify({
 				compatibility_date: "2026-09-24",

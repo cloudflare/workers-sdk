@@ -10,6 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
+import * as workersUtils from "@cloudflare/workers-utils";
 import { afterEach, describe, it, vi } from "vitest";
 import { migrateWranglerToCf } from "../../src";
 import {
@@ -64,6 +65,7 @@ async function removeDirectory(directory: string): Promise<void> {
 }
 
 afterEach(async () => {
+	vi.restoreAllMocks();
 	vi.clearAllMocks();
 	for (const directory of temporaryDirectories.splice(0)) {
 		await removeDirectory(directory);
@@ -536,7 +538,7 @@ describe("migrateWranglerToCf", () => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.100.0",
+				version: "4.136.0",
 			}),
 			"package.json": JSON.stringify({ name: "example-worker" }),
 			"wrangler.json": JSON.stringify({
@@ -624,7 +626,7 @@ describe("migrateWranglerToCf", () => {
 		const wranglerCwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.100.0",
+				version: "4.136.0",
 			}),
 			"wrangler.json": source,
 		});
@@ -644,36 +646,131 @@ describe("migrateWranglerToCf", () => {
 		]);
 	});
 
-	it("requires a compatible Wrangler for tooling output", async ({
-		expect,
-	}) => {
-		const cwd = await createProject({
-			"node_modules/wrangler/package.json": JSON.stringify({
-				name: "wrangler",
-				version: "4.99.0",
-			}),
-			"wrangler.json": JSON.stringify({
-				compatibility_date: "2026-09-23",
-				name: "example-worker",
-				no_bundle: true,
-			}),
-		});
+	describe.each([false, true])(
+		"Wrangler compatibility (dryRun: %s)",
+		(dryRun) => {
+			it.for([
+				undefined,
+				"",
+				"invalid",
+				"4.136",
+				"4.99.0",
+				"4.100.0",
+				"4.120.0",
+				"4.135.0",
+				"4.135.9",
+				"4.136.0-beta.1",
+			])(
+				"rejects %s before writes or dependency installation",
+				async (version, { expect }) => {
+					const files: Record<string, string> = {
+						"package.json": JSON.stringify({
+							name: "example-worker",
+							devDependencies: { wrangler: version ?? "4.136.0" },
+						}),
+						"pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+						"worker.js":
+							'export default { fetch() { return new Response("ok"); } };\n',
+						"wrangler.json": JSON.stringify({
+							compatibility_date: "2026-09-23",
+							name: "example-worker",
+							main: "worker.js",
+							no_bundle: true,
+						}),
+					};
+					if (version !== undefined) {
+						files["node_modules/wrangler/package.json"] = JSON.stringify({
+							name: "wrangler",
+							version,
+						});
+					}
+					const cwd = await createProject(files);
+					const before = (await readdir(cwd, { recursive: true })).sort();
+					if (version === undefined) {
+						// Vitest resolves the workspace Wrangler even outside the project.
+						vi.spyOn(
+							workersUtils,
+							"getInstalledPackageVersion"
+						).mockReturnValueOnce(undefined);
+					}
 
-		await expect(
-			migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
-				bundler: "wrangler",
-			})
-		).rejects.toThrow("requires wrangler 4.100.0 or newer");
-		await expect(
-			migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
-				bundler: "wrangler",
-				dryRun: true,
-			})
-		).rejects.toThrow("requires wrangler 4.100.0 or newer");
-		await expect(
-			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
-		).rejects.toMatchObject({ code: "ENOENT" });
-	});
+					await expect(
+						migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+							bundler: "wrangler",
+							dryRun,
+						})
+					).rejects.toThrow(
+						"requires wrangler 4.136.0 or newer because cf requires its delegate and build integration"
+					);
+
+					expect(writeMigrationOutputs).not.toHaveBeenCalled();
+					expect(installPackages).not.toHaveBeenCalled();
+					expect((await readdir(cwd, { recursive: true })).sort()).toEqual(
+						before
+					);
+					for (const [file, contents] of Object.entries(files)) {
+						expect(await readFile(path.join(cwd, file), "utf8")).toBe(contents);
+					}
+				}
+			);
+
+			it.for(["4.136.0", "4.136.1", "4.143.0", "4.136.0+build.1"])(
+				"accepts %s",
+				async (version, { expect }) => {
+					const cwd = await createProject({
+						"node_modules/wrangler/package.json": JSON.stringify({
+							name: "wrangler",
+							version,
+						}),
+						"wrangler.json": JSON.stringify({
+							compatibility_date: "2026-09-23",
+							name: "example-worker",
+							no_bundle: true,
+						}),
+					});
+					const result = await migrateWranglerToCf(
+						path.join(cwd, "wrangler.json"),
+						{ bundler: "wrangler", dryRun, installDependencies: false }
+					);
+					expect(result.changedFiles).toEqual([
+						"cloudflare.config.ts",
+						"wrangler.config.ts",
+					]);
+					if (dryRun) {
+						expect(writeMigrationOutputs).not.toHaveBeenCalled();
+					} else {
+						expect(
+							await readFile(path.join(cwd, "wrangler.config.ts"), "utf8")
+						).toContain("defineWranglerConfig");
+					}
+				}
+			);
+
+			it.for([undefined, "invalid", "4.100.0"])(
+				"does not require compatible Wrangler without tooling output (%s)",
+				async (version, { expect }) => {
+					const files: Record<string, string> = {
+						"wrangler.json": JSON.stringify({
+							compatibility_date: "2026-09-23",
+							name: "example-worker",
+						}),
+					};
+					if (version !== undefined) {
+						files["node_modules/wrangler/package.json"] = JSON.stringify({
+							name: "wrangler",
+							version,
+						});
+					}
+					const cwd = await createProject(files);
+					const result = await migrateWranglerToCf(
+						path.join(cwd, "wrangler.json"),
+						{ dryRun, installDependencies: false }
+					);
+					expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
+				}
+			);
+		}
+	);
 
 	it("migrates each Worker relative to its config", async ({ expect }) => {
 		const cwd = await createProject({

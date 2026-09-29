@@ -1,6 +1,8 @@
 import { getInstalledPackageVersion } from "@cloudflare/workers-utils";
 
-const MINIMUM_WRANGLER_VERSION = "4.100.0";
+// cf requires the delegate/build contract introduced in Wrangler 4.136.0.
+// The experimental-config export alone (available since 4.100.0) is insufficient.
+const MINIMUM_WRANGLER_VERSION = "4.136.0";
 const SEMVER_PATTERN =
 	/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
 
@@ -24,7 +26,7 @@ function isVersionSupported(version: string): boolean {
 }
 
 /**
- * Ensures the project can load a generated wrangler.config.ts file.
+ * Ensures the project supports cf delegation and builds with wrangler.config.ts.
  *
  * @param projectDirectory Directory containing the Wrangler configuration.
  */
@@ -43,6 +45,6 @@ export function assertCompatibleWranglerVersion(
 		? `Detected version ${installedVersion}.`
 		: "No local Wrangler installation was found.";
 	throw new Error(
-		`Generating wrangler.config.ts requires wrangler ${MINIMUM_WRANGLER_VERSION} or newer because earlier versions do not export wrangler/experimental-config. ${detectedVersion} Update Wrangler and retry the migration.`
+		`Generating wrangler.config.ts requires wrangler ${MINIMUM_WRANGLER_VERSION} or newer because cf requires its delegate and build integration, not only wrangler/experimental-config. ${detectedVersion} Update Wrangler and retry the migration.`
 	);
 }
