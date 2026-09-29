@@ -93,6 +93,8 @@ describe.sequential("DevRegistry", () => {
 			new TestLog()
 		);
 		vi.useFakeTimers();
+		// Filesystem timestamps can be ahead of the fake clock on Windows.
+		vi.setSystemTime((await fs.stat(definitionPath)).mtime);
 		try {
 			registry.register({ worker: definition });
 			expect(
