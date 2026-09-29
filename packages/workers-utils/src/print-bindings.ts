@@ -581,11 +581,17 @@ export function printBindings(
 
 	if (analytics.length > 0) {
 		output.push(
-			...analytics.map(({ binding }) => ({
+			...analytics.map(({ binding, remote }) => ({
 				name: binding,
 				type: getBindingTypeFriendlyName("analytics"),
 				value: undefined,
-				mode: getMode({ isSimulatedLocally: false }),
+				mode: getMode({
+					isSimulatedLocally:
+						(remote === true || remote === undefined) &&
+						!context.remoteBindingsDisabled
+							? false
+							: undefined,
+				}),
 			}))
 		);
 	}
