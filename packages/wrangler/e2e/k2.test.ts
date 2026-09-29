@@ -19,6 +19,7 @@ import {
 import { generateResourceName } from "./helpers/generate-resource-name";
 import type { K2Stream } from "../src/k2/client";
 import type { K2Producer } from "@cloudflare/config";
+import type { ExpectStatic } from "vitest";
 
 const streamId = "stream-v2-example";
 const workerSource = `const revision = "initial";
@@ -281,6 +282,22 @@ function workerAccessHeaders(workerName: string, url: string) {
 	};
 }
 
+/** Waits for workers.dev to serve a revision; a new Worker's route can return 404 briefly after deployment. */
+async function waitForRevision(
+	expect: ExpectStatic,
+	url: string,
+	headers: ReturnType<typeof workerAccessHeaders>,
+	revision: string
+) {
+	await vi.waitFor(
+		async () => {
+			const response = await fetch(url, { headers, redirect: "manual" });
+			expect(await response.text()).toBe(revision);
+		},
+		{ timeout: 30_000, interval: 500 }
+	);
+}
+
 async function readProducerJsonResponse(
 	response: Awaited<ReturnType<typeof fetch>>
 ): Promise<unknown> {
@@ -372,6 +389,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("K2 producer live E2E", () => {
 				const deployed = await helper.worker({ workerName });
 				url = deployed.deployedUrl;
 				accessHeaders = workerAccessHeaders(workerName, url);
+				await waitForRevision(expect, url, accessHeaders, "initial");
 				if (mode === "versions") {
 					await helper.seed({
 						"src/index.js": workerSource.replace(
@@ -389,19 +407,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("K2 producer live E2E", () => {
 						`wrangler versions deploy ${versionId}@100% --yes`
 					);
 					expect(deploy.status).toBe(0);
-					await vi.waitFor(
-						async () => {
-							expect(
-								await (
-									await fetch(url, {
-										headers: accessHeaders,
-										redirect: "manual",
-									})
-								).text()
-							).toBe("uploaded");
-						},
-						{ timeout: 15_000, interval: 500 }
-					);
+					await waitForRevision(expect, url, accessHeaders, "uploaded");
 				}
 			}
 			const produced = await fetch(new URL("/produce", url), {
