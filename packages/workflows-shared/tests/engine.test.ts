@@ -820,8 +820,11 @@ describe("Engine", () => {
 										throw new Error("immediate step failure");
 									}
 								);
-							} catch {
-								// Continue to the next step; the workflow itself should succeed.
+							} catch (e) {
+								const msg = e instanceof Error ? e.message : String(e);
+								if (!msg.includes("immediate step failure")) {
+									throw e;
+								}
 							}
 						}
 						return { completed: steps };
