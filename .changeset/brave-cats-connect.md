@@ -1,5 +1,4 @@
 ---
-"@cloudflare/remote-bindings": patch
 "miniflare": patch
 "wrangler": patch
 ---
