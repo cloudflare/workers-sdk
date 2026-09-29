@@ -1,0 +1,23 @@
+packages/vite-plugin-cloudflare/src/__tests__/agent-hint.spec.ts
+  s_1356a911e53448::t_6fe886aa8c32a9 64-71
+  s_1356a911e53448::t_3b54136f231796 63
+packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts
+  s_1356a911e53448::t_95de65f8dfe20c 76
+  s_1356a911e53448::t_0a2ccf337cf21c 81-82,85-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3723da13f213217ec979f7dfcaa329ee20009828",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

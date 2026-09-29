@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/preview.base-config.secret.test.ts
+  s_b46253444e44fa::t_039a29ef6a32f2 146-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "684ba79b3f22fe266f6afd1edcd34b0493a282b1",
+  "prompts": {},
+  "sessions": {
+    "s_b46253444e44fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00d862336ffeMDSO0BhLy22sbO",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

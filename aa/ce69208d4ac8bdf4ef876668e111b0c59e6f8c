@@ -1,0 +1,29 @@
+packages/workers-auth/src/access.ts
+  s_532a1002f66761::t_d61fc3e76fe998 49,158
+packages/workers-auth/src/device-flow.ts
+  s_532a1002f66761::t_378a819be377b8 214
+packages/workers-auth/src/token-exchange.ts
+  s_532a1002f66761::t_fcb33ef3cd4bd8 315
+packages/workers-auth/tests/access.test.ts
+  s_532a1002f66761::t_b39598c0ffbff1 100,103,117,144,149
+packages/wrangler/src/api/startDevWorker/RemoteRuntimeController.ts
+  s_532a1002f66761::t_fb8d7b0fde07d2 327-328
+packages/wrangler/src/user/access.ts
+  s_532a1002f66761::t_d0fd0661e26ea7 17,22-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aace69208d4ac8bdf4ef876668e111b0c59e6f8c",
+  "prompts": {},
+  "sessions": {
+    "s_532a1002f66761": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "a823b758-b142-4c88-bff7-44b3c17e918c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Christopher Little-Savage <clittle-savage@cloudflare.com>"
+    }
+  }
+}

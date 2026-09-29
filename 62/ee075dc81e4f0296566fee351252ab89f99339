@@ -1,0 +1,21 @@
+.changeset/quiet-durable-retries.md
+  s_bf1ef2329fbd5a::t_582aaca9cd6941 12-13
+packages/wrangler/src/__tests__/deploy/build.test.ts
+  s_bf1ef2329fbd5a::t_66dc2004d40699 103-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "62ee075dc81e4f0296566fee351252ab89f99339",
+  "prompts": {},
+  "sessions": {
+    "s_bf1ef2329fbd5a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f853bc28bffe5fdudebM6gGEQz",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}

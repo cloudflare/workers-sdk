@@ -1,0 +1,29 @@
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_b702d30224ef81::t_d2ea24420b515c 15-18,389-393,397,399,402-406,409-413,415-418
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_b702d30224ef81::t_b9e8ffc75ddb51 625,634,639,1059-1063,1078-1082,1105-1109,1124-1128,1145-1149
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_b702d30224ef81::t_8feafac6bcd813 637-642,644-645,692-700,778-784,829-837,890-896,2452-2456,2492-2496
+  s_b702d30224ef81::t_786336e687afef 643
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_b702d30224ef81::t_fe4275f7e1ff5f 1289-1295,1297-1298,1344-1353,1429-1436,1481-1490,1544-1551,4047-4050,4110-4113
+  s_b702d30224ef81::t_4e9c51543edc34 1296
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_b702d30224ef81::t_ec44a63e9fbbd6 969-972,991-994,1713-1718,1747-1752,1796-1801,1830-1835,1866-1871
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f434df171c7a56f4c4d5d654bb9a8bb5fb7e6ebf",
+  "prompts": {},
+  "sessions": {
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

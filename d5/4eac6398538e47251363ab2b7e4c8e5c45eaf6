@@ -1,0 +1,21 @@
+.changeset/quiet-otters-handshake.md
+  s_fc36f18452e668::t_62ad2087cb568e 1-9
+packages/miniflare/src/plugins/core/proxy/fetch-sync.ts
+  s_fc36f18452e668::t_c87e6bbf2e07aa 91-92,101-102,104,114-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d54eac6398538e47251363ab2b7e4c8e5c45eaf6",
+  "prompts": {},
+  "sessions": {
+    "s_fc36f18452e668": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "e3ea84fc-760f-4788-9110-99abc43167eb",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Christopher Little-Savage <clittle-savage@cloudflare.com>"
+    }
+  }
+}

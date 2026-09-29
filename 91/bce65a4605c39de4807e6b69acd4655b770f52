@@ -1,0 +1,37 @@
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_0e56c3301e5173::t_ac980ca1d32574 294-321,349,355,436-449,835,848-849,1019,1022-1028,1031,1034,1086,1111,1214,1217,1960-1961,1964,2038,2367-2371,2390,2394-2395,2397-2398,2401,2404,2408,2411,2603-2738,2740-2741,2745,2758-2795,3032,3097,3194,3512-3559,4372-4376,4536-4539
+.changeset/access-local-dev.md
+  s_684f2d2be94584::t_6f9c10e75c9276 9-11
+  s_684f2d2be94584::t_c9662951b4d364 5-7
+  s_684f2d2be94584::t_5fc3dd751617e9 8
+  s_684f2d2be94584::t_655e0afd87105f 2-4
+  s_684f2d2be94584::t_92586bbf0be8fd 12-14
+pnpm-lock.yaml
+  s_0e56c3301e5173::t_3643f1747183e5 88-89,2342,2738,2812,4535,5979-5980,5997-5998,6015-6016,6033-6034,6051-6052,16877-16878,18922,18931,18940,18949,18958,30244,30246-30250
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_684f2d2be94584::t_073702593ec42a 142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "91bce65a4605c39de4807e6b69acd4655b770f52",
+  "prompts": {},
+  "sessions": {
+    "s_0e56c3301e5173": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09dbefc92ffel4Y7irj65GOs7y",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    },
+    "s_684f2d2be94584": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_684f2d2be94584",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    }
+  }
+}

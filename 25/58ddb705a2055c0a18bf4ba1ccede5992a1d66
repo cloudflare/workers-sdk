@@ -1,0 +1,48 @@
+.changeset/cyan-planets-ring.md
+  s_768bec3fe32406::t_c011b7138cbe6b 9,11
+packages/wrangler/src/__tests__/preview.test.ts
+  s_768bec3fe32406::t_3eb1547667e34b 7
+  s_768bec3fe32406::t_dbf21222ee5730 89-102,2174,2179,2191-2193,2199-2201,2208,2229,2251-2252,2254,2256,2264-2265,2268,2273-2274,2277,2282,2292,2294-2295,2298-2299,2305,2326,2339-2340,2342,2346,2348-2361,2456-2638,4035,4045-4048,4055-4058,4106-4113,4143-4234
+packages/deploy-helpers/src/preview/preview.ts
+  s_768bec3fe32406::t_9197b2f573e064 2,6,31,35,43,91-106,109-111,126-260,460-462,464,470-472,631-638,660-664,666-668
+  s_768bec3fe32406::t_dce338aca3771d 734-735,737,739,751-764
+packages/deploy-helpers/src/preview/shared.ts
+  s_768bec3fe32406::t_80bd108b1614b4 363-376
+packages/wrangler/src/preview/preview.ts
+  s_768bec3fe32406::t_940cc0455eaaa8 4,104
+packages/wrangler/src/preview/containers.ts
+  s_768bec3fe32406::t_87335fb2bfe97a 3,16-19,22-26,29,33-35,37,40-46,52-53,59
+  s_768bec3fe32406::t_8dccccbbdb0560 63
+  s_768bec3fe32406::t_4e8adc9446aea9 99-103,120-131,144-157
+  s_768bec3fe32406::t_abaef12b2f48b6 72-76,78,81-84
+packages/wrangler/src/__tests__/preview/containers.test.ts
+  s_768bec3fe32406::t_81aff2aaefa7d2 1-166
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_768bec3fe32406::t_75f77a6bd92935 11304
+  s_768bec3fe32406::t_c66cb3b0a33877 11299
+  s_768bec3fe32406::t_3ff7129eb4ffe0 11290-11294
+  s_768bec3fe32406::t_8f4ef3e0060282 11257-11285,11287-11289,11295,11297-11298,11300-11303,11305,11309-11311
+  s_768bec3fe32406::t_7a25f6a47d00bb 11312
+  s_768bec3fe32406::t_a30d4404095ae6 11286
+  s_768bec3fe32406::t_e75596820dfa31 11306-11308
+  s_768bec3fe32406::t_8321ee955ba7f7 11296
+packages/workers-utils/src/config/validation.ts
+  s_768bec3fe32406::t_cf081b501a6e9e 3371-3379,3385-3387,3408-3409,3411,3447,5618,5952
+  s_768bec3fe32406::t_0fb4ee6927af0f 2177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2558ddb705a2055c0a18bf4ba1ccede5992a1d66",
+  "prompts": {},
+  "sessions": {
+    "s_768bec3fe32406": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_01364a252ffeVNd7EcdmXU42t1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Will Taylor <williamtaylor@cloudflare.com>"
+    }
+  }
+}

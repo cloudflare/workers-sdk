@@ -1,0 +1,69 @@
+.changeset/fuzzy-pandas-launch.md
+  s_3725c7a238f252::t_b40950544feef9 1-13
+packages/containers-shared/src/client/index.ts
+  s_3725c7a238f252::t_e94e87d4b3b967 49-50,56,188,222
+packages/containers-shared/src/client/models/ContainerImagePreparation.ts
+  s_3725c7a238f252::t_3f97ddab97f503 1-12
+packages/containers-shared/src/client/models/ContainerImagePreparationStatus.ts
+  s_3725c7a238f252::t_d3657d8d281e12 1-9
+packages/containers-shared/src/client/models/PrepareContainerImageRequestBody.ts
+  s_3725c7a238f252::t_d41e9c29cc7315 1-7
+packages/containers-shared/src/client/models/SchedulingPolicy.ts
+  s_3725c7a238f252::t_1ff424ef9abb79 9
+packages/containers-shared/src/client/services/ApplicationsService.ts
+  s_3725c7a238f252::t_431cb2012a57f9 17,44-46
+packages/containers-shared/src/client/services/ContainerImagePreparationsService.ts
+  s_3725c7a238f252::t_17d111261593f3 1-30
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_3725c7a238f252::t_45090029111777 11,29,134-145,310-331,361,804-814
+packages/deploy-helpers/src/deploy/helpers/container-metadata.ts
+  s_3725c7a238f252::t_f5a08fffa6c8ae 1-30
+packages/deploy-helpers/src/deploy/helpers/durable.ts
+  s_3725c7a238f252::t_dc089cc808d8b3 5,113-124,127
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_3725c7a238f252::t_169bc2d0f36446 20,197
+packages/workers-utils/src/config/containers.ts
+  s_3725c7a238f252::t_90abb70025b0d3 2-43
+packages/workers-utils/src/config/environment.ts
+  s_3725c7a238f252::t_e735367265deb4 350-376,423-425,433-435,440,455-457,462
+packages/workers-utils/src/config/index.ts
+  s_3725c7a238f252::t_99ce22328fe967 45,47,50
+packages/workers-utils/src/config/validation.ts
+  s_3725c7a238f252::t_41e513c85cf2da 10-14,3609,3634,4884-4898,6462-6472,6474-6547,6549,7299,7312-7316,7359-7365
+packages/workers-utils/src/index.ts
+  s_3725c7a238f252::t_efb60a3d104243 18,20,23
+packages/workers-utils/tests/config/containers.test.ts
+  s_3725c7a238f252::t_43a21d3116c378 4,55-109
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_3725c7a238f252::t_5361c24627b21f 2656,4622-4847
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_4f9c40db58b85b 6,39,57,116-553,3243-3301,3642-3653
+packages/wrangler/src/__tests__/containers/schema.test.ts
+  s_3725c7a238f252::t_eabde90b471e38 13-20,24-38,91-124
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_3725c7a238f252::t_ef075dc7781e7d 1899-1944
+packages/wrangler/src/containers/config.ts
+  s_3725c7a238f252::t_41368f9afe95e6 65-68
+packages/wrangler/src/containers/deploy.ts
+  s_3725c7a238f252::t_2374bae199162c 75,78,80,85-86,100,105,107,114-115,117-124,126-128,130-133,135-153,155-158,161-162,164-173
+packages/wrangler/src/deploy/index.ts
+  s_3725c7a238f252::t_68249a637ff6c8 10-13,210-211
+packages/wrangler/src/type-generation/index.ts
+  s_3725c7a238f252::t_95b109ad0cb22f 10,1969-1973,1997-2005,2012,2014,2016,3043-3046,3049,3072-3080,3089,3096
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "53f2e0a439183386467378fa6c11f4910e9ce54e",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

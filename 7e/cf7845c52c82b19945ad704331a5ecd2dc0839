@@ -1,0 +1,23 @@
+packages/wrangler/src/__tests__/dev/start-dev.test.ts
+  s_1356a911e53448::t_1e988d939c6c71 113-121
+.changeset/local-explorer-query-hint-example.md
+  s_1356a911e53448::t_f547bd46fd92c0 1-7
+packages/wrangler/src/dev/start-dev.ts
+  s_1356a911e53448::t_78803c43f7ee6d 380-381,384-387
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7ecf7845c52c82b19945ad704331a5ecd2dc0839",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

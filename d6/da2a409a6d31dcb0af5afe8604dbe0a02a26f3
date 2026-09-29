@@ -1,0 +1,19 @@
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_18c7e5cb6a2433::t_f2666affaf5428 1661,1665,1667,1687-1704,1706,1711,1714,1717-1718
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d6da2a409a6d31dcb0af5afe8604dbe0a02a26f3",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+.changeset/calm-mails-report.md
+  s_cfcda634814b92::t_f021da6155f580 7
+.changeset/email-local-explorer-backend.md
+  s_cfcda634814b92::t_09f8737e929b06 5
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_cfcda634814b92::t_e8c76030c2d9aa 709-719,2141,2143-2144,2146,2148-2149,2153,2155-2194,2197,2214-2224,2226-2234,2244-2247,2273-2283,2285-2293,2305-2308
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_cfcda634814b92::t_03d02a924c47d7 26-27,30-33,36-37,40-41,44-45,48-49,52-53
+packages/miniflare/src/workers/email/result.ts
+  s_cfcda634814b92::t_0315510a440417 1-58
+packages/miniflare/src/workers/email/storage.ts
+  s_cfcda634814b92::t_980db3bff9aae2 8,10
+packages/miniflare/src/workers/index.ts
+  s_cfcda634814b92::t_6f3af5f1e364d5 3
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_cfcda634814b92::t_ba539fd2c94582 60-62
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_cfcda634814b92::t_58554c33c74bc5 785-788,790,792,794,798,800-824,845-855,875-885,1727-1734
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_cfcda634814b92::t_3386ed778ed72c 532-536,538-550,562-566,615-619,1081-1082
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_cfcda634814b92::t_06a43f2f187d48 1361-1369,3673,3675,3677,3679-3680,3684,3686-3728,3731,3763-3778,3781-3787,3798-3801,3842-3863,3866,3879-3882
+packages/miniflare/test/index.spec.ts
+  s_cfcda634814b92::t_deafb3ccfd912a 2074,2098,2119,2142
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_cfcda634814b92::t_4a0689503d1dfe 20-21,28-31,132,135,159-184,186-207,541-542,653-656,658-659,662,671-672,674,677,679
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e08e6742ca67f2a9e7a6191e1e44cf7c65b5e8c6",
+  "prompts": {},
+  "sessions": {
+    "s_cfcda634814b92": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05662ba38ffeFAbzJynmgX0Ka6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_ae91e42aa48337::t_5281b7e801f253 33-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ad0d609e5a67d74ebb04b40d9994c3fd2f6c643d",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

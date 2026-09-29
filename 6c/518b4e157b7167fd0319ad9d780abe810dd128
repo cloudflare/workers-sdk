@@ -1,0 +1,39 @@
+packages/wrangler/src/__tests__/preview.test.ts
+  s_18c7e5cb6a2433::t_2840b0ddb21023 1682-1698,1746-1748,1768,1774,1786-1791
+packages/deploy-helpers/src/deploy/helpers/assets.ts
+  s_f474ca80723658::t_dd9436fd2de86a 561
+packages/deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts
+  s_2f8343d878c4fa::t_3d79ee1b8441fe 89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6c518b4e157b7167fd0319ad9d780abe810dd128",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_2f8343d878c4fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff532a9cffeujhyQPJ9FOV6BY",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_f474ca80723658": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff170d0effeE7WgGuFM1on5jT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

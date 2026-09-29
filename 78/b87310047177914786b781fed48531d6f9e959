@@ -1,0 +1,21 @@
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_b8c315d6ee9c77::t_d8b121a3518e74 7-8,85,89-234
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_b8c315d6ee9c77::t_c968cdae59e0a3 96,122,151,180,194-196,204-207,577
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "78b87310047177914786b781fed48531d6f9e959",
+  "prompts": {},
+  "sessions": {
+    "s_b8c315d6ee9c77": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03418-3e7c-7ba3-92f9-f5482549e92a",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

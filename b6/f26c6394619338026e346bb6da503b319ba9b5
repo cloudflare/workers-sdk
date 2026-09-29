@@ -1,0 +1,85 @@
+packages/miniflare/openapi-ts.config.ts
+  s_b702d30224ef81::t_5c7fdcd78c3070 7
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_b702d30224ef81::t_8feafac6bcd813 631-936,1972-1978,2183-2539
+packages/miniflare/src/index.ts
+  s_b702d30224ef81::t_e5a86bb545f066 81-86,120,180-189,1289-1382,1739-1745,2140-2141,2424,3497
+packages/miniflare/src/plugins/core/constants.ts
+  s_b702d30224ef81::t_5f61810922b4a2 19-24
+packages/miniflare/src/plugins/core/explorer.ts
+  s_b702d30224ef81::t_66c06bd749ccfa 19,100-115,357,410-416
+packages/miniflare/src/plugins/core/index.ts
+  s_b702d30224ef81::t_45971c5ffd74d3 32,53,952,968,998-1001,1037-1042,1190
+packages/miniflare/src/plugins/core/temp-file.ts
+  s_b702d30224ef81::t_ebefb4b4034137 1-43
+packages/miniflare/src/plugins/core/types.ts
+  s_b702d30224ef81::t_af5dd25c9c885b 54-58
+packages/miniflare/src/plugins/email/artifacts.ts
+  s_b702d30224ef81::t_7b2aa877309205 1-98
+packages/miniflare/src/plugins/email/index.ts
+  s_b702d30224ef81::t_a0b9fa7e12baac 1,6-8,14,17,50-56,61-74,109-218,234-237,239,241,257,275-284,286-294,296,305,316-318
+packages/miniflare/src/plugins/email/store.ts
+  s_b702d30224ef81::t_3f5d4cb382f758 1-55
+packages/miniflare/src/plugins/index.ts
+  s_b702d30224ef81::t_a2746491ba12ca 166
+packages/miniflare/src/plugins/shared/index.ts
+  s_b702d30224ef81::t_52aa760f705342 96-97
+packages/miniflare/src/workers/core/constants.ts
+  s_b702d30224ef81::t_eef166324e85d9 68,99-106
+packages/miniflare/src/workers/core/email.ts
+  s_b702d30224ef81::t_a5e02b72ef6e8d 5-7,11-20,30,35,39-71,76,80-82,119,154,165,174-177,180,182-286,290-291,293-297,299-308,310-316,318-337,339-345,347-359,361-400,402,404-419,422-423,425-427,429-449,451-452,455-456
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_b702d30224ef81::t_9e3e8d9cfe32e3 20,144-148,150,158,160,520,552
+packages/miniflare/src/workers/email/constants.ts
+  s_b702d30224ef81::t_a449b14b9609e2 2
+packages/miniflare/src/workers/email/email-store.ts
+  s_b702d30224ef81::t_cef22aa3044e72 1-349
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_b702d30224ef81::t_933c12a44957a9 1-66
+packages/miniflare/src/workers/email/encoding.ts
+  s_b702d30224ef81::t_273eb4c13874dc 1-11
+packages/miniflare/src/workers/email/message-id.ts
+  s_b702d30224ef81::t_fd30068365db22 1-47
+packages/miniflare/src/workers/email/result.ts
+  s_b702d30224ef81::t_ca6d4431a52ebf 1-60
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_b702d30224ef81::t_7cdf63c46d605b 2-3,5-6,8-19,23-25,27-28,30-44,70-79,110-113,118,120-125,129,131-166,169-177,183-184,200-206,208-213,216-220,222,300-305,337-372,376-389,392-393,401-430,434-471,474-482,484,488-501,503-509,512-513
+packages/miniflare/src/workers/email/storage.ts
+  s_b702d30224ef81::t_8738326de90c06 1-102
+packages/miniflare/src/workers/email/validate.ts
+  s_b702d30224ef81::t_189a237c593582 3,67,73-75,132-134,139,142
+packages/miniflare/src/workers/index.ts
+  s_b702d30224ef81::t_219dfb834d87cd 3-4
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_b702d30224ef81::t_d2ea24420b515c 15-19,32-38,74,94-96,385-420
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_b702d30224ef81::t_3b0a5b4390ed04 49-82
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_b702d30224ef81::t_ec44a63e9fbbd6 610-613,785-1021,1710-1896
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_b702d30224ef81::t_b9e8ffc75ddb51 443,532-655,1056-1160
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_b702d30224ef81::t_fe4275f7e1ff5f 1285-1591,3475-3481,3717-4182
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_b702d30224ef81::t_807e8a2d2a129f 1-623
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_b702d30224ef81::t_9516fd1dd644ec 33-37
+packages/wrangler/src/api/test-harness.ts
+  s_b702d30224ef81::t_cb33ff29405d98 57,108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b6f26c6394619338026e346bb6da503b319ba9b5",
+  "prompts": {},
+  "sessions": {
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

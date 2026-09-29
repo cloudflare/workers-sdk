@@ -1,0 +1,25 @@
+packages/miniflare/src/workers/core/email.ts
+  s_18c7e5cb6a2433::t_be3a5eb5e0c8bc 75-76,221-226,229,234-240,416-432,437
+packages/miniflare/src/workers/email/capture.ts
+  s_18c7e5cb6a2433::t_9a7eec945a77ce 140-158,185-208
+packages/miniflare/src/workers/email/email-store.ts
+  s_18c7e5cb6a2433::t_be94546fecbc2c 43-77,85,96,110,143-145,169-173,180,280,477
+packages/miniflare/src/workers/email/storage.ts
+  s_18c7e5cb6a2433::t_f450a7dd728ce1 66-71,76-79,102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d5ad92fa00c65c332c3060503670c7933c9d4da6",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

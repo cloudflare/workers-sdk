@@ -1,0 +1,45 @@
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_1356a911e53448::t_e8f4a00bddd938 421-422
+  s_1356a911e53448::t_6decd0d0a29b45 398-404
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_1356a911e53448::t_928ed557774364 581
+  s_1356a911e53448::t_e979ca91a4d866 42
+  s_1356a911e53448::t_412036d4abb0e0 691
+.changeset/hide-internal-dev-noise.md
+  s_1356a911e53448::t_77f45a96a75c9a 1-11
+packages/miniflare/test/index.spec.ts
+  s_1356a911e53448::t_28572b72e44757 20
+  s_1356a911e53448::t_f12dc28833125c 1615-1650
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_1356a911e53448::t_30136086413923 8,10
+  s_1356a911e53448::t_b6822f07644b9d 172-174
+  s_1356a911e53448::t_5d994b8e9ca09c 156-171,175-211
+packages/local-explorer-ui/src/utils/observability.ts
+  s_1356a911e53448::t_3f0cfb98826591 365-367,372
+  s_1356a911e53448::t_b1134e1f3cd6a5 851-853
+  s_1356a911e53448::t_5500b9d1548927 164-171
+  s_1356a911e53448::t_b22e65e9e98692 512
+  s_1356a911e53448::t_b974bd0892897b 756-757
+  s_1356a911e53448::t_35f2c30c526125 368-371,373-375
+  s_1356a911e53448::t_0982fb623414f7 676-680,682-703
+  s_1356a911e53448::t_1b429b4447b5fe 758-759,763-764,766-771
+  s_1356a911e53448::t_2d263d9fdad9f8 765
+  s_1356a911e53448::t_b11fc9d62b6ae9 675,681
+  s_1356a911e53448::t_5cfdcb7cd42558 163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ea75638530d4891454cd5602bb11c7880f988844",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

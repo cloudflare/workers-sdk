@@ -1,0 +1,23 @@
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_e771bd5e618774::t_e4162d04698b92 27-31
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_e771bd5e618774::t_403297a9787bab 31,44,47-52,102-110
+packages/local-explorer-ui/src/routes/email/sending.tsx
+  s_e771bd5e618774::t_56b40a31f39cd0 169,192,195-198,205-217,261-269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7d5de8fb2e8ab3eff268820f6ff21cdda61497f8",
+  "prompts": {},
+  "sessions": {
+    "s_e771bd5e618774": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_048515778ffe4EBFGtwSCLtvFn",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+packages/workers-utils/src/config/validation.ts
+  s_168d6f73e9e63d::t_583476d89980f8 1214-1215,1217-1234,1247,1263,1276,1281,1290,1301,1310,1319,1340,1348,5992-5998
+packages/wrangler/src/__tests__/preview.settings.test.ts
+  s_168d6f73e9e63d::t_b5498b63a795ab 791-827
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e48acdd71addaf6a0c49bedf3803fabd3ab221b2",
+  "prompts": {},
+  "sessions": {
+    "s_168d6f73e9e63d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f98ad0f66ffenvYuXJpfs1NEGt",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

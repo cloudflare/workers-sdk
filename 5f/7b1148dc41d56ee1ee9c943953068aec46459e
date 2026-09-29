@@ -1,0 +1,27 @@
+packages/local-explorer-ui/src/routeTree.gen.ts
+  s_b702d30224ef81::t_e5b65804e3204a 18-19,24,27,61-70,92-96,108-112,128-129,136,139,147,152,155,165-166,173,176,187-188,195,198,206,211,214,223-224,231,234,244-245,297-310,339-345,360-366,398-411,445-446
+packages/local-explorer-ui/src/routes/email/routing.tsx
+  s_b702d30224ef81::t_882f35db57180b 1-10
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_b702d30224ef81::t_b4baa07db441ad 1-89
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_b702d30224ef81::t_5892c153ada251 1-131
+packages/local-explorer-ui/src/routes/email/sending.tsx
+  s_b702d30224ef81::t_28bb910b08f757 1-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5f7b1148dc41d56ee1ee9c943953068aec46459e",
+  "prompts": {},
+  "sessions": {
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

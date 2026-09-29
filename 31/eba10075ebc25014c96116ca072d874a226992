@@ -1,0 +1,135 @@
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_afb1359b250186::t_81c59d4f17caf6 3479-3578,3582
+  s_afb1359b250186::t_8b774fe90acf23 3579-3581
+  s_afb1359b250186::t_75067aa132f524 3583
+packages/workers-shared/utils/tests/base-path.test.ts
+  s_d9951fe8e48e61::t_ee3c01806e501c 124-126,129,141,144
+  s_d9951fe8e48e61::t_831c963d30dc36 1-119,122-123,131,136,146-147
+  s_d9951fe8e48e61::t_222132695e2f9b 120-121,127,130,142,145
+  s_d9951fe8e48e61::t_a0681be3d97f93 128
+  s_d9951fe8e48e61::t_2bc349bff59a67 132-135
+  s_d9951fe8e48e61::t_56ae6598c20796 137-140
+  s_d9951fe8e48e61::t_daf014ab72a2ce 143
+  s_d9951fe8e48e61::t_8e085a43f93933 148
+packages/miniflare/test/config/v4-convert.spec.ts
+  s_18c7e5cb6a2433::t_d5a38f219007ff 479,487
+packages/workers-shared/asset-worker/tests/base-path.test.ts
+  s_2f8343d878c4fa::t_df57fc484421f0 1-58
+packages/config/src/__tests__/convert.test.ts
+  s_8e48d0d480d9ad::t_9a9a6c665535aa 1104,1111
+packages/miniflare/README.md
+  s_18c7e5cb6a2433::t_e9df9ca64eef23 463-464,463
+packages/miniflare/test/plugins/assets/index.spec.ts
+  s_18c7e5cb6a2433::t_1c9ff49bcda6db 134
+  s_18c7e5cb6a2433::t_60f6d7341f8fb0 18-21,30,88,96-133,135-137
+  s_18c7e5cb6a2433::t_8049d9f193b800 138
+packages/wrangler/src/__tests__/preview.test.ts
+  s_18c7e5cb6a2433::t_2840b0ddb21023 2278-2294,2342-2344,2364,2370,2382-2387
+packages/wrangler/src/__tests__/assets.test.ts
+  s_e4a84890485ace::t_bb59565b4ee488 18,120-137,141,145-155,157-158,164-167,169-170,172-173
+  s_e4a84890485ace::t_7dcbc9be6a105b 138-140
+  s_e4a84890485ace::t_6f43c67bbe9d3c 142-144
+  s_e4a84890485ace::t_748b4071c97c70 156
+  s_e4a84890485ace::t_79b21b14b9a91b 159-163,178
+  s_e4a84890485ace::t_aedf3835cf62e8 168
+  s_e4a84890485ace::t_ed9aca069331a0 171
+  s_e4a84890485ace::t_09896634871f9b 174-176
+  s_e4a84890485ace::t_7d9c1fd2de1b8c 177
+  s_e4a84890485ace::t_91c61f511d08f0 179
+packages/workers-shared/asset-worker/tests/base-path-handler.test.ts
+  s_abf9c14d79df75::t_0d423f9eaae291 1-708,1-45,46-592,594-701
+  s_abf9c14d79df75::t_ceba58648508e0 702-704,709-711
+  s_18c7e5cb6a2433::t_c0231198593458 705-735,712-742,739,744-745,746,747,749,751-752,754,756
+  s_18c7e5cb6a2433::t_ab13080d291c81 736-738,743-745
+  s_18c7e5cb6a2433::t_8a09b9eeb959c8 740-743,747-750
+  s_18c7e5cb6a2433::t_8f6f9253598456 746,753
+  s_18c7e5cb6a2433::t_66509e871cfc85 748,755
+  s_18c7e5cb6a2433::t_e3f6f6fa43f63f 750,757
+  s_18c7e5cb6a2433::t_8c0fe70e909415 751-753
+packages/miniflare/src/config/v4-convert.ts
+  s_18c7e5cb6a2433::t_c42052483eba0d 848
+packages/wrangler/src/experimental-config/load.ts
+  s_2f8343d878c4fa::t_d531a2c6e90ce8 173-175
+packages/miniflare/src/plugins/assets/index.ts
+  s_18c7e5cb6a2433::t_6364d73c7de814 223
+packages/workers-shared/utils/base-path.ts
+  s_d9951fe8e48e61::t_845bbd5dadf61c 1-90
+packages/deploy-helpers/src/deploy/helpers/assets.ts
+  s_f474ca80723658::t_dd9436fd2de86a 560
+packages/deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts
+  s_2f8343d878c4fa::t_3d79ee1b8441fe 89
+packages/workers-utils/src/types.ts
+  s_2f8343d878c4fa::t_3467b1b03443e6 216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "31eba10075ebc25014c96116ca072d874a226992",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_2f8343d878c4fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff532a9cffeujhyQPJ9FOV6BY",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_8e48d0d480d9ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01057-f613-77c3-9ea6-f67040cc69f7",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_abf9c14d79df75": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0103b-285c-72d3-9f33-c80696917469",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_afb1359b250186": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0103b-3ade-7090-ac22-3dff035f6828",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_d9951fe8e48e61": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_feffa7d2affebqHe0S1Q1Wo7uE",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_e4a84890485ace": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01057-eea4-7d13-8231-6a796198cef7",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_f474ca80723658": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff170d0effeE7WgGuFM1on5jT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

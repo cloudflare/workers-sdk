@@ -1,0 +1,19 @@
+packages/wrangler/src/d1/splitter.ts
+  s_be0334cb7b308b::t_adfbc11c2990d7 3-4,129,131-133,137,146-153,156-163,165,167-175,177-185,187-195,197-205,207-215,217-225,227-235,237-245,252-257,262,270,274,277,281,284,288,291,295,298,306,309,311-312,315,329,331,334,336,338,340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9c8497f6f44e42fd941a6165ed898b8ca18c047d",
+  "prompts": {},
+  "sessions": {
+    "s_be0334cb7b308b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f50374ae3ffe2D128CaiQM9C29",
+        "model": "unknown"
+      },
+      "human_author": "David Laban <dlaban@cloudflare.com>"
+    }
+  }
+}

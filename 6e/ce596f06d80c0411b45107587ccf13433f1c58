@@ -1,0 +1,57 @@
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_c1da0c64966116::t_2dbd8996867b9e 611,1674-1726,1735-1832
+  s_27cf40cb8ff5f3::t_3dcda50ae05a36 871-874,918-938,941-944,961,979
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_c1da0c64966116::t_fb8c71263ebfca 1043-1071,1074-1127
+  s_27cf40cb8ff5f3::t_e8495064e1a454 573-582,585-588,595-605,611-612,623,639
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_c1da0c64966116::t_acea9e9fd1020a 1285-1360,1370-1546,3436
+  s_27cf40cb8ff5f3::t_19fe7b36573bca 3835-3841,3878,3932-3958,3963,3965,4025,4085
+packages/miniflare/src/plugins/core/index.ts
+  s_c1da0c64966116::t_ed7a2f029811c3 35,56,1208-1213,1369
+packages/miniflare/src/plugins/email/store.ts
+  s_c1da0c64966116::t_c91cd5a8b2aef3 1-55
+packages/miniflare/src/workers/core/email.ts
+  s_c1da0c64966116::t_35b3739a8103f8 9,24,187-190,192
+  s_27cf40cb8ff5f3::t_b872d155b74212 162-171
+packages/miniflare/src/workers/email/email-store.ts
+  s_c1da0c64966116::t_7bfd18cb1ba1f7 1-18,23-24,26-94,97,101,104-105,109,113,116-117,120-124
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_c1da0c64966116::t_b7211dba2e88b0 1-25,28-29,34-35,38-39,42-43,46-47,50-51,54-55
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_27cf40cb8ff5f3::t_896b90fe9c056a 682,2265-2272,2304,2333-2363,2367,2369-2370,2397,2424
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_27cf40cb8ff5f3::t_60aff5679a57f5 15,330
+packages/miniflare/src/workers/email/storage.ts
+  s_27cf40cb8ff5f3::t_007be7ddce3fe4 24-25,28,48
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_27cf40cb8ff5f3::t_a042ebb2704434 49
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_27cf40cb8ff5f3::t_29405c593ed8ad 65-67,70-73,84-96,99-118,120,122
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_27cf40cb8ff5f3::t_fb56dc53542b9d 5,266-467,469-477,479-481,483-528,529-530
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6ece596f06d80c0411b45107587ccf13433f1c58",
+  "prompts": {},
+  "sessions": {
+    "s_27cf40cb8ff5f3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05b7a13f6ffewE11jNIdfs2beD",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_c1da0c64966116": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05ccc4986ffenGK49lt16xdV1M",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

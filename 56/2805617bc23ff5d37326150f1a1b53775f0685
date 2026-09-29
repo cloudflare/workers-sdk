@@ -1,0 +1,21 @@
+packages/wrangler/src/__tests__/pages/functions-build.test.ts
+  s_e806f17992ef33::t_16265d81add9a7 809
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_e806f17992ef33::t_404c38cc41962d 2022
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "562805617bc23ff5d37326150f1a1b53775f0685",
+  "prompts": {},
+  "sessions": {
+    "s_e806f17992ef33": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b4d8ae7ffeIkvnqhfc3vY7CY",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

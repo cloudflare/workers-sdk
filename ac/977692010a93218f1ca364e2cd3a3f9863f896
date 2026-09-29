@@ -1,0 +1,19 @@
+.changeset/email-local-explorer-ui.md
+  s_fac814dd42479b::t_8aaf0433a09f16 2,6-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ac977692010a93218f1ca364e2cd3a3f9863f896",
+  "prompts": {},
+  "sessions": {
+    "s_fac814dd42479b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03438-1082-7f11-a63e-51aaf4de84c0",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/workers-utils/AGENTS.md
+  s_1356a911e53448::t_04b2d882dc0d66 29-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7147eedba023651443a164e43a06f557ec7b9dc1",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

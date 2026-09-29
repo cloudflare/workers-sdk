@@ -1,0 +1,19 @@
+.github/workflows/prerelease.yml
+  s_11a2b580ce093d::t_74764b908d4fdf 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ae7ef47ba1a53f51d5895edd9ba6f681ac5fd559",
+  "prompts": {},
+  "sessions": {
+    "s_11a2b580ce093d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0496e-9bd6-7b80-8a1a-ee068d59277c",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_81a8094cd6d768::t_cf7767962e651a 2-4,8-9,15,46,51,56-58,60-61,65-87,90,97-99,110-111,113-140,146,150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8d7619c2ae81c108f2558f9fd20726d035907821",
+  "prompts": {},
+  "sessions": {
+    "s_81a8094cd6d768": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03457-c410-75f3-a783-6b489e3a9534",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

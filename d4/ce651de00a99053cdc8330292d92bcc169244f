@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/preview.test.ts
+  s_768bec3fe32406::t_dbf21222ee5730 13,89-102,3805,3815-3818,3825-3828,3876-3882,3912-4003
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d4ce651de00a99053cdc8330292d92bcc169244f",
+  "prompts": {},
+  "sessions": {
+    "s_768bec3fe32406": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_01364a252ffeVNd7EcdmXU42t1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Will Taylor <williamtaylor@cloudflare.com>"
+    }
+  }
+}

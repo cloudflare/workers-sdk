@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_ae91e42aa48337::t_207aa28e1ea080 390,396-397,403,410,416
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0cb90c032306446c01f765e16a795ee34247fb82",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

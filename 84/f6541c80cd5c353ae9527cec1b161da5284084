@@ -1,0 +1,19 @@
+packages/wrangler/e2e/dev.test.ts
+  s_ae91e42aa48337::t_7b90f66e8b44c0 2710-2712,2773
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "84f6541c80cd5c353ae9527cec1b161da5284084",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

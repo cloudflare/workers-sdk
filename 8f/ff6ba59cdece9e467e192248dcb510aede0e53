@@ -1,0 +1,23 @@
+packages/deploy-helpers/src/preview/preview.ts
+  s_19c65b4b5b916c::t_907978342c9221 296,573,576-584,608-643,647-649,661,664-668,677-683,877-880,888,891-892,895-904
+packages/wrangler/src/__tests__/preview.secret.test.ts
+  s_19c65b4b5b916c::t_e118f8ce1d5ca4 24
+packages/wrangler/src/__tests__/preview.test.ts
+  s_19c65b4b5b916c::t_8c5f8afdf9b1d8 1141-1150,1214-1223,1225-1228,1230,1233,1236-1240,1969,1973-1991
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8fff6ba59cdece9e467e192248dcb510aede0e53",
+  "prompts": {},
+  "sessions": {
+    "s_19c65b4b5b916c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fac8f45feffemtkcBcL1OrAaTp",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}

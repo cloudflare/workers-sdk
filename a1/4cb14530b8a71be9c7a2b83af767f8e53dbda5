@@ -1,0 +1,23 @@
+packages/wrangler/src/__tests__/containers/info.test.ts
+  s_87a2ac7afbb8ab::t_c2550079ddceb6 12-13,33,36,71,81,117-165,173,187-189,194,201,211
+packages/wrangler/src/containers/containers.ts
+  s_87a2ac7afbb8ab::t_a4a90a6c784960 15,23-39,42,53,55,60,71,80,86,91,95,100,111,114,116,121,125,137,145,154,167,170-171,190,196
+packages/wrangler/src/containers/instances.ts
+  s_87a2ac7afbb8ab::t_33d74a207c8acb 3-7,14-18,22,77-88,91-94,104-111,120-121,123-143,155-205,209-231,233,235-237,239-254,261,267-274,276-280,282-289,293,297-321,324-326,328-334,336-375,379,387-392,395-402,405-411,431-449,453-460,464-470,477,485-491,496-505,526-527,529,540-551,558,568-572,576-583,586,608,613,632,646,652,655-663
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a14cb14530b8a71be9c7a2b83af767f8e53dbda5",
+  "prompts": {},
+  "sessions": {
+    "s_87a2ac7afbb8ab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a091c0-1fb5-7952-b718-90593ae62891",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

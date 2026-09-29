@@ -1,0 +1,21 @@
+packages/miniflare/test/plugins/core/temp-file.spec.ts
+  s_cfcda634814b92::t_4a2c4d186b9298 36-39
+packages/miniflare/test/plugins/email/index.spec.ts
+  s_cfcda634814b92::t_909395ebe6d66e 993-995,997,1016,1054-1055
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "88d40a63f7694b299d0004da879a7d187a43a122",
+  "prompts": {},
+  "sessions": {
+    "s_cfcda634814b92": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05662ba38ffeFAbzJynmgX0Ka6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

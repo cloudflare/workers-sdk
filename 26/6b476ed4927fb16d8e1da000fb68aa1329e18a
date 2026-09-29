@@ -1,0 +1,20 @@
+packages/wrangler/src/__tests__/preview.base-config.secret.test.ts
+  s_674e2b0e30d3c7::t_1ce05511484e60 185-198,209-213,230-259,358-381,386-396,629-642
+  s_674e2b0e30d3c7::t_5fb102136cfa63 5,7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "266b476ed4927fb16d8e1da000fb68aa1329e18a",
+  "prompts": {},
+  "sessions": {
+    "s_674e2b0e30d3c7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_003815469ffeLuA8ll62X3oiAX",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+packages/workers-utils/src/config/patch-config.ts
+  s_3fe88a80ac76fb::t_82398ed4d796ab 76-78,90-94
+packages/wrangler/src/preview/preview.ts
+  s_3fe88a80ac76fb::t_78d0841c99d45b 1-18,25,29-318,374,376-380,385-397,402,407,413
+packages/wrangler/src/__tests__/preview.test.ts
+  s_3fe88a80ac76fb::t_b4053ce8aec844 2,19,23,239,247,814-922,973-1505,1801,2353
+packages/workers-utils/tests/config/patch-config.test.ts
+  s_3fe88a80ac76fb::t_a2af0638cfea6d 483-499
+packages/workers-utils/src/config/validation.ts
+  s_3fe88a80ac76fb::t_e0697df4ee2ee6 13-16,5964
+.changeset/polite-rings-make.md
+  s_3fe88a80ac76fb::t_61e4a79b20a41c 1-7
+packages/workers-utils/src/config/environment.ts
+  s_3fe88a80ac76fb::t_3e46cc7234ad99 1953-1984
+packages/deploy-helpers/src/preview/shared.ts
+  s_3fe88a80ac76fb::t_47efa1747de41e 466-467
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ab95ac135c082a31475d039eeb4f07ee633cebf6",
+  "prompts": {},
+  "sessions": {
+    "s_3fe88a80ac76fb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f98419adeffe0CohIZ5w8HSyG0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

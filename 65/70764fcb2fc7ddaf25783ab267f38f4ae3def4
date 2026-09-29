@@ -1,0 +1,19 @@
+packages/miniflare/src/index.ts
+  s_e771bd5e618774::t_c9d7c55a7be870 83,1322,1327-1330,1339-1342,1344,1369-1375
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6570764fcb2fc7ddaf25783ab267f38f4ae3def4",
+  "prompts": {},
+  "sessions": {
+    "s_e771bd5e618774": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_048515778ffe4EBFGtwSCLtvFn",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

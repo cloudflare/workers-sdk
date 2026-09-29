@@ -1,0 +1,117 @@
+.changeset/fuzzy-pandas-launch.md
+  s_3725c7a238f252::t_468897c7b0087e 1-13
+packages/containers-shared/src/client/index.ts
+  s_3725c7a238f252::t_9dd1ca201b6a5e 49-50,56,188,222
+packages/containers-shared/src/client/models/ContainerImagePreparation.ts
+  s_3725c7a238f252::t_c62984b04c08d7 1-12
+packages/containers-shared/src/client/models/ContainerImagePreparationStatus.ts
+  s_3725c7a238f252::t_078dc9f0107b11 1-9
+packages/containers-shared/src/client/models/CreateDurableObjectApplicationRequest.ts
+  s_3725c7a238f252::t_3bcd803d5cec37 1-21
+packages/containers-shared/src/client/models/PrepareContainerImageRequestBody.ts
+  s_3725c7a238f252::t_b758f2b1883cc4 1-7
+packages/containers-shared/src/client/models/SchedulingPolicy.ts
+  s_3725c7a238f252::t_cf89261d064c19 9
+packages/containers-shared/src/client/services/ApplicationsService.ts
+  s_3725c7a238f252::t_36fce60ee59b8f 17,44-46
+packages/containers-shared/src/client/services/ContainerImagePreparationsService.ts
+  s_3725c7a238f252::t_7c812ee1cefe4c 1-30
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_3725c7a238f252::t_2e89f99f91f353 12,34-35,139-150,256-262,333-336,362-364,810-821
+packages/deploy-helpers/src/deploy/helpers/container-image-bindings.ts
+  s_3725c7a238f252::t_7b087835ef3998 1-53
+packages/deploy-helpers/src/deploy/helpers/container-metadata.ts
+  s_3725c7a238f252::t_c9712cc6ba40ed 1-34
+packages/deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts
+  s_3725c7a238f252::t_193a66a48fc5e7 885
+packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
+  s_3725c7a238f252::t_6fdc9ba865d150 7,121-125,173-191,339,349
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_3725c7a238f252::t_69f456d3bd22dc 9-10,27-28,62-69,166-171,208,225,449-462
+packages/deploy-helpers/tests/container-image-bindings.test.ts
+  s_3725c7a238f252::t_55ac528b94af95 1-212
+packages/deploy-helpers/tests/container-metadata.test.ts
+  s_3725c7a238f252::t_8d1349752e929f 1-71
+packages/vite-plugin-cloudflare/e2e/helpers.ts
+  s_3725c7a238f252::t_3877317df926a9 324-329
+packages/vite-plugin-cloudflare/src/__tests__/containers.spec.ts
+  s_3725c7a238f252::t_61df41713fb590 44-64
+packages/vite-plugin-cloudflare/src/containers.ts
+  s_3725c7a238f252::t_6d9aeb4e73aa8d 10,72-78
+packages/workers-utils/src/config/containers.ts
+  s_3725c7a238f252::t_7a814f681ea3c1 4-26
+packages/workers-utils/src/config/environment.ts
+  s_3725c7a238f252::t_40463a5cc2d323 101-120,154-163,190-193,196
+packages/workers-utils/src/config/index.ts
+  s_3725c7a238f252::t_b5427809f1a74d 44,47-48,51
+packages/workers-utils/src/config/validation.ts
+  s_3725c7a238f252::t_414b714fe7d4b7 10-14,3572-3586,3627-3718,3739-3760,3768,3770-3774,3797-3812,5062-5064
+packages/workers-utils/src/index.ts
+  s_3725c7a238f252::t_883b093998f88e 17,20-21,24
+packages/workers-utils/src/print-bindings.ts
+  s_3725c7a238f252::t_917d9e80b58308 954-958
+packages/workers-utils/src/types.ts
+  s_3725c7a238f252::t_a199e31fd149db 297-301
+packages/workers-utils/src/worker.ts
+  s_3725c7a238f252::t_a0337e7fa71821 498-504
+packages/workers-utils/tests/config/containers.test.ts
+  s_3725c7a238f252::t_db0fd2b38d6ab9 5-6,15-35
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_3725c7a238f252::t_21f8e03a070670 4622-4891
+packages/workers-utils/tests/print-bindings.test.ts
+  s_3725c7a238f252::t_db24b340da1d20 49-72
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_3725c7a238f252::t_bb07d081a37bbc 9-26,47-65
+packages/wrangler/src/__tests__/containers/config.test.ts
+  s_3725c7a238f252::t_f9b1fa89ad3ca6 84-112,215-283
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_a6f4f835f6474e 6,12,20,41,66-76,129-492,1602-1613,3212-3225,3268-3355,3621-3632
+packages/wrangler/src/__tests__/containers/schema.test.ts
+  s_3725c7a238f252::t_70eb23672b8957 51
+packages/wrangler/src/__tests__/deploy/assets.test.ts
+  s_3725c7a238f252::t_ab89a609b88a9a 30,1540-1543
+packages/wrangler/src/__tests__/deploy/environments.test.ts
+  s_3725c7a238f252::t_fd1043376d84c7 35,248-251,1128-1131
+packages/wrangler/src/__tests__/deploy/helpers.ts
+  s_3725c7a238f252::t_b982eca26b1524 367,372-373,387
+packages/wrangler/src/__tests__/dev/remote-bindings.test.ts
+  s_3725c7a238f252::t_f22053d7c30ced 30-31,542,575,609,680,732,785,828
+packages/wrangler/src/__tests__/helpers/mock-upload-worker.ts
+  s_3725c7a238f252::t_23c9f72f41380a 69-73,76,96-100
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_3725c7a238f252::t_d71922c6abb32d 1899-1950
+packages/wrangler/src/__tests__/versions/versions.deploy.test.ts
+  s_3725c7a238f252::t_45bd008de350cc 290-349
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_3725c7a238f252::t_23fa3d5e34bc2e 5,11-14,28,2346-2464,2529-2592
+packages/wrangler/src/containers/config.ts
+  s_3725c7a238f252::t_78f55139daef77 9,11,27-69,109-110,112-115,118-121,123-125
+packages/wrangler/src/containers/deploy.ts
+  s_3725c7a238f252::t_43d38dee8eee0e 75,78,80,85-86,100,105,107,114-115,117-124,126-128,130-133,135-153,155-158,161-162,164-173
+packages/wrangler/src/containers/durable-object-applications.ts
+  s_3725c7a238f252::t_cca17ee9b26503 1-251
+packages/wrangler/src/deploy/index.ts
+  s_3725c7a238f252::t_52bfc0f65a4f42 10-13,210-211
+packages/wrangler/src/type-generation/index.ts
+  s_3725c7a238f252::t_064a53099c4e8e 6,11,45-47,2574-2582,3591-3598
+packages/wrangler/src/versions/deploy.ts
+  s_3725c7a238f252::t_43d7b077a1ad96 16-21,23,256-270
+packages/wrangler/src/versions/upload.ts
+  s_3725c7a238f252::t_59b4d89b84a02d 6-9,76-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3b5f2bab0213bcf366a0b3962555d580db565668",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

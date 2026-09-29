@@ -1,0 +1,57 @@
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_c1da0c64966116::t_2dbd8996867b9e 611,1702-1753,1766-1863
+  s_27cf40cb8ff5f3::t_3dcda50ae05a36 884-887,931-946,951-955,958-961,983,1003
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_c1da0c64966116::t_fb8c71263ebfca 1045-1072,1076-1129
+  s_27cf40cb8ff5f3::t_e8495064e1a454 558-563,565-568,571-574,597,598-601,603-605,607,613-614,625,640
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_c1da0c64966116::t_acea9e9fd1020a 1285-1358,1371-1547,3437
+  s_27cf40cb8ff5f3::t_19fe7b36573bca 3847-3853,3890,3945-3963,3968-3975,3980,3982,4046,4111
+packages/miniflare/src/plugins/core/index.ts
+  s_c1da0c64966116::t_ed7a2f029811c3 35,56,1208-1213,1369
+packages/miniflare/src/plugins/email/store.ts
+  s_c1da0c64966116::t_c91cd5a8b2aef3 1-55
+packages/miniflare/src/workers/core/email.ts
+  s_c1da0c64966116::t_35b3739a8103f8 11,30,204,217-218,220
+  s_27cf40cb8ff5f3::t_b872d155b74212 179-185,187-188
+packages/miniflare/src/workers/email/email-store.ts
+  s_c1da0c64966116::t_7bfd18cb1ba1f7 1-9,15-16,29-30,32-37,40-44,47-52,54,56,59-61,63,65,68-71,85-86,171-179,210-213,235,249-250,252-253,255,258-259,261-266,278,295,302-306
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_c1da0c64966116::t_b7211dba2e88b0 1-9,17-31,34-35,40-41,44-45,48-49,52-53,56-57,60-61
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_27cf40cb8ff5f3::t_896b90fe9c056a 682,2288-2295,2327,2357-2377,2382-2391,2395,2397-2398,2432,2469
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_27cf40cb8ff5f3::t_60aff5679a57f5 17,361
+packages/miniflare/src/workers/email/storage.ts
+  s_27cf40cb8ff5f3::t_007be7ddce3fe4 29-30,42,72
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_27cf40cb8ff5f3::t_a042ebb2704434 49
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_27cf40cb8ff5f3::t_29405c593ed8ad 130-132,135-138,149-161,164-176,182-188,190,192
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_27cf40cb8ff5f3::t_fb56dc53542b9d 5,269-306,308-322,361-386,413-431,433-442,444-536,538-546,548-550,552-597,598-599
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6d28526a21527f9955155f7158925d506986d1a8",
+  "prompts": {},
+  "sessions": {
+    "s_27cf40cb8ff5f3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05b7a13f6ffewE11jNIdfs2beD",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_c1da0c64966116": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05ccc4986ffenGK49lt16xdV1M",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

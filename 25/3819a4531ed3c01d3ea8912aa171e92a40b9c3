@@ -1,0 +1,31 @@
+.changeset/pages-delegation-per-project-gate.md
+  s_f994bbf0d9a8a0::t_d68c64ac156345 8-9
+packages/wrangler/src/__tests__/pages/deploy.test.ts
+  s_f994bbf0d9a8a0::t_09559d87f9b003 169-233
+packages/wrangler/src/pages/deploy.ts
+  s_da4850dcde74ad::t_3ac4109f4931e1 196-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "253819a4531ed3c01d3ea8912aa171e92a40b9c3",
+  "prompts": {},
+  "sessions": {
+    "s_da4850dcde74ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06836-3f2c-71d2-b7b1-b00a14ae1f67",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    },
+    "s_f994bbf0d9a8a0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07da7-cc26-7e40-a6d9-1c2d629703e6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

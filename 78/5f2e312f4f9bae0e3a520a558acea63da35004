@@ -1,0 +1,21 @@
+.github/workflows/README.md
+  s_11a2b580ce093d::t_0179a792ee1099 75
+.github/workflows/prerelease.yml
+  s_11a2b580ce093d::t_de2f31a8e5c3f8 41,53-64,66,68-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "785f2e312f4f9bae0e3a520a558acea63da35004",
+  "prompts": {},
+  "sessions": {
+    "s_11a2b580ce093d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0496e-9bd6-7b80-8a1a-ee068d59277c",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+.changeset/pages-delegation-branch-flags.md
+  s_e8c55513ed5828::t_706f43e449d380 1-9
+packages/wrangler/src/__tests__/pages/delegate-to-workers.test.ts
+  s_e8c55513ed5828::t_7e05d687d6449f 185
+packages/wrangler/src/__tests__/pages/deploy.test.ts
+  s_e8c55513ed5828::t_1190ed34c26ff4 25,6654-6697
+packages/wrangler/src/pages/deploy.ts
+  s_e8c55513ed5828::t_399a32e143c919 658-672
+packages/wrangler/src/pages/projects.ts
+  s_e8c55513ed5828::t_3260acb47845f3 174-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "26d09886d4b900a1bbba22ee90da469049654eb5",
+  "prompts": {},
+  "sessions": {
+    "s_e8c55513ed5828": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb177213-5aa8-42c7-ae40-3f6d948d416e",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

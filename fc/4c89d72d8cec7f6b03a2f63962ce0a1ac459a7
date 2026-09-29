@@ -1,0 +1,19 @@
+packages/miniflare/test/plugins/email/index.spec.ts
+  s_2f8343d878c4fa::t_3fbed765ef4a05 2243,2245-2248,2288-2362,2411,2413-2416,2454-2465
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fc4c89d72d8cec7f6b03a2f63962ce0a1ac459a7",
+  "prompts": {},
+  "sessions": {
+    "s_2f8343d878c4fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff532a9cffeujhyQPJ9FOV6BY",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,423 @@
+.changeset/fuzzy-dodos-preview.md
+  s_8f02c9a94024e9::t_fc2e5b6db320c5 2-3,6,8
+.github/workflows/vite-plugin-playgrounds.yml
+  s_8f02c9a94024e9::t_a2c29fa95c47d8 92-93,97,101
+.oxlintrc.jsonc
+  s_8f02c9a94024e9::t_e758b4941512b5 172-189
+.vscode/settings.json
+  s_8f02c9a94024e9::t_c565f5a2c7e40c 48
+packages/autoconfig/CHANGELOG.md
+  s_8f02c9a94024e9::t_978f40ae833580 3-24
+packages/autoconfig/package.json
+  s_8f02c9a94024e9::t_1442733b8dca30 3
+packages/autoconfig/src/frameworks/all-frameworks.ts
+  s_8f02c9a94024e9::t_87ba4db26c697f 63
+packages/autoconfig/tests/frameworks/validate-framework-version.test.ts
+  s_8f02c9a94024e9::t_69e9141210c8c2 4,141-155
+packages/build-output-utils/CHANGELOG.md
+  s_8f02c9a94024e9::t_f16c278663db4f 3-22
+packages/build-output-utils/package.json
+  s_8f02c9a94024e9::t_5ad5d689dee09e 3
+packages/build-output-utils/src/__tests__/paths.test.ts
+  s_8f02c9a94024e9::t_b7b082b66ecd60 8-10,41-50,81-98
+packages/build-output-utils/src/__tests__/read.test.ts
+  s_8f02c9a94024e9::t_8215b185960125 3-7,13-14,20-24,39-53,104,157-245
+packages/build-output-utils/src/__tests__/write.test.ts
+  s_8f02c9a94024e9::t_902d1c53f30b0b 6,13,19,37-51,151,161-198
+packages/build-output-utils/src/index.ts
+  s_8f02c9a94024e9::t_6f43f72c178637 6-8,18,22-25,30-31
+packages/build-output-utils/src/paths.ts
+  s_8f02c9a94024e9::t_3179ed615be74d 57,59-63,65-70,73,76-85,90-115
+packages/build-output-utils/src/read.ts
+  s_8f02c9a94024e9::t_bd4dcf3744cf89 4-8,13-14,23,82-92,113-118,126-128,131-132,161-217,219
+packages/build-output-utils/src/write.ts
+  s_8f02c9a94024e9::t_8dab4d2ecce9c2 7-8,16,32,45,49,51,56-82
+packages/cli/CHANGELOG.md
+  s_8f02c9a94024e9::t_5f9fff63f275bc 3-16
+packages/cli/package.json
+  s_8f02c9a94024e9::t_4117504bb29f97 3
+packages/config/CHANGELOG.md
+  s_8f02c9a94024e9::t_713795ed1562d8 3-20
+packages/config/package.json
+  s_8f02c9a94024e9::t_114161d26a602f 3
+packages/config/src/__tests__/config-loader.test.ts
+  s_8f02c9a94024e9::t_bebaf6d7929f5e 1,4-5,7-10,43-441,445-449,461,576-578,585-615,653-655,689-691,714-716,770-774,777
+packages/config/src/__tests__/container-references.test-d.ts
+  s_8f02c9a94024e9::t_c82ff11602274e 1-112
+packages/config/src/__tests__/convert.test.ts
+  s_8f02c9a94024e9::t_d6f6264579d878 183,187-189,851-855,871-872,1114,1177-1291
+packages/config/src/__tests__/schema.test.ts
+  s_8f02c9a94024e9::t_a2025ed4a631b3 5,8,20-25,707-1133,1444,1452,1465-1468,1474
+packages/config/src/config-loader.ts
+  s_8f02c9a94024e9::t_6232f41352e728 5,11,24-28,30,32,56-67,111,118-192,203-307,311-314,321,323,357-367,369-372,374-376,378-381,385-389
+packages/config/src/container-definition.ts
+  s_8f02c9a94024e9::t_9f3696e196e21c 1-22
+packages/config/src/convert.ts
+  s_8f02c9a94024e9::t_10451e85d1c354 4,9,15-20,24-26,31-32,37-38,52-56,61-170
+packages/config/src/exports.ts
+  s_8f02c9a94024e9::t_881e29ca0cf78c 15-16,23-27,35,37,52-56,58,102-106,112,116-120,131-137,177-181,204-208,224-228,238-242,265-270,275
+packages/config/src/index.ts
+  s_8f02c9a94024e9::t_e3ba28cf239871 14,19,47,50
+packages/config/src/public.ts
+  s_8f02c9a94024e9::t_5eff659d7eb550 79-84
+packages/config/src/schema.ts
+  s_8f02c9a94024e9::t_ca1c0efe333a16 3,337-550,796,798,820-829,906-907,914-915,919-923,970-1021
+packages/config/src/types.ts
+  s_8f02c9a94024e9::t_5c684043a6a395 131-333
+packages/containers-shared/CHANGELOG.md
+  s_8f02c9a94024e9::t_251c8158e1f8a8 3-50
+packages/containers-shared/package.json
+  s_8f02c9a94024e9::t_4b675c08a44825 3
+packages/containers-shared/src/build.ts
+  s_8f02c9a94024e9::t_bee74781b4e86b 28,33,252,592,618-632,634,658-659,680-681,683,686-687,690-696,698-711,714-716
+packages/containers-shared/tests/build-and-push.test.ts
+  s_8f02c9a94024e9::t_d09e77394d49c1 13,24,405,427,471,561,565,576,580-581,594-661
+packages/create-cloudflare/CHANGELOG.md
+  s_8f02c9a94024e9::t_a0174d8652ccdf 3-50
+packages/create-cloudflare/package.json
+  s_8f02c9a94024e9::t_00c0e6231a221c 3
+packages/create-cloudflare/src/agents-md.ts
+  s_8f02c9a94024e9::t_4cc7f41a309d4e 7-10,34-54
+packages/create-cloudflare/src/frameworks/package.json
+  s_8f02c9a94024e9::t_2da79d4ed588e7 4,6,10,17
+packages/deploy-helpers/CHANGELOG.md
+  s_8f02c9a94024e9::t_d9f8ec5e16621b 3-110
+packages/deploy-helpers/package.json
+  s_8f02c9a94024e9::t_9c01ff14ea37b5 3,32-35,54,59-60,69
+packages/deploy-helpers/scripts/deps.ts
+  s_8f02c9a94024e9::t_2f2dcfde5c7c9b 14-15,26-27
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_8f02c9a94024e9::t_f2136fdef5e1de 86-90,129-134,148,178,228-232,246-256,258-269,273-275,347-352,354-365,454,480,653,686,709,794-795,798,804,825,828-837,840
+packages/deploy-helpers/src/deploy/helpers/assets.ts
+  s_8f02c9a94024e9::t_28ac0fd48eda36 186,192,251-261,287,289-291
+packages/deploy-helpers/src/deploy/helpers/check-remote-secrets-override.ts
+  s_8f02c9a94024e9::t_43da543b4523a8 130
+packages/deploy-helpers/src/deploy/helpers/container-image-bindings.ts
+  s_8f02c9a94024e9::t_0b71cdd754688f 3,7,10-11,19-20,24,40,47,58,80-83
+packages/deploy-helpers/src/deploy/helpers/container-metadata.ts
+  s_8f02c9a94024e9::t_a4acdf19c25f62 1,5,10,12-16,21,23,25-43,46-48,50,52-58,62-63,85-92
+packages/deploy-helpers/src/deploy/helpers/durable-object-container-applications.ts
+  s_8f02c9a94024e9::t_787782d6b0a251 3,7,12,18,24-27,29-32,37,48-49,60,71-105,114-116,121,213-219,271-328,379-384,403,408-423,426-428,431,443-446,448-474,516,518-520,528-535,542,570,586,589,594,618-624,626-627,633,636-639,660-665
+packages/deploy-helpers/src/deploy/helpers/friendly-validator-errors.ts
+  s_8f02c9a94024e9::t_10af782b6852e4 9-10,16,63,82-83,85,87,91,101-107
+packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
+  s_8f02c9a94024e9::t_665872b3e7e88f 27-31,48,122,149
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_8f02c9a94024e9::t_f02d74b532b4f3 62-66,70,73,87,89,123,193-195,198-207,232-237,239-244,261-265,417,494,497-506
+packages/deploy-helpers/src/preview/api.ts
+  s_8f02c9a94024e9::t_33388fe2cc82d9 29,120
+packages/deploy-helpers/src/preview/shared.ts
+  s_8f02c9a94024e9::t_1710dc55527b6c 392-395,522-535
+packages/deploy-helpers/src/shared/types.ts
+  s_8f02c9a94024e9::t_e4f3c26b3e0a82 2-3,20,55-76,135-136,191
+packages/deploy-helpers/src/startup-profile.ts
+  s_8f02c9a94024e9::t_51fd755dd23e7e 1-852
+packages/deploy-helpers/src/triggers/deploy.ts
+  s_8f02c9a94024e9::t_eaff3f1cdebff1 30-32,223,494-508
+packages/deploy-helpers/src/triggers/publish-routes.ts
+  s_8f02c9a94024e9::t_eaa1e64aff5e4e 69-71,259,279-328,333,348-349,351-358,361-363,390
+packages/deploy-helpers/tests/container-image-bindings.test.ts
+  s_8f02c9a94024e9::t_c44e782ab86a82 1-4,10-14,17,20-25,27-32,35-42,44-58,71,79,89-94,102-108,116-118,123-129,131-132,134-136,141,144-149,151-152,156,177,200,215-221,223-224,228,258-259,266,277-278,293-294,317-318
+packages/deploy-helpers/tests/container-metadata.test.ts
+  s_8f02c9a94024e9::t_2530d591a5c1aa 1-4,15-20,24-40,45-49,55,58-75,78-82,84,87,91-92,99-119,125-138,151,153,160-161,171,228,230,312-322,330-340,353-363,370
+packages/deploy-helpers/tests/durable-object-container-applications.test.ts
+  s_8f02c9a94024e9::t_f37e8a2c3321e0 4,9,12,16,20,22-25,27,37,53-73,93-106,112-387,389-443,458-465,483-488,507-512,527-532,535-540,544-735,750-751,759-764,785-790,801-809,815-823,827-836,842-847,870,873-879,892-901,903,924-932
+packages/deploy-helpers/tests/publish-custom-domains.test.ts
+  s_8f02c9a94024e9::t_41d1723a778a74 1-295
+packages/deploy-helpers/tests/publish-routes.test.ts
+  s_8f02c9a94024e9::t_5bdedf03b87628 1-46
+packages/deploy-helpers/tests/startup-profile-lifecycle.test.ts
+  s_8f02c9a94024e9::t_70ea7186d20e7e 1-303
+packages/deploy-helpers/tests/startup-profile.test.ts
+  s_8f02c9a94024e9::t_9f41a1ed6e3c04 1-634
+packages/deploy-helpers/tsup.config.ts
+  s_8f02c9a94024e9::t_c70e846f69952c 16,37
+packages/miniflare/CHANGELOG.md
+  s_8f02c9a94024e9::t_ee8d375c69a412 3-76
+packages/miniflare/openapi-ts.config.ts
+  s_8f02c9a94024e9::t_4a430e9ccc5012 6-10
+packages/miniflare/package.json
+  s_8f02c9a94024e9::t_a5f899f2d1fea8 3
+packages/miniflare/scripts/build.mjs
+  s_8f02c9a94024e9::t_955e58a2452bd7 164-182,255,261-265
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_8f02c9a94024e9::t_1e4ecb10023534 23-30
+packages/miniflare/src/workers/d1/dumpSql.ts
+  s_8f02c9a94024e9::t_25600e0c59f0e3 125-127
+packages/miniflare/src/workers/email/contracts.ts
+  s_8f02c9a94024e9::t_8ae568b0c5805c 1
+packages/miniflare/src/workers/email/email-store.ts
+  s_8f02c9a94024e9::t_60b308b34521c2 19
+packages/miniflare/src/workers/local-explorer/common.ts
+  s_8f02c9a94024e9::t_f816250ab4351b 1,3,48-52,59-77,201-206,212
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_8f02c9a94024e9::t_928089e26ef8c8 20,24,41,43,242-259
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_8f02c9a94024e9::t_52e59fd3c6d9ed 149-150,153-154,158,173-177,206-210
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_8f02c9a94024e9::t_b1fe5f384ffe96 327-361,1163,1167-1168,1346-1411
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_8f02c9a94024e9::t_a985ab79ae18fe 3,272-296,731-733,737,835-870
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_8f02c9a94024e9::t_c8cc6eb8d05342 344-491,3258-3331
+packages/miniflare/src/workers/local-explorer/resources/do.ts
+  s_8f02c9a94024e9::t_402145b2ec3e0a 82-84,126-130
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_8f02c9a94024e9::t_9ee748023e5eb9 1
+packages/miniflare/src/workers/local-explorer/resources/kv-bulk.ts
+  s_8f02c9a94024e9::t_c499d2a72500c5 1-32
+packages/miniflare/src/workers/local-explorer/resources/kv.ts
+  s_8f02c9a94024e9::t_a76b7d658c0461 1-2,4,8,13,17,27,66,70-78,96-275,509-556
+packages/miniflare/src/workers/local-explorer/resources/workflows.ts
+  s_8f02c9a94024e9::t_734185faeaa709 214-216,252-253
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_8f02c9a94024e9::t_02606afdc4d177 6,8
+packages/miniflare/src/workers/shared/zod.worker.ts
+  s_8f02c9a94024e9::t_7449f2e01b38b2 16-17
+packages/miniflare/src/workers/workflows/wrapped-binding.worker.ts
+  s_8f02c9a94024e9::t_322660d02ef673 6-9,145-152
+packages/miniflare/test/index.spec.ts
+  s_8f02c9a94024e9::t_357909c2f5ba9f 4350,4375
+packages/miniflare/test/plugins/browser/index.spec.ts
+  s_8f02c9a94024e9::t_95d7100f057ed5 1063-1070
+packages/miniflare/test/plugins/d1/suite.ts
+  s_8f02c9a94024e9::t_64d8262905fd3a 635-701
+packages/miniflare/test/plugins/local-explorer/aggregation.spec.ts
+  s_8f02c9a94024e9::t_a5954d5a4eda75 57,62-64,77-82,104,109-111,123-128,348-350,369,375-388,451-461,464-477,501-511,514-527,545-561,587-609,631-641,644-657,717-780
+packages/miniflare/test/plugins/local-explorer/kv.spec.ts
+  s_8f02c9a94024e9::t_bf3f6367ce1e4a 4,7,12,14,455-869,997-1043
+packages/miniflare/test/plugins/local-explorer/telemetry.spec.ts
+  s_8f02c9a94024e9::t_d44cc1c597aeb5 33-42
+packages/miniflare/test/plugins/workflows/index.spec.ts
+  s_8f02c9a94024e9::t_abdb91f08b2f04 65-231
+packages/pages-shared/CHANGELOG.md
+  s_8f02c9a94024e9::t_55099e03680682 3-23
+packages/pages-shared/package.json
+  s_8f02c9a94024e9::t_1a101a31271c9f 3
+packages/remote-bindings/CHANGELOG.md
+  s_8f02c9a94024e9::t_b75c286086030a 3-32
+packages/remote-bindings/package.json
+  s_8f02c9a94024e9::t_5020c78f56bb64 3
+packages/runtime-types/CHANGELOG.md
+  s_8f02c9a94024e9::t_d0992a25fa3b77 3-23
+packages/runtime-types/package.json
+  s_8f02c9a94024e9::t_9f2bf01b938d27 3
+packages/vite-plugin-cloudflare/CHANGELOG.md
+  s_8f02c9a94024e9::t_0ada4b2961d540 3-50
+packages/vite-plugin-cloudflare/package.json
+  s_8f02c9a94024e9::t_5162420ed0d8fa 3
+packages/vite-plugin-cloudflare/src/__tests__/config-watch.spec.ts
+  s_8f02c9a94024e9::t_d7142a2f65a55b 1,3-5,7-10,12-22,24-29,31-42
+packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts
+  s_8f02c9a94024e9::t_880d4f0c4fe33d 59-61,91
+packages/vite-plugin-cloudflare/src/plugins/config.ts
+  s_8f02c9a94024e9::t_7ff285b412888c 28,76
+packages/vite-plugin-cloudflare/src/plugins/wrangler-watch-ignore.ts
+  s_8f02c9a94024e9::t_55922b1af882eb 1-7,9-10,12-13,15-20,22-26,30-37,39-47
+packages/vitest-plugin/CHANGELOG.md
+  s_8f02c9a94024e9::t_3342481949e20e 3-26
+packages/vitest-plugin/package.json
+  s_8f02c9a94024e9::t_ee11ea7a697807 3
+packages/workers-auth/AGENTS.md
+  s_8f02c9a94024e9::t_31822e21c0fd58 112-113,144-151
+packages/workers-auth/CHANGELOG.md
+  s_8f02c9a94024e9::t_bb3364953c2e77 3-30
+packages/workers-auth/package.json
+  s_8f02c9a94024e9::t_2b2c24b2d3f3ec 3
+packages/workers-auth/src/cf/index.ts
+  s_8f02c9a94024e9::t_9394ebf0b47bfb 75,81
+packages/workers-auth/src/cf/scopes.ts
+  s_8f02c9a94024e9::t_bbc2055c1b1967 1-4,6-9,11-13,16,30-31,49,51,63,66-68,93,108-487,491,495-588,590,596,598
+packages/workers-auth/src/core/factory.ts
+  s_8f02c9a94024e9::t_a55805af207a29 287,298,306,322,363-366,369-370,411-418,421,424-425
+packages/workers-auth/src/core/types.ts
+  s_8f02c9a94024e9::t_f9da717a6e8673 91-96
+packages/workers-auth/tests/cf/index.test.ts
+  s_8f02c9a94024e9::t_0f06c0a0964c56 48
+packages/workers-auth/tests/cf/scopes.test.ts
+  s_8f02c9a94024e9::t_4dcd51a19d9a6e 1-140
+packages/workers-auth/tests/core/factory.test.ts
+  s_8f02c9a94024e9::t_0db80d8296c5ad 1-123
+packages/workers-shared/utils/configuration/parseStaticRouting.ts
+  s_8f02c9a94024e9::t_48ae80ca58066e 4-5,17-43
+packages/workers-shared/utils/tests/parseStaticRouting.test.ts
+  s_8f02c9a94024e9::t_15fcb641d0ae03 2,33-77
+packages/workers-utils/CHANGELOG.md
+  s_8f02c9a94024e9::t_e73b39165dcdb5 3-60
+packages/workers-utils/package.json
+  s_8f02c9a94024e9::t_a9df5b8acf02b0 3
+packages/workers-utils/src/config/containers.ts
+  s_8f02c9a94024e9::t_9689ef1710146c 13-19,36-58,227-232,239-242
+packages/workers-utils/src/config/environment.ts
+  s_8f02c9a94024e9::t_b00a009d37bd0e 109-115,124-125,218-220,228-229
+packages/workers-utils/src/config/index.ts
+  s_8f02c9a94024e9::t_49ff7631fa18f2 49,54-57
+packages/workers-utils/src/config/validation.ts
+  s_8f02c9a94024e9::t_b3727e1c5f5454 3723-3750,3752-3758,3773-3812,3842-3851,3867-3869,3901-3921,3924-3931,3935,6236-6237,6354-6369
+packages/workers-utils/src/default-compat-date.ts
+  s_8f02c9a94024e9::t_d3b06c717b50c3 22
+packages/workers-utils/src/index.ts
+  s_8f02c9a94024e9::t_d066f177a14627 22,27-30
+packages/workers-utils/src/parse.ts
+  s_8f02c9a94024e9::t_d705d1eab27d71 87-88
+packages/workers-utils/src/print-bindings.ts
+  s_8f02c9a94024e9::t_c411542851bd4d 944
+packages/workers-utils/tests/config/containers.test.ts
+  s_8f02c9a94024e9::t_750ea340000a39 6,35-72
+packages/workers-utils/tests/config/durable-object-container-settings.test.ts
+  s_8f02c9a94024e9::t_649ab78e53ba63 1-3,5-19,21-25,27-39,41,43-53,55,57-67
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_8f02c9a94024e9::t_b85b51da05f028 2659-2678,2680-2684,2686,2690-2691,2729-2748,2750-2754,2756,2761-2762,2764-2788,2790-2794,2796,2800-2801,2879-2903,2905-2909,2911,2915-2916,4807,4824,4828-4893,4936-5020,13691-13715
+packages/workers-utils/tests/parse.test.ts
+  s_8f02c9a94024e9::t_eda8834720a0eb 3,408-441
+packages/workers-utils/tests/print-bindings.test.ts
+  s_8f02c9a94024e9::t_126497185179f2 50-62,64-66,68-73
+packages/workflows-shared/CHANGELOG.md
+  s_8f02c9a94024e9::t_2cd43385c47e18 3-10
+packages/workflows-shared/package.json
+  s_8f02c9a94024e9::t_8e48b19bf4c432 3
+packages/workflows-shared/src/binding.ts
+  s_8f02c9a94024e9::t_7c8865c4e2469b 15,24-27,633-639
+packages/workflows-shared/src/context.ts
+  s_8f02c9a94024e9::t_6f11718a48a71a 29
+packages/workflows-shared/src/engine.ts
+  s_8f02c9a94024e9::t_4bbfd234c802ab 2,39,44,49-53,65-69,130,149-151,168-432,459-460,525-532,642-729,939-940,943-978,1734-1736
+packages/workflows-shared/src/instance.ts
+  s_8f02c9a94024e9::t_7ab6243500e15c 137-141
+packages/workflows-shared/src/lib/serialization.ts
+  s_8f02c9a94024e9::t_67b5f98263f501 1-96
+packages/workflows-shared/src/subscription.ts
+  s_8f02c9a94024e9::t_1c15b668b28e23 1-292
+packages/workflows-shared/tests/binding.test.ts
+  s_8f02c9a94024e9::t_c63459bd15e9cb 6,10-13,638-1346
+packages/wrangler/CHANGELOG.md
+  s_8f02c9a94024e9::t_3f4b6efea5a670 3-161
+packages/wrangler/e2e/preview.test.ts
+  s_8f02c9a94024e9::t_aa9f646baceb50 52-111
+packages/wrangler/e2e/unenv-preset/worker/index.ts
+  s_8f02c9a94024e9::t_d4d997a3e3a32a 296
+packages/wrangler/package.json
+  s_8f02c9a94024e9::t_beabe652eb73e5 3,48-52,180
+packages/wrangler/src/__tests__/ai-search.test.ts
+  s_8f02c9a94024e9::t_ef1f07f3d76a7a 2088-2176
+packages/wrangler/src/__tests__/api/startDevWorker/ProxyController.test.ts
+  s_8f02c9a94024e9::t_2db3d7fa9a605c 2,6,11-35
+packages/wrangler/src/__tests__/api/startDevWorker/events.test.ts
+  s_8f02c9a94024e9::t_38e9d22b3d72cc 1-74
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_8f02c9a94024e9::t_3d759f1a7e14ce 85-99
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_8f02c9a94024e9::t_627d466f1fbac3 157,261-422,426,430,433,436-443,447,455-456,458-467,469,471-478,482-494,498-504,543-544,574-577,4251-4352,4766-4775,5172-5181,5497-5498,5510-5513
+packages/wrangler/src/__tests__/custom-build.test.ts
+  s_8f02c9a94024e9::t_1f8e8e0cc94617 34-45
+packages/wrangler/src/__tests__/deploy/assets.test.ts
+  s_8f02c9a94024e9::t_a392b18e1e1ea3 5,1211-1415
+packages/wrangler/src/__tests__/deploy/build.test.ts
+  s_8f02c9a94024e9::t_8c018865b2775c 1069-1071
+packages/wrangler/src/__tests__/deploy/core.test.ts
+  s_8f02c9a94024e9::t_ea851dde1fcc24 785,918
+packages/wrangler/src/__tests__/deploy/entry-points.test.ts
+  s_8f02c9a94024e9::t_98013d1a8c6b1e 17,1284-1350
+packages/wrangler/src/__tests__/deploy/helpers.ts
+  s_8f02c9a94024e9::t_ff0e8ace0f734e 157,160,162,165,177-181,184,193-194,199,206,209
+packages/wrangler/src/__tests__/deploy/routes.test.ts
+  s_8f02c9a94024e9::t_8665f922b73c92 2,498-634,652,693-762,824,931,1632
+packages/wrangler/src/__tests__/deployment-bundle/build-container-images.test.ts
+  s_8f02c9a94024e9::t_cbdb2ec27b1982 1-337
+packages/wrangler/src/__tests__/friendly-validator-errors.test.ts
+  s_8f02c9a94024e9::t_a2a95327fe77d5 1-2,13,98,102-103,109,133-149
+packages/wrangler/src/__tests__/init.test.ts
+  s_8f02c9a94024e9::t_9005fe23977fb1 7,80-85,92,96-100,116,118,128-133,140,150-154,191-192,194-197,203,207-211,226-231,233-268,908-909,919-923
+packages/wrangler/src/__tests__/metrics/sanitization.test.ts
+  s_8f02c9a94024e9::t_27ba831df7da5e 1-2,6-7,143-228
+packages/wrangler/src/__tests__/middleware.test.ts
+  s_8f02c9a94024e9::t_d7cd64e2396349 263-265,271
+packages/wrangler/src/__tests__/pages/deploy.test.ts
+  s_8f02c9a94024e9::t_9e13d7edd95e41 11,2275
+packages/wrangler/src/__tests__/preview.secret.test.ts
+  s_8f02c9a94024e9::t_7b75802b0f6baa 24,191,207-215,407,645
+packages/wrangler/src/__tests__/profiles.test.ts
+  s_8f02c9a94024e9::t_2cfd36d3182680 223,241
+packages/wrangler/src/__tests__/user.test.ts
+  s_8f02c9a94024e9::t_c1c7044627cbb3 109,197,243,289,331,1749
+packages/wrangler/src/__tests__/versions/versions.deploy.test.ts
+  s_8f02c9a94024e9::t_a52015594a3f2e 242-251,457-548,550-551,553-554,556,558-560,564-565,567-569,571-583,644,655,666-672,675,677,702-718,725
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_8f02c9a94024e9::t_7a0224aabdeda7 26,161-170,1825-1841,2422-2434,2437-2464,2467-2468,2471-2501,2503-2507,2509-2512,2514-2527,2529,2531-2538,2540-2571,2637-2675,2677-2686,2688-2698,2700-2702,2704,2706-2714,2716-2718,2720-2737
+packages/wrangler/src/__tests__/vitest.setup.ts
+  s_8f02c9a94024e9::t_7e4afa2fdcbe50 287-301,304-305
+packages/wrangler/src/ai-search/client.ts
+  s_8f02c9a94024e9::t_781b67e9782766 8,126
+packages/wrangler/src/ai-search/search.ts
+  s_8f02c9a94024e9::t_2f8baeb8a68dd6 5-10,70-73,75,78-83,86-91
+packages/wrangler/src/ai-search/types.ts
+  s_8f02c9a94024e9::t_8c9c6fbb1bd4f6 164-190
+packages/wrangler/src/api/startDevWorker/events.ts
+  s_8f02c9a94024e9::t_7eaa321a90af29 37-59,66-84
+packages/wrangler/src/check/commands.ts
+  s_8f02c9a94024e9::t_1549492adc3a30 1,5-10,77,80
+packages/wrangler/src/core/register-yargs-command.ts
+  s_8f02c9a94024e9::t_af9d5690840cb4 34,302-307
+packages/wrangler/src/deploy/index.ts
+  s_8f02c9a94024e9::t_6be0cd4bdf580c 2,16-19,211-214,218-219,246-256
+packages/wrangler/src/deployment-bundle/build-container-images.ts
+  s_8f02c9a94024e9::t_5b748c1fb424ef 1,4-5,9-25,28-29,32,37,57-201
+packages/wrangler/src/deployment-bundle/merge-config-args.ts
+  s_8f02c9a94024e9::t_84fce69bdd6c84 99-103,146,170-176
+packages/wrangler/src/deployment-bundle/run-custom-build.ts
+  s_8f02c9a94024e9::t_fd45f40622d1a3 6,11,31-40,42,44-48,51,62,73-82,160,165,184
+packages/wrangler/src/dev/start-dev.ts
+  s_8f02c9a94024e9::t_f0011a682706ed 371-373,391
+packages/wrangler/src/init.ts
+  s_8f02c9a94024e9::t_b31abae7c01e0e 9,139-150,152-161,163-174
+packages/wrangler/src/metrics/sanitization.ts
+  s_8f02c9a94024e9::t_9741ba81541195 1,34-44,46,50-78,86,90-91,143-148,206-232
+packages/wrangler/src/metrics/types.ts
+  s_8f02c9a94024e9::t_99a645d7d79080 106-111
+packages/wrangler/src/package-manager.ts
+  s_8f02c9a94024e9::t_b48cce8cbdacf4 3,89-98,100
+packages/wrangler/src/pages/deploy.ts
+  s_8f02c9a94024e9::t_966bc06eeb71b7 607
+packages/wrangler/src/preview/secrets/bulk.ts
+  s_8f02c9a94024e9::t_d7c03eb3895a29 8,110
+packages/wrangler/src/preview/secrets/delete.ts
+  s_8f02c9a94024e9::t_51381170325973 8,97
+packages/wrangler/src/preview/secrets/index.ts
+  s_8f02c9a94024e9::t_8a2e0f02fead91 2,51
+packages/wrangler/src/preview/secrets/put.ts
+  s_8f02c9a94024e9::t_38ebb352e51a72 9,92
+packages/wrangler/src/user/whoami.ts
+  s_8f02c9a94024e9::t_c83ebe4c068e55 193
+packages/wrangler/src/versions/upload.ts
+  s_8f02c9a94024e9::t_b59e9361d17ac7 1-4,9-12,17,83-84,87,94,98-104
+packages/wrangler/templates/middleware/loader-sw.ts
+  s_8f02c9a94024e9::t_65b4baed15f75e 13-54,70-72,83-85,94,221,232,261
+packages/wrangler/tsup.config.ts
+  s_8f02c9a94024e9::t_bc0e6847484fc5 18-21
+patches/vite@8.1.5.patch
+  s_8f02c9a94024e9::t_f9e77b42093215 1-15
+pnpm-lock.yaml
+  s_8f02c9a94024e9::t_711ba6fda3fc46 13-14,88-89,121-123,197,245,272,287,290,302,323,347,353,356,383,398,413,452,476,503,573,591,595,626,654,684,702,735,760,784,823,844,865,883,902,962,983,1139,1145,1151,1178,1202,1217,1235,1244,1262,1301,1304,1336,1391,1403,1451,1475,1496,1517,1538,1559,1592,1619,1637,1661,1664,1673,1679,1688,1746,1759,1845,1915,2017,2020,2023,2057-2059,2075-2077,2097-2099,2126,2147,2171,2198,2201,2279,2313,2322,2334,2337,2340,2355,2392,2592,2601,2629,2663,2687,2727,2754,2861,2895,2952,2958,3003,3009,3024,3030,3045,3051,3066,3072,3087,3093,3108,3114,3129,3135,3150,3156,3171,3177,3192,3198,3213,3219,3234,3240,3255,3261,3276,3282,3297,3303,3318,3324,3339,3357,3372,3378,3393,3399,3414,3420,3435,3441,3456,3462,3477,3483,3498,3504,3519,3525,3540,3549,3564,3576,3591,3603,3621,3636,3642,3657,3687,3709,3721,3730,3749,3752,3761,3770,3785,3791,3806,3824,3846,3855,3861,3876,3882,3897,3903,3925,3934,3937,3943,3958,3964,3979,3985,4000,4006,4021,4024,4030,4045,4051,4066,4072,4087,4093,4108,4114,4154,4273,4285,4288,4391,4400,4409,4415,4551,4557,4596,4654,4853-4855,5232-5233,5252-5255,5264-5265,5356-5357,5375-5379,5460-5463,5476-5479,5963-5964,5981-5982,5999-6000,6017-6018,6035-6036,6052-6053,7601-7603,7617-7619,7719-7720,10768-10769,11868-11869,13966-13967,16329-16330,16412-16415,16715-16716,17629,17654-17657,17659-17660,17687-17695,17708,17710,17714,17795,17798,17812-17815,17903-17912,17928-17932,17982,17993,17995,18006,18008,18010,18012,18014,18016,18020,18022,18025,18027,18031,18033,18038,18040-18041,18047,18049,18625,18633,18646,18655,18664,18673,18682,18695,19415,19418,19490,19494,19498,19525,19529,19914-19918,19930-19931,20131,20847,20850,21056,21063,21386,21391,22029,22034,22099,22116,22624,22626,22628,22636,22649,22656-22665,22734,22896,22903,22908,22915,22923,22935,23163,23179,23181-23187,23200,23207,23328,23330-23332,24068,24070,24121,26257,26438,26724,26726,26729,26731,29258,29376-29377,29394,29408,29414,29419,29425,29431,29452,29467-29481,29533-29562,29565,29582,29840,29842-29846,29848,29859
+pnpm-workspace.yaml
+  s_8f02c9a94024e9::t_93afd703ace9cb 105,132-133
+tools/deployments/__tests__/publish-packages.test.ts
+  s_8f02c9a94024e9::t_1ecd2796fa83af 472,491-496,500-504
+tools/deployments/publish-packages.ts
+  s_8f02c9a94024e9::t_8f0717d2c0c646 389-390
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "12afa0b9762b48416569001cda74eeb7927daf51",
+  "prompts": {},
+  "sessions": {
+    "s_8f02c9a94024e9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f599a2b2affeyOkdveQRPTk6K1",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

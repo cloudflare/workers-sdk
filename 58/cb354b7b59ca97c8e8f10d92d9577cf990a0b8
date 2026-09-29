@@ -1,0 +1,27 @@
+.changeset/pages-delegation-per-project-gate.md
+  s_7fe7b6ed8c360f::t_dfbc51473b4b09 1-7
+packages/wrangler/src/__tests__/pages/delegate-to-workers.test.ts
+  s_7fe7b6ed8c360f::t_a28c60b9a6ff8e 50,56,60-61,65,68-70,74,77-82
+packages/wrangler/src/pages/delegate-to-workers.ts
+  s_7fe7b6ed8c360f::t_5f0889677e071d 11-12,36-38,40-43,45,160-161,189-198
+packages/wrangler/src/pages/deploy.ts
+  s_7fe7b6ed8c360f::t_07626deee07dfb 218-221,226,658-659
+packages/wrangler/src/pages/projects.ts
+  s_7fe7b6ed8c360f::t_e9aeb0940e23f7 154-157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "58cb354b7b59ca97c8e8f10d92d9577cf990a0b8",
+  "prompts": {},
+  "sessions": {
+    "s_7fe7b6ed8c360f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a7520433-4017-4ac0-ada2-50dbdc160842",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

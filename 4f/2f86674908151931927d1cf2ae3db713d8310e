@@ -1,0 +1,37 @@
+packages/wrangler/src/__tests__/preview/containers.test.ts
+  s_768bec3fe32406::t_50944708d4af9b 1-180
+packages/wrangler/src/preview/preview.ts
+  s_768bec3fe32406::t_91e629bfb7c82f 4,104
+packages/workers-utils/src/config/validation.ts
+  s_768bec3fe32406::t_ef39ab2bcccef8 2186,3379-3386,3392-3394,3396-3419,3428-3429,3431,3467,5638,5972
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_768bec3fe32406::t_2a7320d682b224 11454-11510,11526-11555,11565
+packages/deploy-helpers/src/preview/shared.ts
+  s_768bec3fe32406::t_72eb51fe618bca 388-390
+  s_768bec3fe32406::t_0f23ec02cd205a 411-413
+  s_768bec3fe32406::t_b11c5499e6eee1 401-402
+  s_768bec3fe32406::t_961a3b3b6d5e04 392-399
+  s_768bec3fe32406::t_e31cc0169e593f 391,400,414-423
+  s_768bec3fe32406::t_91bf08aac7000b 385-387
+  s_768bec3fe32406::t_5eb1b722fda08e 408-410
+packages/wrangler/src/preview/delete.ts
+  s_768bec3fe32406::t_610b994027491b 37
+packages/wrangler/src/preview/containers.ts
+  s_768bec3fe32406::t_6a9e5116c10aa5 1,3,6-8,10-14,17-21,23-27,30-31,33-34,36-42,45-61,63,65-71,74-80,86-87,93-111,114,123-127,129,132-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4f2f86674908151931927d1cf2ae3db713d8310e",
+  "prompts": {},
+  "sessions": {
+    "s_768bec3fe32406": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_01364a252ffeVNd7EcdmXU42t1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Will Taylor <williamtaylor@cloudflare.com>"
+    }
+  }
+}

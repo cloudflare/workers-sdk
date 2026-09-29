@@ -1,0 +1,19 @@
+packages/deploy-helpers/src/preview/preview.ts
+  s_768bec3fe32406::t_f073d7d2588b16 762-773
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ae409ca89c7bbd67331e88af7643aa0eb89b5e47",
+  "prompts": {},
+  "sessions": {
+    "s_768bec3fe32406": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_01364a252ffeVNd7EcdmXU42t1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Will Taylor <williamtaylor@cloudflare.com>"
+    }
+  }
+}

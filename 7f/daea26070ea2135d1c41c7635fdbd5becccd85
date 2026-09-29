@@ -1,0 +1,27 @@
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_9c31185f402640::t_c6f5b0e9708aa2 4,6,168
+packages/local-explorer-ui/src/__tests__/utils/worker-navigation.test.ts
+  s_9c31185f402640::t_04a446409ac381 24,26,46-47
+packages/local-explorer-ui/src/routes/email/sending.tsx
+  s_9c31185f402640::t_fb7ca3303172af 189-192
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_9c31185f402640::t_04496c1cb2bdd7 16-18
+packages/local-explorer-ui/src/utils/worker-navigation.ts
+  s_9c31185f402640::t_0a7bba1e2244c3 15-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7fdaea26070ea2135d1c41c7635fdbd5becccd85",
+  "prompts": {},
+  "sessions": {
+    "s_9c31185f402640": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_03271f4e3ffeFf9b515gTaTdkK",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_e136989dfafa02::t_75ac026f547f53 708-712,2214-2218,2245,2264-2268,2307,2401-2405,2414-2421,2432-2436,2456-2463
+packages/miniflare/src/workers/core/email.ts
+  s_e136989dfafa02::t_29695832881a50 5,149-155
+packages/miniflare/src/workers/email/email-store.ts
+  s_e136989dfafa02::t_ab73b201c0e5a9 18,89-91,100,112
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_e136989dfafa02::t_edec308d9ef5c3 271,316-318,323
+packages/miniflare/src/workers/email/storage.ts
+  s_e136989dfafa02::t_c7ca408278d7a6 18-22,46-50,67,71
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_e136989dfafa02::t_bfa39a2f60cddd 841-844,865-868,962-965,977-980,1734-1737
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_e136989dfafa02::t_474ec52888b0fc 549,599,618,630,1067
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_e136989dfafa02::t_81c2bf51377e70 1359-1361,3753-3754,3791,3819-3820,3868,4011-4012,4024-4031,4064-4065,4093-4100
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_e136989dfafa02::t_59a5fc3e4b3806 192-194,197-198,227
+packages/miniflare/test/index.spec.ts
+  s_e136989dfafa02::t_02c30b876f7555 2142-2144,2147
+packages/miniflare/test/plugins/email/index.spec.ts
+  s_e136989dfafa02::t_56acf0ac92be5f 1440,1442-1446,2120-2121,2124
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_e136989dfafa02::t_1d64ba4fb5c7e3 100-103,111,113,122-123,132,136-139,163,167,207-209,304,578,695-697,710,794
+packages/wrangler/e2e/get-platform-proxy.test.ts
+  s_e136989dfafa02::t_e7d1bbffdd1b4e 697
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "17bfebffed0fe37e1ec1ab8dd52fc5f534bd87ca",
+  "prompts": {},
+  "sessions": {
+    "s_e136989dfafa02": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_051edf047ffeURqkUgtmfuwDKf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

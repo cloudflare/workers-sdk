@@ -1,0 +1,21 @@
+.changeset/access-local-dev.md
+  s_684f2d2be94584::t_5fc3dd751617e9 8
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_684f2d2be94584::t_073702593ec42a 142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3175d9d297a172cfc49ee7332b1cdaf0c8ff4773",
+  "prompts": {},
+  "sessions": {
+    "s_684f2d2be94584": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_684f2d2be94584",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    }
+  }
+}

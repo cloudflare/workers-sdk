@@ -1,0 +1,29 @@
+packages/workers-utils/src/types.ts
+  s_7d5df5632364c9::t_eacd274d3686dd 436
+  s_7d5df5632364c9::t_2f70cbc7e72bf3 434-435
+  s_7d5df5632364c9::t_20130080322365 437-439
+packages/config/src/__tests__/convert.test.ts
+  s_7d5df5632364c9::t_e175e8b82e40d0 961,989-992,995-997
+  s_7d5df5632364c9::t_8559ea3ab97a94 959-960
+  s_7d5df5632364c9::t_477aebbb73180e 962-964
+  s_7d5df5632364c9::t_6c8d55b587ab05 986-988
+packages/workers-utils/src/config/validation.ts
+  s_7d5df5632364c9::t_00f2840eb8c55d 5310
+  s_7d5df5632364c9::t_88299443bb9722 5311-5313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "872d66471528ed73d43a1f1c0010d3bdd3ed0d46",
+  "prompts": {},
+  "sessions": {
+    "s_7d5df5632364c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0462d798effe7zAY4Lxc6YAJ8q",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Thomas Rubini <trubini@cloudflare.com>"
+    }
+  }
+}

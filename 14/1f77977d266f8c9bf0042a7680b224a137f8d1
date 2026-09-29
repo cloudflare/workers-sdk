@@ -1,0 +1,25 @@
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_5e02feaf7769df::t_ac00131c489e22 19,82,225
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_5e02feaf7769df::t_378a8293814ad1 20-21,24
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_5e02feaf7769df::t_e2659ad2a8f71c 18-22,29,42,44,152
+packages/local-explorer-ui/src/routes/email/sending.tsx
+  s_5e02feaf7769df::t_f2fe8623545f45 23-27,168,178,182,190,192,213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "141f77977d266f8c9bf0042a7680b224a137f8d1",
+  "prompts": {},
+  "sessions": {
+    "s_5e02feaf7769df": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_037a1ea80ffeSqTOx5QH6Nwys4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
