@@ -190,6 +190,7 @@ describe("Wrangler Worker configuration conversion", () => {
 				sourcePath?.includes("workflows")
 			)
 		).toEqual([]);
+		expect(result).toMatchSnapshot();
 	});
 
 	it("reports the settings of a second Workflow on an already exported class", ({
@@ -232,6 +233,7 @@ describe("Wrangler Worker configuration conversion", () => {
 				sourcePath: "workflows.1",
 			},
 		]);
+		expect(result).toMatchSnapshot();
 	});
 
 	it("merges a Workflow binding's settings into the export declaring the same Workflow", ({
@@ -262,6 +264,7 @@ describe("Wrangler Worker configuration conversion", () => {
 				sourcePath?.includes("workflows")
 			)
 		).toEqual([]);
+		expect(result).toMatchSnapshot();
 	});
 
 	it("reports zone-qualified custom domains for manual review", ({

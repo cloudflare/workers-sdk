@@ -116,6 +116,7 @@ describe("Wrangler environment and tooling conversion", () => {
 		expect(result.cloudflareConfig).toContain("Jobs: exports.workflow({");
 		expect(result.cloudflareConfig).toContain("steps: 20");
 		expect(result.codes).not.toContain("unsupported-binding-options");
+		expect(result).toMatchSnapshot();
 	});
 
 	it("reports Vite source maps as non-blocking guidance", ({ expect }) => {

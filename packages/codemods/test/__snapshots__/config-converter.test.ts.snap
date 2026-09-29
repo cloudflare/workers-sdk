@@ -354,3 +354,77 @@ export default defineConfig((ctx) => {
   "wranglerConfig": null,
 }
 `;
+
+exports[`Wrangler environment and tooling conversion > treats a Workflow whose script_name names the environment's Worker as local 1`] = `
+{
+  "cloudflareConfig": "import { bindings, defineConfig, exports } from "cf/config";
+
+/**
+ * Wrangler environments are selected through ctx.mode and the cf --mode flag.
+ * @see https://developers.cloudflare.com/workers/wrangler/environments/
+ */
+
+export default defineConfig((ctx) => {
+	switch (ctx.mode) {
+		case "staging": {
+			return {
+				worker: {
+					name: "app-staging",
+					compatibilityDate: "2026-09-23",
+					entrypoint: "src/index.ts",
+					env: {
+						JOBS: bindings.workflow({
+							name: "jobs-staging",
+							worker: "app-staging",
+							exportName: "Jobs",
+						}),
+					},
+					exports: {
+						Jobs: exports.workflow({
+							name: "jobs-staging",
+							limits: {
+								steps: 20,
+							},
+						}),
+					},
+				},
+			};
+		}
+		default: {
+			return {
+				worker: {
+					name: "app",
+					compatibilityDate: "2026-09-23",
+					entrypoint: "src/index.ts",
+				},
+			};
+		}
+	}
+});
+",
+  "codes": [
+    "environments-migrated",
+  ],
+  "wranglerConfig": "import { defineWranglerConfig } from "wrangler/experimental-config";
+
+export default defineWranglerConfig((ctx) => {
+	switch (ctx.mode) {
+		case "staging": {
+			return {
+				types: {
+					generate: false,
+				},
+			};
+		}
+		default: {
+			return {
+				types: {
+					generate: false,
+				},
+			};
+		}
+	}
+});
+",
+}
+`;
