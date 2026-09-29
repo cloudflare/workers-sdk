@@ -12,6 +12,28 @@ import {
 import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputProperty } from "./types";
 
+const WORKFLOW_SETTINGS = [
+	"limits",
+	"concurrency",
+	"schedules",
+	"default_retention",
+] as const;
+
+/**
+ * Whether this Worker defines the Workflow a `workflows` entry binds to. This
+ * matches Wrangler's `isWorkflowDefinedInThisScript`: no `script_name`, or a
+ * `script_name` naming this Worker. `source.name` is already the effective
+ * name in a named environment (`<name>-<environment>`).
+ */
+export function isLocalWorkflow(
+	entry: UnknownRecord,
+	source: UnknownRecord
+): boolean {
+	return (
+		typeof entry.script_name !== "string" || entry.script_name === source.name
+	);
+}
+
 /**
  * Options for `exports.workflow(...)`, from either a Wrangler `exports`
  * entry of type "workflow" or a `workflows` binding entry. Both carry the
@@ -50,6 +72,16 @@ export function convertExports(
 	const configuredExports = getRecord(source, "exports") ?? {};
 
 	const properties: OutputProperty[] = [];
+	// Workflow exports render last, once every `workflows` binding has had the
+	// chance to merge its settings into them; each keeps its place in order.
+	const workflowExports = new Map<string, UnknownRecord>();
+	const pendingWorkflows: Array<[OutputProperty, UnknownRecord]> = [];
+	function addWorkflowExport(key: string, record: UnknownRecord): void {
+		const property: OutputProperty = { key, value: call("exports.workflow") };
+		properties.push(property);
+		workflowExports.set(key, record);
+		pendingWorkflows.push([property, record]);
+	}
 	for (const [name, value] of Object.entries(configuredExports)) {
 		if (!isRecord(value)) {
 			continue;
@@ -110,10 +142,7 @@ export function convertExports(
 
 		if (value.type === "workflow") {
 			imports.add("exports");
-			properties.push({
-				key: name,
-				value: call("exports.workflow", workflowExportOptions(value)),
-			});
+			addWorkflowExport(name, { ...value });
 			continue;
 		}
 
@@ -125,25 +154,48 @@ export function convertExports(
 			)
 		);
 	}
-	// A `workflows` binding to a class this Worker defines (no `script_name`)
-	// becomes an export here, carrying the Workflow's settings. Classes the
-	// Wrangler `exports` table already declares keep that declaration.
-	const declared = new Set(properties.map((property) => property.key));
-	for (const entry of getRecords(source, "workflows")) {
+	// A `workflows` binding to a Workflow this Worker defines becomes an export
+	// here, carrying the Workflow's settings. When the Wrangler `exports` table
+	// already declares the same Workflow, the two merge the way Wrangler merges
+	// them (`getWorkflowsOwnedByScript`), with the binding's settings winning.
+	for (const [index, entry] of getRecords(source, "workflows").entries()) {
 		if (
-			typeof entry.script_name === "string" ||
+			!isLocalWorkflow(entry, source) ||
 			typeof entry.class_name !== "string" ||
-			entry.class_name.length === 0 ||
-			declared.has(entry.class_name)
+			entry.class_name.length === 0
 		) {
 			continue;
 		}
-		imports.add("exports");
-		declared.add(entry.class_name);
-		properties.push({
-			key: entry.class_name,
-			value: call("exports.workflow", workflowExportOptions(entry)),
-		});
+		const existing = workflowExports.get(entry.class_name);
+		if (existing === undefined) {
+			imports.add("exports");
+			addWorkflowExport(entry.class_name, { ...entry });
+			continue;
+		}
+		if (existing.name === entry.name) {
+			for (const key of WORKFLOW_SETTINGS) {
+				if (hasOwn(entry, key)) {
+					existing[key] = entry[key];
+				}
+			}
+			continue;
+		}
+		// The new config declares one Workflow per exported class, so a second
+		// Workflow on the same class keeps its binding and loses its settings.
+		const lost = WORKFLOW_SETTINGS.filter((key) => hasOwn(entry, key));
+		if (lost.length > 0) {
+			const sourcePath = `${sourcePrefix ? `${sourcePrefix}.` : ""}workflows.${index}`;
+			report(
+				createFollowUp(
+					"workflow-shared-class",
+					`The Workflow \`${String(entry.name)}\` at \`${sourcePath}\` uses the class \`${entry.class_name}\`, which already exports the Workflow \`${String(existing.name)}\`. The new config declares one Workflow per exported class, so its ${lost.map((key) => `\`${key}\``).join(", ")} were not migrated.`,
+					{ sourcePath }
+				)
+			);
+		}
+	}
+	for (const [property, record] of pendingWorkflows) {
+		property.value = call("exports.workflow", workflowExportOptions(record));
 	}
 
 	return properties.length > 0 ? { kind: "object", properties } : undefined;

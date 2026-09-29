@@ -9,6 +9,7 @@ import {
 	toOutputValue,
 	type UnknownRecord,
 } from "./converter-helpers";
+import { isLocalWorkflow } from "./exports";
 import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputValue } from "./types";
 
@@ -539,10 +540,11 @@ export function convertBindings(
 
 		// A Workflow defined by another Worker keeps its settings on that
 		// Worker's export; this Worker only binds to it. A Workflow this Worker
-		// defines also gets an `exports.workflow` entry (see convertExports).
-		const external = typeof entry.script_name === "string";
+		// defines, including one whose `script_name` names this Worker, also gets
+		// an `exports.workflow` entry (see convertExports).
+		const external = !isLocalWorkflow(entry, source);
 		const worker = external
-			? entry.script_name
+			? String(entry.script_name)
 			: typeof source.name === "string"
 				? source.name
 				: "TODO";

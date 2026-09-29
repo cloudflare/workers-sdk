@@ -164,6 +164,106 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("treats a Workflow whose script_name names this Worker as local", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "JOBS",
+					class_name: "Jobs",
+					limits: { steps: 10 },
+					name: "jobs",
+					script_name: "app",
+				},
+			],
+		});
+
+		expect(result.output).toContain('worker: "app"');
+		expect(result.output).toContain("Jobs: exports.workflow({");
+		expect(result.output).toContain("steps: 10");
+		expect(
+			result.followUps.filter(({ sourcePath }) =>
+				sourcePath?.includes("workflows")
+			)
+		).toEqual([]);
+	});
+
+	it("reports the settings of a second Workflow on an already exported class", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "FIRST",
+					class_name: "Runner",
+					limits: { steps: 10 },
+					name: "first",
+				},
+				{
+					binding: "SECOND",
+					class_name: "Runner",
+					limits: { steps: 20 },
+					name: "second",
+				},
+			],
+		});
+
+		expect(result.output).toContain("steps: 10");
+		expect(result.output).not.toContain("steps: 20");
+		expect(
+			result.followUps
+				.filter(({ sourcePath }) => sourcePath?.includes("workflows"))
+				.map(({ blocking, code, sourcePath }) => ({
+					blocking,
+					code,
+					sourcePath,
+				}))
+		).toEqual([
+			{
+				blocking: true,
+				code: "workflow-shared-class",
+				sourcePath: "workflows.1",
+			},
+		]);
+	});
+
+	it("merges a Workflow binding's settings into the export declaring the same Workflow", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			exports: {
+				Jobs: { name: "jobs", schedules: "0 * * * *", type: "workflow" },
+			},
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "JOBS",
+					class_name: "Jobs",
+					limits: { steps: 10 },
+					name: "jobs",
+				},
+			],
+		});
+
+		expect(result.output.match(/Jobs: exports\.workflow\(/g)).toHaveLength(1);
+		expect(result.output).toContain("steps: 10");
+		expect(result.output).toContain('schedules: "0 * * * *"');
+		expect(
+			result.followUps.filter(({ sourcePath }) =>
+				sourcePath?.includes("workflows")
+			)
+		).toEqual([]);
+	});
+
 	it("reports zone-qualified custom domains for manual review", ({
 		expect,
 	}) => {
