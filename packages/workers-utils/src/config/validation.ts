@@ -6518,6 +6518,7 @@ const validatePreviewsConfig =
 				"streaming_tail_consumers",
 				"unsafe",
 				"browser",
+				"analytics",
 				"ai",
 				"images",
 				"stream",
@@ -6717,6 +6718,16 @@ const validatePreviewsConfig =
 					diagnostics,
 					`${field}.browser`,
 					previews.browser,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.analytics !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.analytics`,
+					previews.analytics,
 					undefined
 				) && isValid;
 		}

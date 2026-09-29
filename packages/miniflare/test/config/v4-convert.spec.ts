@@ -114,6 +114,7 @@ describe("convertV4MiniflareOptions", () => {
 			serviceBindings: { SERVICE: "other-worker" },
 			assets: { directory: "./public", binding: "ASSETS" },
 			browserRendering: { binding: "BROWSER", headful: true },
+			analyticsSql: { binding: "ANALYTICS" },
 			workflows: {
 				WORKFLOW: {
 					name: "workflow",
@@ -158,6 +159,7 @@ describe("convertV4MiniflareOptions", () => {
 				},
 				QUEUE: { type: "queue", name: "queue" },
 				SERVICE: { type: "worker", worker: "other-worker" },
+				ANALYTICS: { type: "analytics", dev: { remote: false } },
 				ASSETS: { type: "assets" },
 				BROWSER: { type: "browser", headful: true },
 				WORKFLOW: {

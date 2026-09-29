@@ -499,15 +499,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 		.record(z.string(), z.object({ dataset: z.string() }))
 		.optional(),
 	ai: V4RemoteBindingWithNameSchema.optional(),
-	analyticsSql: z
-		.record(
-			z.string(),
-			z.object({
-				remoteProxyConnectionString:
-					RemoteProxyConnectionStringSchema.optional(),
-			})
-		)
-		.optional(),
+	analyticsSql: V4RemoteBindingWithNameSchema.optional(),
 	agentMemory: z
 		.record(
 			z.string(),
@@ -930,7 +922,7 @@ export type V4WorkerOptionsShape = {
 	};
 	analyticsEngineDatasets?: Record<string, { dataset: string }>;
 	ai?: V4RemoteBindingWithName;
-	analyticsSql?: Record<string, V4RemoteBinding>;
+	analyticsSql?: V4RemoteBindingWithName;
 	agentMemory?: Record<string, { namespace: string } & V4RemoteBinding>;
 	aiSearchNamespaces?: Record<
 		string,

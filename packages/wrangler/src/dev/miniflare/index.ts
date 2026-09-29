@@ -858,12 +858,13 @@ export function buildMiniflareBindingOptions(
 			])
 		),
 
-		analyticsSql: Object.fromEntries(
-			analyticsSqlBindings.map((analytics) => [
-				analytics.binding,
-				{ remoteProxyConnectionString },
-			])
-		),
+		analyticsSql:
+			analyticsSqlBindings.length > 0
+				? {
+						binding: analyticsSqlBindings[0].binding,
+						remoteProxyConnectionString,
+					}
+				: undefined,
 
 		kvNamespaces: Object.fromEntries(
 			kvNamespaces.map((kv) =>

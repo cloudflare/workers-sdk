@@ -14428,6 +14428,47 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 			});
 
+			it("should accept previews.analytics", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						analytics: { binding: "ANALYTICS" },
+					},
+				} as unknown as RawConfig;
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.previews?.analytics).toEqual({ binding: "ANALYTICS" });
+			});
+
+			it("should reject previews.analytics without a binding name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						analytics: {},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'binding should have a string "binding" field.'
+				);
+			});
+
 			it("should reject previews.queues when passed as a flat array", ({
 				expect,
 			}) => {

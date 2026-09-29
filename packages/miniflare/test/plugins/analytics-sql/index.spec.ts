@@ -4,18 +4,13 @@ import { describe, test } from "vitest";
 function workerOptions(bindings = true) {
 	return {
 		config: {
-			env: bindings
-				? {
-						ANALYTICS: { type: "analytics" },
-						SECOND_ANALYTICS: { type: "analytics" },
-					}
-				: {},
+			env: bindings ? { ANALYTICS: { type: "analytics" } } : {},
 		},
 	} as unknown as Parameters<typeof ANALYTICS_SQL_PLUGIN.getBindings>[0];
 }
 
 describe("Analytics SQL plugin", () => {
-	test("creates service bindings for every configured binding", async ({
+	test("creates a service binding for the configured binding", async ({
 		expect,
 	}) => {
 		const bindings = await ANALYTICS_SQL_PLUGIN.getBindings(
@@ -24,30 +19,23 @@ describe("Analytics SQL plugin", () => {
 			0
 		);
 
-		expect(bindings).toHaveLength(2);
-		expect(bindings).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ name: "ANALYTICS" }),
-				expect.objectContaining({ name: "SECOND_ANALYTICS" }),
-			])
-		);
-		for (const binding of bindings ?? []) {
-			expect(binding).toMatchObject({
-				service: { name: "analytics-sql:remote" },
-			});
-		}
+		expect(bindings).toEqual([
+			expect.objectContaining({
+				name: "ANALYTICS",
+				service: expect.objectContaining({ name: "analytics-sql:remote" }),
+			}),
+		]);
 	});
 
 	test("creates Node proxy bindings", async ({ expect }) => {
 		const bindings =
 			await ANALYTICS_SQL_PLUGIN.getNodeBindings(workerOptions());
 
-		expect(Object.keys(bindings)).toEqual(["ANALYTICS", "SECOND_ANALYTICS"]);
+		expect(Object.keys(bindings)).toEqual(["ANALYTICS"]);
 		expect(bindings.ANALYTICS).toBeInstanceOf(ProxyNodeBinding);
-		expect(bindings.SECOND_ANALYTICS).toBeInstanceOf(ProxyNodeBinding);
 	});
 
-	test("creates one shared remote service only when configured", async ({
+	test("creates the remote service only when configured", async ({
 		expect,
 	}) => {
 		const services = await ANALYTICS_SQL_PLUGIN.getServices({
