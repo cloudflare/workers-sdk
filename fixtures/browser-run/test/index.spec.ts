@@ -12,6 +12,10 @@ const BROWSER_RENDERING_RETRY = {
 	},
 } satisfies TestOptions;
 
+const testPageUrl = encodeURIComponent(
+	"data:text/html,<h1>Example Domain</h1><p>Example paragraph</p>"
+);
+
 describe.sequential("Local Browser", () => {
 	let ip: string,
 		port: number,
@@ -61,7 +65,7 @@ describe.sequential("Local Browser", () => {
 				async ({ expect }) => {
 					await expect(
 						fetchText(
-							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=select`
+							`http://${ip}:${port}/?lib=${lib}&url=${testPageUrl}&action=select`
 						)
 					).resolves.toEqual("Example Domain");
 				}
@@ -73,7 +77,7 @@ describe.sequential("Local Browser", () => {
 				async ({ expect }) => {
 					await expect(
 						fetchText(
-							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=alter`
+							`http://${ip}:${port}/?lib=${lib}&url=${testPageUrl}&action=alter`
 						)
 					).resolves.toEqual(
 						`New paragraph text set by ${lib === "playwright" ? "Playwright" : "Puppeteer"}!`
@@ -87,7 +91,7 @@ describe.sequential("Local Browser", () => {
 				async ({ expect }) => {
 					await expect(
 						fetchText(
-							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=disconnect`
+							`http://${ip}:${port}/?lib=${lib}&url=${testPageUrl}&action=disconnect`
 						)
 					).resolves.toEqual(`Browser disconnected`);
 				}
