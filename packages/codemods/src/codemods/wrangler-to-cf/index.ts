@@ -14,10 +14,11 @@ import {
 } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
 import {
-	installCfDependency,
+	installProjectDependencies,
 	planCfDependencyInstallation,
+	planWranglerDependencyUpgrade,
 } from "./install-dependencies";
-import { assertCompatibleWranglerVersion } from "./wrangler-version";
+import { MINIMUM_WRANGLER_VERSION } from "./wrangler-version";
 import type {
 	MigrationFollowUp,
 	WranglerToCfMigrationOptions,
@@ -87,7 +88,11 @@ export async function migrateWranglerToCf(
 		bundler,
 		secretFiles
 	);
-	const dependencyPlan = await planCfDependencyInstallation(projectDirectory);
+	const wranglerConfig = renderWranglerConfig(convertedConfig);
+	const [dependencyPlan, wranglerPlan] = await Promise.all([
+		planCfDependencyInstallation(projectDirectory),
+		planWranglerDependencyUpgrade(projectDirectory, wranglerConfig !== null),
+	]);
 	if (dependencyPlan.action === "missing-manifest") {
 		convertedConfig.followUps.push(
 			createFollowUp(
@@ -127,9 +132,24 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
+	if (wranglerPlan.action === "manual") {
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"wrangler-upgrade-manual",
+				`The generated wrangler.config.ts requires Wrangler ${MINIMUM_WRANGLER_VERSION} or newer. Add a compatible Wrangler dependency to the package that owns this Worker and update its lockfile.`
+			)
+		);
+	}
+	if (!installDependencies && wranglerPlan.action === "install") {
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"wrangler-upgrade-disabled",
+				`Automatic dependency installation was disabled. Update Wrangler to ${MINIMUM_WRANGLER_VERSION} or newer with your package manager before using the generated configuration.`
+			)
+		);
+	}
 	const followUps = [...convertedConfig.followUps];
 	const cloudflareConfig = renderCloudflareConfig(convertedConfig);
-	const wranglerConfig = renderWranglerConfig(convertedConfig);
 
 	const outputs = new Map<string, string>([
 		[cloudflareConfigPath, cloudflareConfig],
@@ -141,22 +161,36 @@ export async function migrateWranglerToCf(
 		);
 	}
 	const changedFiles = Array.from(outputs.keys());
-	let requiresInstall = dependencyPlan.action !== "already-installed";
+	let requiresInstall =
+		dependencyPlan.action !== "already-installed" ||
+		wranglerPlan.action !== "none";
+	const dependenciesToInstall = [
+		...(dependencyPlan.action === "install"
+			? [{ dev: true, packageSpecifier: "cf@latest" }]
+			: []),
+		...(wranglerPlan.action === "install"
+			? [
+					{
+						dev: wranglerPlan.dev,
+						packageSpecifier: wranglerPlan.packageSpecifier,
+					},
+				]
+			: []),
+	];
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
-	if (wranglerConfig) {
-		assertCompatibleWranglerVersion(projectDirectory);
-	}
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
 	}
-	if (installDependencies && dependencyPlan.action === "install") {
+	if (installDependencies && dependenciesToInstall.length > 0) {
 		let dependencyFollowUp: MigrationFollowUp | undefined;
 		try {
-			const installResult = await installCfDependency(dependencyPlan, {
-				dryRun,
-			});
+			const installResult = await installProjectDependencies(
+				projectDirectory,
+				dependenciesToInstall,
+				{ dryRun }
+			);
 			changedFiles.push(...installResult.changedFiles);
 			requiresInstall = installResult.requiresInstall;
 		} catch (error) {
@@ -165,9 +199,17 @@ export async function migrateWranglerToCf(
 			}
 			const reason =
 				error instanceof Error ? ` Installation failed: ${error.message}` : "";
+			const packageNames = dependenciesToInstall
+				.map(({ packageSpecifier }) =>
+					packageSpecifier.startsWith("cf@") ? "`cf`" : "`wrangler`"
+				)
+				.join(" and ");
+			const packageSpecifiers = dependenciesToInstall
+				.map(({ packageSpecifier }) => `\`${packageSpecifier}\``)
+				.join(" and ");
 			dependencyFollowUp = createFollowUp(
 				"cf-install-failed",
-				`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+				`The generated configuration was written, but ${packageNames} could not be installed automatically. Install ${packageSpecifiers} with your package manager before using it.${reason}`
 			);
 			requiresInstall = true;
 		}

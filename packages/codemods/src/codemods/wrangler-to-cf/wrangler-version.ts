@@ -1,10 +1,10 @@
 import { getInstalledPackageVersion } from "@cloudflare/workers-utils";
 
-const MINIMUM_WRANGLER_VERSION = "4.100.0";
+export const MINIMUM_WRANGLER_VERSION = "4.100.0";
 const SEMVER_PATTERN =
 	/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
 
-function isVersionSupported(version: string): boolean {
+export function isVersionSupported(version: string): boolean {
 	const match = SEMVER_PATTERN.exec(version);
 	if (!match) {
 		return false;
@@ -23,26 +23,28 @@ function isVersionSupported(version: string): boolean {
 	return match[4] === undefined;
 }
 
-/**
- * Ensures the project can load a generated wrangler.config.ts file.
- *
- * @param projectDirectory Directory containing the Wrangler configuration.
- */
-export function assertCompatibleWranglerVersion(
-	projectDirectory: string
-): void {
+/** Returns a compatible version range when the declared or installed Wrangler needs updating. */
+export function getWranglerUpgradeSpec(
+	projectDirectory: string,
+	declaredVersion: string
+): string | undefined {
 	const installedVersion = getInstalledPackageVersion(
 		"wrangler",
 		projectDirectory
 	);
-	if (installedVersion && isVersionSupported(installedVersion)) {
-		return;
+	const declaredMinimum =
+		/^(?:\^|~|>=)?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(
+			declaredVersion
+		)?.[1];
+	const declaredCompatible =
+		declaredVersion === "latest" ||
+		(declaredMinimum !== undefined && isVersionSupported(declaredMinimum));
+	if (
+		declaredCompatible &&
+		(installedVersion === undefined || isVersionSupported(installedVersion))
+	) {
+		return undefined;
 	}
 
-	const detectedVersion = installedVersion
-		? `Detected version ${installedVersion}.`
-		: "No local Wrangler installation was found.";
-	throw new Error(
-		`Generating wrangler.config.ts requires wrangler ${MINIMUM_WRANGLER_VERSION} or newer because earlier versions do not export wrangler/experimental-config. ${detectedVersion} Update Wrangler and retry the migration.`
-	);
+	return declaredCompatible ? declaredVersion : `^${MINIMUM_WRANGLER_VERSION}`;
 }

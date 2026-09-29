@@ -9,6 +9,10 @@ import {
 	YarnPackageManager,
 } from "@cloudflare/workers-utils";
 import { fileExists } from "../../files";
+import {
+	getWranglerUpgradeSpec,
+	MINIMUM_WRANGLER_VERSION,
+} from "./wrangler-version";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 const PACKAGE_MANAGERS = [
@@ -43,15 +47,23 @@ type CfDependencyInstallPlan =
 	  }
 	| {
 			action: "install";
-			isWorkspaceRoot: boolean;
-			packageDirectory: string;
 	  };
 
-interface CfDependencyInstallOptions {
+export type WranglerDependencyUpgradePlan =
+	| { action: "none" }
+	| { action: "manual" }
+	| { action: "install"; dev: boolean; packageSpecifier: string };
+
+export interface DependencyToInstall {
+	dev: boolean;
+	packageSpecifier: string;
+}
+
+interface DependencyInstallOptions {
 	dryRun: boolean;
 }
 
-interface CfDependencyInstallResult {
+interface DependencyInstallResult {
 	changedFiles: string[];
 	requiresInstall: boolean;
 }
@@ -317,30 +329,70 @@ export async function planCfDependencyInstallation(
 	if (hasCfDependency(packageJson)) {
 		return { action: "already-installed" };
 	}
-	const isWorkspaceRoot =
-		packageJson.workspaces !== undefined ||
-		(await fileExists(path.join(packageDirectory, "pnpm-workspace.yaml")));
+	return { action: "install" };
+}
+
+/**
+ * Plans a Wrangler upgrade while retaining its current dependency section.
+ */
+export async function planWranglerDependencyUpgrade(
+	projectDirectory: string,
+	requiresWrangler: boolean
+): Promise<WranglerDependencyUpgradePlan> {
+	const packageJsonPath = path.join(projectDirectory, "package.json");
+	if (!(await fileExists(packageJsonPath))) {
+		return { action: requiresWrangler ? "manual" : "none" };
+	}
+
+	let packageJson: PackageJson;
+	try {
+		packageJson = await readPackageJson(packageJsonPath);
+	} catch {
+		return { action: requiresWrangler ? "manual" : "none" };
+	}
+
+	const dependency = packageJson.dependencies?.wrangler;
+	const devDependency = packageJson.devDependencies?.wrangler;
+	const declaredVersion = dependency ?? devDependency;
+	if (declaredVersion === undefined && !requiresWrangler) {
+		return { action: "none" };
+	}
+
+	const upgradeSpec =
+		typeof declaredVersion === "string"
+			? getWranglerUpgradeSpec(projectDirectory, declaredVersion)
+			: `^${MINIMUM_WRANGLER_VERSION}`;
+	if (upgradeSpec === undefined) {
+		return { action: "none" };
+	}
 
 	return {
 		action: "install",
-		isWorkspaceRoot,
-		packageDirectory,
+		dev: dependency === undefined,
+		packageSpecifier: `wrangler@${upgradeSpec}`,
 	};
 }
 
 /**
- * Installs cf using a dependency installation plan.
+ * Installs planned project dependencies with the detected package manager.
  *
- * @param plan Planned package manager invocation for the migrated project.
+ * @param packageDirectory Directory containing the project's package.json.
+ * @param dependencies Packages to install in their dependency sections.
  * @param options Whether to report planned changes without installing.
  *
  * @returns Package files changed or expected to change during installation.
  */
-export async function installCfDependency(
-	plan: Extract<CfDependencyInstallPlan, { action: "install" }>,
-	options: CfDependencyInstallOptions
-): Promise<CfDependencyInstallResult> {
-	const { isWorkspaceRoot, packageDirectory } = plan;
+export async function installProjectDependencies(
+	packageDirectory: string,
+	dependencies: DependencyToInstall[],
+	options: DependencyInstallOptions
+): Promise<DependencyInstallResult> {
+	const packageJson = await readPackageJson(
+		path.join(packageDirectory, "package.json")
+	);
+	const isWorkspaceRoot =
+		packageJson.workspaces !== undefined ||
+		(await fileExists(path.join(packageDirectory, "pnpm-workspace.yaml")));
 	const {
 		directory: lockFileDirectory,
 		packageManager,
@@ -364,11 +416,18 @@ export async function installCfDependency(
 
 	const before = await readFiles(packageFilePaths);
 
-	await installPackages(packageManager.type, ["cf@latest"], {
-		cwd: packageDirectory,
-		dev: true,
-		isWorkspaceRoot,
-	});
+	for (const dev of [true, false]) {
+		const packages = dependencies
+			.filter((dependency) => dependency.dev === dev)
+			.map((dependency) => dependency.packageSpecifier);
+		if (packages.length > 0) {
+			await installPackages(packageManager.type, packages, {
+				cwd: packageDirectory,
+				dev,
+				isWorkspaceRoot,
+			});
+		}
+	}
 
 	return {
 		changedFiles: getChangedFiles(before, await readFiles(packageFilePaths)),
