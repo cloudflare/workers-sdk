@@ -1716,6 +1716,22 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * K2 producer bindings. Create streams using the Dashboard or API.
+	 *
+	 * This field must be specified separately in each named environment.
+	 * @default []
+	 * @nonInheritable
+	 */
+	k2: {
+		/** The binding name exposed on the Worker's env object. */
+		binding: string;
+		/** The ID of the K2 stream. */
+		stream: string;
+		/** Always uses the real stream in development. Set true to suppress the usage warning; false is unsupported. */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Specifies Secret Store bindings that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

@@ -161,6 +161,7 @@ export function createWorkerUploadForm(
 	);
 	const mtls_certificates = extractBindingsOfType("mtls_certificate", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
 	const wasm_modules = extractBindingsOfType("wasm_module", bindings);
@@ -582,6 +583,10 @@ export function createWorkerUploadForm(
 		} else {
 			throw new Error("Pipeline binding must specify a stream or pipeline");
 		}
+	});
+
+	k2.forEach(({ binding, stream: k2Stream }) => {
+		metadataBindings.push({ name: binding, type: "k2", stream: k2Stream });
 	});
 
 	worker_loaders.forEach(({ binding }) => {

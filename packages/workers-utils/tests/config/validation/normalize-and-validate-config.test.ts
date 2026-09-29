@@ -124,6 +124,7 @@ describe("normalizeAndValidateConfig()", () => {
 			tail_consumers: undefined,
 			streaming_tail_consumers: undefined,
 			pipelines: [],
+			k2: [],
 			workflows: [],
 			userConfigPath: undefined,
 			topLevelName: undefined,

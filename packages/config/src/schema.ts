@@ -164,6 +164,11 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		name: z.string(),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
+	z.strictObject({
+		type: z.literal("k2"),
+		stream: z.string(),
+		dev: RemoteBindingDevSchema.optional(),
+	}),
 	QueueBindingSchema,
 	z.strictObject({
 		type: z.literal("rate-limit"),

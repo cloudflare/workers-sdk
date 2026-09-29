@@ -281,6 +281,15 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "k2": {
+				if (pages) {
+					break;
+				}
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "k2", ...x };
+				}
+				break;
+			}
 			case "secrets_store_secrets": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "secrets_store_secret", ...x };

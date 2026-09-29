@@ -373,6 +373,7 @@ function convertBindingsAndAssets(
 	const mtlsCertificates: NonNullable<RawConfig["mtls_certificates"]> = [];
 	const hyperdrive: NonNullable<RawConfig["hyperdrive"]> = [];
 	const pipelines: NonNullable<RawConfig["pipelines"]> = [];
+	const k2: NonNullable<RawConfig["k2"]> = [];
 	const flagship: NonNullable<RawConfig["flagship"]> = [];
 	const aiSearch: NonNullable<RawConfig["ai_search"]> = [];
 	const aiSearchNamespaces: NonNullable<RawConfig["ai_search_namespaces"]> = [];
@@ -589,6 +590,16 @@ function convertBindingsAndAssets(
 				);
 				break;
 			}
+			case "k2": {
+				k2.push(
+					omitUndefined({
+						binding: name,
+						stream: binding.stream,
+						remote: binding.dev?.remote,
+					})
+				);
+				break;
+			}
 			case "queue": {
 				queueProducers.push(
 					omitUndefined({
@@ -758,6 +769,9 @@ function convertBindingsAndAssets(
 	}
 	if (pipelines.length) {
 		result.pipelines = pipelines;
+	}
+	if (k2.length) {
+		result.k2 = k2;
 	}
 	if (flagship.length) {
 		result.flagship = flagship;

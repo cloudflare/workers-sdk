@@ -249,6 +249,14 @@ import {
 import { hyperdriveUpdateCommand } from "./hyperdrive/update";
 import { init } from "./init";
 import {
+	k2Namespace,
+	k2StreamsNamespace,
+	k2StreamsCreateCommand,
+	k2StreamsDeleteCommand,
+	k2StreamsGetCommand,
+	k2StreamsListCommand,
+} from "./k2/commands";
+import {
 	kvBulkDeleteCommand,
 	kvBulkGetCommand,
 	kvBulkNamespace,
@@ -2414,6 +2422,22 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("pipelines");
+
+	registry.define([
+		{ command: "wrangler k2", definition: k2Namespace },
+		{ command: "wrangler k2 streams", definition: k2StreamsNamespace },
+		{
+			command: "wrangler k2 streams create",
+			definition: k2StreamsCreateCommand,
+		},
+		{ command: "wrangler k2 streams get", definition: k2StreamsGetCommand },
+		{ command: "wrangler k2 streams list", definition: k2StreamsListCommand },
+		{
+			command: "wrangler k2 streams delete",
+			definition: k2StreamsDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("k2");
 
 	registry.define([
 		{ command: "wrangler vpc", definition: vpcNamespace },

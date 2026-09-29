@@ -85,6 +85,7 @@ describe("wrangler", () => {
 				  wrangler basin                  🏞️ Manage Basin products
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler k2                     ⛰️ Manage K2 streams [open beta]
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
@@ -186,6 +187,7 @@ describe("wrangler", () => {
 				  wrangler basin                  🏞️ Manage Basin products
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler k2                     ⛰️ Manage K2 streams [open beta]
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]

@@ -486,6 +486,16 @@ const V4WorkerOptionsShapeSchema = z.object({
 	pipelines: z
 		.union([z.record(z.string(), V4PipelineSchema), z.array(z.string())])
 		.optional(),
+	k2: z
+		.record(
+			z.string(),
+			z.object({
+				stream: z.string(),
+				remoteProxyConnectionString:
+					RemoteProxyConnectionStringSchema.optional(),
+			})
+		)
+		.optional(),
 	secretsStoreSecrets: z
 		.record(
 			z.string(),
@@ -897,6 +907,7 @@ export type V4WorkerOptionsShape = {
 				| ({ pipeline: string } & V4RemoteBinding)
 		  >
 		| string[];
+	k2?: Record<string, { stream: string } & V4RemoteBinding>;
 	secretsStoreSecrets?: Record<
 		string,
 		{ store_id: string; secret_name: string }
