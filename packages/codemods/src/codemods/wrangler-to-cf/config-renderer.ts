@@ -109,13 +109,15 @@ function renderBranchReturn(branch: ConvertedBranch, depth: number): string[] {
 function renderConfigExport(
 	definer: string,
 	base: ConvertedBranch,
-	environments: Map<string, ConvertedBranch>
+	environments: Map<string, ConvertedBranch>,
+	returnType?: string
 ): string {
 	if (environments.size === 0 && !base.previewConfig) {
 		return `export default ${definer}(${renderObject(base.config, 0)});`;
 	}
 
-	const lines = [`export default ${definer}((ctx) => {`];
+	const annotation = returnType ? `: ${returnType}` : "";
+	const lines = [`export default ${definer}((ctx)${annotation} => {`];
 	if (environments.size === 0) {
 		lines.push(...renderBranchReturn(base, 1));
 	} else {
@@ -177,6 +179,9 @@ export function renderCloudflareConfig(
 	converted: ConvertedWranglerConfig
 ): string {
 	const imports = [...converted.imports, "defineConfig"].sort();
+	if (converted.environments.size > 0 || converted.base.previewConfig) {
+		imports.push("type CloudflareConfig");
+	}
 	const sections = [`import { ${imports.join(", ")} } from "cf/config";`];
 
 	const warning = converted.followUps.find(
@@ -201,7 +206,12 @@ export function renderCloudflareConfig(
 	}
 
 	sections.push(
-		renderConfigExport("defineConfig", converted.base, converted.environments)
+		renderConfigExport(
+			"defineConfig",
+			converted.base,
+			converted.environments,
+			"CloudflareConfig"
+		)
 	);
 
 	return `${sections.join("\n\n")}\n`;

@@ -44,6 +44,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",

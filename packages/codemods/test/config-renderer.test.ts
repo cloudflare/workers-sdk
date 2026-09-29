@@ -48,6 +48,12 @@ describe("configuration rendering", () => {
 
 		expect(renderCloudflareConfig(converted)).toContain("switch (ctx.mode)");
 		expect(renderCloudflareConfig(converted)).toContain("if (ctx.isPreview)");
+		expect(renderCloudflareConfig(converted)).toContain(
+			"type CloudflareConfig"
+		);
+		expect(renderCloudflareConfig(converted)).toContain(
+			"defineConfig((ctx): CloudflareConfig =>"
+		);
 	});
 
 	it("renders Wrangler tooling only when configured", ({ expect }) => {
@@ -63,5 +69,10 @@ describe("configuration rendering", () => {
 		expect(renderWranglerConfig(converted)).toContain(
 			"defineWranglerConfig({\n\tminify: true,\n})"
 		);
+		converted.toolingEnvironments.set("staging", converted.toolingBase);
+		expect(renderWranglerConfig(converted)).toContain(
+			"defineWranglerConfig((ctx) =>"
+		);
+		expect(renderWranglerConfig(converted)).not.toContain("CloudflareConfig");
 	});
 });

@@ -2,7 +2,7 @@
 
 exports[`Wrangler environment and tooling conversion > converts environments and previews without inheriting bindings 1`] = `
 {
-  "cloudflareConfig": "import { bindings, defineConfig } from "cf/config";
+  "cloudflareConfig": "import { bindings, defineConfig, type CloudflareConfig } from "cf/config";
 
 /**
  * Secret-like files were detected but not read or migrated: .env.example. Only \`secrets.required\` entries are migrated.
@@ -27,7 +27,7 @@ exports[`Wrangler environment and tooling conversion > converts environments and
  */
 throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
-export default defineConfig((ctx) => {
+export default defineConfig((ctx): CloudflareConfig => {
 	switch (ctx.mode) {
 		case "staging": {
 			if (ctx.isPreview) {
@@ -106,7 +106,7 @@ export default defineConfig((ctx) => {
 
 exports[`Wrangler environment and tooling conversion > renders Wrangler tooling branches independently 1`] = `
 {
-  "cloudflareConfig": "import { bindings, defineConfig } from "cf/config";
+  "cloudflareConfig": "import { bindings, defineConfig, type CloudflareConfig } from "cf/config";
 
 /**
  * Wrangler environments are selected through ctx.mode and the cf --mode flag.
@@ -126,7 +126,7 @@ exports[`Wrangler environment and tooling conversion > renders Wrangler tooling 
  */
 throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
-export default defineConfig((ctx) => {
+export default defineConfig((ctx): CloudflareConfig => {
 	switch (ctx.mode) {
 		case "staging": {
 			if (ctx.isPreview) {
@@ -232,7 +232,7 @@ export default defineWranglerConfig((ctx) => {
 
 exports[`Wrangler environment and tooling conversion > reports Vite mode and tooling conflicts 1`] = `
 {
-  "cloudflareConfig": "import { bindings, defineConfig } from "cf/config";
+  "cloudflareConfig": "import { bindings, defineConfig, type CloudflareConfig } from "cf/config";
 
 /**
  * Wrangler environments are selected through ctx.mode and the cf --mode flag.
@@ -270,7 +270,7 @@ exports[`Wrangler environment and tooling conversion > reports Vite mode and too
  */
 throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
-export default defineConfig((ctx) => {
+export default defineConfig((ctx): CloudflareConfig => {
 	switch (ctx.mode) {
 		case "development": {
 			if (ctx.isPreview) {
