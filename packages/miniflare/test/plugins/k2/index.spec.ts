@@ -16,7 +16,7 @@ const script = `export default {
 			const useArrayBuffer = new URL(request.url).searchParams.has("array-buffer");
 			const content = useArrayBuffer ? bytes.slice().buffer : bytes;
 			const records = [{ content, headers: { event: "order.created" } }];
-			if (new URL(request.url).searchParams.has("mixed")) records.push({ content: useArrayBuffer ? bytes : bytes.buffer });
+			if (new URL(request.url).searchParams.has("mixed")) records.push({ content: useArrayBuffer ? bytes : bytes.slice().buffer });
 			return Response.json(await env.ORDERS.send(records));
 		} catch (err) {
 			return new Response(err.message, { status: 500 });
@@ -36,6 +36,15 @@ class Producer extends RpcTarget {
 		}
 		return this.result;
 	}
+}
+
+// Cap'n Web decodes bytes as a Node Buffer; compare them as plain Uint8Arrays.
+function plain(batch?: K2Record<ArrayBuffer | Uint8Array>[]) {
+	return batch?.map((record) =>
+		record.content instanceof Uint8Array
+			? { ...record, content: new Uint8Array(record.content) }
+			: record
+	);
 }
 
 function producerWorker(proxyUrl?: URL, remote?: boolean) {
@@ -134,7 +143,7 @@ describe("K2 producer binding", () => {
 			useDispose(mf);
 			const response = await mf.dispatchFetch("http://localhost/");
 			expect(await response.json()).toEqual({ success: true });
-			expect(producer.batches).toEqual([
+			expect(producer.batches.map(plain)).toEqual([
 				[
 					{
 						content: new Uint8Array([1, 2, 3]),
@@ -156,27 +165,23 @@ describe("K2 producer binding", () => {
 			expect(producer.batches).toHaveLength(2);
 
 			producer.result = { success: true };
-			const arrayBufferResponse = await mf.dispatchFetch(
-				"http://localhost/?array-buffer"
-			);
-			const arrayBufferBody = await arrayBufferResponse.text();
-			expect(arrayBufferResponse.status, arrayBufferBody).toBe(200);
-			expect(JSON.parse(arrayBufferBody)).toEqual({ success: true });
-			expect(producer.batches).toHaveLength(3);
-			expect(producer.batches[2]).toEqual([
-				{
-					content: new Uint8Array([1, 2, 3]),
-					headers: { event: "order.created" },
-				},
-			]);
-			for (const query of ["mixed", "mixed&array-buffer"]) {
-				const mixed = await mf.dispatchFetch(`http://localhost/?${query}`);
-				expect(mixed.status).toBe(500);
-				expect(await mixed.text()).toContain(
-					"Cannot serialize value: [object ArrayBuffer]"
-				);
-				expect(producer.batches).toHaveLength(3);
+			const bytes = new Uint8Array([1, 2, 3]);
+			const headers = { event: "order.created" };
+			for (const [query, expected] of [
+				["array-buffer", [{ content: bytes.buffer, headers }]],
+				["mixed", [{ content: bytes, headers }, { content: bytes.buffer }]],
+				[
+					"mixed&array-buffer",
+					[{ content: bytes.buffer, headers }, { content: bytes }],
+				],
+			] as const) {
+				const response = await mf.dispatchFetch(`http://localhost/?${query}`);
+				const body = await response.text();
+				expect(response.status, body).toBe(200);
+				expect(JSON.parse(body)).toEqual({ success: true });
+				expect(plain(producer.batches.at(-1))).toEqual(expected);
 			}
+			expect(producer.batches).toHaveLength(5);
 		}
 	);
 

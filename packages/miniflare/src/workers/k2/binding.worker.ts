@@ -23,16 +23,6 @@ export default class K2Client extends WorkerEntrypoint<
 			throwRemoteRequired(binding);
 		}
 
-		// Cap'n Web transports Uint8Array but not ArrayBuffer. Convert only
-		// all-ArrayBuffer batches; mixed batches fail transport serialization.
-		const forwarded =
-			Array.isArray(records) &&
-			records.every((record) => record?.content instanceof ArrayBuffer)
-				? records.map((record) => ({
-						...record,
-						content: new Uint8Array(record.content as ArrayBuffer),
-					}))
-				: records;
 		const producer = makeRemoteProxyStub(
 			remoteProxyConnectionString,
 			binding,
@@ -41,7 +31,7 @@ export default class K2Client extends WorkerEntrypoint<
 			this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
 		) as unknown as K2Producer & Disposable;
 		try {
-			const result = await producer.send(forwarded);
+			const result = await producer.send(records);
 			// Return plain data before closing the one-call RPC session. Forwarding
 			// its result object can retain remote capabilities/disposer state.
 			return result.success
