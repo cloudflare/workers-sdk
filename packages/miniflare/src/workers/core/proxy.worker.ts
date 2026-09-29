@@ -310,7 +310,23 @@ export class ProxyServer implements DurableObject {
 				const argsSize = parseInt(argsSizeHeader);
 				assert(!Number.isNaN(argsSize));
 				assert(request.body !== null);
-				const [encodedArgs, rest] = await readPrefix(request.body, argsSize);
+				// If the client sent the stream's length, restore it on the rest of
+				// the request body, as some APIs (e.g. `R2Bucket#put()`) reject
+				// streams without one.
+				const streamSizeHeader = request.headers.get(
+					CoreHeaders.OP_STREAM_SIZE
+				);
+				let restTransform: IdentityTransformStream | undefined;
+				if (streamSizeHeader !== null) {
+					const streamSize = parseInt(streamSizeHeader);
+					assert(!Number.isNaN(streamSize));
+					restTransform = new FixedLengthStream(streamSize);
+				}
+				const [encodedArgs, rest] = await readPrefix(
+					request.body,
+					argsSize,
+					restTransform
+				);
 				unbufferedRest = rest;
 				const stringifiedArgs = DECODER.decode(encodedArgs);
 				args = parseWithReadableStreams(

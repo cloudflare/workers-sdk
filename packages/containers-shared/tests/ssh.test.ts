@@ -68,10 +68,12 @@ afterEach(() => {
 });
 
 describe("shared Container SSH", () => {
-	it("detects stdio mode and lets --stdio override a terminal", ({
+	it("detects stdio mode, lets --stdio override a terminal, and lets --tty opt out", ({
 		expect,
 	}) => {
 		expect(shouldUseStdio({})).toBe(true);
+		expect(shouldUseStdio({ tty: true })).toBe(false);
+		expect(shouldUseStdio({ stdio: true, tty: true })).toBe(true);
 		streams(true);
 		expect(shouldUseStdio({})).toBe(false);
 		expect(shouldUseStdio({ stdio: true })).toBe(true);
@@ -152,6 +154,7 @@ describe("shared Container SSH", () => {
 			id: "instance",
 			identityFile: "/tmp/key",
 			option: ["A=yes", "B=no"],
+			tty: true,
 			command: ["echo", "001"],
 		});
 		const [socket] = await connected;
@@ -163,6 +166,8 @@ describe("shared Container SSH", () => {
 		expect(showCursor).toHaveBeenLastCalledWith(true);
 		expect(childArgs).toEqual(
 			expect.arrayContaining([
+				"-o",
+				"RequestTTY=force",
 				"-i",
 				"/tmp/key",
 				"-o",
@@ -174,6 +179,29 @@ describe("shared Container SSH", () => {
 				"001",
 			])
 		);
+	});
+	it("launches OpenSSH instead of proxying when --tty is passed with redirected streams", async ({
+		expect,
+	}) => {
+		const ws = await server();
+		const connected = once(ws, "connection");
+		let childArgs: string[] = [];
+		spawn.mockImplementation((_command: string, args: string[]) => {
+			const child = new EventEmitter() as ChildProcess;
+			if (args[0] !== "-V") {
+				childArgs = args;
+			}
+			void connected.then(() =>
+				setImmediate(() => {
+					child.emit("exit", 0);
+					child.emit("close", 0);
+				})
+			);
+			return child;
+		});
+		await sshCommand({ id: "instance", tty: true, command: ["top"] });
+		expect(childArgs).toContain("RequestTTY=force");
+		expect(childArgs.slice(-2)).toEqual(["--", "top"]);
 	});
 	for (const failure of ["missing-binary", "ssh-failed"]) {
 		it(`closes its WebSocket after ${failure}`, async ({ expect }) => {

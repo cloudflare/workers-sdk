@@ -8,6 +8,7 @@ import { getOauthToken } from "./callback-server";
 import { getAPIToken, requireApiToken } from "./credentials";
 import { getOauthTokenViaDeviceFlow } from "./device-flow";
 import { getRevokeUrlFromEnv } from "./env-vars";
+import { ErrorAuthServerUnreachable } from "./errors";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
@@ -33,7 +34,9 @@ export type LoginOrRefreshFailureReason =
 	/** the stored token has expired, refresh failed, and the environment is non-interactive so a browser login cannot be started. */
 	| "token-expired-non-interactive"
 	/** the stored token has expired, refresh failed, and the interactive login attempt was unsuccessful. */
-	| "token-expired-login-failed";
+	| "token-expired-login-failed"
+	/** the stored token has expired and the auth server could not be reached to refresh it; the stored credentials were left untouched and no login was attempted. */
+	| "token-refresh-unreachable";
 
 /**
  * Discriminated union returned by {@link OAuthFlowAPI.loginOrRefreshIfRequired}.
@@ -324,7 +327,13 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 	}
 
-	async function refreshToken(profile?: string): Promise<boolean> {
+	/**
+	 * `"unreachable"` means no response arrived from the token endpoint, so the
+	 * refresh token may well still be valid: callers must not ask for a new login.
+	 */
+	async function refreshToken(
+		profile?: string
+	): Promise<"refreshed" | "rejected" | "unreachable"> {
 		// `exchangeRefreshTokenForAccessToken` reads the refresh token fresh from
 		// disk on every call, so we always pick up the latest rotation written by a
 		// sibling Wrangler process. Refresh tokens are single-use, so a long-lived
@@ -352,12 +361,14 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				refresh_token,
 				scopes,
 			});
-			return true;
+			return "refreshed";
 		} catch (e) {
 			ctx.logger.debug(
 				`Token refresh failed: ${e instanceof Error ? e.message : String(e)}`
 			);
-			return false;
+			return e instanceof ErrorAuthServerUnreachable
+				? "unreachable"
+				: "rejected";
 		}
 	}
 
@@ -392,10 +403,15 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		} else if (isRefreshNeeded(props.profile)) {
 			// We're logged in, but the refresh token seems to have expired,
 			// so let's try to refresh it
-			const didRefresh = await refreshToken(props.profile);
-			if (didRefresh) {
+			const refreshed = await refreshToken(props.profile);
+			if (refreshed === "refreshed") {
 				// The token was refreshed, so we're done here
 				return { loggedIn: true };
+			}
+			if (refreshed === "unreachable") {
+				// A network failure says nothing about the refresh token, and a
+				// browser login would need the same unreachable server.
+				return { loggedIn: false, reason: "token-refresh-unreachable" };
 			}
 			// If the refresh token isn't valid, then we ask the user to login again
 			if (ctx.isNonInteractiveOrCI()) {
@@ -474,8 +490,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		const expired =
 			stored.accessToken && new Date() >= new Date(stored.accessToken.expiry);
 		if (expired) {
-			const didRefresh = await refreshToken();
-			if (!didRefresh) {
+			if ((await refreshToken()) !== "refreshed") {
 				return undefined;
 			}
 			// Re-read after the refresh has persisted the new token to disk.

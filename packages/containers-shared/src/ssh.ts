@@ -15,6 +15,7 @@ export interface ContainerSshArgs {
 	id: string;
 	command?: string[];
 	stdio?: boolean;
+	tty?: boolean;
 	cipher?: string;
 	logFile?: string;
 	escapeChar?: string;
@@ -97,6 +98,12 @@ export const containersSshOptions = {
 	},
 	stdio: {
 		describe: "Proxy SSH traffic over stdin/stdout",
+		type: "boolean",
+	},
+	tty: {
+		alias: "t",
+		describe:
+			"Force pseudo-terminal allocation, e.g. for interactive commands like `-- bash`",
 		type: "boolean",
 	},
 } as const;
@@ -341,10 +348,14 @@ function formatWebSocketData(data: RawData) {
 	return data instanceof ArrayBuffer ? new Uint8Array(data) : data;
 }
 
-export function shouldUseStdio(sshArgs: { stdio?: boolean }) {
+export function shouldUseStdio(sshArgs: { stdio?: boolean; tty?: boolean }) {
 	return (
 		sshArgs.stdio === true ||
-		(process.stdin.isTTY !== true && process.stdout.isTTY !== true)
+		// An explicit --tty requests an OpenSSH session, so it must not be
+		// mistaken for ProxyCommand usage when both streams are redirected.
+		(sshArgs.tty !== true &&
+			process.stdin.isTTY !== true &&
+			process.stdout.isTTY !== true)
 	);
 }
 
@@ -368,6 +379,12 @@ function buildContainerSshArgs(sshArgs: ContainerSshArgs): string[] {
 	// Hide warnings from SSH unless debug logging is enabled
 	if (process.env.WRANGLER_LOG !== "debug") {
 		flags.push("-o", "LogLevel=ERROR");
+	}
+
+	if (sshArgs.tty === true) {
+		flags.push("-o", "RequestTTY=force");
+	} else if (sshArgs.tty === false) {
+		flags.push("-o", "RequestTTY=no");
 	}
 
 	if (sshArgs.cipher !== undefined) {

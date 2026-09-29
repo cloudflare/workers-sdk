@@ -1,5 +1,32 @@
 # wrangler
 
+## 4.143.1
+
+### Patch Changes
+
+- [#15159](https://github.com/cloudflare/workers-sdk/pull/15159) [`7bb6eae`](https://github.com/cloudflare/workers-sdk/commit/7bb6eaea0d1d68df2e130ed870ee7ca9aa68bc74) Thanks [@veggiedefender](https://github.com/veggiedefender)! - Fix `wrangler dev` remote bindings for `workers.dev` subdomains protected by Access
+
+  Running `wrangler dev` with remote bindings on an unpublished worker protected by Access (e.g. using a wildcard on your workers.dev domain) previously failed with a redirect loop. Wrangler now correctly authenticates remote bindings with Access in this situation.
+
+- [#15923](https://github.com/cloudflare/workers-sdk/pull/15923) [`60ccdbd`](https://github.com/cloudflare/workers-sdk/commit/60ccdbd5e760c3dc721ac082acaa25a6cff5e8bb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Upgrade the bundled capnweb implementation to 0.12.0
+
+  This updates the RPC implementation shipped in Miniflare and remote-binding proxy workers to the latest capnweb release.
+
+- [#15938](https://github.com/cloudflare/workers-sdk/pull/15938) [`62fd03a`](https://github.com/cloudflare/workers-sdk/commit/62fd03a21e227f30d3c254244d22a30e9f5924dd) Thanks [@dieub](https://github.com/dieub)! - Resolve the affected Undici dependency in new Wrangler and Vite plugin installs
+
+  Undici 7.29.1 fixes GHSA-3wwx-pv8p-q78v. Update the shared dependency catalog and matching types used by Miniflare and Wrangler so downstream installs can resolve the patched runtime without an application-level override. A published release is still required for consumers; this changeset does not alter already published package metadata.
+
+- [#15903](https://github.com/cloudflare/workers-sdk/pull/15903) [`06ed9c8`](https://github.com/cloudflare/workers-sdk/commit/06ed9c8b55bcac37f8750a1f46e1a4290ff8eae9) Thanks [@itsmunzir](https://github.com/itsmunzir)! - Fix custom-domain-only deploys failing for API tokens without Zone Workers Routes read permission
+
+  When `workers_dev` was disabled and `routes` contained only entries with `custom_domain: true`, every deploy after the first one fetched `/zones/:zoneId/workers/routes` to check for route conflicts, even though custom domains are not zone Workers Routes. Tokens scoped to Workers Scripts edit plus custom domains - without `Zone > Workers Routes > Read` - failed with "No access to the specified resource" after the Worker version had already been uploaded. The conflict check now only covers non-custom-domain routes; custom domain conflicts continue to be reported by the custom domains changeset API.
+
+- [#15887](https://github.com/cloudflare/workers-sdk/pull/15887) [`86211fe`](https://github.com/cloudflare/workers-sdk/commit/86211feed191f3d181e16836e62b1875ae6e6606) Thanks [@alepacheco](https://github.com/alepacheco)! - Report an unreachable auth server instead of an expired login when refreshing an OAuth token
+
+  When the OAuth token endpoint could not be reached (for example a DNS failure or a connection timeout), the refresh failure was reported as "Your auth token has expired and could not be refreshed", with advice to run `wrangler login`; in an interactive terminal Wrangler also started a new browser login. A network failure says nothing about the stored refresh token, and a new login would need the same unreachable server. Wrangler now reports that the Cloudflare auth server could not be reached, leaves the stored credentials unchanged, and does not start a login, so the next run can refresh with the same token once the network is back.
+
+- Updated dependencies [[`60ccdbd`](https://github.com/cloudflare/workers-sdk/commit/60ccdbd5e760c3dc721ac082acaa25a6cff5e8bb), [`62fd03a`](https://github.com/cloudflare/workers-sdk/commit/62fd03a21e227f30d3c254244d22a30e9f5924dd), [`c2bb4c8`](https://github.com/cloudflare/workers-sdk/commit/c2bb4c815f8a6af2ebea17ab6dd4f612c7b1e8eb), [`eb1efe0`](https://github.com/cloudflare/workers-sdk/commit/eb1efe08db8dde7b6db4b8d959c381b3e5ebe3a4), [`485cfb3`](https://github.com/cloudflare/workers-sdk/commit/485cfb3abfd9715632edc6c30a78a680c1765604)]:
+  - miniflare@5.20260926.1-alpha
+
 ## 4.143.0
 
 ### Minor Changes

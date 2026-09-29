@@ -882,6 +882,17 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts SSH settings for a Durable Object Container", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			ssh: { enabled: true, port: 2222 },
+			authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
 	it.for([{ targetInstancePercentage: 50 }, { targetInstanceCount: 2 }])(
 		"rejects observability instance targeting for a Durable Object Container: %o",
 		(observability, { expect }) => {
@@ -1184,6 +1195,21 @@ describe("OutputContainerSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("preserves SSH settings for a Durable Object Container", ({ expect }) => {
+		const container = {
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			ssh: { enabled: true },
+			authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
+		};
+		const result = OutputContainerSchema.safeParse(container);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toEqual(container);
+		}
 	});
 
 	it("rejects unbuilt Durable Object Container images", ({ expect }) => {
