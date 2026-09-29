@@ -1,4 +1,4 @@
-# @cloudflare/vitest-pool-workers
+# @cloudflare/vitest-plugin
 
 ## 1.3.2
 
