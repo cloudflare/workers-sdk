@@ -1,5 +1,31 @@
 # miniflare
 
+## 5.20260926.1-alpha
+
+### Patch Changes
+
+- [#15923](https://github.com/cloudflare/workers-sdk/pull/15923) [`60ccdbd`](https://github.com/cloudflare/workers-sdk/commit/60ccdbd5e760c3dc721ac082acaa25a6cff5e8bb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Upgrade the bundled capnweb implementation to 0.12.0
+
+  This updates the RPC implementation shipped in Miniflare and remote-binding proxy workers to the latest capnweb release.
+
+- [#15938](https://github.com/cloudflare/workers-sdk/pull/15938) [`62fd03a`](https://github.com/cloudflare/workers-sdk/commit/62fd03a21e227f30d3c254244d22a30e9f5924dd) Thanks [@dieub](https://github.com/dieub)! - Resolve the affected Undici dependency in new Wrangler and Vite plugin installs
+
+  Undici 7.29.1 fixes GHSA-3wwx-pv8p-q78v. Update the shared dependency catalog and matching types used by Miniflare and Wrangler so downstream installs can resolve the patched runtime without an application-level override. A published release is still required for consumers; this changeset does not alter already published package metadata.
+
+- [#15902](https://github.com/cloudflare/workers-sdk/pull/15902) [`c2bb4c8`](https://github.com/cloudflare/workers-sdk/commit/c2bb4c815f8a6af2ebea17ab6dd4f612c7b1e8eb) Thanks [@michealroberts](https://github.com/michealroberts)! - Fix passing an `R2ObjectBody#body` back to `R2Bucket#put()` via `Miniflare#getR2Bucket()`
+
+  Previously, a body returned by `get()` lost its length on the way back through the binding proxy, so `put()` rejected it with "Provided readable stream must have a known length", even though the same call works in a Worker. The proxy now forwards the stream's length and the body streams straight through without buffering.
+
+- [#15906](https://github.com/cloudflare/workers-sdk/pull/15906) [`eb1efe0`](https://github.com/cloudflare/workers-sdk/commit/eb1efe08db8dde7b6db4b8d959c381b3e5ebe3a4) Thanks [@michealroberts](https://github.com/michealroberts)! - Preserve the request body length in `Miniflare#dispatchFetch()`
+
+  Previously, a request with a known-length body (e.g. a string) was sent to the Worker chunked, without a `Content-Length`. Passing its `request.body` to `R2Bucket#put()` then failed with "Provided readable stream must have a known length", even though the same request works in production. The body's length is now preserved.
+
+- [#15910](https://github.com/cloudflare/workers-sdk/pull/15910) [`485cfb3`](https://github.com/cloudflare/workers-sdk/commit/485cfb3abfd9715632edc6c30a78a680c1765604) Thanks [@james-elicx](https://github.com/james-elicx)! - Raise the local R2 custom metadata limit to 8 KiB
+
+  R2 `put()` now accepts up to 8,192 bytes of custom metadata, matching the documented R2 limit. Previously, Miniflare rejected metadata larger than 2 KiB.
+
+  Multipart upload creation now enforces the same limit through both R2 bindings and the local S3 API. Oversized metadata is rejected with error 10012 through R2 bindings, or HTTP 400 `MetadataTooLarge` for S3 uploads, copies, and multipart initiation.
+
 ## 5.20260926.0-alpha
 
 ### Minor Changes
