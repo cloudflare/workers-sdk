@@ -8,6 +8,7 @@ import {
 	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { getGitBranchName } from "../shared/git-branch";
 import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, UpdatePreviewRequestParams } from "./api";
 import type {
@@ -36,12 +37,7 @@ export function getBranchName(): string | undefined {
 		return gitlabBranch;
 	}
 
-	try {
-		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();
-	} catch {
-		return undefined;
-	}
+	return getGitBranchName();
 }
 
 export function shouldUseCIMetadataFallback(): boolean {
