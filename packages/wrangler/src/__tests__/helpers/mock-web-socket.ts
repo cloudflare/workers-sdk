@@ -34,6 +34,9 @@ export class MockWebSocket extends WebSocket {
 					listener(closeEvent?.code, closeEvent?.reason);
 				});
 				break;
+			case "error":
+				this.addEventListener("error", listener);
+				break;
 			case "pong":
 				this.pongListener = listener;
 				break;
