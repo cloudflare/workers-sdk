@@ -149,6 +149,7 @@ describe("deploy secrets", () => {
 			expect,
 		}) => {
 			vi.stubEnv("CI", "expanded-value");
+			vi.stubEnv("EMPTY_SECRET", "");
 			const secretsFile = ".env.production";
 			fs.writeFileSync(
 				secretsFile,
@@ -159,6 +160,7 @@ describe("deploy secrets", () => {
 					"SECRET3=${SECRET2}",
 					"ESCAPED_SECRET=\\${CI}",
 					"CI=file-value",
+					"EMPTY_SECRET=file-value",
 				].join("\n")
 			);
 
@@ -194,6 +196,11 @@ describe("deploy secrets", () => {
 						name: "CI",
 						text: "expanded-value",
 					},
+					{
+						type: "secret_text",
+						name: "EMPTY_SECRET",
+						text: "",
+					},
 				],
 				expectedCompatibilityDate: "2022-01-12",
 				expectedMainModule: "index.js",
@@ -215,6 +222,7 @@ describe("deploy secrets", () => {
 				env.SECRET3 ("(hidden)")             Environment Variable
 				env.ESCAPED_SECRET ("(hidden)")      Environment Variable
 				env.CI ("(hidden)")                  Environment Variable
+				env.EMPTY_SECRET ("(hidden)")        Environment Variable
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
