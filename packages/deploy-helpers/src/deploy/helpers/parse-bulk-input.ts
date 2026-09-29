@@ -127,7 +127,13 @@ export async function parseBulkInputToObject(
 
 function parseDotEnv(content: string): Record<string, string> {
 	const parsed = dotenvParse(content);
-	dotenvExpand({ parsed, processEnv: copyProcessEnv() });
+	const processEnv = copyProcessEnv();
+	dotenvExpand({ parsed, processEnv: { ...processEnv } });
+	for (const key of Object.keys(parsed)) {
+		if (Object.hasOwn(processEnv, key)) {
+			parsed[key] = processEnv[key];
+		}
+	}
 
 	return parsed;
 }
