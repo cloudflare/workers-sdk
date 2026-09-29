@@ -174,6 +174,7 @@ const requireLoggedInErrorMessageBodies = {
 	"no-credentials-login-failed": `No credentials were found and the login attempt was unsuccessful. Run \`wrangler login\` to try again.`,
 	"token-expired-non-interactive": `Your auth token has expired and could not be refreshed, and the environment is non-interactive. Run \`wrangler login\` in an interactive terminal or set a CLOUDFLARE_API_TOKEN.`,
 	"token-expired-login-failed": `Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful. Run \`wrangler login\` to try again.`,
+	"token-refresh-unreachable": `Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. This is usually a network problem (connectivity, proxy, or IPv6), not an invalid login: your stored credentials were left unchanged. Check your connection and try again; run with \`WRANGLER_LOG=debug\` to see the underlying error.`,
 } as const;
 
 /**

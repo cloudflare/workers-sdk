@@ -60,6 +60,7 @@ export const CoreHeaders = {
 	OP_KEY: "MF-Op-Key",
 	OP_SYNC: "MF-Op-Sync",
 	OP_STRINGIFIED_SIZE: "MF-Op-Stringified-Size",
+	OP_STREAM_SIZE: "MF-Op-Stream-Size",
 	OP_RESULT_TYPE: "MF-Op-Result-Type",
 	OP_ORIGINAL_URL: "MF-Op-Original-URL",
 } as const;

@@ -235,6 +235,11 @@ function getLoginOrRefreshFailureErrorMessage(
 			" Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful.\n" +
 			"Either:\n" +
 			` - Run \`wrangler login\` to try again${localFallback}${whoamiTip}`,
+		"token-refresh-unreachable":
+			" Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. Your stored credentials were left unchanged.\n" +
+			"Either:\n" +
+			" - Check your network connection (connectivity, proxy, or IPv6) and try again; `WRANGLER_LOG=debug` shows the underlying error" +
+			`${localFallback}${whoamiTip}`,
 	};
 	const errorMessageBody = errorMessageBodies[failureReason];
 	const errorMessage = errorMessagePrefix + errorMessageBody;
