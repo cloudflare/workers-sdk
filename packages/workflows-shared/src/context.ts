@@ -109,29 +109,35 @@ export function toEngineStepConfig(
 	return { ...config, retries };
 }
 
-// Signal-aware wrapper around the global `scheduler.wait`. `scheduler.wait`
-// can't itself be cancelled, so an aborted signal resolves the returned promise
-// early and the dangling timer becomes a no-op.
+/**
+ * Signal-aware wrapper around the global `scheduler.wait`.
+ *
+ * Passing `{ signal }` lets workerd cancel the native timer. Without that,
+ * completed waits stay in the isolate's 10,000-timer quota until their original
+ * deadline (issue #15788). An aborted signal resolves the returned promise
+ * rather than rejecting, matching callers that treat abort as "stop waiting".
+ */
 function schedulerWait(
 	durationMs: number,
 	opts?: { signal?: AbortSignal }
 ): Promise<void> {
-	return new Promise<void>((resolve) => {
-		const signal = opts?.signal;
-		if (signal?.aborted) {
-			resolve();
-			return;
-		}
-		let done = false;
-		const finish = (): void => {
-			if (!done) {
-				done = true;
-				resolve();
+	const signal = opts?.signal;
+	if (signal?.aborted) {
+		return Promise.resolve();
+	}
+	const wait =
+		signal === undefined
+			? scheduler.wait(durationMs)
+			: scheduler.wait(durationMs, { signal });
+	return wait.then(
+		() => undefined,
+		(error: unknown) => {
+			if (signal?.aborted) {
+				return;
 			}
-		};
-		void scheduler.wait(durationMs).then(finish);
-		signal?.addEventListener("abort", finish, { once: true });
-	});
+			throw error;
+		}
+	);
 }
 
 const defaultConfig: ResolvedStepConfig = {
@@ -627,7 +633,12 @@ export class Context extends RpcTarget {
 						targetTimestamp: Date.now() + timeout,
 						type: "timeout",
 					});
-					await scheduler.wait(timeout);
+					await schedulerWait(timeout, { signal: stepExecutionSignal });
+					if (stepExecutionSignal.aborted) {
+						// Step finished or the engine aborted: the native timer is already
+						// cancelled. Hang so Promise.race does not treat this as a timeout.
+						await new Promise<never>(() => {});
+					}
 					// if we reach here, means that we can try to delete the timeout from the PQ
 					// because we managed to wait in the same lifetime
 					// @ts-expect-error priorityQueue is initiated in init
