@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import {
 	getPreviewBaseConfig,
 	isWorkerNotFoundError,
@@ -6,6 +5,7 @@ import {
 } from "@cloudflare/deploy-helpers";
 import {
 	configFormat,
+	experimental_isConfigPatchable,
 	experimental_patchConfig,
 	formatConfigSnippet,
 	isNonInteractiveOrCI,
@@ -208,9 +208,8 @@ export async function ensurePreviewsConfig(
 	const canWriteConfig =
 		config.userConfigPath !== undefined &&
 		config.userConfigPath === config.configPath &&
-		(JSON_CONFIG_FORMATS.includes(format) ||
-			(format === "toml" &&
-				!readFileSync(config.userConfigPath, "utf8").includes("#")));
+		(JSON_CONFIG_FORMATS.includes(format) || format === "toml") &&
+		experimental_isConfigPatchable(config.userConfigPath);
 	if (!canWriteConfig || args.json || isNonInteractiveOrCI()) {
 		logConversionMessages(conversionMessages, args.json);
 		throw new UserError(missingPreviewsConfigMessage, {

@@ -132,6 +132,35 @@ describe("Preview configuration conversion", () => {
 		expect(result.blockingDeploymentMessages).toEqual([]);
 	});
 
+	test("preserves empty Preview Base values and omits null observability fields", ({
+		expect,
+	}) => {
+		const result = createPreviewConfigProposal({
+			kind: "previewBase",
+			config: {
+				observability: {
+					enabled: true,
+					head_sampling_rate: null,
+					logs: { head_sampling_rate: null },
+				},
+				limits: {},
+				tail_consumers: [],
+				env: {
+					EMPTY_OBJECT: { type: "json", json: {} },
+					EMPTY_ARRAY: { type: "json", json: [] },
+					NULL_VALUE: { type: "json", json: null },
+				},
+			} as unknown as PreviewBaseConfig,
+		});
+
+		expect(result.config).toEqual({
+			vars: { EMPTY_OBJECT: {}, EMPTY_ARRAY: [], NULL_VALUE: null },
+			observability: { enabled: true },
+			limits: {},
+			tail_consumers: [],
+		});
+	});
+
 	test("ignores excluded bindings without reading their values", ({
 		expect,
 	}) => {
