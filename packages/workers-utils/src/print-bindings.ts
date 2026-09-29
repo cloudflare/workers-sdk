@@ -660,12 +660,15 @@ export function printBindings(
 
 	if (k2.length > 0) {
 		output.push(
-			...k2.map(({ binding, stream: k2Stream, remote }) => ({
+			...k2.map(({ binding, stream: k2Stream }) => ({
 				name: binding,
 				type: getBindingTypeFriendlyName("k2"),
 				value: k2Stream,
 				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					// K2 always writes to the real stream; `remote: false` is rejected during validation.
+					isSimulatedLocally: context.remoteBindingsDisabled
+						? undefined
+						: false,
 				}),
 			}))
 		);

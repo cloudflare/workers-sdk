@@ -158,12 +158,12 @@ export const k2StreamsCreateCommand = createCommand({
 		}
 		validateCors(args.corsOrigin);
 	},
-	async handler(args, { config, sdk }) {
+	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 		if (!args.json) {
 			logger.log(`Creating K2 stream '${args.stream}'...`);
 		}
-		const stream = await createK2Stream(sdk, accountId, {
+		const stream = await createK2Stream(config, accountId, {
 			name: args.stream,
 			...(args.retentionSeconds === undefined
 				? {}
@@ -212,9 +212,9 @@ export const k2StreamsGetCommand = createCommand({
 		},
 		json: jsonArg,
 	},
-	async handler(args, { config, sdk }) {
+	async handler(args, { config }) {
 		const stream = await getK2Stream(
-			sdk,
+			config,
 			await requireAuth(config),
 			args.stream
 		);
@@ -258,9 +258,9 @@ export const k2StreamsDeleteCommand = createCommand({
 			);
 		}
 	},
-	async handler(args, { config, sdk }) {
+	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
-		const stream = await getK2Stream(sdk, accountId, args.stream);
+		const stream = await getK2Stream(config, accountId, args.stream);
 		if (
 			!args.force &&
 			!(await confirm(
@@ -271,7 +271,7 @@ export const k2StreamsDeleteCommand = createCommand({
 			logger.log("Delete cancelled.");
 			return;
 		}
-		await deleteK2Stream(sdk, accountId, args.stream);
+		await deleteK2Stream(config, accountId, args.stream);
 		if (args.json) {
 			logger.json({ id: args.stream, deleted: true });
 		} else {
@@ -313,8 +313,8 @@ export const k2StreamsListCommand = createCommand({
 			);
 		}
 	},
-	async handler(args, { config, sdk }) {
-		const streams = await listK2Streams(sdk, await requireAuth(config), {
+	async handler(args, { config }) {
+		const streams = await listK2Streams(config, await requireAuth(config), {
 			page: args.page,
 			per_page: args.perPage,
 			...(args.name === undefined ? {} : { name: args.name }),

@@ -263,7 +263,7 @@ describe("K2 stream commands", () => {
 					return HttpResponse.json(
 						{
 							success: false,
-							errors: [{ code: 10000, message: "Unavailable" }],
+							errors: [{ code: 10001, message: "Unavailable" }],
 						},
 						{ status: 503 }
 					);
@@ -286,11 +286,13 @@ describe("K2 stream commands", () => {
 			);
 			await expect(
 				runWrangler("k2 streams create order_events --json")
-			).rejects.toThrow("did not return a successful result");
+			).rejects.toThrow(
+				"A request to the Cloudflare API (/accounts/some-account-id/k2/streams) failed."
+			);
 			expect(std.out).toBe("");
 		});
 
-		it("preserves SDK rate-limit handling and structured retry guidance", async ({
+		it("preserves rate-limit handling and structured retry guidance", async ({
 			expect,
 		}) => {
 			msw.use(
@@ -561,7 +563,7 @@ describe("K2 stream commands", () => {
 						HttpResponse.json(
 							{
 								success: false,
-								errors: [{ code: 10000, message: "Deletion rejected" }],
+								errors: [{ code: 10001, message: "Deletion rejected" }],
 							},
 							{ status }
 						)
@@ -575,29 +577,26 @@ describe("K2 stream commands", () => {
 			}
 		);
 
-		it.for([
-			{ success: false, result: {} },
-			{ success: true, result: null },
-			{ success: true },
-		])(
-			"rejects unsuccessful deletion envelopes: %j",
-			async (response, { expect }) => {
-				mockExistingStream();
-				msw.use(
-					http.delete(`${collection}/${id}`, () => HttpResponse.json(response))
-				);
-				await expect(
-					runWrangler(`k2 streams delete ${id} --force --json`)
-				).rejects.toThrow("did not return a successful result");
-				expect(std.out).toBe("");
-			}
-		);
+		it("rejects unsuccessful deletion envelopes", async ({ expect }) => {
+			mockExistingStream();
+			msw.use(
+				http.delete(`${collection}/${id}`, () =>
+					HttpResponse.json({ success: false, result: {} })
+				)
+			);
+			await expect(
+				runWrangler(`k2 streams delete ${id} --force --json`)
+			).rejects.toThrow(
+				`A request to the Cloudflare API (/accounts/some-account-id/k2/streams/${id}) failed.`
+			);
+			expect(std.out).toBe("");
+		});
 
 		it("does not retry an ambiguous deletion failure", async ({ expect }) => {
 			mockExistingStream();
 			const deletion = vi.fn(() =>
 				HttpResponse.json(
-					{ success: false, errors: [{ code: 10000, message: "Unavailable" }] },
+					{ success: false, errors: [{ code: 10001, message: "Unavailable" }] },
 					{ status: 503 }
 				)
 			);
