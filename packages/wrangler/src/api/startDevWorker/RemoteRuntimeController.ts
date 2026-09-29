@@ -42,6 +42,10 @@ import type { Route } from "@cloudflare/workers-utils";
 
 type CreateRemoteWorkerInitProps = Parameters<typeof createRemoteWorkerInit>[0];
 
+const PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL = 60_000;
+const PREVIEW_TOKEN_REFRESH_BACKOFF_INTERVAL = 10 * 60 * 1000;
+const PREVIEW_TOKEN_REFRESH_RETRY_LIMIT = 5;
+
 export class RemoteRuntimeController extends RuntimeController {
 	#abortController = new AbortController();
 
@@ -59,6 +63,9 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	// Timer for proactive token refresh before the 1-hour expiry
 	#refreshTimer?: ReturnType<typeof setTimeout>;
+	// A rebuild reuses the preview session, so its expiry is anchored here.
+	#sessionCreatedAt = 0;
+	#refreshRetryCount = 0;
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
@@ -69,7 +76,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			const { workerAccount, workerContext } =
 				await getWorkerAccountAndContext(props);
 
-			return await retryOnAPIFailure(
+			const session = await retryOnAPIFailure(
 				() =>
 					createPreviewSession(
 						props.complianceConfig,
@@ -83,6 +90,8 @@ export class RemoteRuntimeController extends RuntimeController {
 				undefined,
 				this.#abortController.signal
 			);
+			this.#sessionCreatedAt = Date.now();
+			return session;
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
 				return; // ignore
@@ -344,6 +353,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		};
 
 		this.#latestProxyData = proxyData;
+		this.#refreshRetryCount = 0;
 
 		this.emitReloadCompleteEvent({
 			type: "reloadComplete",
@@ -358,14 +368,39 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	#scheduleRefresh(interval: number) {
 		clearTimeout(this.#refreshTimer);
+		const sessionAge = this.#sessionCreatedAt
+			? Date.now() - this.#sessionCreatedAt
+			: 0;
+		const delay =
+			interval < PREVIEW_TOKEN_REFRESH_INTERVAL
+				? interval
+				: Math.max(
+						0,
+						Math.min(interval, PREVIEW_TOKEN_REFRESH_INTERVAL - sessionAge)
+					);
 		this.#refreshTimer = setTimeout(() => {
 			if (this.#latestProxyData) {
 				this.onPreviewTokenExpired({
 					type: "previewTokenExpired",
 					proxyData: this.#latestProxyData,
 				});
+			} else {
+				this.#scheduleRetry();
 			}
-		}, interval);
+		}, delay);
+		this.#refreshTimer.unref?.();
+	}
+
+	#scheduleRetry() {
+		if (this.tearingDown) {
+			return;
+		}
+		this.#refreshRetryCount += 1;
+		this.#scheduleRefresh(
+			this.#refreshRetryCount <= PREVIEW_TOKEN_REFRESH_RETRY_LIMIT
+				? PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL
+				: PREVIEW_TOKEN_REFRESH_BACKOFF_INTERVAL
+		);
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
@@ -445,6 +480,8 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			if (refreshed) {
 				logger.log(chalk.green("✔ Preview token refreshed successfully"));
+			} else if (!this.#abortController.signal.aborted) {
+				this.#scheduleRetry();
 			}
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {
@@ -458,6 +495,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				source: "RemoteRuntimeController",
 				data: undefined,
 			});
+			this.#scheduleRetry();
 		}
 	}
 
@@ -469,7 +507,6 @@ export class RemoteRuntimeController extends RuntimeController {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
-		clearTimeout(this.#refreshTimer);
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;
