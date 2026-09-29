@@ -452,6 +452,15 @@ const StandardContainerObservabilitySchema = z.union([
 const BaseContainerSchema = z.strictObject({
 	name: z.string().min(1),
 	unsafe: z.record(z.string(), z.unknown()).optional(),
+	ssh: z
+		.strictObject({
+			enabled: z.boolean(),
+			port: z.number().int().min(1).max(65_535).optional(),
+		})
+		.optional(),
+	authorizedKeys: z
+		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
+		.optional(),
 });
 
 const StandardContainerBaseSchema = BaseContainerSchema.extend({
@@ -475,15 +484,6 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 		])
 		.optional(),
 	schedulingPolicy: z.enum(["default", "regional"]).optional(),
-	ssh: z
-		.strictObject({
-			enabled: z.boolean(),
-			port: z.number().int().min(1).max(65_535).optional(),
-		})
-		.optional(),
-	authorizedKeys: z
-		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
-		.optional(),
 	constraints: z
 		.strictObject({
 			regions: z

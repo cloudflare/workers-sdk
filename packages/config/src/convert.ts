@@ -65,6 +65,14 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 	if (container.unsafe !== undefined) {
 		converted.unsafe = container.unsafe;
 	}
+	if (container.ssh !== undefined) {
+		converted.ssh = container.ssh;
+	}
+	if (container.authorizedKeys !== undefined) {
+		converted.authorized_keys = container.authorizedKeys.map(
+			({ name, publicKey }) => ({ name, public_key: publicKey })
+		);
+	}
 	if (container.schedulingPolicy === "durable-object") {
 		converted.scheduling_policy = "durable_object";
 		if (container.images !== undefined) {
@@ -113,14 +121,6 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 	}
 	if (container.schedulingPolicy !== undefined) {
 		converted.scheduling_policy = container.schedulingPolicy;
-	}
-	if (container.ssh !== undefined) {
-		converted.ssh = container.ssh;
-	}
-	if (container.authorizedKeys !== undefined) {
-		converted.authorized_keys = container.authorizedKeys.map(
-			({ name, publicKey }) => ({ name, public_key: publicKey })
-		);
 	}
 	if (container.constraints !== undefined) {
 		converted.constraints = container.constraints;
