@@ -6,62 +6,17 @@ import type {
 	CfPlacement,
 	CfUserLimits,
 	Config,
-	Json,
 	Observability,
+	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
-export interface Binding {
-	type: string;
-	text?: string;
-	json?: Json;
-	namespace_id?: string;
-	workflow_name?: string;
-	destination_address?: string;
-	allowed_destination_addresses?: string[];
-	allowed_sender_addresses?: string[];
-	queue_name?: string;
-	delivery_delay?: number;
-	database_id?: string;
-	database_name?: string;
-	bucket_name?: string;
-	jurisdiction?: string;
-	index_name?: string;
-	instance_name?: string;
-	id?: string;
-	service?: string;
-	environment?: string;
-	// Props supplied to a Worker service binding.
-	props?: Record<string, unknown>;
-	cross_account_grant?: string;
-	dataset?: string;
-	namespace?: string;
-	outbound?: {
-		worker: {
-			service: string;
-			environment?: string;
-		};
-		params?: Array<{ name: string }>;
-	};
-	certificate_id?: string;
-	pipeline?: string;
-	stream?: string;
-	store_id?: string;
-	secret_name?: string;
-	simple?: {
-		limit: number;
-		period: 10 | 60;
-	};
-	service_id?: string;
-	tunnel_id?: string;
-	network_id?: string;
-	destination?: string;
-	staging?: boolean;
-	enable_timer?: boolean;
-	app_id?: string;
-	entrypoint?: string;
-	class_name?: string;
-	script_name?: string;
-}
+type PreviewBinding<Metadata extends WorkerMetadataBinding> =
+	Metadata extends WorkerMetadataBinding
+		? { type: Metadata["type"] } & Partial<Omit<Metadata, "type" | "name">>
+		: never;
+
+/** A canonical Preview binding, before its record key becomes `name`. */
+export type Binding = PreviewBinding<WorkerMetadataBinding>;
 
 export type EnvBindings = Record<string, Binding>;
 

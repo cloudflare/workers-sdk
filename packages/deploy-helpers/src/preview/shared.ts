@@ -378,7 +378,13 @@ export function getBindingValue(binding: Binding): string {
 		case "kv_namespace":
 			return String(binding.namespace_id ?? "");
 		case "d1":
-			return binding.database_name ?? String(binding.database_id ?? "");
+			return (
+				binding.database_name ??
+				String(
+					// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
+					"database_id" in binding ? binding.database_id : (binding.id ?? "")
+				)
+			);
 		case "r2_bucket":
 			return String(binding.bucket_name ?? "");
 		case "service":

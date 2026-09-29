@@ -129,6 +129,18 @@ export type WorkerMetadataBinding =
 	| {
 			type: "d1";
 			name: string;
+			database_id: string;
+			database_name?: string;
+			/** @deprecated The API may return this for legacy D1 bindings. Use `database_id` instead. */
+			id?: string;
+			internalEnv?: string;
+			raw?: boolean;
+	  }
+	| {
+			type: "d1";
+			name: string;
+			database_name?: string;
+			/** @deprecated The API may return this for legacy D1 bindings. Use `database_id` instead. */
 			id: string;
 			internalEnv?: string;
 			raw?: boolean;
@@ -147,6 +159,7 @@ export type WorkerMetadataBinding =
 			service: string;
 			environment?: string;
 			entrypoint?: string;
+			props?: Record<string, unknown>;
 			cross_account_grant?: string;
 	  }
 	| { type: "analytics_engine"; name: string; dataset?: string }
