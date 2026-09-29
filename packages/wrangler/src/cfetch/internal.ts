@@ -277,7 +277,7 @@ export async function fetchR2Objects(
 		try {
 			const bodyText = await response.text();
 			// Attempt to parse as a standard Cloudflare API JSON envelope to
-			// extract the structured error code (e.g. for data catalog conflicts).
+			// extract the structured error code (e.g. for Basin Catalog conflicts).
 			try {
 				const json = JSON.parse(bodyText) as {
 					errors?: Array<{ code?: number; message?: string }>;

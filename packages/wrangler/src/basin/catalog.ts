@@ -3,11 +3,13 @@ import {
 	getCloudflareApiEnvironmentFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { createCommand, createNamespace } from "../core/create-command";
+import {
+	createAlias,
+	createCommand,
+	createNamespace,
+} from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
-import { requireAuth } from "../user";
-import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	disableR2Catalog,
 	disableR2CatalogCompaction,
@@ -21,7 +23,9 @@ import {
 	enableR2CatalogTableSnapshotExpiration,
 	getR2Catalog,
 	upsertR2CatalogCredential,
-} from "./helpers/catalog";
+} from "../r2/helpers/catalog";
+import { requireAuth } from "../user";
+import formatLabelledValues from "../utils/render-labelled-values";
 
 /**
  * Validates that namespace and table positional args are either both provided or both omitted.
@@ -30,7 +34,7 @@ import {
  * @param namespace The namespace argument value
  * @param table The table argument value
  * @param bucket The bucket name (used in the retry hint)
- * @param subcommand The subcommand path after "wrangler r2 bucket catalog" (e.g. "compaction enable")
+ * @param subcommand The subcommand path after "wrangler basin catalog" (e.g. "compaction enable")
  */
 function validateNamespaceAndTable(
 	namespace: string | undefined,
@@ -38,10 +42,10 @@ function validateNamespaceAndTable(
 	bucket: string,
 	subcommand: string
 ): void {
-	const telemetryBase = `r2 catalog ${subcommand.replace("-", " ")}`;
+	const telemetryBase = `basin catalog ${subcommand.replace("-", " ")}`;
 	if (namespace && !table) {
 		throw new UserError(
-			`Both namespace and table must be provided together. You specified namespace without table. Retry by running:\n  wrangler r2 bucket catalog ${subcommand} ${bucket} <namespace> <table>`,
+			`Both namespace and table must be provided together. You specified namespace without table. Retry by running:\n  wrangler basin catalog ${subcommand} ${bucket} <namespace> <table>`,
 			{
 				telemetryMessage: `${telemetryBase} missing table`,
 			}
@@ -49,7 +53,7 @@ function validateNamespaceAndTable(
 	}
 	if (!namespace && table) {
 		throw new UserError(
-			`Both namespace and table must be provided together. You specified table without namespace. Retry by running:\n  wrangler r2 bucket catalog ${subcommand} ${bucket} <namespace> <table>`,
+			`Both namespace and table must be provided together. You specified table without namespace. Retry by running:\n  wrangler basin catalog ${subcommand} ${bucket} <namespace> <table>`,
 			{
 				telemetryMessage: `${telemetryBase} missing namespace`,
 			}
@@ -57,20 +61,27 @@ function validateNamespaceAndTable(
 	}
 }
 
-export const r2BucketCatalogNamespace = createNamespace({
+export const basinCatalogNamespace = createNamespace({
 	metadata: {
 		description:
-			"Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+			"Manage Basin Catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 });
 
-export const r2BucketCatalogEnableCommand = createCommand({
+export const r2BucketCatalogAlias = createAlias({
+	aliasOf: "wrangler basin catalog",
 	metadata: {
-		description: "Enable the data catalog on an R2 bucket",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+		hidden: true,
+	},
+});
+
+export const basinCatalogEnableCommand = createCommand({
+	metadata: {
+		description: "Enable Basin Catalog on an R2 bucket",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -94,28 +105,28 @@ export const r2BucketCatalogEnableCommand = createCommand({
 		}
 
 		logger.log(
-			`✨ Successfully enabled data catalog on bucket '${args.bucket}'.
+			`✨ Successfully enabled Basin Catalog on bucket '${args.bucket}'.
 
 Catalog URI: '${catalogHost}'
 Warehouse: '${response.name}'
 
 Use this Catalog URI with Iceberg-compatible query engines (Spark, PyIceberg etc.) to query data as tables.
-Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+Note: You will need a Cloudflare API token with 'Basin Catalog' permission to authenticate your client with this catalog.
 For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/`
 		);
 	},
 });
 
-export const r2BucketCatalogDisableCommand = createCommand({
+export const basinCatalogDisableCommand = createCommand({
 	metadata: {
-		description: "Disable the data catalog for an R2 bucket",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+		description: "Disable Basin Catalog for an R2 bucket",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
-			describe: "The name of the bucket to disable the data catalog for",
+			describe: "The name of the bucket to disable Basin Catalog for",
 			type: "string",
 			demandOption: true,
 		},
@@ -124,7 +135,7 @@ export const r2BucketCatalogDisableCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		const confirmedDisable = await confirm(
-			`Are you sure you want to disable the data catalog for bucket '${args.bucket}'?`
+			`Are you sure you want to disable Basin Catalog for bucket '${args.bucket}'?`
 		);
 		if (!confirmedDisable) {
 			logger.log("Disable cancelled.");
@@ -135,13 +146,13 @@ export const r2BucketCatalogDisableCommand = createCommand({
 			await disableR2Catalog(config, accountId, args.bucket);
 
 			logger.log(
-				`Successfully disabled the data catalog on bucket '${args.bucket}'.`
+				`Successfully disabled Basin Catalog on bucket '${args.bucket}'.`
 			);
 		} catch (e) {
-			// R2 Data Catalog 40401 corresponds to a 404
+			// Basin Catalog 40401 corresponds to a 404
 			if (e instanceof APIError && e.code == 40401) {
 				logger.log(
-					`Data catalog is not enabled for bucket '${args.bucket}'. Please use 'wrangler r2 bucket catalog enable ${args.bucket}' to first enable the data catalog on this bucket.`
+					`Basin Catalog is not enabled for bucket '${args.bucket}'. Please use 'wrangler basin catalog enable ${args.bucket}' to first enable Basin Catalog on this bucket.`
 				);
 			} else {
 				throw e;
@@ -150,17 +161,17 @@ export const r2BucketCatalogDisableCommand = createCommand({
 	},
 });
 
-export const r2BucketCatalogGetCommand = createCommand({
+export const basinCatalogGetCommand = createCommand({
 	metadata: {
-		description: "Get the status of the data catalog for an R2 bucket",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+		description: "Get the status of Basin Catalog for an R2 bucket",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
 			describe:
-				"The name of the R2 bucket whose data catalog status to retrieve",
+				"The name of the R2 bucket whose Basin Catalog status to retrieve",
 			type: "string",
 			demandOption: true,
 		},
@@ -168,7 +179,7 @@ export const r2BucketCatalogGetCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		logger.log(`Getting data catalog status for '${args.bucket}'...\n`);
+		logger.log(`Getting Basin Catalog status for '${args.bucket}'...\n`);
 
 		try {
 			const catalog = await getR2Catalog(config, accountId, args.bucket);
@@ -190,10 +201,10 @@ export const r2BucketCatalogGetCommand = createCommand({
 
 			logger.log(formatLabelledValues(output));
 		} catch (e) {
-			// R2 Data Catalog 40401 corresponds to a 404
+			// Basin Catalog 40401 corresponds to a 404
 			if (e instanceof APIError && e.code == 40401) {
 				logger.log(
-					`Data catalog is not enabled for bucket '${args.bucket}'. Please use 'wrangler r2 bucket catalog enable ${args.bucket}' to first enable the data catalog on this bucket.`
+					`Basin Catalog is not enabled for bucket '${args.bucket}'. Please use 'wrangler basin catalog enable ${args.bucket}' to first enable Basin Catalog on this bucket.`
 				);
 			} else {
 				throw e;
@@ -202,21 +213,21 @@ export const r2BucketCatalogGetCommand = createCommand({
 	},
 });
 
-export const r2BucketCatalogCompactionNamespace = createNamespace({
+export const basinCatalogCompactionNamespace = createNamespace({
 	metadata: {
 		description:
-			"Control settings for automatic file compaction maintenance jobs for your R2 data catalog",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+			"Control settings for automatic file compaction maintenance jobs for Basin Catalog",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 });
 
-export const r2BucketCatalogCompactionEnableCommand = createCommand({
+export const basinCatalogCompactionEnableCommand = createCommand({
 	metadata: {
 		description:
-			"Enable automatic file compaction for your R2 data catalog or a specific table",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+			"Enable automatic file compaction for Basin Catalog or a specific table",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -245,7 +256,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 		},
 		token: {
 			describe:
-				"A cloudflare api token with access to R2 and R2 Data Catalog (required for catalog-level compaction settings only)",
+				"A cloudflare api token with access to R2 and Basin Catalog (required for catalog-level compaction settings only)",
 			demandOption: false,
 			type: "string",
 		},
@@ -280,7 +291,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 				throw new UserError(
 					"Token is required for catalog-level compaction. Use --token flag to provide a Cloudflare API token.",
 					{
-						telemetryMessage: "r2 catalog compaction enable missing token",
+						telemetryMessage: "basin catalog compaction enable missing token",
 					}
 				);
 			}
@@ -300,7 +311,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 			);
 
 			logger.log(
-				`✨ Successfully enabled file compaction for the data catalog for bucket '${args.bucket}'.
+				`✨ Successfully enabled file compaction for Basin Catalog on bucket '${args.bucket}'.
 
 Compaction will automatically combine small files into larger ones to improve query performance.
 For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/about-compaction/`
@@ -309,12 +320,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/ab
 	},
 });
 
-export const r2BucketCatalogCompactionDisableCommand = createCommand({
+export const basinCatalogCompactionDisableCommand = createCommand({
 	metadata: {
 		description:
-			"Disable automatic file compaction for your R2 data catalog or a specific table",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+			"Disable automatic file compaction for Basin Catalog or a specific table",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -369,7 +380,7 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 		} else {
 			// Catalog-level compaction
 			const confirmedDisable = await confirm(
-				`Are you sure you want to disable file compaction for the data catalog for bucket '${args.bucket}'?`
+				`Are you sure you want to disable file compaction for Basin Catalog on bucket '${args.bucket}'?`
 			);
 			if (!confirmedDisable) {
 				logger.log("Disable cancelled.");
@@ -379,27 +390,27 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 			await disableR2CatalogCompaction(config, accountId, args.bucket);
 
 			logger.log(
-				`Successfully disabled file compaction for the data catalog for bucket '${args.bucket}'.`
+				`Successfully disabled file compaction for Basin Catalog on bucket '${args.bucket}'.`
 			);
 		}
 	},
 });
 
-export const r2BucketCatalogSnapshotExpirationNamespace = createNamespace({
+export const basinCatalogSnapshotExpirationNamespace = createNamespace({
 	metadata: {
 		description:
-			"Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+			"Control settings for automatic snapshot expiration maintenance jobs for Basin Catalog",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 });
 
-export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
+export const basinCatalogSnapshotExpirationEnableCommand = createCommand({
 	metadata: {
 		description:
-			"Enable automatic snapshot expiration for your R2 data catalog or a specific table",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+			"Enable automatic snapshot expiration for Basin Catalog or a specific table",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -432,7 +443,7 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 		},
 		token: {
 			describe:
-				"A cloudflare api token with access to R2 and R2 Data Catalog (required for catalog-level snapshot expiration settings only)",
+				"A cloudflare api token with access to R2 and Basin Catalog (required for catalog-level snapshot expiration settings only)",
 			demandOption: false,
 			type: "string",
 		},
@@ -469,7 +480,7 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 					"Token is required for catalog-level snapshot expiration. Use --token flag to provide a Cloudflare API token.",
 					{
 						telemetryMessage:
-							"r2 catalog snapshot expiration enable missing token",
+							"basin catalog snapshot expiration enable missing token",
 					}
 				);
 			}
@@ -490,7 +501,7 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 			);
 
 			logger.log(
-				`✨ Successfully enabled snapshot expiration for the data catalog for bucket '${args.bucket}'.
+				`✨ Successfully enabled snapshot expiration for Basin Catalog on bucket '${args.bucket}'.
 
 Snapshot expiration will automatically delete old table snapshots to save storage costs.
 For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/`
@@ -499,12 +510,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/`
 	},
 });
 
-export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
+export const basinCatalogSnapshotExpirationDisableCommand = createCommand({
 	metadata: {
 		description:
-			"Disable automatic snapshot expiration for your R2 data catalog or a specific table",
-		status: "open beta",
-		owner: "Product: R2 Data Catalog",
+			"Disable automatic snapshot expiration for Basin Catalog or a specific table",
+		status: "stable",
+		owner: "Product: Basin Catalog",
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -568,7 +579,7 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 			// Catalog-level snapshot expiration
 			if (!args.force) {
 				const confirmedDisable = await confirm(
-					`Are you sure you want to disable snapshot expiration for the data catalog for bucket '${args.bucket}'?`
+					`Are you sure you want to disable snapshot expiration for Basin Catalog on bucket '${args.bucket}'?`
 				);
 				if (!confirmedDisable) {
 					logger.log("Disable cancelled.");
@@ -579,7 +590,7 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 			await disableR2CatalogSnapshotExpiration(config, accountId, args.bucket);
 
 			logger.log(
-				`Successfully disabled snapshot expiration for the data catalog for bucket '${args.bucket}'.`
+				`Successfully disabled snapshot expiration for Basin Catalog on bucket '${args.bucket}'.`
 			);
 		}
 	},

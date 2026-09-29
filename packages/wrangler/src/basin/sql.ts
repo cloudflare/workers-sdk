@@ -8,9 +8,13 @@ import {
 } from "@cloudflare/workers-utils";
 import prettyBytes from "pretty-bytes";
 import { fetch } from "undici";
-import { createCommand, createNamespace } from "../core/create-command";
+import {
+	createAlias,
+	createCommand,
+	createNamespace,
+} from "../core/create-command";
 import { logger } from "../logger";
-import { getWranglerR2SqlAuthToken } from "../user/auth-variables";
+import { getWranglerBasinSqlAuthToken } from "../user/auth-variables";
 
 interface SqlQueryResponse {
 	result?: {
@@ -66,24 +70,31 @@ function formatSqlResults(data: SqlQueryResponse, duration: number): void {
 	}
 }
 
-export const r2SqlNamespace = createNamespace({
+export const basinSqlNamespace = createNamespace({
 	metadata: {
-		description: "Send queries and manage R2 SQL",
-		status: "open beta",
-		owner: "Product: R2 SQL",
+		description: "Send queries and manage Basin SQL",
+		status: "stable",
+		owner: "Product: Basin SQL",
 	},
 });
 
-export const r2SqlQueryCommand = createCommand({
+export const r2SqlAlias = createAlias({
+	aliasOf: "wrangler basin sql",
 	metadata: {
-		description: "Execute SQL query against R2 Data Catalog",
-		status: "open beta",
-		owner: "Product: R2",
+		hidden: true,
+	},
+});
+
+export const basinSqlQueryCommand = createCommand({
+	metadata: {
+		description: "Execute SQL query against Basin Catalog",
+		status: "stable",
+		owner: "Product: Basin SQL",
 	},
 	positionalArgs: ["warehouse", "query"],
 	args: {
 		warehouse: {
-			describe: "R2 Data Catalog warehouse name",
+			describe: "Basin Catalog warehouse name",
 			type: "string",
 			demandOption: true,
 		},
@@ -94,21 +105,21 @@ export const r2SqlQueryCommand = createCommand({
 		},
 	},
 	async handler({ warehouse, query }) {
-		let token = getWranglerR2SqlAuthToken();
+		let token = getWranglerBasinSqlAuthToken();
 		if (!token) {
 			token = getCloudflareAPITokenFromEnv();
 			if (!token) {
 				throw new UserError(
-					"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable. " +
+					"Missing WRANGLER_BASIN_SQL_AUTH_TOKEN environment variable. " +
 						"Tried to fallback to CLOUDFLARE_API_TOKEN, didn't find it either. " +
 						"Please follow instructions in https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ to create a token. " +
-						"Once done, you can prefix the command with the variable definition like so: `WRANGLER_R2_SQL_AUTH_TOKEN=... wrangler r2 sql query ...`. " +
+						"Once done, you can prefix the command with the variable definition like so: `WRANGLER_BASIN_SQL_AUTH_TOKEN=... wrangler basin sql query ...`. " +
 						"There also other ways to provide the value of this variable, see https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for more details.",
-					{ telemetryMessage: "r2 sql query missing auth token" }
+					{ telemetryMessage: "basin sql query missing auth token" }
 				);
 			} else {
 				logger.warn(
-					"Missing WRANGLER_R2_SQL_AUTH_TOKEN environment variable, falling back to CLOUDFLARE_API_TOKEN"
+					"Missing WRANGLER_BASIN_SQL_AUTH_TOKEN environment variable, falling back to CLOUDFLARE_API_TOKEN"
 				);
 			}
 		}
@@ -116,9 +127,9 @@ export const r2SqlQueryCommand = createCommand({
 		const splitIndex = warehouse.indexOf("_");
 		if (splitIndex === -1) {
 			throw new UserError(
-				`Invalid warehouse name format '${warehouse}'. Expected the format '<account-id>_<bucket-name>' (e.g. 'abc123_my-bucket'). You can find the warehouse name by running: wrangler r2 bucket catalog get <bucket>`,
+				`Invalid warehouse name format '${warehouse}'. Expected the format '<account-id>_<bucket-name>' (e.g. 'abc123_my-bucket'). You can find the warehouse name by running: wrangler basin catalog get <bucket>`,
 				{
-					telemetryMessage: "r2 sql query invalid warehouse format",
+					telemetryMessage: "basin sql query invalid warehouse format",
 				}
 			);
 		}
@@ -129,7 +140,7 @@ export const r2SqlQueryCommand = createCommand({
 
 		const s = spinner();
 		s.start("Query in progress");
-		const apiUrl = `https://api.sql.cloudflarestorage.com/api/v1/accounts/${accountId}/r2-sql/query/${bucketName}`;
+		const apiUrl = `https://api.sql.cloudflarestorage.com/api/v1/accounts/${accountId}/basin-sql/query/${bucketName}`;
 		let responseStatus = null;
 		let statusText = null;
 		let text = null;
@@ -153,14 +164,14 @@ export const r2SqlQueryCommand = createCommand({
 			duration = Date.now() - start;
 		} catch (error) {
 			throw new APIError({
-				text: `Failed to connect to R2 SQL API: ${error instanceof Error ? error.message : String(error)}`,
+				text: `Failed to connect to Basin SQL API: ${error instanceof Error ? error.message : String(error)}`,
 				telemetryMessage: false,
 			});
 		}
 
 		if (responseStatus === 403) {
 			logger.error(
-				"Please check that token in WRANGLER_R2_SQL_AUTH_TOKEN or CLOUDFLARE_API_TOKEN has the correct permissions. " +
+				"Please check that token in WRANGLER_BASIN_SQL_AUTH_TOKEN or CLOUDFLARE_API_TOKEN has the correct permissions. " +
 					"See https://developers.cloudflare.com/r2/sql/platform/troubleshooting/ for more details."
 			);
 		}
