@@ -12,7 +12,7 @@ import {
 import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputProperty } from "./types";
 
-const WORKFLOW_SETTINGS = [
+export const WORKFLOW_SETTINGS = [
 	"limits",
 	"concurrency",
 	"schedules",

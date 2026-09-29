@@ -9,7 +9,7 @@ import {
 	toOutputValue,
 	type UnknownRecord,
 } from "./converter-helpers";
-import { isLocalWorkflow } from "./exports";
+import { WORKFLOW_SETTINGS, isLocalWorkflow } from "./exports";
 import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputValue } from "./types";
 
@@ -47,7 +47,7 @@ function addBinding(
 
 function reportUnsupportedOptions(
 	record: UnknownRecord,
-	keys: string[],
+	keys: readonly string[],
 	sourcePath: string,
 	report: (followUp: MigrationFollowUp) => void
 ): void {
@@ -573,12 +573,7 @@ export function convertBindings(
 				report
 			);
 			if (external) {
-				reportUnsupportedOptions(
-					entry,
-					["limits", "concurrency", "schedules", "default_retention"],
-					sourcePath,
-					report
-				);
+				reportUnsupportedOptions(entry, WORKFLOW_SETTINGS, sourcePath, report);
 			}
 		}
 	}
