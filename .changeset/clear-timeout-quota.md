@@ -3,6 +3,6 @@
 "@cloudflare/workflows-shared": patch
 ---
 
-Cancel local Workflow step timeout timers when the step finishes
+Fix local Workflows hitting the timer quota on long runs
 
-Each `step.do()` used to leave its 10-minute `scheduler.wait()` running after the step succeeded, so a few thousand sequential steps hit workerd's 10,000-timer quota. The wait now receives the step abort signal so the native timer is cleared.
+Long local workflows with many sequential `step.do()` calls no longer fail from timer exhaustion. Step timeout timers are now cancelled when a step finishes or fails, instead of remaining until the original timeout deadline.

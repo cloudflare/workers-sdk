@@ -938,7 +938,10 @@ export class Context extends RpcTarget {
 				);
 			} catch (e) {
 				const error = e as Error;
-				// if we reach here, means that the closure ran but errored out and we can remove the timeout from the PQ
+				// Cancel the native timeout timer for this attempt. Removing the PQ
+				// entry alone leaves scheduler.wait() holding a workerd timer until
+				// the original deadline (issue #15788).
+				abortController.abort("step errored");
 				// @ts-expect-error priorityQueue is initiated in init
 				this.#engine.priorityQueue.remove({
 					hash: `${cacheKey}-${stepState.attemptedCount}`,
