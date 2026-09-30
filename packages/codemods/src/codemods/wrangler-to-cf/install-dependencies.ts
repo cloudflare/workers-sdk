@@ -3,12 +3,12 @@ import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	BunPackageManager,
-	getInstalledPackageVersion,
 	NpmPackageManager,
 	NubPackageManager,
 	PnpmPackageManager,
 	YarnPackageManager,
 } from "@cloudflare/workers-utils";
+import { glob } from "tinyglobby";
 import { fileExists } from "../../files";
 import {
 	getWranglerUpgradeSpec,
@@ -32,7 +32,9 @@ const NPM_LOCK_FILES = [
 interface PackageJson {
 	dependencies?: Record<string, unknown>;
 	devDependencies?: Record<string, unknown>;
+	name?: unknown;
 	packageManager?: unknown;
+	version?: unknown;
 	workspaces?: unknown;
 }
 
@@ -53,7 +55,7 @@ type CfDependencyInstallPlan =
 
 export type WranglerDependencyUpgradePlan =
 	| { action: "none" }
-	| { action: "manual"; workspaceDependency?: boolean }
+	| { action: "manual"; workspaceDependency?: "incompatible" | "unverified" }
 	| { action: "install"; dependency: DependencyToInstall };
 
 export interface DependencyToInstall {
@@ -100,6 +102,155 @@ interface DetectedPackageManager {
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
+}
+
+function getPackageJsonWorkspacePatterns(
+	workspaces: unknown
+): string[] | undefined {
+	const patterns: unknown = Array.isArray(workspaces)
+		? workspaces
+		: typeof workspaces === "object" &&
+			  workspaces !== null &&
+			  "packages" in workspaces
+			? workspaces.packages
+			: undefined;
+	return Array.isArray(patterns) &&
+		patterns.every((pattern: unknown) => typeof pattern === "string")
+		? (patterns as string[])
+		: undefined;
+}
+
+function getPnpmWorkspacePatterns(contents: string): string[] | undefined {
+	const patterns: string[] = [];
+	let inPackages = false;
+	for (const line of contents.split(/\r?\n/)) {
+		if (!inPackages) {
+			inPackages = /^packages:\s*(?:#.*)?$/.test(line);
+			continue;
+		}
+		if (/^\S/.test(line)) {
+			break;
+		}
+		if (line.trim() === "" || line.trim().startsWith("#")) {
+			continue;
+		}
+		const match = /^\s+-\s+(?:"([^"]+)"|'([^']+)'|([^#\s]+))\s*(?:#.*)?$/.exec(
+			line
+		);
+		if (!match) {
+			return undefined;
+		}
+		patterns.push(match[1] ?? match[2] ?? match[3]);
+	}
+	return patterns.length > 0 ? patterns : undefined;
+}
+
+async function findWorkspaceWranglerVersion(
+	projectDirectory: string
+): Promise<string | undefined> {
+	let directory = projectDirectory;
+	while (true) {
+		try {
+			const pnpmWorkspacePath = path.join(directory, "pnpm-workspace.yaml");
+			const packageJsonPath = path.join(directory, "package.json");
+			let patterns: string[] | undefined;
+			if (await fileExists(pnpmWorkspacePath)) {
+				patterns = getPnpmWorkspacePatterns(
+					await readFile(pnpmWorkspacePath, "utf8")
+				);
+				if (!patterns) {
+					return undefined;
+				}
+			} else if (await fileExists(packageJsonPath)) {
+				const { workspaces } = await readPackageJson(packageJsonPath);
+				if (workspaces !== undefined) {
+					patterns = getPackageJsonWorkspacePatterns(workspaces);
+					if (!patterns) {
+						return undefined;
+					}
+				}
+			}
+			if (patterns) {
+				const safePatterns = patterns.every((pattern) => {
+					const directoryPattern = pattern.replace(/^!/, "");
+					return (
+						!path.isAbsolute(directoryPattern) &&
+						!directoryPattern.split(/[\\/]/).includes("..")
+					);
+				});
+				if (!safePatterns) {
+					return undefined;
+				}
+				const packageJsonPaths = await glob(
+					patterns.map((pattern) => `${pattern}/package.json`),
+					{
+						absolute: true,
+						cwd: directory,
+						dot: true,
+						ignore: ["**/.git/**", "**/node_modules/**"],
+						onlyFiles: true,
+					}
+				);
+				if (
+					projectDirectory !== directory &&
+					!packageJsonPaths.some(
+						(workspacePackageJsonPath) =>
+							path.resolve(workspacePackageJsonPath) ===
+							path.resolve(projectDirectory, "package.json")
+					)
+				) {
+					return undefined;
+				}
+				const workspacePackages = await Promise.all(
+					packageJsonPaths.map(async (workspacePackageJsonPath) => {
+						try {
+							return await readPackageJson(workspacePackageJsonPath);
+						} catch {
+							return undefined;
+						}
+					})
+				);
+				const wranglerVersions = workspacePackages.flatMap((packageJson) =>
+					packageJson?.name === "wrangler" &&
+					typeof packageJson.version === "string"
+						? [packageJson.version]
+						: []
+				);
+				return wranglerVersions.length === 1 ? wranglerVersions[0] : undefined;
+			}
+		} catch {
+			return undefined;
+		}
+
+		const parentDirectory = path.dirname(directory);
+		if (parentDirectory === directory) {
+			return undefined;
+		}
+		directory = parentDirectory;
+	}
+}
+
+async function getDirectlyInstalledWranglerVersion(
+	projectDirectory: string
+): Promise<string | undefined> {
+	const packageJsonPath = path.join(
+		projectDirectory,
+		"node_modules",
+		"wrangler",
+		"package.json"
+	);
+	try {
+		if (!(await fileExists(packageJsonPath))) {
+			return undefined;
+		}
+		const packageJson = await readPackageJson(packageJsonPath);
+		return packageJson.name === "wrangler" &&
+			typeof packageJson.version === "string"
+			? packageJson.version
+			: undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 function hasCfDependency(packageJson: PackageJson): boolean {
@@ -386,14 +537,17 @@ export async function planWranglerDependencyUpgrade(
 		typeof declaredVersion === "string" &&
 		declaredVersion.startsWith("workspace:")
 	) {
-		const installedVersion = getInstalledPackageVersion(
-			"wrangler",
-			projectDirectory
-		);
-		return installedVersion !== undefined &&
-			isVersionSupported(installedVersion)
+		const workspaceVersion =
+			(await findWorkspaceWranglerVersion(projectDirectory)) ??
+			(await getDirectlyInstalledWranglerVersion(projectDirectory));
+		return workspaceVersion !== undefined &&
+			isVersionSupported(workspaceVersion)
 			? { action: "none" }
-			: { action: "manual", workspaceDependency: true };
+			: {
+					action: "manual",
+					workspaceDependency:
+						workspaceVersion === undefined ? "unverified" : "incompatible",
+				};
 	}
 
 	const upgradeSpec =

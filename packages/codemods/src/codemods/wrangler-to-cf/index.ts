@@ -135,9 +135,12 @@ export async function migrateWranglerToCf(
 		);
 	}
 	if (wranglerDepPlan.action === "manual") {
-		const instruction = wranglerDepPlan.workspaceDependency
-			? "Update the workspace Wrangler package and its lockfile while preserving the workspace dependency."
-			: "Add a compatible Wrangler dependency to the package that owns this Worker and update its lockfile.";
+		const instruction =
+			wranglerDepPlan.workspaceDependency === "incompatible"
+				? "Update the workspace Wrangler package and its lockfile while preserving the workspace dependency."
+				: wranglerDepPlan.workspaceDependency === "unverified"
+					? "Verify the workspace Wrangler package version and install workspace dependencies. Update the package and lockfile if needed while preserving the workspace dependency."
+					: "Add a compatible Wrangler dependency to the package that owns this Worker and update its lockfile.";
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"wrangler-upgrade-manual",
