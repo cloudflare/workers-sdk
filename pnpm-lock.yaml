@@ -34,8 +34,8 @@ catalogs:
       specifier: 0.12.0
       version: 0.12.0
     cf:
-      specifier: 1.0.0-beta.2
-      version: 1.0.0-beta.2
+      specifier: 1.0.0-beta.7
+      version: 1.0.0-beta.7
     chalk:
       specifier: 5.3.0
       version: 5.3.0
@@ -350,7 +350,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -461,7 +461,7 @@ importers:
         version: link:../shared
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1271,7 +1271,7 @@ importers:
         version: 1.5.4(@cloudflare/workers-types@5.20260930.2)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(drizzle-orm@0.45.1(@cloudflare/workers-types@5.20260930.2)(@electric-sql/pglite@0.3.2)(@opentelemetry/api@1.9.1)(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/pg@8.15.4)(kysely@0.28.11)(mysql2@3.15.3)(pg@8.16.3)(postgres@3.4.7)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))(mongodb@7.1.0)(mysql2@3.15.3)(pg@8.16.3)(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.0)
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       cjs-wasm-module-dep:
         specifier: file:./module-resolution/vendor/cjs-wasm-module-dep
         version: file:fixtures/vitest-plugin-examples/module-resolution/vendor/cjs-wasm-module-dep
@@ -3036,7 +3036,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3057,7 +3057,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3078,7 +3078,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3099,7 +3099,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3120,7 +3120,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3141,7 +3141,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3162,7 +3162,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3183,7 +3183,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3204,7 +3204,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3225,7 +3225,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3246,7 +3246,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3267,7 +3267,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3288,7 +3288,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3309,7 +3309,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3330,7 +3330,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3351,7 +3351,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3375,7 +3375,7 @@ importers:
         version: 2.0.4
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       mimetext:
         specifier: ^3.0.27
         version: 3.0.27
@@ -3405,7 +3405,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3426,7 +3426,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3447,7 +3447,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3468,7 +3468,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3489,7 +3489,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3510,7 +3510,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3534,7 +3534,7 @@ importers:
         version: file:packages/vite-plugin-cloudflare/playground/main-resolution/package
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3558,7 +3558,7 @@ importers:
         version: 5.0.1
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       express:
         specifier: ^5.1.0
         version: 5.1.0
@@ -3597,7 +3597,7 @@ importers:
         version: 18.3.18
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       discord-api-types:
         specifier: 0.37.98
         version: 0.37.98
@@ -3627,7 +3627,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3660,7 +3660,7 @@ importers:
         version: 8.15.4
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       cross-fetch:
         specifier: ^4.0.0
         version: 4.1.0(encoding@0.1.13)
@@ -3706,7 +3706,7 @@ importers:
         version: 19.1.1(@types/react@19.1.0)
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3752,7 +3752,7 @@ importers:
         version: 5.2.0(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       tailwindcss:
         specifier: ^4.0.15
         version: 4.0.15
@@ -3776,7 +3776,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3806,7 +3806,7 @@ importers:
         version: 7.0.1(prisma@7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3)
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       prisma:
         specifier: ^7.0.0
         version: 7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)
@@ -3849,7 +3849,7 @@ importers:
         version: 5.2.0(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3870,7 +3870,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3891,7 +3891,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3931,7 +3931,7 @@ importers:
         version: 5.2.0(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3952,7 +3952,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3973,7 +3973,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3994,7 +3994,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4018,7 +4018,7 @@ importers:
         version: 2.2.0(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4039,7 +4039,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4060,7 +4060,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4081,7 +4081,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4102,7 +4102,7 @@ importers:
         version: 5.20260930.2
       cf:
         specifier: catalog:default
-        version: 1.0.0-beta.2(@types/node@22.15.17)
+        version: 1.0.0-beta.7(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -5721,14 +5721,11 @@ packages:
   '@clack/prompts@1.2.0':
     resolution: {integrity: sha512-4jmztR9fMqPMjz6H/UZXj0zEmE43ha1euENwkckKKel4XpSfokExPo5AiVStdHSAlHekz4d0CA/r45Ok1E4D3w==}
 
-  '@cloudflare/build-output-utils@0.8.2':
-    resolution: {integrity: sha512-DHKF7p5p1ZapZbh2GyF3mfBW7D45IKtcnwMdKnVZ72A/a2rfwd1kczBYFH+O4cHnNI7e9HRwTm+Z76IDZfxVLw==}
-
   '@cloudflare/build-output-utils@0.8.4':
     resolution: {integrity: sha512-IjFovj2NV5GXA2D4EZu243M5iiwcEEVeQwaOySfz6L+D9U6C5pVtO8WINQCVLc3zPW8Av9grQzBX2UvCbntnbw==}
 
-  '@cloudflare/codemods@0.2.0':
-    resolution: {integrity: sha512-UonIk10PqFQgH8DfP8cTqixR4I6KKwFeSpy7CVXl5rpcckqfHSUhiNYe+K+xL6d1x7H4N/wjCpGsFnOxORsmkg==}
+  '@cloudflare/codemods@0.3.0':
+    resolution: {integrity: sha512-sS/tbKhZu0xQZfxd/4vi/N4Zlg/X6U0O1MJZmg656orES9REII8tF74SYq0GS+4NuQtdOYV59qdNkb5GIuebpw==}
     hasBin: true
 
   '@cloudflare/component-box@4.0.2':
@@ -5829,9 +5826,6 @@ packages:
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
-  '@cloudflare/config@0.20.0':
-    resolution: {integrity: sha512-Dv/UDLkqsmvW95+CmM2nE55pdkLPWnJ63KDMjAFe/5KW1hc2SzJW4f8CUagqarivQugf5+oJMWYlHSmtA4KVlA==}
-
   '@cloudflare/config@0.22.0':
     resolution: {integrity: sha512-6FoqVlQicGs6DcUn5zbWUbcXomqtqIe+dFKwYJGKTJI/3W1dNQ2sKzxttNthiQG9RJhrENki4BNrpZtZuHwvXw==}
 
@@ -5898,9 +5892,6 @@ packages:
   '@cloudflare/puppeteer@1.0.4':
     resolution: {integrity: sha512-I7vh9Er1hQ/7OnOL/NEPaiR0alRQ62wEWstyizilmr69AcRqvu+ufNlTc3A2uXREEvFBZ6TFajdcrBbh78/mtA==}
     engines: {node: '>=18'}
-
-  '@cloudflare/runtime-types@0.1.4':
-    resolution: {integrity: sha512-Jp3Za6h0KybVoi/4D6La3HicW71L8nyS7AGf0WHpbKqCs17lLkCuTbOcAuUTraoib8+SR74L+AbqxwcDq3VhTw==}
 
   '@cloudflare/runtime-types@0.1.6':
     resolution: {integrity: sha512-sXsT4U4r9uSHzbN6fVio6mhtaBa4B0TwQHpeatD13e6LYnTG1I7tvjC8dYtfvoKSaazpxXdH49MiU+nqQaEDRA==}
@@ -6043,12 +6034,6 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-64@1.20260926.1':
-    resolution: {integrity: sha512-VCIpwgJu5Dm1o+VHLclNOKIdpttEqss7oDHS5DYxgVoonM9Dxxxr1xCQvJbh6IXFuQ1DDrbm5krjte5NsTgX3Q==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [darwin]
-
   '@cloudflare/workerd-darwin-64@1.20260930.2':
     resolution: {integrity: sha512-wxKsfekWeev6xkjHEMx3x7nz6WfWOn1/scQ8geqWQhUm8qRl1ZRZhjnj+rucIMLhLhP9RGSYMZIjEm3AV0zwVQ==}
     engines: {node: '>=16'}
@@ -6075,12 +6060,6 @@ packages:
 
   '@cloudflare/workerd-darwin-arm64@1.20260918.1':
     resolution: {integrity: sha512-CR9JRZEQo93fNgBVF4Df2H2/VYO4n7rxSseSwCVv3bJQEb0huADUSCj2FK4ipxar8ToOEB4wawyw0vJo5U/rQQ==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@cloudflare/workerd-darwin-arm64@1.20260926.1':
-    resolution: {integrity: sha512-oVuLXfCnr1Xu9sBMNYrEPcFZQNMcviNcacz9l+oqQiLHc5UrVp++lpKbsuWstCfh+/c39Pp37TVeaNBLA8+ReA==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -6115,12 +6094,6 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-64@1.20260926.1':
-    resolution: {integrity: sha512-BjmiDvYBVBG5248gCHSZS3yONbcm3/3qKTu9RaQA8o7jQHJfXx9JnWbhkld2KsbXnRGEGHFwpLLidIpIGtQYUA==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [linux]
-
   '@cloudflare/workerd-linux-64@1.20260930.2':
     resolution: {integrity: sha512-cwrJAC5y/avPd1OzGyhc5OvUUfPXBFc065TY5CjXp7Hb3dhiTx6JeB5Pc8L3G8L8M44HyAfRHSpoLtRr+SR3cQ==}
     engines: {node: '>=16'}
@@ -6151,12 +6124,6 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-arm64@1.20260926.1':
-    resolution: {integrity: sha512-28bdfQDIFcpaKXMPisADy8BchpIsX+tEAhD+bhfEBXukFGFr8F3ouyiG3HzN3CqAh/OYvifJizzFZtptUPCy7w==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [linux]
-
   '@cloudflare/workerd-linux-arm64@1.20260930.2':
     resolution: {integrity: sha512-FHucB4gak1IuT+IxLx3KbtMBMapZhcqD9EdhHvBxk1FpHwD2QU5x26MRRVN53jIKG/O25HUmE9yffb3cMANQgw==}
     engines: {node: '>=16'}
@@ -6183,12 +6150,6 @@ packages:
 
   '@cloudflare/workerd-windows-64@1.20260918.1':
     resolution: {integrity: sha512-sATrMx5ShYYgmgUGrcTmvsFSJBFuN95NEkX3xwb1qk8w1A6h5N11sea7yN2IeibwPyPmXKjWNjXOno0hZAM71Q==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [win32]
-
-  '@cloudflare/workerd-windows-64@1.20260926.1':
-    resolution: {integrity: sha512-ehdL3ataKdEmlnW9oom6OZUR8n3XsTL/zl8+KGREpLi5sMSW0mek0PrF4wK9SX51f3Alnlu8tF8eKBg+mc3xFw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -11371,8 +11332,8 @@ packages:
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
 
-  cf@1.0.0-beta.2:
-    resolution: {integrity: sha512-Xwi8GG1TOjYaz6eEhJtGR+XMRYBoRXP3Cf8bobEZRqn24ZC6k5fl7hYBSSkMWSGPZpPL8yyURvMOZBKsGvM22A==}
+  cf@1.0.0-beta.7:
+    resolution: {integrity: sha512-SVcXMHue6KMIJmJTbEcenbaXLIe1Rwp28gT7tuVrVvWiavP1fTxe01VEvaEphwmDK7E76DtoWncoqQKiFHMwig==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -14018,10 +13979,6 @@ packages:
 
   miniflare@5.20260918.0-alpha:
     resolution: {integrity: sha512-vyIes7yW/OTzHtz4GhcBCTohZfqk2eQNiIkngZ07VRA5Qu24aNgW/TrFwlPkMLMjWDQ8R4JJBBHR/KX+liSDtg==}
-    engines: {node: '>=22.0.0'}
-
-  miniflare@5.20260926.0-alpha:
-    resolution: {integrity: sha512-m/M3rpLnaouw6QSoKzylfw6Z1dnOwRM48idnZ7kc5ivRqBXANFQ8XqKCyQ/V+xqQ9Rg1L99j4WkZGVU9uT4L2w==}
     engines: {node: '>=22.0.0'}
 
   miniflare@5.20260930.0-alpha:
@@ -17078,11 +17035,6 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  workerd@1.20260926.1:
-    resolution: {integrity: sha512-YojhsWBuZwk3Jk9OC0QfTgVbLeQOD1tK1olC9ZXAUcmeip8z4NE/xtttpxCsuTvQBRqppvy7Tkac0kxPYMjIXA==}
-    engines: {node: '>=16'}
-    hasBin: true
-
   workerd@1.20260930.2:
     resolution: {integrity: sha512-k1lQzEiGyCDqaRsR5+o9PBT5wVU5omtas6hXx3spbEHHMFo8a7tkAixVCMsWFeiT7xhrmg21Hd6a9jLNrkcUMg==}
     engines: {node: '>=16'}
@@ -18677,15 +18629,11 @@ snapshots:
       fast-wrap-ansi: 0.1.6
       sisteransi: 1.0.5
 
-  '@cloudflare/build-output-utils@0.8.2':
-    dependencies:
-      '@cloudflare/config': 0.20.0
-
   '@cloudflare/build-output-utils@0.8.4':
     dependencies:
       '@cloudflare/config': 0.22.0
 
-  '@cloudflare/codemods@0.2.0': {}
+  '@cloudflare/codemods@0.3.0': {}
 
   '@cloudflare/component-box@4.0.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -18825,10 +18773,6 @@ snapshots:
     transitivePeerDependencies:
       - regenerator-runtime
 
-  '@cloudflare/config@0.20.0':
-    dependencies:
-      zod: 4.4.3
-
   '@cloudflare/config@0.22.0':
     dependencies:
       zod: 4.4.3
@@ -18920,15 +18864,6 @@ snapshots:
       - bare-buffer
       - bufferutil
       - supports-color
-      - utf-8-validate
-
-  '@cloudflare/runtime-types@0.1.4(@types/node@22.15.17)':
-    dependencies:
-      miniflare: 5.20260926.0-alpha(@types/node@22.15.17)
-      workerd: 1.20260926.1
-    transitivePeerDependencies:
-      - '@types/node'
-      - bufferutil
       - utf-8-validate
 
   '@cloudflare/runtime-types@0.1.6(@types/node@22.15.17)':
@@ -19124,9 +19059,6 @@ snapshots:
   '@cloudflare/workerd-darwin-64@1.20260918.1':
     optional: true
 
-  '@cloudflare/workerd-darwin-64@1.20260926.1':
-    optional: true
-
   '@cloudflare/workerd-darwin-64@1.20260930.2':
     optional: true
 
@@ -19140,9 +19072,6 @@ snapshots:
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20260918.1':
-    optional: true
-
-  '@cloudflare/workerd-darwin-arm64@1.20260926.1':
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20260930.2':
@@ -19160,9 +19089,6 @@ snapshots:
   '@cloudflare/workerd-linux-64@1.20260918.1':
     optional: true
 
-  '@cloudflare/workerd-linux-64@1.20260926.1':
-    optional: true
-
   '@cloudflare/workerd-linux-64@1.20260930.2':
     optional: true
 
@@ -19178,9 +19104,6 @@ snapshots:
   '@cloudflare/workerd-linux-arm64@1.20260918.1':
     optional: true
 
-  '@cloudflare/workerd-linux-arm64@1.20260926.1':
-    optional: true
-
   '@cloudflare/workerd-linux-arm64@1.20260930.2':
     optional: true
 
@@ -19194,9 +19117,6 @@ snapshots:
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20260918.1':
-    optional: true
-
-  '@cloudflare/workerd-windows-64@1.20260926.1':
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20260930.2':
@@ -24071,14 +23991,14 @@ snapshots:
 
   ccount@2.0.1: {}
 
-  cf@1.0.0-beta.2(@types/node@22.15.17):
+  cf@1.0.0-beta.7(@types/node@22.15.17):
     dependencies:
-      '@cloudflare/build-output-utils': 0.8.2
-      '@cloudflare/codemods': 0.2.0
-      '@cloudflare/config': 0.20.0
-      '@cloudflare/runtime-types': 0.1.4(@types/node@22.15.17)
+      '@cloudflare/build-output-utils': 0.8.4
+      '@cloudflare/codemods': 0.3.0
+      '@cloudflare/config': 0.22.0
+      '@cloudflare/runtime-types': 0.1.6(@types/node@22.15.17)
       blake3-wasm: 2.1.5
-      miniflare: 5.20260926.0-alpha(@types/node@22.15.17)
+      miniflare: 5.20260930.0-alpha(@types/node@22.15.17)
       minisearch: 7.2.0
     transitivePeerDependencies:
       - '@types/node'
@@ -26832,19 +26752,6 @@ snapshots:
       sharp: 0.35.4(@types/node@22.15.17)
       undici: 7.29.0
       workerd: 1.20260918.1
-      ws: 8.21.0
-      youch: 4.1.0-beta.10(patch_hash=3e73fc48581841f22ea1d2cf5a3560bde280fdba04940253073fb121a70a9269)
-    transitivePeerDependencies:
-      - '@types/node'
-      - bufferutil
-      - utf-8-validate
-
-  miniflare@5.20260926.0-alpha(@types/node@22.15.17):
-    dependencies:
-      '@cspotcode/source-map-support': 0.8.1
-      sharp: 0.35.4(@types/node@22.15.17)
-      undici: 7.29.0
-      workerd: 1.20260926.1
       ws: 8.21.0
       youch: 4.1.0-beta.10(patch_hash=3e73fc48581841f22ea1d2cf5a3560bde280fdba04940253073fb121a70a9269)
     transitivePeerDependencies:
@@ -30578,14 +30485,6 @@ snapshots:
       '@cloudflare/workerd-linux-64': 1.20260918.1
       '@cloudflare/workerd-linux-arm64': 1.20260918.1
       '@cloudflare/workerd-windows-64': 1.20260918.1
-
-  workerd@1.20260926.1:
-    optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20260926.1
-      '@cloudflare/workerd-darwin-arm64': 1.20260926.1
-      '@cloudflare/workerd-linux-64': 1.20260926.1
-      '@cloudflare/workerd-linux-arm64': 1.20260926.1
-      '@cloudflare/workerd-windows-64': 1.20260926.1
 
   workerd@1.20260930.2:
     optionalDependencies:
