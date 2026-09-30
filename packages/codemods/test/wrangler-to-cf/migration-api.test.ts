@@ -293,7 +293,7 @@ describe("migrateWranglerToCf", () => {
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
 			["@cloudflare/vite-plugin@beta"],
-			{ cwd, isWorkspaceRoot: false }
+			{ cwd, dev: false, isWorkspaceRoot: false }
 		);
 	});
 
@@ -305,6 +305,7 @@ describe("migrateWranglerToCf", () => {
 				devDependencies: {
 					"@cloudflare/vite-plugin": "^1.60.2",
 					cf: "1.0.0-beta.5",
+					wrangler: "^4.136.0",
 				},
 			}),
 			"wrangler.json": JSON.stringify({
@@ -382,7 +383,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
-			followUps: [{ blocking: true, code: "cf-install-disabled" }],
+			followUps: [{ blocking: true, code: "vite-plugin-install-disabled" }],
 			requiresInstall: true,
 			status: "needs-intervention",
 		});
@@ -602,7 +603,10 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
-			followUps: [{ blocking: true, code: "cf-install-disabled" }],
+			followUps: [
+				{ blocking: true, code: "cf-install-disabled" },
+				{ blocking: true, code: "wrangler-upgrade-disabled" },
+			],
 			status: "needs-intervention",
 		});
 		await expect(
@@ -615,7 +619,7 @@ describe("migrateWranglerToCf", () => {
 	}) => {
 		const cwd = await createProject({
 			"package.json": JSON.stringify({
-				devDependencies: { cf: "1.0.0" },
+				devDependencies: { cf: "1.0.0", wrangler: "^4.136.0" },
 				name: "example-worker",
 			}),
 			"wrangler.json": JSON.stringify({
@@ -968,7 +972,11 @@ describe("migrateWranglerToCf", () => {
 		expect,
 	}) => {
 		const manifest = JSON.stringify({
-			devDependencies: { cf: "^1.0.0", wrangler: "^4.99.0" },
+			devDependencies: {
+				"@cloudflare/vite-plugin": "beta",
+				cf: "^1.0.0",
+				wrangler: "^4.99.0",
+			},
 			name: "example-worker",
 		});
 		const cwd = await createProject({

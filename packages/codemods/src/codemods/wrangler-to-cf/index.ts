@@ -116,7 +116,9 @@ export async function migrateWranglerToCf(
 		dependenciesToInstall.push(wranglerDepPlan.dependency);
 	}
 	const dependencyNames = formatDependencies(
-		dependenciesToInstall.map(({ name, version }) => `${name}@${version}`)
+		dependenciesToInstall
+			.filter(({ name }) => name !== "wrangler")
+			.map(({ name, version }) => `${name}@${version}`)
 	);
 	if (cfDepPlan.action === "missing-manifest") {
 		convertedConfig.followUps.push(
@@ -154,7 +156,7 @@ export async function migrateWranglerToCf(
 		convertedConfig.followUps.push(
 			createFollowUp(
 				cfDepPlan.action === "install" ||
-				cfDepPlan.action === "unreadable-manifest"
+					cfDepPlan.action === "unreadable-manifest"
 					? "cf-install-disabled"
 					: "vite-plugin-install-disabled",
 				`Automatic dependency installation was disabled. Install ${cfDepPlan.action === "unreadable-manifest" ? missingManifestPackages : dependencyNames} before using the generated configuration.`

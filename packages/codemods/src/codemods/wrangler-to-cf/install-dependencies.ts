@@ -3,6 +3,7 @@ import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	BunPackageManager,
+	getInstalledPackageVersion,
 	NpmPackageManager,
 	NubPackageManager,
 	PnpmPackageManager,
@@ -11,11 +12,12 @@ import {
 import { glob } from "tinyglobby";
 import { fileExists } from "../../files";
 import { getWranglerUpgradeSpec, isVersionSupported } from "./wrangler-version";
-import type { PackageManager } from "@cloudflare/workers-utils";
 import type { MigrationBundler } from "./types";
+import type { PackageManager } from "@cloudflare/workers-utils";
 
 const VITE_PLUGIN = "@cloudflare/vite-plugin";
-const VITE_PLUGIN_VERSION_PATTERN = /^2\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+const VITE_PLUGIN_VERSION_PATTERN =
+	/^2\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 const VITE_PLUGIN_RANGE_PATTERN =
 	/^(?:(?:\^|~)?2(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?|>=2\.0\.0-0 <3\.0\.0-0|beta)$/;
 
