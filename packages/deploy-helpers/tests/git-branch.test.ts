@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -33,7 +34,7 @@ for (const [name, getBranchName] of [
 
 		afterEach(() => {
 			process.chdir(originalCwd);
-			rmSync(directory, { recursive: true, force: true });
+			removeDirSync(directory);
 			vi.unstubAllEnvs();
 		});
 
