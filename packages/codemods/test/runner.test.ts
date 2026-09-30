@@ -618,7 +618,7 @@ export default defineWorkersProject({
 		const cwd = await createProject({
 			"package.json": JSON.stringify({
 				devDependencies: {
-					"@cloudflare/vite-plugin": "^2.0.0-beta.1",
+					"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
 					cf: "1.0.0",
 				},
 				name: "dry-run-test",

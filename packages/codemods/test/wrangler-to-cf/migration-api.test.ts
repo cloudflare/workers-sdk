@@ -125,10 +125,13 @@ describe("migrateWranglerToCf", () => {
 		{ packageManager: "pnpm", lockFile: "pnpm-lock.yaml" },
 		{ packageManager: "yarn", lockFile: "yarn.lock" },
 		{ packageManager: "bun", lockFile: "bun.lock" },
+		{ packageManager: "bun", lockFile: "bun.lockb" },
 		{ packageManager: "nub", lockFile: "nub.lock" },
 	] as const)(
-		"upgrades an outdated Vite plugin with $packageManager",
+		"upgrades an outdated Vite plugin with $packageManager ($lockFile)",
 		async ({ packageManager, lockFile }, { expect }) => {
+			const packageManagerVersion =
+				lockFile === "bun.lockb" ? "1.1.0" : "1.2.0";
 			const cwd = await createProject({
 				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
 					name: "@cloudflare/vite-plugin",
@@ -139,7 +142,7 @@ describe("migrateWranglerToCf", () => {
 						"@cloudflare/vite-plugin": "^1.60.2",
 						cf: "1.0.0-beta.5",
 					},
-					packageManager: `${packageManager}@1.2.0`,
+					packageManager: `${packageManager}@${packageManagerVersion}`,
 				}),
 				[lockFile]: "old lockfile",
 				"wrangler.json": JSON.stringify({
@@ -155,7 +158,7 @@ describe("migrateWranglerToCf", () => {
 							"@cloudflare/vite-plugin": "beta",
 							cf: "1.0.0-beta.5",
 						},
-						packageManager: `${packageManager}@1.2.0`,
+						packageManager: `${packageManager}@${packageManagerVersion}`,
 					})
 				);
 				await writeFile(path.join(cwd, lockFile), "new lockfile");
@@ -182,13 +185,19 @@ describe("migrateWranglerToCf", () => {
 		}
 	);
 
-	it.for(["^2.0.0-beta.1", "beta", ">=2.0.0-0 <3.0.0-0", "workspace:*"])(
+	it.for([
+		"^2.0.0-beta.sha-805ec1ff3",
+		"beta",
+		">=2.0.0-0 <3.0.0-0",
+		"workspace:*",
+		"catalog:default",
+	])(
 		"keeps a compatible Vite plugin declared as %s unchanged",
 		async (declaredVersion, { expect }) => {
 			const cwd = await createProject({
 				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
 					name: "@cloudflare/vite-plugin",
-					version: "2.0.0-beta.1",
+					version: "2.0.0-beta.sha-805ec1ff3",
 				}),
 				"package.json": JSON.stringify({
 					devDependencies: {
@@ -224,7 +233,7 @@ describe("migrateWranglerToCf", () => {
 			}),
 			"package.json": JSON.stringify({
 				devDependencies: {
-					"@cloudflare/vite-plugin": "^2.0.0-beta.1",
+					"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
 					cf: "1.0.0-beta.5",
 				},
 			}),
