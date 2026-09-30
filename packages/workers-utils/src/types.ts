@@ -19,6 +19,7 @@ import type {
 	CfAISearch,
 	CfAISearchNamespace,
 	CfAnalyticsEngineDataset,
+	CfAnalyticsSQLBinding,
 	CfBrowserBinding,
 	CfD1Database,
 	CfDispatchNamespace,
@@ -80,6 +81,7 @@ export type WorkerMetadataBinding =
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string; raw?: boolean }
+	| { type: "analytics"; name: string }
 	| { type: "ai"; name: string; staging?: boolean; raw?: boolean }
 	| { type: "images"; name: string; raw?: boolean }
 	| { type: "stream"; name: string }
@@ -479,6 +481,7 @@ export type Binding =
 	| { type: "wasm_module"; source: BinaryFile }
 	| { type: "text_blob"; source: File }
 	| ({ type: "browser" } & BindingOmit<CfBrowserBinding>)
+	| ({ type: "analytics" } & BindingOmit<CfAnalyticsSQLBinding>)
 	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
 	| ({ type: "images" } & BindingOmit<CfImagesBinding>)
 	| ({ type: "stream" } & BindingOmit<CfStreamBinding>)

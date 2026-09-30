@@ -40,6 +40,7 @@ describe("Preview configuration conversion", () => {
 				TEXT: { type: "plain_text", text: "production-text" },
 				JSON: { type: "json", json: { source: "production-json" } },
 				BROWSER: { type: "browser" },
+				ANALYTICS_SQL: { type: "analytics" },
 				AI: { type: "ai", staging: true },
 				IMAGES: { type: "images" },
 				STREAM: { type: "stream" },
@@ -106,6 +107,7 @@ describe("Preview configuration conversion", () => {
 		expect(Object.keys(result.config)).toEqual([
 			"vars",
 			"browser",
+			"analytics",
 			"ai",
 			"images",
 			"stream",
@@ -136,6 +138,7 @@ describe("Preview configuration conversion", () => {
 		]);
 		expect(result.config).toMatchObject({
 			vars: { TEXT: "<REPLACE_ME>", JSON: "<REPLACE_ME>" },
+			analytics: { binding: "ANALYTICS_SQL" },
 			ai: { binding: "AI", staging: true },
 			kv_namespaces: [{ binding: "KV", id: "<REPLACE_ME>" }],
 			r2_buckets: [

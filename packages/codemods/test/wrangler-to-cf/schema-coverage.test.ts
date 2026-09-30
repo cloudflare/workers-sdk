@@ -25,6 +25,7 @@ const FIELD_CASES = {
 	ai_search: [{ binding: "SEARCH", instance_name: "search" }],
 	ai_search_namespaces: [{ binding: "SEARCH", namespace: "search" }],
 	alias: { module: "./module.ts" },
+	analytics: { binding: "ANALYTICS" },
 	analytics_engine_datasets: [{ binding: "ANALYTICS", dataset: "events" }],
 	artifacts: [{ binding: "ARTIFACTS", namespace: "artifacts" }],
 	assets: {

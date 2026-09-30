@@ -390,6 +390,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				break;
 			}
 			case "browser":
+			case "analytics":
 			case "ai":
 			case "images":
 			case "stream":

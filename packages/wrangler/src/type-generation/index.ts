@@ -2496,6 +2496,25 @@ function collectCoreBindings(
 			}
 		}
 
+		if (env.analytics) {
+			if (!env.analytics.binding) {
+				throwMissingBindingError({
+					binding: env.analytics,
+					bindingType: "analytics",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				addBinding(
+					env.analytics.binding,
+					"AnalyticsSQLBinding",
+					"analytics",
+					envName
+				);
+			}
+		}
+
 		if (env.ai) {
 			if (!env.ai.binding) {
 				throwMissingBindingError({
@@ -3498,6 +3517,24 @@ function collectCoreBindingsPerEnvironment(
 					bindingCategory: "browser",
 					name: env.browser.binding,
 					type: "BrowserRun",
+				});
+			}
+		}
+
+		if (env.analytics) {
+			if (!env.analytics.binding) {
+				throwMissingBindingError({
+					binding: env.analytics,
+					bindingType: "analytics",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				bindings.push({
+					bindingCategory: "analytics",
+					name: env.analytics.binding,
+					type: "AnalyticsSQLBinding",
 				});
 			}
 		}

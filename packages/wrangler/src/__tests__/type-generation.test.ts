@@ -559,6 +559,7 @@ const bindingsConfigMock: Omit<
 		},
 	],
 	vpc_networks: [],
+	analytics: { binding: "ANALYTICS_SQL_BINDING" },
 	connect: [],
 };
 
@@ -850,6 +851,7 @@ describe("generate types - CLI", () => {
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -979,6 +981,7 @@ describe("generate types - CLI", () => {
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -1171,6 +1174,7 @@ describe("generate types - CLI", () => {
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;

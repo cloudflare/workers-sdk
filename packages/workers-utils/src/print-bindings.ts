@@ -102,6 +102,7 @@ export function printBindings(
 	);
 	const text_blobs = extractBindingsOfType("text_blob", bindings);
 	const browser = extractBindingsOfType("browser", bindings);
+	const analytics = extractBindingsOfType("analytics", bindings);
 	const images = extractBindingsOfType("images", bindings);
 	const stream = extractBindingsOfType("stream", bindings);
 	const ai = extractBindingsOfType("ai", bindings);
@@ -574,6 +575,23 @@ export function printBindings(
 				value: undefined,
 				mode: getMode({
 					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+				}),
+			}))
+		);
+	}
+
+	if (analytics.length > 0) {
+		output.push(
+			...analytics.map(({ binding, remote }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("analytics"),
+				value: undefined,
+				mode: getMode({
+					isSimulatedLocally:
+						(remote === true || remote === undefined) &&
+						!context.remoteBindingsDisabled
+							? false
+							: undefined,
 				}),
 			}))
 		);

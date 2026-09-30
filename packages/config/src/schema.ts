@@ -27,6 +27,11 @@ export const BrowserBindingSchema = z.strictObject({
 	dev: RemoteBindingDevSchema.optional(),
 });
 
+export const AnalyticsSQLBindingSchema = z.strictObject({
+	type: z.literal("analytics"),
+	dev: RemoteBindingDevSchema.optional(),
+});
+
 export const WorkerBindingSchema = z.strictObject({
 	type: z.literal("worker"),
 	worker: z.string(),
@@ -124,6 +129,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({ type: z.literal("assets") }),
 	BrowserBindingSchema,
+	AnalyticsSQLBindingSchema,
 	D1BindingSchema,
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
@@ -302,6 +308,7 @@ const SINGLETON_BINDING_TYPES = new Set([
 	"ai",
 	"assets",
 	"browser",
+	"analytics",
 	"images",
 	"media",
 	"stream",
