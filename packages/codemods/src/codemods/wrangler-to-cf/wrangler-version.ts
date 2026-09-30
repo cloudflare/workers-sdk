@@ -1,6 +1,7 @@
 import { getInstalledPackageVersion } from "@cloudflare/workers-utils";
 
-export const MINIMUM_WRANGLER_VERSION = "4.100.0";
+// Match the Wrangler version constraint in cf's dev/known-impls.ts.
+export const MINIMUM_WRANGLER_VERSION = "4.136.0";
 const SEMVER_PATTERN =
 	/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
 const DECLARED_VERSION_PATTERN =

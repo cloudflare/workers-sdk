@@ -91,11 +91,11 @@ export async function migrateWranglerToCf(
 		secretFiles
 	);
 	const wranglerConfig = renderWranglerConfig(convertedConfig);
-	const [dependencyPlan, wranglerPlan] = await Promise.all([
+	const [cfDepPlan, wranglerDepPlan] = await Promise.all([
 		planCfDependencyInstallation(projectDirectory),
 		planWranglerDependencyUpgrade(projectDirectory, wranglerConfig !== null),
 	]);
-	if (dependencyPlan.action === "missing-manifest") {
+	if (cfDepPlan.action === "missing-manifest") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-missing-manifest",
@@ -103,7 +103,7 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (dependencyPlan.action === "skipped-ancestor-package") {
+	if (cfDepPlan.action === "skipped-ancestor-package") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-skipped",
@@ -111,9 +111,9 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (installDependencies && dependencyPlan.action === "unreadable-manifest") {
-		const reason = dependencyPlan.reason
-			? ` Package manifest error: ${dependencyPlan.reason}`
+	if (installDependencies && cfDepPlan.action === "unreadable-manifest") {
+		const reason = cfDepPlan.reason
+			? ` Package manifest error: ${cfDepPlan.reason}`
 			: "";
 		convertedConfig.followUps.push(
 			createFollowUp(
@@ -124,8 +124,8 @@ export async function migrateWranglerToCf(
 	}
 	if (
 		!installDependencies &&
-		(dependencyPlan.action === "install" ||
-			dependencyPlan.action === "unreadable-manifest")
+		(cfDepPlan.action === "install" ||
+			cfDepPlan.action === "unreadable-manifest")
 	) {
 		convertedConfig.followUps.push(
 			createFollowUp(
@@ -134,8 +134,8 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (wranglerPlan.action === "manual") {
-		const instruction = wranglerPlan.workspaceDependency
+	if (wranglerDepPlan.action === "manual") {
+		const instruction = wranglerDepPlan.workspaceDependency
 			? "Update the workspace Wrangler package and its lockfile while preserving the workspace dependency."
 			: "Add a compatible Wrangler dependency to the package that owns this Worker and update its lockfile.";
 		convertedConfig.followUps.push(
@@ -145,7 +145,7 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (!installDependencies && wranglerPlan.action === "install") {
+	if (!installDependencies && wranglerDepPlan.action === "install") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"wrangler-upgrade-disabled",
@@ -167,14 +167,14 @@ export async function migrateWranglerToCf(
 	}
 	const changedFiles = Array.from(outputs.keys());
 	let requiresInstall =
-		dependencyPlan.action !== "already-installed" ||
-		wranglerPlan.action !== "none";
+		cfDepPlan.action !== "already-installed" ||
+		wranglerDepPlan.action !== "none";
 	const dependenciesToInstall: DependencyToInstall[] = [];
-	if (dependencyPlan.action === "install") {
+	if (cfDepPlan.action === "install") {
 		dependenciesToInstall.push({ dev: true, name: "cf", version: "latest" });
 	}
-	if (wranglerPlan.action === "install") {
-		dependenciesToInstall.push(wranglerPlan.dependency);
+	if (wranglerDepPlan.action === "install") {
+		dependenciesToInstall.push(wranglerDepPlan.dependency);
 	}
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
@@ -192,7 +192,7 @@ export async function migrateWranglerToCf(
 			);
 			changedFiles.push(...installResult.changedFiles);
 			requiresInstall =
-				installResult.requiresInstall || wranglerPlan.action === "manual";
+				installResult.requiresInstall || wranglerDepPlan.action === "manual";
 		} catch (error) {
 			if (dryRun) {
 				throw error;

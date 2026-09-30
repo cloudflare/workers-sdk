@@ -573,7 +573,7 @@ describe("migrateWranglerToCf", () => {
 		expect(result.followUps).toMatchObject([
 			{ blocking: true, code: "wrangler-upgrade-failed" },
 		]);
-		expect(result.followUps[0].message).toContain("wrangler@^4.100.0");
+		expect(result.followUps[0].message).toContain("wrangler@^4.136.0");
 		expect(result.followUps[0].message).not.toContain("cf@latest");
 	});
 
@@ -583,7 +583,7 @@ describe("migrateWranglerToCf", () => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.100.0",
+				version: "4.136.0",
 			}),
 			"package.json": JSON.stringify({ name: "example-worker" }),
 			"wrangler.json": JSON.stringify({
@@ -671,7 +671,7 @@ describe("migrateWranglerToCf", () => {
 		const wranglerCwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.100.0",
+				version: "4.136.0",
 			}),
 			"wrangler.json": source,
 		});
@@ -728,10 +728,10 @@ describe("migrateWranglerToCf", () => {
 		{ manager: "bun", lockFile: "bun.lockb", managerVersion: "1.1.0" },
 		{ manager: "nub", lockFile: "nub.lock", managerVersion: "1.2.0" },
 	])(
-		"upgrades Wrangler with $manager and reports $lockFile",
+		"upgrades Wrangler 4.100.0 with $manager and reports $lockFile",
 		async ({ manager, lockFile, managerVersion }, { expect }) => {
 			const packageJson = {
-				devDependencies: { cf: "^1.0.0", wrangler: "^4.99.0" },
+				devDependencies: { cf: "^1.0.0", wrangler: "^4.100.0" },
 				name: "example-worker",
 				packageManager: `${manager}@${managerVersion}`,
 			};
@@ -739,7 +739,7 @@ describe("migrateWranglerToCf", () => {
 				[lockFile]: "old lockfile",
 				"node_modules/wrangler/package.json": JSON.stringify({
 					name: "wrangler",
-					version: "4.99.0",
+					version: "4.100.0",
 				}),
 				"package.json": JSON.stringify(packageJson),
 				"wrangler.json": JSON.stringify({
@@ -755,7 +755,7 @@ describe("migrateWranglerToCf", () => {
 						...packageJson,
 						devDependencies: {
 							...packageJson.devDependencies,
-							wrangler: "^4.100.0",
+							wrangler: "^4.136.0",
 						},
 					})
 				);
@@ -771,7 +771,7 @@ describe("migrateWranglerToCf", () => {
 
 			expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 				manager,
-				["wrangler@^4.100.0"],
+				["wrangler@^4.136.0"],
 				{ cwd, dev: true, isWorkspaceRoot: false }
 			);
 			expect(result.changedFiles).toEqual([
@@ -805,7 +805,7 @@ describe("migrateWranglerToCf", () => {
 			await writeFile(
 				path.join(projectDirectory, "package.json"),
 				JSON.stringify({
-					devDependencies: { cf: "latest", wrangler: "^4.100.0" },
+					devDependencies: { cf: "latest", wrangler: "^4.136.0" },
 					name: "example-worker",
 					packageManager: "pnpm@10.27.0",
 				})
@@ -820,7 +820,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
 			"pnpm",
-			["cf@latest", "wrangler@^4.100.0"],
+			["cf@latest", "wrangler@^4.136.0"],
 			{ cwd: projectDirectory, dev: true, isWorkspaceRoot: false }
 		);
 		expect(result.changedFiles).toEqual([
@@ -851,7 +851,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
-			["wrangler@^4.100.0"],
+			["wrangler@^4.136.0"],
 			{ cwd, dev: false, isWorkspaceRoot: false }
 		);
 	});
@@ -860,10 +860,10 @@ describe("migrateWranglerToCf", () => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.100.0",
+				version: "4.136.0",
 			}),
 			"package.json": JSON.stringify({
-				devDependencies: { cf: "^1.0.0", wrangler: "^4.100.0" },
+				devDependencies: { cf: "^1.0.0", wrangler: "^4.136.0" },
 				name: "example-worker",
 			}),
 			"wrangler.json": JSON.stringify({
@@ -893,7 +893,7 @@ describe("migrateWranglerToCf", () => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.100.0",
+				version: "4.136.0",
 			}),
 			"package.json": manifest,
 			"pnpm-lock.yaml": "old lockfile",
@@ -924,7 +924,7 @@ describe("migrateWranglerToCf", () => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.99.0",
+				version: "4.135.0",
 			}),
 			"package.json": JSON.stringify({
 				devDependencies: { wrangler: "workspace:*" },
@@ -974,7 +974,7 @@ describe("migrateWranglerToCf", () => {
 			}),
 		});
 		vi.mocked(installPackages).mockImplementationOnce(async () => {
-			await writeFile(path.join(cwd, "pnpm-lock.yaml"), "wrangler 4.100.0");
+			await writeFile(path.join(cwd, "pnpm-lock.yaml"), "wrangler 4.136.0");
 		});
 
 		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
@@ -999,10 +999,10 @@ describe("migrateWranglerToCf", () => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.99.0",
+				version: "4.135.0",
 			}),
 			"package.json": JSON.stringify({
-				devDependencies: { cf: "^1.0.0", wrangler: "^4.100.0" },
+				devDependencies: { cf: "^1.0.0", wrangler: "^4.136.0" },
 				name: "example-worker",
 			}),
 			"wrangler.json": JSON.stringify({
@@ -1018,7 +1018,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
-			["wrangler@^4.100.0"],
+			["wrangler@^4.136.0"],
 			{ cwd, dev: true, isWorkspaceRoot: false }
 		);
 	});
