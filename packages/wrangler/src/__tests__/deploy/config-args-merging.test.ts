@@ -1211,10 +1211,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				mockGetSettings({ result: { bindings: [] } });
 			});
 
-			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
+			it("without --keep-vars, only secret bindings are kept", async ({
+				expect,
+			}) => {
 				writeWranglerConfig();
 				writeWorkerSource();
-				mockUploadWorkerRequest({ keepVars: false });
+				mockUploadWorkerRequest({ keepVars: false, keepSecrets: true });
 				mockSubDomainRequest();
 				await runWrangler("deploy ./index.js");
 				expect(std.out).toContain("Uploaded test-name");

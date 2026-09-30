@@ -444,7 +444,7 @@ describe("deploy", () => {
 
 		await runWrangler("deploy ./my-worker/index.js");
 		expect(std.debug).toContain(
-			`{"main_module":"index.js","bindings":[{"name":"xyz","type":"json","json":123}],"compatibility_date":"2022-01-12","compatibility_flags":[]}`
+			`{"main_module":"index.js","bindings":[{"name":"xyz","type":"json","json":123}],"compatibility_date":"2022-01-12","compatibility_flags":[],"keep_bindings":["secret_text","secret_key"]}`
 		);
 	});
 
