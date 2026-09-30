@@ -258,7 +258,7 @@ export function mockUploadWorkerRequest(
 		expectedContainers,
 		expectedAnnotations,
 		keepVars,
-		keepSecrets = true,
+		keepSecrets: keepSecretsOverride,
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
@@ -266,6 +266,9 @@ export function mockUploadWorkerRequest(
 		expectedDeploymentMessage,
 		expectedDurableObjectsCodeUpdateStrategy,
 	} = options;
+	const isAssetsOnly =
+		expectedAssets !== undefined && expectedMainModule === undefined;
+	const keepSecrets = keepSecretsOverride ?? !isAssetsOnly;
 
 	const expectedScriptName =
 		options.expectedScriptName ?? "test-name" + (env ? `-${env}` : "");
