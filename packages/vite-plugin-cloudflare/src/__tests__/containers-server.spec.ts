@@ -137,33 +137,8 @@ describe.each(["dev", "preview"] as const)(
 			test.for(["single", "concurrent"] as const)(
 				"retries pending cleanup once on close after %s restart removes the Cloudflare plugin",
 				async (restartMode, { expect, onTestFinished }) => {
-					fs.writeFileSync(
-						"index.js",
-						`import { DurableObject } from "cloudflare:workers";
-export class Probe extends DurableObject {}
-export default { fetch() { return new Response("ready"); } };`
-					);
-					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-					fs.writeFileSync(
-						"wrangler.jsonc",
-						JSON.stringify({
-							name: "container-cleanup-plugin-removal-test",
-							main: "index.js",
-							compatibility_date: "2026-09-21",
-							containers: [
-								{
-									class_name: "Probe",
-									scheduling_policy: "durable_object",
-									images: { app: { dockerfile: "./Dockerfile" } },
-								},
-							],
-							durable_objects: {
-								bindings: [{ name: "PROBE", class_name: "Probe" }],
-							},
-							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-						})
-					);
+					writeWorkerSource();
+					writeCloudflareConfig({ scenario: "configured" });
 					const require = createRequire(import.meta.url);
 					const bridgePath = path.resolve("factory.cjs");
 					fs.writeFileSync(bridgePath, "module.exports = {};\n");
@@ -183,7 +158,7 @@ import { createRequire } from "node:module";
 const bridge = createRequire(import.meta.url)("./factory.cjs");
 export default {
   plugins: bridge.includeCloudflare
-    ? [bridge.cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false })]
+    ? [bridge.cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })]
     : [],
 };
 `
@@ -241,37 +216,8 @@ export default {
 			test.for(["configured", "absent"] as const)(
 				"keeps dependency optimizer hashes stable on the first restart with Containers %s",
 				async (scenario, { expect, onTestFinished }) => {
-					fs.writeFileSync(
-						"index.js",
-						`import { DurableObject } from "cloudflare:workers";
-export class Probe extends DurableObject {}
-export default { fetch() { return new Response("ready"); } };`
-					);
-					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-					fs.writeFileSync(
-						"wrangler.jsonc",
-						JSON.stringify({
-							name: "container-restart-hash-test",
-							main: "index.js",
-							compatibility_date: "2026-09-21",
-							...(scenario === "configured"
-								? {
-										containers: [
-											{
-												class_name: "Probe",
-												scheduling_policy: "durable_object",
-												images: { app: { dockerfile: "./Dockerfile" } },
-											},
-										],
-									}
-								: {}),
-							durable_objects: {
-								bindings: [{ name: "PROBE", class_name: "Probe" }],
-							},
-							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-						})
-					);
+					writeWorkerSource();
+					writeCloudflareConfig({ scenario });
 					const require = createRequire(import.meta.url);
 					const bridgePath = path.resolve("factory.cjs");
 					fs.writeFileSync(bridgePath, "module.exports = {};\n");
@@ -287,7 +233,7 @@ export default { fetch() { return new Response("ready"); } };`
 						`
 import { createRequire } from "node:module";
 const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
-export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false })] };
+export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })] };
 `
 					);
 					const server = await createServer({

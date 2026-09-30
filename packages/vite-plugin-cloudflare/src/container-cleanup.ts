@@ -3,12 +3,17 @@ import { cleanupContainers } from "@cloudflare/containers-shared";
 import type { ViteDevServer } from "vite";
 
 export interface ContainerCleanup {
+	attachToClose(server: ViteDevServer): void;
 	cleanup(): void;
 	readonly isRestarting: boolean;
 	restart(action: () => Promise<void>): Promise<void>;
 	track(dockerPath: string, imageTags: Iterable<string>): void;
 }
 
+const containerCleanupKey = Symbol("vite-plugin-cloudflare:container-cleanup");
+type CloseWithCleanup = ViteDevServer["close"] & {
+	[containerCleanupKey]?: ContainerCleanup;
+};
 const restartingContainerCleanup = new AsyncLocalStorage<ContainerCleanup>();
 const serverContainerCleanups = new WeakMap<ViteDevServer, ContainerCleanup>();
 
@@ -29,6 +34,23 @@ export function createContainerCleanup(): ContainerCleanup {
 	}
 
 	const cleanup: ContainerCleanup = {
+		attachToClose(server) {
+			if ((server.close as CloseWithCleanup)[containerCleanupKey] === cleanup) {
+				return;
+			}
+			const closeServer = server.close.bind(server);
+			const closeWithCleanup: CloseWithCleanup = async () => {
+				try {
+					await closeServer();
+				} finally {
+					if (!cleanup.isRestarting) {
+						cleanup.cleanup();
+					}
+				}
+			};
+			closeWithCleanup[containerCleanupKey] = cleanup;
+			server.close = closeWithCleanup;
+		},
 		cleanup: cleanupContainerImages,
 		get isRestarting() {
 			return restarting;

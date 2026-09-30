@@ -92,6 +92,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							ctx.beginRestartingDevServer();
 							debuglog("From server.restart(): Restarting server...");
 							await restartServer();
+							if (
+								!viteDevServer.config.plugins.some(
+									(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
+								)
+							) {
+								containerCleanup.attachToClose(viteDevServer);
+							}
 							debuglog("From server.restart(): Restarted server...");
 						} finally {
 							ctx.endRestartingDevServer();
