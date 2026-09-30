@@ -43,7 +43,11 @@ export function displayServiceDetails(service: ConnectivityService) {
 
 	// Display network details
 	if (service.host.network) {
-		logger.log(`   Tunnel ID: ${service.host.network.tunnel_id}`);
+		if ("tunnel_id" in service.host.network) {
+			logger.log(`   Tunnel ID: ${service.host.network.tunnel_id}`);
+		} else {
+			logger.log(`   Network ID: ${service.host.network.network_id}`);
+		}
 	} else if (service.host.resolver_network) {
 		logger.log(`   Tunnel ID: ${service.host.resolver_network.tunnel_id}`);
 		if (service.host.resolver_network.resolver_ips) {
@@ -90,11 +94,15 @@ export function formatServiceForTable(service: ConnectivityService) {
 		host = ips.join(", ");
 	}
 
-	// Get tunnel ID
-	const tunnelId =
-		service.host.network?.tunnel_id ||
-		service.host.resolver_network?.tunnel_id ||
-		"";
+	let networkDisplay = "";
+	if (service.host.network) {
+		networkDisplay =
+			"tunnel_id" in service.host.network
+				? service.host.network.tunnel_id
+				: service.host.network.network_id;
+	} else if (service.host.resolver_network) {
+		networkDisplay = service.host.resolver_network.tunnel_id;
+	}
 
 	return {
 		id: service.service_id,
@@ -102,7 +110,7 @@ export function formatServiceForTable(service: ConnectivityService) {
 		type: service.type,
 		ports,
 		host,
-		tunnel: tunnelId.substring(0, 8) + "...", // Truncate for table display
+		network: networkDisplay.substring(0, 8) + "...", // Truncate for table display
 		created: new Date(service.created_at).toLocaleString(),
 		modified: new Date(service.updated_at).toLocaleString(),
 	};

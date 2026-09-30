@@ -47,9 +47,7 @@ export interface HttpServiceConfig {
 	https_port?: number;
 }
 
-export interface Network {
-	tunnel_id: string;
-}
+export type Network = { tunnel_id: string } | { network_id: string };
 
 export interface ResolverNetwork {
 	tunnel_id: string;
@@ -159,9 +157,15 @@ export const serviceOptions = {
 	},
 	"tunnel-id": {
 		type: "string",
-		demandOption: true,
+		conflicts: ["network-id"],
 		group: "Required Configuration",
 		description: "UUID of the Cloudflare tunnel",
+	},
+	"network-id": {
+		type: "string",
+		conflicts: ["tunnel-id"],
+		group: "Required Configuration",
+		description: "Cloudflare network ID (e.g. 'cf1:network')",
 	},
 	"cert-verification-mode": {
 		type: "string",
