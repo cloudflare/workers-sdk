@@ -5,6 +5,9 @@
 // than capturing it at wiring time.
 
 export const DefaultScopes = {
+	"k2.read":
+		"See K2 stream configurations and bind existing streams to Workers.",
+	"k2.write": "Create and manage K2 stream configurations.",
 	"account:read":
 		"See your account info such as account details, analytics, and memberships.",
 	"user:read":

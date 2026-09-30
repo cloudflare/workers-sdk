@@ -30,6 +30,10 @@ export async function fetch(
 				`Fetch API cannot load: ${url.toString()}\nMake sure you're using http(s):// URLs for WebSocket requests via fetch.`
 			);
 		}
+		// `ws` doesn't use `dispatcher`, so apply its origin rewrite here
+		if (requestInit?.dispatcher instanceof DispatchFetchDispatcher) {
+			requestInit.dispatcher.rewriteOrigin(url);
+		}
 		url.protocol = url.protocol.replace("http", "ws");
 
 		// Normalise request headers to a format ws understands, extracting the
@@ -209,6 +213,14 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		if (this.cfBlobJson !== undefined) {
 			// Only add this header if a `cf` override was set
 			headers.set(CoreHeaders.CF_BLOB, this.cfBlobJson);
+		}
+	}
+
+	rewriteOrigin(/* mut */ url: URL) {
+		if (url.origin === this.userRuntimeOrigin) {
+			const runtimeURL = new URL(this.actualRuntimeOrigin);
+			url.protocol = runtimeURL.protocol;
+			url.host = runtimeURL.host;
 		}
 	}
 

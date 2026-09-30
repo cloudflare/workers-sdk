@@ -1,5 +1,29 @@
 # @cloudflare/autoconfig
 
+## 0.7.3
+
+### Patch Changes
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22), [`27bc20d`](https://github.com/cloudflare/workers-sdk/commit/27bc20d5b22e7156b59940275bd3d809e269d7ce)]:
+  - @cloudflare/config@0.22.0
+  - @cloudflare/workers-utils@0.45.0
+  - @cloudflare/cli-shared-helpers@0.2.1
+
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [[`2a15ae2`](https://github.com/cloudflare/workers-sdk/commit/2a15ae21d210fcd36e485e7492b75198c8d7856c)]:
+  - @cloudflare/config@0.21.0
+
+## 0.7.1
+
+### Patch Changes
+
+- [#15913](https://github.com/cloudflare/workers-sdk/pull/15913) [`3ea1365`](https://github.com/cloudflare/workers-sdk/commit/3ea1365509e64786471bac5dfee37ff60e5f75ff) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix the type generation script added to TypeScript projects configured for `cf`.
+
+  The `cf-typegen` script now runs `cf workers types` instead of the unsupported `cf types` command. Projects configured for Wrangler continue to use `wrangler types`.
+
 ## 0.7.0
 
 ### Minor Changes

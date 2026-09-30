@@ -7,7 +7,8 @@ const ENCODER = new TextEncoder();
 
 export async function readPrefix(
 	stream: ReadableStream<Uint8Array>,
-	prefixLength: number
+	prefixLength: number,
+	restTransform: IdentityTransformStream = new IdentityTransformStream()
 ): Promise<[prefix: Uint8Array, rest: ReadableStream]> {
 	const reader = await stream.getReader({ mode: "byob" });
 	const result = await reader.readAtLeast(
@@ -18,7 +19,7 @@ export async function readPrefix(
 	reader.releaseLock();
 	// Without this `pipeThrough()`, getting uncaught `TypeError: Can't read from
 	// request stream after response has been sent.`
-	const rest = stream.pipeThrough(new IdentityTransformStream());
+	const rest = stream.pipeThrough(restTransform);
 	return [result.value, rest];
 }
 

@@ -527,6 +527,12 @@ const bindingsConfigMock: Omit<
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
 	pipelines: [{ binding: "PIPELINE", stream: "my-pipeline" }],
+	k2: [
+		{
+			binding: "K2_BINDING",
+			stream: "0123456789abcdef0123456789abcdef",
+		},
+	],
 	assets: {
 		binding: "ASSETS_BINDING",
 		directory: "/assets",
@@ -553,6 +559,7 @@ const bindingsConfigMock: Omit<
 		},
 	],
 	vpc_networks: [],
+	analytics: { binding: "ANALYTICS_SQL_BINDING" },
 	connect: [],
 };
 
@@ -823,6 +830,15 @@ describe("generate types - CLI", () => {
 				NAMESPACE_BINDING: DispatchNamespace;
 				MTLS_BINDING: Fetcher;
 				TEST_QUEUE_BINDING: Queue;
+				K2_BINDING: {
+					send(records:
+						| { content: ArrayBuffer; headers?: Record<string, string> }[]
+						| { content: Uint8Array; headers?: Record<string, string> }[]
+					): Promise<
+						| { success: true }
+						| { success: false; error: { code: number; message: string; retryable: boolean } }
+					>;
+				};
 				SECRET: SecretsStoreSecret;
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
@@ -835,6 +851,7 @@ describe("generate types - CLI", () => {
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -943,6 +960,15 @@ describe("generate types - CLI", () => {
 				NAMESPACE_BINDING: DispatchNamespace;
 				MTLS_BINDING: Fetcher;
 				TEST_QUEUE_BINDING: Queue;
+				K2_BINDING: {
+					send(records:
+						| { content: ArrayBuffer; headers?: Record<string, string> }[]
+						| { content: Uint8Array; headers?: Record<string, string> }[]
+					): Promise<
+						| { success: true }
+						| { success: false; error: { code: number; message: string; retryable: boolean } }
+					>;
+				};
 				SECRET: SecretsStoreSecret;
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
@@ -955,6 +981,7 @@ describe("generate types - CLI", () => {
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -1126,6 +1153,15 @@ describe("generate types - CLI", () => {
 				NAMESPACE_BINDING: DispatchNamespace;
 				MTLS_BINDING: Fetcher;
 				TEST_QUEUE_BINDING: Queue;
+				K2_BINDING: {
+					send(records:
+						| { content: ArrayBuffer; headers?: Record<string, string> }[]
+						| { content: Uint8Array; headers?: Record<string, string> }[]
+					): Promise<
+						| { success: true }
+						| { success: false; error: { code: number; message: string; retryable: boolean } }
+					>;
+				};
 				SECRET: SecretsStoreSecret;
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
@@ -1138,6 +1174,7 @@ describe("generate types - CLI", () => {
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;

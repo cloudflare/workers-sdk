@@ -80,6 +80,12 @@ const BINDING_ERRORS: Partial<Record<number, S3Error>> = {
 		message:
 			"Your proposed upload is smaller than the minimum allowed object size.",
 	},
+	// METADATA_TOO_LARGE
+	10012: {
+		status: 400,
+		code: "MetadataTooLarge",
+		message: "Your metadata headers exceed the maximum allowed metadata size.",
+	},
 	// NO_SUCH_UPLOAD
 	10024: NO_SUCH_UPLOAD,
 	// INVALID_PART
@@ -104,7 +110,7 @@ const BINDING_ERRORS: Partial<Record<number, S3Error>> = {
  * R2Error type is disabled (r2-rpc.c++, "all we can send back to the user
  * is a message").
  */
-function bindingError(e: unknown): Response {
+export function bindingError(e: unknown): Response {
 	const message = e instanceof Error ? e.message : String(e);
 	const v4Code = /\((\d+)\)$/.exec(message);
 	const known = v4Code === null ? undefined : BINDING_ERRORS[Number(v4Code[1])];

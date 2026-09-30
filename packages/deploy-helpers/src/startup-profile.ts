@@ -308,6 +308,7 @@ type MiniflareBindingOptions = Pick<
 	| "media"
 	| "mtlsCertificates"
 	| "pipelines"
+	| "k2"
 	| "queueProducers"
 	| "r2Buckets"
 	| "ratelimits"
@@ -361,6 +362,7 @@ async function convertWorkerBundleBindings(
 	const mtlsCertificates: MiniflareBindingOption<"mtlsCertificates"> = {};
 	const pipelines: Record<string, { stream: string } | { pipeline: string }> =
 		{};
+	const k2: MiniflareBindingOption<"k2"> = {};
 	const queueProducers: Record<
 		string,
 		{ queueName: string; deliveryDelay?: number }
@@ -516,6 +518,9 @@ async function convertWorkerBundleBindings(
 					unsupportedBindings.push(binding);
 				}
 				break;
+			case "k2":
+				k2[binding.name] = { stream: binding.stream };
+				break;
 			case "secrets_store_secret":
 				secretsStoreSecrets[binding.name] = {
 					store_id: binding.store_id,
@@ -570,6 +575,10 @@ async function convertWorkerBundleBindings(
 				// Miniflare has no runtime binding option for log forwarders.
 				unsupportedBindings.push(binding);
 				break;
+			case "analytics":
+				// Analytics SQL bindings require a remote connection.
+				unsupportedBindings.push(binding);
+				break;
 			default: {
 				binding satisfies never;
 				const unknownBinding = binding as unknown as UnsupportedWorkerBinding;
@@ -599,6 +608,7 @@ async function convertWorkerBundleBindings(
 			media,
 			mtlsCertificates,
 			pipelines,
+			k2,
 			queueProducers,
 			r2Buckets,
 			ratelimits,

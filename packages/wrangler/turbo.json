@@ -58,7 +58,7 @@
 				"WRANGLER_WORKER_REGISTRY_PORT",
 				"DOCKER_HOST",
 				"WRANGLER_DOCKER_HOST",
-				"WRANGLER_R2_SQL_AUTH_TOKEN"
+				"WRANGLER_BASIN_SQL_AUTH_TOKEN"
 			]
 		},
 		"test:ci": {
@@ -68,6 +68,10 @@
 		"test:e2e": {
 			"inputs": ["e2e/**"],
 			"dependsOn": ["build", "create-cloudflare#build"],
+			"passThroughEnv": [
+				"CLOUDFLARE_ACCESS_CLIENT_ID",
+				"CLOUDFLARE_ACCESS_CLIENT_SECRET"
+			],
 			"env": [
 				"$TURBO_EXTENDS$",
 				"VITEST",

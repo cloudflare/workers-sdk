@@ -4,6 +4,30 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
+		expect,
+	}) => {
+		const stream = "stream-v2:orders";
+		const remoteProxyConnectionString = new URL(
+			"http://127.0.0.1:8787"
+		) as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			name: "producer",
+			script: "export default {};",
+			modules: true,
+			k2: { ORDERS: { stream, remoteProxyConnectionString } },
+		});
+
+		expect(converted.workers[0].config.env?.ORDERS).toEqual({
+			type: "k2",
+			stream,
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
+			remoteProxyConnectionString
+		);
+	});
+
 	test("converts local, external, and unbound durable objects", ({
 		expect,
 	}) => {
@@ -114,6 +138,7 @@ describe("convertV4MiniflareOptions", () => {
 			serviceBindings: { SERVICE: "other-worker" },
 			assets: { directory: "./public", binding: "ASSETS" },
 			browserRendering: { binding: "BROWSER", headful: true },
+			analyticsSql: { binding: "ANALYTICS" },
 			workflows: {
 				WORKFLOW: {
 					name: "workflow",
@@ -158,6 +183,7 @@ describe("convertV4MiniflareOptions", () => {
 				},
 				QUEUE: { type: "queue", name: "queue" },
 				SERVICE: { type: "worker", worker: "other-worker" },
+				ANALYTICS: { type: "analytics", dev: { remote: false } },
 				ASSETS: { type: "assets" },
 				BROWSER: { type: "browser", headful: true },
 				WORKFLOW: {

@@ -27,6 +27,11 @@ export const BrowserBindingSchema = z.strictObject({
 	dev: RemoteBindingDevSchema.optional(),
 });
 
+export const AnalyticsSQLBindingSchema = z.strictObject({
+	type: z.literal("analytics"),
+	dev: RemoteBindingDevSchema.optional(),
+});
+
 export const WorkerBindingSchema = z.strictObject({
 	type: z.literal("worker"),
 	worker: z.string(),
@@ -124,6 +129,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({ type: z.literal("assets") }),
 	BrowserBindingSchema,
+	AnalyticsSQLBindingSchema,
 	D1BindingSchema,
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
@@ -162,6 +168,11 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("pipeline"),
 		name: z.string(),
+		dev: RemoteBindingDevSchema.optional(),
+	}),
+	z.strictObject({
+		type: z.literal("k2"),
+		stream: z.string(),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
 	QueueBindingSchema,
@@ -297,6 +308,7 @@ const SINGLETON_BINDING_TYPES = new Set([
 	"ai",
 	"assets",
 	"browser",
+	"analytics",
 	"images",
 	"media",
 	"stream",
@@ -452,6 +464,15 @@ const StandardContainerObservabilitySchema = z.union([
 const BaseContainerSchema = z.strictObject({
 	name: z.string().min(1),
 	unsafe: z.record(z.string(), z.unknown()).optional(),
+	ssh: z
+		.strictObject({
+			enabled: z.boolean(),
+			port: z.number().int().min(1).max(65_535).optional(),
+		})
+		.optional(),
+	authorizedKeys: z
+		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
+		.optional(),
 });
 
 const StandardContainerBaseSchema = BaseContainerSchema.extend({
@@ -475,15 +496,6 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 		])
 		.optional(),
 	schedulingPolicy: z.enum(["default", "regional"]).optional(),
-	ssh: z
-		.strictObject({
-			enabled: z.boolean(),
-			port: z.number().int().min(1).max(65_535).optional(),
-		})
-		.optional(),
-	authorizedKeys: z
-		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
-		.optional(),
 	constraints: z
 		.strictObject({
 			regions: z
