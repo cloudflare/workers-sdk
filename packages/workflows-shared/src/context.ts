@@ -1212,22 +1212,23 @@ export class Context extends RpcTarget {
 			// in case the engine dies while sleeping and wakes up before the retry period
 			if (entryPQ !== undefined) {
 				const pauseSignal = this.#engine.pauseController.signal;
-				await raceAgainstAbort(
+				const raceResult = await raceAgainstAbort(
 					schedulerWait(
 						disableSleep ? 0 : entryPQ.targetTimestamp - Date.now(),
 						{ signal: pauseSignal }
 					),
 					pauseSignal
 				);
-				// @ts-expect-error priorityQueue is initiated in init
-				this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
 				const statusAfterSleep = await this.#engine.getStatus();
 				const pausedDuringSleep =
+					raceResult.aborted ||
 					statusAfterSleep === InstanceStatus.Paused ||
 					statusAfterSleep === InstanceStatus.WaitingForPause;
 				if (pausedDuringSleep) {
 					throw new Error(ABORT_REASONS.USER_PAUSE);
 				}
+				// @ts-expect-error priorityQueue is initiated in init
+				this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
 			}
 			const shouldWriteLog =
 				(await this.#state.storage.get(sleepLogWrittenKey)) == undefined;
