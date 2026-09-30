@@ -42,7 +42,7 @@ export const tunnelQuickStartCommand = createCommand({
 			array: true,
 			nargs: 1,
 			description:
-				"Require email authentication. Accepts an exact address or domain wildcard such as user@example.com or *@example.org. May be repeated or comma-separated.",
+				"Require email authentication (cloudflared 2026.9.2 or later). Accepts an exact address or domain wildcard such as user@example.com or *@example.org. May be repeated or comma-separated.",
 		},
 		"log-level": {
 			type: "string",
