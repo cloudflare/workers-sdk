@@ -256,7 +256,7 @@ export function mockUploadWorkerRequest(
 		expectedContainers,
 		expectedAnnotations,
 		keepVars,
-		keepSecrets,
+		keepSecrets = true,
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
