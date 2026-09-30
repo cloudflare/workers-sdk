@@ -1,5 +1,58 @@
 # wrangler
 
+## 4.145.0
+
+### Minor Changes
+
+- [#15685](https://github.com/cloudflare/workers-sdk/pull/15685) [`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add native support for the Analytics SQL binding
+
+  Declare the zero-configuration binding in `wrangler.json` with `"analytics": { "binding": "ANALYTICS" }`. Wrangler uploads the `analytics` binding type and proxies it to the remote service during local development, so `wrangler dev` can call the binding without `unsafe.bindings`.
+
+- [#15943](https://github.com/cloudflare/workers-sdk/pull/15943) [`8468487`](https://github.com/cloudflare/workers-sdk/commit/8468487cd1e5c3b6870822348d8ef20c1df53a13) Thanks [@sejoker](https://github.com/sejoker)! - Graduate SQL, Catalog, and Pipelines under `wrangler basin` out of beta to stable
+
+  Basin SQL is now available under `wrangler basin sql`, Basin Catalog operations are available under `wrangler basin catalog`, and Pipelines operations are available under `wrangler basin pipelines`. These commands are now stable, while the previous `wrangler r2 sql`, `wrangler r2 bucket catalog`, and `wrangler pipelines` command paths remain available as hidden compatibility aliases.
+
+  The Basin SQL authentication environment variable is now `WRANGLER_BASIN_SQL_AUTH_TOKEN`. Update any existing `WRANGLER_R2_SQL_AUTH_TOKEN` configuration to use the new name. The fallback to `CLOUDFLARE_API_TOKEN` remains available.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 producer bindings for existing streams
+
+  Configure a stream created through Wrangler, the Dashboard, or the API in `wrangler.json`:
+
+  ```jsonc
+  {
+    "k2": [
+      {
+        "binding": "ORDERS",
+        "stream": "0123456789abcdef0123456789abcdef"
+      }
+    ]
+  }
+  ```
+
+  The binding supports `env.ORDERS.send([{ content: new TextEncoder().encode("order"), headers: { event: "order.created" } }])`. Batches use either all `ArrayBuffer` or all `Uint8Array` content. Check the returned `success` value, handle rejected RPC promises, and retry only when the returned error explicitly allows it. Generated environment types describe this producer contract without requiring a separate application dependency.
+
+  K2 requires an enabled account. Deployment credentials need Worker deployment and K2 configuration-read access. Default Wrangler logins now request the K2 OAuth scopes; existing OAuth users should run `wrangler login` again to grant the new permissions. Development always uses a real K2 stream and may incur usage charges; no local simulator is provided. The `remote` setting can be omitted, `remote: true` suppresses the usage warning, and `remote: false` is rejected. Consumption is not part of this Worker binding.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 stream management commands
+
+  Use `wrangler k2 streams create order_events`, `wrangler k2 streams list`, `wrangler k2 streams get <stream-id>`, and `wrangler k2 streams delete <stream-id>` to manage K2 streams. Creation enables Worker bindings but not HTTP ingestion by default, matching the dashboard. Pass `--http-enabled` to enable authenticated HTTP ingestion and print its endpoint. Creation prints the stream ID and a binding configuration with a `YOUR_BINDING_NAME` placeholder for the Worker's variable name, but does not edit the configuration file automatically.
+
+  All four commands support `--json`. Deletion requires confirmation, or `--force`/`-y` to skip it; use `--force --json` for JSON deletion output. Creation also accepts retention, HTTP authentication, Worker-input, and CORS options; listing supports pagination and a name filter. Default Wrangler logins now request `k2.read` and `k2.write`; existing OAuth users should run `wrangler login` again, or use a custom API token granting K2 Config Write. The account must be enabled for K2.
+
+### Patch Changes
+
+- [#15908](https://github.com/cloudflare/workers-sdk/pull/15908) [`ddaa558`](https://github.com/cloudflare/workers-sdk/commit/ddaa5588640f6b14541e1d37a5bc49099fd6779d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260926.1 | ^5.20260930.2 |
+  | workerd                   | 1.20260926.1  | 1.20260930.2  |
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`ddaa558`](https://github.com/cloudflare/workers-sdk/commit/ddaa5588640f6b14541e1d37a5bc49099fd6779d), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22)]:
+  - miniflare@5.20260930.0-alpha
+
 ## 4.144.0
 
 ### Minor Changes
