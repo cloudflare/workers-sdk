@@ -345,6 +345,12 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
+					case "k2":
+						configObj.k2 = [
+							...(configObj.k2 ?? []),
+							{ binding: binding.name, stream: binding.stream },
+						];
+						break;
 					case "assets":
 						configObj.assets = {
 							binding: binding.name,

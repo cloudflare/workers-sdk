@@ -130,7 +130,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation and data catalog validation prompt",
+			describe: "Skip confirmation and Basin Catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -351,8 +351,8 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		} catch (error) {
 			if (!force && isDataCatalogConflict(error)) {
 				const confirmed = await confirm(
-					"Data catalog is enabled for this bucket. " +
-						"Proceeding may leave the data catalog in an invalid state. Continue?",
+					"Basin Catalog is enabled for this bucket. " +
+						"Proceeding may leave Basin Catalog in an invalid state. Continue?",
 					{ defaultValue: false, fallbackValue: true }
 				);
 				if (!confirmed) {
@@ -465,7 +465,7 @@ export const r2BucketLifecycleSetCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation and data catalog validation prompt",
+			describe: "Skip confirmation and Basin Catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -520,8 +520,8 @@ export const r2BucketLifecycleSetCommand = createCommand({
 		} catch (error) {
 			if (!force && isDataCatalogConflict(error)) {
 				const confirmed = await confirm(
-					"Data catalog is enabled for this bucket. " +
-						"Proceeding may leave the data catalog in an invalid state. Continue?",
+					"Basin Catalog is enabled for this bucket. " +
+						"Proceeding may leave Basin Catalog in an invalid state. Continue?",
 					{ defaultValue: false, fallbackValue: true }
 				);
 				if (!confirmed) {

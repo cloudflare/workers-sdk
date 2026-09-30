@@ -1,5 +1,33 @@
 # wrangler
 
+## 4.144.0
+
+### Minor Changes
+
+- [#15919](https://github.com/cloudflare/workers-sdk/pull/15919) [`91a3606`](https://github.com/cloudflare/workers-sdk/commit/91a3606a2a519a341f71a91f43a723f113dd9abf) Thanks [@flakey5](https://github.com/flakey5)! - Add `--tty` (`-t`) flag to `wrangler containers ssh` to force pseudo-terminal allocation
+
+  OpenSSH only allocates a pseudo-terminal when no remote command is given, so interactive commands such as `wrangler containers ssh <ID> -- bash` previously ran without a prompt or line editing. Pass `--tty` to force one:
+
+  `wrangler containers ssh <ID> --tty -- bash`
+
+- [#15951](https://github.com/cloudflare/workers-sdk/pull/15951) [`2a15ae2`](https://github.com/cloudflare/workers-sdk/commit/2a15ae21d210fcd36e485e7492b75198c8d7856c) Thanks [@flakey5](https://github.com/flakey5)! - Support SSH settings for Durable Object-managed Containers in the configuration API
+
+  `defineContainer` now accepts `ssh` and `authorizedKeys` with `schedulingPolicy: "durable-object"`, matching the `ssh` and `authorized_keys` fields that Wrangler already supports for these Containers. Previously the schema rejected them, so they could not be set from `cloudflare.config.ts`.
+
+  ```ts
+  defineContainer({
+    name: "sandbox",
+    schedulingPolicy: "durable-object",
+    ssh: { enabled: true },
+    authorizedKeys: [{ name: "laptop", publicKey: "ssh-ed25519 AAAA..." }],
+  });
+  ```
+
+### Patch Changes
+
+- Updated dependencies []:
+  - miniflare@5.20260926.1-alpha
+
 ## 4.143.1
 
 ### Patch Changes

@@ -408,6 +408,12 @@ export interface CfPipeline {
 	remote?: boolean;
 }
 
+export interface CfK2Binding {
+	binding: string;
+	stream: string;
+	remote?: boolean;
+}
+
 export interface CfUnsafeBinding {
 	name: string;
 	type: string;

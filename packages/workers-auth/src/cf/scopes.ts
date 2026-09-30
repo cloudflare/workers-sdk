@@ -18,6 +18,7 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 	"access:read",
 	"access:write",
 	"account:read",
+	"account_api_tokens:create",
 	"agw:read",
 	"agw:run",
 	"agw:write",

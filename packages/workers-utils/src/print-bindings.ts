@@ -129,6 +129,7 @@ export function printBindings(
 	);
 	const mtls_certificates = extractBindingsOfType("mtls_certificate", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const assets = extractBindingsOfType("assets", bindings);
 	const unsafe_hello_world = extractBindingsOfType(
@@ -672,6 +673,22 @@ export function printBindings(
 					}),
 				})
 			)
+		);
+	}
+
+	if (k2.length > 0) {
+		output.push(
+			...k2.map(({ binding, stream: k2Stream }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("k2"),
+				value: k2Stream,
+				mode: getMode({
+					// K2 always writes to the real stream; `remote: false` is rejected during validation.
+					isSimulatedLocally: context.remoteBindingsDisabled
+						? undefined
+						: false,
+				}),
+			}))
 		);
 	}
 

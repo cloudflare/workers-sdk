@@ -1,5 +1,22 @@
 # @cloudflare/config
 
+## 0.21.0
+
+### Minor Changes
+
+- [#15951](https://github.com/cloudflare/workers-sdk/pull/15951) [`2a15ae2`](https://github.com/cloudflare/workers-sdk/commit/2a15ae21d210fcd36e485e7492b75198c8d7856c) Thanks [@flakey5](https://github.com/flakey5)! - Support SSH settings for Durable Object-managed Containers in the configuration API
+
+  `defineContainer` now accepts `ssh` and `authorizedKeys` with `schedulingPolicy: "durable-object"`, matching the `ssh` and `authorized_keys` fields that Wrangler already supports for these Containers. Previously the schema rejected them, so they could not be set from `cloudflare.config.ts`.
+
+  ```ts
+  defineContainer({
+    name: "sandbox",
+    schedulingPolicy: "durable-object",
+    ssh: { enabled: true },
+    authorizedKeys: [{ name: "laptop", publicKey: "ssh-ed25519 AAAA..." }],
+  });
+  ```
+
 ## 0.20.0
 
 ### Minor Changes

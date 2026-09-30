@@ -65,6 +65,7 @@ const FIELD_CASES = {
 	jsx_fragment: "Fragment",
 	keep_names: true,
 	keep_vars: true,
+	k2: [{ binding: "ORDERS", stream: "0123456789abcdef0123456789abcdef" }],
 	kv_namespaces: [{ binding: "KV", id: "id" }],
 	limits: { cpu_ms: 100 },
 	logfwdr: { bindings: [{ destination: "destination", name: "LOG" }] },

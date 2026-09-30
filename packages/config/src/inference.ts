@@ -2,6 +2,7 @@
 
 import type {
 	JsonBinding,
+	K2Producer,
 	TextBinding,
 	TypedAiBinding,
 	TypedKvBinding,
@@ -78,6 +79,7 @@ type ExtractInstance<T, TInstance> =
  * widen the import to a wildcard or to the plain `*Binding` interfaces.
  */
 interface BindingTypeMap<TBinding> {
+	k2: K2Producer;
 	// Parameterized bindings - refine via nominal match on the binding instance
 	ai: TBinding extends TypedAiBinding<infer T> ? Ai<T> : Ai;
 	json: TBinding extends JsonBinding<infer T> ? T : never;
@@ -253,6 +255,34 @@ export type UnwrapConfig<TConfig> = TConfig extends (
 		? UnwrapConfig<TCompletion>
 		: TConfig;
 
+/** Extract the authored binding map from each possible config branch. */
+type ConfigEnv<TConfig> = TConfig extends {
+	env: infer TEnv extends Record<string, any>;
+}
+	? TEnv
+	: Record<never, never>;
+
+/** Collect every property name from a union of object types. */
+type KeysOfUnion<T> = T extends unknown ? keyof T : never;
+
+/** Read a property distributively from every member of a union. */
+type UnionProperty<T, K extends PropertyKey> = T extends unknown
+	? K extends keyof T
+		? T[K]
+		: never
+	: never;
+
+/** Merge binding maps, making bindings absent from some branches optional. */
+type MergeEnv<
+	TEnv,
+	TRequiredKey extends PropertyKey = keyof TEnv,
+	TOptionalKey extends PropertyKey = Exclude<KeysOfUnion<TEnv>, TRequiredKey>,
+> = {
+	[K in TRequiredKey]: InferBindingType<UnionProperty<TEnv, K>>;
+} & {
+	[K in TOptionalKey]?: InferBindingType<UnionProperty<TEnv, K>>;
+};
+
 /**
  * Infer the `Env` interface type from a Worker config.
  *
@@ -276,11 +306,7 @@ export type UnwrapConfig<TConfig> = TConfig extends (
  * export type Env = InferEnv<WorkerConfig>;
  * ```
  */
-export type InferEnv<TUnwrappedConfig> = TUnwrappedConfig extends {
-	env: infer TEnv extends Record<string, any>;
-}
-	? { [K in keyof TEnv]: InferBindingType<TEnv[K]> }
-	: never;
+export type InferEnv<TUnwrappedConfig> = MergeEnv<ConfigEnv<TUnwrappedConfig>>;
 
 /**
  * Infer the Durable Object namespace names from a Worker config's exports.

@@ -36,6 +36,7 @@ import type {
 	CfMTlsCertificate,
 	CfModule,
 	CfPipeline,
+	CfK2Binding,
 	CfPlacement,
 	CfQueue,
 	CfR2Bucket,
@@ -166,6 +167,7 @@ export type WorkerMetadataBinding =
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
 	| { type: "pipelines"; name: string; stream?: string; pipeline?: string }
+	| { type: "k2"; name: string; stream: string }
 	| {
 			type: "secrets_store_secret";
 			name: string;
@@ -501,6 +503,7 @@ export type Binding =
 	| ({ type: "dispatch_namespace" } & BindingOmit<CfDispatchNamespace>)
 	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
+	| ({ type: "k2" } & BindingOmit<CfK2Binding>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "artifacts" } & BindingOmit<CfArtifacts>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)

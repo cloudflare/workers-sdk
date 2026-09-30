@@ -384,6 +384,11 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				};
 				break;
 			}
+			case "k2": {
+				const b = binding as Extract<WorkerMetadataBinding, { type: "k2" }>;
+				output[name] = { type: "k2", stream: b.stream };
+				break;
+			}
 			case "browser":
 			case "analytics":
 			case "ai":

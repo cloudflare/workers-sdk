@@ -219,6 +219,9 @@ export function convertBindings(
 			report
 		);
 	}
+	convertArrayBindings("k2", "binding", "bindings.k2", [["stream", "stream"]], {
+		remote: true,
+	});
 	convertArrayBindings(
 		"kv_namespaces",
 		"binding",
