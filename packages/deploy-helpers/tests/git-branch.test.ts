@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
-import { removeDirSync } from "@cloudflare/workers-utils";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getBranchName as getAliasBranchName } from "../src/deploy/helpers/preview-alias";
 import { getBranchName as getPreviewBranchName } from "../src/preview/shared";
