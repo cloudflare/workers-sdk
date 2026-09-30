@@ -111,6 +111,14 @@ jobs:
           WORKERS_SHARED_SENTRY_ACCESS_SECRET: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_SECRET }}
           WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}
 
+      - name: Notify cf of the completed npm publish
+        if: ${{ !cancelled() && steps.changesets.outputs.published == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        run: |
+          printf '{"event_type":"workers-sdk-published","client_payload":{"sha":"%s"}}' "$GITHUB_SHA" |
+            gh api --method POST repos/cloudflare/cf/dispatches --input -
+
       - name: Send Alert
         if: always()
         run: node -r esbuild-register tools/deployments/alert-on-error.ts
