@@ -3,6 +3,7 @@ import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	BunPackageManager,
+	getInstalledPackageVersion,
 	NpmPackageManager,
 	NubPackageManager,
 	PnpmPackageManager,
@@ -11,6 +12,7 @@ import {
 import { fileExists } from "../../files";
 import {
 	getWranglerUpgradeSpec,
+	isVersionSupported,
 	MINIMUM_WRANGLER_VERSION,
 } from "./wrangler-version";
 import type { PackageManager } from "@cloudflare/workers-utils";
@@ -51,12 +53,29 @@ type CfDependencyInstallPlan =
 
 export type WranglerDependencyUpgradePlan =
 	| { action: "none" }
-	| { action: "manual" }
-	| { action: "install"; dev: boolean; packageSpecifier: string };
+	| { action: "manual"; workspaceDependency?: boolean }
+	| { action: "install"; dependency: DependencyToInstall };
 
 export interface DependencyToInstall {
 	dev: boolean;
-	packageSpecifier: string;
+	name: string;
+	version: string;
+}
+
+/** Retains changed package files when a later dependency installation fails. */
+export class DependencyInstallError extends Error {
+	constructor(
+		readonly changedFiles: string[],
+		readonly pendingDependencies: DependencyToInstall[],
+		cause: unknown
+	) {
+		super(
+			cause instanceof Error ? cause.message : "Package installation failed.",
+			{
+				cause,
+			}
+		);
+	}
 }
 
 interface DependencyInstallOptions {
@@ -339,23 +358,37 @@ export async function planWranglerDependencyUpgrade(
 	projectDirectory: string,
 	requiresWrangler: boolean
 ): Promise<WranglerDependencyUpgradePlan> {
+	if (!requiresWrangler) {
+		return { action: "none" };
+	}
+
 	const packageJsonPath = path.join(projectDirectory, "package.json");
 	if (!(await fileExists(packageJsonPath))) {
-		return { action: requiresWrangler ? "manual" : "none" };
+		return { action: "manual" };
 	}
 
 	let packageJson: PackageJson;
 	try {
 		packageJson = await readPackageJson(packageJsonPath);
 	} catch {
-		return { action: requiresWrangler ? "manual" : "none" };
+		return { action: "manual" };
 	}
 
 	const dependency = packageJson.dependencies?.wrangler;
 	const devDependency = packageJson.devDependencies?.wrangler;
 	const declaredVersion = dependency ?? devDependency;
-	if (declaredVersion === undefined && !requiresWrangler) {
-		return { action: "none" };
+	if (
+		typeof declaredVersion === "string" &&
+		declaredVersion.startsWith("workspace:")
+	) {
+		const installedVersion = getInstalledPackageVersion(
+			"wrangler",
+			projectDirectory
+		);
+		return installedVersion !== undefined &&
+			isVersionSupported(installedVersion)
+			? { action: "none" }
+			: { action: "manual", workspaceDependency: true };
 	}
 
 	const upgradeSpec =
@@ -368,8 +401,11 @@ export async function planWranglerDependencyUpgrade(
 
 	return {
 		action: "install",
-		dev: dependency === undefined,
-		packageSpecifier: `wrangler@${upgradeSpec}`,
+		dependency: {
+			dev: dependency === undefined,
+			name: "wrangler",
+			version: upgradeSpec,
+		},
 	};
 }
 
@@ -396,10 +432,14 @@ export async function installProjectDependencies(
 	const {
 		directory: lockFileDirectory,
 		packageManager,
-		version,
+		version: packageManagerVersion,
 	} = await detectPackageManager(packageDirectory);
 	const lockFilePaths = options.dryRun
-		? await getPlannedLockFiles(lockFileDirectory, packageManager, version)
+		? await getPlannedLockFiles(
+				lockFileDirectory,
+				packageManager,
+				packageManagerVersion
+			)
 		: getLockFiles(packageManager).map((lockFile) =>
 				path.join(lockFileDirectory, lockFile)
 			);
@@ -419,13 +459,23 @@ export async function installProjectDependencies(
 	for (const dev of [true, false]) {
 		const packages = dependencies
 			.filter((dependency) => dependency.dev === dev)
-			.map((dependency) => dependency.packageSpecifier);
+			.map(({ name, version }) => `${name}@${version}`);
 		if (packages.length > 0) {
-			await installPackages(packageManager.type, packages, {
-				cwd: packageDirectory,
-				dev,
-				isWorkspaceRoot,
-			});
+			try {
+				await installPackages(packageManager.type, packages, {
+					cwd: packageDirectory,
+					dev,
+					isWorkspaceRoot,
+				});
+			} catch (error) {
+				throw new DependencyInstallError(
+					getChangedFiles(before, await readFiles(packageFilePaths)),
+					dev
+						? dependencies
+						: dependencies.filter((dependency) => !dependency.dev),
+					error
+				);
+			}
 		}
 	}
 

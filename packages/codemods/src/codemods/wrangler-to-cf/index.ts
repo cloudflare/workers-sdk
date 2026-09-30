@@ -14,11 +14,13 @@ import {
 } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
 import {
+	DependencyInstallError,
 	installProjectDependencies,
 	planCfDependencyInstallation,
 	planWranglerDependencyUpgrade,
 } from "./install-dependencies";
 import { MINIMUM_WRANGLER_VERSION } from "./wrangler-version";
+import type { DependencyToInstall } from "./install-dependencies";
 import type {
 	MigrationFollowUp,
 	WranglerToCfMigrationOptions,
@@ -133,10 +135,13 @@ export async function migrateWranglerToCf(
 		);
 	}
 	if (wranglerPlan.action === "manual") {
+		const instruction = wranglerPlan.workspaceDependency
+			? "Update the workspace Wrangler package and its lockfile while preserving the workspace dependency."
+			: "Add a compatible Wrangler dependency to the package that owns this Worker and update its lockfile.";
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"wrangler-upgrade-manual",
-				`The generated wrangler.config.ts requires Wrangler ${MINIMUM_WRANGLER_VERSION} or newer. Add a compatible Wrangler dependency to the package that owns this Worker and update its lockfile.`
+				`The generated wrangler.config.ts requires Wrangler ${MINIMUM_WRANGLER_VERSION} or newer. ${instruction}`
 			)
 		);
 	}
@@ -164,19 +169,13 @@ export async function migrateWranglerToCf(
 	let requiresInstall =
 		dependencyPlan.action !== "already-installed" ||
 		wranglerPlan.action !== "none";
-	const dependenciesToInstall = [
-		...(dependencyPlan.action === "install"
-			? [{ dev: true, packageSpecifier: "cf@latest" }]
-			: []),
-		...(wranglerPlan.action === "install"
-			? [
-					{
-						dev: wranglerPlan.dev,
-						packageSpecifier: wranglerPlan.packageSpecifier,
-					},
-				]
-			: []),
-	];
+	const dependenciesToInstall: DependencyToInstall[] = [];
+	if (dependencyPlan.action === "install") {
+		dependenciesToInstall.push({ dev: true, name: "cf", version: "latest" });
+	}
+	if (wranglerPlan.action === "install") {
+		dependenciesToInstall.push(wranglerPlan.dependency);
+	}
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
@@ -192,23 +191,31 @@ export async function migrateWranglerToCf(
 				{ dryRun }
 			);
 			changedFiles.push(...installResult.changedFiles);
-			requiresInstall = installResult.requiresInstall;
+			requiresInstall =
+				installResult.requiresInstall || wranglerPlan.action === "manual";
 		} catch (error) {
 			if (dryRun) {
 				throw error;
 			}
+			const pendingDependencies =
+				error instanceof DependencyInstallError
+					? error.pendingDependencies
+					: dependenciesToInstall;
+			if (error instanceof DependencyInstallError) {
+				changedFiles.push(...error.changedFiles);
+			}
 			const reason =
 				error instanceof Error ? ` Installation failed: ${error.message}` : "";
-			const packageNames = dependenciesToInstall
-				.map(({ packageSpecifier }) =>
-					packageSpecifier.startsWith("cf@") ? "`cf`" : "`wrangler`"
-				)
+			const packageNames = pendingDependencies
+				.map(({ name }) => `\`${name}\``)
 				.join(" and ");
-			const packageSpecifiers = dependenciesToInstall
-				.map(({ packageSpecifier }) => `\`${packageSpecifier}\``)
+			const packageSpecifiers = pendingDependencies
+				.map(({ name, version }) => `\`${name}@${version}\``)
 				.join(" and ");
 			dependencyFollowUp = createFollowUp(
-				"cf-install-failed",
+				pendingDependencies.some(({ name }) => name === "cf")
+					? "cf-install-failed"
+					: "wrangler-upgrade-failed",
 				`The generated configuration was written, but ${packageNames} could not be installed automatically. Install ${packageSpecifiers} with your package manager before using it.${reason}`
 			);
 			requiresInstall = true;

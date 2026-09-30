@@ -3,6 +3,8 @@ import { getInstalledPackageVersion } from "@cloudflare/workers-utils";
 export const MINIMUM_WRANGLER_VERSION = "4.100.0";
 const SEMVER_PATTERN =
 	/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
+const DECLARED_VERSION_PATTERN =
+	/^(?:\^|~|>=)?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/;
 
 export function isVersionSupported(version: string): boolean {
 	const match = SEMVER_PATTERN.exec(version);
@@ -28,17 +30,17 @@ export function getWranglerUpgradeSpec(
 	projectDirectory: string,
 	declaredVersion: string
 ): string | undefined {
+	if (declaredVersion === "latest") {
+		return declaredVersion;
+	}
+
 	const installedVersion = getInstalledPackageVersion(
 		"wrangler",
 		projectDirectory
 	);
-	const declaredMinimum =
-		/^(?:\^|~|>=)?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(
-			declaredVersion
-		)?.[1];
+	const declaredMinimum = DECLARED_VERSION_PATTERN.exec(declaredVersion)?.[1];
 	const declaredCompatible =
-		declaredVersion === "latest" ||
-		(declaredMinimum !== undefined && isVersionSupported(declaredMinimum));
+		declaredMinimum !== undefined && isVersionSupported(declaredMinimum);
 	if (
 		declaredCompatible &&
 		(installedVersion === undefined || isVersionSupported(installedVersion))
