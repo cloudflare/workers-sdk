@@ -110,7 +110,6 @@ export function toEngineStepConfig(
 	return { ...config, retries };
 }
 
-
 const defaultConfig: ResolvedStepConfig = {
 	retries: {
 		limit: 5,

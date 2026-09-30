@@ -272,4 +272,3 @@ describe("schedulerWait", () => {
 		await expect(schedulerWait(-100)).resolves.toBeUndefined();
 	});
 });
-
