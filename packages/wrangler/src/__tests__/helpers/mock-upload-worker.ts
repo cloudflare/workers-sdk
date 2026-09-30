@@ -127,11 +127,13 @@ export function mockUploadWorkerRequest(
 			expect(metadata.keep_bindings).toEqual(
 				expect.arrayContaining(["plain_text", "json"])
 			);
-		} else if (keepSecrets) {
+		}
+		if (keepSecrets) {
 			expect(metadata.keep_bindings).toEqual(
 				expect.arrayContaining(["secret_text", "secret_key"])
 			);
-		} else {
+		}
+		if (!keepVars && !keepSecrets) {
 			expect(metadata.keep_bindings).toBeFalsy();
 		}
 
