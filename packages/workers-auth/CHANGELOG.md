@@ -1,5 +1,13 @@
 # @cloudflare/workers-auth
 
+## 0.11.0
+
+### Minor Changes
+
+- [#15978](https://github.com/cloudflare/workers-sdk/pull/15978) [`db011b1`](https://github.com/cloudflare/workers-sdk/commit/db011b100e9078a2812d4b30aeaec45ed2ca872e) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Allow cf to request the K2 OAuth scopes
+
+  New cf OAuth logins request `k2.consume`, `k2.produce`, `k2.read`, and `k2.write`, which are registered for the cf OAuth client. Existing sessions must authenticate again to receive them.
+
 ## 0.10.0
 
 ### Minor Changes
