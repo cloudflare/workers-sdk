@@ -7,6 +7,12 @@ const SEMVER_PATTERN =
 const DECLARED_VERSION_PATTERN =
 	/^(?:\^|~|>=)?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/;
 
+/**
+ * Checks an installed Wrangler version against the minimum required by cf dev.
+ *
+ * @param version Exact version of the installed Wrangler package.
+ * @returns Whether the version passes the minimum version check.
+ */
 export function isVersionSupported(version: string): boolean {
 	const match = SEMVER_PATTERN.exec(version);
 	if (!match) {
@@ -26,7 +32,13 @@ export function isVersionSupported(version: string): boolean {
 	return match[4] === undefined;
 }
 
-/** Returns a compatible version range when the declared or installed Wrangler needs updating. */
+/**
+ * Selects a Wrangler specifier when its declaration or installation needs updating.
+ *
+ * @param projectDirectory Directory containing the Worker's package.json.
+ * @param declaredVersion Wrangler version, range, or tag declared in package.json.
+ * @returns The specifier to install, or undefined when no update is needed.
+ */
 export function getWranglerUpgradeSpec(
 	projectDirectory: string,
 	declaredVersion: string

@@ -352,7 +352,12 @@ export async function planCfDependencyInstallation(
 }
 
 /**
- * Plans a Wrangler upgrade while retaining its current dependency section.
+ * Plans a Wrangler upgrade only when migration generates Wrangler tooling.
+ * Preserves existing workspace links and dependency placement.
+ *
+ * @param projectDirectory Directory containing the migrated Worker.
+ * @param requiresWrangler Whether migration generates wrangler.config.ts.
+ * @returns The dependency action without modifying the manifest or lockfile.
  */
 export async function planWranglerDependencyUpgrade(
 	projectDirectory: string,
