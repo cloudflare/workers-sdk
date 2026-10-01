@@ -274,18 +274,37 @@ describe("migrateWranglerToCf", () => {
 	);
 
 	it.for([
-		"^2.0.0-beta.sha-805ec1ff3",
-		"beta",
-		">=2.0.0-0 <3.0.0-0",
-		"workspace:*",
-		"catalog:default",
+		{
+			declaredVersion: "^2.0.0-beta.sha-805ec1ff3",
+			installedVersion: "2.0.0-beta.sha-805ec1ff3",
+		},
+		{
+			declaredVersion: "^2.0.0-beta.123",
+			installedVersion: "2.0.0-beta.123",
+		},
+		{
+			declaredVersion: "beta",
+			installedVersion: "2.0.0-beta.sha-805ec1ff3",
+		},
+		{
+			declaredVersion: ">=2.0.0-0 <3.0.0-0",
+			installedVersion: "2.0.0-beta.sha-805ec1ff3",
+		},
+		{
+			declaredVersion: "workspace:*",
+			installedVersion: "2.0.0-beta.sha-805ec1ff3",
+		},
+		{
+			declaredVersion: "catalog:default",
+			installedVersion: "2.0.0-beta.sha-805ec1ff3",
+		},
 	])(
-		"keeps a compatible Vite plugin declared as %s unchanged",
-		async (declaredVersion, { expect }) => {
+		"keeps a compatible Vite plugin declared as $declaredVersion unchanged",
+		async ({ declaredVersion, installedVersion }, { expect }) => {
 			const cwd = await createProject({
 				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
 					name: "@cloudflare/vite-plugin",
-					version: "2.0.0-beta.sha-805ec1ff3",
+					version: installedVersion,
 				}),
 				"package.json": JSON.stringify({
 					devDependencies: {
