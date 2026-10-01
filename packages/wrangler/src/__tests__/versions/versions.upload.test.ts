@@ -507,6 +507,40 @@ describe("versions upload", () => {
 		expect(std.debug).toContain("Retrying API call after error...");
 	});
 
+	test("should warn when preview_urls is enabled but the version has no preview", async () => {
+		mockGetScript();
+		mockUploadVersion(false);
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.js",
+			preview_urls: true,
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		await expect(runWrangler("versions upload")).resolves.toBeUndefined();
+
+		expect(std.out).not.toContain("Version Preview URL");
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis version has no preview URL, although \`preview_urls\` is enabled in your configuration. Version URLs are not generated for Workers that implement a Durable Object, including Containers and Sandboxes: https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/#limitations[0m
+
+			"
+		`);
+	});
+
+	test("should not warn about a missing preview when preview_urls is not enabled", async () => {
+		mockGetScript();
+		mockUploadVersion(false);
+		writeWranglerConfig({ name: "test-name", main: "./index.js" });
+		writeWorkerSource();
+		setIsTTY(false);
+
+		await expect(runWrangler("versions upload")).resolves.toBeUndefined();
+
+		expect(std.out).not.toContain("Version Preview URL");
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+	});
+
 	test("correctly detects python workers", async () => {
 		mockGetScript();
 		mockUploadVersion(true);

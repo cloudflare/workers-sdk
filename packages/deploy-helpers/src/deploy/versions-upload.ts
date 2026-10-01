@@ -517,6 +517,15 @@ async function uploadWorkerVersion(
 				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
 			}
 		}
+	} else if (versionId && config.preview_urls === true) {
+		// The API reports `has_preview: false` without a reason. The documented
+		// one is a Worker that implements a Durable Object (including Containers
+		// and Sandboxes), which never gets Version URLs.
+		logger.warn(
+			"This version has no preview URL, although `preview_urls` is enabled in your configuration. " +
+				"Version URLs are not generated for Workers that implement a Durable Object, including Containers and Sandboxes: " +
+				"https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/#limitations"
+		);
 	}
 
 	const cmdVersionsDeploy = blue("wrangler versions deploy");
