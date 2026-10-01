@@ -1533,7 +1533,7 @@ describe("convertToWranglerConfig", () => {
 				authorizedKeys: [{ name: "deploy", publicKey: "ssh-ed25519 key" }],
 				constraints: {
 					regions: ["ENAM", "WEUR"],
-					jurisdiction: "eu",
+					jurisdiction: "us",
 				},
 				rollout: {
 					kind: "full-auto",
@@ -1578,7 +1578,7 @@ describe("convertToWranglerConfig", () => {
 					authorized_keys: [{ name: "deploy", public_key: "ssh-ed25519 key" }],
 					constraints: {
 						regions: ["ENAM", "WEUR"],
-						jurisdiction: "eu",
+						jurisdiction: "us",
 					},
 					rollout_kind: "full_auto",
 					rollout_step_percentage: [50, 100],
