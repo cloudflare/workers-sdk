@@ -97,6 +97,205 @@ describe("createTestHarness", () => {
 		);
 	});
 
+	it("runs Build Output API modules with Worker handles", async ({
+		expect,
+		onTestFailed,
+	}) => {
+		await helper.seed({
+			".cloudflare/output/v0/config.json": JSON.stringify({
+				buildContext: { isPreview: false },
+			}),
+			".cloudflare/output/v0/workers/default/worker.config.json":
+				JSON.stringify({
+					name: "build-output-worker",
+					compatibilityDate: "2026-05-20",
+					env: { STORE: { type: "kv" } },
+					manifest: {
+						type: "complete",
+						mainModule: "index.js",
+						modules: {
+							"index.js": { type: "esm" },
+							"message.txt": { type: "text" },
+						},
+					},
+				}),
+			".cloudflare/output/v0/workers/default/bundle/index.js": dedent`
+				import message from "./message.txt";
+				export default {
+					async fetch(_request, env) {
+						return new Response(message + ":" + env.TEST_VALUE + ":" + (await env.STORE.get("key")));
+					}
+				};
+			`,
+			".cloudflare/output/v0/workers/default/bundle/message.txt":
+				"from build output",
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			buildOutput: true,
+			workerOverrides: {
+				"build-output-worker": { vars: { TEST_VALUE: "override" } },
+			},
+		});
+		onTestFinished(server.close);
+		onTestFailed(server.debug);
+
+		await server.listen();
+		const worker = server.getWorker<{ STORE: KVNamespace }>();
+		await (await worker.getEnv()).STORE.put("key", "stored");
+		await expect((await server.fetch("/")).text()).resolves.toBe(
+			"from build output:override:stored"
+		);
+		await expect((await worker.fetch("/")).text()).resolves.toBe(
+			"from build output:override:stored"
+		);
+
+		await server.reset();
+		await expect((await server.fetch("/")).text()).resolves.toBe(
+			"from build output:override:null"
+		);
+		await (await worker.getEnv()).STORE.put("key", "retained");
+
+		await server.update((options) => ({
+			...options,
+			workerOverrides: {
+				"build-output-worker": { vars: { TEST_VALUE: "updated" } },
+			},
+		}));
+		await expect((await server.fetch("/")).text()).resolves.toBe(
+			"from build output:updated:retained"
+		);
+	});
+
+	it("serves assets-only Build Output API projects", async ({ expect }) => {
+		await helper.seed({
+			".cloudflare/output/v0/config.json": JSON.stringify({
+				buildContext: { isPreview: false },
+			}),
+			".cloudflare/output/v0/workers/default/worker.config.json":
+				JSON.stringify({
+					name: "assets-only-worker",
+					compatibilityDate: "2026-05-20",
+				}),
+			".cloudflare/output/v0/workers/default/assets/index.html":
+				"<h1>Built assets</h1>",
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			buildOutput: true,
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+		await expect((await server.fetch("/")).text()).resolves.toBe(
+			"<h1>Built assets</h1>"
+		);
+	});
+
+	it("shares a direct Miniflare session across Build Output Worker handles", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			".cloudflare/output/v0/config.json": JSON.stringify({
+				buildContext: { isPreview: false },
+			}),
+			".cloudflare/output/v0/workers/default/worker.config.json":
+				JSON.stringify({
+					name: "frontend",
+					compatibilityDate: "2026-05-20",
+					manifest: {
+						type: "complete",
+						mainModule: "index.js",
+						modules: { "index.js": { type: "esm" } },
+					},
+				}),
+			".cloudflare/output/v0/workers/default/bundle/index.js": dedent`
+				export default {
+					async fetch(request, env) {
+						return env.BACKEND.fetch(request);
+					}
+				};
+			`,
+			".cloudflare/output/v0/workers/backend/worker.config.json":
+				JSON.stringify({
+					name: "backend",
+					compatibilityDate: "2026-05-20",
+					triggers: [
+						{ type: "fetch", pattern: "example.com/backend/*" },
+						{ type: "scheduled", schedule: "* * * * *" },
+					],
+					manifest: {
+						type: "complete",
+						mainModule: "index.js",
+						modules: { "index.js": { type: "esm" } },
+					},
+				}),
+			".cloudflare/output/v0/workers/backend/bundle/index.js": dedent`
+				let count = 0;
+				export default {
+					fetch() { return new Response(String(count)); },
+					scheduled() { count++; }
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			buildOutput: true,
+			workerOverrides: {
+				frontend: { bindingOverrides: { BACKEND: "backend" } },
+			},
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+		await server.getWorker("backend").scheduled({ cron: "* * * * *" });
+		await expect((await server.fetch("/")).text()).resolves.toBe("1");
+		await expect(
+			(await server.fetch("http://example.com/backend/path")).text()
+		).resolves.toBe("1");
+		await expect(
+			(await server.getWorker("backend").fetch("/")).text()
+		).resolves.toBe("1");
+	});
+
+	it("runs a Worker built with the Build Output API", async ({ expect }) => {
+		await helper.seed({
+			"cloudflare.config.ts": dedent`
+				export default {
+					worker: {
+						name: "built-worker",
+						compatibilityDate: "2026-05-20",
+						entrypoint: "./src/index.js",
+					},
+				};
+			`,
+			"src/index.js": dedent`
+				export default {
+					fetch() {
+						return new Response("from wrangler build");
+					}
+				};
+			`,
+		});
+		await helper.run(
+			"wrangler build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			buildOutput: true,
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+		await expect((await server.fetch("/")).text()).resolves.toBe(
+			"from wrangler build"
+		);
+	});
+
 	it("runs existing dry-run output without rebuilding it", async ({
 		expect,
 		onTestFailed,
