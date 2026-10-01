@@ -1,6 +1,16 @@
 import assert from "node:assert";
-import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	configFileName,
+	isNonInteractiveOrCI,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
+import {
+	deleteContainerApplication,
+	findWorkerContainerApplications,
+	type WorkerContainerApplication,
+} from "./containers/worker-applications";
 import { createCommand } from "./core/create-command";
 import { confirm } from "./dialogs";
 import {
@@ -12,7 +22,7 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 // Types returned by the /script/{name}/references API
 type ServiceReference = {
@@ -151,6 +161,14 @@ export const deleteCommand = createCommand({
 				return;
 			}
 
+			// Resolved before the Worker is deleted, because the Durable Object
+			// namespaces that identify these applications go away with it.
+			const containerApplications = await tryFindWorkerContainerApplications(
+				config,
+				accountId,
+				scriptName
+			);
+
 			await fetchResult(
 				config,
 				`/accounts/${accountId}/workers/services/${scriptName}`,
@@ -161,9 +179,98 @@ export const deleteCommand = createCommand({
 			await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
 
 			logger.log("Successfully deleted", scriptName);
+
+			await handleContainerApplications(scriptName, containerApplications);
 		}
 	},
 });
+
+/**
+ * Look up the Worker's Container applications without ever failing the delete.
+ *
+ * A Worker without Durable Objects never reaches the Containers API, so this is
+ * normally free. When the lookup itself is not permitted we say so rather than
+ * leaving the user to discover the leftovers by another route.
+ */
+async function tryFindWorkerContainerApplications(
+	config: Config,
+	accountId: string,
+	scriptName: string
+): Promise<WorkerContainerApplication[]> {
+	try {
+		return await findWorkerContainerApplications(config, accountId, scriptName);
+	} catch (error) {
+		logger.warn(
+			`Could not check whether "${scriptName}" owns any Cloudflare Container applications: ${
+				error instanceof Error ? error.message : String(error)
+			}\nIf it deployed any, they will keep running and billing after this delete.`
+		);
+		return [];
+	}
+}
+
+/**
+ * Remove the Container applications that `wrangler deploy` created alongside the
+ * Worker. Deleting the Worker leaves them running and billing, so either offer to
+ * delete them or, when that isn't possible, name what is still running.
+ *
+ * Failures here are reported rather than thrown: the Worker is already gone at
+ * this point, so aborting would only hide the rest of the cleanup.
+ */
+async function handleContainerApplications(
+	scriptName: string,
+	applications: WorkerContainerApplication[]
+): Promise<void> {
+	if (applications.length === 0) {
+		return;
+	}
+
+	const count = applications.length;
+	const noun = count === 1 ? "application" : "applications";
+	const pronoun = count === 1 ? "it" : "them";
+	const verb = count === 1 ? "keeps" : "keep";
+	const summary = applications
+		.map((application) => `- ${application.name} (${application.id})`)
+		.join("\n");
+
+	if (isNonInteractiveOrCI()) {
+		logger.warn(
+			`${scriptName} owned ${count} Cloudflare Container ${noun}, which ${verb} running and billing now that the Worker is gone:\n${summary}\n\nDelete ${pronoun} with: wrangler containers delete <id>`
+		);
+		return;
+	}
+
+	const alsoDelete = await confirm(
+		`${scriptName} also created ${count} Cloudflare Container ${noun}, which will keep running and billing after the Worker is deleted:\n${summary}\n\nDelete ${pronoun} as well?`,
+		{ defaultValue: false }
+	);
+	if (!alsoDelete) {
+		logger.warn(
+			`Left ${count} Container ${noun} running. Delete ${pronoun} with: wrangler containers delete <id>`
+		);
+		return;
+	}
+
+	for (const application of applications) {
+		try {
+			await deleteContainerApplication(application.id);
+			logger.log(`🗑️ Deleted Container application "${application.name}"`);
+		} catch (error) {
+			// One failure must not hide the remaining applications, and the Worker
+			// is already gone, so report and carry on.
+			logger.warn(
+				`Could not delete Container application "${application.name}" (${application.id}): ${
+					error instanceof Error ? error.message : String(error)
+				}`
+			);
+		}
+	}
+	logger.log(
+		`Deleted ${count} Container ${noun}. ${
+			count === 1 ? "Its" : "Their"
+		} instances may take a while to shut down.`
+	);
+}
 
 async function deleteSiteNamespaceIfExisting(
 	complianceConfig: ComplianceConfig,
