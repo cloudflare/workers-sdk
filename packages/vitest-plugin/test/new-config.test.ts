@@ -27,15 +27,13 @@ const workerTest = dedent`
 	});
 `;
 
-test("loads cloudflare.config.ts from the project root", async ({
+test("automatically loads cloudflare.config.ts from the project root", async ({
 	expect,
 	seed,
 	vitestRun,
 }) => {
 	await seed({
-		"vitest.config.mts": vitestConfig({
-			experimental: { newConfig: true },
-		}),
+		"vitest.config.mts": vitestConfig(),
 		"cloudflare.config.ts": dedent`
 			export default {
 				worker: {
@@ -55,6 +53,62 @@ test("loads cloudflare.config.ts from the project root", async ({
 	const result = await vitestRun();
 
 	await expect(result.exitCode).resolves.toBe(0);
+});
+
+test("does not load cloudflare.config.ts when disabled", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			experimental: { newConfig: false },
+		}),
+		"cloudflare.config.ts": "export default {};",
+		"index.test.ts": dedent`
+			import { it } from "vitest";
+
+			it("runs without loading the config", ({ expect }) => {
+				expect(true).toBe(true);
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode, result.stderr).resolves.toBe(0);
+});
+
+test("uses an explicit Wrangler config when cloudflare.config.ts exists", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			wrangler: { configPath: "./wrangler.jsonc" },
+		}),
+		"cloudflare.config.ts": "export default {};",
+		"wrangler.jsonc": dedent`
+			{
+				"name": "test-worker",
+				"compatibility_date": "2025-12-02",
+				"vars": { "MY_TEXT": "from wrangler" }
+			}
+		`,
+		"index.test.ts": dedent`
+			import { env } from "cloudflare:test";
+			import { it } from "vitest";
+
+			it("uses Wrangler bindings", ({ expect }) => {
+				expect(env.MY_TEXT).toBe("from wrangler");
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode, result.stderr).resolves.toBe(0);
 });
 
 test("resolves a custom configPath and its entrypoint", async ({
