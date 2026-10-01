@@ -160,6 +160,7 @@ function notLoggedInErrorBodies(
 		"no-credentials-login-failed": `No credentials were found and the login attempt was unsuccessful. Run \`${loginCommand}\` to try again.`,
 		"token-expired-non-interactive": `Your auth token has expired and could not be refreshed, and the environment is non-interactive. Run \`${loginCommand}\` in an interactive terminal or set a CLOUDFLARE_API_TOKEN.`,
 		"token-expired-login-failed": `Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful. Run \`${loginCommand}\` to try again.`,
+		"token-refresh-unreachable": `Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. This is usually a network problem (connectivity, proxy, or IPv6), not an invalid login: your stored credentials were left unchanged. Check your connection and try again.`,
 	};
 }
 
@@ -615,6 +616,10 @@ ${accounts
 					`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for ${cliName} to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.`,
 					{ telemetryMessage: "user auth missing api token non interactive" }
 				);
+			} else if (result.reason === "token-refresh-unreachable") {
+				throw new UserError(NOT_LOGGED_IN_ERROR_BODIES[result.reason], {
+					telemetryMessage: "user auth token refresh unreachable",
+				});
 			} else {
 				// didn't login, let's just quit
 				throw new UserError("Did not login, quitting...", {

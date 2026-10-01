@@ -369,7 +369,9 @@ async function deployWorker(
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
-		keepSecrets: keepVars || !!props.secretsFile,
+		// Never delete secret bindings when deploying. Inherit unchanged secrets
+		// from the previous Worker Version, including secrets absent from config.
+		keepSecrets: true,
 		logpush: props.logpush,
 		placement,
 		tail_consumers: config.tail_consumers,

@@ -87,6 +87,106 @@ describe("Wrangler environment and tooling conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("treats a Workflow whose script_name names the environment's Worker as local", ({
+		expect,
+	}) => {
+		const result = convert(
+			{
+				compatibility_date: "2026-09-23",
+				env: {
+					staging: {
+						workflows: [
+							{
+								binding: "JOBS",
+								class_name: "Jobs",
+								limits: { steps: 20 },
+								name: "jobs-staging",
+								script_name: "app-staging",
+							},
+						],
+					},
+				},
+				main: "src/index.ts",
+				name: "app",
+			},
+			"wrangler"
+		);
+
+		expect(result.cloudflareConfig).toContain('worker: "app-staging"');
+		expect(result.cloudflareConfig).toContain("Jobs: exports.workflow({");
+		expect(result.cloudflareConfig).toContain("steps: 20");
+		expect(result.codes).not.toContain("unsupported-binding-options");
+		expect(result).toMatchSnapshot();
+	});
+
+	it("reports Vite source maps as non-blocking guidance", ({ expect }) => {
+		const converted = convertWranglerConfig(
+			{
+				compatibility_date: "2026-09-23",
+				env: { staging: { upload_source_maps: true } },
+				name: "example-worker",
+				upload_source_maps: true,
+			},
+			"vite",
+			[]
+		);
+
+		expect(
+			converted.followUps.filter(({ code }) => code === "vite-source-maps")
+		).toEqual([
+			expect.objectContaining({
+				blocking: false,
+				sourcePath: "upload_source_maps",
+			}),
+			expect.objectContaining({
+				blocking: false,
+				sourcePath: "env.staging.upload_source_maps",
+			}),
+		]);
+		expect(converted.followUps.some(({ blocking }) => blocking)).toBe(false);
+		expect(renderCloudflareConfig(converted)).not.toContain(
+			"Migration incomplete"
+		);
+	});
+
+	it("reports disabled Vite source maps as non-blocking guidance", ({
+		expect,
+	}) => {
+		const converted = convertWranglerConfig(
+			{
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+				upload_source_maps: false,
+			},
+			"vite",
+			[]
+		);
+
+		expect(converted.followUps).toEqual([
+			expect.objectContaining({
+				blocking: false,
+				code: "vite-source-maps",
+				message: expect.stringContaining(
+					"keep `build.sourcemap` disabled for the Worker's Vite environment"
+				),
+				sourcePath: "upload_source_maps",
+			}),
+		]);
+		expect(renderCloudflareConfig(converted)).not.toContain(
+			"Migration incomplete"
+		);
+	});
+
+	it("reports a Vite assets directory once", ({ expect }) => {
+		const result = convert({
+			assets: { directory: "public" },
+			compatibility_date: "2026-09-23",
+			name: "example-worker",
+		});
+
+		expect(result.codes).toEqual(["vite-assets-directory"]);
+	});
+
 	it("renders Wrangler tooling branches independently", ({ expect }) => {
 		const result = convert(
 			{

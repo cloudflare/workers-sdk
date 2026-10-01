@@ -1,6 +1,7 @@
 export * from "./public";
 export {
 	AnalyticsEngineDatasetBindingSchema,
+	AnalyticsSQLBindingSchema,
 	AssetsSchema,
 	BindingSchema,
 	BrowserBindingSchema,

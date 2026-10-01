@@ -1,5 +1,69 @@
 # @cloudflare/config
 
+## 0.22.0
+
+### Minor Changes
+
+- [#15685](https://github.com/cloudflare/workers-sdk/pull/15685) [`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add native support for the Analytics SQL binding
+
+  Declare the zero-configuration binding in `wrangler.json` with `"analytics": { "binding": "ANALYTICS" }`. Wrangler uploads the `analytics` binding type and proxies it to the remote service during local development, so `wrangler dev` can call the binding without `unsafe.bindings`.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 producer bindings for existing streams
+
+  Configure a stream created through Wrangler, the Dashboard, or the API in `wrangler.json`:
+
+  ```jsonc
+  {
+    "k2": [
+      {
+        "binding": "ORDERS",
+        "stream": "0123456789abcdef0123456789abcdef"
+      }
+    ]
+  }
+  ```
+
+  The binding supports `env.ORDERS.send([{ content: new TextEncoder().encode("order"), headers: { event: "order.created" } }])`. Batches use either all `ArrayBuffer` or all `Uint8Array` content. Check the returned `success` value, handle rejected RPC promises, and retry only when the returned error explicitly allows it. Generated environment types describe this producer contract without requiring a separate application dependency.
+
+  K2 requires an enabled account. Deployment credentials need Worker deployment and K2 configuration-read access. Default Wrangler logins now request the K2 OAuth scopes; existing OAuth users should run `wrangler login` again to grant the new permissions. Development always uses a real K2 stream and may incur usage charges; no local simulator is provided. The `remote` setting can be omitted, `remote: true` suppresses the usage warning, and `remote: false` is rejected. Consumption is not part of this Worker binding.
+
+### Patch Changes
+
+- [#15916](https://github.com/cloudflare/workers-sdk/pull/15916) [`27bc20d`](https://github.com/cloudflare/workers-sdk/commit/27bc20d5b22e7156b59940275bd3d809e269d7ce) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix environment types for Worker configurations inferred as unions
+
+  `InferEnv` and generated Worker `Env` types now include every binding and runtime type that the configuration can produce. Bindings that are not always present are optional.
+
+## 0.21.0
+
+### Minor Changes
+
+- [#15951](https://github.com/cloudflare/workers-sdk/pull/15951) [`2a15ae2`](https://github.com/cloudflare/workers-sdk/commit/2a15ae21d210fcd36e485e7492b75198c8d7856c) Thanks [@flakey5](https://github.com/flakey5)! - Support SSH settings for Durable Object-managed Containers in the configuration API
+
+  `defineContainer` now accepts `ssh` and `authorizedKeys` with `schedulingPolicy: "durable-object"`, matching the `ssh` and `authorized_keys` fields that Wrangler already supports for these Containers. Previously the schema rejected them, so they could not be set from `cloudflare.config.ts`.
+
+  ```ts
+  defineContainer({
+    name: "sandbox",
+    schedulingPolicy: "durable-object",
+    ssh: { enabled: true },
+    authorizedKeys: [{ name: "laptop", publicKey: "ssh-ed25519 AAAA..." }],
+  });
+  ```
+
+## 0.20.0
+
+### Minor Changes
+
+- [#15877](https://github.com/cloudflare/workers-sdk/pull/15877) [`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add cross-Worker Workflow bindings to the experimental configuration API
+
+  Workflow bindings can now identify a Workflow by name and reference the Worker and exported `WorkflowEntrypoint` class that define it.
+
+### Patch Changes
+
+- [#15880](https://github.com/cloudflare/workers-sdk/pull/15880) [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Restore configuration field documentation in `define*` helpers
+
+  VS Code now displays JSDoc for fields passed to `defineConfig`, `defineContainer`, and `defineWorker` while retaining their exact inferred config types.
+
 ## 0.19.0
 
 ### Minor Changes

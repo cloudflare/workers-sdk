@@ -30,6 +30,7 @@ import {
 	TOP_LEVEL_ENV_NAME,
 	validateEnvInterfaceNames,
 } from "./helpers";
+import { K2_PRODUCER_TYPE } from "./k2";
 import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
@@ -2267,6 +2268,20 @@ function collectCoreBindings(
 			addBinding(queue.binding, "Queue", "queues_producers", envName);
 		}
 
+		for (const [index, stream] of (env.k2 ?? []).entries()) {
+			if (!stream.binding) {
+				throwMissingBindingError({
+					binding: stream,
+					bindingType: "k2",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+			addBinding(stream.binding, K2_PRODUCER_TYPE, "k2", envName);
+		}
+
 		for (const [index, secret] of (env.secrets_store_secrets ?? []).entries()) {
 			if (!secret.binding) {
 				throwMissingBindingError({
@@ -2478,6 +2493,25 @@ function collectCoreBindings(
 				});
 			} else {
 				addBinding(env.browser.binding, "BrowserRun", "browser", envName);
+			}
+		}
+
+		if (env.analytics) {
+			if (!env.analytics.binding) {
+				throwMissingBindingError({
+					binding: env.analytics,
+					bindingType: "analytics",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				addBinding(
+					env.analytics.binding,
+					"AnalyticsSQLBinding",
+					"analytics",
+					envName
+				);
 			}
 		}
 
@@ -3287,6 +3321,24 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, stream] of (env.k2 ?? []).entries()) {
+			if (!stream.binding) {
+				throwMissingBindingError({
+					binding: stream,
+					bindingType: "k2",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+			bindings.push({
+				bindingCategory: "k2",
+				name: stream.binding,
+				type: K2_PRODUCER_TYPE,
+			});
+		}
+
 		for (const [index, secret] of (env.secrets_store_secrets ?? []).entries()) {
 			if (!secret.binding) {
 				throwMissingBindingError({
@@ -3465,6 +3517,24 @@ function collectCoreBindingsPerEnvironment(
 					bindingCategory: "browser",
 					name: env.browser.binding,
 					type: "BrowserRun",
+				});
+			}
+		}
+
+		if (env.analytics) {
+			if (!env.analytics.binding) {
+				throwMissingBindingError({
+					binding: env.analytics,
+					bindingType: "analytics",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				bindings.push({
+					bindingCategory: "analytics",
+					name: env.analytics.binding,
+					type: "AnalyticsSQLBinding",
 				});
 			}
 		}

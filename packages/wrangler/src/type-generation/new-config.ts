@@ -47,7 +47,7 @@ export async function regenerateNewConfigTypes(options: {
 			: `./${relativeConfigPath}`;
 		content = generateTypes({
 			configPath: configImportPath,
-			packageName: "wrangler/experimental-config",
+			packageName: "cf/config",
 		});
 
 		if (options.types.includeRuntime) {

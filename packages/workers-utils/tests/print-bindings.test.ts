@@ -47,6 +47,39 @@ describe("printBindings", () => {
 		expect(output).toContain("local [connected]");
 	});
 
+	test.for([undefined, true])(
+		"labels K2 bindings as remote in local development with remote=%s",
+		(remote, { expect }) => {
+			const output = captureBindings(
+				{
+					ORDERS: {
+						type: "k2",
+						stream: "0123456789abcdef0123456789abcdef",
+						...(remote === undefined ? {} : { remote }),
+					},
+				},
+				{ local: true }
+			);
+
+			expect(output).toMatch(
+				/env\.ORDERS \(0123456789abcdef0123456789abcdef\)\s+K2 Stream\s+remote/
+			);
+		}
+	);
+
+	test("labels K2 bindings as unsupported when remote bindings are disabled", ({
+		expect,
+	}) => {
+		const output = captureBindings(
+			{
+				ORDERS: { type: "k2", stream: "0123456789abcdef0123456789abcdef" },
+			},
+			{ local: true, remoteBindingsDisabled: true }
+		);
+
+		expect(output).toMatch(/K2 Stream\s+not supported/);
+	});
+
 	test.for([{ class_name: "Sandbox" }, { name: "Sandbox" }])(
 		"prints Durable Object-managed containers using their configured identity %j",
 		(identity, { expect }) => {

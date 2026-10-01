@@ -797,7 +797,7 @@ function resolveWorker(
 
 const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
 const TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
-const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
+const CONFIG_PACKAGE = "cf/config";
 
 /**
  * Load and convert a `cloudflare.config.ts` file via `@cloudflare/config`. Returns
@@ -868,9 +868,8 @@ async function loadNewConfig(options: {
 
 /**
  * Write `.cloudflare/types/index.d.ts` using
- * `@cloudflare/config`'s `generateTypes`, targeting the vite-plugin's
- * `experimental-config` subpath (so users don't need a direct dependency on
- * `@cloudflare/config`).
+ * `@cloudflare/config`'s `generateTypes`, targeting the public `cf/config`
+ * package used by `cloudflare.config.ts`.
  *
  * When `includeRuntime` is true, appends the Workers runtime types (generated
  * from the project's compatibility date/flags) after the inference block. The
@@ -906,7 +905,7 @@ async function writeCloudflareTypes(options: {
 
 	let content = generateTypes({
 		configPath: configImportPath,
-		packageName: EXPERIMENTAL_CONFIG_PKG,
+		packageName: CONFIG_PACKAGE,
 	});
 
 	if (options.includeRuntime) {

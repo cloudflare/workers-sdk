@@ -1,5 +1,100 @@
 # miniflare
 
+## 5.20260930.0-alpha
+
+### Minor Changes
+
+- [#15685](https://github.com/cloudflare/workers-sdk/pull/15685) [`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add native support for the Analytics SQL binding
+
+  Declare the zero-configuration binding in `wrangler.json` with `"analytics": { "binding": "ANALYTICS" }`. Wrangler uploads the `analytics` binding type and proxies it to the remote service during local development, so `wrangler dev` can call the binding without `unsafe.bindings`.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 producer bindings for existing streams
+
+  Configure a stream created through Wrangler, the Dashboard, or the API in `wrangler.json`:
+
+  ```jsonc
+  {
+    "k2": [
+      {
+        "binding": "ORDERS",
+        "stream": "0123456789abcdef0123456789abcdef"
+      }
+    ]
+  }
+  ```
+
+  The binding supports `env.ORDERS.send([{ content: new TextEncoder().encode("order"), headers: { event: "order.created" } }])`. Batches use either all `ArrayBuffer` or all `Uint8Array` content. Check the returned `success` value, handle rejected RPC promises, and retry only when the returned error explicitly allows it. Generated environment types describe this producer contract without requiring a separate application dependency.
+
+  K2 requires an enabled account. Deployment credentials need Worker deployment and K2 configuration-read access. Default Wrangler logins now request the K2 OAuth scopes; existing OAuth users should run `wrangler login` again to grant the new permissions. Development always uses a real K2 stream and may incur usage charges; no local simulator is provided. The `remote` setting can be omitted, `remote: true` suppresses the usage warning, and `remote: false` is rejected. Consumption is not part of this Worker binding.
+
+### Patch Changes
+
+- [#15908](https://github.com/cloudflare/workers-sdk/pull/15908) [`ddaa558`](https://github.com/cloudflare/workers-sdk/commit/ddaa5588640f6b14541e1d37a5bc49099fd6779d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260926.1 | ^5.20260930.2 |
+  | workerd                   | 1.20260926.1  | 1.20260930.2  |
+
+## 5.20260926.1-alpha
+
+### Patch Changes
+
+- [#15923](https://github.com/cloudflare/workers-sdk/pull/15923) [`60ccdbd`](https://github.com/cloudflare/workers-sdk/commit/60ccdbd5e760c3dc721ac082acaa25a6cff5e8bb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Upgrade the bundled capnweb implementation to 0.12.0
+
+  This updates the RPC implementation shipped in Miniflare and remote-binding proxy workers to the latest capnweb release.
+
+- [#15938](https://github.com/cloudflare/workers-sdk/pull/15938) [`62fd03a`](https://github.com/cloudflare/workers-sdk/commit/62fd03a21e227f30d3c254244d22a30e9f5924dd) Thanks [@dieub](https://github.com/dieub)! - Resolve the affected Undici dependency in new Wrangler and Vite plugin installs
+
+  Undici 7.29.1 fixes GHSA-3wwx-pv8p-q78v. Update the shared dependency catalog and matching types used by Miniflare and Wrangler so downstream installs can resolve the patched runtime without an application-level override. A published release is still required for consumers; this changeset does not alter already published package metadata.
+
+- [#15902](https://github.com/cloudflare/workers-sdk/pull/15902) [`c2bb4c8`](https://github.com/cloudflare/workers-sdk/commit/c2bb4c815f8a6af2ebea17ab6dd4f612c7b1e8eb) Thanks [@michealroberts](https://github.com/michealroberts)! - Fix passing an `R2ObjectBody#body` back to `R2Bucket#put()` via `Miniflare#getR2Bucket()`
+
+  Previously, a body returned by `get()` lost its length on the way back through the binding proxy, so `put()` rejected it with "Provided readable stream must have a known length", even though the same call works in a Worker. The proxy now forwards the stream's length and the body streams straight through without buffering.
+
+- [#15906](https://github.com/cloudflare/workers-sdk/pull/15906) [`eb1efe0`](https://github.com/cloudflare/workers-sdk/commit/eb1efe08db8dde7b6db4b8d959c381b3e5ebe3a4) Thanks [@michealroberts](https://github.com/michealroberts)! - Preserve the request body length in `Miniflare#dispatchFetch()`
+
+  Previously, a request with a known-length body (e.g. a string) was sent to the Worker chunked, without a `Content-Length`. Passing its `request.body` to `R2Bucket#put()` then failed with "Provided readable stream must have a known length", even though the same request works in production. The body's length is now preserved.
+
+- [#15910](https://github.com/cloudflare/workers-sdk/pull/15910) [`485cfb3`](https://github.com/cloudflare/workers-sdk/commit/485cfb3abfd9715632edc6c30a78a680c1765604) Thanks [@james-elicx](https://github.com/james-elicx)! - Raise the local R2 custom metadata limit to 8 KiB
+
+  R2 `put()` now accepts up to 8,192 bytes of custom metadata, matching the documented R2 limit. Previously, Miniflare rejected metadata larger than 2 KiB.
+
+  Multipart upload creation now enforces the same limit through both R2 bindings and the local S3 API. Oversized metadata is rejected with error 10012 through R2 bindings, or HTTP 400 `MetadataTooLarge` for S3 uploads, copies, and multipart initiation.
+
+## 5.20260926.0-alpha
+
+### Minor Changes
+
+- [#15856](https://github.com/cloudflare/workers-sdk/pull/15856) [`4c2993b`](https://github.com/cloudflare/workers-sdk/commit/4c2993b898c8df4ea6799897803c2c5ef18c5847) Thanks [@Naapperas](https://github.com/Naapperas)! - Support Workflows declared in `exports` on `ctx.exports` in local development
+
+  A Workflow declared in a Worker's `exports` is now available on `ctx.exports` in `wrangler dev`, the Vite plugin and the Vitest plugin, with the same API as a Workflow binding:
+
+  ```ts
+  const instance = await ctx.exports.MyWorkflow.create({
+    params: { name: "World" },
+  });
+  ```
+
+  `ctx.exports` and `workflows` bindings with the same Workflow `name` share their instances, including instances created before the Workflow was declared in `exports`. Two Workers can't export the same Workflow name, and a binding to an exported Workflow must refer to the Worker and class that export it. `getPlatformProxy()` ignores Workflows declared in `exports`, since it doesn't run the Worker's code.
+
+  `wrangler workflows` commands run with `--local` also work with Workflows declared only in `exports`, without a `workflows` binding.
+
+  In the Vitest plugin, `introspectWorkflow()` and `introspectWorkflowInstance()` still need a Workflow binding, and now explain how to add one when passed a Workflow from `ctx.exports`. Instances created through `ctx.exports` are introspected too. A `workflows` binding whose `script_name` is the Worker's own name now resolves to the Worker itself again.
+
+### Patch Changes
+
+- [#15891](https://github.com/cloudflare/workers-sdk/pull/15891) [`8dc53ae`](https://github.com/cloudflare/workers-sdk/commit/8dc53aec0d1a4133cd8c599b814cac0da30b4bb8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260925.1 | ^5.20260926.1 |
+  | workerd                   | 1.20260925.1  | 1.20260926.1  |
+
 ## 5.20260925.0-alpha
 
 ### Patch Changes

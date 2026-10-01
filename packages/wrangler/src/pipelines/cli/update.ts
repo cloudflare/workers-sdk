@@ -9,7 +9,7 @@ export const pipelinesUpdateCommand = createCommand({
 	metadata: {
 		description: "Update a pipeline configuration (legacy pipelines only)",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 	},
 	positionalArgs: ["pipeline"],
 	args: {
