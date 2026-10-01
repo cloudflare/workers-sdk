@@ -858,8 +858,8 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 		"Expected to find `vitest`'s version"
 	);
 
-	// Hard error on Vitest v3, which definitely won't work
-	if (semverSatisfies(actualVitestVersion, "3.x")) {
+	// Earlier Vitest versions cannot use this pool's Vitest 5 APIs.
+	if (semverSatisfies(actualVitestVersion, "<5.0.0")) {
 		const message = `You're running \`vitest@${actualVitestVersion}\`, but this version of \`@cloudflare/vitest-plugin\` only supports \`vitest ${expectedVitestVersion}\`.`;
 		throw new Error(message);
 	}
