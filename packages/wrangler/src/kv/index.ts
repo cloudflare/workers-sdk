@@ -182,24 +182,36 @@ export const kvNamespaceListCommand = createCommand({
 		owner: "Product: KV",
 	},
 
-	args: {},
+	args: {
+		mode: {
+			type: "string",
+			describe: "Only list namespaces using this storage mode",
+			choices: ["instant"] as const,
+			requiresArg: true,
+			hidden: true,
+		},
+	},
 
 	behaviour: {
 		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
 	},
-	async handler(_, { config, sdk }) {
+	async handler(args, { config, sdk }) {
 		const accountId = await requireAuth(config);
 
 		const allNamespaces = [];
-
-		for await (const namespace of sdk.kv.namespaces.list({
+		const listParams: Cloudflare.KV.Namespaces.NamespaceListParams & {
+			filter?: string;
+		} = {
 			account_id: accountId,
 			per_page: 1000,
 			order: "title",
 			direction: "asc",
-		})) {
+			filter: args.mode ? `mode:${args.mode}` : undefined,
+		};
+
+		for await (const namespace of sdk.kv.namespaces.list(listParams)) {
 			allNamespaces.push(namespace);
 		}
 
