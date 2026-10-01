@@ -19,7 +19,7 @@ import type { Config, Logger } from "@cloudflare/workers-utils";
  * @param json whether the command is producing `--json` output
  * @returns a logger that is safe to use alongside the command's output
  */
-export function getRetryLogger(json: boolean | undefined): Logger {
+export function getJsonAwareRetryLogger(json: boolean | undefined): Logger {
 	if (!json) {
 		return logger;
 	}
