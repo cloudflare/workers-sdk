@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
@@ -106,6 +106,24 @@ interface DetectedPackageManager {
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
+}
+
+async function pinVitePluginToBeta(
+	packageDirectory: string,
+	dev: boolean
+): Promise<boolean> {
+	const packageJsonPath = path.join(packageDirectory, "package.json");
+	const packageJson = await readPackageJson(packageJsonPath);
+	const dependencySection = dev ? "devDependencies" : "dependencies";
+	const packageDependencies = packageJson[dependencySection] ?? {};
+	if (packageDependencies[VITE_PLUGIN] === "beta") {
+		return false;
+	}
+
+	packageDependencies[VITE_PLUGIN] = "beta";
+	packageJson[dependencySection] = packageDependencies;
+	await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+	return true;
 }
 
 function getPackageJsonWorkspacePatterns(
@@ -699,6 +717,18 @@ export async function installProjectDependencies(
 					dev,
 					isWorkspaceRoot,
 				});
+				if (
+					dependencies.some(
+						(dependency) =>
+							dependency.dev === dev && dependency.name === VITE_PLUGIN
+					) &&
+					(await pinVitePluginToBeta(packageDirectory, dev))
+				) {
+					await installPackages(packageManager.type, [], {
+						cwd: packageDirectory,
+						isWorkspaceRoot,
+					});
+				}
 			} catch (error) {
 				throw new DependencyInstallError(
 					getChangedFiles(before, await readFiles(packageFilePaths)),

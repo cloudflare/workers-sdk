@@ -186,6 +186,76 @@ describe("migrateWranglerToCf", () => {
 	);
 
 	it.for([
+		{ packageManager: "npm", lockFile: "package-lock.json" },
+		{ packageManager: "pnpm", lockFile: "pnpm-lock.yaml" },
+		{ packageManager: "yarn", lockFile: "yarn.lock" },
+		{ packageManager: "bun", lockFile: "bun.lock" },
+		{ packageManager: "nub", lockFile: "nub.lock" },
+	] as const)(
+		"pins beta when $packageManager saves a resolved Vite plugin version",
+		async ({ packageManager, lockFile }, { expect }) => {
+			const cwd = await createProject({
+				"package.json": JSON.stringify({
+					devDependencies: {
+						"@cloudflare/vite-plugin": "^1.60.2",
+						cf: "1.0.0-beta.5",
+					},
+					packageManager: `${packageManager}@1.2.0`,
+				}),
+				[lockFile]: "old lockfile",
+				"wrangler.json": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					name: "example-worker",
+				}),
+			});
+			vi.mocked(installPackages)
+				.mockImplementationOnce(async () => {
+					await writeFile(
+						path.join(cwd, "package.json"),
+						JSON.stringify({
+							devDependencies: {
+								"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
+								cf: "1.0.0-beta.5",
+							},
+							packageManager: `${packageManager}@1.2.0`,
+						})
+					);
+					await writeFile(path.join(cwd, lockFile), "resolved lockfile");
+				})
+				.mockImplementationOnce(async () => {
+					await writeFile(path.join(cwd, lockFile), "synced lockfile");
+				});
+
+			const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+			expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(
+				1,
+				packageManager,
+				["@cloudflare/vite-plugin@beta"],
+				{ cwd, dev: true, isWorkspaceRoot: false }
+			);
+			expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(
+				2,
+				packageManager,
+				[],
+				{ cwd, isWorkspaceRoot: false }
+			);
+			expect(
+				JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"))
+					.devDependencies["@cloudflare/vite-plugin"]
+			).toBe("beta");
+			expect(await readFile(path.join(cwd, lockFile), "utf8")).toBe(
+				"synced lockfile"
+			);
+			expect(result.changedFiles).toEqual([
+				"cloudflare.config.ts",
+				"package.json",
+				lockFile,
+			]);
+		}
+	);
+
+	it.for([
 		"^2.0.0-beta.sha-805ec1ff3",
 		"beta",
 		">=2.0.0-0 <3.0.0-0",
@@ -294,6 +364,16 @@ describe("migrateWranglerToCf", () => {
 			"npm",
 			["@cloudflare/vite-plugin@beta"],
 			{ cwd, dev: false, isWorkspaceRoot: false }
+		);
+		const packageJson = JSON.parse(
+			await readFile(path.join(cwd, "package.json"), "utf8")
+		) as {
+			dependencies: Record<string, string>;
+			devDependencies: Record<string, string>;
+		};
+		expect(packageJson.dependencies["@cloudflare/vite-plugin"]).toBe("beta");
+		expect(packageJson.devDependencies).not.toHaveProperty(
+			"@cloudflare/vite-plugin"
 		);
 	});
 

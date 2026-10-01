@@ -39,6 +39,7 @@ export const installPackages = async (
 		switch (packageManager) {
 			case "yarn":
 				break;
+			case "bun":
 			case "npm":
 			case "pnpm":
 			case "nub":

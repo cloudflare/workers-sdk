@@ -131,6 +131,17 @@ describe("Package Helpers", () => {
 				expect.any(String)
 			);
 		});
+
+		test("runs bun install when no packages are specified", async ({
+			expect,
+		}) => {
+			await installPackages("bun", []);
+
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				["bun", "install"],
+				expect.anything()
+			);
+		});
 	});
 
 	test("installWrangler", async ({ expect }) => {
