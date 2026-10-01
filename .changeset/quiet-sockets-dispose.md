@@ -1,7 +1,8 @@
 ---
 "wrangler": patch
+"@cloudflare/pages-functions": patch
 ---
 
-Preserve `using` and `await using` declarations when bundling a Worker
+Ship `using` and `await using` declarations to the runtime as written, for smaller Worker bundles
 
-Wrangler bundles at the `es2024` target, so esbuild was lowering explicit resource management syntax into `__using` and `__callDispose` helpers, roughly 1 KB of polyfill for a feature workerd already runs at every compatibility date. Wrangler now tells esbuild that `using` is supported, the same way it already does for source phase imports, so these declarations reach the runtime as written.
+Workers and Pages Functions that use explicit resource management no longer carry about 1 KB of bundled helper code to emulate it. workerd supports `using` and `await using` natively at every compatibility date, so `wrangler deploy`, `wrangler versions upload` and Pages Functions builds now leave these declarations untouched.
