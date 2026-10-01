@@ -81,7 +81,7 @@ describe("wrangler", () => {
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
-				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
+				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [open beta]
 				  wrangler basin                  🏞️ Manage Basin products
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
@@ -183,7 +183,7 @@ describe("wrangler", () => {
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
-				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
+				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [open beta]
 				  wrangler basin                  🏞️ Manage Basin products
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
