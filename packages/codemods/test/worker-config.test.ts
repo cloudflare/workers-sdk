@@ -108,6 +108,165 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("converts Workflow bindings and exports the Workflows the Worker defines", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			exports: {
+				DeclaredWorkflow: { name: "declared-workflow", type: "workflow" },
+			},
+			main: "src/index.ts",
+			name: "example-worker",
+			workflows: [
+				{
+					binding: "LOCAL",
+					class_name: "LocalWorkflow",
+					concurrency: { limit: 2 },
+					default_retention: {
+						error_retention: 86_400_000,
+						success_retention: "3 days",
+					},
+					limits: { steps: 10 },
+					name: "local-workflow",
+					schedules: "0 * * * *",
+				},
+				{
+					binding: "DECLARED",
+					class_name: "DeclaredWorkflow",
+					name: "declared-workflow",
+				},
+				{
+					binding: "REMOTE",
+					class_name: "RemoteWorkflow",
+					limits: { steps: 5 },
+					name: "remote-workflow",
+					script_name: "other-worker",
+				},
+			],
+		});
+
+		expect(result.output).toContain("bindings.workflow({");
+		expect(result.output).toContain('worker: "other-worker"');
+		expect(result.output).toContain("LocalWorkflow: exports.workflow({");
+		expect(result.output).toContain("defaultRetention: {");
+		expect(result.output).not.toContain("RemoteWorkflow: exports.workflow(");
+		expect(
+			result.output.match(/DeclaredWorkflow: exports\.workflow\(/g)
+		).toHaveLength(1);
+		expect(
+			result.followUps
+				.filter(({ sourcePath }) => sourcePath?.includes("workflows"))
+				.map(({ code, sourcePath }) => ({ code, sourcePath }))
+		).toEqual([
+			{ code: "unsupported-binding-options", sourcePath: "workflows.2" },
+		]);
+		expect(result).toMatchSnapshot();
+	});
+
+	it("treats a Workflow whose script_name names this Worker as local", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "JOBS",
+					class_name: "Jobs",
+					limits: { steps: 10 },
+					name: "jobs",
+					script_name: "app",
+				},
+			],
+		});
+
+		expect(result.output).toContain('worker: "app"');
+		expect(result.output).toContain("Jobs: exports.workflow({");
+		expect(result.output).toContain("steps: 10");
+		expect(
+			result.followUps.filter(({ sourcePath }) =>
+				sourcePath?.includes("workflows")
+			)
+		).toEqual([]);
+		expect(result).toMatchSnapshot();
+	});
+
+	it("reports the settings of a second Workflow on an already exported class", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "FIRST",
+					class_name: "Runner",
+					limits: { steps: 10 },
+					name: "first",
+				},
+				{
+					binding: "SECOND",
+					class_name: "Runner",
+					limits: { steps: 20 },
+					name: "second",
+				},
+			],
+		});
+
+		expect(result.output).toContain("steps: 10");
+		expect(result.output).not.toContain("steps: 20");
+		expect(
+			result.followUps
+				.filter(({ sourcePath }) => sourcePath?.includes("workflows"))
+				.map(({ blocking, code, sourcePath }) => ({
+					blocking,
+					code,
+					sourcePath,
+				}))
+		).toEqual([
+			{
+				blocking: true,
+				code: "workflow-shared-class",
+				sourcePath: "workflows.1",
+			},
+		]);
+		expect(result).toMatchSnapshot();
+	});
+
+	it("merges a Workflow binding's settings into the export declaring the same Workflow", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			exports: {
+				Jobs: { name: "jobs", schedules: "0 * * * *", type: "workflow" },
+			},
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "JOBS",
+					class_name: "Jobs",
+					limits: { steps: 10 },
+					name: "jobs",
+				},
+			],
+		});
+
+		expect(result.output.match(/Jobs: exports\.workflow\(/g)).toHaveLength(1);
+		expect(result.output).toContain("steps: 10");
+		expect(result.output).toContain('schedules: "0 * * * *"');
+		expect(
+			result.followUps.filter(({ sourcePath }) =>
+				sourcePath?.includes("workflows")
+			)
+		).toEqual([]);
+		expect(result).toMatchSnapshot();
+	});
+
 	it("reports zone-qualified custom domains for manual review", ({
 		expect,
 	}) => {
