@@ -1,5 +1,41 @@
 # wrangler
 
+## 4.146.0
+
+### Minor Changes
+
+- [#15777](https://github.com/cloudflare/workers-sdk/pull/15777) [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support the new Workflows `createBatch()` API in local development
+
+  Local Workflows bindings now accept object-form batches that create instances from a count or a list of instance options. The result includes handles for created instances and indexed per-instance errors, matching the runtime API while preserving the deprecated array form.
+
+- [#15639](https://github.com/cloudflare/workers-sdk/pull/15639) [`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44) Thanks [@hugo-vicente11](https://github.com/hugo-vicente11)! - Add `--allowed-mail` to the experimental `wrangler tunnel quick-start` command
+
+  The option forwards exact email addresses, comma-separated lists, and wildcard domains to `cloudflared`. It can be specified more than once to combine multiple recipient rules.
+
+  Email-protected tunnels require `cloudflared` 2026.9.2 or later. Wrangler checks the selected binary before starting the tunnel and reports an upgrade error when it is incompatible.
+
+### Patch Changes
+
+- [#15992](https://github.com/cloudflare/workers-sdk/pull/15992) [`b8e7cc3`](https://github.com/cloudflare/workers-sdk/commit/b8e7cc3af4137d1dd4fe4ec6684d0f09d5f9c708) Thanks [@zebp](https://github.com/zebp)! - Mark `wrangler artifacts` commands as open beta
+
+  Artifacts has entered open beta, so the `wrangler artifacts` commands no longer display a "private beta" label in help output and warnings.
+
+- [#15984](https://github.com/cloudflare/workers-sdk/pull/15984) [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260930.2 | ^5.20261001.1 |
+  | workerd                   | 1.20260930.2  | 1.20261001.1  |
+
+- [#15959](https://github.com/cloudflare/workers-sdk/pull/15959) [`efd67e6`](https://github.com/cloudflare/workers-sdk/commit/efd67e69e8ca2951dbb5426923428a6193a38648) Thanks [@breken-ai](https://github.com/breken-ai)! - Keep colons in `wrangler tail --header` filter values
+
+  `wrangler tail --header` splits its argument into a header name and an optional value at the colon. It split at every colon and kept only the first two parts, so a value containing a colon was cut short: `--header "Origin:https://app.example.com"` filtered on `https`. The value now includes everything after the first colon, so URLs, ports and IPv6 addresses are sent to the tail filter intact.
+
+- Updated dependencies [[`b00ef4f`](https://github.com/cloudflare/workers-sdk/commit/b00ef4fd16f071f33ae9095128373167f0b5892e), [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580), [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f)]:
+  - miniflare@5.20261001.0-alpha
+
 ## 4.145.0
 
 ### Minor Changes

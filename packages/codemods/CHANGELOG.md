@@ -1,5 +1,13 @@
 # @cloudflare/codemods
 
+## 0.4.0
+
+### Minor Changes
+
+- [#15927](https://github.com/cloudflare/workers-sdk/pull/15927) [`7a18975`](https://github.com/cloudflare/workers-sdk/commit/7a1897555f2cda3c0b928110808dbfdab819e7d9) Thanks [@oddharsh](https://github.com/oddharsh)! - Migrate Workflow bindings in `cf migrate`
+
+  The `wrangler-to-cf` codemod now converts `workflows` entries to `bindings.workflow(...)` instead of dropping them, and adds an `exports.workflow(...)` entry, with its settings, for each Workflow the Worker defines itself. It also writes `defaultRetention` in camelCase, which the new config requires. `cf migrate` is in beta.
+
 ## 0.3.0
 
 ### Minor Changes
