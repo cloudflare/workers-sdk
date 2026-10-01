@@ -15,7 +15,10 @@ const WORKER_SCRIPT = `export default {
 	}
 }`;
 
-function makeOptions(directory: string, rootPath?: string): MiniflareOptions {
+function makeOptions(
+	directory: string,
+	{ rootPath, basePath }: { rootPath?: string; basePath?: string } = {}
+): MiniflareOptions {
 	return {
 		workers: [
 			{
@@ -23,7 +26,7 @@ function makeOptions(directory: string, rootPath?: string): MiniflareOptions {
 					name: "",
 					compatibilityDate: "2026-04-29",
 					manifest: singleModuleManifest(WORKER_SCRIPT),
-					assets: { directory },
+					assets: { directory, basePath },
 				},
 				dev: rootPath === undefined ? undefined : { rootPath },
 			},
@@ -102,10 +105,53 @@ test("serves files from assets directory relative to rootPath", async ({
 	await fs.mkdir(assetsDir);
 	await fs.writeFile(path.join(assetsDir, "test.txt"), "hello from asset");
 
-	const mf = new Miniflare(makeOptions("public", tmp));
+	const mf = new Miniflare(makeOptions("public", { rootPath: tmp }));
 	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://example.com/test.txt");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("hello from asset");
+});
+
+test("serves an in-prefix asset under a non-root basePath", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "test.txt"), "hello from asset");
+
+	const mf = new Miniflare(makeOptions(tmp, { basePath: "/subpath" }));
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://example.com/subpath/test.txt");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("hello from asset");
+});
+
+test("returns 404 for an off-prefix request under a non-root basePath", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "test.txt"), "hello from asset");
+
+	const mf = new Miniflare(makeOptions(tmp, { basePath: "/subpath" }));
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://example.com/test.txt");
+	expect(res.status).toBe(404);
+	await res.arrayBuffer();
+});
+
+test("normalizes a relative basePath in the Asset Worker", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "test.txt"), "hello from asset");
+	const mf = new Miniflare(makeOptions(tmp, { basePath: "relative/path" }));
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch(
+		"http://example.com/relative/path/test.txt"
+	);
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("hello from asset");
 });
