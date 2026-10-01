@@ -12,6 +12,7 @@ import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
+import { isValidApplicationId } from "./application-id";
 import { containersScope } from "./index";
 import type {
 	CommonYargsArgv,
@@ -32,9 +33,7 @@ export async function deleteCommand(
 	_config: Config
 ) {
 	// API gateway has path restrictions so if someone provides a string that isn't ID shaped, we get a weird error instead of a 404
-	const uuidRegex =
-		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-	if (!uuidRegex.test(deleteArgs.ID)) {
+	if (!isValidApplicationId(deleteArgs.ID)) {
 		throw new UserError(
 			`Expected a container ID but got ${deleteArgs.ID}. Use \`wrangler containers list\` to view your containers and corresponding IDs.`,
 			{ telemetryMessage: "containers delete invalid container id" }
