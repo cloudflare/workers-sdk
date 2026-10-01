@@ -51,6 +51,7 @@ export const vitestConfig = (
 			})
 		],
 		test: {
+			reporters: ["default"],
 			sequence: { sequencer: DeterministicSequencer },
 			testTimeout: 90_000,
 			...${JSON.stringify(testOptions)}

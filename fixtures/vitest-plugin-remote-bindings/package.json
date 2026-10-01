@@ -11,7 +11,7 @@
 	"devDependencies": {
 		"@cloudflare/vitest-plugin": "workspace:*",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default",
+		"vitest": "catalog:vitest5",
 		"wrangler": "workspace:*"
 	}
 }

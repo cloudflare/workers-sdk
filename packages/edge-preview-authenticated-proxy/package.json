@@ -16,7 +16,7 @@
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.7.2",
 		"toucan-js": "4.0.0",
-		"vitest": "catalog:default",
+		"vitest": "catalog:vitest5",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
