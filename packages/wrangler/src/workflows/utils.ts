@@ -218,7 +218,7 @@ export async function getInstanceIdFromArgs(
 						config,
 						`/accounts/${accountId}/workflows/${args.name}/instances/`
 					),
-				getRetryLogger(args.json)
+				getJsonAwareRetryLogger(args.json)
 			)
 		).sort((a, b) => b.created_on.localeCompare(a.created_on));
 

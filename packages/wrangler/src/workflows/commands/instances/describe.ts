@@ -22,7 +22,7 @@ import {
 	emojifyInstanceTriggerName,
 	emojifyStepType,
 	getInstanceIdFromArgs,
-	getRetryLogger,
+	getJsonAwareRetryLogger,
 	jsonWorkflowArgs,
 } from "../../utils";
 import type {
@@ -93,7 +93,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 						config,
 						`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
 					),
-				getRetryLogger(args.json)
+				getJsonAwareRetryLogger(args.json)
 			);
 		}
 

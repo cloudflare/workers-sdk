@@ -6,7 +6,7 @@ import { requireAuth } from "../../../user";
 import { fetchLocalResult, localWorkflowArgs } from "../../local";
 import {
 	emojifyInstanceStatus,
-	getRetryLogger,
+	getJsonAwareRetryLogger,
 	validateInstanceDate,
 	jsonWorkflowArgs,
 	validateStatus,
@@ -213,7 +213,7 @@ export const workflowsInstancesListCommand = createCommand({
 						// fetchCursorPage deletes `page` from the params it is given, so each attempt needs its own copy
 						new URLSearchParams(URLParams)
 					),
-				getRetryLogger(args.json)
+				getJsonAwareRetryLogger(args.json)
 			);
 
 			const sortedInstances = instances.sort((a, b) =>
