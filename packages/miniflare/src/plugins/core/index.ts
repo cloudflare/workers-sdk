@@ -1043,7 +1043,8 @@ export function getGlobalServices({
 		services.push(
 			...getObservabilityServices(
 				tmpPath,
-				sharedOptions.isolatedResourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath,
+				sharedOptions.unsafeRuntimeEnv
 			)
 		);
 	}

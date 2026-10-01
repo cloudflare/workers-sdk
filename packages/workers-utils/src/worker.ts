@@ -137,6 +137,12 @@ export interface CfBrowserBinding {
 	remote?: boolean;
 }
 
+/** A binding to Analytics SQL. */
+export interface CfAnalyticsSQLBinding {
+	binding: string;
+	remote?: boolean;
+}
+
 /**
  * A binding to the AI project
  */
@@ -399,6 +405,12 @@ export interface CfPipeline {
 	binding: string;
 	stream?: string;
 	pipeline?: string;
+	remote?: boolean;
+}
+
+export interface CfK2Binding {
+	binding: string;
+	stream: string;
 	remote?: boolean;
 }
 

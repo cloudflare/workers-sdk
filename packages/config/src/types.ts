@@ -12,6 +12,7 @@ import type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
+	AnalyticsSQLBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,
@@ -22,6 +23,7 @@ import type {
 	HyperdriveBinding,
 	ImagesBinding,
 	JsonBinding,
+	K2Binding,
 	KvBinding,
 	LogfwdrBinding,
 	MediaBinding,
@@ -94,6 +96,7 @@ type Binding =
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
 	| AnalyticsEngineDatasetBinding
+	| AnalyticsSQLBinding
 	| ArtifactsBinding
 	| AssetsBinding
 	| BrowserBinding
@@ -104,6 +107,7 @@ type Binding =
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding
+	| K2Binding
 	| KvBinding
 	| LogfwdrBinding
 	| MediaBinding
@@ -216,6 +220,25 @@ interface BaseContainerConfig {
 	 * @hidden
 	 */
 	unsafe?: Record<string, unknown>;
+
+	ssh?: {
+		/**
+		 * If enabled, users with write access to the Container application can
+		 * connect to it over SSH.
+		 *
+		 * @default true
+		 */
+		enabled: boolean;
+		/**
+		 * Port that the SSH service is running on.
+		 *
+		 * @default 22
+		 */
+		port?: number;
+	};
+
+	/** SSH public keys to put in the Container's authorized_keys file. */
+	authorizedKeys?: Array<{ name: string; publicKey: string }>;
 }
 
 /** A Container application managed with a standard scheduling policy. */
@@ -271,25 +294,6 @@ interface StandardContainerConfig extends BaseContainerConfig {
 	 * @default "default"
 	 */
 	schedulingPolicy?: "default" | "regional";
-
-	ssh?: {
-		/**
-		 * If enabled, users with write access to the Container application can
-		 * connect to it over SSH.
-		 *
-		 * @default false
-		 */
-		enabled: boolean;
-		/**
-		 * Port that the SSH service is running on.
-		 *
-		 * @default 22
-		 */
-		port?: number;
-	};
-
-	/** SSH public keys to put in the Container's authorized_keys file. */
-	authorizedKeys?: Array<{ name: string; publicKey: string }>;
 
 	/** Scheduling constraints for Container placement. */
 	constraints?: {

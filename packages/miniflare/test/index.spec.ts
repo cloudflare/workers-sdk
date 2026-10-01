@@ -23,6 +23,7 @@ import {
 	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
+	Request,
 	Response,
 	viewToBuffer,
 } from "miniflare";
@@ -5301,4 +5302,44 @@ test("Miniflare: dispatchFetch handles POST/PUT with non-2xx status", async ({
 		expect(res.status).toBe(status);
 		expect(await res.json()).toEqual({ method: "PUT", status });
 	}
+});
+
+test("Miniflare: dispatchFetch() preserves request body length", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
+			async fetch(request, env) {
+				await env.BUCKET.put("key", request.body);
+				const object = await env.BUCKET.get("key");
+				return Response.json({
+					contentLength: request.headers.get("Content-Length"),
+					body: await object.text(),
+				});
+			}
+		}`),
+					env: { BUCKET: { type: "r2", name: "BUCKET" } },
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	// `R2Bucket#put()` requires a known length, as it does for requests with a
+	// `Content-Length` in production
+	let res = await mf.dispatchFetch("http://localhost/", {
+		method: "PUT",
+		body: "value",
+	});
+	expect(await res.json()).toEqual({ contentLength: "5", body: "value" });
+
+	res = await mf.dispatchFetch(
+		new Request("http://localhost/", { method: "PUT", body: "request" })
+	);
+	expect(await res.json()).toEqual({ contentLength: "7", body: "request" });
 });

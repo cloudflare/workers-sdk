@@ -143,7 +143,7 @@ import type {
 	ParsedInstanceOptions,
 	ParsedWorkerOptions,
 } from "./config/schema";
-import type { DispatchFetch, RequestInit } from "./http";
+import type { DispatchFetch } from "./http";
 import type {
 	DurableObjectClassNames,
 	MiniflareFetcherBinding,
@@ -3138,13 +3138,8 @@ export class Miniflare {
 		assert(this.#nonRetryableRuntimeDispatcher !== undefined);
 
 		const forward = new Request(input, init);
-		const url = new URL(forward.url);
 		const actualRuntimeOrigin = this.#runtimeEntryURL.origin;
-		const userRuntimeOrigin = url.origin;
-
-		// Rewrite URL for WebSocket requests which won't use `DispatchFetchDispatcher`
-		url.protocol = this.#runtimeEntryURL.protocol;
-		url.host = this.#runtimeEntryURL.host;
+		const userRuntimeOrigin = new URL(forward.url).origin;
 
 		// Remove `Content-Length: 0` headers from requests when a body is set to
 		// avoid `RequestContentLengthMismatch` errors
@@ -3165,9 +3160,10 @@ export class Miniflare {
 			this.#nonRetryableRuntimeDispatcher
 		);
 
-		const forwardInit = forward as RequestInit;
-		forwardInit.dispatcher = dispatcher;
-		const response = await fetch(url, forwardInit);
+		// Pass `forward` as the input, not `init`, so its body keeps a known length.
+		// As `init`, only the body stream is copied and it's sent chunked, which
+		// APIs like `R2Bucket#put()` reject. `dispatcher` routes it to the runtime.
+		const response = await fetch(forward, { dispatcher });
 
 		// If the Worker threw an uncaught exception, propagate it to the caller
 		const stack = response.headers.get(CoreHeaders.ERROR_STACK);

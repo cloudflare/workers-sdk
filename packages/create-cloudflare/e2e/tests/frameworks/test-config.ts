@@ -222,6 +222,10 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "fastapi",
+			// TODO: Unquarantine once FastAPI no longer creates an OpenTelemetry
+			// context key, which requires unavailable entropy, at import time.
+			// https://github.com/fastapi/fastapi/pull/16403
+			quarantine: true,
 			argv: ["--lang", "python"],
 			testCommitMessage: false,
 			verifyDeploy: {

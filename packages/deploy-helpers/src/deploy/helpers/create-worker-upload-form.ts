@@ -161,10 +161,12 @@ export function createWorkerUploadForm(
 	);
 	const mtls_certificates = extractBindingsOfType("mtls_certificate", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
 	const wasm_modules = extractBindingsOfType("wasm_module", bindings);
 	const browser = extractBindingsOfType("browser", bindings)[0];
+	const analytics = extractBindingsOfType("analytics", bindings)[0];
 	const ai = extractBindingsOfType("ai", bindings)[0];
 	const images = extractBindingsOfType("images", bindings)[0];
 	const stream = extractBindingsOfType("stream", bindings)[0];
@@ -584,6 +586,10 @@ export function createWorkerUploadForm(
 		}
 	});
 
+	k2.forEach(({ binding, stream: k2Stream }) => {
+		metadataBindings.push({ name: binding, type: "k2", stream: k2Stream });
+	});
+
 	worker_loaders.forEach(({ binding }) => {
 		metadataBindings.push({
 			name: binding,
@@ -625,6 +631,13 @@ export function createWorkerUploadForm(
 			name: browser.binding,
 			type: "browser",
 			raw: browser.raw,
+		});
+	}
+
+	if (analytics !== undefined) {
+		metadataBindings.push({
+			name: analytics.binding,
+			type: "analytics",
 		});
 	}
 

@@ -1,5 +1,25 @@
 # @cloudflare/codemods
 
+## 0.4.0
+
+### Minor Changes
+
+- [#15927](https://github.com/cloudflare/workers-sdk/pull/15927) [`7a18975`](https://github.com/cloudflare/workers-sdk/commit/7a1897555f2cda3c0b928110808dbfdab819e7d9) Thanks [@oddharsh](https://github.com/oddharsh)! - Migrate Workflow bindings in `cf migrate`
+
+  The `wrangler-to-cf` codemod now converts `workflows` entries to `bindings.workflow(...)` instead of dropping them, and adds an `exports.workflow(...)` entry, with its settings, for each Workflow the Worker defines itself. It also writes `defaultRetention` in camelCase, which the new config requires. `cf migrate` is in beta.
+
+## 0.3.0
+
+### Minor Changes
+
+- [#15685](https://github.com/cloudflare/workers-sdk/pull/15685) [`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add native support for the Analytics SQL binding
+
+  Declare the zero-configuration binding in `wrangler.json` with `"analytics": { "binding": "ANALYTICS" }`. Wrangler uploads the `analytics` binding type and proxies it to the remote service during local development, so `wrangler dev` can call the binding without `unsafe.bindings`.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Migrate beta K2 producer bindings in the `wrangler-to-cf` codemod
+
+  `k2` entries in a Wrangler configuration file are converted to `bindings.k2({ stream })`. A `remote` setting is carried over as `dev.remote`.
+
 ## 0.2.1
 
 ### Patch Changes

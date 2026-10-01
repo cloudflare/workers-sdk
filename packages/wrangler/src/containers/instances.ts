@@ -7,6 +7,7 @@ import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { onKeyPress } from "../utils/onKeyPress";
+import { isValidApplicationId } from "./application-id";
 import { containersScope } from "./index";
 import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
 import type {
@@ -301,9 +302,7 @@ const instancesArgs = {
 type InstancesArgs = HandlerArgs<typeof instancesArgs>;
 
 export async function instancesCommand(args: InstancesArgs): Promise<void> {
-	const uuidRegex =
-		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-	if (!uuidRegex.test(args.ID)) {
+	if (!isValidApplicationId(args.ID)) {
 		throw new UserError(
 			`Expected an application ID but got ${args.ID}. Use \`wrangler containers list\` to view your containers and corresponding IDs.`,
 			{ telemetryMessage: "containers instances invalid application id" }

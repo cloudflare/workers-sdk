@@ -25,6 +25,7 @@ const FIELD_CASES = {
 	ai_search: [{ binding: "SEARCH", instance_name: "search" }],
 	ai_search_namespaces: [{ binding: "SEARCH", namespace: "search" }],
 	alias: { module: "./module.ts" },
+	analytics: { binding: "ANALYTICS" },
 	analytics_engine_datasets: [{ binding: "ANALYTICS", dataset: "events" }],
 	artifacts: [{ binding: "ARTIFACTS", namespace: "artifacts" }],
 	assets: {
@@ -64,6 +65,7 @@ const FIELD_CASES = {
 	jsx_fragment: "Fragment",
 	keep_names: true,
 	keep_vars: true,
+	k2: [{ binding: "ORDERS", stream: "0123456789abcdef0123456789abcdef" }],
 	kv_namespaces: [{ binding: "KV", id: "id" }],
 	limits: { cpu_ms: 100 },
 	logfwdr: { bindings: [{ destination: "destination", name: "LOG" }] },

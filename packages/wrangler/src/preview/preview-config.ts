@@ -429,6 +429,9 @@ export function convertBinding(
 		case "browser":
 			config = { browser: { binding: name } };
 			break;
+		case "analytics":
+			config = { analytics: { binding: name } };
+			break;
 		case "ai":
 			config = {
 				ai: {
@@ -670,6 +673,19 @@ export function convertBinding(
 						...(binding.pipeline !== undefined && {
 							pipeline: usePlaceholderValue ? REPLACE_ME : binding.pipeline,
 						}),
+					},
+				],
+			};
+			break;
+		case "k2":
+			if (binding.stream === undefined) {
+				break;
+			}
+			config = {
+				k2: [
+					{
+						binding: name,
+						stream: usePlaceholderValue ? REPLACE_ME : binding.stream,
 					},
 				],
 			};
