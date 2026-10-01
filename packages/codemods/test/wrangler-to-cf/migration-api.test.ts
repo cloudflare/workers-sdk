@@ -573,7 +573,7 @@ describe("migrateWranglerToCf", () => {
 		expect(result.followUps).toMatchObject([
 			{ blocking: true, code: "wrangler-upgrade-failed" },
 		]);
-		expect(result.followUps[0].message).toContain("wrangler@^4.136.0");
+		expect(result.followUps[0].message).toContain("wrangler@latest");
 		expect(result.followUps[0].message).not.toContain("cf@latest");
 	});
 
@@ -728,7 +728,7 @@ describe("migrateWranglerToCf", () => {
 		{ manager: "bun", lockFile: "bun.lockb", managerVersion: "1.1.0" },
 		{ manager: "nub", lockFile: "nub.lock", managerVersion: "1.2.0" },
 	])(
-		"upgrades Wrangler 4.100.0 with $manager and reports $lockFile",
+		"upgrades Wrangler 4.100.0 to latest with $manager and reports $lockFile",
 		async ({ manager, lockFile, managerVersion }, { expect }) => {
 			const packageJson = {
 				devDependencies: { cf: "^1.0.0", wrangler: "^4.100.0" },
@@ -755,7 +755,7 @@ describe("migrateWranglerToCf", () => {
 						...packageJson,
 						devDependencies: {
 							...packageJson.devDependencies,
-							wrangler: "^4.136.0",
+							wrangler: "latest",
 						},
 					})
 				);
@@ -771,7 +771,7 @@ describe("migrateWranglerToCf", () => {
 
 			expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 				manager,
-				["wrangler@^4.136.0"],
+				["wrangler@latest"],
 				{ cwd, dev: true, isWorkspaceRoot: false }
 			);
 			expect(result.changedFiles).toEqual([
@@ -805,7 +805,7 @@ describe("migrateWranglerToCf", () => {
 			await writeFile(
 				path.join(projectDirectory, "package.json"),
 				JSON.stringify({
-					devDependencies: { cf: "latest", wrangler: "^4.136.0" },
+					devDependencies: { cf: "latest", wrangler: "latest" },
 					name: "example-worker",
 					packageManager: "pnpm@10.27.0",
 				})
@@ -820,7 +820,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
 			"pnpm",
-			["cf@latest", "wrangler@^4.136.0"],
+			["cf@latest", "wrangler@latest"],
 			{ cwd: projectDirectory, dev: true, isWorkspaceRoot: false }
 		);
 		expect(result.changedFiles).toEqual([
@@ -851,8 +851,34 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
-			["wrangler@^4.136.0"],
+			["wrangler@latest"],
 			{ cwd, dev: false, isWorkspaceRoot: false }
+		);
+	});
+
+	it("installs latest Wrangler when the dependency is missing", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { cf: "^1.0.0" },
+				name: "example-worker",
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+				no_bundle: true,
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
+
+		expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
+			"npm",
+			["wrangler@latest"],
+			{ cwd, dev: true, isWorkspaceRoot: false }
 		);
 	});
 
@@ -1127,7 +1153,7 @@ describe("migrateWranglerToCf", () => {
 		]);
 	});
 
-	it("refreshes an outdated installation without changing a compatible range", async ({
+	it("refreshes an outdated installation with latest Wrangler", async ({
 		expect,
 	}) => {
 		const cwd = await createProject({
@@ -1152,7 +1178,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
-			["wrangler@^4.136.0"],
+			["wrangler@latest"],
 			{ cwd, dev: true, isWorkspaceRoot: false }
 		);
 	});
@@ -1222,6 +1248,7 @@ describe("migrateWranglerToCf", () => {
 		expect(result.followUps).toMatchObject([
 			{ blocking: true, code: "wrangler-upgrade-disabled" },
 		]);
+		expect(result.followUps[0].message).toContain("wrangler@latest");
 		expect(await readFile(path.join(cwd, "package.json"), "utf8")).toBe(
 			manifest
 		);

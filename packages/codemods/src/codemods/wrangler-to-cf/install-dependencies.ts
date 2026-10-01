@@ -10,11 +10,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { glob } from "tinyglobby";
 import { fileExists } from "../../files";
-import {
-	getWranglerUpgradeSpec,
-	isVersionSupported,
-	MINIMUM_WRANGLER_VERSION,
-} from "./wrangler-version";
+import { getWranglerUpgradeSpec, isVersionSupported } from "./wrangler-version";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 const PACKAGE_MANAGERS = [
@@ -553,7 +549,7 @@ export async function planWranglerDependencyUpgrade(
 	const upgradeSpec =
 		typeof declaredVersion === "string"
 			? getWranglerUpgradeSpec(projectDirectory, declaredVersion)
-			: `^${MINIMUM_WRANGLER_VERSION}`;
+			: "latest";
 	if (upgradeSpec === undefined) {
 		return { action: "none" };
 	}

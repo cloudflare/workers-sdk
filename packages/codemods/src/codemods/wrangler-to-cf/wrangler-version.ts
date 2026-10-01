@@ -37,7 +37,7 @@ export function isVersionSupported(version: string): boolean {
  *
  * @param projectDirectory Directory containing the Worker's package.json.
  * @param declaredVersion Wrangler version, range, or tag declared in package.json.
- * @returns The specifier to install, or undefined when no update is needed.
+ * @returns `latest` when an update is needed, or undefined otherwise.
  */
 export function getWranglerUpgradeSpec(
 	projectDirectory: string,
@@ -61,5 +61,5 @@ export function getWranglerUpgradeSpec(
 		return undefined;
 	}
 
-	return declaredCompatible ? declaredVersion : `^${MINIMUM_WRANGLER_VERSION}`;
+	return "latest";
 }

@@ -140,7 +140,7 @@ export async function migrateWranglerToCf(
 				? "Update the workspace Wrangler package and its lockfile while preserving the workspace dependency."
 				: wranglerDepPlan.workspaceDependency === "unverified"
 					? "Verify the workspace Wrangler package version and install workspace dependencies. Update the package and lockfile if needed while preserving the workspace dependency."
-					: "Add a compatible Wrangler dependency to the package that owns this Worker and update its lockfile.";
+					: "Add `wrangler@latest` to the package that owns this Worker and update its lockfile.";
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"wrangler-upgrade-manual",
@@ -152,7 +152,7 @@ export async function migrateWranglerToCf(
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"wrangler-upgrade-disabled",
-				`Automatic dependency installation was disabled. Update Wrangler to ${MINIMUM_WRANGLER_VERSION} or newer with your package manager before using the generated configuration.`
+				"Automatic dependency installation was disabled. Install `wrangler@latest` with your package manager before using the generated configuration."
 			)
 		);
 	}
