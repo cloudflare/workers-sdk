@@ -27,6 +27,19 @@ const workerTest = dedent`
 	});
 `;
 
+const rootConfig = dedent`
+	export default {
+		worker: {
+			name: "test-worker",
+			compatibilityDate: "2025-12-02",
+			entrypoint: "./index.ts",
+			env: {
+				MY_TEXT: { type: "text", value: "from the new config" },
+			},
+		},
+	};
+`;
+
 test("automatically loads cloudflare.config.ts from the project root", async ({
 	expect,
 	seed,
@@ -34,18 +47,7 @@ test("automatically loads cloudflare.config.ts from the project root", async ({
 }) => {
 	await seed({
 		"vitest.config.mts": vitestConfig(),
-		"cloudflare.config.ts": dedent`
-			export default {
-				worker: {
-					name: "test-worker",
-					compatibilityDate: "2025-12-02",
-					entrypoint: "./index.ts",
-					env: {
-						MY_TEXT: { type: "text", value: "from the new config" },
-					},
-				},
-			};
-		`,
+		"cloudflare.config.ts": rootConfig,
 		"index.ts": worker,
 		"index.test.ts": workerTest,
 	});
@@ -53,6 +55,26 @@ test("automatically loads cloudflare.config.ts from the project root", async ({
 	const result = await vitestRun();
 
 	await expect(result.exitCode).resolves.toBe(0);
+});
+
+test("detects project-root config with a custom Miniflare root", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			miniflare: { rootPath: "runner" },
+		}),
+		"cloudflare.config.ts": rootConfig,
+		"runner/.gitkeep": "",
+		"index.ts": worker,
+		"index.test.ts": workerTest,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode, result.stderr).resolves.toBe(0);
 });
 
 test("does not load cloudflare.config.ts when disabled", async ({
@@ -118,10 +140,12 @@ test("resolves a custom configPath and its entrypoint", async ({
 }) => {
 	await seed({
 		"vitest.config.mts": vitestConfig({
+			miniflare: { rootPath: "runner" },
 			experimental: {
 				newConfig: { configPath: "./config/cloudflare.config.ts" },
 			},
 		}),
+		"runner/.gitkeep": "",
 		// `entrypoint` is resolved relative to the config file, not the project root
 		"config/cloudflare.config.ts": dedent`
 			export default {

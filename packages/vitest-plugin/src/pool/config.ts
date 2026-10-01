@@ -339,6 +339,7 @@ async function parseCustomPoolOptions(
 	// Try to parse runner worker options, coalescing all errors
 	const errorRef: ZodErrorRef = {};
 	const workers = options.miniflare?.workers;
+	const projectPath = rootPath;
 	const rootPathOption = getRootPath(options.miniflare);
 	rootPath = path.resolve(rootPath, rootPathOption);
 	try {
@@ -385,7 +386,7 @@ async function parseCustomPoolOptions(
 	const newConfig = normalizeNewConfigOption(
 		options.experimental?.newConfig ??
 			(options.wrangler === undefined &&
-				existsSync(path.resolve(rootPath, NEW_CONFIG_FILENAME)))
+				existsSync(path.resolve(projectPath, NEW_CONFIG_FILENAME)))
 	);
 
 	if (newConfig !== undefined && options.wrangler !== undefined) {
@@ -400,7 +401,7 @@ async function parseCustomPoolOptions(
 	let environment: string | undefined;
 
 	if (newConfig !== undefined) {
-		configPath = path.resolve(rootPath, newConfig.configPath);
+		configPath = path.resolve(projectPath, newConfig.configPath);
 		config = await loadNewConfig(configPath, mode);
 	} else if (options.wrangler?.configPath !== undefined) {
 		configPath = path.resolve(rootPath, options.wrangler.configPath);
