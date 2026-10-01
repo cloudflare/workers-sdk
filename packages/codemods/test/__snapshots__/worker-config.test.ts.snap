@@ -1,5 +1,76 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Wrangler Worker configuration conversion > converts Workflow bindings and exports the Workflows the Worker defines 1`] = `
+{
+  "followUps": [
+    {
+      "blocking": true,
+      "code": "unsupported-binding-options",
+      "docsUrl": undefined,
+      "message": "The options \`limits\` at \`workflows.2\` require manual migration.",
+      "sourcePath": "workflows.2",
+    },
+  ],
+  "output": "import { bindings, defineConfig, exports } from "cf/config";
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: workflows.2: The options \`limits\` at \`workflows.2\` require manual migration.
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+export default defineConfig({
+	worker: {
+		name: "example-worker",
+		compatibilityDate: "2026-09-23",
+		entrypoint: "src/index.ts",
+		env: {
+			LOCAL: bindings.workflow({
+				name: "local-workflow",
+				worker: "example-worker",
+				exportName: "LocalWorkflow",
+			}),
+			DECLARED: bindings.workflow({
+				name: "declared-workflow",
+				worker: "example-worker",
+				exportName: "DeclaredWorkflow",
+			}),
+			REMOTE: bindings.workflow({
+				name: "remote-workflow",
+				worker: "other-worker",
+				exportName: "RemoteWorkflow",
+			}),
+		},
+		exports: {
+			DeclaredWorkflow: exports.workflow({
+				name: "declared-workflow",
+			}),
+			LocalWorkflow: exports.workflow({
+				name: "local-workflow",
+				limits: {
+					steps: 10,
+				},
+				concurrency: {
+					limit: 2,
+				},
+				schedules: "0 * * * *",
+				defaultRetention: {
+					errorRetention: 86400000,
+					successRetention: "3 days",
+				},
+			}),
+		},
+		/**
+		 * TODO(@cloudflare): cf migrate: The options \`limits\` at \`workflows.2\` require manual migration.
+		 */
+	},
+});
+",
+}
+`;
+
 exports[`Wrangler Worker configuration conversion > converts core settings, triggers, bindings, and exports 1`] = `
 {
   "followUps": [
@@ -90,9 +161,9 @@ export default defineConfig({
 					"0 * * * *",
 					"30 * * * *",
 				],
-				default_retention: {
-					error_retention: 86400000,
-					success_retention: "3 days",
+				defaultRetention: {
+					errorRetention: 86400000,
+					successRetention: "3 days",
 				},
 			}),
 		},
@@ -217,6 +288,124 @@ export default defineConfig({
 		 * TODO(@cloudflare): cf migrate: The Workers Sites configuration is not supported by the new config and was not migrated.
 		 * @see https://developers.cloudflare.com/workers/wrangler/configuration/
 		 */
+	},
+});
+",
+}
+`;
+
+exports[`Wrangler Worker configuration conversion > merges a Workflow binding's settings into the export declaring the same Workflow 1`] = `
+{
+  "followUps": [],
+  "output": "import { bindings, defineConfig, exports } from "cf/config";
+
+export default defineConfig({
+	worker: {
+		name: "app",
+		compatibilityDate: "2026-09-23",
+		entrypoint: "src/index.ts",
+		env: {
+			JOBS: bindings.workflow({
+				name: "jobs",
+				worker: "app",
+				exportName: "Jobs",
+			}),
+		},
+		exports: {
+			Jobs: exports.workflow({
+				name: "jobs",
+				limits: {
+					steps: 10,
+				},
+				schedules: "0 * * * *",
+			}),
+		},
+	},
+});
+",
+}
+`;
+
+exports[`Wrangler Worker configuration conversion > reports the settings of a second Workflow on an already exported class 1`] = `
+{
+  "followUps": [
+    {
+      "blocking": true,
+      "code": "workflow-shared-class",
+      "docsUrl": undefined,
+      "message": "The Workflow \`second\` at \`workflows.1\` uses the class \`Runner\`, which already exports the Workflow \`first\`. The new config declares one Workflow per exported class, so its \`limits\` were not migrated.",
+      "sourcePath": "workflows.1",
+    },
+  ],
+  "output": "import { bindings, defineConfig, exports } from "cf/config";
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: workflows.1: The Workflow \`second\` at \`workflows.1\` uses the class \`Runner\`, which already exports the Workflow \`first\`. The new config declares one Workflow per exported class, so its \`limits\` were not migrated.
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+export default defineConfig({
+	worker: {
+		name: "app",
+		compatibilityDate: "2026-09-23",
+		entrypoint: "src/index.ts",
+		env: {
+			FIRST: bindings.workflow({
+				name: "first",
+				worker: "app",
+				exportName: "Runner",
+			}),
+			SECOND: bindings.workflow({
+				name: "second",
+				worker: "app",
+				exportName: "Runner",
+			}),
+		},
+		exports: {
+			Runner: exports.workflow({
+				name: "first",
+				limits: {
+					steps: 10,
+				},
+			}),
+		},
+		/**
+		 * TODO(@cloudflare): cf migrate: The Workflow \`second\` at \`workflows.1\` uses the class \`Runner\`, which already exports the Workflow \`first\`. The new config declares one Workflow per exported class, so its \`limits\` were not migrated.
+		 */
+	},
+});
+",
+}
+`;
+
+exports[`Wrangler Worker configuration conversion > treats a Workflow whose script_name names this Worker as local 1`] = `
+{
+  "followUps": [],
+  "output": "import { bindings, defineConfig, exports } from "cf/config";
+
+export default defineConfig({
+	worker: {
+		name: "app",
+		compatibilityDate: "2026-09-23",
+		entrypoint: "src/index.ts",
+		env: {
+			JOBS: bindings.workflow({
+				name: "jobs",
+				worker: "app",
+				exportName: "Jobs",
+			}),
+		},
+		exports: {
+			Jobs: exports.workflow({
+				name: "jobs",
+				limits: {
+					steps: 10,
+				},
+			}),
+		},
 	},
 });
 ",

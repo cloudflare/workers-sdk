@@ -87,6 +87,38 @@ describe("Wrangler environment and tooling conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("treats a Workflow whose script_name names the environment's Worker as local", ({
+		expect,
+	}) => {
+		const result = convert(
+			{
+				compatibility_date: "2026-09-23",
+				env: {
+					staging: {
+						workflows: [
+							{
+								binding: "JOBS",
+								class_name: "Jobs",
+								limits: { steps: 20 },
+								name: "jobs-staging",
+								script_name: "app-staging",
+							},
+						],
+					},
+				},
+				main: "src/index.ts",
+				name: "app",
+			},
+			"wrangler"
+		);
+
+		expect(result.cloudflareConfig).toContain('worker: "app-staging"');
+		expect(result.cloudflareConfig).toContain("Jobs: exports.workflow({");
+		expect(result.cloudflareConfig).toContain("steps: 20");
+		expect(result.codes).not.toContain("unsupported-binding-options");
+		expect(result).toMatchSnapshot();
+	});
+
 	it("reports Vite source maps as non-blocking guidance", ({ expect }) => {
 		const converted = convertWranglerConfig(
 			{

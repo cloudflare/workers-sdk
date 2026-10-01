@@ -9,6 +9,7 @@ import {
 	toOutputValue,
 	type UnknownRecord,
 } from "./converter-helpers";
+import { WORKFLOW_SETTINGS, isLocalWorkflow } from "./exports";
 import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputValue } from "./types";
 
@@ -46,7 +47,7 @@ function addBinding(
 
 function reportUnsupportedOptions(
 	record: UnknownRecord,
-	keys: string[],
+	keys: readonly string[],
 	sourcePath: string,
 	report: (followUp: MigrationFollowUp) => void
 ): void {
@@ -527,14 +528,57 @@ export function convertBindings(
 		}
 	}
 
-	if (getRecords(source, "workflows").length > 0) {
-		report(
-			createFollowUp(
-				"workflows-unsupported",
-				"Workflow bindings are not supported by the new config and were not migrated.",
-				{ sourcePath: pathFor("workflows") }
-			)
-		);
+	const workflows = getRecords(source, "workflows");
+	if (workflows.length > 0) {
+		for (const [index, entry] of workflows.entries()) {
+			const sourcePath = pathFor("workflows", index);
+			if (
+				typeof entry.class_name !== "string" ||
+				entry.class_name.length === 0
+			) {
+				report(
+					createFollowUp(
+						"workflow-missing-class",
+						`The Workflow binding at \`${sourcePath}\` has no \`class_name\` and was not migrated.`,
+						{ sourcePath }
+					)
+				);
+				continue;
+			}
+
+			// A Workflow defined by another Worker keeps its settings on that
+			// Worker's export; this Worker only binds to it. A Workflow this Worker
+			// defines, including one whose `script_name` names this Worker, also gets
+			// an `exports.workflow` entry (see convertExports).
+			const external = !isLocalWorkflow(entry, source);
+			const worker = external
+				? String(entry.script_name)
+				: typeof source.name === "string"
+					? source.name
+					: "TODO";
+
+			imports.add("bindings");
+			addBinding(
+				bindings,
+				entry.binding,
+				call(
+					"bindings.workflow",
+					optionsFromRecord(
+						{ name: entry.name, worker, export_name: entry.class_name },
+						[
+							["name", "name"],
+							["worker", "worker"],
+							["export_name", "exportName"],
+						]
+					)
+				),
+				sourcePath,
+				report
+			);
+			if (external) {
+				reportUnsupportedOptions(entry, WORKFLOW_SETTINGS, sourcePath, report);
+			}
+		}
 	}
 
 	function convertSingletonBinding(
