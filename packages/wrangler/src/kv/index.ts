@@ -104,10 +104,10 @@ export const kvNamespaceCreateCommand = createCommand({
 		},
 		mode: {
 			type: "string",
-			describe: "The storage mode for the new namespace",
+			describe:
+				"The storage mode for the new namespace. Instant is in private beta.",
 			choices: ["instant"] as const,
 			requiresArg: true,
-			hidden: true,
 		},
 		...sharedResourceCreationArgs,
 	},
