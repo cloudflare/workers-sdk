@@ -514,10 +514,7 @@ describe("migrateWranglerToCf", () => {
 		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
-		expect(result.changedFiles).toEqual([
-			"cloudflare.config.ts",
-			"wrangler.config.ts",
-		]);
+		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
 	});
 
 	it("previews a Vite plugin upgrade without installing it", async ({
@@ -798,10 +795,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
-			followUps: [
-				{ blocking: true, code: "cf-install-disabled" },
-				{ blocking: true, code: "wrangler-upgrade-disabled" },
-			],
+			followUps: [{ blocking: true, code: "cf-install-disabled" }],
 			status: "needs-intervention",
 		});
 		await expect(
@@ -1220,6 +1214,53 @@ describe("migrateWranglerToCf", () => {
 			"cloudflare.config.ts",
 			"wrangler.config.ts",
 		]);
+	});
+
+	it("writes Wrangler type settings only for an explicit opt-out", async ({
+		expect,
+	}) => {
+		const baseConfig = {
+			compatibility_date: "2026-09-23",
+			name: "example-worker",
+		};
+		const wranglerPackage = JSON.stringify({
+			name: "wrangler",
+			version: "4.136.0",
+		});
+		const defaultCwd = await createProject({
+			"node_modules/wrangler/package.json": wranglerPackage,
+			"wrangler.json": JSON.stringify(baseConfig),
+		});
+		const disabledCwd = await createProject({
+			"node_modules/wrangler/package.json": wranglerPackage,
+			"wrangler.json": JSON.stringify({
+				...baseConfig,
+				dev: { generate_types: false },
+			}),
+		});
+
+		const defaultResult = await migrateWranglerToCf(
+			path.join(defaultCwd, "wrangler.json"),
+			{ bundler: "wrangler" }
+		);
+		const disabledResult = await migrateWranglerToCf(
+			path.join(disabledCwd, "wrangler.json"),
+			{ bundler: "wrangler" }
+		);
+
+		expect(defaultResult.changedFiles).toEqual(["cloudflare.config.ts"]);
+		expect(disabledResult.changedFiles).toEqual([
+			"cloudflare.config.ts",
+			"wrangler.config.ts",
+		]);
+		await expect(
+			readFile(path.join(defaultCwd, "wrangler.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
+		const disabledConfig = await readFile(
+			path.join(disabledCwd, "wrangler.config.ts"),
+			"utf8"
+		);
+		expect(disabledConfig).toContain("generate: false");
 	});
 
 	it("leaves Wrangler unchanged when Vite output does not need it", async ({
