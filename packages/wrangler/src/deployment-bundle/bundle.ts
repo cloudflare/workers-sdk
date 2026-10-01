@@ -49,7 +49,11 @@ export const COMMON_ESBUILD_OPTIONS = {
 	// v8 supports es2024 features as of 11.9
 	// workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 	target: "es2024",
-	supported: { "import-source": true },
+	// Syntax newer than es2024 that workerd runs natively, so esbuild should emit
+	// it as written. `using` and `await using` (explicit resource management)
+	// work at every compatibility date; at es2024 esbuild would otherwise lower
+	// them to `__using`/`__callDispose` helpers.
+	supported: { "import-source": true, using: true },
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 
