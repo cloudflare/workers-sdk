@@ -219,6 +219,9 @@ export function convertBindings(
 			report
 		);
 	}
+	convertArrayBindings("k2", "binding", "bindings.k2", [["stream", "stream"]], {
+		remote: true,
+	});
 	convertArrayBindings(
 		"kv_namespaces",
 		"binding",
@@ -558,6 +561,7 @@ export function convertBindings(
 	}
 
 	convertSingletonBinding("ai", "binding", "bindings.ai", ["staging"]);
+	convertSingletonBinding("analytics", "binding", "bindings.analyticsSQL");
 	convertSingletonBinding("browser", "binding", "bindings.browser");
 	convertSingletonBinding("images", "binding", "bindings.images");
 	convertSingletonBinding("media", "binding", "bindings.media");

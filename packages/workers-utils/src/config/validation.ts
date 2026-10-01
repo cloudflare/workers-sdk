@@ -104,6 +104,7 @@ export type ConfigBindingFieldName =
 	| "analytics_engine_datasets"
 	| "text_blobs"
 	| "browser"
+	| "analytics"
 	| "ai"
 	| "images"
 	| "stream"
@@ -116,6 +117,7 @@ export type ConfigBindingFieldName =
 	| "mtls_certificates"
 	| "workflows"
 	| "pipelines"
+	| "k2"
 	| "secrets_store_secrets"
 	| "artifacts"
 	| "ratelimits"
@@ -144,6 +146,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	analytics_engine_datasets: "Analytics Engine Dataset",
 	text_blobs: "Text Blob",
 	browser: "Browser Run",
+	analytics: "Analytics SQL",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -156,6 +159,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	mtls_certificates: "mTLS Certificate",
 	workflows: "Workflow",
 	pipelines: "Pipeline",
+	k2: "K2 Stream",
 	secrets_store_secrets: "Secrets Store Secret",
 	artifacts: "Artifacts",
 	ratelimits: "Rate Limit",
@@ -181,6 +185,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	wasm_module: "Wasm Module",
 	text_blob: "Text Blob",
 	browser: "Browser Run",
+	analytics: "Analytics SQL",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -202,6 +207,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	dispatch_namespace: "Dispatch Namespace",
 	mtls_certificate: "mTLS Certificate",
 	pipeline: "Pipeline",
+	k2: "K2 Stream",
 	secrets_store_secret: "Secrets Store Secret",
 	artifacts: "Artifacts",
 	logfwdr: "logfwdr",
@@ -1963,6 +1969,16 @@ function normalizeAndValidateEnvironment(
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
+		analytics: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"analytics",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
 		ai: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2011,6 +2027,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"pipelines",
 			validateBindingArray(envName, validatePipelineBinding),
+			[]
+		),
+		k2: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"k2",
+			validateBindingArray(envName, validateK2Binding),
 			[]
 		),
 		secrets_store_secrets: notInheritable(
@@ -3609,6 +3635,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"data_blob",
 			"text_blob",
 			"browser",
+			"analytics",
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
@@ -3621,6 +3648,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"logfwdr",
 			"mtls_certificate",
 			"pipeline",
+			"k2",
 			"worker_loader",
 			"vpc_service",
 			"flagship",
@@ -6165,6 +6193,39 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateK2Binding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(`"${field}" must have a string "binding" field.`);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "stream", "string")) {
+		diagnostics.errors.push(`"${field}" must have a string "stream" field.`);
+		isValid = false;
+	}
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+	if ("remote" in value && value.remote === false) {
+		diagnostics.errors.push(
+			`"${field}" does not support \`remote: false\`. K2 bindings always access remote resources; omit "remote" or set \`remote: true\`.`
+		);
+		isValid = false;
+	}
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"stream",
+		"remote",
+	]);
+	return isValid;
+};
+
 const validateSecretsStoreSecretBinding: ValidatorFn = (
 	diagnostics,
 	field,
@@ -6504,11 +6565,13 @@ const validatePreviewsConfig =
 				"streaming_tail_consumers",
 				"unsafe",
 				"browser",
+				"analytics",
 				"ai",
 				"images",
 				"stream",
 				"media",
 				"pipelines",
+				"k2",
 				"secrets_store_secrets",
 				"artifacts",
 				"unsafe_hello_world",
@@ -6707,6 +6770,16 @@ const validatePreviewsConfig =
 				) && isValid;
 		}
 
+		if (previews.analytics !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.analytics`,
+					previews.analytics,
+					undefined
+				) && isValid;
+		}
+
 		if (previews.ai !== undefined) {
 			isValid =
 				validateAIBinding(envName)(
@@ -6760,6 +6833,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.secrets_store_secrets`,
 				previews.secrets_store_secrets,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateK2Binding)(
+				diagnostics,
+				`${field}.k2`,
+				previews.k2,
 				undefined
 			) && isValid;
 

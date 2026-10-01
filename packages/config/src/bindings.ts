@@ -143,6 +143,16 @@ export interface BrowserBinding extends BrowserBindingOptions {
 	type: "browser";
 }
 
+interface AnalyticsSQLBindingOptions {
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
+}
+
+/** An Analytics SQL binding. */
+export interface AnalyticsSQLBinding extends AnalyticsSQLBindingOptions {
+	type: "analytics";
+}
+
 interface D1BindingOptions {
 	/** The UUID of this D1 database (not required). */
 	id?: string;
@@ -353,6 +363,45 @@ interface PipelineBindingOptions {
 	name: string;
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
+}
+
+interface K2BindingOptions {
+	/** The ID of the K2 stream. */
+	stream: string;
+	/** Always uses the real stream in development. Set remote to true to suppress the usage warning; false is unsupported. */
+	dev?: BindingDevOptions;
+}
+
+/** A producer binding to a K2 stream created using the Dashboard or API. */
+export interface K2Binding extends K2BindingOptions {
+	type: "k2";
+}
+
+/** An opaque K2 record with optional application headers. */
+export interface K2Record<T extends ArrayBuffer | Uint8Array> {
+	content: T;
+	headers?: Record<string, string>;
+}
+
+/** A complete-batch append outcome. An unsuccessful append may have committed. */
+export type K2ProduceResult =
+	| { success: true }
+	| {
+			success: false;
+			error: { code: number; message: string; retryable: boolean };
+	  };
+
+/** The K2 producer RPC interface. Batches use one byte representation. */
+export interface K2Producer {
+	/**
+	 * Atomically appends a batch of opaque records to the stream.
+	 * @param records - A batch containing either all ArrayBuffers or all Uint8Arrays.
+	 * @returns The append outcome; retry only when explicitly marked retryable.
+	 * @throws RPC transport failures may reject with an unknown append outcome.
+	 */
+	send(
+		records: K2Record<ArrayBuffer>[] | K2Record<Uint8Array>[]
+	): Promise<K2ProduceResult>;
 }
 
 /** Binding to a Cloudflare Pipeline. */
@@ -710,6 +759,8 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
 	 */
 	browser(options?: BrowserBindingOptions): BrowserBinding;
+	/** An Analytics SQL binding. */
+	analyticsSQL(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
 	/**
 	 * Binding to a D1 database.
 	 *
@@ -779,6 +830,8 @@ export interface Bindings {
 	pipeline<TRecord extends PipelineRecord = PipelineRecord>(
 		options: PipelineBindingOptions
 	): TypedPipelineBinding<TRecord>;
+	/** A producer binding to a K2 stream created using the Dashboard or API. */
+	k2(options: K2BindingOptions): K2Binding;
 	/**
 	 * Producer binding to a Cloudflare Queue.
 	 *
@@ -896,6 +949,7 @@ export const bindings = {
 	media: (options) => ({ type: "media", ...options }),
 	mtlsCertificate: (options) => ({ type: "mtls-certificate", ...options }),
 	pipeline: (options) => ({ type: "pipeline", ...options }),
+	k2: (options) => ({ type: "k2", ...options }),
 	queue: (options) => ({ type: "queue", ...options }),
 	rateLimit: (options) => ({ type: "rate-limit", ...options }),
 	r2: (options) => ({ type: "r2", ...options }),
@@ -909,6 +963,7 @@ export const bindings = {
 	text: (value) => ({ type: "text", value }),
 	vectorize: (options) => ({ type: "vectorize", ...options }),
 	versionMetadata: () => ({ type: "version-metadata" }),
+	analyticsSQL: (options) => ({ type: "analytics", ...options }),
 	vpcService: (options) => ({ type: "vpc-service", ...options }),
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),

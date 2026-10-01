@@ -51,7 +51,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new sink",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 	},
 	positionalArgs: ["sink"],
 	args: {
@@ -117,7 +117,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 			implies: "access-key-id",
 		},
 		namespace: {
-			describe: "Data catalog namespace (required for r2-data-catalog)",
+			describe: "Basin Catalog namespace (required for r2-data-catalog)",
 			type: "string",
 		},
 		table: {
@@ -126,7 +126,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 		},
 		"catalog-token": {
 			describe:
-				"Authentication token for data catalog (required for r2-data-catalog)",
+				"Authentication token for Basin Catalog (required for r2-data-catalog)",
 			type: "string",
 		},
 	},
@@ -167,16 +167,16 @@ export const pipelinesSinksCreateCommand = createCommand({
 					{ telemetryMessage: "pipelines sinks create invalid format" }
 				);
 			}
-			// Enforce minimum interval for R2 Data Catalog to prevent compaction issues
+			// Enforce minimum interval for Basin Catalog to prevent compaction issues
 			if (
 				args.rollInterval !== undefined &&
 				args.rollInterval < SINK_DEFAULTS.rolling_policy.min_interval_seconds
 			) {
 				throw new CommandLineArgsError(
-					`Pipeline frequency must be at least ${SINK_DEFAULTS.rolling_policy.min_interval_seconds} seconds for R2 Data Catalog sinks to prevent compaction issues. Current value: ${args.rollInterval} seconds.`,
+					`Pipeline frequency must be at least ${SINK_DEFAULTS.rolling_policy.min_interval_seconds} seconds for Basin Catalog sinks to prevent compaction issues. Current value: ${args.rollInterval} seconds.`,
 					{
 						telemetryMessage:
-							"pipelines r2 data catalog interval below minimum threshold",
+							"pipelines basin catalog interval below minimum threshold",
 					}
 				);
 			}

@@ -1,5 +1,8 @@
 import { describe, it, vi } from "vitest";
-import { maybeStartOrUpdateRemoteProxySession } from "./maybe-start-or-update-session";
+import {
+	maybeStartOrUpdateRemoteProxySession,
+	pickRemoteBindings,
+} from "./maybe-start-or-update-session";
 import type { RemoteBindingsLogger } from "./logger";
 import type { RemoteProxySessionData } from "./maybe-start-or-update-session";
 import type { startRemoteProxySession } from "./start-remote-proxy-session";
@@ -18,6 +21,20 @@ function createTestLogger(): RemoteBindingsLogger {
 }
 
 describe("maybeStartOrUpdateRemoteProxySession", () => {
+	it.for([undefined, true])(
+		"selects K2 bindings for remote development with remote=%s",
+		(remote, { expect }) => {
+			const binding = {
+				type: "k2" as const,
+				stream: "0123456789abcdef0123456789abcdef",
+				...(remote === undefined ? {} : { remote }),
+			};
+			expect(pickRemoteBindings({ ORDERS: binding })).toEqual({
+				ORDERS: binding,
+			});
+		}
+	);
+
 	it("updates an existing session when all remote bindings are removed", async ({
 		expect,
 	}) => {

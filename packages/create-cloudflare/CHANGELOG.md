@@ -1,5 +1,61 @@
 # create-cloudflare
 
+## 2.73.1
+
+### Patch Changes
+
+- [#15895](https://github.com/cloudflare/workers-sdk/pull/15895) [`9fecda5`](https://github.com/cloudflare/workers-sdk/commit/9fecda5f738d06f789a0d5c0b3fe1664ff18a53f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.1.8 | 22.2.0 |
+
+- [#15896](https://github.com/cloudflare/workers-sdk/pull/15896) [`5afa83a`](https://github.com/cloudflare/workers-sdk/commit/5afa83aa65b2ee4587a17d715279a763e873d229) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.3.5 | 16.3.6 |
+
+- [#15897](https://github.com/cloudflare/workers-sdk/pull/15897) [`f938656`](https://github.com/cloudflare/workers-sdk/commit/f93865676406a7616b3c2ed3e48e83e5ec010787) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.17.0 | 0.17.1 |
+
+- [#15898](https://github.com/cloudflare/workers-sdk/pull/15898) [`f1179eb`](https://github.com/cloudflare/workers-sdk/commit/f1179eb5b54dfa9dc2a36f1df27e13114a3bbc31) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.20.0 | 1.20.1 |
+
+- [#15899](https://github.com/cloudflare/workers-sdk/pull/15899) [`cce87c3`](https://github.com/cloudflare/workers-sdk/commit/cce87c3490042316225835d9c78425af34e25847) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.7.2 | 2.7.5 |
+
+## 2.73.0
+
+### Minor Changes
+
+- [#15636](https://github.com/cloudflare/workers-sdk/pull/15636) [`29099b1`](https://github.com/cloudflare/workers-sdk/commit/29099b1c2fc60fe3374dab31bd8ec8b255f1bd6c) Thanks [@ryanking13](https://github.com/ryanking13)! - Add Django, FastAPI, and Flask framework starters for Python Workers projects
+
+### Patch Changes
+
+- [#15885](https://github.com/cloudflare/workers-sdk/pull/15885) [`ff5039c`](https://github.com/cloudflare/workers-sdk/commit/ff5039c802790473a8d0d14f9970649633ae73c2) Thanks [@Zhong-z](https://github.com/Zhong-z)! - Validate project name format before checking for directory conflicts
+
+  Previously, when providing an invalid project name for an existing directory containing files, C3 reported that the directory already exists and contains conflicting files instead of reporting the invalid project name. Project name format validation is now performed before checking whether the directory already exists.
+
 ## 2.72.13
 
 ### Patch Changes

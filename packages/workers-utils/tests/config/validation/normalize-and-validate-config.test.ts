@@ -92,6 +92,7 @@ describe("normalizeAndValidateConfig()", () => {
 			site: undefined,
 			text_blobs: undefined,
 			browser: undefined,
+			analytics: undefined,
 			ai: undefined,
 			version_metadata: undefined,
 			triggers: {
@@ -124,6 +125,7 @@ describe("normalizeAndValidateConfig()", () => {
 			tail_consumers: undefined,
 			streaming_tail_consumers: undefined,
 			pipelines: [],
+			k2: [],
 			workflows: [],
 			userConfigPath: undefined,
 			topLevelName: undefined,
@@ -3930,6 +3932,33 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - The field "browser" should be an object but got null."
 				`);
+			});
+		});
+
+		describe("[analytics]", () => {
+			it("accepts an Analytics SQL binding", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ analytics: { binding: "ANALYTICS" } } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.analytics).toEqual({ binding: "ANALYTICS" });
+			});
+
+			it("requires a binding name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ analytics: {} } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'binding should have a string "binding" field'
+				);
 			});
 		});
 
@@ -14398,6 +14427,47 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(true);
+			});
+
+			it("should accept previews.analytics", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						analytics: { binding: "ANALYTICS" },
+					},
+				} as unknown as RawConfig;
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.previews?.analytics).toEqual({ binding: "ANALYTICS" });
+			});
+
+			it("should reject previews.analytics without a binding name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						analytics: {},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'binding should have a string "binding" field.'
+				);
 			});
 
 			it("should reject previews.queues when passed as a flat array", ({

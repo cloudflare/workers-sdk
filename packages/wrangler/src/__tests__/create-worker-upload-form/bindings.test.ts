@@ -304,6 +304,7 @@ describe("createWorkerUploadForm — bindings", () => {
 				type: "agent_memory" as const,
 				namespace: "my-agent",
 			},
+			{ type: "analytics" as const },
 			{ type: "inherit" as const },
 		])("should pass through $type binding unchanged", (input, { expect }) => {
 			const bindings: StartDevWorkerInput["bindings"] = {

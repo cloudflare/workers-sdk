@@ -134,6 +134,130 @@ describe.each(["dev", "preview"] as const)(
 		});
 
 		if (mode === "dev") {
+			test.for(["single", "concurrent"] as const)(
+				"retries pending cleanup once on close after %s restart removes the Cloudflare plugin",
+				async (restartMode, { expect, onTestFinished }) => {
+					writeWorkerSource();
+					writeCloudflareConfig({ scenario: "configured" });
+					const require = createRequire(import.meta.url);
+					const bridgePath = path.resolve("factory.cjs");
+					fs.writeFileSync(bridgePath, "module.exports = {};\n");
+					const bridge = require(bridgePath) as {
+						cloudflare: typeof cloudflare;
+						includeCloudflare: boolean;
+					};
+					bridge.cloudflare = cloudflare;
+					bridge.includeCloudflare = true;
+					onTestFinished(() => {
+						delete require.cache[bridgePath];
+					});
+					fs.writeFileSync(
+						"vite.config.mjs",
+						`
+import { createRequire } from "node:module";
+const bridge = createRequire(import.meta.url)("./factory.cjs");
+export default {
+  plugins: bridge.includeCloudflare
+    ? [bridge.cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })]
+    : [],
+};
+`
+					);
+					const initialExitListeners = new Set(process.listeners("exit"));
+					const server = await createServer({
+						configFile: path.resolve("vite.config.mjs"),
+						logLevel: "silent",
+						server: { port: 0 },
+					});
+					onTestFinished(async () => {
+						await server.close();
+						vi.mocked(cleanupContainers).mockReturnValue(true);
+						for (const listener of process.listeners("exit")) {
+							if (
+								!initialExitListeners.has(listener) &&
+								listener.name === "cleanupContainerImages"
+							) {
+								listener(0);
+							}
+						}
+					});
+					await server.listen();
+					const pendingTags = new Set(
+						vi
+							.mocked(prepareContainerImagesForDev)
+							.mock.calls[0]?.[0].containerOptions.map(
+								({ image_tag }) => image_tag
+							)
+					);
+					expect(pendingTags.size).toBeGreaterThan(0);
+					if (restartMode === "concurrent") {
+						vi.mocked(cleanupContainers).mockReturnValue(false);
+					} else {
+						vi.mocked(cleanupContainers).mockReturnValueOnce(false);
+					}
+					bridge.includeCloudflare = false;
+					if (restartMode === "concurrent") {
+						await Promise.all([server.restart(), server.restart()]);
+					} else {
+						await server.restart();
+					}
+					expect(cleanupContainers).toHaveBeenCalledExactlyOnceWith(
+						expect.any(String),
+						pendingTags
+					);
+					await server.close();
+					expect(cleanupContainers).toHaveBeenCalledTimes(2);
+					expect(cleanupContainers).toHaveBeenLastCalledWith(
+						expect.any(String),
+						pendingTags
+					);
+				}
+			);
+			test.for(["configured", "absent"] as const)(
+				"keeps dependency optimizer hashes stable on the first restart with Containers %s",
+				async (scenario, { expect, onTestFinished }) => {
+					writeWorkerSource();
+					writeCloudflareConfig({ scenario });
+					const require = createRequire(import.meta.url);
+					const bridgePath = path.resolve("factory.cjs");
+					fs.writeFileSync(bridgePath, "module.exports = {};\n");
+					const bridge = require(bridgePath) as {
+						cloudflare: typeof cloudflare;
+					};
+					bridge.cloudflare = cloudflare;
+					onTestFinished(() => {
+						delete require.cache[bridgePath];
+					});
+					fs.writeFileSync(
+						"vite.config.mjs",
+						`
+import { createRequire } from "node:module";
+const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
+export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })] };
+`
+					);
+					const server = await createServer({
+						configFile: path.resolve("vite.config.mjs"),
+						logLevel: "silent",
+						server: { port: 0 },
+					});
+					onTestFinished(() => server.close());
+					await server.listen();
+					const configHashes = () =>
+						Object.fromEntries(
+							Object.entries(server.environments)
+								.filter(([_, environment]) => environment.depsOptimizer)
+								.map(([name, environment]) => [
+									name,
+									environment.depsOptimizer?.metadata.configHash,
+								])
+						);
+					const initialHashes = configHashes();
+					expect(Object.keys(initialHashes)).toContain("client");
+					await server.restart();
+					expect(configHashes()).toEqual(initialHashes);
+				}
+			);
 			test.for(["inline", "config-file"] as const)(
 				"retries failed cleanup across %s restarts without mixing servers",
 				async (configuration, { expect, onTestFinished }) => {

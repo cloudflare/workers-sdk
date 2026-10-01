@@ -90,7 +90,7 @@ export async function triggersDeploy(
 		props.firstDeploy
 	);
 
-	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
+	if (!wantWorkersDev && workersDevInSync && routesOnly.length !== 0) {
 		// TODO is this true? How does last subdomain status affect route confict??
 		// Why would we only need to validate route conflicts if didn't need to
 		// disable the subdomain deployment?
@@ -118,7 +118,7 @@ export async function triggersDeploy(
 		>();
 
 		const zoneIdCache = new Map();
-		for (const route of routes) {
+		for (const route of routesOnly) {
 			queuePromises.push(
 				queue.add(async () => {
 					const zone = await getZoneForRoute(

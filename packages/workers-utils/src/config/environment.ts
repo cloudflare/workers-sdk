@@ -1507,6 +1507,23 @@ export interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
+	 * An Analytics SQL binding.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	analytics:
+		| {
+				binding: string;
+				/** Whether the binding should connect to the remote service during local development. */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
 	 * Binding to the AI project.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1712,6 +1729,22 @@ export interface EnvironmentNonInheritable {
 		 */
 		pipeline?: string;
 		/** Whether the pipeline should be remote or not in local development */
+		remote?: boolean;
+	}[];
+
+	/**
+	 * K2 producer bindings. Create streams using the Dashboard or API.
+	 *
+	 * This field must be specified separately in each named environment.
+	 * @default []
+	 * @nonInheritable
+	 */
+	k2: {
+		/** The binding name exposed on the Worker's env object. */
+		binding: string;
+		/** The ID of the K2 stream. */
+		stream: string;
+		/** Always uses the real stream in development. Set true to suppress the usage warning; false is unsupported. */
 		remote?: boolean;
 	}[];
 

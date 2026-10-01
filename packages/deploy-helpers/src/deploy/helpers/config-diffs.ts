@@ -30,6 +30,7 @@ const reorderableBindings = {
 	dispatch_namespaces: true,
 	mtls_certificates: true,
 	pipelines: true,
+	k2: true,
 	secrets_store_secrets: true,
 	artifacts: true,
 	ratelimits: true,
@@ -51,6 +52,7 @@ const reorderableBindings = {
 	text_blobs: false,
 	data_blobs: false,
 	browser: false,
+	analytics: false,
 	ai: false,
 	images: false,
 	stream: false,
@@ -200,6 +202,11 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 			({ remote: _, ...binding }) => binding
 		);
 	}
+	if (normalizedConfig.k2?.length) {
+		normalizedConfig.k2 = normalizedConfig.k2.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
 
 	if (normalizedConfig.vectorize?.length) {
 		normalizedConfig.vectorize = normalizedConfig.vectorize.map(
@@ -252,6 +259,7 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	const singleBindingFields = [
 		"browser",
+		"analytics",
 		"ai",
 		"images",
 		"stream",

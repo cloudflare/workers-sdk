@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.61.0",
+	"version": "1.62.3",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -49,11 +49,11 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/build-output-utils": "0.8.2",
-		"@cloudflare/config": "0.20.0",
-		"@cloudflare/runtime-types": "0.1.4",
+		"@cloudflare/build-output-utils": "0.8.4",
+		"@cloudflare/config": "0.22.0",
+		"@cloudflare/runtime-types": "0.1.6",
 		"@cloudflare/unenv-preset": "2.16.2",
-		"miniflare": "5.20260926.0-alpha",
+		"miniflare": "5.20260930.0-alpha",
 		"unenv": "2.0.0-rc.24",
 		"ws": "catalog:default"
 	},

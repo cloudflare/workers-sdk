@@ -56,12 +56,12 @@ describe.sequential("Local Browser", () => {
 			});
 
 			it(
-				"Run a browser, and check h1 text content",
+				"Run a browser, and check the page title",
 				BROWSER_RENDERING_RETRY,
 				async ({ expect }) => {
 					await expect(
 						fetchText(
-							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=select`
+							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=title`
 						)
 					).resolves.toEqual("Example Domain");
 				}
