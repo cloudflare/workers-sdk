@@ -1,5 +1,4 @@
 ---
-"@cloudflare/cli-shared-helpers": patch
 "@cloudflare/codemods": patch
 ---
 

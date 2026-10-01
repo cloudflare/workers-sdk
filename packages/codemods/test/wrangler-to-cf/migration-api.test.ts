@@ -9,6 +9,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { afterEach, describe, it, vi } from "vitest";
 import { migrateWranglerToCf } from "../../src";
@@ -21,6 +22,9 @@ const temporaryDirectories: string[] = [];
 
 vi.mock("@cloudflare/cli-shared-helpers/packages", () => ({
 	installPackages: vi.fn(),
+}));
+vi.mock("@cloudflare/cli-shared-helpers/command", () => ({
+	runCommand: vi.fn(),
 }));
 
 vi.mock(
@@ -208,23 +212,30 @@ describe("migrateWranglerToCf", () => {
 					name: "example-worker",
 				}),
 			});
-			vi.mocked(installPackages)
-				.mockImplementationOnce(async () => {
-					await writeFile(
-						path.join(cwd, "package.json"),
-						JSON.stringify({
-							devDependencies: {
-								"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
-								cf: "1.0.0-beta.5",
-							},
-							packageManager: `${packageManager}@1.2.0`,
-						})
-					);
-					await writeFile(path.join(cwd, lockFile), "resolved lockfile");
-				})
-				.mockImplementationOnce(async () => {
-					await writeFile(path.join(cwd, lockFile), "synced lockfile");
+			vi.mocked(installPackages).mockImplementationOnce(async () => {
+				await writeFile(
+					path.join(cwd, "package.json"),
+					JSON.stringify({
+						devDependencies: {
+							"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
+							cf: "1.0.0-beta.5",
+						},
+						packageManager: `${packageManager}@1.2.0`,
+					})
+				);
+				await writeFile(path.join(cwd, lockFile), "resolved lockfile");
+			});
+			const syncLockfile = async () => {
+				await writeFile(path.join(cwd, lockFile), "synced lockfile");
+			};
+			if (packageManager === "bun") {
+				vi.mocked(runCommand).mockImplementationOnce(async () => {
+					await syncLockfile();
+					return "";
 				});
+			} else {
+				vi.mocked(installPackages).mockImplementationOnce(syncLockfile);
+			}
 
 			const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
 
@@ -234,12 +245,19 @@ describe("migrateWranglerToCf", () => {
 				["@cloudflare/vite-plugin@beta"],
 				{ cwd, dev: true, isWorkspaceRoot: false }
 			);
-			expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(
-				2,
-				packageManager,
-				[],
-				{ cwd, isWorkspaceRoot: false }
-			);
+			if (packageManager === "bun") {
+				expect(vi.mocked(runCommand)).toHaveBeenCalledWith(["bun", "install"], {
+					cwd,
+					silent: true,
+				});
+			} else {
+				expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(
+					2,
+					packageManager,
+					[],
+					{ cwd, isWorkspaceRoot: false }
+				);
+			}
 			expect(
 				JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"))
 					.devDependencies["@cloudflare/vite-plugin"]
