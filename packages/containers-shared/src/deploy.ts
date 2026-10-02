@@ -494,7 +494,7 @@ function assertCanUseApplicationObservabilityTargeting(
 	}
 
 	throw new UserError(
-		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your ${cliPresentation.displayConfigFileName} and deploy once, then deploy again with target_instance_percentage or target_instance_count.`,
+		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your ${cliPresentation.displayConfigFileName} and deploy once, then deploy again with ${cliPresentation.configFields.containerObservabilityTargetPercentage} or ${cliPresentation.configFields.containerObservabilityTargetCount}.`,
 		{
 			telemetryMessage: "containers deploy observability migration blocked",
 		}

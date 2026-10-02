@@ -12,6 +12,10 @@ describe("resolveCliPresentation", () => {
 			cliName: "wrangler",
 			displayName: "Wrangler",
 			displayConfigFileName: "Wrangler config file",
+			configFields: {
+				containerObservabilityTargetPercentage: "target_instance_percentage",
+				containerObservabilityTargetCount: "target_instance_count",
+			},
 			commands: {
 				deploy: "wrangler deploy",
 				versionsDeploy: "wrangler versions deploy",
@@ -31,6 +35,10 @@ describe("resolveCliPresentation", () => {
 			cliName: "cf",
 			displayName: "cf",
 			displayConfigFileName: "cloudflare.config.ts",
+			configFields: {
+				containerObservabilityTargetPercentage: "targetInstancePercentage",
+				containerObservabilityTargetCount: "targetInstanceCount",
+			},
 			commands: {
 				deploy: "cf deploy",
 				preview: "cf previews deploy",
