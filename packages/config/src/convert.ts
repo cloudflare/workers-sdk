@@ -521,7 +521,11 @@ function convertBindingsAndAssets(
 				durableObjectBindings.push({
 					name,
 					class_name: binding.exportName,
-					script_name: binding.worker,
+					// A binding to this Worker's own class is a local Durable Object, which
+					// Wrangler expresses by omitting `script_name`.
+					...(binding.worker !== config.name && {
+						script_name: binding.worker,
+					}),
 				});
 				break;
 			}
