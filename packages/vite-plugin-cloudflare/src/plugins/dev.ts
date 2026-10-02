@@ -164,7 +164,8 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					handleWebSocket(
 						viteDevServer.httpServer,
 						ctx.miniflare,
-						entryWorkerName
+						entryWorkerName,
+						viteDevServer.config.server.ws !== false
 					);
 				}
 
