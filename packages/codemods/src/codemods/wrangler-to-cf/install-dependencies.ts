@@ -130,6 +130,7 @@ function getPnpmWorkspacePatterns(contents: string): string[] | undefined {
 		if (line.trim() === "" || line.trim().startsWith("#")) {
 			continue;
 		}
+		// Accept quoted or bare globs with an optional comment; leave other YAML forms unverified.
 		const match = /^\s+-\s+(?:"([^"]+)"|'([^']+)'|([^#\s]+))\s*(?:#.*)?$/.exec(
 			line
 		);
