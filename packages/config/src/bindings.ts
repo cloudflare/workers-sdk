@@ -516,15 +516,19 @@ type SendEmailDestinationOptions =
 	| {
 			/** If this binding should be restricted to a specific verified address. */
 			destinationAddress: string;
+			/** @hidden */
 			allowedDestinationAddresses?: never;
 	  }
 	| {
+			/** @hidden */
 			destinationAddress?: never;
 			/** If this binding should be restricted to a set of verified addresses. */
 			allowedDestinationAddresses: string[];
 	  }
 	| {
+			/** @hidden */
 			destinationAddress?: never;
+			/** @hidden */
 			allowedDestinationAddresses?: never;
 	  };
 
@@ -614,11 +618,13 @@ type VpcNetworkBindingOptions =
 	| {
 			/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with `networkId`. */
 			tunnelId: string;
+			/** @hidden */
 			networkId?: never;
 			/** Options that only apply during local development. */
 			dev?: BindingDevOptions;
 	  }
 	| {
+			/** @hidden */
 			tunnelId?: never;
 			/** The network ID to route traffic through. Mutually exclusive with `tunnelId`. */
 			networkId: string;
