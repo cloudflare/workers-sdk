@@ -10,6 +10,7 @@ import { beforeEach, describe, it } from "vitest";
 import { BuildOutputError } from "../errors";
 import {
 	DEFAULT_WORKER_DIRECTORY_NAME,
+	getBuildOutputDir,
 	getContainerConfigPath,
 	getContainerDir,
 	getRootConfigPath,
@@ -133,6 +134,181 @@ describe("readBuildOutput", () => {
 			mode: undefined,
 		});
 	});
+
+	describe("symlinks", () => {
+		it.for([
+			[".cloudflare", "dir"],
+			[".cloudflare/output", "dir"],
+			[".cloudflare/output/v0", "dir"],
+			[".cloudflare/output/v0/config.json", "file"],
+			[".cloudflare/output/v0/workers", "dir"],
+			[".cloudflare/output/v0/workers/default", "dir"],
+			[".cloudflare/output/v0/workers/default/worker.config.json", "file"],
+			[".cloudflare/output/v0/workers/default/bundle", "dir"],
+			[".cloudflare/output/v0/workers/default/bundle/chunks/module.js", "file"],
+			[".cloudflare/output/v0/workers/default/assets", "dir"],
+			[".cloudflare/output/v0/workers/default/assets/nested", "dir"],
+			[
+				".cloudflare/output/v0/workers/default/assets/nested/index.html",
+				"file",
+			],
+			[".cloudflare/output/v0/workers/additional", "dir"],
+			[".cloudflare/output/v0/containers", "dir"],
+			[".cloudflare/output/v0/containers/api", "dir"],
+			[".cloudflare/output/v0/containers/api/container.config.json", "file"],
+			[".cloudflare/output/v0/metadata/nested", "dir"],
+			[".cloudflare/output/v0/metadata/nested/data.json", "file"],
+		] as const)(
+			"rejects a symlink at %s",
+			async ([relativePath, type], { expect }) => {
+				const root = process.cwd();
+				await seedWorker(root, { assets: true });
+				await seedWorker(root, { directoryName: "additional" });
+				await writeContainerConfig({
+					root,
+					config: parsedStandardContainerConfig,
+					directoryName: "api",
+				});
+				await writeBundleFiles(root, {
+					"chunks/module.js": "export default {};",
+				});
+				const nestedAssetsDir = path.join(getWorkerAssetsDir(root), "nested");
+				await fsp.mkdir(nestedAssetsDir);
+				await fsp.writeFile(
+					path.join(nestedAssetsDir, "index.html"),
+					"<h1>Hello</h1>"
+				);
+				const metadataDir = path.join(
+					getBuildOutputDir(root),
+					"v0/metadata/nested"
+				);
+				await fsp.mkdir(metadataDir, { recursive: true });
+				await fsp.writeFile(path.join(metadataDir, "data.json"), "{}");
+
+				const symlinkPath = path.join(root, relativePath);
+				const targetPath = path.join(root, "symlink-target");
+				await fsp.rename(symlinkPath, targetPath);
+				await fsp.symlink(targetPath, symlinkPath, type);
+
+				await expect(readBuildOutput(root)).rejects.toThrow(
+					new BuildOutputError(
+						`symlinks are not allowed in build output directories: ${symlinkPath}. Build output directories must be portable and self-contained.`
+					)
+				);
+			}
+		);
+
+		it.for([
+			["index.js", "linked.js", "file"],
+			["chunks", "linked-chunks", "dir"],
+		] as const)(
+			"rejects a symlink to an internal %s",
+			async ([target, name, type], { expect }) => {
+				const root = process.cwd();
+				await seedWorker(root);
+				await writeBundleFiles(root, {
+					"index.js": "export default {};",
+					"chunks/module.js": "export default {};",
+				});
+				const symlinkPath = path.join(getWorkerBundleDir(root), name);
+				await fsp.symlink(target, symlinkPath, type);
+
+				await expect(readBuildOutput(root)).rejects.toThrow(
+					new BuildOutputError(
+						`symlinks are not allowed in build output directories: ${symlinkPath}. Build output directories must be portable and self-contained.`
+					)
+				);
+			}
+		);
+
+		it.for([
+			[".cloudflare", "dir"],
+			[".cloudflare/output", "dir"],
+			[".cloudflare/output/v0", "dir"],
+			[".cloudflare/output/v0/config.json", "file"],
+			[".cloudflare/output/v0/workers/default/bundle/missing-file", "file"],
+			[".cloudflare/output/v0/workers/default/bundle/missing-dir", "dir"],
+		] as const)(
+			"rejects a dangling symlink at %s",
+			async ([relativePath, type], { expect }) => {
+				const root = process.cwd();
+				await seedWorker(root);
+				await fsp.writeFile(
+					path.join(getWorkerBundleDir(root), "missing-file"),
+					""
+				);
+				await fsp.mkdir(path.join(getWorkerBundleDir(root), "missing-dir"));
+				const symlinkPath = path.join(root, relativePath);
+				await fsp.rename(symlinkPath, path.join(root, "symlink-target"));
+				await fsp.symlink("does-not-exist", symlinkPath, type);
+
+				await expect(readBuildOutput(root)).rejects.toThrow(
+					new BuildOutputError(
+						`symlinks are not allowed in build output directories: ${symlinkPath}. Build output directories must be portable and self-contained.`
+					)
+				);
+			}
+		);
+
+		it("rejects a directory symlink cycle", async ({ expect }) => {
+			const root = process.cwd();
+			await seedWorker(root);
+			const bundleDir = getWorkerBundleDir(root);
+			await fsp.symlink(".", path.join(bundleDir, "loop"), "dir");
+
+			await expect(readBuildOutput(root)).rejects.toThrow(
+				/symlinks are not allowed in build output directories/
+			);
+		});
+	});
+
+	it("allows symlinks outside the build output directory", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		const linkedRoot = path.join(root, "linked-project");
+		await fsp.symlink(root, linkedRoot, "dir");
+		await fsp.symlink(
+			"does-not-exist",
+			path.join(root, ".cloudflare/cache"),
+			"dir"
+		);
+
+		const output = await readBuildOutput(linkedRoot);
+
+		expect(output.root).toBe(linkedRoot);
+		expect(output.workers.default.config.name).toBe("my-worker");
+	});
+
+	it.for([".cloudflare", ".cloudflare/output", ".cloudflare/output/v0"])(
+		"reports a missing root config when %s is absent",
+		async (relativePath, { expect }) => {
+			const root = process.cwd();
+			await fsp.rename(
+				path.join(root, relativePath),
+				path.join(root, "old-output")
+			);
+
+			await expect(readBuildOutput(root)).rejects.toThrow(
+				/no root config found/
+			);
+		}
+	);
+
+	it.for([".cloudflare", ".cloudflare/output"])(
+		"reports a missing root config when %s is a file",
+		async (relativePath, { expect }) => {
+			const root = process.cwd();
+			const directoryPath = path.join(root, relativePath);
+			await fsp.rename(directoryPath, path.join(root, "old-output"));
+			await fsp.writeFile(directoryPath, "");
+
+			await expect(readBuildOutput(root)).rejects.toThrow(
+				/no root config found/
+			);
+		}
+	);
 
 	it("reads the default Worker, keeping the manifest", async ({ expect }) => {
 		const root = process.cwd();
