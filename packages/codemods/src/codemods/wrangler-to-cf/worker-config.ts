@@ -14,7 +14,6 @@ import {
 import { convertExports } from "./exports";
 import {
 	CONFIGURATION_DOCS_URL,
-	DURABLE_OBJECT_EXPORTS_DOCS_URL,
 	createFollowUp,
 	followUpToComment,
 } from "./follow-ups";
@@ -246,18 +245,6 @@ export function convertWorkerConfig(
 		}
 	}
 
-	if (Array.isArray(source.migrations) && source.migrations.length > 0) {
-		report(
-			createFollowUp(
-				"durable-object-migrations",
-				'Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example `exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }`.',
-				{
-					docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
-					sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}migrations`,
-				}
-			)
-		);
-	}
 	if (Array.isArray(source.containers) && source.containers.length > 0) {
 		report(
 			createFollowUp(
