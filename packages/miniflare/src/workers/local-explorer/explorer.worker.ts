@@ -55,6 +55,7 @@ import {
 } from "./resources/kv";
 import { clearTraces, runQuery } from "./resources/observability";
 import {
+	deleteR2Object,
 	deleteR2Objects,
 	getR2Object,
 	listR2Buckets,
@@ -345,6 +346,10 @@ app.put("/api/r2/buckets/:bucket_name/objects/:object_key", (c) =>
 		"content-type": c.req.header("content-type"),
 		"cf-r2-custom-metadata": c.req.header("cf-r2-custom-metadata"),
 	})
+);
+
+app.delete("/api/r2/buckets/:bucket_name/objects/:object_key{.+}", (c) =>
+	deleteR2Object(c, c.req.param("bucket_name"), c.req.param("object_key"))
 );
 
 app.delete(

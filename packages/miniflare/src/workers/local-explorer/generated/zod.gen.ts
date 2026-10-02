@@ -1179,6 +1179,28 @@ export const zR2BucketListObjectsResponse = zWorkersApiResponseCommon.and(
 	})
 );
 
+export const zR2BucketDeleteObjectData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		bucket_name: z.string(),
+		object_key: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete object response.
+ */
+export const zR2BucketDeleteObjectResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				key: z.string().optional(),
+			})
+			.optional(),
+	})
+);
+
 export const zR2BucketGetObjectData = z.object({
 	body: z.never().optional(),
 	path: z.object({
