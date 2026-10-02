@@ -709,6 +709,8 @@ export interface StartDevWorkerInput {
 		tunnel?: {
 			enabled: boolean;
 			name?: string;
+			/** Email addresses or domain patterns allowed to authenticate to a Quick Tunnel. */
+			allowedMail?: string[];
 		};
 	};
 	legacy?: {
