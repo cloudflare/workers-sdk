@@ -98,6 +98,49 @@ describe("Durable Object export inference", () => {
 		});
 	});
 
+	it("applies deletions before creations within one migration", ({
+		expect,
+	}) => {
+		const result = infer({
+			migrations: [
+				{ new_classes: ["Counter"], tag: "v1" },
+				{
+					deleted_classes: ["Counter"],
+					new_sqlite_classes: ["Counter"],
+					tag: "v2",
+				},
+			],
+		});
+
+		expect(result).toEqual({
+			exports: { Counter: { storage: "sqlite", type: "durable-object" } },
+			followUps: [],
+		});
+	});
+
+	it("applies renames before reusing the source name within one migration", ({
+		expect,
+	}) => {
+		const result = infer({
+			migrations: [
+				{ new_classes: ["Old"], tag: "v1" },
+				{
+					new_sqlite_classes: ["Old"],
+					renamed_classes: [{ from: "Old", to: "New" }],
+					tag: "v2",
+				},
+			],
+		});
+
+		expect(result).toEqual({
+			exports: {
+				New: { storage: "legacy-kv", type: "durable-object" },
+				Old: { storage: "sqlite", type: "durable-object" },
+			},
+			followUps: [],
+		});
+	});
+
 	it("preserves explicit exports without review TODOs", ({ expect }) => {
 		const exports = {
 			Counter: { storage: "sqlite", type: "durable-object" },
@@ -153,29 +196,119 @@ describe("Durable Object export inference", () => {
 		});
 	});
 
-	it("identifies the missing storage for transferred classes", ({ expect }) => {
-		const result = infer(
-			{
+	it.for(["Original", "Incoming"])(
+		"requires transfer review for source class %s",
+		(from, { expect }) => {
+			const result = infer(
+				{
+					migrations: [
+						{
+							tag: "v1",
+							transferred_classes: [
+								{ from, from_script: "source", to: "Incoming" },
+							],
+						},
+					],
+				},
+				"env.staging"
+			);
+
+			expect(result.followUps).toEqual([
+				expect.objectContaining({
+					blocking: true,
+					code: "durable-object-transfer",
+					sourcePath: "env.staging.migrations.0.transferred_classes.0",
+				}),
+			]);
+			const message = result.followUps[0]?.message;
+			expect(message).toContain(`\`${from}\``);
+			expect(message).toContain("`source`");
+			expect(message).toContain("`Incoming`");
+			expect(message).toContain("If completed");
+			expect(message).toContain("If pending");
+			expect(message).toContain("expecting-transfer");
+			expect(message).toContain("transferFrom");
+			expect(message).toContain("rename separately");
+			expect(result.exports.Incoming).toEqual({ type: "durable-object" });
+		}
+	);
+
+	it("preserves transfer provenance through later renames", ({ expect }) => {
+		const result = infer({
+			migrations: [
+				{
+					tag: "v1",
+					transferred_classes: [
+						{ from: "Original", from_script: "source", to: "Incoming" },
+					],
+				},
+				{ renamed_classes: [{ from: "Incoming", to: "Current" }], tag: "v2" },
+			],
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				code: "durable-object-transfer",
+				message: expect.stringContaining("`Current`"),
+				sourcePath: "migrations.0.transferred_classes.0",
+			}),
+		]);
+		expect(result.followUps[0]?.message).toContain("`Original`");
+		expect(result.followUps[0]?.message).toContain("`Incoming`");
+		expect(result.followUps[0]?.message).toContain("`source`");
+	});
+
+	it.for(["created", "expecting-transfer"] as const)(
+		"preserves an explicit %s declaration for a transferred class",
+		(state, { expect }) => {
+			const declared = {
+				state,
+				storage: "sqlite",
+				...(state === "expecting-transfer" && { transfer_from: "source" }),
+				type: "durable-object",
+			};
+			const result = infer({
+				exports: { Incoming: declared },
 				migrations: [
 					{
 						tag: "v1",
 						transferred_classes: [
-							{ from: "Original", from_script: "source", to: "Incoming" },
+							{ from: "Incoming", from_script: "source", to: "Incoming" },
 						],
 					},
 				],
-			},
-			"env.staging"
-		);
+			});
 
-		expect(result.followUps).toEqual([
-			expect.objectContaining({
-				blocking: true,
-				code: "durable-object-storage",
-				message: expect.stringContaining("`Incoming`"),
-				sourcePath: "env.staging.migrations.0.transferred_classes",
-			}),
-		]);
+			expect(result).toEqual({
+				exports: { Incoming: declared },
+				followUps: [],
+			});
+		}
+	);
+
+	it("clears transfer provenance when a class is deleted and recreated", ({
+		expect,
+	}) => {
+		const result = infer({
+			migrations: [
+				{
+					tag: "v1",
+					transferred_classes: [
+						{ from: "Original", from_script: "source", to: "Incoming" },
+					],
+				},
+				{
+					deleted_classes: ["Incoming"],
+					new_sqlite_classes: ["Incoming"],
+					tag: "v2",
+				},
+			],
+		});
+
+		expect(result).toEqual({
+			exports: { Incoming: { storage: "sqlite", type: "durable-object" } },
+			followUps: [],
+		});
 	});
 
 	it("identifies a rename whose creation migration is missing", ({
