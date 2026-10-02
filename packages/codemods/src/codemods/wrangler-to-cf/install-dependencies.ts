@@ -21,6 +21,8 @@ const VITE_PLUGIN_VERSION_PATTERN =
 	/^2\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 const VITE_PLUGIN_RANGE_PATTERN =
 	/^(?:(?:\^|~)?2(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?|>=2\.0\.0-0 <3\.0\.0-0|beta)$/;
+const MANAGED_VITE_PLUGIN_SPECIFIER =
+	/^(?:workspace:|file:|link:|portal:|catalog:)/;
 
 const PACKAGE_MANAGERS = [
 	NubPackageManager,
@@ -61,6 +63,11 @@ type CfDependencyInstallPlan =
 export type WranglerDependencyUpgradePlan =
 	| { action: "none" }
 	| { action: "manual"; workspaceDependency?: "incompatible" | "unverified" }
+	| { action: "install"; dependency: DependencyToInstall };
+
+export type VitePluginDependencyUpgradePlan =
+	| { action: "none" }
+	| { action: "manual"; managedDependency: "incompatible" | "unverified" }
 	| { action: "install"; dependency: DependencyToInstall };
 
 export interface DependencyToInstall {
@@ -306,7 +313,7 @@ function needsVitePluginUpgrade(
 	if (
 		!VITE_PLUGIN_RANGE_PATTERN.test(declaredVersion) &&
 		!(
-			/^(?:workspace:|file:|link:|portal:|catalog:)/.test(declaredVersion) &&
+			MANAGED_VITE_PLUGIN_SPECIFIER.test(declaredVersion) &&
 			compatibleInstalledVersion
 		)
 	) {
@@ -562,35 +569,54 @@ export async function planCfDependencyInstallation(
  *
  * @param projectDirectory Directory containing the migrated Worker.
  * @param bundler Bundler selected for the migrated project.
- * @returns The plugin dependency to install, if needed.
+ * @returns The required plugin dependency action.
  */
 export async function planVitePluginDependencyUpgrade(
 	projectDirectory: string,
 	bundler: MigrationBundler
-): Promise<DependencyToInstall | undefined> {
+): Promise<VitePluginDependencyUpgradePlan> {
 	if (bundler !== "vite") {
-		return undefined;
+		return { action: "none" };
 	}
 
 	const packageJsonPath = path.join(projectDirectory, "package.json");
 	if (!(await fileExists(packageJsonPath))) {
-		return undefined;
+		return { action: "none" };
 	}
 
 	let packageJson: PackageJson;
 	try {
 		packageJson = await readPackageJson(packageJsonPath);
 	} catch {
-		return undefined;
+		return { action: "none" };
 	}
 	if (!needsVitePluginUpgrade(packageJson, projectDirectory)) {
-		return undefined;
+		return { action: "none" };
+	}
+
+	const declaredVersion =
+		packageJson.dependencies?.[VITE_PLUGIN] ??
+		packageJson.devDependencies?.[VITE_PLUGIN];
+	if (
+		typeof declaredVersion === "string" &&
+		MANAGED_VITE_PLUGIN_SPECIFIER.test(declaredVersion)
+	) {
+		return {
+			action: "manual",
+			managedDependency:
+				getInstalledPackageVersion(VITE_PLUGIN, projectDirectory) === undefined
+					? "unverified"
+					: "incompatible",
+		};
 	}
 
 	return {
-		dev: packageJson.dependencies?.[VITE_PLUGIN] === undefined,
-		name: VITE_PLUGIN,
-		version: "beta",
+		action: "install",
+		dependency: {
+			dev: packageJson.dependencies?.[VITE_PLUGIN] === undefined,
+			name: VITE_PLUGIN,
+			version: "beta",
+		},
 	};
 }
 

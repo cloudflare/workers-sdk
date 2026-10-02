@@ -96,7 +96,7 @@ export async function migrateWranglerToCf(
 		secretFiles
 	);
 	const wranglerConfig = renderWranglerConfig(convertedConfig);
-	const [cfDepPlan, wranglerDepPlan, vitePluginDependency] = await Promise.all([
+	const [cfDepPlan, wranglerDepPlan, vitePluginDepPlan] = await Promise.all([
 		planCfDependencyInstallation(projectDirectory),
 		planWranglerDependencyUpgrade(projectDirectory, wranglerConfig !== null),
 		planVitePluginDependencyUpgrade(projectDirectory, bundler),
@@ -109,8 +109,8 @@ export async function migrateWranglerToCf(
 	if (cfDepPlan.action === "install") {
 		dependenciesToInstall.push({ dev: true, name: "cf", version: "latest" });
 	}
-	if (vitePluginDependency) {
-		dependenciesToInstall.push(vitePluginDependency);
+	if (vitePluginDepPlan.action === "install") {
+		dependenciesToInstall.push(vitePluginDepPlan.dependency);
 	}
 	if (wranglerDepPlan.action === "install") {
 		dependenciesToInstall.push(wranglerDepPlan.dependency);
@@ -151,7 +151,7 @@ export async function migrateWranglerToCf(
 		!installDependencies &&
 		(cfDepPlan.action === "install" ||
 			cfDepPlan.action === "unreadable-manifest" ||
-			vitePluginDependency !== undefined)
+			vitePluginDepPlan.action === "install")
 	) {
 		convertedConfig.followUps.push(
 			createFollowUp(
@@ -174,6 +174,18 @@ export async function migrateWranglerToCf(
 			createFollowUp(
 				"wrangler-upgrade-manual",
 				`The generated wrangler.config.ts requires Wrangler ${MINIMUM_WRANGLER_VERSION} or newer. ${instruction}`
+			)
+		);
+	}
+	if (vitePluginDepPlan.action === "manual") {
+		const instruction =
+			vitePluginDepPlan.managedDependency === "incompatible"
+				? "Update the project-managed plugin to a compatible v2 version and refresh its lockfile while preserving the dependency specifier."
+				: "Install dependencies and verify that the project-managed plugin resolves to v2. If needed, update it and refresh the lockfile while preserving the dependency specifier.";
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"vite-plugin-upgrade-manual",
+				`The Vite migration requires @cloudflare/vite-plugin v2. ${instruction}`
 			)
 		);
 	}
@@ -201,7 +213,7 @@ export async function migrateWranglerToCf(
 	let requiresInstall =
 		cfDepPlan.action !== "already-installed" ||
 		wranglerDepPlan.action !== "none" ||
-		vitePluginDependency !== undefined;
+		vitePluginDepPlan.action !== "none";
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
@@ -218,7 +230,9 @@ export async function migrateWranglerToCf(
 			);
 			changedFiles.push(...installResult.changedFiles);
 			requiresInstall =
-				installResult.requiresInstall || wranglerDepPlan.action === "manual";
+				installResult.requiresInstall ||
+				wranglerDepPlan.action === "manual" ||
+				vitePluginDepPlan.action === "manual";
 		} catch (error) {
 			if (dryRun) {
 				throw error;

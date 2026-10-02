@@ -330,6 +330,84 @@ describe("migrateWranglerToCf", () => {
 		}
 	);
 
+	it.for([
+		{ declaredVersion: "workspace:*", installedVersion: "1.60.2" },
+		{ declaredVersion: "workspace:*", installedVersion: undefined },
+		{ declaredVersion: "file:../vite-plugin", installedVersion: "1.60.2" },
+		{ declaredVersion: "link:../vite-plugin", installedVersion: "1.60.2" },
+		{ declaredVersion: "portal:../vite-plugin", installedVersion: "1.60.2" },
+		{ declaredVersion: "catalog:default", installedVersion: "1.60.2" },
+		{ declaredVersion: "catalog:default", installedVersion: undefined },
+	])(
+		"preserves a managed Vite plugin declared as $declaredVersion with installed version $installedVersion",
+		async ({ declaredVersion, installedVersion }, { expect }) => {
+			const packageJson = JSON.stringify({
+				devDependencies: {
+					"@cloudflare/vite-plugin": declaredVersion,
+					cf: "1.0.0-beta.5",
+				},
+			});
+			const cwd = await createProject({
+				...(installedVersion === undefined
+					? {}
+					: {
+							"node_modules/@cloudflare/vite-plugin/package.json":
+								JSON.stringify({
+									name: "@cloudflare/vite-plugin",
+									version: installedVersion,
+								}),
+						}),
+				"package.json": packageJson,
+				"wrangler.json": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					name: "example-worker",
+				}),
+			});
+
+			const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+			expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+			expect(result).toMatchObject({
+				changedFiles: ["cloudflare.config.ts"],
+				followUps: [{ blocking: true, code: "vite-plugin-upgrade-manual" }],
+				requiresInstall: true,
+				status: "needs-intervention",
+			});
+			expect(result.followUps[0].message).toContain(
+				installedVersion === undefined ? "verify" : "Update"
+			);
+			expect(await readFile(path.join(cwd, "package.json"), "utf8")).toBe(
+				packageJson
+			);
+		}
+	);
+
+	it("installs cf without replacing a managed Vite plugin", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { "@cloudflare/vite-plugin": "workspace:*" },
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
+			"npm",
+			["cf@latest"],
+			{ cwd, dev: true, isWorkspaceRoot: false }
+		);
+		expect(result.followUps).toMatchObject([
+			{ blocking: true, code: "vite-plugin-upgrade-manual" },
+		]);
+		expect(result.requiresInstall).toBe(true);
+	});
+
 	it("upgrades when the installed plugin contradicts a compatible manifest", async ({
 		expect,
 	}) => {
