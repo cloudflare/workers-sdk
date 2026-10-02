@@ -77,7 +77,8 @@ export function getDevContainerCleanup(
 			...server.config.inlineConfig,
 			[containerCleanupKey]: cleanup,
 		};
-		server.config = { ...server.config, inlineConfig };
+		// Vitest associates projects with servers by resolved config identity.
+		Object.assign(server.config, { inlineConfig });
 	}
 	attachContainerCleanup(server, cleanup);
 	return cleanup;
