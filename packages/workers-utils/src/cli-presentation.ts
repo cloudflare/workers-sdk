@@ -19,18 +19,25 @@ export type CliCommands = {
 	containerRegistryConfigure: string;
 };
 
+export type CliConfigFields = {
+	containerObservabilityTargetPercentage: string;
+	containerObservabilityTargetCount: string;
+};
+
 export type CliPresentation = {
 	cliName: string;
 	displayName: string;
 	/** A bare config-file label; callers should supply a determiner such as "your". */
 	displayConfigFileName: string;
 	commands: CliCommands;
+	configFields: CliConfigFields;
 };
 
 export type CliPresentationOverrides = Partial<
-	Omit<CliPresentation, "commands">
+	Omit<CliPresentation, "commands" | "configFields">
 > & {
 	commands?: Partial<CliCommands>;
+	configFields?: Partial<CliConfigFields>;
 };
 
 const WRANGLER_COMMANDS: CliCommands = {
@@ -48,17 +55,27 @@ const WRANGLER_COMMANDS: CliCommands = {
 	containerRegistryConfigure: "wrangler containers registries configure",
 };
 
+const WRANGLER_CONFIG_FIELDS: CliConfigFields = {
+	containerObservabilityTargetPercentage: "target_instance_percentage",
+	containerObservabilityTargetCount: "target_instance_count",
+};
+
 export const WRANGLER_CLI_PRESENTATION: CliPresentation = {
 	cliName: "wrangler",
 	displayName: "Wrangler",
 	displayConfigFileName: "Wrangler config file",
 	commands: WRANGLER_COMMANDS,
+	configFields: WRANGLER_CONFIG_FIELDS,
 };
 
 export const CF_CLI_PRESENTATION: CliPresentationOverrides = {
 	cliName: "cf",
 	displayName: "cf",
 	displayConfigFileName: "cloudflare.config.ts",
+	configFields: {
+		containerObservabilityTargetPercentage: "targetInstancePercentage",
+		containerObservabilityTargetCount: "targetInstanceCount",
+	},
 	commands: {
 		deploy: "cf deploy",
 		preview: "cf previews deploy",
@@ -96,6 +113,10 @@ export function resolveCliPresentation(
 		commands: {
 			...WRANGLER_COMMANDS,
 			...overrides?.commands,
+		},
+		configFields: {
+			...WRANGLER_CONFIG_FIELDS,
+			...overrides?.configFields,
 		},
 	};
 }
