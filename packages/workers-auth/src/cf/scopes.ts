@@ -482,6 +482,8 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 	"zone-disable-esc.write",
 	"zone-dns-settings.read",
 	"zone-dns-settings.write",
+	"zone-observability.read",
+	"zone-observability.write",
 	"zone-security-center-insights.read",
 	"zone-security-center-insights.write",
 	"zone-settings.read",
