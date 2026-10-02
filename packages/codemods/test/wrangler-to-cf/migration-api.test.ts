@@ -75,6 +75,100 @@ afterEach(async () => {
 });
 
 describe("migrateWranglerToCf", () => {
+	it.for(["vite", "wrangler"] as const)(
+		"migrates Durable Object history without manual intervention with %s",
+		async (bundler, { expect }) => {
+			const cwd = await createProject({
+				"node_modules/wrangler/package.json": JSON.stringify({
+					name: "wrangler",
+					version: "4.100.0",
+				}),
+				"package.json": JSON.stringify({ devDependencies: { cf: "1.0.0" } }),
+				"wrangler.jsonc": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					durable_objects: {
+						bindings: [{ class_name: "Counter", name: "COUNTER" }],
+					},
+					main: "src/index.ts",
+					migrations: [
+						{
+							new_classes: ["LegacyCounter"],
+							new_sqlite_classes: ["OldCounter"],
+							tag: "v1",
+						},
+						{
+							deleted_classes: ["LegacyCounter"],
+							renamed_classes: [{ from: "OldCounter", to: "Counter" }],
+							tag: "v2",
+						},
+					],
+					name: "counter-worker",
+				}),
+			});
+
+			const result = await migrateWranglerToCf(
+				path.join(cwd, "wrangler.jsonc"),
+				{
+					bundler,
+				}
+			);
+			const output = await readFile(
+				path.join(cwd, "cloudflare.config.ts"),
+				"utf8"
+			);
+
+			expect(result.status).toBe("complete");
+			expect(result.followUps).toEqual([]);
+			expect(output).toContain("COUNTER: bindings.durableObject({");
+			expect(output).toContain("Counter: exports.durableObject({");
+			expect(output).toContain('storage: "sqlite"');
+			expect(output).toContain('renamedTo: "Counter"');
+			expect(output).toContain('state: "deleted"');
+			expect(output).not.toContain("Migration incomplete");
+			expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		}
+	);
+
+	it("keeps transferred Durable Objects blocked until their storage is specified", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({ devDependencies: { cf: "1.0.0" } }),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				migrations: [
+					{
+						tag: "v1",
+						transferred_classes: [
+							{
+								from: "Original",
+								from_script: "source-worker",
+								to: "Incoming",
+							},
+						],
+					},
+				],
+				name: "worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+		const output = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+
+		expect(result.status).toBe("needs-intervention");
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				code: "durable-object-storage",
+				sourcePath: "migrations.0.transferred_classes",
+			}),
+		]);
+		expect(output).toContain("Migration incomplete");
+		expect(output).toContain("`Incoming`");
+	});
+
 	it("rejects unsupported bundlers", async ({ expect }) => {
 		await expect(
 			migrateWranglerToCf("wrangler.json", {
