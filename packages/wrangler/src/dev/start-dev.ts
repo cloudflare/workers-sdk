@@ -280,6 +280,9 @@ async function setupDevEnv(
 				tunnel: {
 					enabled: args.tunnel ?? false,
 					name: args.tunnelName,
+					allowedMail: args.tunnelAllowedMail?.length
+						? args.tunnelAllowedMail
+						: undefined,
 				},
 			},
 			legacy: {
