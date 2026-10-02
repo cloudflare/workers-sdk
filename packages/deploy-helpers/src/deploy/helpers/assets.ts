@@ -35,6 +35,7 @@ import type {
 	AssetsOptions,
 	ComplianceConfig,
 	Config,
+	Logger,
 } from "@cloudflare/workers-utils";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
@@ -69,25 +70,52 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
 const MAX_DIFF_LINES = 100;
 
+/**
+ * The logger methods asset uploads report their progress through.
+ */
+type ProgressLogger = Pick<Logger, "info" | "log">;
+
+/**
+ * Choose where asset upload progress goes.
+ *
+ * @param quiet Whether stdout has to stay machine readable, as it does for
+ * `--json` output. Progress then moves to debug level, so it is still
+ * available with `WRANGLER_LOG=debug`.
+ * @returns The logger methods to report progress through.
+ */
+function progressLogger(quiet: boolean): ProgressLogger {
+	if (!quiet) {
+		return logger;
+	}
+	return {
+		info: (...args: unknown[]) => logger.debug(...args),
+		log: (...args: unknown[]) => logger.debug(...args),
+	};
+}
+
 export const syncAssets = async (
 	complianceConfig: ComplianceConfig,
 	accountId: string | undefined,
 	assetDirectory: string,
 	scriptName: string,
-	dispatchNamespace?: string
+	{
+		dispatchNamespace,
+		quiet = false,
+	}: { dispatchNamespace?: string; quiet?: boolean } = {}
 ): Promise<AssetsUploadResult> => {
 	assert(accountId, "Missing accountId");
+	const progress = progressLogger(quiet);
 
 	// 1. generate asset manifest
-	logger.info("🌀 Building list of assets...");
-	const manifest = await buildAssetManifest(assetDirectory);
+	progress.info("🌀 Building list of assets...");
+	const manifest = await buildAssetManifest(assetDirectory, progress);
 
 	const url = dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${dispatchNamespace}/scripts/${scriptName}/assets-upload-session`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`;
 
 	// 2. fetch buckets w/ hashes
-	logger.info("🌀 Starting asset upload...");
+	progress.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse =
 		await fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
 			headers: { "Content-Type": "application/json" },
@@ -119,7 +147,7 @@ export const syncAssets = async (
 				{ code: 1, telemetryMessage: "assets upload missing completion token" }
 			);
 		}
-		logger.info(
+		progress.info(
 			`No updated asset files to upload. Proceeding with deployment...`
 		);
 		return {
@@ -135,7 +163,7 @@ export const syncAssets = async (
 
 	// 3. fill buckets and upload assets
 	const numberFilesToUpload = filesToUpload.length;
-	logger.info(
+	progress.info(
 		`🌀 Found ${numberFilesToUpload} new or modified static asset${
 			numberFilesToUpload > 1 ? "s" : ""
 		} to upload. Proceeding with upload...`
@@ -162,7 +190,11 @@ export const syncAssets = async (
 			}
 			// just logging file uploads at the moment...
 			// unsure how to log deletion vs unchanged file ignored/if we want to log this
-			assetLogCount = logAssetUpload(`+ ${manifestEntry[0]}`, assetLogCount);
+			assetLogCount = logAssetUpload(
+				`+ ${manifestEntry[0]}`,
+				assetLogCount,
+				progress
+			);
 			return manifestEntry;
 		});
 	});
@@ -267,12 +299,13 @@ export const syncAssets = async (
 				logAssetsUploadStatus(
 					numberFilesToUpload,
 					uploadedAssetsCount,
-					uploadedFiles
+					uploadedFiles,
+					progress
 				);
 				return res;
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					logger.info(
+					progress.info(
 						chalk.dim(
 							`Asset upload failed. Retrying... ${attempts + 1} of ${MAX_UPLOAD_ATTEMPTS} attempts.\n`
 						)
@@ -345,7 +378,7 @@ export const syncAssets = async (
 	const skipped = Object.keys(manifest).length - numberFilesToUpload;
 	const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
 
-	logger.log(
+	progress.log(
 		`✨ Success! Uploaded ${numberFilesToUpload} file${
 			numberFilesToUpload > 1 ? "s" : ""
 		} ${skippedMessage}${formatTime(uploadMs)}\n`
@@ -379,9 +412,12 @@ export function getEdgeKvUploadConcurrency(jwt: string): number {
 	}
 }
 
-export const buildAssetManifest = async (dir: string) => {
+export const buildAssetManifest = async (
+	dir: string,
+	progress: ProgressLogger = logger
+) => {
 	const files = await readdir(dir, { recursive: true });
-	logReadFilesFromDirectory(dir, files);
+	logReadFilesFromDirectory(dir, files, progress);
 
 	const manifest: AssetManifest = {};
 
@@ -435,7 +471,11 @@ export const buildAssetManifest = async (dir: string) => {
 	return manifest;
 };
 
-function logAssetUpload(line: string, diffCount: number) {
+function logAssetUpload(
+	line: string,
+	diffCount: number,
+	progress: ProgressLogger
+) {
 	const level = logger.loggerLevel ?? "log";
 	if (LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug) {
 		// If we're logging as debug level, we want *all* diff lines to be logged
@@ -443,12 +483,12 @@ function logAssetUpload(line: string, diffCount: number) {
 		logger.debug(line);
 	} else if (diffCount < MAX_DIFF_LINES) {
 		// Otherwise, log  the first MAX_DIFF_LINES diffs at info level...
-		logger.info(line);
+		progress.info(line);
 	} else if (diffCount === MAX_DIFF_LINES) {
 		// ...and warn when we start to truncate it
 		const msg =
 			"   (truncating changed assets log, set `WRANGLER_LOG=debug` environment variable to see full diff)";
-		logger.info(chalk.dim(msg));
+		progress.info(chalk.dim(msg));
 	}
 	return ++diffCount;
 }
@@ -460,9 +500,10 @@ function logAssetUpload(line: string, diffCount: number) {
 function logAssetsUploadStatus(
 	numberFilesToUpload: number,
 	uploadedAssetsCount: number,
-	uploadedAssetFiles: string[]
+	uploadedAssetFiles: string[],
+	progress: ProgressLogger
 ) {
-	logger.info(
+	progress.info(
 		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} asset${
 			numberFilesToUpload === 1 ? "" : "s"
 		}`
@@ -475,8 +516,12 @@ function logAssetsUploadStatus(
  * files from directory <dir>"), and the list of read files if in
  * debug log level.
  */
-function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
-	logger.info(
+function logReadFilesFromDirectory(
+	directory: string,
+	assetFiles: string[],
+	progress: ProgressLogger
+) {
+	progress.info(
 		`✨ Read ${assetFiles.length} file${
 			assetFiles.length === 1 ? "" : "s"
 		} from the assets directory ${directory}`
