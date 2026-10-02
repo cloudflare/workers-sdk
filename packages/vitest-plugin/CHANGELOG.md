@@ -1,5 +1,13 @@
 # @cloudflare/vitest-plugin
 
+## 1.3.6
+
+### Patch Changes
+
+- Updated dependencies [[`7f700ef`](https://github.com/cloudflare/workers-sdk/commit/7f700ef52c47127c67f20137a03c051d26a0c8e5), [`90e6a1b`](https://github.com/cloudflare/workers-sdk/commit/90e6a1be8c67c0687a6a0ce51c9d101c9ad363e0), [`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4), [`6a4b0fe`](https://github.com/cloudflare/workers-sdk/commit/6a4b0fefa20ef2ffc52acdcf1cb194210d1b4c4b)]:
+  - wrangler@4.147.0
+  - miniflare@5.20261001.0-alpha
+
 ## 1.3.5
 
 ### Patch Changes
