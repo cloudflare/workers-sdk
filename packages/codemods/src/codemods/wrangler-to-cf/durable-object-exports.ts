@@ -2,11 +2,17 @@ import {
 	getRecord,
 	getRecords,
 	getStrings,
+	hasOwn,
 	isRecord,
 	type UnknownRecord,
 } from "./converter-helpers";
 import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp } from "./types";
+
+interface MigrationLocation {
+	sourcePath: string;
+	transfer?: UnknownRecord;
+}
 
 /**
  * Replays Wrangler migration history into declarative Durable Object exports.
@@ -28,7 +34,7 @@ export function inferDurableObjectExports(
 	const configured = getRecord(source, "exports") ?? {};
 	const exports = { ...Object.fromEntries(inferred), ...configured };
 
-	reportMissingStorage(exports, configured, locations, prefix, report);
+	reportUnresolvedExports(exports, configured, locations, prefix, report);
 	reportMissingLocalExports(source, exports, prefix, report);
 
 	return exports;
@@ -36,13 +42,13 @@ export function inferDurableObjectExports(
 
 function replayDurableObjectMigrations(source: UnknownRecord, prefix: string) {
 	const inferred = new Map<string, UnknownRecord>();
-	const locations = new Map<string, string>();
+	const locations = new Map<string, MigrationLocation>();
 	for (const [index, migration] of getRecords(source, "migrations").entries()) {
 		const sourcePath = `${prefix}migrations.${index}`;
-		applyCreatedClasses(migration, sourcePath, inferred, locations);
-		applyRenamedClasses(migration, sourcePath, inferred, locations);
-		applyTransferredClasses(migration, sourcePath, inferred, locations);
 		applyDeletedClasses(migration, inferred);
+		applyRenamedClasses(migration, sourcePath, inferred, locations);
+		applyCreatedClasses(migration, sourcePath, inferred, locations);
+		applyTransferredClasses(migration, sourcePath, inferred, locations);
 	}
 	return { inferred, locations };
 }
@@ -51,7 +57,7 @@ function applyCreatedClasses(
 	migration: UnknownRecord,
 	sourcePath: string,
 	inferred: Map<string, UnknownRecord>,
-	locations: Map<string, string>
+	locations: Map<string, MigrationLocation>
 ): void {
 	for (const [field, storage] of [
 		["new_classes", "legacy-kv"],
@@ -59,7 +65,7 @@ function applyCreatedClasses(
 	] as const) {
 		for (const name of getStrings(migration, field)) {
 			inferred.set(name, { storage, type: "durable-object" });
-			locations.set(name, `${sourcePath}.${field}`);
+			locations.set(name, { sourcePath: `${sourcePath}.${field}` });
 		}
 	}
 }
@@ -68,13 +74,14 @@ function applyRenamedClasses(
 	migration: UnknownRecord,
 	sourcePath: string,
 	inferred: Map<string, UnknownRecord>,
-	locations: Map<string, string>
+	locations: Map<string, MigrationLocation>
 ): void {
 	for (const rename of getRecords(migration, "renamed_classes")) {
 		if (typeof rename.from !== "string" || typeof rename.to !== "string") {
 			continue;
 		}
 		const previous = inferred.get(rename.from);
+		const location = locations.get(rename.from);
 		// Rename tombstones must point directly to a live class, even after
 		// multiple renames of the same namespace.
 		for (const value of inferred.values()) {
@@ -91,7 +98,12 @@ function applyRenamedClasses(
 			storage: previous?.storage,
 			type: "durable-object",
 		});
-		locations.set(rename.to, `${sourcePath}.renamed_classes`);
+		locations.set(
+			rename.to,
+			location?.transfer
+				? location
+				: { sourcePath: `${sourcePath}.renamed_classes` }
+		);
 	}
 }
 
@@ -99,14 +111,20 @@ function applyTransferredClasses(
 	migration: UnknownRecord,
 	sourcePath: string,
 	inferred: Map<string, UnknownRecord>,
-	locations: Map<string, string>
+	locations: Map<string, MigrationLocation>
 ): void {
-	for (const transfer of getRecords(migration, "transferred_classes")) {
+	for (const [index, transfer] of getRecords(
+		migration,
+		"transferred_classes"
+	).entries()) {
 		if (typeof transfer.to !== "string") {
 			continue;
 		}
 		inferred.set(transfer.to, { type: "durable-object" });
-		locations.set(transfer.to, `${sourcePath}.transferred_classes`);
+		locations.set(transfer.to, {
+			sourcePath: `${sourcePath}.transferred_classes.${index}`,
+			transfer,
+		});
 	}
 }
 
@@ -125,10 +143,10 @@ function applyDeletedClasses(
 	}
 }
 
-function reportMissingStorage(
+function reportUnresolvedExports(
 	exports: UnknownRecord,
 	configured: UnknownRecord,
-	locations: Map<string, string>,
+	locations: Map<string, MigrationLocation>,
 	prefix: string,
 	report: (followUp: MigrationFollowUp) => void
 ): void {
@@ -138,25 +156,55 @@ function reportMissingStorage(
 			value.type !== "durable-object" ||
 			(value.state !== undefined &&
 				value.state !== "created" &&
-				value.state !== "expecting-transfer") ||
-			value.storage === "sqlite" ||
-			value.storage === "legacy-kv"
+				value.state !== "expecting-transfer")
 		) {
+			continue;
+		}
+		const location = locations.get(name);
+		if (location?.transfer && !hasOwn(configured, name)) {
+			reportUnresolvedTransfer(
+				name,
+				location.transfer,
+				location.sourcePath,
+				report
+			);
+			continue;
+		}
+		if (value.storage === "sqlite" || value.storage === "legacy-kv") {
 			continue;
 		}
 		report(
 			createFollowUp(
 				"durable-object-storage",
-				`The storage backend for Durable Object \`${name}\` is missing or unsupported. Set \`storage\` to \`"sqlite"\` or \`"legacy-kv"\` in its export. Transfers do not record storage; renames require the original class's creation migration.`,
+				`The storage backend for Durable Object \`${name}\` is missing or unsupported. Set \`storage\` to \`"sqlite"\` or \`"legacy-kv"\` in its export. Renames require the original class's creation migration.`,
 				{
 					docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
 					sourcePath: isRecord(configured[name])
 						? `${prefix}exports.${name}`
-						: locations.get(name),
+						: location?.sourcePath,
 				}
 			)
 		);
 	}
+}
+
+function reportUnresolvedTransfer(
+	name: string,
+	transfer: UnknownRecord,
+	sourcePath: string,
+	report: (followUp: MigrationFollowUp) => void
+): void {
+	report(
+		createFollowUp(
+			"durable-object-transfer",
+			`The migration transfers Durable Object \`${String(transfer.from)}\` from Worker \`${String(transfer.from_script)}\` to \`${String(transfer.to)}\` (current class: \`${name}\`). Whether it has been deployed cannot be determined from this config. If completed, keep a live export for \`${name}\` with its existing storage backend. If pending, coordinate a two-phase transfer with the source Worker using \`state: "expecting-transfer"\`, \`transferFrom: ${JSON.stringify(transfer.from_script)}\`, and matching storage. The transfer requires matching class names; perform any rename separately. Setting storage alone does not complete a pending transfer.`,
+			{
+				docsUrl:
+					"https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/#transfer-a-durable-object-class-between-workers",
+				sourcePath,
+			}
+		)
+	);
 }
 
 function reportMissingLocalExports(

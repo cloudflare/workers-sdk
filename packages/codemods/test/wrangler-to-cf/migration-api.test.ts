@@ -125,7 +125,7 @@ describe("migrateWranglerToCf", () => {
 		}
 	);
 
-	it("keeps transferred Durable Objects blocked until their storage is specified", async ({
+	it("keeps transferred Durable Objects blocked until their transfer status is reviewed", async ({
 		expect,
 	}) => {
 		const cwd = await createProject({
@@ -157,12 +157,17 @@ describe("migrateWranglerToCf", () => {
 		expect(result.status).toBe("needs-intervention");
 		expect(result.followUps).toEqual([
 			expect.objectContaining({
-				code: "durable-object-storage",
-				sourcePath: "migrations.0.transferred_classes",
+				code: "durable-object-transfer",
+				sourcePath: "migrations.0.transferred_classes.0",
 			}),
 		]);
 		expect(output).toContain("Migration incomplete");
 		expect(output).toContain("`Incoming`");
+		expect(output).toContain("`Original`");
+		expect(output).toContain("`source-worker`");
+		expect(output).toContain("If completed");
+		expect(output).toContain("If pending");
+		expect(output).toContain("transferFrom");
 	});
 
 	it("rejects unsupported bundlers", async ({ expect }) => {
