@@ -287,13 +287,6 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
     },
     {
       "blocking": true,
-      "code": "durable-object-review",
-      "docsUrl": "https://developers.cloudflare.com/workers/runtime-apis/context/#exports",
-      "message": "Durable Object bindings require manual review after migration.",
-      "sourcePath": "durable_objects.bindings.0",
-    },
-    {
-      "blocking": true,
       "code": "workflow-missing-class",
       "docsUrl": undefined,
       "message": "The Workflow binding at \`workflows.0\` has no \`class_name\` and was not migrated.",

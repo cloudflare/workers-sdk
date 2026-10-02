@@ -479,6 +479,12 @@ export function convertBindings(
 
 	const durableObjects = getRecord(source, "durable_objects");
 	if (durableObjects) {
+		reportUnsupportedOptions(
+			durableObjects,
+			["code_update_strategy"],
+			pathFor("durable_objects"),
+			report
+		);
 		for (const [index, entry] of getRecords(
 			durableObjects,
 			"bindings"
@@ -515,16 +521,18 @@ export function convertBindings(
 				sourcePath,
 				report
 			);
-			report(
-				createFollowUp(
-					"durable-object-review",
-					"Durable Object bindings require manual review after migration.",
-					{
-						docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
-						sourcePath,
-					}
-				)
-			);
+			if (
+				typeof entry.class_name !== "string" ||
+				entry.class_name.length === 0
+			) {
+				report(
+					createFollowUp(
+						"durable-object-missing-class",
+						`The Durable Object binding at \`${sourcePath}\` has no \`class_name\`. Set it to the class exported by the Worker.`,
+						{ docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL, sourcePath }
+					)
+				);
+			}
 		}
 	}
 
