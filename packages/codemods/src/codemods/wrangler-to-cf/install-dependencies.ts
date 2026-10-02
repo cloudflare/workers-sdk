@@ -8,7 +8,9 @@ import {
 	PnpmPackageManager,
 	YarnPackageManager,
 } from "@cloudflare/workers-utils";
+import { glob } from "tinyglobby";
 import { fileExists } from "../../files";
+import { getWranglerUpgradeSpec, isVersionSupported } from "./wrangler-version";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 const PACKAGE_MANAGERS = [
@@ -26,7 +28,9 @@ const NPM_LOCK_FILES = [
 interface PackageJson {
 	dependencies?: Record<string, unknown>;
 	devDependencies?: Record<string, unknown>;
+	name?: unknown;
 	packageManager?: unknown;
+	version?: unknown;
 	workspaces?: unknown;
 }
 
@@ -43,15 +47,40 @@ type CfDependencyInstallPlan =
 	  }
 	| {
 			action: "install";
-			isWorkspaceRoot: boolean;
-			packageDirectory: string;
 	  };
 
-interface CfDependencyInstallOptions {
+export type WranglerDependencyUpgradePlan =
+	| { action: "none" }
+	| { action: "manual"; workspaceDependency?: "incompatible" | "unverified" }
+	| { action: "install"; dependency: DependencyToInstall };
+
+export interface DependencyToInstall {
+	dev: boolean;
+	name: string;
+	version: string;
+}
+
+/** Retains changed package files when a later dependency installation fails. */
+export class DependencyInstallError extends Error {
+	constructor(
+		readonly changedFiles: string[],
+		readonly pendingDependencies: DependencyToInstall[],
+		cause: unknown
+	) {
+		super(
+			cause instanceof Error ? cause.message : "Package installation failed.",
+			{
+				cause,
+			}
+		);
+	}
+}
+
+interface DependencyInstallOptions {
 	dryRun: boolean;
 }
 
-interface CfDependencyInstallResult {
+interface DependencyInstallResult {
 	changedFiles: string[];
 	requiresInstall: boolean;
 }
@@ -69,6 +98,157 @@ interface DetectedPackageManager {
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
+}
+
+function getPackageJsonWorkspacePatterns(
+	workspaces: unknown
+): string[] | undefined {
+	const patterns: unknown = Array.isArray(workspaces)
+		? workspaces
+		: typeof workspaces === "object" &&
+			  workspaces !== null &&
+			  "packages" in workspaces
+			? workspaces.packages
+			: undefined;
+	return Array.isArray(patterns) &&
+		patterns.every((pattern: unknown) => typeof pattern === "string")
+		? (patterns as string[])
+		: undefined;
+}
+
+function getPnpmWorkspacePatterns(contents: string): string[] | undefined {
+	const patterns: string[] = [];
+	let inPackages = false;
+	for (const line of contents.split(/\r?\n/)) {
+		if (!inPackages) {
+			inPackages = /^packages:\s*(?:#.*)?$/.test(line);
+			continue;
+		}
+		if (/^\S/.test(line)) {
+			break;
+		}
+		if (line.trim() === "" || line.trim().startsWith("#")) {
+			continue;
+		}
+		// Accept quoted or bare globs with an optional comment; leave other YAML forms unverified.
+		const match = /^\s+-\s+(?:"([^"]+)"|'([^']+)'|([^#\s]+))\s*(?:#.*)?$/.exec(
+			line
+		);
+		if (!match) {
+			return undefined;
+		}
+		const [, doubleQuotedGlob, singleQuotedGlob, bareGlob] = match;
+		patterns.push(doubleQuotedGlob ?? singleQuotedGlob ?? bareGlob);
+	}
+	return patterns.length > 0 ? patterns : undefined;
+}
+
+async function findWorkspaceWranglerVersion(
+	projectDirectory: string
+): Promise<string | undefined> {
+	let directory = projectDirectory;
+	while (true) {
+		try {
+			const pnpmWorkspacePath = path.join(directory, "pnpm-workspace.yaml");
+			const packageJsonPath = path.join(directory, "package.json");
+			let patterns: string[] | undefined;
+			if (await fileExists(pnpmWorkspacePath)) {
+				patterns = getPnpmWorkspacePatterns(
+					await readFile(pnpmWorkspacePath, "utf8")
+				);
+				if (!patterns) {
+					return undefined;
+				}
+			} else if (await fileExists(packageJsonPath)) {
+				const { workspaces } = await readPackageJson(packageJsonPath);
+				if (workspaces !== undefined) {
+					patterns = getPackageJsonWorkspacePatterns(workspaces);
+					if (!patterns) {
+						return undefined;
+					}
+				}
+			}
+			if (patterns) {
+				const safePatterns = patterns.every((pattern) => {
+					const directoryPattern = pattern.replace(/^!/, "");
+					return (
+						!path.isAbsolute(directoryPattern) &&
+						!directoryPattern.split(/[\\/]/).includes("..")
+					);
+				});
+				if (!safePatterns) {
+					return undefined;
+				}
+				const packageJsonPaths = await glob(
+					patterns.map((pattern) => `${pattern}/package.json`),
+					{
+						absolute: true,
+						cwd: directory,
+						dot: true,
+						ignore: ["**/.git/**", "**/node_modules/**"],
+						onlyFiles: true,
+					}
+				);
+				if (
+					projectDirectory !== directory &&
+					!packageJsonPaths.some(
+						(workspacePackageJsonPath) =>
+							path.resolve(workspacePackageJsonPath) ===
+							path.resolve(projectDirectory, "package.json")
+					)
+				) {
+					return undefined;
+				}
+				const workspacePackages = await Promise.all(
+					packageJsonPaths.map(async (workspacePackageJsonPath) => {
+						try {
+							return await readPackageJson(workspacePackageJsonPath);
+						} catch {
+							return undefined;
+						}
+					})
+				);
+				const wranglerVersions = workspacePackages.flatMap((packageJson) =>
+					packageJson?.name === "wrangler" &&
+					typeof packageJson.version === "string"
+						? [packageJson.version]
+						: []
+				);
+				return wranglerVersions.length === 1 ? wranglerVersions[0] : undefined;
+			}
+		} catch {
+			return undefined;
+		}
+
+		const parentDirectory = path.dirname(directory);
+		if (parentDirectory === directory) {
+			return undefined;
+		}
+		directory = parentDirectory;
+	}
+}
+
+async function getDirectlyInstalledWranglerVersion(
+	projectDirectory: string
+): Promise<string | undefined> {
+	const packageJsonPath = path.join(
+		projectDirectory,
+		"node_modules",
+		"wrangler",
+		"package.json"
+	);
+	try {
+		if (!(await fileExists(packageJsonPath))) {
+			return undefined;
+		}
+		const packageJson = await readPackageJson(packageJsonPath);
+		return packageJson.name === "wrangler" &&
+			typeof packageJson.version === "string"
+			? packageJson.version
+			: undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 function hasCfDependency(packageJson: PackageJson): boolean {
@@ -317,37 +497,106 @@ export async function planCfDependencyInstallation(
 	if (hasCfDependency(packageJson)) {
 		return { action: "already-installed" };
 	}
-	const isWorkspaceRoot =
-		packageJson.workspaces !== undefined ||
-		(await fileExists(path.join(packageDirectory, "pnpm-workspace.yaml")));
+	return { action: "install" };
+}
+
+/**
+ * Plans a Wrangler upgrade only when migration generates Wrangler tooling.
+ * Preserves existing workspace links and dependency placement.
+ *
+ * @param projectDirectory Directory containing the migrated Worker.
+ * @param requiresWrangler Whether migration generates wrangler.config.ts.
+ * @returns The dependency action without modifying the manifest or lockfile.
+ */
+export async function planWranglerDependencyUpgrade(
+	projectDirectory: string,
+	requiresWrangler: boolean
+): Promise<WranglerDependencyUpgradePlan> {
+	if (!requiresWrangler) {
+		return { action: "none" };
+	}
+
+	const packageJsonPath = path.join(projectDirectory, "package.json");
+	if (!(await fileExists(packageJsonPath))) {
+		return { action: "manual" };
+	}
+
+	let packageJson: PackageJson;
+	try {
+		packageJson = await readPackageJson(packageJsonPath);
+	} catch {
+		return { action: "manual" };
+	}
+
+	const dependency = packageJson.dependencies?.wrangler;
+	const devDependency = packageJson.devDependencies?.wrangler;
+	const declaredVersion = dependency ?? devDependency;
+	if (
+		typeof declaredVersion === "string" &&
+		declaredVersion.startsWith("workspace:")
+	) {
+		const workspaceVersion =
+			(await findWorkspaceWranglerVersion(projectDirectory)) ??
+			(await getDirectlyInstalledWranglerVersion(projectDirectory));
+		return workspaceVersion !== undefined &&
+			isVersionSupported(workspaceVersion)
+			? { action: "none" }
+			: {
+					action: "manual",
+					workspaceDependency:
+						workspaceVersion === undefined ? "unverified" : "incompatible",
+				};
+	}
+
+	const upgradeSpec =
+		typeof declaredVersion === "string"
+			? getWranglerUpgradeSpec(projectDirectory, declaredVersion)
+			: "latest";
+	if (upgradeSpec === undefined) {
+		return { action: "none" };
+	}
 
 	return {
 		action: "install",
-		isWorkspaceRoot,
-		packageDirectory,
+		dependency: {
+			dev: dependency === undefined,
+			name: "wrangler",
+			version: upgradeSpec,
+		},
 	};
 }
 
 /**
- * Installs cf using a dependency installation plan.
+ * Installs planned project dependencies with the detected package manager.
  *
- * @param plan Planned package manager invocation for the migrated project.
+ * @param packageDirectory Directory containing the project's package.json.
+ * @param dependencies Packages to install in their dependency sections.
  * @param options Whether to report planned changes without installing.
  *
  * @returns Package files changed or expected to change during installation.
  */
-export async function installCfDependency(
-	plan: Extract<CfDependencyInstallPlan, { action: "install" }>,
-	options: CfDependencyInstallOptions
-): Promise<CfDependencyInstallResult> {
-	const { isWorkspaceRoot, packageDirectory } = plan;
+export async function installProjectDependencies(
+	packageDirectory: string,
+	dependencies: DependencyToInstall[],
+	options: DependencyInstallOptions
+): Promise<DependencyInstallResult> {
+	const packageJson = await readPackageJson(
+		path.join(packageDirectory, "package.json")
+	);
+	const isWorkspaceRoot =
+		packageJson.workspaces !== undefined ||
+		(await fileExists(path.join(packageDirectory, "pnpm-workspace.yaml")));
 	const {
 		directory: lockFileDirectory,
 		packageManager,
-		version,
+		version: packageManagerVersion,
 	} = await detectPackageManager(packageDirectory);
 	const lockFilePaths = options.dryRun
-		? await getPlannedLockFiles(lockFileDirectory, packageManager, version)
+		? await getPlannedLockFiles(
+				lockFileDirectory,
+				packageManager,
+				packageManagerVersion
+			)
 		: getLockFiles(packageManager).map((lockFile) =>
 				path.join(lockFileDirectory, lockFile)
 			);
@@ -364,11 +613,28 @@ export async function installCfDependency(
 
 	const before = await readFiles(packageFilePaths);
 
-	await installPackages(packageManager.type, ["cf@latest"], {
-		cwd: packageDirectory,
-		dev: true,
-		isWorkspaceRoot,
-	});
+	for (const dev of [true, false]) {
+		const packages = dependencies
+			.filter((dependency) => dependency.dev === dev)
+			.map(({ name, version }) => `${name}@${version}`);
+		if (packages.length > 0) {
+			try {
+				await installPackages(packageManager.type, packages, {
+					cwd: packageDirectory,
+					dev,
+					isWorkspaceRoot,
+				});
+			} catch (error) {
+				throw new DependencyInstallError(
+					getChangedFiles(before, await readFiles(packageFilePaths)),
+					dev
+						? dependencies
+						: dependencies.filter((dependency) => !dependency.dev),
+					error
+				);
+			}
+		}
+	}
 
 	return {
 		changedFiles: getChangedFiles(before, await readFiles(packageFilePaths)),

@@ -14,10 +14,13 @@ import {
 } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
 import {
-	installCfDependency,
+	DependencyInstallError,
+	installProjectDependencies,
 	planCfDependencyInstallation,
+	planWranglerDependencyUpgrade,
 } from "./install-dependencies";
-import { assertCompatibleWranglerVersion } from "./wrangler-version";
+import { MINIMUM_WRANGLER_VERSION } from "./wrangler-version";
+import type { DependencyToInstall } from "./install-dependencies";
 import type {
 	MigrationFollowUp,
 	WranglerToCfMigrationOptions,
@@ -87,8 +90,12 @@ export async function migrateWranglerToCf(
 		bundler,
 		secretFiles
 	);
-	const dependencyPlan = await planCfDependencyInstallation(projectDirectory);
-	if (dependencyPlan.action === "missing-manifest") {
+	const wranglerConfig = renderWranglerConfig(convertedConfig);
+	const [cfDepPlan, wranglerDepPlan] = await Promise.all([
+		planCfDependencyInstallation(projectDirectory),
+		planWranglerDependencyUpgrade(projectDirectory, wranglerConfig !== null),
+	]);
+	if (cfDepPlan.action === "missing-manifest") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-missing-manifest",
@@ -96,7 +103,7 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (dependencyPlan.action === "skipped-ancestor-package") {
+	if (cfDepPlan.action === "skipped-ancestor-package") {
 		convertedConfig.followUps.push(
 			createFollowUp(
 				"cf-install-skipped",
@@ -104,9 +111,9 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
-	if (installDependencies && dependencyPlan.action === "unreadable-manifest") {
-		const reason = dependencyPlan.reason
-			? ` Package manifest error: ${dependencyPlan.reason}`
+	if (installDependencies && cfDepPlan.action === "unreadable-manifest") {
+		const reason = cfDepPlan.reason
+			? ` Package manifest error: ${cfDepPlan.reason}`
 			: "";
 		convertedConfig.followUps.push(
 			createFollowUp(
@@ -117,8 +124,8 @@ export async function migrateWranglerToCf(
 	}
 	if (
 		!installDependencies &&
-		(dependencyPlan.action === "install" ||
-			dependencyPlan.action === "unreadable-manifest")
+		(cfDepPlan.action === "install" ||
+			cfDepPlan.action === "unreadable-manifest")
 	) {
 		convertedConfig.followUps.push(
 			createFollowUp(
@@ -127,9 +134,30 @@ export async function migrateWranglerToCf(
 			)
 		);
 	}
+	if (wranglerDepPlan.action === "manual") {
+		const instruction =
+			wranglerDepPlan.workspaceDependency === "incompatible"
+				? "Update the workspace Wrangler package and its lockfile while preserving the workspace dependency."
+				: wranglerDepPlan.workspaceDependency === "unverified"
+					? "Verify the workspace Wrangler package version and install workspace dependencies. Update the package and lockfile if needed while preserving the workspace dependency."
+					: "Add `wrangler@latest` to the package that owns this Worker and update its lockfile.";
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"wrangler-upgrade-manual",
+				`The generated wrangler.config.ts requires Wrangler ${MINIMUM_WRANGLER_VERSION} or newer. ${instruction}`
+			)
+		);
+	}
+	if (!installDependencies && wranglerDepPlan.action === "install") {
+		convertedConfig.followUps.push(
+			createFollowUp(
+				"wrangler-upgrade-disabled",
+				"Automatic dependency installation was disabled. Install `wrangler@latest` with your package manager before using the generated configuration."
+			)
+		);
+	}
 	const followUps = [...convertedConfig.followUps];
 	const cloudflareConfig = renderCloudflareConfig(convertedConfig);
-	const wranglerConfig = renderWranglerConfig(convertedConfig);
 
 	const outputs = new Map<string, string>([
 		[cloudflareConfigPath, cloudflareConfig],
@@ -141,33 +169,57 @@ export async function migrateWranglerToCf(
 		);
 	}
 	const changedFiles = Array.from(outputs.keys());
-	let requiresInstall = dependencyPlan.action !== "already-installed";
+	let requiresInstall =
+		cfDepPlan.action !== "already-installed" ||
+		wranglerDepPlan.action !== "none";
+	const dependenciesToInstall: DependencyToInstall[] = [];
+	if (cfDepPlan.action === "install") {
+		dependenciesToInstall.push({ dev: true, name: "cf", version: "latest" });
+	}
+	if (wranglerDepPlan.action === "install") {
+		dependenciesToInstall.push(wranglerDepPlan.dependency);
+	}
 
 	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
-	if (wranglerConfig) {
-		assertCompatibleWranglerVersion(projectDirectory);
-	}
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
 	}
-	if (installDependencies && dependencyPlan.action === "install") {
+	if (installDependencies && dependenciesToInstall.length > 0) {
 		let dependencyFollowUp: MigrationFollowUp | undefined;
 		try {
-			const installResult = await installCfDependency(dependencyPlan, {
-				dryRun,
-			});
+			const installResult = await installProjectDependencies(
+				projectDirectory,
+				dependenciesToInstall,
+				{ dryRun }
+			);
 			changedFiles.push(...installResult.changedFiles);
-			requiresInstall = installResult.requiresInstall;
+			requiresInstall =
+				installResult.requiresInstall || wranglerDepPlan.action === "manual";
 		} catch (error) {
 			if (dryRun) {
 				throw error;
 			}
+			const pendingDependencies =
+				error instanceof DependencyInstallError
+					? error.pendingDependencies
+					: dependenciesToInstall;
+			if (error instanceof DependencyInstallError) {
+				changedFiles.push(...error.changedFiles);
+			}
 			const reason =
 				error instanceof Error ? ` Installation failed: ${error.message}` : "";
+			const packageNames = pendingDependencies
+				.map(({ name }) => `\`${name}\``)
+				.join(" and ");
+			const packageSpecifiers = pendingDependencies
+				.map(({ name, version }) => `\`${name}@${version}\``)
+				.join(" and ");
 			dependencyFollowUp = createFollowUp(
-				"cf-install-failed",
-				`The generated configuration was written, but \`cf\` could not be installed automatically. Install \`cf@latest\` as a dev dependency with your package manager before using it.${reason}`
+				pendingDependencies.some(({ name }) => name === "cf")
+					? "cf-install-failed"
+					: "wrangler-upgrade-failed",
+				`The generated configuration was written, but ${packageNames} could not be installed automatically. Install ${packageSpecifiers} with your package manager before using it.${reason}`
 			);
 			requiresInstall = true;
 		}
