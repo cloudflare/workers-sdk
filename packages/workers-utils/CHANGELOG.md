@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.46.0
+
+### Minor Changes
+
+- [#15928](https://github.com/cloudflare/workers-sdk/pull/15928) [`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Allow `"us"` as a jurisdiction for Container applications
+
+  Container placement constraints now accept `constraints.jurisdiction: "us"` in Wrangler and typed Cloudflare configuration. This makes the US jurisdiction available alongside `"eu"` and `"fedramp"`.
+
 ## 0.45.1
 
 ### Patch Changes
