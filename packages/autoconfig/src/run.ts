@@ -192,9 +192,7 @@ export async function runAutoConfig(
 	}
 
 	if (dryRun) {
-		logger.log(
-			`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
-		);
+		logger.log(`✋  ${"Autoconfig process run in dry-run mode, exiting now."}`);
 		logger.log("");
 
 		return autoConfigSummary;
