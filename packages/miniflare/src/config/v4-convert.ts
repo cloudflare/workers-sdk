@@ -663,6 +663,14 @@ function addProductBindings(
 			dev: { remote: isRemote(worker.ai.remoteProxyConnectionString) },
 		};
 	}
+	if (worker.analyticsSql !== undefined) {
+		env[worker.analyticsSql.binding] = {
+			type: "analytics",
+			dev: {
+				remote: isRemote(worker.analyticsSql.remoteProxyConnectionString),
+			},
+		};
+	}
 	for (const [name, binding] of Object.entries(worker.agentMemory ?? {})) {
 		env[name] = {
 			type: "agent-memory",
@@ -708,6 +716,13 @@ function addProductBindings(
 		};
 	}
 	addPipelineBindings(env, worker.pipelines, isRemote);
+	for (const [name, binding] of Object.entries(worker.k2 ?? {})) {
+		env[name] = {
+			type: "k2",
+			stream: binding.stream,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const binding of worker.email?.send_email ?? []) {
 		env[binding.name] = {
 			type: "send-email",

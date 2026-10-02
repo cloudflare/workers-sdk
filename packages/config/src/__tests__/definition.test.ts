@@ -94,4 +94,4 @@ it("preserves JSDoc for define helper fields", ({ expect }) => {
 	} finally {
 		languageService.dispose();
 	}
-});
+}, 10_000);

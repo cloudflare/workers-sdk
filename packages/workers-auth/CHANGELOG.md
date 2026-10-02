@@ -1,5 +1,71 @@
 # @cloudflare/workers-auth
 
+## 0.12.0
+
+### Minor Changes
+
+- [#16009](https://github.com/cloudflare/workers-sdk/pull/16009) [`f23dcb3`](https://github.com/cloudflare/workers-sdk/commit/f23dcb32ca0df051eaaf0222086a612a615c80a3) Thanks [@NuroDev](https://github.com/NuroDev)! - Allow cf to request the zone observability OAuth scopes
+
+  New cf OAuth logins request `zone-observability.read` and `zone-observability.write`. Existing sessions must authenticate again to receive them.
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/workers-utils@0.46.0
+
+## 0.11.1
+
+### Patch Changes
+
+- Updated dependencies [[`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44)]:
+  - @cloudflare/workers-utils@0.45.1
+
+## 0.11.0
+
+### Minor Changes
+
+- [#15978](https://github.com/cloudflare/workers-sdk/pull/15978) [`db011b1`](https://github.com/cloudflare/workers-sdk/commit/db011b100e9078a2812d4b30aeaec45ed2ca872e) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Allow cf to request the K2 OAuth scopes
+
+  New cf OAuth logins request `k2.consume`, `k2.produce`, `k2.read`, and `k2.write`, which are registered for the cf OAuth client. Existing sessions must authenticate again to receive them.
+
+## 0.10.0
+
+### Minor Changes
+
+- [#15883](https://github.com/cloudflare/workers-sdk/pull/15883) [`ae70e63`](https://github.com/cloudflare/workers-sdk/commit/ae70e637fd02164712583288b50b881f225936f6) Thanks [@Kmschr](https://github.com/Kmschr)! - Allow cf to request the account token creation scope
+
+  New cf OAuth logins can request `account_api_tokens:create`. Existing sessions must authenticate again to receive the scope.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 producer bindings for existing streams
+
+  Configure a stream created through Wrangler, the Dashboard, or the API in `wrangler.json`:
+
+  ```jsonc
+  {
+    "k2": [
+      {
+        "binding": "ORDERS",
+        "stream": "0123456789abcdef0123456789abcdef"
+      }
+    ]
+  }
+  ```
+
+  The binding supports `env.ORDERS.send([{ content: new TextEncoder().encode("order"), headers: { event: "order.created" } }])`. Batches use either all `ArrayBuffer` or all `Uint8Array` content. Check the returned `success` value, handle rejected RPC promises, and retry only when the returned error explicitly allows it. Generated environment types describe this producer contract without requiring a separate application dependency.
+
+  K2 requires an enabled account. Deployment credentials need Worker deployment and K2 configuration-read access. Default Wrangler logins now request the K2 OAuth scopes; existing OAuth users should run `wrangler login` again to grant the new permissions. Development always uses a real K2 stream and may incur usage charges; no local simulator is provided. The `remote` setting can be omitted, `remote: true` suppresses the usage warning, and `remote: false` is rejected. Consumption is not part of this Worker binding.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 stream management commands
+
+  Use `wrangler k2 streams create order_events`, `wrangler k2 streams list`, `wrangler k2 streams get <stream-id>`, and `wrangler k2 streams delete <stream-id>` to manage K2 streams. Creation enables Worker bindings but not HTTP ingestion by default, matching the dashboard. Pass `--http-enabled` to enable authenticated HTTP ingestion and print its endpoint. Creation prints the stream ID and a binding configuration with a `YOUR_BINDING_NAME` placeholder for the Worker's variable name, but does not edit the configuration file automatically.
+
+  All four commands support `--json`. Deletion requires confirmation, or `--force`/`-y` to skip it; use `--force --json` for JSON deletion output. Creation also accepts retention, HTTP authentication, Worker-input, and CORS options; listing supports pagination and a name filter. Default Wrangler logins now request `k2.read` and `k2.write`; existing OAuth users should run `wrangler login` again, or use a custom API token granting K2 Config Write. The account must be enabled for K2.
+
+### Patch Changes
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22)]:
+  - @cloudflare/workers-utils@0.45.0
+
 ## 0.9.5
 
 ### Patch Changes

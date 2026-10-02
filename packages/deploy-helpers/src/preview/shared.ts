@@ -405,6 +405,8 @@ export function getBindingValue(binding: Binding): string {
 			return String(binding.certificate_id ?? "");
 		case "pipelines":
 			return String(binding.stream ?? binding.pipeline ?? "");
+		case "k2":
+			return String(binding.stream ?? "");
 		case "secrets_store_secret":
 			return binding.secret_name
 				? `${binding.store_id}/${binding.secret_name}`
@@ -619,6 +621,10 @@ function extractBindings(
 		};
 	}
 
+	for (const { binding, stream } of previews?.k2 ?? []) {
+		env[binding] = { type: "k2", stream };
+	}
+
 	for (const secret of previews?.secrets_store_secrets ?? []) {
 		env[secret.binding] = {
 			type: "secrets_store_secret",
@@ -659,6 +665,10 @@ function extractBindings(
 
 	if (previews?.browser) {
 		env[previews.browser.binding] = { type: "browser" };
+	}
+
+	if (previews?.analytics) {
+		env[previews.analytics.binding] = { type: "analytics" };
 	}
 
 	if (previews?.ai) {

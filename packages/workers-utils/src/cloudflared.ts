@@ -314,13 +314,16 @@ function validateBinary(
 
 export function redactCloudflaredArgsForLogging(args: string[]): string[] {
 	const redacted = [...args];
+	const sensitiveArgs = ["--token", "--allowed-mail"];
 	for (let i = 0; i < redacted.length; i++) {
 		const arg = redacted[i];
-		if (arg === "--token" && i + 1 < redacted.length) {
-			redacted[i + 1] = "[REDACTED]";
-		}
-		if (arg.startsWith("--token=")) {
-			redacted[i] = "--token=[REDACTED]";
+		for (const sensitiveArg of sensitiveArgs) {
+			if (arg === sensitiveArg && i + 1 < redacted.length) {
+				redacted[i + 1] = "[REDACTED]";
+			}
+			if (arg.startsWith(`${sensitiveArg}=`)) {
+				redacted[i] = `${sensitiveArg}=[REDACTED]`;
+			}
 		}
 	}
 	return redacted;
@@ -707,6 +710,34 @@ export async function spawnCloudflared(
 		confirmDownload: options?.confirmDownload,
 		logger,
 	});
+
+	if (
+		args.some(
+			(arg) => arg === "--allowed-mail" || arg.startsWith("--allowed-mail=")
+		)
+	) {
+		// Earlier releases included parts of protected Quick Tunnels but did not
+		// register the --allowed-mail flag until 2026.9.2.
+		const minimumVersion = "2026.9.2";
+		const installedVersion = getInstalledVersion(binPath);
+		if (
+			!installedVersion ||
+			isVersionOutdated(installedVersion, minimumVersion)
+		) {
+			throw new UserError(
+				`[cloudflared] --allowed-mail requires cloudflared ${minimumVersion} or later.\n\n` +
+					(installedVersion
+						? `The selected binary (${binPath}) is version ${installedVersion}.\n\n`
+						: `Could not determine the version of the selected binary (${binPath}).\n\n`) +
+					`Update cloudflared in your PATH or set CLOUDFLARED_PATH to a compatible binary.\n` +
+					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`,
+				{
+					telemetryMessage:
+						"tunnel cloudflared allowed mail unsupported version",
+				}
+			);
+		}
+	}
 
 	logger?.debug(
 		`Spawning cloudflared: ${binPath} ${redactCloudflaredArgsForLogging(args).join(" ")}`

@@ -127,11 +127,13 @@ export function mockUploadWorkerRequest(
 			expect(metadata.keep_bindings).toEqual(
 				expect.arrayContaining(["plain_text", "json"])
 			);
-		} else if (keepSecrets) {
+		}
+		if (keepSecrets) {
 			expect(metadata.keep_bindings).toEqual(
 				expect.arrayContaining(["secret_text", "secret_key"])
 			);
-		} else {
+		}
+		if (!keepVars && !keepSecrets) {
 			expect(metadata.keep_bindings).toBeFalsy();
 		}
 
@@ -256,7 +258,7 @@ export function mockUploadWorkerRequest(
 		expectedContainers,
 		expectedAnnotations,
 		keepVars,
-		keepSecrets,
+		keepSecrets: keepSecretsOverride,
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
@@ -264,6 +266,9 @@ export function mockUploadWorkerRequest(
 		expectedDeploymentMessage,
 		expectedDurableObjectsCodeUpdateStrategy,
 	} = options;
+	const isAssetsOnly =
+		expectedAssets !== undefined && expectedMainModule === undefined;
+	const keepSecrets = keepSecretsOverride ?? !isAssetsOnly;
 
 	const expectedScriptName =
 		options.expectedScriptName ?? "test-name" + (env ? `-${env}` : "");

@@ -8,13 +8,17 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { TailToStoreHandler } from "./tail-to-store";
 import { TraceStore } from "./trace-store";
+import { TraceWriter } from "./trace-writer";
 
 // Re-export so the embedded worker registers the DO class under its namespace.
 export { TraceStore };
 
 interface Env {
 	TRACE_STORE: DurableObjectNamespace<TraceStore>;
+	TRACE_BATCH_SIZE: number;
 }
+
+let writer: TraceWriter | undefined;
 
 export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 	tailStream(onset: TailStream.TailEvent<TailStream.Onset>) {
@@ -22,11 +26,12 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 		const store = this.env.TRACE_STORE.get(
 			this.env.TRACE_STORE.idFromName("singleton")
 		);
+		writer ??= new TraceWriter(this.env.TRACE_BATCH_SIZE);
 		// Miniflare core passes the source worker's name in binding props (workerd
 		// doesn't surface it on the tail onset locally), so captured spans can be
 		// attributed to the right worker.
 		const worker = (this.ctx.props as { worker?: string } | undefined)?.worker;
-		return new TailToStoreHandler(store, onset, worker);
+		return new TailToStoreHandler(writer, store, onset, worker);
 	}
 
 	/**
@@ -59,7 +64,8 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 		// Delete all captured spans and logs. Separate from the read-only `/query`
 		// path on purpose — this is the one mutation the store exposes.
 		if (url.pathname === "/clear" && request.method === "POST") {
-			await store.clear();
+			writer ??= new TraceWriter(this.env.TRACE_BATCH_SIZE);
+			await writer.clear(store);
 			return Response.json({ success: true });
 		}
 		return new Response("not found", { status: 404 });

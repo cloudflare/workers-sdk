@@ -186,6 +186,7 @@ describe("convertToWranglerConfig", () => {
 					env: {
 						MY_AI: { type: "ai" },
 						MY_BROWSER: { type: "browser" },
+						MY_ANALYTICS: { type: "analytics" },
 						MY_IMAGES: { type: "images" },
 						MY_MEDIA: { type: "media" },
 						MY_STREAM: { type: "stream" },
@@ -196,6 +197,7 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI" });
 			expect(result.browser).toEqual({ binding: "MY_BROWSER" });
+			expect(result.analytics).toEqual({ binding: "MY_ANALYTICS" });
 			expect(result.images).toEqual({ binding: "MY_IMAGES" });
 			expect(result.media).toEqual({ binding: "MY_MEDIA" });
 			expect(result.stream).toEqual({ binding: "MY_STREAM" });
@@ -1531,7 +1533,7 @@ describe("convertToWranglerConfig", () => {
 				authorizedKeys: [{ name: "deploy", publicKey: "ssh-ed25519 key" }],
 				constraints: {
 					regions: ["ENAM", "WEUR"],
-					jurisdiction: "eu",
+					jurisdiction: "us",
 				},
 				rollout: {
 					kind: "full-auto",
@@ -1576,7 +1578,7 @@ describe("convertToWranglerConfig", () => {
 					authorized_keys: [{ name: "deploy", public_key: "ssh-ed25519 key" }],
 					constraints: {
 						regions: ["ENAM", "WEUR"],
-						jurisdiction: "eu",
+						jurisdiction: "us",
 					},
 					rollout_kind: "full_auto",
 					rollout_step_percentage: [50, 100],

@@ -446,11 +446,13 @@ export const defaultWranglerConfig: Config = {
 	containers: undefined,
 	send_email: [],
 	browser: undefined,
+	analytics: undefined,
 	unsafe: {},
 	mtls_certificates: [],
 	tail_consumers: undefined,
 	streaming_tail_consumers: undefined,
 	pipelines: [],
+	k2: [],
 	vpc_services: [],
 	vpc_networks: [],
 };

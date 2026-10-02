@@ -1,5 +1,29 @@
 # @cloudflare/vitest-plugin
 
+## 1.3.6
+
+### Patch Changes
+
+- Updated dependencies [[`7f700ef`](https://github.com/cloudflare/workers-sdk/commit/7f700ef52c47127c67f20137a03c051d26a0c8e5), [`90e6a1b`](https://github.com/cloudflare/workers-sdk/commit/90e6a1be8c67c0687a6a0ce51c9d101c9ad363e0), [`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4), [`6a4b0fe`](https://github.com/cloudflare/workers-sdk/commit/6a4b0fefa20ef2ffc52acdcf1cb194210d1b4c4b)]:
+  - wrangler@4.147.0
+  - miniflare@5.20261001.0-alpha
+
+## 1.3.5
+
+### Patch Changes
+
+- Updated dependencies [[`b8e7cc3`](https://github.com/cloudflare/workers-sdk/commit/b8e7cc3af4137d1dd4fe4ec6684d0f09d5f9c708), [`b00ef4f`](https://github.com/cloudflare/workers-sdk/commit/b00ef4fd16f071f33ae9095128373167f0b5892e), [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580), [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f), [`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44), [`efd67e6`](https://github.com/cloudflare/workers-sdk/commit/efd67e69e8ca2951dbb5426923428a6193a38648)]:
+  - wrangler@4.146.0
+  - miniflare@5.20261001.0-alpha
+
+## 1.3.4
+
+### Patch Changes
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`ddaa558`](https://github.com/cloudflare/workers-sdk/commit/ddaa5588640f6b14541e1d37a5bc49099fd6779d), [`8468487`](https://github.com/cloudflare/workers-sdk/commit/8468487cd1e5c3b6870822348d8ef20c1df53a13), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22)]:
+  - miniflare@5.20260930.0-alpha
+  - wrangler@4.145.0
+
 ## 1.3.3
 
 ### Patch Changes

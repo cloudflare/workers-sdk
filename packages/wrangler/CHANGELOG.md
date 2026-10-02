@@ -1,5 +1,119 @@
 # wrangler
 
+## 4.147.0
+
+### Minor Changes
+
+- [#15928](https://github.com/cloudflare/workers-sdk/pull/15928) [`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Allow `"us"` as a jurisdiction for Container applications
+
+  Container placement constraints now accept `constraints.jurisdiction: "us"` in Wrangler and typed Cloudflare configuration. This makes the US jurisdiction available alongside `"eu"` and `"fedramp"`.
+
+### Patch Changes
+
+- [#15974](https://github.com/cloudflare/workers-sdk/pull/15974) [`7f700ef`](https://github.com/cloudflare/workers-sdk/commit/7f700ef52c47127c67f20137a03c051d26a0c8e5) Thanks [@martinezjandrew](https://github.com/martinezjandrew)! - Fix `wrangler containers list` to report live instances
+
+  The `LIVE INSTANCES` column now reports each application's active runtime instances instead of its configured instance count, matching the Cloudflare dashboard. JSON output continues to expose the configured count through the existing `instances` field.
+
+- [#15980](https://github.com/cloudflare/workers-sdk/pull/15980) [`90e6a1b`](https://github.com/cloudflare/workers-sdk/commit/90e6a1be8c67c0687a6a0ce51c9d101c9ad363e0) Thanks [@martinezjandrew](https://github.com/martinezjandrew)! - Accept Durable Object application IDs in Containers commands
+
+  `wrangler containers instances` and `wrangler containers delete` now accept the 32-character hexadecimal application IDs returned for Durable Object-backed applications, in addition to legacy dashed UUIDs.
+
+- [#15871](https://github.com/cloudflare/workers-sdk/pull/15871) [`6a4b0fe`](https://github.com/cloudflare/workers-sdk/commit/6a4b0fefa20ef2ffc52acdcf1cb194210d1b4c4b) Thanks [@tw4](https://github.com/tw4)! - Retry transient API failures in `wrangler workflows instances list` and `wrangler workflows instances describe`
+
+  Previously, a single temporary 5xx response or dropped connection made these read-only commands exit with an error, even though the next request would have succeeded. They now use Wrangler's existing bounded API retry handling. The read that resolves `--id latest` is retried too, which also benefits the other `wrangler workflows instances` commands that accept `latest`; the mutating requests they make afterwards are not retried. Persistent failures are still reported after the retries are exhausted, and under `--json` any retry notices are written to stderr so stdout stays valid JSON.
+
+- Updated dependencies []:
+  - miniflare@5.20261001.0-alpha
+
+## 4.146.0
+
+### Minor Changes
+
+- [#15777](https://github.com/cloudflare/workers-sdk/pull/15777) [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support the new Workflows `createBatch()` API in local development
+
+  Local Workflows bindings now accept object-form batches that create instances from a count or a list of instance options. The result includes handles for created instances and indexed per-instance errors, matching the runtime API while preserving the deprecated array form.
+
+- [#15639](https://github.com/cloudflare/workers-sdk/pull/15639) [`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44) Thanks [@hugo-vicente11](https://github.com/hugo-vicente11)! - Add `--allowed-mail` to the experimental `wrangler tunnel quick-start` command
+
+  The option forwards exact email addresses, comma-separated lists, and wildcard domains to `cloudflared`. It can be specified more than once to combine multiple recipient rules.
+
+  Email-protected tunnels require `cloudflared` 2026.9.2 or later. Wrangler checks the selected binary before starting the tunnel and reports an upgrade error when it is incompatible.
+
+### Patch Changes
+
+- [#15992](https://github.com/cloudflare/workers-sdk/pull/15992) [`b8e7cc3`](https://github.com/cloudflare/workers-sdk/commit/b8e7cc3af4137d1dd4fe4ec6684d0f09d5f9c708) Thanks [@zebp](https://github.com/zebp)! - Mark `wrangler artifacts` commands as open beta
+
+  Artifacts has entered open beta, so the `wrangler artifacts` commands no longer display a "private beta" label in help output and warnings.
+
+- [#15984](https://github.com/cloudflare/workers-sdk/pull/15984) [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260930.2 | ^5.20261001.1 |
+  | workerd                   | 1.20260930.2  | 1.20261001.1  |
+
+- [#15959](https://github.com/cloudflare/workers-sdk/pull/15959) [`efd67e6`](https://github.com/cloudflare/workers-sdk/commit/efd67e69e8ca2951dbb5426923428a6193a38648) Thanks [@breken-ai](https://github.com/breken-ai)! - Keep colons in `wrangler tail --header` filter values
+
+  `wrangler tail --header` splits its argument into a header name and an optional value at the colon. It split at every colon and kept only the first two parts, so a value containing a colon was cut short: `--header "Origin:https://app.example.com"` filtered on `https`. The value now includes everything after the first colon, so URLs, ports and IPv6 addresses are sent to the tail filter intact.
+
+- Updated dependencies [[`b00ef4f`](https://github.com/cloudflare/workers-sdk/commit/b00ef4fd16f071f33ae9095128373167f0b5892e), [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580), [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f)]:
+  - miniflare@5.20261001.0-alpha
+
+## 4.145.0
+
+### Minor Changes
+
+- [#15685](https://github.com/cloudflare/workers-sdk/pull/15685) [`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add native support for the Analytics SQL binding
+
+  Declare the zero-configuration binding in `wrangler.json` with `"analytics": { "binding": "ANALYTICS" }`. Wrangler uploads the `analytics` binding type and proxies it to the remote service during local development, so `wrangler dev` can call the binding without `unsafe.bindings`.
+
+- [#15943](https://github.com/cloudflare/workers-sdk/pull/15943) [`8468487`](https://github.com/cloudflare/workers-sdk/commit/8468487cd1e5c3b6870822348d8ef20c1df53a13) Thanks [@sejoker](https://github.com/sejoker)! - Graduate SQL, Catalog, and Pipelines under `wrangler basin` out of beta to stable
+
+  Basin SQL is now available under `wrangler basin sql`, Basin Catalog operations are available under `wrangler basin catalog`, and Pipelines operations are available under `wrangler basin pipelines`. These commands are now stable, while the previous `wrangler r2 sql`, `wrangler r2 bucket catalog`, and `wrangler pipelines` command paths remain available as hidden compatibility aliases.
+
+  The Basin SQL authentication environment variable is now `WRANGLER_BASIN_SQL_AUTH_TOKEN`. Update any existing `WRANGLER_R2_SQL_AUTH_TOKEN` configuration to use the new name. The fallback to `CLOUDFLARE_API_TOKEN` remains available.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 producer bindings for existing streams
+
+  Configure a stream created through Wrangler, the Dashboard, or the API in `wrangler.json`:
+
+  ```jsonc
+  {
+    "k2": [
+      {
+        "binding": "ORDERS",
+        "stream": "0123456789abcdef0123456789abcdef"
+      }
+    ]
+  }
+  ```
+
+  The binding supports `env.ORDERS.send([{ content: new TextEncoder().encode("order"), headers: { event: "order.created" } }])`. Batches use either all `ArrayBuffer` or all `Uint8Array` content. Check the returned `success` value, handle rejected RPC promises, and retry only when the returned error explicitly allows it. Generated environment types describe this producer contract without requiring a separate application dependency.
+
+  K2 requires an enabled account. Deployment credentials need Worker deployment and K2 configuration-read access. Default Wrangler logins now request the K2 OAuth scopes; existing OAuth users should run `wrangler login` again to grant the new permissions. Development always uses a real K2 stream and may incur usage charges; no local simulator is provided. The `remote` setting can be omitted, `remote: true` suppresses the usage warning, and `remote: false` is rejected. Consumption is not part of this Worker binding.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 stream management commands
+
+  Use `wrangler k2 streams create order_events`, `wrangler k2 streams list`, `wrangler k2 streams get <stream-id>`, and `wrangler k2 streams delete <stream-id>` to manage K2 streams. Creation enables Worker bindings but not HTTP ingestion by default, matching the dashboard. Pass `--http-enabled` to enable authenticated HTTP ingestion and print its endpoint. Creation prints the stream ID and a binding configuration with a `YOUR_BINDING_NAME` placeholder for the Worker's variable name, but does not edit the configuration file automatically.
+
+  All four commands support `--json`. Deletion requires confirmation, or `--force`/`-y` to skip it; use `--force --json` for JSON deletion output. Creation also accepts retention, HTTP authentication, Worker-input, and CORS options; listing supports pagination and a name filter. Default Wrangler logins now request `k2.read` and `k2.write`; existing OAuth users should run `wrangler login` again, or use a custom API token granting K2 Config Write. The account must be enabled for K2.
+
+### Patch Changes
+
+- [#15908](https://github.com/cloudflare/workers-sdk/pull/15908) [`ddaa558`](https://github.com/cloudflare/workers-sdk/commit/ddaa5588640f6b14541e1d37a5bc49099fd6779d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260926.1 | ^5.20260930.2 |
+  | workerd                   | 1.20260926.1  | 1.20260930.2  |
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`ddaa558`](https://github.com/cloudflare/workers-sdk/commit/ddaa5588640f6b14541e1d37a5bc49099fd6779d), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22)]:
+  - miniflare@5.20260930.0-alpha
+
 ## 4.144.0
 
 ### Minor Changes

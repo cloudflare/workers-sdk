@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.73.2
+
+### Patch Changes
+
+- [#16017](https://github.com/cloudflare/workers-sdk/pull/16017) [`1bc7269`](https://github.com/cloudflare/workers-sdk/commit/1bc72691ef482c9d7a09b4c6dc2aa4e5004827d3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support SvelteKit 3 projects
+
+  Create Svelte projects with the SvelteKit 3-compatible Cloudflare adapter and preserve SvelteKit's generated types when adding Workers types.
+
 ## 2.73.1
 
 ### Patch Changes

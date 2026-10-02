@@ -12,6 +12,7 @@ import type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
+	AnalyticsSQLBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,
@@ -22,6 +23,7 @@ import type {
 	HyperdriveBinding,
 	ImagesBinding,
 	JsonBinding,
+	K2Binding,
 	KvBinding,
 	LogfwdrBinding,
 	MediaBinding,
@@ -94,6 +96,7 @@ type Binding =
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
 	| AnalyticsEngineDatasetBinding
+	| AnalyticsSQLBinding
 	| ArtifactsBinding
 	| AssetsBinding
 	| BrowserBinding
@@ -104,6 +107,7 @@ type Binding =
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding
+	| K2Binding
 	| KvBinding
 	| LogfwdrBinding
 	| MediaBinding
@@ -298,7 +302,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 			"ENAM" | "WNAM" | "EEUR" | "WEUR" | "APAC" | "SAM" | "ME" | "OC" | "AFR"
 		>;
 		/** Restrict Containers to compliance boundaries. */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 	};
 
 	rollout?: {

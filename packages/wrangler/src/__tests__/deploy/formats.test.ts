@@ -1137,7 +1137,7 @@ export default{
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name="metadata"
 
-				{"main_module":"index.js","bindings":[],"compatibility_date":"2022-01-12","compatibility_flags":[]}
+				{"main_module":"index.js","bindings":[],"compatibility_date":"2022-01-12","compatibility_flags":[],"keep_bindings":["secret_text","secret_key"]}
 				------formdata-undici-0.test
 				Content-Disposition: form-data; name="index.js"; filename="index.js"
 				Content-Type: application/javascript+module
@@ -1282,7 +1282,7 @@ export default{
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name="metadata"
 
-				{"main_module":"index.js","bindings":[{"name":"KV","type":"kv_namespace","namespace_id":"kv-namespace-id"}],"compatibility_date":"2022-01-12","compatibility_flags":[]}
+				{"main_module":"index.js","bindings":[{"name":"KV","type":"kv_namespace","namespace_id":"kv-namespace-id"}],"compatibility_date":"2022-01-12","compatibility_flags":[],"keep_bindings":["secret_text","secret_key"]}
 				------formdata-undici-0.test
 				Content-Disposition: form-data; name="index.js"; filename="index.js"
 				Content-Type: application/javascript+module

@@ -183,6 +183,35 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				}),
 			],
 		},
+		...([undefined, true] as const).map((remote) => ({
+			name: `k2 with remote=${remote}`,
+			config: {
+				k2: [
+					{
+						binding: "K2_BINDING",
+						stream: "0123456789abcdef0123456789abcdef",
+						remote,
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				K2_BINDING: {
+					type: "k2" as const,
+					stream: "0123456789abcdef0123456789abcdef",
+					remote,
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					k2: {
+						K2_BINDING: {
+							stream: "0123456789abcdef0123456789abcdef",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		})),
 		{
 			name: "ai",
 			config: {
@@ -784,6 +813,34 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 					},
 				},
 			}),
+		]);
+		await stopWrangler();
+		await wranglerStopped;
+	});
+
+	it("does not create K2 remote bindings when --local is passed", async ({
+		expect,
+	}) => {
+		const stream = "0123456789abcdef0123456789abcdef";
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "worker",
+				main: "index.js",
+				compatibility_date: "2025-01-01",
+				k2: [{ binding: "ORDERS", stream }],
+			}),
+			"index.js": 'export default { fetch() { return new Response("hello") } }',
+		});
+		const wranglerStopped = runWrangler(
+			"dev --local --port=0 --inspector-port=0"
+		);
+		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
+			timeout: devReadyTimeout,
+		});
+		expect(startRemoteProxySessionCallCount).toBe(0);
+		expect(proxyWorkerBindings).toBeUndefined();
+		expect(workerOptions).toEqual([
+			expect.objectContaining({ k2: { ORDERS: { stream } } }),
 		]);
 		await stopWrangler();
 		await wranglerStopped;
