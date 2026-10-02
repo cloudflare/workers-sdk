@@ -4,7 +4,7 @@ export interface WranglerToCfMigrationOptions {
 	bundler?: MigrationBundler;
 	dryRun?: boolean;
 	force?: boolean;
-	/** Whether to install required cf and compatible Wrangler dependencies. Missing dependencies are reported as blocking follow-ups when false. */
+	/** Whether to install cf and install or upgrade Wrangler when needed. Required dependency changes become blocking follow-ups when false. */
 	installDependencies?: boolean;
 }
 
