@@ -759,7 +759,12 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
 	 */
 	browser(options?: BrowserBindingOptions): BrowserBinding;
-	/** An Analytics SQL binding. */
+	/** An Analytics binding. */
+	analytics(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
+	/**
+	 * An Analytics SQL binding.
+	 * @deprecated Use `analytics()` instead.
+	 */
 	analyticsSQL(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
 	/**
 	 * Binding to a D1 database.
@@ -934,6 +939,7 @@ export const bindings = {
 	artifacts: (options) => ({ type: "artifacts", ...options }),
 	assets: () => ({ type: "assets" }),
 	browser: (options) => ({ type: "browser", ...options }),
+	analytics: (options) => ({ type: "analytics", ...options }),
 	d1: (options) => ({ type: "d1", ...options }),
 	dispatchNamespace: (options) => ({
 		type: "dispatch-namespace",

@@ -42,6 +42,15 @@ const inlineConfig = defineConfig({
 	],
 });
 
+const analyticsBinding = bindings.analytics({ dev: { remote: true } });
+const analyticsSQLBinding = bindings.analyticsSQL({ dev: { remote: true } });
+export type AnalyticsBindingTypeTest = Assert<
+	Equal<typeof analyticsBinding.type, "analytics">
+>;
+export type AnalyticsSQLBindingTypeTest = Assert<
+	Equal<typeof analyticsSQLBinding.type, "analytics">
+>;
+
 // @ts-expect-error a workflow export requires a name
 workerExports.workflow({ limits: { steps: 10 } });
 
