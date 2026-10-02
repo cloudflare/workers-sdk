@@ -1,1 +1,1 @@
-export { hashFile } from "@cloudflare/deploy-helpers";
+export { hashFile, initHash } from "@cloudflare/deploy-helpers";
