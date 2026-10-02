@@ -137,7 +137,8 @@ function getPnpmWorkspacePatterns(contents: string): string[] | undefined {
 		if (!match) {
 			return undefined;
 		}
-		patterns.push(match[1] ?? match[2] ?? match[3]);
+		const [, doubleQuotedGlob, singleQuotedGlob, bareGlob] = match;
+		patterns.push(doubleQuotedGlob ?? singleQuotedGlob ?? bareGlob);
 	}
 	return patterns.length > 0 ? patterns : undefined;
 }
