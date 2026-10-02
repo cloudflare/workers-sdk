@@ -341,7 +341,7 @@ export type ContainerApp = {
 		/**
 		 * Restrict containers to compliance boundaries.
 		 */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 		/**
 		 * @hidden
 		 */

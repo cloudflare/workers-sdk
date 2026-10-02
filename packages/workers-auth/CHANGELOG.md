@@ -1,5 +1,25 @@
 # @cloudflare/workers-auth
 
+## 0.12.0
+
+### Minor Changes
+
+- [#16009](https://github.com/cloudflare/workers-sdk/pull/16009) [`f23dcb3`](https://github.com/cloudflare/workers-sdk/commit/f23dcb32ca0df051eaaf0222086a612a615c80a3) Thanks [@NuroDev](https://github.com/NuroDev)! - Allow cf to request the zone observability OAuth scopes
+
+  New cf OAuth logins request `zone-observability.read` and `zone-observability.write`. Existing sessions must authenticate again to receive them.
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/workers-utils@0.46.0
+
+## 0.11.1
+
+### Patch Changes
+
+- Updated dependencies [[`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44)]:
+  - @cloudflare/workers-utils@0.45.1
+
 ## 0.11.0
 
 ### Minor Changes

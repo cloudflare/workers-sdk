@@ -4555,10 +4555,10 @@ function validateContainerApp(
 				);
 				if (
 					constraints.jurisdiction &&
-					!["eu", "fedramp"].includes(constraints.jurisdiction)
+					!["eu", "fedramp", "us"].includes(constraints.jurisdiction)
 				) {
 					diagnostics.errors.push(
-						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp"`
+						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp", "us"`
 					);
 				}
 				if (

@@ -1,5 +1,28 @@
 # miniflare
 
+## 5.20261001.0-alpha
+
+### Minor Changes
+
+- [#15970](https://github.com/cloudflare/workers-sdk/pull/15970) [`b00ef4f`](https://github.com/cloudflare/workers-sdk/commit/b00ef4fd16f071f33ae9095128373167f0b5892e) Thanks [@wperron](https://github.com/wperron)! - Keep local development responsive while capturing observability data
+
+  Local observability now records high volumes of spans and logs with less impact on the main Worker, making local requests faster and more responsive. If observability data arrives faster than it can be stored, completed entries are dropped rather than slowing the Worker; the buffer size can be tuned with `X_LOCAL_OBSERVABILITY_BATCH_SIZE`.
+
+- [#15777](https://github.com/cloudflare/workers-sdk/pull/15777) [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support the new Workflows `createBatch()` API in local development
+
+  Local Workflows bindings now accept object-form batches that create instances from a count or a list of instance options. The result includes handles for created instances and indexed per-instance errors, matching the runtime API while preserving the deprecated array form.
+
+### Patch Changes
+
+- [#15984](https://github.com/cloudflare/workers-sdk/pull/15984) [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260930.2 | ^5.20261001.1 |
+  | workerd                   | 1.20260930.2  | 1.20261001.1  |
+
 ## 5.20260930.0-alpha
 
 ### Minor Changes
