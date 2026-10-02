@@ -46,7 +46,12 @@ import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
-import { temporaryArgDefinition } from "./temporary-commands";
+import {
+	addTemporaryEventAccountHint,
+	eventCodeArgDefinition,
+	temporaryArgDefinition,
+	validateTemporaryArgs,
+} from "./temporary-commands";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	HandlerArgs,
@@ -75,7 +80,11 @@ export function createRegisterYargsCommand(
 			(subYargs) => {
 				if (def.type === "command") {
 					const args: NamedArgDefinitions = def.behaviour?.supportTemporary
-						? { ...def.args, temporary: temporaryArgDefinition }
+						? {
+								...def.args,
+								temporary: temporaryArgDefinition,
+								"event-code": eventCodeArgDefinition,
+							}
 						: (def.args ?? {});
 
 					const positionalArgs = new Set(def.positionalArgs);
@@ -200,6 +209,11 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				}
 			}
 
+			if (def.behaviour?.supportTemporary) {
+				validateTemporaryArgs(
+					args as { temporary?: boolean; eventCode?: string }
+				);
+			}
 			await def.validateArgs?.(args, def);
 
 			const shouldPrintResourceLocation =
@@ -436,6 +450,10 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					) {
 						err.message +=
 							"\n\nTo continue without logging in, rerun this command with `--temporary`. Wrangler will use a temporary account and print a claim URL.";
+					}
+
+					if (temporaryAllowed) {
+						addTemporaryEventAccountHint(def.command, err);
 					}
 
 					await handleError(err, args, argv);
