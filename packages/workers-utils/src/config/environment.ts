@@ -922,6 +922,34 @@ interface EnvironmentInheritable {
 	previews: PreviewsConfig | undefined;
 }
 
+/**
+ * Retry policy for calls made to a Durable Object through a binding.
+ * Omitted properties use the runtime defaults. The limits are upper bounds and
+ * do not make otherwise ineligible calls retryable.
+ */
+export interface DurableObjectRetryPolicy {
+	/**
+	 * Maximum number of retries after the initial request, not the total number
+	 * of attempts. Defaults to 4. Zero disables retries.
+	 *
+	 * @minimum 0
+	 * @maximum 10
+	 * @asType integer
+	 */
+	max_attempts?: number;
+	/**
+	 * Retry timeout in milliseconds, measured from the start of the call.
+	 * No retry starts after it expires, and a retry still running when it expires
+	 * is cancelled. This is not a request timeout: the initial request always runs
+	 * to completion. Defaults to 10000.
+	 *
+	 * @minimum 500
+	 * @maximum 60000
+	 * @asType integer
+	 */
+	timeout_ms?: number;
+}
+
 export type DurableObjectBindings = {
 	/** The name of the binding used to refer to the Durable Object */
 	name: string;
@@ -931,6 +959,8 @@ export type DurableObjectBindings = {
 	script_name?: string;
 	/** The service environment of the script_name to bind to */
 	environment?: string;
+	/** Retry policy for calls made through this binding */
+	retry?: DurableObjectRetryPolicy;
 }[];
 
 export type DurableObjectCodeUpdateStrategy = {

@@ -530,6 +530,7 @@ function extractBindings(
 			type: "durable_object_namespace",
 			class_name: doBinding.class_name,
 			script_name: doBinding.script_name,
+			retry: doBinding.retry,
 		};
 	}
 

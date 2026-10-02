@@ -58,6 +58,79 @@ const STATEFUL_SCRIPT = (responsePrefix = "") => `
   }
 `;
 
+test("emits Durable Object retry policies, including for external workers", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const configPath = path.join(tmp, "workerd-config.json");
+	const originalDebugPath = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
+	process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = configPath;
+	onTestFinished(() => {
+		if (originalDebugPath === undefined) {
+			delete process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
+		} else {
+			process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = originalDebugPath;
+		}
+	});
+
+	const mf = new Miniflare({
+		unsafeDevRegistryPath: path.join(tmp, "registry"),
+		workers: [
+			{
+				config: {
+					name: "worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+						export class Object {}
+						export default { fetch() { return new Response("ok"); } }
+					`),
+					env: {
+						ABSENT: {
+							type: "durable-object",
+							worker: "worker",
+							exportName: "Object",
+						},
+						LOCAL: {
+							type: "durable-object",
+							worker: "worker",
+							exportName: "Object",
+							retry: { maxAttempts: 3, timeoutMs: 12_345 },
+						},
+						EXTERNAL: {
+							type: "durable-object",
+							worker: "external-worker",
+							exportName: "Object",
+							retry: { maxAttempts: 0 },
+						},
+					},
+					exports: {
+						Object: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	await mf.ready;
+
+	const config = JSON.parse(await fs.readFile(configPath, "utf8")) as {
+		services: { worker?: { bindings?: Record<string, unknown>[] } }[];
+	};
+	const bindings = config.services.flatMap(
+		(service) => service.worker?.bindings ?? []
+	);
+	const getNamespace = (name: string) =>
+		bindings.find((binding) => binding.name === name)?.durableObjectNamespace;
+
+	expect(getNamespace("ABSENT")).not.toHaveProperty("retryPolicy");
+	expect(getNamespace("LOCAL")).toMatchObject({
+		retryPolicy: { maxAttempts: 3, timeoutMs: 12_345 },
+	});
+	expect(getNamespace("EXTERNAL")).toMatchObject({
+		retryPolicy: { maxAttempts: 0 },
+	});
+});
+
 test("persists Durable Object data in-memory between options reloads", async ({
 	expect,
 }) => {

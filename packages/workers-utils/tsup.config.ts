@@ -30,6 +30,7 @@ export default defineConfig(() => [
 			// pulling in the broad package barrel and its transitive dependencies.
 			"src/compliance.ts",
 			"src/compatibility-date.ts",
+			"src/decorators.ts",
 			"src/docker-path.ts",
 			"src/errors.ts",
 			"src/fs-helpers.ts",
