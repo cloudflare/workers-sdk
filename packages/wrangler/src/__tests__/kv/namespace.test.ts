@@ -4,7 +4,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -233,6 +233,30 @@ describe("kv", () => {
 						'Creating namespace with title "UnitTestNamespace" (mode: instant)'
 					);
 					expect(std.out).toContain("✨ Success!");
+				}
+			);
+
+			it.for(["--experimental-mode", "--x-mode"])(
+				"should reject %s with --jurisdiction before creating a namespace",
+				async (flag, { expect }) => {
+					const createRequest = vi.fn(() =>
+						HttpResponse.json(createFetchResult({ id: "some-namespace-id" }))
+					);
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/storage/kv/namespaces",
+							createRequest
+						)
+					);
+
+					await expect(
+						runWrangler(
+							`kv namespace create UnitTestNamespace ${flag} instant --jurisdiction eu`
+						)
+					).rejects.toThrow(
+						"Arguments experimental-mode and jurisdiction are mutually exclusive"
+					);
+					expect(createRequest).not.toHaveBeenCalled();
 				}
 			);
 
