@@ -319,10 +319,11 @@ export type TestHarness = {
 	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
 	 * ```
 	 *
-	 * Under Bun, this method and the URL returned by `listen()` cannot reach the
-	 * Worker, because Bun's `fetch()` ignores the undici `dispatcher` that the
-	 * proxy relies on. This method throws a `UserError` and the URL answers with a
-	 * 503. `server.getWorker().fetch()` dispatches directly and works under Bun.
+	 * Under Bun, this method, `server.getWorker()`'s `fetch()`, `email()` and
+	 * `scheduled()`, and the URL returned by `listen()` cannot reach the Worker,
+	 * because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes
+	 * requests through. The methods throw a `UserError` and the URL answers with a
+	 * 503. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.
 	 */
 	fetch: DispatchFetch;
 	/**
@@ -976,6 +977,16 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		worker?: string,
 		event = "fetch"
 	) {
+		// Miniflare's `dispatchFetch()` routes every request, `getWorker()` ones
+		// included, through an undici dispatcher that Bun's `fetch()` ignores, so
+		// a request can leave for the network. Check before sending anything.
+		if (isBun()) {
+			const session = await resolveSession();
+			await waitForBunProxyMessages(
+				() => session.primaryDevEnv.proxy.latestReloadCompleteMessage
+			);
+		}
+
 		let resolvedInput = input;
 
 		if (typeof input === "string" && !URL.canParse(input)) {
@@ -1025,13 +1036,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		},
 		async fetch(input, init) {
 			const session = await resolveSession();
-			// Only this door and the `listen()` URL go through the ProxyWorker.
-			// `getWorker()` dispatches directly, so it keeps working under Bun.
-			if (isBun()) {
-				await waitForBunProxyMessages(
-					() => session.primaryDevEnv.proxy.latestReloadCompleteMessage
-				);
-			}
 			const miniflare = session.primaryDevEnv.proxy.proxyWorker;
 			assert(
 				miniflare,
