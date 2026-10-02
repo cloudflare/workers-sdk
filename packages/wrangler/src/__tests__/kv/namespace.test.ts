@@ -87,6 +87,7 @@ describe("kv", () => {
 					OPTIONS
 					      --preview        Interact with a preview namespace  [boolean]
 					      --jurisdiction   The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")  [string]
+					      --mode           The storage mode for the new namespace. Instant mode offers lower-latency reads and faster global updates [private beta]  [string] [choices: "instant"]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
 					      --update-config  Automatically update your config file with the newly added resource  [boolean]
 					      --binding        The binding name of this resource in your Worker  [string]"
@@ -128,6 +129,7 @@ describe("kv", () => {
 					OPTIONS
 					      --preview        Interact with a preview namespace  [boolean]
 					      --jurisdiction   The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")  [string]
+					      --mode           The storage mode for the new namespace. Instant mode offers lower-latency reads and faster global updates [private beta]  [string] [choices: "instant"]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
 					      --update-config  Automatically update your config file with the newly added resource  [boolean]
 					      --binding        The binding name of this resource in your Worker  [string]"
