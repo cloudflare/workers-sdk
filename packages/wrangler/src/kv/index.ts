@@ -102,7 +102,8 @@ export const kvNamespaceCreateCommand = createCommand({
 				'The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")',
 			requiresArg: true,
 		},
-		mode: {
+		"experimental-mode": {
+			alias: "x-mode",
 			type: "string",
 			describe:
 				"The storage mode for the new namespace. Instant mode offers lower-latency reads and faster global updates [private beta]",
@@ -117,7 +118,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
 		const title = `${environment}${args.namespace}${preview}`;
-		const { jurisdiction, mode } = args;
+		const { jurisdiction, experimentalMode: mode } = args;
 
 		const accountId = await requireAuth(config);
 		printResourceLocation("remote");
