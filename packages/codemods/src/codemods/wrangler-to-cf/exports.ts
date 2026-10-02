@@ -9,7 +9,8 @@ import {
 	toOutputValue,
 	type UnknownRecord,
 } from "./converter-helpers";
-import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
+import { inferDurableObjectExports } from "./durable-object-exports";
+import { createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputProperty } from "./types";
 
 export const WORKFLOW_SETTINGS = [
@@ -69,7 +70,11 @@ export function convertExports(
 	imports: Set<string>,
 	report: (followUp: MigrationFollowUp) => void
 ): OutputObject | undefined {
-	const configuredExports = getRecord(source, "exports") ?? {};
+	const configuredExports = inferDurableObjectExports(
+		source,
+		sourcePrefix,
+		report
+	);
 
 	const properties: OutputProperty[] = [];
 	// Workflow exports render last, once every `workflows` binding has had the
@@ -121,13 +126,6 @@ export function convertExports(
 				key: name,
 				value: call("exports.durableObject", options),
 			});
-			report(
-				createFollowUp(
-					"durable-object-review",
-					"Durable Object exports require manual review after migration.",
-					{ docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL, sourcePath }
-				)
-			);
 			if (hasOwn(value, "container")) {
 				report(
 					createFollowUp(
