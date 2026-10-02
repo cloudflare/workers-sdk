@@ -851,7 +851,6 @@ export class Miniflare {
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
-	#nonRetryableRuntimeDispatcher?: Dispatcher;
 	#dispatchConnectTcpSockets = new Set<net.Socket>();
 	#dispatchConnectDatagramSockets = new Set<dgram.Socket>();
 	#proxyClient?: ProxyClient;
@@ -2776,10 +2775,9 @@ export class Miniflare {
 
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			// Close the previous dispatcher if the entry URL changed, to avoid
-			// leaking sockets from the old Pools.
+			// leaking sockets from the old Pool.
 			void this.#runtimeDispatcher?.close().catch(() => {});
-			void this.#nonRetryableRuntimeDispatcher?.close().catch(() => {});
-			const runtimePoolOptions = {
+			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
 				// Close idle client sockets before workerd's 5s idle timeout
 				keepAliveTimeout: 1_000,
@@ -2788,15 +2786,7 @@ export class Miniflare {
 				// slow uploads, long-polling) should not be killed by undici defaults.
 				headersTimeout: 0,
 				bodyTimeout: 0,
-			};
-			this.#runtimeDispatcher = new Pool(
-				this.#runtimeEntryURL,
-				runtimePoolOptions
-			);
-			this.#nonRetryableRuntimeDispatcher = new Pool(
-				this.#runtimeEntryURL,
-				runtimePoolOptions
-			);
+			});
 		}
 
 		// Set up a direct dispatcher to the dev-registry-proxy socket so we can
@@ -3135,7 +3125,6 @@ export class Miniflare {
 
 		assert(this.#runtimeEntryURL !== undefined);
 		assert(this.#runtimeDispatcher !== undefined);
-		assert(this.#nonRetryableRuntimeDispatcher !== undefined);
 
 		const forward = new Request(input, init);
 		const actualRuntimeOrigin = this.#runtimeEntryURL.origin;
@@ -3156,8 +3145,7 @@ export class Miniflare {
 			this.#runtimeDispatcher,
 			actualRuntimeOrigin,
 			userRuntimeOrigin,
-			cfBlob,
-			this.#nonRetryableRuntimeDispatcher
+			cfBlob
 		);
 
 		// Pass `forward` as the input, not `init`, so its body keeps a known length.
@@ -3870,9 +3858,6 @@ export class Miniflare {
 		// all connections broke), so ignore ClientDestroyedError.
 		try {
 			await this.#runtimeDispatcher?.close();
-		} catch {}
-		try {
-			await this.#nonRetryableRuntimeDispatcher?.close();
 		} catch {}
 		// Also close the dev-registry dispatcher (same issue as above).
 		try {

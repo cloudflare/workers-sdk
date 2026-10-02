@@ -274,21 +274,13 @@ test.for(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"])(
 
 		const origin = `http://127.0.0.1:${port}`;
 		const runtimeDispatcher = new Pool(origin);
-		const nonRetryableRuntimeDispatcher = new Pool(origin);
-		onTestFinished(async () => {
-			await Promise.all([
-				runtimeDispatcher.close(),
-				nonRetryableRuntimeDispatcher.close(),
-			]);
-		});
+		onTestFinished(() => runtimeDispatcher.close());
 		// Both origins match, so requests take the runtime dispatch path
 		const dispatcher = new DispatchFetchDispatcher(
 			runtimeDispatcher,
 			runtimeDispatcher,
 			origin,
-			origin,
-			undefined,
-			nonRetryableRuntimeDispatcher
+			origin
 		);
 		const requestCount = 200;
 		for (let i = 0; i < requestCount; i++) {
@@ -422,39 +414,3 @@ test.for(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"])(
 		expect(sockets.size).toBe(2);
 	}
 );
-test("fetch: DispatchFetchDispatcher isolates non-retryable requests", async ({
-	expect,
-}) => {
-	const origin = "http://runtime.test";
-	const runtimeDispatcher = new MockAgent();
-	const nonRetryableRuntimeDispatcher = new MockAgent();
-	runtimeDispatcher.disableNetConnect();
-	nonRetryableRuntimeDispatcher.disableNetConnect();
-	onTestFinished(async () => {
-		await Promise.all([
-			runtimeDispatcher.close(),
-			nonRetryableRuntimeDispatcher.close(),
-		]);
-	});
-
-	nonRetryableRuntimeDispatcher
-		.get(origin)
-		.intercept({ path: "/", method: "POST", body: "hello" })
-		.reply(200, "ok");
-
-	const dispatcher = new DispatchFetchDispatcher(
-		runtimeDispatcher,
-		runtimeDispatcher,
-		origin,
-		origin,
-		undefined,
-		nonRetryableRuntimeDispatcher
-	);
-	const res = await fetch(origin, {
-		method: "POST",
-		body: "hello",
-		dispatcher,
-	});
-	expect(await res.text()).toBe("ok");
-	nonRetryableRuntimeDispatcher.assertNoPendingInterceptors();
-});

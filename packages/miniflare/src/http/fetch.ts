@@ -178,7 +178,6 @@ function convertUndiciHeadersToStandard(
  */
 export class DispatchFetchDispatcher extends undici.Dispatcher {
 	private readonly cfBlobJson?: string;
-	private readonly nonRetryableRuntimeDispatcher: undici.Dispatcher;
 
 	/**
 	 * @param globalDispatcher 		Dispatcher to use for all non-runtime requests
@@ -189,19 +188,15 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 	 * @param userRuntimeOrigin 	Origin to treat as runtime request
 	 * 														(initial URL passed by user to `dispatchFetch()`)
 	 * @param cfBlob							`request.cf` blob override for runtime requests
-	 * @param nonRetryableRuntimeDispatcher Dispatcher for methods that shouldn't be retried
 	 */
 	constructor(
 		private readonly globalDispatcher: undici.Dispatcher,
 		private readonly runtimeDispatcher: undici.Dispatcher,
 		private readonly actualRuntimeOrigin: string,
 		private readonly userRuntimeOrigin: string,
-		cfBlob?: IncomingRequestCfProperties,
-		nonRetryableRuntimeDispatcher?: undici.Dispatcher
+		cfBlob?: IncomingRequestCfProperties
 	) {
 		super();
-		this.nonRetryableRuntimeDispatcher =
-			nonRetryableRuntimeDispatcher ?? runtimeDispatcher;
 		if (cfBlob !== undefined) {
 			this.cfBlobJson = JSON.stringify(cfBlob);
 		}
@@ -266,10 +261,10 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			// Reuse successful connections for every method to avoid consuming one
 			// ephemeral port per dispatch, but surface failures instead of retrying
 			options.reset = false;
-			if (options.method === "GET" || options.method === "HEAD") {
-				return this.runtimeDispatcher.dispatch(options, handler);
-			}
-			return this.nonRetryableRuntimeDispatcher.dispatch(options, handler);
+
+			// Dispatch with runtime dispatcher to avoid certificate errors if using
+			// self-signed certificate
+			return this.runtimeDispatcher.dispatch(options, handler);
 		} else {
 			// If this wasn't a request to the runtime (e.g. redirect to somewhere
 			// else), use the regular global dispatcher, without special headers
@@ -280,11 +275,10 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 	close(): Promise<void>;
 	close(callback: () => void): void;
 	async close(callback?: () => void): Promise<void> {
-		const dispatchers = [this.globalDispatcher, this.runtimeDispatcher];
-		if (this.nonRetryableRuntimeDispatcher !== this.runtimeDispatcher) {
-			dispatchers.push(this.nonRetryableRuntimeDispatcher);
-		}
-		await Promise.all(dispatchers.map((dispatcher) => dispatcher.close()));
+		await Promise.all([
+			this.globalDispatcher.close(),
+			this.runtimeDispatcher.close(),
+		]);
 		callback?.();
 	}
 
@@ -304,11 +298,10 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			err = errCallback;
 		}
 
-		const dispatchers = [this.globalDispatcher, this.runtimeDispatcher];
-		if (this.nonRetryableRuntimeDispatcher !== this.runtimeDispatcher) {
-			dispatchers.push(this.nonRetryableRuntimeDispatcher);
-		}
-		await Promise.all(dispatchers.map((dispatcher) => dispatcher.destroy(err)));
+		await Promise.all([
+			this.globalDispatcher.destroy(err),
+			this.runtimeDispatcher.destroy(err),
+		]);
 		callback?.();
 	}
 
