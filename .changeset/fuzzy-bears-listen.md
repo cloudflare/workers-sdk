@@ -2,6 +2,6 @@
 "wrangler": patch
 ---
 
-Fail early when `createTestHarness()` cannot start its proxy under Bun
+Fail fast when `createTestHarness()` cannot dispatch requests under Bun
 
-When Bun does not deliver the proxy control request required by Miniflare, `createTestHarness()` now throws an actionable startup error. This prevents the process from remaining idle while every request to the test harness hangs indefinitely.
+Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes requests through. Under Bun, `server.fetch()` and requests to the URL returned by `listen()` used to hang forever with no error, and `server.getWorker().fetch()` could send a request to the network instead of the Worker. `listen()` now resolves, `server.fetch()` and `server.getWorker()`'s `fetch()`, `email()` and `scheduled()` throw an actionable `UserError` before sending anything, and the ProxyWorker answers requests to the `listen()` URL with a 503 that names the cause. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.

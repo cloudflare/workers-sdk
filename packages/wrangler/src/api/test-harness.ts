@@ -318,6 +318,12 @@ export type TestHarness = {
 	 * await server.fetch("http://example.com/api/data");
 	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
 	 * ```
+	 *
+	 * Under Bun, this method, `server.getWorker()`'s `fetch()`, `email()` and
+	 * `scheduled()`, and the URL returned by `listen()` cannot reach the Worker,
+	 * because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes
+	 * requests through. The methods throw a `UserError` and the URL answers with a
+	 * 503. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.
 	 */
 	fetch: DispatchFetch;
 	/**
@@ -450,8 +456,6 @@ type DebugLog = {
  * const response = await server.fetch("/api/users");
  * await server.close();
  * ```
- * @throws {UserError} If Bun cannot deliver the proxy control request required
- * to start the server.
  */
 export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	let initialOptions = options;
@@ -684,11 +688,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				waitForReloadComplete(session),
 				updateConfig(session, inputs),
 			]);
-			if (isBun()) {
-				await waitForBunProxyMessages(
-					() => session.primaryDevEnv.proxy.latestReloadCompleteMessage
-				);
-			}
 			debugLog("startup - completed");
 			return session;
 		} catch (error) {
@@ -978,6 +977,16 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		worker?: string,
 		event = "fetch"
 	) {
+		// Miniflare's `dispatchFetch()` routes every request, `getWorker()` ones
+		// included, through an undici dispatcher that Bun's `fetch()` ignores, so
+		// a request can leave for the network. Check before sending anything.
+		if (isBun()) {
+			const session = await resolveSession();
+			await waitForBunProxyMessages(
+				() => session.primaryDevEnv.proxy.latestReloadCompleteMessage
+			);
+		}
+
 		let resolvedInput = input;
 
 		if (typeof input === "string" && !URL.canParse(input)) {
