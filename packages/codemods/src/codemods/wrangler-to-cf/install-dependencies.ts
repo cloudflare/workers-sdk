@@ -17,10 +17,13 @@ import type { MigrationBundler } from "./types";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 const VITE_PLUGIN = "@cloudflare/vite-plugin";
+// Recognize full installed v2 versions, including prerelease and build labels.
 const VITE_PLUGIN_VERSION_PATTERN =
 	/^2\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+// Only these declared ranges stay within v2; the beta tag tracks new prereleases.
 const VITE_PLUGIN_RANGE_PATTERN =
 	/^(?:(?:\^|~)?2(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?|>=2\.0\.0-0 <3\.0\.0-0|beta)$/;
+// Managed specifiers need an installed-version check instead of range parsing.
 const MANAGED_VITE_PLUGIN_SPECIFIER =
 	/^(?:workspace:|file:|link:|portal:|catalog:)/;
 
