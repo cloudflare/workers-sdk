@@ -47,7 +47,11 @@ async function assertTargetsDoNotExist(filePaths: string[]): Promise<void> {
 }
 
 function formatDependencies(packages: string[]): string {
-	return packages.map((packageName) => `\`${packageName}\``).join(" and ");
+	const formatted = packages.map((packageName) => `\`${packageName}\``);
+	if (formatted.length < 3) {
+		return formatted.join(" and ");
+	}
+	return `${formatted.slice(0, -1).join(", ")} and ${formatted.at(-1)}`;
 }
 
 /**
@@ -263,12 +267,12 @@ export async function migrateWranglerToCf(
 					error instanceof Error
 						? ` Installation failed: ${error.message}`
 						: "";
-				const packageNames = pendingDependencies
-					.map(({ name }) => `\`${name}\``)
-					.join(" and ");
-				const packageSpecifiers = pendingDependencies
-					.map(({ name, version }) => `\`${name}@${version}\``)
-					.join(" and ");
+				const packageNames = formatDependencies(
+					pendingDependencies.map(({ name }) => name)
+				);
+				const packageSpecifiers = formatDependencies(
+					pendingDependencies.map(({ name, version }) => `${name}@${version}`)
+				);
 				dependencyFollowUp = createFollowUp(
 					pendingDependencies.some(({ name }) => name === "cf")
 						? "cf-install-failed"
