@@ -34,10 +34,12 @@ session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, 
 
 - `wrangler: { configPath, environment }` — a Wrangler configuration file, via
   `wrangler.unstable_readConfig()`
-- `experimental: { newConfig }` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
+- `cloudflare.config.ts`: detected by default when no `wrangler` option is set,
+  or selected with `experimental: { newConfig }`; loaded via `src/pool/new-config.ts`
   (`@cloudflare/config`'s `loadAndParseConfig()` → `convertToWranglerConfig()` →
-  `normalizeAndValidateConfig()`). Mirrors `@cloudflare/vite-plugin`'s
-  `experimental.newConfig`. `ctx.mode` comes from `project.vite.config.mode`.
+  `normalizeAndValidateConfig()`). Uses the same loading pipeline as
+  `@cloudflare/vite-plugin`'s explicit `experimental.newConfig`. `ctx.mode`
+  comes from `project.vite.config.mode`.
 
 The two are mutually exclusive. Whichever is used, the resolved path, config format and
 Worker name are recorded on `options.resolvedConfig` for the pool to consume — never

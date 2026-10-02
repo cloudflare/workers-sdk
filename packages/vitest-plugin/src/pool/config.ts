@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
@@ -92,10 +93,12 @@ const WorkersPoolOptionsSchema = z.object({
 			/**
 			 * Load the Worker's configuration from a `cloudflare.config.ts` file
 			 * instead of a Wrangler configuration file. Cannot be combined with
-			 * `wrangler`.
+			 * `wrangler`. Defaults to `true` when `cloudflare.config.ts` exists in
+			 * the project root and `wrangler` is not configured. Pass `false` to
+			 * disable automatic detection.
 			 *
-			 * Pass `true` to load `cloudflare.config.ts` from the project root, or
-			 * an object to customise the behaviour.
+			 * Pass `true` to require `cloudflare.config.ts` in the project root, or
+			 * an object to customise the path.
 			 *
 			 * Config functions are called with `ctx.mode` set to Vite's mode, which
 			 * defaults to `"test"` and can be overridden with `--mode`.
@@ -336,6 +339,7 @@ async function parseCustomPoolOptions(
 	// Try to parse runner worker options, coalescing all errors
 	const errorRef: ZodErrorRef = {};
 	const workers = options.miniflare?.workers;
+	const projectPath = rootPath;
 	const rootPathOption = getRootPath(options.miniflare);
 	rootPath = path.resolve(rootPath, rootPathOption);
 	try {
@@ -379,7 +383,11 @@ async function parseCustomPoolOptions(
 	delete options.miniflare.modulesRules;
 
 	// Try to parse the project's configuration file, whichever format it uses
-	const newConfig = normalizeNewConfigOption(options.experimental?.newConfig);
+	const newConfig = normalizeNewConfigOption(
+		options.experimental?.newConfig ??
+			(options.wrangler === undefined &&
+				existsSync(path.resolve(projectPath, NEW_CONFIG_FILENAME)))
+	);
 
 	if (newConfig !== undefined && options.wrangler !== undefined) {
 		throw new TypeError(
@@ -393,7 +401,7 @@ async function parseCustomPoolOptions(
 	let environment: string | undefined;
 
 	if (newConfig !== undefined) {
-		configPath = path.resolve(rootPath, newConfig.configPath);
+		configPath = path.resolve(projectPath, newConfig.configPath);
 		config = await loadNewConfig(configPath, mode);
 	} else if (options.wrangler?.configPath !== undefined) {
 		configPath = path.resolve(rootPath, options.wrangler.configPath);
