@@ -244,22 +244,40 @@ export async function migrateWranglerToCf(
 			if (error instanceof DependencyInstallError) {
 				changedFiles.push(...error.changedFiles);
 			}
-			const reason =
-				error instanceof Error ? ` Installation failed: ${error.message}` : "";
-			const packageNames = pendingDependencies
-				.map(({ name }) => `\`${name}\``)
-				.join(" and ");
-			const packageSpecifiers = pendingDependencies
-				.map(({ name, version }) => `\`${name}@${version}\``)
-				.join(" and ");
-			dependencyFollowUp = createFollowUp(
-				pendingDependencies.some(({ name }) => name === "cf")
-					? "cf-install-failed"
-					: pendingDependencies.some(({ name }) => name === "wrangler")
-						? "wrangler-upgrade-failed"
-						: "vite-plugin-install-failed",
-				`The generated configuration was written, but ${packageNames} could not be installed automatically. Install ${packageSpecifiers} with your package manager before using it.${reason}`
-			);
+			if (
+				error instanceof DependencyInstallError &&
+				error.stage !== "install"
+			) {
+				dependencyFollowUp =
+					error.stage === "lockfile-sync"
+						? createFollowUp(
+								"vite-plugin-lockfile-sync-failed",
+								`The Vite plugin was installed and package.json now declares \`beta\`, but the lockfile could not be synchronized. Run your package manager's install command to refresh it before using the generated configuration. ${error.message}`
+							)
+						: createFollowUp(
+								"vite-plugin-manifest-update-failed",
+								`The Vite plugin was installed, but package.json could not be set to the \`beta\` dist tag. Set it to \`beta\` and run your package manager's install command before using the generated configuration. ${error.message}`
+							);
+			} else {
+				const reason =
+					error instanceof Error
+						? ` Installation failed: ${error.message}`
+						: "";
+				const packageNames = pendingDependencies
+					.map(({ name }) => `\`${name}\``)
+					.join(" and ");
+				const packageSpecifiers = pendingDependencies
+					.map(({ name, version }) => `\`${name}@${version}\``)
+					.join(" and ");
+				dependencyFollowUp = createFollowUp(
+					pendingDependencies.some(({ name }) => name === "cf")
+						? "cf-install-failed"
+						: pendingDependencies.some(({ name }) => name === "wrangler")
+							? "wrangler-upgrade-failed"
+							: "vite-plugin-install-failed",
+					`The generated configuration was written, but ${packageNames} could not be installed automatically. Install ${packageSpecifiers} with your package manager before using it.${reason}`
+				);
+			}
 			requiresInstall = true;
 		}
 

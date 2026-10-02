@@ -1002,6 +1002,65 @@ describe("migrateWranglerToCf", () => {
 		expect(cloudflareConfig).toContain("Migration incomplete.");
 	});
 
+	it("reports a lockfile sync failure after installing cf and the Vite plugin", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { "@cloudflare/vite-plugin": "^1.60.2" },
+				packageManager: "pnpm@10.27.0",
+			}),
+			"pnpm-lock.yaml": "old lockfile",
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+		vi.mocked(installPackages)
+			.mockImplementationOnce(async () => {
+				await writeFile(
+					path.join(cwd, "package.json"),
+					JSON.stringify({
+						devDependencies: {
+							"@cloudflare/vite-plugin": "^2.0.0-beta.123",
+							cf: "latest",
+						},
+						packageManager: "pnpm@10.27.0",
+					})
+				);
+				await writeFile(path.join(cwd, "pnpm-lock.yaml"), "installed lockfile");
+			})
+			.mockRejectedValueOnce(new Error("Lockfile is read-only."));
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(2, "pnpm", [], {
+			cwd,
+			isWorkspaceRoot: false,
+		});
+		expect(result).toMatchObject({
+			changedFiles: ["cloudflare.config.ts", "package.json", "pnpm-lock.yaml"],
+			followUps: [{ blocking: true, code: "vite-plugin-lockfile-sync-failed" }],
+			requiresInstall: true,
+			status: "needs-intervention",
+		});
+		expect(result.followUps[0].message).toContain(
+			"lockfile could not be synchronized"
+		);
+		expect(result.followUps[0].message).not.toContain("cf@latest");
+		expect(result.followUps[0].message).not.toContain("could not be installed");
+		expect(
+			JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"))
+				.devDependencies
+		).toMatchObject({
+			"@cloudflare/vite-plugin": "beta",
+			cf: "latest",
+		});
+		expect(await readFile(path.join(cwd, "pnpm-lock.yaml"), "utf8")).toBe(
+			"installed lockfile"
+		);
+	});
+
 	it("reports package files changed before a later install fails", async ({
 		expect,
 	}) => {

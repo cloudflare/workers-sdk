@@ -81,6 +81,7 @@ export class DependencyInstallError extends Error {
 	constructor(
 		readonly changedFiles: string[],
 		readonly pendingDependencies: DependencyToInstall[],
+		readonly stage: "install" | "manifest-update" | "lockfile-sync",
 		cause: unknown
 	) {
 		super(
@@ -738,6 +739,7 @@ export async function installProjectDependencies(
 			.filter((dependency) => dependency.dev === dev)
 			.map(({ name, version }) => `${name}@${version}`);
 		if (packages.length > 0) {
+			let stage: "install" | "manifest-update" | "lockfile-sync" = "install";
 			try {
 				await installPackages(packageManager.type, packages, {
 					cwd: packageDirectory,
@@ -748,27 +750,33 @@ export async function installProjectDependencies(
 					dependencies.some(
 						(dependency) =>
 							dependency.dev === dev && dependency.name === VITE_PLUGIN
-					) &&
-					(await pinVitePluginToBeta(packageDirectory, dev))
+					)
 				) {
-					if (packageManager.type === "bun") {
-						await runCommand(["bun", "install"], {
-							cwd: packageDirectory,
-							silent: true,
-						});
-					} else {
-						await installPackages(packageManager.type, [], {
-							cwd: packageDirectory,
-							isWorkspaceRoot,
-						});
+					stage = "manifest-update";
+					if (await pinVitePluginToBeta(packageDirectory, dev)) {
+						stage = "lockfile-sync";
+						if (packageManager.type === "bun") {
+							await runCommand(["bun", "install"], {
+								cwd: packageDirectory,
+								silent: true,
+							});
+						} else {
+							await installPackages(packageManager.type, [], {
+								cwd: packageDirectory,
+								isWorkspaceRoot,
+							});
+						}
 					}
 				}
 			} catch (error) {
 				throw new DependencyInstallError(
 					getChangedFiles(before, await readFiles(packageFilePaths)),
-					dev
-						? dependencies
-						: dependencies.filter((dependency) => !dependency.dev),
+					stage === "install"
+						? dev
+							? dependencies
+							: dependencies.filter((dependency) => !dependency.dev)
+						: [],
+					stage,
 					error
 				);
 			}
