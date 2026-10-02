@@ -516,6 +516,17 @@ async function uploadWorkerVersion(
 				versionPreviewAliasUrl = `https://${props.previewAlias}${workerSubdomain.preview_url_suffix}`;
 				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
 			}
+		} else if (
+			config.preview_urls === true &&
+			!workerSubdomain.previews_enabled
+		) {
+			// `versions upload` reads the Worker's subdomain settings but never
+			// applies them, so a newly enabled `preview_urls` stays off until a
+			// command that runs the trigger deploy does.
+			logger.warn(
+				"This version has no preview URL, although `preview_urls` is enabled in your configuration, because Preview URLs are disabled for this Worker. " +
+					"`wrangler versions upload` does not apply that setting; run `wrangler triggers deploy` or `wrangler deploy` to turn them on."
+			);
 		}
 	} else if (versionId && config.preview_urls === true) {
 		// The API reports `has_preview: false` without a reason. The documented

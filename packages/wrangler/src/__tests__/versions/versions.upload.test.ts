@@ -528,6 +528,28 @@ describe("versions upload", () => {
 		`);
 	});
 
+	test("should warn when preview_urls is enabled but the Worker has Preview URLs disabled", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.js",
+			preview_urls: true,
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		await expect(runWrangler("versions upload")).resolves.toBeUndefined();
+
+		expect(std.out).not.toContain("Version Preview URL");
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis version has no preview URL, although \`preview_urls\` is enabled in your configuration, because Preview URLs are disabled for this Worker. \`wrangler versions upload\` does not apply that setting; run \`wrangler triggers deploy\` or \`wrangler deploy\` to turn them on.[0m
+
+			"
+		`);
+	});
+
 	test("should not warn about a missing preview when preview_urls is not enabled", async () => {
 		mockGetScript();
 		mockUploadVersion(false);
