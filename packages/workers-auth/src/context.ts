@@ -11,6 +11,10 @@ import type { Logger } from "@cloudflare/workers-utils";
 export interface OAuthFlowTemporaryContext {
 	/** Persistence backend for the cached temporary preview account. */
 	storage: TemporaryAccountStorage;
+	/** Consumer name used in temporary-account errors. */
+	cliDisplayName?: string;
+	/** Consumer command used to clear a cached temporary account. */
+	logoutCommand?: string;
 	/**
 	 * Hook to customise the terms-acceptance interactive prompt
 	 *  - question: the question to ask a user in interactive mode.
@@ -103,7 +107,7 @@ export interface OAuthFlowContext {
 	 * into the copy the flow prints to the user — "To authorize <name>, please
 	 * visit ...". Consumer-specific, so it is required.
 	 */
-	displayName: string;
+	cliDisplayName: string;
 
 	/**
 	 * The command that restarts the device authorization flow (e.g.

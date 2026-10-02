@@ -27,7 +27,7 @@ import {
 	CreateApplicationRolloutRequest,
 	RolloutsService,
 } from "./client";
-import { fetchPagedListResult, fetchResult } from "./context";
+import { cliPresentation, fetchPagedListResult, fetchResult } from "./context";
 import { Diff } from "./diff";
 import { resolveImageName } from "./images";
 import { inferInstanceType } from "./limits";
@@ -494,7 +494,7 @@ function assertCanUseApplicationObservabilityTargeting(
 	}
 
 	throw new UserError(
-		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config and deploy once, then deploy again with target_instance_percentage or target_instance_count.`,
+		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your ${cliPresentation.displayConfigFileName} and deploy once, then deploy again with target_instance_percentage or target_instance_count.`,
 		{
 			telemetryMessage: "containers deploy observability migration blocked",
 		}

@@ -18,7 +18,7 @@ import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form"
 import { parseBulkInputToObject } from "../deploy/helpers/parse-bulk-input";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
-import { confirm, logger } from "../shared/context";
+import { cliPresentation, confirm, logger } from "../shared/context";
 import { getSubdomainValues } from "../triggers/deploy";
 import {
 	createPreview,
@@ -336,7 +336,7 @@ function buildPreviewContainerConfig(
 			continue;
 		}
 		throw new UserError(
-			`The container class_name "${className}" in "previews.containers" does not match any Durable Object class in your ${configFileName(config.configPath)} file. Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".`,
+			`The container class_name "${className}" in "previews.containers" does not match any Durable Object class in your ${configFileName(config.configPath, config.userConfigPath)} file. Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".`,
 			{
 				telemetryMessage: "no preview DO class matches container class_name",
 			}
@@ -540,8 +540,8 @@ export function formatNoActivePreviewUrlsMessage(config: Config): string {
 		customDomainRoute?.previews_enabled === true;
 	const cautionText =
 		workersDevAlreadyConfigured && customDomainAlreadyConfigured
-			? "Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again."
-			: "Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again.";
+			? `Caution: \`${cliPresentation.commands.deploy}\` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running \`${cliPresentation.commands.deploy}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${cliPresentation.commands.preview}\` again.`
+			: `Caution: \`${cliPresentation.commands.deploy}\` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run \`${cliPresentation.commands.deploy}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${cliPresentation.commands.preview}\` again.`;
 	let workersDevInstruction = `Add this to your ${configName}:`;
 	if (config.preview_urls === true) {
 		workersDevInstruction = `Your ${configName} already contains:`;
@@ -593,7 +593,8 @@ function getPreviewMigrationsToUpload(
 		if (foundIndex === -1) {
 			logger.warn(
 				`The published preview for ${workerName} has a migration tag "${currentMigrationTag}", which was not found in your ${configFileName(
-					config.configPath
+					config.configPath,
+					config.userConfigPath
 				)} file. You may have already deleted it. Applying all available migrations to the preview...`
 			);
 			return {
@@ -960,7 +961,7 @@ function logMissingCustomDomainPreviewUrlsWarning(
 
 	logger.log("");
 	logger.warn(
-		"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
+		`Custom domain Preview URLs are configured, but none are active for this Preview. If you added \`previews_enabled = true\` after your last deployment, run \`${cliPresentation.commands.deploy}\` once to publish the custom domain Preview route, then run \`${cliPresentation.commands.preview}\` again. If you already deployed with that setting, the custom domain may still be provisioning.`
 	);
 }
 

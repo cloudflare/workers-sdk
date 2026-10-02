@@ -5,12 +5,13 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
-import { removeDirSync } from "@cloudflare/workers-utils";
+import { CF_CLI_PRESENTATION, removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	AccountService,
 	buildCommand,
 	cleanupBuiltImages,
+	cliPresentation,
 	buildContainerImages,
 	getCloudflareContainerRegistry,
 	getContainerImageTag,
@@ -238,6 +239,22 @@ describe("buildCommand", () => {
 			"-",
 			dir,
 		]);
+	});
+
+	it("resolves consumer-specific presentation copy", ({ expect }) => {
+		initContainersSharedContext({
+			cliPresentation: CF_CLI_PRESENTATION,
+			logger,
+			fetchResult: fetchResultMock,
+		});
+
+		expect(cliPresentation).toMatchObject({
+			cliName: "cf",
+			displayConfigFileName: "cloudflare.config.ts",
+			commands: {
+				containerRegistryConfigure: "cf containers registries create",
+			},
+		});
 	});
 
 	it("tags and pushes new images, returning the pushed digest", async ({

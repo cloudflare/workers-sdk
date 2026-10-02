@@ -596,6 +596,16 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: To use Wrangler with Cloudflare Access, please install \`cloudflared\` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation]`
 				);
+
+				await expect(
+					getAccessHeaders("access-protected.com", {
+						logger: silentLogger,
+						isNonInteractiveOrCI: () => false,
+						cliDisplayName: "cf",
+					})
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: To use cf with Cloudflare Access, please install \`cloudflared\` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation]`
+				);
 			});
 		});
 	});
