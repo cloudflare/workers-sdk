@@ -72,6 +72,7 @@ export const WRANGLER_CLI: CliDescriptor = {
 	displayName: WRANGLER_DISPLAY_NAME,
 	commands: {
 		login: "wrangler login",
+		logout: "wrangler logout",
 		whoami: "wrangler whoami",
 		createProfile: "wrangler auth create",
 		deviceLogin: "wrangler login --device",

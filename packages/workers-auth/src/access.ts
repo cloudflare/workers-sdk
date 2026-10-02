@@ -96,11 +96,8 @@ export async function domainUsesAccess(
  * Get the headers needed to authenticate with an Access-protected domain.
  *
  * @param domain The hostname of the Access-protected domain (e.g. `"example.com"`).
- * @param options logger + an `isNonInteractiveOrCI` predicate used to
- *   produce an actionable error in CI (both default to no-op / `false`), plus an
- *   optional `previewToken` that is added as the `cf_workers_preview_token`
- *   query parameter when probing for Access and when invoking `cloudflared
- *   access login`, so detection works on unpublished `<name>.workers.dev` hosts.
+ * @param options Logger, interactivity, CLI presentation, cancellation, and
+ *   optional preview-token inputs for Access authentication.
  * @returns
  * - Service token headers (`CF-Access-Client-Id` + `CF-Access-Client-Secret`) if env vars are set
  * - A `Cookie: CF_Authorization=...` header if obtained via `cloudflared` (interactive only)
@@ -115,6 +112,8 @@ export async function getAccessHeaders(
 	options: {
 		logger: OAuthFlowLogger;
 		isNonInteractiveOrCI?: () => boolean;
+		/** Consumer name used in actionable error messages. */
+		cliDisplayName?: string;
 		/** Aborts a pending `cloudflared` authorization and kills its process. */
 		signal?: AbortSignal;
 		/**
@@ -202,7 +201,7 @@ export async function getAccessHeaders(
 	);
 	if (output.error) {
 		throw new UserError(
-			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation",
+			`To use ${options.cliDisplayName ?? "Wrangler"} with Cloudflare Access, please install \`cloudflared\` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation`,
 			{ telemetryMessage: "user access missing cloudflared" }
 		);
 	}
@@ -274,10 +273,14 @@ function spawnCloudflaredAccessLogin(
  *
  * Checks `WRANGLER_CF_AUTHORIZATION_TOKEN` first, then falls back to
  * {@link getAccessHeaders} against the configured auth domain.
+ *
+ * @param options Logger, interactivity, CLI presentation, and cancellation inputs.
+ * @returns Headers for authenticating with the configured OAuth auth domain.
  */
 export async function getCloudflareAccessHeaders(options: {
 	logger: OAuthFlowLogger;
 	isNonInteractiveOrCI: () => boolean;
+	cliDisplayName?: string;
 	signal?: AbortSignal;
 }): Promise<Record<string, string>> {
 	const cfAuthToken = getCfAuthorizationTokenFromEnv();

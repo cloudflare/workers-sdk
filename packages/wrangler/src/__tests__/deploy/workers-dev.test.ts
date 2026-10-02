@@ -1643,15 +1643,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your Wrangler file, it will be enabled for this deployment by default.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your Wrangler config file, it will be enabled for this deployment by default.[0m
 
 				  To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false'
-				  in your Wrangler file.
+				  in your Wrangler config file.
 
 				"
 			`);
 		});
-
 		it("should warn the user if preview_urls default is different from remote", async ({
 			expect,
 		}) => {
@@ -1676,10 +1675,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be enabled for this deployment by default.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler config file, Preview URLs will be enabled for this deployment by default.[0m
 
 				  To override this setting, you can disable Preview URLs by explicitly setting 'preview_urls =
-				  false' in your Wrangler file.
+				  false' in your Wrangler config file.
 
 				"
 			`);

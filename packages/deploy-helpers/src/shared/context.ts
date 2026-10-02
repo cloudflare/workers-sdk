@@ -1,5 +1,7 @@
+import { resolveCliPresentation } from "@cloudflare/workers-utils";
 import type { DeployHelpersContext } from "./types";
 import type {
+	CliPresentation,
 	FetchKVGetValueFetcher,
 	FetchListResultFetcher,
 	FetchPagedListResultFetcher,
@@ -27,12 +29,14 @@ export let fetchKVGetValue: FetchKVGetValueFetcher;
 export let confirm: DeployHelpersContext["confirm"];
 export let prompt: DeployHelpersContext["prompt"];
 export let select: DeployHelpersContext["select"];
+export let cliPresentation: CliPresentation = resolveCliPresentation();
 
 /**
  * Set the global context for deploy-helpers. Must be called once at
  * startup before any deploy-helpers function that needs these values.
  */
 export function initDeployHelpersContext(ctx: DeployHelpersContext): void {
+	cliPresentation = resolveCliPresentation(ctx.cliPresentation);
 	logger = ctx.logger;
 	fetchResult = ctx.fetchResult;
 	fetchListResult = ctx.fetchListResult;

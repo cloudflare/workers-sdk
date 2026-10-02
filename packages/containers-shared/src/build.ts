@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { isDirectory } from "@cloudflare/workers-utils/fs-helpers";
-import { logger } from "./context";
+import { cliPresentation, logger } from "./context";
 import { resolveImageName } from "./images";
 import { dockerImageInspect } from "./inspect";
 import { getCloudflareContainerRegistry } from "./knobs";
@@ -595,7 +595,7 @@ async function buildContainerImage(
 ): Promise<BuiltContainerImage> {
 	const localTag = `${getContainerImageRepositoryName(
 		containerConfig
-	)}:wrangler-${crypto.randomUUID()}`;
+	)}:${cliPresentation.cliName}-${crypto.randomUUID()}`;
 	logger.log("Building image", localTag);
 
 	try {

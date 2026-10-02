@@ -11,6 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import {
+	cliPresentation,
 	fetchListResult,
 	fetchPagedListResult,
 	fetchResult,
@@ -1573,26 +1574,35 @@ async function createD1Database(
 		}
 
 		if (errorCode === 7406) {
-			throw new UserError(
-				dedent`
-					You have reached the maximum number of D1 databases for your account.
-
-					On the Workers Free plan? Upgrade to create more:
-					https://dash.cloudflare.com/${accountId}/workers/plans
-
-					Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
-					https://developers.cloudflare.com/d1/
-
-					Or free up space:
-					To list your existing databases, run: wrangler d1 list
-					To delete a database, run: wrangler d1 delete <database-name>
-				`,
-				{ telemetryMessage: "d1 create database limit reached" }
-			);
+			throw new UserError(renderD1DatabaseLimitError(accountId), {
+				telemetryMessage: "d1 create database limit reached",
+			});
 		}
 
 		throw e;
 	}
+}
+
+/**
+ * Renders actionable guidance after D1 rejects creation at the account limit.
+ *
+ * @param accountId Account identifier used to construct the upgrade URL.
+ * @returns Consumer-specific database listing and deletion guidance.
+ */
+export function renderD1DatabaseLimitError(accountId: string): string {
+	return dedent`
+		You have reached the maximum number of D1 databases for your account.
+
+		On the Workers Free plan? Upgrade to create more:
+		https://dash.cloudflare.com/${accountId}/workers/plans
+
+		Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
+		https://developers.cloudflare.com/d1/
+
+		Or free up space:
+		To list your existing databases, run: ${cliPresentation.commands.d1List}
+		To delete a database, run: ${cliPresentation.commands.d1Delete} <database-name>
+	`;
 }
 
 async function listDatabases(

@@ -40,7 +40,8 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	verifyDockerInstalled: vi.fn(),
 }));
 
-vi.mock("../src/shared/context", () => ({
+vi.mock("../src/shared/context", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/shared/context")>()),
 	logger: {
 		log: vi.fn(),
 		warn: vi.fn(),
