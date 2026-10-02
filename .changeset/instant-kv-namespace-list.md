@@ -4,4 +4,4 @@
 
 Add a hidden `--mode instant` option to `wrangler kv namespace list`
 
-This lets entitled accounts filter their Workers KV namespaces by mode. The option stays hidden from `--help` until the feature is generally available.
+Use this option to list only namespaces using Workers KV Instant mode in your account. Workers KV Instant is in private beta.
