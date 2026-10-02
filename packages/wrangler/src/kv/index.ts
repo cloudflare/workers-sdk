@@ -106,9 +106,10 @@ export const kvNamespaceCreateCommand = createCommand({
 			alias: "x-mode",
 			type: "string",
 			describe:
-				"The storage mode for the new namespace. Instant mode offers lower-latency reads and faster global updates [private beta]",
+				"The storage mode for the new namespace. Instant mode offers lower-latency reads and faster global updates [private beta].\nCannot be combined with --jurisdiction.",
 			choices: ["instant"] as const,
 			requiresArg: true,
+			conflicts: "jurisdiction",
 		},
 		...sharedResourceCreationArgs,
 	},
