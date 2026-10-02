@@ -9,7 +9,7 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import type { Miniflare } from "miniflare";
 
 const BUN_PROXY_ERROR =
-	"`server.fetch()` cannot reach the Worker because Bun does not support the custom `fetch()` dispatcher required to deliver Miniflare's proxy control request. Use `server.getWorker().fetch()`, which dispatches to the Worker directly, or run your tests using Node.js.";
+	"`createTestHarness()` cannot dispatch requests to your Worker under Bun, because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes them through (https://github.com/oven-sh/bun/issues/39247). Without it, a request can reach the network instead of your Worker. `server.getWorker().getEnv()` and `getExport()` still work under Bun; run `fetch()`, `email()` and `scheduled()` dispatches using Node.js.";
 
 const { isBunMock } = vi.hoisted(() => ({ isBunMock: vi.fn(() => false) }));
 vi.mock("../../utils/is-bun", () => ({ isBun: isBunMock }));
@@ -18,7 +18,7 @@ describe("createTestHarness under Bun", () => {
 	mockConsoleMethods();
 	runInTempDir();
 
-	it("keeps listen() and getWorker() working and fails both proxy doors loudly", async ({
+	it("keeps listen() and getEnv() working and fails every dispatch door loudly", async ({
 		expect,
 		onTestFinished,
 	}) => {
@@ -68,6 +68,7 @@ describe("createTestHarness under Bun", () => {
 				name: "harness-under-bun",
 				main: "worker.js",
 				compatibility_date: "2026-05-20",
+				vars: { PROBE: "yes" },
 			})
 		);
 
@@ -78,14 +79,24 @@ describe("createTestHarness under Bun", () => {
 
 		const { url } = await server.listen();
 
-		const direct = await server.getWorker().fetch("/");
-		expect(direct.status).toBe(200);
-		expect(await direct.text()).toBe("ok");
+		// `getEnv()` reads bindings without Miniflare's `dispatchFetch()`.
+		const env = await server.getWorker<{ PROBE: string }>().getEnv();
+		expect(env.PROBE).toBe("yes");
 
-		await expect(server.fetch("/")).rejects.toMatchObject({
+		// Every door below goes through `dispatchFetch()`, whose undici
+		// dispatcher Bun ignores, so each must refuse before sending anything.
+		const refused = {
 			message: BUN_PROXY_ERROR,
 			telemetryMessage: "test harness bun proxy request failed",
-		});
+		};
+		await expect(server.fetch("/")).rejects.toMatchObject(refused);
+		await expect(server.getWorker().fetch("/")).rejects.toMatchObject(refused);
+		await expect(
+			server.getWorker().fetch("http://example.com/")
+		).rejects.toMatchObject(refused);
+		await expect(
+			server.getWorker().scheduled({ cron: "* * * * *" })
+		).rejects.toMatchObject(refused);
 
 		const viaUrl = await fetch(url);
 		expect(viaUrl.status).toBe(503);

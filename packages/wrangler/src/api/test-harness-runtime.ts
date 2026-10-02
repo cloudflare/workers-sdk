@@ -7,16 +7,18 @@ const BUN_PROXY_MESSAGE_TIMEOUT_MS = 5_000;
 
 function createBunProxyMessageError(): UserError {
 	return new UserError(
-		"`server.fetch()` cannot reach the Worker because Bun does not support the custom `fetch()` dispatcher required to deliver Miniflare's proxy control request. Use `server.getWorker().fetch()`, which dispatches to the Worker directly, or run your tests using Node.js.",
+		"`createTestHarness()` cannot dispatch requests to your Worker under Bun, because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes them through (https://github.com/oven-sh/bun/issues/39247). Without it, a request can reach the network instead of your Worker. `server.getWorker().getEnv()` and `getExport()` still work under Bun; run `fetch()`, `email()` and `scheduled()` dispatches using Node.js.",
 		{ telemetryMessage: "test harness bun proxy request failed" }
 	);
 }
 
 /**
  * Waits for Bun to deliver the control message that unlocks the test harness
- * proxy, before `server.fetch()` sends a request through it. Current Bun releases are affected by an upstream dispatcher issue and
- * do not deliver this message. A possible future compatible release can resolve
- * normally; until then, the timeout prevents requests from hanging indefinitely.
+ * proxy, before the harness dispatches a request through Miniflare. The message
+ * travels through the same undici `dispatcher` as every dispatch, so its
+ * delivery doubles as the capability check. Current Bun releases ignore that
+ * option and do not deliver it. A future compatible release resolves normally;
+ * until then, this throws before any request leaves the process.
  *
  * @param waitForProxyMessages Callback that reports whether the latest proxy
  * control message was delivered.

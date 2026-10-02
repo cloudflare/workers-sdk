@@ -387,7 +387,7 @@ export class ProxyWorker implements DurableObject {
  */
 function controlPayloadMissingResponse(): Response {
 	return new Response(
-		"The Wrangler ProxyWorker received a control request without its payload, so it cannot forward requests to your Worker. This happens when the JavaScript runtime's `fetch()` ignores undici's `dispatcher` option, which Bun does today (https://github.com/oven-sh/bun/issues/39247). Run under Node.js, or, with `createTestHarness()`, use `server.getWorker().fetch()`, which does not go through this proxy.",
+		"The Wrangler ProxyWorker received a control request without its payload, so it cannot forward requests to your Worker. This happens when the JavaScript runtime's `fetch()` ignores undici's `dispatcher` option, which Bun does today (https://github.com/oven-sh/bun/issues/39247). Run under Node.js.",
 		{ status: 503 }
 	);
 }
