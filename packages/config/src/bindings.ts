@@ -762,11 +762,6 @@ export interface Bindings {
 	/** An Analytics binding. */
 	analytics(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
 	/**
-	 * An Analytics SQL binding.
-	 * @deprecated Use `analytics()` instead.
-	 */
-	analyticsSQL(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
-	/**
 	 * Binding to a D1 database.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#d1-databases
@@ -969,7 +964,6 @@ export const bindings = {
 	text: (value) => ({ type: "text", value }),
 	vectorize: (options) => ({ type: "vectorize", ...options }),
 	versionMetadata: () => ({ type: "version-metadata" }),
-	analyticsSQL: (options) => ({ type: "analytics", ...options }),
 	vpcService: (options) => ({ type: "vpc-service", ...options }),
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),
