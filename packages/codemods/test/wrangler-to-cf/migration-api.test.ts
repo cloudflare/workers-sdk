@@ -196,7 +196,7 @@ describe("migrateWranglerToCf", () => {
 		{ packageManager: "bun", lockFile: "bun.lock" },
 		{ packageManager: "nub", lockFile: "nub.lock" },
 	] as const)(
-		"pins beta when $packageManager saves a resolved Vite plugin version",
+		"sets beta when $packageManager saves a resolved Vite plugin version",
 		async ({ packageManager, lockFile }, { expect }) => {
 			const cwd = await createProject({
 				"package.json": JSON.stringify({

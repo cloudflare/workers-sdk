@@ -120,7 +120,7 @@ async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
 }
 
-async function pinVitePluginToBeta(
+async function setVitePluginDepToBeta(
 	packageDirectory: string,
 	dev: boolean
 ): Promise<boolean> {
@@ -756,7 +756,7 @@ export async function installProjectDependencies(
 					)
 				) {
 					stage = "manifest-update";
-					if (await pinVitePluginToBeta(packageDirectory, dev)) {
+					if (await setVitePluginDepToBeta(packageDirectory, dev)) {
 						stage = "lockfile-sync";
 						if (packageManager.type === "bun") {
 							await runCommand(["bun", "install"], {
