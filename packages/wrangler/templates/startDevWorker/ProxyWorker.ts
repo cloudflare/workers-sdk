@@ -96,6 +96,11 @@ export class ProxyWorker implements DurableObject {
 					.forEach((ws) => ws.send("reload"));
 
 				break;
+
+			default:
+				// Bun currently drops `cf.hostMetadata`, so acknowledge only control
+				// requests whose payload actually reached the ProxyWorker.
+				return new Response(null, { status: 400 });
 		}
 
 		return new Response(null, { status: 204 });
