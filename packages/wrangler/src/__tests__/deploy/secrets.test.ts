@@ -145,16 +145,23 @@ describe("deploy secrets", () => {
 			`);
 		});
 
-		it("should upload secrets from a .env file alongside the worker", async ({
+		it("should expand dotenv secrets like Wrangler's .env loader", async ({
 			expect,
 		}) => {
+			vi.stubEnv("CI", "expanded-value");
+			vi.stubEnv("EMPTY_SECRET", "");
 			const secretsFile = ".env.production";
 			fs.writeFileSync(
 				secretsFile,
-				`SECRET1=value1
-SECRET2=value2
-# Comment line
-SECRET3=value3`
+				[
+					"SECRET1=${CI}",
+					"SECRET2=value2",
+					"# Comment line",
+					"SECRET3=${SECRET2}",
+					"ESCAPED_SECRET=\\${CI}",
+					"CI=file-value",
+					"EMPTY_SECRET=file-value",
+				].join("\n")
 			);
 
 			mockServiceScriptData({
@@ -167,7 +174,7 @@ SECRET3=value3`
 					{
 						type: "secret_text",
 						name: "SECRET1",
-						text: "value1",
+						text: "expanded-value",
 					},
 					{
 						type: "secret_text",
@@ -177,7 +184,22 @@ SECRET3=value3`
 					{
 						type: "secret_text",
 						name: "SECRET3",
-						text: "value3",
+						text: "value2",
+					},
+					{
+						type: "secret_text",
+						name: "ESCAPED_SECRET",
+						text: "${CI}",
+					},
+					{
+						type: "secret_text",
+						name: "CI",
+						text: "expanded-value",
+					},
+					{
+						type: "secret_text",
+						name: "EMPTY_SECRET",
+						text: "",
 					},
 				],
 				expectedCompatibilityDate: "2022-01-12",
@@ -194,10 +216,13 @@ SECRET3=value3`
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
-				Binding                       Resource
-				env.SECRET1 ("(hidden)")      Environment Variable
-				env.SECRET2 ("(hidden)")      Environment Variable
-				env.SECRET3 ("(hidden)")      Environment Variable
+				Binding                              Resource
+				env.SECRET1 ("(hidden)")             Environment Variable
+				env.SECRET2 ("(hidden)")             Environment Variable
+				env.SECRET3 ("(hidden)")             Environment Variable
+				env.ESCAPED_SECRET ("(hidden)")      Environment Variable
+				env.CI ("(hidden)")                  Environment Variable
+				env.EMPTY_SECRET ("(hidden)")        Environment Variable
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)

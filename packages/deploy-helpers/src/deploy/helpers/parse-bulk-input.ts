@@ -7,6 +7,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { parse as dotenvParse } from "dotenv";
+import { expand as dotenvExpand } from "dotenv-expand";
 
 export function validateFileSecrets(
 	content: unknown,
@@ -80,7 +81,7 @@ export async function parseBulkInputToObject(
 			content = parseJSON(fileContent) as Record<string, string | null>;
 			secretFormat = "json";
 		} catch {
-			content = dotenvParse(fileContent);
+			content = parseDotEnv(fileContent);
 			secretFormat = "dotenv";
 			// dotenvParse does not error unless fileContent is undefined, no keys === error
 			if (Object.keys(content).length === 0) {
@@ -102,7 +103,7 @@ export async function parseBulkInputToObject(
 				content = parseJSON(pipedInput) as Record<string, string | null>;
 				secretFormat = "json";
 			} catch (e) {
-				content = dotenvParse(pipedInput);
+				content = parseDotEnv(pipedInput);
 				secretFormat = "dotenv";
 				// dotenvParse does not error unless fileContent is undefined, no keys === error
 				if (Object.keys(content).length === 0) {
@@ -122,4 +123,25 @@ export async function parseBulkInputToObject(
 		);
 	}
 	return { content, secretSource, secretFormat };
+}
+
+function parseDotEnv(content: string): Record<string, string> {
+	const parsed = dotenvParse(content);
+	const processEnv = copyProcessEnv();
+	dotenvExpand({ parsed, processEnv: { ...processEnv } });
+	for (const key of Object.keys(parsed)) {
+		if (Object.hasOwn(processEnv, key)) {
+			parsed[key] = processEnv[key];
+		}
+	}
+
+	return parsed;
+}
+
+function copyProcessEnv(): Record<string, string> {
+	return Object.fromEntries(
+		Object.entries(process.env).filter(
+			(entry): entry is [string, string] => entry[1] !== undefined
+		)
+	);
 }
