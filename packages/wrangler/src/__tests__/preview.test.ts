@@ -4334,6 +4334,7 @@ describe("wrangler preview", () => {
 					previews: {},
 				})
 			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -4367,16 +4368,33 @@ describe("wrangler preview", () => {
 				),
 				http.post(
 					`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
-					() =>
-						HttpResponse.json({
+					async ({ request }) => {
+						const { manifest } = (await request.json()) as {
+							manifest: Record<string, { hash: string; size: number }>;
+						};
+						return HttpResponse.json({
 							success: true,
-							result: { buckets: [], jwt: "assets-jwt-from-session" },
-						})
+							result: {
+								buckets: [Object.values(manifest).map(({ hash }) => hash)],
+								jwt: "assets-jwt-from-session",
+							},
+						});
+					}
+				),
+				http.post(`*/accounts/:accountId/workers/assets/upload`, () =>
+					HttpResponse.json(
+						{
+							success: true,
+							result: { jwt: "assets-completion-jwt" },
+						},
+						{ status: 201 }
+					)
 				),
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-					() =>
-						HttpResponse.json(
+					async ({ request }) => {
+						deploymentRequestBody = await readPreviewDeploymentRequest(request);
+						return HttpResponse.json(
 							{
 								success: true,
 								result: {
@@ -4390,12 +4408,16 @@ describe("wrangler preview", () => {
 								},
 							},
 							{ status: 201 }
-						)
+						);
+					}
 				)
 			);
 
 			await runWrangler("preview --name test-preview --json");
 
+			expect(deploymentRequestBody?.assets).toMatchObject({
+				jwt: "assets-completion-jwt",
+			});
 			// console.info writes to stdout too, so anything logged there would
 			// corrupt the payload for whoever parses it.
 			expect(std.info).toBe("");
