@@ -57,6 +57,31 @@ describe("buildPagesFunctions", () => {
 		expect(bundle).toContain("hello");
 	});
 
+	it("should preserve using declarations instead of lowering them", async ({
+		expect,
+	}) => {
+		const { functionsDir, outputDir } = setupFunctionsDir({
+			"hello.ts": `
+				export const onRequest = async () => {
+					await using session = { async [Symbol.asyncDispose]() {} };
+					using socket = { [Symbol.dispose]() {} };
+					return new Response("hello");
+				};
+			`,
+		});
+
+		const result = await buildPagesFunctions({
+			functionsDirectory: functionsDir,
+			outputDirectory: outputDir,
+		});
+
+		const bundle = readFileSync(result.entryPointPath, "utf-8");
+		expect(bundle).toContain("await using session = ");
+		expect(bundle).toContain("using socket = ");
+		expect(bundle).not.toContain("__using");
+		expect(bundle).not.toContain("__callDispose");
+	});
+
 	it("should compile multiple routes with method-specific handlers", async ({
 		expect,
 	}) => {
