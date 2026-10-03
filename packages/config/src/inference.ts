@@ -352,31 +352,59 @@ type HasProcessEnv<
 				: false
 			: false;
 
+type StringBinding = { type: "text" | "json" | "secret" };
+
+type ProcessEnvValue<TValue> = TValue extends string ? TValue : string;
+
 type StringBindings<TEnv> = TEnv extends unknown
 	? {
 			[
-				K in keyof TEnv as Exclude<TEnv[K], undefined> extends {
-					type: "text" | "json" | "secret";
-				}
-					? K
-					: never
-			]: TEnv[K];
+				K in keyof TEnv as [Extract<TEnv[K], StringBinding>] extends [never]
+					? never
+					: K
+			]:
+				| ProcessEnvValue<InferBindingType<Extract<TEnv[K], StringBinding>>>
+				| (Exclude<TEnv[K], StringBinding> extends never ? never : undefined);
 		}
+	: never;
+
+type ProcessEnvBindingsForDate<
+	TConfig,
+	TNodeCompatDefaultOnDate extends string,
+	TDate extends string,
+> = TDate extends unknown
+	? HasProcessEnv<
+			Omit<TConfig, "compatibilityDate"> & { compatibilityDate: TDate },
+			TNodeCompatDefaultOnDate
+		> extends true
+		? StringBindings<ConfigEnv<TConfig>>
+		: Record<never, never>
 	: never;
 
 type ProcessEnvBindings<
 	TConfig,
 	TNodeCompatDefaultOnDate extends string,
-> = TConfig extends unknown
-	? HasProcessEnv<TConfig, TNodeCompatDefaultOnDate> extends true
-		? StringBindings<ConfigEnv<TConfig>>
-		: Record<never, never>
-	: never;
+> = TConfig extends { compatibilityDate: infer TDate extends string }
+	? ProcessEnvBindingsForDate<TConfig, TNodeCompatDefaultOnDate, TDate>
+	: Record<never, never>;
 
-type StringifyEnv<TEnv> = {
-	[K in keyof TEnv]: Exclude<TEnv[K], undefined> extends string
-		? TEnv[K]
-		: string;
+type PossiblyMissingKeys<TEnv> = {
+	[K in KeysOfUnion<TEnv>]: undefined extends UnionProperty<TEnv, K>
+		? K
+		: never;
+}[KeysOfUnion<TEnv>];
+
+type MergeProcessEnv<
+	TEnv,
+	TRequiredKey extends PropertyKey = Exclude<
+		keyof TEnv,
+		PossiblyMissingKeys<TEnv>
+	>,
+	TOptionalKey extends PropertyKey = Exclude<KeysOfUnion<TEnv>, TRequiredKey>,
+> = {
+	[K in TRequiredKey]: UnionProperty<TEnv, K>;
+} & {
+	[K in TOptionalKey]?: Exclude<UnionProperty<TEnv, K>, undefined>;
 };
 
 /**
@@ -387,8 +415,8 @@ type StringifyEnv<TEnv> = {
 export type InferProcessEnv<
 	TUnwrappedConfig,
 	TNodeCompatDefaultOnDate extends string,
-> = StringifyEnv<
-	MergeEnv<ProcessEnvBindings<TUnwrappedConfig, TNodeCompatDefaultOnDate>>
+> = MergeProcessEnv<
+	ProcessEnvBindings<TUnwrappedConfig, TNodeCompatDefaultOnDate>
 >;
 
 /**

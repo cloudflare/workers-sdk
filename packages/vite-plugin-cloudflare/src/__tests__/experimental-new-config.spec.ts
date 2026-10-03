@@ -404,9 +404,11 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		// Runtime types are appended by default (includeRuntime defaults to true).
 		expect(content).toContain(RUNTIME_MARKER);
 		expect(content).toContain(FAKE_RUNTIME_TYPES);
+		expect(content).toContain("interface Env extends Cloudflare.Env {}");
+		expect(content).toContain("interface ProcessEnv extends __ProcessEnv {}");
 		// A blank line separates the inference block from the runtime types.
 		expect(content).toContain(
-			`interface Env extends Cloudflare.Env {}\n\n${FAKE_RUNTIME_HEADER}`
+			`interface ProcessEnv extends __ProcessEnv {}\n}\n\n${FAKE_RUNTIME_HEADER}`
 		);
 		expect(generateRuntimeTypesMock).toHaveBeenCalledTimes(1);
 	});

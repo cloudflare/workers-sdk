@@ -41,6 +41,12 @@ export type DefaultBefore = Assert<
 >;
 export type DefaultBoundary = Assert<Equal<WithDate<"2026-08-04">, Populated>>;
 export type DefaultAfter = Assert<Equal<WithDate<"2026-10-02">, Populated>>;
+export type ConditionalPopulationDate = Assert<
+	Equal<WithDate<"2026-08-03" | "2026-08-04">, Partial<Populated>>
+>;
+export type AllPopulatedDates = Assert<
+	Equal<WithDate<"2026-08-04" | "2026-10-02">, Populated>
+>;
 export type FutureYear = Assert<Equal<WithDate<"2027-01-01">, Populated>>;
 export type BeforePopulation = Assert<
 	Equal<WithDate<"2025-03-31", ["nodejs_compat"]>, Record<never, never>>
@@ -146,5 +152,62 @@ export type EnvUnion = Assert<
 	Equal<
 		InferProcessEnv<UnwrapConfig<typeof branchedEnv>>,
 		{ LABEL: "preview" | "production"; PREVIEW?: string }
+	>
+>;
+
+const mixedBinding = defineWorker((ctx) => ({
+	name: "api",
+	compatibilityDate: "2026-10-02" as const,
+	env: {
+		SHARED: ctx.isPreview
+			? bindings.text("ready")
+			: bindings.r2({ name: "assets" }),
+		ALWAYS: bindings.text("present"),
+	},
+}));
+export type MixedBindingKinds = Assert<
+	Equal<
+		InferProcessEnv<UnwrapConfig<typeof mixedBinding>>,
+		{ SHARED?: "ready"; ALWAYS: "present" }
+	>
+>;
+
+const mixedStringBinding = defineWorker((ctx) => ({
+	name: "api",
+	compatibilityDate: "2026-10-02" as const,
+	env: {
+		VALUE: ctx.isPreview ? bindings.text("ready") : bindings.json("hello"),
+	},
+}));
+export type MixedStringKinds = Assert<
+	Equal<
+		InferProcessEnv<UnwrapConfig<typeof mixedStringBinding>>,
+		{ VALUE: "ready" | "hello" }
+	>
+>;
+
+export type CorrelatedDateAndBinding = Assert<
+	Equal<
+		InferProcessEnv<
+			| {
+					compatibilityDate: "2026-08-03";
+					env: { BEFORE: typeof env.PUBLIC_LABEL };
+			  }
+			| {
+					compatibilityDate: "2026-08-04";
+					env: { AFTER: typeof env.PUBLIC_LABEL };
+			  }
+		>,
+		{ AFTER?: "production" }
+	>
+>;
+
+export type OptionalBinding = Assert<
+	Equal<
+		InferProcessEnv<{
+			compatibilityDate: "2026-10-02";
+			env: { TOKEN?: typeof env.API_TOKEN };
+		}>,
+		{ TOKEN?: string }
 	>
 >;
