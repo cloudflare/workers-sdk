@@ -140,7 +140,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Updates to PRs.
 - Actions
   - Runs the E2E tests for C3.
-  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `ci:run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
+  - C3 E2E tests do not receive Cloudflare API credentials.
 
 ### Rerun Code Owners (rerun-codeowners.yml + rerun-codeowners-privileged.yml)
 
@@ -155,6 +155,6 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 - Triggers
   - The `ci:run-remote-tests` or `run-c3-frameworks-tests` label is added to or removed from a PR.
 - Actions
-  - Re-runs the E2E workflows for the PR so they pick up the label change and pass (or withhold) API credentials to the test steps.
-  - `ci:run-remote-tests` re-runs Wrangler, Vite, and C3 E2E workflows; `run-c3-frameworks-tests` re-runs only C3 E2E.
+  - `ci:run-remote-tests` re-runs the Wrangler and Vite E2E workflows so they pick up the label change and pass (or withhold) API credentials to the test steps.
+  - `run-c3-frameworks-tests` re-runs only the C3 E2E workflow.
   - Uses `pull_request_target` to get a privileged token even for fork PRs (safe because no untrusted code is checked out).
