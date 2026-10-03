@@ -177,6 +177,9 @@ export class HyperdriveProxyController {
 	) {
 		// Connect to real database
 		const dbSocket = net.connect({ host: targetHost, port: targetPort });
+		// Nothing listens on the client socket until pipeSockets runs, and the
+		// negotiation below awaits the database and a TLS handshake.
+		clientSocket.on("error", () => dbSocket.destroy());
 		const sslmodeRequire = sslmode === "require";
 		const sslmodePrefer = sslmode === "prefer";
 		const sslmodeVerifyFull = sslmode === "verify-full";
@@ -220,9 +223,7 @@ export class HyperdriveProxyController {
 				}
 			}
 		}
-		// Pipe plain tcp sockets
-		clientSocket.pipe(dbSocket);
-		dbSocket.pipe(clientSocket);
+		pipeSockets(clientSocket, dbSocket);
 	}
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
@@ -261,7 +262,7 @@ async function handlePostgresTlsConnection(
 		);
 		try {
 			const tlsSocket = await tlsConnect(tlsOptions);
-			setupTLSConnection(clientSocket, tlsSocket);
+			pipeSockets(clientSocket, tlsSocket);
 			return;
 		} catch (e) {
 			if (sslmodeRequire) {
@@ -276,14 +277,8 @@ async function handlePostgresTlsConnection(
 	}
 	// fallback to plain TCP
 	dbSocket.destroy();
-	const newDbSocket = await createPlainTCPConnection(
-		targetHost,
-		targetPort,
-		clientSocket
-	);
-	// Pipe plain TCP sockets
-	clientSocket.pipe(newDbSocket);
-	newDbSocket.pipe(clientSocket);
+	const newDbSocket = await createPlainTCPConnection(targetHost, targetPort);
+	pipeSockets(clientSocket, newDbSocket);
 }
 
 /** Handles MySQL TLS connection */
@@ -371,8 +366,7 @@ async function handleMySQLTlsConnection(
 			authResponsePayload[3]--;
 			await writeAsync(clientSocket, authResponsePayload);
 
-			// Set up pipes with error handler
-			setupTLSConnection(clientSocket, tlsSocket);
+			pipeSockets(clientSocket, tlsSocket);
 			return;
 		} catch (e) {
 			if (sslmodeRequire) {
@@ -388,23 +382,16 @@ async function handleMySQLTlsConnection(
 	dbSocket.destroy();
 
 	// Create new connection and send init packet without SSL capability
-	const newDbSocket = await createPlainTCPConnection(
-		targetHost,
-		targetPort,
-		clientSocket
-	);
+	const newDbSocket = await createPlainTCPConnection(targetHost, targetPort);
 
-	// Pipe plain TCP sockets
-	clientSocket.pipe(newDbSocket);
-	newDbSocket.pipe(clientSocket);
+	pipeSockets(clientSocket, newDbSocket);
 	return;
 }
 
 /** Create and wait for plain TCP connection */
 async function createPlainTCPConnection(
 	targetHost: string,
-	targetPort: number,
-	clientSocket: net.Socket
+	targetPort: number
 ): Promise<net.Socket> {
 	const dbSocket = net.connect({ host: targetHost, port: targetPort });
 
@@ -424,28 +411,32 @@ async function createPlainTCPConnection(
 		dbSocket.once("error", handleError);
 	});
 
-	// Set up error handler
-	dbSocket.on("error", () => {
-		clientSocket.destroy();
-	});
-
 	return dbSocket;
 }
 
-/** Set up TLS connection with pipes and error handlers */
-function setupTLSConnection(
-	clientSocket: net.Socket,
-	tlsSocket: tls.TLSSocket
-): void {
-	// Set up error handler for runtime TLS errors
-	tlsSocket.on("error", () => {
+/**
+ * `pipe()` is not enough: the `error` listener it installs on the destination
+ * removes itself and re-emits once no other listener is left, which kills the
+ * process.
+ */
+function pipeSockets(clientSocket: net.Socket, peerSocket: net.Socket): void {
+	const teardown = () => {
 		clientSocket.destroy();
-		tlsSocket.destroy();
-	});
+		peerSocket.destroy();
+	};
 
-	// Pipe sockets
-	clientSocket.pipe(tlsSocket);
-	tlsSocket.pipe(clientSocket);
+	// A client that already errored will not fire again, so the peer it is about
+	// to be piped into would never be closed.
+	if (clientSocket.destroyed) {
+		teardown();
+		return;
+	}
+
+	clientSocket.on("error", teardown);
+	peerSocket.on("error", teardown);
+
+	clientSocket.pipe(peerSocket);
+	peerSocket.pipe(clientSocket);
 }
 
 /** Write buffer to socket and return as a promise helper function  */
