@@ -15,18 +15,41 @@ import {
 import { parseJSONC } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
-import type { AutoConfigContext } from "../context";
+import { getInstalledPackageVersion } from "./utils/packages";
+import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
+const ASTRO_CONFIG_EXTENSIONS = ["mjs", "mts", "ts", "js"];
+
 export class Astro extends Framework {
 	override readonly supportsMode = true;
 
+	isConfigured(
+		projectPath: string,
+		{ target = "cf" }: { target?: AutoConfigTarget } = {}
+	): boolean {
+		if (target === "wrangler") {
+			return super.isConfigured(projectPath, { target });
+		}
+
+		const adapterVersion = getInstalledPackageVersion(
+			"@astrojs/cloudflare",
+			projectPath
+		);
+		return (
+			adapterVersion !== undefined &&
+			semiver(adapterVersion, "15.0.0-beta.0") >= 0
+		);
+	}
+
 	async configure({
+		target,
 		outputDir,
 		dryRun,
 		packageManager,
@@ -36,52 +59,95 @@ export class Astro extends Framework {
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const astroVersion = this.frameworkVersion;
 
-		const { npx } = packageManager;
-		if (!dryRun) {
-			if (semiver(astroVersion, "6.0.0") >= 0) {
-				// For Astro 6.0.0+ use the native `astro add cloudflare` command
-				await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
-					silent: true,
-					startText: "Installing adapter",
-					doneText: `${brandColor("installed")} ${dim(
-						`via \`${npx} astro add cloudflare\``
-					)}`,
-				});
-			} else {
-				// For older versions of Astro we need to apply manual configuration since `astro add cloudflare`
-				// tries to install the latest version of the adapter causing conflicts
+		if (target === "wrangler") {
+			if (!dryRun) {
+				if (semiver(astroVersion, "6.0.0") >= 0) {
+					// For Astro 6.0.0+ use the native `astro add cloudflare` command
+					await runCommand(
+						[packageManager.npx, "astro", "add", "cloudflare", "-y"],
+						{
+							silent: true,
+							startText: "Installing adapter",
+							doneText: `${brandColor("installed")} ${dim(
+								`via \`${packageManager.npx} astro add cloudflare\``
+							)}`,
+						}
+					);
+				} else {
+					// For older versions of Astro we need to apply manual configuration since `astro add cloudflare`
+					// tries to install the latest version of the adapter causing conflicts
 
-				// Note: here the Astro version can only be 5 or 4 because of the minimum version validation
-				const astroMajorVersion = semiver(astroVersion, "5.0.0") >= 0 ? 5 : 4;
-				await configureAstroLegacy(
-					projectPath,
-					isWorkspaceRoot,
-					packageManager,
-					astroMajorVersion,
-					context
-				);
+					// Note: here the Astro version can only be 5 or 4 because of the minimum version validation
+					const astroMajorVersion = semiver(astroVersion, "5.0.0") >= 0 ? 5 : 4;
+					await configureAstroLegacy(
+						projectPath,
+						isWorkspaceRoot,
+						packageManager,
+						astroMajorVersion,
+						context
+					);
+				}
+
+				writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
 			}
 
-			writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
-		}
-
-		if (semiver(astroVersion, "6.0.0") < 0) {
-			// Before version 6 Astro required a wrangler config file
-			return {
-				buildTool: "wrangler",
-				workerConfig: {
-					entrypoint: `${outputDir}/_worker.js/index.js`,
-					compatibilityFlags: ["global_fetch_strictly_public"],
-					env: {
-						ASSETS: { type: "assets" },
+			if (semiver(astroVersion, "6.0.0") < 0) {
+				// Before version 6 Astro required a wrangler config file
+				return {
+					buildTool: "wrangler",
+					workerConfig: {
+						entrypoint: `${outputDir}/_worker.js/index.js`,
+						compatibilityFlags: ["global_fetch_strictly_public"],
+						env: {
+							ASSETS: { type: "assets" },
+						},
 					},
-				},
-				buildConfig: { assetsDirectory: outputDir },
+					buildConfig: { assetsDirectory: outputDir },
+				};
+			}
+
+			// From version 6 Astro doesn't need a wrangler config file but generates a redirected config on build
+			return {
+				workerConfig: null,
 			};
 		}
 
-		// From version 6 Astro doesn't need a wrangler config file but generates a redirected config on build
+		if (semiver(astroVersion, "7.0.0") < 0) {
+			throw new AutoConfigFrameworkConfigurationError(
+				`cf only supports Astro 7 or later, but this project uses Astro ${JSON.stringify(
+					astroVersion
+				)}. Please update Astro and try again, or continue using Wrangler if you are not ready to upgrade.`,
+				{ telemetryMessage: "autoconfig framework version unsupported" }
+			);
+		}
+
+		if (!dryRun) {
+			await installPackages(
+				packageManager.type,
+				["astro@beta", "@astrojs/cloudflare@beta"],
+				{
+					cwd: projectPath,
+					startText:
+						"Installing Astro and the Cloudflare adapter beta versions",
+					doneText: `${brandColor("installed")} ${dim("Astro and @astrojs/cloudflare")}`,
+					isWorkspaceRoot,
+				}
+			);
+			if (
+				!ASTRO_CONFIG_EXTENSIONS.some((extension) =>
+					existsSync(join(projectPath, `astro.config.${extension}`))
+				)
+			) {
+				writeFileSync(
+					join(projectPath, "astro.config.mjs"),
+					'import { defineConfig } from "astro/config";\n\nexport default defineConfig({});\n'
+				);
+			}
+			updateAstroConfig(projectPath, 7);
+		}
+
 		return {
+			// The Astro adapter emits Build Output without a Cloudflare config file.
 			workerConfig: null,
 		};
 	}
@@ -99,8 +165,7 @@ export class Astro extends Framework {
  * @throws Error if no config file is found
  */
 function findAstroConfigFile(projectPath: string): string {
-	const extensions = ["mjs", "mts", "ts", "js"];
-	for (const ext of extensions) {
+	for (const ext of ASTRO_CONFIG_EXTENSIONS) {
 		const configPath = join(projectPath, `astro.config.${ext}`);
 		if (existsSync(configPath)) {
 			return configPath;
@@ -113,14 +178,13 @@ function findAstroConfigFile(projectPath: string): string {
 
 /**
  * Updates the Astro config file to add the Cloudflare adapter.
- * This replicates the logic from `astro add cloudflare` for Astro versions < 6.0.0.
  *
  * @param projectPath The path of the project
- * @param astroMajorVersion The major version of Astro (4 or 5) to determine the config options
+ * @param astroMajorVersion The major version of Astro being configured
  */
 function updateAstroConfig(
 	projectPath: string,
-	astroMajorVersion: 4 | 5
+	astroMajorVersion: 4 | 5 | 7
 ): void {
 	const configPath = findAstroConfigFile(projectPath);
 
