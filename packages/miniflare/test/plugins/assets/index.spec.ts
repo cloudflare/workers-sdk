@@ -110,6 +110,39 @@ test("serves files from assets directory relative to rootPath", async ({
 	expect(await res.text()).toBe("hello from asset");
 });
 
+test("serves each Worker's own assets when several Workers have assets", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const names = ["first", "second"];
+	for (const name of names) {
+		await fs.mkdir(path.join(tmp, name));
+		await fs.writeFile(path.join(tmp, name, "name.txt"), name);
+	}
+
+	const mf = new Miniflare({
+		workers: names.map((name) => ({
+			config: {
+				name,
+				compatibilityDate: "2026-04-29",
+				manifest: singleModuleManifest(
+					"export default { fetch(request, env) { return env.ASSETS.fetch(request); } }"
+				),
+				assets: { directory: path.join(tmp, name) },
+				env: { ASSETS: { type: "assets" } },
+			},
+		})),
+	});
+	useDispose(mf);
+
+	for (const name of names) {
+		const worker = await mf.getWorker(name);
+		const res = await worker.fetch("http://example.com/name.txt");
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe(name);
+	}
+});
+
 // ─── Watch / reload behaviour ────────────────────────────────────────────────
 
 // This test simulates what happens during `wrangler dev` when the assets
