@@ -2,11 +2,14 @@ import assert from "node:assert";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { watch as watchPaths } from "chokidar";
+import { shouldApplyMiddlewareLoaderFacade } from "../deployment-bundle/apply-middleware";
+import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
+import { guessWorkerFormat } from "../deployment-bundle/guess-worker-format";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
@@ -20,7 +23,7 @@ import type {
 	Config,
 	Entry,
 } from "@cloudflare/workers-utils";
-import type { Metafile, Message } from "esbuild";
+import type { Metafile, Message, Plugin } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
@@ -63,6 +66,7 @@ export function runBuild(
 		projectRoot,
 		onStart,
 		onRebuildError,
+		onExportShapeChange,
 		defineNavigatorUserAgent,
 		checkFetch,
 		pythonModulesExcludes,
@@ -93,6 +97,7 @@ export function runBuild(
 		projectRoot: string | undefined;
 		onStart: () => void;
 		onRebuildError?: (errors: Message[], warnings: Message[]) => void;
+		onExportShapeChange?: (exports: string[]) => void;
 		defineNavigatorUserAgent: boolean;
 		checkFetch: boolean;
 		pythonModulesExcludes?: string[];
@@ -105,6 +110,44 @@ export function runBuild(
 	let stopWatching: (() => Promise<void>) | undefined = undefined;
 
 	const entryDirectory = path.dirname(entry.file);
+	const exportShapePlugin: Plugin = {
+		name: "watch-entry-export-shape",
+		setup(pluginBuild) {
+			let currentExports = entry.exports;
+			let exportShapeChanged = false;
+
+			pluginBuild.onStart(async () => {
+				exportShapeChanged = false;
+				if (!watch || !onExportShapeChange || entry.format !== "modules") {
+					return;
+				}
+
+				try {
+					currentExports = (
+						await guessWorkerFormat(entry.file, entry.projectRoot, tsconfig)
+					).exports;
+					exportShapeChanged =
+						shouldApplyMiddlewareLoaderFacade(entry) !==
+						shouldApplyMiddlewareLoaderFacade({
+							format: entry.format,
+							exports: currentExports,
+						});
+				} catch (error) {
+					if (!isBuildFailure(error)) {
+						throw error;
+					}
+					// Let the primary build report syntax and resolution errors. A later
+					// successful rebuild will inspect the export shape again.
+				}
+			});
+
+			pluginBuild.onEnd(() => {
+				if (exportShapeChanged) {
+					onExportShapeChange?.(currentExports);
+				}
+			});
+		},
+	};
 	const moduleCollector = noBundle
 		? noopModuleCollector
 		: createModuleCollector({
@@ -192,6 +235,7 @@ export function runBuild(
 						targetConsumer,
 						testScheduled,
 						plugins: [
+							exportShapePlugin,
 							logBuildOutput(
 								nodejsCompatMode,
 								onStart,

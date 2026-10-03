@@ -181,6 +181,73 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				`);
 		});
 
+		test.for([
+			{
+				name: "default to named-only",
+				initialExports: ["default"],
+				initialSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+				updatedExports: ["Api"],
+				updatedSource: "export class Api {}",
+			},
+			{
+				name: "named-only to default",
+				initialExports: ["Api"],
+				initialSource: "export class Api {}",
+				updatedExports: ["default"],
+				updatedSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+			},
+		])(
+			"reconfigures the middleware facade when exports change ($name)",
+			async (
+				{ initialExports, initialSource, updatedExports, updatedSource },
+				{ expect }
+			) => {
+				await seed({ "src/index.ts": initialSource });
+				const config = configDefaults({
+					entrypoint: path.resolve("src/index.ts"),
+					projectRoot: path.resolve("src"),
+					build: { exports: initialExports },
+				});
+
+				const initialBuild = bus.waitFor("bundleComplete");
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				const initialBundle = (await initialBuild).bundle;
+				expect(initialBundle.entry.exports).toEqual(initialExports);
+				expect(initialBundle.entrypointSource).toContain(
+					initialExports.includes("default")
+						? "middleware_loader_entry_default"
+						: "var Api = class"
+				);
+
+				const eventCountBeforeEdit = bus.events.length;
+				const rebuilt = bus.waitFor("bundleComplete");
+				await seed({ "src/index.ts": updatedSource });
+				const updatedBundle = (await rebuilt).bundle;
+				const rebuildEvents = bus.events.slice(eventCountBeforeEdit);
+				expect(rebuildEvents.filter(({ type }) => type === "error")).toEqual(
+					[]
+				);
+				expect(
+					rebuildEvents.filter(({ type }) => type === "bundleComplete")
+				).toHaveLength(1);
+				expect(updatedBundle.entry.exports).toEqual(updatedExports);
+				if (updatedExports.includes("default")) {
+					expect(updatedBundle.entrypointSource).toContain(
+						"middleware_loader_entry_default"
+					);
+				} else {
+					expect(updatedBundle.entrypointSource).not.toContain(
+						"middleware_loader_entry_default"
+					);
+					expect(updatedBundle.entrypointSource).toContain("var Api = class");
+				}
+			}
+		);
+
 		test("a watch-mode rebuild failure emits an error event and recovers", async ({
 			expect,
 		}) => {
