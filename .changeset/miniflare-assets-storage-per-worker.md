@@ -2,6 +2,6 @@
 "miniflare": patch
 ---
 
-Give each Worker with static assets its own assets storage service
+Serve each Worker's own static assets when several Workers with assets run together
 
-When several Workers with static assets ran in one Miniflare instance, they all registered a disk service named `assets:storage`, so one Worker's asset directory served every Worker's files and the others got 404s. The storage service name now includes the Worker name, like the assets KV and router services already do.
+When several Workers with static assets ran in one Miniflare instance, such as `wrangler dev` with multiple `-c` configs or the test harness, every Worker read its assets from the same Worker's directory. Other Workers got 404s or that Worker's file at the same path. Each Worker now reads its own assets directory.
