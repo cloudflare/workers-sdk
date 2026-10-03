@@ -68,6 +68,82 @@ describe("r2", () => {
 				`);
 			});
 
+			it("should round trip local objects whose keys are not URL safe", async ({
+				expect,
+			}) => {
+				const keys = [
+					"my report.pdf",
+					"report#1.pdf",
+					"sale?50.pdf",
+					"héllo.txt",
+					"invoices/2026/q1.pdf",
+					"50%off.pdf",
+					"my%20report.pdf",
+				];
+				fs.writeFileSync("payload", "quarterly numbers");
+
+				for (const key of keys) {
+					await runWrangler(
+						`r2 object put "bucket-object-test/${key}" --file ./payload`
+					);
+					await runWrangler(
+						`r2 object get "bucket-object-test/${key}" --file ./downloaded`
+					);
+
+					expect(`${key} holds ${fs.readFileSync("downloaded", "utf8")}`).toBe(
+						`${key} holds quarterly numbers`
+					);
+					fs.rmSync("downloaded");
+				}
+				std.getAndClearOut();
+			});
+
+			it("should keep two local objects whose keys differ after a hash", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("first", "january");
+				fs.writeFileSync("second", "february");
+
+				await runWrangler(
+					`r2 object put "bucket-object-test/archive#2026-01.zip" --file ./first`
+				);
+				await runWrangler(
+					`r2 object put "bucket-object-test/archive#2026-02.zip" --file ./second`
+				);
+				std.getAndClearOut();
+
+				await runWrangler(
+					`r2 object get "bucket-object-test/archive#2026-01.zip" --file ./got-first`
+				);
+				await runWrangler(
+					`r2 object get "bucket-object-test/archive#2026-02.zip" --file ./got-second`
+				);
+				std.getAndClearOut();
+
+				expect(fs.readFileSync("got-first", "utf8")).toBe("january");
+				expect(fs.readFileSync("got-second", "utf8")).toBe("february");
+			});
+
+			it("should bulk put a local object whose key is not URL safe", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("payload", "quarterly numbers");
+				fs.writeFileSync(
+					"list.json",
+					JSON.stringify([{ key: "my report #1.pdf", file: "payload" }])
+				);
+
+				await runWrangler(
+					`r2 bulk put bucket-object-test --filename ./list.json`
+				);
+				await runWrangler(
+					`r2 object get "bucket-object-test/my report #1.pdf" --file ./downloaded`
+				);
+				std.getAndClearOut();
+
+				expect(fs.readFileSync("downloaded", "utf8")).toBe("quarterly numbers");
+			});
+
 			it("should bulk put R2 objects to a local bucket", async ({ expect }) => {
 				await expect(() =>
 					runWrangler(
