@@ -10,7 +10,12 @@ type InferProcessEnv<T> = InferProcessEnvWithDate<
 	typeof NODEJS_COMPAT_DEFAULT_ON_DATE
 >;
 
-type Equal<T, U> = [T] extends [U] ? ([U] extends [T] ? true : false) : false;
+// Include the keys so an empty object cannot pass for an optional binding map.
+type Equal<T, U> = [T, keyof T] extends [U, keyof U]
+	? [U, keyof U] extends [T, keyof T]
+		? true
+		: false
+	: false;
 type Assert<T extends true> = T;
 
 const env = {
@@ -125,11 +130,13 @@ const branchedPopulation = defineWorker((ctx) =>
 	ctx.isPreview
 		? {
 				name: "preview",
-				compatibilityDate: "2026-10-02",
-				compatibilityFlags: ["nodejs_compat_do_not_populate_process_env"],
+				compatibilityDate: "2026-10-02" as const,
+				compatibilityFlags: [
+					"nodejs_compat_do_not_populate_process_env",
+				] as const,
 				env,
 			}
-		: { name: "production", compatibilityDate: "2026-10-02", env }
+		: { name: "production", compatibilityDate: "2026-10-02" as const, env }
 );
 export type OptionalPopulation = Assert<
 	Equal<
@@ -209,5 +216,22 @@ export type OptionalBinding = Assert<
 			env: { TOKEN?: typeof env.API_TOKEN };
 		}>,
 		{ TOKEN?: string }
+	>
+>;
+
+export type ConditionalFlags = Assert<
+	Equal<WithDate<"2026-10-02", [] | ["no_nodejs_compat"]>, Partial<Populated>>
+>;
+export type ConditionalExplicitNodeFlag = Assert<
+	Equal<WithDate<"2025-06-01", [] | ["nodejs_compat"]>, Partial<Populated>>
+>;
+export type OptionalFlags = Assert<
+	Equal<
+		InferProcessEnv<{
+			compatibilityDate: "2026-10-02";
+			compatibilityFlags?: ["nodejs_compat_do_not_populate_process_env"];
+			env: typeof env;
+		}>,
+		Partial<Populated>
 	>
 >;

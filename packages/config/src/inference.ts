@@ -372,13 +372,21 @@ type ProcessEnvBindingsForDate<
 	TConfig,
 	TNodeCompatDefaultOnDate extends string,
 	TDate extends string,
+	TFlags = "compatibilityFlags" extends keyof TConfig
+		? TConfig["compatibilityFlags"]
+		: undefined,
 > = TDate extends unknown
-	? HasProcessEnv<
-			Omit<TConfig, "compatibilityDate"> & { compatibilityDate: TDate },
-			TNodeCompatDefaultOnDate
-		> extends true
-		? StringBindings<ConfigEnv<TConfig>>
-		: Record<never, never>
+	? TFlags extends unknown
+		? HasProcessEnv<
+				Omit<TConfig, "compatibilityDate" | "compatibilityFlags"> & {
+					compatibilityDate: TDate;
+					compatibilityFlags: TFlags;
+				},
+				TNodeCompatDefaultOnDate
+			> extends true
+			? StringBindings<ConfigEnv<TConfig>>
+			: Record<never, never>
+		: never
 	: never;
 
 type ProcessEnvBindings<
