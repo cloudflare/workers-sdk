@@ -160,7 +160,7 @@ export const ASSETS_PLUGIN: Plugin = {
 			}
 		}
 
-		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
+		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage:${options.config.name}`;
 		const storageService: Service = {
 			name: storageServiceName,
 			disk: {
