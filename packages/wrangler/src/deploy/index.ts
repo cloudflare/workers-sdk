@@ -17,6 +17,7 @@ import {
 	buildDeployContainerImages,
 	buildDurableObjectContainerImages,
 } from "../deployment-bundle/build-container-images";
+import { assertNoCloudflareBuildOutput } from "../deployment-bundle/cf-build-output-guard";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -138,6 +139,13 @@ export async function runDeployCommandHandler(
 		pagesToWorkersDelegation = false,
 	}: { config: Config; pagesToWorkersDelegation?: boolean }
 ): Promise<void> {
+	// Runs before autoconfig, which may write a config file, and so before any
+	// local or remote mutation. `--dry-run` is exempt: it uploads nothing, so
+	// there is no deployment to stop.
+	if (!args.dryRun) {
+		assertNoCloudflareBuildOutput(process.cwd(), "deploy");
+	}
+
 	const detectedAgent = detectAgent();
 	const shouldUseProjectName =
 		detectedAgent.isAgent && !args.name && !config.name;
