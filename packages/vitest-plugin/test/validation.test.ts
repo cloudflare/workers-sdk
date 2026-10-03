@@ -19,14 +19,16 @@ test(
 		});
 		let result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toContain(
+			`TypeError: Unexpected options in project ${tmpPathName}`
+		);
 		let expected = dedent`
-			TypeError: Unexpected options in project ${path.join(tmpPathName, "vitest.config.mts")}:
 			✖ Invalid input: expected object, received array
 			  → at miniflare
 			✖ Invalid input: expected object, received string
 			  → at wrangler
 		`;
-		expect(result.stderr).toMatch(expected);
+		expect(result.stderr).toContain(expected);
 
 		// Check `miniflare` options validated with correct error paths
 		await seed({
@@ -39,12 +41,14 @@ test(
 		});
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toContain(
+			`TypeError: Unexpected options in project ${tmpPathName}`
+		);
 		expected = dedent`
-			TypeError: Unexpected options in project ${path.join(tmpPathName, "vitest.config.mts")}:
 			✖ Invalid input: expected string, received object
 			  → at miniflare.compatibilityDate
 		`;
-		expect(result.stderr).toMatch(expected);
+		expect(result.stderr).toContain(expected);
 	}
 );
 

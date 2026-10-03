@@ -31,7 +31,7 @@ import {
 	isFileNotFoundError,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
-import { handleLoopbackRequest } from "./loopback";
+import { createLoopbackHandler } from "./loopback";
 import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
@@ -333,6 +333,17 @@ async function buildProjectWorkerOptions(
 	// of the libraries it depends on expect `require()` to return
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
+	// The runner relies on the new registry's native module semantics and V2
+	// fallback protocol, so override an explicitly configured legacy registry.
+	const legacyModuleRegistryFlagIndex = runnerWorker.compatibilityFlags.indexOf(
+		"legacy_module_registry"
+	);
+	if (legacyModuleRegistryFlagIndex !== -1) {
+		runnerWorker.compatibilityFlags.splice(legacyModuleRegistryFlagIndex, 1);
+	}
+	if (!runnerWorker.compatibilityFlags.includes("new_module_registry")) {
+		runnerWorker.compatibilityFlags.push("new_module_registry");
+	}
 
 	// By default, workerd tracks which request context a promise was created in
 	// and rejects promises that resolve in a different request context. This is a
@@ -406,7 +417,15 @@ async function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags.push("unsafe_module");
 	}
 
-	// The following nodejs compat flags enable features required for Vitest to work properly
+	// Vitest 5's spy package constructs a FinalizationRegistry when imported and
+	// a WeakRef for every mock. Workerd exposes both APIs behind this feature.
+	ensureFeature(
+		runnerWorker.compatibilityFlags,
+		"weak_ref",
+		runnerWorker.compatibilityDate >= "2025-05-05"
+	);
+	// The following Node.js compatibility flags enable features required for
+	// Vitest to work properly.
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_tty_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_fs_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_http_modules");
@@ -422,7 +441,9 @@ async function buildProjectWorkerOptions(
 	runnerWorker.serviceBindings ??= {};
 	runnerWorker.serviceBindings[SELF_SERVICE_BINDING] = kCurrentWorker;
 	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
-		handleLoopbackRequest;
+		createLoopbackHandler(
+			project.serializedConfig.coverage.coverageFilesDirectory
+		);
 
 	// Build wrappers for entrypoints and Durable Objects defined in this worker
 	runnerWorker.durableObjects ??= {};
@@ -857,11 +878,16 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
  * Ensures that the specified compatibility feature is enabled for Vitest to work.
  * @param compatibilityFlags The list of current compatibility flags.
  * @param feature The name of the feature to enable.
+ * @param enabledByDefault Whether the compatibility date enables this feature.
  */
-function ensureFeature(compatibilityFlags: string[], feature: string) {
+function ensureFeature(
+	compatibilityFlags: string[],
+	feature: string,
+	enabledByDefault = false
+) {
 	const flagToEnable = `enable_${feature}`;
 	const flagToDisable = `disable_${feature}`;
-	if (!compatibilityFlags.includes(flagToEnable)) {
+	if (!enabledByDefault && !compatibilityFlags.includes(flagToEnable)) {
 		debug(
 			"Adding `%s` compatibility flag during tests as this feature is needed to support the Vitest runner.",
 			flagToEnable

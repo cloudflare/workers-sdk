@@ -12,6 +12,13 @@ interface UnsafeEval {
 	): (...args: unknown[]) => unknown;
 }
 
+// eslint-disable-next-line no-var -- TypeScript ambient globals must use `var` declarations.
+declare var __vitest_browser_runner__: {
+	commands: {
+		triggerCommand(command: string, args: unknown[]): Promise<string>;
+	};
+};
+
 namespace Cloudflare {
 	interface Env extends Record<string, unknown> {
 		__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;

@@ -11,7 +11,7 @@ import { test } from "./helpers";
 // module runner architecture which correctly preserves counter objects across
 // module re-evaluations via hash-based reuse in istanbul-lib-instrument.
 test(
-	"istanbul coverage reports correctly across multiple test files (#5825)",
+	"istanbul coverage reports correctly (#5825)",
 	{ timeout: 60_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		await seed({
@@ -97,7 +97,7 @@ test(
 			`,
 		});
 		const result = await vitestRun({ flags: ["--coverage"] });
-		expect(await result.exitCode).toBe(0);
+		expect(await result.exitCode, result.stderr).toBe(0);
 
 		// Read the JSON coverage summary to verify actual coverage values
 		const summaryPath = path.join(tmpPath, "coverage", "coverage-summary.json");

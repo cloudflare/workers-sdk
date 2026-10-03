@@ -1,7 +1,7 @@
 import dedent from "ts-dedent";
 import { test, vitestConfig } from "./helpers";
 
-test("uses the new module registry fallback protocol", async ({
+test("enables the new module registry fallback protocol", async ({
 	expect,
 	seed,
 	vitestRun,
@@ -10,7 +10,6 @@ test("uses the new module registry fallback protocol", async ({
 		"vitest.config.mts": vitestConfig({
 			miniflare: {
 				compatibilityDate: "2026-08-10",
-				compatibilityFlags: ["new_module_registry"],
 			},
 		}),
 		"dependency.cjs": dedent`
@@ -53,7 +52,7 @@ test("uses the new module registry fallback protocol", async ({
 	expect(await result.exitCode).toBe(0);
 });
 
-test("keeps using the legacy fallback protocol when explicitly requested", async ({
+test("uses the new fallback protocol when the legacy registry is requested", async ({
 	expect,
 	seed,
 	vitestRun,
@@ -65,14 +64,13 @@ test("keeps using the legacy fallback protocol when explicitly requested", async
 				compatibilityFlags: ["legacy_module_registry"],
 			},
 		}),
-		"dependency.cjs": "exports.value = 42;",
+		"helper.ts": "export const value = 42;",
 		"index.test.ts": dedent`
-				import dependency, { value } from "./dependency.cjs";
 				import { it } from "vitest";
 
-				it("uses legacy module registry semantics", ({ expect }) => {
-					expect(dependency.value).toBe(42);
-					expect(value).toBe(42);
+				it("uses native module registry semantics", async ({ expect }) => {
+					const helper = await import(import.meta.resolve("./helper.ts"));
+					expect(helper.value).toBe(42);
 				});
 			`,
 	});

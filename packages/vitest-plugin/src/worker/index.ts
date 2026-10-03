@@ -164,6 +164,20 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	});
 }
 
+async function writeCoverageFile(
+	loopback: Fetcher,
+	coverage: unknown
+): Promise<string> {
+	const response = await loopback.fetch("http://placeholder/coverage", {
+		method: "POST",
+		body: JSON.stringify(coverage),
+	});
+	if (!response.ok) {
+		throw new Error(`Failed to write coverage file: ${response.status}`);
+	}
+	return response.text();
+}
+
 function applyDefines() {
 	// Based off `/@vite/env` implementation:
 	// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/client/env.ts
@@ -187,6 +201,18 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		super(_state, doEnv);
 		vm._setUnsafeEval(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		ensurePatchedFunction(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
+		globalThis.__vitest_browser_runner__ = {
+			commands: {
+				triggerCommand: (command, args) => {
+					assert.strictEqual(command, "__vitest_writeCoverageFile");
+					assert.strictEqual(args.length, 1);
+					return writeCoverageFile(
+						doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE,
+						args[0]
+					);
+				},
+			},
+		};
 		applyDefines();
 	}
 
@@ -277,6 +303,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			// Durable Object". See: https://github.com/cloudflare/workers-sdk/issues/12924
 			onModuleRunner(moduleRunner: unknown) {
 				const runner = moduleRunner as {
+					isBrowser?: boolean;
 					evaluator?: { createRequire?: CreateRequire };
 					options?: {
 						createImportMeta?: (
@@ -287,6 +314,9 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					};
 					transport?: { invoke?: (...args: unknown[]) => unknown };
 				};
+				// Vitest's browser coverage provider delegates filesystem writes to
+				// its host, which is also required when running inside workerd.
+				runner.isBrowser = true;
 				if (runner.evaluator?.createRequire) {
 					const originalCreateRequire = runner.evaluator.createRequire.bind(
 						runner.evaluator
