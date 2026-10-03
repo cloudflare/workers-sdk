@@ -10,6 +10,7 @@ import {
 } from "vitest";
 import { clearAccessCaches } from "../src/access";
 import { createOAuthFlow } from "../src/flow";
+import { exchangeAuthCodeForAccessToken } from "../src/token-exchange";
 import type { UserAuthConfig } from "../src/config-file/auth";
 import type { OAuthFlowContext } from "../src/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -35,7 +36,7 @@ const TEST_CLI = {
 	deviceLoginCommand: "testcli auth login --device",
 };
 
-function createTestContext(): {
+function createTestContext(initialStored?: UserAuthConfig): {
 	ctx: OAuthFlowContext;
 	logs: string[];
 	opened: string[];
@@ -49,7 +50,7 @@ function createTestContext(): {
 			logs.push([...prefix, ...args].join(" "));
 		};
 
-	let stored: UserAuthConfig | undefined;
+	let stored = initialStored;
 
 	return {
 		logs,
@@ -420,5 +421,131 @@ describe("device flow unusable responses", () => {
 			"The device authorization endpoint returned a response that could not be interpreted (HTTP 200 OK)."
 		);
 		expect(opened).toEqual([]);
+	});
+});
+
+describe("OAuth challenge responses", () => {
+	it("reports a challenged device authorization with its Ray ID", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/oauth2/device/auth",
+				() =>
+					new HttpResponse("<!DOCTYPE html><html></html>", {
+						status: 403,
+						headers: {
+							"cf-mitigated": "challenge",
+							"cf-ray": "device-ray",
+						},
+					})
+			)
+		);
+		const { ctx, opened } = createTestContext();
+
+		await expect(login(ctx)).rejects.toThrow(
+			"Cloudflare challenged this OAuth request from your IP address.\n" +
+				"Use `CLOUDFLARE_API_TOKEN` for CLI commands on this machine.\n" +
+				"Cloudflare Ray ID: device-ray"
+		);
+		expect(opened).toEqual([]);
+	});
+
+	it("recognizes a challenged device authorization without the mitigation header", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/oauth2/device/auth",
+				() =>
+					new HttpResponse("<!DOCTYPE html><html>challenge-platform</html>", {
+						status: 403,
+					})
+			)
+		);
+		const { ctx } = createTestContext();
+
+		await expect(login(ctx)).rejects.toThrow(
+			"Use `CLOUDFLARE_API_TOKEN` for CLI commands on this machine."
+		);
+	});
+
+	it("stops token polling when the edge challenges the request", async ({
+		expect,
+	}) => {
+		msw.use(mockDeviceAuth());
+		let polls = 0;
+		msw.use(
+			http.post("*/oauth2/token", () => {
+				polls += 1;
+				return new HttpResponse("<!DOCTYPE html><html></html>", {
+					status: 403,
+					headers: { "cf-mitigated": "challenge", "cf-ray": "poll-ray" },
+				});
+			})
+		);
+		const { ctx } = createTestContext();
+
+		await expect(login(ctx)).rejects.toThrow("Cloudflare Ray ID: poll-ray");
+		expect(polls).toBe(1);
+	});
+
+	it("reports a challenged authorization-code exchange", async ({ expect }) => {
+		msw.use(
+			http.post(
+				"*/oauth2/token",
+				() =>
+					new HttpResponse("<!DOCTYPE html><html>challenge-platform</html>", {
+						status: 403,
+						headers: { "cf-ray": "code-ray" },
+					})
+			)
+		);
+		const { ctx } = createTestContext();
+
+		await expect(
+			exchangeAuthCodeForAccessToken(
+				{ authorizationCode: "code", codeVerifier: "verifier" },
+				ctx.logger,
+				ctx.isNonInteractiveOrCI,
+				"test-client-id",
+				ctx.redirectUri
+			)
+		).rejects.toThrow("Cloudflare Ray ID: code-ray");
+	});
+
+	it("preserves the challenge error when refreshing an expired token", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/oauth2/token",
+				() =>
+					new HttpResponse("<!DOCTYPE html><html>challenge-platform</html>", {
+						status: 403,
+						headers: { "cf-ray": "refresh-ray" },
+					})
+			)
+		);
+		const { ctx } = createTestContext({
+			oauth_token: "expired-token",
+			refresh_token: "refresh-token",
+			expiration_time: "2000-01-01T00:00:00.000Z",
+		});
+
+		await expect(
+			createOAuthFlow(ctx).getOAuthTokenFromLocalState()
+		).rejects.toThrow("Cloudflare Ray ID: refresh-ray");
+	});
+
+	it("keeps an ordinary OAuth 403 as an OAuth error", async ({ expect }) => {
+		msw.use(
+			http.post("*/oauth2/device/auth", () =>
+				HttpResponse.json({ error: "invalid_client" }, { status: 403 })
+			)
+		);
+		const { ctx } = createTestContext();
+
+		await expect(login(ctx)).rejects.toThrow("OAuth error: invalid_client");
 	});
 });

@@ -22,8 +22,10 @@ import {
 } from "./env-vars";
 import {
 	ErrorAuthServerUnreachable,
+	ErrorOAuthChallenge,
 	ErrorInvalidReturnedStateParam,
 	ErrorUnknown,
+	getOAuthChallengeError,
 	toErrorClass,
 } from "./errors";
 import { generatePKCECodes, RECOMMENDED_STATE_LENGTH } from "./pkce";
@@ -162,6 +164,9 @@ export async function exchangeRefreshTokenForAccessToken(
 		try {
 			tokenExchangeResErr = await getJSONFromResponse(response, logger);
 		} catch (e) {
+			if (e instanceof ErrorOAuthChallenge) {
+				throw e;
+			}
 			// If it can't parse to JSON ignore the error
 			logger.error(e);
 		}
@@ -325,23 +330,13 @@ export async function fetchAuthToken(
 		Object.assign(headers, accessHeaders);
 	}
 	logger.debug("Fetching auth token from", getTokenUrlFromEnv());
+	let response: Response;
 	try {
-		const response = await fetch(getTokenUrlFromEnv(), {
+		response = await fetch(getTokenUrlFromEnv(), {
 			method: "POST",
 			body: body.toString(),
 			headers,
 		});
-		if (!response.ok) {
-			// Log at debug level — callers handle non-OK responses and surface
-			// structured errors, so an error-level log here would be redundant
-			// noise that confuses users with multiple error messages.
-			logger.debug(
-				"Failed to fetch auth token:",
-				response.status,
-				response.statusText
-			);
-		}
-		return response;
 	} catch (e) {
 		// Log at debug level — the error is re-thrown for the caller to handle.
 		logger.debug("Failed to fetch auth token:", e);
@@ -354,6 +349,21 @@ export async function fetchAuthToken(
 			{ cause: e, telemetryMessage: "user oauth token endpoint unreachable" }
 		);
 	}
+	const challenge = getOAuthChallengeError(response);
+	if (challenge) {
+		throw challenge;
+	}
+	if (!response.ok) {
+		// Log at debug level — callers handle non-OK responses and surface
+		// structured errors, so an error-level log here would be redundant
+		// noise that confuses users with multiple error messages.
+		logger.debug(
+			"Failed to fetch auth token:",
+			response.status,
+			response.statusText
+		);
+	}
+	return response;
 }
 
 async function getJSONFromResponse(
@@ -361,6 +371,10 @@ async function getJSONFromResponse(
 	logger: OAuthFlowContext["logger"]
 ) {
 	const text = await response.text();
+	const challenge = getOAuthChallengeError(response, text);
+	if (challenge) {
+		throw challenge;
+	}
 	try {
 		return JSON.parse(text);
 	} catch (e) {
