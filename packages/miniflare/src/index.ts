@@ -2779,6 +2779,9 @@ export class Miniflare {
 			void this.#runtimeDispatcher?.close().catch(() => {});
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
+				// Close idle client sockets before workerd's 5s idle timeout
+				keepAliveTimeout: 1_000,
+				keepAliveMaxTimeout: 1_000,
 				// Disable timeouts for local dev — long-running responses (streaming,
 				// slow uploads, long-polling) should not be killed by undici defaults.
 				headersTimeout: 0,
