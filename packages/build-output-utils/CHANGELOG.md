@@ -1,5 +1,12 @@
 # @cloudflare/build-output-utils
 
+## 0.8.6
+
+### Patch Changes
+
+- Updated dependencies [[`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65)]:
+  - @cloudflare/config@0.24.0
+
 ## 0.8.5
 
 ### Patch Changes
