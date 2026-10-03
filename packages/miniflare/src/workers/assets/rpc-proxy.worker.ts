@@ -1,8 +1,8 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
 import {
 	tailEventsReplacer,
 	tailEventsReviver,
-} from "../core/dev-registry-proxy-shared.worker";
+} from "@cloudflare/workers-utils/tail-events";
+import { WorkerEntrypoint } from "cloudflare:workers";
 import type RouterWorker from "@cloudflare/workers-shared/asset-worker";
 
 interface Env {
