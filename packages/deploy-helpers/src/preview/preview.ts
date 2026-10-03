@@ -693,6 +693,7 @@ async function assemblePreviewDeploymentSettings(
 		assetsOptions?: PreviewAssetsOptions;
 		secrets?: Record<string, string>;
 		cliVars?: Record<string, string>;
+		json?: boolean;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -713,7 +714,8 @@ async function assemblePreviewDeploymentSettings(
 			config,
 			accountId,
 			options.assetsOptions.directory,
-			workerName
+			workerName,
+			{ quiet: options.json === true }
 		);
 		request.assets = {
 			jwt: assetsUploadResult.jwt,
@@ -1173,6 +1175,7 @@ async function runPreview(
 			assetsOptions,
 			secrets,
 			cliVars: args.cliVars,
+			json: args.json,
 		}
 	);
 	const deployment = await createPreviewDeployment(
