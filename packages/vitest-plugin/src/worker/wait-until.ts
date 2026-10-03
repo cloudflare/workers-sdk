@@ -15,6 +15,11 @@ export function setWaitUntilTimeout(ms: number): void {
 }
 
 const kTimedOut = Symbol("kTimedOut");
+const kCancelled = Symbol("kCancelled");
+// A last test may leave fake timers active. Runtime shutdown still needs a real
+// deadline, captured before test code can replace these globals.
+const originalSetTimeout = globalThis.setTimeout;
+const originalClearTimeout = globalThis.clearTimeout;
 
 /**
  * Empty array and wait for all promises to resolve until no more added.
@@ -31,6 +36,12 @@ export async function waitForWaitUntil(
 
 	while (waitUntil.length > 0) {
 		const batch = waitUntil.splice(0);
+		// Explicit context drains discharge only the registrations they actually
+		// joined. Later registrations, even of the same Promise, remain owned.
+		const promises = new Set(batch);
+		const registrations = [...globalWaitUntil].filter(({ promise }) =>
+			promises.has(promise)
+		);
 		let timeoutId: ReturnType<typeof setTimeout> | undefined;
 		const result = await Promise.race([
 			Promise.allSettled(batch).then((results) => ({ results })),
@@ -54,6 +65,10 @@ export async function waitForWaitUntil(
 			break;
 		}
 
+		for (const registration of registrations) {
+			globalWaitUntil.delete(registration);
+		}
+
 		// Record all rejected promises
 		for (const settled of result.results) {
 			if (settled.status === "rejected") {
@@ -71,20 +86,94 @@ export async function waitForWaitUntil(
 	}
 }
 
-// If isolated storage is enabled, we ensure all `waitUntil()`s are `await`ed at
-// the end of each test, as these may contain storage calls (e.g. caching
-// responses). Note we can't wait at the end of `.concurrent` tests, as we can't
-// track which `waitUntil()`s belong to which tests.
-//
-// If isolated storage is disabled, we ensure all `waitUntil()`s are `await`ed
-// at the end of each test *file*. This ensures we don't try to dispose the
-// runtime until all `waitUntil()`s complete.
-const globalWaitUntil: unknown[] = [];
+// Registered Worker work may still need the module loader after the test body
+// finishes. Keep it owned until it settles or the runtime is disposed.
+const globalWaitUntil = new Set<{ promise: unknown }>();
 export function registerGlobalWaitUntil(promise: unknown) {
-	globalWaitUntil.push(promise);
+	globalWaitUntil.add({ promise });
 }
-export function waitForGlobalWaitUntil(): Promise<void> {
-	return waitForWaitUntil(globalWaitUntil);
+
+/**
+ * Finish registered work before the runner closes its module-loader RPC.
+ * A single deadline covers the entire drain, including newly registered work.
+ * Preserve earlier run failures alongside background failures or a timeout.
+ */
+export async function waitForGlobalWaitUntil(
+	/* mut */ errors: unknown[] = [],
+	signal?: AbortSignal
+): Promise<void> {
+	if (globalWaitUntil.size > 0) {
+		const timeout = WAIT_UNTIL_TIMEOUT;
+		let timeoutId: ReturnType<typeof setTimeout> | undefined;
+		let cancel: () => void = () => {};
+		const stopped = Promise.race([
+			new Promise<typeof kTimedOut>((resolve) => {
+				timeoutId = originalSetTimeout.call(
+					globalThis,
+					() => resolve(kTimedOut),
+					timeout
+				);
+			}),
+			new Promise<typeof kCancelled>((resolve) => {
+				cancel = () => resolve(kCancelled);
+				if (signal?.aborted) {
+					cancel();
+				} else {
+					signal?.addEventListener("abort", cancel, { once: true });
+				}
+			}),
+		]);
+		try {
+			while (globalWaitUntil.size > 0) {
+				const batch = [...globalWaitUntil];
+				const result = await Promise.race([
+					Promise.all(
+						batch.map(async (registration) => {
+							try {
+								await registration.promise;
+							} catch (error) {
+								// Record each rejection as it settles: another promise in
+								// this same batch may never settle before the deadline.
+								if (globalWaitUntil.has(registration)) {
+									errors.push(error);
+								}
+							} finally {
+								globalWaitUntil.delete(registration);
+							}
+						})
+					),
+					stopped,
+				]);
+				if (result === kTimedOut) {
+					errors.push(
+						new Error(
+							`[vitest-plugin] ${globalWaitUntil.size} registered waitUntil promise(s) ` +
+								`did not resolve within ${timeout / 1000}s before test shutdown.`
+						)
+					);
+					break;
+				}
+				if (result === kCancelled) {
+					errors.push(signal?.reason);
+					break;
+				}
+			}
+		} finally {
+			originalClearTimeout.call(globalThis, timeoutId);
+			signal?.removeEventListener("abort", cancel);
+		}
+	}
+
+	if (errors.length === 1 && errors[0] instanceof Error) {
+		throw errors[0];
+	} else if (errors.length > 0) {
+		// Vitest treats a falsy serialized run error as success. An error envelope
+		// retains every thrown value without losing undefined, null, false or 0.
+		throw new AggregateError(
+			errors,
+			"Errors occurred while finishing registered Worker work."
+		);
+	}
 }
 
 export const handlerContextStore = new AsyncLocalStorage<ExecutionContext>();

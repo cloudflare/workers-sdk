@@ -6,6 +6,7 @@ import {
 	maybeHandleRunRequest,
 	registerHandlerAndGlobalWaitUntil,
 	runInRunnerObject,
+	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
 import { DurableObject } from "cloudflare:workers";
 import * as devalue from "devalue";
@@ -212,6 +213,28 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const { init, runBaseTests, setupEnvironment } =
 			await import("vitest/worker");
 
+		const runWithWaitUntil: typeof runBaseTests = async (
+			method,
+			state,
+			traces
+		) => {
+			const errors: unknown[] = [];
+			const controller = new AbortController();
+			state.onCancel((reason) =>
+				controller.abort(
+					new Error(
+						`[vitest-plugin] Test run cancelled while finishing registered Worker work: ${reason}`
+					)
+				)
+			);
+			try {
+				await runBaseTests(method, state, traces);
+			} catch (error) {
+				errors.push(error);
+			}
+			await waitForGlobalWaitUntil(errors, controller.signal);
+		};
+
 		poolSocket.accept();
 		// Sending over the runner's WebSocket from another Durable Object requires
 		// I/O that cannot complete if that object's input gate breaks. Buffer console
@@ -267,8 +290,9 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					callback(structuredSerializableParse(m.data));
 				});
 			},
-			runTests: (state, traces) => runBaseTests("run", state, traces),
-			collectTests: (state, traces) => runBaseTests("collect", state, traces),
+			runTests: (state, traces) => runWithWaitUntil("run", state, traces),
+			collectTests: (state, traces) =>
+				runWithWaitUntil("collect", state, traces),
 			setup: setupEnvironment,
 			// Patch the module runner's transport so that `invoke()` calls always
 			// execute inside the Runner DO's I/O context. Without this, a dynamic
