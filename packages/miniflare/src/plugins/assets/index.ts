@@ -383,12 +383,43 @@ export type AssetReverseMap = {
 };
 
 /**
+ * Lists the asset files beneath `dir`, as paths relative to it.
+ *
+ * Unlike `readdir(dir, { recursive: true })`, this does not follow symbolic
+ * links: symlinked files are skipped and symlinked directories are not
+ * descended into. `fs.stat()` resolves links, so an `isSymbolicLink()` check
+ * after it can never fire; walking with `lstat` is what actually keeps
+ * symlinked content out. This mirrors `listAssetFiles` in `deploy-helpers` so
+ * that `wrangler dev` serves the same set of assets `wrangler deploy` uploads.
+ */
+async function listAssetFiles(
+	dir: string,
+	base: string = dir
+): Promise<string[]> {
+	const entries = await fs.readdir(dir);
+	const nested = await Promise.all(
+		entries.map(async (entry) => {
+			const filepath = path.join(dir, entry);
+			const filestat = await fs.lstat(filepath);
+			if (filestat.isSymbolicLink()) {
+				return [];
+			}
+			if (filestat.isDirectory()) {
+				return listAssetFiles(filepath, base);
+			}
+			return [path.relative(base, filepath)];
+		})
+	);
+	return nested.flat();
+}
+
+/**
  * Traverses the asset directory to create an asset manifest and asset reverse map.
  * These are available to the Asset Worker as a binding.
  * NB: This runs every time the dev server restarts.
  */
 const walk = async (dir: string) => {
-	const files = await fs.readdir(dir, { recursive: true });
+	const files = await listAssetFiles(dir);
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
 	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
@@ -403,7 +434,6 @@ const walk = async (dir: string) => {
 			const relativeFilepath = path.relative(dir, filepath);
 			const filestat = await fs.stat(filepath);
 
-			// TODO: decide whether to follow symbolic links
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
