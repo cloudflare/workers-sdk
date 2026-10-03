@@ -1,5 +1,11 @@
 # @cloudflare/config
 
+## 0.24.0
+
+### Minor Changes
+
+- [#16016](https://github.com/cloudflare/workers-sdk/pull/16016) [`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add `bindings.analytics()` as the preferred name for Analytics SQL bindings and deprecate `bindings.analyticsSQL()`.
+
 ## 0.23.0
 
 ### Minor Changes

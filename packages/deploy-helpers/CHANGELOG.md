@@ -1,5 +1,14 @@
 # @cloudflare/deploy-helpers
 
+## 0.19.3
+
+### Patch Changes
+
+- Updated dependencies [[`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65)]:
+  - @cloudflare/config@0.24.0
+  - @cloudflare/containers-shared@0.21.4
+  - miniflare@5.20261001.0-alpha
+
 ## 0.19.2
 
 ### Patch Changes
