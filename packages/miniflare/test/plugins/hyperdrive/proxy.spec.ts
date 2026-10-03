@@ -709,3 +709,111 @@ describe("sslrootcert connection string parsing", () => {
 		expect(url.searchParams.get("sslrootcert")).toBeNull();
 	});
 });
+
+test("reuses a Hyperdrive proxy listener for an unchanged target", async ({
+	expect,
+}) => {
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "reload-reuse",
+		targetHost: "127.0.0.1",
+		targetPort: "5432",
+		scheme: "postgres",
+		sslmode: "require",
+	};
+	try {
+		const firstPort = await controller.createProxyServer(config);
+		const secondPort = await controller.createProxyServer(config);
+		expect(secondPort).toBe(firstPort);
+	} finally {
+		controller.dispose();
+	}
+});
+
+test("concurrent requests for one Hyperdrive target share a listener", async ({
+	expect,
+}) => {
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "concurrent-reuse",
+		targetHost: "127.0.0.1",
+		targetPort: "5432",
+		scheme: "postgres",
+		sslmode: "require",
+	};
+	try {
+		const [firstPort, secondPort] = await Promise.all([
+			controller.createProxyServer(config),
+			controller.createProxyServer(config),
+		]);
+		expect(secondPort).toBe(firstPort);
+	} finally {
+		controller.dispose();
+	}
+});
+
+test("retiring a proxy stops new connections but preserves an active one", async ({
+	expect,
+}) => {
+	const database = net.createServer((socket) => {
+		socket.on("data", (data) => socket.write(data));
+	});
+	await new Promise<void>((resolve) =>
+		database.listen(0, "127.0.0.1", resolve)
+	);
+	const address = database.address();
+	if (address === null || typeof address === "string") {
+		throw new Error("Expected a TCP database port");
+	}
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "live-connection",
+		targetHost: "127.0.0.1",
+		targetPort: String(address.port),
+		scheme: "postgres",
+		sslmode: "disable",
+	};
+	let client: net.Socket | undefined;
+	try {
+		controller.beginUpdate();
+		const oldPort = await controller.createProxyServer(config);
+		controller.commitUpdate(new Set([`127.0.0.1:${oldPort}`]));
+
+		client = net.connect(oldPort, "127.0.0.1");
+		await new Promise<void>((resolve, reject) => {
+			client?.once("connect", resolve);
+			client?.once("error", reject);
+		});
+		client.on("error", () => {});
+		const activeClient = client;
+		const exchange = (message: string) =>
+			new Promise<string>((resolve) => {
+				activeClient.once("data", (data) => resolve(data.toString()));
+				activeClient.write(message);
+			});
+		expect(await exchange("before")).toBe("before");
+
+		controller.beginUpdate();
+		const newPort = await controller.createProxyServer({
+			...config,
+			targetPort: String(address.port + 1),
+		});
+		controller.commitUpdate(new Set([`127.0.0.1:${newPort}`]));
+
+		expect(await exchange("after")).toBe("after");
+		await expect(
+			new Promise<void>((resolve, reject) => {
+				const next = net.connect(oldPort, "127.0.0.1");
+				next.once("connect", () => {
+					next.destroy();
+					resolve();
+				});
+				next.once("error", reject);
+			})
+		).rejects.toMatchObject({ code: "ECONNREFUSED" });
+	} finally {
+		client?.destroy();
+		controller.dispose();
+		database.close();
+	}
+});
