@@ -1,3 +1,4 @@
+import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils/compatibility-date";
 import { dedent } from "ts-dedent";
 
 interface GenerateTypesOptions {
@@ -41,6 +42,7 @@ export function generateTypes({
 		type __Config = import("${packageName}").UnwrapConfig<typeof import("${configImportPath}").default>;
 		type __WorkerConfig = import("${packageName}").UnwrapConfig<__Config["worker"]>;
 		type __Env = import("${packageName}").InferEnv<__WorkerConfig>;
+		type __ProcessEnv = import("${packageName}").InferProcessEnv<__WorkerConfig, "${NODEJS_COMPAT_DEFAULT_ON_DATE}">;
 
 		declare namespace Cloudflare {
 			interface GlobalProps {
@@ -50,6 +52,10 @@ export function generateTypes({
 			interface Env extends __Env {}
 		}
 		interface Env extends Cloudflare.Env {}
+
+		declare namespace NodeJS {
+			interface ProcessEnv extends __ProcessEnv {}
+		}
 
 	`;
 }

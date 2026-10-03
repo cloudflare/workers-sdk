@@ -308,6 +308,89 @@ type MergeEnv<
  */
 export type InferEnv<TUnwrappedConfig> = MergeEnv<ConfigEnv<TUnwrappedConfig>>;
 
+/** Compare the fixed-width ISO dates used by Worker compatibility settings. */
+type DateOnOrAfter<
+	TDate extends string,
+	TMinimum extends string,
+> = string extends TDate
+	? false
+	: TMinimum extends `${infer M}${infer MinimumRest}`
+		? TDate extends `${infer D}${infer DateRest}`
+			? D extends M
+				? DateOnOrAfter<DateRest, MinimumRest>
+				: "0123456789" extends `${string}${M}${string}${D}${string}`
+					? true
+					: false
+			: false
+		: true;
+
+type ConfigFlags<TConfig> = TConfig extends {
+	compatibilityFlags: readonly (infer TFlag extends string)[];
+}
+	? TFlag
+	: never;
+
+type HasProcessEnv<
+	TConfig,
+	TNodeCompatDefaultOnDate extends string,
+	TFlags = ConfigFlags<TConfig>,
+> = string extends TFlags
+	? false
+	: "nodejs_compat_do_not_populate_process_env" extends TFlags
+		? false
+		: TConfig extends { compatibilityDate: infer TDate extends string }
+			? (
+					"nodejs_compat" extends TFlags
+						? true
+						: "no_nodejs_compat" extends TFlags
+							? false
+							: DateOnOrAfter<TDate, TNodeCompatDefaultOnDate>
+				) extends true
+				? "nodejs_compat_populate_process_env" extends TFlags
+					? true
+					: DateOnOrAfter<TDate, "2025-04-01">
+				: false
+			: false;
+
+type StringBindings<TEnv> = TEnv extends unknown
+	? {
+			[
+				K in keyof TEnv as Exclude<TEnv[K], undefined> extends {
+					type: "text" | "json" | "secret";
+				}
+					? K
+					: never
+			]: TEnv[K];
+		}
+	: never;
+
+type ProcessEnvBindings<
+	TConfig,
+	TNodeCompatDefaultOnDate extends string,
+> = TConfig extends unknown
+	? HasProcessEnv<TConfig, TNodeCompatDefaultOnDate> extends true
+		? StringBindings<ConfigEnv<TConfig>>
+		: Record<never, never>
+	: never;
+
+type StringifyEnv<TEnv> = {
+	[K in keyof TEnv]: Exclude<TEnv[K], undefined> extends string
+		? TEnv[K]
+		: string;
+};
+
+/**
+ * Infer text, JSON, and secret bindings exposed on `process.env` when the
+ * Worker's compatibility settings enable Node.js environment population.
+ * The generator supplies the default-on date from the shared compatibility resolver.
+ */
+export type InferProcessEnv<
+	TUnwrappedConfig,
+	TNodeCompatDefaultOnDate extends string,
+> = StringifyEnv<
+	MergeEnv<ProcessEnvBindings<TUnwrappedConfig, TNodeCompatDefaultOnDate>>
+>;
+
 /**
  * Infer the Durable Object namespace names from a Worker config's exports.
  * Returns a union of export names that declare a *live* Durable Object —

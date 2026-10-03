@@ -39,6 +39,20 @@ describe("generateTypes", () => {
 		expect(out).toContain(`interface Env extends __Env {}`);
 	});
 
+	it("augments ProcessEnv with the same package's inferred string bindings", ({
+		expect,
+	}) => {
+		const out = generateTypes({
+			configPath: "./cloudflare.config.ts",
+			packageName: "cf/config",
+		});
+		expect(out).toContain(
+			'type __ProcessEnv = import("cf/config").InferProcessEnv<__WorkerConfig, "2026-08-04">;'
+		);
+		expect(out).toContain("declare namespace NodeJS {");
+		expect(out).toContain("interface ProcessEnv extends __ProcessEnv {}");
+	});
+
 	it("emits a global script (no top-level import/export, no declare global)", ({
 		expect,
 	}) => {

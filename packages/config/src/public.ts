@@ -77,6 +77,7 @@ export type {
 export { exports } from "./exports";
 export type {
 	InferEnv,
+	InferProcessEnv,
 	InferDurableNamespaces,
 	InferMainModule,
 	UnwrapConfig,
