@@ -23,6 +23,7 @@ interface FetchTriggerOptions {
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
  */
 export interface FetchTrigger extends FetchTriggerOptions {
+	/** The type of event trigger. */
 	type: "fetch";
 }
 
@@ -56,6 +57,7 @@ interface QueueConsumerTriggerOptions {
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
  */
 export interface QueueConsumerTrigger extends QueueConsumerTriggerOptions {
+	/** The type of event trigger. */
 	type: "queue";
 }
 
@@ -94,6 +96,7 @@ interface EmailTriggerOptions {
  * addresses.
  */
 export interface EmailTrigger extends EmailTriggerOptions {
+	/** The type of event trigger. */
 	type: "email";
 }
 
@@ -104,9 +107,13 @@ interface ConnectTriggerOptionsBase {
 	address?: string;
 }
 
-type TcpConnectTriggerOptions = ConnectTriggerOptionsBase & { protocol: "tcp" };
+type TcpConnectTriggerOptions = ConnectTriggerOptionsBase & {
+	/** The network protocol to listen on. */
+	protocol: "tcp";
+};
 
 type UdpConnectTriggerOptions = ConnectTriggerOptionsBase & {
+	/** The network protocol to listen on. */
 	protocol: "udp";
 	/** The idle timeout in milliseconds after which a peer flow is closed. */
 	idleTimeoutMs?: number;
@@ -123,7 +130,10 @@ type ConnectTriggerOptions =
  * handler for raw socket connections received on the configured
  * protocol/port.
  */
-export type ConnectTrigger = ConnectTriggerOptions & { type: "connect" };
+export type ConnectTrigger = ConnectTriggerOptions & {
+	/** The type of event trigger. */
+	type: "connect";
+};
 
 /**
  * Event triggers — fetch routes, queue consumers, cron schedules, Email
