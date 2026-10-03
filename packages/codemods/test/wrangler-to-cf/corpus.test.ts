@@ -62,7 +62,7 @@ describe("Wrangler configuration corpus", () => {
 				await mkdir(wranglerPackageDirectory, { recursive: true });
 				await writeFile(
 					path.join(wranglerPackageDirectory, "package.json"),
-					JSON.stringify({ name: "wrangler", version: "4.100.0" })
+					JSON.stringify({ name: "wrangler", version: "4.136.0" })
 				);
 				await writeFile(targetConfigPath, source);
 

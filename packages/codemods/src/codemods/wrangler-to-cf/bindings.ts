@@ -304,12 +304,17 @@ export function convertBindings(
 			sourcePath,
 			report
 		);
-		reportUnsupportedOptions(
-			entry,
-			["preview_bucket_name"],
-			sourcePath,
-			report
-		);
+		if (
+			hasOwn(entry, "preview_bucket_name") &&
+			entry.preview_bucket_name !== entry.bucket_name
+		) {
+			reportUnsupportedOptions(
+				entry,
+				["preview_bucket_name"],
+				sourcePath,
+				report
+			);
+		}
 	}
 	convertArrayBindings(
 		"secrets_store_secrets",

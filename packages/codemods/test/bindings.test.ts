@@ -222,4 +222,43 @@ describe("Wrangler binding conversion", () => {
 		});
 		expect(followUps).toEqual([]);
 	});
+
+	it("reports only differing R2 preview bucket names", ({ expect }) => {
+		const followUps: MigrationFollowUp[] = [];
+		const bindings = convertBindings(
+			{
+				r2_buckets: [
+					{
+						binding: "SAME",
+						bucket_name: "same-bucket",
+						preview_bucket_name: "same-bucket",
+					},
+					{
+						binding: "DIFFERENT",
+						bucket_name: "production-bucket",
+						preview_bucket_name: "preview-bucket",
+					},
+					{
+						binding: "ABSENT",
+						bucket_name: "bucket-without-preview",
+					},
+				],
+			},
+			"",
+			new Set(),
+			(followUp) => followUps.push(followUp)
+		);
+
+		expect(bindings?.properties.map(({ key }) => key)).toEqual([
+			"SAME",
+			"DIFFERENT",
+			"ABSENT",
+		]);
+		expect(followUps).toHaveLength(1);
+		expect(followUps[0]).toMatchObject({
+			code: "unsupported-binding-options",
+			message: `The options \`preview_bucket_name\` at \`r2_buckets.1\` require manual migration.`,
+			sourcePath: "r2_buckets.1",
+		});
+	});
 });
