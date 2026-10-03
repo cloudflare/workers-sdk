@@ -7,6 +7,7 @@ import {
 } from "@cloudflare/containers-shared";
 import {
 	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
 	isDockerfile,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
@@ -85,13 +86,18 @@ export const getNormalizedContainerOptions = async (
 		return [];
 	}
 
-	validateDurableObjectContainerApplications(config);
+	// Replaying `migrations` rejects an already-applied history that deletes or
+	// renames a class no earlier tag in the file creates, so only replay it when
+	// the result is needed: to validate Durable Object-managed Containers, or to
+	// find a container's class that no Durable Object binding names.
+	const durableObjectContainers = getDurableObjectContainerApps(
+		config.containers
+	);
+	if (durableObjectContainers.length > 0) {
+		validateDurableObjectContainerApplications(config, durableObjectContainers);
+	}
 
 	const normalizedContainers: ContainerNormalizedConfig[] = [];
-	const allDOs = getDurableObjectClassNameToUseSQLiteMap(
-		config.migrations,
-		config.exports
-	);
 
 	for (const container of config.containers) {
 		if (isDurableObjectContainerApp(container)) {
@@ -115,20 +121,21 @@ export const getNormalizedContainerOptions = async (
 			);
 		}
 
+		const maybeBoundDO = config.durable_objects.bindings.find(
+			(durableObject) => durableObject.class_name === className
+		);
 		if (
-			!allDOs.has(className) &&
-			config.durable_objects.bindings.find(
-				(doBinding) => doBinding.class_name === className
-			) === undefined
+			maybeBoundDO === undefined &&
+			!getDurableObjectClassNameToUseSQLiteMap(
+				config.migrations,
+				config.exports
+			).has(className)
 		) {
 			throw new UserError(
 				`The container class_name ${className} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
 				{ telemetryMessage: "no DO defined that matches container class_name" }
 			);
 		}
-		const maybeBoundDO = config.durable_objects.bindings.find(
-			(durableObject) => durableObject.class_name === className
-		);
 		if (maybeBoundDO && maybeBoundDO.script_name !== undefined) {
 			throw new UserError(
 				`The container ${container.name} is referencing the durable object ${className}, which appears to be defined on the ${maybeBoundDO.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
