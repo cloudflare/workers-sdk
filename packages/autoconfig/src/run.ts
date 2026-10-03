@@ -30,6 +30,7 @@ import {
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
+import { writePnpmBuildApprovals } from "./pnpm-build-approvals";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
@@ -203,6 +204,10 @@ export async function runAutoConfig(
 	logger.debug(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
+
+	if (autoConfigDetails.packageJson && packageManager.type === "pnpm") {
+		await writePnpmBuildApprovals(autoConfigDetails.projectPath);
+	}
 
 	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
 		if (target === "cf") {
