@@ -9,6 +9,7 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { createBuilder, createServer, preview } from "vite";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
+import type { ResolvedConfig } from "vite";
 
 vi.mock("node:fs", async (importOriginal) => {
 	const original = await importOriginal<typeof import("node:fs")>();
@@ -70,6 +71,46 @@ describe.each(["dev", "preview"] as const)(
 		});
 
 		if (mode === "dev") {
+			test("preserves resolved config identity when attaching Container cleanup", async ({
+				expect,
+				onTestFinished,
+			}) => {
+				fs.writeFileSync(
+					"index.js",
+					`export default { fetch() { return new Response("ready"); } };`
+				);
+				fs.writeFileSync(
+					"wrangler.jsonc",
+					JSON.stringify({
+						name: "config-identity-test",
+						main: "index.js",
+						compatibility_date: "2026-09-01",
+					})
+				);
+				let resolvedConfig: ResolvedConfig | undefined;
+				const server = await createServer({
+					configFile: false,
+					logLevel: "silent",
+					server: { port: 0 },
+					plugins: [
+						cloudflare({
+							inspectorPort: false,
+							persistState: false,
+							remoteBindings: false,
+						}),
+						{
+							name: "capture-resolved-config",
+							configResolved(config) {
+								resolvedConfig = config;
+							},
+						},
+					],
+				});
+				onTestFinished(() => server.close());
+				expect(server.config).toBe(resolvedConfig);
+				await server.restart();
+				expect(server.config).toBe(resolvedConfig);
+			});
 			test.for(["single", "concurrent"] as const)(
 				"retries pending cleanup once on close after %s restart removes the Cloudflare plugin",
 				async (restartMode, { expect, onTestFinished }) => {
