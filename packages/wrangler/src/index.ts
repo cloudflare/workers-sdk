@@ -112,6 +112,7 @@ import {
 	cloudchamberSshListCommand,
 	cloudchamberSshNamespace,
 } from "./cloudchamber";
+import { maybeHandleCodexMicroInvocation } from "./codex-micro/invocation";
 import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import {
@@ -2708,6 +2709,15 @@ export function createCLIParser(argv: string[]) {
 }
 
 export async function main(argv: string[]): Promise<void> {
+	try {
+		if (await maybeHandleCodexMicroInvocation(argv)) {
+			return;
+		}
+	} catch (error) {
+		logger.error(error instanceof Error ? error.message : String(error));
+		throw error;
+	}
+
 	setupSentry();
 
 	checkMacOSVersion({ shouldThrow: false });
