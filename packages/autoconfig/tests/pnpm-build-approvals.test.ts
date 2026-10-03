@@ -50,6 +50,34 @@ describe("pnpm build approvals", () => {
 			},
 		});
 	});
+	it("does not let a version-scoped decision for one package prevent approval of another", async ({
+		expect,
+	}) => {
+		await seed({
+			"pnpm-workspace.yaml": "allowBuilds:\n  'esbuild@0.25.0': true\n",
+		});
+		await writePnpmBuildApprovals(process.cwd());
+		expect(parse(readFileSync("pnpm-workspace.yaml", "utf8"))).toEqual({
+			allowBuilds: { "esbuild@0.25.0": true, workerd: true },
+		});
+	});
+	it("previews the workspace path and changed approvals without writing", async ({
+		expect,
+	}) => {
+		const original = "packages: ['apps/*']\nallowBuilds: {esbuild: false}\n";
+		await seed({
+			"pnpm-workspace.yaml": original,
+			"apps/web/package.json": "{}",
+		});
+		expect(
+			await writePnpmBuildApprovals(resolve("apps/web"), { dryRun: true })
+		).toEqual({
+			workspacePath: resolve("pnpm-workspace.yaml"),
+			packages: ["workerd"],
+		});
+		expect(readFileSync("pnpm-workspace.yaml", "utf8")).toBe(original);
+		expect(existsSync("apps/web/pnpm-workspace.yaml")).toBe(false);
+	});
 	it.for([
 		"dangerouslyAllowAllBuilds: true\n",
 		"onlyBuiltDependencies: [sharp]\n",

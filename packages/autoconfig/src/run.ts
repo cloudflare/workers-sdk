@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -576,6 +576,25 @@ export async function buildOperationsSummary(
 			logger.log(` - ${packageName} (devDependency)`);
 		}
 		logger.log("");
+	}
+
+	if (
+		autoConfigDetails.packageJson &&
+		autoConfigDetails.packageManager.type === "pnpm"
+	) {
+		const approvals = await writePnpmBuildApprovals(
+			autoConfigDetails.projectPath,
+			{ dryRun: true }
+		);
+		if (approvals) {
+			logger.log(
+				`🔨 Allow dependency build scripts in ${relative(autoConfigDetails.projectPath, approvals.workspacePath)}:`
+			);
+			for (const name of approvals.packages) {
+				logger.log(` - ${name}`);
+			}
+			logger.log("");
+		}
 	}
 
 	if (autoConfigDetails.packageJson) {

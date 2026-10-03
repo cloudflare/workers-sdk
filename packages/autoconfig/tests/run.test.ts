@@ -474,7 +474,17 @@ describe("runAutoConfig()", () => {
 				"pnpm-workspace.yaml": original,
 			});
 			const context = createMockContext();
-			vi.mocked(context.dialogs.confirm).mockResolvedValue(false);
+			vi.mocked(context.dialogs.confirm).mockImplementation(async (message) => {
+				if (message === "Proceed with setup?") {
+					expect(context.logger.log).toHaveBeenCalledWith(
+						"🔨 Allow dependency build scripts in pnpm-workspace.yaml:"
+					);
+					expect(context.logger.log).toHaveBeenCalledWith(" - esbuild");
+					expect(context.logger.log).toHaveBeenCalledWith(" - workerd");
+					expect(readFileSync("pnpm-workspace.yaml", "utf8")).toBe(original);
+				}
+				return false;
+			});
 			const install = vi
 				.spyOn(cliPackages, "installPackages")
 				.mockResolvedValue();
@@ -499,6 +509,9 @@ describe("runAutoConfig()", () => {
 				await result;
 			}
 			expect(readFileSync("pnpm-workspace.yaml", "utf8")).toBe(original);
+			expect(context.logger.log).toHaveBeenCalledWith(
+				"🔨 Allow dependency build scripts in pnpm-workspace.yaml:"
+			);
 			expect(install).not.toHaveBeenCalled();
 		}
 	);

@@ -17,10 +17,13 @@ const LEGACY_BUILD_SETTINGS = [
  * Approve the native dependencies installed by autoconfig at the pnpm workspace root.
  * Existing build decisions, including version-scoped policies, remain authoritative.
  * @param projectPath - The project being configured.
+ * @param options - Set dryRun to preview approvals without writing the workspace file.
+ * @returns The workspace path and packages whose approvals would change, if any.
  */
 export async function writePnpmBuildApprovals(
-	projectPath: string
-): Promise<void> {
+	projectPath: string,
+	{ dryRun = false }: { dryRun?: boolean } = {}
+): Promise<{ workspacePath: string; packages: string[] } | undefined> {
 	let directory = resolve(projectPath);
 	let workspacePath = join(directory, "pnpm-workspace.yaml");
 	while (!existsSync(workspacePath)) {
@@ -68,7 +71,7 @@ export async function writePnpmBuildApprovals(
 		approvals?.items.map((item) =>
 			isScalar(item.key) ? item.key.value : undefined
 		) ?? [];
-	let changed = false;
+	const packages: string[] = [];
 	for (const name of REQUIRED_BUILDS) {
 		// Do not broaden an existing glob or version-specific decision into an unconditional approval.
 		if (
@@ -84,13 +87,16 @@ export async function writePnpmBuildApprovals(
 			continue;
 		}
 		document.setIn(["allowBuilds", name], true);
-		changed = true;
+		packages.push(name);
 	}
-	if (changed) {
-		const updated = document.toString();
-		await writeFile(
-			workspacePath,
-			original.includes("\r\n") ? updated.replace(/\n/g, "\r\n") : updated
-		);
+	if (packages.length > 0) {
+		if (!dryRun) {
+			const updated = document.toString();
+			await writeFile(
+				workspacePath,
+				original.includes("\r\n") ? updated.replace(/\n/g, "\r\n") : updated
+			);
+		}
+		return { workspacePath, packages };
 	}
 }
