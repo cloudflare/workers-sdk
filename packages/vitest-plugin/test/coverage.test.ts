@@ -3,6 +3,83 @@ import path from "node:path";
 import dedent from "ts-dedent";
 import { test } from "./helpers";
 
+test(
+	"v8 coverage reports source files with the default provider",
+	{ timeout: 60_000 },
+	async ({ expect, seed, vitestRun, tmpPath }) => {
+		await seed({
+			"vitest.config.mts": dedent /* javascript */ `
+				import { cloudflareTest } from "@cloudflare/vitest-plugin";
+
+				export default {
+					plugins: [
+						cloudflareTest({
+							miniflare: {
+								compatibilityDate: "2025-12-02",
+								compatibilityFlags: [
+									"nodejs_compat",
+									"disable_nodejs_inspector_module",
+									"disable_nodejs_inspector_local_dev",
+								],
+							},
+						}),
+					],
+					test: {
+						coverage: {
+							reporter: ["json-summary"],
+							include: ["src/**"],
+						},
+					},
+				};
+			`,
+			"src/greeting.ts": dedent /* javascript */ `
+				export function greeting(name: string): string {
+					if (name === "World") {
+						return "Hello, World!";
+					}
+					return "Hello, stranger!";
+				}
+			`,
+			"index.test.ts": dedent /* javascript */ `
+				import { greeting } from "./src/greeting";
+				import { expect, it } from "vitest";
+
+				it("greets the world", () => {
+					expect(greeting("World")).toBe("Hello, World!");
+				});
+			`,
+		});
+
+		const result = await vitestRun({ flags: ["--coverage"] });
+		expect(await result.exitCode).toBe(0);
+		const output = result.stdout + result.stderr;
+		expect(output).toContain(
+			'Removing `disable_nodejs_inspector_module` compatibility flag during tests as that feature is needed because Vitest\'s `coverage.provider` is set to `"v8"`.'
+		);
+		expect(output).toContain(
+			'Removing `disable_nodejs_inspector_local_dev` compatibility flag during tests as that feature is needed because Vitest\'s `coverage.provider` is set to `"v8"`.'
+		);
+
+		const summaryPath = path.join(tmpPath, "coverage", "coverage-summary.json");
+		const summaryJson = JSON.parse(await fs.readFile(summaryPath, "utf8"));
+		const entries = Object.entries(summaryJson) as [
+			string,
+			{
+				branches: { pct: number };
+				functions: { pct: number };
+				lines: { pct: number };
+			},
+		][];
+		const greetingCoverage = entries.find(([key]) =>
+			key.endsWith("/src/greeting.ts")
+		)?.[1];
+
+		expect(greetingCoverage?.branches.pct).toBe(50);
+		expect(greetingCoverage?.functions.pct).toBe(100);
+		expect(greetingCoverage?.lines.pct).toBeLessThan(100);
+	}
+);
+
 // Regression test for https://github.com/cloudflare/workers-sdk/issues/5825
 // Istanbul coverage was reporting 0% for source files exercised by test files
 // that ran after the first one. The root cause was that in vitest v1, module
