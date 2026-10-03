@@ -1,4 +1,4 @@
-From 83cc44962c8b10698abe61b74e4260a373624115 Mon Sep 17 00:00:00 2001
+From 97d32d0d4c0c4157f36c7b99553bb6fd10f4bdad Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:05:56 +0100
 Subject: [PATCH 5/8] Support forcing the devtools theme via a query parameter,
@@ -10,7 +10,7 @@ To test, make sure that `?theme=dark`, `?theme=default`, and `?theme=systemPrefe
  1 file changed, 8 insertions(+), 3 deletions(-)
 
 diff --git a/front_end/ui/legacy/theme_support/ThemeSupport.ts b/front_end/ui/legacy/theme_support/ThemeSupport.ts
-index 298ba78952..43ee9341ec 100644
+index 85bda316b0..93ae99ae5a 100644
 --- a/front_end/ui/legacy/theme_support/ThemeSupport.ts
 +++ b/front_end/ui/legacy/theme_support/ThemeSupport.ts
 @@ -152,14 +152,19 @@ export class ThemeSupport extends EventTarget {
@@ -25,10 +25,10 @@ index 298ba78952..43ee9341ec 100644
      const systemPreferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default';
  
 -    const useSystemPreferred = this.setting.get() === 'systemPreferred' || isForcedColorsMode;
--    this.themeNameInternal = useSystemPreferred ? systemPreferredTheme : this.setting.get();
+-    this.#themeName = useSystemPreferred ? systemPreferredTheme : this.setting.get();
 +    const useSystemPreferred = theme === 'systemPreferred' || isForcedColorsMode;
-+    this.themeNameInternal = useSystemPreferred ? systemPreferredTheme : theme;
-     document.documentElement.classList.toggle('theme-with-dark-background', this.themeNameInternal === 'dark');
++    this.#themeName = useSystemPreferred ? systemPreferredTheme : theme;
+     document.documentElement.classList.toggle('theme-with-dark-background', this.#themeName === 'dark');
  
 -    const useChromeTheme = Common.Settings.moduleSetting('chrome-theme-colors').get();
 +    // Disable this—it adds blue headers which are out of keeping with Cloudflare styling
@@ -37,5 +37,5 @@ index 298ba78952..43ee9341ec 100644
      // Baseline is the name of Chrome's default color theme and there are two of these: default and grayscale.
      // The collective name for the rest of the color themes is dynamic.
 -- 
-2.39.5 (Apple Git-154)
+2.50.1 (Apple Git-155)
 
