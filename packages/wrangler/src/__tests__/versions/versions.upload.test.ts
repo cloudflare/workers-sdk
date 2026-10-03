@@ -3274,6 +3274,7 @@ describe("versions upload", () => {
 });
 
 const mockExecSync = vi.fn();
+const mockExecFileSync = vi.fn();
 
 // At the top level because `vi.mock` is hoisted to module scope regardless of
 // where it is written, so nesting it in the `describe` misrepresented its
@@ -3281,6 +3282,8 @@ const mockExecSync = vi.fn();
 vi.mock("child_process", () => ({
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.mock callback needs untyped rest args to forward to mock
 	execSync: (...args: any[]) => mockExecSync(...args),
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.mock callback needs untyped rest args to forward to mock
+	execFileSync: (...args: any[]) => mockExecFileSync(...args),
 }));
 
 describe("generatePreviewAlias", () => {
@@ -3288,10 +3291,11 @@ describe("generatePreviewAlias", () => {
 
 	beforeEach(() => {
 		mockExecSync.mockReset();
+		mockExecFileSync.mockReset();
 	});
 
 	it("returns undefined if not in a git directory", () => {
-		mockExecSync.mockImplementationOnce(() => {
+		mockExecFileSync.mockImplementationOnce(() => {
 			throw new Error("not a git repo");
 		});
 
@@ -3300,11 +3304,9 @@ describe("generatePreviewAlias", () => {
 	});
 
 	it("returns undefined if git branch name cannot be retrieved", () => {
-		mockExecSync
-			.mockImplementationOnce(() => {}) // is-inside-work-tree
-			.mockImplementationOnce(() => {
-				throw new Error("failed to get branch");
-			});
+		mockExecFileSync.mockImplementationOnce(() => {
+			throw new Error("failed to get branch");
+		});
 
 		const result = generatePreviewAlias("worker");
 		expect(result).toBeUndefined();
@@ -3312,9 +3314,7 @@ describe("generatePreviewAlias", () => {
 
 	it("sanitizes branch names correctly", () => {
 		const scriptName = "worker";
-		mockExecSync
-			.mockImplementationOnce(() => {}) // is-inside-work-tree
-			.mockImplementationOnce(() => Buffer.from("feat/awesome-feature"));
+		mockExecFileSync.mockReturnValueOnce(Buffer.from("feat/awesome-feature"));
 
 		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("feat-awesome-feature");
@@ -3325,9 +3325,7 @@ describe("generatePreviewAlias", () => {
 	it("truncates and hashes long branch names that don't fit within DNS label constraints", () => {
 		const scriptName = "very-long-worker-name";
 		const longBranch = "a".repeat(62);
-		mockExecSync
-			.mockImplementationOnce(() => {}) // is-inside-work-tree
-			.mockImplementationOnce(() => Buffer.from(longBranch));
+		mockExecFileSync.mockReturnValueOnce(Buffer.from(longBranch));
 
 		const result = generatePreviewAlias(scriptName);
 
@@ -3341,9 +3339,7 @@ describe("generatePreviewAlias", () => {
 
 	it("handles multiple, leading, and trailing dashes", () => {
 		const scriptName = "testscript";
-		mockExecSync
-			.mockImplementationOnce(() => {}) // is-inside-work-tree
-			.mockImplementationOnce(() => Buffer.from("--some--branch--name--"));
+		mockExecFileSync.mockReturnValueOnce(Buffer.from("--some--branch--name--"));
 
 		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("some-branch-name");
@@ -3353,9 +3349,7 @@ describe("generatePreviewAlias", () => {
 
 	it("lowercases branch names", () => {
 		const scriptName = "testscript";
-		mockExecSync
-			.mockImplementationOnce(() => {}) // is-inside-work-tree
-			.mockImplementationOnce(() => Buffer.from("HEAD/feature/work"));
+		mockExecFileSync.mockReturnValueOnce(Buffer.from("HEAD/feature/work"));
 
 		const result = generatePreviewAlias(scriptName);
 		expect(result).toBe("head-feature-work");
@@ -3418,9 +3412,7 @@ describe("generatePreviewAlias", () => {
 
 	it("returns undefined when script name is too long to allow any alias", () => {
 		const scriptName = "a".repeat(60);
-		mockExecSync
-			.mockImplementationOnce(() => {}) // is-inside-work-tree
-			.mockImplementationOnce(() => Buffer.from("short-branch"));
+		mockExecFileSync.mockReturnValueOnce(Buffer.from("short-branch"));
 
 		const result = generatePreviewAlias(scriptName);
 		expect(result).toBeUndefined();
@@ -3429,9 +3421,7 @@ describe("generatePreviewAlias", () => {
 	it("handles long branch names with truncation", () => {
 		const scriptName = "longer-branch-name-worker";
 		const longBranch = "a".repeat(100);
-		mockExecSync
-			.mockImplementationOnce(() => {}) // is-inside-work-tree
-			.mockImplementationOnce(() => Buffer.from(longBranch));
+		mockExecFileSync.mockReturnValueOnce(Buffer.from(longBranch));
 
 		const result = generatePreviewAlias(scriptName);
 
