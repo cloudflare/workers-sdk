@@ -200,10 +200,16 @@ type PowChallengeResponse = {
 	};
 };
 
-// Requests a proof-of-work challenge and solves it. The challenge is required:
-// any failure aborts provisioning.
+/**
+ * Requests and solves the proof-of-work challenge required for provisioning.
+ *
+ * @param logger Logger used to report challenge progress.
+ * @param cliDisplayName Consumer name used in actionable errors.
+ * @returns The proof-of-work solution required by the provisioning request.
+ */
 async function requestPowSolution(
-	logger: OAuthFlowLogger
+	logger: OAuthFlowLogger,
+	cliDisplayName: string
 ): Promise<PowSolution> {
 	const response = await fetch(getTemporaryPreviewChallengeUrl(), {
 		method: "POST",
@@ -252,7 +258,7 @@ async function requestPowSolution(
 		Buffer.from(seed, "base64url").length !== 32
 	) {
 		throw new FatalError(
-			"The proof-of-work challenge is not supported by this version of Wrangler.",
+			`The proof-of-work challenge is not supported by this version of ${cliDisplayName}.`,
 			{
 				telemetryMessage:
 					"deploy temporary account challenge difficulty unsupported",
@@ -266,13 +272,19 @@ async function requestPowSolution(
 
 /**
  * Provision a brand new temporary preview account from the public provisioning
- * endpoint
+ * endpoint.
+ *
+ * @param logger Logger used to report provisioning progress.
+ * @param request Optional inputs for event-scoped account provisioning.
+ * @param cliDisplayName Consumer name used in actionable errors.
+ * @returns The newly provisioned temporary preview account.
  */
 export async function createTemporaryPreviewAccount(
 	logger: OAuthFlowLogger,
-	request?: TemporaryAccountRequest
+	request?: TemporaryAccountRequest,
+	cliDisplayName = "Wrangler"
 ): Promise<TemporaryPreviewAccount> {
-	const pow = await requestPowSolution(logger);
+	const pow = await requestPowSolution(logger, cliDisplayName);
 
 	const response = await fetch(getTemporaryPreviewUrl(), {
 		method: "POST",
@@ -359,13 +371,20 @@ export async function createTemporaryPreviewAccount(
 
 /**
  * Return the cached temporary preview account if one is still valid, otherwise
- * mint a fresh one (running `beforeCreate` first, e.g. a terms-acceptance gate)
- * and persist it to the injected storage.
+ * mint a fresh one after terms acceptance and persist it to the injected
+ * storage.
+ *
+ * @param options Storage, prompting, logging, and consumer presentation inputs.
+ * @returns The active temporary preview account and whether it came from cache.
  */
 export async function getOrCreateTemporaryPreviewAccount(options: {
 	storage: TemporaryAccountStorage;
 	prompt: (question: string, notice: string) => Promise<boolean>;
 	logger: OAuthFlowLogger;
+	/** Consumer name used in temporary-account errors. */
+	cliDisplayName?: string;
+	/** Consumer command used to clear a cached temporary account. */
+	logoutCommand?: string;
 	request?: TemporaryAccountRequest;
 }): Promise<{
 	account: TemporaryPreviewAccount;
@@ -377,7 +396,7 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 	if (cachedPreviewAccount) {
 		if (options.request?.eventCode) {
 			throw new UserError(
-				"A temporary account is already cached. Rerun without --event-code to reuse it, or run `wrangler logout` and retry to create an account for this event.",
+				`A temporary account is already cached. Rerun without --event-code to reuse it, or run \`${options.logoutCommand ?? "wrangler logout"}\` and retry to create an account for this event.`,
 				{
 					telemetryMessage: "deploy temporary event cache conflict",
 				}
@@ -399,7 +418,8 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 
 	const temporaryPreviewAccount = await createTemporaryPreviewAccount(
 		options.logger,
-		options.request
+		options.request,
+		options.cliDisplayName
 	);
 	options.storage.write(temporaryPreviewAccount);
 

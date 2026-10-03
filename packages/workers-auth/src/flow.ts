@@ -353,7 +353,8 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				ctx.logger,
 				ctx.isNonInteractiveOrCI,
 				getClientId(),
-				storage
+				storage,
+				ctx.cliDisplayName
 			);
 			storage.write({
 				oauth_token,
@@ -550,7 +551,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	}> {
 		if (!ctx.temporary) {
 			throw new UserError(
-				"Temporary preview accounts are not supported by this CLI.",
+				`Temporary preview accounts are not supported by ${ctx.cliDisplayName}.`,
 				{ telemetryMessage: "user temporary account unsupported" }
 			);
 		}

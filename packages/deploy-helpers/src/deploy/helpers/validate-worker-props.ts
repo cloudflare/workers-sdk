@@ -8,7 +8,12 @@ import {
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { confirm, fetchResult, logger } from "../../shared/context";
+import {
+	cliPresentation,
+	confirm,
+	fetchResult,
+	logger,
+} from "../../shared/context";
 import {
 	getSubdomainValues,
 	validateEventTriggerTargets,
@@ -65,7 +70,7 @@ export function validateWorkerProps<T extends ValidateWorkerPropsInput>(
 	if (!compatibilityDate) {
 		const compatibilityDateStr = DEFAULT_COMPAT_DATE;
 		throw new UserError(
-			`A compatibility_date is required when uploading a Worker. Add the following to your ${configFileName(config.configPath)} file:
+			`A compatibility_date is required when uploading a Worker. Add the following to your ${configFileName(config.configPath, config.userConfigPath)} file:
     \`\`\`
     ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
     \`\`\`
@@ -89,14 +94,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath, config.userConfigPath)} file`,
 			{ telemetryMessage: "text_blobs with es module worker" }
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath, config.userConfigPath)} file`,
 			{ telemetryMessage: "data_blobs with es module worker" }
 		);
 	}
@@ -219,7 +224,7 @@ export async function preUploadApiChecks(
 			// propagates.
 			if (props.command === "deploy" && props.failIfWorkerNameTaken) {
 				throw new UserError(
-					`A Worker named "${name}" already exists in your account. This deploy could not confirm that it should update that Worker, so it stopped instead of overwriting it. To update the existing Worker, add a Wrangler configuration file naming "${name}"; to deploy separately, use a different name.`,
+					`A Worker named "${name}" already exists in your account. This deploy could not confirm that it should update that Worker, so it stopped instead of overwriting it. To update the existing Worker, add a ${cliPresentation.displayConfigFileName} that names "${name}"; to deploy separately, use a different name.`,
 					{ telemetryMessage: "deploy unverified worker name already exists" }
 				);
 			}

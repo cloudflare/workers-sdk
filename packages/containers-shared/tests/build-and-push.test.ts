@@ -5,13 +5,16 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
-import { removeDirSync } from "@cloudflare/workers-utils";
+import { CF_CLI_PRESENTATION, removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	AccountService,
+	ApplicationsService,
 	buildCommand,
 	cleanupBuiltImages,
+	cliPresentation,
 	buildContainerImages,
+	deployContainers,
 	getCloudflareContainerRegistry,
 	getContainerImageTag,
 	ImageRegistriesService,
@@ -25,7 +28,12 @@ import {
 import type { BuiltContainerImage, BuiltImage } from "../src/build";
 import type { CompleteAccountCustomer } from "../src/client";
 import type { ContainerNormalizedConfig } from "../src/types";
-import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	FetchPagedListResultFetcher,
+	FetchResultFetcher,
+	Logger,
+} from "@cloudflare/workers-utils";
 
 vi.mock("node:child_process");
 
@@ -238,6 +246,26 @@ describe("buildCommand", () => {
 			"-",
 			dir,
 		]);
+	});
+
+	it("resolves consumer-specific presentation copy", ({ expect }) => {
+		initContainersSharedContext({
+			cliPresentation: CF_CLI_PRESENTATION,
+			logger,
+			fetchResult: fetchResultMock,
+		});
+
+		expect(cliPresentation).toMatchObject({
+			cliName: "cf",
+			displayConfigFileName: "cloudflare.config.ts",
+			configFields: {
+				containerObservabilityTargetPercentage: "targetInstancePercentage",
+				containerObservabilityTargetCount: "targetInstanceCount",
+			},
+			commands: {
+				containerRegistryConfigure: "cf containers registries create",
+			},
+		});
 	});
 
 	it("tags and pushes new images, returning the pushed digest", async ({
@@ -459,6 +487,30 @@ describe("deploy container image build and push", () => {
 
 		await expect(
 			buildContainerImages([container, imageUriContainer], "docker", false)
+		).resolves.toStrictEqual([
+			{
+				container,
+				localTag: TEST_LOCAL_TAG,
+			},
+		]);
+	});
+
+	it("keeps the internal image tag stable for cf", async ({ expect }) => {
+		initContainersSharedContext({
+			cliPresentation: CF_CLI_PRESENTATION,
+			logger,
+			fetchResult: fetchResultMock,
+		});
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+		const container = {
+			...dockerfileContainer,
+			dockerfile: args.pathToDockerfile,
+			image_build_context: dir,
+		};
+
+		await expect(
+			buildContainerImages([container], "docker", false)
 		).resolves.toStrictEqual([
 			{
 				container,
@@ -715,6 +767,65 @@ describe("deploy container image build and push", () => {
 				"11111111-2222-4333-8444-555555555555"
 			)
 		).toBe("test-app:11111111");
+	});
+});
+
+describe("caller-specific container guidance", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("uses cloudflare.config.ts field names for cf", async ({ expect }) => {
+		const container = {
+			...dockerfileContainer,
+			observability: {
+				logs_enabled: true,
+				target_instance_percentage: 10,
+			},
+		} satisfies ContainerNormalizedConfig;
+		const fetchPagedListResult = vi.fn(async () => [
+			{
+				id: "namespace-id",
+				class: container.class_name,
+				name: "namespace",
+				script: "worker",
+				use_sqlite: true,
+			},
+		]) as unknown as FetchPagedListResultFetcher;
+		initContainersSharedContext({
+			cliPresentation: CF_CLI_PRESENTATION,
+			logger,
+			fetchResult: vi.fn() as never,
+			fetchPagedListResult,
+		});
+		vi.spyOn(ApplicationsService, "listApplications").mockResolvedValue([
+			{
+				id: "application-id",
+				name: container.name,
+				configuration: {
+					image: "registry.cloudflare.com/example/image:tag",
+					observability: { logs: { enabled: true } },
+				},
+				durable_objects: { namespace_id: "namespace-id" },
+			},
+		] as never);
+
+		await expect(
+			deployContainers(
+				{
+					containers: [container],
+					durable_objects: { bindings: [] },
+				} as unknown as Config,
+				[{ container, imageRef: { newTag: "example/image:tag" } }],
+				{
+					versionId: "version-id",
+					accountId: "account-id",
+					scriptName: "worker",
+				}
+			)
+		).rejects.toThrow(
+			"Set containers[].observability.enabled = false in your cloudflare.config.ts and deploy once, then deploy again with targetInstancePercentage or targetInstanceCount."
+		);
 	});
 });
 
