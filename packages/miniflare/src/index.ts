@@ -3351,6 +3351,9 @@ export class Miniflare {
 		// Proxies make synchronous calls, which would otherwise block the main
 		// thread, and every other request it serves, while that worker starts
 		await this.#proxyClient.warm();
+		// dispose() may have terminated that worker while we waited, and a
+		// synchronous call to it would then block forever
+		this.#checkDisposed();
 		return this.#proxyClient;
 	}
 
