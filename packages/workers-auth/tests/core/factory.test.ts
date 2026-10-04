@@ -1,7 +1,9 @@
+import { APIError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { CF_CLI } from "../../src/cf";
 import { createCloudflareAuth } from "../../src/core/factory";
+import { WRANGLER_CLI } from "../../src/wrangler";
 import type { AuthContext } from "../../src/core/types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -121,3 +123,141 @@ describe("per-CLI login defaults", () => {
 		);
 	});
 });
+
+describe.each([WRANGLER_CLI, CF_CLI])(
+	"account discovery errors for $cliName",
+	(descriptor) => {
+		runInTempDir();
+
+		beforeEach(() => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
+		});
+
+		it("includes account-ID guidance when /memberships returns 10001", async ({
+			expect,
+		}) => {
+			fetchInternalBase.mockImplementation(async (_config, resource) => ({
+				response:
+					resource === "/memberships"
+						? {
+								success: false,
+								result: null,
+								errors: [
+									{ code: 10001, message: "Unable to authenticate request" },
+								],
+							}
+						: {
+								success: true,
+								result: [{ id: "account-id", name: "Account" }],
+								result_info: { page: 1, total_pages: 1 },
+							},
+				status: resource === "/memberships" ? 400 : 200,
+			}));
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			const error = await auth
+				.getOrSelectAccountId(COMPLIANCE_CONFIG)
+				.catch((e: unknown) => e);
+
+			expect(error).toBeInstanceOf(APIError);
+			expect(error).toMatchObject({
+				code: 10001,
+				status: 400,
+				message: "A request to the Cloudflare API (/memberships) failed.",
+				reportable: true,
+				telemetryMessage: undefined,
+				notes: [
+					{ text: "Unable to authenticate request [code: 10001]" },
+					{
+						text: expect.stringContaining("CLOUDFLARE_ACCOUNT_ID"),
+					},
+				],
+			});
+			if (!(error instanceof APIError)) {
+				throw new Error("Expected an APIError");
+			}
+			expect(error.notes[1].text).toContain("account-owned API token");
+			expect(error.notes[1].text).toContain("`account_id`");
+			expect(error.notes[1].text).toContain(descriptor.getConfigFileLabel());
+		});
+
+		it("uses account_id from configuration without automatic discovery", async ({
+			expect,
+		}) => {
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			await expect(
+				auth.getOrSelectAccountId({
+					...COMPLIANCE_CONFIG,
+					account_id: "configured-account",
+				})
+			).resolves.toBe("configured-account");
+			expect(fetchInternalBase).not.toHaveBeenCalled();
+		});
+
+		it("uses CLOUDFLARE_ACCOUNT_ID without automatic discovery", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "environment-account");
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).resolves.toBe(
+				"environment-account"
+			);
+			expect(fetchInternalBase).not.toHaveBeenCalled();
+		});
+
+		it("preserves unrelated /memberships errors without account-ID guidance", async ({
+			expect,
+		}) => {
+			fetchInternalBase.mockImplementation(async (_config, resource) => ({
+				response:
+					resource === "/memberships"
+						? {
+								success: false,
+								result: null,
+								errors: [{ code: 1003, message: "Invalid something" }],
+							}
+						: {
+								success: true,
+								result: [],
+								result_info: { page: 1, total_pages: 1 },
+							},
+				status: resource === "/memberships" ? 400 : 200,
+			}));
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			await expect(
+				auth.fetchAllAccounts(COMPLIANCE_CONFIG)
+			).rejects.toMatchObject({
+				code: 1003,
+				status: 400,
+				message: "A request to the Cloudflare API (/memberships) failed.",
+				notes: [{ text: "Invalid something [code: 1003]" }],
+			});
+		});
+
+		it("preserves /accounts errors when both endpoints return 10001", async ({
+			expect,
+		}) => {
+			fetchInternalBase.mockResolvedValue({
+				response: {
+					success: false,
+					result: null,
+					errors: [{ code: 10001, message: "Unable to authenticate request" }],
+				},
+				status: 400,
+			});
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			await expect(
+				auth.fetchAllAccounts(COMPLIANCE_CONFIG)
+			).rejects.toMatchObject({
+				code: 10001,
+				status: 400,
+				message: "A request to the Cloudflare API (/accounts) failed.",
+				notes: [{ text: "Unable to authenticate request [code: 10001]" }],
+			});
+		});
+	}
+);
