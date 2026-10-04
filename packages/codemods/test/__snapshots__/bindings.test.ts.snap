@@ -230,6 +230,19 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
         },
       },
       {
+        "key": "ANALYTICS",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [],
+            },
+          ],
+          "callee": "bindings.analytics",
+          "kind": "call",
+        },
+      },
+      {
         "key": "VERSION",
         "value": {
           "args": [],
