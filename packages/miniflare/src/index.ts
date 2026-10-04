@@ -3348,6 +3348,9 @@ export class Miniflare {
 		this.#checkDisposed();
 		await this.ready;
 		assert(this.#proxyClient !== undefined);
+		// Proxies make synchronous calls, which would otherwise block the main
+		// thread, and every other request it serves, while that worker starts
+		await this.#proxyClient.warm();
 		return this.#proxyClient;
 	}
 
