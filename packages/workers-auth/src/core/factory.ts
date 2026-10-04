@@ -471,7 +471,7 @@ You may have incorrect permissions on your API token, or your authentication may
 					membershipsRes.reason.code === 10001
 				) {
 					membershipsRes.reason.notes.push({
-						text: `If you are using an account-owned API token, set \`CLOUDFLARE_ACCOUNT_ID\` or add \`account_id\` to your ${descriptor.getConfigFileLabel()} file to select the account without querying the user-scoped \`/memberships\` endpoint.`,
+						text: "If you are using an account-owned API token, set `CLOUDFLARE_ACCOUNT_ID` to select the account without querying the user-scoped `/memberships` endpoint.",
 					});
 				}
 				throw membershipsRes.reason;

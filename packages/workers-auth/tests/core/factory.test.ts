@@ -177,8 +177,64 @@ describe.each([WRANGLER_CLI, CF_CLI])(
 				throw new Error("Expected an APIError");
 			}
 			expect(error.notes[1].text).toContain("account-owned API token");
-			expect(error.notes[1].text).toContain("`account_id`");
-			expect(error.notes[1].text).toContain(descriptor.getConfigFileLabel());
+			expect(error.notes[1].text).toContain("select the account");
+			expect(error.notes[1].text).toContain("`/memberships`");
+			expect(error.notes[1].text).not.toContain("`account_id`");
+		});
+
+		it("preserves the original APIError instance and metadata", async ({
+			expect,
+		}) => {
+			const error = new APIError({
+				text: "A request to the Cloudflare API (/memberships) failed.",
+				status: 400,
+				notes: [{ text: "Unable to authenticate request [code: 10001]" }],
+				telemetryMessage: false,
+			});
+			error.code = 10001;
+			const meta = { details: { reason: "Account-owned token" } };
+			error.meta = meta;
+			error.preventReport();
+			fetchInternalBase.mockImplementation(async (_config, resource) => {
+				if (resource === "/memberships") {
+					throw error;
+				}
+				return {
+					response: { success: true, result: [] },
+					status: 200,
+				};
+			});
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			await expect(auth.fetchAllAccounts(COMPLIANCE_CONFIG)).rejects.toBe(
+				error
+			);
+			expect(error.meta).toBe(meta);
+			expect(error.reportable).toBe(false);
+			expect(error.notes).toEqual([
+				{ text: "Unable to authenticate request [code: 10001]" },
+				{ text: expect.stringContaining("CLOUDFLARE_ACCOUNT_ID") },
+			]);
+		});
+
+		it("preserves non-API failures carrying code 10001", async ({ expect }) => {
+			const error = Object.assign(new Error("Unexpected transport failure"), {
+				code: 10001,
+			});
+			fetchInternalBase.mockImplementation(async (_config, resource) => {
+				if (resource === "/memberships") {
+					throw error;
+				}
+				return {
+					response: { success: true, result: [] },
+					status: 200,
+				};
+			});
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			await expect(auth.fetchAllAccounts(COMPLIANCE_CONFIG)).rejects.toBe(
+				error
+			);
 		});
 
 		it("uses account_id from configuration without automatic discovery", async ({
