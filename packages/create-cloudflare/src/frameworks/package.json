@@ -1,8 +1,8 @@
 {
 	"name": "frameworks_clis_info",
 	"dependencies": {
-		"@angular/create": "22.2.0",
-		"@tanstack/cli": "0.71.0",
+		"@angular/create": "22.2.1",
+		"@tanstack/cli": "0.71.1",
 		"create-analog": "2.7.5",
 		"create-astro": "5.2.4",
 		"create-docusaurus": "3.10.2",
