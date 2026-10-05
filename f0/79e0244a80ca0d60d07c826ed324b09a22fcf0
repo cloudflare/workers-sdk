@@ -1,0 +1,51 @@
+.changeset/durable-object-binding-retry-local.md
+  s_f70c3d9c923e90::t_bdc73118e67b8e 1-9
+packages/config/src/__tests__/convert.test.ts
+  s_f70c3d9c923e90::t_0c13ba4564217d 755-791
+packages/config/src/__tests__/schema.test.ts
+  s_f70c3d9c923e90::t_eac1a098336520 236-263
+packages/config/src/bindings.ts
+  s_f70c3d9c923e90::t_b38d786ac2c188 214-233
+packages/config/src/convert.ts
+  s_f70c3d9c923e90::t_7a7f7e927d2c7b 513,517-524
+packages/config/src/schema.ts
+  s_f70c3d9c923e90::t_5e89d803a9e55b 143-148
+packages/miniflare/src/config/v4-convert.ts
+  s_f70c3d9c923e90::t_6f121b82685545 417,422-424
+packages/miniflare/src/config/v4-schema.ts
+  s_f70c3d9c923e90::t_05612f96df376a 246-247,766-769
+packages/miniflare/src/index.ts
+  s_f70c3d9c923e90::t_aaf40ed293026e 489
+packages/miniflare/src/plugins/do/index.ts
+  s_f70c3d9c923e90::t_a26550bd76b0aa 30
+packages/miniflare/src/runtime/config/workerd.ts
+  s_f70c3d9c923e90::t_474c0c2fca5806 174-179
+packages/miniflare/test/config/v4-convert.spec.ts
+  s_f70c3d9c923e90::t_0d6477b39cc643 73-100
+packages/miniflare/test/config/v4-schema.spec.ts
+  s_f70c3d9c923e90::t_8e9a10f891449f 192-212
+packages/miniflare/test/plugins/do/index.spec.ts
+  s_f70c3d9c923e90::t_d5c2b6d7d0a96c 61-133
+packages/miniflare/test/runtime/config.spec.ts
+  s_f70c3d9c923e90::t_47b713925d072c 122-165
+packages/wrangler/src/__tests__/unstable-get-miniflare-worker-options.test.ts
+  s_f70c3d9c923e90::t_2440e1fc0250a0 355-397
+packages/wrangler/src/dev/miniflare/index.ts
+  s_f70c3d9c923e90::t_f1931aed67a934 1050,1056-1057
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f079e0244a80ca0d60d07c826ed324b09a22fcf0",
+  "prompts": {},
+  "sessions": {
+    "s_f70c3d9c923e90": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2fdf8364ffeOHX8yTIJunIGkw",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}
