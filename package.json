@@ -59,11 +59,11 @@
 	},
 	"engines": {
 		"node": ">=22.0.0",
-		"pnpm": "^10.33.0"
+		"pnpm": "^12.9.1"
 	},
 	"volta": {
 		"node": "22.22.1",
-		"pnpm": "10.33.0"
+		"pnpm": "12.9.1"
 	},
-	"packageManager": "pnpm@10.33.0"
+	"packageManager": "pnpm@12.9.1"
 }

@@ -11,7 +11,7 @@ permissions:
 # silently ignored by pnpm 10.
 #
 # - pmOnFail=ignore: pnpm 11's default `download` would silently re-exec as
-#   the monorepo's pinned pnpm 10.33.0, defeating the matrix override.
+#   the monorepo's pinned pnpm 12.9.1, defeating the matrix override.
 # - verifyDepsBeforeRun=false: pnpm 11's default `install` would re-run
 #   `pnpm install` at the monorepo root before invoking the script, which
 #   then trips on engines.pnpm.
@@ -38,7 +38,7 @@ jobs:
         filter: ["cli", "workers"]
         os: [{ name: ubuntu-latest, description: Linux }]
         pm:
-          - { name: pnpm, version: "10.33.0", label: "pnpm" }
+          - { name: pnpm, version: "12.9.1", label: "pnpm" }
           - { name: pnpm, version: "11.5.1", label: "pnpm@11.5.1" }
           - { name: npm, version: "11.7.0", label: "npm" }
           # The yarn tests keep failing on Linux with out of space errors, with no clear reason why. Disabling for now.
@@ -48,17 +48,17 @@ jobs:
           # preserve historical required-check names. pnpm 11 coverage comes
           # from the Linux base entries above.
           - os: { name: windows-latest, description: Windows }
-            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
+            pm: { name: pnpm, version: "12.9.1", label: "pnpm" }
             filter: "cli"
           - os: { name: windows-latest, description: Windows }
-            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
+            pm: { name: pnpm, version: "12.9.1", label: "pnpm" }
             filter: "workers"
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
+            pm: { name: pnpm, version: "12.9.1", label: "pnpm" }
             experimental: true
             filter: "cli"
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
+            pm: { name: pnpm, version: "12.9.1", label: "pnpm" }
             experimental: true
             filter: "workers"
     runs-on: ${{ matrix.os.name }}
@@ -97,7 +97,7 @@ jobs:
           git config --global user.name 'Wrangler Tester'
 
       # Put the matrix pnpm version on PATH so scaffolded-project installs
-      # run it (not the monorepo's pinned pnpm 10.33.0). Without this, the
+      # run it (not the monorepo's pinned pnpm 12.9.1). Without this, the
       # matrix only relabels C3's `npm_config_user_agent` and pnpm 11
       # regressions go undetected.
       #
@@ -124,7 +124,7 @@ jobs:
           version: ${{ matrix.pm.version }}
           package_json_file: .ci-pnpm-setup-stub/package.json
           # Distinct dest so `addPath` prepends ahead of the monorepo's
-          # pinned pnpm 10.x from the earlier `~/setup-pnpm`.
+          # pinned pnpm 12.x from the earlier `~/setup-pnpm`.
           dest: ~/matrix-pnpm
       - name: Verify pnpm on PATH matches matrix version
         if: matrix.pm.name == 'pnpm' && steps.changes.outputs.everything_but_markdown == 'true'
@@ -192,14 +192,14 @@ jobs:
         os:
           - { name: ubuntu-latest, description: Linux }
         pm:
-          - { name: pnpm, version: "10.33.0", label: "pnpm" }
+          - { name: pnpm, version: "12.9.1", label: "pnpm" }
           - { name: pnpm, version: "11.5.1", label: "pnpm@11.5.1" }
           - { name: npm, version: "11.7.0", label: "npm" }
         include:
           # Experimental stays on the default pnpm to preserve historical
           # required-check names; pnpm 11 coverage comes from the base entry.
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "10.33.0", label: "pnpm" }
+            pm: { name: pnpm, version: "12.9.1", label: "pnpm" }
             experimental: true
     runs-on: ${{ matrix.os.name }}
     steps:
