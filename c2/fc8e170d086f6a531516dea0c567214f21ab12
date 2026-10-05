@@ -1,0 +1,21 @@
+.changeset/temporary-notices-stderr.md
+  s_1f41e6fcdf1e6b::t_b621d6ecf08db9 7
+packages/wrangler/src/d1/execute.ts
+  s_1f41e6fcdf1e6b::t_74096f28f37e1f 119,230
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c2fc8e170d086f6a531516dea0c567214f21ab12",
+  "prompts": {},
+  "sessions": {
+    "s_1f41e6fcdf1e6b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10ce5-ba7c-72e1-9257-8f86df6e6d97",
+        "model": "unknown"
+      },
+      "human_author": "André Cruz <acruz@cloudflare.com>"
+    }
+  }
+}
