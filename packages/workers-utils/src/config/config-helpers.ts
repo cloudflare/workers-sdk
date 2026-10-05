@@ -158,7 +158,7 @@ function findRedirectedWranglerConfig(
 					It is only applied when it sits alongside the user configuration file, which here would be "${path.relative(".", expectedDeployConfigPath)}".
 
 					Please either delete "${path.relative(".", deployConfigPath)}" if it is left over from a previous build,
-					or run this command from the directory containing the configuration you want to use.
+					or explicitly select the configuration you want to use with --config <path>.
 					See https://developers.cloudflare.com/workers/wrangler/configuration/#generated-wrangler-configuration
 				`,
 				{ telemetryMessage: false }

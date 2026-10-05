@@ -245,7 +245,7 @@ describe("config findWranglerConfig()", () => {
 				It is only applied when it sits alongside the user configuration file, which here would be "foo/.wrangler/deploy/config.json".
 
 				Please either delete "foo/bar/.wrangler/deploy/config.json" if it is left over from a previous build,
-				or run this command from the directory containing the configuration you want to use.
+				or explicitly select the configuration you want to use with --config <path>.
 				See https://developers.cloudflare.com/workers/wrangler/configuration/#generated-wrangler-configuration"
 			`);
 			expect(std).toMatchObject(NO_LOGS);
@@ -266,7 +266,7 @@ describe("config findWranglerConfig()", () => {
 				It is only applied when it sits alongside the user configuration file, which here would be "bar/foo/.wrangler/deploy/config.json".
 
 				Please either delete "bar/.wrangler/deploy/config.json" if it is left over from a previous build,
-				or run this command from the directory containing the configuration you want to use.
+				or explicitly select the configuration you want to use with --config <path>.
 				See https://developers.cloudflare.com/workers/wrangler/configuration/#generated-wrangler-configuration"
 			`);
 			expect(std).toMatchObject(NO_LOGS);
