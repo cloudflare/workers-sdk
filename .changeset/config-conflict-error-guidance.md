@@ -3,8 +3,6 @@
 "wrangler": patch
 ---
 
-Explain how to resolve a user/deploy configuration conflict
+Improve guidance for conflicting Wrangler configuration files
 
-When a user configuration file and a `.wrangler/deploy/config.json` were found under different base paths, the error stated the conflict but gave no way out of it, leaving the reader to guess whether to move a file, delete one, or run the command somewhere else.
-
-The message now names the path the deploy configuration would have to sit at to apply, suggests deleting it when it is left over from a previous build or explicitly selecting the intended configuration, and links to the Generated Wrangler configuration documentation.
+When user and generated deploy configurations are found under different base paths, Wrangler now identifies the expected deploy configuration location, suggests how to resolve the conflict, and links to the relevant documentation.
