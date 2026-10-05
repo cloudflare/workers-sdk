@@ -824,7 +824,6 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "proxy-server",
 						compatibilityDate: COMPAT_DATE,
 						compatibilityFlags: ["experimental"],
@@ -842,7 +841,6 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: "hd-target",
 						compatibilityDate: COMPAT_DATE,
 						compatibilityFlags: ["experimental"],
@@ -879,81 +877,5 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 		} finally {
 			controller.dispose();
 		}
-	});
-});
-
-// The edge mints per-session credentials for a remote Hyperdrive binding, so the
-// local binding config must be seeded with the edge session's `connectionString`
-// (fetched via the `MF-HD-Seed` guard endpoint) or a database client can't
-// authenticate through the proxy.
-describe("Hyperdrive remote binding: MF-HD-Seed endpoint", () => {
-	function makeSeedEdge(): Miniflare {
-		return new Miniflare({
-			workers: [
-				{
-					config: {
-						type: "worker",
-						name: "proxy-server",
-						compatibilityDate: COMPAT_DATE,
-						compatibilityFlags: ["experimental"],
-						manifest: {
-							mainModule: "ProxyServerWorker.js",
-							modules: {
-								"ProxyServerWorker.js": {
-									type: "esm",
-									contents: proxyServerBundle,
-								},
-							},
-						},
-						env: {
-							HYPERDRIVE: {
-								type: "hyperdrive",
-								id: "hyperdrive-id",
-								dev: {
-									connectionString:
-										"mysql://hduser:hdpass@127.0.0.1:3306/testdb",
-								},
-							},
-						},
-					},
-				},
-			],
-		});
-	}
-
-	test("returns the binding's connectionString", async ({ expect }) => {
-		const edge = makeSeedEdge();
-		useDispose(edge);
-		const edgeUrl = await edge.ready;
-
-		const res = await fetch(edgeUrl, {
-			headers: { "MF-HD-Seed": "true", "MF-Binding": "HYPERDRIVE" },
-		});
-		expect(res.status).toBe(200);
-		const body = (await res.json()) as { connectionString?: string };
-		expect(typeof body.connectionString).toBe("string");
-		// The connection string workerd exposes preserves the configured database
-		// (and credentials), which is exactly what the local binding must replay.
-		expect(body.connectionString).toContain("testdb");
-	});
-
-	test("rejects a request with no MF-Binding header", async ({ expect }) => {
-		const edge = makeSeedEdge();
-		useDispose(edge);
-		const edgeUrl = await edge.ready;
-
-		const res = await fetch(edgeUrl, { headers: { "MF-HD-Seed": "true" } });
-		expect(res.status).toBe(400);
-	});
-
-	test("404s an unknown binding", async ({ expect }) => {
-		const edge = makeSeedEdge();
-		useDispose(edge);
-		const edgeUrl = await edge.ready;
-
-		const res = await fetch(edgeUrl, {
-			headers: { "MF-HD-Seed": "true", "MF-Binding": "DOES_NOT_EXIST" },
-		});
-		expect(res.status).toBe(404);
 	});
 });

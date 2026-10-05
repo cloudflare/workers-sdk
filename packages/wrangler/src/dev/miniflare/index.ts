@@ -412,7 +412,8 @@ function hyperdriveEntry(
 			throw new UserError(
 				`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no remote connection could be established, and it has no local database to fall back to. Please make sure you are authenticated (run \`wrangler login\`) and connected to the internet so that Wrangler can reach your Hyperdrive configuration, or set the value of the 'CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to a local Postgres connection string.`,
 				{
-					telemetryMessage: "no remote hyperdrive session or connection string",
+					telemetryMessage:
+						"hyperdrive remote binding session and local connection string missing",
 				}
 			);
 		}

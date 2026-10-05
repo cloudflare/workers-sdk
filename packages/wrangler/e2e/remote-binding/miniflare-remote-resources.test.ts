@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { seedRemoteHyperdriveBindings } from "@cloudflare/remote-bindings";
+import { createConnection } from "mysql2/promise";
 import dedent from "ts-dedent";
 import { afterAll, assert, beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
@@ -70,9 +72,11 @@ interface TestConfig {
 	/**
 	 * The Miniflare config (mostly bindings) for this test case. This will be merged with all other test cases to create a single Miniflare instance for all tests.
 	 * @param connection The URL to the remote proxy session
+	 * @param hyperdriveConnectionStrings Edge credentials seeded for remote Hyperdrive bindings.
 	 */
 	miniflareConfig(
-		connection: RemoteProxyConnectionString | undefined
+		connection: RemoteProxyConnectionString | undefined,
+		hyperdriveConnectionStrings?: ReadonlyMap<string, string>
 	): MiniflareEnv;
 }
 
@@ -221,16 +225,15 @@ const testCases: TestCase[] = [
 						},
 					},
 				},
-				miniflareConfig: (connection) => ({
+				miniflareConfig: (connection, hyperdriveConnectionStrings) => ({
 					HYPERDRIVE_BINDING: {
 						type: "hyperdrive",
 						id,
 						dev: {
 							remote: remote(connection),
-							// A remote binding is seeded with the edge session's
-							// credentials; this stands in for the local database a
-							// non-remote binding needs.
-							connectionString: "mysql://user:password@127.0.0.1:3306/database",
+							connectionString:
+								hyperdriveConnectionStrings?.get("HYPERDRIVE_BINDING") ??
+								"mysql://user:password@127.0.0.1:3306/database",
 						},
 					},
 				}),
@@ -778,6 +781,68 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				45_000
 			);
 		}
+
+		it("authenticates and queries through a remote Hyperdrive binding", async ({
+			expect,
+		}) => {
+			const hyperdriveCase = activeTestCases.find(
+				(testCase) => testCase.name === "Hyperdrive"
+			);
+			assert(hyperdriveCase);
+			const config = testConfigByTestCase.get(hyperdriveCase);
+			assert(config);
+			const session = await startRemoteProxySession(
+				config.remoteProxySessionConfig.bindings
+			);
+			try {
+				const hyperdriveBinding =
+					config.remoteProxySessionConfig.bindings?.HYPERDRIVE_BINDING;
+				assert(hyperdriveBinding?.type === "hyperdrive");
+				const seededConnectionStrings = await seedRemoteHyperdriveBindings(
+					{ HYPERDRIVE_BINDING: { ...hyperdriveBinding, remote: true } },
+					session.remoteProxyConnectionString
+				);
+				const queryMf = new Miniflare({
+					workers: [
+						{
+							config: {
+								name: "hyperdrive-query",
+								compatibilityDate: "2025-09-06",
+								manifest: createManifest(helper.tmpPath, ["hyperdrive.js"]),
+								env: config.miniflareConfig(
+									session.remoteProxyConnectionString,
+									seededConnectionStrings
+								),
+							},
+							dev: {
+								remoteProxyConnectionString:
+									session.remoteProxyConnectionString,
+							},
+						},
+					],
+				});
+				try {
+					const { HYPERDRIVE_BINDING } = await queryMf.getBindings<{
+						HYPERDRIVE_BINDING: { connectionString: string };
+					}>();
+					const connection = await createConnection(
+						HYPERDRIVE_BINDING.connectionString
+					);
+					try {
+						const [rows] = await connection.query(
+							"SELECT 1 AS remote_hyperdrive_probe"
+						);
+						expect(rows).toEqual([{ remote_hyperdrive_probe: 1 }]);
+					} finally {
+						await connection.end();
+					}
+				} finally {
+					await queryMf.dispose();
+				}
+			} finally {
+				await session.dispose();
+			}
+		}, 45_000);
 	});
 
 	// Separate describe block for mTLS because it needs a custom remote-binding
