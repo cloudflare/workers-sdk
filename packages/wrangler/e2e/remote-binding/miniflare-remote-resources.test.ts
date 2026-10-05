@@ -843,6 +843,16 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					} finally {
 						await directConnection.end();
 					}
+					const seededConnectionString =
+						seededConnectionStrings.get("HYPERDRIVE_BINDING");
+					assert(seededConnectionString);
+					const seededUrl = new URL(seededConnectionString);
+					// Compare only a boolean: assertion failures must never print credentials.
+					expect(
+						url.username === seededUrl.username &&
+							url.password === seededUrl.password &&
+							url.pathname === seededUrl.pathname
+					).toBe(true);
 				} finally {
 					stream.destroy();
 					ws.terminate();
@@ -876,7 +886,13 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 							database: string;
 						};
 					}>();
-					const connection = await createConnection(HYPERDRIVE_BINDING);
+					const connection = await createConnection({
+						host: HYPERDRIVE_BINDING.host,
+						port: HYPERDRIVE_BINDING.port,
+						user: HYPERDRIVE_BINDING.user,
+						password: HYPERDRIVE_BINDING.password,
+						database: HYPERDRIVE_BINDING.database,
+					});
 					try {
 						const [rows] = await connection.query(
 							"SELECT 1 AS remote_hyperdrive_probe"
