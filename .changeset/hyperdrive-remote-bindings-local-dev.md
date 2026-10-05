@@ -1,4 +1,5 @@
 ---
+"@cloudflare/config": minor
 "miniflare": minor
 "wrangler": minor
 "@cloudflare/vite-plugin": minor
