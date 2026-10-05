@@ -22,6 +22,7 @@ packages/miniflare/src/runtime/config/workerd.ts
   s_f70c3d9c923e90::t_474c0c2fca5806 174-179
 packages/miniflare/test/config/v4-convert.spec.ts
   s_f70c3d9c923e90::t_0d6477b39cc643 73-100
+  s_f70c3d9c923e90::t_0af5333c54b753 93-96,98
 packages/miniflare/test/config/v4-schema.spec.ts
   s_f70c3d9c923e90::t_8e9a10f891449f 192-212
 packages/miniflare/test/plugins/do/index.spec.ts
