@@ -4,6 +4,7 @@ import { seedRemoteHyperdriveBindings } from "@cloudflare/remote-bindings";
 import { createConnection } from "mysql2/promise";
 import dedent from "ts-dedent";
 import { afterAll, assert, beforeAll, describe, it } from "vitest";
+import WebSocket, { createWebSocketStream } from "ws";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
@@ -802,6 +803,50 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					{ HYPERDRIVE_BINDING: { ...hyperdriveBinding, remote: true } },
 					session.remoteProxyConnectionString
 				);
+				// Diagnose whether the fixture and MySQL client can authenticate when
+				// credentials and bytes come from the exact same edge connection.
+				const wsUrl = new URL(String(session.remoteProxyConnectionString));
+				wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+				const ws = new WebSocket(wsUrl.href, {
+					headers: {
+						"MF-Binding": "HYPERDRIVE_BINDING",
+						"MF-Connect-Address": "hyperdrive.local:0",
+					},
+				});
+				const stream = createWebSocketStream(ws);
+				try {
+					const connectionString = await new Promise<string>(
+						(resolve, reject) => {
+							ws.once("upgrade", (response) => {
+								const value = response.headers["mf-hd-connection-string"];
+								if (typeof value === "string") {
+									resolve(value);
+								} else {
+									reject(new Error("Missing Hyperdrive upgrade credentials"));
+								}
+							});
+							ws.once("error", reject);
+						}
+					);
+					const url = new URL(connectionString);
+					const directConnection = await createConnection({
+						stream,
+						user: decodeURIComponent(url.username),
+						password: decodeURIComponent(url.password),
+						database: decodeURIComponent(url.pathname.slice(1)),
+					});
+					try {
+						const [rows] = await directConnection.query(
+							"SELECT 1 AS direct_hyperdrive_probe"
+						);
+						expect(rows).toEqual([{ direct_hyperdrive_probe: 1 }]);
+					} finally {
+						await directConnection.end();
+					}
+				} finally {
+					stream.destroy();
+					ws.terminate();
+				}
 				const queryMf = new Miniflare({
 					workers: [
 						{
@@ -823,11 +868,15 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				});
 				try {
 					const { HYPERDRIVE_BINDING } = await queryMf.getBindings<{
-						HYPERDRIVE_BINDING: { connectionString: string };
+						HYPERDRIVE_BINDING: {
+							host: string;
+							port: number;
+							user: string;
+							password: string;
+							database: string;
+						};
 					}>();
-					const connection = await createConnection(
-						HYPERDRIVE_BINDING.connectionString
-					);
+					const connection = await createConnection(HYPERDRIVE_BINDING);
 					try {
 						const [rows] = await connection.query(
 							"SELECT 1 AS remote_hyperdrive_probe"
