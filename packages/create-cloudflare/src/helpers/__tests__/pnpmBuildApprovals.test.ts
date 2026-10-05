@@ -284,6 +284,29 @@ describe("getPnpmIgnoredBuildsGuidance", () => {
 });
 
 describe("extractIgnoredBuildPackages", () => {
+	test.for(["\n", "\r\n"])(
+		"parses pnpm 12's wrapped package names with %j line endings",
+		(eol, { expect }) => {
+			const error = new Error(
+				[
+					"Error: ERR_PNPM_IGNORED_BUILDS",
+					"",
+					"  × adding a new package",
+					"  ╰─▶ Ignored build scripts: @parcel/watcher@2.6.0, lmdb@3.5.6, msgpackr-",
+					"      extract@3.0.4",
+					'  help: Run "pnpm approve-builds" to pick which dependencies should be allowed',
+					"        to run scripts.",
+				].join(eol)
+			);
+
+			expect(extractIgnoredBuildPackages(error)).toEqual([
+				"@parcel/watcher",
+				"lmdb",
+				"msgpackr-extract",
+			]);
+		}
+	);
+
 	test("parses a single flagged package with version suffix", ({ expect }) => {
 		const err = new Error(
 			[

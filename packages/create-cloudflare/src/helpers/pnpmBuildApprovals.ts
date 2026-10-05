@@ -134,7 +134,9 @@ export const isPnpmIgnoredBuildsError = (error: unknown): error is Error => {
 	return error.message.includes("ERR_PNPM_IGNORED_BUILDS");
 };
 
-const IGNORED_BUILDS_LINE = /Ignored build scripts:\s*([^\n\r]+)/;
+// pnpm 12 wraps its error message, including in the middle of package names.
+const IGNORED_BUILDS_LINE =
+	/Ignored build scripts:[ \t]*([^\n\r]+(?:\r?\n {6}[^\n\r]+)*)/;
 
 /**
  * Parse the package list pnpm prints after `Ignored build scripts:`, returning
@@ -155,7 +157,7 @@ export const extractIgnoredBuildPackages = (error: unknown): string[] => {
 
 	const seen = new Set<string>();
 	const result: string[] = [];
-	for (const raw of match[1].split(",")) {
+	for (const raw of match[1].replace(/\r?\n[ \t]+/g, "").split(",")) {
 		const trimmed = raw.trim();
 		if (!trimmed) {
 			continue;

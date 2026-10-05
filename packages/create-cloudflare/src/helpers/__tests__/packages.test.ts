@@ -2,7 +2,8 @@ import { existsSync } from "node:fs";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
-import { npmInstall } from "helpers/packages";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
+import { installPackages, installWrangler, npmInstall } from "helpers/packages";
 import { isIgnoredBuildsError } from "helpers/pnpmBuildApprovals";
 import { beforeEach, describe, test, vi } from "vitest";
 import { mockPackageManager, mockSpinner } from "./mocks";
@@ -12,6 +13,7 @@ import type { C3Context } from "types";
 vi.mock("node:fs");
 vi.mock("@cloudflare/cli-shared-helpers/command");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
+vi.mock("@cloudflare/cli-shared-helpers/packages");
 vi.mock("which-pm-runs");
 
 const ctx = (): C3Context =>
@@ -23,6 +25,100 @@ const pnpmIgnoredBuildsError = (packagesLine: string): Error =>
 	new Error(
 		`Packages: +1\n+\n[ERR_PNPM_IGNORED_BUILDS] Ignored build scripts: ${packagesLine}\n\nRun "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.\n`
 	);
+
+describe.each([
+	{
+		name: "installPackages",
+		install: () => installPackages(["xhr2"], { dev: true }),
+		mockInstall: cliPackages.installPackages,
+		args: ["pnpm", ["xhr2"], { dev: true }],
+	},
+	{
+		name: "installWrangler",
+		install: installWrangler,
+		mockInstall: cliPackages.installWrangler,
+		args: ["pnpm", false],
+	},
+])("$name", ({ install, mockInstall, args }) => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mockSpinner();
+		mockPackageManager("pnpm", "12.9.1");
+	});
+
+	test("approves flagged builds and retries the original package addition", async ({
+		expect,
+	}) => {
+		vi.mocked(mockInstall)
+			.mockRejectedValueOnce(pnpmIgnoredBuildsError("@parcel/watcher@2.6.0"))
+			.mockResolvedValueOnce(undefined);
+		vi.mocked(inputPrompt).mockResolvedValueOnce(true);
+		vi.mocked(runCommand).mockResolvedValueOnce("");
+
+		await install();
+
+		expect(inputPrompt).toHaveBeenCalledTimes(1);
+		expect(runCommand).toHaveBeenCalledExactlyOnceWith(
+			["pnpm", "approve-builds", "@parcel/watcher"],
+			expect.objectContaining({ silent: true })
+		);
+		expect(vi.mocked(mockInstall).mock.calls).toEqual([args, args]);
+	});
+
+	test("does not approve or retry when the user declines", async ({
+		expect,
+	}) => {
+		vi.mocked(mockInstall).mockRejectedValueOnce(
+			pnpmIgnoredBuildsError("@parcel/watcher@2.6.0")
+		);
+		vi.mocked(inputPrompt).mockResolvedValueOnce(false);
+
+		await expect(install()).rejects.toMatchObject({
+			name: "IgnoredBuildsError",
+			packages: ["@parcel/watcher"],
+		});
+		expect(mockInstall).toHaveBeenCalledTimes(1);
+		expect(runCommand).not.toHaveBeenCalled();
+	});
+
+	test("rethrows unrelated failures without prompting", async ({ expect }) => {
+		const error = new Error("ENOTFOUND registry.npmjs.org");
+		vi.mocked(mockInstall).mockRejectedValueOnce(error);
+
+		await expect(install()).rejects.toBe(error);
+		expect(mockInstall).toHaveBeenCalledTimes(1);
+		expect(inputPrompt).not.toHaveBeenCalled();
+	});
+
+	test("does not retry repeatedly when more builds are blocked", async ({
+		expect,
+	}) => {
+		vi.mocked(mockInstall)
+			.mockRejectedValueOnce(pnpmIgnoredBuildsError("@parcel/watcher@2.6.0"))
+			.mockRejectedValueOnce(pnpmIgnoredBuildsError("lmdb@3.5.6"));
+		vi.mocked(inputPrompt).mockResolvedValueOnce(true);
+		vi.mocked(runCommand).mockResolvedValueOnce("");
+
+		await expect(install()).rejects.toMatchObject({
+			name: "IgnoredBuildsError",
+			packages: ["lmdb"],
+		});
+		expect(mockInstall).toHaveBeenCalledTimes(2);
+		expect(inputPrompt).toHaveBeenCalledTimes(1);
+	});
+
+	test("does not apply pnpm recovery to other package managers", async ({
+		expect,
+	}) => {
+		mockPackageManager("npm");
+		const error = pnpmIgnoredBuildsError("@parcel/watcher@2.6.0");
+		vi.mocked(mockInstall).mockRejectedValueOnce(error);
+
+		await expect(install()).rejects.toBe(error);
+		expect(mockInstall).toHaveBeenCalledTimes(1);
+		expect(inputPrompt).not.toHaveBeenCalled();
+	});
+});
 
 describe("npmInstall", () => {
 	beforeEach(() => {
