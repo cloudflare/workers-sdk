@@ -557,7 +557,6 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 		const result = await getOrCreateTemporaryPreviewAccount({
 			...ctx.temporary,
-			logger: ctx.logger,
 			...(temporaryRequest ? { request: temporaryRequest } : {}),
 		});
 		activeTemporaryAccount = result.account;

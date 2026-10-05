@@ -632,7 +632,8 @@ Your database may not be available to serve requests during the migration, conti
 
 				await runWrangler("d1 migrations apply db --remote --temporary");
 
-				expect(std.err).toBe("");
+				expect(std.err).toContain("Temporary account ready:");
+				expect(std.out).not.toContain("Temporary account ready:");
 				expect(std.out).toContain("0001_test.sql");
 				// More than one query proves that the command authenticated more
 				// than one time and did not stop at the first authentication.
