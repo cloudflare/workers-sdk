@@ -70,7 +70,11 @@ export function seed(
 			// These temporary projects do not inherit the monorepo's build approvals.
 			await fs.writeFile(
 				path.resolve(projectPath, "pnpm-workspace.yaml"),
-				"allowBuilds:\n  esbuild: true\n  sharp: true\n  workerd: true\n"
+				`allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true
+`
 			);
 		}
 		runCommand(
