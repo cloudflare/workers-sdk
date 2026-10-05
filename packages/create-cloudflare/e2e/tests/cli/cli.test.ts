@@ -897,7 +897,7 @@ describe("Create Cloudflare CLI", () => {
 			"--platform=pages hides non-framework categories",
 			async ({ expect, logStream, project }) => {
 				const { output } = await runC3(
-					[project.path, "--platform=pages"],
+					[project.path, "--platform=pages", "--variant=react-ts"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
@@ -913,7 +913,7 @@ describe("Create Cloudflare CLI", () => {
 							matcher: /Which development framework do you want to use\?/,
 							input: {
 								type: "select",
-								target: "Angular",
+								target: "React",
 							},
 						},
 						{
@@ -938,13 +938,18 @@ describe("Create Cloudflare CLI", () => {
 			"--platform=pages filters out workers-only frameworks",
 			async ({ expect, logStream, project }) => {
 				const { output } = await runC3(
-					[project.path, "--platform=pages", "--category=web-framework"],
+					[
+						project.path,
+						"--platform=pages",
+						"--category=web-framework",
+						"--variant=react-ts",
+					],
 					[
 						{
 							matcher: /Which development framework do you want to use\?/,
 							input: {
 								type: "select",
-								target: "Angular",
+								target: "React",
 							},
 						},
 						{
