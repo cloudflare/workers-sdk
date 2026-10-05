@@ -49,7 +49,6 @@ describe("findPackageNames()", () => {
 				"@cloudflare/workers-auth",
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-playground",
-				"@cloudflare/workers-sdk-auto-triage",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
