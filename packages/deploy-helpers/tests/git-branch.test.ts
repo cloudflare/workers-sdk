@@ -7,6 +7,12 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getBranchName as getAliasBranchName } from "../src/deploy/helpers/preview-alias";
 import { getBranchName as getPreviewBranchName } from "../src/preview/shared";
 
+// Environment variables that getBranchName() reads before it falls back to
+// Git (Workers CI, GitHub Actions, GitLab CI). These tests exercise the Git
+// fallback, so beforeEach stubs each of them to an empty string, which is
+// falsy and makes the lookup fall through. Without that, a CI runner's own
+// branch variables would be returned instead and the assertions would depend
+// on where the tests run.
 const ciVariables = [
 	"WORKERS_CI_BRANCH",
 	"GITHUB_HEAD_REF",
