@@ -66,6 +66,13 @@ export function seed(
 		debuglog("Fixing up replacements in seeded files");
 		await fixupReplacements(projectPath, replacements);
 		debuglog("Updated vite-plugin version in package.json");
+		if (pm === "pnpm") {
+			// These temporary projects do not inherit the monorepo's build approvals.
+			await fs.writeFile(
+				path.resolve(projectPath, "pnpm-workspace.yaml"),
+				"allowBuilds:\n  esbuild: true\n  sharp: true\n  workerd: true\n"
+			);
+		}
 		runCommand(
 			`${pm} install ${useStrictPeerDeps ? strictPeerDeps[pm] : ""}`,
 			projectPath,
