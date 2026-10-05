@@ -175,7 +175,7 @@ function FlagshipAppView(): JSX.Element {
 		await refresh();
 	}
 
-	const searching = query.trim() !== "";
+	const isSearching = query.trim() !== "";
 
 	return (
 		<div className="flex h-full flex-col">
@@ -260,7 +260,7 @@ function FlagshipAppView(): JSX.Element {
 										placeholder="Search flags by key or description"
 										value={query}
 									/>
-									{searching ? (
+									{isSearching ? (
 										<InputGroup.Button
 											aria-label="Clear search"
 											onClick={() => setQuery("")}
@@ -273,7 +273,7 @@ function FlagshipAppView(): JSX.Element {
 								</InputGroup>
 							</div>
 							<span className="ml-auto text-sm whitespace-nowrap text-kumo-subtle">
-								{searching
+								{isSearching
 									? `${filteredFlags.length} of ${flags.length}`
 									: `${flags.length} ${flags.length === 1 ? "flag" : "flags"}`}
 							</span>

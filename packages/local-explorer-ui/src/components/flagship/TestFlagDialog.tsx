@@ -64,6 +64,7 @@ export function TestFlagDialog({
 	const wasOpen = useRef(false);
 	const requestId = useRef(0);
 
+	// Reset on open and discard any evaluation from the previous opening.
 	useEffect(() => {
 		if (open && !wasOpen.current) {
 			requestId.current += 1;

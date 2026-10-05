@@ -225,6 +225,14 @@ function validateCondition(
 }
 
 /**
+ * Production only accepts rollouts in steps of 0.01%. The tolerance absorbs
+ * floating-point error, e.g. `33.33 * 100` is `3332.9999999999995`.
+ */
+function hasAtMostTwoDecimals(value: number): boolean {
+	return Math.abs(value * 100 - Math.round(value * 100)) <= 1e-9;
+}
+
+/**
  * Validates a flag before it is written to the local store.
  *
  * @param input The flag to validate.
@@ -345,8 +353,7 @@ export function validateFlagInput(
 				!Number.isFinite(percentage) ||
 				percentage < 0 ||
 				percentage > 100 ||
-				(!allowLegacyRules &&
-					Math.abs(percentage * 100 - Math.round(percentage * 100)) > 1e-9)
+				(!allowLegacyRules && !hasAtMostTwoDecimals(percentage))
 			) {
 				throw new Error(
 					`Flag '${key}' rollout percentage must be a number between 0 and 100`
