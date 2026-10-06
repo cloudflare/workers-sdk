@@ -14,10 +14,23 @@ import {
 import {
 	clearAccessCaches,
 	domainUsesAccess,
-	getAccessHeaders,
+	getAccessHeaders as getAccessHeadersForConsumer,
 } from "../src/access";
 import { mswAccessHandlers } from "../src/test-helpers/msw-handlers/access";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
+
+function getAccessHeaders(
+	domain: string,
+	options: Omit<
+		Parameters<typeof getAccessHeadersForConsumer>[1],
+		"cliDisplayName"
+	> & { cliDisplayName?: string }
+) {
+	return getAccessHeadersForConsumer(domain, {
+		cliDisplayName: "Wrangler",
+		...options,
+	});
+}
 
 vi.mock("node:child_process", () => ({
 	spawn: vi.fn(() => {

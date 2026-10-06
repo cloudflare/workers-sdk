@@ -113,7 +113,7 @@ export async function getAccessHeaders(
 		logger: OAuthFlowLogger;
 		isNonInteractiveOrCI?: () => boolean;
 		/** Consumer name used in actionable error messages. */
-		cliDisplayName?: string;
+		cliDisplayName: string;
 		/** Aborts a pending `cloudflared` authorization and kills its process. */
 		signal?: AbortSignal;
 		/**
@@ -201,7 +201,7 @@ export async function getAccessHeaders(
 	);
 	if (output.error) {
 		throw new UserError(
-			`To use ${options.cliDisplayName ?? "Wrangler"} with Cloudflare Access, please install \`cloudflared\` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation`,
+			`To use ${options.cliDisplayName} with Cloudflare Access, please install \`cloudflared\` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation`,
 			{ telemetryMessage: "user access missing cloudflared" }
 		);
 	}
@@ -280,7 +280,7 @@ function spawnCloudflaredAccessLogin(
 export async function getCloudflareAccessHeaders(options: {
 	logger: OAuthFlowLogger;
 	isNonInteractiveOrCI: () => boolean;
-	cliDisplayName?: string;
+	cliDisplayName: string;
 	signal?: AbortSignal;
 }): Promise<Record<string, string>> {
 	const cfAuthToken = getCfAuthorizationTokenFromEnv();

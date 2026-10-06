@@ -144,7 +144,7 @@ export async function exchangeRefreshTokenForAccessToken(
 	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
 	clientId: string,
 	storage: AuthConfigStorage,
-	cliDisplayName?: string
+	cliDisplayName: string
 ): Promise<AccessContext> {
 	// Read the refresh token fresh from disk on every call so we always pick up
 	// the latest rotation written by a sibling Wrangler process.
@@ -253,7 +253,7 @@ export async function exchangeAuthCodeForAccessToken(
 	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
 	clientId: string,
 	redirectUri: string,
-	cliDisplayName?: string
+	cliDisplayName: string
 ): Promise<AccessContext> {
 	const { authorizationCode, codeVerifier = "" } = state;
 
@@ -335,7 +335,7 @@ export async function fetchAuthToken(
 	body: URLSearchParams,
 	logger: OAuthFlowContext["logger"],
 	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
-	cliDisplayName?: string
+	cliDisplayName: string
 ): Promise<Response> {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",

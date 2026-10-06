@@ -1,7 +1,7 @@
 ---
 "@cloudflare/containers-shared": patch
 "@cloudflare/deploy-helpers": patch
-"@cloudflare/workers-auth": patch
+"@cloudflare/workers-auth": minor
 "@cloudflare/workers-utils": patch
 ---
 

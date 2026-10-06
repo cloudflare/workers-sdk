@@ -28,6 +28,8 @@ export type StartRemoteProxySessionOptions = {
 	auth?: AsyncHook<CfAccount>;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
+	/** Consumer name used in actionable error messages. */
+	cliDisplayName: string;
 	logger: RemoteBindingsLogger;
 };
 
@@ -107,6 +109,7 @@ export async function startRemoteProxySession(
 	const rawBindings = toRawBindings(bindings);
 	const workerConfig = {
 		name: options.workerName ?? randomUUID(),
+		cliDisplayName: options.cliDisplayName,
 		entrypointSource: remoteBindingsWorkerSource,
 		compatibilityDate: "2025-04-28",
 		compatibilityFlags: [],

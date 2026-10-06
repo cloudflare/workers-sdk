@@ -24,6 +24,7 @@ export async function getAccessHeaders(
 ): Promise<Record<string, string>> {
 	return packageGetAccessHeaders(domain, {
 		logger,
+		cliDisplayName: "Wrangler",
 		isNonInteractiveOrCI,
 		previewToken,
 		signal,
