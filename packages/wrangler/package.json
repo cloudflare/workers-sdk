@@ -89,6 +89,7 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
+		"undici": "catalog:default",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "catalog:default"
 	},
@@ -184,7 +185,6 @@
 		"tsdown": "0.16.3",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"vitest-websocket-mock": "^0.4.0",
 		"ws": "catalog:default",

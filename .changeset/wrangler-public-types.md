@@ -1,7 +1,8 @@
 ---
 "wrangler": patch
+"@cloudflare/workers-utils": patch
 ---
 
-Remove unresolved private build dependencies from Wrangler's published declaration surface
+Fix unresolved imports in Wrangler's published TypeScript declarations
 
-Wrangler now inlines declaration dependencies that are safe to bundle, keeps `@cloudflare/workers-utils` external in declarations as a declared dependency so nominal symbol identities remain shared, while continuing to bundle its runtime into Wrangler.
+Projects that check dependency declarations no longer need Wrangler's private build dependencies to resolve its public types. Inherited bindings remain compatible between Wrangler and the shared utilities used by the Vite and Vitest plugins.
