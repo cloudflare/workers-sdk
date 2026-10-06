@@ -45,7 +45,8 @@ function validateLocalNamespace(namespace: string): void {
 }
 
 function namespaceId(namespace: string): string {
-	return createHash("sha256").update(namespace).digest("hex");
+	// 128 bits keeps storage paths short enough for workerd's SQLite files on Windows.
+	return createHash("sha256").update(namespace).digest("hex").slice(0, 32);
 }
 
 function localServiceName(namespace: string): string {
