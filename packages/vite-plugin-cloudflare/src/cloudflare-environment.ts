@@ -202,6 +202,9 @@ const defaultConditions = ["workerd", "worker", "module", "browser"];
 // v8 supports es2024 features as of 11.9
 // workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 const target = isRolldown ? "es2026" : "es2024";
+// `build.cssTarget` defaults to `build.target`, and Vite's lightningcss target
+// conversion has no es2026 entry, so CSS keeps the es2024 target.
+const cssTarget = "es2024";
 
 // TODO: consider removing in next major to use default extensions
 const resolveExtensions = [
@@ -279,6 +282,7 @@ export function createCloudflareEnvironmentOptions({
 				return new vite.BuildEnvironment(name, config);
 			},
 			target,
+			cssTarget,
 			emitAssets: true,
 			manifest: isEntryWorker,
 			outDir: getOutputDirectory(userConfig, environmentName),
