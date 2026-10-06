@@ -73,8 +73,8 @@ export interface CliDescriptor {
 	/** Commands surfaced in auth guidance. */
 	commands: {
 		login: string;
-		/** Command that clears cached auth state. Defaults to `wrangler logout`. */
-		logout?: string;
+		/** Command that clears cached auth state. */
+		logout: string;
 		whoami: string;
 		createProfile: string;
 		/**

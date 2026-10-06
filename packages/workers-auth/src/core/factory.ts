@@ -266,7 +266,7 @@ export function createCloudflareAuth(
 				descriptor.getTemporaryAccountConfigPath
 			),
 			cliDisplayName: descriptor.displayName,
-			logoutCommand: descriptor.commands.logout ?? "wrangler logout",
+			logoutCommand: descriptor.commands.logout,
 			prompt: createTemporaryTermsPrompt({
 				temporaryAccountLogger,
 				prompt: ctx.prompt,

@@ -109,7 +109,8 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `prompt` / `select`, `isNoDefaultValueProvidedError`) and
   `CliDescriptor` (everything that varies per CLI: `cliName` (the executable),
   `displayName` (branded name used in prose), auth command names
-  (`login` / `whoami` / `createProfile` / `deviceLogin`), `keyringServiceName`,
+  (`login` / `logout` / `whoami` / `createProfile` / `deviceLogin`),
+  `keyringServiceName`,
   `clientId`, `consent`, `redirectUri`, `useDeviceFlowByDefault`,
   `getConfigPath`, `fileFormat`,
   `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
