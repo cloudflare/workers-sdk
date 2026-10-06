@@ -506,17 +506,7 @@ describe("RemoteRuntimeController", () => {
 			controller.onBundleStart({ type: "bundleStart", config });
 			await vi.advanceTimersByTimeAsync(0);
 
-			// The abort must not be reported as an error, nor scheduled for
-			// retry. `createPreviewSession` was already called once by this
-			// point, for this refresh's own (unaborted) session step — the
-			// assertion is that it does *not* climb further.
 			expect(createPreviewSession).toHaveBeenCalledTimes(1);
-			await vi.advanceTimersByTimeAsync(
-				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
-			);
-			expect(createPreviewSession).toHaveBeenCalledTimes(1);
-
-			// The rebuild itself completes normally afterwards, unaffected.
 			vi.mocked(createWorkerPreview).mockResolvedValue({
 				value: "test-preview-token",
 				host: "test.workers.dev",
@@ -532,6 +522,47 @@ describe("RemoteRuntimeController", () => {
 				bundle: { ...bundle, path: "/virtual/index2.mjs" },
 			});
 			await reloadPromise;
+			vi.mocked(createPreviewSession).mockClear();
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
+			);
+			expect(createPreviewSession).not.toHaveBeenCalled();
+		});
+
+		it("should retry after an aborted refresh when the rebuild never completes", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+			vi.mocked(createWorkerPreview).mockImplementationOnce(
+				(...args: unknown[]) =>
+					new Promise((_resolve, reject) => {
+						const signal = args[5] as AbortSignal;
+						signal.addEventListener("abort", () => {
+							reject(new DOMException("aborted", "AbortError"));
+						});
+					})
+			);
+
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000);
+			controller.onBundleStart({ type: "bundleStart", config });
+			await vi.advanceTimersByTimeAsync(0);
+			vi.mocked(createWorkerPreview).mockClear();
+
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
+			);
+			await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+			expect(await reloadPromise).toMatchObject({ bundle });
 		});
 
 		it("should not recreate the refresh timer when a thrown error surfaces after a concurrent rebuild aborted it", async ({
@@ -552,9 +583,8 @@ describe("RemoteRuntimeController", () => {
 			// itself rejecting this call (already covered above), a *different*,
 			// unrelated error surfaces afterwards — e.g. a concurrent
 			// account/context lookup failure — while the signal happens to
-			// already be aborted. `onBundleStart()` also clears the pending
-			// refresh timer; a thrown, non-`AbortError` failure must not
-			// recreate it for this now-superseded bundle.
+			// already be aborted. A thrown, non-`AbortError` failure must not
+			// retry the aborted refresh.
 			let rejectAccountContext!: (err: unknown) => void;
 			vi.mocked(getWorkerAccountAndContext).mockImplementation(
 				() =>
@@ -573,8 +603,6 @@ describe("RemoteRuntimeController", () => {
 				reason: "Error refreshing preview token",
 			});
 
-			// The error is still reported, but must not resurrect a retry timer
-			// for the superseded bundle.
 			vi.mocked(getWorkerAccountAndContext).mockResolvedValue({
 				workerAccount: {
 					accountId: "test-account-id",
@@ -589,12 +617,8 @@ describe("RemoteRuntimeController", () => {
 				},
 			});
 			vi.mocked(createPreviewSession).mockClear();
-			await vi.advanceTimersByTimeAsync(
-				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
-			);
 			expect(createPreviewSession).not.toHaveBeenCalled();
 
-			// The rebuild itself completes normally afterwards, unaffected.
 			const reloadPromise = bus.waitFor(
 				"reloadComplete",
 				undefined,
@@ -606,6 +630,11 @@ describe("RemoteRuntimeController", () => {
 				bundle: { ...bundle, path: "/virtual/index3.mjs" },
 			});
 			await reloadPromise;
+			vi.mocked(createPreviewSession).mockClear();
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
+			);
+			expect(createPreviewSession).not.toHaveBeenCalled();
 		});
 	});
 

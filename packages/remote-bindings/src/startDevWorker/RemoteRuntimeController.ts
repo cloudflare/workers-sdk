@@ -400,6 +400,9 @@ export class RemoteRuntimeController {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
+		if (!this.#refreshTimer && this.#latestProxyData && !this.#tearingDown) {
+			this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+		}
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;

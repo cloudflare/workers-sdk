@@ -1,4 +1,5 @@
 ---
+"@cloudflare/remote-bindings": patch
 "wrangler": patch
 ---
 

@@ -523,9 +523,13 @@ export class RemoteRuntimeController extends RuntimeController {
 		this.#abortController.abort();
 		if (!event.config.dev?.remote) {
 			clearTimeout(this.#refreshTimer);
+			this.#refreshTimer = undefined;
 			return;
 		}
 		this.#abortController = new AbortController();
+		if (!this.#refreshTimer && this.#latestProxyData && !this.tearingDown) {
+			this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+		}
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;

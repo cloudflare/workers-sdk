@@ -235,17 +235,10 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		controller.onUpdateStart();
 		await vi.advanceTimersByTimeAsync(0);
 
-		// The abort must not be reported as an error, nor scheduled for retry.
-		// `createPreviewSession` was already called twice by this point — once
-		// for the initial bundle, once for this refresh's own (unaborted)
-		// session step — the assertion is that it does *not* climb further.
 		expect(onError).not.toHaveBeenCalled();
-		expect(createPreviewSession).toHaveBeenCalledTimes(2);
-		await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2);
 		expect(createPreviewSession).toHaveBeenCalledTimes(2);
 		expect(onReloadComplete).toHaveBeenCalledTimes(1);
 
-		// The rebuild itself completes normally afterwards, unaffected.
 		createWorkerPreview.mockResolvedValue(token);
 		const newBundle: Bundle = { ...bundle, path: "/tmp/worker-2.js" };
 		controller.onBundleComplete({
@@ -255,7 +248,45 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		});
 		await vi.advanceTimersByTimeAsync(0);
 		expect(onReloadComplete).toHaveBeenCalledTimes(2);
+		const sessionCount = createPreviewSession.mock.calls.length;
+		await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2);
+		expect(createPreviewSession).toHaveBeenCalledTimes(sessionCount);
 
+		await controller.teardown();
+	});
+
+	it("retries after an aborted refresh when the rebuild never completes", async ({
+		expect,
+	}) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+		const onError = vi.fn<(event: ErrorEvent) => void>();
+		const onReloadComplete = vi.fn<(event: ReloadCompleteEvent) => void>();
+		const controller = new RemoteRuntimeController(onError, onReloadComplete);
+
+		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+		await vi.advanceTimersByTimeAsync(0);
+
+		createWorkerPreview.mockImplementationOnce(
+			(...args: unknown[]) =>
+				new Promise((_resolve, reject) => {
+					const signal = args[4] as AbortSignal;
+					signal.addEventListener("abort", () => {
+						reject(new DOMException("aborted", "AbortError"));
+					});
+				})
+		);
+		await vi.advanceTimersByTimeAsync(50 * 60 * 1000);
+		controller.onUpdateStart();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledTimes(1);
+
+		await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+		expect(onError).not.toHaveBeenCalled();
+		expect(onReloadComplete).toHaveBeenCalledTimes(2);
+		expect(onReloadComplete).toHaveBeenLastCalledWith(
+			expect.objectContaining({ bundle })
+		);
 		await controller.teardown();
 	});
 
@@ -277,8 +308,8 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		// aborts the controller. Rather than the abort itself rejecting this
 		// call (already covered above), a *different*, unrelated error surfaces
 		// afterwards — e.g. a concurrent auth-hook failure — while the signal
-		// happens to already be aborted. The timer has already fired; a thrown,
-		// non-`AbortError` failure must not recreate it for this bundle.
+		// happens to already be aborted. A thrown, non-`AbortError` failure
+		// must not retry the aborted refresh.
 		let rejectSession!: (err: unknown) => void;
 		createPreviewSession.mockImplementation(
 			() =>
@@ -292,14 +323,10 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		rejectSession(new Error("auth hook failed"));
 		await vi.advanceTimersByTimeAsync(0);
 
-		// The error is still reported...
 		expect(onError).toHaveBeenCalledTimes(1);
-		// ...but must not resurrect a retry timer for the superseded bundle.
-		await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2);
 		expect(createPreviewSession).toHaveBeenCalledTimes(2);
 		expect(onReloadComplete).toHaveBeenCalledTimes(1);
 
-		// The rebuild itself completes normally afterwards, unaffected.
 		createPreviewSession.mockResolvedValue(session);
 		createWorkerPreview.mockResolvedValue(token);
 		const newBundle: Bundle = { ...bundle, path: "/tmp/worker-3.js" };
@@ -313,6 +340,9 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		expect(onReloadComplete).toHaveBeenLastCalledWith(
 			expect.objectContaining({ bundle: newBundle })
 		);
+		const sessionCount = createPreviewSession.mock.calls.length;
+		await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2);
+		expect(createPreviewSession).toHaveBeenCalledTimes(sessionCount);
 
 		await controller.teardown();
 	});
