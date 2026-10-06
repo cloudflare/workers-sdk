@@ -411,7 +411,8 @@ export function normalizeAndValidateConfig(
 		configPath,
 		rawConfig,
 		isDispatchNamespace,
-		preserveOriginalMain
+		preserveOriginalMain,
+		args.name
 	);
 
 	const definedEnvironments = Object.keys(rawConfig.env ?? {});
@@ -486,6 +487,7 @@ export function normalizeAndValidateConfig(
 					rawEnv,
 					isDispatchNamespace,
 					preserveOriginalMain,
+					args.name,
 					envName,
 					topLevelEnv,
 					rawConfig
@@ -498,6 +500,7 @@ export function normalizeAndValidateConfig(
 					topLevelEnv, // in this case reuse the topLevelEnv to ensure that nonInherited fields are not removed
 					isDispatchNamespace,
 					preserveOriginalMain,
+					args.name,
 					envName,
 					topLevelEnv,
 					rawConfig
@@ -1473,7 +1476,8 @@ function normalizeAndValidateEnvironment(
 	configPath: string | undefined,
 	topLevelEnv: RawConfig,
 	isDispatchNamespace: boolean,
-	preserveOriginalMain: boolean
+	preserveOriginalMain: boolean,
+	containerWorkerName?: string
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
@@ -1484,6 +1488,7 @@ function normalizeAndValidateEnvironment(
 	rawEnv: RawEnvironment,
 	isDispatchNamespace: boolean,
 	preserveOriginalMain: boolean,
+	containerWorkerName: string | undefined,
 	envName: string,
 	topLevelEnv: Environment,
 	rawConfig: RawConfig
@@ -1494,6 +1499,7 @@ function normalizeAndValidateEnvironment(
 	rawEnv: RawEnvironment | RawConfig,
 	isDispatchNamespace: boolean,
 	preserveOriginalMain: boolean,
+	containerWorkerName?: string,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	rawConfig?: RawConfig | undefined
@@ -1773,12 +1779,11 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"containers",
-			// `name` is inheritable, so a named environment that doesn't redeclare it
-			// still runs under the top level Worker name — fall back to it so the
-			// generated container name isn't built from `undefined`.
+			// A CLI Worker name overrides an environment name; otherwise a named
+			// environment can inherit the top-level Worker name.
 			validateContainerApp(
 				envName,
-				rawEnv.name ?? rawConfig?.name,
+				containerWorkerName ?? rawEnv.name ?? rawConfig?.name,
 				configPath,
 				{
 					complianceConfig: {

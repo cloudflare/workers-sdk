@@ -4868,6 +4868,33 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[containers]", () => {
+			it("uses the CLI Worker name for generated container names but preserves explicit names", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "original-worker",
+						containers: [
+							{ class_name: "MySandbox", scheduling_policy: "durable_object" },
+							{
+								name: "shared-application",
+								class_name: "OtherSandbox",
+								scheduling_policy: "durable_object",
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ name: "renamed-worker" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.map((container) => container.name)).toEqual([
+					"renamed-worker-mysandbox",
+					"shared-application",
+				]);
+			});
+
 			it("should error if containers is not an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ containers: "test" } as unknown as RawConfig,

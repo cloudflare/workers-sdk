@@ -70,6 +70,42 @@ describe("wrangler deploy with containers", () => {
 		vi.unstubAllEnvs();
 	});
 
+	it("uses --name for the default managed Container application name", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			name: "original-worker",
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+				},
+			],
+		});
+		mockLegacyScriptData({
+			script: { id: "renamed-worker", migration_tag: "v1" },
+		});
+		mockGetVersion("Galaxy-Class");
+		mockUploadWorkerRequest({
+			expectedScriptName: "renamed-worker",
+			expectedContainers: [
+				{
+					name: "renamed-worker-exampledurableobject",
+					class_name: "ExampleDurableObject",
+				},
+			],
+			useOldUploadApi: true,
+		});
+		mockCreateApplication(expect, {
+			name: "renamed-worker-exampledurableobject",
+			scheduling_policy: SchedulingPolicy.DURABLE_OBJECT,
+			durable_objects: { namespace_id: "1" },
+		});
+
+		await runWrangler("deploy index.js --name renamed-worker");
+	});
+
 	it("should upload an empty container list when explicitly configured", async () => {
 		writeWranglerConfig({ containers: [] });
 		mockUploadWorkerRequest({
