@@ -11,11 +11,7 @@ import {
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import WebSocket from "ws";
 import { Config as CapnpConfig } from "../src/runtime/config/generated/workerd";
-import {
-	CoreBindings,
-	CoreHeaders,
-	CorePaths,
-} from "../src/workers/core/constants";
+import { CoreBindings, CoreHeaders } from "../src/workers/core/constants";
 import {
 	disposeWithRetry,
 	singleModuleManifest,
@@ -47,8 +43,8 @@ async function start(options: Partial<MiniflareOptions> = {}) {
 					name: "victim",
 					compatibilityDate: "2026-09-04",
 					manifest: singleModuleManifest(`export default {
-				fetch(request) {
-					return new Response(request.headers.get("MF-Local-Explorer-Secret"));
+				fetch() {
+					return new Response("ok");
 				}
 			}`),
 					env: { KV: { type: "kv", id: "test-kv" } },
@@ -62,7 +58,7 @@ async function start(options: Partial<MiniflareOptions> = {}) {
 	await mf.ready;
 	const info = infos.at(-1);
 	assert(info);
-	return { mf, opts, info, registryPath };
+	return { mf, info, registryPath };
 }
 
 async function webSocketStatus(url: string): Promise<number> {
@@ -275,67 +271,8 @@ describe.sequential("control-plane authentication", () => {
 		expect(authorized.status).toBe(200);
 		await authorized.text();
 		// Exercise legitimate workerd-to-Node loopback traffic as well.
-		expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe("");
-	});
-
-	test("authenticates Explorer operations and revokes a replaced session secret", async ({
-		expect,
-	}) => {
-		const firstSecret = "a".repeat(64);
-		const { mf, opts } = await start({
-			unsafeLocalExplorer: true,
-			unsafeLocalExplorerSecret: firstSecret,
-		});
-		const url = new URL(
-			`${CorePaths.EXPLORER}/api/storage/kv/namespaces/test-kv/values/canary`,
-			await mf.ready
+		expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
+			"ok"
 		);
-		const kv = await mf.getKVNamespace("KV");
-		await kv.put("canary", "original");
-		for (const credential of [undefined, "b".repeat(64)]) {
-			for (const method of ["GET", "PUT"]) {
-				const headers: Record<string, string> = {};
-				if (credential !== undefined) {
-					headers[CoreHeaders.LOCAL_EXPLORER_SECRET] = credential;
-				}
-				const response = await fetch(url, {
-					method,
-					headers,
-					...(method === "PUT" ? { body: "injected" } : {}),
-				});
-				expect(response.status).toBe(403);
-				await response.text();
-			}
-		}
-		expect(await kv.get("canary")).toBe("original");
-		const authorized = await fetch(url, {
-			headers: { [CoreHeaders.LOCAL_EXPLORER_SECRET]: firstSecret },
-		});
-		expect(authorized.status).toBe(200);
-		expect(await authorized.text()).toBe("original");
-		const write = await fetch(url, {
-			method: "PUT",
-			headers: { [CoreHeaders.LOCAL_EXPLORER_SECRET]: firstSecret },
-			body: "updated",
-		});
-		expect(write.status).toBe(200);
-		await write.text();
-		expect(await kv.get("canary")).toBe("updated");
-		const ordinary = await mf.dispatchFetch("http://localhost/", {
-			headers: { [CoreHeaders.LOCAL_EXPLORER_SECRET]: firstSecret },
-		});
-		expect(await ordinary.text()).toBe("");
-		await mf.setOptions({ ...opts, unsafeLocalExplorerSecret: "c".repeat(64) });
-		const renewedUrl = new URL(url.pathname, await mf.ready);
-		const expired = await fetch(renewedUrl, {
-			headers: { [CoreHeaders.LOCAL_EXPLORER_SECRET]: firstSecret },
-		});
-		expect(expired.status).toBe(403);
-		await expired.text();
-		const renewed = await fetch(renewedUrl, {
-			headers: { [CoreHeaders.LOCAL_EXPLORER_SECRET]: "c".repeat(64) },
-		});
-		expect(renewed.status).toBe(200);
-		expect(await renewed.text()).toBe("updated");
 	});
 });

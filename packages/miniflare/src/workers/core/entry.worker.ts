@@ -33,7 +33,6 @@ type Env = {
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
-	[CoreBindings.DATA_LOCAL_EXPLORER_SECRET]?: ArrayBuffer;
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 	[CoreBindings.LOG_REQUESTS]: boolean;
 	[CoreBindings.STRIP_DISABLE_PRETTY_ERROR]: boolean;
@@ -555,10 +554,6 @@ export default <ExportedHandler<Env>>{
 			}
 			throw e;
 		}
-		const explorerSecret = request.headers.get(
-			CoreHeaders.LOCAL_EXPLORER_SECRET
-		);
-		request.headers.delete(CoreHeaders.LOCAL_EXPLORER_SECRET);
 		const url = new URL(request.url);
 		const { service, routeTarget } = getTargetService(request, url, env);
 		if (service === undefined) {
@@ -571,16 +566,6 @@ export default <ExportedHandler<Env>>{
 					url.pathname === CorePaths.EXPLORER ||
 					url.pathname.startsWith(`${CorePaths.EXPLORER}/`)
 				) {
-					const expected = env[CoreBindings.DATA_LOCAL_EXPLORER_SECRET];
-					if (expected !== undefined) {
-						const supplied = encoder.encode(explorerSecret ?? "");
-						if (
-							supplied.byteLength !== expected.byteLength ||
-							!crypto.subtle.timingSafeEqual(supplied, expected)
-						) {
-							return new Response("Forbidden", { status: 403 });
-						}
-					}
 					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
 				}
 			}

@@ -679,8 +679,6 @@ export const V4SharedOptionsSchema = z.object({
 	unsafeTriggerHandlers: z.boolean().optional(),
 	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
 	unsafeLocalExplorer: z.boolean().optional(),
-	/** Authenticate Explorer requests with a caller-provided, session-scoped secret. */
-	unsafeLocalExplorerSecret: z.string().min(1).optional(),
 	unsafeObservability: z.boolean().optional(),
 	unsafeInspectDurableObjects: z.boolean().optional(),
 	logRequests: z.boolean().default(true),
@@ -992,7 +990,6 @@ export type V4SharedOptions = {
 	unsafeTriggerHandlers?: boolean;
 	unsafeRuntimeEnv?: Record<string, string>;
 	unsafeLocalExplorer?: boolean;
-	unsafeLocalExplorerSecret?: string;
 	unsafeObservability?: boolean;
 	unsafeInspectDurableObjects?: boolean;
 	logRequests?: boolean;
