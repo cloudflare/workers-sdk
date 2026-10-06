@@ -246,10 +246,15 @@ describe("RemoteRuntimeController", () => {
 			});
 		});
 
-		it("should cancel the proactive refresh timer on bundle start", async ({
+		it("should refresh based on session age even after a reload", async ({
 			expect,
 		}) => {
 			vi.useFakeTimers();
+			vi.mocked(createPreviewSession).mockResolvedValue({
+				value: "test-session-value",
+				host: "test.workers.dev",
+				name: "test-worker",
+			});
 
 			const { controller, bus } = setup();
 			const config = makeConfig();
@@ -259,18 +264,139 @@ describe("RemoteRuntimeController", () => {
 			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 			await bus.waitFor("reloadComplete");
 
-			vi.mocked(createWorkerPreview).mockClear();
-
-			// A new bundleStart cancels the old timer before it fires
+			await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
 			controller.onBundleStart({ type: "bundleStart", config });
 			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 			await bus.waitFor("reloadComplete");
 
 			vi.mocked(createWorkerPreview).mockClear();
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				30 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(20 * 60 * 1000 + 1);
+			await reloadPromise;
+			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+			expect(createPreviewSession).toHaveBeenCalledTimes(2);
+		});
 
-			// Advance to just before T2 would fire — no proactive refresh should occur
-			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 - 1);
-			expect(createWorkerPreview).not.toHaveBeenCalled();
+		it("should retain the refresh timer if a rebuild fails", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: makeBundle(),
+			});
+			await bus.waitFor("reloadComplete");
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			vi.mocked(createWorkerPreview).mockClear();
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			await reloadPromise;
+			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+		});
+
+		it("should retry a failed refresh", async ({ expect }) => {
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: makeBundle(),
+			});
+			await bus.waitFor("reloadComplete");
+
+			vi.mocked(getWorkerAccountAndContext).mockRejectedValueOnce(
+				new Error("temporary failure")
+			);
+			const errorPromise = bus.waitFor("error", undefined, 60 * 60 * 1000);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			await errorPromise;
+
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				2 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(60_000);
+			await reloadPromise;
+			expect(createPreviewSession).toHaveBeenCalledTimes(2);
+		});
+
+		it("should retry when uploading the refreshed token fails", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: makeBundle(),
+			});
+			await bus.waitFor("reloadComplete");
+
+			vi.mocked(createWorkerPreview).mockRejectedValueOnce(
+				new Error("temporary upload failure")
+			);
+			const errorPromise = bus.waitFor("error", undefined, 60 * 60 * 1000);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			await errorPromise;
+
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				2 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(60_000);
+			await reloadPromise;
+			expect(createWorkerPreview).toHaveBeenCalledTimes(3);
+		});
+
+		it("should back off after five failed refreshes", async ({ expect }) => {
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: makeBundle(),
+			});
+			await bus.waitFor("reloadComplete");
+
+			vi.mocked(getWorkerAccountAndContext).mockRejectedValue(
+				new Error("temporary failure")
+			);
+			for (let attempt = 0; attempt < 5; attempt++) {
+				const errorPromise = bus.waitFor("error", undefined, 60 * 60 * 1000);
+				await vi.advanceTimersByTimeAsync(
+					attempt === 0 ? 50 * 60 * 1000 : 60_000
+				);
+				await errorPromise;
+			}
+
+			const calls = vi.mocked(getWorkerAccountAndContext).mock.calls.length;
+			await vi.advanceTimersByTimeAsync(9 * 60 * 1000);
+			expect(getWorkerAccountAndContext).toHaveBeenCalledTimes(calls);
+			const errorPromise = bus.waitFor("error", undefined, 2 * 60 * 1000);
+			await vi.advanceTimersByTimeAsync(60_000);
+			await errorPromise;
+			expect(getWorkerAccountAndContext).toHaveBeenCalledTimes(calls + 1);
 		});
 
 		it("should cancel the proactive refresh timer on teardown", async ({
