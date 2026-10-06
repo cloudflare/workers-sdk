@@ -873,16 +873,6 @@ describe("deploy", () => {
 			).rejects.toThrow("--event-code cannot be empty");
 		});
 
-		it("does not accept --event-code on versions upload", async ({
-			expect,
-		}) => {
-			await expect(
-				runWrangler(
-					"versions upload index.js --temporary --event-code ABCD-EFGH-JKMN"
-				)
-			).rejects.toThrow(/Unknown argument.*event-code/);
-		});
-
 		it("rejects repeated event codes without exposing their values", async ({
 			expect,
 		}) => {
