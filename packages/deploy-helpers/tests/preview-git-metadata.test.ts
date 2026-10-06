@@ -4,11 +4,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { getBranchName as getPreviewAliasBranchName } from "../src/deploy/helpers/preview-alias";
 import {
+	getBranchName,
 	getHeadCommitMessage,
 	getHeadCommitRef,
 	getRepositoryUrl,
 } from "../src/preview/shared";
+
+const BRANCH_ENV_KEYS = [
+	"WORKERS_CI_BRANCH",
+	"GITHUB_HEAD_REF",
+	"GITHUB_REF_NAME",
+	"CI_COMMIT_REF_NAME",
+] as const;
 
 const REPOSITORY_ENV_KEYS = [
 	"CI_PROJECT_URL",
@@ -31,7 +40,7 @@ function git(cwd: string, args: string[]) {
 }
 
 function clearRepositoryEnv() {
-	for (const key of REPOSITORY_ENV_KEYS) {
+	for (const key of [...BRANCH_ENV_KEYS, ...REPOSITORY_ENV_KEYS]) {
 		vi.stubEnv(key, "");
 	}
 }
@@ -99,5 +108,24 @@ describe("preview git metadata on an unborn repository", () => {
 		expect(getRepositoryUrl()).toBeUndefined();
 		vi.stubEnv("CI", "true");
 		expect(getRepositoryUrl()).toBe("https://github.com/example/repo");
+	});
+
+	it("prefers Workers CI, then GitHub, then GitLab, then git", ({ expect }) => {
+		expect(getBranchName()).toBe("fresh-unborn");
+		expect(getPreviewAliasBranchName()).toBe("fresh-unborn");
+
+		vi.stubEnv("CI_COMMIT_REF_NAME", "gitlab-branch");
+		expect(getBranchName()).toBe("gitlab-branch");
+		expect(getPreviewAliasBranchName()).toBe("fresh-unborn");
+
+		vi.stubEnv("GITHUB_REF_NAME", "github-ref");
+		expect(getBranchName()).toBe("github-ref");
+
+		vi.stubEnv("GITHUB_HEAD_REF", "github-head");
+		expect(getBranchName()).toBe("github-head");
+
+		vi.stubEnv("WORKERS_CI_BRANCH", "workers-ci");
+		expect(getBranchName()).toBe("workers-ci");
+		expect(getPreviewAliasBranchName()).toBe("workers-ci");
 	});
 });
