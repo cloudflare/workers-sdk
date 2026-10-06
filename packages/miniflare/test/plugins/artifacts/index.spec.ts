@@ -794,6 +794,33 @@ test("artifacts: native Git absence fails before starting a sidecar listener", a
 	}
 });
 
+test("artifacts: sidecar creates a repository without host Git config", async ({
+	expect,
+}) => {
+	const sidecar = await startGitSidecar(path.join(await useTmp(), "repos"));
+	try {
+		const response = await fetch(
+			`http://${sidecar.address}/__local_artifacts__`,
+			{
+				method: "POST",
+				headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+				body: JSON.stringify({
+					action: "create",
+					namespace: "test",
+					name: "repo",
+					generation: "test-generation",
+					defaultBranch: "main",
+				}),
+			}
+		);
+		const body = await response.text();
+		expect(response.status, body).toBe(200);
+		expect(JSON.parse(body)).toEqual({ defaultBranch: "main", refs: {} });
+	} finally {
+		await sidecar.close();
+	}
+});
+
 test("artifacts: disposing the sidecar closes its private listener", async ({
 	expect,
 }) => {
