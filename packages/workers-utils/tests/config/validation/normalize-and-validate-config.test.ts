@@ -4877,7 +4877,7 @@ describe("normalizeAndValidateConfig()", () => {
 						containers: [
 							{ class_name: "MySandbox", scheduling_policy: "durable_object" },
 							{
-								name: "shared-application",
+								name: "original-worker-othersandbox",
 								class_name: "OtherSandbox",
 								scheduling_policy: "durable_object",
 							},
@@ -4891,8 +4891,26 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(config.containers?.map((container) => container.name)).toEqual([
 					"renamed-worker-mysandbox",
-					"shared-application",
+					"original-worker-othersandbox",
 				]);
+			});
+
+			it("uses the CLI Worker name when the config has no Worker name", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{ class_name: "MySandbox", scheduling_policy: "durable_object" },
+						],
+					},
+					undefined,
+					undefined,
+					{ name: "renamed-worker" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.[0].name).toBe("renamed-worker-mysandbox");
 			});
 
 			it("should error if containers is not an object", ({ expect }) => {
@@ -5285,6 +5303,34 @@ describe("normalizeAndValidateConfig()", () => {
 						scheduling_policy: "durable_object",
 					},
 				]);
+			});
+
+			it("uses the CLI Worker name for a generated name in a named environment", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "original-worker",
+						env: {
+							staging: {
+								containers: [
+									{
+										class_name: "MySandbox",
+										scheduling_policy: "durable_object",
+									},
+								],
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: "staging", name: "renamed-worker" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.[0].name).toBe(
+					"renamed-worker-mysandbox-staging"
+				);
 			});
 
 			it("should reject scheduler fields on a Durable Object-managed container", ({
