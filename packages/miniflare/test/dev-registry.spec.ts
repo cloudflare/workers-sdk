@@ -92,14 +92,17 @@ describe.sequential("DevRegistry", () => {
 			undefined,
 			new TestLog()
 		);
-		vi.useFakeTimers();
+		// Filesystem timestamps use the real clock, so only fake the retry timer.
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 		try {
 			registry.register({ worker: definition });
 			expect(
 				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
 			).toBe("previous-instance");
 
-			await vi.advanceTimersByTimeAsync(90_001);
+			const stale = new Date(Date.now() - 91_000);
+			await fs.utimes(definitionPath, stale, stale);
+			await vi.runOnlyPendingTimersAsync();
 
 			expect(
 				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
