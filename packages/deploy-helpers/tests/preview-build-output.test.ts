@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
 	editPreview: vi.fn(),
 	getPreview: vi.fn(),
 	getPreviewBaseConfig: vi.fn(),
+	confirm: vi.fn(),
 	syncAssets: vi.fn(),
 }));
 
@@ -48,6 +49,7 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 
 vi.mock("../src/shared/context", () => ({
 	logger: console,
+	confirm: mocks.confirm,
 }));
 
 const previewResource = {
@@ -107,6 +109,7 @@ describe("previewBuildOutput", () => {
 		vi.clearAllMocks();
 		mocks.getPreview.mockResolvedValue(previewResource);
 		mocks.getPreviewBaseConfig.mockResolvedValue({});
+		mocks.confirm.mockResolvedValue(true);
 		mocks.editPreview.mockResolvedValue(previewResource);
 		mocks.createPreview.mockResolvedValue(previewResource);
 		mocks.createPreviewParentWorker.mockResolvedValue(undefined);
@@ -158,6 +161,10 @@ describe("previewBuildOutput", () => {
 			{ log: false }
 		);
 		expect(std.out).toBe("");
+		expect(mocks.confirm).toHaveBeenCalledWith(
+			'Worker "preview-worker" does not exist yet. Would you like to create it for this Preview?',
+			{ defaultValue: true, fallbackValue: true }
+		);
 		expect(mocks.createPreviewParentWorker).toHaveBeenCalledOnce();
 		expect(mocks.syncAssets).toHaveBeenCalledWith(
 			expect.anything(),
@@ -168,6 +175,34 @@ describe("previewBuildOutput", () => {
 			{ quiet: true }
 		);
 		expect(result.isNewPreview).toBe(true);
+	});
+
+	it("does not create a parent Worker when a quiet caller declines", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValueOnce({ code: 10007 });
+		mocks.confirm.mockResolvedValueOnce(false);
+		await expect(
+			uploadPreview(buildOutputConfig(), undefined, { log: false })
+		).rejects.toThrow("Cannot create a Preview");
+		expect(mocks.confirm).toHaveBeenCalledOnce();
+		expect(mocks.createPreviewParentWorker).not.toHaveBeenCalled();
+		expect(mocks.createPreview).not.toHaveBeenCalled();
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+		expect(std.out).toBe("");
+	});
+
+	it("keeps JSON parent creation non-interactive when logging is disabled", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValueOnce({ code: 10007 });
+		await uploadPreview(buildOutputConfig(), undefined, {
+			log: false,
+			json: true,
+		});
+		expect(mocks.confirm).not.toHaveBeenCalled();
+		expect(mocks.createPreviewParentWorker).toHaveBeenCalledOnce();
+		expect(std.out).toBe("");
 	});
 
 	it.for([false, true])(
