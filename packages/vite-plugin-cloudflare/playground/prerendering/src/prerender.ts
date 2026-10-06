@@ -1,5 +1,7 @@
 export default {
 	async fetch(request) {
+		// The build must ship this declaration as written (see base-tests.ts)
+		using _scope = { [Symbol.dispose]() {} };
 		const url = new URL(request.url);
 
 		if (url.pathname === "/prerendered") {

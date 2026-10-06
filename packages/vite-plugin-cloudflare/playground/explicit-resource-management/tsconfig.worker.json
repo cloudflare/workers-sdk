@@ -3,5 +3,5 @@
 	"compilerOptions": {
 		"lib": ["ES2022", "ESNext.Disposable"]
 	},
-	"include": ["src"]
+	"include": ["worker"]
 }

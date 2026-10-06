@@ -106,16 +106,16 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				ctx.resolvedViteConfig
 			);
 
-			if (ctx.resolvedPluginConfig.type === "workers") {
-				const {
-					environmentNameToWorkerMap,
-					environmentNameToChildEnvironmentNamesMap,
-				} = ctx.resolvedPluginConfig;
-				applyWorkerEsbuildSupported(resolvedViteConfig, [
-					...environmentNameToWorkerMap.keys(),
-					...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
-				]);
-			}
+			// Assets-only configs can still hold Worker environments (a prerender
+			// Worker), so this covers both resolved config types.
+			const {
+				environmentNameToWorkerMap,
+				environmentNameToChildEnvironmentNamesMap,
+			} = ctx.resolvedPluginConfig;
+			applyWorkerEsbuildSupported(resolvedViteConfig, [
+				...environmentNameToWorkerMap.keys(),
+				...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
+			]);
 
 			if (ctx.resolvedPluginConfig.experimental.newConfig?.cfBuildOutput) {
 				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
