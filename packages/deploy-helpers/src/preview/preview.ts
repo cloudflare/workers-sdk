@@ -717,7 +717,7 @@ async function assemblePreviewDeploymentSettings(
 			accountId,
 			options.assetsOptions.directory,
 			workerName,
-			{ quiet: options.json === true }
+			{ json: options.json }
 		);
 		request.assets = {
 			jwt: assetsUploadResult.jwt,
