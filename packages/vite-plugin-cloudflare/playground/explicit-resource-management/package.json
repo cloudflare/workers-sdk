@@ -1,11 +1,9 @@
 {
-	"name": "@playground/prerendering",
+	"name": "@playground/explicit-resource-management",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build:default": "vite build",
-		"build:assets-only": "vite build -c ./vite.config.assets-only.ts",
-		"build:assets-only-config": "vite build -c ./vite.config.assets-only-config.ts",
+		"build:default": "vite build --app",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
