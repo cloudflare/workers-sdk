@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import WebSocket from "ws";
 import type { Binding } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
@@ -64,6 +65,52 @@ async function fetchEdgeConnectionString(
 }
 
 /**
+ * How many times to ask the edge for a binding's credentials before giving up.
+ *
+ * A single attempt was enough while a failure here aborted session setup: the
+ * caller saw the error and restarted. Now that a failure degrades instead, the
+ * consumer decides whether it ever gets another chance — and
+ * `getPlatformProxy()` does not, because it builds one Miniflare instance for
+ * the life of the host process and never re-enters the seeding path. One
+ * timed-out request at startup would leave that process's Hyperdrive bindings
+ * unauthenticated until it was restarted.
+ *
+ * Retrying here absorbs the transient case so the degraded path is reserved
+ * for an edge that is genuinely unreachable. Worst case this blocks startup
+ * for roughly the per-attempt timeout times the attempt count, which is the
+ * cost of not silently shipping a broken binding.
+ */
+const SEED_ATTEMPTS = 3;
+
+/** Base delay between seeding attempts; scaled by the attempt number. */
+const SEED_RETRY_BACKOFF_MS = 500;
+
+/**
+ * {@link fetchEdgeConnectionString}, retried a few times before the failure is
+ * allowed to surface.
+ */
+async function fetchEdgeConnectionStringWithRetry(
+	remoteProxyConnectionString: RemoteProxyConnectionString,
+	bindingName: string
+): Promise<string> {
+	let lastError: unknown;
+	for (let attempt = 1; attempt <= SEED_ATTEMPTS; attempt++) {
+		try {
+			return await fetchEdgeConnectionString(
+				remoteProxyConnectionString,
+				bindingName
+			);
+		} catch (error) {
+			lastError = error;
+			if (attempt < SEED_ATTEMPTS) {
+				await delay(SEED_RETRY_BACKOFF_MS * attempt);
+			}
+		}
+	}
+	throw lastError;
+}
+
+/**
  * Fetches the edge session's connection string for every remote Hyperdrive
  * binding, so that the local binding can present credentials the edge
  * Hyperdrive proxy will accept.
@@ -105,7 +152,7 @@ export async function seedRemoteHyperdriveBindings(
 
 	await Promise.all(
 		remoteHyperdrives.map(async ([name]) => {
-			const connectionString = await fetchEdgeConnectionString(
+			const connectionString = await fetchEdgeConnectionStringWithRetry(
 				remoteProxyConnectionString,
 				name
 			);
