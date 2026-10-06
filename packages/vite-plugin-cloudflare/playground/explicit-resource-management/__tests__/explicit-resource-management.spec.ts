@@ -34,8 +34,10 @@ test.runIf(isBuild)(
 );
 
 // The Worker-scoped esbuild override on Vite 6 and 7 must not reach the client.
-// Vite 8 builds the client with Oxc, and the pinned Rolldown does not lower
-// `using` at all, so there is nothing to assert there.
+// Vite 8 has no such override, since the client keeps its own target. Also, the
+// pinned Vite 8.1.5 (Rolldown 1.1.5) leaves `using` in client bundles at an
+// explicit target with or without this plugin, so the assertion only holds on
+// Vite 6 and 7.
 test.runIf(isBuild && !satisfiesMinimumViteVersion("8.0.0"))(
 	"lowers using declarations in the client build",
 	async ({ expect }) => {
