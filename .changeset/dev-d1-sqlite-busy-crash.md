@@ -2,8 +2,8 @@
 "miniflare": patch
 ---
 
-Surface recoverable SQLite errors from local D1's session commit token lookup as catchable `D1_ERROR`s instead of crashing `wrangler dev`
+Prevent local D1 session bookmark errors from crashing the development server
 
-When another connection is writing to the same persisted local D1 database, SQLite can return a recoverable `SQLITE_BUSY` ("database is locked") error. Query failures were already surfaced to the Worker as catchable `D1_ERROR`s, but the session commit token lookup that runs after each query batch was not wrapped, so a `SQLITE_BUSY` raised there escaped as an uncaught internal error and took down the entire `wrangler dev` process (and, with multi-config dev, every hosted worker). That lookup is now wrapped in the same `D1Error` handling, so the Worker receives a normal, retryable query error and the dev server stays up.
+Session bookmark lookup failures, including SQLite errors when another connection holds the database write lock, now reach the Worker as catchable `D1_ERROR`s. SQL execution and bookmark retrieval share a transaction, so a failed lookup rolls back the queries and retrying cannot duplicate their writes. This applies to local D1 through Miniflare, Wrangler, the Vite plugin, and the Vitest plugin.
 
 Fixes https://github.com/cloudflare/workers-sdk/issues/14916
