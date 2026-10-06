@@ -232,19 +232,19 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				pendingConsoleLogs.shift();
 			}
 		};
-		const flushPendingConsoleLogs = setInterval(() => {
+		const pendingConsoleLogsFlushInterval = setInterval(() => {
 			if (pendingConsoleLogs.length === 0) {
 				return;
 			}
 			try {
 				sendPendingConsoleLogs();
 			} catch (error) {
-				clearInterval(flushPendingConsoleLogs);
+				clearInterval(pendingConsoleLogsFlushInterval);
 				__console.error("Error flushing console logs from the runner:", error);
 			}
 		}, 50);
 		poolSocket.addEventListener("close", () => {
-			clearInterval(flushPendingConsoleLogs);
+			clearInterval(pendingConsoleLogsFlushInterval);
 		});
 		init({
 			post: (response) => {
