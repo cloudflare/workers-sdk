@@ -14,6 +14,8 @@ import type {
 function parseSourceArgument(
 	source: string,
 	args: {
+		namespace?: string;
+		repoName?: string;
 		modelName?: string;
 		workerName?: string;
 		workflowName?: string;
@@ -26,7 +28,23 @@ function parseSourceArgument(
 			return { type: EventSourceType.ARTIFACTS };
 
 		case EventSourceType.ARTIFACTS_REPO:
-			return { type: EventSourceType.ARTIFACTS_REPO };
+			if (!args.namespace) {
+				throw new UserError(
+					`--namespace is required when using source '${EventSourceType.ARTIFACTS_REPO}'`,
+					{ telemetryMessage: "queues subscription create missing namespace" }
+				);
+			}
+			if (!args.repoName) {
+				throw new UserError(
+					`--repo-name is required when using source '${EventSourceType.ARTIFACTS_REPO}'`,
+					{ telemetryMessage: "queues subscription create missing repo name" }
+				);
+			}
+			return {
+				type: EventSourceType.ARTIFACTS_REPO,
+				namespace: args.namespace,
+				repo_name: args.repoName,
+			};
 
 		case EventSourceType.BROWSER_RUN:
 			return { type: EventSourceType.BROWSER_RUN };
@@ -133,9 +151,19 @@ export const queuesSubscriptionCreateCommand = createCommand({
 			choices: EVENT_SOURCE_TYPES,
 		},
 		events: {
-			describe: "Comma-separated list of event types to subscribe to",
+			describe:
+				"Comma-separated list of event types to subscribe to (use short names, e.g. pushed for artifacts.repo)",
 			type: "string",
 			demandOption: true,
+		},
+		namespace: {
+			describe: "Artifacts namespace (required for artifacts.repo source)",
+			type: "string",
+		},
+		"repo-name": {
+			describe:
+				"Artifacts repository name (required for artifacts.repo source)",
+			type: "string",
 		},
 		name: {
 			describe: "Name for the subscription (auto-generated if not provided)",
@@ -170,6 +198,8 @@ export const queuesSubscriptionCreateCommand = createCommand({
 	},
 	async handler(args, { config }) {
 		const source = parseSourceArgument(args.source, {
+			namespace: args.namespace,
+			repoName: args.repoName,
 			modelName: args.modelName,
 			workerName: args.workerName,
 			workflowName: args.workflowName,

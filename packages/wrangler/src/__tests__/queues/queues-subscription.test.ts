@@ -103,7 +103,9 @@ describe("queues subscription", () => {
 
 				OPTIONS
 				      --source         The event source type  [string] [required] [choices: "artifacts", "artifacts.repo", "browserRun", "email.sending", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
-				      --events         Comma-separated list of event types to subscribe to  [string] [required]
+				      --events         Comma-separated list of event types to subscribe to (use short names, e.g. pushed for artifacts.repo)  [string] [required]
+				      --namespace      Artifacts namespace (required for artifacts.repo source)  [string]
+				      --repo-name      Artifacts repository name (required for artifacts.repo source)  [string]
 				      --name           Name for the subscription (auto-generated if not provided)  [string]
 				      --enabled        Whether the subscription should be active  [boolean] [default: true]
 				      --model-name     Workers AI model name (required for workersAi.model source)  [string]
@@ -263,18 +265,46 @@ describe("queues subscription", () => {
 				{
 					name: "testQueue artifacts.repo",
 					enabled: true,
-					source: { type: EventSourceType.ARTIFACTS_REPO },
+					source: {
+						type: EventSourceType.ARTIFACTS_REPO,
+						namespace: "my-namespace",
+						repo_name: "my-repo",
+					},
 					events: ["pushed"],
 				},
 				expectedQueueId
 			);
 
 			await runWrangler(
-				"queues subscription create testQueue --source artifacts.repo --events pushed"
+				"queues subscription create testQueue --source artifacts.repo --events pushed --namespace my-namespace --repo-name my-repo"
 			);
 
 			expect(queueNameResolveRequest.count).toEqual(1);
 			expect(createRequest.count).toEqual(1);
+		});
+
+		it("should require a namespace for an Artifacts repository source", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"queues subscription create testQueue --source artifacts.repo --events pushed --repo-name my-repo"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --namespace is required when using source 'artifacts.repo']`
+			);
+		});
+
+		it("should require a repository name for an Artifacts repository source", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"queues subscription create testQueue --source artifacts.repo --events pushed --namespace my-namespace"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --repo-name is required when using source 'artifacts.repo']`
+			);
 		});
 
 		it("should create a subscription for the Browser Run account source", async ({
