@@ -120,17 +120,17 @@ describe("queues subscription", () => {
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS
-				      --source         The event source type  [string] [required] [choices: "artifacts", "artifacts.repo", "browserRun", "email.sending", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
-				      --events         Comma-separated list of event types to subscribe to  [string] [required]
-				      --name           Name for the subscription (auto-generated if not provided)  [string]
-				      --enabled        Whether the subscription should be active  [boolean] [default: true]
-				      --model-name     Workers AI model name (required for workersAi.model source)  [string]
-				      --worker-name    Worker name (required for workersBuilds.worker source)  [string]
-				      --workflow-name  Workflow name (required for workflows.workflow source)  [string]
-				      --zone-id        Zone ID (required for email.sending source)  [string]
-				      --domain         Sending domain — zone apex or verified subdomain (required for email.sending source)  [string]
-				      --namespace      Artifacts namespace (required for artifacts.repo source)  [string]
-				      --repo-name      Artifacts repository name (required for artifacts.repo source)  [string]"
+				      --source            The event source type  [string] [required] [choices: "artifacts", "artifacts.repo", "browserRun", "email.sending", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				      --events            Comma-separated list of event types to subscribe to (for artifacts.repo, use pushed, not cf.artifacts.repo.pushed)  [string] [required]
+				      --name              Name for the subscription (auto-generated if not provided)  [string]
+				      --enabled           Whether the subscription should be active  [boolean] [default: true]
+				      --model-name        Workers AI model name (required for workersAi.model source)  [string]
+				      --worker-name       Worker name (required for workersBuilds.worker source)  [string]
+				      --workflow-name     Workflow name (required for workflows.workflow source)  [string]
+				      --zone-id           Zone ID (required for email.sending source)  [string]
+				      --domain            Sending domain — zone apex or verified subdomain (required for email.sending source)  [string]
+				      --source-namespace  Artifacts namespace (required for artifacts.repo source)  [string]
+				      --source-repo-name  Artifacts repository name (required for artifacts.repo source)  [string]"
 			`);
 		});
 
@@ -294,7 +294,7 @@ describe("queues subscription", () => {
 			);
 
 			await runWrangler(
-				"queues subscription create testQueue --source artifacts.repo --events pushed --namespace my-namespace --repo-name my-repo"
+				"queues subscription create testQueue --source artifacts.repo --events pushed --source-namespace my-namespace --source-repo-name my-repo"
 			);
 
 			expect(queueNameResolveRequest.count).toEqual(1);
@@ -306,10 +306,10 @@ describe("queues subscription", () => {
 		}) => {
 			await expect(
 				runWrangler(
-					"queues subscription create testQueue --source artifacts.repo --events pushed --repo-name my-repo"
+					"queues subscription create testQueue --source artifacts.repo --events pushed --source-repo-name my-repo"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: --namespace is required when using source 'artifacts.repo']`
+				`[Error: --source-namespace is required when using source 'artifacts.repo']`
 			);
 		});
 
@@ -318,10 +318,10 @@ describe("queues subscription", () => {
 		}) => {
 			await expect(
 				runWrangler(
-					"queues subscription create testQueue --source artifacts.repo --events pushed --namespace my-namespace"
+					"queues subscription create testQueue --source artifacts.repo --events pushed --source-namespace my-namespace"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: --repo-name is required when using source 'artifacts.repo']`
+				`[Error: --source-repo-name is required when using source 'artifacts.repo']`
 			);
 		});
 

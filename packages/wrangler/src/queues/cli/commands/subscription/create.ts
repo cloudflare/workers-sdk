@@ -19,8 +19,8 @@ function parseSourceArgument(
 		workflowName?: string;
 		zoneId?: string;
 		domain?: string;
-		namespace?: string;
-		repoName?: string;
+		sourceNamespace?: string;
+		sourceRepoName?: string;
 	}
 ): EventSource {
 	switch (source as EventSourceType) {
@@ -28,22 +28,22 @@ function parseSourceArgument(
 			return { type: EventSourceType.ARTIFACTS };
 
 		case EventSourceType.ARTIFACTS_REPO:
-			if (!args.namespace) {
+			if (!args.sourceNamespace) {
 				throw new UserError(
-					`--namespace is required when using source '${EventSourceType.ARTIFACTS_REPO}'`,
+					`--source-namespace is required when using source '${EventSourceType.ARTIFACTS_REPO}'`,
 					{ telemetryMessage: "queues subscription create missing namespace" }
 				);
 			}
-			if (!args.repoName) {
+			if (!args.sourceRepoName) {
 				throw new UserError(
-					`--repo-name is required when using source '${EventSourceType.ARTIFACTS_REPO}'`,
+					`--source-repo-name is required when using source '${EventSourceType.ARTIFACTS_REPO}'`,
 					{ telemetryMessage: "queues subscription create missing repo name" }
 				);
 			}
 			return {
 				type: EventSourceType.ARTIFACTS_REPO,
-				namespace: args.namespace,
-				repo_name: args.repoName,
+				namespace: args.sourceNamespace,
+				repo_name: args.sourceRepoName,
 			};
 
 		case EventSourceType.BROWSER_RUN:
@@ -151,7 +151,8 @@ export const queuesSubscriptionCreateCommand = createCommand({
 			choices: EVENT_SOURCE_TYPES,
 		},
 		events: {
-			describe: "Comma-separated list of event types to subscribe to",
+			describe:
+				"Comma-separated list of event types to subscribe to (for artifacts.repo, use pushed, not cf.artifacts.repo.pushed)",
 			type: "string",
 			demandOption: true,
 		},
@@ -185,11 +186,11 @@ export const queuesSubscriptionCreateCommand = createCommand({
 				"Sending domain — zone apex or verified subdomain (required for email.sending source)",
 			type: "string",
 		},
-		namespace: {
+		"source-namespace": {
 			describe: "Artifacts namespace (required for artifacts.repo source)",
 			type: "string",
 		},
-		"repo-name": {
+		"source-repo-name": {
 			describe:
 				"Artifacts repository name (required for artifacts.repo source)",
 			type: "string",
@@ -202,8 +203,8 @@ export const queuesSubscriptionCreateCommand = createCommand({
 			workflowName: args.workflowName,
 			zoneId: args.zoneId,
 			domain: args.domain,
-			namespace: args.namespace,
-			repoName: args.repoName,
+			sourceNamespace: args.sourceNamespace,
+			sourceRepoName: args.sourceRepoName,
 		});
 
 		const events = args.events
