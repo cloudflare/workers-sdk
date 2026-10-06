@@ -104,8 +104,9 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `createConfigCache`), account selection (`fetchInternalBase` with the token
   the flow already holds), login / logout / refresh, and `requireAuth`. Imports
   only `@cloudflare/workers-utils`.
-- `types.ts` — `AuthContext` (the injected primitives: `logger`, `userAgent`,
-  interactive `prompt` / `select`, `isNoDefaultValueProvidedError`) and
+- `types.ts` — `AuthContext` (the injected primitives: `logger`, optional
+  `temporaryAccountLogger` for temporary-account notices, `userAgent`, interactive
+  `prompt` / `select`, `isNoDefaultValueProvidedError`) and
   `CliDescriptor` (everything that varies per CLI: `cliName` (the executable),
   `displayName` (branded name used in prose), auth command names
   (`login` / `whoami` / `createProfile` / `deviceLogin`), `keyringServiceName`,
@@ -156,7 +157,9 @@ Each CLI is a thin **descriptor + entrypoint**:
 - License: dual MIT/Apache-2.0. Files derived from
   [BitySA/oauth2-auth-code-pkce](https://github.com/BitySA/oauth2-auth-code-pkce)
   carry the Apache-2.0 header.
-- No `console.*` — use the injected `ctx.logger`.
+- No `console.*` — use the injected `ctx.logger`. Temporary-account notices
+  (terms notice, proof-of-work, "Temporary account ready") go through the
+  `temporaryAccountLogger` instead, so a CLI can keep them off stdout.
 - No global `fetch` — use undici's `fetch`.
 - `UserError` instances must carry stable `telemetryMessage` labels
   (`<area> <sub-area> <failure>`, e.g. `user oauth invalid scope`).

@@ -360,10 +360,10 @@ Remote E2E tests run automatically in these cases:
 - **Version Packages PRs** (branch `changeset-release/main`) — acts as a pre-release safety net, catching remote-test failures before packages are published.
 - **Merge queue** — final check before code lands on `main`.
 
-If you need remote E2E tests on your PR (e.g. you're changing deployment logic or binding behavior), apply the **`ci:run-remote-tests`** label. This triggers a re-run of the E2E workflows with API credentials enabled.
+If you need remote E2E tests on your PR (e.g. you're changing deployment logic or binding behavior), apply the **`ci:run-remote-tests`** label. This triggers a re-run of the Wrangler and Vite E2E workflows with API credentials enabled. C3 E2E tests do not receive Cloudflare API credentials.
 
 > [!NOTE]
-> The `ci:run-remote-tests` label has no effect on PRs from forks, because GitHub does not expose repository secrets to fork PRs.
+> Remote tests cannot run on PRs from forks because GitHub does not expose repository secrets to fork PRs. Applying the `ci:run-remote-tests` label to a fork PR will fail its Wrangler and Vite E2E checks until the label is removed.
 
 ## Running E2E tests locally
 

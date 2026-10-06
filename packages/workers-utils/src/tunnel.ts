@@ -65,6 +65,8 @@ export interface Tunnel {
 export interface TunnelOptions {
 	origin: URL;
 	token?: string;
+	/** Email addresses or domain patterns allowed to authenticate to a Quick Tunnel. */
+	allowedMail?: string[];
 	timeoutMs?: number;
 	expiryMs?: number;
 	reminderIntervalMs?: number;
@@ -272,12 +274,27 @@ export function startTunnel(options: TunnelOptions): Tunnel {
 		options.reminderIntervalMs ?? DEFAULT_TUNNEL_REMINDER_INTERVAL_MS;
 	const defaultExpiryMs = options.expiryMs ?? DEFAULT_TUNNEL_EXPIRY_MS;
 	const isNamedTunnel = options.token !== undefined;
+	if (isNamedTunnel && (options.allowedMail?.length ?? 0) > 0) {
+		throw new UserError(
+			"The `allowedMail` option is only supported for Quick Tunnels.",
+			{ telemetryMessage: "tunnel allowed mail named tunnel conflict" }
+		);
+	}
 	const timeFormatter = new Intl.DateTimeFormat(undefined, {
 		timeStyle: "short",
 	});
 	const cloudflaredArgs = isNamedTunnel
 		? ["tunnel", "--no-autoupdate", "run"]
-		: ["tunnel", "--no-autoupdate", "--url", options.origin.href];
+		: [
+				"tunnel",
+				"--no-autoupdate",
+				"--url",
+				options.origin.href,
+				...(options.allowedMail ?? []).flatMap((allowedMail) => [
+					"--allowed-mail",
+					allowedMail,
+				]),
+			];
 
 	const cloudflaredPromise = spawnCloudflared(cloudflaredArgs, {
 		stdio: "pipe",

@@ -978,6 +978,81 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 	});
 });
 
+describe("resolvePluginConfig - tunnel", () => {
+	let tempDir: string;
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
+		fs.writeFileSync(
+			path.join(tempDir, "wrangler.jsonc"),
+			JSON.stringify({ name: "my-worker" })
+		);
+	});
+
+	afterEach(() => {
+		removeDirSync(tempDir);
+	});
+
+	const viteEnv = { mode: "development", command: "serve" as const };
+
+	test("resolves allowed mail for a Quick Tunnel", async ({ expect }) => {
+		const result = await resolvePluginConfig(
+			{
+				tunnel: {
+					autoStart: true,
+					allowedMail: ["alice@example.com", "*@example.org"],
+				},
+			},
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.tunnel).toEqual({
+			autoStart: true,
+			name: undefined,
+			allowedMail: ["alice@example.com", "*@example.org"],
+		});
+	});
+
+	test("rejects allowed mail for a named tunnel", async ({ expect }) => {
+		await expect(
+			resolvePluginConfig(
+				{
+					tunnel: {
+						name: "my-tunnel",
+						allowedMail: ["alice@example.com"],
+					},
+				},
+				{ root: tempDir },
+				viteEnv
+			)
+		).rejects.toThrow(
+			"`tunnel.allowedMail` is only supported for Quick Tunnels"
+		);
+	});
+
+	test("allows an empty allowed mail list for a named tunnel", async ({
+		expect,
+	}) => {
+		const result = await resolvePluginConfig(
+			{
+				tunnel: {
+					name: "my-tunnel",
+					allowedMail: [],
+				},
+			},
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.tunnel).toEqual({
+			autoStart: false,
+			name: "my-tunnel",
+			allowedMail: undefined,
+		});
+	});
+});
+
 describe("resolvePluginConfig - environment name validation", () => {
 	let tempDir: string;
 

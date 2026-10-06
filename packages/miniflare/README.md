@@ -460,7 +460,7 @@ parameter in module format Workers.
 - `binding?: string`
   Binding name to inject as a `Fetcher` binding to allow access to static assets from within the Worker.
 
-- `assetOptions?: { html_handling?: HTMLHandlingOptions, not_found_handling?: NotFoundHandlingOptions}`
+- `assetConfig?: { html_handling?: HTMLHandlingOptions, not_found_handling?: NotFoundHandlingOptions, base_path?: string }`
   Configuration for file-based asset routing - see [docs](https://developers.cloudflare.com/workers/static-assets/routing/#routing-configuration) for options
 
 #### Pipelines

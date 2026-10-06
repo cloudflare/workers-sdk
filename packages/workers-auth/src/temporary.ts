@@ -10,7 +10,10 @@ import type {
 	TemporaryAccountStorage,
 	TemporaryPreviewAccount,
 } from "./config-file/temporary";
-import type { OAuthFlowLogger, TemporaryAccountRequest } from "./context";
+import type {
+	TemporaryAccountLogger,
+	TemporaryAccountRequest,
+} from "./context";
 import type { PowSolution } from "./pow";
 
 export const TEMPORARY_TERMS_URLS = {
@@ -203,7 +206,7 @@ type PowChallengeResponse = {
 // Requests a proof-of-work challenge and solves it. The challenge is required:
 // any failure aborts provisioning.
 async function requestPowSolution(
-	logger: OAuthFlowLogger
+	temporaryAccountLogger: TemporaryAccountLogger
 ): Promise<PowSolution> {
 	const response = await fetch(getTemporaryPreviewChallengeUrl(), {
 		method: "POST",
@@ -260,7 +263,7 @@ async function requestPowSolution(
 		);
 	}
 
-	logger.log("Solving proof-of-work challenge…");
+	temporaryAccountLogger.log("Solving proof-of-work challenge…");
 	return solveChallenge({ challengeToken, seed, k, g });
 }
 
@@ -269,10 +272,10 @@ async function requestPowSolution(
  * endpoint
  */
 export async function createTemporaryPreviewAccount(
-	logger: OAuthFlowLogger,
+	temporaryAccountLogger: TemporaryAccountLogger,
 	request?: TemporaryAccountRequest
 ): Promise<TemporaryPreviewAccount> {
-	const pow = await requestPowSolution(logger);
+	const pow = await requestPowSolution(temporaryAccountLogger);
 
 	const response = await fetch(getTemporaryPreviewUrl(), {
 		method: "POST",
@@ -365,7 +368,7 @@ export async function createTemporaryPreviewAccount(
 export async function getOrCreateTemporaryPreviewAccount(options: {
 	storage: TemporaryAccountStorage;
 	prompt: (question: string, notice: string) => Promise<boolean>;
-	logger: OAuthFlowLogger;
+	temporaryAccountLogger: TemporaryAccountLogger;
 	request?: TemporaryAccountRequest;
 }): Promise<{
 	account: TemporaryPreviewAccount;
@@ -398,7 +401,7 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 	}
 
 	const temporaryPreviewAccount = await createTemporaryPreviewAccount(
-		options.logger,
+		options.temporaryAccountLogger,
 		options.request
 	);
 	options.storage.write(temporaryPreviewAccount);
