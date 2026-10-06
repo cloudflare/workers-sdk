@@ -824,7 +824,6 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "proxy-server",
 						compatibilityDate: COMPAT_DATE,
 						compatibilityFlags: ["experimental"],
@@ -842,7 +841,6 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: "hd-target",
 						compatibilityDate: COMPAT_DATE,
 						compatibilityFlags: ["experimental"],
@@ -892,7 +890,6 @@ describe("Hyperdrive remote binding: MF-HD-Seed endpoint", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "proxy-server",
 						compatibilityDate: COMPAT_DATE,
 						compatibilityFlags: ["experimental"],
