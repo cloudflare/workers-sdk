@@ -77,6 +77,7 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
+import { ArtifactsController } from "./plugins/artifacts/controller";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import { closeBrowserProcess } from "./plugins/browser-rendering/process";
@@ -888,6 +889,7 @@ export class Miniflare {
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
+	#artifactsController = new ArtifactsController();
 	#containerPrivilegesCache = new ContainerPrivilegesCache();
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController();
@@ -2326,6 +2328,7 @@ export class Miniflare {
 				queueConsumers,
 				containerPrivilegesCache: this.#containerPrivilegesCache,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
+				artifactsController: this.#artifactsController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -2341,6 +2344,11 @@ export class Miniflare {
 					} else {
 						pluginServices = pluginServicesExtensions.services;
 						extensions.push(...pluginServicesExtensions.extensions);
+						for (const socket of pluginServicesExtensions.sockets ?? []) {
+							if (!sockets.some((existing) => existing.name === socket.name)) {
+								sockets.push(socket);
+							}
+						}
 					}
 
 					for (const service of pluginServices) {
@@ -3915,6 +3923,14 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		try {
+			await this.#artifactsController.dispose();
+		} catch (error) {
+			if (!independentCleanupFailed) {
+				independentCleanupFailed = true;
+				independentCleanupError = error;
+			}
+		}
 		this.#devRegistry.unregisterWorkers();
 		try {
 			await Promise.all(
