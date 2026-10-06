@@ -497,9 +497,13 @@ export class RemoteRuntimeController extends RuntimeController {
 	//   Event Handlers
 	// ******************
 
-	onBundleStart(_: BundleStartEvent) {
+	onBundleStart(event: BundleStartEvent) {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
+		if (!event.config.dev?.remote) {
+			clearTimeout(this.#refreshTimer);
+			return;
+		}
 		this.#abortController = new AbortController();
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {

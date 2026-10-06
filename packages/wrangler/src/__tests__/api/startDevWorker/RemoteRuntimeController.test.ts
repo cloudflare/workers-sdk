@@ -307,6 +307,30 @@ describe("RemoteRuntimeController", () => {
 			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
 		});
 
+		it("should stop refreshing when switching to local mode", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: makeBundle(),
+			});
+			await bus.waitFor("reloadComplete");
+
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 - 1_000);
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: makeConfig({ dev: { ...config.dev, remote: false } }),
+			});
+			vi.mocked(getWorkerAccountAndContext).mockClear();
+			await vi.advanceTimersByTimeAsync(1_001);
+			expect(getWorkerAccountAndContext).not.toHaveBeenCalled();
+		});
+
 		it("should retry a failed refresh", async ({ expect }) => {
 			vi.useFakeTimers();
 			const { controller, bus } = setup();
