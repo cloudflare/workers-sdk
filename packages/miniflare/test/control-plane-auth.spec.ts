@@ -8,7 +8,7 @@ import {
 	Response as MiniflareResponse,
 	SOCKET_DEV_REGISTRY,
 } from "miniflare";
-import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import { describe, test as baseTest, vi } from "vitest";
 import WebSocket from "ws";
 import { Config as CapnpConfig } from "../src/runtime/config/generated/workerd";
 import { CoreBindings, CoreHeaders } from "../src/workers/core/constants";
@@ -27,9 +27,10 @@ interface RuntimeInfo {
 	loopbackSecret: string;
 }
 
-const infos: RuntimeInfo[] = [];
-
-async function start(options: Partial<MiniflareOptions> = {}) {
+async function startRuntime(
+	infos: RuntimeInfo[],
+	options: Partial<MiniflareOptions> = {}
+) {
 	const registryPath = await useTmp();
 	const opts: MiniflareOptions = {
 		cf: false,
@@ -77,12 +78,17 @@ async function webSocketStatus(url: string): Promise<number> {
 	});
 }
 
-describe.sequential("control-plane authentication", () => {
-	beforeEach(() => {
-		infos.length = 0;
+const test = baseTest.extend<{
+	start: (
+		options?: Partial<MiniflareOptions>
+	) => ReturnType<typeof startRuntime>;
+}>({
+	start: async ({ onTestFinished }, use) => {
+		const infos: RuntimeInfo[] = [];
 		const updateConfig = Runtime.prototype.updateConfig;
-		vi.spyOn(Runtime.prototype, "updateConfig").mockImplementation(
-			async function (this: Runtime, ...args) {
+		const spy = vi
+			.spyOn(Runtime.prototype, "updateConfig")
+			.mockImplementation(async function (this: Runtime, ...args) {
 				const config = new Message(args[0], false).getRoot(CapnpConfig);
 				const registry = Array.from(config.services).find(
 					(service) => service.name === "core:user:dev-registry-proxy"
@@ -109,14 +115,16 @@ describe.sequential("control-plane authentication", () => {
 					loopbackSecret: header.value,
 				});
 				return ports;
-			}
-		);
-	});
+			});
+		onTestFinished(() => spy.mockRestore());
+		await use((options) => startRuntime(infos, options));
+	},
+});
 
-	afterEach(() => vi.restoreAllMocks());
-
+describe.sequential("control-plane authentication", () => {
 	test("rejects registry replacement before parsing and preserves shared storage", async ({
 		expect,
+		start,
 	}) => {
 		const { mf, info, registryPath } = await start();
 		const kv = await mf.getKVNamespace("KV");
@@ -202,6 +210,7 @@ describe.sequential("control-plane authentication", () => {
 
 	test("rejects credentials from other and disposed runtimes", async ({
 		expect,
+		start,
 	}) => {
 		const first = await start();
 		const second = await start();
@@ -230,6 +239,7 @@ describe.sequential("control-plane authentication", () => {
 
 	test("protects loopback discovery, custom services, browser control, and upgrades", async ({
 		expect,
+		start,
 	}) => {
 		const fallback = vi.fn(() => new MiniflareResponse("module"));
 		const { mf, info } = await start({
