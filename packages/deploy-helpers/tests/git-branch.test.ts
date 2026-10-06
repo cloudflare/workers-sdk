@@ -35,7 +35,9 @@ describe("resolveGitBranchName", () => {
 		expect(resolveGitBranchName()).toBe("fresh-unborn");
 	});
 
-	it("does not leak git stderr when resolving an unborn branch", ({ expect }) => {
+	it("does not leak git stderr when resolving an unborn branch", ({
+		expect,
+	}) => {
 		const err = vi.spyOn(process.stderr, "write");
 		expect(resolveGitBranchName()).toBe("fresh-unborn");
 		const leaked = err.mock.calls
