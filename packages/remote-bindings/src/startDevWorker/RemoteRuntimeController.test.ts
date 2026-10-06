@@ -76,6 +76,48 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		vi.useRealTimers();
 	});
 
+	it("refreshes on the session deadline despite an update", async ({
+		expect,
+	}) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+		const onReloadComplete = vi.fn<(event: ReloadCompleteEvent) => void>();
+		const controller = new RemoteRuntimeController(vi.fn(), onReloadComplete);
+
+		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledTimes(1);
+
+		await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
+		controller.onUpdateStart();
+		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledTimes(2);
+
+		createWorkerPreview.mockClear();
+		await vi.advanceTimersByTimeAsync(20 * 60 * 1000 + 1);
+		expect(onReloadComplete).toHaveBeenCalledTimes(3);
+		expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+		expect(createPreviewSession).toHaveBeenCalledTimes(2);
+		await controller.teardown();
+	});
+
+	it("retains the refresh timer when an update fails", async ({ expect }) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+		const onReloadComplete = vi.fn<(event: ReloadCompleteEvent) => void>();
+		const controller = new RemoteRuntimeController(vi.fn(), onReloadComplete);
+
+		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledTimes(1);
+
+		controller.onUpdateStart();
+		await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+		expect(onReloadComplete).toHaveBeenCalledTimes(2);
+		await controller.teardown();
+	});
+
 	it("keeps retrying on an interval after a failed refresh, and recovers once it succeeds", async ({
 		expect,
 	}) => {
@@ -235,9 +277,8 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		// aborts the controller. Rather than the abort itself rejecting this
 		// call (already covered above), a *different*, unrelated error surfaces
 		// afterwards — e.g. a concurrent auth-hook failure — while the signal
-		// happens to already be aborted. `onUpdateStart()` also clears the
-		// pending refresh timer; a thrown, non-`AbortError` failure must not
-		// recreate it for this now-superseded bundle.
+		// happens to already be aborted. The timer has already fired; a thrown,
+		// non-`AbortError` failure must not recreate it for this bundle.
 		let rejectSession!: (err: unknown) => void;
 		createPreviewSession.mockImplementation(
 			() =>
@@ -268,7 +309,10 @@ describe("RemoteRuntimeController preview token refresh", () => {
 			bundle: newBundle,
 		});
 		await vi.advanceTimersByTimeAsync(0);
-		expect(onReloadComplete).toHaveBeenCalledTimes(2);
+		expect(onReloadComplete).toHaveBeenCalledTimes(3);
+		expect(onReloadComplete).toHaveBeenLastCalledWith(
+			expect.objectContaining({ bundle: newBundle })
+		);
 
 		await controller.teardown();
 	});

@@ -63,6 +63,7 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	// Timer for proactive token refresh before the 1-hour expiry
 	#refreshTimer?: ReturnType<typeof setTimeout>;
+	#sessionCreatedAt?: number;
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
@@ -73,7 +74,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			const { workerAccount, workerContext } =
 				await getWorkerAccountAndContext(props);
 
-			return await retryOnAPIFailure(
+			const session = await retryOnAPIFailure(
 				() =>
 					createPreviewSession(
 						props.complianceConfig,
@@ -87,6 +88,10 @@ export class RemoteRuntimeController extends RuntimeController {
 				undefined,
 				this.#abortController.signal
 			);
+			if (session) {
+				this.#sessionCreatedAt = Date.now();
+			}
+			return session;
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
 				return; // ignore
@@ -361,14 +366,27 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	#scheduleRefresh(interval: number) {
 		clearTimeout(this.#refreshTimer);
+		const delay =
+			interval === PREVIEW_TOKEN_REFRESH_INTERVAL &&
+			this.#sessionCreatedAt !== undefined
+				? Math.max(
+						0,
+						PREVIEW_TOKEN_REFRESH_INTERVAL -
+							(Date.now() - this.#sessionCreatedAt)
+					)
+				: interval;
 		this.#refreshTimer = setTimeout(() => {
+			this.#refreshTimer = undefined;
 			if (this.#latestProxyData) {
 				this.onPreviewTokenExpired({
 					type: "previewTokenExpired",
 					proxyData: this.#latestProxyData,
 				});
+			} else if (!this.tearingDown) {
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
-		}, interval);
+		}, delay);
+		this.#refreshTimer.unref?.();
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
@@ -440,9 +458,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		// A newer bundle superseding this refresh, or this refresh's own
 		// signal having been aborted, means a rebuild is already handling
 		// things — that rebuild's own success path reschedules normally, so
-		// retrying a stale attempt here would revive outdated worker code (or,
-		// for a thrown error, recreate the timer `onBundleStart()` just
-		// cleared).
+		// retrying a stale attempt here would revive outdated worker code.
 		const shouldRetry = () =>
 			bundleId === this.#currentBundleId &&
 			!abortSignal.aborted &&
@@ -502,11 +518,14 @@ export class RemoteRuntimeController extends RuntimeController {
 	//   Event Handlers
 	// ******************
 
-	onBundleStart(_: BundleStartEvent) {
+	onBundleStart(event: BundleStartEvent) {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
+		if (!event.config.dev?.remote) {
+			clearTimeout(this.#refreshTimer);
+			return;
+		}
 		this.#abortController = new AbortController();
-		clearTimeout(this.#refreshTimer);
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;

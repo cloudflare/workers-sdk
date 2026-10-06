@@ -247,10 +247,15 @@ describe("RemoteRuntimeController", () => {
 			});
 		});
 
-		it("should cancel the proactive refresh timer on bundle start", async ({
+		it("should refresh on the session deadline despite a reload", async ({
 			expect,
 		}) => {
 			vi.useFakeTimers();
+			vi.mocked(createPreviewSession).mockResolvedValue({
+				value: "test-session-value",
+				host: "test.workers.dev",
+				name: "test-worker",
+			});
 
 			const { controller, bus } = setup();
 			const config = makeConfig();
@@ -260,18 +265,71 @@ describe("RemoteRuntimeController", () => {
 			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 			await bus.waitFor("reloadComplete");
 
-			vi.mocked(createWorkerPreview).mockClear();
-
-			// A new bundleStart cancels the old timer before it fires
+			await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
 			controller.onBundleStart({ type: "bundleStart", config });
 			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 			await bus.waitFor("reloadComplete");
 
 			vi.mocked(createWorkerPreview).mockClear();
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				30 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(20 * 60 * 1000 + 1);
+			await reloadPromise;
+			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+			expect(createPreviewSession).toHaveBeenCalledTimes(2);
+		});
 
-			// Advance to just before T2 would fire — no proactive refresh should occur
-			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 - 1);
-			expect(createWorkerPreview).not.toHaveBeenCalled();
+		it("should retain the refresh timer when a rebuild fails", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: makeBundle(),
+			});
+			await bus.waitFor("reloadComplete");
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			vi.mocked(createWorkerPreview).mockClear();
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			await reloadPromise;
+			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+		});
+
+		it("should stop refreshing when switching to local mode", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: makeBundle(),
+			});
+			await bus.waitFor("reloadComplete");
+
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 - 1_000);
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: makeConfig({ dev: { ...config.dev, remote: false } }),
+			});
+			vi.mocked(getWorkerAccountAndContext).mockClear();
+			await vi.advanceTimersByTimeAsync(1_001);
+			expect(getWorkerAccountAndContext).not.toHaveBeenCalled();
 		});
 
 		it("should cancel the proactive refresh timer on teardown", async ({
