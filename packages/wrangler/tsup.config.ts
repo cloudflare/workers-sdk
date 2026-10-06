@@ -111,14 +111,16 @@ export default defineConfig((options) => [
 			compilerOptions: {
 				baseUrl: ".",
 				paths: {
-					"@cloudflare/workers-utils": ["../workers-utils/src/index.ts"],
 					"@cloudflare/remote-bindings": ["../remote-bindings/src/index.ts"],
 				},
 			},
-			// Resolve only the remaining private type dependencies that are safe
-			// for tsup's node_modules resolver to inline. The workspace packages
-			// above use declaration-only source paths because they publish through
-			// conditional .d.mts exports, which tsup 8.3's resolver does not probe.
+			// Resolve only private type dependencies that are safe for tsup's
+			// declaration bundler to inline. @cloudflare/workers-utils stays
+			// external in declarations because its Binding types contain unique
+			// symbols whose identity must be shared with downstream consumers.
+			// @cloudflare/remote-bindings uses a declaration-only source path
+			// because it publishes through conditional .d.mts exports, which
+			// tsup 8.3's resolver does not probe.
 			resolve: [
 				"@cloudflare/workflows-shared/src/types",
 				"@cloudflare/containers-shared",
@@ -131,6 +133,9 @@ export default defineConfig((options) => [
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
 		external: EXTERNAL_DEPENDENCIES,
+		// workers-utils is a published type dependency, but Wrangler's CJS runtime
+		// must continue bundling it because the package root is ESM-only.
+		noExternal: ["@cloudflare/workers-utils"],
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "import_meta_url.js")],
 		// mainFields: ["module", "main"],

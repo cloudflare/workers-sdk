@@ -2,6 +2,6 @@
 "wrangler": patch
 ---
 
-Remove private build dependencies from Wrangler's published declaration surface
+Remove unresolved private build dependencies from Wrangler's published declaration surface
 
-Wrangler now resolves bundled, dev-only type dependencies into its declaration output instead of exposing them as imports that downstream projects cannot install. Runtime dependencies and peer dependencies remain external.
+Wrangler now inlines declaration dependencies that are safe to bundle, keeps `@cloudflare/workers-utils` external in declarations as a declared dependency so nominal symbol identities remain shared, while continuing to bundle its runtime into Wrangler.

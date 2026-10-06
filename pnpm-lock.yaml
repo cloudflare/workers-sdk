@@ -4582,6 +4582,9 @@ importers:
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
@@ -4658,9 +4661,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20261006.1
-      '@cloudflare/workers-utils':
-        specifier: workspace:*
-        version: link:../workers-utils
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
