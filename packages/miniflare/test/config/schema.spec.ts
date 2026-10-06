@@ -254,7 +254,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 	}) => {
 		expect(
 			MiniflareWorkerConfigSchema.parse({
-				type: "worker",
 				name: "api",
 				compatibilityDate: "2026-01-01",
 				env: {
