@@ -1,6 +1,8 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
-import { devNull } from "node:os";
+import { randomUUID } from "node:crypto";
+import { devNull, tmpdir } from "node:os";
+import path from "node:path";
 
 const decoder = new TextDecoder();
 type GitOptions = { allowFailure?: boolean; timeout?: number };
@@ -31,8 +33,12 @@ export function gitEnvironment(
 	return {
 		...env,
 		GIT_CONFIG_NOSYSTEM: "1",
-		// Git for Windows cannot open Node's devNull path; use its NUL alias.
-		GIT_CONFIG_GLOBAL: process.platform === "win32" ? "NUL" : devNull,
+		// Git for Windows cannot read null-device paths. A unique, nonexistent
+		// config path prevents it from falling back to the host's Git settings.
+		GIT_CONFIG_GLOBAL:
+			process.platform === "win32"
+				? path.join(tmpdir(), `miniflare-artifacts-empty-${randomUUID()}`)
+				: devNull,
 		GIT_CONFIG_COUNT: "1",
 		GIT_CONFIG_KEY_0: "credential.helper",
 		GIT_CONFIG_VALUE_0: "",

@@ -109,10 +109,7 @@ function git(args: string[], cwd?: string) {
 	return exec("git", args, {
 		cwd,
 		env: {
-			...process.env,
-			GIT_CONFIG_NOSYSTEM: "1",
-			GIT_CONFIG_GLOBAL: devNull,
-			GIT_TERMINAL_PROMPT: "0",
+			...gitEnvironment(),
 			GIT_AUTHOR_NAME: "Miniflare",
 			GIT_AUTHOR_EMAIL: "miniflare@example.com",
 			GIT_COMMITTER_NAME: "Miniflare",
@@ -178,9 +175,11 @@ test("artifacts: native Git subprocesses do not inherit Cloudflare or host crede
 	expect(env.GIT_ASKPASS).toBeUndefined();
 	expect(env.GITHUB_TOKEN).toBeUndefined();
 	expect(env.GIT_CONFIG_VALUE_0).toBe("");
-	expect(env.GIT_CONFIG_GLOBAL).toBe(
-		process.platform === "win32" ? "NUL" : devNull
-	);
+	if (process.platform === "win32") {
+		expect(env.GIT_CONFIG_GLOBAL).toContain("miniflare-artifacts-empty-");
+	} else {
+		expect(env.GIT_CONFIG_GLOBAL).toBe(devNull);
+	}
 });
 
 test("artifacts: Git client imports and reads a local fixture", async ({
