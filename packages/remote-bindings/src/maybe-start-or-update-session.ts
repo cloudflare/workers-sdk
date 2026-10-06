@@ -49,10 +49,12 @@ export type RemoteProxySessionData = {
 	/**
 	 * Edge connection strings for remote Hyperdrive bindings, keyed by binding
 	 * name. The edge mints per-session credentials, so a database client has to
-	 * present *these* to authenticate through the proxy. Fetched here, once per
-	 * session, so that every consumer of a session — `wrangler dev`,
-	 * `getPlatformProxy()`, the Vite plugin, `vitest-pool-workers` — receives
-	 * usable credentials without repeating the setup.
+	 * present *these* to authenticate through the proxy. Fetched here, on every
+	 * call — including the reloads that reuse an existing session, since each
+	 * fetch has to come from a live connection — so that every consumer of a
+	 * session (`wrangler dev`, `getPlatformProxy()`, the Vite plugin,
+	 * `vitest-pool-workers`) receives usable credentials without repeating the
+	 * setup.
 	 */
 	hyperdriveConnectionStrings: Map<string, string>;
 };
@@ -77,17 +79,47 @@ export type RemoteBindingsContext = {
  */
 export const HYPERDRIVE_KEEPALIVE_INTERVAL_MS = 20 * 60 * 1000;
 
-// Tracks the keepalive timer already installed for a session, so repeated
-// calls to `maybeStartOrUpdateRemoteProxySession` that reuse the same
-// session (auth and bindings unchanged) don't stack up duplicate timers.
-// Keyed by the session object itself so it's automatically dropped once the
-// session is no longer reachable — this is a background convenience, not a
-// substitute for clearing the interval on `dispose()`.
-const hyperdriveKeepalives = new WeakSet<RemoteProxySession>();
+/**
+ * A session's running Hyperdrive keepalive.
+ *
+ * `bindings` is re-read on every tick rather than captured once: a session
+ * outlives the reloads that reuse it, and the set of remote Hyperdrive
+ * bindings can change between them. A timer closed over the set from its
+ * first installation would keep refreshing bindings that no longer exist and
+ * never refresh the ones that replaced them — reviving the very expiry this
+ * keepalive exists to prevent.
+ *
+ * `timer` is `undefined` while no remote Hyperdrive binding is configured.
+ * The record itself outlives that gap so `dispose` only ever needs patching
+ * once, however many times bindings come and go.
+ */
+type HyperdriveKeepalive = {
+	bindings: StartDevWorkerInput["bindings"];
+	timer: ReturnType<typeof setInterval> | undefined;
+};
+
+// Keyed by the session object so a record is dropped once its session is
+// unreachable. That is a backstop, not the mechanism: the interval is cleared
+// in the patched `dispose()` below.
+const hyperdriveKeepalives = new WeakMap<
+	RemoteProxySession,
+	HyperdriveKeepalive
+>();
+
+function hasRemoteHyperdriveBinding(
+	bindings: StartDevWorkerInput["bindings"]
+): boolean {
+	return Object.values(bindings ?? {}).some(
+		(binding) =>
+			binding.type === "hyperdrive" &&
+			"remote" in binding &&
+			Boolean(binding.remote)
+	);
+}
 
 /**
- * Installs a periodic Hyperdrive credential keepalive for a session, unless
- * one is already running or the session has no remote Hyperdrive bindings.
+ * Starts, retargets, or stops a session's periodic Hyperdrive credential
+ * keepalive so that it always reflects the bindings this call was given.
  *
  * This re-runs the same fetch used to seed credentials at session start,
  * discarding the result — it exists purely to keep the edge's per-session
@@ -104,23 +136,47 @@ function ensureHyperdriveKeepalive(
 	bindings: StartDevWorkerInput["bindings"],
 	logger: RemoteBindingsLogger
 ): void {
-	if (hyperdriveKeepalives.has(session)) {
-		return;
-	}
-	const hasRemoteHyperdrive = Object.values(bindings ?? {}).some(
-		(binding) =>
-			binding.type === "hyperdrive" &&
-			"remote" in binding &&
-			Boolean(binding.remote)
-	);
-	if (!hasRemoteHyperdrive) {
+	const wanted = hasRemoteHyperdriveBinding(bindings);
+	const existing = hyperdriveKeepalives.get(session);
+
+	if (existing) {
+		existing.bindings = bindings;
+		if (!wanted) {
+			// Every remote Hyperdrive binding is gone; there is nothing left at the
+			// edge to keep warm. Stop ticking, but keep the record so a binding
+			// added later restarts the timer without patching `dispose` again.
+			clearInterval(existing.timer);
+			existing.timer = undefined;
+		} else if (existing.timer === undefined) {
+			existing.timer = startKeepaliveTimer(session, existing, logger);
+		}
 		return;
 	}
 
-	hyperdriveKeepalives.add(session);
+	if (!wanted) {
+		return;
+	}
+
+	const record: HyperdriveKeepalive = { bindings, timer: undefined };
+	record.timer = startKeepaliveTimer(session, record, logger);
+	hyperdriveKeepalives.set(session, record);
+
+	const originalDispose = session.dispose.bind(session);
+	session.dispose = async () => {
+		clearInterval(record.timer);
+		record.timer = undefined;
+		await originalDispose();
+	};
+}
+
+function startKeepaliveTimer(
+	session: RemoteProxySession,
+	record: HyperdriveKeepalive,
+	logger: RemoteBindingsLogger
+): ReturnType<typeof setInterval> {
 	const timer = setInterval(() => {
 		seedRemoteHyperdriveBindings(
-			bindings,
+			record.bindings,
 			session.remoteProxyConnectionString
 		).catch((error) => {
 			logger.debug(
@@ -129,13 +185,9 @@ function ensureHyperdriveKeepalive(
 				}`
 			);
 		});
-	}, HYPERDRIVE_KEEPALIVE_INTERVAL_MS).unref();
-
-	const originalDispose = session.dispose.bind(session);
-	session.dispose = async () => {
-		clearInterval(timer);
-		await originalDispose();
-	};
+	}, HYPERDRIVE_KEEPALIVE_INTERVAL_MS);
+	timer.unref();
+	return timer;
 }
 
 /** Potentially starts or updates a remote proxy session. */
