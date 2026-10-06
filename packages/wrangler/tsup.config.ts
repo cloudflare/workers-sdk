@@ -108,7 +108,25 @@ export default defineConfig((options) => [
 		platform: "node",
 		format: "cjs",
 		dts: {
-			resolve: ["@cloudflare/workflows-shared/src/types"],
+			compilerOptions: {
+				baseUrl: ".",
+				paths: {
+					"@cloudflare/workers-utils": ["../workers-utils/src/index.ts"],
+					"@cloudflare/remote-bindings": ["../remote-bindings/src/index.ts"],
+				},
+			},
+			// Resolve only the remaining private type dependencies that are safe
+			// for tsup's node_modules resolver to inline. The workspace packages
+			// above use declaration-only source paths because they publish through
+			// conditional .d.mts exports, which tsup 8.3's resolver does not probe.
+			resolve: [
+				"@cloudflare/workflows-shared/src/types",
+				"@cloudflare/containers-shared",
+				"@cloudflare/workers-shared",
+				"devtools-protocol",
+				"devtools-protocol/types/protocol-mapping",
+				"undici",
+			],
 		},
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
