@@ -559,21 +559,39 @@ describe("previewBuildOutput", () => {
 
 		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
 		expect(request).not.toHaveProperty("main_module");
+		expect(request).not.toHaveProperty("modules");
 		expect(request).toMatchObject({
-			assets: { jwt: "asset-token" },
-			modules: [
-				{
-					name: "_headers",
-					content_type: "text/plain",
-					content: "/assets/*\n  X-Test: yes",
+			assets: {
+				jwt: "asset-token",
+				config: {
+					_headers: "/assets/*\n  X-Test: yes",
+					_redirects: "/old /new 301",
 				},
-				{
-					name: "_redirects",
-					content_type: "text/plain",
-					content: "/old /new 301",
-				},
-			],
+			},
 		});
+	});
+
+	it("keeps asset routing files out of Worker modules", async ({ expect }) => {
+		const directory = path.join(process.cwd(), "assets");
+		mkdirSync(directory);
+		writeFileSync(path.join(directory, "_headers"), "/assets/*\n  X-Test: yes");
+		writeFileSync(path.join(directory, "_redirects"), "/old /new 301");
+
+		await uploadPreview(buildOutputConfig({ assets: {} }), { directory });
+
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request).toMatchObject({
+			main_module: "index.js",
+			assets: {
+				config: {
+					_headers: "/assets/*\n  X-Test: yes",
+					_redirects: "/old /new 301",
+				},
+			},
+		});
+		expect(request.modules).toEqual([
+			expect.objectContaining({ name: "index.js" }),
+		]);
 	});
 
 	it("preserves a nested main module path", async ({ expect }) => {

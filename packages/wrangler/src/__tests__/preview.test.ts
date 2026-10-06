@@ -4316,10 +4316,22 @@ describe("wrangler preview", () => {
 			);
 			expect(deploymentRequestBody?.assets).toMatchObject({
 				jwt: "assets-jwt-from-session",
-				config: { base_path: "/subpath", run_worker_first: true },
+				config: {
+					base_path: "/subpath",
+					run_worker_first: true,
+					_headers: "/\n  Cache-Control: max-age=3600",
+					_redirects: "/old /new 301",
+				},
 			});
 			expect(deploymentRequestBody?.main_module).toBeDefined();
 			expect(Array.isArray(deploymentRequestBody?.modules)).toBe(true);
+			const moduleNames = (
+				deploymentRequestBody?.modules as
+					| PreviewDeploymentModulePart[]
+					| undefined
+			)?.map((module) => module.name);
+			expect(moduleNames).not.toContain("_headers");
+			expect(moduleNames).not.toContain("_redirects");
 			// No assets binding configured, so no env entry should be emitted
 			const env = deploymentRequestBody?.env as
 				| Record<string, { type: string }>

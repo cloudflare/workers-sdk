@@ -624,8 +624,7 @@ function getPreviewMigrationsToUpload(
 }
 
 function buildResultToDeploymentModules(
-	buildResult: PreviewWorkerBuildResult | undefined,
-	assetFiles?: { _headers?: string; _redirects?: string }
+	buildResult: PreviewWorkerBuildResult | undefined
 ): { main_module?: string; modules: PreviewDeploymentModule[] } {
 	let mainModuleName: string | undefined;
 	const deploymentModules: PreviewDeploymentModule[] = [];
@@ -660,22 +659,6 @@ function buildResultToDeploymentModules(
 		);
 	}
 
-	if (assetFiles?._headers !== undefined) {
-		deploymentModules.push({
-			name: "_headers",
-			content_type: "text/plain",
-			content: assetFiles._headers,
-		});
-	}
-
-	if (assetFiles?._redirects !== undefined) {
-		deploymentModules.push({
-			name: "_redirects",
-			content_type: "text/plain",
-			content: assetFiles._redirects,
-		});
-	}
-
 	return { main_module: mainModuleName, modules: deploymentModules };
 }
 
@@ -698,10 +681,7 @@ async function assemblePreviewDeploymentSettings(
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const request: CreatePreviewDeploymentRequestParams = {};
-	const deploymentModules = buildResultToDeploymentModules(buildResult, {
-		_headers: options.assetsOptions?._headers,
-		_redirects: options.assetsOptions?._redirects,
-	});
+	const deploymentModules = buildResultToDeploymentModules(buildResult);
 	if (deploymentModules.main_module !== undefined) {
 		request.main_module = deploymentModules.main_module;
 	}
@@ -719,6 +699,8 @@ async function assemblePreviewDeploymentSettings(
 		request.assets = {
 			jwt: assetsUploadResult.jwt,
 			config: {
+				_headers: options.assetsOptions._headers,
+				_redirects: options.assetsOptions._redirects,
 				html_handling: options.assetsOptions.assetConfig.html_handling,
 				not_found_handling:
 					options.assetsOptions.assetConfig.not_found_handling,

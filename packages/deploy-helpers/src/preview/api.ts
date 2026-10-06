@@ -114,6 +114,8 @@ export type CreatePreviewDeploymentRequestParams = {
 	assets?: {
 		jwt: string;
 		config: {
+			_headers?: string;
+			_redirects?: string;
 			html_handling?: string;
 			not_found_handling?: string;
 			base_path?: string;
