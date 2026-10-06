@@ -80,6 +80,7 @@ export type PreviewArgs = {
 	/**
 	 * Set to false to return the result without progress or summary output.
 	 * Warnings are still logged and failures still reject the promise.
+	 * Confirmation prompts are unchanged.
 	 */
 	log?: boolean;
 	ignoreBaseConfig: boolean;
@@ -1052,14 +1053,16 @@ Resources: https://developers.cloudflare.com/workers/previews/resources/`);
  * @param config The resolved Wrangler config.
  * @param accountId The Cloudflare account ID.
  * @param workerName The parent Worker name.
- * @param json Whether to suppress human-readable output.
+ * @param json Whether to use the existing non-interactive JSON mode.
+ * @param log Whether to log parent Worker creation progress.
  * @returns A promise that resolves when the parent Worker has been created.
  */
 async function provisionParentWorker(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	json: boolean
+	json: boolean,
+	log = true
 ): Promise<void> {
 	const confirmed =
 		json ||
@@ -1075,7 +1078,7 @@ async function provisionParentWorker(
 		);
 	}
 
-	if (!json) {
+	if (!json && log) {
 		logger.log(`🌀 Creating new Worker "${workerName}"...`);
 	}
 	const routes = config.routes ?? (config.route ? [config.route] : []);
@@ -1159,7 +1162,8 @@ async function runPreview(
 				config,
 				accountId,
 				workerName,
-				args.json === true || args.log === false
+				args.json ?? false,
+				args.log !== false
 			);
 		} else if (!(e instanceof Error && "code" in e && e.code === 10025)) {
 			throw e;
