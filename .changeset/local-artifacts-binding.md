@@ -2,7 +2,6 @@
 "miniflare": minor
 "wrangler": minor
 "@cloudflare/workers-utils": minor
-"@cloudflare/remote-bindings": minor
 ---
 
 Add a local Artifacts binding simulator backed by native Git for Worker development

@@ -178,7 +178,9 @@ test("artifacts: native Git subprocesses do not inherit Cloudflare or host crede
 	expect(env.GIT_ASKPASS).toBeUndefined();
 	expect(env.GITHUB_TOKEN).toBeUndefined();
 	expect(env.GIT_CONFIG_VALUE_0).toBe("");
-	expect(env.GIT_CONFIG_GLOBAL).toBe(devNull);
+	expect(env.GIT_CONFIG_GLOBAL).toBe(
+		process.platform === "win32" ? "NUL" : devNull
+	);
 });
 
 test("artifacts: Git client imports and reads a local fixture", async ({

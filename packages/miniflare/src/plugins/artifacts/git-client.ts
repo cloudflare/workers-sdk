@@ -31,7 +31,8 @@ export function gitEnvironment(
 	return {
 		...env,
 		GIT_CONFIG_NOSYSTEM: "1",
-		GIT_CONFIG_GLOBAL: devNull,
+		// Git for Windows cannot open Node's devNull path; use its NUL alias.
+		GIT_CONFIG_GLOBAL: process.platform === "win32" ? "NUL" : devNull,
 		GIT_CONFIG_COUNT: "1",
 		GIT_CONFIG_KEY_0: "credential.helper",
 		GIT_CONFIG_VALUE_0: "",

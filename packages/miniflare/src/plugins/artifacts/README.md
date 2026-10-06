@@ -17,7 +17,7 @@ sequenceDiagram
 
     Dev->>MF: Configure Artifacts binding
     MF->>Plugin: getBindings()
-    Plugin->>Plugin: Select local; validate namespace
+    Plugin->>Plugin: Select local and validate namespace
     Plugin-->>MF: Bind to local namespace entrypoint
     MF->>Plugin: getServices()
     Plugin->>Controller: get(Git storage path)
