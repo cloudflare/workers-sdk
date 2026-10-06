@@ -92,6 +92,7 @@ export const r2ObjectGetCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner({ pipe }) {
 			return !pipe;
 		},
@@ -265,6 +266,7 @@ export const r2ObjectPutCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation(args) {
 			return !args?.pipe;
 		},
@@ -494,6 +496,7 @@ export const r2ObjectDeleteCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	async handler(args) {
@@ -584,6 +587,7 @@ export const r2BulkPutCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	async handler(yArgs, { config }) {

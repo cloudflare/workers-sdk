@@ -10,46 +10,9 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockProcess } from "./helpers/mock-process";
+import { mockTemporaryPreviewAccount } from "./helpers/mock-temporary-account";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-
-const temporaryPreviewAccountUrl =
-	"https://api.cloudflare.com/client/v4/provisioning/previews";
-
-/** Mocks the temporary preview-account challenge and creation endpoints. */
-function mockTemporaryPreviewAccount(): void {
-	msw.use(
-		// Small k/g so the proof-of-work solve is instant.
-		http.post(`${temporaryPreviewAccountUrl}/challenge`, () =>
-			HttpResponse.json(
-				createFetchResult({
-					challengeToken: "challenge-token",
-					seed: Buffer.alloc(32, 1).toString("base64url"),
-					k: 2,
-					g: 2,
-					s: 16,
-					expiresAt: 9999999999,
-				})
-			)
-		),
-		http.post(temporaryPreviewAccountUrl, () =>
-			HttpResponse.json(
-				createFetchResult({
-					account: {
-						id: "preview-account-id",
-						name: "Preview Account Alpha",
-						apiToken: "preview-account-token",
-						expiresAt: "2027-01-01T00:00:00.000Z",
-					},
-					claim: {
-						url: "https://dash.cloudflare.com/claim-preview",
-						expiresAt: "2027-01-02T00:00:00.000Z",
-					},
-				})
-			)
-		)
-	);
-}
 
 describe("temporary account notices", () => {
 	mockApiToken({ apiToken: null });
