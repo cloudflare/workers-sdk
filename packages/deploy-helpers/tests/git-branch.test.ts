@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { removeDirSync } from "@cloudflare/workers-utils";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { resolveGitBranchName } from "../src/shared/git-branch";
 
 function git(cwd: string, args: string[]) {
@@ -27,14 +28,14 @@ describe("resolveGitBranchName", () => {
 
 	afterEach(() => {
 		process.chdir(previousCwd);
-		rmSync(repo, { recursive: true, force: true });
+		removeDirSync(repo);
 	});
 
-	it("returns the branch name for an unborn repository", () => {
+	it("returns the branch name for an unborn repository", ({ expect }) => {
 		expect(resolveGitBranchName()).toBe("fresh-unborn");
 	});
 
-	it("does not leak git stderr when resolving an unborn branch", () => {
+	it("does not leak git stderr when resolving an unborn branch", ({ expect }) => {
 		const err = vi.spyOn(process.stderr, "write");
 		expect(resolveGitBranchName()).toBe("fresh-unborn");
 		const leaked = err.mock.calls
@@ -45,7 +46,7 @@ describe("resolveGitBranchName", () => {
 		expect(leaked).toBe(false);
 	});
 
-	it("returns undefined for a detached HEAD", () => {
+	it("returns undefined for a detached HEAD", ({ expect }) => {
 		writeFileSync(join(repo, "file.txt"), "hi\n");
 		git(repo, ["add", "file.txt"]);
 		git(repo, ["commit", "-m", "init"]);
@@ -54,7 +55,7 @@ describe("resolveGitBranchName", () => {
 		expect(resolveGitBranchName()).toBeUndefined();
 	});
 
-	it("returns the branch name after the first commit", () => {
+	it("returns the branch name after the first commit", ({ expect }) => {
 		writeFileSync(join(repo, "file.txt"), "hi\n");
 		git(repo, ["add", "file.txt"]);
 		git(repo, ["commit", "-m", "init"]);
