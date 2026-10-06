@@ -12,6 +12,7 @@ import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
 import { buildOutputContainers } from "../build-output-containers";
 import {
+	applyWorkerEsbuildSupported,
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
@@ -104,6 +105,17 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				ctx.resolvedPluginConfig,
 				ctx.resolvedViteConfig
 			);
+
+			if (ctx.resolvedPluginConfig.type === "workers") {
+				const {
+					environmentNameToWorkerMap,
+					environmentNameToChildEnvironmentNamesMap,
+				} = ctx.resolvedPluginConfig;
+				applyWorkerEsbuildSupported(resolvedViteConfig, [
+					...environmentNameToWorkerMap.keys(),
+					...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
+				]);
+			}
 
 			if (ctx.resolvedPluginConfig.experimental.newConfig?.cfBuildOutput) {
 				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
