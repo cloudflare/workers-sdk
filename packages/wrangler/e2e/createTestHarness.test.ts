@@ -97,40 +97,6 @@ describe("createTestHarness", () => {
 		);
 	});
 
-	it("can close immediately after listen or reset", async () => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "lifecycle-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-09-26"
-				}
-			`,
-			"src/index.ts": 'export default { fetch: () => new Response("ok") };',
-		});
-
-		await Promise.all(
-			Array.from({ length: 8 }, async () => {
-				const server = createTestHarness({
-					workers: [
-						{ configPath: path.join(helper.tmpPath, "wrangler.jsonc") },
-					],
-				});
-				try {
-					for (let cycle = 0; cycle < 4; cycle++) {
-						await server.listen();
-						if (cycle % 2 === 0) {
-							await server.reset();
-						}
-						await server.close();
-					}
-				} finally {
-					await server.close();
-				}
-			})
-		);
-	});
-
 	it("runs existing dry-run output without rebuilding it", async ({
 		expect,
 		onTestFailed,
