@@ -49,7 +49,8 @@ function namespaceId(namespace: string): string {
 }
 
 function localServiceName(namespace: string): string {
-	return `${ARTIFACTS_PLUGIN_NAME}:${namespaceId(namespace)}`;
+	// Workerd also uses this as the Durable Object storage key/directory name.
+	return `${ARTIFACTS_PLUGIN_NAME}-${namespaceId(namespace)}`;
 }
 
 export const ARTIFACTS_PLUGIN: Plugin = {
@@ -131,10 +132,10 @@ async function createLocalNamespaceRuntime(
 		path.join(persistPath, "git")
 	);
 	const serviceName = localServiceName(namespace);
-	const storageName = `${serviceName}:storage`;
-	const backendName = `${serviceName}:backend`;
+	const storageName = `${serviceName}-storage`;
+	const backendName = `${serviceName}-backend`;
 	const socket: Socket = {
-		name: `${serviceName}:git`,
+		name: `${serviceName}-git`,
 		address: `127.0.0.1:${port}`,
 		http: {},
 		service: { name: serviceName, entrypoint: ENTRYPOINT },
