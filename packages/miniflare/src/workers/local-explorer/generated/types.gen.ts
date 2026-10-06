@@ -263,7 +263,7 @@ export type D1DatabaseName = string;
 /**
  * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
  */
-export type D1JurisdictionNullable = "eu" | "fedramp";
+export type D1JurisdictionNullable = "eu" | "fedramp" | "us";
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
@@ -324,6 +324,41 @@ export type WorkersKvBulkGetResult = {
  */
 export type WorkersKvKeyNameBulk = string;
 
+export type WorkersKvBulkDelete = Array<WorkersKvKeyNameBulk>;
+
+export type WorkersKvBulkResult = {
+	/**
+	 * Number of keys successfully updated.
+	 */
+	successful_key_count?: number;
+	/**
+	 * Name of the keys that failed to be fully updated. They should be retried.
+	 */
+	unsuccessful_keys?: Array<string>;
+};
+
+export type WorkersKvBulkWrite = Array<{
+	/**
+	 * Indicates whether or not the server should base64 decode the value before storing it. Useful for writing values that wouldn't otherwise be valid JSON strings, such as images.
+	 */
+	base64?: boolean;
+	expiration?: WorkersKvExpiration;
+	expiration_ttl?: WorkersKvExpirationTtl;
+	key: WorkersKvKeyNameBulk;
+	metadata?: WorkersKvListMetadata;
+	/**
+	 * A UTF-8 encoded string to be stored, up to 25 MiB in length.
+	 */
+	value: string;
+}>;
+
+export type WorkersKvListMetadata = WorkersKvAny & unknown;
+
+/**
+ * Expires the key after a number of seconds. Must be at least 60.
+ */
+export type WorkersKvExpirationTtl = number;
+
 export type WorkersKvApiResponseCommonNoResult = WorkersKvApiResponseCommon & {
 	result?: {
 		[key: string]: unknown;
@@ -381,8 +416,6 @@ export type WorkersKvKey = {
 	name: WorkersKvKeyName;
 };
 
-export type WorkersKvListMetadata = WorkersKvAny & unknown;
-
 /**
  * Namespace identifier tag.
  */
@@ -419,6 +452,142 @@ export type WorkersKvResultInfo = {
 	 * Total number of results for the requested service.
 	 */
 	count?: number;
+};
+
+export type LocalExplorerScheduledRequest = {
+	cron: string;
+	/**
+	 * Epoch milliseconds within workerd's signed 64-bit nanosecond range.
+	 */
+	scheduled_time?: number;
+};
+
+export type LocalExplorerScheduledResult = {
+	outcome: string;
+	noRetry: boolean;
+	[key: string]: unknown;
+};
+
+export type FlagshipApp = {
+	/**
+	 * The Flagship app id the bindings point at
+	 */
+	id: string;
+	/**
+	 * Binding names in this instance using the app
+	 */
+	bindings: Array<string>;
+};
+
+export type FlagshipBaseCondition = {
+	attribute: string;
+	operator:
+		| "equals"
+		| "not_equals"
+		| "greater_than"
+		| "less_than"
+		| "greater_than_or_equals"
+		| "less_than_or_equals"
+		| "contains"
+		| "starts_with"
+		| "ends_with"
+		| "in"
+		| "not_in"
+		| "has"
+		| "not_has";
+	value: unknown;
+};
+
+export type FlagshipLogicalCondition = {
+	logical_operator: "AND" | "OR";
+	clauses: Array<FlagshipCondition>;
+};
+
+export type FlagshipCondition =
+	| FlagshipBaseCondition
+	| FlagshipLogicalCondition;
+
+export type FlagshipRule = {
+	/**
+	 * Evaluation order, lowest first
+	 */
+	priority: number;
+	/**
+	 * Conditions that must match for the rule to apply
+	 */
+	conditions: Array<FlagshipCondition>;
+	/**
+	 * Variation served when the rule matches
+	 */
+	serve_variation: string;
+	/**
+	 * Percentage rollout applied to matching contexts
+	 */
+	rollout?: {
+		percentage: number;
+		attribute?: string;
+	};
+};
+
+export type FlagshipFlag = {
+	/**
+	 * Flag key
+	 */
+	key: string;
+	/**
+	 * Type shared by the flag's variations
+	 */
+	type: "boolean" | "string" | "number" | "json";
+	/**
+	 * Human readable description
+	 */
+	description?: string | null;
+	/**
+	 * Whether the flag is enabled
+	 */
+	enabled: boolean;
+	/**
+	 * Variation served when no rule matches
+	 */
+	default_variation: string;
+	/**
+	 * Named values the flag can serve
+	 */
+	variations: {
+		[key: string]: unknown;
+	};
+	/**
+	 * Targeting rules, in priority order
+	 */
+	rules: Array<FlagshipRule>;
+	/**
+	 * When the flag was last written locally
+	 */
+	updated_at: string;
+};
+
+export type FlagshipEvaluation = {
+	flagKey: string;
+	/**
+	 * The resolved flag value
+	 */
+	value: unknown;
+	/**
+	 * Name of the variation served
+	 */
+	variant: string;
+	/**
+	 * Why this value was served
+	 */
+	reason:
+		| "STATIC"
+		| "TARGETING_MATCH"
+		| "DEFAULT"
+		| "DISABLED"
+		| "SPLIT"
+		| "ERROR";
+	errorCode?: string;
+	errorMessage?: string;
 };
 
 export type R2Object = {
@@ -580,7 +749,22 @@ export type LocalExplorerWorker = {
 	 * Worker name from the dev registry
 	 */
 	name: string;
+	/**
+	 * Opaque stable identifier for the worker's local project, used to scope browser persistence without exposing its filesystem path
+	 */
+	persistenceScope?: string;
 	bindings?: LocalExplorerWorkerBindings;
+	triggers?: LocalExplorerWorkerTriggers;
+};
+
+/**
+ * Trigger metadata for a worker
+ */
+export type LocalExplorerWorkerTriggers = {
+	/**
+	 * Exact configured Cron Trigger expressions
+	 */
+	crons: Array<string>;
 };
 
 /**
@@ -607,6 +791,21 @@ export type LocalExplorerWorkerBindings = {
 	 * Workflow bindings
 	 */
 	workflows?: Array<LocalExplorerWorkflowBinding>;
+	/**
+	 * Send Email bindings
+	 */
+	sendEmail?: Array<LocalExplorerNamedBinding>;
+	/**
+	 * Flagship app bindings
+	 */
+	flagship?: Array<LocalExplorerResourceBinding>;
+};
+
+export type LocalExplorerNamedBinding = {
+	/**
+	 * Name of the binding in the worker's env
+	 */
+	bindingName: string;
 };
 
 export type LocalExplorerResourceBinding = {
@@ -778,6 +977,330 @@ export type ObservabilityQueryResult = {
 	rows: Array<Array<unknown>>;
 };
 
+/**
+ * One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
+ */
+export type EmailHandlerEvent =
+	| {
+			type: "received" | "reject" | "unhandled";
+			/**
+			 * ISO 8601 timestamp of when the event occurred.
+			 */
+			timestamp: string;
+	  }
+	| {
+			type: "forward" | "reply";
+			/**
+			 * ISO 8601 timestamp of when the event occurred.
+			 */
+			timestamp: string;
+			/**
+			 * Correlates with the matching `forwards`/`replies` entry.
+			 */
+			messageId: string;
+	  };
+
+export type EmailHandlerForward = {
+	messageId: string;
+	/**
+	 * Envelope recipient the message was forwarded to.
+	 */
+	recipient: string;
+	/**
+	 * Headers added to the forwarded message.
+	 */
+	headers: Array<[string, string]>;
+};
+
+export type EmailHandlerReply = {
+	messageId: string;
+	/**
+	 * Address the reply was sent from.
+	 */
+	sender: string;
+	/**
+	 * Raw MIME content of the reply. Omitted from the routing list; present on the detail response.
+	 */
+	raw?: string;
+	/**
+	 * Lossless base64 representation of the reply MIME.
+	 */
+	rawBase64?: string;
+};
+
+export type EmailBase = {
+	/**
+	 * Worker associated with the email, if known.
+	 */
+	worker?: string;
+	/**
+	 * Envelope MAIL FROM address.
+	 */
+	from: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value carried by the email.
+	 */
+	messageId: string;
+	/**
+	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
+	 */
+	attachments: Array<EmailAttachment>;
+};
+
+export type EmailRoutingItem = {
+	/**
+	 * Worker that handled this captured delivery.
+	 */
+	worker?: string;
+	/**
+	 * Envelope MAIL FROM address.
+	 */
+	from: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value. This is message content and compatibility lookup material; captureId identifies the Routing record.
+	 */
+	messageId: string;
+	/**
+	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
+	 */
+	attachments: Array<EmailAttachment>;
+	/**
+	 * Opaque identifier for this exact captured delivery.
+	 */
+	captureId?: string;
+	/**
+	 * Whether this capture can be projected into the email composer.
+	 */
+	editAndResendAvailable?: boolean;
+	editAndResendUnavailableReason?: string;
+	/**
+	 * Whether this capture contains only a portion of the original message.
+	 */
+	capturedPortion?: boolean;
+	/**
+	 * Envelope RCPT TO address.
+	 */
+	to: string;
+	cc?: Array<string>;
+	headers?: {
+		[key: string]: string;
+	};
+	/**
+	 * Email headers as ordered name/value pairs, including duplicates.
+	 */
+	headerEntries?: Array<[string, string]>;
+	receivedAt: string;
+	rawSize: number;
+	/**
+	 * Whether the handler ran to completion or threw.
+	 */
+	outcome: "ok" | "exception";
+	/**
+	 * Reason passed to setReject(), if the handler rejected the message.
+	 */
+	rejectReason?: string;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
+};
+
+export type EmailRoutingDetail = {
+	worker: string;
+	/**
+	 * Envelope MAIL FROM address.
+	 */
+	from: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value. This is message content and compatibility lookup material; captureId identifies the Routing record.
+	 */
+	messageId: string;
+	/**
+	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
+	 */
+	attachments: Array<EmailAttachment>;
+	captureId: string;
+	editAndResendAvailable: boolean;
+	editAndResendUnavailableReason?: string;
+	capturedPortion: boolean;
+	/**
+	 * Envelope RCPT TO address.
+	 */
+	to: string;
+	cc?: Array<string>;
+	headers?: {
+		[key: string]: string;
+	};
+	/**
+	 * Email headers as ordered name/value pairs, including duplicates.
+	 */
+	headerEntries?: Array<[string, string]>;
+	receivedAt: string;
+	rawSize: number;
+	/**
+	 * Whether the handler ran to completion or threw.
+	 */
+	outcome: "ok" | "exception";
+	/**
+	 * Reason passed to setReject(), if the handler rejected the message.
+	 */
+	rejectReason?: string;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
+	/**
+	 * Parsed plain text body, when present.
+	 */
+	text?: string;
+	/**
+	 * Parsed HTML body, when present.
+	 */
+	html?: string;
+	/**
+	 * Raw MIME content of the received email.
+	 */
+	raw: string;
+	/**
+	 * Lossless base64 representation of the received MIME.
+	 */
+	rawBase64?: string;
+};
+
+/**
+ * Fields for composing a test email, mirroring MessageBuilder.
+ */
+export type EmailSendRequest = {
+	/**
+	 * Sender address.
+	 */
+	from: string;
+	/**
+	 * Recipient addresses.
+	 */
+	to: Array<string>;
+	cc?: Array<string>;
+	bcc?: Array<string>;
+	replyTo?: string;
+	subject: string;
+	/**
+	 * Plain text body.
+	 */
+	text?: string;
+	/**
+	 * HTML body.
+	 */
+	html?: string;
+	/**
+	 * Custom headers to include on the message.
+	 */
+	headers?: {
+		[key: string]: string;
+	};
+	/**
+	 * Attachments to include on the message, mirroring the MessageBuilder `attachments` entries accepted by a send_email binding. Adding any attachment composes the message as multipart/mixed.
+	 */
+	attachments?: Array<{
+		/**
+		 * Name the attachment is presented under.
+		 */
+		filename: string;
+		/**
+		 * MIME type of the attachment, e.g. 'application/pdf'.
+		 */
+		type: string;
+		/**
+		 * Attachment content, base64-encoded. MessageBuilder takes raw bytes here, but this endpoint accepts JSON so the bytes must be base64-encoded.
+		 */
+		content: string;
+		/**
+		 * Content-ID for an inline attachment.
+		 */
+		contentId?: string;
+		/**
+		 * How the attachment is presented. Defaults to 'attachment'.
+		 */
+		disposition?: "inline" | "attachment";
+	}>;
+};
+
+/**
+ * Metadata describing an attachment on a captured email, without its content.
+ */
+export type EmailAttachment = {
+	filename: string;
+	contentType: string;
+	disposition: "inline" | "attachment";
+	size: number;
+};
+
+export type EmailSendingItem = {
+	/**
+	 * Worker associated with the email, if known.
+	 */
+	worker?: string;
+	/**
+	 * Envelope MAIL FROM address.
+	 */
+	from: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value that identifies this Sending record for detail lookup.
+	 */
+	messageId: string;
+	/**
+	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
+	 */
+	attachments: Array<EmailAttachment>;
+	to: Array<string>;
+	cc?: Array<string>;
+	bcc?: Array<string>;
+	replyTo?: string;
+	sentAt: string;
+	headers?: {
+		[key: string]: string;
+	};
+};
+
+export type EmailSendingDetail = {
+	/**
+	 * Worker associated with the email, if known.
+	 */
+	worker?: string;
+	/**
+	 * Envelope MAIL FROM address.
+	 */
+	from: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value that identifies this Sending record for detail lookup.
+	 */
+	messageId: string;
+	/**
+	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
+	 */
+	attachments: Array<EmailAttachment>;
+	to: Array<string>;
+	cc?: Array<string>;
+	bcc?: Array<string>;
+	replyTo?: string;
+	sentAt: string;
+	headers?: {
+		[key: string]: string;
+	};
+	text?: string;
+	html?: string;
+	/**
+	 * Raw MIME content, present when sent via the EmailMessage API.
+	 */
+	raw?: string;
+	/**
+	 * Lossless base64 representation of sent MIME.
+	 */
+	rawBase64?: string;
+};
+
 export type R2ResultInfoWritable = {
 	[key: string]: unknown;
 };
@@ -806,9 +1329,11 @@ export type WorkersKvAnyWritable =
 	| null
 	| Array<WorkersKvAnyWritable>;
 
-export type WorkersKvMetadataWritable = WorkersKvAnyWritable & unknown;
+export type WorkersKvBulkDeleteWritable = Array<WorkersKvKeyNameBulk>;
 
 export type WorkersKvListMetadataWritable = WorkersKvAnyWritable & unknown;
+
+export type WorkersKvMetadataWritable = WorkersKvAnyWritable & unknown;
 
 export type WorkersKvNamespaceWritable = {
 	title: WorkersKvNamespaceTitle;
@@ -987,6 +1512,72 @@ export type WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses = {
 export type WorkersKvNamespaceWriteKeyValuePairWithMetadataResponse =
 	WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses[keyof WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses];
 
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsData = {
+	body: WorkersKvBulkWrite;
+	path: {
+		namespace_id: WorkersKvNamespaceIdentifier;
+	};
+	query?: never;
+	url: "/storage/kv/namespaces/{namespace_id}/bulk";
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsErrors = {
+	/**
+	 * Write multiple key-value pairs response failure.
+	 */
+	"4XX": WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsError =
+	WorkersKvNamespaceWriteMultipleKeyValuePairsErrors[keyof WorkersKvNamespaceWriteMultipleKeyValuePairsErrors];
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsResponses = {
+	/**
+	 * Write multiple key-value pairs response.
+	 */
+	200: WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsResponse =
+	WorkersKvNamespaceWriteMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceWriteMultipleKeyValuePairsResponses];
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsData = {
+	body: WorkersKvBulkDeleteWritable;
+	path: {
+		namespace_id: WorkersKvNamespaceIdentifier;
+	};
+	query?: never;
+	url: "/storage/kv/namespaces/{namespace_id}/bulk/delete";
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors = {
+	/**
+	 * Delete multiple key-value pairs response failure.
+	 */
+	"4XX": WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsError =
+	WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors[keyof WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors];
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses = {
+	/**
+	 * Delete multiple key-value pairs response.
+	 */
+	200: WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsResponse =
+	WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses];
+
 export type WorkersKvNamespaceGetMultipleKeyValuePairsData = {
 	body: {
 		/**
@@ -1093,6 +1684,129 @@ export type D1RawDatabaseQueryResponses = {
 
 export type D1RawDatabaseQueryResponse =
 	D1RawDatabaseQueryResponses[keyof D1RawDatabaseQueryResponses];
+
+export type WorChangeStatusWorkflowInstanceData = {
+	body:
+		| {
+				status: "pause";
+		  }
+		| {
+				status: "resume";
+		  }
+		| {
+				/**
+				 * Run rollback before terminating.
+				 */
+				rollback?: boolean;
+				status: "terminate";
+		  }
+		| {
+				/**
+				 * Step to restart from.
+				 */
+				from?: {
+					count?: number;
+					name: string;
+					type?: "do" | "sleep" | "waitForEvent";
+				};
+				status: "restart";
+		  };
+	path: {
+		workflow_name: string;
+		/**
+		 * Instance identifier. User-created instances match `^[a-zA-Z0-9_][a-zA-Z0-9-_]*$` (max 100 characters); cron-triggered instances can use a longer, system-generated id derived from the cron expression.
+		 */
+		instance_id: string;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/{instance_id}/status";
+};
+
+export type WorChangeStatusWorkflowInstanceErrors = {
+	/**
+	 * Bad Request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+	/**
+	 * Instance not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+	/**
+	 * Instance not in a restartable state.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+};
+
+export type WorChangeStatusWorkflowInstanceError =
+	WorChangeStatusWorkflowInstanceErrors[keyof WorChangeStatusWorkflowInstanceErrors];
+
+export type WorChangeStatusWorkflowInstanceResponses = {
+	/**
+	 * Change status of instance - it can be paused, resumed or terminated.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<{
+			code: number;
+			message: string;
+		}>;
+		result: {
+			status:
+				| "queued"
+				| "running"
+				| "paused"
+				| "errored"
+				| "terminated"
+				| "complete"
+				| "waitingForPause"
+				| "waiting"
+				| "rollingBack";
+			/**
+			 * Accepts ISO 8601 with no timezone offsets and in UTC.
+			 */
+			timestamp: string;
+		};
+		result_info?: {
+			count: number;
+			cursor?: string;
+			page?: number;
+			per_page: number;
+			total_count: number;
+			total_pages?: number;
+		};
+		success: true;
+	};
+};
+
+export type WorChangeStatusWorkflowInstanceResponse =
+	WorChangeStatusWorkflowInstanceResponses[keyof WorChangeStatusWorkflowInstanceResponses];
 
 export type DurableObjectsNamespaceListNamespacesData = {
 	body?: never;
@@ -1466,6 +2180,276 @@ export type LocalExplorerListWorkersResponses = {
 export type LocalExplorerListWorkersResponse =
 	LocalExplorerListWorkersResponses[keyof LocalExplorerListWorkersResponses];
 
+export type LocalExplorerDispatchScheduledData = {
+	body: LocalExplorerScheduledRequest;
+	path?: never;
+	query: {
+		/**
+		 * Exact Worker name available to Local Explorer.
+		 */
+		worker: string;
+	};
+	url: "/local/scheduled";
+};
+
+export type LocalExplorerDispatchScheduledErrors = {
+	/**
+	 * Scheduled invocation request failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type LocalExplorerDispatchScheduledError =
+	LocalExplorerDispatchScheduledErrors[keyof LocalExplorerDispatchScheduledErrors];
+
+export type LocalExplorerDispatchScheduledResponses = {
+	/**
+	 * Scheduled invocation result.
+	 */
+	200: WorkersApiResponseCommon & {
+		result: LocalExplorerScheduledResult;
+	};
+};
+
+export type LocalExplorerDispatchScheduledResponse =
+	LocalExplorerDispatchScheduledResponses[keyof LocalExplorerDispatchScheduledResponses];
+
+export type EmailListRoutingData = {
+	body?: never;
+	path?: never;
+	query?: {
+		/**
+		 * Only return emails received by this worker's email() handler.
+		 */
+		worker?: string;
+		/**
+		 * Compatibility lookup by RFC Message-ID. Returns the newest match and accepts bracketed or bracket-stripped values.
+		 */
+		email_id?: string;
+		/**
+		 * Canonical identifier for one captured delivery. Requires `worker` and never falls back to Message-ID lookup.
+		 */
+		capture_id?: string;
+		/**
+		 * Opaque cursor for the next page of emails.
+		 */
+		cursor?: string;
+		/**
+		 * Number of emails per page.
+		 */
+		per_page?: number;
+	};
+	url: "/local/email/routing";
+};
+
+export type EmailListRoutingErrors = {
+	/**
+	 * List received emails failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailListRoutingError =
+	EmailListRoutingErrors[keyof EmailListRoutingErrors];
+
+export type EmailListRoutingResponses = {
+	/**
+	 * List received emails response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<EmailRoutingItem> | EmailRoutingDetail;
+		result_info?: {
+			count?: number;
+			cursor?: string;
+			per_page?: number;
+			has_more?: boolean;
+		};
+	};
+};
+
+export type EmailListRoutingResponse =
+	EmailListRoutingResponses[keyof EmailListRoutingResponses];
+
+export type EmailResendRoutingData = {
+	body?: never;
+	path?: never;
+	query: {
+		/**
+		 * Worker that owns the exact Routing capture.
+		 */
+		worker: string;
+		/**
+		 * Opaque identifier for the exact captured delivery.
+		 */
+		capture_id: string;
+	};
+	url: "/local/email/routing/resend";
+};
+
+export type EmailResendRoutingErrors = {
+	/**
+	 * Email resend failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailResendRoutingError =
+	EmailResendRoutingErrors[keyof EmailResendRoutingErrors];
+
+export type EmailResendRoutingResponses = {
+	/**
+	 * Email resend result.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			messageId: string;
+			outcome: "ok" | "exception";
+			rejectReason?: string;
+			capturedPortion: boolean;
+		};
+	};
+};
+
+export type EmailResendRoutingResponse =
+	EmailResendRoutingResponses[keyof EmailResendRoutingResponses];
+
+export type EmailResendDraftRoutingData = {
+	body?: never;
+	path?: never;
+	query: {
+		/**
+		 * Worker that owns the exact Routing capture.
+		 */
+		worker: string;
+		/**
+		 * Opaque identifier for the exact captured delivery.
+		 */
+		capture_id: string;
+	};
+	url: "/local/email/routing/resend/draft";
+};
+
+export type EmailResendDraftRoutingErrors = {
+	/**
+	 * Composer projection failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailResendDraftRoutingError =
+	EmailResendDraftRoutingErrors[keyof EmailResendDraftRoutingErrors];
+
+export type EmailResendDraftRoutingResponses = {
+	/**
+	 * Composer projection response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: EmailSendRequest;
+	};
+};
+
+export type EmailResendDraftRoutingResponse =
+	EmailResendDraftRoutingResponses[keyof EmailResendDraftRoutingResponses];
+
+export type EmailSendRoutingData = {
+	body: EmailSendRequest;
+	path?: never;
+	query: {
+		/**
+		 * Deliver the test email directly to this worker's email() handler. Required because a single dev port can serve multiple workers, so the target cannot be inferred from the recipient address.
+		 */
+		worker: string;
+	};
+	url: "/local/email/routing/send";
+};
+
+export type EmailSendRoutingErrors = {
+	/**
+	 * Send test email failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailSendRoutingError =
+	EmailSendRoutingErrors[keyof EmailSendRoutingErrors];
+
+export type EmailSendRoutingResponses = {
+	/**
+	 * Send test email response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			/**
+			 * RFC Message-ID header value of the delivered test email.
+			 */
+			messageId?: string;
+			/**
+			 * Whether the handler ran to completion or threw.
+			 */
+			outcome?: "ok" | "exception";
+			/**
+			 * Reason passed to setReject(), if the handler rejected the message.
+			 */
+			rejectReason?: string;
+		};
+	};
+};
+
+export type EmailSendRoutingResponse =
+	EmailSendRoutingResponses[keyof EmailSendRoutingResponses];
+
+export type EmailListSendingData = {
+	body?: never;
+	path?: never;
+	query?: {
+		/**
+		 * Only return emails sent through this worker's send_email bindings.
+		 */
+		worker?: string;
+		/**
+		 * Return the details for this email instead of a paginated list.
+		 */
+		email_id?: string;
+		/**
+		 * Opaque cursor for the next page of emails.
+		 */
+		cursor?: string;
+		/**
+		 * Number of emails per page.
+		 */
+		per_page?: number;
+	};
+	url: "/local/email/sending";
+};
+
+export type EmailListSendingErrors = {
+	/**
+	 * List sent emails failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailListSendingError =
+	EmailListSendingErrors[keyof EmailListSendingErrors];
+
+export type EmailListSendingResponses = {
+	/**
+	 * List sent emails response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<EmailSendingItem> | EmailSendingDetail;
+		result_info?: {
+			count?: number;
+			cursor?: string;
+			per_page?: number;
+			has_more?: boolean;
+		};
+	};
+};
+
+export type EmailListSendingResponse =
+	EmailListSendingResponses[keyof EmailListSendingResponses];
+
 export type WorkflowsListWorkflowsData = {
 	body?: never;
 	path?: never;
@@ -1589,6 +2573,14 @@ export type WorkflowsListInstancesData = {
 			| "complete"
 			| "waitingForPause"
 			| "waiting";
+		/**
+		 * Only return instances created at or after this time. Accepts ISO 8601 with no timezone offsets and in UTC.
+		 */
+		date_start?: string;
+		/**
+		 * Only return instances created at or before this time. Accepts ISO 8601 with no timezone offsets and in UTC.
+		 */
+		date_end?: string;
 	};
 	url: "/workflows/{workflow_name}/instances";
 };
@@ -1666,6 +2658,48 @@ export type WorkflowsCreateInstanceResponses = {
 export type WorkflowsCreateInstanceResponse =
 	WorkflowsCreateInstanceResponses[keyof WorkflowsCreateInstanceResponses];
 
+export type WorkflowsBatchDeleteInstancesData = {
+	body: {
+		instances: Array<string>;
+	};
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/batch/delete";
+};
+
+export type WorkflowsBatchDeleteInstancesErrors = {
+	/**
+	 * Batch delete Workflow Instances response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsBatchDeleteInstancesError =
+	WorkflowsBatchDeleteInstancesErrors[keyof WorkflowsBatchDeleteInstancesErrors];
+
+export type WorkflowsBatchDeleteInstancesResponses = {
+	/**
+	 * Batch delete Workflow Instances response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			deleted: Array<{
+				id: string;
+			}>;
+			errors: Array<{
+				id: string;
+				code: number;
+				message: string;
+			}>;
+		};
+	};
+};
+
+export type WorkflowsBatchDeleteInstancesResponse =
+	WorkflowsBatchDeleteInstancesResponses[keyof WorkflowsBatchDeleteInstancesResponses];
+
 export type WorkflowsDeleteInstanceData = {
 	body?: never;
 	path: {
@@ -1731,66 +2765,6 @@ export type WorkflowsGetInstanceDetailsResponses = {
 
 export type WorkflowsGetInstanceDetailsResponse =
 	WorkflowsGetInstanceDetailsResponses[keyof WorkflowsGetInstanceDetailsResponses];
-
-export type WorkflowsChangeInstanceStatusData = {
-	body: {
-		/**
-		 * The action to perform on the workflow instance.
-		 */
-		action: "pause" | "resume" | "restart" | "terminate";
-		/**
-		 * The step to restart the instance from. Only valid when action is restart.
-		 */
-		from?: {
-			/**
-			 * The name of the step.
-			 */
-			name: string;
-			/**
-			 * The 1-based index of the step when multiple steps share the same name and type. Defaults to 1.
-			 */
-			count?: number;
-			/**
-			 * The step type. Defaults to do.
-			 */
-			type?: "do" | "sleep" | "waitForEvent";
-		};
-		/**
-		 * The option to trigger rollbacks when terminating the workflow instance.
-		 */
-		rollback?: boolean;
-	};
-	path: {
-		workflow_name: WorkflowsWorkflowName;
-		instance_id: WorkflowsInstanceId;
-	};
-	query?: never;
-	url: "/workflows/{workflow_name}/instances/{instance_id}/status";
-};
-
-export type WorkflowsChangeInstanceStatusErrors = {
-	/**
-	 * Change Workflow Instance Status response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type WorkflowsChangeInstanceStatusError =
-	WorkflowsChangeInstanceStatusErrors[keyof WorkflowsChangeInstanceStatusErrors];
-
-export type WorkflowsChangeInstanceStatusResponses = {
-	/**
-	 * Change Workflow Instance Status response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: {
-			success?: boolean;
-		};
-	};
-};
-
-export type WorkflowsChangeInstanceStatusResponse =
-	WorkflowsChangeInstanceStatusResponses[keyof WorkflowsChangeInstanceStatusResponses];
 
 export type WorkflowsSendInstanceEventData = {
 	/**
@@ -1893,3 +2867,274 @@ export type ObservabilityClearResponses = {
 
 export type ObservabilityClearResponse =
 	ObservabilityClearResponses[keyof ObservabilityClearResponses];
+
+export type FlagshipListAppsData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/flagship/apps";
+};
+
+export type FlagshipListAppsErrors = {
+	/**
+	 * List Flagship Apps response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipListAppsError =
+	FlagshipListAppsErrors[keyof FlagshipListAppsErrors];
+
+export type FlagshipListAppsResponses = {
+	/**
+	 * List Flagship Apps response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<FlagshipApp>;
+	};
+};
+
+export type FlagshipListAppsResponse =
+	FlagshipListAppsResponses[keyof FlagshipListAppsResponses];
+
+export type FlagshipListFlagsData = {
+	body?: never;
+	path: {
+		app_id: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags";
+};
+
+export type FlagshipListFlagsErrors = {
+	/**
+	 * List Flagship Flags response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipListFlagsError =
+	FlagshipListFlagsErrors[keyof FlagshipListFlagsErrors];
+
+export type FlagshipListFlagsResponses = {
+	/**
+	 * List Flagship Flags response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<FlagshipFlag>;
+	};
+};
+
+export type FlagshipListFlagsResponse =
+	FlagshipListFlagsResponses[keyof FlagshipListFlagsResponses];
+
+export type FlagshipCreateFlagData = {
+	body: {
+		/**
+		 * Flag key
+		 */
+		key: string;
+		/**
+		 * Human readable description
+		 */
+		description?: string | null;
+		/**
+		 * Whether the flag is enabled
+		 */
+		enabled?: boolean;
+		/**
+		 * Variation served when no rule matches
+		 */
+		default_variation: string;
+		/**
+		 * Named values the flag can serve
+		 */
+		variations: {
+			[key: string]: unknown;
+		};
+		/**
+		 * Targeting rules, in priority order
+		 */
+		rules?: Array<FlagshipRule>;
+	};
+	path: {
+		app_id: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags";
+};
+
+export type FlagshipCreateFlagErrors = {
+	/**
+	 * Create Flagship Flag response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipCreateFlagError =
+	FlagshipCreateFlagErrors[keyof FlagshipCreateFlagErrors];
+
+export type FlagshipCreateFlagResponses = {
+	/**
+	 * Create Flagship Flag response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: FlagshipFlag;
+	};
+};
+
+export type FlagshipCreateFlagResponse =
+	FlagshipCreateFlagResponses[keyof FlagshipCreateFlagResponses];
+
+export type FlagshipDeleteFlagData = {
+	body?: never;
+	path: {
+		app_id: string;
+		flag_key: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags/{flag_key}";
+};
+
+export type FlagshipDeleteFlagErrors = {
+	/**
+	 * Delete Flagship Flag response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipDeleteFlagError =
+	FlagshipDeleteFlagErrors[keyof FlagshipDeleteFlagErrors];
+
+export type FlagshipDeleteFlagResponses = {
+	/**
+	 * Delete Flagship Flag response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			success?: boolean;
+		};
+	};
+};
+
+export type FlagshipDeleteFlagResponse =
+	FlagshipDeleteFlagResponses[keyof FlagshipDeleteFlagResponses];
+
+export type FlagshipUpdateFlagData = {
+	body: {
+		/**
+		 * Human readable description
+		 */
+		description?: string | null;
+		/**
+		 * Whether the flag is enabled
+		 */
+		enabled?: boolean;
+		/**
+		 * Variation served when no rule matches
+		 */
+		default_variation?: string;
+		/**
+		 * Named values the flag can serve
+		 */
+		variations?: {
+			[key: string]: unknown;
+		};
+		/**
+		 * Targeting rules, in priority order
+		 */
+		rules?: Array<FlagshipRule>;
+	};
+	path: {
+		app_id: string;
+		flag_key: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags/{flag_key}";
+};
+
+export type FlagshipUpdateFlagErrors = {
+	/**
+	 * Update Flagship Flag response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipUpdateFlagError =
+	FlagshipUpdateFlagErrors[keyof FlagshipUpdateFlagErrors];
+
+export type FlagshipUpdateFlagResponses = {
+	/**
+	 * Update Flagship Flag response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: FlagshipFlag;
+	};
+};
+
+export type FlagshipUpdateFlagResponse =
+	FlagshipUpdateFlagResponses[keyof FlagshipUpdateFlagResponses];
+
+export type FlagshipEvaluateFlagData = {
+	body: {
+		/**
+		 * Attributes used for rule matching and rollout bucketing.
+		 */
+		context?: {
+			[key: string]: unknown;
+		};
+	};
+	path: {
+		app_id: string;
+		flag_key: string;
+	};
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags/{flag_key}/evaluate";
+};
+
+export type FlagshipEvaluateFlagErrors = {
+	/**
+	 * Evaluate Flagship Flag response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipEvaluateFlagError =
+	FlagshipEvaluateFlagErrors[keyof FlagshipEvaluateFlagErrors];
+
+export type FlagshipEvaluateFlagResponses = {
+	/**
+	 * Evaluate Flagship Flag response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: FlagshipEvaluation;
+	};
+};
+
+export type FlagshipEvaluateFlagResponse =
+	FlagshipEvaluateFlagResponses[keyof FlagshipEvaluateFlagResponses];

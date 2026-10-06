@@ -1,16 +1,20 @@
-import {
-	aggregateListResults,
-	fetchFromPeer,
-	getPeerUrlsIfAggregating,
-} from "../aggregation";
+import { Buffer } from "node:buffer";
+import { HttpError } from "miniflare:shared";
+import { KVHeaders, KVParams } from "../../kv/constants";
+import { validateKey, validatePutOptions } from "../../kv/validator.worker";
+import { SharedHeaders } from "../../shared/constants";
+import { aggregateListResults } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
+import { executeKVBulkOperations, type KVBulkExecutionResult } from "./kv-bulk";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkersKvNamespace } from "../generated";
 import type {
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 } from "../generated/zod.gen";
 import type z from "zod";
 
@@ -20,46 +24,56 @@ import type z from "zod";
 
 /** Error code for key not found in KV namespace */
 const KV_ERROR_KEY_NOT_FOUND = 10009;
-/** Error code for KV namespace not found */
-const KV_ERROR_NAMESPACE_NOT_FOUND = 10013;
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-/**
- * Get a KV binding by namespace ID
- */
-function getKVBinding(env: Env, namespace_id: string): KVNamespace | null {
-	const bindingMap = env.LOCAL_EXPLORER_BINDING_MAP.kv;
-
-	// Find the binding name for this namespace ID
-	const bindingName = bindingMap[namespace_id];
-	if (!bindingName) return null;
-
-	return env[bindingName] as KVNamespace;
+interface KVListResult {
+	keys: Array<{
+		name: string;
+		expiration?: number;
+		metadata?: string;
+	}>;
+	list_complete: boolean;
+	cursor?: string;
 }
 
-async function findKVNamespaceOwner(
+function getKVKeyUrl(keyName: string): URL {
+	const url = new URL(`http://kv/${encodeURIComponent(keyName)}`);
+	url.searchParams.set(KVParams.URL_ENCODED, "true");
+	return url;
+}
+
+async function sendKVRequest(
 	c: AppContext,
-	namespaceId: string
-): Promise<string | null> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) return null;
+	namespaceId: string,
+	url: URL | string,
+	init?: RequestInit
+): Promise<Response> {
+	const headers = new Headers(init?.headers);
+	headers.set(SharedHeaders.NAMESPACE, namespaceId);
+	return c.env.MINIFLARE_KV.fetch(url, { ...init, headers });
+}
 
-	const responses = await Promise.all(
-		peerUrls.map(async (url) => {
-			const response = await fetchFromPeer(url, "/storage/kv/namespaces");
-			if (!response?.ok) return null;
-			const data = (await response.json()) as {
-				result?: Array<{ id: string }>;
-			};
-			const found = data.result?.some((ns) => ns.id === namespaceId);
-			return found ? url : null;
-		})
+async function toKVErrorResponse(
+	response: Response,
+	code = 10000
+): Promise<Response> {
+	return errorResponse(
+		response.status,
+		code,
+		await getKVErrorMessage(response)
 	);
+}
 
-	return responses.find((url) => url !== null) ?? null;
+async function getKVErrorMessage(response: Response): Promise<string> {
+	const fallback = response.statusText || "Internal KV request failed";
+	try {
+		return (await response.text()) || fallback;
+	} catch {
+		return fallback;
+	}
 }
 
 /**
@@ -79,6 +93,186 @@ function getLocalKVNamespaces(env: Env): WorkersKvNamespace[] {
 	});
 }
 
+type BulkWriteBody = NonNullable<
+	z.output<typeof zWorkersKvNamespaceWriteMultipleKeyValuePairsData>["body"]
+>;
+type BulkDeleteBody = NonNullable<
+	z.output<typeof zWorkersKvNamespaceDeleteMultipleKeyValuePairsData>["body"]
+>;
+
+interface PreparedKVWrite {
+	key: string;
+	value: string | Uint8Array;
+	expiration?: number;
+	expirationTtl?: number;
+	metadata?: unknown;
+}
+
+const textEncoder = new TextEncoder();
+const BASE64_PATTERN =
+	/^(?:[A-Za-z\d+/]{4})*(?:[A-Za-z\d+/]{2}(?:==)?|[A-Za-z\d+/]{3}=?){0,1}$/;
+
+function decodeBase64(value: string): Uint8Array {
+	const normalisedValue = value.replace(/[\t\n\f\r ]/g, "");
+	if (!BASE64_PATTERN.test(normalisedValue)) {
+		throw new HttpError(400, "Invalid base64 value");
+	}
+	return Buffer.from(normalisedValue, "base64");
+}
+
+/**
+ * Serialises a value with recursively sorted object keys so semantically
+ * equivalent metadata can be compared regardless of property insertion order.
+ */
+function canonicalStringify(value: unknown): string | undefined {
+	if (Array.isArray(value)) {
+		return `[${value.map(canonicalStringify).join(",")}]`;
+	}
+	if (value !== null && typeof value === "object") {
+		const record = value as Record<string, unknown>;
+		return `{${Object.keys(record)
+			.sort()
+			.map((key) => `${JSON.stringify(key)}:${canonicalStringify(record[key])}`)
+			.join(",")}}`;
+	}
+	return JSON.stringify(value);
+}
+
+function valuesEqual(
+	left: string | Uint8Array,
+	right: string | Uint8Array
+): boolean {
+	const leftBytes = typeof left === "string" ? textEncoder.encode(left) : left;
+	const rightBytes =
+		typeof right === "string" ? textEncoder.encode(right) : right;
+	return (
+		leftBytes.byteLength === rightBytes.byteLength &&
+		leftBytes.every((byte, index) => byte === rightBytes[index])
+	);
+}
+
+function preparedKVWritesEqual(
+	left: PreparedKVWrite,
+	right: PreparedKVWrite
+): boolean {
+	return (
+		valuesEqual(left.value, right.value) &&
+		left.expiration === right.expiration &&
+		left.expirationTtl === right.expirationTtl &&
+		canonicalStringify(left.metadata) === canonicalStringify(right.metadata)
+	);
+}
+
+function deduplicateKVWrites(operations: PreparedKVWrite[]): PreparedKVWrite[] {
+	const uniqueOperations = new Map<string, PreparedKVWrite>();
+	for (const operation of operations) {
+		const existing = uniqueOperations.get(operation.key);
+		if (existing === undefined) {
+			uniqueOperations.set(operation.key, operation);
+		} else if (!preparedKVWritesEqual(existing, operation)) {
+			throw new HttpError(
+				400,
+				`received duplicate key with different values or expiration parameters: "${operation.key}"`
+			);
+		}
+	}
+	return [...uniqueOperations.values()];
+}
+
+function prepareKVWrites(body: BulkWriteBody): PreparedKVWrite[] {
+	const now = Math.floor(Date.now() / 1000);
+
+	const operations = body.map((item) => {
+		const metadata = item.metadata;
+		const rawMetadata =
+			metadata === undefined ? null : JSON.stringify(metadata);
+		validatePutOptions(item.key, {
+			now,
+			rawExpiration: item.expiration?.toString() ?? null,
+			rawExpirationTtl: item.expiration_ttl?.toString() ?? null,
+			rawMetadata,
+		});
+
+		const value = item.base64 ? decodeBase64(item.value) : item.value;
+
+		return {
+			key: item.key,
+			value,
+			expiration: item.expiration,
+			expirationTtl: item.expiration_ttl,
+			metadata,
+		};
+	});
+	return deduplicateKVWrites(operations);
+}
+
+function bulkValidationError(error: unknown): Response {
+	if (error instanceof HttpError) {
+		return errorResponse(error.code, 10001, error.message);
+	}
+	throw error;
+}
+
+function bulkExecutionResponse(
+	c: AppContext,
+	execution: KVBulkExecutionResult
+): Response {
+	if (execution.result.unsuccessful_keys?.length === 0) {
+		return c.json(wrapResponse(execution.result));
+	}
+
+	const status =
+		execution.error instanceof HttpError ? execution.error.code : 500;
+	const code = execution.error instanceof HttpError ? 10001 : 10000;
+	const message =
+		execution.error instanceof Error
+			? execution.error.message
+			: "Internal KV request failed";
+	return errorResponse(status, code, message, execution.result);
+}
+
+async function putPreparedKVValue(
+	c: AppContext,
+	namespaceId: string,
+	operation: PreparedKVWrite
+): Promise<void> {
+	const url = getKVKeyUrl(operation.key);
+	if (operation.expirationTtl !== undefined) {
+		url.searchParams.set(
+			KVParams.EXPIRATION_TTL,
+			operation.expirationTtl.toString()
+		);
+	} else if (operation.expiration !== undefined) {
+		url.searchParams.set(KVParams.EXPIRATION, operation.expiration.toString());
+	}
+
+	const headers = new Headers();
+	if (operation.metadata !== undefined) {
+		headers.set(KVHeaders.METADATA, JSON.stringify(operation.metadata));
+	}
+	const response = await sendKVRequest(c, namespaceId, url, {
+		method: "PUT",
+		headers,
+		body: operation.value,
+	});
+	if (!response.ok) {
+		throw new HttpError(response.status, await getKVErrorMessage(response));
+	}
+}
+
+async function deletePreparedKVValue(
+	c: AppContext,
+	namespaceId: string,
+	key: string
+): Promise<void> {
+	const response = await sendKVRequest(c, namespaceId, getKVKeyUrl(key), {
+		method: "DELETE",
+	});
+	if (!response.ok) {
+		throw new HttpError(response.status, await getKVErrorMessage(response));
+	}
+}
+
 // ============================================================================
 // API Handlers
 // ============================================================================
@@ -88,10 +282,9 @@ type ListNamespacesQuery = NonNullable<
 >;
 
 /**
- * List all KV namespaces across all connected instances.
+ * List all local KV namespaces and namespaces configured by shared-storage peers.
  *
- * This is an aggregated endpoint - it fetches namespaces from the local instance
- * and all peer instances in the dev registry, then merges the results.
+ * Shared-storage peers are scoped by their canonical persistence root.
  *
  * Supports sorting via `direction` and `order` query parameters.
  *
@@ -105,17 +298,11 @@ export async function listKVNamespaces(
 	const order = query.order ?? "id";
 
 	const localNamespaces = getLocalKVNamespaces(c.env);
-	const aggregatedNamespaces = await aggregateListResults(
+	const allNamespaces = await aggregateListResults(
 		c,
 		localNamespaces,
-		"/storage/kv/namespaces"
-	);
-
-	// deduplicate by id - not totally correct, since local dev can use binding names as an 'id' :/
-	// TODO: check persistence path to properly verify local uniqueness
-	const localIds = new Set(localNamespaces.map((ns) => ns.id));
-	const allNamespaces = aggregatedNamespaces.filter(
-		(ns, index) => index < localNamespaces.length || !localIds.has(ns.id)
+		"/storage/kv/namespaces",
+		{ getKey: (namespace) => namespace.id, sharedStorageOnly: true }
 	);
 
 	// Sort results
@@ -141,7 +328,6 @@ type ListKeysQuery = NonNullable<
  * List a Namespace's Keys
  *
  * This endpoint keeps pagination as-is since it operates on a single namespace.
- * If the namespace is not found locally, it proxies to peer instances.
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/keys/methods/list/
  */
@@ -154,64 +340,40 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 	const limit = query.limit;
 	const prefix = query.prefix;
 
-	// Try local first
-	const kv = getKVBinding(c.env, namespace_id);
-	if (kv) {
-		return executeListKeys(c, kv, { cursor, limit, prefix });
+	const url = new URL("http://kv/");
+	if (cursor !== undefined) {
+		url.searchParams.set(KVParams.LIST_CURSOR, cursor);
 	}
-
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
-	if (ownerMiniflare) {
-		const params = new URLSearchParams();
-		if (cursor) params.set("cursor", cursor);
-		if (limit !== undefined) params.set("limit", String(limit));
-		if (prefix) params.set("prefix", prefix);
-		const queryString = params.toString();
-		const path = `/storage/kv/namespaces/${encodeURIComponent(
-			namespace_id
-		)}/keys${queryString ? `?${queryString}` : ""}`;
-
-		const response = await fetchFromPeer(ownerMiniflare, path);
-		if (response) return response;
+	if (limit !== undefined && limit > 0) {
+		url.searchParams.set(KVParams.LIST_LIMIT, String(limit));
 	}
-
-	return errorResponse(
-		404,
-		KV_ERROR_NAMESPACE_NOT_FOUND,
-		"list keys: 'namespace not found'"
-	);
-}
-
-/**
- * Execute list keys on a local KV binding.
- */
-async function executeListKeys(
-	c: AppContext,
-	kv: KVNamespace,
-	options: { cursor?: string; limit?: number; prefix?: string }
-) {
-	const listResult = await kv.list(options);
-	const resultCursor = "cursor" in listResult ? (listResult.cursor ?? "") : "";
+	if (prefix !== undefined) {
+		url.searchParams.set(KVParams.LIST_PREFIX, prefix);
+	}
+	const response = await sendKVRequest(c, namespace_id, url);
+	if (!response.ok) {
+		return toKVErrorResponse(response);
+	}
+	const listResult = (await response.json()) as KVListResult;
 
 	return c.json({
 		...wrapResponse(
 			listResult.keys.map((key) => ({
 				name: key.name,
 				expiration: key.expiration,
-				metadata: key.metadata,
+				metadata:
+					key.metadata === undefined ? undefined : JSON.parse(key.metadata),
 			}))
 		),
 		result_info: {
 			count: listResult.keys.length,
-			cursor: resultCursor,
+			cursor: listResult.cursor ?? "",
 		},
 	});
 }
 
 /**
  * Read key-value pair
- *
- * If the namespace is not found locally, it proxies to peer instances.
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/get/
  */
@@ -220,39 +382,19 @@ export async function getKVValue(
 	namespaceId: string,
 	keyName: string
 ) {
-	// Try local first
-	const kv = getKVBinding(c.env, namespaceId);
-	if (kv) {
-		const value = await kv.get(keyName, { type: "arrayBuffer" });
-		if (value === null) {
-			return errorResponse(404, KV_ERROR_KEY_NOT_FOUND, "get: 'key not found'");
-		}
-		// this specific API doesn't wrap the response in the envelope
-		return new Response(value);
-	}
-
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
-	if (ownerMiniflare) {
-		const response = await fetchFromPeer(
-			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(
-				namespaceId
-			)}/values/${encodeURIComponent(keyName)}`
+	const response = await sendKVRequest(c, namespaceId, getKVKeyUrl(keyName));
+	if (!response.ok) {
+		return toKVErrorResponse(
+			response,
+			response.status === 404 ? KV_ERROR_KEY_NOT_FOUND : 10000
 		);
-		if (response) return response;
 	}
-
-	return errorResponse(
-		404,
-		KV_ERROR_NAMESPACE_NOT_FOUND,
-		"get: 'namespace not found'"
-	);
+	// This specific API doesn't wrap the response in the envelope.
+	return new Response(response.body);
 }
 
 /**
  * Write key-value pair with optional metadata
- *
- * If the namespace is not found locally, it proxies to peer instances.
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/update/
  */
@@ -261,47 +403,6 @@ export async function putKVValue(
 	namespaceId: string,
 	keyName: string
 ) {
-	// Try local first
-	const kv = getKVBinding(c.env, namespaceId);
-	if (kv) {
-		return executePutKVValue(c, kv, keyName);
-	}
-
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
-	if (ownerMiniflare) {
-		const body = await c.req.arrayBuffer();
-		const response = await fetchFromPeer(
-			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(
-				namespaceId
-			)}/values/${encodeURIComponent(keyName)}`,
-			{
-				method: "PUT",
-				headers: {
-					"Content-Type":
-						c.req.header("content-type") || "application/octet-stream",
-				},
-				body,
-			}
-		);
-		if (response) return response;
-	}
-
-	return errorResponse(
-		404,
-		KV_ERROR_NAMESPACE_NOT_FOUND,
-		"put: 'namespace not found'"
-	);
-}
-
-/**
- * Execute put KV value on a local KV binding.
- */
-async function executePutKVValue(
-	c: AppContext,
-	kv: KVNamespace,
-	key_name: string
-): Promise<Response> {
 	let value: ArrayBuffer | string;
 	let metadata: unknown | undefined;
 
@@ -343,17 +444,24 @@ async function executePutKVValue(
 		value = await c.req.arrayBuffer();
 	}
 
-	const options: KVNamespacePutOptions = {};
-	if (metadata) options.metadata = metadata;
-
-	await kv.put(key_name, value, options);
+	const headers = new Headers();
+	if (metadata !== undefined) {
+		headers.set(KVHeaders.METADATA, JSON.stringify(metadata));
+	}
+	const response = await sendKVRequest(c, namespaceId, getKVKeyUrl(keyName), {
+		method: "PUT",
+		headers,
+		body: value,
+	});
+	if (!response.ok) {
+		return toKVErrorResponse(response);
+	}
+	await response.arrayBuffer();
 	return c.json(wrapResponse({}));
 }
 
 /**
  * Delete key-value pair
- *
- * If the namespace is not found locally, it proxies to peer instances.
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/delete/
  */
@@ -362,30 +470,14 @@ export async function deleteKVValue(
 	namespaceId: string,
 	keyName: string
 ) {
-	// Try local first
-	const kv = getKVBinding(c.env, namespaceId);
-	if (kv) {
-		await kv.delete(keyName);
-		return c.json(wrapResponse({}));
+	const response = await sendKVRequest(c, namespaceId, getKVKeyUrl(keyName), {
+		method: "DELETE",
+	});
+	if (!response.ok) {
+		return toKVErrorResponse(response);
 	}
-
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
-	if (ownerMiniflare) {
-		const response = await fetchFromPeer(
-			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(
-				namespaceId
-			)}/values/${encodeURIComponent(keyName)}`,
-			{ method: "DELETE" }
-		);
-		if (response) return response;
-	}
-
-	return errorResponse(
-		404,
-		KV_ERROR_NAMESPACE_NOT_FOUND,
-		"remove key: 'namespace not found'"
-	);
+	await response.arrayBuffer();
+	return c.json(wrapResponse({}));
 }
 
 type BulkGetBody = NonNullable<
@@ -393,8 +485,6 @@ type BulkGetBody = NonNullable<
 >;
 /**
  * Get multiple key-value pairs
- *
- * If the namespace is not found locally, it proxies to peer instances.
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_get/
  */
@@ -405,38 +495,62 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 	}
 	const { keys } = body;
 
-	// Try local first
-	const kv = getKVBinding(c.env, namespace_id);
-	if (kv) {
-		// Fetch all keys at once - returns Map<string, string | null>
-		const results = await kv.get(keys);
+	const response = await sendKVRequest(c, namespace_id, "http://kv/bulk/get", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ keys }),
+	});
+	if (!response.ok) {
+		return toKVErrorResponse(response);
+	}
+	const values = (await response.json()) as Record<string, string | null>;
+	return c.json(wrapResponse({ values }));
+}
 
-		// Build result object with null for missing keys
-		const values: Record<string, string | null> = {};
-		for (const key of keys) {
-			values[key] = results?.get(key) ?? null;
-		}
-
-		return c.json(wrapResponse({ values }));
+/**
+ * Write multiple key-value pairs.
+ *
+ * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_update/
+ */
+export async function bulkWriteKVValues(c: AppContext, body: BulkWriteBody) {
+	const namespaceId = c.req.param("namespace_id");
+	if (!namespaceId) {
+		return errorResponse(400, 10000, "Missing namespace_id parameter");
+	}
+	let operations: PreparedKVWrite[];
+	try {
+		operations = prepareKVWrites(body);
+	} catch (error) {
+		return bulkValidationError(error);
 	}
 
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
-	if (ownerMiniflare) {
-		const response = await fetchFromPeer(
-			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/bulk/get`,
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(body),
-			}
-		);
-		if (response) return response;
-	}
-
-	return errorResponse(
-		404,
-		KV_ERROR_NAMESPACE_NOT_FOUND,
-		"bulk get keys: 'namespace not found'"
+	const execution = await executeKVBulkOperations(operations, (operation) =>
+		putPreparedKVValue(c, namespaceId, operation)
 	);
+	return bulkExecutionResponse(c, execution);
+}
+
+/**
+ * Delete multiple key-value pairs.
+ *
+ * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_delete/
+ */
+export async function bulkDeleteKVValues(c: AppContext, body: BulkDeleteBody) {
+	const namespaceId = c.req.param("namespace_id");
+	if (!namespaceId) {
+		return errorResponse(400, 10000, "Missing namespace_id parameter");
+	}
+	try {
+		for (const key of body) {
+			validateKey(key);
+		}
+	} catch (error) {
+		return bulkValidationError(error);
+	}
+
+	const operations = [...new Set(body)].map((key) => ({ key }));
+	const execution = await executeKVBulkOperations(operations, (operation) =>
+		deletePreparedKVValue(c, namespaceId, operation.key)
+	);
+	return bulkExecutionResponse(c, execution);
 }

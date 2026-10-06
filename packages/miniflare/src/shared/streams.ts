@@ -39,7 +39,9 @@ export async function readPrefix(
 		chunks.push(chunk);
 		chunksLength += chunk.byteLength;
 		// Once we've read enough bytes, stop
-		if (chunksLength >= prefixLength) break;
+		if (chunksLength >= prefixLength) {
+			break;
+		}
 	}
 	// If we read the entire stream without enough bytes for prefix, throw
 	if (chunksLength < prefixLength) {

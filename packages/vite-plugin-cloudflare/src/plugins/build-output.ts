@@ -4,6 +4,7 @@ import {
 	writeRootConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
+import { isPreviewBuild } from "../build-output-env";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
@@ -23,15 +24,17 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				ctx.resolvedPluginConfig.type === "assets-only" &&
 				this.environment.name === "client"
 			) {
-				const defaultExport = ctx.resolvedPluginConfig.parsedNewConfig?.default;
 				const workerNewConfig =
-					defaultExport?.type === "worker" ? defaultExport : undefined;
+					ctx.resolvedPluginConfig.parsedNewConfig?.worker;
 				assert(
 					workerNewConfig,
-					"Expected a default worker export on assets-only resolved config"
+					"Expected a Worker on assets-only resolved config"
 				);
-				await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig);
-				await writeSettingsConfig();
+				await writeWorkerConfig({
+					root: ctx.resolvedViteConfig.root,
+					config: workerNewConfig,
+				});
+				await writeRoot();
 				return;
 			}
 
@@ -83,25 +86,40 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				modules[fileName] = { type: detectModuleType(fileName) };
 			}
 
-			await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig, {
-				mainModule: entryChunk.fileName,
-				modules,
+			await writeWorkerConfig({
+				root: ctx.resolvedViteConfig.root,
+				config: workerNewConfig,
+				manifest: {
+					type: "complete",
+					mainModule: entryChunk.fileName,
+					modules,
+				},
 			});
-			await writeSettingsConfig();
+			await writeRoot();
 		},
 	};
 
-	async function writeSettingsConfig(): Promise<void> {
+	/**
+	 * Write the root `config.json`, recording the settings shared by every
+	 * Worker, including the Vite mode the build ran in.
+	 *
+	 * Written even when there are no account settings, so the build context is
+	 * always captured.
+	 */
+	async function writeRoot(): Promise<void> {
 		if (ctx.resolvedPluginConfig.type === "preview") {
 			return;
 		}
-		const settingsExport = ctx.resolvedPluginConfig.parsedNewConfig?.settings;
-		const settings =
-			settingsExport?.type === "settings" ? settingsExport : undefined;
-		if (!settings) {
-			return;
-		}
-		await writeRootConfig(ctx.resolvedViteConfig.root, settings);
+		const config = ctx.resolvedPluginConfig.parsedNewConfig;
+		const settings = config && {
+			accountId: config.accountId,
+			complianceRegion: config.complianceRegion,
+		};
+
+		await writeRootConfig(ctx.resolvedViteConfig.root, settings, {
+			isPreview: isPreviewBuild(),
+			mode: ctx.resolvedViteConfig.mode,
+		});
 	}
 });
 

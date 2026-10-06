@@ -317,6 +317,51 @@ describe("writeOutput()", () => {
 		expect(entries[1].retry_after_ms).toBeUndefined();
 	});
 
+	it.each([
+		[
+			"a separate argument",
+			"deploy --event-code SECRET-EVENT-CODE",
+			["deploy", "--event-code", "<redacted>"],
+		],
+		[
+			"equals syntax",
+			"deploy --event-code=SECRET-EVENT-CODE",
+			["deploy", "--event-code=<redacted>"],
+		],
+		[
+			"a camel-case separate argument",
+			"deploy --eventCode SECRET-EVENT-CODE",
+			["deploy", "--eventCode", "<redacted>"],
+		],
+		[
+			"camel-case equals syntax",
+			"deploy --eventCode=SECRET-EVENT-CODE",
+			["deploy", "--eventCode=<redacted>"],
+		],
+	])(
+		"should redact event codes from session output with %s",
+		async (_description, command, expectedArgs) => {
+			const outputFilePath = "output.json";
+			vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "");
+			vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", outputFilePath);
+
+			await expect(runWrangler(command)).rejects.toThrow(
+				"--event-code requires --temporary."
+			);
+
+			const outputFile = readFileSync(outputFilePath, "utf8");
+			const entries = outputFile
+				.split("\n")
+				.filter(Boolean)
+				.map((entry) => JSON.parse(entry));
+			expect(entries[0]).toMatchObject({
+				type: "wrangler-session",
+				command_line_args: expectedArgs,
+			});
+			expect(outputFile).not.toContain("SECRET-EVENT-CODE");
+		}
+	);
+
 	it("should include retry_after_ms in the error log when the failure carries a Retry-After duration", async () => {
 		mockWhoami.mockImplementation(() => {
 			const error = new APIError({

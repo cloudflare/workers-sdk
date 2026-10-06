@@ -103,6 +103,12 @@ type CommandEventProperties = CommonCommandEventProperties & {
 	 * the sanitized args would only contain `{ format: "json" }` since that is the only allowed value.
 	 * The `<key>` positional argument and `--namespace-id` flag would be omitted since they are not allowed.
 	 *
+	 * Positional args are normally excluded entirely, but an allow-list entry may
+	 * define a categoriser that maps a positional value to a coarse, non-identifying
+	 * label (never the raw value). For example, `wrangler deploy ./dist` records
+	 * `{ path: "directory" }`, while `wrangler deploy` with no positional records
+	 * `{ path: null }`.
+	 *
 	 * It is named `sanitizedArgs` to distinguish it from the historical `args` field which
 	 * may have contained sensitive data in older Wrangler versions.
 	 */

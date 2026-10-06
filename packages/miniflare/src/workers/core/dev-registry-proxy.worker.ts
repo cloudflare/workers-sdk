@@ -1,14 +1,19 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
 import { CorePaths } from "./constants";
 import {
 	findQueueConsumer,
+	openDebugPortClient,
+	resolveSharedStorageOwner,
 	resolveTarget,
 	tailEventsReplacer,
 	tailEventsReviver,
 	workerNotFoundMessage,
 } from "./dev-registry-proxy-shared.worker";
-import type { WorkerdDebugPortConnector } from "./dev-registry-proxy-shared.worker";
+import type {
+	RegistryEntry,
+	WorkerdDebugPortConnector,
+} from "./dev-registry-proxy-shared.worker";
 
 export {
 	createProxyDurableObjectClass,
@@ -30,6 +35,8 @@ const HANDLER_RESERVED_KEYS = new Set([
 
 interface Env {
 	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
+	DEV_REGISTRY_INSTANCE_ID: string;
+	MINIFLARE_LOOPBACK: Fetcher;
 }
 
 interface Props {
@@ -39,19 +46,50 @@ interface Props {
 	// Forwarded to the remote entrypoint via the debug port so they are
 	// available as `ctx.props` on the callee.
 	userProps?: Record<string, unknown>;
+	// Is this trying to access a "storage" miniflare service?
+	// If it is, the proxy will try to forward to the shared storage owner
+	// (first active worker in the dev registry)
+	storage?: boolean;
+	storageScope?: string;
+	rpcProperties?: string[];
 }
 
-function resolve(props: Props, env: Env): Fetcher | null {
-	const { service, entrypoint, userProps } = props;
-	const target = resolveTarget(service);
-	if (!target || !target.debugPortAddress) {
-		return null;
+class ExternalRpcTarget extends RpcTarget {
+	constructor(resolve: () => object) {
+		super();
+		return new Proxy(this, {
+			get(target, prop) {
+				if (Reflect.has(target, prop)) {
+					return Reflect.get(target, prop);
+				}
+				return Reflect.get(resolve(), prop);
+			},
+		});
 	}
-	const serviceName =
-		entrypoint === null || entrypoint === "default"
+}
+
+function getTarget(props: Props): RegistryEntry | undefined {
+	if (props.storage) {
+		return props.storageScope === undefined
+			? undefined
+			: resolveSharedStorageOwner(props.storageScope);
+	}
+	return resolveTarget(props.service);
+}
+
+function resolve(props: Props, env: Env, target: RegistryEntry): Fetcher {
+	const { service, entrypoint, userProps, storage } = props;
+
+	const serviceName = storage
+		? service
+		: entrypoint === null || entrypoint === "default"
 			? target.defaultEntrypointService
 			: target.userWorkerService;
-	const client = env.DEV_REGISTRY_DEBUG_PORT.connect(target.debugPortAddress);
+	const client = openDebugPortClient(
+		env.DEV_REGISTRY_DEBUG_PORT,
+		target,
+		env.DEV_REGISTRY_INSTANCE_ID
+	);
 	return client.getEntrypoint(serviceName, entrypoint ?? undefined, userProps);
 }
 
@@ -80,8 +118,10 @@ export class ExternalQueueProxy extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		const client = this.env.DEV_REGISTRY_DEBUG_PORT.connect(
-			target.debugPortAddress
+		const client = openDebugPortClient(
+			this.env.DEV_REGISTRY_DEBUG_PORT,
+			target,
+			this.env.DEV_REGISTRY_INSTANCE_ID
 		);
 		const broker = client.getEntrypoint(getQueueServiceName(queueName));
 		const headers = new Headers(request.headers);
@@ -91,19 +131,22 @@ export class ExternalQueueProxy extends WorkerEntrypoint<Env> {
 }
 
 export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
-	_fetcher: Fetcher | null = null;
+	_fetcher: Fetcher | undefined;
+	_targetAddress: string | undefined;
+	_targetInstanceId: string | undefined;
 	_entryFetcher: Fetcher | null = null;
 
 	constructor(ctx: ExecutionContext<Props>, env: Env) {
 		super(ctx, env);
-		this._fetcher = resolve(ctx.props, env);
 
 		// Separate connection for scheduled: the debug port's EventDispatcher
 		// doesn't support runScheduled/runAlarm/queue, so we forward via HTTP.
 		const target = resolveTarget(ctx.props.service);
 		if (target && target.debugPortAddress) {
-			const client = env.DEV_REGISTRY_DEBUG_PORT.connect(
-				target.debugPortAddress
+			const client = openDebugPortClient(
+				env.DEV_REGISTRY_DEBUG_PORT,
+				target,
+				env.DEV_REGISTRY_INSTANCE_ID
 			);
 			this._entryFetcher = client.getEntrypoint("core:entry");
 		}
@@ -116,22 +159,60 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 				if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
 					return undefined;
 				}
+				// A debug-port RpcProperty cannot itself cross this outer property path.
+				// Terminate the outer hop with a local target, then forward its methods.
+				if (
+					typeof prop === "string" &&
+					ctx.props.rpcProperties?.includes(prop)
+				) {
+					return new ExternalRpcTarget(() => {
+						const fetcher = target._resolve();
+						if (!fetcher) {
+							throw new Error(workerNotFoundMessage(ctx.props.service));
+						}
+						return Reflect.get(fetcher, prop) as object;
+					});
+				}
 
-				if (!target._fetcher) {
+				const fetcher = target._resolve();
+				if (!fetcher) {
 					throw new Error(workerNotFoundMessage(ctx.props.service));
 				}
-				return Reflect.get(target._fetcher, prop);
+				return Reflect.get(fetcher, prop);
 			},
 		});
 	}
 
+	_resolve(): Fetcher | null {
+		const target = getTarget(this.ctx.props);
+		if (target === undefined || !target.debugPortAddress) {
+			this._fetcher = undefined;
+			this._targetAddress = undefined;
+			this._targetInstanceId = undefined;
+			return null;
+		}
+		if (
+			this._fetcher !== undefined &&
+			this._targetAddress === target.debugPortAddress &&
+			this._targetInstanceId === target.instanceId
+		) {
+			return this._fetcher;
+		}
+
+		this._fetcher = resolve(this.ctx.props, this.env, target);
+		this._targetAddress = target.debugPortAddress;
+		this._targetInstanceId = target.instanceId;
+		return this._fetcher;
+	}
+
 	fetch(request: Request): Promise<Response> | Response {
-		if (!this._fetcher) {
+		const fetcher = this._resolve();
+		if (!fetcher) {
 			return new Response(workerNotFoundMessage(this.ctx.props.service), {
 				status: 503,
 			});
 		}
-		return this._fetcher.fetch(request);
+		return fetcher.fetch(request);
 	}
 
 	async scheduled(controller: ScheduledController) {
@@ -162,7 +243,8 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	// Events with rpcMethod==="tail" are filtered out to prevent infinite
 	// recursion (the remote tail() call would itself produce a tail event).
 	async tail(events: TraceItem[]) {
-		if (!this._fetcher) {
+		const fetcher = this._resolve();
+		if (fetcher === null) {
 			return;
 		}
 		const filtered = events.filter(
@@ -181,7 +263,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 			// outside this `try`, so it escapes as an unhandled rejection instead of
 			// being reported.
 			// @ts-expect-error .tail is not in the `Fetcher` type but it's a valid RPC call
-			await this._fetcher.tail(serializedEvents);
+			await fetcher.tail(serializedEvents);
 		} catch (e) {
 			console.warn(
 				`[dev-registry] Failed to forward tail events to "${

@@ -1,21 +1,7 @@
 /**
- * Experimental subpath entry — `wrangler/experimental-config`.
+ * Experimental tooling-config entry point for `wrangler.config.ts`.
  *
- * Re-exports the Worker config API from `@cloudflare/config/public` (used by
- * `cloudflare.config.ts`), and the new tooling config API
- * (`defineWranglerConfig`) used by `wrangler.config.ts`.
- *
- * Importing example:
- *
- * ```ts
- * import {
- *   defineWorker,
- *   defineWranglerConfig,
- *   bindings,
- *   triggers,
- * } from "wrangler/experimental-config";
- * ```
+ * Cloudflare configuration helpers for `cloudflare.config.ts` are exported by
+ * `cf/config`.
  */
-
-export * from "@cloudflare/config/public";
 export * from "./experimental-config/public";

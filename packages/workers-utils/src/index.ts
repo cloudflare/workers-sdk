@@ -12,11 +12,22 @@ export type { ExportType, PartitionedExports } from "./config/exports";
 export {
 	getDurableObjectExports,
 	hasDurableObjectExports,
+	isLiveDurableObjectExport,
 } from "./config/durable-object-exports";
+export type { LiveDurableObjectExport } from "./config/durable-object-exports";
 export {
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
+} from "./config/containers";
+export type {
+	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
 } from "./config/containers";
 export {
 	type RedirectedRawConfig,
@@ -73,6 +84,7 @@ export const friendlyBindingNames = validation.friendlyBindingNames;
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
+	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
 
 export { validatePagesConfig } from "./config/validation-pages";
@@ -104,6 +116,15 @@ export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 export { constructWranglerConfig } from "./construct-wrangler-config";
+export {
+	convertConfigToBindings,
+	extractBindingsOfType,
+	getBindings,
+	isUnsafeBindingType,
+} from "./binding-utils";
+export type { ConvertBindingsOptions } from "./binding-utils";
+export { printBindings } from "./print-bindings";
+export type { PrintBindingsOptions } from "./print-bindings";
 
 export {
 	getBooleanEnvironmentVariableFactory,
@@ -148,7 +169,7 @@ export { MetricsRegistry } from "./prometheus-metrics";
 export type { Counter } from "./prometheus-metrics";
 
 export type { Tunnel, TunnelOptions } from "./tunnel";
-export { startTunnel } from "./tunnel";
+export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
 export * from "./cfetch";
@@ -161,6 +182,8 @@ export type { Logger, LoggerLevel } from "./logger";
 
 export { isCI, isInteractive, isNonInteractiveOrCI } from "./is-interactive";
 export { openInBrowser } from "./open-in-browser";
+export { clearOutputFilePath, writeOutput } from "./output";
+export type { OutputEntry } from "./output";
 
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";
@@ -186,7 +209,17 @@ export {
 	getWorkerNameFromProject,
 } from "./worker-name";
 
-export { _forceColour, formatZodError } from "./zod-format";
+export { formatZodError } from "./zod-format";
 
 export { toUrlPath } from "./url-path";
 export type { UrlPath } from "./url-path";
+
+export {
+	compareMigrationPaths,
+	getD1MigrationFiles,
+	normalizeRelativePath,
+} from "./d1-migrations";
+export type {
+	D1MigrationFile,
+	GetD1MigrationFilesOptions,
+} from "./d1-migrations";

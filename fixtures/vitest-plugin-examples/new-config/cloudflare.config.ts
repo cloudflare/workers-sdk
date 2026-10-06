@@ -1,0 +1,15 @@
+import { bindings, defineConfig } from "cf/config";
+import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+export default defineConfig({
+	worker: {
+		name: "vitest-plugin-new-config",
+		entrypoint,
+		compatibilityDate: "2025-12-02",
+		compatibilityFlags: ["nodejs_compat"],
+		env: {
+			MY_TEXT: bindings.text("from cloudflare.config.ts"),
+			MY_KV: bindings.kv({ id: "vitest-plugin-new-config-kv" }),
+		},
+	},
+});

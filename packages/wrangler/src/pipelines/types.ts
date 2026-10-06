@@ -125,6 +125,7 @@ export type StreamJsonFormat = {
 // Format types
 export type JsonFormat = {
 	type: "json";
+	compression?: "uncompressed" | "gzip";
 };
 
 export type ParquetFormat = {
@@ -226,7 +227,7 @@ export interface CreateSinkRequest {
 			access_key_id: string;
 			secret_access_key: string;
 		};
-		// R2 Data Catalog specific fields
+		// Basin Catalog specific fields
 		namespace?: string;
 		table_name?: string;
 		token?: string;

@@ -18,6 +18,40 @@ function asArray(value: unknown): unknown[] {
 describe("unstable_getMiniflareWorkerOptions", () => {
 	runInTempDir();
 
+	it("preserves UDP connect handlers", ({ expect }) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				main: "./index.js",
+				compatibility_date: "2026-09-21",
+				compatibility_flags: ["experimental"],
+				connect: [
+					{
+						protocol: "udp",
+						port: 9000,
+						address: "::1",
+						idle_timeout_ms: 1_000,
+						max_pending_bytes: 65_536,
+					},
+				],
+			},
+			"./wrangler.json"
+		);
+
+		const { workerOptions } =
+			unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+		expect(workerOptions.connectHandlers).toEqual([
+			{
+				protocol: "udp",
+				port: 9000,
+				address: "::1",
+				idleTimeoutMs: 1_000,
+				maxPendingBytes: 65_536,
+			},
+		]);
+	});
+
 	describe("zone derivation (used for the outbound CF-Worker header)", () => {
 		it("derives the zone from a single `route` string", ({ expect }) => {
 			writeWranglerConfig(
@@ -170,7 +204,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
 			// Without this, `ctx.access` resolves to `undefined` under
-			// @cloudflare/vitest-pool-workers even though `wrangler dev` honours it.
+			// @cloudflare/vitest-plugin even though `wrangler dev` honours it.
 			expect(workerOptions.access).toEqual({
 				aud: "my-app-aud-tag",
 				identity: {
@@ -194,6 +228,127 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
 			expect(workerOptions.access).toBeUndefined();
+		});
+	});
+
+	describe("cron triggers", () => {
+		it("passes through exact cron strings from the selected environment", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					triggers: { crons: ["*/5 * * * *", " 0 17 * * SUN "] },
+					env: {
+						staging: {
+							triggers: { crons: ["30 6 * * mon"] },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+
+			const base = unstable_getMiniflareWorkerOptions("./wrangler.json");
+			const staging = unstable_getMiniflareWorkerOptions(
+				"./wrangler.json",
+				"staging"
+			);
+
+			expect(base.workerOptions.cronTriggers).toEqual([
+				"*/5 * * * *",
+				" 0 17 * * SUN ",
+			]);
+			expect(staging.workerOptions.cronTriggers).toEqual(["30 6 * * mon"]);
+		});
+
+		it.for([
+			{ label: "missing", crons: undefined },
+			{ label: "empty", crons: [] as string[] },
+		])("passes through $label cron triggers", ({ crons }, { expect }) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					triggers: { crons },
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			expect(workerOptions.cronTriggers).toEqual(crons);
+		});
+	});
+
+	describe("workflow bindings", () => {
+		it("drops deploy-only workflow fields that the local runtime has no concept of", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							limits: { steps: 5000 },
+							schedules: "0 * * * *",
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86400000,
+							},
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+			expect(workerOptions.workflows).toEqual({
+				WORKFLOW: {
+					name: "my-workflow",
+					className: "MyWorkflow",
+					scriptName: undefined,
+					stepLimit: 5000,
+				},
+			});
+		});
+
+		it("surfaces configured workflow exports as workflowExports for the local runtime", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+			expect(workerOptions.workflowExports).toEqual({
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			});
 		});
 	});
 
@@ -292,6 +447,109 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 					(b) => asRecord(b)?.name === "MY_SERVICE"
 				)
 			).toBeUndefined();
+		});
+	});
+
+	describe("Durable Object-managed Containers", () => {
+		it("returns named-image runtime options for Miniflare", ({ expect }) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2026-09-05",
+					containers: [
+						{
+							name: "managed-container",
+							scheduling_policy: "durable_object",
+							images: {
+								app: { dockerfile: "./Dockerfile" },
+							},
+						},
+					],
+					exports: {
+						ManagedDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "managed-container",
+						},
+					},
+					durable_objects: {
+						bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+					},
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } = unstable_getMiniflareWorkerOptions(
+				"./wrangler.json",
+				undefined,
+				{
+					containerBuildId: "build-id",
+				}
+			);
+			const durableObject = asRecord(
+				asRecord(workerOptions.durableObjects)?.MANAGED
+			);
+			const container = asRecord(durableObject?.container);
+			const images = asArray(container?.images);
+			expect(images).toEqual([
+				{
+					name: "app",
+					image: expect.stringMatching(
+						/^cloudflare-dev\/manageddo-app-[a-f0-9]{12}:build-id$/
+					),
+				},
+			]);
+			expect(container).not.toHaveProperty("imageName");
+
+			expect(() =>
+				unstable_getMiniflareWorkerOptions("./wrangler.json")
+			).toThrow(
+				/Build ID should be set when a Container image requires preparation/
+			);
+
+			// enableContainers: false skips image preparation and Container attachments.
+			const disabled = unstable_getMiniflareWorkerOptions(
+				"./wrangler.json",
+				undefined,
+				{ overrides: { enableContainers: false } }
+			);
+			const disabledDurableObject = asRecord(
+				asRecord(disabled.workerOptions.durableObjects)?.MANAGED
+			);
+			expect(disabledDurableObject?.container).toBeUndefined();
+		});
+
+		it("attaches an empty Container configuration when no images are configured", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2026-09-05",
+					containers: [
+						{
+							name: "managed-container",
+							class_name: "ManagedDO",
+							scheduling_policy: "durable_object",
+						},
+					],
+					durable_objects: {
+						bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+					},
+					migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			const durableObject = asRecord(
+				asRecord(workerOptions.durableObjects)?.MANAGED
+			);
+
+			expect(durableObject?.container).toEqual({});
 		});
 	});
 });

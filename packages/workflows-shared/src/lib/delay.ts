@@ -23,12 +23,10 @@ export async function raceAgainstAbort<T>(
 	promise: Promise<T>,
 	signal: AbortSignal
 ): Promise<AbortRaceResult<T>> {
-	const resultPromise = promise.then(
-		(value): AbortRaceResult<T> => ({
-			aborted: false,
-			value,
-		})
-	);
+	const resultPromise = promise.then((value): AbortRaceResult<T> => ({
+		aborted: false,
+		value,
+	}));
 	if (signal.aborted) {
 		// Observe a later rejection from the losing promise so it doesn't become
 		// an unhandled rejection after returning the already-aborted result.

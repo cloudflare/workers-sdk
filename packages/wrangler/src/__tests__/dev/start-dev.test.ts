@@ -110,6 +110,9 @@ describe("startDev", () => {
 			"GET http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings"
 		);
 		expect(std.out).toContain(
+			"POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/scheduled?worker=<name> - invoke a Worker's scheduled handler; cron is required (see the OpenAPI schema for the full request)"
+		);
+		expect(std.out).toContain(
 			"POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:"
 		);
 		// The query route ships a copy-pasteable example that also documents the request body shape.

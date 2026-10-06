@@ -30,6 +30,10 @@ export async function fetch(
 				`Fetch API cannot load: ${url.toString()}\nMake sure you're using http(s):// URLs for WebSocket requests via fetch.`
 			);
 		}
+		// `ws` doesn't use `dispatcher`, so apply its origin rewrite here
+		if (requestInit?.dispatcher instanceof DispatchFetchDispatcher) {
+			requestInit.dispatcher.rewriteOrigin(url);
+		}
 		url.protocol = url.protocol.replace("http", "ws");
 
 		// Normalise request headers to a format ws understands, extracting the
@@ -193,7 +197,9 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		cfBlob?: IncomingRequestCfProperties
 	) {
 		super();
-		if (cfBlob !== undefined) this.cfBlobJson = JSON.stringify(cfBlob);
+		if (cfBlob !== undefined) {
+			this.cfBlobJson = JSON.stringify(cfBlob);
+		}
 	}
 
 	addHeaders(
@@ -210,13 +216,23 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		}
 	}
 
+	rewriteOrigin(/* mut */ url: URL) {
+		if (url.origin === this.userRuntimeOrigin) {
+			const runtimeURL = new URL(this.actualRuntimeOrigin);
+			url.protocol = runtimeURL.protocol;
+			url.host = runtimeURL.host;
+		}
+	}
+
 	dispatch(
 		/* mut */ options: undici.Dispatcher.DispatchOptions,
 		handler: undici.Dispatcher.DispatchHandler
 	): boolean {
 		let origin = String(options.origin);
 		// The first request in a redirect chain will always match the user origin
-		if (origin === this.userRuntimeOrigin) origin = this.actualRuntimeOrigin;
+		if (origin === this.userRuntimeOrigin) {
+			origin = this.actualRuntimeOrigin;
+		}
 		if (origin === this.actualRuntimeOrigin) {
 			// If this is now a request to the runtime, rewrite dispatching origin to
 			// the runtime's
@@ -238,11 +254,13 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 
 			options.headers = headers;
 
-			// Sometimes, keep-alive connections can sometimes cause issues with sockets
-			// disconnecting unexpectedly. To mitigate this, try to avoid keep-alive race
-			// conditions by telling the runtime to close the connection immediately after
-			// the request is complete
-			options.reset = true;
+			// Worker handlers can have side effects even for GET/HEAD, so never
+			// replay a request after a transport failure or pipeline it behind another
+			options.idempotent = false;
+
+			// Reuse successful connections for every method to avoid consuming one
+			// ephemeral port per dispatch, but surface failures instead of retrying
+			options.reset = false;
 
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate
@@ -273,8 +291,12 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		callback?: () => void
 	): Promise<void> {
 		let err: Error | null = null;
-		if (typeof errCallback === "function") callback = errCallback;
-		if (errCallback instanceof Error) err = errCallback;
+		if (typeof errCallback === "function") {
+			callback = errCallback;
+		}
+		if (errCallback instanceof Error) {
+			err = errCallback;
+		}
 
 		await Promise.all([
 			this.globalDispatcher.destroy(err),

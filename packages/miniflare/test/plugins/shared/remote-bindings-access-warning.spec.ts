@@ -55,15 +55,14 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(SCRIPT),
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "some-remote-service",
-								remote: true,
+								worker: "some-remote-service",
+								dev: { remote: true },
 							},
 						},
 					},
@@ -117,15 +116,14 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(SCRIPT),
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "some-remote-service",
-								remote: true,
+								worker: "some-remote-service",
+								dev: { remote: true },
 							},
 						},
 					},
@@ -176,15 +174,14 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(SCRIPT),
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "some-remote-service",
-								remote: true,
+								worker: "some-remote-service",
+								dev: { remote: true },
 							},
 						},
 					},
@@ -226,15 +223,14 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(SCRIPT),
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "some-remote-service",
-								remote: true,
+								worker: "some-remote-service",
+								dev: { remote: true },
 							},
 						},
 					},

@@ -7,15 +7,21 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
+import { fetchResultBase } from "../src/cfetch";
 import { spawnCloudflared } from "../src/cloudflared";
 import { UserError } from "../src/errors";
-import { startTunnel } from "../src/tunnel";
+import { resolveNamedTunnel, startTunnel } from "../src/tunnel";
 
 vi.mock("../src/cloudflared", () => {
 	return {
 		spawnCloudflared: vi.fn(),
 	};
 });
+
+vi.mock("../src/cfetch", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/cfetch")>()),
+	fetchResultBase: vi.fn(),
+}));
 
 function createMockProcess() {
 	const proc = new EventEmitter() as EventEmitter & {
@@ -131,13 +137,57 @@ describe("startTunnel", () => {
 		);
 	});
 
-	it("should pass the correct args for named tunnels", async ({ expect }) => {
+	it("should pass allowed mail to Quick Tunnels", async ({ expect }) => {
+		const proc = createMockProcess();
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			allowedMail: ["alice@example.com", "*@example.org"],
+			timeoutMs: TEST_TIMEOUT_MS,
+		});
+
+		await emitStderrNextTick(
+			proc,
+			"INF https://test-tunnel.trycloudflare.com\n"
+		);
+		await tunnel.ready();
+
+		expect(spawnCloudflared).toHaveBeenCalledWith(
+			[
+				"tunnel",
+				"--no-autoupdate",
+				"--url",
+				"http://localhost:8787/",
+				"--allowed-mail",
+				"alice@example.com",
+				"--allowed-mail",
+				"*@example.org",
+			],
+			{ stdio: "pipe", skipVersionCheck: true }
+		);
+	});
+
+	it("should reject allowed mail for named tunnels", ({ expect }) => {
+		expect(() =>
+			startTunnel({
+				origin: new URL("http://localhost:8787"),
+				token: "NAMED_TUNNEL_TOKEN",
+				allowedMail: ["alice@example.com"],
+			})
+		).toThrow("The `allowedMail` option is only supported for Quick Tunnels");
+	});
+
+	it("should allow an empty allowed mail list for named tunnels", async ({
+		expect,
+	}) => {
 		const proc = createMockProcess();
 		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
 
 		const tunnel = startTunnel({
 			origin: new URL("http://localhost:8787"),
 			token: "NAMED_TUNNEL_TOKEN",
+			allowedMail: [],
 			timeoutMs: TEST_TIMEOUT_MS,
 		});
 
@@ -486,5 +536,123 @@ describe("startTunnel", () => {
 		await vi.advanceTimersByTimeAsync(3 * 60 * 60 * 1_000);
 		expect(logger.log).toHaveBeenCalledWith("Tunnel expired. Closing tunnel.");
 		expect(killSpy).toHaveBeenCalledWith("SIGTERM");
+	});
+});
+
+describe("resolveNamedTunnel", () => {
+	it("resolves matching ingress hostnames and the tunnel token", async ({
+		expect,
+	}) => {
+		const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+		onTestFinished(() => timeoutSpy.mockRestore());
+		vi.mocked(fetchResultBase)
+			.mockResolvedValueOnce([
+				{
+					id: "11111111-1111-4111-8111-111111111111",
+					name: "my-tunnel",
+				},
+			])
+			.mockResolvedValueOnce({
+				config: {
+					ingress: [
+						{
+							hostname: "dev.example.com",
+							service: "http://127.0.0.1:8787",
+						},
+						{
+							hostname: "other.example.com",
+							service: "http://localhost:3000",
+						},
+					],
+				},
+			})
+			.mockResolvedValueOnce("TOKEN");
+		const abortController = new AbortController();
+		await expect(
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				abortSignal: abortController.signal,
+				accountId: "account",
+				apiToken: { apiToken: "test-token" },
+				complianceRegion: undefined,
+				logger: console,
+				userAgent: "test",
+			})
+		).resolves.toEqual({
+			hostnames: ["dev.example.com"],
+			token: "TOKEN",
+		});
+		const abortSignals = vi
+			.mocked(fetchResultBase)
+			.mock.calls.map((call) => call[6]);
+		expect(timeoutSpy).toHaveBeenCalledTimes(3);
+		expect(timeoutSpy).toHaveBeenCalledWith(60_000);
+		abortController.abort();
+		expect(abortSignals).toHaveLength(3);
+		expect(abortSignals.every((signal) => signal?.aborted)).toBe(true);
+	});
+
+	it("throws when a named tunnel has no ingress for the local port", async ({
+		expect,
+	}) => {
+		vi.mocked(fetchResultBase)
+			.mockResolvedValueOnce([{ id: "test-tunnel-id", name: "my-tunnel" }])
+			.mockResolvedValueOnce({
+				config: {
+					ingress: [
+						{
+							hostname: "dev.example.com",
+							service: "http://localhost:3000",
+						},
+						{
+							hostname: "admin.example.com",
+							service: "http://localhost:4000",
+						},
+					],
+				},
+			});
+
+		await expect(
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				accountId: "test-account-id",
+				apiToken: { apiToken: "test-token" },
+				complianceRegion: undefined,
+				logger: console,
+				userAgent: "test",
+			})
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Tunnel "my-tunnel" has no route for http://localhost:8787/
+
+			Resolved routes:
+			  - dev.example.com -> http://localhost:3000
+			  - admin.example.com -> http://localhost:4000
+
+			Update your local server settings or the tunnel routes in the Cloudflare dashboard:
+			https://dash.cloudflare.com/test-account-id/tunnels/test-tunnel-id
+			]
+		`);
+	});
+
+	it("shows compact setup guidance when a named tunnel has no ingress rules", async ({
+		expect,
+	}) => {
+		vi.mocked(fetchResultBase)
+			.mockResolvedValueOnce([{ id: "test-tunnel-id", name: "my-tunnel" }])
+			.mockResolvedValueOnce({ config: { ingress: [] } });
+
+		await expect(
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				accountId: "test-account-id",
+				apiToken: { apiToken: "test-token" },
+				complianceRegion: undefined,
+				logger: console,
+				userAgent: "test",
+			})
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Tunnel "my-tunnel" has no routes configured.
+
+			Add a route for http://localhost:8787/ in the Cloudflare dashboard:
+			https://dash.cloudflare.com/test-account-id/tunnels/test-tunnel-id
+			]
+		`);
 	});
 });

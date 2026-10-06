@@ -50,7 +50,7 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 					isConfigured: () => false,
 					configure: () =>
 						({
-							wranglerConfig: {},
+							workerConfig: {},
 						}) satisfies ReturnType<Framework["configure"]>,
 				} as unknown as Framework,
 				buildCommand: "astro build",

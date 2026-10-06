@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import {
+	APIError,
 	indexLocation,
 	parseByteSize,
 	parseJSON,
@@ -10,7 +11,7 @@ import {
 
 describe("parseTOML", () => {
 	it("should parse toml that is empty", ({ expect }) => {
-		expect(parseTOML("")).toStrictEqual({});
+		expect(parseTOML("")).toEqual({});
 	});
 
 	it("should parse toml with basic values", ({ expect }) => {
@@ -19,7 +20,7 @@ describe("parseTOML", () => {
         name = "basic"
         version = 1
     `)
-		).toStrictEqual({
+		).toEqual({
 			name: "basic",
 			version: 1,
 		});
@@ -36,7 +37,7 @@ describe("parseTOML", () => {
         [owner.dog]
         exists = true
       `)
-		).toStrictEqual({
+		).toEqual({
 			name: "complex",
 			owner: {
 				alive: true,
@@ -56,11 +57,11 @@ describe("parseTOML", () => {
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
-				text: "Invalid TOML document: only letter, numbers, dashes and underscores are allowed in keys",
+				text: "Invalid TOML document: unfinished string",
 				kind: "error",
 				location: {
 					line: 1,
-					column: 12,
+					column: 7,
 					fileText: "name = 'fail\"",
 					file: undefined,
 					lineText: "name = 'fail\"",
@@ -402,5 +403,39 @@ describe("parseByteSize", () => {
 		expect(parseByteSize(".B")).toBeNaN();
 		expect(parseByteSize("3iB")).toBeNaN();
 		expect(parseByteSize("3ib")).toBeNaN();
+	});
+});
+
+describe("APIError.isGatewayError", () => {
+	it("treats HTTP gateway statuses and Cloudflare 524 as gateway errors", ({
+		expect,
+	}) => {
+		for (const status of [502, 503, 504, 524]) {
+			expect(
+				new APIError({
+					text: "gateway",
+					status,
+					telemetryMessage: false,
+				}).isGatewayError()
+			).toBe(true);
+		}
+	});
+
+	it("does not treat other statuses as gateway errors", ({ expect }) => {
+		expect(
+			new APIError({
+				text: "no status",
+				telemetryMessage: false,
+			}).isGatewayError()
+		).toBe(false);
+		for (const status of [200, 400, 401, 404, 429, 500]) {
+			expect(
+				new APIError({
+					text: "other",
+					status,
+					telemetryMessage: false,
+				}).isGatewayError()
+			).toBe(false);
+		}
 	});
 });

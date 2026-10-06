@@ -1,9 +1,11 @@
 import { describe, it } from "vitest";
 import {
+	isValidAddressableWorkflowInstanceId,
 	isValidStepConfig,
 	isValidStepName,
 	isValidWorkflowInstanceId,
 	isValidWorkflowName,
+	MAX_ADDRESSABLE_WORKFLOW_INSTANCE_ID_LENGTH,
 	MAX_STEP_NAME_LENGTH,
 	MAX_WORKFLOW_INSTANCE_ID_LENGTH,
 	MAX_WORKFLOW_NAME_LENGTH,
@@ -53,6 +55,30 @@ describe("Workflow instance ID validation", () => {
 		"w".repeat(MAX_WORKFLOW_INSTANCE_ID_LENGTH),
 	])("should accept valid IDs", (value, { expect }) => {
 		expect(isValidWorkflowInstanceId(value as string)).toBe(true);
+	});
+});
+
+describe("Addressable Workflow instance ID validation", () => {
+	it.for([
+		"",
+		NaN,
+		undefined,
+		"w".repeat(MAX_ADDRESSABLE_WORKFLOW_INSTANCE_ID_LENGTH + 1),
+		"invalid!",
+		"0 0 * * MON?2-1786001400000",
+	])("should reject invalid IDs", (value, { expect }) => {
+		expect(isValidAddressableWorkflowInstanceId(value as string)).toBe(false);
+	});
+
+	it.for([
+		"abc",
+		"*/30 * * * *-1786001400000",
+		"0 0 * * MON#2-1786001400000",
+		"0 0 1,15 * *-1786001400000",
+		"NAME_123-/cron",
+		"w".repeat(MAX_ADDRESSABLE_WORKFLOW_INSTANCE_ID_LENGTH),
+	])("should accept valid IDs", (value, { expect }) => {
+		expect(isValidAddressableWorkflowInstanceId(value)).toBe(true);
 	});
 });
 

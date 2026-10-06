@@ -3,29 +3,61 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
+import { z } from "miniflare:zod";
 import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
+import { EXPLORER_REFRESH_HEADER } from "./explorer-refresh";
 import {
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
+	zEmailListRoutingData,
+	zEmailListSendingData,
+	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zLocalExplorerDispatchScheduledData,
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zFlagshipCreateFlagData,
+	zFlagshipEvaluateFlagData,
+	zFlagshipUpdateFlagData,
+	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 	zObservabilityQueryData,
-	zWorkflowsChangeInstanceStatusData,
+	zWorkflowsBatchDeleteInstancesData,
+	zWorChangeStatusWorkflowInstanceData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
+	getReceivedEmail,
+	getReceivedEmailByCaptureId,
+	getResendDraft,
+	getSentEmail,
+	listReceivedEmails,
+	listSentEmails,
+	resendCapturedEmail,
+	sendTestEmail,
+} from "./resources/email";
+import {
+	createFlagshipFlag,
+	deleteFlagshipFlag,
+	evaluateFlagshipFlag,
+	listFlagshipApps,
+	listFlagshipFlags,
+	updateFlagshipFlag,
+} from "./resources/flagship";
+import {
+	bulkDeleteKVValues,
 	bulkGetKVValues,
+	bulkWriteKVValues,
 	deleteKVValue,
 	getKVValue,
 	listKVKeys,
@@ -40,11 +72,13 @@ import {
 	listR2Objects,
 	putR2Object,
 } from "./resources/r2";
+import { dispatchScheduledToWorker } from "./resources/scheduled";
 import {
 	changeWorkflowInstanceStatus,
 	createWorkflowInstance,
 	deleteWorkflow,
 	deleteWorkflowInstance,
+	deleteWorkflowInstances,
 	getWorkflowDetails,
 	getWorkflowInstanceDetails,
 	listWorkflowInstances,
@@ -59,7 +93,25 @@ import type {
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { CoreBindings } from "../core";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
+import type { EmailStoreService } from "../email/storage";
 import type { LocalExplorerWorker } from "./generated";
+
+// Generated object schemas strip unknown keys, so reject invalid rollback
+// combinations before parsing rather than silently dropping the option.
+const zWorkflowInstanceStatusBody = z.preprocess((value, ctx) => {
+	if (
+		typeof value === "object" &&
+		value !== null &&
+		Object.hasOwn(value, "rollback") &&
+		(value as { status?: unknown }).status !== "terminate"
+	) {
+		ctx.addIssue({
+			code: "custom",
+			message: "'rollback' is only valid when terminating.",
+		});
+	}
+	return value;
+}, zWorChangeStatusWorkflowInstanceData.shape.body);
 
 export type Env = {
 	[key: string]: unknown;
@@ -71,6 +123,9 @@ export type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	// Worker names for this instance, used to filter self from dev registry during aggregation
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
+	[CoreBindings.SERVICE_D1]: Fetcher;
+	[CoreBindings.SERVICE_KV]: Fetcher;
+	[CoreBindings.SERVICE_R2]: Fetcher;
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
 	[CoreBindings.JSON_TELEMETRY_CONFIG]: { enabled: boolean; deviceId?: string };
@@ -78,6 +133,8 @@ export type Env = {
 	// Internal observability collector's read API — only bound when local
 	// observability is enabled (see getExplorerServices).
 	[CoreBindings.SERVICE_OBSERVABILITY_COLLECTOR]?: Fetcher;
+	// Email store RPC. Backs the Email tab's routing/sending views.
+	[CoreBindings.SERVICE_EMAIL_STORE]: EmailStoreService;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -108,8 +165,7 @@ app.use("/api/*", async (c, next) => {
 				"Access-Control-Allow-Origin": origin ?? "*",
 				"Access-Control-Allow-Methods":
 					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers":
-					"Content-Type, cf-metadata-only, cf-r2-custom-metadata",
+				"Access-Control-Allow-Headers": `Content-Type, cf-metadata-only, cf-r2-custom-metadata, ${EXPLORER_REFRESH_HEADER}`,
 				"Access-Control-Max-Age": "86400",
 			},
 		});
@@ -217,6 +273,24 @@ app.delete("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
 	deleteKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
 
+app.put(
+	"/api/storage/kv/namespaces/:namespace_id/bulk",
+	validateRequestBody(
+		zWorkersKvNamespaceWriteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkWriteKVValues(c, c.req.valid("json"))
+);
+
+app.post(
+	"/api/storage/kv/namespaces/:namespace_id/bulk/delete",
+	validateRequestBody(
+		zWorkersKvNamespaceDeleteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkDeleteKVValues(c, c.req.valid("json"))
+);
+
 app.post(
 	"/api/storage/kv/namespaces/:namespace_id/bulk/get",
 	validateRequestBody(
@@ -315,6 +389,17 @@ app.post("/api/workflows/:workflow_name/instances", (c) =>
 	createWorkflowInstance(c, c.req.param("workflow_name"))
 );
 
+app.post(
+	"/api/workflows/:workflow_name/instances/batch/delete",
+	validateRequestBody(zWorkflowsBatchDeleteInstancesData.shape.body),
+	(c) =>
+		deleteWorkflowInstances(
+			c,
+			c.req.param("workflow_name"),
+			c.req.valid("json")
+		)
+);
+
 app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 	getWorkflowInstanceDetails(
 		c,
@@ -325,7 +410,7 @@ app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 
 app.patch(
 	"/api/workflows/:workflow_name/instances/:instance_id/status",
-	validateRequestBody(zWorkflowsChangeInstanceStatusData.shape.body),
+	validateRequestBody(zWorkflowInstanceStatusBody),
 	(c) =>
 		changeWorkflowInstanceStatus(
 			c,
@@ -355,6 +440,50 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 );
 
 // ============================================================================
+// Flagship Endpoints
+// ============================================================================
+
+app.get("/api/flagship/apps", (c) => listFlagshipApps(c));
+
+app.get("/api/flagship/apps/:app_id/flags", (c) =>
+	listFlagshipFlags(c, c.req.param("app_id"))
+);
+
+app.post(
+	"/api/flagship/apps/:app_id/flags",
+	validateRequestBody(zFlagshipCreateFlagData.shape.body),
+	(c) => createFlagshipFlag(c, c.req.param("app_id"), c.req.valid("json"))
+);
+
+app.patch(
+	"/api/flagship/apps/:app_id/flags/:flag_key",
+	validateRequestBody(zFlagshipUpdateFlagData.shape.body),
+	(c) =>
+		updateFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json")
+		)
+);
+
+app.delete("/api/flagship/apps/:app_id/flags/:flag_key", (c) =>
+	deleteFlagshipFlag(c, c.req.param("app_id"), c.req.param("flag_key"))
+);
+
+app.post(
+	"/api/flagship/apps/:app_id/flags/:flag_key/evaluate",
+	validateRequestBody(zFlagshipEvaluateFlagData.shape.body),
+	(c) =>
+		evaluateFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json").context ?? {}
+		)
+);
+
+// ============================================================================
 // Observability Endpoints
 // ============================================================================
 
@@ -365,6 +494,94 @@ app.post(
 );
 
 app.post("/api/local/observability/clear", (c) => clearTraces(c));
+
+// ============================================================================
+// Scheduled Endpoints
+// ============================================================================
+
+app.post(
+	"/api/local/scheduled",
+	validateQuery(zLocalExplorerDispatchScheduledData.shape.query),
+	validateRequestBody(zLocalExplorerDispatchScheduledData.shape.body),
+	(c) => dispatchScheduledToWorker(c, c.req.valid("query"), c.req.valid("json"))
+);
+
+// ============================================================================
+// Email Endpoints
+// ============================================================================
+
+const zEmailRoutingQuery = zEmailListRoutingData.shape.query
+	.unwrap()
+	.extend({ capture_id: z.uuid().optional() })
+	.superRefine((query, context) => {
+		if (query.capture_id !== undefined && query.email_id !== undefined) {
+			context.addIssue({
+				code: "custom",
+				message: "capture_id and email_id are mutually exclusive",
+			});
+		}
+		if (
+			query.capture_id !== undefined &&
+			(query.worker === undefined || query.worker.trim() === "")
+		) {
+			context.addIssue({
+				code: "custom",
+				path: ["worker"],
+				message: "Worker is required with capture_id",
+			});
+		}
+	});
+
+const zEmailCaptureOperationQuery = z.object({
+	worker: z.string().trim().min(1),
+	capture_id: z.uuid(),
+});
+
+app.get("/api/local/email/routing", validateQuery(zEmailRoutingQuery), (c) => {
+	const query = c.req.valid("query");
+	if (query.capture_id !== undefined) {
+		return getReceivedEmailByCaptureId(c, query.capture_id, query.worker ?? "");
+	}
+	return query.email_id === undefined
+		? listReceivedEmails(c, query)
+		: getReceivedEmail(c, query.email_id, query.worker);
+});
+
+app.post(
+	"/api/local/email/routing/resend",
+	validateQuery(zEmailCaptureOperationQuery),
+	(c) => {
+		const query = c.req.valid("query");
+		return resendCapturedEmail(c, query.worker, query.capture_id);
+	}
+);
+
+app.get(
+	"/api/local/email/routing/resend/draft",
+	validateQuery(zEmailCaptureOperationQuery),
+	(c) => {
+		const query = c.req.valid("query");
+		return getResendDraft(c, query.worker, query.capture_id);
+	}
+);
+
+app.post(
+	"/api/local/email/routing/send",
+	validateQuery(zEmailSendRoutingData.shape.query),
+	validateRequestBody(zEmailSendRoutingData.shape.body),
+	(c) => sendTestEmail(c, c.req.valid("json"), c.req.valid("query").worker)
+);
+
+app.get(
+	"/api/local/email/sending",
+	validateQuery(zEmailListSendingData.shape.query.unwrap()),
+	(c) => {
+		const query = c.req.valid("query");
+		return query.email_id === undefined
+			? listSentEmails(c, query)
+			: getSentEmail(c, query.email_id, query.worker);
+	}
+);
 
 // ============================================================================
 // Local Workers / Dev Registry Endpoint
@@ -386,7 +603,7 @@ app.get("/api/local/workers", async (c) => {
 				return {
 					isSelf: true,
 					name,
-					bindings: explorerWorkerOpts[name],
+					...explorerWorkerOpts[name],
 				};
 			});
 
@@ -395,7 +612,9 @@ app.get("/api/local/workers", async (c) => {
 		const peerResults = await Promise.all(
 			peerUrls.map(async (url) => {
 				const peerResponse = await fetchFromPeer(url, "/local/workers");
-				if (!peerResponse?.ok) return [];
+				if (!peerResponse?.ok) {
+					return [];
+				}
 				try {
 					const data = (await peerResponse.json()) as {
 						result?: LocalExplorerWorker[];

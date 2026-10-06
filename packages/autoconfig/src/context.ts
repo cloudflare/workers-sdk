@@ -15,6 +15,8 @@ export interface AutoConfigLogger {
 	error(...args: unknown[]): void;
 }
 
+export type AutoConfigTarget = "cf" | "wrangler";
+
 /**
  * Dialog interface for interactive prompts.
  * Callers provide their own implementation (e.g., using `prompts`, `inquirer`, or a custom UI).

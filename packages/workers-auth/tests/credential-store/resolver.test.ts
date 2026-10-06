@@ -238,7 +238,14 @@ describe("createCredentialStorageContext — resolver", () => {
 		}) => {
 			stubPlatform("linux");
 			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "true");
-			setLinuxSecretToolRunner(() => mockResult({ status: 127 }));
+			// `spawnSync` reports a missing executable via `error` with a `null`
+			// status rather than by throwing.
+			setLinuxSecretToolRunner(() => ({
+				...mockResult({ status: null }),
+				error: Object.assign(new Error("spawn secret-tool ENOENT"), {
+					code: "ENOENT",
+				}),
+			}));
 
 			expect(() => resolveStore({ isKeyringEnabled: true })).toThrow(
 				/CLOUDFLARE_AUTH_USE_KEYRING is set but `secret-tool` is required/

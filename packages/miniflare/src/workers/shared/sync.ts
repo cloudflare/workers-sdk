@@ -51,7 +51,9 @@ export class Mutex {
 		} else {
 			this.locked = false;
 			let resolve: (() => void) | undefined;
-			while ((resolve = this.drainQueue.shift()) !== undefined) resolve();
+			while ((resolve = this.drainQueue.shift()) !== undefined) {
+				resolve();
+			}
 		}
 	}
 
@@ -61,10 +63,14 @@ export class Mutex {
 
 	async runWith<T>(closure: () => Awaitable<T>): Promise<T> {
 		const acquireAwaitable = this.lock();
-		if (acquireAwaitable instanceof Promise) await acquireAwaitable;
+		if (acquireAwaitable instanceof Promise) {
+			await acquireAwaitable;
+		}
 		try {
 			const awaitable = closure();
-			if (awaitable instanceof Promise) return await awaitable;
+			if (awaitable instanceof Promise) {
+				return await awaitable;
+			}
 			return awaitable;
 		} finally {
 			this.unlock();
@@ -72,7 +78,9 @@ export class Mutex {
 	}
 
 	async drained(): Promise<void> {
-		if (this.resolveQueue.length === 0 && !this.locked) return;
+		if (this.resolveQueue.length === 0 && !this.locked) {
+			return;
+		}
 		return new Promise((resolve) => this.drainQueue.push(resolve));
 	}
 }
@@ -90,12 +98,16 @@ export class WaitGroup {
 		this.counter--;
 		if (this.counter === 0) {
 			let resolve: (() => void) | undefined;
-			while ((resolve = this.resolveQueue.shift()) !== undefined) resolve();
+			while ((resolve = this.resolveQueue.shift()) !== undefined) {
+				resolve();
+			}
 		}
 	}
 
 	wait(): Promise<void> {
-		if (this.counter === 0) return Promise.resolve();
+		if (this.counter === 0) {
+			return Promise.resolve();
+		}
 		return new Promise((resolve) => this.resolveQueue.push(resolve));
 	}
 }

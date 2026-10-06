@@ -183,11 +183,13 @@ export const syncAssets = async (
 	let completionJwt = "";
 	let uploadedAssetsCount = 0;
 	let uploadedBytes = 0;
+	let concurrencyThrottleGeneration = 0;
 
 	for (const [bucketIndex, bucket] of uploadBuckets.entries()) {
 		let attempts = 0;
 		let gatewayErrors = 0;
 		const doUpload = async (): Promise<UploadResponse> => {
+			const uploadGeneration = concurrencyThrottleGeneration;
 			const uploadedFiles: string[] = [];
 			for (const manifestEntry of bucket) {
 				uploadedFiles.push(manifestEntry[0]);
@@ -246,6 +248,17 @@ export const syncAssets = async (
 						}
 					);
 				}
+				// Only requests started after the latest throttle may restore capacity.
+				// Otherwise, requests that were already in flight could immediately undo it.
+				if (
+					queue.concurrency < concurrency &&
+					uploadGeneration === concurrencyThrottleGeneration
+				) {
+					queue.concurrency++;
+					logger.debug(
+						`Asset upload concurrency recovered to ${queue.concurrency}.`
+					);
+				}
 				uploadedAssetsCount += bucket.length;
 				uploadedBytes += bucket.reduce(
 					(total, manifestEntry) => total + manifestEntry[1].size,
@@ -271,7 +284,11 @@ export const syncAssets = async (
 					);
 					if (e instanceof APIError && e.isGatewayError()) {
 						// Gateway problem, wait for some additional time and set concurrency to 1
+						concurrencyThrottleGeneration++;
 						queue.concurrency = 1;
+						logger.debug(
+							"Asset upload concurrency throttled to 1 after a gateway error."
+						);
 						await new Promise((resolvePromise) =>
 							setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
 						);
@@ -553,11 +570,11 @@ export function resolveAssetOptions(
 	const _headers = directoryExists
 		? maybeGetFile(path.join(directory, HEADERS_FILENAME))
 		: undefined;
-
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
+		base_path: config.assets?.base_path,
 		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
 		compatibility_date: config.compatibility_date,
 		compatibility_flags: config.compatibility_flags,

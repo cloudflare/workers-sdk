@@ -1,12 +1,15 @@
 import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { SharedBindings } from "../../workers";
+import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import {
+	buildObjectEntryProps,
 	buildRemoteProxyProps,
 	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getRemoteProxyConnectionString,
+	getStorageService,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -27,9 +30,6 @@ import type { ParsedWorkerOptions, Plugin } from "../shared";
 import type { SitesOptions } from "./sites";
 
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
-// A single entry service shared by every *local* namespace. Each namespace's id
-// is supplied per-binding via `ctx.props`, so one service serves all of them.
-const KV_LOCAL_ENTRY_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:entry`;
 // One shared remote-proxy service for all remote namespaces (config via props).
 const KV_REMOTE_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:remote`;
 const KV_STORAGE_SERVICE_NAME = `${KV_PLUGIN_NAME}:storage`;
@@ -47,7 +47,7 @@ function isWorkersSitesEnabled(
 
 export const KV_PLUGIN: Plugin = {
 	bindingTypeDescription: "KV namespace",
-	async getBindings(options) {
+	async getBindings(options, sharedOptions) {
 		const namespaces = getEnvBindingsOfType(options.config, "kv");
 		const bindings = namespaces.map<Worker_Binding>(([name, binding]) => {
 			const id = binding.id;
@@ -70,14 +70,11 @@ export const KV_PLUGIN: Plugin = {
 			// passed at runtime via props (read in object-entry.worker.ts).
 			return {
 				name,
-				kvNamespace: {
-					name: KV_LOCAL_ENTRY_SERVICE_NAME,
-					props: {
-						json: JSON.stringify({
-							[SharedBindings.TEXT_NAMESPACE]: id,
-						}),
-					},
-				},
+				kvNamespace: getStorageService(
+					KV_LOCAL_ENTRY_SERVICE_NAME,
+					buildObjectEntryProps(id),
+					sharedOptions
+				),
 			};
 		});
 
@@ -112,9 +109,12 @@ export const KV_PLUGIN: Plugin = {
 		const services: Service[] = [];
 
 		// One shared entry service for all local namespaces (id supplied via props).
-		const hasLocalNamespace = namespaces.some(
-			([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
-		);
+		const hasLocalNamespace =
+			namespaces.some(
+				([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
+			) ||
+			sharedOptions.unsafeEnableSharedStorage ||
+			sharedOptions.unsafeLocalExplorer;
 		if (hasLocalNamespace) {
 			services.push({
 				name: KV_LOCAL_ENTRY_SERVICE_NAME,
@@ -177,7 +177,6 @@ export const KV_PLUGIN: Plugin = {
 			};
 			services.push(storageService, objectService);
 		}
-
 		if (isWorkersSitesEnabled(options)) {
 			services.push(...getSitesServices(options.legacy, options.dev?.rootPath));
 		}

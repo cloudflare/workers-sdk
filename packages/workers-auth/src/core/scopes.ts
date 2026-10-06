@@ -5,6 +5,9 @@
 // than capturing it at wiring time.
 
 export const DefaultScopes = {
+	"k2.read":
+		"See K2 stream configurations and bind existing streams to Workers.",
+	"k2.write": "Create and manage K2 stream configurations.",
 	"account:read":
 		"See your account info such as account details, analytics, and memberships.",
 	"user:read":
@@ -26,7 +29,6 @@ export const DefaultScopes = {
 	"ai:write": "See and change Workers AI catalog and assets",
 	"ai-search:write": "See and change AI Search data",
 	"ai-search:run": "Run search queries on your AI Search instances",
-	"websearch.run": "Run search queries against Cloudflare Web Search",
 	"agent-memory:write":
 		"See and change Agent Memory data such as keys and namespaces.",
 	"queues:write": "See and change Cloudflare Queues settings and data",

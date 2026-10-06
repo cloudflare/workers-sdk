@@ -469,12 +469,17 @@ function writeEntryServerTsx(
 }
 
 export class ReactRouter extends Framework {
+	readonly env = {
+		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+	} as const;
+
 	async configure({
 		dryRun,
 		projectPath,
 		packageManager,
 		isWorkspaceRoot,
 		context,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const useMiddlewarePattern = hasV8MiddlewareFlag(
 			projectPath,
@@ -485,6 +490,7 @@ export class ReactRouter extends Framework {
 				packageManager: packageManager.type,
 				projectPath,
 				isWorkspaceRoot,
+				version: target === "cf" ? "beta" : undefined,
 			});
 
 			mkdirSync("workers");
@@ -514,8 +520,9 @@ export class ReactRouter extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./workers/app.ts",
+			buildTool: "vite",
+			workerConfig: {
+				entrypoint: "./workers/app.ts",
 			},
 		};
 	}

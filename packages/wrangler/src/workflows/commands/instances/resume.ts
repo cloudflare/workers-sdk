@@ -6,7 +6,11 @@ import {
 	localWorkflowArgs,
 	updateLocalInstanceStatus,
 } from "../../local";
-import { getInstanceIdFromArgs, updateInstanceStatus } from "../../utils";
+import {
+	getInstanceIdFromArgs,
+	jsonWorkflowArgs,
+	updateInstanceStatus,
+} from "../../utils";
 
 export const workflowsInstancesResumeCommand = createCommand({
 	metadata: {
@@ -17,6 +21,7 @@ export const workflowsInstancesResumeCommand = createCommand({
 	positionalArgs: ["name", "id"],
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -30,16 +35,39 @@ export const workflowsInstancesResumeCommand = createCommand({
 		},
 	},
 
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+
 	async handler(args, { config }) {
 		let id: string;
+		let result: unknown;
 
 		if (args.local) {
-			id = await getLocalInstanceIdFromArgs(args.port, args);
-			await updateLocalInstanceStatus(args.port, args.name, id, "resume");
+			id = await getLocalInstanceIdFromArgs(args.port, args, {
+				quiet: args.json,
+			});
+			result = await updateLocalInstanceStatus(
+				args.port,
+				args.name,
+				id,
+				"resume"
+			);
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			await updateInstanceStatus(config, accountId, args.name, id, "resume");
+			result = await updateInstanceStatus(
+				config,
+				accountId,
+				args.name,
+				id,
+				"resume"
+			);
+		}
+
+		if (args.json) {
+			logger.json(result);
+			return;
 		}
 
 		logger.info(

@@ -70,6 +70,7 @@ export const ABORT_REASONS = {
 	USER_PAUSE: `${ABORT_PREFIX} User called pause`,
 	USER_RESTART: `${ABORT_PREFIX} User called restart`,
 	USER_TERMINATE: `${ABORT_PREFIX} User called terminate`,
+	USER_DELETE: `${ABORT_PREFIX} User called delete`,
 	NON_RETRYABLE_ERROR: `${ABORT_PREFIX} A step threw a NonRetryableError`,
 	NOT_SERIALISABLE: `${ABORT_PREFIX} Value is not serialisable`,
 	STORAGE_LIMIT_EXCEEDED: `${ABORT_PREFIX} Storage limit exceeded`,
@@ -110,6 +111,11 @@ export function isUserTriggeredTerminate(e: unknown): boolean {
 	return getErrorMessage(e) === ABORT_REASONS.USER_TERMINATE;
 }
 
+/** Checks whether an Engine RPC ended because deletion intentionally aborted it. */
+export function isUserTriggeredDelete(e: unknown): boolean {
+	return getErrorMessage(e) === ABORT_REASONS.USER_DELETE;
+}
+
 function getCompatFlag(name: string): boolean {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- safe globalThis access for environments where cloudflare global may not exist
 	return (globalThis as any).Cloudflare?.compatibilityFlags?.[name] ?? false;
@@ -123,5 +129,12 @@ export function stepNotFoundError(name: string): WorkflowError {
 	return createWorkflowError(
 		`Step "${name}" not found in execution history`,
 		"instance.cannot_restart"
+	);
+}
+
+export function duplicateInstanceError(id: string): WorkflowError {
+	return createWorkflowError(
+		`Workflow instance with id "${id}" already exists`,
+		"instance.already_exists"
 	);
 }

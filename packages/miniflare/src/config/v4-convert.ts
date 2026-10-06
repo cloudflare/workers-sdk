@@ -70,6 +70,7 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		unsafeInspectDurableObjects: options.unsafeInspectDurableObjects,
 		logRequests: options.logRequests,
 		resourcePersistencePath: options.resourcePersistencePath,
+		isolatedResourcePersistencePath: options.isolatedResourcePersistencePath,
 		resourceTmpPath: options.resourceTmpPath,
 		stripDisablePrettyError: options.stripDisablePrettyError,
 		telemetry: options.telemetry,
@@ -126,7 +127,6 @@ function convertWorkerOptions(
 	);
 
 	const config: MiniflareWorkerConfig = {
-		type: "worker",
 		name: worker.name ?? "",
 		compatibilityDate: worker.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE,
 		compatibilityFlags: worker.compatibilityFlags,
@@ -140,6 +140,11 @@ function convertWorkerOptions(
 		config.triggers.push({ type: "fetch", pattern: route });
 	}
 
+	for (const cron of worker.cronTriggers ?? []) {
+		config.triggers ??= [];
+		config.triggers.push({ type: "scheduled", schedule: cron });
+	}
+
 	for (const connectHandler of worker.connectHandlers ?? []) {
 		config.triggers ??= [];
 		config.triggers.push({ type: "connect", ...connectHandler });
@@ -150,6 +155,7 @@ function convertWorkerOptions(
 	addNamespaceBindings(env, "d1", worker.d1Databases, isRemote);
 	addR2Bindings(env, worker.r2Buckets, isRemote);
 	addDurableObjectBindings(env, exports, config.name, worker, isRemote);
+	addWorkflowExports(exports, worker);
 	addQueueBindings(
 		env,
 		config,
@@ -359,7 +365,7 @@ function addNamespaceBindings(
 			env[name] = {
 				type,
 				id: value.id,
-				remote: isRemote(value.remoteProxyConnectionString),
+				dev: { remote: isRemote(value.remoteProxyConnectionString) },
 			};
 		}
 	}
@@ -386,14 +392,10 @@ function addR2Bindings(
 			env[bindingName] = {
 				type: "r2",
 				name: bucket.id,
-				...(bucket.s3Credentials === undefined
-					? {}
-					: {
-							localDev: {
-								experimentalS3Credentials: bucket.s3Credentials,
-							},
-						}),
-				remote: isRemote(bucket.remoteProxyConnectionString),
+				dev: {
+					remote: isRemote(bucket.remoteProxyConnectionString),
+					experimentalS3Credentials: bucket.s3Credentials,
+				},
 			};
 		}
 	}
@@ -414,7 +416,7 @@ function addDurableObjectBindings(
 		const targetWorkerName = objectOptions.scriptName ?? workerName;
 		env[bindingName] = {
 			type: "durable-object",
-			workerName: targetWorkerName,
+			worker: targetWorkerName,
 			exportName: objectOptions.className,
 		};
 		isRemote(objectOptions.remoteProxyConnectionString);
@@ -449,6 +451,28 @@ function addDurableObjectExport(
 	exports[object.className] = exported as Exports[string];
 }
 
+/**
+ * Translate the declarative `workflowExports` carrier (keyed by the exported
+ * class name) into `exports` entries. This is the export-side counterpart to
+ * the `workflows` binding loop in `addProductBindings`: bindings expose a
+ * workflow to another Worker via `env`, whereas exports declare a workflow this
+ * Worker owns on `ctx.exports`.
+ */
+function addWorkflowExports(exports: Exports, worker: ParsedV4WorkerOptions) {
+	for (const [className, workflow] of Object.entries(
+		worker.workflowExports ?? {}
+	)) {
+		exports[className] = {
+			type: "workflow",
+			name: workflow.name,
+			limits:
+				workflow.stepLimit === undefined
+					? undefined
+					: { steps: workflow.stepLimit },
+		} as Exports[string];
+	}
+}
+
 function addQueueBindings(
 	env: Env,
 	config: MiniflareWorkerConfig,
@@ -469,7 +493,9 @@ function addQueueBindings(
 					type: "queue",
 					name: producer.queueName,
 					deliveryDelay: producer.deliveryDelay,
-					remote: isRemote(producer.remoteProxyConnectionString),
+					dev: {
+						remote: isRemote(producer.remoteProxyConnectionString),
+					},
 				};
 			}
 		}
@@ -517,15 +543,12 @@ function addServiceBindingArray(
 			throwUnsupportedOption(`${option}[].remoteProxyConnectionString`);
 		}
 		const converted = convertServiceDesignator(binding, () => false);
-		if (
-			converted.type !== "worker" ||
-			typeof converted.workerName !== "string"
-		) {
+		if (converted.type !== "worker" || typeof converted.worker !== "string") {
 			throwUnsupportedOption(option);
 		}
 		config.tailConsumers ??= [];
 		config.tailConsumers.push({
-			workerName: converted.workerName,
+			worker: converted.worker,
 			entrypoint: converted.exportName,
 			props: converted.props,
 			streaming,
@@ -555,13 +578,13 @@ function convertOutboundService(
 	if (converted.type === "fetcher" || converted.type === "node-handler") {
 		return converted;
 	}
-	if (converted.type === "worker" && typeof converted.workerName === "string") {
+	if (converted.type === "worker" && typeof converted.worker === "string") {
 		return {
 			type: "worker",
-			workerName: converted.workerName,
+			worker: converted.worker,
 			exportName: converted.exportName,
 			props: converted.props,
-			remote: converted.remote,
+			dev: converted.dev,
 		};
 	}
 	throwUnsupportedOption("outboundService");
@@ -575,27 +598,27 @@ function convertServiceDesignator(
 		return { type: "fetcher", handler: binding };
 	}
 	if (typeof binding === "string") {
-		return { type: "worker", workerName: binding };
+		return { type: "worker", worker: binding };
 	}
 	if (binding === kCurrentWorker) {
 		return {
 			type: "worker",
-			workerName: getCurrentWorkerBindingName(),
+			worker: getCurrentWorkerBindingName(),
 		};
 	}
 	if (typeof binding !== "object" || binding === null) {
 		return {
 			type: "worker",
-			workerName: getCurrentWorkerBindingName(),
+			worker: getCurrentWorkerBindingName(),
 		};
 	}
 	if ("name" in binding) {
 		return {
 			type: "worker",
-			workerName: convertWorkerName(binding.name),
+			worker: convertWorkerName(binding.name),
 			exportName: binding.entrypoint,
 			props: binding.props,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	if ("network" in binding) {
@@ -610,13 +633,11 @@ function convertServiceDesignator(
 	return { type: "node-handler", handler: binding.node };
 }
 
-function getCurrentWorkerBindingName(): ServiceBinding["workerName"] {
+function getCurrentWorkerBindingName(): ServiceBinding["worker"] {
 	return kCurrentWorker;
 }
 
-function convertWorkerName(
-	name: string | symbol
-): ServiceBinding["workerName"] {
+function convertWorkerName(name: string | symbol): ServiceBinding["worker"] {
 	return typeof name === "string" ? name : getCurrentWorkerBindingName();
 }
 
@@ -639,14 +660,22 @@ function addProductBindings(
 	if (worker.ai !== undefined) {
 		env[worker.ai.binding] = {
 			type: "ai",
-			remote: isRemote(worker.ai.remoteProxyConnectionString),
+			dev: { remote: isRemote(worker.ai.remoteProxyConnectionString) },
+		};
+	}
+	if (worker.analyticsSql !== undefined) {
+		env[worker.analyticsSql.binding] = {
+			type: "analytics",
+			dev: {
+				remote: isRemote(worker.analyticsSql.remoteProxyConnectionString),
+			},
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.agentMemory ?? {})) {
 		env[name] = {
 			type: "agent-memory",
 			namespace: binding.namespace,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -655,7 +684,7 @@ function addProductBindings(
 		env[name] = {
 			type: "ai-search-namespace",
 			namespace: binding.namespace ?? name,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -664,13 +693,7 @@ function addProductBindings(
 		env[name] = {
 			type: "ai-search",
 			name: binding.instance_name ?? binding.namespace ?? name,
-			remote: isRemote(binding.remoteProxyConnectionString),
-		};
-	}
-	for (const [name, binding] of Object.entries(worker.websearch ?? {})) {
-		env[name] = {
-			type: "web-search",
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -682,7 +705,7 @@ function addProductBindings(
 		env[name] = {
 			type: "hyperdrive",
 			id: name,
-			localConnectionString: String(value),
+			dev: { connectionString: String(value) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.ratelimits ?? {})) {
@@ -693,13 +716,20 @@ function addProductBindings(
 		};
 	}
 	addPipelineBindings(env, worker.pipelines, isRemote);
+	for (const [name, binding] of Object.entries(worker.k2 ?? {})) {
+		env[name] = {
+			type: "k2",
+			stream: binding.stream,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const binding of worker.email?.send_email ?? []) {
 		env[binding.name] = {
 			type: "send-email",
 			destinationAddress: binding.destination_address,
 			allowedDestinationAddresses: binding.allowed_destination_addresses,
 			allowedSenderAddresses: binding.allowed_sender_addresses,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -715,7 +745,7 @@ function addProductBindings(
 		env[name] = {
 			type: "vectorize",
 			name: binding.index_name,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -724,14 +754,14 @@ function addProductBindings(
 		env[name] = {
 			type: "dispatch-namespace",
 			namespace: binding.namespace,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.vpcServices ?? {})) {
 		env[name] = {
 			type: "vpc-service",
 			id: binding.service_id,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.vpcNetworks ?? {})) {
@@ -740,14 +770,14 @@ function addProductBindings(
 			...("tunnel_id" in binding
 				? { tunnelId: binding.tunnel_id }
 				: { networkId: binding.network_id }),
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.mtlsCertificates ?? {})) {
 		env[name] = {
 			type: "mtls-certificate",
 			id: binding.certificate_id,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.helloWorld ?? {})) {
@@ -757,14 +787,14 @@ function addProductBindings(
 		env[name] = {
 			type: "flagship",
 			id: binding.app_id,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {
@@ -787,13 +817,12 @@ function addProductBindings(
 		env[bindingName] = {
 			type: "workflow",
 			name: workflow.name,
-			workerName: targetWorkerName,
+			worker: targetWorkerName,
 			exportName: workflow.className,
 			limits:
 				workflow.stepLimit === undefined
 					? undefined
 					: { steps: workflow.stepLimit },
-			remote: isRemote(workflow.remoteProxyConnectionString),
 		};
 	}
 }
@@ -821,10 +850,10 @@ function addPipelineBindings(
 					: "stream" in binding
 						? binding.stream
 						: binding.pipeline,
-			remote:
+			dev:
 				typeof binding === "string"
 					? undefined
-					: isRemote(binding.remoteProxyConnectionString),
+					: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 }
@@ -844,6 +873,7 @@ function configAssets(
 	config.assets = {
 		directory: assets.directory,
 		hasUserWorker: getBooleanProperty(assets.routerConfig, "has_user_worker"),
+		basePath: getStringProperty(assets.assetConfig, "base_path"),
 		htmlHandling: getHtmlHandling(
 			getStringProperty(assets.assetConfig, "html_handling")
 		),
@@ -918,7 +948,7 @@ function addBrowserRenderingBinding(
 	if (binding !== undefined) {
 		env[binding.binding] = {
 			type: "browser",
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 			headful: binding.headful,
 		};
 	}
@@ -940,7 +970,7 @@ function addSingletonBinding<
 	if (binding !== undefined) {
 		env[binding.binding] = {
 			type,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 }

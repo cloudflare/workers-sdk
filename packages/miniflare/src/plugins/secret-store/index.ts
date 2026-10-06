@@ -8,6 +8,7 @@ import {
 	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getStorageService,
 	getUserBindingServiceName,
 	objectEntryWorker,
 	ProxyNodeBinding,
@@ -53,7 +54,7 @@ export const SECRET_STORE_PLUGIN: Plugin = {
 			"secrets-store-secret"
 		).map(([, binding]) => binding);
 
-		if (configs.length === 0) {
+		if (configs.length === 0 && !sharedOptions.unsafeEnableSharedStorage) {
 			return [];
 		}
 
@@ -126,10 +127,11 @@ export const SECRET_STORE_PLUGIN: Plugin = {
 				bindings: [
 					{
 						name: "store",
-						kvNamespace: {
-							name: SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME,
-							props: buildObjectEntryProps(config.storeId),
-						},
+						kvNamespace: getStorageService(
+							SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME,
+							buildObjectEntryProps(config.storeId),
+							sharedOptions
+						),
 					},
 					{
 						name: "secret_name",

@@ -40,14 +40,15 @@ export class Qwik extends Framework {
 			addBindingsProxy(projectPath);
 		}
 		return {
-			wranglerConfig: {
-				main: "./dist/_worker.js",
-				compatibility_flags: ["global_fetch_strictly_public"],
-				assets: {
-					binding: "ASSET",
-					directory: "./dist",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./dist/_worker.js",
+				compatibilityFlags: ["global_fetch_strictly_public"],
+				env: {
+					ASSET: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./dist" },
 			packageJsonScriptsOverrides: {
 				preview: `${packageManager.type} run build && wrangler dev`,
 				deploy: `${packageManager.type} run build && wrangler deploy`,

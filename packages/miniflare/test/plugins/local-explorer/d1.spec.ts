@@ -6,8 +6,16 @@ import {
 	zD1ListDatabasesResponse,
 	zD1RawDatabaseQueryResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
-import { disposeWithRetry, singleModuleManifest } from "../../test-shared";
-import { expectValidResponse } from "./helpers";
+import {
+	dispatchFetchWithRetry,
+	disposeWithRetry,
+	singleModuleManifest,
+} from "../../test-shared";
+import {
+	createSharedStorageExplorerPair,
+	createUnboundStorageExplorer,
+	expectValidResponse,
+} from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
@@ -21,7 +29,6 @@ describe("D1 API", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(
@@ -228,7 +235,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		test("returns 404 for non-existent database", async ({ expect }) => {
+		test("addresses an unlisted database", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/non-existent-id/raw`,
 				{
@@ -246,14 +253,18 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zD1ApiResponseCommonFailure,
-				expect,
-				404
+				zD1RawDatabaseQueryResponse,
+				expect
 			);
 
 			expect(data).toMatchObject({
-				errors: [expect.objectContaining({ code: 7404 })],
-				success: false,
+				result: [
+					{
+						results: { columns: ["1"], rows: [[1]] },
+						success: true,
+					},
+				],
+				success: true,
 			});
 		});
 
@@ -349,4 +360,90 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 	});
+});
+
+test("addresses arbitrary database IDs without a D1 binding", async ({
+	expect,
+}) => {
+	const mf = createUnboundStorageExplorer();
+
+	try {
+		await mf.ready;
+		const queryUrl = `${BASE_URL}/d1/database/arbitrary-database/raw`;
+		const writeResponse = await dispatchFetchWithRetry(mf, queryUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				batch: [
+					{ sql: "CREATE TABLE entries (value TEXT NOT NULL)" },
+					{ sql: "INSERT INTO entries VALUES ('unbound-content')" },
+				],
+			}),
+		});
+		expect(writeResponse.status).toBe(200);
+		expect(await writeResponse.json()).toMatchObject({ success: true });
+
+		const readResponse = await dispatchFetchWithRetry(mf, queryUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ sql: "SELECT value FROM entries" }),
+		});
+		expect(readResponse.status).toBe(200);
+		expect(await readResponse.json()).toMatchObject({
+			result: [
+				{
+					results: {
+						columns: ["value"],
+						rows: [["unbound-content"]],
+					},
+				},
+			],
+			success: true,
+		});
+	} finally {
+		await disposeWithRetry(mf);
+	}
+});
+
+test("routes arbitrary database IDs through the shared-storage owner", async ({
+	expect,
+}) => {
+	const { owner, client } = await createSharedStorageExplorerPair();
+
+	try {
+		await client.ready;
+		const queryUrl = `${BASE_URL}/d1/database/arbitrary-database/raw`;
+		const writeResponse = await dispatchFetchWithRetry(client, queryUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				batch: [
+					{ sql: "CREATE TABLE entries (value TEXT NOT NULL)" },
+					{ sql: "INSERT INTO entries VALUES ('written-through-client')" },
+				],
+			}),
+		});
+		expect(writeResponse.status).toBe(200);
+		expect(await writeResponse.json()).toMatchObject({ success: true });
+
+		const readResponse = await dispatchFetchWithRetry(owner, queryUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ sql: "SELECT value FROM entries" }),
+		});
+		expect(readResponse.status).toBe(200);
+		expect(await readResponse.json()).toMatchObject({
+			result: [
+				{
+					results: {
+						columns: ["value"],
+						rows: [["written-through-client"]],
+					},
+				},
+			],
+			success: true,
+		});
+	} finally {
+		await Promise.all([disposeWithRetry(client), disposeWithRetry(owner)]);
+	}
 });

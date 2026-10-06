@@ -11,24 +11,127 @@ import * as details from "../../src/details";
 import { createMockContext } from "../helpers/mock-context";
 import type { Config } from "@cloudflare/workers-utils";
 
+const fileSystemErrors = vi.hoisted(() => ({
+	readdir: new Map<string, string>(),
+	stat: new Map<string, string>(),
+}));
+const statAliases = vi.hoisted(() => new Map<string, string>());
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const original = await importOriginal<typeof import("node:fs/promises")>();
+
+	function throwConfiguredError(errors: Map<string, string>, path: unknown) {
+		const stringPath = String(path);
+		const code = errors.get(stringPath);
+		if (code !== undefined) {
+			throw Object.assign(new Error(`${code}: ${stringPath}`), {
+				code,
+				path: stringPath,
+			});
+		}
+	}
+
+	return {
+		...original,
+		readdir: (...args: Parameters<typeof original.readdir>) => {
+			throwConfiguredError(fileSystemErrors.readdir, args[0]);
+			return Reflect.apply(original.readdir, undefined, args);
+		},
+		stat: (...args: Parameters<typeof original.stat>) => {
+			throwConfiguredError(fileSystemErrors.stat, args[0]);
+			const alias = statAliases.get(String(args[0]));
+			if (alias !== undefined) {
+				return Reflect.apply(original.stat, undefined, [
+					alias,
+					...args.slice(1),
+				]);
+			}
+			return Reflect.apply(original.stat, undefined, args);
+		},
+	};
+});
+
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 	const context = createMockContext();
 
 	afterEach(() => {
+		fileSystemErrors.readdir.clear();
+		fileSystemErrors.stat.clear();
+		statAliases.clear();
 		vi.unstubAllGlobals();
 	});
 
-	it("should set configured: true if a configPath exists", async ({
+	it("should set configured: true if a configPath exists during legacy Wrangler detection", async ({
 		expect,
 	}) => {
 		await expect(
 			details.getDetailsForAutoConfig({
 				wranglerConfig: { configPath: "/tmp" } as Config,
+				target: "wrangler",
 				context,
 			})
 		).resolves.toMatchObject({ configured: true });
+	});
+
+	it("should migrate an existing Wrangler project by default", async ({
+		expect,
+	}) => {
+		await writeFile("index.html", "<h1>Hello World</h1>");
+
+		await expect(
+			details.getDetailsForAutoConfig({
+				wranglerConfig: { configPath: "/tmp" } as Config,
+				context,
+			})
+		).resolves.toMatchObject({ configured: false });
+	});
+
+	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				scripts: { build: "astro build", dev: "cf dev" },
+				dependencies: { astro: "5" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "astro", supportsMode: true },
+			buildCommand: "npx astro build",
+			devCommand: "npx astro dev",
+			packageManager: { type: "npm" },
+		});
+	});
+
+	it("should defer a configured unsupported framework to a Cloudflare dev server", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				scripts: { build: "cf build", dev: "cf dev" },
+				dependencies: { hono: "4", vite: "8" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "hono" },
+			buildCommand: undefined,
+			devCommand: undefined,
+			packageManager: { type: "npm" },
+		});
 	});
 
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
@@ -59,6 +162,8 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				details.getDetailsForAutoConfig({ context })
 			).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
+				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
+				framework: { supportsMode: true },
 				configured: false,
 				outputDir: "dist",
 				packageJson: {
@@ -166,7 +271,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		expect(std.warn).toContain("project is part of a workspace");
 	});
 
-	it("should use npm build instead of framework build if present", async ({
+	it("should use the direct framework build instead of an npm script for cf", async ({
 		expect,
 	}) => {
 		await writeFile(
@@ -184,7 +289,48 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await expect(
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
+			buildCommand: "npx astro build",
+		});
+	});
+
+	it("should preserve npm build script detection for Wrangler", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"package.json",
+			JSON.stringify({
+				scripts: {
+					build: "echo build",
+				},
+				dependencies: {
+					astro: "5",
+				},
+			})
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ target: "wrangler", context })
+		).resolves.toMatchObject({
 			buildCommand: "npm run build",
+		});
+	});
+
+	it("should include the Vite plugin command environment for cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({ dependencies: { vite: "8" } }),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			framework: { id: "vite" },
+			buildCommand: "npx vite build",
+			env: {
+				CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+			},
 		});
 	});
 
@@ -217,6 +363,60 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			"public/index.html": `<h1>Hello World</h1>`,
 			"random/index.html": `<h1>Hello World</h1>`,
 		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
+	it("outputDir should require index.html to use exact casing", async ({
+		expect,
+	}) => {
+		await seed({
+			"public/INDEX.HTML": `<h1>Hello World</h1>`,
+		});
+		statAliases.set(
+			join(process.cwd(), "public", "index.html"),
+			join(process.cwd(), "public", "INDEX.HTML")
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
+		);
+	});
+
+	it("outputDir should ignore inaccessible child directories", async ({
+		expect,
+	}) => {
+		await seed({
+			".Trash/placeholder": "",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+		fileSystemErrors.readdir.set(join(process.cwd(), ".Trash"), "EPERM");
+		fileSystemErrors.stat.set(
+			join(process.cwd(), ".Trash", "index.html"),
+			"EPERM"
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
+	it("outputDir should ignore child directories that cannot be statted", async ({
+		expect,
+	}) => {
+		await seed({
+			"0-cache/placeholder": "",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+		fileSystemErrors.stat.set(join(process.cwd(), "0-cache"), "EACCES");
 
 		await expect(
 			details.getDetailsForAutoConfig({ context })

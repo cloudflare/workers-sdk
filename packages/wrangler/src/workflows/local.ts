@@ -5,6 +5,10 @@ import type {
 	InstanceStatusAndLogs,
 	WorkflowInstanceRestartFrom,
 } from "./types";
+import type {
+	LocalExplorerWorkflowInstanceStatus,
+	LocalExplorerWorkflowInstanceStatusResult,
+} from "miniflare";
 
 const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/local/explorer/api";
 const DEFAULT_LOCAL_PORT = 8787;
@@ -104,10 +108,15 @@ export async function fetchLocalResult<T>(
 /**
  * List all workflow instances locally and resolve "latest" to an actual ID.
  * Mirrors `getInstanceIdFromArgs` but uses the local explorer API.
+ *
+ * @param options.quiet Suppress the informational "Latest instance is ..."
+ * message. Callers rendering JSON must set this so that the resolved id is not
+ * written to stdout ahead of the payload.
  */
 export async function getLocalInstanceIdFromArgs(
 	port: number,
-	args: { id: string; name: string }
+	args: { id: string; name: string },
+	options: { quiet?: boolean } = {}
 ): Promise<string> {
 	let id = args.id;
 
@@ -128,7 +137,9 @@ export async function getLocalInstanceIdFromArgs(
 		);
 
 		id = sorted[0].id;
-		logger.info(`Latest instance is "${id}"`);
+		if (!options.quiet) {
+			logger.info(`Latest instance is "${id}"`);
+		}
 	}
 
 	return id;
@@ -136,23 +147,22 @@ export async function getLocalInstanceIdFromArgs(
 
 /**
  * Change the status of a local workflow instance (pause, resume, restart, terminate).
- * The local explorer API uses `action` instead of `status` in the request body.
  */
 export async function updateLocalInstanceStatus(
 	port: number,
 	workflowName: string,
 	instanceId: string,
-	action: "pause" | "resume" | "restart" | "terminate",
+	status: LocalExplorerWorkflowInstanceStatus,
 	from?: WorkflowInstanceRestartFrom,
 	rollback?: boolean
-): Promise<void> {
+): Promise<LocalExplorerWorkflowInstanceStatusResult> {
 	const body = {
-		action,
+		status,
 		...(from ? { from } : {}),
-		...(action === "terminate" && rollback === true ? { rollback: true } : {}),
+		...(status === "terminate" && rollback === true ? { rollback: true } : {}),
 	};
 
-	await fetchLocalResult<{ success: boolean }>(
+	return fetchLocalResult<LocalExplorerWorkflowInstanceStatusResult>(
 		port,
 		`/workflows/${encodeURIComponent(workflowName)}/instances/${encodeURIComponent(instanceId)}/status`,
 		{

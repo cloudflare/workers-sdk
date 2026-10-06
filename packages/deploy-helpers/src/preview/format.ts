@@ -1,8 +1,8 @@
 import { getBindingTypeFriendlyName } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { drawBox, padToVisibleWidth, visibleLength } from "./box";
+import { padToVisibleWidth, visibleLength } from "./box";
 import { getBindingValue } from "./shared";
-import type { Binding, PreviewDefaults } from "./api";
+import type { Binding } from "./api";
 
 type MergedBinding = Binding & { fromConfig: boolean };
 
@@ -69,83 +69,4 @@ export function formatBindings(
 			valueWidth
 		)}`;
 	});
-}
-
-export function formatPreviewsSettings(
-	workerName: string,
-	previewDefaults: PreviewDefaults
-): string {
-	const lines: string[] = [];
-	lines.push(`${chalk.bold.hex("#FFA500")("Worker:")} ${workerName}`);
-	lines.push("");
-	lines.push(`  ${chalk.bold.underline("Previews settings")}`);
-	lines.push("");
-
-	const settingsRows: Array<[string, string]> = [];
-	if (
-		previewDefaults.observability &&
-		typeof previewDefaults.observability === "object"
-	) {
-		const enabledLabel = previewDefaults.observability.enabled
-			? "enabled"
-			: "disabled";
-		const sampling =
-			typeof previewDefaults.observability.head_sampling_rate === "number"
-				? `, ${previewDefaults.observability.head_sampling_rate.toFixed(
-						1
-					)} sampling`
-				: "";
-		settingsRows.push(["observability", `${enabledLabel}${sampling}`]);
-	}
-	if (typeof previewDefaults.logpush === "boolean") {
-		settingsRows.push([
-			"logpush",
-			previewDefaults.logpush ? "enabled" : "disabled",
-		]);
-	}
-	if (
-		typeof previewDefaults.limits?.cpu_ms === "number" ||
-		typeof previewDefaults.limits?.subrequests === "number"
-	) {
-		const limitParts = [
-			typeof previewDefaults.limits?.cpu_ms === "number"
-				? `cpu_ms: ${previewDefaults.limits.cpu_ms}`
-				: undefined,
-			typeof previewDefaults.limits?.subrequests === "number"
-				? `subrequests: ${previewDefaults.limits.subrequests}`
-				: undefined,
-		].filter((value): value is string => value !== undefined);
-		settingsRows.push(["limits", limitParts.join(", ")]);
-	}
-	if (typeof previewDefaults.placement?.mode === "string") {
-		settingsRows.push(["placement", previewDefaults.placement.mode]);
-	}
-	if (previewDefaults.cache !== undefined) {
-		settingsRows.push([
-			"cache",
-			previewDefaults.cache.enabled ? "enabled" : "disabled",
-		]);
-	}
-
-	if (settingsRows.length > 0) {
-		const labelWidth = Math.max(...settingsRows.map(([label]) => label.length));
-		for (const [label, value] of settingsRows) {
-			lines.push(
-				`  ${chalk.cyan(padToVisibleWidth(label, labelWidth))}   ${value}`
-			);
-		}
-	}
-
-	lines.push("");
-	lines.push(chalk.bold("  Bindings"));
-	const env = Object.fromEntries(
-		Object.entries(previewDefaults.env ?? {}).map(([name, binding]) => [
-			name,
-			{ ...binding, fromConfig: false },
-		])
-	) as Record<string, MergedBinding>;
-	lines.push(...formatBindings(env));
-	lines.push("");
-
-	return drawBox(lines);
 }

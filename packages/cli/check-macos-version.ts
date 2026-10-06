@@ -1,5 +1,5 @@
 import os from "node:os";
-import { UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils/errors";
 import ci from "ci-info";
 
 /**

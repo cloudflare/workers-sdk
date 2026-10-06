@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { brandColor, dim, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { removeDir } from "@cloudflare/workers-utils";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { CDP_WEBSOCKET_ENDPOINT_REGEX, launch } from "@puppeteer/browsers";
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { kVoid } from "../../runtime";

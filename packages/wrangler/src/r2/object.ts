@@ -228,7 +228,7 @@ const commonPutArguments = {
 		type: "string",
 	},
 	force: {
-		describe: "Skip data catalog validation prompt",
+		describe: "Skip Basin Catalog validation prompt",
 		type: "boolean",
 		alias: "y",
 		default: false,
@@ -415,8 +415,8 @@ export const r2ObjectPutCommand = createCommand({
 			} catch (error) {
 				if (!yArgs.force && isDataCatalogConflict(error)) {
 					const confirmed = await confirm(
-						"Data catalog is enabled for this bucket. " +
-							"Proceeding may leave the data catalog in an invalid state. Continue?",
+						"Basin Catalog is enabled for this bucket. " +
+							"Proceeding may leave Basin Catalog in an invalid state. Continue?",
 						{ defaultValue: false, fallbackValue: true }
 					);
 					if (!confirmed) {
@@ -487,7 +487,7 @@ export const r2ObjectDeleteCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip data catalog validation prompt",
+			describe: "Skip Basin Catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -527,8 +527,8 @@ export const r2ObjectDeleteCommand = createCommand({
 			} catch (error) {
 				if (!args.force && isDataCatalogConflict(error)) {
 					const confirmed = await confirm(
-						"Data catalog is enabled for this bucket. " +
-							"Proceeding may leave the data catalog in an invalid state. Continue?",
+						"Basin Catalog is enabled for this bucket. " +
+							"Proceeding may leave Basin Catalog in an invalid state. Continue?",
 						{ defaultValue: false, fallbackValue: true }
 					);
 					if (!confirmed) {
@@ -692,7 +692,7 @@ export const r2BulkPutCommand = createCommand({
 
 			const accountId = await requireAuth(config);
 
-			// Upfront data catalog warning for bulk operations.
+			// Upfront Basin Catalog warning for bulk operations.
 			// Unlike individual commands, we don't use the API-level catalog check
 			// header because the PQueue concurrency model makes mid-batch
 			// prompting unreliable (in-flight requests can't be paused).
@@ -700,7 +700,7 @@ export const r2BulkPutCommand = createCommand({
 			if (!forceBulk) {
 				const confirmed = await confirm(
 					"Bulk upload may overwrite existing objects. If this bucket has " +
-						"data catalog enabled, this operation could leave the catalog " +
+						"Basin Catalog enabled, this operation could leave the catalog " +
 						"in an invalid state. Continue?",
 					{ defaultValue: false, fallbackValue: true }
 				);

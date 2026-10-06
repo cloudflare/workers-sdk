@@ -193,7 +193,7 @@ Remember that this change is specific to the current project and will not affect
 
 ### Linting
 
-The code is checked for linting errors by [ESLint](https://eslint.org/).
+The code is checked for linting errors by [Oxlint](https://oxc.rs/docs/guide/usage/linter.html).
 
 - Run the linting checks
 
@@ -201,11 +201,11 @@ The code is checked for linting errors by [ESLint](https://eslint.org/).
   pnpm run check:lint
   ```
 
-- The repository has a recommended VS Code plugin to run ESLint checks while editing source code, providing immediate feedback.
+- The repository recommends the [Oxc VS Code extension](https://marketplace.visualstudio.com/items?itemName=oxc.oxc-vscode) to run Oxlint checks while editing source code, providing immediate feedback.
 
 ### Formatting
 
-The code is checked for formatting errors by [Prettier](https://prettier.io/).
+The code is checked for formatting errors by [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html).
 
 - Run the formatting checks
 
@@ -213,8 +213,8 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
   pnpm run check:format
   ```
 
-- The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback
-- Use the following command to run prettier on the codebase
+- The Oxc VS Code extension can automatically format supported files with Oxfmt while editing source code.
+- Use the following command to format the codebase
 
   ```sh
   pnpm run prettify
@@ -360,10 +360,10 @@ Remote E2E tests run automatically in these cases:
 - **Version Packages PRs** (branch `changeset-release/main`) — acts as a pre-release safety net, catching remote-test failures before packages are published.
 - **Merge queue** — final check before code lands on `main`.
 
-If you need remote E2E tests on your PR (e.g. you're changing deployment logic or binding behavior), apply the **`ci:run-remote-tests`** label. This triggers a re-run of the E2E workflows with API credentials enabled.
+If you need remote E2E tests on your PR (e.g. you're changing deployment logic or binding behavior), apply the **`ci:run-remote-tests`** label. This triggers a re-run of the Wrangler and Vite E2E workflows with API credentials enabled. C3 E2E tests do not receive Cloudflare API credentials.
 
 > [!NOTE]
-> The `ci:run-remote-tests` label has no effect on PRs from forks, because GitHub does not expose repository secrets to fork PRs.
+> Remote tests cannot run on PRs from forks because GitHub does not expose repository secrets to fork PRs. Applying the `ci:run-remote-tests` label to a fork PR will fail its Wrangler and Vite E2E checks until the label is removed.
 
 ## Running E2E tests locally
 

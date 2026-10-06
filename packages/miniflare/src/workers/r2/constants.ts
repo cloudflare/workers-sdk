@@ -3,7 +3,8 @@ export const R2Limits = {
 	MAX_KEY_SIZE: 1024,
 	// https://developers.cloudflare.com/r2/platform/limits/
 	MAX_VALUE_SIZE: 5_368_709_120 - 5_242_880, // 5 GiB - 5 MiB
-	MAX_METADATA_SIZE: 2048, // 2048 B
+	// https://developers.cloudflare.com/r2/api/error-codes/#object-errors
+	MAX_METADATA_SIZE: 8192, // 8 KiB
 	MIN_MULTIPART_PART_SIZE: 5 * 1024 * 1024,
 	MIN_MULTIPART_PART_SIZE_TEST: 50,
 } as const;
@@ -20,6 +21,10 @@ export const R2S3Bindings = {
 	/** Prefix for per-bucket `R2Bucket` bindings (followed by the bucket id) */
 	BUCKET_PREFIX: "MINIFLARE_R2_S3_BUCKET_",
 } as const;
+
+// A single entry service shared by every local bucket. The bucket ID is
+// supplied when resolving the entrypoint via `ctx.props`.
+export const R2_LOCAL_ENTRY_SERVICE_NAME = "r2:bucket:entry";
 
 export const R2Headers = {
 	ERROR: "cf-r2-error",

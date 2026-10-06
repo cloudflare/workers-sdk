@@ -10,7 +10,6 @@ async function createReadyMiniflare(): Promise<Miniflare> {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -146,7 +145,9 @@ test("Miniflare: dispose waits for workerd exit and continues cleanup before ret
 			"injected proxy cleanup failure"
 		);
 	} finally {
-		if (!runtimeExitReleased) releaseRuntimeExit();
+		if (!runtimeExitReleased) {
+			releaseRuntimeExit();
+		}
 		emit.mockRestore();
 		proxyDispose.mockRestore();
 		webSocketClose.mockRestore();

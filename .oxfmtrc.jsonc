@@ -48,7 +48,7 @@
 		"!packages/create-cloudflare/templates*/hello-world/**/*.*",
 		"packages/create-cloudflare/templates*/hello-world/**/worker-configuration.d.ts",
 
-		"packages/vitest-pool-workers/scripts/rtti/rtti.js",
+		"packages/vitest-plugin/scripts/rtti/rtti.js",
 		"packages/vite-plugin-cloudflare/playground/prisma/src/generated",
 		"dist-functions",
 		"vscode.d.ts",

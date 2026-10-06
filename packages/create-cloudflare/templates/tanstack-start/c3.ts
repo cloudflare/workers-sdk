@@ -28,6 +28,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "tanstack-start",
 	platform: "workers",
+	languages: ["ts"],
 	frameworkCli: "@tanstack/cli",
 	displayName: "TanStack Start",
 	generate,

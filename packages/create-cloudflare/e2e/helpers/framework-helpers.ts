@@ -74,6 +74,7 @@ export async function runC3ForFrameworkTest(
 		`${runDeployTests}`,
 		"--no-open",
 		"--no-auto-update",
+		"--no-agents",
 		...argv,
 	];
 
@@ -361,7 +362,7 @@ export async function verifyTypes(
 	// if the runtime types were installed, they wont be in this file
 	if (workersTypes === "generated") {
 		expect(outputFileContent[2]).match(
-			/\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2} ([a-z_]+,?)*/
+			/^\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2}(?: [a-z_]+(?:,[a-z_]+)*)?$/
 		);
 	}
 

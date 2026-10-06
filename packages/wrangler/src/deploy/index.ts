@@ -1,13 +1,23 @@
+import {
+	cleanupBuiltImages,
+	initContainersSharedContext,
+} from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
+	CommandLineArgsError,
+	getDockerPath,
+	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
 	isNonInteractiveOrCI,
 } from "@cloudflare/workers-utils";
-import { analyseBundle } from "../check/commands";
-import { buildContainer } from "../containers/build";
-import { getNormalizedContainerOptions } from "../containers/config";
-import { deployContainers } from "../containers/deploy";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
+import {
+	buildDeployContainerImages,
+	buildDurableObjectContainerImages,
+} from "../deployment-bundle/build-container-images";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -17,16 +27,37 @@ import {
 	cleanupDestination,
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
+import {
+	routeZoneArgs,
+	validateRouteZoneArgs,
+} from "../deployment-bundle/route-zone-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
+import { durableObjectsCodeUpdateModeArg } from "../versions/deployment-args";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 import type { Config } from "@cloudflare/workers-utils";
+
+function parseEventCode(value: string | string[]): string {
+	if (Array.isArray(value)) {
+		throw new CommandLineArgsError("--event-code expects a single value.", {
+			telemetryMessage: "deploy event code multiple values",
+		});
+	}
+
+	const eventCode = value.trim();
+	if (!eventCode) {
+		throw new CommandLineArgsError("--event-code cannot be empty.", {
+			telemetryMessage: "deploy event code empty",
+		});
+	}
+
+	return eventCode;
+}
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -39,6 +70,14 @@ export const deployCommand = createCommand({
 	args: {
 		...experimentalNewConfigArg,
 		...sharedDeployVersionsArgs,
+		...durableObjectsCodeUpdateModeArg,
+		"event-code": {
+			describe: "Create a temporary account for an event",
+			type: "string",
+			requiresArg: true,
+			hidden: true,
+			coerce: parseEventCode,
+		},
 		triggers: {
 			describe: "cron schedules to attach",
 			alias: ["schedule", "schedules"],
@@ -53,6 +92,7 @@ export const deployCommand = createCommand({
 			requiresArg: true,
 			array: true,
 		},
+		...routeZoneArgs,
 		domains: {
 			describe: "Custom domains to deploy to",
 			alias: "domain",
@@ -106,7 +146,16 @@ export const deployCommand = createCommand({
 		suggestSkillsAfterHandler: true,
 	},
 	validateArgs(args) {
+		if (
+			args.eventCode &&
+			!(args as typeof args & { temporary?: boolean }).temporary
+		) {
+			throw new CommandLineArgsError("--event-code requires --temporary.", {
+				telemetryMessage: "deploy event code temporary required",
+			});
+		}
 		validateDeployVersionsArgs(args, "deploy");
+		validateRouteZoneArgs(args);
 	},
 	async handler(args, { config }) {
 		await runDeployCommandHandler(args, { config });
@@ -188,32 +237,39 @@ export async function runDeployCommandHandler(
 	try {
 		// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 		const preMergeName = getScriptName(args, config);
-		const workerNameOverridden =
+		props.workerNameOverridden =
 			props.name !== undefined && props.name !== preMergeName;
 
 		const beforeUpload = Date.now();
 
 		const buildResult = await buildWorker(buildProps, config);
 
-		const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
-			await deploy(props, config, buildResult, {
-				syncWorkersSite,
-				getNormalizedContainerOptions,
-				buildContainer,
-				deployContainers,
-				analyseBundle,
-			});
-
-		writeOutput({
-			type: "deploy",
-			version: 1,
-			worker_name: props.name ?? null,
-			worker_tag: workerTag,
-			version_id: versionId,
-			targets,
-			wrangler_environment: args.env,
-			worker_name_overridden: workerNameOverridden,
+		initContainersSharedContext({
+			logger,
+			fetchPagedListResult,
+			fetchResult,
 		});
+		props.containers.standard.builtImages =
+			await buildDeployContainerImages(props);
+		props.containers.durableObjects.builtImages =
+			await buildDurableObjectContainerImages(props, config);
+		if (
+			!props.dryRun &&
+			props.containersRollout !== "none" &&
+			(props.containers.standard.normalized.length > 0 ||
+				getDurableObjectContainerApps(props.containers.source).length > 0)
+		) {
+			await fillOpenAPIConfiguration(config, containersScope);
+		}
+
+		const { sourceMapSize, assetUploadStats } = await deploy(
+			props,
+			config,
+			buildResult,
+			{
+				syncWorkersSite,
+			}
+		);
 
 		metrics.sendMetricsEvent(
 			"deploy worker script",
@@ -228,6 +284,19 @@ export async function runDeployCommandHandler(
 			}
 		);
 	} finally {
+		if (
+			props.containers.standard.builtImages.length > 0 ||
+			props.containers.durableObjects.builtImages.length > 0
+		) {
+			const dockerPath = getDockerPath();
+			await cleanupBuiltImages(
+				[
+					...props.containers.standard.builtImages,
+					...props.containers.durableObjects.builtImages,
+				],
+				dockerPath
+			);
+		}
 		cleanupDestination(buildProps.destination);
 	}
 }

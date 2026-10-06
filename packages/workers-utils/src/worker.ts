@@ -1,5 +1,6 @@
 import type {
 	CacheOptions,
+	DurableObjectCodeUpdateStrategy,
 	Exports,
 	LocalS3Credentials,
 	Observability,
@@ -94,10 +95,20 @@ export interface CfKvNamespace {
 export type CfSendEmailBindings = {
 	name: string;
 	remote?: boolean;
+	allowed_sender_addresses?: string[];
 } & (
-	| { destination_address?: string }
-	| { allowed_destination_addresses?: string[] }
-	| { allowed_sender_addresses?: string[] }
+	| {
+			destination_address: string;
+			allowed_destination_addresses?: never;
+	  }
+	| {
+			destination_address?: never;
+			allowed_destination_addresses: string[];
+	  }
+	| {
+			destination_address?: never;
+			allowed_destination_addresses?: never;
+	  }
 );
 
 /**
@@ -123,6 +134,12 @@ export interface CfTextBlobBindings {
 export interface CfBrowserBinding {
 	binding: string;
 	raw?: boolean;
+	remote?: boolean;
+}
+
+/** A binding to Analytics SQL. */
+export interface CfAnalyticsSQLBinding {
+	binding: string;
 	remote?: boolean;
 }
 
@@ -197,6 +214,9 @@ export interface CfWorkflow {
 	limits?: {
 		steps?: number;
 	};
+	concurrency?: {
+		limit?: number;
+	};
 	schedules?: string | string[];
 }
 
@@ -251,11 +271,6 @@ export interface CfAISearchNamespace {
 export interface CfAISearch {
 	binding: string;
 	instance_name: string;
-	remote?: boolean;
-}
-
-export interface CfWebSearch {
-	binding: string;
 	remote?: boolean;
 }
 
@@ -393,6 +408,12 @@ export interface CfPipeline {
 	remote?: boolean;
 }
 
+export interface CfK2Binding {
+	binding: string;
+	stream: string;
+	remote?: boolean;
+}
+
 export interface CfUnsafeBinding {
 	name: string;
 	type: string;
@@ -428,6 +449,11 @@ export interface CfDurableObjectMigrations {
 		new_sqlite_classes?: string[];
 		renamed_classes?: {
 			from: string;
+			to: string;
+		}[];
+		transferred_classes?: {
+			from: string;
+			from_script: string;
 			to: string;
 		}[];
 		deleted_classes?: string[];
@@ -482,9 +508,16 @@ export interface CfWorkerInit {
 	 * A container is linked to its Durable Object either by `class_name`, or by
 	 * the Durable Object's `exports` entry naming the container by `name`.
 	 */
-	containers: { name?: string; class_name?: string }[] | undefined;
+	containers:
+		| {
+				name?: string;
+				class_name?: string;
+				images?: Record<string, string>;
+		  }[]
+		| undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	/**
 	 * Declarative exports configuration. Durable Object entries are sent instead
 	 * of `migrations`.

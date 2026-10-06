@@ -1,4 +1,4 @@
-import { assert } from "node:console";
+import assert from "node:assert";
 
 type DiscriminatedPath<Discriminator extends string> = string & {
 	_discriminator: Discriminator;

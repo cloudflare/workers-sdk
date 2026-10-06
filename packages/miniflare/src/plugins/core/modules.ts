@@ -48,7 +48,9 @@ export function compileModuleRules(rules: V4ModuleRule[]) {
 export function withSourceURL(script: string, scriptPath: string): string {
 	// If we've already got a `//# sourceURL` comment, return `script` as is
 	// (searching from the end as that's where we'd expect it)
-	if (script.lastIndexOf("//# sourceURL=") !== -1) return script;
+	if (script.lastIndexOf("//# sourceURL=") !== -1) {
+		return script;
+	}
 
 	let scriptURL: URL | string = scriptPath;
 	if (maybeGetStringScriptPathIndex(scriptPath) === undefined) {

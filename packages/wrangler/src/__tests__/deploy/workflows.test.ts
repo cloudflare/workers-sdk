@@ -27,14 +27,6 @@ import {
 import type { ExpectStatic } from "vitest";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -405,6 +397,124 @@ describe("deploy", () => {
 						script_name: "test-name",
 						class_name: "MyWorkflow",
 						limits: { steps: 5000 },
+					});
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("workflow: my-workflow");
+		});
+
+		it("should deploy a workflow with default_retention", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						default_retention: {
+							success_retention: "3 days",
+							error_retention: 86400000,
+						},
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				async ({ params, request }) => {
+					expect(params.workflowName).toBe("my-workflow");
+					const body = (await request.json()) as Record<string, unknown>;
+					expect(body).toEqual({
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						default_retention: {
+							success_retention: "3 days",
+							error_retention: 86400000,
+						},
+					});
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("workflow: my-workflow");
+		});
+
+		it("should deploy a workflow with concurrency", async ({ expect }) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: { limit: 10 },
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				async ({ params, request }) => {
+					expect(params.workflowName).toBe("my-workflow");
+					const body = (await request.json()) as Record<string, unknown>;
+					expect(body).toEqual({
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						concurrency: { limit: 10 },
 					});
 					return HttpResponse.json(
 						createFetchResult({ id: "mock-new-workflow-id" })
@@ -881,6 +991,48 @@ describe("deploy", () => {
 			);
 		});
 
+		it("should error when deploying a workflow with concurrency that references an external script", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				name: "this-script",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+						concurrency: { limit: 10 },
+					},
+				],
+			});
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "this-script",
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                export default {};
+            `
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Workflow "my-workflow" has "concurrency" configured but references external script "another-script"'
+			);
+		});
+
 		it("should error when deploying a workflow with schedules that references an external script", async ({
 			expect,
 		}) => {
@@ -921,6 +1073,284 @@ describe("deploy", () => {
 			await expect(runWrangler("deploy")).rejects.toThrow(
 				'Workflow "my-workflow" has "schedules" configured but references external script "another-script"'
 			);
+		});
+
+		it("should error when deploying a workflow with default_retention that references an external script", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				name: "this-script",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+						default_retention: { success_retention: "3 days" },
+					},
+				],
+			});
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "this-script",
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                export default {};
+            `
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Workflow "my-workflow" has "default_retention" configured but references external script "another-script"'
+			);
+		});
+
+		describe("workflow exports", () => {
+			const workflowSource = `
+				import { WorkflowEntrypoint } from 'cloudflare:workers';
+				export default {};
+				export class MyWorkflow extends WorkflowEntrypoint {};
+			`;
+
+			it("should upload workflow exports and provision them", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				const putBodies: unknown[] = [];
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workflows/:workflowName",
+						async ({ params, request }) => {
+							expect(params.workflowName).toBe("my-workflow");
+							putBodies.push(await request.json());
+							return HttpResponse.json(
+								createFetchResult({ id: "mock-new-workflow-id" })
+							);
+						}
+					)
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedExports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+
+				await runWrangler("deploy");
+
+				expect(putBodies).toEqual([
+					{
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						limits: { steps: 10 },
+					},
+				]);
+				expect(std.out).toContain("workflow: my-workflow");
+			});
+
+			it("should provision every setting declared on a workflow export", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+							concurrency: { limit: 5 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				const putBodies: unknown[] = [];
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workflows/:workflowName",
+						async ({ request }) => {
+							putBodies.push(await request.json());
+							return HttpResponse.json(
+								createFetchResult({ id: "mock-new-workflow-id" })
+							);
+						}
+					)
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedExports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+
+				await runWrangler("deploy");
+
+				expect(putBodies).toEqual([
+					{
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						limits: { steps: 10 },
+						concurrency: { limit: 5 },
+						schedules: [{ cron: "0 * * * *" }, { cron: "30 * * * *" }],
+						default_retention: {
+							success_retention: "3 days",
+							error_retention: 86_400_000,
+						},
+					},
+				]);
+			});
+
+			it("should provision a workflow declared by both a binding and an export once", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							schedules: "0 * * * *",
+						},
+					],
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				const putBodies: unknown[] = [];
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workflows/:workflowName",
+						async ({ request }) => {
+							putBodies.push(await request.json());
+							return HttpResponse.json(
+								createFetchResult({ id: "mock-new-workflow-id" })
+							);
+						}
+					)
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "workflow",
+							name: "WORKFLOW",
+							workflow_name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+					expectedExports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+
+				await runWrangler("deploy");
+
+				expect(putBodies).toEqual([
+					{
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						limits: { steps: 10 },
+						schedules: [{ cron: "0 * * * *" }],
+					},
+				]);
+			});
+
+			it("should check a binding against an export using the name passed to --name", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					name: "original-name",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "OldWorkflow",
+							script_name: "deployed-name",
+						},
+					],
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				await expect(
+					runWrangler("deploy --name deployed-name")
+				).rejects.toThrow(
+					'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow", but with different classes ("OldWorkflow" and "MyWorkflow").'
+				);
+			});
+
+			it("should allow event triggers to target workflow exports", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+					triggers: {
+						events: [
+							{
+								type: "cf.artifacts.repo.pushed",
+								targets: [{ type: "workflow", workflow_name: "my-workflow" }],
+							},
+						],
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				msw.use(
+					http.put("*/accounts/:accountId/workflows/:workflowName", () =>
+						HttpResponse.json(createFetchResult({ id: "mock-new-workflow-id" }))
+					),
+					http.put("*/accounts/:accountId/triggers/:scriptName", () =>
+						HttpResponse.json(createFetchResult({}))
+					)
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+
+				await runWrangler("deploy");
+
+				expect(std.out).toContain("event triggers: 1");
+			});
 		});
 
 		describe("workflow script_name validation with environments", () => {
@@ -1302,6 +1732,51 @@ describe("deploy", () => {
 				);
 				expect(std.warn).toContain(
 					"If this reassignment is unintended, rename the workflow(s) in the Wrangler config."
+				);
+			});
+
+			it("should warn when deploying a workflow export that belongs to a different worker", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"my-workflow": {
+						id: "existing-workflow-id",
+						name: "my-workflow",
+						script_name: "other-worker",
+						class_name: "SomeClass",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+				});
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockDeployWorkflow(expect, "my-workflow");
+
+				mockConfirm({
+					text: "Do you want to continue?",
+					result: true,
+				});
+
+				await runWrangler("deploy");
+
+				expect(std.warn).toContain(
+					'"my-workflow" (currently belongs to "other-worker")'
 				);
 			});
 

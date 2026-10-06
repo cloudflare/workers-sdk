@@ -178,3 +178,25 @@ export async function patchConfig(
 		}
 	);
 }
+
+// Printed as JSON for the user to pipe into the partner's own CLI, which uses
+// it to authorize a Cloudflare-billed database creation.
+export type CreateDatabaseSignature = {
+	account_id: string;
+	timestamp: string;
+	signature: string;
+};
+
+export async function createDatabaseSignature(
+	config: Config,
+	integration: string
+): Promise<CreateDatabaseSignature> {
+	const accountId = await requireAuth(config);
+	return await fetchResult(
+		config,
+		`/accounts/${accountId}/hyperdrive/integrationsOperations/${integration}/createDatabaseSignature`,
+		{
+			method: "POST",
+		}
+	);
+}

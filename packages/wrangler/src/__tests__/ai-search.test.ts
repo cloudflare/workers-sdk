@@ -2085,7 +2085,95 @@ describe("ai-search commands", () => {
 			);
 			expect(capturedBody).toMatchObject({
 				messages: [{ role: "user", content: "test" }],
-				filters: { type: "docs", lang: "en" },
+				ai_search_options: {
+					retrieval: {
+						filters: { type: "docs", lang: "en" },
+					},
+				},
+			});
+		});
+
+		it("should send search overrides using AI Search options", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/search",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult({ chunks: [], search_query: "test" }, true)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				'ai-search search my-instance --query "test" --score-threshold 0.6 --max-num-results 3 --filter type=docs --reranking'
+			);
+			expect(capturedBody).toEqual({
+				messages: [{ role: "user", content: "test" }],
+				ai_search_options: {
+					retrieval: {
+						filters: { type: "docs" },
+						match_threshold: 0.6,
+						max_num_results: 3,
+					},
+					reranking: { enabled: true },
+				},
+			});
+		});
+
+		it("should preserve zero-valued score threshold overrides", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/search",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult({ chunks: [], search_query: "test" }, true)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				'ai-search search my-instance --query "test" --score-threshold 0'
+			);
+			expect(capturedBody).toEqual({
+				messages: [{ role: "user", content: "test" }],
+				ai_search_options: {
+					retrieval: { match_threshold: 0 },
+				},
+			});
+		});
+
+		it("should preserve false reranking overrides", async ({ expect }) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances/:name/search",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult({ chunks: [], search_query: "test" }, true)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				'ai-search search my-instance --query "test" --no-reranking'
+			);
+			expect(capturedBody).toEqual({
+				messages: [{ role: "user", content: "test" }],
+				ai_search_options: {
+					reranking: { enabled: false },
+				},
 			});
 		});
 

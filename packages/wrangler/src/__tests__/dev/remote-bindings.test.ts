@@ -27,6 +27,8 @@ import type { StartRemoteProxySessionOptions } from "@cloudflare/remote-bindings
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, V4WorkerOptions } from "miniflare";
 
+const devReadyTimeout = process.platform === "win32" ? 30_000 : 5_000;
+
 // Mock the startDev function to capture the devEnv so we can stop it later
 // The `stopWrangler` function will be assigned in the startDev mock implementation where it has access to the `devEnv.teardown()` method.
 let stopWrangler: () => Promise<void> = async () => {
@@ -181,6 +183,35 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				}),
 			],
 		},
+		...([undefined, true] as const).map((remote) => ({
+			name: `k2 with remote=${remote}`,
+			config: {
+				k2: [
+					{
+						binding: "K2_BINDING",
+						stream: "0123456789abcdef0123456789abcdef",
+						remote,
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				K2_BINDING: {
+					type: "k2" as const,
+					stream: "0123456789abcdef0123456789abcdef",
+					remote,
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					k2: {
+						K2_BINDING: {
+							stream: "0123456789abcdef0123456789abcdef",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		})),
 		{
 			name: "ai",
 			config: {
@@ -331,6 +362,35 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 					kvNamespaces: {
 						KV_BINDING: {
 							id: "mock-kv-namespace",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		},
+		{
+			name: "flagship app",
+			config: {
+				flagship: [
+					{
+						binding: "FLAGS",
+						app_id: "mock-flagship-app",
+						remote: true,
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				FLAGS: {
+					app_id: "mock-flagship-app",
+					remote: true,
+					type: "flagship",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					flagship: {
+						FLAGS: {
+							app_id: "mock-flagship-app",
 							remoteProxyConnectionString,
 						},
 					},
@@ -537,7 +597,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
 
 			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-				timeout: 5_000,
+				timeout: devReadyTimeout,
 			});
 			expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
 			expect(workerOptions).toEqual(expectedWorkerOptions);
@@ -570,7 +630,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		const match = await vi.waitUntil(
 			() => std.out.match(/Ready on (?<url>http:\/\/[^:]+:\d{4}.+)/),
 
-			{ timeout: 5_000 }
+			{ timeout: devReadyTimeout }
 		);
 
 		// Check that there is initially no remote bindings proxy setup
@@ -604,7 +664,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
 				expect(workerOptions).toEqual(expectedWorkerOptions);
 			},
-			{ timeout: 5_000 }
+			{ timeout: devReadyTimeout }
 		);
 
 		await stopWrangler();
@@ -675,7 +735,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		});
 		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 5_000,
+			timeout: devReadyTimeout,
 		});
 		expect(proxyWorkerBindings).toEqual({
 			KV_REMOTE_BINDING: {
@@ -727,7 +787,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		});
 		const wranglerStopped = runWrangler("dev --local");
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 5_000,
+			timeout: devReadyTimeout,
 		});
 		const bindingsPrintStart = std.out.indexOf(
 			"Your Worker has access to the following bindings:"
@@ -758,6 +818,34 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		await wranglerStopped;
 	});
 
+	it("does not create K2 remote bindings when --local is passed", async ({
+		expect,
+	}) => {
+		const stream = "0123456789abcdef0123456789abcdef";
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "worker",
+				main: "index.js",
+				compatibility_date: "2025-01-01",
+				k2: [{ binding: "ORDERS", stream }],
+			}),
+			"index.js": 'export default { fetch() { return new Response("hello") } }',
+		});
+		const wranglerStopped = runWrangler(
+			"dev --local --port=0 --inspector-port=0"
+		);
+		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
+			timeout: devReadyTimeout,
+		});
+		expect(startRemoteProxySessionCallCount).toBe(0);
+		expect(proxyWorkerBindings).toBeUndefined();
+		expect(workerOptions).toEqual([
+			expect.objectContaining({ k2: { ORDERS: { stream } } }),
+		]);
+		await stopWrangler();
+		await wranglerStopped;
+	});
+
 	it("uses the provided api token and account id when starting the remote proxy session", async () => {
 		await seed({
 			"wrangler.jsonc": JSON.stringify(
@@ -780,7 +868,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		});
 		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 5_000,
+			timeout: devReadyTimeout,
 		});
 		expect(sessionOptions).toBeDefined();
 		assert(sessionOptions);
@@ -823,7 +911,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			"dev --x-provision=false --port=0 --inspector-port=0"
 		);
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 5_000,
+			timeout: devReadyTimeout,
 		});
 
 		expect(sessionOptions).toBeDefined();

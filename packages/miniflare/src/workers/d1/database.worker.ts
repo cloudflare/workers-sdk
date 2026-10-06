@@ -154,8 +154,11 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		const rows = convertRows(Array.from(cursor.raw()));
 
 		let results = undefined;
-		if (format === "ROWS_AND_COLUMNS") results = { columns, rows };
-		else results = rowsToObjects(columns, rows);
+		if (format === "ROWS_AND_COLUMNS") {
+			results = { columns, rows };
+		} else {
+			results = rowsToObjects(columns, rows);
+		}
 		// Note that the "NONE" format behaviour here is inconsistent with workerd.
 		// See comment: https://github.com/cloudflare/workers-sdk/pull/5917#issuecomment-2133313156
 
@@ -210,7 +213,9 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 	@POST("/execute")
 	queryExecute: RouteHandler = async (req) => {
 		let queries = D1QueriesSchema.parse(await req.json());
-		if (!Array.isArray(queries)) queries = [queries];
+		if (!Array.isArray(queries)) {
+			queries = [queries];
+		}
 
 		// Special local-mode-only handlers
 		if (this.#isExportPragma(queries)) {

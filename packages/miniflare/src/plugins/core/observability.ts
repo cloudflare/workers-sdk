@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import SCRIPT_OBSERVABILITY_COLLECTOR from "worker:observability/collector";
 import { type Service } from "../../runtime";
+import { parseTraceBatchCapacity } from "../../workers/observability/trace-writer";
 import { getPersistPath } from "../shared";
 import {
 	getUserServiceName,
@@ -19,12 +20,17 @@ import {
 const TRACE_STORE_CLASS_NAME = "TraceStore";
 /** Binding name — must match the collector worker's `Env.TRACE_STORE`. */
 const TRACE_STORE_BINDING = "TRACE_STORE";
+/** Host environment variable used to tune completed-row batch capacity. */
+const OBSERVABILITY_BATCH_SIZE_ENV = "X_LOCAL_OBSERVABILITY_BATCH_SIZE";
+/** Binding name — must match the collector worker's `Env.TRACE_BATCH_SIZE`. */
+const TRACE_BATCH_SIZE_BINDING = "TRACE_BATCH_SIZE";
 /** Disk service backing the TraceStore DO's SQLite storage. */
 const OBSERVABILITY_STORAGE_SERVICE_NAME = "obs:storage";
 
 export function getObservabilityServices(
 	tmpPath: string,
-	resourcePersistencePath: string | undefined
+	isolatedResourcePersistencePath: string | undefined,
+	runtimeEnv: Record<string, string> | undefined
 ): Service[] {
 	// The TraceStore DO is SQLite-backed, so it needs disk-backed storage (the
 	// in-memory option doesn't support SQL). Persist under `.wrangler/state` when
@@ -33,9 +39,14 @@ export function getObservabilityServices(
 	const storagePath = getPersistPath(
 		"observability",
 		tmpPath,
-		resourcePersistencePath
+		isolatedResourcePersistencePath
 	);
 	mkdirSync(storagePath, { recursive: true });
+	const batchSize = parseTraceBatchCapacity(
+		runtimeEnv?.[OBSERVABILITY_BATCH_SIZE_ENV] ??
+			process.env[OBSERVABILITY_BATCH_SIZE_ENV] ??
+			null
+	);
 
 	return [
 		{
@@ -71,6 +82,10 @@ export function getObservabilityServices(
 					{
 						name: TRACE_STORE_BINDING,
 						durableObjectNamespace: { className: TRACE_STORE_CLASS_NAME },
+					},
+					{
+						name: TRACE_BATCH_SIZE_BINDING,
+						json: JSON.stringify(batchSize),
 					},
 				],
 			},

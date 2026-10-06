@@ -17,7 +17,13 @@ import {
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Sink, Stream } from "../pipelines/types";
+import type {
+	JsonFormat,
+	ParquetFormat,
+	Sink,
+	SinkFormat,
+	Stream,
+} from "../pipelines/types";
 import type { ExpectStatic } from "vitest";
 
 describe("wrangler pipelines setup", () => {
@@ -109,7 +115,7 @@ describe("wrangler pipelines setup", () => {
 	function mockCreateSinkRequest(
 		expect: ExpectStatic,
 		expectedName: string,
-		options: { fail?: boolean } = {}
+		options: { fail?: boolean; expectedFormat?: SinkFormat } = {}
 	) {
 		const requests = { count: 0 };
 		msw.use(
@@ -117,8 +123,14 @@ describe("wrangler pipelines setup", () => {
 				`*/accounts/${accountId}/pipelines/v1/sinks`,
 				async ({ request }) => {
 					requests.count++;
-					const body = (await request.json()) as { name: string };
+					const body = (await request.json()) as {
+						name: string;
+						format?: SinkFormat;
+					};
 					expect(body.name).toBe(expectedName);
+					if (options.expectedFormat) {
+						expect(body.format).toEqual(options.expectedFormat);
+					}
 
 					if (options.fail) {
 						return HttpResponse.json(
@@ -140,7 +152,7 @@ describe("wrangler pipelines setup", () => {
 							id: "sink_123",
 							name: body.name,
 							type: "r2",
-							format: { type: "json" },
+							format: body.format ?? { type: "json" },
 							schema: null,
 							config: { bucket: "test-bucket" },
 							created_at: "2024-01-01T00:00:00Z",
@@ -294,7 +306,48 @@ describe("wrangler pipelines setup", () => {
 		});
 	}
 
-	function mockAdvancedR2SinkPrompts() {
+	function mockJsonCompression(
+		result: NonNullable<JsonFormat["compression"]> = "uncompressed"
+	) {
+		mockSelect({
+			text: "Compression:",
+			options: {
+				choices: [
+					{ title: "uncompressed", value: "uncompressed" },
+					{ title: "gzip", value: "gzip" },
+				],
+				defaultOption: 0,
+			},
+			result,
+		});
+	}
+
+	function mockParquetCompression(
+		result: NonNullable<ParquetFormat["compression"]> = "zstd"
+	) {
+		mockSelect({
+			text: "Compression:",
+			options: {
+				choices: [
+					{ title: "uncompressed", value: "uncompressed" },
+					{ title: "snappy", value: "snappy" },
+					{ title: "gzip", value: "gzip" },
+					{ title: "zstd", value: "zstd" },
+					{ title: "lz4", value: "lz4" },
+				],
+				defaultOption: 3,
+			},
+			result,
+		});
+	}
+
+	function mockAdvancedR2SinkPrompts(
+		options: {
+			format?: "json" | "parquet";
+			jsonCompression?: NonNullable<JsonFormat["compression"]>;
+		} = {}
+	) {
+		const format = options.format ?? "json";
 		mockPrompt({
 			text: "The base prefix in your bucket where data will be written (optional):",
 			result: "",
@@ -305,8 +358,13 @@ describe("wrangler pipelines setup", () => {
 		});
 		mockSelect({
 			text: "Output format:",
-			result: "json",
+			result: format,
 		});
+		if (format === "json") {
+			mockJsonCompression(options.jsonCompression);
+		} else {
+			mockParquetCompression();
+		}
 		mockPrompt({
 			text: "Roll file when size reaches (MB, minimum 5):",
 			result: "100",
@@ -701,7 +759,7 @@ describe("wrangler pipelines setup", () => {
 				            HTTP enabled, unstructured
 
 				  Sink      test_pipeline_sink
-				            R2 → valid-bucket-name, json
+				            R2 → valid-bucket-name, json + uncompressed
 
 				"
 			`);
@@ -878,7 +936,7 @@ describe("wrangler pipelines setup", () => {
 				result: "test-bucket",
 			});
 			mockGetR2Bucket("test-bucket", true);
-			mockAdvancedR2SinkPrompts();
+			mockAdvancedR2SinkPrompts({ format: "parquet" });
 
 			mockConfirm({
 				text: "Create resources?",
@@ -886,7 +944,10 @@ describe("wrangler pipelines setup", () => {
 			});
 
 			mockCreateStreamRequest(expect, "test_pipeline_stream");
-			mockCreateSinkRequest(expect, "test_pipeline_sink", { fail: true });
+			mockCreateSinkRequest(expect, "test_pipeline_sink", {
+				fail: true,
+				expectedFormat: { type: "parquet", compression: "zstd" },
+			});
 
 			mockConfirm({
 				text: "  Retry? (stream was created successfully)",
@@ -928,7 +989,7 @@ describe("wrangler pipelines setup", () => {
 				            HTTP enabled, unstructured
 
 				  Sink      test_pipeline_sink
-				            R2 → test-bucket, json
+				            R2 → test-bucket, parquet + zstd
 
 				 done
 				 failed
@@ -957,7 +1018,7 @@ describe("wrangler pipelines setup", () => {
 				result: "test-bucket",
 			});
 			mockGetR2Bucket("test-bucket", true);
-			mockAdvancedR2SinkPrompts();
+			mockAdvancedR2SinkPrompts({ jsonCompression: "gzip" });
 
 			mockConfirm({
 				text: "Create resources?",
@@ -965,7 +1026,9 @@ describe("wrangler pipelines setup", () => {
 			});
 
 			mockCreateStreamRequest(expect, "test_pipeline_stream");
-			mockCreateSinkRequest(expect, "test_pipeline_sink");
+			mockCreateSinkRequest(expect, "test_pipeline_sink", {
+				expectedFormat: { type: "json", compression: "gzip" },
+			});
 
 			mockSelect({
 				text: "Query:",
@@ -1014,7 +1077,7 @@ describe("wrangler pipelines setup", () => {
 				            HTTP enabled, unstructured
 
 				  Sink      test_pipeline_sink
-				            R2 → test-bucket, json
+				            R2 → test-bucket, json + gzip
 
 				 done
 				 done
@@ -1034,7 +1097,7 @@ describe("wrangler pipelines setup", () => {
 
 				  Stream and sink were created, but pipeline creation failed.
 
-				  You can create the pipeline later with: wrangler pipelines create
+				  You can create the pipeline later with: wrangler basin pipelines create
 				  Your stream "test_pipeline_stream" and sink "test_pipeline_sink" are ready."
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1065,6 +1128,7 @@ describe("wrangler pipelines setup", () => {
 				text: "Output format:",
 				result: "json",
 			});
+			mockJsonCompression();
 			mockPrompt({
 				text: "Roll file when size reaches (MB, minimum 5):",
 				result: "2",
@@ -1106,6 +1170,7 @@ describe("wrangler pipelines setup", () => {
 				text: "Output format:",
 				result: "json",
 			});
+			mockJsonCompression();
 			mockPrompt({
 				text: "Roll file when size reaches (MB, minimum 5):",
 				result: "100",
@@ -1129,7 +1194,7 @@ describe("wrangler pipelines setup", () => {
 		});
 	});
 
-	describe("Data Catalog sink configuration", () => {
+	describe("Basin Catalog sink configuration", () => {
 		it("enables catalog when not already enabled", async ({ expect }) => {
 			setIsTTY(true);
 
@@ -1190,7 +1255,7 @@ describe("wrangler pipelines setup", () => {
 				`[Error: Table name - cancelled]`
 			);
 
-			expect(std.out).toContain("Data Catalog already enabled");
+			expect(std.out).toContain("Basin Catalog already enabled");
 		});
 
 		it("creates bucket when it does not exist", async ({ expect }) => {
@@ -1269,7 +1334,7 @@ describe("wrangler pipelines setup", () => {
 		});
 	});
 
-	describe("Advanced mode Data Catalog sink", () => {
+	describe("Advanced mode Basin Catalog sink", () => {
 		it("prompts for namespace and table name", async ({ expect }) => {
 			setIsTTY(true);
 
@@ -1301,18 +1366,18 @@ describe("wrangler pipelines setup", () => {
 				`[Error: Table name - cancelled]`
 			);
 
-			expect(std.out).toContain("Data Catalog already enabled");
+			expect(std.out).toContain("Basin Catalog already enabled");
 		});
 	});
 
-	describe("Data Catalog full flow", () => {
+	describe("Basin Catalog full flow", () => {
 		it("completes full setup from bucket to pipeline creation", async ({
 			expect,
 		}) => {
 			setIsTTY(true);
 			vi.useFakeTimers({ now: new Date("2025-01-01T00:00:00Z") });
 
-			mockSinkDialogs("r2_data_catalog", "simple");
+			mockSinkDialogs("r2_data_catalog", "advanced");
 
 			mockPrompt({
 				text: "R2 bucket name (will be created if it doesn't exist):",
@@ -1322,15 +1387,22 @@ describe("wrangler pipelines setup", () => {
 			mockGetR2Catalog("test-bucket", { exists: false });
 			mockEnableR2Catalog("test-bucket");
 
-			mockPrompt({
-				text: "Table name (e.g. events, user_activity):",
-				result: "events",
-			});
+			mockPrompt({ text: "Namespace:", result: "default" });
+			mockPrompt({ text: "Table name:", result: "events" });
 			mockPrompt({
 				text: "Catalog API token:",
 				result: "test-catalog-token",
 			});
 			mockUpsertR2CatalogCredential("test-bucket");
+			mockParquetCompression();
+			mockPrompt({
+				text: "Roll file when size reaches (MB, minimum 5):",
+				result: "100",
+			});
+			mockPrompt({
+				text: "Roll file when time reaches (seconds, minimum 60):",
+				result: "300",
+			});
 
 			mockConfirm({
 				text: "Create resources?",
@@ -1338,7 +1410,9 @@ describe("wrangler pipelines setup", () => {
 			});
 
 			mockCreateStreamRequest(expect, "test_pipeline_stream");
-			mockCreateSinkRequest(expect, "test_pipeline_sink");
+			mockCreateSinkRequest(expect, "test_pipeline_sink", {
+				expectedFormat: { type: "parquet", compression: "zstd" },
+			});
 
 			mockSelect({
 				text: "Query:",
@@ -1379,7 +1453,7 @@ describe("wrangler pipelines setup", () => {
 				            HTTP enabled, unstructured
 
 				  Sink      test_pipeline_sink
-				            Data Catalog → default/events
+				            Basin Catalog → default/events
 
 				 done
 				 done
@@ -1446,7 +1520,9 @@ describe("wrangler pipelines setup", () => {
 			});
 
 			mockCreateStreamRequest(expect, "test_pipeline_stream");
-			mockCreateSinkRequest(expect, "test_pipeline_sink");
+			mockCreateSinkRequest(expect, "test_pipeline_sink", {
+				expectedFormat: { type: "json", compression: "uncompressed" },
+			});
 
 			mockSelect({
 				text: "Query:",

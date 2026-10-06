@@ -1,9 +1,13 @@
-import { execFileSync, spawn } from "node:child_process";
+import {
+	execFile,
+	execFileSync,
+	spawn,
+	type StdioOptions,
+} from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { UserError } from "@cloudflare/workers-utils";
-import { dockerImageInspect } from "./inspect";
-import type { ContainerDevOptions } from "./types";
-import type { StdioOptions } from "node:child_process";
+import { existsSync } from "node:fs";
+import { release } from "node:os";
+import { UserError } from "@cloudflare/workers-utils/errors";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -91,6 +95,88 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 		);
 	}
 };
+
+/**
+ * Permit elevated container options only when the selected daemon adds an
+ * isolation boundary. Rootless Docker limits `SYS_ADMIN` to its user
+ * namespace. Local Docker engines on macOS and through WSL run their Linux
+ * daemon in a VM.
+ */
+export async function containerPrivilegesAllowed(
+	dockerHost: string,
+	dockerPath = "docker"
+): Promise<boolean> {
+	const platform = process.platform;
+	if (
+		!isLocalDockerEndpoint(dockerHost) ||
+		(platform !== "darwin" && platform !== "linux")
+	) {
+		return false;
+	}
+
+	const securityOptions = await getDockerSecurityOptions(
+		dockerPath,
+		dockerHost
+	);
+	const rootless =
+		Array.isArray(securityOptions) &&
+		securityOptions.some(
+			(option) => option === "name=rootless" || option === "rootless"
+		);
+	const localVm =
+		platform === "darwin" || (platform === "linux" && detectWsl());
+	const localRootlessLinux =
+		platform === "linux" && existsSync("/dev/fuse") && rootless;
+
+	return localVm || localRootlessLinux;
+}
+
+/** Checks that workerd will connect to a local Unix socket. */
+function isLocalDockerEndpoint(dockerHost: string): boolean {
+	try {
+		const url = new URL(dockerHost);
+		return (
+			url.protocol === "unix:" &&
+			url.hostname === "" &&
+			url.pathname.startsWith("/")
+		);
+	} catch {
+		return false;
+	}
+}
+
+/** Reads the daemon security configuration with the selected Docker CLI. */
+async function getDockerSecurityOptions(
+	dockerPath: string,
+	dockerHost: string
+): Promise<unknown> {
+	const output = await new Promise<string>((resolve, reject) => {
+		execFile(
+			dockerPath,
+			["--host", dockerHost, "info", "--format", "{{json .SecurityOptions}}"],
+			{ encoding: "utf8", timeout: 5_000 },
+			(error, stdout) => {
+				if (error === null) {
+					resolve(stdout);
+				} else {
+					reject(error);
+				}
+			}
+		);
+	});
+	return JSON.parse(output);
+}
+
+/**
+ * WSL is detected from the kernel release because its environment variables
+ * can be removed or changed by the calling process.
+ */
+function detectWsl(): boolean {
+	return (
+		process.platform === "linux" &&
+		release().toLowerCase().includes("microsoft")
+	);
+}
 
 /** Checks whether docker is running on the system */
 export const isDockerRunning = async (dockerPath: string) => {
@@ -266,31 +352,6 @@ export const getContainerIdsFromImage = (
 };
 
 /**
- * While all ports are exposed in prod, a limitation of local dev with docker is that
- * users will have to manually expose ports in their Dockerfile.
- * We want to fail early and clearly if a user tries to develop with a container
- * that has no ports exposed and is definitely not accessible.
- *
- * (A user could still use `getTCPPort()` on a port that is not exposed, but we leave that error for runtime.)
- */
-export async function checkExposedPorts(
-	dockerPath: string,
-	options: ContainerDevOptions
-) {
-	const output = await dockerImageInspect(dockerPath, {
-		imageTag: options.image_tag,
-		formatString: "{{ len .Config.ExposedPorts }}",
-	});
-	if (output === "0") {
-		throw new UserError(
-			`The container "${options.class_name}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
-				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n",
-			{ telemetryMessage: false }
-		);
-	}
-}
-
-/**
  * Generates a random container build id
  */
 export function generateContainerBuildId() {
@@ -378,50 +439,3 @@ export const getDockerHostFromEnv = (): string => {
 		? "//./pipe/docker_engine"
 		: "unix:///var/run/docker.sock";
 };
-
-/**
- * Get all repository tags for a given image
- */
-export async function getImageRepoTags(
-	dockerPath: string,
-	imageTag: string
-): Promise<string[]> {
-	try {
-		const output = await dockerImageInspect(dockerPath, {
-			imageTag,
-			formatString: "{{ range .RepoTags }}{{ . }}\n{{ end }}",
-		});
-		return output.split("\n").filter((tag) => tag.trim() !== "");
-	} catch {
-		return [];
-	}
-}
-
-/**
- * Checks if the given image has any duplicate tags from previous dev sessions,
- * and remove them if so.
- */
-export async function cleanupDuplicateImageTags(
-	dockerPath: string,
-	imageTag: string
-): Promise<void> {
-	try {
-		const repoTags = await getImageRepoTags(dockerPath, imageTag);
-		const currentBuildId = getImageTag(imageTag);
-		// Remove all cloudflare-dev tags from previous sessions except the current dev session.
-		const tagsToRemove = repoTags.filter(
-			(tag) =>
-				tag.startsWith("cloudflare-dev") && getImageTag(tag) !== currentBuildId
-		);
-		if (tagsToRemove.length > 0) {
-			runDockerCmdWithOutput(dockerPath, ["rmi", ...tagsToRemove]);
-		}
-	} catch {}
-}
-
-function getImageTag(imageTag: string): string | undefined {
-	const tagSeparatorIndex = imageTag.lastIndexOf(":");
-	return tagSeparatorIndex === -1
-		? undefined
-		: imageTag.slice(tagSeparatorIndex + 1);
-}

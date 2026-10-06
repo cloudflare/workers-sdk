@@ -382,12 +382,17 @@ describe("mapWorkerMetadataBindings", () => {
 	});
 
 	describe("send_email", () => {
-		it("maps send_email binding", ({ expect }) => {
+		it("maps send_email bindings", ({ expect }) => {
 			const bindings: WorkerMetadataBinding[] = [
 				{
 					type: "send_email",
-					name: "EMAIL",
+					name: "EMAIL_DESTINATION",
 					destination_address: "test@example.com",
+					allowed_sender_addresses: ["sender@example.com"],
+				},
+				{
+					type: "send_email",
+					name: "EMAIL_ALLOWLIST",
 					allowed_destination_addresses: ["a@b.com", "c@d.com"],
 					allowed_sender_addresses: ["sender@example.com"],
 				},
@@ -395,8 +400,12 @@ describe("mapWorkerMetadataBindings", () => {
 			const result = mapWorkerMetadataBindings(bindings);
 			expect(result.send_email).toEqual([
 				{
-					name: "EMAIL",
+					name: "EMAIL_DESTINATION",
 					destination_address: "test@example.com",
+					allowed_sender_addresses: ["sender@example.com"],
+				},
+				{
+					name: "EMAIL_ALLOWLIST",
 					allowed_destination_addresses: ["a@b.com", "c@d.com"],
 					allowed_sender_addresses: ["sender@example.com"],
 				},

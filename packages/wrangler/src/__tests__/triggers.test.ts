@@ -28,4 +28,59 @@ describe("triggers deploy", () => {
 		);
 		expect(std.out).toContain("--dry-run: exiting now.");
 	});
+
+	describe("--zone and --zone-id flags", () => {
+		it("accepts a --zone for the --route patterns", async ({ expect }) => {
+			writeWranglerConfig();
+
+			await runWrangler(
+				"triggers deploy --dry-run --x-route-zones --route a.example.com/* --route b.example.com/* --zone example.com"
+			);
+
+			expect(std.out).toContain("--dry-run: exiting now.");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("errors when --zone is used without --experimental-route-zones", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			await expect(
+				runWrangler(
+					"triggers deploy --dry-run --route a.example.com/* --zone example.com"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --zone and --zone-id are experimental and require the --experimental-route-zones (--x-route-zones) flag.]`
+			);
+		});
+
+		it("errors when --zone and --zone-id are used together", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			await expect(
+				runWrangler(
+					"triggers deploy --dry-run --x-route-zones --route a.example.com/* --zone example.com --zone-id example-com-id"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Conflicting options: --zone and --zone-id cannot be used together. Please provide only one.]`
+			);
+		});
+
+		it("errors when --zone-id is passed without --route", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			await expect(
+				runWrangler(
+					"triggers deploy --dry-run --x-route-zones --zone-id example-com-id"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --zone-id can only be used together with --route. To attach a zone to routes defined in your config file, set "zone_name" or "zone_id" on each route there instead.]`
+			);
+		});
+	});
 });

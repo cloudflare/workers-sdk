@@ -104,12 +104,14 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `createConfigCache`), account selection (`fetchInternalBase` with the token
   the flow already holds), login / logout / refresh, and `requireAuth`. Imports
   only `@cloudflare/workers-utils`.
-- `types.ts` — `AuthContext` (the injected primitives: `logger`, `userAgent`,
-  interactive `prompt` / `select`, `isNoDefaultValueProvidedError`) and
+- `types.ts` — `AuthContext` (the injected primitives: `logger`, optional
+  `temporaryAccountLogger` for temporary-account notices, `userAgent`, interactive
+  `prompt` / `select`, `isNoDefaultValueProvidedError`) and
   `CliDescriptor` (everything that varies per CLI: `cliName` (the executable),
   `displayName` (branded name used in prose), auth command names
   (`login` / `whoami` / `createProfile` / `deviceLogin`), `keyringServiceName`,
-  `clientId`, `consent`, `redirectUri`, `getConfigPath`, `fileFormat`,
+  `clientId`, `consent`, `redirectUri`, `useDeviceFlowByDefault`,
+  `getConfigPath`, `fileFormat`,
   `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
   `getDefaultScopeKeys`, …).
 - `file-storage.ts` (`createFileStorage(format, getPath)`), `auth-config-file.ts`
@@ -140,17 +142,24 @@ Each CLI is a thin **descriptor + entrypoint**:
   `~/.config/cloudflare`, the `"cloudflare"` keyring service, `CLOUDFLARE_CLIENT_ID`)
   - `createCfAuth(ctx)`. OAuth-app values (client ID `cbca97e7-…`, callback port
     8877, `cf-oauth-consent-*` pages, scoped-token-only auth) mirror the `cf`
-    CLI's registration. cf carries its own scope catalog (`src/cf/scopes.ts`) —
-    the full Cloudflare product surface as a flat list (no per-scope
-    descriptions), distinct from wrangler's smaller `src/core/scopes.ts`
-    key → description map — so it does not re-export `DefaultScopes`.
+    CLI's registration, and device authorization is its default interactive
+    login flow. cf carries its own scope policy (`src/cf/scopes.ts`): the raw
+    client registration is kept separate from the known-grantable catalog used
+    for validation, types, and login defaults. Requestable scopes must both
+    appear in the client registration and resolve in the consent service's Bach
+    catalog; registered exceptions stay explicit negative regressions. Retain
+    separately verified, grandfathered legacy scopes and registration order.
+    This is distinct from wrangler's smaller `src/core/scopes.ts` key →
+    description map, so cf does not re-export `DefaultScopes`.
 
 ## CONVENTIONS
 
 - License: dual MIT/Apache-2.0. Files derived from
   [BitySA/oauth2-auth-code-pkce](https://github.com/BitySA/oauth2-auth-code-pkce)
   carry the Apache-2.0 header.
-- No `console.*` — use the injected `ctx.logger`.
+- No `console.*` — use the injected `ctx.logger`. Temporary-account notices
+  (terms notice, proof-of-work, "Temporary account ready") go through the
+  `temporaryAccountLogger` instead, so a CLI can keep them off stdout.
 - No global `fetch` — use undici's `fetch`.
 - `UserError` instances must carry stable `telemetryMessage` labels
   (`<area> <sub-area> <failure>`, e.g. `user oauth invalid scope`).

@@ -6,6 +6,7 @@ import {
 	SharedBindings,
 } from "miniflare";
 import type {
+	MiniflareBinding,
 	ParsedWorkerOptions,
 	Plugin,
 	Service,
@@ -66,12 +67,19 @@ export class UnsafeBindingServiceEntrypoint extends WorkerEntrypoint {
 
 const UNSAFE_PLUGIN_NAME = "unsafe-plugin";
 
+function isUnsafeBinding(
+	binding: MiniflareBinding
+): binding is Extract<MiniflareBinding, { type: `unsafe:${string}` }> {
+	return binding.type.startsWith("unsafe:");
+}
+
 // Unsafe bindings live in `config.env` with an `unsafe:*` type and carry the
 // plugin reference under `dev.plugin`. Select the ones targeting this plugin.
 function getUnsafeBindings(config: ParsedWorkerOptions["config"]) {
 	return Object.entries(config.env ?? {}).filter(
 		([, binding]) =>
-			"dev" in binding && binding.dev?.plugin?.name === UNSAFE_PLUGIN_NAME
+			isUnsafeBinding(binding) &&
+			binding.dev?.plugin?.name === UNSAFE_PLUGIN_NAME
 	);
 }
 

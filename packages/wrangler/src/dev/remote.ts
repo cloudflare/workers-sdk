@@ -3,7 +3,7 @@ import path from "node:path";
 import { syncAssets } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { isAuthenticationError } from "../core/handle-errors";
-import { printBundleSize } from "../deployment-bundle/bundle-reporter";
+import { getSize, printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
@@ -164,13 +164,7 @@ export async function createRemoteWorkerInit(props: {
 	);
 
 	// TODO: For Dev we could show the reporter message in the interactive box.
-	void printBundleSize(
-		{
-			name: path.basename(props.bundle.path),
-			content,
-		},
-		props.modules
-	);
+	void getSize([...props.modules, { content }]).then(printBundleSize);
 
 	const workersSitesAssets = await syncWorkersSite(
 		props.complianceConfig,

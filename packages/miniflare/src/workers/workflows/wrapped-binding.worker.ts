@@ -1,9 +1,20 @@
 import type {
 	WorkflowBinding,
+	WorkflowBatchCreateOptions,
+	WorkflowBatchCreateResult as WorkflowBatchCreateRpcResult,
 	WorkflowInstanceRestartOptions,
 	WorkflowInstanceTerminateOptions,
 } from "@cloudflare/workflows-shared/src/binding";
+import type {
+	WorkflowSubscription,
+	WorkflowSubscriptionOptions,
+} from "@cloudflare/workflows-shared/src/subscription";
 import type { WorkflowIntrospectionOperation } from "@cloudflare/workflows-shared/src/types";
+
+type WrappedWorkflowBatchCreateResult = {
+	created: WorkflowInstance[];
+	errors: WorkflowBatchCreateRpcResult["errors"];
+};
 
 class WorkflowImpl implements Workflow {
 	constructor(private binding: WorkflowBinding) {}
@@ -27,15 +38,29 @@ class WorkflowImpl implements Workflow {
 
 	async createBatch(
 		options: WorkflowInstanceCreateOptions[]
-	): Promise<WorkflowInstance[]> {
+	): Promise<WorkflowInstance[]>;
+	async createBatch(
+		options: WorkflowBatchCreateOptions
+	): Promise<WrappedWorkflowBatchCreateResult>;
+	async createBatch(
+		options: WorkflowInstanceCreateOptions[] | WorkflowBatchCreateOptions
+	): Promise<WorkflowInstance[] | WrappedWorkflowBatchCreateResult> {
+		if (Array.isArray(options)) {
+			const result = await this.binding.createBatch(options);
+			return result.map((res) => new InstanceImpl(res.id, this.binding));
+		}
+
 		const result = await this.binding.createBatch(options);
-		return result.map((res) => {
-			return new InstanceImpl(res.id, this.binding);
-		});
+		return {
+			created: result.created.map(
+				({ id }) => new InstanceImpl(id, this.binding)
+			),
+			errors: result.errors,
+		};
 	}
 
 	async deleteBatch(instanceIds: string[]): Promise<WorkflowBatchDeleteResult> {
-		return this.binding.deleteBatch(instanceIds);
+		return this.binding.deleteBatch({ instances: instanceIds });
 	}
 
 	async unsafeGetBindingName(): Promise<string> {
@@ -128,15 +153,22 @@ class InstanceImpl implements WorkflowInstance {
 		await instance.restart(options);
 	}
 
+	public async delete(): Promise<void> {
+		await this.binding.deleteInstance(this.id);
+	}
+
 	public async status(): Promise<InstanceStatus> {
 		using instance = await this.getInstance();
 		using res = (await instance.status()) as InstanceStatus & Disposable;
 		return structuredClone(res);
 	}
 
-	public async delete(): Promise<void> {
+	public async subscribe(
+		options?: WorkflowSubscriptionOptions
+	): Promise<WorkflowSubscription> {
 		using instance = await this.getInstance();
-		await instance.delete();
+		// @ts-expect-error `subscribe` not yet included in workers-types.
+		return await instance.subscribe(options);
 	}
 
 	public async sendEvent(args: {

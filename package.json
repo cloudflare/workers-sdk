@@ -49,7 +49,7 @@
 		"esbuild-register": "^3.5.0",
 		"eslint-plugin-turbo": "^2.8.17",
 		"jsonc-parser": "catalog:default",
-		"oxfmt": "^0.41.0",
+		"oxfmt": "^0.68.0",
 		"oxlint": "^1.56.0",
 		"oxlint-tsgolint": "^0.17.0",
 		"tree-kill": "catalog:default",

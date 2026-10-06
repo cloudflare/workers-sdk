@@ -40,7 +40,7 @@ jobs:
         pm:
           - { name: pnpm, version: "10.33.0", label: "pnpm" }
           - { name: pnpm, version: "11.5.1", label: "pnpm@11.5.1" }
-          - { name: npm, version: "0.0.0", label: "npm" }
+          - { name: npm, version: "11.7.0", label: "npm" }
           # The yarn tests keep failing on Linux with out of space errors, with no clear reason why. Disabling for now.
           # - { name: yarn, version: "1.0.0", label: "yarn" }
         include:
@@ -135,6 +135,16 @@ jobs:
           echo "pnpm on PATH: $got (expected $want)"
           [ "$got" = "$want" ] || { echo "ERROR: PATH pnpm is $got, not $want — scaffolded installs would silently run the wrong version."; exit 1; }
 
+      - name: Install matrix npm version for scaffolded installs
+        if: matrix.pm.name == 'npm' && steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: |
+          npm install --global npm@${{ matrix.pm.version }}
+          got="$(npm --version)"
+          want="${{ matrix.pm.version }}"
+          echo "npm on PATH: $got (expected $want)"
+          [ "$got" = "$want" ] || { echo "ERROR: PATH npm is $got, not $want."; exit 1; }
+
       - id: run-e2e
         if: steps.changes.outputs.everything_but_markdown == 'true'
         shell: bash
@@ -184,7 +194,7 @@ jobs:
         pm:
           - { name: pnpm, version: "10.33.0", label: "pnpm" }
           - { name: pnpm, version: "11.5.1", label: "pnpm@11.5.1" }
-          - { name: npm, version: "0.0.0", label: "npm" }
+          - { name: npm, version: "11.7.0", label: "npm" }
         include:
           # Experimental stays on the default pnpm to preserve historical
           # required-check names; pnpm 11 coverage comes from the base entry.
@@ -280,6 +290,16 @@ jobs:
           want="${{ matrix.pm.version }}"
           echo "pnpm on PATH: $got (expected $want)"
           [ "$got" = "$want" ] || { echo "ERROR: PATH pnpm is $got, not $want — scaffolded installs would silently run the wrong version."; exit 1; }
+
+      - name: Install matrix npm version for scaffolded installs
+        if: matrix.pm.name == 'npm' && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: |
+          npm install --global npm@${{ matrix.pm.version }}
+          got="$(npm --version)"
+          want="${{ matrix.pm.version }}"
+          echo "npm on PATH: $got (expected $want)"
+          [ "$got" = "$want" ] || { echo "ERROR: PATH npm is $got, not $want."; exit 1; }
 
       - id: run-e2e
         if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'

@@ -7,7 +7,15 @@ export interface MatcherRegExps {
 }
 
 export function testRegExps(matcher: MatcherRegExps, value: string): boolean {
-	for (const exclude of matcher.exclude) if (exclude.test(value)) return false;
-	for (const include of matcher.include) if (include.test(value)) return true;
+	for (const exclude of matcher.exclude) {
+		if (exclude.test(value)) {
+			return false;
+		}
+	}
+	for (const include of matcher.include) {
+		if (include.test(value)) {
+			return true;
+		}
+	}
 	return false;
 }

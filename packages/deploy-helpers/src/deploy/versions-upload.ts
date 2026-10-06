@@ -5,18 +5,31 @@ import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	APIError,
 	formatTime,
+	getBindings,
+	getDurableObjectContainerApps,
+	hasDurableObjectExports,
 	ParseError,
+	printBindings,
 	retryOnAPIFailure,
 	UserError,
+	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
-import { getWorkersDevSubdomain } from "../triggers/subdomain";
+import { getWorkerSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
-import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize } from "./helpers/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
+import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
+import {
+	deployDurableObjectContainerApplications,
+	prepareDurableObjectContainerApplications,
+} from "./helpers/durable-object-container-applications";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
@@ -28,7 +41,6 @@ import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-e
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
-import { printBindings } from "./helpers/print-bindings";
 import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
@@ -43,27 +55,71 @@ import {
 	validateWorkerProps,
 } from "./helpers/validate-worker-props";
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
-import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
+import type {
+	ContainerlessConfig,
+	VersionsUploadProps,
+	WorkerBuildResult,
+} from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type { CfWorkerInit } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
+/** Compatibility callback shape for existing deploy-helpers consumers. */
 export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
-export default async function versionsUpload(
-	props: VersionsUploadProps,
-	config: Config,
-	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks
-): Promise<{
+type VersionsUploadResult = {
 	versionId: string | null;
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
-}> {
+	bundleSize?: BundleSize;
+};
+
+export default async function versionsUpload(
+	props: VersionsUploadProps,
+	config: ContainerlessConfig,
+	buildResult: WorkerBuildResult,
+	callbacks: VersionsUploadCallbacks = {}
+): Promise<VersionsUploadResult> {
+	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
+
+	const result = await uploadWorkerVersion(
+		props,
+		config,
+		buildResult,
+		callbacks
+	);
+
+	writeOutput({
+		type: "version-upload",
+		version: 1,
+		worker_name: props.name ?? null,
+		worker_tag: result.workerTag,
+		version_id: result.versionId,
+		preview_url: result.versionPreviewUrl,
+		preview_alias_url: result.versionPreviewAliasUrl,
+		wrangler_environment: props.env,
+		worker_name_overridden: props.workerNameOverridden ?? false,
+		bundle_size: result.bundleSize
+			? {
+					raw_bytes: result.bundleSize.size,
+					gzip_bytes: result.bundleSize.gzipSize,
+				}
+			: undefined,
+	});
+
+	return result;
+}
+
+async function uploadWorkerVersion(
+	props: VersionsUploadProps,
+	config: ContainerlessConfig,
+	buildResult: WorkerBuildResult,
+	callbacks: VersionsUploadCallbacks
+): Promise<VersionsUploadResult> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
 
@@ -121,6 +177,28 @@ export default async function versionsUpload(
 		config,
 		dispatchNamespace: undefined,
 	});
+	if (migrations !== undefined) {
+		throw new UserError(
+			"This Worker has a pending Durable Object migration, which cannot be applied by `wrangler versions upload`. Durable Object migrations must be applied with `wrangler deploy`. Run `wrangler deploy` to apply the migration, then retry `wrangler versions upload`.",
+			{ telemetryMessage: "versions upload pending durable object migration" }
+		);
+	}
+	const durableObjectContainerConfig = getDurableObjectContainerApps(
+		props.containers.source
+	);
+
+	const preparedContainerImages =
+		await prepareDurableObjectContainerApplications(
+			config,
+			durableObjectContainerConfig,
+			props.containers.durableObjects.builtImages,
+			{
+				accountId,
+				dryRun: Boolean(props.dryRun),
+				scriptName,
+				requireExistingImageLessApplications: true,
+			}
+		);
 
 	// Upload assets if assets is being used
 	const assetsUploadResult =
@@ -145,7 +223,7 @@ export default async function versionsUpload(
 
 	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
 
-	const placement = parseConfigPlacement(config);
+	const placement = parseConfigPlacement(config.placement);
 
 	const entryPointName = path.basename(resolvedEntryPointPath);
 	const main = {
@@ -160,7 +238,11 @@ export default async function versionsUpload(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: getContainerMetadata(
+			props.containers.source,
+			preparedContainerImages,
+			{ exports: config.exports }
+		),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -199,10 +281,8 @@ export default async function versionsUpload(
 				: undefined,
 	};
 
-	await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	let workerBundle: FormData;
 
@@ -211,19 +291,21 @@ export default async function versionsUpload(
 			dryRun: true,
 			unsafe: config.unsafe,
 		});
-		printBindings(
-			bindings,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			undefined,
-			{ unsafeMetadata: config.unsafe?.metadata }
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: config.tail_consumers,
+			streamingTailConsumers: config.streaming_tail_consumers,
+			unsafeMetadata: config.unsafe?.metadata,
+		});
 	} else {
 		assert(accountId, "Missing accountId");
+		let provisionBindingsResult:
+			| Awaited<ReturnType<typeof provisionBindings>>
+			| undefined;
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
 			logger.debug("skipping provisioning on assets-only project");
 		} else if (props.resourcesProvision) {
-			await provisionBindings(
+			provisionBindingsResult = await provisionBindings(
 				bindings,
 				accountId,
 				scriptName,
@@ -267,24 +349,23 @@ export default async function versionsUpload(
 
 			logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 			bindingsPrinted = true;
-			printBindings(
-				bindings,
-				config.tail_consumers,
-				config.streaming_tail_consumers,
-				undefined,
-				{ unsafeMetadata: config.unsafe?.metadata }
-			);
+			printBindings(bindings, {
+				log: logger.log,
+				tailConsumers: config.tail_consumers,
+				streamingTailConsumers: config.streaming_tail_consumers,
+				unsafeMetadata: config.unsafe?.metadata,
+			});
+			provisionBindingsResult?.warnOnSkippedProvisioning();
 			versionId = result.id;
 			hasPreview = result.metadata.has_preview;
 		} catch (err) {
 			if (!bindingsPrinted) {
-				printBindings(
-					bindings,
-					config.tail_consumers,
-					config.streaming_tail_consumers,
-					undefined,
-					{ unsafeMetadata: config.unsafe?.metadata }
-				);
+				printBindings(bindings, {
+					log: logger.log,
+					tailConsumers: config.tail_consumers,
+					streamingTailConsumers: config.streaming_tail_consumers,
+					unsafeMetadata: config.unsafe?.metadata,
+				});
 			}
 
 			// A binding references a DO class declared in `exports` but not yet
@@ -313,6 +394,7 @@ export default async function versionsUpload(
 				dependencies,
 				workerBundle,
 				projectRoot,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
 				callbacks.analyseBundle
 			);
 			if (message) {
@@ -382,9 +464,29 @@ export default async function versionsUpload(
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, bundleSize };
 	}
 	assert(accountId);
+	// Declarative exports are reconciled only when this version is deployed, so
+	// only migration-managed namespaces can be resolved during version upload.
+	if (
+		!hasDurableObjectExports(config.exports) &&
+		durableObjectContainerConfig.length > 0
+	) {
+		assert(versionId);
+		await deployDurableObjectContainerApplications(
+			config,
+			durableObjectContainerConfig.filter(
+				(container) => Object.keys(container.images ?? {}).length > 0
+			),
+			{
+				versionId,
+				accountId,
+				scriptName,
+				updateExisting: false,
+			}
+		);
+	}
 
 	const uploadMs = Date.now() - start;
 
@@ -395,21 +497,23 @@ export default async function versionsUpload(
 	let versionPreviewAliasUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
-		const { previews_enabled: previews_available_on_subdomain } =
-			await fetchResult<{
-				previews_enabled: boolean;
-			}>(config, `${workerUrl}/subdomain`);
+		const workerSubdomain = await getWorkerSubdomain(
+			config,
+			accountId,
+			workerName
+		);
 
-		if (previews_available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-				configPath: config.configPath,
-			});
+		if (
+			workerSubdomain.previews_enabled &&
+			workerSubdomain.preview_url_suffix
+		) {
 			const shortVersion = versionId.slice(0, 8);
-			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
+			// The API-provided suffix includes the leading "-" separator.
+			versionPreviewUrl = `https://${shortVersion}${workerSubdomain.preview_url_suffix}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 
 			if (props.previewAlias) {
-				versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}`;
+				versionPreviewAliasUrl = `https://${props.previewAlias}${workerSubdomain.preview_url_suffix}`;
 				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
 			}
 		}
@@ -433,5 +537,6 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 		assetUploadStats: assetsUploadResult?.assetUploadStats,
 		versionPreviewUrl,
 		versionPreviewAliasUrl,
+		bundleSize,
 	};
 }

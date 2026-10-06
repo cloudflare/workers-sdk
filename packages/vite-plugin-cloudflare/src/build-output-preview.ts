@@ -1,7 +1,14 @@
-import { readBuildOutput } from "@cloudflare/build-output-utils";
+import {
+	DEFAULT_WORKER_DIRECTORY_NAME,
+	readBuildOutput,
+} from "@cloudflare/build-output-utils";
 import { convertToWranglerConfig } from "@cloudflare/config";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
-import type { ModuleType } from "@cloudflare/config";
+import type {
+	ModuleType,
+	ParsedInputContainerConfig,
+	ParsedOutputContainerConfig,
+} from "@cloudflare/config";
 import type { Unstable_Config } from "wrangler";
 
 export interface Bundle {
@@ -21,26 +28,34 @@ export interface BuildOutputPreviewWorker {
  * `<root>/.cloudflare/output/v0/workers/default/` and reconstruct a
  * `BuildOutputPreviewWorker`.
  *
- * The spec currently holds a single Worker, so this returns a single-element
- * array.
+ * Preview currently uses only the `default` Worker, so this returns a
+ * single-element array.
  */
 export async function readBuildOutputWorkers(
 	root: string
 ): Promise<BuildOutputPreviewWorker[]> {
-	// `settings` comes from the optional top-level `config.json` holding
-	// project-level settings (`account_id`, `compliance_region`) shared by
-	// every Worker.
-	const { workers, settings } = await readBuildOutput(root);
-	const [worker] = workers;
+	// `rootConfig` comes from the root `config.json` holding account
+	// settings and build context. Preview does not act on `mode` yet.
+	const { workers, rootConfig, containers } = await readBuildOutput(root);
+	const worker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
 
 	const { manifest, ...inputShape } = worker.config;
-	const rawConfig = convertToWranglerConfig(inputShape, settings);
+	const { buildContext: _buildContext, ...settings } = rootConfig;
+	const rawConfig = convertToWranglerConfig({
+		...settings,
+		worker: inputShape,
+		containers: containers.map(({ config }) =>
+			convertOutputContainerToInput(config)
+		),
+	});
 
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		undefined,
 		undefined,
-		{},
+		// Build Output preview does not consume Container images yet. Include
+		// their configs for reference validation, but do not prepare them locally.
+		{ enableContainers: false },
 		true
 	);
 
@@ -69,4 +84,33 @@ export async function readBuildOutputWorkers(
 	}
 
 	return [{ source: "build-output", config, bundle }];
+}
+
+type OutputContainerImage = Extract<
+	ParsedOutputContainerConfig,
+	{ image: unknown }
+>["image"];
+
+function convertOutputContainerToInput(
+	config: ParsedOutputContainerConfig
+): ParsedInputContainerConfig {
+	if (config.schedulingPolicy === "durable-object") {
+		// Preview does not run Containers. Keep the application metadata so
+		// Worker export references can be validated, but omit named images: a
+		// locally built output image cannot be represented by Wrangler's remote,
+		// managed-registry-only `images.<name>.image` field.
+		const { images: _images, ...container } = config;
+		return container;
+	}
+
+	return {
+		...config,
+		image: convertOutputContainerImage(config.image),
+	};
+}
+
+function convertOutputContainerImage(image: OutputContainerImage) {
+	return {
+		reference: "reference" in image ? image.reference : image.localReference,
+	};
 }

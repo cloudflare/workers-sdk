@@ -3,7 +3,9 @@
  * Order matters - more specific patterns must come first.
  */
 const ROUTE_PATTERNS: [RegExp, string][] = [
+	[/^\/storage\/kv\/namespaces\/[^/]+\/bulk\/delete$/, "kv.bulk_delete"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/bulk\/get$/, "kv.bulk_get"],
+	[/^\/storage\/kv\/namespaces\/[^/]+\/bulk$/, "kv.bulk_write"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/values\/[^/]+$/, "kv.value"],
 	[/^\/storage\/kv\/namespaces\/[^/]+\/keys$/, "kv.keys"],
 	[/^\/storage\/kv\/namespaces$/, "kv.namespaces"],
@@ -17,6 +19,10 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/r2\/buckets\/[^/]+$/, "r2.bucket"],
 	[/^\/r2\/buckets$/, "r2.buckets"],
 	[
+		/^\/workflows\/[^/]+\/instances\/batch\/delete$/,
+		"workflows.instances.batch_delete",
+	],
+	[
 		/^\/workflows\/[^/]+\/instances\/[^/]+\/events\/[^/]+$/,
 		"workflows.instance.event",
 	],
@@ -28,8 +34,21 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/workflows\/[^/]+\/instances$/, "workflows.instances"],
 	[/^\/workflows\/[^/]+$/, "workflows.details"],
 	[/^\/workflows$/, "workflows.list"],
+	[
+		/^\/flagship\/apps\/[^/]+\/flags\/[^/]+\/evaluate$/,
+		"flagship.flag.evaluate",
+	],
+	[/^\/flagship\/apps\/[^/]+\/flags\/[^/]+$/, "flagship.flag"],
+	[/^\/flagship\/apps\/[^/]+\/flags$/, "flagship.flags"],
+	[/^\/flagship\/apps$/, "flagship.apps"],
 	[/^\/local\/observability\/query$/, "observability.query"],
 	[/^\/local\/observability\/clear$/, "observability.clear"],
+	[/^\/local\/email\/routing\/resend\/draft$/, "email.routing.resend.draft"],
+	[/^\/local\/email\/routing\/resend$/, "email.routing.resend"],
+	[/^\/local\/scheduled$/, "scheduled.dispatch"],
+	[/^\/local\/email\/routing\/send$/, "email.routing.send"],
+	[/^\/local\/email\/routing$/, "email.routing.list"],
+	[/^\/local\/email\/sending$/, "email.sending.list"],
 	[/^\/local\/workers$/, "local.workers"],
 ];
 

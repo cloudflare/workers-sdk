@@ -1,5 +1,83 @@
 import type { FilterConfig } from "./filter-openapi";
 
+const FLAGSHIP_WORKER_PARAMETER = {
+	description: "Worker whose local Flagship store should be used.",
+	in: "query" as const,
+	name: "worker",
+	required: false,
+	schema: { type: "string" as const },
+};
+
+function flagshipPathParameter(name: "app_id" | "flag_key") {
+	return {
+		in: "path" as const,
+		name,
+		required: true,
+		schema: { type: "string" as const },
+	};
+}
+
+function flagshipResponses(description: string, result: object) {
+	return {
+		"200": {
+			content: {
+				"application/json": {
+					schema: {
+						allOf: [
+							{ $ref: "#/components/schemas/workers_api-response-common" },
+							{ properties: { result }, type: "object" as const },
+						],
+					},
+				},
+			},
+			description: `${description} response.`,
+		},
+		"4XX": {
+			content: {
+				"application/json": {
+					schema: {
+						$ref: "#/components/schemas/workers_api-response-common-failure",
+					},
+				},
+			},
+			description: `${description} response failure.`,
+		},
+	};
+}
+
+function flagshipRequestBody(schema: object) {
+	return {
+		content: { "application/json": { schema } },
+		required: true,
+	};
+}
+
+const FLAGSHIP_FLAG_PROPERTIES = {
+	description: {
+		description: "Human readable description",
+		nullable: true,
+		type: "string" as const,
+	},
+	enabled: {
+		description: "Whether the flag is enabled",
+		type: "boolean" as const,
+	},
+	default_variation: {
+		description: "Variation served when no rule matches",
+		type: "string" as const,
+	},
+	variations: {
+		additionalProperties: true,
+		description: "Named values the flag can serve",
+		type: "object" as const,
+	},
+	rules: {
+		description: "Targeting rules, in priority order",
+		items: { $ref: "#/components/schemas/flagship_rule" },
+		type: "array" as const,
+	},
+};
+
 /**
  * Configuration for filtering Cloudflare's OpenAPI spec for local explorer.
  * This defines which endpoints to include and what features to ignore.
@@ -20,6 +98,14 @@ const config = {
 			methods: ["get", "put", "delete"],
 		},
 		{
+			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk",
+			methods: ["put"],
+		},
+		{
+			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk/delete",
+			methods: ["post"],
+		},
+		{
 			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk/get",
 			methods: ["post"],
 		},
@@ -32,6 +118,12 @@ const config = {
 		{
 			path: "/accounts/{account_id}/d1/database/{database_id}/raw",
 			methods: ["post"],
+		},
+
+		// Workflows endpoints
+		{
+			path: "/accounts/{account_id}/workflows/{workflow_name}/instances/{instance_id}/status",
+			methods: ["patch"],
 		},
 
 		// Durable Objects endpoints
@@ -161,8 +253,8 @@ const config = {
 
 		// Schema properties not returned by local implementation
 		schemaProperties: {
-			// Namespace response doesn't include supports_url_encoding locally
-			"workers-kv_namespace": ["supports_url_encoding"],
+			// Namespace response doesn't include jurisdiction or supports_url_encoding locally
+			"workers-kv_namespace": ["jurisdiction", "supports_url_encoding"],
 			// D1 database response doesn't include created_at locally
 			"d1_database-response": ["created_at"],
 			// D1 query meta doesn't include served_by fields locally
@@ -627,6 +719,481 @@ const config = {
 					tags: ["Local Explorer"],
 				},
 			},
+			"/local/scheduled": {
+				post: {
+					description:
+						"Dispatches one scheduled invocation to the exact Worker available to Local Explorer under the requested name.",
+					operationId: "local-explorer-dispatch-scheduled",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							required: true,
+							schema: { type: "string", minLength: 1 },
+							description: "Exact Worker name available to Local Explorer.",
+						},
+					],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									$ref: "#/components/schemas/local-explorer_scheduled-request",
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												required: ["result"],
+												properties: {
+													result: {
+														$ref: "#/components/schemas/local-explorer_scheduled-result",
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Scheduled invocation result.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Scheduled invocation request failure.",
+						},
+					},
+					summary: "Dispatch Scheduled Invocation",
+					tags: ["Local Explorer"],
+				},
+			},
+
+			// Email endpoints (local-only, not pulling from upstream API)
+			"/local/email/routing": {
+				get: {
+					description:
+						"Lists emails received by any email() handler during this dev session. Use `capture_id` with `worker` for canonical exact-capture details, or `email_id` for compatibility Message-ID lookup. The two identifiers are mutually exclusive.",
+					operationId: "email-list-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Only return emails received by this worker's email() handler.",
+						},
+						{
+							in: "query",
+							name: "email_id",
+							schema: { type: "string" },
+							description:
+								"Compatibility lookup by RFC Message-ID. Returns the newest match and accepts bracketed or bracket-stripped values.",
+						},
+						{
+							in: "query",
+							name: "capture_id",
+							schema: { type: "string", format: "uuid" },
+							description:
+								"Canonical identifier for one captured delivery. Requires `worker` and never falls back to Message-ID lookup.",
+						},
+						{
+							in: "query",
+							name: "cursor",
+							schema: { type: "string" },
+							description: "Opaque cursor for the next page of emails.",
+						},
+						{
+							in: "query",
+							name: "per_page",
+							schema: {
+								type: "integer",
+								minimum: 1,
+								maximum: 100,
+								default: 25,
+							},
+							description: "Number of emails per page.",
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														oneOf: [
+															{
+																items: {
+																	$ref: "#/components/schemas/email_routing-item",
+																},
+																type: "array",
+															},
+															{
+																$ref: "#/components/schemas/email_routing-detail",
+															},
+														],
+													},
+													result_info: {
+														type: "object",
+														properties: {
+															count: { type: "number" },
+															cursor: { type: "string" },
+															per_page: { type: "integer" },
+															has_more: { type: "boolean" },
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List received emails response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List received emails failure.",
+						},
+					},
+					summary: "List Received Emails",
+					tags: ["Email"],
+				},
+			},
+			"/local/email/routing/resend": {
+				post: {
+					description:
+						"Replays the stored bytes of one exact Routing capture to the same Worker's email() handler with a new Message-ID.",
+					operationId: "email-resend-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							required: true,
+							schema: { type: "string", minLength: 1 },
+							description: "Worker that owns the exact Routing capture.",
+						},
+						{
+							in: "query",
+							name: "capture_id",
+							required: true,
+							schema: { type: "string", format: "uuid" },
+							description: "Opaque identifier for the exact captured delivery.",
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															messageId: { type: "string" },
+															outcome: {
+																type: "string",
+																enum: ["ok", "exception"],
+															},
+															rejectReason: { type: "string" },
+															capturedPortion: { type: "boolean" },
+														},
+														required: [
+															"messageId",
+															"outcome",
+															"capturedPortion",
+														],
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Email resend result.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Email resend failure.",
+						},
+					},
+					summary: "Resend Received Email",
+					tags: ["Email"],
+				},
+			},
+			"/local/email/routing/resend/draft": {
+				get: {
+					description:
+						"Projects one complete composer-originated Routing capture back into structured composer fields.",
+					operationId: "email-resend-draft-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							required: true,
+							schema: { type: "string", minLength: 1 },
+							description: "Worker that owns the exact Routing capture.",
+						},
+						{
+							in: "query",
+							name: "capture_id",
+							required: true,
+							schema: { type: "string", format: "uuid" },
+							description: "Opaque identifier for the exact captured delivery.",
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												properties: {
+													result: {
+														$ref: "#/components/schemas/email_send-request",
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Composer projection response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Composer projection failure.",
+						},
+					},
+					summary: "Get Received Email Resend Draft",
+					tags: ["Email"],
+				},
+			},
+			"/local/email/routing/send": {
+				post: {
+					description:
+						"Sends a test email to trigger the worker's email() handler. Only the first `to` address is used as the envelope recipient; any additional to and cc addresses appear only in the composed MIME headers. bcc addresses are accepted but, by convention, are not written into the composed message.",
+					operationId: "email-send-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							required: true,
+							schema: { type: "string" },
+							description:
+								"Deliver the test email directly to this worker's email() handler. Required because a single dev port can serve multiple workers, so the target cannot be inferred from the recipient address.",
+						},
+					],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									$ref: "#/components/schemas/email_send-request",
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															messageId: {
+																type: "string",
+																description:
+																	"RFC Message-ID header value of the delivered test email.",
+															},
+															outcome: {
+																type: "string",
+																enum: ["ok", "exception"],
+																description:
+																	"Whether the handler ran to completion or threw.",
+															},
+															rejectReason: {
+																type: "string",
+																description:
+																	"Reason passed to setReject(), if the handler rejected the message.",
+															},
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Send test email response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Send test email failure.",
+						},
+					},
+					summary: "Send Test Email",
+					tags: ["Email"],
+				},
+			},
+			"/local/email/sending": {
+				get: {
+					description:
+						"Lists emails sent through send_email bindings during this dev session, or returns one email's details when `email_id` is provided.",
+					operationId: "email-list-sending",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Only return emails sent through this worker's send_email bindings.",
+						},
+						{
+							in: "query",
+							name: "email_id",
+							schema: { type: "string" },
+							description:
+								"Return the details for this email instead of a paginated list.",
+						},
+						{
+							in: "query",
+							name: "cursor",
+							schema: { type: "string" },
+							description: "Opaque cursor for the next page of emails.",
+						},
+						{
+							in: "query",
+							name: "per_page",
+							schema: {
+								type: "integer",
+								minimum: 1,
+								maximum: 100,
+								default: 25,
+							},
+							description: "Number of emails per page.",
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														oneOf: [
+															{
+																items: {
+																	$ref: "#/components/schemas/email_sending-item",
+																},
+																type: "array",
+															},
+															{
+																$ref: "#/components/schemas/email_sending-detail",
+															},
+														],
+													},
+													result_info: {
+														type: "object",
+														properties: {
+															count: { type: "number" },
+															cursor: { type: "string" },
+															per_page: { type: "integer" },
+															has_more: { type: "boolean" },
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List sent emails response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List sent emails failure.",
+						},
+					},
+					summary: "List Sent Emails",
+					tags: ["Email"],
+				},
+			},
 
 			// Workflows endpoints (local-only, not pulling from upstream API)
 			"/workflows": {
@@ -848,6 +1415,26 @@ const config = {
 								description: "Filter instances by status.",
 							},
 						},
+						{
+							in: "query",
+							name: "date_start",
+							schema: {
+								type: "string",
+								format: "date-time",
+								description:
+									"Only return instances created at or after this time. Accepts ISO 8601 with no timezone offsets and in UTC.",
+							},
+						},
+						{
+							in: "query",
+							name: "date_end",
+							schema: {
+								type: "string",
+								format: "date-time",
+								description:
+									"Only return instances created at or before this time. Accepts ISO 8601 with no timezone offsets and in UTC.",
+							},
+						},
 					],
 					responses: {
 						"200": {
@@ -985,6 +1572,107 @@ const config = {
 					tags: ["Workflows"],
 				},
 			},
+			"/workflows/{workflow_name}/instances/batch/delete": {
+				post: {
+					description: "Deletes multiple workflow instances.",
+					operationId: "workflows-batch-delete-instances",
+					parameters: [
+						{
+							in: "path",
+							name: "workflow_name",
+							required: true,
+							schema: {
+								$ref: "#/components/schemas/workflows_workflow-name",
+							},
+						},
+					],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									type: "object",
+									properties: {
+										instances: {
+											type: "array",
+											minItems: 1,
+											maxItems: 100,
+											items: {
+												type: "string",
+												minLength: 1,
+												maxLength: 271,
+												pattern: "^[a-zA-Z0-9, */#_-]+$",
+											},
+										},
+									},
+									required: ["instances"],
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															deleted: {
+																type: "array",
+																items: {
+																	type: "object",
+																	properties: {
+																		id: { type: "string" },
+																	},
+																	required: ["id"],
+																},
+															},
+															errors: {
+																type: "array",
+																items: {
+																	type: "object",
+																	properties: {
+																		id: { type: "string" },
+																		code: { type: "number" },
+																		message: { type: "string" },
+																	},
+																	required: ["id", "code", "message"],
+																},
+															},
+														},
+														required: ["deleted", "errors"],
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Batch delete Workflow Instances response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Batch delete Workflow Instances response failure.",
+						},
+					},
+					summary: "Batch Delete Workflow Instances",
+					tags: ["Workflows"],
+				},
+			},
 			"/workflows/{workflow_name}/instances/{instance_id}": {
 				get: {
 					description: "Returns the status details of a workflow instance.",
@@ -1106,119 +1794,6 @@ const config = {
 						},
 					},
 					summary: "Delete Workflow Instance",
-					tags: ["Workflows"],
-				},
-			},
-			"/workflows/{workflow_name}/instances/{instance_id}/status": {
-				patch: {
-					description:
-						"Changes the status of a workflow instance (pause, resume, restart, terminate).",
-					operationId: "workflows-change-instance-status",
-					parameters: [
-						{
-							in: "path",
-							name: "workflow_name",
-							required: true,
-							schema: {
-								$ref: "#/components/schemas/workflows_workflow-name",
-							},
-						},
-						{
-							in: "path",
-							name: "instance_id",
-							required: true,
-							schema: {
-								$ref: "#/components/schemas/workflows_instance-id",
-							},
-						},
-					],
-					requestBody: {
-						required: true,
-						content: {
-							"application/json": {
-								schema: {
-									type: "object",
-									required: ["action"],
-									properties: {
-										action: {
-											type: "string",
-											enum: ["pause", "resume", "restart", "terminate"],
-											description:
-												"The action to perform on the workflow instance.",
-										},
-										from: {
-											type: "object",
-											description:
-												"The step to restart the instance from. Only valid when action is restart.",
-											required: ["name"],
-											properties: {
-												name: {
-													type: "string",
-													description: "The name of the step.",
-												},
-												count: {
-													type: "integer",
-													minimum: 1,
-													description:
-														"The 1-based index of the step when multiple steps share the same name and type. Defaults to 1.",
-												},
-												type: {
-													type: "string",
-													enum: ["do", "sleep", "waitForEvent"],
-													description: "The step type. Defaults to do.",
-												},
-											},
-										},
-										rollback: {
-											type: "boolean",
-											description:
-												"The option to trigger rollbacks when terminating the workflow instance.",
-										},
-									},
-								},
-							},
-						},
-					},
-					responses: {
-						"200": {
-							content: {
-								"application/json": {
-									schema: {
-										allOf: [
-											{
-												$ref: "#/components/schemas/workers_api-response-common",
-											},
-											{
-												properties: {
-													result: {
-														type: "object",
-														properties: {
-															success: {
-																type: "boolean",
-															},
-														},
-													},
-												},
-												type: "object",
-											},
-										],
-									},
-								},
-							},
-							description: "Change Workflow Instance Status response.",
-						},
-						"4XX": {
-							content: {
-								"application/json": {
-									schema: {
-										$ref: "#/components/schemas/workers_api-response-common-failure",
-									},
-								},
-							},
-							description: "Change Workflow Instance Status response failure.",
-						},
-					},
-					summary: "Change Workflow Instance Status",
 					tags: ["Workflows"],
 				},
 			},
@@ -1422,8 +1997,289 @@ const config = {
 					tags: ["Observability"],
 				},
 			},
+			// Flagship endpoints (local-only, feature flags are not in the public API)
+			"/flagship/apps": {
+				get: {
+					description: "Returns the Flagship apps bound for local development.",
+					operationId: "flagship-list-apps",
+					parameters: [],
+					responses: flagshipResponses("List Flagship Apps", {
+						items: { $ref: "#/components/schemas/flagship_app" },
+						type: "array",
+					}),
+					summary: "List Flagship Apps",
+					tags: ["Flagship"],
+				},
+			},
+			"/flagship/apps/{app_id}/flags": {
+				get: {
+					description: "Returns the flags in a local Flagship app.",
+					operationId: "flagship-list-flags",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					responses: flagshipResponses("List Flagship Flags", {
+						items: { $ref: "#/components/schemas/flagship_flag" },
+						type: "array",
+					}),
+					summary: "List Flagship Flags",
+					tags: ["Flagship"],
+				},
+				post: {
+					description: "Creates a flag in a local Flagship app.",
+					operationId: "flagship-create-flag",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					requestBody: flagshipRequestBody({
+						required: ["key", "default_variation", "variations"],
+						properties: {
+							key: { description: "Flag key", type: "string" },
+							...FLAGSHIP_FLAG_PROPERTIES,
+						},
+						type: "object",
+					}),
+					responses: flagshipResponses("Create Flagship Flag", {
+						$ref: "#/components/schemas/flagship_flag",
+					}),
+					summary: "Create Flagship Flag",
+					tags: ["Flagship"],
+				},
+			},
+			"/flagship/apps/{app_id}/flags/{flag_key}": {
+				patch: {
+					description:
+						"Updates a flag. Omitted fields keep their current values; provided rules replace the existing ones.",
+					operationId: "flagship-update-flag",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						flagshipPathParameter("flag_key"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					requestBody: flagshipRequestBody({
+						properties: FLAGSHIP_FLAG_PROPERTIES,
+						type: "object",
+					}),
+					responses: flagshipResponses("Update Flagship Flag", {
+						$ref: "#/components/schemas/flagship_flag",
+					}),
+					summary: "Update Flagship Flag",
+					tags: ["Flagship"],
+				},
+				delete: {
+					description: "Deletes a flag from a local Flagship app.",
+					operationId: "flagship-delete-flag",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						flagshipPathParameter("flag_key"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					responses: flagshipResponses("Delete Flagship Flag", {
+						properties: { success: { type: "boolean" } },
+						type: "object",
+					}),
+					summary: "Delete Flagship Flag",
+					tags: ["Flagship"],
+				},
+			},
+			"/flagship/apps/{app_id}/flags/{flag_key}/evaluate": {
+				post: {
+					description:
+						"Evaluates a flag against an evaluation context, as a Worker binding would.",
+					operationId: "flagship-evaluate-flag",
+					parameters: [
+						flagshipPathParameter("app_id"),
+						flagshipPathParameter("flag_key"),
+						FLAGSHIP_WORKER_PARAMETER,
+					],
+					requestBody: flagshipRequestBody({
+						properties: {
+							context: {
+								additionalProperties: true,
+								description:
+									"Attributes used for rule matching and rollout bucketing.",
+								type: "object",
+							},
+						},
+						type: "object",
+					}),
+					responses: flagshipResponses("Evaluate Flagship Flag", {
+						$ref: "#/components/schemas/flagship_evaluation",
+					}),
+					summary: "Evaluate Flagship Flag",
+					tags: ["Flagship"],
+				},
+			},
 		},
 		schemas: {
+			"local-explorer_scheduled-request": {
+				type: "object",
+				required: ["cron"],
+				properties: {
+					cron: { type: "string", pattern: ".*\\S.*" },
+					scheduled_time: {
+						type: "integer",
+						minimum: -9223372036854,
+						maximum: 9223372036854,
+						description:
+							"Epoch milliseconds within workerd's signed 64-bit nanosecond range.",
+					},
+				},
+			},
+			"local-explorer_scheduled-result": {
+				type: "object",
+				required: ["outcome", "noRetry"],
+				additionalProperties: true,
+				properties: {
+					outcome: { type: "string" },
+					noRetry: { type: "boolean" },
+				},
+			},
+			// Flagship schemas — the local flag store's management shapes
+			flagship_app: {
+				type: "object",
+				required: ["id", "bindings"],
+				properties: {
+					id: {
+						type: "string",
+						description: "The Flagship app id the bindings point at",
+					},
+					bindings: {
+						type: "array",
+						items: { type: "string" },
+						description: "Binding names in this instance using the app",
+					},
+				},
+			},
+			"flagship_base-condition": {
+				type: "object",
+				required: ["attribute", "operator", "value"],
+				properties: {
+					attribute: { type: "string" },
+					operator: {
+						type: "string",
+						enum: [
+							"equals",
+							"not_equals",
+							"greater_than",
+							"less_than",
+							"greater_than_or_equals",
+							"less_than_or_equals",
+							"contains",
+							"starts_with",
+							"ends_with",
+							"in",
+							"not_in",
+							"has",
+							"not_has",
+						],
+					},
+					value: {},
+				},
+			},
+			"flagship_logical-condition": {
+				type: "object",
+				required: ["logical_operator", "clauses"],
+				properties: {
+					logical_operator: { type: "string", enum: ["AND", "OR"] },
+					clauses: {
+						type: "array",
+						items: { $ref: "#/components/schemas/flagship_condition" },
+					},
+				},
+			},
+			flagship_condition: {
+				oneOf: [
+					{ $ref: "#/components/schemas/flagship_base-condition" },
+					{ $ref: "#/components/schemas/flagship_logical-condition" },
+				],
+			},
+			flagship_rule: {
+				type: "object",
+				required: ["priority", "conditions", "serve_variation"],
+				properties: {
+					priority: {
+						type: "integer",
+						description: "Evaluation order, lowest first",
+					},
+					conditions: {
+						type: "array",
+						items: { $ref: "#/components/schemas/flagship_condition" },
+						description: "Conditions that must match for the rule to apply",
+					},
+					serve_variation: {
+						type: "string",
+						description: "Variation served when the rule matches",
+					},
+					rollout: {
+						type: "object",
+						required: ["percentage"],
+						properties: {
+							percentage: {
+								type: "number",
+								minimum: 0,
+								maximum: 100,
+								multipleOf: 0.01,
+							},
+							attribute: { type: "string" },
+						},
+						description: "Percentage rollout applied to matching contexts",
+					},
+				},
+			},
+			flagship_flag: {
+				type: "object",
+				required: [
+					"key",
+					"type",
+					"enabled",
+					"default_variation",
+					"variations",
+					"rules",
+					"updated_at",
+				],
+				properties: {
+					key: { type: "string", description: "Flag key" },
+					type: {
+						type: "string",
+						enum: ["boolean", "string", "number", "json"],
+						description: "Type shared by the flag's variations",
+					},
+					...FLAGSHIP_FLAG_PROPERTIES,
+					updated_at: {
+						type: "string",
+						description: "When the flag was last written locally",
+					},
+				},
+			},
+			flagship_evaluation: {
+				type: "object",
+				required: ["flagKey", "value", "variant", "reason"],
+				properties: {
+					flagKey: { type: "string" },
+					value: { description: "The resolved flag value" },
+					variant: {
+						type: "string",
+						description: "Name of the variation served",
+					},
+					reason: {
+						type: "string",
+						enum: [
+							"STATIC",
+							"TARGETING_MATCH",
+							"DEFAULT",
+							"DISABLED",
+							"SPLIT",
+							"ERROR",
+						],
+						description: "Why this value was served",
+					},
+					errorCode: { type: "string" },
+					errorMessage: { type: "string" },
+				},
+			},
 			// R2 schemas - matches stratus dashboard API shapes
 			// Note: storage_class and jurisdiction/location not supported locally
 			r2_object: {
@@ -1618,9 +2474,30 @@ const config = {
 						type: "string",
 						description: "Worker name from the dev registry",
 					},
+					persistenceScope: {
+						type: "string",
+						description:
+							"Opaque stable identifier for the worker's local project, used to scope browser persistence without exposing its filesystem path",
+					},
 					bindings: {
 						$ref: "#/components/schemas/local-explorer_worker-bindings",
 						description: "Resource bindings for this worker",
+					},
+					triggers: {
+						$ref: "#/components/schemas/local-explorer_worker-triggers",
+						description: "Configured triggers for this worker",
+					},
+				},
+			},
+			"local-explorer_worker-triggers": {
+				type: "object",
+				description: "Trigger metadata for a worker",
+				required: ["crons"],
+				properties: {
+					crons: {
+						type: "array",
+						items: { type: "string" },
+						description: "Exact configured Cron Trigger expressions",
 					},
 				},
 			},
@@ -1662,6 +2539,30 @@ const config = {
 							$ref: "#/components/schemas/local-explorer_workflow-binding",
 						},
 						description: "Workflow bindings",
+					},
+					sendEmail: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_named-binding",
+						},
+						description: "Send Email bindings",
+					},
+					flagship: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_resource-binding",
+						},
+						description: "Flagship app bindings",
+					},
+				},
+			},
+			"local-explorer_named-binding": {
+				type: "object",
+				required: ["bindingName"],
+				properties: {
+					bindingName: {
+						type: "string",
+						description: "Name of the binding in the worker's env",
 					},
 				},
 			},
@@ -1866,6 +2767,677 @@ const config = {
 					},
 				},
 				required: ["columns", "rows"],
+			},
+			"email_handler-event": {
+				oneOf: [
+					{
+						type: "object",
+						properties: {
+							type: {
+								type: "string",
+								enum: ["received", "reject", "unhandled"],
+							},
+							timestamp: {
+								type: "string",
+								description: "ISO 8601 timestamp of when the event occurred.",
+							},
+						},
+						required: ["type", "timestamp"],
+						additionalProperties: false,
+					},
+					{
+						type: "object",
+						properties: {
+							type: {
+								type: "string",
+								enum: ["forward", "reply"],
+							},
+							timestamp: {
+								type: "string",
+								description: "ISO 8601 timestamp of when the event occurred.",
+							},
+							messageId: {
+								type: "string",
+								description:
+									"Correlates with the matching `forwards`/`replies` entry.",
+							},
+						},
+						required: ["type", "timestamp", "messageId"],
+						additionalProperties: false,
+					},
+				],
+				description:
+					"One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.",
+			},
+			"email_handler-forward": {
+				type: "object",
+				properties: {
+					messageId: {
+						type: "string",
+					},
+					recipient: {
+						type: "string",
+						description: "Envelope recipient the message was forwarded to.",
+					},
+					headers: {
+						type: "array",
+						items: {
+							type: "array",
+							items: {
+								anyOf: [
+									{
+										type: "string",
+									},
+									{
+										type: "string",
+									},
+								],
+							},
+							minItems: 2,
+							maxItems: 2,
+						},
+						description: "Headers added to the forwarded message.",
+					},
+				},
+				required: ["messageId", "recipient", "headers"],
+				additionalProperties: false,
+			},
+			"email_handler-reply": {
+				type: "object",
+				properties: {
+					messageId: {
+						type: "string",
+					},
+					sender: {
+						type: "string",
+						description: "Address the reply was sent from.",
+					},
+					raw: {
+						type: "string",
+						description:
+							"Raw MIME content of the reply. Omitted from the routing list; present on the detail response.",
+					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of the reply MIME.",
+					},
+				},
+				required: ["messageId", "sender"],
+				additionalProperties: false,
+			},
+			email_base: {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker associated with the email, if known.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description: "RFC Message-ID header value carried by the email.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+				},
+				required: ["from", "subject", "messageId", "attachments"],
+				additionalProperties: false,
+			},
+			"email_routing-item": {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker that handled this captured delivery.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. This is message content and compatibility lookup material; captureId identifies the Routing record.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					captureId: {
+						type: "string",
+						format: "uuid",
+						pattern:
+							"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+						description: "Opaque identifier for this exact captured delivery.",
+					},
+					editAndResendAvailable: {
+						type: "boolean",
+						description:
+							"Whether this capture can be projected into the email composer.",
+					},
+					editAndResendUnavailableReason: {
+						type: "string",
+					},
+					capturedPortion: {
+						type: "boolean",
+						description:
+							"Whether this capture contains only a portion of the original message.",
+					},
+					to: {
+						type: "string",
+						description: "Envelope RCPT TO address.",
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+					},
+					headerEntries: {
+						type: "array",
+						items: {
+							type: "array",
+							items: {
+								anyOf: [
+									{
+										type: "string",
+									},
+									{
+										type: "string",
+									},
+								],
+							},
+							minItems: 2,
+							maxItems: 2,
+						},
+						description:
+							"Email headers as ordered name/value pairs, including duplicates.",
+					},
+					receivedAt: {
+						type: "string",
+					},
+					rawSize: {
+						type: "number",
+					},
+					outcome: {
+						type: "string",
+						enum: ["ok", "exception"],
+						description: "Whether the handler ran to completion or threw.",
+					},
+					rejectReason: {
+						type: "string",
+						description:
+							"Reason passed to setReject(), if the handler rejected the message.",
+					},
+					forwards: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-forward",
+						},
+					},
+					replies: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-reply",
+						},
+					},
+					events: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-event",
+						},
+					},
+				},
+				required: [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"receivedAt",
+					"rawSize",
+					"outcome",
+					"forwards",
+					"replies",
+					"events",
+				],
+				additionalProperties: false,
+			},
+			"email_routing-detail": {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. This is message content and compatibility lookup material; captureId identifies the Routing record.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					captureId: {
+						type: "string",
+						format: "uuid",
+						pattern:
+							"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+					},
+					editAndResendAvailable: {
+						type: "boolean",
+					},
+					editAndResendUnavailableReason: {
+						type: "string",
+					},
+					capturedPortion: {
+						type: "boolean",
+					},
+					to: {
+						type: "string",
+						description: "Envelope RCPT TO address.",
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+					},
+					headerEntries: {
+						type: "array",
+						items: {
+							type: "array",
+							items: {
+								anyOf: [
+									{
+										type: "string",
+									},
+									{
+										type: "string",
+									},
+								],
+							},
+							minItems: 2,
+							maxItems: 2,
+						},
+						description:
+							"Email headers as ordered name/value pairs, including duplicates.",
+					},
+					receivedAt: {
+						type: "string",
+					},
+					rawSize: {
+						type: "number",
+					},
+					outcome: {
+						type: "string",
+						enum: ["ok", "exception"],
+						description: "Whether the handler ran to completion or threw.",
+					},
+					rejectReason: {
+						type: "string",
+						description:
+							"Reason passed to setReject(), if the handler rejected the message.",
+					},
+					forwards: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-forward",
+						},
+					},
+					replies: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-reply",
+						},
+					},
+					events: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-event",
+						},
+					},
+					text: {
+						type: "string",
+						description: "Parsed plain text body, when present.",
+					},
+					html: {
+						type: "string",
+						description: "Parsed HTML body, when present.",
+					},
+					raw: {
+						type: "string",
+						description: "Raw MIME content of the received email.",
+					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of the received MIME.",
+					},
+				},
+				required: [
+					"worker",
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"captureId",
+					"editAndResendAvailable",
+					"capturedPortion",
+					"to",
+					"receivedAt",
+					"rawSize",
+					"outcome",
+					"forwards",
+					"replies",
+					"events",
+					"raw",
+				],
+				additionalProperties: false,
+			},
+			"email_send-request": {
+				type: "object",
+				properties: {
+					from: {
+						type: "string",
+						description: "Sender address.",
+					},
+					to: {
+						minItems: 1,
+						type: "array",
+						items: {
+							type: "string",
+						},
+						description: "Recipient addresses.",
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					bcc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					replyTo: {
+						type: "string",
+					},
+					subject: {
+						type: "string",
+					},
+					text: {
+						type: "string",
+						description: "Plain text body.",
+					},
+					html: {
+						type: "string",
+						description: "HTML body.",
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+						description: "Custom headers to include on the message.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								filename: {
+									type: "string",
+									description: "Name the attachment is presented under.",
+								},
+								type: {
+									type: "string",
+									description:
+										"MIME type of the attachment, e.g. 'application/pdf'.",
+								},
+								content: {
+									type: "string",
+									description:
+										"Attachment content, base64-encoded. MessageBuilder takes raw bytes here, but this endpoint accepts JSON so the bytes must be base64-encoded.",
+								},
+								contentId: {
+									type: "string",
+									description: "Content-ID for an inline attachment.",
+								},
+								disposition: {
+									type: "string",
+									enum: ["inline", "attachment"],
+									description:
+										"How the attachment is presented. Defaults to 'attachment'.",
+								},
+							},
+							required: ["filename", "type", "content"],
+							additionalProperties: false,
+						},
+						description:
+							"Attachments to include on the message, mirroring the MessageBuilder `attachments` entries accepted by a send_email binding. Adding any attachment composes the message as multipart/mixed.",
+					},
+				},
+				required: ["from", "to", "subject"],
+				additionalProperties: false,
+				description:
+					"Fields for composing a test email, mirroring MessageBuilder.",
+			},
+			email_attachment: {
+				type: "object",
+				properties: {
+					filename: {
+						type: "string",
+					},
+					contentType: {
+						type: "string",
+					},
+					disposition: {
+						type: "string",
+						enum: ["inline", "attachment"],
+					},
+					size: {
+						type: "number",
+					},
+				},
+				required: ["filename", "contentType", "disposition", "size"],
+				additionalProperties: false,
+				description:
+					"Metadata describing an attachment on a captured email, without its content.",
+			},
+			"email_sending-item": {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker associated with the email, if known.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value that identifies this Sending record for detail lookup.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					to: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					bcc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					replyTo: {
+						type: "string",
+					},
+					sentAt: {
+						type: "string",
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+					},
+				},
+				required: [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"sentAt",
+				],
+				additionalProperties: false,
+			},
+			"email_sending-detail": {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker associated with the email, if known.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value that identifies this Sending record for detail lookup.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					to: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					bcc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					replyTo: {
+						type: "string",
+					},
+					sentAt: {
+						type: "string",
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+					},
+					text: {
+						type: "string",
+					},
+					html: {
+						type: "string",
+					},
+					raw: {
+						type: "string",
+						description:
+							"Raw MIME content, present when sent via the EmailMessage API.",
+					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of sent MIME.",
+					},
+				},
+				required: [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"sentAt",
+				],
+				additionalProperties: false,
 			},
 		},
 	},

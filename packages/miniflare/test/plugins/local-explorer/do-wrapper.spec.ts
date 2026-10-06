@@ -72,7 +72,6 @@ describe("Durable Object Wrapper", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2024-04-03",
 							compatibilityFlags: ["nodejs_compat"],
@@ -80,7 +79,7 @@ describe("Durable Object Wrapper", () => {
 							env: {
 								TEST_DO: {
 									type: "durable-object",
-									workerName: "",
+									worker: "",
 									exportName: "TestDO",
 								},
 							},

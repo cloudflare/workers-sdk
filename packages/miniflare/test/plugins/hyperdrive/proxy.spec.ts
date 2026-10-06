@@ -6,7 +6,7 @@ import path from "node:path";
 import tls from "node:tls";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, test } from "vitest";
+import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import {
 	HyperdriveProxyController,
 	POSTGRES_SSL_REQUEST_PACKET,
@@ -244,6 +244,25 @@ function sendThroughProxy(
 			clearTimeout(timer);
 			reject(err);
 		});
+	});
+}
+
+/**
+ * Sends `message` through the proxy and resolves on the first reply, leaving
+ * the connection open so the sockets on both sides of the proxy still exist.
+ */
+function connectThroughProxy(
+	proxyPort: number,
+	message: string
+): Promise<{ socket: net.Socket; response: string }> {
+	return new Promise((resolve, reject) => {
+		const socket = net.connect({ host: "127.0.0.1", port: proxyPort }, () =>
+			socket.write(message)
+		);
+		socket.once("data", (data) =>
+			resolve({ socket, response: data.toString() })
+		);
+		socket.once("error", reject);
 	});
 }
 
@@ -549,6 +568,72 @@ describe("HyperdriveProxyController TLS modes", () => {
 			server.close();
 		}
 	});
+
+	test.for([
+		{ sslmode: "disable", serverSupportsSsl: false },
+		{ sslmode: "prefer", serverSupportsSsl: false },
+		{ sslmode: "require", serverSupportsSsl: true },
+	])(
+		"sslmode=$sslmode turns on noDelay for the client and database sockets",
+		async ({ sslmode, serverSupportsSsl }, { expect }) => {
+			const { server, port: dbPort } = serverSupportsSsl
+				? await createMockPostgresServer(certs.localhost, certs.ca.cert)
+				: await createMockPostgresNoSslServer();
+			const acceptedByDb: net.Socket[] = [];
+			server.on("connection", (socket) => acceptedByDb.push(socket));
+
+			const noDelaySockets = new Set<net.Socket>();
+			const setNoDelay = net.Socket.prototype.setNoDelay;
+			const spy = vi
+				.spyOn(net.Socket.prototype, "setNoDelay")
+				.mockImplementation(function (this: net.Socket, noDelay) {
+					if (noDelay !== false) {
+						noDelaySockets.add(this);
+					}
+					return setNoDelay.call(this, noDelay);
+				});
+			let client: net.Socket | undefined;
+
+			try {
+				const proxyPort = await controller.createProxyServer({
+					name: `test-nodelay-${sslmode}`,
+					targetHost: "127.0.0.1",
+					targetPort: String(dbPort),
+					scheme: "postgres",
+					sslmode,
+				});
+
+				const { socket, response } = await connectThroughProxy(
+					proxyPort,
+					"hello"
+				);
+				client = socket;
+				expect(response).toBe("ECHO:hello");
+
+				// With `prefer` the proxy reconnects after the 'N', and the second
+				// connection is the one that carries the traffic.
+				const pipedDbConnection = acceptedByDb.at(-1);
+				const sockets = [...noDelaySockets];
+				expect(
+					sockets.some(
+						(s) =>
+							s.localPort === proxyPort && s.remotePort === socket.localPort
+					)
+				).toBe(true);
+				expect(
+					sockets.some(
+						(s) =>
+							s.remotePort === dbPort &&
+							s.localPort === pipedDbConnection?.remotePort
+					)
+				).toBe(true);
+			} finally {
+				spy.mockRestore();
+				client?.destroy();
+				server.close();
+			}
+		}
+	);
 });
 
 describe("MySQL ssl-mode parsing via Miniflare", () => {
@@ -573,7 +658,6 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(workerScript),
@@ -581,8 +665,10 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 							HYPERDRIVE: {
 								type: "hyperdrive",
 								id: "hyperdrive",
-								localConnectionString:
-									"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_IDENTITY",
+								dev: {
+									connectionString:
+										"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_IDENTITY",
+								},
 							},
 						},
 					},
@@ -603,7 +689,6 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(workerScript),
@@ -611,8 +696,10 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 							HYPERDRIVE: {
 								type: "hyperdrive",
 								id: "hyperdrive",
-								localConnectionString:
-									"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_CA",
+								dev: {
+									connectionString:
+										"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_CA",
+								},
 							},
 						},
 					},
@@ -633,7 +720,6 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(workerScript),
@@ -641,8 +727,10 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 							HYPERDRIVE: {
 								type: "hyperdrive",
 								id: "hyperdrive",
-								localConnectionString:
-									"mysql://user:password@localhost:3306/database?ssl-mode=REQUIRED",
+								dev: {
+									connectionString:
+										"mysql://user:password@localhost:3306/database?ssl-mode=REQUIRED",
+								},
 							},
 						},
 					},

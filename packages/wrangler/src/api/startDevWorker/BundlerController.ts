@@ -1,8 +1,10 @@
 import assert from "node:assert";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
-import { getWranglerTmpDir } from "@cloudflare/workers-utils";
+import {
+	extractBindingsOfType,
+	getWranglerTmpDir,
+} from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { BuildFailure } from "../../deployment-bundle/build-failures";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
@@ -31,6 +33,7 @@ type PendingCustomBuild = {
 	config: StartDevWorkerOptions;
 	filePath: string;
 	buildAborter: AbortController;
+	runBuildCommand: boolean;
 };
 
 export class BundlerController extends Controller {
@@ -64,11 +67,18 @@ export class BundlerController extends Controller {
 	 * builds write to the same output files at once, and the user's build command
 	 * is unlikely to expect that.
 	 *
+	 * @param runBuildCommand Whether to run the user's build command. This is
+	 * `false` when (re)watching after a config update, since `getEntry()`
+	 * already ran the build command for the current config immediately before
+	 * `BundlerController` saw it (see `onConfigUpdate()`); only the resulting
+	 * output still needs to be bundled. Real file-change events must always
+	 * run the build command to reflect the change.
 	 * @returns a promise that resolves once the queue has been drained.
 	 */
 	#scheduleCustomBuild(
 		config: StartDevWorkerOptions,
-		filePath: string
+		filePath: string,
+		runBuildCommand = true
 	): Promise<void> {
 		// Watcher events can still be delivered between `teardown()` aborting the
 		// in-flight build and the watcher finishing closing, and a build must never
@@ -86,6 +96,7 @@ export class BundlerController extends Controller {
 			config,
 			filePath,
 			buildAborter: this.#customBuildAborter,
+			runBuildCommand,
 		};
 		if (this.#customBuildDrain === undefined) {
 			const drain = this.#drainCustomBuilds();
@@ -114,7 +125,8 @@ export class BundlerController extends Controller {
 				await this.#runCustomBuild(
 					next.config,
 					next.filePath,
-					next.buildAborter
+					next.buildAborter,
+					next.runBuildCommand
 				);
 			}
 		} finally {
@@ -125,25 +137,28 @@ export class BundlerController extends Controller {
 	async #runCustomBuild(
 		config: StartDevWorkerOptions,
 		filePath: string,
-		buildAborter: AbortController
+		buildAborter: AbortController,
+		runBuildCommand = true
 	) {
-		const relativeFile =
-			path.relative(config.projectRoot, config.entrypoint) || ".";
-		logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
 		try {
-			await runCustomBuild(
-				config.entrypoint,
-				relativeFile,
-				{
-					cwd: config.build?.custom?.workingDirectory,
-					command: config.build?.custom?.command,
-				},
-				config.config,
-				{ wranglerCommand: "dev", signal: buildAborter.signal }
-			);
-			if (buildAborter.signal.aborted) {
-				return;
+			if (runBuildCommand) {
+				const relativeFile =
+					path.relative(config.projectRoot, config.entrypoint) || ".";
+				logger.log(`The file ${filePath} changed, restarting build...`);
+				await runCustomBuild(
+					config.entrypoint,
+					relativeFile,
+					{
+						cwd: config.build?.custom?.workingDirectory,
+						command: config.build?.custom?.command,
+					},
+					config.config,
+					{ wranglerCommand: "dev", signal: buildAborter.signal }
+				);
+				if (buildAborter.signal.aborted) {
+					return;
+				}
 			}
 			assert(this.#tmpDir);
 			if (!config.build?.bundle) {
@@ -297,17 +312,41 @@ export class BundlerController extends Controller {
 		assert(pathsToWatch, "config.build.custom.watch");
 
 		if (config.dev.watch === false) {
-			await this.#scheduleCustomBuild(config, String(pathsToWatch));
+			// `getEntry()` already ran the build command for this config; just
+			// bundle its output (see `#scheduleCustomBuild()`'s `runBuildCommand`).
+			await this.#scheduleCustomBuild(
+				config,
+				String(pathsToWatch),
+				/* runBuildCommand */ false
+			);
 			return;
 		}
 
 		this.#customBuildWatcher = watch(pathsToWatch, {
 			persistent: true,
-			// The initial custom build is always done in getEntry()
+			// The initial custom build command is always run by `getEntry()`, so
+			// files that already exist when we start watching must not be
+			// reported as changes.
 			ignoreInitial: true,
 		});
+		// A real change can be detected (and start a real rebuild) before the
+		// watcher's initial scan finishes: `ignoreInitial` only suppresses `add`
+		// events for pre-existing files, not `change` events picked up mid-scan.
+		// Track that so `ready`'s bundle-only pass below doesn't supersede (and
+		// discard the result of) a rebuild that's already reflecting a real edit.
+		let realChangeSeenBeforeReady = false;
 		this.#customBuildWatcher.on("ready", () => {
-			void this.#scheduleCustomBuild(config, String(pathsToWatch));
+			if (realChangeSeenBeforeReady) {
+				return;
+			}
+			// Bundle the output `getEntry()` already produced; don't re-run the
+			// build command a second time (see `#scheduleCustomBuild()`'s
+			// `runBuildCommand`).
+			void this.#scheduleCustomBuild(
+				config,
+				String(pathsToWatch),
+				/* runBuildCommand */ false
+			);
 		});
 
 		// A single logical change (a `git pull`, a "save all", a framework writing
@@ -321,6 +360,7 @@ export class BundlerController extends Controller {
 		this.#debouncedCustomBuild = debouncedCustomBuild;
 
 		this.#customBuildWatcher.on("all", (_event, filePath) => {
+			realChangeSeenBeforeReady = true;
 			lastChangedPath = filePath;
 			debouncedCustomBuild();
 		});

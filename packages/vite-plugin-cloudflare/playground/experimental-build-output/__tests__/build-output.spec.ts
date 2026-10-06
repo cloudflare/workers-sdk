@@ -1,13 +1,33 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, test } from "vitest";
-import { getTextResponse, isBuild, rootDir } from "../../__test-utils__";
+import {
+	getTextResponse,
+	isBuild,
+	rootDir,
+	satisfiesMinimumViteVersion,
+} from "../../__test-utils__";
 
 function getBuildOutputDir() {
 	return path.join(rootDir, ".cloudflare/output/v0/workers", "default");
 }
 
-describe("Build Output Specification", () => {
+function getRootConfigPath() {
+	return path.join(rootDir, ".cloudflare/output/v0", "config.json");
+}
+
+function getContainerConfigPath() {
+	return path.join(
+		rootDir,
+		".cloudflare/output/v0/containers/build-output/container.config.json"
+	);
+}
+
+const isVite7OrLater = satisfiesMinimumViteVersion("7.0.0");
+const describeBuildOutput = describe.runIf(isVite7OrLater);
+const describeBuildOutputFiles = describe.runIf(isBuild && isVite7OrLater);
+
+describeBuildOutput("Build Output Specification", () => {
 	test("serves the worker", async ({ expect }) => {
 		const response = await getTextResponse("/");
 		expect(response).toBe("hello from worker");
@@ -24,14 +44,14 @@ describe("Build Output Specification", () => {
 	});
 });
 
-describe.runIf(isBuild)("Build Output Specification files", () => {
-	test("emits config.json at the correct location", ({ expect }) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+describeBuildOutputFiles("Build Output Specification files", () => {
+	test("emits worker.config.json at the correct location", ({ expect }) => {
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		expect(fs.existsSync(configPath)).toBe(true);
 	});
 
 	test("emits a bundle/ directory with the entry chunk", ({ expect }) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: { mainModule: string };
 		};
@@ -48,10 +68,10 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(fs.existsSync(assetsDir)).toBe(true);
 	});
 
-	test("strips `entrypoint` in config.json and adds `manifest`", ({
+	test("strips `entrypoint` in worker.config.json and adds `manifest`", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as Record<
 			string,
 			unknown
@@ -59,6 +79,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(config).not.toHaveProperty("entrypoint");
 		expect(typeof config.manifest).toBe("object");
 		const manifest = config.manifest as Record<string, unknown>;
+		expect(manifest.type).toBe("complete");
 		expect(typeof manifest.mainModule).toBe("string");
 		expect(typeof manifest.modules).toBe("object");
 	});
@@ -66,7 +87,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 	test("includes every module in `manifest.modules` on disk under bundle/", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: { modules: Record<string, { type: string }> };
 		};
@@ -81,7 +102,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 	test("includes source maps in `manifest.modules` with type `sourcemap`", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "config.json");
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: {
 				mainModule: string;
@@ -105,6 +126,16 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(fs.existsSync(wranglerJson)).toBe(false);
 	});
 
+	test("emits a root config.json recording the build context", ({ expect }) => {
+		const contents = JSON.parse(
+			fs.readFileSync(getRootConfigPath(), "utf-8")
+		) as Record<string, unknown>;
+
+		expect(contents).toEqual({
+			buildContext: { isPreview: false, mode: "production" },
+		});
+	});
+
 	test("does not write .wrangler/deploy/config.json", ({ expect }) => {
 		const deployConfig = path.join(
 			rootDir,
@@ -113,5 +144,22 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 			"config.json"
 		);
 		expect(fs.existsSync(deployConfig)).toBe(false);
+	});
+
+	test("emits Container configs under their Container names", ({ expect }) => {
+		const contents = JSON.parse(
+			fs.readFileSync(getContainerConfigPath(), "utf-8")
+		) as Record<string, unknown>;
+
+		expect(contents).toMatchObject({
+			name: "build-output",
+			schedulingPolicy: "durable-object",
+			images: {
+				api: {
+					reference:
+						"registry.cloudflare.com/account/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			},
+		});
 	});
 });

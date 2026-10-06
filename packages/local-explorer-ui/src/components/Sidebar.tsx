@@ -6,6 +6,9 @@ import {
 	useSidebar,
 } from "@cloudflare/kumo";
 import {
+	ClockCountdownIcon,
+	EnvelopeSimpleIcon,
+	FlagBannerIcon,
 	MonitorIcon,
 	MoonIcon,
 	PulseIcon,
@@ -120,6 +123,7 @@ export function AppSidebar({
 	const kvNamespaces = bindings?.kv ?? [];
 	const r2Buckets = bindings?.r2 ?? [];
 	const workflows = bindings?.workflows ?? [];
+	const flagshipApps = bindings?.flagship ?? [];
 
 	const sidebarItemGroups = [
 		{
@@ -207,6 +211,80 @@ export function AppSidebar({
 				},
 			})),
 			title: "Workflows",
+		},
+		{
+			emptyLabel: "No email",
+			groupId: "email" as const,
+			icon: EnvelopeSimpleIcon,
+			items: [
+				{
+					id: "sending",
+					isActive: currentPath === "/email/sending",
+					label: "Sending",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/email/sending",
+					},
+				},
+				{
+					id: "routing",
+					isActive:
+						currentPath === "/email/routing" ||
+						currentPath.startsWith("/email/routing/"),
+					label: "Routing",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/email/routing",
+					},
+				},
+			],
+			title: "Email",
+		},
+		{
+			emptyLabel: "",
+			groupId: "cron-triggers" as const,
+			icon: ClockCountdownIcon,
+			items: [
+				{
+					id: "configured-crons",
+					isActive: currentPath === "/cron-triggers/configured",
+					label: "Configured Crons",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/cron-triggers/configured",
+					},
+				},
+				{
+					id: "ad-hoc-triggers",
+					isActive: currentPath === "/cron-triggers/ad-hoc",
+					label: "Ad-Hoc Triggers",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/cron-triggers/ad-hoc",
+					},
+				},
+			],
+			title: "Cron Triggers",
+		},
+		{
+			emptyLabel: "No Flagship apps",
+			groupId: "flagship" as const,
+			icon: FlagBannerIcon,
+			items: flagshipApps.map((app) => ({
+				id: `${app.id}:${app.bindingName}`,
+				isActive: currentPath === `/flagship/${app.id}`,
+				label: app.bindingName,
+				link: {
+					params: { appId: app.id },
+					search: workerSearch,
+					to: "/flagship/$appId",
+				},
+			})),
+			title: "Flagship",
 		},
 	] satisfies Array<{
 		emptyLabel: string;
@@ -362,7 +440,15 @@ export function AppSidebar({
 						{sidebarItemGroups.map((group) => (
 							<SidebarGroupPopup
 								emptyLabel={group.emptyLabel}
-								icon={<group.icon width={20} height={20} />}
+								icon={
+									<group.icon
+										aria-label={
+											group.groupId === "email" ? group.title : undefined
+										}
+										height={20}
+										width={20}
+									/>
+								}
 								items={group.items}
 								key={group.groupId}
 								title={group.title}

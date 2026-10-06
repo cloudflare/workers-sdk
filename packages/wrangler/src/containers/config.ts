@@ -6,11 +6,13 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import {
+	getDurableObjectClassNameToUseSQLiteMap,
 	isDockerfile,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
 	UserError,
+	validateDurableObjectContainerApplications,
 } from "@cloudflare/workers-utils";
-import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
@@ -19,8 +21,30 @@ import type {
 	InstanceTypeOrLimits,
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
-import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
-import type { Config, ContainerApp } from "@cloudflare/workers-utils";
+import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared";
+import type {
+	Config,
+	ContainerApp,
+	ContainerObservability,
+	Observability,
+} from "@cloudflare/workers-utils";
+
+function isContainerObservabilityEnabled(
+	observability: ContainerObservability | undefined
+): boolean {
+	return (
+		observability?.logs?.enabled === true || observability?.enabled === true
+	);
+}
+
+function isRootObservabilityLogsEnabled(
+	observability: Observability | undefined
+): boolean {
+	return (
+		observability?.logs?.enabled === true ||
+		(observability?.enabled === true && observability?.logs?.enabled !== false)
+	);
+}
 
 /**
  * Perform type conversion of affinities so that they can be fed to the API.
@@ -61,13 +85,23 @@ export const getNormalizedContainerOptions = async (
 		return [];
 	}
 
+	validateDurableObjectContainerApplications(config);
+
 	const normalizedContainers: ContainerNormalizedConfig[] = [];
+	const allDOs = getDurableObjectClassNameToUseSQLiteMap(
+		config.migrations,
+		config.exports
+	);
 
 	for (const container of config.containers) {
+		if (isDurableObjectContainerApp(container)) {
+			continue;
+		}
+
 		assert(container.name, "container name should have been set by validation");
-		const allDOs = getDurableObjectClassNameToUseSQLiteMap(
-			config.migrations,
-			config.exports
+		assert(
+			container.image,
+			"container image should have been set by validation"
 		);
 
 		// A container is linked to its Durable Object either by its own
@@ -125,6 +159,16 @@ export const getNormalizedContainerOptions = async (
 			tiers = [1, 2];
 		}
 
+		let selectedObservabilityLogsEnabled = isRootObservabilityLogsEnabled(
+			config.observability
+		);
+
+		if (container.observability !== undefined) {
+			selectedObservabilityLogsEnabled = isContainerObservabilityEnabled(
+				container.observability
+			);
+		}
+
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: className,
@@ -153,9 +197,19 @@ export const getNormalizedContainerOptions = async (
 					: (container.rollout_kind ?? "full_auto"),
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
-				logs_enabled:
-					config.observability?.logs?.enabled ??
-					config.observability?.enabled === true,
+				logs_enabled: selectedObservabilityLogsEnabled,
+				...(container.observability?.target_instance_percentage !== undefined
+					? {
+							target_instance_percentage:
+								container.observability.target_instance_percentage,
+						}
+					: {}),
+				...(container.observability?.target_instance_count !== undefined
+					? {
+							target_instance_count:
+								container.observability.target_instance_count,
+						}
+					: {}),
 			},
 			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `wrangler_ssh` when `ssh` is not set
 			wrangler_ssh: container.ssh ?? container.wrangler_ssh,

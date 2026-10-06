@@ -12,7 +12,30 @@ import { applyDefaultsToSink, SINK_DEFAULTS } from "../../defaults";
 import { authorizeR2Bucket } from "../../index";
 import { validateEntityName } from "../../validate";
 import { displaySinkConfiguration } from "./utils";
-import type { CreateSinkRequest, SinkFormat } from "../../types";
+import type {
+	CreateSinkRequest,
+	JsonFormat,
+	ParquetFormat,
+	SinkFormat,
+} from "../../types";
+
+function isJsonCompression(
+	compression: string | undefined
+): compression is NonNullable<JsonFormat["compression"]> {
+	return compression === "uncompressed" || compression === "gzip";
+}
+
+function isParquetCompression(
+	compression: string | undefined
+): compression is NonNullable<ParquetFormat["compression"]> {
+	return (
+		compression === "uncompressed" ||
+		compression === "snappy" ||
+		compression === "gzip" ||
+		compression === "zstd" ||
+		compression === "lz4"
+	);
+}
 
 function parseSinkType(type: string): "r2" | "r2_data_catalog" {
 	if (type === "r2" || type === "r2-data-catalog") {
@@ -28,7 +51,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new sink",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 	},
 	positionalArgs: ["sink"],
 	args: {
@@ -55,10 +78,10 @@ export const pipelinesSinksCreateCommand = createCommand({
 			default: SINK_DEFAULTS.format.type,
 		},
 		compression: {
-			describe: "Compression method (parquet only)",
+			describe:
+				"Compression method (JSON supports uncompressed and gzip; Parquet defaults to zstd)",
 			type: "string",
 			choices: ["uncompressed", "snappy", "gzip", "zstd", "lz4"],
-			default: SINK_DEFAULTS.format.compression,
 		},
 		"target-row-group-size": {
 			describe: "Target row group size for parquet format",
@@ -94,7 +117,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 			implies: "access-key-id",
 		},
 		namespace: {
-			describe: "Data catalog namespace (required for r2-data-catalog)",
+			describe: "Basin Catalog namespace (required for r2-data-catalog)",
 			type: "string",
 		},
 		table: {
@@ -103,7 +126,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 		},
 		"catalog-token": {
 			describe:
-				"Authentication token for data catalog (required for r2-data-catalog)",
+				"Authentication token for Basin Catalog (required for r2-data-catalog)",
 			type: "string",
 		},
 	},
@@ -144,16 +167,37 @@ export const pipelinesSinksCreateCommand = createCommand({
 					{ telemetryMessage: "pipelines sinks create invalid format" }
 				);
 			}
-			// Enforce minimum interval for R2 Data Catalog to prevent compaction issues
+			// Enforce minimum interval for Basin Catalog to prevent compaction issues
 			if (
 				args.rollInterval !== undefined &&
 				args.rollInterval < SINK_DEFAULTS.rolling_policy.min_interval_seconds
 			) {
 				throw new CommandLineArgsError(
-					`Pipeline frequency must be at least ${SINK_DEFAULTS.rolling_policy.min_interval_seconds} seconds for R2 Data Catalog sinks to prevent compaction issues. Current value: ${args.rollInterval} seconds.`,
+					`Pipeline frequency must be at least ${SINK_DEFAULTS.rolling_policy.min_interval_seconds} seconds for Basin Catalog sinks to prevent compaction issues. Current value: ${args.rollInterval} seconds.`,
 					{
 						telemetryMessage:
-							"pipelines r2 data catalog interval below minimum threshold",
+							"pipelines basin catalog interval below minimum threshold",
+					}
+				);
+			}
+		}
+
+		if (args.format === "json") {
+			if (args.compression && !isJsonCompression(args.compression)) {
+				throw new CommandLineArgsError(
+					"JSON sinks only support 'uncompressed' or 'gzip' compression",
+					{
+						telemetryMessage: "pipelines sinks create invalid json compression",
+					}
+				);
+			}
+
+			if (args.targetRowGroupSize) {
+				throw new CommandLineArgsError(
+					"--target-row-group-size is only supported for Parquet sinks",
+					{
+						telemetryMessage:
+							"pipelines sinks create invalid json row group size",
 					}
 				);
 			}
@@ -175,18 +219,18 @@ export const pipelinesSinksCreateCommand = createCommand({
 		if (args.format || args.compression || args.targetRowGroupSize) {
 			let formatConfig: SinkFormat;
 			if (args.format === "json") {
-				formatConfig = { type: "json" };
+				formatConfig = {
+					type: "json",
+					...(isJsonCompression(args.compression) && {
+						compression: args.compression,
+					}),
+				};
 			} else {
 				formatConfig = {
 					type: "parquet",
-					...(args.compression && {
-						compression: args.compression as
-							| "uncompressed"
-							| "snappy"
-							| "gzip"
-							| "zstd"
-							| "lz4",
-					}),
+					compression: isParquetCompression(args.compression)
+						? args.compression
+						: SINK_DEFAULTS.format.compression,
 					...(args.targetRowGroupSize && {
 						row_group_bytes:
 							parseInt(args.targetRowGroupSize.replace(/MB$/i, "")) *

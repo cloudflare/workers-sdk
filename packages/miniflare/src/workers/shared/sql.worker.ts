@@ -112,7 +112,9 @@ export function get<R extends TypedResult>(
 	cursor: TypedSqlStorageCursor<R>
 ): R | undefined {
 	let result: R | undefined;
-	for (const row of cursor) result ??= row;
+	for (const row of cursor) {
+		result ??= row;
+	}
 	return result;
 }
 
