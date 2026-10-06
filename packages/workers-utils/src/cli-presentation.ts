@@ -20,6 +20,7 @@ export type CliCommands = {
 };
 
 export type CliConfigFields = {
+	workersDev: string;
 	containerObservabilityTargetPercentage: string;
 	containerObservabilityTargetCount: string;
 };
@@ -29,6 +30,7 @@ export type CliPresentation = {
 	displayName: string;
 	/** A bare config-file label; callers should supply a determiner such as "your". */
 	displayConfigFileName: string;
+	configFieldAssignmentSeparator: " = " | ": ";
 	commands: CliCommands;
 	configFields: CliConfigFields;
 };
@@ -56,6 +58,7 @@ const WRANGLER_COMMANDS: CliCommands = {
 };
 
 const WRANGLER_CONFIG_FIELDS: CliConfigFields = {
+	workersDev: "workers_dev",
 	containerObservabilityTargetPercentage: "target_instance_percentage",
 	containerObservabilityTargetCount: "target_instance_count",
 };
@@ -64,6 +67,7 @@ export const WRANGLER_CLI_PRESENTATION: CliPresentation = {
 	cliName: "wrangler",
 	displayName: "Wrangler",
 	displayConfigFileName: "Wrangler config file",
+	configFieldAssignmentSeparator: " = ",
 	commands: WRANGLER_COMMANDS,
 	configFields: WRANGLER_CONFIG_FIELDS,
 };
@@ -72,7 +76,9 @@ export const CF_CLI_PRESENTATION: CliPresentationOverrides = {
 	cliName: "cf",
 	displayName: "cf",
 	displayConfigFileName: "cloudflare.config.ts",
+	configFieldAssignmentSeparator: ": ",
 	configFields: {
+		workersDev: "workersDev",
 		containerObservabilityTargetPercentage: "targetInstancePercentage",
 		containerObservabilityTargetCount: "targetInstanceCount",
 	},
@@ -110,6 +116,9 @@ export function resolveCliPresentation(
 		displayConfigFileName:
 			overrides?.displayConfigFileName ??
 			WRANGLER_CLI_PRESENTATION.displayConfigFileName,
+		configFieldAssignmentSeparator:
+			overrides?.configFieldAssignmentSeparator ??
+			WRANGLER_CLI_PRESENTATION.configFieldAssignmentSeparator,
 		commands: {
 			...WRANGLER_COMMANDS,
 			...overrides?.commands,

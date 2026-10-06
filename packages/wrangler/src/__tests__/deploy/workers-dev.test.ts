@@ -1619,10 +1619,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should warn the user if workers_dev default is different from remote", async ({
+		it("should warn with TOML syntax if workers_dev default is different from remote when using wrangler.toml", async ({
 			expect,
 		}) => {
-			writeWranglerConfig({}); // Default workers_dev should be true, since there's no routes.
+			writeWranglerConfig({}, "./wrangler.toml"); // Default workers_dev should be true, since there's no routes.
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();

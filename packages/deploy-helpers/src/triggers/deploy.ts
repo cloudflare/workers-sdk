@@ -653,6 +653,8 @@ export function renderWorkersDevDefaultWarning(
 	beforeEnabled: boolean,
 	afterEnabled: boolean
 ): string {
+	const workersDevField = cliPresentation.configFields.workersDev;
+	const workersDevAssignment = `${workersDevField}${cliPresentation.configFieldAssignmentSeparator}${beforeEnabled}`;
 	const status = (enabled: boolean, past: boolean) => {
 		if (past) {
 			return enabled ? "enabled" : "disabled";
@@ -662,8 +664,8 @@ export function renderWorkersDevDefaultWarning(
 	};
 
 	return [
-		`Because 'workers_dev' is not in your ${cliPresentation.displayConfigFileName}, it will be ${status(afterEnabled, true)} for this deployment by default.`,
-		`To override this setting, you can ${status(beforeEnabled, false)} workers.dev by explicitly setting 'workers_dev = ${beforeEnabled}' in your ${cliPresentation.displayConfigFileName}.`,
+		`Because '${workersDevField}' is not in your ${cliPresentation.displayConfigFileName}, it will be ${status(afterEnabled, true)} for this deployment by default.`,
+		`To override this setting, you can ${status(beforeEnabled, false)} workers.dev by explicitly setting '${workersDevAssignment}' in your ${cliPresentation.displayConfigFileName}.`,
 	].join("\n");
 }
 

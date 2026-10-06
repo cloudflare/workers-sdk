@@ -89,6 +89,17 @@ describe("validateNodeCompatMode caller-specific warnings", () => {
 	}
 });
 
+describe("Wrangler presentation copy", () => {
+	it("renders the workers_dev config warning", ({ expect }) => {
+		initContext(WRANGLER_CLI_PRESENTATION, vi.fn());
+
+		expect(renderWorkersDevDefaultWarning(false, true)).toMatchInlineSnapshot(`
+			"Because 'workers_dev' is not in your Wrangler config file, it will be enabled for this deployment by default.
+			To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false' in your Wrangler config file."
+		`);
+	});
+});
+
 describe("cf presentation copy", () => {
 	it("preserves the inconsistent exports message and appends actionable next-steps", ({
 		expect,
@@ -131,12 +142,12 @@ describe("cf presentation copy", () => {
 		`);
 	});
 
-	it("renders the workers_dev config warning", ({ expect }) => {
+	it("renders the workersDev config warning", ({ expect }) => {
 		initContext(CF_CLI_PRESENTATION, vi.fn());
 
 		expect(renderWorkersDevDefaultWarning(false, true)).toMatchInlineSnapshot(`
-			"Because 'workers_dev' is not in your cloudflare.config.ts, it will be enabled for this deployment by default.
-			To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false' in your cloudflare.config.ts."
+			"Because 'workersDev' is not in your cloudflare.config.ts, it will be enabled for this deployment by default.
+			To override this setting, you can disable workers.dev by explicitly setting 'workersDev: false' in your cloudflare.config.ts."
 		`);
 	});
 });
