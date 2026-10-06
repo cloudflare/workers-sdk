@@ -764,6 +764,8 @@ export const InstanceOptionsSchema = z.strictObject({
 	unsafeTriggerHandlers: z.boolean().optional(),
 	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
 	unsafeLocalExplorer: z.boolean().optional(),
+	/** Authenticate Explorer requests with a caller-provided, session-scoped secret. */
+	unsafeLocalExplorerSecret: z.string().min(1).optional(),
 	// Turn on local-dev observability: attach the trace collector to the
 	// user's worker(s) so it receives their tail events.
 	unsafeObservability: z.boolean().optional(),

@@ -895,6 +895,12 @@ export function getGlobalServices({
 			text: sharedOptions.upstream,
 		});
 	}
+	if (sharedOptions.unsafeLocalExplorerSecret !== undefined) {
+		serviceEntryBindings.push({
+			name: CoreBindings.DATA_LOCAL_EXPLORER_SECRET,
+			data: encoder.encode(sharedOptions.unsafeLocalExplorerSecret),
+		});
+	}
 	if (sharedOptions.unsafeProxySharedSecret !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.DATA_PROXY_SHARED_SECRET,

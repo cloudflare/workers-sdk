@@ -32,6 +32,19 @@ console.log(await response.text()); // Hello Miniflare!
 await mf.dispose();
 ```
 
+## Local Explorer authentication
+
+Programmatic integrations can set `unsafeLocalExplorerSecret` alongside
+`unsafeLocalExplorer: true` and send that value in the
+`MF-Local-Explorer-Secret` header on each Explorer request, including requests
+sent with `dispatchFetch()`. Generate a fresh random secret for each session;
+do not reuse Cloudflare API credentials. Changing the option with `setOptions()`
+revokes the previous credential. Host and Origin checks still apply.
+
+This option is independent of `unsafeProxySharedSecret`, which authenticates
+proxy URL rewriting. Browser integrations that omit the Explorer option retain
+their existing behavior.
+
 ## API
 
 ### `type Awaitable<T>`

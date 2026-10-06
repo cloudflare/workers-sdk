@@ -69,6 +69,7 @@ import {
 	SECRET_STORE_PLUGIN_NAME,
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
+	SERVICE_LOOPBACK,
 	SOCKET_DEBUG_PORT,
 	SOCKET_DEV_REGISTRY,
 	SOCKET_ENTRY,
@@ -1076,6 +1077,9 @@ export class Miniflare {
 	 */
 	#devRegistryDispatcher?: Dispatcher;
 	#devRegistryPort?: number;
+	// Control-plane credentials belong to one instance and never enter the registry.
+	readonly #devRegistrySecret = crypto.randomBytes(32);
+	readonly #loopbackSecret = crypto.randomBytes(32).toString("hex");
 	#registryPushPromise: Promise<void> = Promise.resolve();
 
 	#queueRegistryUpdate(): Promise<void> {
@@ -1103,7 +1107,11 @@ export class Miniflare {
 				origin: "http://127.0.0.1",
 				path: "/",
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					[CoreHeaders.DEV_REGISTRY_SECRET]:
+						this.#devRegistrySecret.toString("hex"),
+				},
 				body: JSON.stringify(registry),
 				signal: AbortSignal.timeout(2000),
 			});
@@ -1622,6 +1630,54 @@ export class Miniflare {
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
+		const supplied = req.headers[CoreHeaders.LOOPBACK_SECRET.toLowerCase()];
+		const actual = Buffer.from(typeof supplied === "string" ? supplied : "");
+		const expected = Buffer.from(this.#loopbackSecret);
+		if (
+			actual.byteLength !== expected.byteLength ||
+			!crypto.timingSafeEqual(actual, expected)
+		) {
+			let response = new Response("Forbidden", { status: 403 });
+			// workerd's module-fallback protocol cannot supply custom headers.
+			// Keep it confined to its root route, without internal dispatch headers.
+			const url = new URL(req.url ?? "/", "http://localhost");
+			if (
+				this.#sharedOpts.unsafeModuleFallbackService !== undefined &&
+				url.pathname === "/" &&
+				req.headers.origin === undefined &&
+				req.headers[CoreHeaders.ORIGINAL_URL.toLowerCase()] === undefined
+			) {
+				const noBody = req.method === "GET" || req.method === "HEAD";
+				const resolveMethod = req.headers["x-resolve-method"];
+				const request = new Request(url, {
+					method: req.method,
+					headers:
+						typeof resolveMethod === "string"
+							? { "X-Resolve-Method": resolveMethod }
+							: {},
+					body: noBody ? undefined : safeReadableStreamFrom(req),
+					duplex: "half",
+				});
+				if (isModuleFallbackRequest(request)) {
+					try {
+						response = await this.#sharedOpts.unsafeModuleFallbackService(
+							request,
+							this
+						);
+					} catch (error) {
+						this.#log.error(
+							error instanceof Error ? error : new Error(String(error))
+						);
+						response = new Response("Module fallback failed", { status: 500 });
+					}
+				}
+			}
+			if (res !== undefined) {
+				await this.#writeResponse(response, res);
+			}
+			return response;
+		}
+		delete req.headers[CoreHeaders.LOOPBACK_SECRET.toLowerCase()];
 		const customNodeService =
 			req.headers[CoreHeaders.CUSTOM_NODE_SERVICE.toLowerCase()];
 		if (typeof customNodeService === "string") {
@@ -2430,16 +2486,7 @@ export class Miniflare {
 				`import { ExternalQueueProxy, ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
 				`export { ExternalQueueProxy, ExternalServiceProxy };`,
 				`setRegistry(${JSON.stringify(initialRegistry)});`,
-				`export default {`,
-				`  async fetch(request, env) {`,
-				`    if (request.method === "POST") {`,
-				`      const data = await request.json();`,
-				`      setRegistry(data);`,
-				`      return new Response("ok");`,
-				`    }`,
-				`    return new Response("not found", { status: 404 });`,
-				`  }`,
-				`};`,
+				`export { default } from "./dev-registry-proxy.worker.js";`,
 				...externalObjects.map(
 					([scriptName, className]) =>
 						`export const ${getOutboundDoProxyClassName(
@@ -2467,6 +2514,12 @@ export class Miniflare {
 						},
 					],
 					bindings: [
+						{
+							name: CoreBindings.DATA_DEV_REGISTRY_SECRET,
+							data: new TextEncoder().encode(
+								this.#devRegistrySecret.toString("hex")
+							),
+						},
 						{
 							name: CoreBindings.DEV_REGISTRY_DEBUG_PORT,
 							// workerdDebugPort bindings don't have any additional configuration
@@ -2535,6 +2588,12 @@ export class Miniflare {
 		}
 
 		const servicesArray = Array.from(services.values());
+		const loopbackService = services.get(SERVICE_LOOPBACK);
+		assert(loopbackService && "external" in loopbackService);
+		assert(loopbackService.external && "http" in loopbackService.external);
+		loopbackService.external.http.injectRequestHeaders = [
+			{ name: CoreHeaders.LOOPBACK_SECRET, value: this.#loopbackSecret },
+		];
 
 		return {
 			services: servicesArray,
