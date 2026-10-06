@@ -1,6 +1,20 @@
 import { execSync } from "node:child_process";
 
 /**
+ * execSync is typed as string when encoding is set, but Wrangler stubs
+ * return a Buffer. Read either shape as text before trim.
+ */
+export function gitCommandText(stdout: unknown): string {
+	if (typeof stdout === "string") {
+		return stdout;
+	}
+	if (stdout instanceof Uint8Array) {
+		return new TextDecoder().decode(stdout);
+	}
+	return "";
+}
+
+/**
  * Resolve the current Git branch name for the working tree.
  *
  * Uses `git symbolic-ref --short HEAD` so unborn branches (fresh
@@ -19,10 +33,12 @@ export function resolveGitBranchName(): string | undefined {
 	}
 
 	try {
-		const branch = execSync(`git symbolic-ref --short HEAD`, {
-			encoding: "utf8",
-			stdio: ["ignore", "pipe", "ignore"],
-		}).trim();
+		const branch = gitCommandText(
+			execSync(`git symbolic-ref --short HEAD`, {
+				encoding: "utf8",
+				stdio: ["ignore", "pipe", "ignore"],
+			})
+		).trim();
 		return branch || undefined;
 	} catch {
 		// Detached HEAD, or Git could not resolve a branch name.

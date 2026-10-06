@@ -8,7 +8,7 @@ import {
 	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { resolveGitBranchName } from "../shared/git-branch";
+import { gitCommandText, resolveGitBranchName } from "../shared/git-branch";
 import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, UpdatePreviewRequestParams } from "./api";
 import type {
@@ -25,10 +25,12 @@ const MAX_CONTAINER_APP_NAME_LENGTH = 253;
  * Stderr is discarded so a missing HEAD or origin cannot print `fatal:`.
  */
 function readGitStdout(command: string): string {
-	return execSync(command, {
-		encoding: "utf8",
-		stdio: ["ignore", "pipe", "ignore"],
-	}).trim();
+	return gitCommandText(
+		execSync(command, {
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "ignore"],
+		})
+	).trim();
 }
 
 export function getBranchName(): string | undefined {
