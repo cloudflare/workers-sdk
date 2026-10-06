@@ -78,18 +78,19 @@ const MAX_DIFF_LINES = 100;
 type ProgressLogger = Pick<Logger, "info" | "log">;
 
 /**
- * Choose where asset upload progress goes.
+ * Returns a logger that moves progress logs to the debug log level.
  *
- * @param quiet Whether stdout has to stay machine readable, as it does for
+ * @param json Whether stdout has to stay machine readable, as it does for
  * `--json` output. Progress then moves to debug level, so it is still
  * available with `WRANGLER_LOG=debug`.
  * @returns The logger methods to report progress through.
  */
-function progressLogger(quiet: boolean): ProgressLogger {
-	if (!quiet) {
+function progressLogger(json: boolean): ProgressLogger {
+	if (!json) {
 		return logger;
 	}
 	return {
+		...logger,
 		info: (...args: unknown[]) => logger.debug(...args),
 		log: (...args: unknown[]) => logger.debug(...args),
 	};
@@ -102,11 +103,11 @@ export const syncAssets = async (
 	scriptName: string,
 	{
 		dispatchNamespace,
-		quiet = false,
-	}: { dispatchNamespace?: string; quiet?: boolean } = {}
+		json = false,
+	}: { dispatchNamespace?: string; json?: boolean } = {}
 ): Promise<AssetsUploadResult> => {
 	assert(accountId, "Missing accountId");
-	const progress = progressLogger(quiet);
+	const progressLogger = getProgressLogger(quiet);
 
 	// 1. generate asset manifest
 	progress.info("🌀 Building list of assets...");
