@@ -8,6 +8,7 @@ import {
 	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { gitCommandText, resolveGitBranchName } from "../shared/git-branch";
 import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, UpdatePreviewRequestParams } from "./api";
 import type {
@@ -18,6 +19,19 @@ import type {
 } from "@cloudflare/workers-utils";
 
 const MAX_CONTAINER_APP_NAME_LENGTH = 253;
+
+/**
+ * Run a Git command and return its trimmed stdout.
+ * Stderr is discarded so a missing HEAD or origin cannot print `fatal:`.
+ */
+function readGitStdout(command: string): string {
+	return gitCommandText(
+		execSync(command, {
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "ignore"],
+		})
+	).trim();
+}
 
 export function getBranchName(): string | undefined {
 	const workersCIBranch = getWorkersCIBranchName();
@@ -36,12 +50,7 @@ export function getBranchName(): string | undefined {
 		return gitlabBranch;
 	}
 
-	try {
-		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();
-	} catch {
-		return undefined;
-	}
+	return resolveGitBranchName();
 }
 
 export function shouldUseCIMetadataFallback(): boolean {
@@ -51,7 +60,7 @@ export function shouldUseCIMetadataFallback(): boolean {
 export function getHeadCommitRef(): string | undefined {
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git rev-parse --short HEAD`).toString().trim();
+		return readGitStdout(`git rev-parse --short HEAD`);
 	} catch {
 		return undefined;
 	}
@@ -60,7 +69,7 @@ export function getHeadCommitRef(): string | undefined {
 export function getHeadCommitMessage(): string | undefined {
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git log -1 --format=%B`).toString().trim();
+		return readGitStdout(`git log -1 --format=%B`);
 	} catch {
 		return undefined;
 	}
@@ -172,7 +181,7 @@ export function getRepositoryUrl(): string | undefined {
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
 		return normalizeRepositoryUrl(
-			execSync(`git config --get remote.origin.url`).toString()
+			readGitStdout(`git config --get remote.origin.url`)
 		);
 	} catch {
 		return undefined;
