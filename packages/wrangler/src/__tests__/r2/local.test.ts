@@ -93,7 +93,6 @@ describe("r2", () => {
 					expect(`${key} holds ${fs.readFileSync("downloaded", "utf8")}`).toBe(
 						`${key} holds quarterly numbers`
 					);
-					fs.rmSync("downloaded");
 				}
 				std.getAndClearOut();
 			});
