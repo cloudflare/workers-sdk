@@ -69,7 +69,6 @@ import {
 	SECRET_STORE_PLUGIN_NAME,
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
-	SERVICE_LOOPBACK,
 	SOCKET_DEBUG_PORT,
 	SOCKET_DEV_REGISTRY,
 	SOCKET_ENTRY,
@@ -2557,6 +2556,7 @@ export class Miniflare {
 
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts,
+			loopbackSecret: this.#loopbackSecret,
 			allWorkerRoutes,
 			/*
 			 * - if Workers + Assets project but NOT Vitest, the fallback Worker (see
@@ -2588,12 +2588,6 @@ export class Miniflare {
 		}
 
 		const servicesArray = Array.from(services.values());
-		const loopbackService = services.get(SERVICE_LOOPBACK);
-		assert(loopbackService && "external" in loopbackService);
-		assert(loopbackService.external && "http" in loopbackService.external);
-		loopbackService.external.http.injectRequestHeaders = [
-			{ name: CoreHeaders.LOOPBACK_SECRET, value: this.#loopbackSecret },
-		];
 
 		return {
 			services: servicesArray,
