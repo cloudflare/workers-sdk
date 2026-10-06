@@ -211,14 +211,39 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		workerConfigObject.bindings,
 		context.logger
 	);
+	let hyperdriveConnectionStrings: Map<string, string>;
+	try {
+		hyperdriveConnectionStrings = await seedRemoteHyperdriveBindings(
+			workerConfigObject.bindings,
+			remoteProxySession.remoteProxyConnectionString
+		);
+	} catch (error) {
+		// Seeding can reject on a WebSocket error, a missing header, or its
+		// timeout. Letting that propagate would throw *after* the session is
+		// live, so the caller never receives the handle it would need to dispose
+		// it — the session leaks. Disposing it here instead is no better: the
+		// session is shared with every other remote binding in this worker, so
+		// tearing it down over a Hyperdrive-only failure would take unrelated
+		// service, KV, and R2 bindings down with it.
+		//
+		// Warn and carry on with no credentials. The Hyperdrive bindings are
+		// degraded for this round — `buildMiniflareBindingOptions` warns again
+		// per binding, and a reload re-enters this function and retries the
+		// seed — but the session stays owned by the caller and usable by
+		// everything else.
+		context.logger.warn(
+			`Failed to fetch edge credentials for remote Hyperdrive bindings: ${
+				error instanceof Error ? error.message : String(error)
+			}`
+		);
+		hyperdriveConnectionStrings = new Map();
+	}
+
 	return {
 		session: remoteProxySession,
 		remoteBindings,
 		auth,
-		hyperdriveConnectionStrings: await seedRemoteHyperdriveBindings(
-			workerConfigObject.bindings,
-			remoteProxySession.remoteProxyConnectionString
-		),
+		hyperdriveConnectionStrings,
 	};
 }
 

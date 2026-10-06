@@ -217,6 +217,48 @@ describe("Hyperdrive credential keepalive", () => {
 		expect(seedSpy).toHaveBeenCalledTimes(3);
 	});
 
+	it("returns the session, degraded, when seeding fails", async ({
+		expect,
+	}) => {
+		// A seed failure must not strand the session: it is shared with every
+		// other remote binding, and a caller that never receives the handle can
+		// neither use nor dispose it.
+		vi.spyOn(
+			seedHyperdriveBindings,
+			"seedRemoteHyperdriveBindings"
+		).mockRejectedValue(new Error("the remote proxy did not respond in time."));
+		const dispose = vi.fn().mockResolvedValue(undefined);
+		const session = {
+			ready: Promise.resolve(),
+			dispose,
+			updateBindings: vi.fn(),
+			remoteProxyConnectionString: new URL(
+				"http://localhost:8787"
+			) as RemoteProxyConnectionString,
+		};
+		const startSession = vi
+			.fn<typeof startRemoteProxySession>()
+			.mockResolvedValue(session);
+		const logger = createTestLogger();
+
+		const result = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings: hyperdriveBindings() },
+			undefined,
+			undefined,
+			{ logger },
+			startSession
+		);
+
+		expect(result?.session).toBe(session);
+		expect(result?.hyperdriveConnectionStrings.size).toBe(0);
+		expect(dispose).not.toHaveBeenCalled();
+		expect(logger.warn).toHaveBeenCalledWith(
+			expect.stringContaining(
+				"Failed to fetch edge credentials for remote Hyperdrive bindings"
+			)
+		);
+	});
+
 	it("does not install a keepalive for sessions without remote Hyperdrive bindings", async ({
 		expect,
 	}) => {
