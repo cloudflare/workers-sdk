@@ -882,7 +882,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	async function waitForReloadComplete(session: ServerSession) {
-		return new Promise<void>((resolve, reject) => {
+		await new Promise<void>((resolve, reject) => {
 			const cleanup = () => {
 				for (const devEnv of session.devEnvs) {
 					devEnv.off("error", onError);
@@ -911,6 +911,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 			session.primaryDevEnv.once("reloadComplete", onReloadComplete);
 		});
+		await session.primaryDevEnv.proxy.runtimeMessageMutex.drained();
 	}
 
 	function resolveErrorCause(error: unknown) {
