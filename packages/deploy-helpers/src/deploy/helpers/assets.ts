@@ -34,6 +34,7 @@ import { decodeJwtPayload, isJwtExpired } from "./jwt";
 import type { SharedDeployVersionsProps } from "../../shared/types";
 import type {
 	AssetsOptions,
+	Logger,
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
@@ -72,25 +73,38 @@ const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
 
 const MAX_DIFF_LINES = 100;
 
+type AssetLogger = Pick<Logger, "loggerLevel" | "debug" | "info" | "log">;
+
+/**
+ * Upload static assets and return the completion token and upload statistics.
+ *
+ * @param options Set `quiet` to suppress progress output. Errors are still logged
+ * and thrown; the shared logger is never modified.
+ */
 export const syncAssets = async (
 	complianceConfig: ComplianceConfig,
 	accountId: string | undefined,
 	assetDirectory: string,
 	scriptName: string,
-	dispatchNamespace?: string
+	dispatchNamespace?: string,
+	options: { quiet?: boolean } = {}
 ): Promise<AssetsUploadResult> => {
 	assert(accountId, "Missing accountId");
+	// Keep progress suppression local to this upload, including concurrent callers.
+	const assetLogger: Logger = options.quiet
+		? { debug() {}, info() {}, log() {}, warn: (...args) => logger.warn(...args), error: (...args) => logger.error(...args) }
+		: logger;
 
 	// 1. generate asset manifest
-	logger.info("🌀 Building list of assets...");
-	const manifest = await buildAssetManifest(assetDirectory);
+	assetLogger.info("🌀 Building list of assets...");
+	const manifest = await buildAssetManifest(assetDirectory, assetLogger);
 
 	const url = dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${dispatchNamespace}/scripts/${scriptName}/assets-upload-session`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}/assets-upload-session`;
 
 	// 2. fetch buckets w/ hashes
-	logger.info("🌀 Starting asset upload...");
+	assetLogger.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse = await retryOnAPIFailure(
 		() =>
 			fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
@@ -98,7 +112,7 @@ export const syncAssets = async (
 				method: "POST",
 				body: JSON.stringify({ manifest: manifest }),
 			}),
-		logger
+		assetLogger
 	);
 
 	// In the past we've seen the endpoint return that incorrectly doesn't contain
@@ -125,7 +139,7 @@ export const syncAssets = async (
 				{ code: 1, telemetryMessage: "assets upload missing completion token" }
 			);
 		}
-		logger.info(
+		assetLogger.info(
 			`No updated asset files to upload. Proceeding with deployment...`
 		);
 		return {
@@ -141,7 +155,7 @@ export const syncAssets = async (
 
 	// 3. fill buckets and upload assets
 	const numberFilesToUpload = filesToUpload.length;
-	logger.info(
+	assetLogger.info(
 		`🌀 Found ${numberFilesToUpload} new or modified static asset${
 			numberFilesToUpload > 1 ? "s" : ""
 		} to upload. Proceeding with upload...`
@@ -168,7 +182,11 @@ export const syncAssets = async (
 			}
 			// just logging file uploads at the moment...
 			// unsure how to log deletion vs unchanged file ignored/if we want to log this
-			assetLogCount = logAssetUpload(`+ ${manifestEntry[0]}`, assetLogCount);
+			assetLogCount = logAssetUpload(
+				`+ ${manifestEntry[0]}`,
+				assetLogCount,
+				assetLogger
+			);
 			return manifestEntry;
 		});
 	});
@@ -181,7 +199,7 @@ export const syncAssets = async (
 		? getEdgeKvUploadConcurrency(initializeAssetsResponse.jwt)
 		: BULK_UPLOAD_CONCURRENCY;
 	if (useSingleAssetUpload) {
-		logger.debug(`Edge KV asset upload concurrency: ${concurrency}`);
+		assetLogger.debug(`Edge KV asset upload concurrency: ${concurrency}`);
 	}
 	const queue = new PQueue({ concurrency });
 	const requestQueue = new PQueue({ concurrency });
@@ -466,7 +484,7 @@ export const syncAssets = async (
 					const recoveredConcurrency = queue.concurrency + 1;
 					requestQueue.concurrency = recoveredConcurrency;
 					queue.concurrency = recoveredConcurrency;
-					logger.debug(
+					assetLogger.debug(
 						`Asset upload concurrency recovered to ${recoveredConcurrency}.`
 					);
 				}
@@ -478,7 +496,8 @@ export const syncAssets = async (
 				logAssetsUploadStatus(
 					numberFilesToUpload,
 					uploadedAssetsCount,
-					uploadedFiles
+					uploadedFiles,
+					assetLogger
 				);
 				return res;
 			} catch (e) {
@@ -497,7 +516,7 @@ export const syncAssets = async (
 						concurrencyThrottleGeneration++;
 						requestQueue.concurrency = 1;
 						queue.concurrency = 1;
-						logger.debug(
+						assetLogger.debug(
 							"Asset upload concurrency throttled to 1 after a gateway error."
 						);
 						gatewayRetryDelayMs = Math.pow(2, gatewayErrors) * 5000;
@@ -515,18 +534,18 @@ export const syncAssets = async (
 							? registeredRetryAfterErrors.get(e)
 							: undefined;
 					if (registeredRetryAfter?.extendsDeadline) {
-						logger.info(
+						assetLogger.info(
 							chalk.dim(
 								`Received a "Retry-After" header from the Cloudflare API. Waiting ${Math.ceil(registeredRetryAfter.retryAfterMs / 1000)} second(s) before retrying...`
 							)
 						);
 					}
-					logger.info(
+					assetLogger.info(
 						chalk.dim(
 							`Asset upload failed. Retrying... ${attemptNumber} of ${MAX_UPLOAD_ATTEMPTS} attempts.\n`
 						)
 					);
-					logger.debug(e);
+					assetLogger.debug(e);
 					if (registeredRetryAfter === undefined) {
 						// Exponential backoff, 1 second first time, then 2 seconds,
 						// then 4 seconds, etc.
@@ -594,7 +613,7 @@ export const syncAssets = async (
 	const skipped = Object.keys(manifest).length - numberFilesToUpload;
 	const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
 
-	logger.log(
+	assetLogger.log(
 		`✨ Success! Uploaded ${numberFilesToUpload} file${
 			numberFilesToUpload > 1 ? "s" : ""
 		} ${skippedMessage}${formatTime(uploadMs)}\n`
@@ -628,9 +647,12 @@ export function getEdgeKvUploadConcurrency(jwt: string): number {
 	}
 }
 
-export const buildAssetManifest = async (dir: string) => {
+export const buildAssetManifest = async (
+	dir: string,
+	assetLogger: AssetLogger = logger
+) => {
 	const files = await readdir(dir, { recursive: true });
-	logReadFilesFromDirectory(dir, files);
+	logReadFilesFromDirectory(dir, files, assetLogger);
 
 	const manifest: AssetManifest = {};
 
@@ -649,7 +671,7 @@ export const buildAssetManifest = async (dir: string) => {
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
 			if (assetsIgnoreFunction(relativeFilepath)) {
-				logger.debug("Ignoring asset:", relativeFilepath);
+				assetLogger.debug("Ignoring asset:", relativeFilepath);
 				// This file should not be included in the manifest.
 				return;
 			}
@@ -693,20 +715,24 @@ export const buildAssetManifest = async (dir: string) => {
 	return manifest;
 };
 
-function logAssetUpload(line: string, diffCount: number) {
-	const level = logger.loggerLevel ?? "log";
+function logAssetUpload(
+	line: string,
+	diffCount: number,
+	assetLogger: AssetLogger
+) {
+	const level = assetLogger.loggerLevel ?? "log";
 	if (LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug) {
 		// If we're logging as debug level, we want *all* diff lines to be logged
 		// at debug level, not just the first MAX_DIFF_LINES
-		logger.debug(line);
+		assetLogger.debug(line);
 	} else if (diffCount < MAX_DIFF_LINES) {
 		// Otherwise, log  the first MAX_DIFF_LINES diffs at info level...
-		logger.info(line);
+		assetLogger.info(line);
 	} else if (diffCount === MAX_DIFF_LINES) {
 		// ...and warn when we start to truncate it
 		const msg =
 			"   (truncating changed assets log, set `WRANGLER_LOG=debug` environment variable to see full diff)";
-		logger.info(chalk.dim(msg));
+		assetLogger.info(chalk.dim(msg));
 	}
 	return ++diffCount;
 }
@@ -718,14 +744,15 @@ function logAssetUpload(line: string, diffCount: number) {
 function logAssetsUploadStatus(
 	numberFilesToUpload: number,
 	uploadedAssetsCount: number,
-	uploadedAssetFiles: string[]
+	uploadedAssetFiles: string[],
+	assetLogger: AssetLogger
 ) {
-	logger.info(
+	assetLogger.info(
 		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} asset${
 			numberFilesToUpload === 1 ? "" : "s"
 		}`
 	);
-	uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
+	uploadedAssetFiles.forEach((file) => assetLogger.debug(`✨ ${file}`));
 }
 
 /**
@@ -733,13 +760,17 @@ function logAssetsUploadStatus(
  * files from directory <dir>"), and the list of read files if in
  * debug log level.
  */
-function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
-	logger.info(
+function logReadFilesFromDirectory(
+	directory: string,
+	assetFiles: string[],
+	assetLogger: AssetLogger
+) {
+	assetLogger.info(
 		`✨ Read ${assetFiles.length} file${
 			assetFiles.length === 1 ? "" : "s"
 		} from the assets directory ${directory}`
 	);
-	assetFiles.forEach((file) => logger.debug(`/${file}`));
+	assetFiles.forEach((file) => assetLogger.debug(`/${file}`));
 }
 
 const WORKER_JS_FILENAME = "_worker.js";
