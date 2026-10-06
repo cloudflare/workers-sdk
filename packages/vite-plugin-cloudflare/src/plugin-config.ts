@@ -50,6 +50,8 @@ export type PersistState = boolean | { path: string };
 export type TunnelConfig = {
 	autoStart?: boolean;
 	name?: string;
+	/** Email addresses or domain patterns allowed to authenticate to a Quick Tunnel. */
+	allowedMail?: string[];
 };
 
 interface BaseWorkerConfig {
@@ -435,6 +437,16 @@ export async function resolvePluginConfig(
 	userConfig: vite.UserConfig,
 	viteEnv: vite.ConfigEnv
 ): Promise<ResolvedPluginConfig> {
+	if (typeof pluginConfig.tunnel === "object") {
+		if (
+			pluginConfig.tunnel.name !== undefined &&
+			(pluginConfig.tunnel.allowedMail?.length ?? 0) > 0
+		) {
+			throw new Error(
+				"`tunnel.allowedMail` is only supported for Quick Tunnels and cannot be used together with `tunnel.name`."
+			);
+		}
+	}
 	const resolvedNewConfig = normalizeNewConfig(
 		pluginConfig.experimental?.newConfig
 	);
@@ -447,6 +459,9 @@ export async function resolvePluginConfig(
 				: {
 						autoStart: pluginConfig.tunnel?.autoStart ?? false,
 						name: pluginConfig.tunnel?.name,
+						allowedMail: pluginConfig.tunnel?.allowedMail?.length
+							? pluginConfig.tunnel.allowedMail
+							: undefined,
 					},
 		experimental: {
 			headersAndRedirectsDevModeSupport:
