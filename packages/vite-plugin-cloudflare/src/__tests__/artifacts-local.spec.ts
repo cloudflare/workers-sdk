@@ -1,8 +1,9 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as pathFromUrl } from "node:url";
 import { promisify } from "node:util";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { createServer } from "vite";
 import { afterEach, test, vi } from "vitest";
@@ -46,13 +47,11 @@ test.for([undefined, false] as const)(
 		// virtual Worker module. Keep the fixture under the checkout instead.
 		const fixtureDir = fs.mkdtempSync(
 			path.join(
-				fs.realpathSync(path.dirname(fileURLToPath(import.meta.url))),
+				fs.realpathSync(path.dirname(pathFromUrl(import.meta.url))),
 				"artifacts-local-"
 			)
 		);
-		onTestFinished(() =>
-			fs.rmSync(fixtureDir, { recursive: true, force: true, maxRetries: 10 })
-		);
+		onTestFinished(() => removeDirSync(fixtureDir));
 		fs.writeFileSync(
 			path.join(fixtureDir, "package.json"),
 			JSON.stringify({ type: "module" })
