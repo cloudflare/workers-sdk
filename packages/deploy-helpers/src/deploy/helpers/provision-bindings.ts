@@ -922,12 +922,7 @@ function writeProvisionedIdsToConfig(
 		const existingIdentifier = (
 			configBindings[index] as Record<string, unknown>
 		)[identifierField];
-		if (
-			existingIdentifier === identifier ||
-			(!resource.provisioned &&
-				typeof existingIdentifier === "string" &&
-				existingIdentifier.length > 0)
-		) {
+		if (existingIdentifier === identifier) {
 			continue;
 		}
 		addBindingToPatch(

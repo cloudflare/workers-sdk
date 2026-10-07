@@ -1603,6 +1603,7 @@ describe("resource provisioning", () => {
 					{
 						binding: "D1",
 						database_name: "existing-db-name",
+						database_id: "stale-d1-id",
 						migrations_dir: "migrations",
 					},
 				],
