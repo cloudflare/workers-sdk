@@ -2842,8 +2842,8 @@ importers:
         specifier: 0.8.4
         version: 0.8.4
       '@cloudflare/config':
-        specifier: 0.22.0
-        version: 0.22.0
+        specifier: 0.24.0
+        version: 0.24.0
       '@cloudflare/runtime-types':
         specifier: 0.1.6
         version: 0.1.6(@types/node@22.15.17)
@@ -2851,8 +2851,8 @@ importers:
         specifier: 2.16.2
         version: 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261006.1)
       miniflare:
-        specifier: 5.20260930.0-alpha
-        version: 5.20260930.0-alpha(@types/node@22.15.17)
+        specifier: 5.20261006.0-alpha
+        version: 5.20261006.0-alpha(@types/node@22.15.17)
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
@@ -5576,6 +5576,9 @@ packages:
 
   '@cloudflare/config@0.22.0':
     resolution: {integrity: sha512-6FoqVlQicGs6DcUn5zbWUbcXomqtqIe+dFKwYJGKTJI/3W1dNQ2sKzxttNthiQG9RJhrENki4BNrpZtZuHwvXw==}
+
+  '@cloudflare/config@0.24.0':
+    resolution: {integrity: sha512-DBKkL2fFfHIL0cdjXOoWybNzBxD5xAvuebu0nfcBphWeUiWKnSUYu8JMaboKzmAJRp6V1RGtPAdfdtXMHueqAA==}
 
   '@cloudflare/containers@0.2.2':
     resolution: {integrity: sha512-cfTSd7M96Z9NeCiaN4i3FuMb+i2Nzi0HbMuxvMAnUmkXwtWIZCQ3XLqUWQkdCKWNJZ/3BLMInC6ntFvpbTWIpA==}
@@ -13461,6 +13464,10 @@ packages:
     resolution: {integrity: sha512-vZljfRtOEeynbhJtuvYsnCU8t6zF5wIUm9ql4YFHB7zvYw2+F2tpT0BzXjzaa++eiUIml1gsODCf02qShBmJdg==}
     engines: {node: '>=22.0.0'}
 
+  miniflare@5.20261006.0-alpha:
+    resolution: {integrity: sha512-UP3qIeQKHba59GHxBqD8H2GateacluT4vrjIpqEgH78kCSUxdu8jA0f7MH7ftRSAnnB1oOvEsDtav3xevQDbpQ==}
+    engines: {node: '>=22.0.0'}
+
   minimatch@10.2.5:
     resolution: {integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==}
     engines: {node: 18 || 20 || >=22}
@@ -17745,6 +17752,10 @@ snapshots:
       - regenerator-runtime
 
   '@cloudflare/config@0.22.0':
+    dependencies:
+      zod: 4.4.3
+
+  '@cloudflare/config@0.24.0':
     dependencies:
       zod: 4.4.3
 
@@ -25147,6 +25158,19 @@ snapshots:
       sharp: 0.35.4(@types/node@22.15.17)
       undici: 7.29.1
       workerd: 1.20260930.2
+      ws: 8.21.0
+      youch: 4.1.0-beta.10(patch_hash=3e73fc48581841f22ea1d2cf5a3560bde280fdba04940253073fb121a70a9269)
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
+
+  miniflare@5.20261006.0-alpha(@types/node@22.15.17):
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      sharp: 0.35.4(@types/node@22.15.17)
+      undici: 7.29.1
+      workerd: 1.20261006.1
       ws: 8.21.0
       youch: 4.1.0-beta.10(patch_hash=3e73fc48581841f22ea1d2cf5a3560bde280fdba04940253073fb121a70a9269)
     transitivePeerDependencies:

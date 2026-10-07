@@ -50,10 +50,10 @@
 	},
 	"dependencies": {
 		"@cloudflare/build-output-utils": "0.8.4",
-		"@cloudflare/config": "0.22.0",
+		"@cloudflare/config": "0.24.0",
 		"@cloudflare/runtime-types": "0.1.6",
 		"@cloudflare/unenv-preset": "2.16.2",
-		"miniflare": "5.20260930.0-alpha",
+		"miniflare": "5.20261006.0-alpha",
 		"unenv": "2.0.0-rc.24",
 		"ws": "catalog:default"
 	},
