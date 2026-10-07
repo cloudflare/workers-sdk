@@ -1293,6 +1293,20 @@ describe("resource provisioning", () => {
 
 			await runWrangler("deploy");
 
+			expect(
+				readWranglerConfig("./dist/my-app/wrangler.json").d1_databases
+			).toEqual([
+				{
+					binding: "NEW",
+					database_id: "new-d1-id",
+					migrations_dir: "../../migrations",
+				},
+				{
+					binding: "EXISTING",
+					database_id: "generated-id",
+					migrations_dir: "../../other-migrations",
+				},
+			]);
 			expect(readWranglerConfig("./wrangler.jsonc")).toEqual({
 				compatibility_date: "2022-01-12",
 				name: "test-name",

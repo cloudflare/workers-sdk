@@ -969,6 +969,54 @@ type PendingResource = {
 		| FlagshipHandler;
 };
 
+function writeProvisionedIdsToConfig(
+	configPath: string,
+	resources: PendingResource[],
+	targetEnvironment?: string
+): void {
+	const { rawConfig } = experimental_readRawConfig(
+		{ config: configPath },
+		{ useRedirectIfAvailable: false }
+	);
+	const environment =
+		targetEnvironment && rawConfig.env?.[targetEnvironment] !== undefined
+			? targetEnvironment
+			: undefined;
+	const configEnvironment = environment
+		? rawConfig.env?.[environment]
+		: rawConfig;
+	const patchEnvironment: RawConfigEnvironment = {};
+	const patch: RawConfig = environment
+		? { env: { [environment]: patchEnvironment } }
+		: patchEnvironment;
+	let hasChanges = false;
+
+	for (const resource of resources) {
+		const index = getRawConfigBindings(
+			configEnvironment ?? {},
+			resource.resourceType
+		).findIndex((binding) => binding.binding === resource.binding);
+		const identifier = resource.handler.getResolvedIdentifier();
+		if (index === -1 || identifier === undefined) {
+			continue;
+		}
+
+		const identifierField =
+			resource.resourceType === "queue" ? "queue" : resource.handler.idField;
+		addBindingToPatch(
+			patchEnvironment,
+			resource.resourceType,
+			{ [identifierField]: identifier },
+			index
+		);
+		hasChanges = true;
+	}
+
+	if (hasChanges) {
+		experimental_patchConfig(configPath, patch, false);
+	}
+}
+
 export type ProvisionBindingsResult = {
 	warnOnSkippedProvisioning: () => void;
 };
@@ -1283,72 +1331,6 @@ export async function provisionBindings(
 
 		const isUsingRedirectedConfig =
 			config.userConfigPath && config.userConfigPath !== config.configPath;
-		const shouldWriteConfig =
-			!options.skipConfigWriteback && !isNonInteractiveOrCI();
-		const rawUserConfig =
-			isUsingRedirectedConfig && shouldWriteConfig
-				? (
-						await experimental_readRawConfig(
-							{ config: configPath },
-							{ useRedirectIfAvailable: false }
-						)
-					).rawConfig
-				: undefined;
-
-		// Legacy environments fall back to the top-level config when the named
-		// environment does not exist, so their provisioned IDs must do the same.
-		const targetEnvironment =
-			config.targetEnvironment &&
-			rawUserConfig?.env?.[config.targetEnvironment] !== undefined
-				? config.targetEnvironment
-				: undefined;
-
-		const patch: RawConfig = {};
-		let patchEnvironment: RawConfigEnvironment = patch;
-		if (targetEnvironment) {
-			patch.env ??= {};
-			patch.env[targetEnvironment] ??= {};
-			patchEnvironment = patch.env[targetEnvironment];
-		}
-
-		// If we're using a redirected config, then the redirected config potentially has injected
-		// bindings that weren't originally in the user config. These can be provisioned, but we
-		// should not write the IDs back to the user config file (because the bindings weren't there in the first place).
-		if (isUsingRedirectedConfig && shouldWriteConfig) {
-			assert(rawUserConfig);
-			const unredirectedEnvironment = targetEnvironment
-				? rawUserConfig.env?.[targetEnvironment]
-				: rawUserConfig;
-			for (const resource of provisionedResources) {
-				const originalIndex = getRawConfigBindings(
-					unredirectedEnvironment ?? {},
-					resource.resourceType
-				).findIndex((binding) => binding.binding === resource.binding);
-				const identifier = resource.handler.getResolvedIdentifier();
-				if (originalIndex !== -1 && identifier !== undefined) {
-					const identifierField =
-						resource.resourceType === "queue"
-							? "queue"
-							: resource.handler.idField;
-					addBindingToPatch(
-						patchEnvironment,
-						resource.resourceType,
-						{ [identifierField]: identifier },
-						originalIndex
-					);
-				}
-			}
-		} else {
-			for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
-				if (isProvisionableBinding(binding)) {
-					addBindingToPatch(
-						patchEnvironment,
-						binding.type,
-						toConfigBinding(bindingName, binding)
-					);
-				}
-			}
-		}
 
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
 		// This is not necessary, as future deploys can use inherited resources, but it can help with
@@ -1357,9 +1339,29 @@ export async function provisionBindings(
 			logger.log(
 				"Your Worker was deployed with provisioned resources. You may add the resource IDs to your config file if you wish, but future deploys will continue to work even without IDs."
 			);
-		} else if (shouldWriteConfig) {
+		} else if (!isNonInteractiveOrCI()) {
 			try {
-				await experimental_patchConfig(configPath, patch, false);
+				if (isUsingRedirectedConfig) {
+					assert(config.configPath);
+					writeProvisionedIdsToConfig(config.configPath, provisionedResources);
+					writeProvisionedIdsToConfig(
+						configPath,
+						provisionedResources,
+						config.targetEnvironment
+					);
+				} else {
+					const patch: RawConfig = {};
+					for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
+						if (isProvisionableBinding(binding)) {
+							addBindingToPatch(
+								patch,
+								binding.type,
+								toConfigBinding(bindingName, binding)
+							);
+						}
+					}
+					experimental_patchConfig(configPath, patch, false);
+				}
 				logger.log(
 					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
 				);
