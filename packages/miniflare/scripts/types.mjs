@@ -148,6 +148,9 @@ function buildTypes() {
 /** @type {import("@microsoft/api-extractor").IConfigFile} */
 const extractorCfgObject = {
 	projectFolder: "<lookup>",
+	bundledPackages: Object.entries(getPackage(pkgRoot).devDependencies ?? {})
+		.filter(([, version]) => version.startsWith("workspace:"))
+		.map(([name]) => name),
 	// Input: individual .d.ts files emitted by tsc into dist-types/
 	mainEntryPointFilePath: "<projectFolder>/dist-types/src/index.d.ts",
 	compiler: {
@@ -184,12 +187,6 @@ const extractorCfgObject = {
 		extractorMessageReporting: {
 			default: { logLevel: "warning" },
 			"ae-missing-release-tag": { logLevel: "none" },
-			// Our public config types transitively reference `@cloudflare/workers-shared`
-			// (via `@cloudflare/config` -> `@cloudflare/workers-utils`), which has no
-			// `exports`/`types` map, so bare imports resolve to its `.ts` source rather
-			// than a `.d.ts`. API Extractor never surfaces those types in the rollup, so
-			// this is a false positive we can safely ignore.
-			"ae-wrong-input-file-type": { logLevel: "none" },
 		},
 	},
 };

@@ -1,0 +1,11 @@
+import { getFreshSourceMapSupport, PLUGINS, AssetConfigSchema, RouterConfigSchema, UnsafeBindingSchema } from "./miniflare";
+import type { Plugin, AssetConfig, RouterConfig, MiniflareBinding, SendEmailBinding, VpcNetworkBinding } from "./miniflare";
+
+const plugin: Plugin = PLUGINS.core;
+const asset: AssetConfig = AssetConfigSchema.parse({});
+const router: RouterConfig = RouterConfigSchema.parse({});
+const unsafe: MiniflareBinding = UnsafeBindingSchema.parse({ type: "unsafe:example" });
+const email: SendEmailBinding = { type: "send-email", destinationAddress: "hello@example.com" };
+const network: VpcNetworkBinding = { type: "vpc-network", networkId: "example" };
+getFreshSourceMapSupport().install({ environment: "node" });
+void [plugin, asset, router, unsafe, email, network];
