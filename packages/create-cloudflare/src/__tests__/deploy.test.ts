@@ -3,11 +3,13 @@ import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { readFile } from "helpers/files";
 import { beforeEach, describe, test, vi } from "vitest";
+import { usesCfCli } from "../cf/config";
 import { offerToDeploy, runDeploy } from "../deploy";
-import { chooseAccount, wranglerLogin } from "../wrangler/accounts";
+import { chooseAccount, login } from "../wrangler/accounts";
 import { createTestContext } from "./helpers";
 
 vi.mock("@cloudflare/cli-shared-helpers/command");
+vi.mock("../cf/config");
 vi.mock("../wrangler/accounts");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
 vi.mock("which-pm-runs");
@@ -49,7 +51,7 @@ describe("deploy helpers", async () => {
 			// mock the user selecting yes when asked to deploy
 			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
 			// mock a successful wrangler login
-			vi.mocked(wranglerLogin).mockResolvedValueOnce(true);
+			vi.mocked(login).mockResolvedValueOnce(true);
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(true);
 		});
@@ -62,7 +64,7 @@ describe("deploy helpers", async () => {
 			await expect(offerToDeploy(ctx)).resolves.toBe(false);
 			expect(inputPrompt).toHaveBeenCalledOnce();
 			expect(ctx.args.deploy).toBe(false);
-			expect(wranglerLogin).not.toHaveBeenCalled();
+			expect(login).not.toHaveBeenCalled();
 		});
 
 		test("project is undeployable (complex binding)", async ({ expect }) => {
@@ -79,7 +81,7 @@ describe("deploy helpers", async () => {
 			await expect(offerToDeploy(ctx)).resolves.toBe(false);
 			expect(inputPrompt).toHaveBeenCalledOnce();
 			expect(ctx.args.deploy).toBe(false);
-			expect(wranglerLogin).not.toHaveBeenCalled();
+			expect(login).not.toHaveBeenCalled();
 		});
 
 		test("assets project is deployable (no other bindings)", async ({
@@ -92,12 +94,24 @@ describe("deploy helpers", async () => {
 			// mock the user selecting yes when asked to deploy
 			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
 			// mock a successful wrangler login
-			vi.mocked(wranglerLogin).mockResolvedValueOnce(true);
+			vi.mocked(login).mockResolvedValueOnce(true);
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(true);
 			expect(inputPrompt).toHaveBeenCalledOnce();
 			expect(ctx.args.deploy).toBe(true);
-			expect(wranglerLogin).toHaveBeenCalled();
+			expect(login).toHaveBeenCalled();
+		});
+
+		test("cf project is deployable without reading a Wrangler config", async ({
+			expect,
+		}) => {
+			const ctx = createTestContext();
+			vi.mocked(usesCfCli).mockReturnValue(true);
+			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
+			vi.mocked(login).mockResolvedValueOnce(true);
+
+			await expect(offerToDeploy(ctx)).resolves.toBe(true);
+			expect(readFile).not.toHaveBeenCalled();
 		});
 
 		test("--no-deploy from command line", async ({ expect }) => {
@@ -108,14 +122,14 @@ describe("deploy helpers", async () => {
 			await expect(offerToDeploy(ctx)).resolves.toBe(false);
 			expect(inputPrompt).toHaveBeenCalledOnce();
 			expect(ctx.args.deploy).toBe(false);
-			expect(wranglerLogin).not.toHaveBeenCalled();
+			expect(login).not.toHaveBeenCalled();
 		});
 
 		test("wrangler login failure", async ({ expect }) => {
 			const ctx = createTestContext();
 			ctx.template.platform = "pages";
 			vi.mocked(inputPrompt).mockResolvedValueOnce(true);
-			vi.mocked(wranglerLogin).mockResolvedValueOnce(false);
+			vi.mocked(login).mockResolvedValueOnce(false);
 
 			await expect(offerToDeploy(ctx)).resolves.toBe(false);
 			expect(chooseAccount).not.toHaveBeenCalled();
@@ -142,6 +156,31 @@ describe("deploy helpers", async () => {
 				expect.any(Object)
 			);
 			expect(ctx.deployment.url).toBe(deployedUrl);
+		});
+
+		test("reads the deployment url from the output of cf projects", async ({
+			expect,
+		}) => {
+			const ctx = createTestContext();
+			ctx.account = { id: "test1234", name: "Test Account" };
+			vi.mocked(usesCfCli).mockReturnValue(true);
+			mockInsideGitRepo(false);
+			vi.mocked(runCommand).mockResolvedValueOnce(
+				[
+					"Note: Preview URLs look like https://<VERSION_PREFIX>-test.<YOUR_SUBDOMAIN>.workers.dev",
+					"Deployed test triggers",
+					"  https://test.example.workers.dev",
+				].join("\n")
+			);
+
+			await runDeploy(ctx);
+
+			expect(runCommand).toHaveBeenLastCalledWith(
+				["npm", "run", "deploy"],
+				expect.objectContaining({ silent: true })
+			);
+			expect(readFile).not.toHaveBeenCalled();
+			expect(ctx.deployment.url).toBe("https://test.example.workers.dev");
 		});
 
 		test("no account in ctx", async ({ expect }) => {

@@ -10,6 +10,7 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
 import * as TOML from "smol-toml";
+import { usesCfCli } from "./cf/config";
 import {
 	readWranglerJsonOrJsonc,
 	readWranglerToml,
@@ -100,7 +101,7 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
  * update `types` in tsconfig:
  * - set workers-types to latest entrypoint if installed
  * - remove workers-types if runtime types have been generated
- * - add generated types file if types were generated
+ * - add generated types file if types were generated (except for `cf` projects)
  * - preserve SvelteKit generated types when required
  * - add node if node compat
  */
@@ -156,7 +157,12 @@ export async function updateTsConfig(
 				}
 			}
 		} else if (ctx.template.workersTypes === "generated") {
-			newTypes.add(ctx.template.typesPath ?? "./worker-configuration.d.ts");
+			// `cf` generates types into a gitignored directory that projects reference
+			// through the tsconfig `include` list. Listing the file in `types` would
+			// break type-checking until the types have been generated.
+			if (!usesCfCli(ctx)) {
+				newTypes.add(ctx.template.typesPath ?? "./worker-configuration.d.ts");
+			}
 
 			// if generated types include runtime types, remove @cloudflare/workers-types
 			const typegen = readFile(

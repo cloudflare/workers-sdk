@@ -48,6 +48,22 @@ export async function installWrangler() {
 }
 
 /**
+ * Installs the latest version of the `cf` CLI in the project directory.
+ * Automatically detects the package manager from the environment.
+ */
+export async function installCf() {
+	const { npm } = detectPackageManager();
+	// Install the latest version even if `cf` is already installed, as some framework CLIs may pin an older version
+	await installPackages(["cf@latest"], {
+		dev: true,
+		startText: `Installing cf ${dim("The Cloudflare CLI")}`,
+		doneText: `${brandColor("installed")} ${dim(
+			`via \`${npm} install cf --save-dev\``
+		)}`,
+	});
+}
+
+/**
  * Install dependencies in the project directory via `npm install` or its equivalent.
  */
 export const npmInstall = async (ctx: C3Context) => {

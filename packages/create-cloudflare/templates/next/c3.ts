@@ -3,6 +3,7 @@ import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
+import { CF_TYPES_PATH, usesCfCli } from "../../src/cf/config";
 import { downloadRemoteTemplate, updatePackageName } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -117,6 +118,12 @@ const generate = async (ctx: C3Context) => {
 	}
 
 	await generateVinext(ctx);
+
+	// vinext configures projects for the `cf` CLI unless it is passed
+	// `--legacy-wrangler-cloudflare-init`
+	if (usesCfCli(ctx)) {
+		ctx.template.typesPath = CF_TYPES_PATH;
+	}
 };
 
 const envInterfaceName = "CloudflareEnv";
@@ -142,7 +149,9 @@ export default {
 				// Align with OpenNext so the shared previewScript: "preview" works
 				// for both variants (vinext only ships dev/build/start/deploy).
 				preview: `${npm} run build && ${npm} run start${npm === "npm" ? " --" : ""}`,
-				"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${VINEXT_TYPES_PATH}`,
+				"cf-typegen": usesCfCli(ctx)
+					? "cf workers types"
+					: `wrangler types --env-interface ${envInterfaceName} ${VINEXT_TYPES_PATH}`,
 			},
 		};
 	},

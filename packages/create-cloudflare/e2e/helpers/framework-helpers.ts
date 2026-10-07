@@ -17,6 +17,7 @@ import * as jsonc from "jsonc-parser";
 import semver from "semver";
 import { fetch } from "undici";
 import { version } from "../../package.json";
+import { CF_TYPES_PATH } from "../../src/cf/config";
 import { getFrameworkMap } from "../../src/templates";
 import {
 	CLOUDFLARE_ACCOUNT_ID,
@@ -337,7 +338,7 @@ export async function verifyTypes(
 	{
 		workersTypes,
 		typesPath: templateTypesPath = "./worker-configuration.d.ts",
-		envInterfaceName = "Env",
+		envInterfaceName: templateEnvInterfaceName = "Env",
 	}: TemplateConfig,
 	projectPath: string
 ) {
@@ -345,7 +346,12 @@ export async function verifyTypes(
 		return;
 	}
 
-	const typesPath = configuredTypesPath ?? templateTypesPath;
+	// `cf` always generates types to the same file, with an `Env` interface
+	const usesCf = existsSync(join(projectPath, "cloudflare.config.ts"));
+	const typesPath = usesCf
+		? CF_TYPES_PATH
+		: (configuredTypesPath ?? templateTypesPath);
+	const envInterfaceName = usesCf ? "Env" : templateEnvInterfaceName;
 	const outputFileContent = readFile(join(projectPath, typesPath)).split("\n");
 
 	const hasEnvInterface = outputFileContent.some(
@@ -361,7 +367,13 @@ export async function verifyTypes(
 
 	// if the runtime types were installed, they wont be in this file
 	if (workersTypes === "generated") {
-		expect(outputFileContent[2]).match(
+		// `cf` writes the runtime types after its own preamble
+		const runtimeTypesLine = usesCf
+			? outputFileContent.find((line) =>
+					line.startsWith("// Runtime types generated with")
+				)
+			: outputFileContent[2];
+		expect(runtimeTypesLine).match(
 			/^\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2}(?: [a-z_]+(?:,[a-z_]+)*)?$/
 		);
 	}
@@ -377,7 +389,11 @@ export async function verifyTypes(
 
 	const tsconfigTypes: string[] = tsconfig.compilerOptions?.types ?? [];
 	if (workersTypes === "generated") {
-		expect(tsconfigTypes).toContain(typesPath);
+		if (usesCf) {
+			expect(tsconfig.include).toContain(".cloudflare/types");
+		} else {
+			expect(tsconfigTypes).toContain(typesPath);
+		}
 	}
 	if (workersTypes === "installed") {
 		expect(

@@ -101,9 +101,13 @@ describe
 						const pkgJsonPath = join(project.path, "package.json");
 						expect(pkgJsonPath).toExist();
 
-						// Wrangler should be installed
-						const wranglerPath = join(project.path, "node_modules/wrangler");
-						expect(wranglerPath).toExist();
+						// The project's Cloudflare CLI should be installed
+						const cliPackage = existsSync(
+							join(project.path, "cloudflare.config.ts")
+						)
+							? "cf"
+							: "wrangler";
+						expect(join(project.path, "node_modules", cliPackage)).toExist();
 
 						await addTestVarsToWranglerToml(project.path);
 

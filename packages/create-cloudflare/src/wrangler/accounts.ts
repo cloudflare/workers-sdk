@@ -6,6 +6,8 @@ import {
 } from "@cloudflare/cli-shared-helpers/interactive";
 import { runWranglerCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
+import { cfLogin, isLoggedInWithCf, listCfAccounts } from "../cf/accounts";
+import { usesCfCli } from "../cf/config";
 import { reporter } from "../metrics";
 import type { C3Context } from "types";
 
@@ -20,7 +22,9 @@ export const chooseAccount = async (ctx: C3Context) => {
 
 	const s = spinner();
 	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
-	const accounts = await listAccounts();
+	const accounts = usesCfCli(ctx)
+		? await listCfAccounts()
+		: await listAccounts();
 
 	let accountId: string;
 
@@ -59,7 +63,16 @@ export const chooseAccount = async (ctx: C3Context) => {
 	ctx.account = { id: accountId, name: accountName };
 };
 
-export const wranglerLogin = async (ctx: C3Context) => {
+/**
+ * Ensures the user is logged in to Cloudflare, prompting a browser login if not.
+ *
+ * Projects that use the `cf` CLI are logged in with `cf`, since it does not
+ * share credentials with Wrangler.
+ *
+ * @param ctx The C3 context.
+ * @returns `true` if the user is logged in.
+ */
+export const login = async (ctx: C3Context) => {
 	return reporter.collectAsyncMetrics({
 		eventPrefix: "c3 login",
 		props: {
@@ -67,18 +80,30 @@ export const wranglerLogin = async (ctx: C3Context) => {
 		},
 		async promise() {
 			const { npx } = detectPackageManager();
+			const useCf = usesCfCli(ctx);
 
 			const s = spinner();
 			s.start(
 				`Logging into Cloudflare ${dim("checking authentication status")}`
 			);
-			const isAlreadyLoggedIn = await isLoggedIn();
+			const isAlreadyLoggedIn = useCf
+				? await isLoggedInWithCf()
+				: await isLoggedIn();
 			s.stop(brandColor(isAlreadyLoggedIn ? "logged in" : "not logged in"));
 
 			reporter.setEventProperty("isAlreadyLoggedIn", isAlreadyLoggedIn);
 
 			if (isAlreadyLoggedIn) {
 				return true;
+			}
+
+			if (useCf) {
+				const success = await cfLogin();
+				updateStatus(
+					`${brandColor(success ? "allowed" : "denied")} ${dim("via `cf auth login`")}`
+				);
+				reporter.setEventProperty("isLoginSuccessful", success);
+				return success;
 			}
 
 			s.start(
