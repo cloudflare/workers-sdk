@@ -19,7 +19,9 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/workers-shared"
 	},
+	"types": "./dist-types/index.d.ts",
 	"scripts": {
+		"build": "tsc -p tsconfig.types.json",
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
 		"deploy": "pnpm run generate-sourcemaps && pnpm run deploy:router-worker && pnpm run deploy:asset-worker && pnpm run upload-sourcemaps",

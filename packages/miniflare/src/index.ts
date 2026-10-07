@@ -4039,6 +4039,20 @@ export * from "./runtime";
 export * from "./shared";
 export * from "./workers";
 export * from "./merge";
+export type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+export {
+	AssetConfigSchema,
+	RouterConfigSchema,
+} from "@cloudflare/workers-shared";
+export { UnsafeBindingSchema } from "@cloudflare/config";
+export type {
+	BindingDevOptions,
+	SendEmailBinding,
+	SendEmailBindingOptions,
+	SendEmailDestinationOptions,
+	VpcNetworkBinding,
+	VpcNetworkBindingOptions,
+} from "@cloudflare/config";
 export type {
 	DurableObjectIdentifier,
 	DurableObjectEvictionOptions,

@@ -66,7 +66,7 @@
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@hey-api/openapi-ts": "catalog:default",
-		"@microsoft/api-extractor": "^7.52.8",
+		"@microsoft/api-extractor": "^7.59.4",
 		"@puppeteer/browsers": "^2.10.6",
 		"@smithy/signature-v4": "^4.2.4",
 		"@types/debug": "^4.1.7",

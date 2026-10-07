@@ -512,7 +512,7 @@ export interface SecretsStoreSecretBinding extends SecretsStoreSecretBindingOpti
 	type: "secrets-store-secret";
 }
 
-type SendEmailDestinationOptions =
+export type SendEmailDestinationOptions =
 	| {
 			/** If this binding should be restricted to a specific verified address. */
 			destinationAddress: string;
@@ -528,7 +528,7 @@ type SendEmailDestinationOptions =
 			allowedDestinationAddresses?: never;
 	  };
 
-type SendEmailBindingOptions = SendEmailDestinationOptions & {
+export type SendEmailBindingOptions = SendEmailDestinationOptions & {
 	/** If this binding should be restricted to a set of sender addresses. */
 	allowedSenderAddresses?: string[];
 	/** Options that only apply during local development. */
@@ -610,7 +610,7 @@ export interface VersionMetadataBinding {
 	type: "version-metadata";
 }
 
-type VpcNetworkBindingOptions =
+export type VpcNetworkBindingOptions =
 	| {
 			/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with `networkId`. */
 			tunnelId: string;
