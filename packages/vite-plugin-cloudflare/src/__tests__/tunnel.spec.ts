@@ -706,6 +706,7 @@ describe("tunnel plugin", () => {
 		const replacementPromise = tunnelManager.startTunnel({
 			origin: "http://localhost:3001",
 			name: undefined,
+			allowedMail: undefined,
 			mode: "dev",
 			allowedHosts: true,
 			accountId: "account-id",
@@ -717,9 +718,9 @@ describe("tunnel plugin", () => {
 		await expect(replacementPromise).resolves.toEqual([
 			"https://example.trycloudflare.com/",
 		]);
-		expect(tunnelManager.isStarted("http://localhost:3001", undefined)).toBe(
-			true
-		);
+		expect(
+			tunnelManager.isStarted("http://localhost:3001", undefined, undefined)
+		).toBe(true);
 	});
 
 	it("logs tunnel closed only after tunnel startup begins", async ({
