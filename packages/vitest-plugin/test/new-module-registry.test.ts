@@ -81,7 +81,7 @@ test("keeps using the legacy fallback protocol when explicitly requested", async
 	expect(await result.exitCode).toBe(0);
 });
 
-test("retains import.meta.url in legacy fallback modules", async ({
+test("preserves the legacy fallback's import.meta.url rewrite", async ({
 	expect,
 	seed,
 	vitestRun,

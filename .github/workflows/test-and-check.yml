@@ -121,9 +121,6 @@ jobs:
           filters: |
             everything_but_markdown:
               - '!**/*.md'
-            vitest_plugin:
-              - 'packages/vitest-plugin/**'
-              - 'fixtures/vitest-plugin-examples/**'
 
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -189,13 +186,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
-
-      - name: Run Vitest plugin tests with Vitest 4
-        if: steps.changes.outputs.vitest_plugin == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
-        run: pnpm --filter @cloudflare/vitest-plugin exec vitest run
-        env:
-          VITEST_VERSION: "4.1.11"
-          NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'

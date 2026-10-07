@@ -221,8 +221,8 @@ async function withImportMetaUrl(
 	contents: string,
 	url: string | URL
 ): Promise<string> {
-	// The legacy registry leaves import.meta.url undefined, including in fallback
-	// modules. Substitute the module's file URL for both Vitest 4 and 5.
+	// Workerd's legacy registry leaves import.meta.url undefined in fallback
+	// modules, but the plugin has historically substituted the module's file URL.
 	if (!contents.includes("import")) {
 		return contents;
 	}

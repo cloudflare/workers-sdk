@@ -305,10 +305,9 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		);
 
 		cwd = wd.cwd;
-		const isVitest5 = this.vitestMajorVersion >= 5;
+
 		const { init, runBaseTests, setupEnvironment } =
 			await import("vitest/worker");
-		const runnerObject = this;
 		let v8CoverageEnabled = false;
 		const v8CoverageEvaluators = new WeakSet<ModuleEvaluator>();
 
@@ -385,7 +384,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			// `import()` inside an entrypoint handler (which runs in a *different*
 			// DO context) fails with "Cannot perform I/O on behalf of a different
 			// Durable Object". See: https://github.com/cloudflare/workers-sdk/issues/12924
-			onModuleRunner(moduleRunner: unknown) {
+			onModuleRunner: (moduleRunner: unknown) => {
 				const runner = moduleRunner as {
 					isBrowser?: boolean;
 					evaluator?: ModuleEvaluator;
@@ -399,10 +398,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					transport?: { invoke?: (...args: unknown[]) => unknown };
 				};
 				if (v8CoverageEnabled) {
-					runnerObject.v8ModuleExecutionInfo =
+					this.v8ModuleExecutionInfo =
 						runner.evaluator?.options?.moduleExecutionInfo;
 				}
-				if (isVitest5) {
+				if (this.vitestMajorVersion >= 5) {
 					runner.isBrowser = true;
 					if (v8CoverageEnabled) {
 						Object.assign(globalThis, {
