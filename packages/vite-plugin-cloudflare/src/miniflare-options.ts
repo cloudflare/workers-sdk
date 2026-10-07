@@ -371,7 +371,7 @@ export async function getDevMiniflareOptions(
 											preExistingRemoteProxySession ?? null,
 											undefined,
 											{
-												cliDisplayName: "Wrangler",
+												cliDisplayName: resolvedPluginConfig.cliDisplayName,
 												logger: createRemoteBindingsLogger(
 													viteDevServer.config.logger
 												),
@@ -792,7 +792,7 @@ export async function getPreviewMiniflareOptions(
 							preExistingRemoteProxySessionData ?? null,
 							undefined,
 							{
-								cliDisplayName: "Wrangler",
+								cliDisplayName: resolvedPluginConfig.cliDisplayName,
 								logger: createRemoteBindingsLogger(
 									vitePreviewServer.config.logger
 								),

@@ -1,6 +1,7 @@
 ---
 "@cloudflare/containers-shared": patch
 "@cloudflare/deploy-helpers": patch
+"@cloudflare/vite-plugin": patch
 "@cloudflare/workers-auth": minor
 "@cloudflare/workers-utils": patch
 ---
