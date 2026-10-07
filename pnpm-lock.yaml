@@ -220,9 +220,6 @@ importers:
       '@cloudflare/puppeteer':
         specifier: ^1.0.4
         version: 1.0.4
-      '@cloudflare/vitest-plugin':
-        specifier: workspace:*
-        version: link:../../packages/vitest-plugin
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
