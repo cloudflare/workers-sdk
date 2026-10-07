@@ -92,16 +92,33 @@ test.for([undefined, false] as const)(
 			const directory = path.resolve("git-fixture");
 			await git("git", ["init", "--initial-branch=main", directory]);
 			fs.writeFileSync(path.join(directory, "hello.txt"), "hello artifacts\n");
+			// Avoid inheriting host Git credentials or Cloudflare environment.
+			const inherited = Object.fromEntries(
+				[
+					"PATH",
+					"SystemRoot",
+					"WINDIR",
+					"PATHEXT",
+					"TMP",
+					"TEMP",
+					"TMPDIR",
+					"LANG",
+				].map((key) => [key, process.env[key]])
+			);
 			const gitOptions = {
 				cwd: directory,
 				env: {
-					...process.env,
+					...inherited,
 					GIT_AUTHOR_NAME: "Example",
 					GIT_AUTHOR_EMAIL: "example@example.invalid",
 					GIT_COMMITTER_NAME: "Example",
 					GIT_COMMITTER_EMAIL: "example@example.invalid",
 					GIT_CONFIG_NOSYSTEM: "1",
-					GIT_CONFIG_GLOBAL: "/dev/null",
+					GIT_CONFIG_GLOBAL: path.join(directory, "absent-global-gitconfig"),
+					GIT_CONFIG_COUNT: "1",
+					GIT_CONFIG_KEY_0: "credential.helper",
+					GIT_CONFIG_VALUE_0: "",
+					GIT_TERMINAL_PROMPT: "0",
 				},
 			};
 			await git("git", ["add", "hello.txt"], gitOptions);

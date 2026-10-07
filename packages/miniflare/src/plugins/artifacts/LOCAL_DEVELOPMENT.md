@@ -46,7 +46,7 @@ Local repositories and metadata persist under the dev tool's Miniflare resource 
 
 To reset local state, stop the dev server first, back up any repositories you need, then delete the `artifacts/` directory inside that dev tool's resource persistence path. Older draft persisted Artifacts layouts are not automatically migrated and may require this backup-and-reset procedure. Do not delete unrelated binding data in the same persistence directory.
 
-A local binding does not contact Cloudflare for repository operations. **Explicit imports from HTTPS Git sources are different:** they make outbound network requests to the supplied host, can require authentication, and may fail due to TLS certificates, connectivity, or upstream Git permissions. Do not disable certificate verification to make imports succeed. Avoid importing untrusted or private URLs in examples or tests. No remote resources are contacted by the local-only examples above.
+A local binding does not contact Cloudflare for repository operations. **Explicit imports from HTTPS Git sources are different:** they make outbound network requests to the supplied host, can require authentication, and may fail due to TLS certificates, connectivity, or upstream Git permissions. For a private Git CA, set `GIT_SSL_CAINFO` to the trusted CA file in the dev tool's host environment before starting the dev server. Do not disable certificate verification. URL credentials are used only during import; the local repository metadata and Git config omit them. Treat the import URL as a secret while calling `import()` and avoid logging it. Avoid importing untrusted or private URLs in examples or tests. No remote resources are contacted by the local-only examples above.
 
 ## Troubleshooting and limits
 
