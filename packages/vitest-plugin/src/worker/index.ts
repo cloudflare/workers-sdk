@@ -219,6 +219,31 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 	private readonly vitestMajorVersion: number;
 	private v8CoverageSession: Session | undefined;
 	private v8ModuleExecutionInfo: Map<string, unknown> | undefined;
+	private v8CoverageWindow: { location: { href: string } } | undefined;
+
+	private async stopV8CoverageSession() {
+		const session = this.v8CoverageSession;
+		if (session === undefined) {
+			return;
+		}
+		this.v8CoverageSession = undefined;
+		try {
+			await session.post("Profiler.stopPreciseCoverage");
+			await session.post("Profiler.disable");
+		} finally {
+			session.disconnect();
+		}
+	}
+
+	private removeV8CoverageWindow() {
+		if (
+			this.v8CoverageWindow !== undefined &&
+			Reflect.get(globalThis, "window") === this.v8CoverageWindow
+		) {
+			Reflect.deleteProperty(globalThis, "window");
+		}
+		this.v8CoverageWindow = undefined;
+	}
 
 	constructor(_state: DurableObjectState, doEnv: Cloudflare.Env) {
 		super(_state, doEnv);
@@ -234,18 +259,22 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				commands: {
 					triggerCommand: async (command, args) => {
 						if (command === "__vitest_startV8Coverage") {
+							await this.stopV8CoverageSession();
 							const { default: inspector } =
 								await import("node:inspector/promises");
-							this.v8CoverageSession = new inspector.Session();
-							this.v8CoverageSession.connect();
-							await this.v8CoverageSession.post("Profiler.enable");
-							await this.v8CoverageSession.post(
-								"Profiler.startPreciseCoverage",
-								{
+							const session = new inspector.Session();
+							session.connect();
+							try {
+								await session.post("Profiler.enable");
+								await session.post("Profiler.startPreciseCoverage", {
 									callCount: true,
 									detailed: true,
-								}
-							);
+								});
+								this.v8CoverageSession = session;
+							} catch (error) {
+								session.disconnect();
+								throw error;
+							}
 							return "";
 						}
 						if (command === "__vitest_takeV8Coverage") {
@@ -370,12 +399,18 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				v8CoverageEnabled =
 					state.ctx.config.coverage.enabled &&
 					state.ctx.config.coverage.provider === "v8";
+				if (!v8CoverageEnabled) {
+					this.removeV8CoverageWindow();
+				}
 				return runBaseTests("run", state, traces);
 			},
 			collectTests: (state, traces) => {
 				v8CoverageEnabled =
 					state.ctx.config.coverage.enabled &&
 					state.ctx.config.coverage.provider === "v8";
+				if (!v8CoverageEnabled) {
+					this.removeV8CoverageWindow();
+				}
 				return runBaseTests("collect", state, traces);
 			},
 			setup: setupEnvironment,
@@ -403,10 +438,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				}
 				if (this.vitestMajorVersion >= 5) {
 					runner.isBrowser = true;
-					if (v8CoverageEnabled) {
-						Object.assign(globalThis, {
-							window: { location: { href: "http://localhost/" } },
-						});
+					if (v8CoverageEnabled && !("window" in globalThis)) {
+						const window = { location: { href: "http://localhost/" } };
+						Object.assign(globalThis, { window });
+						this.v8CoverageWindow = window;
 					}
 				}
 				if (runner.evaluator?.createRequire) {
