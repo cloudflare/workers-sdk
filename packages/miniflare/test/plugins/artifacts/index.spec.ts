@@ -105,11 +105,12 @@ async function rpcFailure(
 	};
 }
 
-function git(args: string[], cwd?: string) {
+function git(args: string[], cwd?: string, extraEnv: NodeJS.ProcessEnv = {}) {
 	return exec("git", args, {
 		cwd,
 		env: {
 			...gitEnvironment(),
+			...extraEnv,
 			GIT_AUTHOR_NAME: "Miniflare",
 			GIT_AUTHOR_EMAIL: "miniflare@example.com",
 			GIT_COMMITTER_NAME: "Miniflare",
@@ -816,6 +817,69 @@ test("artifacts: sidecar creates a repository without host Git config", async ({
 		const body = await response.text();
 		expect(response.status, body).toBe(200);
 		expect(JSON.parse(body)).toEqual({ defaultBranch: "main", refs: {} });
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test("artifacts: shallow imports stay shallow when cloned with Git protocol v2", async ({
+	expect,
+}) => {
+	const workspace = await useTmp();
+	const source = path.join(workspace, "source");
+	await git(["init", "--initial-branch=main", source]);
+	for (const index of [1, 2, 3]) {
+		await writeFile(path.join(source, "README"), `version ${index}\n`);
+		await git(["add", "README"], source);
+		await git(["commit", "-m", `version ${index}`], source);
+	}
+
+	const sidecar = await startGitSidecar(path.join(workspace, "repos"));
+	try {
+		const response = await fetch(
+			`http://${sidecar.address}/__local_artifacts__`,
+			{
+				method: "POST",
+				headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+				body: JSON.stringify({
+					action: "import",
+					namespace: "test",
+					name: "repo",
+					generation: "shallow-generation",
+					sourceUrl: pathToFileURL(source).href,
+					branch: "main",
+					depth: 1,
+				}),
+			}
+		);
+		const body = await response.text();
+		expect(response.status, body).toBe(200);
+
+		const gitHeaders = {
+			GIT_CONFIG_COUNT: "3",
+			GIT_CONFIG_KEY_1: "http.extraHeader",
+			GIT_CONFIG_VALUE_1: `X-Local-Artifacts-Backend: ${sidecar.secret}`,
+			GIT_CONFIG_KEY_2: "http.extraHeader",
+			GIT_CONFIG_VALUE_2: "X-Local-Artifacts-Generation: shallow-generation",
+		};
+		const clone = path.join(workspace, "clone");
+		const remote = `http://${sidecar.address}/git/test/repo.git`;
+		await git(
+			["-c", "protocol.version=2", "clone", remote, clone],
+			undefined,
+			gitHeaders
+		);
+		expect(
+			(await git(["rev-parse", "--is-shallow-repository"], clone)).stdout.trim()
+		).toBe("true");
+		expect(
+			(await git(["rev-list", "--count", "HEAD"], clone)).stdout.trim()
+		).toBe("1");
+		await git(
+			["-c", "protocol.version=2", "fetch", "origin"],
+			clone,
+			gitHeaders
+		);
 	} finally {
 		await sidecar.close();
 	}

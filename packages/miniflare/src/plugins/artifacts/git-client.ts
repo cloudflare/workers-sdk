@@ -314,13 +314,6 @@ export class GitClient {
 		);
 	}
 
-	async rootCommits(): Promise<Set<string>> {
-		const result = await this.git(["rev-list", "--max-parents=0", "--all"]);
-		return new Set(
-			decoder.decode(result.stdout).trim().split("\n").filter(Boolean)
-		);
-	}
-
 	private async objectType(hash: string): Promise<string | null> {
 		const result = await this.git(["cat-file", "-t", hash], {
 			allowFailure: true,

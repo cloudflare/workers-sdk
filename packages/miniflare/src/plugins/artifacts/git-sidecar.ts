@@ -164,7 +164,6 @@ async function handleRequest(
 		}
 		await runGitHttpBackend(
 			root,
-			path,
 			request,
 			response,
 			`/${storageComponent(namespace)}/${storageComponent(repository)}.git${suffix}`,
@@ -331,16 +330,11 @@ function parseGitBackendHeaders(headerBytes: Buffer): {
 
 async function runGitHttpBackend(
 	root: string,
-	repository: string,
 	request: IncomingMessage,
 	response: ServerResponse,
 	pathInfo: string,
 	query: string
 ): Promise<void> {
-	const rootCommits = pathInfo.endsWith("/git-upload-pack")
-		? await new GitClient(repository).rootCommits()
-		: new Set<string>();
-	const shallowFilter = filterRootShallowPackets(rootCommits);
 	return new Promise((resolve, reject) => {
 		const child = spawn("git", ["http-backend"], {
 			env: {
@@ -393,12 +387,6 @@ async function runGitHttpBackend(
 				response.once("drain", () => child.stdout.resume());
 			}
 		};
-		const writeBody = (chunk: Buffer) => {
-			const filtered = shallowFilter.write(chunk);
-			if (filtered.length) {
-				write(filtered);
-			}
-		};
 		request.once("aborted", abort);
 		response.once("close", abort);
 		child.stdin.on("error", (error) => {
@@ -409,7 +397,7 @@ async function runGitHttpBackend(
 		child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
 		child.stdout.on("data", (chunk: Buffer) => {
 			if (headersSent) {
-				writeBody(chunk);
+				write(chunk);
 				return;
 			}
 			header = Buffer.concat([header, chunk]);
@@ -430,15 +418,11 @@ async function runGitHttpBackend(
 			headersSent = true;
 			const remaining = header.subarray(index + separatorLength);
 			if (remaining.length) {
-				writeBody(remaining);
+				write(remaining);
 			}
 			header = Buffer.alloc(0);
 		});
 		child.stdout.on("end", () => {
-			const remaining = shallowFilter.end();
-			if (remaining.length) {
-				write(remaining);
-			}
 			if (headersSent) {
 				response.end();
 			}
@@ -462,54 +446,6 @@ async function runGitHttpBackend(
 		});
 		request.pipe(child.stdin);
 	});
-}
-
-function filterRootShallowPackets(rootCommits: Set<string>): {
-	write(chunk: Buffer): Buffer;
-	end(): Buffer;
-} {
-	let pending = Buffer.alloc(0);
-	let passthrough = rootCommits.size === 0;
-	return {
-		write(chunk) {
-			if (passthrough) {
-				return chunk;
-			}
-			pending = Buffer.concat([pending, chunk]);
-			const output: Buffer[] = [];
-			while (pending.length >= 4) {
-				const prefix = pending.subarray(0, 4).toString("ascii");
-				if (!/^[0-9a-f]{4}$/i.test(prefix)) {
-					passthrough = true;
-					output.push(pending);
-					pending = Buffer.alloc(0);
-					break;
-				}
-				const length = Number.parseInt(prefix, 16);
-				if (length === 0 || length === 1 || length === 2) {
-					output.push(pending.subarray(0, 4));
-					pending = pending.subarray(4);
-					continue;
-				}
-				if (length < 4 || pending.length < length) {
-					break;
-				}
-				const packet = pending.subarray(0, length);
-				const payload = packet.subarray(4).toString("ascii");
-				const shallowHash = /^shallow ([0-9a-f]{40})\n?$/.exec(payload)?.[1];
-				if (!shallowHash || !rootCommits.has(shallowHash)) {
-					output.push(packet);
-				}
-				pending = pending.subarray(length);
-			}
-			return Buffer.concat(output);
-		},
-		end() {
-			const result = pending;
-			pending = Buffer.alloc(0);
-			return result;
-		},
-	};
 }
 
 function readRequest(request: IncomingMessage): Promise<Buffer> {
