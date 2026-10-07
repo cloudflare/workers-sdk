@@ -1,5 +1,8 @@
 # Artifacts in Miniflare
 
+For setup, persistence, Git authentication, and local/remote behavior, see
+[Local development](./LOCAL_DEVELOPMENT.md).
+
 The Artifacts plugin implements the local Artifacts binding in workerd. A Node
 worker thread runs the native Git backend. Unless `dev.remote` is explicitly
 `true`, an Artifacts binding uses local storage rather than contacting Cloudflare.
