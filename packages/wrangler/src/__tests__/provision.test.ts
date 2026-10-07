@@ -1608,6 +1608,17 @@ describe("resource provisioning", () => {
 					},
 				],
 			});
+			writeRedirectedWranglerConfig({
+				main: "../index.js",
+				kv_namespaces: [{ binding: "KV" }],
+				d1_databases: [
+					{
+						binding: "D1",
+						database_name: "existing-db-name",
+						migrations_dir: "../migrations",
+					},
+				],
+			});
 			mockGetSettings();
 			mockGetD1Database(expect, "existing-db-name", {
 				name: "existing-db-name",
