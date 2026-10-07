@@ -1,0 +1,91 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`migrateWranglerToCf > keeps transferred Durable Objects blocked until their transfer status is reviewed 1`] = `
+"import { defineConfig, exports } from "cf/config";
+
+/**
+ * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+ */
+/**
+ * TODO(@cloudflare): cf migrate: migrations.0.transferred_classes.0: The migration transfers Durable Object \`Original\` from Worker \`source-worker\` to \`Incoming\` (current class: \`Incoming\`). Whether it has been deployed cannot be determined from this config. If completed, keep a live export for \`Incoming\` with its existing storage backend. If pending, coordinate a two-phase transfer with the source Worker using \`state: "expecting-transfer"\`, \`transferFrom: "source-worker"\`, and matching storage. The transfer requires matching class names; perform any rename separately. Setting storage alone does not complete a pending transfer.
+ * @see https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/#transfer-a-durable-object-class-between-workers
+ */
+throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+export default defineConfig({
+	worker: {
+		name: "worker",
+		compatibilityDate: "2026-09-23",
+		exports: {
+			Incoming: exports.durableObject({}),
+		},
+		/**
+		 * TODO(@cloudflare): cf migrate: The migration transfers Durable Object \`Original\` from Worker \`source-worker\` to \`Incoming\` (current class: \`Incoming\`). Whether it has been deployed cannot be determined from this config. If completed, keep a live export for \`Incoming\` with its existing storage backend. If pending, coordinate a two-phase transfer with the source Worker using \`state: "expecting-transfer"\`, \`transferFrom: "source-worker"\`, and matching storage. The transfer requires matching class names; perform any rename separately. Setting storage alone does not complete a pending transfer.
+		 * @see https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/#transfer-a-durable-object-class-between-workers
+		 */
+	},
+});
+"
+`;
+
+exports[`migrateWranglerToCf > migrates Durable Object history without manual intervention with vite 1`] = `
+"import { bindings, defineConfig, exports } from "cf/config";
+
+export default defineConfig({
+	worker: {
+		name: "counter-worker",
+		compatibilityDate: "2026-09-23",
+		entrypoint: "src/index.ts",
+		env: {
+			COUNTER: bindings.durableObject({
+				worker: "counter-worker",
+				exportName: "Counter",
+			}),
+		},
+		exports: {
+			LegacyCounter: exports.durableObject({
+				state: "deleted",
+			}),
+			OldCounter: exports.durableObject({
+				renamedTo: "Counter",
+				state: "renamed",
+			}),
+			Counter: exports.durableObject({
+				storage: "sqlite",
+			}),
+		},
+	},
+});
+"
+`;
+
+exports[`migrateWranglerToCf > migrates Durable Object history without manual intervention with wrangler 1`] = `
+"import { bindings, defineConfig, exports } from "cf/config";
+
+export default defineConfig({
+	worker: {
+		name: "counter-worker",
+		compatibilityDate: "2026-09-23",
+		entrypoint: "src/index.ts",
+		env: {
+			COUNTER: bindings.durableObject({
+				worker: "counter-worker",
+				exportName: "Counter",
+			}),
+		},
+		exports: {
+			LegacyCounter: exports.durableObject({
+				state: "deleted",
+			}),
+			OldCounter: exports.durableObject({
+				renamedTo: "Counter",
+				state: "renamed",
+			}),
+			Counter: exports.durableObject({
+				storage: "sqlite",
+			}),
+		},
+	},
+});
+"
+`;
