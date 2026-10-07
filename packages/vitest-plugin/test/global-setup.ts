@@ -39,6 +39,7 @@ async function createTestProject() {
 		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-plugin temp-"))
 	);
 	const packageJsonPath = path.join(projectPath, "package.json");
+	const vitestVersion = process.env.VITEST_VERSION ?? installedVitestVersion;
 	const packageJson = {
 		name: "vitest-plugin-e2e-tests",
 		private: true,
@@ -46,9 +47,9 @@ async function createTestProject() {
 		devDependencies: {
 			// Ensure we use the local version of vitest-plugin
 			"@cloudflare/vitest-plugin": version,
-			"@vitest/coverage-istanbul":
-				process.env.VITEST_VERSION ?? installedVitestVersion,
-			vitest: process.env.VITEST_VERSION ?? installedVitestVersion,
+			"@vitest/coverage-istanbul": vitestVersion,
+			"@vitest/coverage-v8": vitestVersion,
+			vitest: vitestVersion,
 		},
 	};
 	await fs.writeFile(packageJsonPath, JSON.stringify(packageJson));

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import * as vm from "node:vm";
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
@@ -15,8 +16,26 @@ import {
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
 import { markCreateRequireUrl } from "../shared/module-path";
+import type { Session } from "node:inspector/promises";
 
 type CreateRequire = (url: string) => (specifier: string) => unknown;
+
+interface InlinedModule {
+	id: string;
+	file?: string;
+}
+
+type RunInlinedModule = (
+	context: unknown,
+	code: string,
+	module: InlinedModule
+) => unknown;
+
+interface ModuleEvaluator {
+	createRequire?: CreateRequire;
+	runInlinedModule?: RunInlinedModule;
+	options?: { moduleExecutionInfo?: Map<string, unknown> };
+}
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -198,6 +217,8 @@ function applyDefines() {
 // `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton
 export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject {
 	private readonly vitestMajorVersion: number;
+	private v8CoverageSession: Session | undefined;
+	private v8ModuleExecutionInfo: Map<string, unknown> | undefined;
 
 	constructor(_state: DurableObjectState, doEnv: Cloudflare.Env) {
 		super(_state, doEnv);
@@ -207,11 +228,52 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		vm._setUnsafeEval(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		ensurePatchedFunction(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		if (this.vitestMajorVersion >= 5) {
-			// Vitest 5's browser Istanbul provider sends coverage writes to the
-			// host through this command; the Worker has no access to the host's fs.
+			// Vitest 5's browser coverage providers send commands to the host.
+			// Write results through the loopback instead of workerd's filesystem.
 			globalThis.__vitest_browser_runner__ = {
 				commands: {
-					triggerCommand: (command, args) => {
+					triggerCommand: async (command, args) => {
+						if (command === "__vitest_startV8Coverage") {
+							const { default: inspector } =
+								await import("node:inspector/promises");
+							this.v8CoverageSession = new inspector.Session();
+							this.v8CoverageSession.connect();
+							await this.v8CoverageSession.post("Profiler.enable");
+							await this.v8CoverageSession.post(
+								"Profiler.startPreciseCoverage",
+								{
+									callCount: true,
+									detailed: true,
+								}
+							);
+							return "";
+						}
+						if (command === "__vitest_takeV8Coverage") {
+							assert(this.v8CoverageSession);
+							const { result } = await this.v8CoverageSession.post(
+								"Profiler.takePreciseCoverage"
+							);
+							return writeCoverageFile(
+								doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE,
+								{
+									result: result
+										.filter(
+											(entry) =>
+												entry.url.startsWith("file://") &&
+												!entry.url.includes("/node_modules/")
+										)
+										.map((entry) => ({
+											...entry,
+											startOffset:
+												(
+													this.v8ModuleExecutionInfo?.get(
+														fileURLToPath(entry.url)
+													) as { startOffset?: number } | undefined
+												)?.startOffset ?? 0,
+										})),
+								}
+							);
+						}
 						assert.strictEqual(command, "__vitest_writeCoverageFile");
 						assert.strictEqual(args.length, 1);
 						return writeCoverageFile(
@@ -246,6 +308,9 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const isVitest5 = this.vitestMajorVersion >= 5;
 		const { init, runBaseTests, setupEnvironment } =
 			await import("vitest/worker");
+		const runnerObject = this;
+		let v8CoverageEnabled = false;
+		const v8CoverageEvaluators = new WeakSet<ModuleEvaluator>();
 
 		poolSocket.accept();
 		// Sending over the runner's WebSocket from another Durable Object requires
@@ -302,8 +367,18 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					callback(structuredSerializableParse(m.data));
 				});
 			},
-			runTests: (state, traces) => runBaseTests("run", state, traces),
-			collectTests: (state, traces) => runBaseTests("collect", state, traces),
+			runTests: (state, traces) => {
+				v8CoverageEnabled =
+					state.ctx.config.coverage.enabled &&
+					state.ctx.config.coverage.provider === "v8";
+				return runBaseTests("run", state, traces);
+			},
+			collectTests: (state, traces) => {
+				v8CoverageEnabled =
+					state.ctx.config.coverage.enabled &&
+					state.ctx.config.coverage.provider === "v8";
+				return runBaseTests("collect", state, traces);
+			},
 			setup: setupEnvironment,
 			// Patch the module runner's transport so that `invoke()` calls always
 			// execute inside the Runner DO's I/O context. Without this, a dynamic
@@ -313,7 +388,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			onModuleRunner(moduleRunner: unknown) {
 				const runner = moduleRunner as {
 					isBrowser?: boolean;
-					evaluator?: { createRequire?: CreateRequire };
+					evaluator?: ModuleEvaluator;
 					options?: {
 						createImportMeta?: (
 							modulePath: string
@@ -323,11 +398,17 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					};
 					transport?: { invoke?: (...args: unknown[]) => unknown };
 				};
-				// Vitest 5 selects its browser Istanbul provider when isBrowser is
-				// set. This sends coverage writes through the host command above,
-				// instead of attempting to write to the host filesystem in workerd.
+				if (v8CoverageEnabled) {
+					runnerObject.v8ModuleExecutionInfo =
+						runner.evaluator?.options?.moduleExecutionInfo;
+				}
 				if (isVitest5) {
 					runner.isBrowser = true;
+					if (v8CoverageEnabled) {
+						Object.assign(globalThis, {
+							window: { location: { href: "http://localhost/" } },
+						});
+					}
 				}
 				if (runner.evaluator?.createRequire) {
 					const originalCreateRequire = runner.evaluator.createRequire.bind(
@@ -370,6 +451,49 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 						"[vitest-plugin] Could not patch module runner transport. " +
 							"Dynamic import() inside entrypoint/DO handlers may fail."
 					);
+				}
+
+				const evaluator = runner.evaluator;
+				if (
+					v8CoverageEnabled &&
+					evaluator?.runInlinedModule !== undefined &&
+					!v8CoverageEvaluators.has(evaluator)
+				) {
+					v8CoverageEvaluators.add(evaluator);
+					const originalRunInlinedModule =
+						evaluator.runInlinedModule.bind(evaluator);
+					evaluator.runInlinedModule = async (context, code, module) => {
+						if (!v8CoverageEnabled) {
+							return originalRunInlinedModule(context, code, module);
+						}
+						const id = module.id;
+						const isWindowsDrivePath = /^[a-zA-Z]:[\\/]/.test(id);
+						if (
+							(!id.startsWith("/") && !isWindowsDrivePath) ||
+							id.includes("\0")
+						) {
+							return originalRunInlinedModule(context, code, module);
+						}
+
+						// V8 reports the evaluator filename as its script URL, and Vitest's
+						// V8 collector only retains file URLs.
+						const fileUrl = pathToFileURL(
+							isWindowsDrivePath ? `/${id.replaceAll("\\", "/")}` : id
+						).href;
+						try {
+							return await originalRunInlinedModule(context, code, {
+								...module,
+								id: fileUrl,
+							});
+						} finally {
+							// The collector looks up Vitest's wrapper offset by filesystem path.
+							const info = evaluator.options?.moduleExecutionInfo;
+							const filePath = fileURLToPath(fileUrl);
+							if (info?.has(fileUrl) && !info.has(filePath)) {
+								info.set(filePath, info.get(fileUrl));
+							}
+						}
+					};
 				}
 			},
 		});

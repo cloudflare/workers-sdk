@@ -759,6 +759,90 @@ describe("Engine", () => {
 		});
 	});
 
+	describe("step timeout timers", () => {
+		it(
+			"cancels completed step timeout timers so sequential steps stay under the active-timeout quota",
+			{ timeout: 180_000 },
+			async ({ expect }) => {
+				// workerd's isolate allows 10,000 active timers. Each step.do() starts a
+				// 10-minute scheduler.wait() for the step timeout. If that wait is not
+				// cancelled when the step finishes, 5,000 sequential immediate steps hit
+				// QuotaExceededError (issue #15788).
+				const steps = 5_100;
+				const engineStub = await runWorkflowAndAwait(
+					"STEP-TIMEOUT-TIMER-QUOTA",
+					async (_event, step) => {
+						for (let i = 0; i < steps; i++) {
+							await step.do(
+								`n-${i}`,
+								{
+									retries: { limit: 0, delay: "0 seconds" },
+									timeout: "10 minutes",
+								},
+								async () => i
+							);
+						}
+						return { completed: steps };
+					}
+				);
+
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				const failure = logs.logs.find(
+					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+				);
+				expect(failure, JSON.stringify(failure)).toBeUndefined();
+				expect(
+					logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+				).toBe(true);
+			}
+		);
+
+		it(
+			"cancels failed step timeout timers so sequential try/caught steps stay under the active-timeout quota",
+			{ timeout: 180_000 },
+			async ({ expect }) => {
+				// Same 10,000-timer quota as the success-path case. Failed steps used
+				// to leave scheduler.wait() running because the error handler never
+				// aborted stepExecutionSignal (issue #15788).
+				const steps = 5_100;
+				const engineStub = await runWorkflowAndAwait(
+					"STEP-TIMEOUT-TIMER-QUOTA-FAILURES",
+					async (_event, step) => {
+						for (let i = 0; i < steps; i++) {
+							try {
+								await step.do(
+									`n-${i}`,
+									{
+										retries: { limit: 0, delay: "0 seconds" },
+										timeout: "10 minutes",
+									},
+									async () => {
+										throw new Error("immediate step failure");
+									}
+								);
+							} catch (e) {
+								const msg = e instanceof Error ? e.message : String(e);
+								if (!msg.includes("immediate step failure")) {
+									throw e;
+								}
+							}
+						}
+						return { completed: steps };
+					}
+				);
+
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				const failure = logs.logs.find(
+					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+				);
+				expect(failure, JSON.stringify(failure)).toBeUndefined();
+				expect(
+					logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+				).toBe(true);
+			}
+		);
+	});
+
 	describe("lifecycle methods", () => {
 		it.for([
 			InstanceStatus.Complete,

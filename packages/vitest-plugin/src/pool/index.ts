@@ -423,6 +423,7 @@ async function buildProjectWorkerOptions(
 		ensureFeature(
 			runnerWorker.compatibilityFlags,
 			"weak_ref",
+			"to support Vitest 5",
 			runnerWorker.compatibilityDate >= "2025-05-05"
 		);
 	}
@@ -431,6 +432,22 @@ async function buildProjectWorkerOptions(
 	runnerWorker.bindings ??= {};
 	runnerWorker.bindings.__VITEST_POOL_WORKERS_VITEST_MAJOR_VERSION =
 		String(vitestMajorVersion);
+
+	// V8 coverage drives the isolate's Profiler domain through node:inspector.
+	// The real Session implementation is intentionally local-dev-only.
+	const { coverage } = project.serializedConfig;
+	if (coverage.enabled && coverage.provider === "v8") {
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"nodejs_inspector_module",
+			'because Vitest\'s `coverage.provider` is set to `"v8"`'
+		);
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"nodejs_inspector_local_dev",
+			'because Vitest\'s `coverage.provider` is set to `"v8"`'
+		);
+	}
 
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
@@ -883,25 +900,29 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
  * Ensures that the specified compatibility feature is enabled for Vitest to work.
  * @param compatibilityFlags The list of current compatibility flags.
  * @param feature The name of the feature to enable.
+ * @param reason An optional explanation of why the feature is needed.
  * @param enabledByDefault Whether the compatibility date enables this feature.
+ * @returns Nothing.
  */
 function ensureFeature(
 	compatibilityFlags: string[],
 	feature: string,
+	reason = "to support the Vitest runner",
 	enabledByDefault = false
-) {
+): void {
 	const flagToEnable = `enable_${feature}`;
 	const flagToDisable = `disable_${feature}`;
 	if (!enabledByDefault && !compatibilityFlags.includes(flagToEnable)) {
 		debug(
-			"Adding `%s` compatibility flag during tests as this feature is needed to support the Vitest runner.",
-			flagToEnable
+			"Adding `%s` compatibility flag during tests as this feature is needed %s.",
+			flagToEnable,
+			reason
 		);
 		compatibilityFlags.push(flagToEnable);
 	}
 	if (compatibilityFlags.includes(flagToDisable)) {
 		log.warn(
-			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
+			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed ${reason}.`
 		);
 		compatibilityFlags.splice(compatibilityFlags.indexOf(flagToDisable), 1);
 	}
