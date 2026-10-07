@@ -90,7 +90,7 @@ overrides:
   "@types/react-tabs>@types/react": "^18"
   "@types/react-transition-group>@types/react": "^18"
   "@cloudflare/elements>@types/react": "^18"
-  "@types/node": "$@types/node"
+  "@types/node": "catalog:default"
   "@types/node>undici-types": "catalog:default"
 
 peerDependencyRules:
