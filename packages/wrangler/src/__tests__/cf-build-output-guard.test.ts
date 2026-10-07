@@ -37,6 +37,9 @@ async function seedBuildOutput(projectRoot = process.cwd()) {
 	return rootConfigPath;
 }
 
+/** A project with no Wrangler configuration file, so the project root is the cwd. */
+const NO_USER_CONFIG = { userConfigPath: undefined };
+
 /** Capture a thrown value without asserting on it, so fields can be inspected. */
 function captureThrow(fn: () => void): unknown {
 	try {
@@ -139,7 +142,7 @@ describe("assertNoCloudflareBuildOutput", () => {
 	}) => {
 		await seedBuildOutput();
 
-		expect(() => assertNoCloudflareBuildOutput(process.cwd(), "deploy"))
+		expect(() => assertNoCloudflareBuildOutput(NO_USER_CONFIG, "deploy"))
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: It looks like you've run \`wrangler deploy\` in a project that builds for the Cloudflare CLI (\`cf\`).
 			Cloudflare Build Output was found at \`.cloudflare/output\`. Deploying it with Wrangler reads a different configuration, so it may target the wrong Worker.
@@ -153,7 +156,7 @@ describe("assertNoCloudflareBuildOutput", () => {
 		await seedBuildOutput();
 
 		const error = captureThrow(() =>
-			assertNoCloudflareBuildOutput(process.cwd(), "deploy")
+			assertNoCloudflareBuildOutput(NO_USER_CONFIG, "deploy")
 		);
 
 		expect(error).toBeInstanceOf(UserError);
@@ -166,12 +169,12 @@ describe("assertNoCloudflareBuildOutput", () => {
 		await seedBuildOutput();
 
 		expect(() =>
-			assertNoCloudflareBuildOutput(process.cwd(), "versions upload")
+			assertNoCloudflareBuildOutput(NO_USER_CONFIG, "versions upload")
 		).toThrow(/`wrangler versions upload`/);
 		expect(
 			(
 				captureThrow(() =>
-					assertNoCloudflareBuildOutput(process.cwd(), "versions upload")
+					assertNoCloudflareBuildOutput(NO_USER_CONFIG, "versions upload")
 				) as UserError
 			).telemetryMessage
 		).toBe("versions upload run against cloudflare build output");
@@ -181,8 +184,46 @@ describe("assertNoCloudflareBuildOutput", () => {
 		await seed({ "index.js": "export default {};" });
 
 		expect(() =>
-			assertNoCloudflareBuildOutput(process.cwd(), "deploy")
+			assertNoCloudflareBuildOutput(NO_USER_CONFIG, "deploy")
 		).not.toThrow();
+	});
+
+	it("inspects the project the configuration selects, not the working directory", async ({
+		expect,
+	}) => {
+		// `--config` can select a project outside the working directory.
+		await seedBuildOutput(path.resolve("apps/api"));
+
+		expect(() =>
+			assertNoCloudflareBuildOutput(
+				{ userConfigPath: path.join("apps", "api", "wrangler.jsonc") },
+				"deploy"
+			)
+		).toThrow(/apps\/api\/\.cloudflare\/output/);
+	});
+
+	it("ignores Build Output in the working directory when the configuration selects another project", async ({
+		expect,
+	}) => {
+		await seedBuildOutput(process.cwd());
+		await seed({ "apps/api/wrangler.jsonc": JSON.stringify({ name: "api" }) });
+
+		expect(() =>
+			assertNoCloudflareBuildOutput(
+				{ userConfigPath: path.join("apps", "api", "wrangler.jsonc") },
+				"deploy"
+			)
+		).not.toThrow();
+	});
+
+	it("falls back to the working directory when there is no configuration file", async ({
+		expect,
+	}) => {
+		await seedBuildOutput(process.cwd());
+
+		expect(() =>
+			assertNoCloudflareBuildOutput(NO_USER_CONFIG, "deploy")
+		).toThrow(/`\.cloudflare\/output`/);
 	});
 });
 
@@ -254,6 +295,32 @@ describe("deployment commands against Cloudflare Build Output", () => {
 		expect,
 	}) => {
 		await runWrangler("deploy index.js --dry-run");
+
+		expect(std.err).toBe("");
+	});
+
+	it("stops when `--config` selects a project that has Build Output", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({ main: "index.js" }, "./apps/api/wrangler.jsonc");
+		fs.writeFileSync("apps/api/index.js", "export default {};");
+		await seedBuildOutput(path.resolve("apps/api"));
+
+		await expect(
+			runWrangler("deploy --config apps/api/wrangler.jsonc")
+		).rejects.toThrow(/Cloudflare Build Output was found/);
+	});
+
+	it("does not stop when only the working directory has Build Output", async ({
+		expect,
+	}) => {
+		// The guard must follow the selected project, so unrelated Build Output
+		// beside it cannot block a legitimate deployment.
+		writeWranglerConfig({ main: "index.js" }, "./apps/api/wrangler.jsonc");
+		fs.writeFileSync("apps/api/index.js", "export default {};");
+		await seedBuildOutput(process.cwd());
+
+		await runWrangler("deploy --config apps/api/wrangler.jsonc --dry-run");
 
 		expect(std.err).toBe("");
 	});
