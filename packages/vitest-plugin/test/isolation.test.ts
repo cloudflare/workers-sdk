@@ -181,7 +181,46 @@ test(
 			`,
 		});
 		const result = await vitestRun({
-			flags: ["--no-isolate", "--max-workers=1"],
+			flags: ["--no-isolate", "--max-workers=2"],
+		});
+		expect(await result.exitCode).toBe(0);
+	}
+);
+
+test(
+	"patches a reused worker's module runner once",
+	{ timeout: 60_000 },
+	async ({ expect, seed, vitestRun }) => {
+		// With --no-isolate, Vitest hands a worker's module runner to the pool
+		// again for every test file the worker runs. Patching it each time wraps
+		// its transport in one more layer per file, and imports slow down file
+		// after file.
+		const probe = dedent /* javascript */ `
+			import { it, expect } from "vitest";
+			it("finds the module runner as the worker's first file patched it", () => {
+				// The worker's module runner, whose transport the pool patches to
+				// fetch modules in the runner object.
+				const invoke = globalThis.__vitest_mocker__.moduleRunner.transport.invoke;
+				globalThis.FIRST_INVOKE ??= invoke;
+				expect(invoke).toBe(globalThis.FIRST_INVOKE);
+			});
+		`;
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			...Object.fromEntries(
+				["a", "b", "c", "d", "e", "f", "g", "h"].map((name) => [
+					`${name}.test.ts`,
+					probe,
+				])
+			),
+		});
+		const result = await vitestRun({
+			flags: ["--no-isolate", "--max-workers=2"],
 		});
 		expect(await result.exitCode).toBe(0);
 	}
