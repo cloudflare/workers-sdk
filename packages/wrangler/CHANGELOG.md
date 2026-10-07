@@ -1,5 +1,101 @@
 # wrangler
 
+## 4.148.0
+
+### Minor Changes
+
+- [#16051](https://github.com/cloudflare/workers-sdk/pull/16051) [`b4e1299`](https://github.com/cloudflare/workers-sdk/commit/b4e12992ae9d74bc27cc70869384855fdde1ea6c) Thanks [@devteamaegis](https://github.com/devteamaegis)! - Add `--source-namespace` and `--source-repo-name` to `wrangler queues subscription create` for the `artifacts.repo` source
+
+  The Event Subscriptions API requires `source.namespace` and `source.repo_name` for `artifacts.repo` subscriptions, but Wrangler had no way to pass them, so `--source artifacts.repo` always failed with a validation error. Both flags are now required for this source, and `wrangler queues subscription get` shows the subscription's resource as `<namespace>/<repo-name>`.
+
+- [#15998](https://github.com/cloudflare/workers-sdk/pull/15998) [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `assets.base_path` support to Workers Assets
+
+  Serve an asset directory from a public URL prefix without changing its on-disk layout:
+
+  ```jsonc
+  {
+    "assets": {
+      "directory": "./public",
+      "base_path": "/docs"
+    }
+  }
+  ```
+
+  Wrangler, preview, Miniflare, and generated build configuration preserve the explicitly selected value, while the Asset Worker normalizes it and strips the prefix only for asset lookup. Requests passed to a user Worker, request-facing headers, and redirects retain the public path. Relative pathname inputs are interpreted as root-relative prefixes, URL-shaped values are rejected, and omitting the option preserves existing root-path behavior.
+
+  Authored `_headers` and `_redirects` rules continue to match full public paths. In particular, both the source and destination of an authored `200` asset rewrite must include the configured public prefix; Asset Worker-generated redirects are prefixed automatically.
+
+- [#16005](https://github.com/cloudflare/workers-sdk/pull/16005) [`4d308f6`](https://github.com/cloudflare/workers-sdk/commit/4d308f6ad7b7af57ff6bcaac51a2d96500f28836) Thanks [@oOPa](https://github.com/oOPa)! - Add a `--experimental-mode instant` option to `wrangler kv namespace create`
+
+  This lets entitled accounts create Workers KV Instant namespaces while the feature is in private beta.
+
+- [#16030](https://github.com/cloudflare/workers-sdk/pull/16030) [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f) Thanks [@edmundhung](https://github.com/edmundhung)! - Add email-protected Quick Tunnels to `wrangler dev`
+
+  Pass one or more `--tunnel-allowed-mail` flags to require email authentication when exposing a local development server through a Quick Tunnel. Each value can be an exact email address or a domain pattern.
+
+- [#15283](https://github.com/cloudflare/workers-sdk/pull/15283) [`2dde890`](https://github.com/cloudflare/workers-sdk/commit/2dde8907fd4d944d7a1863a8fd9b175ca32e2d74) Thanks [@shubhxho](https://github.com/shubhxho)! - Support deleting secrets with `wrangler versions secret bulk`
+
+  Set a secret's value to `null` in JSON input to remove it from the new Worker version. Bulk output now distinguishes between created and deleted secrets, so retrying `wrangler secret bulk` with `wrangler versions secret bulk` preserves requested deletions. Deploy the new version with `wrangler versions deploy` to apply the changes to production traffic.
+
+### Patch Changes
+
+- [#15534](https://github.com/cloudflare/workers-sdk/pull/15534) [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef) Thanks [@vahidshaik1901](https://github.com/vahidshaik1901)! - Improve guidance for conflicting Wrangler configuration files
+
+  When user and generated deploy configurations are found under different base paths, Wrangler now identifies the expected deploy configuration location, suggests how to resolve the conflict, and links to the relevant documentation.
+
+- [#16014](https://github.com/cloudflare/workers-sdk/pull/16014) [`c492d63`](https://github.com/cloudflare/workers-sdk/commit/c492d6312152cedbf93f0b5bbcadcab5e01af9e7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261001.1 | ^5.20261005.1 |
+  | workerd                   | 1.20261001.1  | 1.20261005.1  |
+
+- [#16079](https://github.com/cloudflare/workers-sdk/pull/16079) [`ba52118`](https://github.com/cloudflare/workers-sdk/commit/ba521182d895d32f691ee2320a7f5524a6566a51) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261005.1 | ^5.20261006.1 |
+  | workerd                   | 1.20261005.1  | 1.20261006.1  |
+
+- [#15573](https://github.com/cloudflare/workers-sdk/pull/15573) [`14f0339`](https://github.com/cloudflare/workers-sdk/commit/14f03399c282d8a13ce3790618a9779155f25b20) Thanks [@xgame92](https://github.com/xgame92)! - Include default module rules in generated Worker types
+
+  `wrangler types` now declares the built-in Text, Data, and WebAssembly module patterns even when they are not repeated in the Wrangler configuration, keeping generated types aligned with deployment behavior.
+
+  Service-worker declaration files are emitted as global scripts so that the generated wildcard module types are visible to imports.
+
+  Directory-specific rules retain their scope when TypeScript can represent it; ambiguous relative imports use a union of the possible deployed module types.
+
+  When generating combined types for named environments, each environment's effective rules are resolved independently and differing import types are represented as unions.
+
+- [#15261](https://github.com/cloudflare/workers-sdk/pull/15261) [`42c7219`](https://github.com/cloudflare/workers-sdk/commit/42c721938f9b003281f9c1cb67b9a829e054b26f) Thanks [@ondraulehla](https://github.com/ondraulehla)! - Fix `r2 object put` and `r2 bulk put` storing a different key in local mode
+
+  Keys that are not URL-safe were mangled on the way into local storage.
+
+  - A key with a space or a non-ASCII character was stored under its percent-encoded name, so a later `r2 object get` for that key reported that the key does not exist.
+  - Two keys that differ only after a `#` collapsed into a single object, and the second upload replaced the first.
+  - A key with a `%` that is not a valid escape failed outright with "Invalid URL string.", and one with a valid escape, such as `%41.txt`, was stored as `A.txt`.
+
+  Spaces, non-ASCII characters, `#` and `%` now survive the trip into local storage. Objects already in local state are left where they are.
+
+- [#15283](https://github.com/cloudflare/workers-sdk/pull/15283) [`2dde890`](https://github.com/cloudflare/workers-sdk/commit/2dde8907fd4d944d7a1863a8fd9b175ca32e2d74) Thanks [@shubhxho](https://github.com/shubhxho)! - Show a useful error when `wrangler secret bulk` hits an undeployed latest version
+
+  `wrangler secret put` already explained this case (API error 10215). `secret bulk` just dumped the raw API response, which for 10214 talks about logpush and tail_consumers even though you were only uploading secrets.
+
+  Both commands now point at `wrangler versions secret …` instead.
+
+- [#16068](https://github.com/cloudflare/workers-sdk/pull/16068) [`26e03e2`](https://github.com/cloudflare/workers-sdk/commit/26e03e2560fcc4b6aaa7f843d19ab1feb645fff1) Thanks [@edevil](https://github.com/edevil)! - Print temporary account notices to stderr
+
+  The terms notice, the proof-of-work message, and the "Temporary account ready" claim details printed by `--temporary` now go to stderr instead of stdout. Previously they corrupted command output on stdout, such as the JSON from `wrangler kv namespace list --temporary` or the raw value from `wrangler kv key get --temporary`. Commands that lower the log level for `--json`, such as `wrangler d1 execute --json --temporary`, also hid the claim URL; it is now shown unless logging is disabled with `WRANGLER_LOG=none`.
+
+  Scripts that read the claim URL from stdout should read stderr instead.
+
+- Updated dependencies [[`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`0ec13b7`](https://github.com/cloudflare/workers-sdk/commit/0ec13b72461b989d1614acd784df50c44891480e), [`c492d63`](https://github.com/cloudflare/workers-sdk/commit/c492d6312152cedbf93f0b5bbcadcab5e01af9e7), [`ba52118`](https://github.com/cloudflare/workers-sdk/commit/ba521182d895d32f691ee2320a7f5524a6566a51), [`946aaa7`](https://github.com/cloudflare/workers-sdk/commit/946aaa7e25dd2b686b08876da8e7aa9178e8e3fa), [`48f3c04`](https://github.com/cloudflare/workers-sdk/commit/48f3c04dceccb3fac88798918f8890e094173a18), [`5606a74`](https://github.com/cloudflare/workers-sdk/commit/5606a7416921f57735add524f6b6b68368deab25), [`f8cdcb9`](https://github.com/cloudflare/workers-sdk/commit/f8cdcb920fc44daf7bf4ef9cb1dce751313ac2bd), [`e44cf6b`](https://github.com/cloudflare/workers-sdk/commit/e44cf6b6c186f69afa5778b9ff38f5156b0061b9), [`0b51fec`](https://github.com/cloudflare/workers-sdk/commit/0b51fec333589b3c039596f981907951617132bb)]:
+  - miniflare@5.20261006.0-alpha
+
 ## 4.147.0
 
 ### Minor Changes

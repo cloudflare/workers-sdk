@@ -9,6 +9,7 @@ describe("Wrangler binding conversion", () => {
 		const bindings = convertBindings(
 			{
 				ai: { binding: "AI", remote: true },
+				analytics: { binding: "ANALYTICS" },
 				assets: { binding: "ASSETS" },
 				d1_databases: [
 					{

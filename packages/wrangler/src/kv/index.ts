@@ -102,6 +102,15 @@ export const kvNamespaceCreateCommand = createCommand({
 				'The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")',
 			requiresArg: true,
 		},
+		"experimental-mode": {
+			alias: "x-mode",
+			type: "string",
+			describe:
+				"The storage mode for the new namespace. Instant mode offers lower-latency reads and faster global updates [private beta].\nCannot be combined with --jurisdiction.",
+			choices: ["instant"] as const,
+			requiresArg: true,
+			conflicts: "jurisdiction",
+		},
 		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["namespace"],
@@ -110,7 +119,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
 		const title = `${environment}${args.namespace}${preview}`;
-		const { jurisdiction } = args;
+		const { jurisdiction, experimentalMode: mode } = args;
 
 		const accountId = await requireAuth(config);
 		printResourceLocation("remote");
@@ -118,17 +127,19 @@ export const kvNamespaceCreateCommand = createCommand({
 		logger.log(
 			`🌀 Creating namespace with title "${title}"${
 				jurisdiction ? ` (jurisdiction: ${jurisdiction})` : ""
-			}`
+			}${mode ? ` (mode: ${mode})` : ""}`
 		);
 
 		let namespaceId: string;
 		try {
 			const createParams: Cloudflare.KV.Namespaces.NamespaceCreateParams & {
 				jurisdiction?: string;
+				mode?: string;
 			} = {
 				account_id: accountId,
 				title,
 				jurisdiction,
+				mode,
 			};
 			const result = await sdk.kv.namespaces.create(createParams);
 			namespaceId = result.id;

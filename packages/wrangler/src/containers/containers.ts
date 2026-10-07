@@ -134,6 +134,7 @@ export const containersInfoCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
@@ -175,6 +176,9 @@ export const containersDeleteCommand = createCommand({
 		description: "Delete a container",
 		status: "stable",
 		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		supportTemporary: true,
 	},
 	args: {
 		ID: {
