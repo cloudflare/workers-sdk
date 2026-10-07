@@ -83,7 +83,12 @@ describe("migrateWranglerToCf", () => {
 					name: "wrangler",
 					version: "4.100.0",
 				}),
-				"package.json": JSON.stringify({ devDependencies: { cf: "1.0.0" } }),
+				"package.json": JSON.stringify({
+					devDependencies: {
+						"@cloudflare/vite-plugin": "beta",
+						cf: "1.0.0",
+					},
+				}),
 				"wrangler.jsonc": JSON.stringify({
 					compatibility_date: "2026-09-23",
 					durable_objects: {
@@ -119,12 +124,7 @@ describe("migrateWranglerToCf", () => {
 
 			expect(result.status).toBe("complete");
 			expect(result.followUps).toEqual([]);
-			expect(output).toContain("COUNTER: bindings.durableObject({");
-			expect(output).toContain("Counter: exports.durableObject({");
-			expect(output).toContain('storage: "sqlite"');
-			expect(output).toContain('renamedTo: "Counter"');
-			expect(output).toContain('state: "deleted"');
-			expect(output).not.toContain("Migration incomplete");
+			expect(output).toMatchSnapshot();
 			expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		}
 	);
@@ -165,13 +165,7 @@ describe("migrateWranglerToCf", () => {
 				sourcePath: "migrations.0.transferred_classes.0",
 			}),
 		]);
-		expect(output).toContain("Migration incomplete");
-		expect(output).toContain("`Incoming`");
-		expect(output).toContain("`Original`");
-		expect(output).toContain("`source-worker`");
-		expect(output).toContain("If completed");
-		expect(output).toContain("If pending");
-		expect(output).toContain("transferFrom");
+		expect(output).toMatchSnapshot();
 	});
 
 	it("rejects unsupported bundlers", async ({ expect }) => {
