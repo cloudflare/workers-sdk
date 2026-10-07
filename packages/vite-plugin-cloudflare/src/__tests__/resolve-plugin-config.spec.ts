@@ -635,6 +635,66 @@ describe("resolvePluginConfig", () => {
 		expect(result.remoteBindings).toBe(true);
 	});
 
+	test("resolves allowed mail for a Quick Tunnel", async ({ expect }) => {
+		writeEntryConfig();
+		const result = await resolvePluginConfig(
+			{
+				tunnel: {
+					autoStart: true,
+					allowedMail: ["alice@example.com", "*@example.org"],
+				},
+			},
+			{ root },
+			buildEnv
+		);
+
+		expect(result.tunnel).toEqual({
+			autoStart: true,
+			name: undefined,
+			allowedMail: ["alice@example.com", "*@example.org"],
+		});
+	});
+
+	test("rejects allowed mail for a named tunnel", async ({ expect }) => {
+		writeEntryConfig();
+		await expect(
+			resolvePluginConfig(
+				{
+					tunnel: {
+						name: "my-tunnel",
+						allowedMail: ["alice@example.com"],
+					},
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(
+			"`tunnel.allowedMail` is only supported for Quick Tunnels"
+		);
+	});
+
+	test("allows an empty allowed mail list for a named tunnel", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		const result = await resolvePluginConfig(
+			{
+				tunnel: {
+					name: "my-tunnel",
+					allowedMail: [],
+				},
+			},
+			{ root },
+			buildEnv
+		);
+
+		expect(result.tunnel).toEqual({
+			autoStart: false,
+			name: "my-tunnel",
+			allowedMail: undefined,
+		});
+	});
+
 	test("rejects duplicate Vite environment names", async ({ expect }) => {
 		writeEntryConfig();
 		writeSource("src/aux.ts");
