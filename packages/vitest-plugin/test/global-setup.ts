@@ -51,6 +51,7 @@ async function createTestProject() {
 			// Ensure we use the local version of vitest-plugin
 			"@cloudflare/vitest-plugin": version,
 			"@vitest/coverage-istanbul": vitestPeerDep,
+			"@vitest/coverage-v8": vitestPeerDep,
 			vitest: vitestPeerDep,
 		},
 	};
