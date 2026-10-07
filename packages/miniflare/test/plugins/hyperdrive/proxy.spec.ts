@@ -41,8 +41,8 @@ function generateCerts(tmpDir: string): TestCerts {
 	// Generate CA key + self-signed cert
 	childProcess.execSync(
 		[
-			"openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1",
-			"-nodes -days 1",
+			"openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -pkeyopt ec_param_enc:named_curve",
+			"-nodes -sha256 -days 1",
 			`-keyout ${caKeyPath} -out ${caCertPath}`,
 			'-subj "/CN=Test CA"',
 		].join(" "),
@@ -64,8 +64,8 @@ function generateCerts(tmpDir: string): TestCerts {
 		// Generate key + CSR
 		childProcess.execSync(
 			[
-				"openssl req -newkey ec -pkeyopt ec_paramgen_curve:prime256v1",
-				"-nodes",
+				"openssl req -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -pkeyopt ec_param_enc:named_curve",
+				"-nodes -sha256",
 				`-keyout ${keyPath} -out ${csrPath}`,
 				`-subj "/CN=${san}"`,
 			].join(" "),
@@ -77,7 +77,7 @@ function generateCerts(tmpDir: string): TestCerts {
 			[
 				`openssl x509 -req -in ${csrPath}`,
 				`-CA ${caCertPath} -CAkey ${caKeyPath} -CAcreateserial`,
-				`-days 1 -extfile ${extPath}`,
+				`-sha256 -days 1 -extfile ${extPath}`,
 				`-out ${certPath}`,
 			].join(" "),
 			{ stdio: "pipe" }
@@ -447,8 +447,8 @@ describe("HyperdriveProxyController TLS modes", () => {
 
 		childProcess.execSync(
 			[
-				"openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1",
-				"-nodes -days 1",
+				"openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -pkeyopt ec_param_enc:named_curve",
+				"-nodes -sha256 -days 1",
 				`-keyout ${wrongCaKeyPath} -out ${wrongCaCertPath}`,
 				'-subj "/CN=Wrong CA"',
 			].join(" "),
