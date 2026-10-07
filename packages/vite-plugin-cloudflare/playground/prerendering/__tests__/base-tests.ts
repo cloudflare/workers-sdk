@@ -44,4 +44,24 @@ describe("pre-rendering", () => {
 			).toBe(true);
 		}
 	);
+
+	test.runIf(isBuild)(
+		"keeps using declarations in the prerender Worker build",
+		async ({ expect }) => {
+			const workerDir = path.join(
+				rootDir,
+				".cloudflare/output/v0/workers/prerender"
+			);
+			const config = JSON.parse(
+				fs.readFileSync(path.join(workerDir, "worker.config.json"), "utf-8")
+			) as { manifest: { mainModule: string } };
+			const output = fs.readFileSync(
+				path.join(workerDir, "bundle", config.manifest.mainModule),
+				"utf-8"
+			);
+
+			expect(output).toMatch(/\busing [\w$]+ =/);
+			expect(output).not.toMatch(/__using|_usingCtx/);
+		}
+	);
 });
