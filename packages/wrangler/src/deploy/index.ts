@@ -143,7 +143,10 @@ export async function runDeployCommandHandler(
 	// local or remote mutation. `--dry-run` is exempt: it uploads nothing, so
 	// there is no deployment to stop.
 	if (!args.dryRun) {
-		assertNoCloudflareBuildOutput(config, "deploy");
+		assertNoCloudflareBuildOutput(
+			{ config, explicitConfigPath: args.config },
+			"deploy"
+		);
 	}
 
 	const detectedAgent = detectAgent();

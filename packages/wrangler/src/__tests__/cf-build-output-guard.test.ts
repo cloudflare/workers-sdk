@@ -38,7 +38,42 @@ async function seedBuildOutput(projectRoot = process.cwd()) {
 }
 
 /** A project with no Wrangler configuration file, so the project root is the cwd. */
-const NO_USER_CONFIG = { userConfigPath: undefined };
+const NO_USER_CONFIG = {
+	config: { userConfigPath: undefined },
+	explicitConfigPath: undefined,
+};
+
+/** A project selected explicitly with `--config`. */
+function selectedConfig(configPath: string) {
+	return {
+		config: { userConfigPath: configPath },
+		explicitConfigPath: configPath,
+	};
+}
+
+/** A configuration found by searching upwards, which may belong to a parent. */
+function inheritedConfig(configPath: string) {
+	return {
+		config: { userConfigPath: configPath },
+		explicitConfigPath: undefined,
+	};
+}
+
+/**
+ * Run `fn` from `directory`, restoring the working directory afterwards.
+ *
+ * The guard reads `process.cwd()` because that is where a build writes its
+ * Build Output, so the nested cases have to move into the subproject.
+ */
+async function withCwd(directory: string, fn: () => Promise<void>) {
+	const previous = process.cwd();
+	process.chdir(directory);
+	try {
+		await fn();
+	} finally {
+		process.chdir(previous);
+	}
+}
 
 /** Capture a thrown value without asserting on it, so fields can be inspected. */
 function captureThrow(fn: () => void): unknown {
@@ -196,7 +231,7 @@ describe("assertNoCloudflareBuildOutput", () => {
 
 		expect(() =>
 			assertNoCloudflareBuildOutput(
-				{ userConfigPath: path.join("apps", "api", "wrangler.jsonc") },
+				selectedConfig(path.join("apps", "api", "wrangler.jsonc")),
 				"deploy"
 			)
 		).toThrow(/apps\/api\/\.cloudflare\/output/);
@@ -210,7 +245,7 @@ describe("assertNoCloudflareBuildOutput", () => {
 
 		expect(() =>
 			assertNoCloudflareBuildOutput(
-				{ userConfigPath: path.join("apps", "api", "wrangler.jsonc") },
+				selectedConfig(path.join("apps", "api", "wrangler.jsonc")),
 				"deploy"
 			)
 		).not.toThrow();
@@ -224,6 +259,54 @@ describe("assertNoCloudflareBuildOutput", () => {
 		expect(() =>
 			assertNoCloudflareBuildOutput(NO_USER_CONFIG, "deploy")
 		).toThrow(/`\.cloudflare\/output`/);
+	});
+
+	it("finds Build Output in a nested project that inherits a parent configuration", async ({
+		expect,
+	}) => {
+		// `cf build` writes Build Output to its own working directory, so a nested
+		// project can hold it while the configuration found by searching upwards
+		// belongs to the parent.
+		await seed({ "wrangler.jsonc": JSON.stringify({ name: "parent" }) });
+		fs.mkdirSync("apps/api", { recursive: true });
+		const parentConfig = path.resolve("wrangler.jsonc");
+
+		await withCwd("apps/api", async () => {
+			await seedBuildOutput(process.cwd());
+
+			expect(() =>
+				assertNoCloudflareBuildOutput(inheritedConfig(parentConfig), "deploy")
+			).toThrow(/Cloudflare Build Output was found/);
+		});
+	});
+
+	it("finds Build Output beside an inherited parent configuration", async ({
+		expect,
+	}) => {
+		await seed({ "wrangler.jsonc": JSON.stringify({ name: "parent" }) });
+		await seedBuildOutput(process.cwd());
+		fs.mkdirSync("apps/api", { recursive: true });
+		const parentConfig = path.resolve("wrangler.jsonc");
+
+		await withCwd("apps/api", async () => {
+			expect(() =>
+				assertNoCloudflareBuildOutput(inheritedConfig(parentConfig), "deploy")
+			).toThrow(/Cloudflare Build Output was found/);
+		});
+	});
+
+	it("ignores a nested project with no Build Output under an inherited configuration", async ({
+		expect,
+	}) => {
+		await seed({ "wrangler.jsonc": JSON.stringify({ name: "parent" }) });
+		fs.mkdirSync("apps/api", { recursive: true });
+		const parentConfig = path.resolve("wrangler.jsonc");
+
+		await withCwd("apps/api", async () => {
+			expect(() =>
+				assertNoCloudflareBuildOutput(inheritedConfig(parentConfig), "deploy")
+			).not.toThrow();
+		});
 	});
 });
 
@@ -316,12 +399,38 @@ describe("deployment commands against Cloudflare Build Output", () => {
 	}) => {
 		// The guard must follow the selected project, so unrelated Build Output
 		// beside it cannot block a legitimate deployment.
+		//
+		// Deliberately not `--dry-run`, which skips the guard and so could not
+		// show that the guard allowed this through. The upload is not mocked, so
+		// the command still fails — what matters is that it gets past the guard
+		// and fails for some other reason.
 		writeWranglerConfig({ main: "index.js" }, "./apps/api/wrangler.jsonc");
 		fs.writeFileSync("apps/api/index.js", "export default {};");
 		await seedBuildOutput(process.cwd());
 
-		await runWrangler("deploy --config apps/api/wrangler.jsonc --dry-run");
+		const error = await runWrangler(
+			"deploy --config apps/api/wrangler.jsonc"
+		).then(
+			() => undefined,
+			(e: unknown) => e
+		);
 
-		expect(std.err).toBe("");
+		expect(String(error ?? "")).not.toMatch(/Cloudflare Build Output/);
+	});
+
+	it("stops a nested project that inherits a parent configuration", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({ main: "index.js" }, "./wrangler.jsonc");
+		fs.mkdirSync("apps/api", { recursive: true });
+		fs.writeFileSync("apps/api/index.js", "export default {};");
+
+		await withCwd("apps/api", async () => {
+			await seedBuildOutput(process.cwd());
+
+			await expect(runWrangler("deploy index.js")).rejects.toThrow(
+				/Cloudflare Build Output was found/
+			);
+		});
 	});
 });

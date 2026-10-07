@@ -81,7 +81,10 @@ export const previewCommand = createCommand({
 	handler: async function previewHandler(args, { config }) {
 		// Runs before authentication and any upload. `preview` has no `--dry-run`,
 		// so every invocation creates a Preview deployment.
-		assertNoCloudflareBuildOutput(config, "preview");
+		assertNoCloudflareBuildOutput(
+			{ config, explicitConfigPath: args.config },
+			"preview"
+		);
 
 		const accountId = await requireAuth(config);
 		const productionBindingsExpectedInPreview =

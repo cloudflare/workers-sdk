@@ -64,7 +64,10 @@ export const versionsUploadCommand = createCommand({
 		// Runs before any build or upload work. `--dry-run` is exempt: it uploads
 		// nothing, so there is no version to stop.
 		if (!args.dryRun) {
-			assertNoCloudflareBuildOutput(config, "versions upload");
+			assertNoCloudflareBuildOutput(
+				{ config, explicitConfigPath: args.config },
+				"versions upload"
+			);
 		}
 
 		// Merge CLI args with config (includes Sites validation and assets validation)
