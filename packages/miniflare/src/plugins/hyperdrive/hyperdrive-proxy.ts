@@ -125,6 +125,7 @@ export class HyperdriveProxyController {
 		const { name, targetHost, targetPort, scheme, sslmode, sslrootcert } =
 			config;
 		const server = net.createServer((clientSocket) => {
+			clientSocket.setNoDelay(true);
 			this.#handleConnection(
 				clientSocket,
 				targetHost,
@@ -177,6 +178,7 @@ export class HyperdriveProxyController {
 	) {
 		// Connect to real database
 		const dbSocket = net.connect({ host: targetHost, port: targetPort });
+		dbSocket.setNoDelay(true);
 		const sslmodeRequire = sslmode === "require";
 		const sslmodePrefer = sslmode === "prefer";
 		const sslmodeVerifyFull = sslmode === "verify-full";
@@ -407,6 +409,7 @@ async function createPlainTCPConnection(
 	clientSocket: net.Socket
 ): Promise<net.Socket> {
 	const dbSocket = net.connect({ host: targetHost, port: targetPort });
+	dbSocket.setNoDelay(true);
 
 	// Wait for connection to be established
 	await new Promise<void>((resolve, reject) => {
