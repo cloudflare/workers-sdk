@@ -260,6 +260,7 @@ describe("Container image planning", () => {
 		);
 		const resolvedPluginConfig: PreviewResolvedConfig = {
 			type: "preview",
+			cliDisplayName: "Wrangler",
 			workers: ["first", "second"].map((name) => ({
 				source: "legacy",
 				config: createWorkerConfig(name),
