@@ -197,22 +197,31 @@ function applyDefines() {
 
 // `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton
 export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject {
+	private readonly vitestMajorVersion: number;
+
 	constructor(_state: DurableObjectState, doEnv: Cloudflare.Env) {
 		super(_state, doEnv);
+		this.vitestMajorVersion = Number(
+			doEnv.__VITEST_POOL_WORKERS_VITEST_MAJOR_VERSION
+		);
 		vm._setUnsafeEval(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		ensurePatchedFunction(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
-		globalThis.__vitest_browser_runner__ = {
-			commands: {
-				triggerCommand: (command, args) => {
-					assert.strictEqual(command, "__vitest_writeCoverageFile");
-					assert.strictEqual(args.length, 1);
-					return writeCoverageFile(
-						doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE,
-						args[0]
-					);
+		if (this.vitestMajorVersion >= 5) {
+			// Vitest 5's browser Istanbul provider sends coverage writes to the
+			// host through this command; the Worker has no access to the host's fs.
+			globalThis.__vitest_browser_runner__ = {
+				commands: {
+					triggerCommand: (command, args) => {
+						assert.strictEqual(command, "__vitest_writeCoverageFile");
+						assert.strictEqual(args.length, 1);
+						return writeCoverageFile(
+							doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE,
+							args[0]
+						);
+					},
 				},
-			},
-		};
+			};
+		}
 		applyDefines();
 	}
 
@@ -234,7 +243,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		);
 
 		cwd = wd.cwd;
-
+		const isVitest5 = this.vitestMajorVersion >= 5;
 		const { init, runBaseTests, setupEnvironment } =
 			await import("vitest/worker");
 
@@ -314,9 +323,12 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					};
 					transport?: { invoke?: (...args: unknown[]) => unknown };
 				};
-				// Vitest's browser coverage provider delegates filesystem writes to
-				// its host, which is also required when running inside workerd.
-				runner.isBrowser = true;
+				// Vitest 5 selects its browser Istanbul provider when isBrowser is
+				// set. This sends coverage writes through the host command above,
+				// instead of attempting to write to the host filesystem in workerd.
+				if (isVitest5) {
+					runner.isBrowser = true;
+				}
 				if (runner.evaluator?.createRequire) {
 					const originalCreateRequire = runner.evaluator.createRequire.bind(
 						runner.evaluator

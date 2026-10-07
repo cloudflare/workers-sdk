@@ -1,7 +1,7 @@
 ---
-"@cloudflare/vitest-plugin": major
+"@cloudflare/vitest-plugin": minor
 ---
 
-Add support for [Vitest 5](https://vitest.dev/blog/vitest-5.html) and use Workerd's new module registry
+Add support for [Vitest 5](https://vitest.dev/blog/vitest-5.html) alongside Vitest 4
 
-Require Vitest 5 and drop support for Vitest 4. Vitest workers now always use the new module registry, including when `legacy_module_registry` is configured, removing the legacy V1 module fallback path.
+Vitest 4 projects remain supported with the legacy module registry. Vitest 5 projects gain Worker test and Istanbul coverage support without changing their configuration.

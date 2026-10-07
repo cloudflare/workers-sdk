@@ -22,6 +22,7 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "miniflare";
+import semverMajor from "semver/functions/major.js";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { guessWorkerExports } from "./guess-exports";
@@ -296,6 +297,7 @@ function rewriteStreamingTailSelfReferences(
 }
 
 async function buildProjectWorkerOptions(
+	ctx: Vitest,
 	project: TestProject,
 	customOptions: WorkersPoolOptionsWithDefines,
 	main: string | undefined
@@ -333,17 +335,6 @@ async function buildProjectWorkerOptions(
 	// of the libraries it depends on expect `require()` to return
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
-	// The runner relies on the new registry's native module semantics and V2
-	// fallback protocol, so override an explicitly configured legacy registry.
-	const legacyModuleRegistryFlagIndex = runnerWorker.compatibilityFlags.indexOf(
-		"legacy_module_registry"
-	);
-	if (legacyModuleRegistryFlagIndex !== -1) {
-		runnerWorker.compatibilityFlags.splice(legacyModuleRegistryFlagIndex, 1);
-	}
-	if (!runnerWorker.compatibilityFlags.includes("new_module_registry")) {
-		runnerWorker.compatibilityFlags.push("new_module_registry");
-	}
 
 	// By default, workerd tracks which request context a promise was created in
 	// and rejects promises that resolve in a different request context. This is a
@@ -417,21 +408,29 @@ async function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags.push("unsafe_module");
 	}
 
-	// Vitest 5's spy package constructs a FinalizationRegistry when imported and
-	// a WeakRef for every mock. Workerd exposes both APIs behind this feature.
-	ensureFeature(
-		runnerWorker.compatibilityFlags,
-		"weak_ref",
-		runnerWorker.compatibilityDate >= "2025-05-05"
-	);
-	// The following Node.js compatibility flags enable features required for
-	// Vitest to work properly.
+	// The following nodejs compat flags enable features required for Vitest to work properly
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_tty_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_fs_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_http_modules");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_perf_hooks_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_v8_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_process_v2");
+
+	const vitestMajorVersion = semverMajor(getVitestVersion(ctx));
+	if (vitestMajorVersion >= 5) {
+		// Vitest 5's spy package constructs a FinalizationRegistry when imported
+		// and a WeakRef for every mock. Workerd gates both APIs behind this flag.
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"weak_ref",
+			runnerWorker.compatibilityDate >= "2025-05-05"
+		);
+	}
+	// The Worker cannot read the host's installed Vitest version, so pass it
+	// explicitly for its runner and coverage setup.
+	runnerWorker.bindings ??= {};
+	runnerWorker.bindings.__VITEST_POOL_WORKERS_VITEST_MAJOR_VERSION =
+		String(vitestMajorVersion);
 
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
@@ -675,6 +674,7 @@ async function buildProjectMiniflareOptions(
 ): Promise<MiniflareOptions> {
 	const moduleFallbackService = getModuleFallbackService(ctx);
 	const [runnerWorker, ...auxiliaryWorkers] = await buildProjectWorkerOptions(
+		ctx,
 		project,
 		customOptions,
 		main
@@ -829,26 +829,12 @@ function getUpstreamVitestVersion(pkgJson: PackageJson): string | undefined {
 	return pkgJson.bundledVersions?.vitest;
 }
 
-export function assertCompatibleVitestVersion(ctx: Vitest) {
-	// Some package managers don't enforce `peerDependencies` requirements,
-	// so add a runtime sanity check to ensure things don't break in strange ways.
-	const poolPkgJson = getPackageJson(__dirname);
+function getVitestVersion(ctx: Vitest): string {
 	const vitestPkgJson = getPackageJson(ctx.distPath);
-	assert(
-		poolPkgJson !== undefined,
-		"Expected to find `package.json` for `@cloudflare/vitest-plugin`"
-	);
 	assert(
 		vitestPkgJson !== undefined,
 		"Expected to find `package.json` for `vitest`"
 	);
-
-	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
-	assert(
-		expectedVitestVersion !== undefined,
-		"Expected to find `@cloudflare/vitest-plugin`'s `vitest` version constraint"
-	);
-
 	const actualVitestVersion =
 		vitestPkgJson.name === "vitest"
 			? vitestPkgJson.version
@@ -857,9 +843,28 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 		actualVitestVersion !== undefined,
 		"Expected to find `vitest`'s version"
 	);
+	return actualVitestVersion;
+}
 
-	// Older Vitest versions are unsupported in this major release.
-	if (semverSatisfies(actualVitestVersion, "<5")) {
+export function assertCompatibleVitestVersion(ctx: Vitest) {
+	// Some package managers don't enforce `peerDependencies` requirements,
+	// so add a runtime sanity check to ensure things don't break in strange ways.
+	const poolPkgJson = getPackageJson(__dirname);
+	assert(
+		poolPkgJson !== undefined,
+		"Expected to find `package.json` for `@cloudflare/vitest-plugin`"
+	);
+
+	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
+	assert(
+		expectedVitestVersion !== undefined,
+		"Expected to find `@cloudflare/vitest-plugin`'s `vitest` version constraint"
+	);
+
+	const actualVitestVersion = getVitestVersion(ctx);
+
+	// Hard error on Vitest v3, which definitely won't work
+	if (semverSatisfies(actualVitestVersion, "3.x")) {
 		const message = `You're running \`vitest@${actualVitestVersion}\`, but this version of \`@cloudflare/vitest-plugin\` only supports \`vitest ${expectedVitestVersion}\`.`;
 		throw new Error(message);
 	}

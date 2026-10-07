@@ -1,7 +1,7 @@
 import dedent from "ts-dedent";
 import { test, vitestConfig } from "./helpers";
 
-test("enables the new module registry fallback protocol", async ({
+test("uses the new module registry fallback protocol", async ({
 	expect,
 	seed,
 	vitestRun,
@@ -10,6 +10,7 @@ test("enables the new module registry fallback protocol", async ({
 		"vitest.config.mts": vitestConfig({
 			miniflare: {
 				compatibilityDate: "2026-08-10",
+				compatibilityFlags: ["new_module_registry"],
 			},
 		}),
 		"dependency.cjs": dedent`
@@ -52,7 +53,7 @@ test("enables the new module registry fallback protocol", async ({
 	expect(await result.exitCode).toBe(0);
 });
 
-test("uses the new fallback protocol when the legacy registry is requested", async ({
+test("keeps using the legacy fallback protocol when explicitly requested", async ({
 	expect,
 	seed,
 	vitestRun,
@@ -64,17 +65,50 @@ test("uses the new fallback protocol when the legacy registry is requested", asy
 				compatibilityFlags: ["legacy_module_registry"],
 			},
 		}),
-		"helper.ts": "export const value = 42;",
+		"dependency.cjs": "exports.value = 42;",
 		"index.test.ts": dedent`
+				import dependency, { value } from "./dependency.cjs";
 				import { it } from "vitest";
 
-				it("uses native module registry semantics", async ({ expect }) => {
-					const helper = await import(import.meta.resolve("./helper.ts"));
-					expect(helper.value).toBe(42);
+				it("uses legacy module registry semantics", ({ expect }) => {
+					expect(dependency.value).toBe(42);
+					expect(value).toBe(42);
 				});
 			`,
 	});
 
 	const result = await vitestRun();
 	expect(await result.exitCode).toBe(0);
+});
+
+test("retains import.meta.url in legacy fallback modules", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			miniflare: {
+				compatibilityDate: "2026-08-10",
+				compatibilityFlags: ["legacy_module_registry"],
+			},
+		}),
+		"node_modules/legacy-meta/package.json": JSON.stringify({
+			name: "legacy-meta",
+			type: "module",
+			exports: "./index.mjs",
+		}),
+		"node_modules/legacy-meta/index.mjs": "export const url = import.meta.url;",
+		"index.test.ts": dedent`
+			import { url } from "legacy-meta";
+			import { it } from "vitest";
+
+			it("provides the fallback module URL", ({ expect }) => {
+				expect(url).toBe(new URL("./node_modules/legacy-meta/index.mjs", import.meta.url).href);
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+	expect(await result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0);
 });

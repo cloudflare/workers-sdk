@@ -12,7 +12,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@fixture/unsafe-external-plugin": "workspace:*",
 		"turbo": "^2.2.3",
-		"vitest": "catalog:vitest5",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

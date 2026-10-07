@@ -46,8 +46,9 @@ async function createTestProject() {
 		devDependencies: {
 			// Ensure we use the local version of vitest-plugin
 			"@cloudflare/vitest-plugin": version,
-			"@vitest/coverage-istanbul": installedVitestVersion,
-			vitest: installedVitestVersion,
+			"@vitest/coverage-istanbul":
+				process.env.VITEST_VERSION ?? installedVitestVersion,
+			vitest: process.env.VITEST_VERSION ?? installedVitestVersion,
 		},
 	};
 	await fs.writeFile(packageJsonPath, JSON.stringify(packageJson));

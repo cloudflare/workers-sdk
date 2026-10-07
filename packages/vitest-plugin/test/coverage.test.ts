@@ -11,7 +11,7 @@ import { test } from "./helpers";
 // module runner architecture which correctly preserves counter objects across
 // module re-evaluations via hash-based reuse in istanbul-lib-instrument.
 test(
-	"istanbul coverage reports correctly (#5825)",
+	"istanbul coverage reports correctly across multiple test files (#5825)",
 	{ timeout: 60_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		await seed({
@@ -33,8 +33,9 @@ test(
 					plugins: [
 						cloudflareTest({
 							miniflare: {
-								compatibilityDate: "2025-12-02",
-								compatibilityFlags: ["nodejs_compat"],
+								// Before weak_ref became the default; Vitest 5 still needs coverage.
+								compatibilityDate: "2025-04-01",
+								compatibilityFlags: ["nodejs_compat", "disable_weak_ref"],
 							},
 							wrangler: {
 								configPath: "./wrangler.jsonc",

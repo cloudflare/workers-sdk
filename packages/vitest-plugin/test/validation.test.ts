@@ -19,6 +19,8 @@ test(
 		});
 		let result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
+		// Vitest 4 includes the config path, while Vitest 5 reports only the
+		// project name. Keep asserting the shared prefix and full diagnostics.
 		expect(result.stderr).toContain(
 			`TypeError: Unexpected options in project ${tmpPathName}`
 		);

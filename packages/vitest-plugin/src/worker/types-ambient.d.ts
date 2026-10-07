@@ -23,6 +23,7 @@ namespace Cloudflare {
 	interface Env extends Record<string, unknown> {
 		__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;
 		__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
+		__VITEST_POOL_WORKERS_VITEST_MAJOR_VERSION: string;
 	}
 	interface GlobalProps {
 		mainModule: typeof import("./index");

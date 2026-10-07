@@ -117,6 +117,8 @@ catalog:
   "@hey-api/openapi-ts": "0.94.0"
   "@types/node": "22.15.17"
 
+  "@vitest/runner": 4.1.0
+  "@vitest/snapshot": 4.1.0
   "@vitest/ui": 4.1.0
   typescript: "5.8.3"
   undici: "7.29.1"
