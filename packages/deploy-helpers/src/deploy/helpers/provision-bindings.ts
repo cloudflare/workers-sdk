@@ -861,6 +861,7 @@ function addBindingToPatch(
 
 type PendingResource = {
 	binding: string;
+	provisioned?: boolean;
 	resourceType:
 		| "kv_namespace"
 		| "d1"
@@ -904,10 +905,13 @@ function writeProvisionedIdsToConfig(
 	let hasChanges = false;
 
 	for (const resource of resources) {
-		const index = getRawConfigBindings(
+		const configBindings = getRawConfigBindings(
 			configEnvironment ?? {},
 			resource.resourceType
-		).findIndex((binding) => binding.binding === resource.binding);
+		);
+		const index = configBindings.findIndex(
+			(binding) => binding.binding === resource.binding
+		);
 		const identifier = resource.handler.getResolvedIdentifier();
 		if (index === -1 || identifier === undefined) {
 			continue;
@@ -915,6 +919,17 @@ function writeProvisionedIdsToConfig(
 
 		const identifierField =
 			resource.resourceType === "queue" ? "queue" : resource.handler.idField;
+		const existingIdentifier = (
+			configBindings[index] as Record<string, unknown>
+		)[identifierField];
+		if (
+			existingIdentifier === identifier ||
+			(!resource.provisioned &&
+				typeof existingIdentifier === "string" &&
+				existingIdentifier.length > 0)
+		) {
+			continue;
+		}
 		addBindingToPatch(
 			patchEnvironment,
 			resource.resourceType,
@@ -1072,6 +1087,7 @@ async function collectPendingResources(
 	bindings: StartDevWorkerInput["bindings"]
 ): Promise<{
 	pendingResources: PendingResource[];
+	resolvedResources: PendingResource[];
 	skippedProvisioning: Map<keyof typeof HANDLERS, Set<string>>;
 }> {
 	let settings: Settings | undefined;
@@ -1083,6 +1099,7 @@ async function collectPendingResources(
 	}
 
 	const pendingResources: PendingResource[] = [];
+	const resolvedResources: PendingResource[] = [];
 	const skippedProvisioning = new Map<keyof typeof HANDLERS, Set<string>>();
 
 	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
@@ -1096,6 +1113,12 @@ async function collectPendingResources(
 			complianceConfig,
 			accountId
 		);
+		const resource: PendingResource = {
+			binding: bindingName,
+			resourceType: binding.type,
+			handler,
+		};
+		const configuredIdentifier = handler.getResolvedIdentifier();
 
 		let shouldProvision;
 		try {
@@ -1111,15 +1134,17 @@ async function collectPendingResources(
 		}
 
 		if (shouldProvision) {
-			pendingResources.push({
-				binding: bindingName,
-				resourceType: binding.type,
-				handler,
-			});
+			pendingResources.push(resource);
+		} else if (
+			configuredIdentifier === undefined &&
+			handler.getResolvedIdentifier() !== undefined
+		) {
+			resolvedResources.push(resource);
 		}
 	}
 
 	return {
+		resolvedResources,
 		pendingResources: pendingResources.sort(
 			(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
 		),
@@ -1138,7 +1163,7 @@ export async function provisionBindings(
 	}
 ): Promise<ProvisionBindingsResult> {
 	const configPath = config.userConfigPath ?? config.configPath;
-	const { pendingResources, skippedProvisioning } =
+	const { pendingResources, resolvedResources, skippedProvisioning } =
 		await collectPendingResources(config, accountId, scriptName, bindings);
 
 	if (pendingResources.length > 0) {
@@ -1167,7 +1192,6 @@ export async function provisionBindings(
 		logger.log();
 
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
-		const provisionedResources: PendingResource[] = [];
 
 		for (const resource of pendingResources) {
 			try {
@@ -1195,7 +1219,8 @@ export async function provisionBindings(
 				scriptName,
 				autoCreate
 			);
-			provisionedResources.push(resource);
+			resource.provisioned = true;
+			resolvedResources.push(resource);
 		}
 
 		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
@@ -1218,16 +1243,9 @@ export async function provisionBindings(
 			);
 		} else if (!isNonInteractiveOrCI()) {
 			try {
-				if (
-					config.userConfigPath &&
-					config.userConfigPath !== config.configPath
-				) {
-					assert(config.configPath);
-					writeProvisionedIdsToConfig(config.configPath, provisionedResources);
-				}
 				writeProvisionedIdsToConfig(
 					configPath,
-					provisionedResources,
+					resolvedResources,
 					config.targetEnvironment
 				);
 				logger.log(
@@ -1237,6 +1255,19 @@ export async function provisionBindings(
 				// no-op — if the user is using TOML config we can't update it.
 				if (!(e instanceof PatchConfigError)) {
 					throw e;
+				}
+			}
+			if (
+				config.userConfigPath &&
+				config.userConfigPath !== config.configPath
+			) {
+				assert(config.configPath);
+				try {
+					writeProvisionedIdsToConfig(config.configPath, resolvedResources);
+				} catch (error) {
+					if (!(error instanceof PatchConfigError)) {
+						logger.warn(`Could not update the generated config: ${error}`);
+					}
 				}
 			}
 		}
