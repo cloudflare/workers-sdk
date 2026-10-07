@@ -15,7 +15,19 @@ For a Wrangler project, add an Artifacts binding to `wrangler.jsonc`:
 }
 ```
 
-Run the repository's Wrangler (`pnpm exec wrangler dev`) to develop locally. With `@cloudflare/vite-plugin`, use the same Wrangler config with `cloudflare()` in your Vite config and start the Vite dev server. In Workers Vitest, point `cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })` at this config. These paths share the Miniflare implementation. To force local behavior explicitly, add `"remote": false` to the binding. The absence of `remote` is also local; this differs from older development behavior that implicitly used a remote Artifacts resource. Do not rely on production repositories being available locally.
+To try this unreleased feature from the Workers SDK checkout, install its dependencies and build Miniflare and Wrangler, then start the checkout's CLI from the app directory:
+
+```sh
+# From the workers-sdk root:
+pnpm install --frozen-lockfile
+pnpm --filter miniflare build
+pnpm --filter wrangler build
+
+# From your app directory, using the absolute path to this checkout:
+node /path/to/workers-sdk/packages/wrangler/bin/wrangler.js dev --port=0 --inspector-port=0
+```
+
+Open the URL on Wrangler's `Ready on` line. With `@cloudflare/vite-plugin`, use the same Wrangler config with `cloudflare()` in your Vite config and start the Vite dev server. In Workers Vitest, point `cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })` at this config. These paths share the Miniflare implementation. To force local behavior explicitly, add `"remote": false` to the binding. The absence of `remote` is also local; this differs from older development behavior that implicitly used a remote Artifacts resource. Do not rely on production repositories being available locally.
 
 A Worker can create and inspect a local repository:
 
@@ -27,10 +39,11 @@ const info = await repo.info();
 // created.remote is a loopback HTTP Git URL; created.token is a secret.
 ```
 
-To use Git smart HTTP, use the returned `remote` URL and a repository token. For example, in a local shell, prompt for a token rather than storing it in source or a Git remote URL:
+To use Git smart HTTP, use the returned `remote` URL and a repository token. If `git clone` prompts for a username and password, enter any username (for example, `git`) and use `created.token` as the password. This is an Artifacts repository token, **not** a GitHub or Cloudflare account password. A configured Git credential helper may remember a password entered at the prompt. To avoid that, supply a bearer token for one Git command without storing it in source or in a Git remote URL:
 
 ```sh
-read -s REPO_TOKEN
+read -s REPO_TOKEN # Paste the token returned by create(); input is hidden.
+printf '\n'
 # Replace the URL with the `remote` value returned by create() or info().
 GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraHeader \
   GIT_CONFIG_VALUE_0="Authorization: Bearer $REPO_TOKEN" \
@@ -38,7 +51,7 @@ GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraHeader \
 unset REPO_TOKEN
 ```
 
-After pushing `hello.txt` to `main`, read it in the Worker with `await repo.readFile({ ref: "main", path: "hello.txt" })` (a `Blob`, or `null` when absent). The initial create token permits writes; use `repo.createToken("read")` when only reading is needed, and revoke tokens that are no longer needed. Avoid printing tokens or committing them to config. A plain request without a token cannot clone a private local repository. Git's URL uses an ephemeral loopback port; obtain the current URL after restarting the dev server instead of hardcoding it.
+After pushing `hello.txt` to `main`, read it in the Worker with `await repo.readFile({ ref: "main", path: "hello.txt" })` (a `Blob`, or `null` when absent). The initial create token permits writes. Its plaintext is returned only once; if you lose it, use `repo.createToken("read")` for cloning or `repo.createToken("write")` for pushing and save the returned `plaintext` securely. Revoke tokens that are no longer needed. Avoid printing tokens or committing them to config. A plain request without a token cannot clone a private local repository. Git's URL uses an ephemeral loopback port; obtain the current URL after restarting the dev server instead of hardcoding it.
 
 ## Storage and network boundaries
 
@@ -46,12 +59,13 @@ Local repositories and metadata persist under the dev tool's Miniflare resource 
 
 To reset local state, stop the dev server first, back up any repositories you need, then delete the `artifacts/` directory inside that dev tool's resource persistence path. Older draft persisted Artifacts layouts are not automatically migrated and may require this backup-and-reset procedure. Do not delete unrelated binding data in the same persistence directory.
 
-A local binding does not contact Cloudflare for repository operations. **Explicit imports from HTTPS Git sources are different:** they make outbound network requests to the supplied host, can require authentication, and may fail due to TLS certificates, connectivity, or upstream Git permissions. For a private Git CA, set `GIT_SSL_CAINFO` to the trusted CA file in the dev tool's host environment before starting the dev server. Do not disable certificate verification. URL credentials are used only during import; the local repository metadata and Git config omit them. Treat the import URL as a secret while calling `import()` and avoid logging it. Avoid importing untrusted or private URLs in examples or tests. No remote resources are contacted by the local-only examples above.
+A local binding does not contact Cloudflare for repository operations. **Explicit imports from HTTPS Git sources are different:** they make outbound network requests to the supplied host, can require authentication, and may fail due to TLS certificates, connectivity, or upstream Git permissions. For a private Git CA, set `GIT_SSL_CAINFO` to the trusted CA file in the dev tool's host environment before starting the dev server. Do not disable certificate verification. After a successful import, URL credentials are omitted from the local repository metadata and Git config. In-flight process-crash recovery is not yet validated; treat partial local storage after an interrupted import as sensitive if the URL contained credentials. Treat the import URL as a secret while calling `import()` and avoid logging it. Avoid importing untrusted or private URLs in examples or tests. No remote resources are contacted by the local-only examples above.
 
 ## Troubleshooting and limits
 
 - If startup reports Git missing, install Git and restart the tool with `git` available on PATH.
 - If startup rejects an older storage layout, back it up and reset only the Artifacts persistence directory; a restart alone will not convert it.
-- If Git reports unauthorized, use a valid token for this repository and the requested read/write operation; an expired or revoked token will not work.
+- If Git asks for a username and password, use any username and the repository token as the password. If Git reports unauthorized, check the repository, scope, expiry, and revocation; do not use a Cloudflare or GitHub account password.
+- If startup reports `Address already in use`, the dev or inspector port may be occupied. Pass `--port=0 --inspector-port=0` and use the printed `Ready on` URL.
 - If a Git URL stops responding after restart, get the new `remote` from the binding; the loopback listener is tied to the dev process.
-- Local development is not a replica of production placement or infrastructure. The local Git endpoint is HTTP on loopback only, and local state and tokens do not transfer to a remote namespace. Windows behavior is not validated here.
+- Local development is not a replica of production placement or infrastructure. The local Git endpoint is HTTP on loopback only, and local state and tokens do not transfer to a remote namespace. Miniflare Artifacts, Wrangler dev, and Vite local fixtures have passed Windows CI; Workers Vitest's Artifacts fixture has not been verified on Windows.
