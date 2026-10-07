@@ -1,5 +1,65 @@
 # @cloudflare/deploy-helpers
 
+## 0.20.0
+
+### Minor Changes
+
+- [#15998](https://github.com/cloudflare/workers-sdk/pull/15998) [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `assets.base_path` support to Workers Assets
+
+  Serve an asset directory from a public URL prefix without changing its on-disk layout:
+
+  ```jsonc
+  {
+    "assets": {
+      "directory": "./public",
+      "base_path": "/docs"
+    }
+  }
+  ```
+
+  Wrangler, preview, Miniflare, and generated build configuration preserve the explicitly selected value, while the Asset Worker normalizes it and strips the prefix only for asset lookup. Requests passed to a user Worker, request-facing headers, and redirects retain the public path. Relative pathname inputs are interpreted as root-relative prefixes, URL-shaped values are rejected, and omitting the option preserves existing root-path behavior.
+
+  Authored `_headers` and `_redirects` rules continue to match full public paths. In particular, both the source and destination of an authored `200` asset rewrite must include the configured public prefix; Asset Worker-generated redirects are prefixed automatically.
+
+### Patch Changes
+
+- [#16069](https://github.com/cloudflare/workers-sdk/pull/16069) [`425662b`](https://github.com/cloudflare/workers-sdk/commit/425662b141a058d403bb8d14493e5417140aeaa0) Thanks [@Pitchfork-and-Torch](https://github.com/Pitchfork-and-Torch)! - fix: infer Preview/git branch names from unborn repositories
+
+  `getBranchName()` previously used `git rev-parse --abbrev-ref HEAD`, which fails (and can leak stderr) before the first commit, and returns the literal `HEAD` on detached checkouts. It now uses `git branch --show-current` with stderr suppressed so unborn branches resolve and detached checkouts return no inferred name.
+
+  Preview commit ref, commit message, and the CI repository URL git fallback swallow stderr the same way, so an unborn repository does not print Git fatal errors.
+
+  Refs: cloudflare/cf#24
+
+- Updated dependencies [[`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65), [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`0ec13b7`](https://github.com/cloudflare/workers-sdk/commit/0ec13b72461b989d1614acd784df50c44891480e), [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef), [`c492d63`](https://github.com/cloudflare/workers-sdk/commit/c492d6312152cedbf93f0b5bbcadcab5e01af9e7), [`ba52118`](https://github.com/cloudflare/workers-sdk/commit/ba521182d895d32f691ee2320a7f5524a6566a51), [`946aaa7`](https://github.com/cloudflare/workers-sdk/commit/946aaa7e25dd2b686b08876da8e7aa9178e8e3fa), [`48f3c04`](https://github.com/cloudflare/workers-sdk/commit/48f3c04dceccb3fac88798918f8890e094173a18), [`5606a74`](https://github.com/cloudflare/workers-sdk/commit/5606a7416921f57735add524f6b6b68368deab25), [`f8cdcb9`](https://github.com/cloudflare/workers-sdk/commit/f8cdcb920fc44daf7bf4ef9cb1dce751313ac2bd), [`e44cf6b`](https://github.com/cloudflare/workers-sdk/commit/e44cf6b6c186f69afa5778b9ff38f5156b0061b9), [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f), [`0b51fec`](https://github.com/cloudflare/workers-sdk/commit/0b51fec333589b3c039596f981907951617132bb)]:
+  - @cloudflare/config@0.24.0
+  - @cloudflare/workers-utils@0.47.0
+  - miniflare@5.20261006.0-alpha
+  - @cloudflare/containers-shared@0.21.4
+  - @cloudflare/cli-shared-helpers@0.2.4
+
+## 0.19.2
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/config@0.23.0
+  - @cloudflare/workers-utils@0.46.0
+  - @cloudflare/containers-shared@0.21.3
+  - miniflare@5.20261001.0-alpha
+  - @cloudflare/cli-shared-helpers@0.2.3
+
+## 0.19.1
+
+### Patch Changes
+
+- Updated dependencies [[`b00ef4f`](https://github.com/cloudflare/workers-sdk/commit/b00ef4fd16f071f33ae9095128373167f0b5892e), [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580), [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f), [`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44)]:
+  - miniflare@5.20261001.0-alpha
+  - @cloudflare/workers-utils@0.45.1
+  - @cloudflare/cli-shared-helpers@0.2.2
+  - @cloudflare/config@0.22.0
+  - @cloudflare/containers-shared@0.21.2
+
 ## 0.19.0
 
 ### Minor Changes

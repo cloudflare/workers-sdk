@@ -135,6 +135,14 @@ export class ProxyClient {
 		this.#envProxy = undefined;
 	}
 
+	/**
+	 * Resolves once synchronous proxy calls can be served without blocking the
+	 * main thread on worker startup.
+	 */
+	warm(): Promise<void> {
+		return this.#bridge.sync.warm();
+	}
+
 	setRuntimeEntryURL(runtimeEntryURL: URL) {
 		// This function will be called whenever the runtime restarts. The URL may
 		// be different if the port has changed.

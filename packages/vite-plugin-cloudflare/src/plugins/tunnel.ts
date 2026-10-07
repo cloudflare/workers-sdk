@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
@@ -17,7 +18,7 @@ function createPublicExposureWarning(
 ) {
 	const intro =
 		name === undefined
-			? colors.dim("Once connected, this tunnel will be ") +
+			? colors.dim("Once connected, this tunnel may be ") +
 				"publicly accessible" +
 				colors.dim(". Anyone who can reach it can:")
 			: colors.dim(
@@ -68,11 +69,18 @@ export const QUICK_TUNNEL_SSE_WARNING =
 
 export const QUICK_TUNNEL_ALLOWED_HOST = ".trycloudflare.com";
 
+function normalizeAllowedMail(
+	allowedMail: string[] | undefined
+): string[] | undefined {
+	return allowedMail?.length ? allowedMail : undefined;
+}
+
 export class TunnelManager {
 	#logger: vite.Logger;
 	#origin?: string;
 	#publicUrls?: string[];
 	#requestedTunnel?: string | undefined;
+	#requestedAllowedMail?: string[];
 	#tunnel?: Tunnel;
 	#abortController?: AbortController;
 	#hasWarnedAboutSse = false;
@@ -81,8 +89,19 @@ export class TunnelManager {
 		this.#logger = logger;
 	}
 
-	isStarted(origin: string, name: string | undefined): boolean {
-		return this.#origin === origin && this.#requestedTunnel === name;
+	isStarted(
+		origin: string,
+		name: string | undefined,
+		allowedMail: string[] | undefined
+	): boolean {
+		return (
+			this.#origin === origin &&
+			this.#requestedTunnel === name &&
+			isDeepStrictEqual(
+				this.#requestedAllowedMail,
+				normalizeAllowedMail(allowedMail)
+			)
+		);
 	}
 
 	isOpen(): boolean {
@@ -105,6 +124,7 @@ export class TunnelManager {
 	async startTunnel(options: {
 		origin: string;
 		name: string | undefined;
+		allowedMail: string[] | undefined;
 		mode: "dev" | "preview";
 		shortcutPressed?: boolean;
 		allowedHosts: true | string[] | undefined;
@@ -113,6 +133,7 @@ export class TunnelManager {
 		profileDir: string;
 	}): Promise<string[] | null> {
 		const abortController = new AbortController();
+		const allowedMail = normalizeAllowedMail(options.allowedMail);
 		try {
 			const previousTunnel = this.#tunnel;
 
@@ -123,6 +144,7 @@ export class TunnelManager {
 			this.#abortController = abortController;
 			this.#origin = options.origin;
 			this.#requestedTunnel = options.name;
+			this.#requestedAllowedMail = allowedMail ? [...allowedMail] : undefined;
 			this.#logger.info(
 				colors.dim("\n  ➜  Starting tunnel (usually takes a few seconds)...\n")
 			);
@@ -204,6 +226,7 @@ export class TunnelManager {
 			const tunnel = startTunnel({
 				origin: new URL(options.origin),
 				token: namedTunnel?.token,
+				allowedMail,
 				extendHint: "Press a + enter to extend by 1 hour.",
 				logger: {
 					log: (message) => this.#logger.info(message),
@@ -290,6 +313,7 @@ export class TunnelManager {
 		this.#origin = undefined;
 		this.#publicUrls = undefined;
 		this.#requestedTunnel = undefined;
+		this.#requestedAllowedMail = undefined;
 		this.#tunnel = undefined;
 		this.#hasWarnedAboutSse = false;
 
@@ -447,7 +471,7 @@ export async function setupDevTunnel(
 	const origin = await resolveDevTunnelOrigin(server);
 	const tunnel = ctx.resolvedPluginConfig.tunnel;
 
-	if (manager.isStarted(origin, tunnel.name)) {
+	if (manager.isStarted(origin, tunnel.name, tunnel.allowedMail)) {
 		debuglog("Tunnel is already started on", origin);
 		return;
 	}
@@ -457,6 +481,7 @@ export async function setupDevTunnel(
 		origin,
 		shortcutPressed,
 		name: tunnel.name,
+		allowedMail: tunnel.allowedMail,
 		accountId: ctx.resolvedPluginConfig.settings.accountId,
 		complianceRegion: toApiComplianceRegion(
 			ctx.resolvedPluginConfig.settings.complianceRegion
@@ -521,7 +546,7 @@ export async function setupPreviewTunnel(
 	const tunnel = ctx.resolvedPluginConfig.tunnel;
 	const origin = resolvedOrigin.toString();
 
-	if (manager.isStarted(origin, tunnel.name)) {
+	if (manager.isStarted(origin, tunnel.name, tunnel.allowedMail)) {
 		debuglog("Tunnel is already started on", origin);
 		return;
 	}
@@ -531,6 +556,7 @@ export async function setupPreviewTunnel(
 		origin,
 		shortcutPressed,
 		name: tunnel.name,
+		allowedMail: tunnel.allowedMail,
 		allowedHosts: preview?.allowedHosts,
 		accountId: ctx.resolvedPluginConfig.settings.accountId,
 		complianceRegion: toApiComplianceRegion(

@@ -1,10 +1,8 @@
 /**
  * Converts one invocation's workerd tail events into the spans and logs the
- * store keeps. Spans are written as they happen: a span is created when it starts
- * (with no duration yet), its attributes are added as they arrive, and it is
- * finished when it closes. This way long-running work (agents, waits, streamed
- * responses) shows up while it is still running, not only once the invocation
- * ends.
+ * store keeps. Open spans and streaming attributes remain in this invocation's
+ * handler. Each completed snapshot is submitted to the collector-wide bounded
+ * persistence batch as soon as the span closes.
  *
  * There is no OpenTelemetry layer in between. Following the OTLP format would only
  * matter for sending traces to a real backend, but here the same process both
@@ -13,36 +11,8 @@
  * `cloudflare.outcome`, `cpu_time_ms`, …) and skip the SDK and wire format. The
  * URLs and headers belong to the developer, so nothing is redacted.
  */
-import type { LogInput, SpanInput } from "./trace-store";
-
-/** The write-through subset of the TraceStore the handler drives (the DO stub
- * satisfies this; RPC methods resolve to promises). */
-interface BatchStore {
-	persist(spans: SpanInput[], logs: LogInput[]): void | Promise<void>;
-}
-
-/**
- * Rows buffered before a flush. Every tail event used to be its own Durable
- * Object call, so a request cost two or three round-trips per span — which on a
- * module-heavy app under the Vite plugin dominated request latency. Batching
- * turns that into one call per flush.
- */
-const FLUSH_THRESHOLD = 16;
-
-/**
- * Once this much time has passed, the next event flushes. Keeps a long-running
- * invocation (an agent waiting on a model, a streamed response) visible while it
- * runs, without costing a short request anything — a few-millisecond request
- * never reaches it.
- *
- * Time comes from tail-event timestamps, not `Date.now()`, which a Worker only
- * advances on I/O. So this bounds staleness *between events*, not in wall-clock
- * time: an invocation that goes completely quiet flushes nothing further until
- * its outcome. Logs and exceptions are written as they arrive, so a quiet
- * invocation can still report what it's doing; a closing span is buffered like
- * any other row, so its duration can trail the close event by one flush.
- */
-const FLUSH_INTERVAL_MS = 100;
+import type { LogInput, SpanInput } from "./trace-types";
+import type { BatchStore, TraceWriter, TraceWriterOwner } from "./trace-writer";
 
 /** A tail event's `timestamp` is a `Date` (or ms number); normalise to epoch ms. */
 function toMs(timestamp: Date | number): number {
@@ -183,8 +153,8 @@ function isErrorOutcome(outcome: TailStream.EventOutcome): boolean {
 
 /**
  * Per-span bookkeeping kept between events so we can compute a duration and fold
- * in error info when the span closes. Attributes are written straight through to
- * the store (not buffered here), so this holds only what `closeSpan` needs.
+ * in error info when the span closes. The full row, including streamed
+ * attributes, remains invocation-local until then.
  */
 interface PendingSpan {
 	traceId: string;
@@ -197,10 +167,8 @@ interface PendingSpan {
 }
 
 /**
- * Handles the tail events for a single invocation. Rows are buffered and written
- * in batches — once at the end, and early whenever a burst crosses
- * `FLUSH_THRESHOLD` so a long-running invocation still shows up while it runs.
- * Everything outstanding is awaited when the invocation ends, so no write is lost.
+ * Handles the tail events for a single invocation. The collector-wide writer
+ * batches completed rows, bounds pending persistence, and serialises store RPCs.
  */
 export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	#spans = new Map<string, PendingSpan>();
@@ -208,27 +176,23 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	#traceId: string | null = null;
 	#startMs: number | null = null;
 	#invocationBody: string | null = null;
-	#writes: Promise<unknown>[] = [];
 	#rows = new Map<string, SpanInput>();
-	#dirty = new Set<string>();
-	#logs: LogInput[] = [];
-	#latestEventMs = 0;
-	#lastFlushMs = 0;
+	#owner: TraceWriterOwner;
 
 	constructor(
-		private readonly store: BatchStore,
+		private readonly writer: TraceWriter,
+		store: BatchStore,
 		onset: TailStream.TailEvent<TailStream.Onset>,
 		/** Owning worker name (from miniflare core), for multi-worker attribution. */
 		private readonly worker?: string
 	) {
+		this.#owner = this.writer.createOwner(store);
 		const { traceId, spanId, parentId } = ids(onset);
 		if (!spanId) {
 			return;
 		}
-		this.#rootSpanId = spanId;
 		this.#traceId = traceId;
 		this.#startMs = toMs(onset.timestamp);
-		this.#latestEventMs = this.#startMs;
 
 		const { name, attributes: triggerAttributes } = describeTrigger(
 			onset.event.info
@@ -253,7 +217,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			onset.event.info.type === "fetch"
 				? `${onset.event.info.method} ${onset.event.info.url}`
 				: name;
-		this.#spans.set(spanId, {
+		const pending: PendingSpan = {
 			traceId,
 			startMs: this.#startMs,
 			name,
@@ -261,7 +225,8 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			error: null,
 			errored: false,
 			closed: false,
-		});
+		};
+		this.#spans.set(spanId, pending);
 		this.#open({
 			traceId,
 			spanId,
@@ -278,19 +243,16 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			error: null,
 			attributes,
 		});
-		// Write the root immediately so an invocation is visible in the trace list
-		// while it's still running; everything under it is batched.
-		this.#flush();
+		this.#rootSpanId = spanId;
 	}
 
 	spanOpen(event: TailStream.TailEvent<TailStream.SpanOpen>) {
-		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId, parentId } = ids(event);
 		if (!spanId) {
 			return;
 		}
 		const startMs = toMs(event.timestamp);
-		this.#spans.set(spanId, {
+		const pending: PendingSpan = {
 			traceId,
 			startMs,
 			name: event.event.name,
@@ -298,7 +260,8 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			error: null,
 			errored: false,
 			closed: false,
-		});
+		};
+		this.#spans.set(spanId, pending);
 		this.#open({
 			traceId,
 			spanId,
@@ -315,7 +278,6 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	spanClose(event: TailStream.TailEvent<TailStream.SpanClose>) {
-		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		const pending = spanId ? this.#spans.get(spanId) : undefined;
 		if (spanId && pending) {
@@ -331,7 +293,6 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	attributes(event: TailStream.TailEvent<TailStream.Attributes>) {
-		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		if (!spanId || !this.#spans.has(spanId)) {
 			return;
@@ -346,7 +307,6 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	return(event: TailStream.TailEvent<TailStream.Return>) {
-		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		const pending = spanId ? this.#spans.get(spanId) : undefined;
 		if (spanId && pending && event.event.info?.type === "fetch") {
@@ -357,7 +317,6 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	log(event: TailStream.TailEvent<TailStream.Log>) {
-		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		// `console.log` surfaces as level "log"; fold into "info" so the stored set
 		// stays {debug, info, warn, error}.
@@ -373,7 +332,6 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	exception(event: TailStream.TailEvent<TailStream.Exception>) {
-		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		const pending = spanId ? this.#spans.get(spanId) : undefined;
 		const type = event.event.name || "Error";
@@ -400,11 +358,11 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 
 	async outcome(event: TailStream.TailEvent<TailStream.Outcome>) {
 		const endMs = toMs(event.timestamp);
-		this.#latestEventMs = endMs;
 		const traceId = this.#traceId ?? event.spanContext.traceId;
 		const root = this.#rootSpanId
 			? this.#spans.get(this.#rootSpanId)
 			: undefined;
+		let rootAccepted = false;
 		if (root && this.#rootSpanId) {
 			if (isErrorOutcome(event.event.outcome)) {
 				root.errored = true;
@@ -412,7 +370,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			root.outcome = event.event.outcome;
 			// The root closes with the invocation: fold in the final outcome and
 			// resource attributes at the same time.
-			this.#close(traceId, this.#rootSpanId, root, endMs, {
+			rootAccepted = this.#close(traceId, this.#rootSpanId, root, endMs, {
 				"cloudflare.outcome": event.event.outcome,
 				cpu_time_ms: event.event.cpuTime,
 				wall_time_ms: event.event.wallTime,
@@ -430,7 +388,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		if (this.#rootSpanId && this.#invocationBody !== null) {
 			this.#append({
 				traceId,
-				spanId: this.#rootSpanId,
+				spanId: rootAccepted ? this.#rootSpanId : null,
 				tsMs: this.#startMs ?? endMs,
 				level: root?.errored ? "error" : "info",
 				message: serialize(this.#invocationBody),
@@ -438,15 +396,12 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			});
 		}
 
-		this.#flush();
-		await Promise.all(this.#writes);
+		await this.writer.drain(this.#owner);
 	}
 
-	#open(input: SpanInput) {
+	#open(input: SpanInput): void {
 		const key = rowKey(input.traceId, input.spanId);
 		this.#rows.set(key, input);
-		this.#dirty.add(key);
-		this.#maybeFlush();
 	}
 
 	/** Fold attributes into a buffered row, so merging costs no round-trip. */
@@ -457,50 +412,10 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			return;
 		}
 		row.attributes = { ...(row.attributes ?? {}), ...attributes };
-		this.#dirty.add(key);
-		this.#maybeFlush();
 	}
 
 	#append(log: LogInput) {
-		this.#logs.push(log);
-		this.#flush();
-	}
-
-	#maybeFlush() {
-		const buffered = this.#dirty.size + this.#logs.length;
-		if (buffered === 0) {
-			return;
-		}
-		if (
-			buffered >= FLUSH_THRESHOLD ||
-			this.#latestEventMs - this.#lastFlushMs >= FLUSH_INTERVAL_MS
-		) {
-			this.#flush();
-		}
-	}
-
-	/**
-	 * Write everything buffered since the last flush. Rows stay in the map after
-	 * flushing so a later close still carries the whole row — `persist` upserts,
-	 * so re-sending a row is safe.
-	 */
-	#flush() {
-		if (this.#dirty.size === 0 && this.#logs.length === 0) {
-			return;
-		}
-		const spans: SpanInput[] = [];
-		for (const key of this.#dirty) {
-			const row = this.#rows.get(key);
-			if (!row) {
-				continue;
-			}
-			spans.push(row);
-		}
-		const logs = this.#logs;
-		this.#dirty.clear();
-		this.#logs = [];
-		this.#lastFlushMs = this.#latestEventMs;
-		this.#track(this.store.persist(spans, logs));
+		this.writer.enqueueLog(this.#owner, log);
 	}
 
 	/** Finish a span, setting its duration and outcome and adding any final
@@ -511,15 +426,15 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		pending: PendingSpan,
 		endMs: number,
 		attributes: Record<string, unknown> | null
-	) {
+	): boolean {
 		if (pending.closed) {
-			return;
+			return true;
 		}
 		pending.closed = true;
 		const key = rowKey(traceId, spanId);
 		const row = this.#rows.get(key);
 		if (!row) {
-			return;
+			return false;
 		}
 		row.durationMs = Math.max(0, endMs - pending.startMs);
 		row.outcome = pending.outcome ?? (pending.errored ? "error" : "ok");
@@ -527,13 +442,10 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		if (attributes) {
 			row.attributes = { ...(row.attributes ?? {}), ...attributes };
 		}
-		this.#dirty.add(key);
-		this.#maybeFlush();
-	}
-
-	/** Track an in-flight store write so `outcome` can await completion. */
-	#track(result: void | Promise<unknown>) {
-		this.#writes.push(Promise.resolve(result));
+		const accepted = this.writer.enqueueCompletedSpan(this.#owner, row);
+		this.#rows.delete(key);
+		this.#spans.delete(spanId);
+		return accepted;
 	}
 }
 

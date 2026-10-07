@@ -302,7 +302,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 			"ENAM" | "WNAM" | "EEUR" | "WEUR" | "APAC" | "SAM" | "ME" | "OC" | "AFR"
 		>;
 		/** Restrict Containers to compliance boundaries. */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 	};
 
 	rollout?: {
@@ -426,6 +426,11 @@ export interface WorkerConfig {
 
 		/** How to handle requests that do not match an asset. */
 		notFoundHandling?: "single-page-application" | "404-page" | "none";
+
+		/**
+		 * The public URL prefix under which the application is served.
+		 */
+		basePath?: string;
 
 		/**
 		 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.

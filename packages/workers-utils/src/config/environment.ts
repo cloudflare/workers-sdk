@@ -341,7 +341,7 @@ export type ContainerApp = {
 		/**
 		 * Restrict containers to compliance boundaries.
 		 */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 		/**
 		 * @hidden
 		 */
@@ -1982,6 +1982,10 @@ export type Assets = {
 		| "none";
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	/**
+	 * The public URL prefix under which the application is served, e.g. `/subpath/`.
+	 */
+	base_path?: string;
 	/**
 	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
 	 *

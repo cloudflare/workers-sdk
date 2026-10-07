@@ -1,5 +1,35 @@
 # @cloudflare/vite-plugin
 
+## 1.63.0
+
+### Minor Changes
+
+- [#16030](https://github.com/cloudflare/workers-sdk/pull/16030) [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f) Thanks [@edmundhung](https://github.com/edmundhung)! - Add email-protected Quick Tunnels to the Cloudflare Vite plugin
+
+  Set `tunnel.allowedMail` to a list of email addresses or domain patterns to require email authentication when exposing a Vite development or preview server through a Quick Tunnel.
+
+### Patch Changes
+
+- Updated dependencies [[`b4e1299`](https://github.com/cloudflare/workers-sdk/commit/b4e12992ae9d74bc27cc70869384855fdde1ea6c), [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`0ec13b7`](https://github.com/cloudflare/workers-sdk/commit/0ec13b72461b989d1614acd784df50c44891480e), [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef), [`c492d63`](https://github.com/cloudflare/workers-sdk/commit/c492d6312152cedbf93f0b5bbcadcab5e01af9e7), [`ba52118`](https://github.com/cloudflare/workers-sdk/commit/ba521182d895d32f691ee2320a7f5524a6566a51), [`946aaa7`](https://github.com/cloudflare/workers-sdk/commit/946aaa7e25dd2b686b08876da8e7aa9178e8e3fa), [`48f3c04`](https://github.com/cloudflare/workers-sdk/commit/48f3c04dceccb3fac88798918f8890e094173a18), [`14f0339`](https://github.com/cloudflare/workers-sdk/commit/14f03399c282d8a13ce3790618a9779155f25b20), [`5606a74`](https://github.com/cloudflare/workers-sdk/commit/5606a7416921f57735add524f6b6b68368deab25), [`4d308f6`](https://github.com/cloudflare/workers-sdk/commit/4d308f6ad7b7af57ff6bcaac51a2d96500f28836), [`f8cdcb9`](https://github.com/cloudflare/workers-sdk/commit/f8cdcb920fc44daf7bf4ef9cb1dce751313ac2bd), [`e44cf6b`](https://github.com/cloudflare/workers-sdk/commit/e44cf6b6c186f69afa5778b9ff38f5156b0061b9), [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f), [`42c7219`](https://github.com/cloudflare/workers-sdk/commit/42c721938f9b003281f9c1cb67b9a829e054b26f), [`2dde890`](https://github.com/cloudflare/workers-sdk/commit/2dde8907fd4d944d7a1863a8fd9b175ca32e2d74), [`26e03e2`](https://github.com/cloudflare/workers-sdk/commit/26e03e2560fcc4b6aaa7f843d19ab1feb645fff1), [`2dde890`](https://github.com/cloudflare/workers-sdk/commit/2dde8907fd4d944d7a1863a8fd9b175ca32e2d74), [`0b51fec`](https://github.com/cloudflare/workers-sdk/commit/0b51fec333589b3c039596f981907951617132bb)]:
+  - wrangler@4.148.0
+  - miniflare@5.20261006.0-alpha
+
+## 1.62.5
+
+### Patch Changes
+
+- Updated dependencies [[`7f700ef`](https://github.com/cloudflare/workers-sdk/commit/7f700ef52c47127c67f20137a03c051d26a0c8e5), [`90e6a1b`](https://github.com/cloudflare/workers-sdk/commit/90e6a1be8c67c0687a6a0ce51c9d101c9ad363e0), [`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4), [`6a4b0fe`](https://github.com/cloudflare/workers-sdk/commit/6a4b0fefa20ef2ffc52acdcf1cb194210d1b4c4b)]:
+  - wrangler@4.147.0
+  - miniflare@5.20261001.0-alpha
+
+## 1.62.4
+
+### Patch Changes
+
+- Updated dependencies [[`b8e7cc3`](https://github.com/cloudflare/workers-sdk/commit/b8e7cc3af4137d1dd4fe4ec6684d0f09d5f9c708), [`b00ef4f`](https://github.com/cloudflare/workers-sdk/commit/b00ef4fd16f071f33ae9095128373167f0b5892e), [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580), [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f), [`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44), [`efd67e6`](https://github.com/cloudflare/workers-sdk/commit/efd67e69e8ca2951dbb5426923428a6193a38648)]:
+  - wrangler@4.146.0
+  - miniflare@5.20261001.0-alpha
+
 ## 1.62.3
 
 ### Patch Changes

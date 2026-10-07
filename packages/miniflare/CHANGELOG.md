@@ -1,5 +1,103 @@
 # miniflare
 
+## 5.20261006.0-alpha
+
+### Minor Changes
+
+- [#15998](https://github.com/cloudflare/workers-sdk/pull/15998) [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `assets.base_path` support to Workers Assets
+
+  Serve an asset directory from a public URL prefix without changing its on-disk layout:
+
+  ```jsonc
+  {
+    "assets": {
+      "directory": "./public",
+      "base_path": "/docs"
+    }
+  }
+  ```
+
+  Wrangler, preview, Miniflare, and generated build configuration preserve the explicitly selected value, while the Asset Worker normalizes it and strips the prefix only for asset lookup. Requests passed to a user Worker, request-facing headers, and redirects retain the public path. Relative pathname inputs are interpreted as root-relative prefixes, URL-shaped values are rejected, and omitting the option preserves existing root-path behavior.
+
+  Authored `_headers` and `_redirects` rules continue to match full public paths. In particular, both the source and destination of an authored `200` asset rewrite must include the configured public prefix; Asset Worker-generated redirects are prefixed automatically.
+
+- [#15330](https://github.com/cloudflare/workers-sdk/pull/15330) [`f8cdcb9`](https://github.com/cloudflare/workers-sdk/commit/f8cdcb920fc44daf7bf4ef9cb1dce751313ac2bd) Thanks [@akshitsinha](https://github.com/akshitsinha)! - Manage local Flagship flags in Local Explorer
+
+  Bound Flagship apps now appear in Local Explorer. You can create, edit, toggle, delete, and evaluate flags against the same local store used by your Worker, including targeting conditions and percentage rollouts.
+
+  Explorer requests are routed to the development process that owns each app, so Flagship management also works across multiple local Workers.
+
+### Patch Changes
+
+- [#16081](https://github.com/cloudflare/workers-sdk/pull/16081) [`0ec13b7`](https://github.com/cloudflare/workers-sdk/commit/0ec13b72461b989d1614acd784df50c44891480e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Authenticate dev registry updates and internal loopback requests
+
+  Require per-instance credentials for dev registry updates and internal loopback requests, including WebSocket upgrades. Authenticate callers before parsing registry updates or dispatching privileged loopback operations, while preserving legitimate shared-storage peers.
+
+- [#16014](https://github.com/cloudflare/workers-sdk/pull/16014) [`c492d63`](https://github.com/cloudflare/workers-sdk/commit/c492d6312152cedbf93f0b5bbcadcab5e01af9e7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261001.1 | ^5.20261005.1 |
+  | workerd                   | 1.20261001.1  | 1.20261005.1  |
+
+- [#16079](https://github.com/cloudflare/workers-sdk/pull/16079) [`ba52118`](https://github.com/cloudflare/workers-sdk/commit/ba521182d895d32f691ee2320a7f5524a6566a51) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261005.1 | ^5.20261006.1 |
+  | workerd                   | 1.20261005.1  | 1.20261006.1  |
+
+- [#14921](https://github.com/cloudflare/workers-sdk/pull/14921) [`946aaa7`](https://github.com/cloudflare/workers-sdk/commit/946aaa7e25dd2b686b08876da8e7aa9178e8e3fa) Thanks [@Mohith26](https://github.com/Mohith26)! - Prevent local D1 session bookmark errors from crashing the development server
+
+  Session bookmark lookup failures, including SQLite errors when another connection holds the database write lock, now reach the Worker as catchable `D1_ERROR`s. SQL execution and bookmark retrieval share a transaction, so a failed lookup rolls back the queries and retrying cannot duplicate their writes. This applies to local D1 through Miniflare, Wrangler, the Vite plugin, and the Vitest plugin.
+
+  Fixes https://github.com/cloudflare/workers-sdk/issues/14916
+
+- [#15781](https://github.com/cloudflare/workers-sdk/pull/15781) [`48f3c04`](https://github.com/cloudflare/workers-sdk/commit/48f3c04dceccb3fac88798918f8890e094173a18) Thanks [@Wichtowski](https://github.com/Wichtowski)! - Reduce `dispatchFetch()` connection exhaustion under sustained local and CI workloads
+
+  Repeated dispatches now reuse runtime connections for all HTTP methods, including `POST`, `PUT`, `DELETE`, and `PATCH`, instead of creating a new connection for every request. This prevents read-heavy and write-heavy Miniflare test suites from exhausting the host's available ephemeral ports. Transport failures are surfaced without automatically replaying requests, since Worker handlers can have side effects even for `GET` and `HEAD`. Idle runtime connections now close after one second, before workerd's five-second idle timeout can race with reuse.
+
+- [#16033](https://github.com/cloudflare/workers-sdk/pull/16033) [`5606a74`](https://github.com/cloudflare/workers-sdk/commit/5606a7416921f57735add524f6b6b68368deab25) Thanks [@Pduhard](https://github.com/Pduhard)! - Remove a 40 ms delay from Hyperdrive queries in local dev
+
+  Miniflare's local Hyperdrive proxy left Nagle's algorithm on for its sockets. A Postgres driver that sends one query in several small writes, such as `pg` for every query with parameters, had the later writes held back until the database acknowledged the first, which took about 40 ms per query. Large results were held back the same way on the way back to the Worker.
+
+  The proxy now turns on `noDelay` for the connection from the Worker and for the connection to the database. Connection strings using `sslmode=disable` are unaffected, since that mode connects directly and skips the proxy.
+
+- [#16050](https://github.com/cloudflare/workers-sdk/pull/16050) [`e44cf6b`](https://github.com/cloudflare/workers-sdk/commit/e44cf6b6c186f69afa5778b9ff38f5156b0061b9) Thanks [@acchou](https://github.com/acchou)! - Serve each Worker's own static assets when several Workers with assets run together
+
+  When several Workers with static assets ran in one Miniflare instance, such as `wrangler dev` with multiple `-c` configs or the test harness, every Worker read its assets from the same Worker's directory. Other Workers got 404s or that Worker's file at the same path. Each Worker now reads its own assets directory.
+
+- [#16063](https://github.com/cloudflare/workers-sdk/pull/16063) [`0b51fec`](https://github.com/cloudflare/workers-sdk/commit/0b51fec333589b3c039596f981907951617132bb) Thanks [@Cherry](https://github.com/Cherry)! - Start the synchronous proxy worker before returning proxies
+
+  `getBindings()`, `getDurableObjectNamespace()` and the other proxy getters now wait for the worker that serves synchronous proxy calls to start, instead of the first synchronous call blocking Node's main thread while it boots. That block also stalled every other Miniflare instance served from the same process, such as Vitest pool workers running test files in parallel.
+
+## 5.20261001.0-alpha
+
+### Minor Changes
+
+- [#15970](https://github.com/cloudflare/workers-sdk/pull/15970) [`b00ef4f`](https://github.com/cloudflare/workers-sdk/commit/b00ef4fd16f071f33ae9095128373167f0b5892e) Thanks [@wperron](https://github.com/wperron)! - Keep local development responsive while capturing observability data
+
+  Local observability now records high volumes of spans and logs with less impact on the main Worker, making local requests faster and more responsive. If observability data arrives faster than it can be stored, completed entries are dropped rather than slowing the Worker; the buffer size can be tuned with `X_LOCAL_OBSERVABILITY_BATCH_SIZE`.
+
+- [#15777](https://github.com/cloudflare/workers-sdk/pull/15777) [`464a582`](https://github.com/cloudflare/workers-sdk/commit/464a582442ad6872edf1d52107b1a7b68b5e606f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support the new Workflows `createBatch()` API in local development
+
+  Local Workflows bindings now accept object-form batches that create instances from a count or a list of instance options. The result includes handles for created instances and indexed per-instance errors, matching the runtime API while preserving the deprecated array form.
+
+### Patch Changes
+
+- [#15984](https://github.com/cloudflare/workers-sdk/pull/15984) [`9d7b08e`](https://github.com/cloudflare/workers-sdk/commit/9d7b08eb2e418f66c71780a5e4ed9882bf55a580) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260930.2 | ^5.20261001.1 |
+  | workerd                   | 1.20260930.2  | 1.20261001.1  |
+
 ## 5.20260930.0-alpha
 
 ### Minor Changes
