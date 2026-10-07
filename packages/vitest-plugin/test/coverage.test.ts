@@ -42,9 +42,9 @@ test(
 			`,
 			"index.test.ts": dedent /* javascript */ `
 				import { greeting } from "./src/greeting";
-				import { expect, it } from "vitest";
+				import { it } from "vitest";
 
-				it("greets the world", () => {
+				it("greets the world", ({ expect }) => {
 					expect(greeting("World")).toBe("Hello, World!");
 				});
 			`,
