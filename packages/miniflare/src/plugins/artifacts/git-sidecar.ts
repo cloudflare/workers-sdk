@@ -1,16 +1,20 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { mkdir, stat } from "node:fs/promises";
 import {
 	createServer,
 	type IncomingMessage,
 	type ServerResponse,
 } from "node:http";
-import { join } from "node:path";
 import { parentPort, workerData } from "node:worker_threads";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { GitClient, gitEnvironment, runGit } from "./git-client";
+import {
+	assertSupportedGitLayout,
+	repositoryDirectory,
+	repositoryPath,
+} from "./storage";
 import type { RepositoryState } from "./git-client";
 
 const adminPath = "/__local_artifacts__";
@@ -70,6 +74,7 @@ function createGitSecret(): string {
 
 export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	await mkdir(root, { recursive: true });
+	await assertSupportedGitLayout(root);
 	await runGit(["--version"]);
 	const secret = createGitSecret();
 	const server = createServer((request, response) => {
@@ -166,7 +171,7 @@ async function handleRequest(
 			root,
 			request,
 			response,
-			`/${storageComponent(namespace)}/${storageComponent(repository)}.git${suffix}`,
+			`/${repositoryDirectory(namespace, repository)}${suffix}`,
 			url.search.slice(1)
 		);
 	});
@@ -282,9 +287,7 @@ async function withNewRepository(
 	git: GitClient,
 	initialize: () => Promise<void>
 ): Promise<RepositoryState> {
-	await mkdir(repositoryNamespacePath(root, body.namespace), {
-		recursive: true,
-	});
+	await mkdir(root, { recursive: true });
 	if (await exists(git.repository)) {
 		throw new Error(`Repository "${body.name}" already exists on disk`);
 	}
@@ -455,21 +458,6 @@ function readRequest(request: IncomingMessage): Promise<Buffer> {
 		request.once("end", () => resolve(Buffer.concat(chunks)));
 		request.once("error", reject);
 	});
-}
-
-function repositoryPath(root: string, namespace: string, name: string): string {
-	return join(
-		repositoryNamespacePath(root, namespace),
-		`${storageComponent(name)}.git`
-	);
-}
-
-function repositoryNamespacePath(root: string, namespace: string): string {
-	return join(root, storageComponent(namespace));
-}
-
-function storageComponent(value: string): string {
-	return createHash("sha256").update(value).digest("hex");
 }
 
 function validateComponent(value: string, type: string): void {

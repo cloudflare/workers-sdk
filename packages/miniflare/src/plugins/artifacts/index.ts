@@ -10,6 +10,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
+import { assertSupportedGitLayout } from "./storage";
 import type { Service, Socket } from "../../runtime";
 import type { MiniflareBinding, Plugin } from "../shared";
 import type { ArtifactsController } from "./controller";
@@ -50,7 +51,6 @@ function namespaceId(namespace: string): string {
 }
 
 function localServiceName(namespace: string): string {
-	// Workerd also uses this as the Durable Object storage key/directory name.
 	return `${ARTIFACTS_PLUGIN_NAME}-${namespaceId(namespace)}`;
 }
 
@@ -126,9 +126,12 @@ async function createLocalNamespaceRuntime(
 	namespace: string,
 	artifactsController: ArtifactsController
 ): Promise<{ services: Service[]; socket: Socket }> {
+	await mkdir(root, { recursive: true });
+	await assertSupportedGitLayout(root);
 	const persistPath = path.join(root, namespaceId(namespace));
 	const metadataPath = path.join(persistPath, "metadata").replaceAll("\\", "/");
 	await mkdir(metadataPath, { recursive: true });
+	await assertSupportedGitLayout(metadataPath);
 	const { sidecar, port } = await artifactsController.get(
 		path.join(persistPath, "git")
 	);
@@ -175,8 +178,10 @@ async function createLocalNamespaceRuntime(
 				},
 				{ name: "gitBackend", service: { name: backendName } },
 			],
+			// Keys must be unique across namespaces in one workerd, but should
+			// not repeat the long service prefix in SQLite's directory name.
 			durableObjectNamespaces: [
-				{ className: OBJECT_CLASS, uniqueKey: serviceName },
+				{ className: OBJECT_CLASS, uniqueKey: namespaceId(namespace) },
 			],
 			durableObjectStorage: { localDisk: storageName },
 		},

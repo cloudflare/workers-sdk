@@ -65,7 +65,14 @@ the sidecar stores the bare Git repositories separately. `git-sidecar.ts`
 handles HTTP routing and repository locks, while `git-client.ts` owns
 repository-scoped Git commands and result parsing. Read operations such as
 `readFile()` also use the binding Worker and native Git backend. Node callers
-reach the same binding through Miniflare's Node binding proxy.
+reach the same binding through Miniflare's Node binding proxy. Namespace and
+repository names are hashed into short, namespace-scoped on-disk paths; this
+leaves room for Git packfiles and workerd SQLite files on platforms with path
+length limits. Older draft storage layouts are not migrated automatically:
+startup rejects a detected old layout rather than silently creating empty
+repositories. Back up any local repositories before resetting the Artifacts
+persistence directory. Do not delete the persistence directory without first
+checking whether it holds work you need.
 
 ## Git clone and push
 
