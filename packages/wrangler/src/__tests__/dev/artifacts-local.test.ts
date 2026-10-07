@@ -91,6 +91,11 @@ async function startLocalDev(remote?: false) {
 
 const output = mockConsoleMethods();
 
+async function stopRunningDev(): Promise<void> {
+	await stopDev?.();
+	stopDev = undefined;
+}
+
 async function request<T>(url: string, endpoint: string): Promise<T> {
 	const response = await fetch(url + endpoint);
 	if (!response.ok) {
@@ -103,8 +108,7 @@ describe.sequential("Wrangler dev local Artifacts", () => {
 	runInTempDir();
 
 	afterEach(async () => {
-		await stopDev?.();
-		stopDev = undefined;
+		await stopRunningDev();
 		vi.unstubAllEnvs();
 	});
 
@@ -179,8 +183,7 @@ describe.sequential("Wrangler dev local Artifacts", () => {
 					"hello artifacts\n"
 				);
 			} finally {
-				await stopDev?.();
-				stopDev = undefined;
+				await stopRunningDev();
 				await first.stopped;
 			}
 			await expect(
@@ -195,8 +198,7 @@ describe.sequential("Wrangler dev local Artifacts", () => {
 					"hello artifacts\n"
 				);
 			} finally {
-				await stopDev?.();
-				stopDev = undefined;
+				await stopRunningDev();
 				await second.stopped;
 			}
 		}

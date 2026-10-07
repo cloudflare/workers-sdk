@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { createServer } from "vite";
@@ -37,12 +38,27 @@ afterEach(() => vi.unstubAllEnvs());
 
 test.for([undefined, false] as const)(
 	"Vite dev serves local Artifacts without credentials (remote=%s)",
-	async (remote, { expect }) => {
+	async (remote, { expect, onTestFinished }) => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
-		fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
+		// On Windows, the system temp directory can use an 8.3 path (RUNNER~1).
+		// Vite resolves that entry as /index.js, but cannot load it from the
+		// virtual Worker module. Keep the fixture under the checkout instead.
+		const fixtureDir = fs.mkdtempSync(
+			path.join(
+				fs.realpathSync(path.dirname(fileURLToPath(import.meta.url))),
+				"artifacts-local-"
+			)
+		);
+		onTestFinished(() =>
+			fs.rmSync(fixtureDir, { recursive: true, force: true, maxRetries: 10 })
+		);
 		fs.writeFileSync(
-			"wrangler.jsonc",
+			path.join(fixtureDir, "package.json"),
+			JSON.stringify({ type: "module" })
+		);
+		fs.writeFileSync(
+			path.join(fixtureDir, "wrangler.jsonc"),
 			JSON.stringify({
 				name: "vite-artifacts-local",
 				main: "index.js",
@@ -57,7 +73,7 @@ test.for([undefined, false] as const)(
 			})
 		);
 		fs.writeFileSync(
-			"index.js",
+			path.join(fixtureDir, "index.js"),
 			`export default {
   async fetch(request, env) {
     if (new URL(request.url).pathname === "/create") return Response.json(await env.REPOS.create("demo"));
@@ -72,9 +88,17 @@ test.for([undefined, false] as const)(
 };`
 		);
 		const server = await createServer({
+			root: fixtureDir,
+			configFile: false,
 			logLevel: "silent",
 			server: { port: 0 },
-			plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+			plugins: [
+				cloudflare({
+					configPath: path.join(fixtureDir, "wrangler.jsonc"),
+					inspectorPort: false,
+					persistState: false,
+				}),
+			],
 		});
 		let gitUrl: string | undefined;
 		try {
@@ -89,7 +113,7 @@ test.for([undefined, false] as const)(
 			};
 			gitUrl = created.remote;
 			expect(new URL(gitUrl).hostname).toBe("127.0.0.1");
-			const directory = path.resolve("git-fixture");
+			const directory = path.join(fixtureDir, "git-fixture");
 			await git("git", ["init", "--initial-branch=main", directory]);
 			fs.writeFileSync(path.join(directory, "hello.txt"), "hello artifacts\n");
 			// Avoid inheriting host Git credentials or Cloudflare environment.
