@@ -1,7 +1,8 @@
-import { spawn } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { once } from "node:events";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import { transform } from "esbuild";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
@@ -388,8 +389,20 @@ test("artifacts: concurrent independent mutations preserve all repositories and 
 });
 
 async function killChild(child: ReturnType<typeof spawn>): Promise<void> {
-	const closed = child.exitCode === null ? once(child, "close") : undefined;
-	if (process.platform !== "win32" && child.pid !== undefined) {
+	if (child.exitCode !== null || child.pid === undefined) {
+		return;
+	}
+	const closed = once(child, "close");
+	if (process.platform === "win32") {
+		// Killing only Node would orphan workerd and leave its listener and
+		// SQLite files open. taskkill /T stops the entire child process tree.
+		await promisify(execFile)("taskkill", [
+			"/PID",
+			String(child.pid),
+			"/T",
+			"/F",
+		]);
+	} else {
 		try {
 			process.kill(-child.pid, "SIGKILL");
 		} catch (error) {
@@ -397,8 +410,6 @@ async function killChild(child: ReturnType<typeof spawn>): Promise<void> {
 				throw error;
 			}
 		}
-	} else if (child.exitCode === null) {
-		child.kill("SIGKILL");
 	}
 	await closed;
 }
@@ -465,11 +476,9 @@ const mf = new Miniflare({
 	} finally {
 		await killChild(child);
 	}
-	if (process.platform !== "win32") {
-		await expect(
-			fetch(listener, { signal: AbortSignal.timeout(2_000) })
-		).rejects.toThrow();
-	}
+	await expect(
+		fetch(listener, { signal: AbortSignal.timeout(2_000) })
+	).rejects.toThrow();
 	const restarted = new Miniflare(options(root));
 	useDispose(restarted);
 	const info = await rpc(restarted, "info", [], "survivor");
