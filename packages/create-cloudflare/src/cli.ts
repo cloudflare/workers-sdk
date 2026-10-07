@@ -170,7 +170,7 @@ const configure = async (ctx: C3Context) => {
 		"Step 2 of 3"
 	);
 
-	if (usesCfCli(ctx)) {
+	if (usesCfCli(ctx.project.path)) {
 		await installCf();
 	} else {
 		// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway

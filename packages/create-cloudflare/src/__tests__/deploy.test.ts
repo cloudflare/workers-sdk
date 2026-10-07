@@ -170,6 +170,7 @@ describe("deploy helpers", async () => {
 					"Note: Preview URLs look like https://<VERSION_PREFIX>-test.<YOUR_SUBDOMAIN>.workers.dev",
 					"Deployed test triggers",
 					"  https://test.example.workers.dev",
+					"Deployed to: https://test.example.workers.dev",
 				].join("\n")
 			);
 
@@ -177,7 +178,12 @@ describe("deploy helpers", async () => {
 
 			expect(runCommand).toHaveBeenLastCalledWith(
 				["npm", "run", "deploy"],
-				expect.objectContaining({ silent: true })
+				expect.objectContaining({
+					captureOutput: true,
+					env: expect.objectContaining({
+						WRANGLER_OUTPUT_FILE_PATH: undefined,
+					}),
+				})
 			);
 			expect(readFile).not.toHaveBeenCalled();
 			expect(ctx.deployment.url).toBe("https://test.example.workers.dev");

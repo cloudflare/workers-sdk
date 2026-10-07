@@ -6,7 +6,7 @@ import {
 } from "@cloudflare/cli-shared-helpers/interactive";
 import { runWranglerCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
-import { cfLogin, isLoggedInWithCf, listCfAccounts } from "../cf/accounts";
+import * as cf from "../cf/accounts";
 import { usesCfCli } from "../cf/config";
 import { reporter } from "../metrics";
 import type { C3Context } from "types";
@@ -22,8 +22,8 @@ export const chooseAccount = async (ctx: C3Context) => {
 
 	const s = spinner();
 	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
-	const accounts = usesCfCli(ctx)
-		? await listCfAccounts()
+	const accounts = usesCfCli(ctx.project.path)
+		? await cf.listAccounts()
 		: await listAccounts();
 
 	let accountId: string;
@@ -80,14 +80,14 @@ export const login = async (ctx: C3Context) => {
 		},
 		async promise() {
 			const { npx } = detectPackageManager();
-			const useCf = usesCfCli(ctx);
+			const useCf = usesCfCli(ctx.project.path);
 
 			const s = spinner();
 			s.start(
 				`Logging into Cloudflare ${dim("checking authentication status")}`
 			);
 			const isAlreadyLoggedIn = useCf
-				? await isLoggedInWithCf()
+				? await cf.isLoggedIn()
 				: await isLoggedIn();
 			s.stop(brandColor(isAlreadyLoggedIn ? "logged in" : "not logged in"));
 
@@ -98,7 +98,7 @@ export const login = async (ctx: C3Context) => {
 			}
 
 			if (useCf) {
-				const success = await cfLogin();
+				const success = await cf.login();
 				updateStatus(
 					`${brandColor(success ? "allowed" : "denied")} ${dim("via `cf auth login`")}`
 				);

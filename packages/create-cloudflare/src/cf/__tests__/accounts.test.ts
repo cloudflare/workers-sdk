@@ -1,7 +1,8 @@
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { mockPackageManager } from "helpers/__tests__/mocks";
 import { runWranglerCommand } from "helpers/command";
 import { beforeEach, describe, test, vi } from "vitest";
-import { cfLogin, isLoggedInWithCf, listCfAccounts } from "../accounts";
+import { isLoggedIn, listAccounts, login } from "../accounts";
 
 const loggedInWhoamiOutput = JSON.stringify({
 	authenticated: true,
@@ -28,11 +29,11 @@ describe("cf account helpers", () => {
 		mockPackageManager("npm");
 	});
 
-	describe("isLoggedInWithCf", () => {
+	describe("isLoggedIn", () => {
 		test("logged in", async ({ expect }) => {
 			vi.mocked(runWranglerCommand).mockResolvedValueOnce(loggedInWhoamiOutput);
 
-			await expect(isLoggedInWithCf()).resolves.toBe(true);
+			await expect(isLoggedIn()).resolves.toBe(true);
 			expect(runWranglerCommand).toHaveBeenCalledWith(
 				["npx", "cf", "auth", "whoami"],
 				expect.anything()
@@ -44,7 +45,7 @@ describe("cf account helpers", () => {
 				loggedOutWhoamiOutput
 			);
 
-			await expect(isLoggedInWithCf()).resolves.toBe(false);
+			await expect(isLoggedIn()).resolves.toBe(false);
 		});
 
 		test("invalid token", async ({ expect }) => {
@@ -52,7 +53,7 @@ describe("cf account helpers", () => {
 				invalidTokenWhoamiOutput
 			);
 
-			await expect(isLoggedInWithCf()).resolves.toBe(false);
+			await expect(isLoggedIn()).resolves.toBe(false);
 		});
 
 		test("ignores output around the JSON", async ({ expect }) => {
@@ -60,31 +61,31 @@ describe("cf account helpers", () => {
 				`A new version of cf is available\n${loggedInWhoamiOutput}\n`
 			);
 
-			await expect(isLoggedInWithCf()).resolves.toBe(true);
+			await expect(isLoggedIn()).resolves.toBe(true);
 		});
 
 		test("cf auth whoami error", async ({ expect }) => {
 			vi.mocked(runWranglerCommand).mockRejectedValueOnce(new Error("fail!"));
 
-			await expect(isLoggedInWithCf()).resolves.toBe(false);
+			await expect(isLoggedIn()).resolves.toBe(false);
 		});
 	});
 
-	test("listCfAccounts", async ({ expect }) => {
+	test("listAccounts", async ({ expect }) => {
 		vi.mocked(runWranglerCommand).mockResolvedValueOnce(loggedInWhoamiOutput);
 
-		await expect(listCfAccounts()).resolves.toEqual({
+		await expect(listAccounts()).resolves.toEqual({
 			testacct: "g8s9dl23jv90xa0xxxx990ds09xxxxda",
 		});
 	});
 
-	describe("cfLogin", () => {
+	describe("login", () => {
 		test("successful login", async ({ expect }) => {
 			vi.mocked(runWranglerCommand)
 				.mockResolvedValueOnce("")
 				.mockResolvedValueOnce(loggedInWhoamiOutput);
 
-			await expect(cfLogin()).resolves.toBe(true);
+			await expect(login()).resolves.toBe(true);
 			// Not silent, so that the user can see the device authorization code
 			expect(runWranglerCommand).toHaveBeenCalledWith([
 				"npx",
@@ -97,7 +98,15 @@ describe("cf account helpers", () => {
 		test("failed login", async ({ expect }) => {
 			vi.mocked(runWranglerCommand).mockRejectedValueOnce(new Error("fail!"));
 
-			await expect(cfLogin()).resolves.toBe(false);
+			await expect(login()).resolves.toBe(false);
+		});
+
+		test("cancelled login", async ({ expect }) => {
+			vi.mocked(runWranglerCommand).mockRejectedValueOnce(
+				new CancelError("Command cancelled")
+			);
+
+			await expect(login()).rejects.toThrow(CancelError);
 		});
 
 		test("still logged out after login", async ({ expect }) => {
@@ -105,7 +114,7 @@ describe("cf account helpers", () => {
 				.mockResolvedValueOnce("")
 				.mockResolvedValueOnce(loggedOutWhoamiOutput);
 
-			await expect(cfLogin()).resolves.toBe(false);
+			await expect(login()).resolves.toBe(false);
 		});
 	});
 });

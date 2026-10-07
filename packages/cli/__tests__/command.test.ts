@@ -1,6 +1,7 @@
 import { spawn } from "cross-spawn";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { quoteShellArgs, runCommand } from "../command";
+import { stdout } from "../streams";
 import type { ChildProcess } from "node:child_process";
 
 // We can change how the mock spawn works by setting these variables
@@ -9,6 +10,7 @@ let spawnStdout: string | undefined = undefined;
 let spawnStderr: string | undefined = undefined;
 
 vi.mock("cross-spawn");
+vi.mock("../streams");
 
 describe("Command Helpers", () => {
 	afterEach(() => {
@@ -50,6 +52,22 @@ describe("Command Helpers", () => {
 			env: process.env,
 			signal: expect.any(AbortSignal),
 		});
+	});
+
+	test("runCommand displays and returns captured output when not silent", async ({
+		expect,
+	}) => {
+		spawnStdout = "some output";
+
+		const output = await runCommand(["ls", "-l"], { captureOutput: true });
+
+		expect(spawn).toHaveBeenCalledWith("ls", ["-l"], {
+			stdio: ["inherit", "pipe", "pipe"],
+			env: process.env,
+			signal: expect.any(AbortSignal),
+		});
+		expect(stdout.write).toHaveBeenCalledWith("some output");
+		expect(output).toBe("some output");
 	});
 
 	describe("quoteShellArgs", () => {

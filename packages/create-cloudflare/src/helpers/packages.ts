@@ -53,7 +53,7 @@ export async function installWrangler() {
  */
 export async function installCf() {
 	const { npm } = detectPackageManager();
-	// Install the latest version even if `cf` is already installed, as some framework CLIs may pin an older version
+	// Like Wrangler, install the latest version even if the framework CLI already installed `cf`
 	await installPackages(["cf@latest"], {
 		dev: true,
 		startText: `Installing cf ${dim("The Cloudflare CLI")}`,

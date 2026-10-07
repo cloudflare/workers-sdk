@@ -3,6 +3,7 @@ import { cp } from "node:fs/promises";
 import { join } from "node:path";
 import { beforeAll, describe } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
+import { usesCfCli } from "../../../src/cf/config";
 import {
 	frameworkToTestFilter,
 	isExperimental,
@@ -102,11 +103,7 @@ describe
 						expect(pkgJsonPath).toExist();
 
 						// The project's Cloudflare CLI should be installed
-						const cliPackage = existsSync(
-							join(project.path, "cloudflare.config.ts")
-						)
-							? "cf"
-							: "wrangler";
+						const cliPackage = usesCfCli(project.path) ? "cf" : "wrangler";
 						expect(join(project.path, "node_modules", cliPackage)).toExist();
 
 						await addTestVarsToWranglerToml(project.path);

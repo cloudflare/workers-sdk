@@ -17,7 +17,7 @@ import * as jsonc from "jsonc-parser";
 import semver from "semver";
 import { fetch } from "undici";
 import { version } from "../../package.json";
-import { CF_TYPES_PATH } from "../../src/cf/config";
+import { CF_TYPES_PATH, usesCfCli } from "../../src/cf/config";
 import { getFrameworkMap } from "../../src/templates";
 import {
 	CLOUDFLARE_ACCOUNT_ID,
@@ -347,7 +347,7 @@ export async function verifyTypes(
 	}
 
 	// `cf` always generates types to the same file, with an `Env` interface
-	const usesCf = existsSync(join(projectPath, "cloudflare.config.ts"));
+	const usesCf = usesCfCli(projectPath);
 	const typesPath = usesCf
 		? CF_TYPES_PATH
 		: (configuredTypesPath ?? templateTypesPath);
@@ -391,6 +391,7 @@ export async function verifyTypes(
 	if (workersTypes === "generated") {
 		if (usesCf) {
 			expect(tsconfig.include).toContain(".cloudflare/types");
+			expect(tsconfigTypes).not.toContain(CF_TYPES_PATH);
 		} else {
 			expect(tsconfigTypes).toContain(typesPath);
 		}

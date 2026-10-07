@@ -147,7 +147,6 @@ describe("updateTsConfig", () => {
 		expect,
 	}) => {
 		vi.mocked(usesCfCli).mockReturnValue(true);
-		ctx.template.typesPath = "./.cloudflare/types/index.d.ts";
 		vi.mocked(readFile).mockImplementation((path) =>
 			path.includes("tsconfig.json")
 				? `{ "compilerOptions": { "types" : ["@cloudflare/workers-types"]} }`
@@ -159,6 +158,21 @@ describe("updateTsConfig", () => {
 		const written = vi.mocked(writeFile).mock.calls[0][1];
 		expect(written).not.toContain(".cloudflare/types");
 		expect(written).not.toContain("@cloudflare/workers-types");
+		// The runtime types are read from where `cf` generates them
+		expect(readFile).toHaveBeenCalledWith("./.cloudflare/types/index.d.ts");
+	});
+
+	test("will not add an empty types list", async ({ expect }) => {
+		vi.mocked(usesCfCli).mockReturnValue(true);
+		vi.mocked(readFile).mockImplementation((path) =>
+			path.includes("tsconfig.json")
+				? `{ "compilerOptions": {} }`
+				: "// Runtime types generated with workerd"
+		);
+
+		await updateTsConfig(ctx, { usesNodeCompat: false });
+
+		expect(writeFile).not.toHaveBeenCalled();
 	});
 
 	test("preserves SvelteKit generated types", async ({ expect }) => {

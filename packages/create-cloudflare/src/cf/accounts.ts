@@ -1,3 +1,4 @@
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { runWranglerCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 
@@ -18,7 +19,10 @@ async function cfWhoami(): Promise<CfWhoami> {
 		return JSON.parse(
 			output.slice(output.indexOf("{"), output.lastIndexOf("}") + 1)
 		) as CfWhoami;
-	} catch {
+	} catch (e) {
+		if (e instanceof CancelError) {
+			throw e;
+		}
 		return {};
 	}
 }
@@ -28,7 +32,7 @@ async function cfWhoami(): Promise<CfWhoami> {
  *
  * @returns `true` if `cf` can make authenticated requests.
  */
-export async function isLoggedInWithCf(): Promise<boolean> {
+export async function isLoggedIn(): Promise<boolean> {
 	const { authenticated, tokenValid } = await cfWhoami();
 	return authenticated === true && tokenValid !== false;
 }
@@ -38,7 +42,7 @@ export async function isLoggedInWithCf(): Promise<boolean> {
  *
  * @returns A map of account names to account IDs.
  */
-export async function listCfAccounts(): Promise<Record<string, string>> {
+export async function listAccounts(): Promise<Record<string, string>> {
 	const { accounts = [] } = await cfWhoami();
 	return Object.fromEntries(accounts.map(({ name, id }) => [name, id]));
 }
@@ -51,12 +55,15 @@ export async function listCfAccounts(): Promise<Record<string, string>> {
  *
  * @returns `true` if `cf` is authenticated once the login flow completes.
  */
-export async function cfLogin(): Promise<boolean> {
+export async function login(): Promise<boolean> {
 	const { npx } = detectPackageManager();
 	try {
 		await runWranglerCommand([npx, "cf", "auth", "login"]);
-	} catch {
+	} catch (e) {
+		if (e instanceof CancelError) {
+			throw e;
+		}
 		return false;
 	}
-	return isLoggedInWithCf();
+	return isLoggedIn();
 }

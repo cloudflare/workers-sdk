@@ -10,7 +10,7 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
 import * as TOML from "smol-toml";
-import { usesCfCli } from "./cf/config";
+import { CF_TYPES_PATH, usesCfCli } from "./cf/config";
 import {
 	readWranglerJsonOrJsonc,
 	readWranglerToml,
@@ -35,6 +35,21 @@ export async function addTypes(ctx: C3Context) {
 }
 
 /**
+ * Gets the path that the project's types are generated to.
+ *
+ * `cf` always generates types to the same file, so this takes precedence over
+ * the template's configured path for projects that use it.
+ *
+ * @param ctx The C3 context.
+ * @returns The path to the generated types file.
+ */
+function getTypesPath(ctx: C3Context): string {
+	return usesCfCli(ctx.project.path)
+		? CF_TYPES_PATH
+		: (ctx.template.typesPath ?? "./worker-configuration.d.ts");
+}
+
+/**
  * Generate types using the `cf-typegen` script and update tsconfig
  */
 async function generateWorkersTypes(ctx: C3Context, npm: string) {
@@ -53,7 +68,7 @@ async function generateWorkersTypes(ctx: C3Context, npm: string) {
 		cwd: ctx.project.path,
 		silent: true,
 		startText: "Generating types for your application",
-		doneText: `${brandColor("generated")} ${dim(`to \`${ctx.template.typesPath}\` via \`${typesCmd.join(" ")}\``)}`,
+		doneText: `${brandColor("generated")} ${dim(`to \`${getTypesPath(ctx)}\` via \`${typesCmd.join(" ")}\``)}`,
 	});
 
 	if (packageManifest["devDependencies"]?.["@cloudflare/workers-types"]) {
@@ -160,14 +175,12 @@ export async function updateTsConfig(
 			// `cf` generates types into a gitignored directory that projects reference
 			// through the tsconfig `include` list. Listing the file in `types` would
 			// break type-checking until the types have been generated.
-			if (!usesCfCli(ctx)) {
-				newTypes.add(ctx.template.typesPath ?? "./worker-configuration.d.ts");
+			if (!usesCfCli(ctx.project.path)) {
+				newTypes.add(getTypesPath(ctx));
 			}
 
 			// if generated types include runtime types, remove @cloudflare/workers-types
-			const typegen = readFile(
-				ctx.template.typesPath ?? "./worker-configuration.d.ts"
-			).split("\n");
+			const typegen = readFile(getTypesPath(ctx)).split("\n");
 			if (
 				typegen.some((line) =>
 					line.includes("// Runtime types generated with workerd")
@@ -183,6 +196,12 @@ export async function updateTsConfig(
 		// add node types if nodejs_compat is enabled
 		if (usesNodeCompat) {
 			newTypes.add("node");
+		}
+
+		// An empty `types` list would stop TypeScript from automatically including
+		// the installed `@types/*` packages
+		if (newTypes.size === 0 && config.compilerOptions?.types === undefined) {
+			return;
 		}
 
 		// If we detect any tabs, use tabs, otherwise use spaces.
