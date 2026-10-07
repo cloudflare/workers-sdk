@@ -81,7 +81,7 @@
 		"vitest": "catalog:vitest5"
 	},
 	"peerDependencies": {
-		"vitest": "^4.1.11 || ^5.0.0"
+		"vitest": "^5.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"
