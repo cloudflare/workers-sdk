@@ -1360,37 +1360,38 @@ export async function provisionBindings(
 			}
 		}
 
-		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
-			if (!isProvisionableBinding(binding)) {
-				continue;
-			}
-
-			// See above for why we skip writing back some bindings to the config file.
-			const originalBindingsByName = originalBindings.get(binding.type);
-			const originalBinding = originalBindingsByName?.get(bindingName);
-			if (isUsingRedirectedConfig) {
-				if (originalBinding) {
-					originalBindingsByName?.set(
-						bindingName,
-						addProvisionedIdentifier(originalBinding, binding)
-					);
-				}
-				continue;
-			}
-
-			addBindingToPatch(
-				patchEnvironment,
-				binding.type,
-				toConfigBinding(bindingName, binding)
-			);
-		}
-
 		if (isUsingRedirectedConfig) {
+			const updatedResourceTypes = new Set<keyof typeof HANDLERS>();
+			for (const resource of pendingResources) {
+				const bindingsByName = originalBindings.get(resource.resourceType);
+				const originalBinding = bindingsByName?.get(resource.binding);
+				if (originalBinding) {
+					bindingsByName?.set(
+						resource.binding,
+						addProvisionedIdentifier(originalBinding, resource.handler.binding)
+					);
+					updatedResourceTypes.add(resource.resourceType);
+				}
+			}
+
 			// Updating existing Map entries above retains their insertion order, so
 			// positional array patches follow the original user config's order.
 			for (const [resourceType, bindingsByName] of originalBindings) {
+				if (!updatedResourceTypes.has(resourceType)) {
+					continue;
+				}
 				for (const binding of bindingsByName.values()) {
 					addBindingToPatch(patchEnvironment, resourceType, binding);
+				}
+			}
+		} else {
+			for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
+				if (isProvisionableBinding(binding)) {
+					addBindingToPatch(
+						patchEnvironment,
+						binding.type,
+						toConfigBinding(bindingName, binding)
+					);
 				}
 			}
 		}
