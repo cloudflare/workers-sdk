@@ -22,6 +22,10 @@ export function gitEnvironment(
 		"TEMP",
 		"TMPDIR",
 		"LANG",
+		// Explicit host CA bundles may be used to trust a private HTTPS Git origin.
+		// Do not inherit other Git TLS overrides (especially GIT_SSL_NO_VERIFY),
+		// credential helpers, or HTTP headers from the host environment.
+		"GIT_SSL_CAINFO",
 	];
 	const env: NodeJS.ProcessEnv = {};
 	for (const key of keep) {
