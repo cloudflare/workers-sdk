@@ -179,7 +179,7 @@ async function validateBuildOutputDirectory(root: string): Promise<void> {
 function assertNotSymlink(filePath: string, entry: fs.Stats | fs.Dirent): void {
 	if (entry.isSymbolicLink()) {
 		throw new BuildOutputError(
-			`symlinks are not allowed in build output directories: ${filePath}. Build output directories must be portable and self-contained.`
+			`symlink found at ${filePath}. Symlinks are not permitted because the build output must be portable and self-contained.`
 		);
 	}
 }
