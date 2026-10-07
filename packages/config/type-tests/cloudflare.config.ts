@@ -4,7 +4,10 @@ import {
 	defineConfig,
 	defineContainer,
 	defineWorker,
+	exports,
+	triggers,
 } from "cf/config";
+import * as entrypoint from "./worker" with { type: "cf-worker" };
 import type {
 	InferDurableNamespaces,
 	InferEnv,
@@ -15,7 +18,19 @@ import type {
 const worker = defineWorker((ctx) => ({
 	name: "worker",
 	compatibilityDate: "2026-09-29",
-	env: { MODE: bindings.text(`${ctx.mode}`) },
+	entrypoint,
+	env: {
+		MODE: bindings.text(`${ctx.mode}`),
+		COUNTER: bindings.durableObject({
+			worker: "worker",
+			exportName: "Counter",
+		}),
+	},
+	exports: {
+		Counter: exports.durableObject({ storage: "sqlite" }),
+		Admin: exports.worker(),
+	},
+	triggers: [triggers.scheduled({ schedule: "0 * * * *" })],
 }));
 
 const container = defineContainer({

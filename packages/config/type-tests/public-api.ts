@@ -1,19 +1,173 @@
 /**
- * Declaration emit must name every helper's return type, and the `env` type
- * each binding infers, through the public entry point. A type missing from
- * `public.ts` fails with TS4023 ("cannot be named"). New helpers are covered
- * automatically.
+ * Declaration emit through the public entry point, as a consumer that
+ * publishes types runs it. Removing an export fails with TS2305 or TS2724, and
+ * a type that consumers can't name fails with TS4023 or TS7056.
  */
-import { bindings, exports, triggers } from "@cloudflare/config/public";
-import type { InferEnv } from "@cloudflare/config/public";
+import {
+	bindings,
+	defineConfig,
+	defineContainer,
+	defineWorker,
+	exports,
+	triggers,
+} from "@cloudflare/config/public";
+import type {
+	CloudflareConfig,
+	ContainerConfig,
+	InferEnv,
+	InferMainModule,
+	WorkerConfig,
+} from "@cloudflare/config/public";
 
-declare function returnTypesOf<T>(helpers: T): {
-	[K in keyof T]: T[K] extends (...args: never[]) => infer R ? R : never;
+declare const cloudflareConfig: CloudflareConfig;
+declare const workerConfig: WorkerConfig;
+declare const containerConfig: ContainerConfig;
+declare const env: InferEnv<{
+	env: { [K in keyof typeof bindings]: ReturnType<(typeof bindings)[K]> };
+}>;
+declare const mainModule: InferMainModule<WorkerConfig>;
+
+// A spread makes emit write out each member's type: every helper's overloads
+// and type parameter constraints, every config field, and the `env` type each
+// binding infers.
+export const surface = {
+	bindings: { ...bindings },
+	triggers: { ...triggers },
+	exports: { ...exports },
+	defineConfig,
+	defineContainer,
+	defineWorker,
+	cloudflareConfig: { ...cloudflareConfig },
+	workerConfig: { ...workerConfig },
+	containerConfig: { ...containerConfig },
+	env: { ...env },
+	mainModule,
 };
 
-export const bindingTypes = returnTypesOf(bindings);
-export const triggerTypes = returnTypesOf(triggers);
-export const exportTypes = returnTypesOf(exports);
-
-declare const env: InferEnv<{ env: typeof bindingTypes }>;
-export const envTypes = { ...env };
+// Every public type, including those only used in annotations, which emit
+// never has to name.
+export type {
+	AgentMemoryBinding,
+	AgentMemoryBindingOptions,
+	AiBinding,
+	AiBindingOptions,
+	AiSearchBinding,
+	AiSearchBindingOptions,
+	AiSearchNamespaceBinding,
+	AiSearchNamespaceBindingOptions,
+	AnalyticsEngineDatasetBinding,
+	AnalyticsEngineDatasetBindingOptions,
+	AnalyticsSQLBinding,
+	AnalyticsSQLBindingOptions,
+	ArtifactsBinding,
+	ArtifactsBindingOptions,
+	AssetsBinding,
+	BindingDevOptions,
+	Bindings,
+	BrowserBinding,
+	BrowserBindingOptions,
+	CloudflareConfig,
+	ConfigContext,
+	ConnectTrigger,
+	ConnectTriggerOptions,
+	ConnectTriggerOptionsBase,
+	ContainerConfig,
+	ContainerDefinition,
+	ContainerObservabilityConfig,
+	D1Binding,
+	D1BindingOptions,
+	DefaultModule,
+	DispatchNamespaceBinding,
+	DispatchNamespaceBindingOptions,
+	DurableObjectBinding,
+	DurableObjectBindingOptions,
+	DurableObjectContainerConfig,
+	DurableObjectCreatedExport,
+	DurableObjectCreatedExportOptions,
+	DurableObjectDeletedExport,
+	DurableObjectDeletedExportOptions,
+	DurableObjectExpectingTransferExport,
+	DurableObjectExpectingTransferExportOptions,
+	DurableObjectExportOptions,
+	DurableObjectRenamedExport,
+	DurableObjectRenamedExportOptions,
+	DurableObjectTransferredExport,
+	DurableObjectTransferredExportOptions,
+	EmailTrigger,
+	EmailTriggerOptions,
+	Exports,
+	FetchTrigger,
+	FetchTriggerOptions,
+	FlagshipBinding,
+	FlagshipBindingOptions,
+	HyperdriveBinding,
+	HyperdriveBindingOptions,
+	ImagesBinding,
+	ImagesBindingOptions,
+	InferDurableNamespaces,
+	InferEnv,
+	InferMainModule,
+	Json,
+	JsonBinding,
+	K2Binding,
+	K2BindingOptions,
+	K2Producer,
+	K2ProduceResult,
+	K2Record,
+	KvBinding,
+	KvBindingOptions,
+	LogfwdrBinding,
+	LogfwdrBindingOptions,
+	MediaBinding,
+	MediaBindingOptions,
+	MtlsCertificateBinding,
+	MtlsCertificateBindingOptions,
+	PipelineBinding,
+	PipelineBindingOptions,
+	QueueBinding,
+	QueueBindingOptions,
+	QueueConsumerTrigger,
+	QueueConsumerTriggerOptions,
+	R2Binding,
+	R2BindingOptions,
+	RateLimitBinding,
+	RateLimitBindingOptions,
+	ScheduledTrigger,
+	ScheduledTriggerOptions,
+	SecretBinding,
+	SecretsStoreSecretBinding,
+	SecretsStoreSecretBindingOptions,
+	SendEmailBinding,
+	SendEmailBindingOptions,
+	Settings,
+	StandardContainerConfig,
+	StreamBinding,
+	StreamBindingOptions,
+	TextBinding,
+	Triggers,
+	TypedAiBinding,
+	TypedKvBinding,
+	TypedPipelineBinding,
+	TypedQueueBinding,
+	UnsafeBinding,
+	UnwrapConfig,
+	VectorizeBinding,
+	VectorizeBindingOptions,
+	VersionMetadataBinding,
+	VpcNetworkBinding,
+	VpcNetworkBindingOptions,
+	VpcServiceBinding,
+	VpcServiceBindingOptions,
+	WorkerBinding,
+	WorkerBindingOptions,
+	WorkerConfig,
+	WorkerDefinition,
+	WorkerEntrypointExport,
+	WorkerEntrypointExportOptions,
+	WorkerLoaderBinding,
+	WorkerReference,
+	WorkflowBinding,
+	WorkflowBindingOptions,
+	WorkflowExport,
+	WorkflowExportOptions,
+} from "@cloudflare/config/public";
