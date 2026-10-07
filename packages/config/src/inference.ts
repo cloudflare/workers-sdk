@@ -30,7 +30,7 @@ export type WorkerModule = Record<string, any>;
  * - default export can be `ExportedHandler` or a `WorkerEntrypoint` class constructor
  * - named exports can be `WorkerEntrypoint`, `DurableObject`, or `WorkflowEntrypoint` class constructors
  */
-interface DefaultModule {
+export interface DefaultModule {
 	default?: ExportedHandler | Constructor<Rpc.WorkerEntrypointBranded>;
 	[key: string]:
 		| ExportedHandler
