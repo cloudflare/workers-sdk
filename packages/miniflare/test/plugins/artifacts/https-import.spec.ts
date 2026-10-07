@@ -1,4 +1,5 @@
 import { execFile, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:https";
 import path from "node:path";
@@ -6,6 +7,7 @@ import { promisify } from "node:util";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
 import { gitEnvironment } from "../../../src/plugins/artifacts/git-client";
+import { repositoryPath } from "../../../src/plugins/artifacts/storage";
 import { singleModuleManifest, useTmp } from "../../test-shared";
 
 const exec = promisify(execFile);
@@ -243,6 +245,7 @@ async function withFixture(
 	try {
 		mf = new Miniflare({
 			cf: false,
+			resourcePersistencePath: path.join(directory, "persist"),
 			workers: [
 				{
 					config: {
@@ -289,6 +292,23 @@ test("HTTPS import: full import exposes refs, file, log and Git clone through th
 			name: "full",
 			defaultBranch: "main",
 		});
+		const namespaceId = createHash("sha256")
+			.update("https-import")
+			.digest("hex")
+			.slice(0, 32);
+		const config = await readFile(
+			path.join(
+				repositoryPath(
+					path.join(directory, "persist", "artifacts", namespaceId, "git"),
+					"https-import",
+					"full"
+				),
+				"config"
+			),
+			"utf8"
+		);
+		expect(config).not.toContain("correct-password");
+		expect(config).not.toContain('remote "origin"');
 		expect(
 			(await call(mf, "readFile", [{ ref: "main", path: "README" }], "full"))
 				.body
@@ -309,8 +329,10 @@ test("HTTPS import: full import exposes refs, file, log and Git clone through th
 		).toEqual({ bytes: [...Buffer.from("feature\n")] });
 		const info = (await call(mf, "info", [], "full")).body as {
 			remote: string;
-			token?: string;
+			source: string;
 		};
+		expect(info.source).toBe(`git:${fixture.url}`);
+		expect(JSON.stringify(info)).not.toContain("correct-password");
 		const token = (imported.body as { token: string }).token;
 		await exec(
 			"git",

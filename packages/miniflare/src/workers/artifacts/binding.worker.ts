@@ -329,7 +329,14 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 				this.env.config.origin,
 				target.opts ?? {}
 			);
-			repository.source = { type: "remote", url: sourceUrl.href };
+			// The clone URL may contain one-time credentials. Keep them out of
+			// repository metadata returned by info() and persisted in storage.
+			const publicSourceUrl = new URL(sourceUrl);
+			publicSourceUrl.username = "";
+			publicSourceUrl.password = "";
+			publicSourceUrl.search = "";
+			publicSourceUrl.hash = "";
+			repository.source = { type: "remote", url: publicSourceUrl.href };
 			const state = await this.backend<BackendState>(repository, {
 				action: "import",
 				sourceUrl: sourceUrl.href,

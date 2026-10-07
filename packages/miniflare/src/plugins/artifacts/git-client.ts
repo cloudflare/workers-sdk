@@ -173,6 +173,10 @@ export class GitClient {
 		}
 		args.push(url, this.repository);
 		await runGit(args);
+		// A bare clone records remote.origin.url in its local Git config. It may
+		// include Basic credentials or query tokens used only for the import.
+		// Local repositories do not fetch from the upstream after creation.
+		await this.git(["remote", "remove", "origin"]);
 	}
 
 	async configure(generation: string): Promise<void> {
