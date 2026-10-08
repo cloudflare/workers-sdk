@@ -187,11 +187,13 @@ jobs:
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
 
-      - name: Test Miniflare release source maps
+      - name: Test release source maps (Miniflare and Vite plugin)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
         run: |
-          pnpm --filter miniflare exec node scripts/build.mjs
+          rm -rf packages/miniflare/dist packages/vite-plugin-cloudflare/dist
+          pnpm run build --filter=miniflare --filter=@cloudflare/vite-plugin
           pnpm --filter miniflare exec vitest run test/sourcemap.spec.ts test/plugins/core/errors/index.spec.ts
+          pnpm --filter @cloudflare/vite-plugin exec vitest run src/__tests__/package-sourcemaps.spec.ts
         env:
           SOURCEMAPS: "false"
           CI_OS: ${{ matrix.description }}
@@ -207,15 +209,6 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.description }}
-
-      - name: Test Vite plugin release source maps
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
-        run: |
-          pnpm --filter @cloudflare/vite-plugin run build
-          pnpm --filter @cloudflare/vite-plugin exec vitest run src/__tests__/package-sourcemaps.spec.ts
-        env:
-          SOURCEMAPS: "false"
           CI_OS: ${{ matrix.description }}
 
       # Only cache an install that Miniflare marked as complete. Without this
