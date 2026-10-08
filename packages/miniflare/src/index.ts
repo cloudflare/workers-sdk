@@ -2680,11 +2680,13 @@ export class Miniflare {
 
 	async #assembleAndUpdateConfig(reusePorts = false) {
 		this.#hyperdriveProxyController.beginUpdate();
+		this.#artifactsController.beginUpdate();
 		try {
 			await this.#assembleAndUpdateConfigInternal(reusePorts);
 		} finally {
-			// If assembly or runtime startup failed, keep the old listeners and
-			// close only the new candidates. A successful update already committed.
+			// A failed update retains listeners used by the previous runtime and
+			// closes only candidates started during this attempt.
+			await this.#artifactsController.abortUpdate();
 			this.#hyperdriveProxyController.abortUpdate();
 		}
 	}
@@ -2808,6 +2810,7 @@ export class Miniflare {
 			}
 		}
 		this.#hyperdriveProxyController.commitUpdate(activeExternalAddresses);
+		await this.#artifactsController.commitUpdate();
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.

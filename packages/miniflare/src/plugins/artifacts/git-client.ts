@@ -176,7 +176,9 @@ export class GitClient {
 		branch?: string,
 		depth?: number
 	): Promise<void> {
-		const args = ["clone", "--bare"];
+		// An import may carry credentials. Never let Git redirect them to a
+		// different destination (or silently expand the requested network access).
+		const args = ["-c", "http.followRedirects=false", "clone", "--bare"];
 		if (branch) {
 			args.push("--branch", branch, "--single-branch");
 		}
@@ -376,7 +378,7 @@ function parseCommitIdentity(
 	person: { name: string; email: string };
 	time: number;
 } {
-	const match = /^(.*) <([^<>]*)> (\d+) [+-]\d{4}$/.exec(
+	const match = /^(.*) <([^<>]*)> (-?\d+) [+-]\d{4}$/.exec(
 		commitHeader(headers, name) ?? ""
 	);
 	if (!match?.[1] || match[2] === undefined || !match[3]) {

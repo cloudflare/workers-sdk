@@ -307,7 +307,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	async get(name: string): Promise<LocalArtifactsRepo> {
 		validateName(name);
 		const repository = await this.getRepo(name);
-		return createRepoHandle(this, repository.name);
+		return createRepoHandle(this, repository.name, repository.id);
 	}
 
 	async import(
@@ -401,9 +401,12 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 				return false;
 			}
 			const repository = getRepo(repositories, name);
-			await this.backend(repository, { action: "delete" });
+			// Persist removal first. If storage fails, the Git contents and
+			// metadata must both remain usable. Git cleanup first retires the
+			// directory atomically; startup or a later creation cleans orphans.
 			delete repositories[name.toLowerCase()];
 			await this.saveRepos(repositories);
+			await this.backend(repository, { action: "delete" });
 			return true;
 		});
 	}
@@ -411,11 +414,12 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	async createToken(
 		name: string,
 		scope: TokenScope = "write",
-		ttl?: number
+		ttl?: number,
+		expectedId?: string
 	): Promise<CreateTokenResult> {
 		return this.exclusive(async () => {
 			const repositories = await this.repos();
-			const repository = getRepo(repositories, name);
+			const repository = getRepo(repositories, name, expectedId);
 			const token = await createToken(repository, scope, ttl);
 			await this.saveRepos(repositories);
 			return tokenResult(token);
@@ -423,9 +427,10 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	}
 
 	async listTokens(
-		name: string
+		name: string,
+		expectedId?: string
 	): Promise<{ total: number; tokens: TokenInfo[] }> {
-		const repository = await this.getRepo(name);
+		const repository = await this.getRepo(name, expectedId);
 		const active = repository.tokens.filter(
 			(token) => !token.revokedAt && isActive(token)
 		);
@@ -439,7 +444,11 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		return { total: active.length, tokens };
 	}
 
-	async revokeToken(name: string, tokenOrId: string): Promise<boolean> {
+	async revokeToken(
+		name: string,
+		tokenOrId: string,
+		expectedId?: string
+	): Promise<boolean> {
 		return this.exclusive(async () => {
 			if (!isTokenId(tokenOrId) && !isArtifactToken(tokenOrId)) {
 				throw new ArtifactsError(
@@ -448,7 +457,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 				);
 			}
 			const repositories = await this.repos();
-			const repository = getRepo(repositories, name);
+			const repository = getRepo(repositories, name, expectedId);
 			const tokenHash = isArtifactToken(tokenOrId)
 				? await hashToken(tokenOrId)
 				: undefined;
@@ -470,13 +479,14 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	async fork(
 		sourceName: string,
 		name: string,
-		options: ForkOptions = {}
+		options: ForkOptions = {},
+		expectedId?: string
 	): Promise<CreateRepositoryResult> {
 		return this.exclusive(async () => {
 			validateName(name);
 			validateRepositoryOptions(options);
 			const repositories = await this.repos();
-			const source = getRepo(repositories, sourceName);
+			const source = getRepo(repositories, sourceName, expectedId);
 			if (hasRepository(repositories, name)) {
 				throw new ArtifactsError(
 					"ALREADY_EXISTS",
@@ -541,8 +551,8 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		return this.ctx.storage.put("repos", repositories);
 	}
 
-	async getRepo(name: string): Promise<Repository> {
-		return getRepo(await this.repos(), name);
+	async getRepo(name: string, expectedId?: string): Promise<Repository> {
+		return getRepo(await this.repos(), name, expectedId);
 	}
 
 	async backend<T = unknown>(
@@ -629,11 +639,12 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 
 function createRepoHandle(
 	namespace: LocalArtifactsNamespaceObject,
-	name: string
+	name: string,
+	id: string
 ): LocalArtifactsRepo {
 	const read = <T>(request: BackendRequest): Promise<T> =>
 		publicCall(async () =>
-			namespace.backend<T>(await namespace.getRepo(name), request)
+			namespace.backend<T>(await namespace.getRepo(name, id), request)
 		);
 	const readFile = async (args: {
 		ref: string;
@@ -663,12 +674,12 @@ function createRepoHandle(
 
 	return {
 		info: () =>
-			publicCall(async () => repoMetadata(await namespace.getRepo(name))),
+			publicCall(async () => repoMetadata(await namespace.getRepo(name, id))),
 		createToken: (scope: TokenScope = "write", ttl?: number) =>
-			publicCall(() => namespace.createToken(name, scope, ttl)),
-		listTokens: () => publicCall(() => namespace.listTokens(name)),
+			publicCall(() => namespace.createToken(name, scope, ttl, id)),
+		listTokens: () => publicCall(() => namespace.listTokens(name, id)),
 		revokeToken: (tokenOrId: string) =>
-			publicCall(() => namespace.revokeToken(name, tokenOrId)),
+			publicCall(() => namespace.revokeToken(name, tokenOrId, id)),
 		readBlob: async (hash: string) => {
 			validateHash(hash);
 			const result = await read<BackendBlob | null>({
@@ -696,7 +707,7 @@ function createRepoHandle(
 			});
 		},
 		fork: (targetName: string, options: ForkOptions = {}) =>
-			publicCall(() => namespace.fork(name, targetName, options)),
+			publicCall(() => namespace.fork(name, targetName, options, id)),
 	};
 }
 
@@ -887,11 +898,19 @@ function tokenResult(token: CreatedToken): CreateTokenResult {
 	};
 }
 
-function getRepo(repositories: RepositoryMap, name: string): Repository {
-	if (!hasRepository(repositories, name)) {
+function getRepo(
+	repositories: RepositoryMap,
+	name: string,
+	expectedId?: string
+): Repository {
+	const repository = repositories[name.toLowerCase()];
+	if (
+		!repository ||
+		(expectedId !== undefined && repository.id !== expectedId)
+	) {
 		throw new ArtifactsError("NOT_FOUND", `Repository not found: ${name}.`);
 	}
-	return repositories[name.toLowerCase()] as Repository;
+	return repository;
 }
 
 function hasRepository(repositories: RepositoryMap, name: string): boolean {

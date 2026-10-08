@@ -65,8 +65,9 @@ async function rpc(
 	return result;
 }
 
-// This variant runs the actual binding worker and its DO inside workerd. Only
-// this test's source is rewritten: there is no clock endpoint in shipped code.
+// Run the actual binding worker and its DO inside workerd. Only this test
+// source has a controlled clock and a one-shot metadata write fault; neither
+// hook exists in the shipped worker.
 async function clockedWorker(): Promise<string> {
 	let source = await readFile(workerSource, "utf8");
 	const replacements = [
@@ -77,7 +78,18 @@ async function clockedWorker(): Promise<string> {
 		],
 		[
 			"\t// The resolved tail lets the first mutation run immediately.",
-			"\tsetTestClock(time: number): void { testClock = time; }\n\t// The resolved tail lets the first mutation run immediately.",
+			`\tprivate failNextSave = false;
+	failSaveOnce(): void { this.failNextSave = true; }
+	setTestClock(time: number): void { testClock = time; }
+	// The resolved tail lets the first mutation run immediately.`,
+		],
+		[
+			'return this.ctx.storage.put("repos", repositories);',
+			`if (this.failNextSave) {
+			this.failNextSave = false;
+			throw new Error("Injected metadata write failure");
+		}
+		return this.ctx.storage.put("repos", repositories);`,
 		],
 	];
 	for (const [original, replacement] of replacements) {
@@ -99,6 +111,15 @@ export default {
     if (action === "clock") {
       await state.setTestClock(time);
       return Response.json(true);
+    }
+    if (action === "failSave") {
+      await state.failSaveOnce();
+      return Response.json(true);
+    }
+    if (action === "backendStatus") {
+      return env.gitBackend.fetch("http://backend/__local_artifacts__", {
+        method: "POST", body: JSON.stringify({ action: "status" })
+      });
     }
     if (action === "git") {
       return state.fetch(new Request(
@@ -154,11 +175,14 @@ function clockOptions(
 				config: {
 					name: "backend",
 					compatibilityDate: "2026-09-03",
-					manifest: singleModuleManifest(`export default {
+					manifest: singleModuleManifest(`let deleteCount = 0;
+          export default {
             async fetch(request) {
               if (new URL(request.url).pathname !== "/__local_artifacts__")
                 return new Response("Git advertisement", { status: 200 });
               const { action } = await request.json();
+              if (action === "status") return Response.json({ deleteCount });
+              if (action === "delete") deleteCount++;
               if (action === "create" || action === "fork")
                 return Response.json({ defaultBranch: "main", refs: {} });
               return Response.json({ refs: {} });
@@ -214,6 +238,26 @@ async function gitStatus(
 }
 
 const start = Date.parse("2026-01-01T00:00:00.000Z");
+
+test("artifacts: a failed metadata write cannot delete Git contents", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(clockOptions(await clockedWorker()));
+	useDispose(mf);
+	const created = await clockRpc(mf, "create", ["repo"]);
+	await (await clockRequest(mf, { action: "failSave" })).body?.cancel();
+	const failed = await clockRequest(mf, { method: "delete", args: ["repo"] });
+	expect(failed.status).toBe(400);
+	await failed.body?.cancel();
+	expect((await clockRpc(mf, "info", [], "repo")).id).toBe(created.id);
+	expect(
+		await (await clockRequest(mf, { action: "backendStatus" })).json()
+	).toEqual({ deleteCount: 0 });
+	expect(await clockRpc(mf, "delete", ["repo"])).toBe(true);
+	expect(
+		await (await clockRequest(mf, { action: "backendStatus" })).json()
+	).toEqual({ deleteCount: 1 });
+});
 
 test("artifacts: token expiry is exclusive at the exact workerd clock boundary and persists", async ({
 	expect,

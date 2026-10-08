@@ -1,17 +1,21 @@
 import { execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { devNull } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
-import { Miniflare } from "miniflare";
+import { ArtifactsController, Miniflare } from "miniflare";
 import { test } from "vitest";
 import {
 	GitClient,
 	gitEnvironment,
 } from "../../../src/plugins/artifacts/git-client";
-import { startGitSidecar } from "../../../src/plugins/artifacts/git-sidecar";
+import {
+	startGitSidecar,
+	type GitSidecar,
+} from "../../../src/plugins/artifacts/git-sidecar";
+import { repositoryPath } from "../../../src/plugins/artifacts/storage";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
@@ -142,6 +146,32 @@ async function pushFixture(mf: Miniflare, directory: string) {
 	return created;
 }
 
+async function createSidecarRepository(
+	sidecar: GitSidecar,
+	generation: string
+): Promise<void> {
+	const response = await fetch(
+		`http://${sidecar.address}/__local_artifacts__`,
+		{
+			method: "POST",
+			headers: {
+				"X-Local-Artifacts-Backend": sidecar.secret,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				action: "create",
+				namespace: "test",
+				name: "repo",
+				generation,
+			}),
+		}
+	);
+	if (!response.ok) {
+		throw new Error(`Sidecar create failed: ${await response.text()}`);
+	}
+	await response.body?.cancel();
+}
+
 test("artifacts: real RPC exposes current methods, not metadata or legacy methods", async ({
 	expect,
 }) => {
@@ -204,6 +234,131 @@ test("artifacts: Git client imports and reads a local fixture", async ({
 	);
 });
 
+test("artifacts: readCommit and log accept pre-1970 Git timestamps", async ({
+	expect,
+}) => {
+	const directory = await useTmp();
+	const repository = path.join(directory, "history");
+	await git(["init", "--initial-branch=main", repository]);
+	const tree = (await git(["write-tree"], repository)).stdout.trim();
+	const commitFile = path.join(directory, "negative-date-commit");
+	await writeFile(
+		commitFile,
+		`tree ${tree}\nauthor Ada <ada@example.test> -1 +0000\ncommitter Ada <ada@example.test> -1 +0000\n\nbefore epoch\n`
+	);
+	// Git's object writer rejects negative dates by default, but the read
+	// surface must still handle existing objects with these header values.
+	const hash = (
+		await git(
+			["hash-object", "--literally", "-t", "commit", "-w", commitFile],
+			repository
+		)
+	).stdout.trim();
+	await git(["update-ref", "refs/heads/main", hash], repository);
+	const client = new GitClient(repository);
+	expect(await client.readCommit(hash)).toMatchObject({
+		authoredAt: -1,
+		committedAt: -1,
+	});
+	expect(await client.log()).toMatchObject([{ hash, authoredAt: -1 }]);
+});
+
+test("artifacts: log follows the first-parent chain through merges", async ({
+	expect,
+}) => {
+	const directory = await useTmp();
+	const repository = path.join(directory, "merged");
+	await git(["init", "--initial-branch=main", repository]);
+	await writeFile(path.join(repository, "base.txt"), "base\n");
+	await git(["add", "."], repository);
+	await git(["commit", "-m", "base"], repository);
+	await git(["checkout", "-b", "feature"], repository);
+	await writeFile(path.join(repository, "feature.txt"), "feature\n");
+	await git(["add", "."], repository);
+	await git(["commit", "-m", "feature"], repository);
+	const feature = (await git(["rev-parse", "HEAD"], repository)).stdout.trim();
+	await git(["checkout", "main"], repository);
+	await writeFile(path.join(repository, "main.txt"), "main\n");
+	await git(["add", "."], repository);
+	await git(["commit", "-m", "main"], repository);
+	await git(["merge", "--no-ff", "-m", "merge", "feature"], repository);
+	const expected = (
+		await git(["rev-list", "--first-parent", "HEAD"], repository)
+	).stdout
+		.trim()
+		.split("\n");
+	const history = await new GitClient(repository).log();
+	expect(history.map((commit) => commit.hash)).toEqual(expected);
+	expect(history.map((commit) => commit.hash)).not.toContain(feature);
+});
+
+test("artifacts: interrupted deletion leaves a replaceable orphaned generation", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const sidecar = await startGitSidecar(root);
+	try {
+		await createSidecarRepository(sidecar, "original");
+		const client = new GitClient(repositoryPath(root, "test", "repo"));
+		expect(await client.generation()).toBe("original");
+		// The namespace has committed the deletion, but the process exited
+		// before the native repository could be removed.
+		await createSidecarRepository(sidecar, "replacement");
+		expect(await client.generation()).toBe("replacement");
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test("artifacts: restart finishes cleanup after an interrupted Git deletion", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const active = repositoryPath(root, "test", "repo");
+	const retired = `${active}.deleting-${"a".repeat(32)}`;
+	const first = await startGitSidecar(root);
+	try {
+		await createSidecarRepository(first, "original");
+		// Simulate termination after metadata removal and the atomic rename,
+		// but before the retired directory's contents have been removed.
+		await rename(active, retired);
+	} finally {
+		await first.close();
+	}
+	const restarted = await startGitSidecar(root);
+	try {
+		await expect(stat(retired)).rejects.toMatchObject({ code: "ENOENT" });
+		await expect(stat(active)).rejects.toMatchObject({ code: "ENOENT" });
+	} finally {
+		await restarted.close();
+	}
+});
+
+test("artifacts: config update closes retired sidecars but abort preserves active ones", async ({
+	expect,
+}) => {
+	const directory = await useTmp();
+	const controller = new ArtifactsController();
+	const reachable = (address: string) => fetch(`http://${address}/`);
+	try {
+		controller.beginUpdate();
+		const first = await controller.get(path.join(directory, "first"));
+		await controller.commitUpdate();
+		controller.beginUpdate();
+		const candidate = await controller.get(path.join(directory, "candidate"));
+		await controller.abortUpdate();
+		expect((await reachable(first.sidecar.address)).status).toBe(403);
+		await expect(reachable(candidate.sidecar.address)).rejects.toThrow();
+		controller.beginUpdate();
+		const next = await controller.get(path.join(directory, "next"));
+		await controller.commitUpdate();
+		await expect(reachable(first.sidecar.address)).rejects.toThrow();
+		expect((await reachable(next.sidecar.address)).status).toBe(403);
+	} finally {
+		await controller.dispose();
+	}
+});
+
 test("artifacts: omitted remote remains offline", async ({ expect }) => {
 	const mf = new Miniflare(options("test", "REPOS", null));
 	useDispose(mf);
@@ -236,6 +391,33 @@ test("artifacts: names are case-insensitive for create, get, fork and delete", a
 	);
 	expect(await rpc(mf, "delete", ["REPO"])).toBe(true);
 	expect(await rpc(mf, "delete", ["repo"])).toBe(false);
+});
+
+test("artifacts: retained handles cannot access a replacement repository", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const { REPOS } = await mf.getBindings<{
+		REPOS: {
+			create(name: string): Promise<{ id: string }>;
+			get(name: string): Promise<{
+				info(): Promise<{ id: string }>;
+				createToken(): Promise<unknown>;
+			}>;
+			delete(name: string): Promise<boolean>;
+		};
+	}>();
+	const original = await REPOS.create("repo");
+	const retained = await REPOS.get("repo");
+	await REPOS.delete("repo");
+	const replacement = await REPOS.create("repo");
+	expect(replacement.id).not.toBe(original.id);
+	await expect(async () => retained.info()).rejects.toThrow(/not found/i);
+	await expect(async () => retained.createToken()).rejects.toThrow(
+		/not found/i
+	);
+	expect((await (await REPOS.get("repo")).info()).id).toBe(replacement.id);
 });
 
 test("artifacts: supports Node binding proxies", async ({ expect }) => {

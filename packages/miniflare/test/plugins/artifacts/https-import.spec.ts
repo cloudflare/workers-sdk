@@ -104,6 +104,15 @@ async function startHttpsGit(directory: string) {
 					.end();
 				return;
 			}
+			if (request.url?.startsWith("/redirected.git")) {
+				redirectedRequests++;
+				response.writeHead(500).end("Unexpected redirected request");
+				return;
+			}
+			if (redirectTarget && request.url?.startsWith("/source.git/info/refs")) {
+				response.writeHead(302, { Location: redirectTarget }).end();
+				return;
+			}
 			if (
 				interruptUpload &&
 				request.url?.startsWith("/source.git/git-upload-pack")
@@ -170,6 +179,8 @@ async function startHttpsGit(directory: string) {
 	);
 	let interruptUpload = false;
 	let interrupted = 0;
+	let redirectTarget: string | undefined;
+	let redirectedRequests = 0;
 	await new Promise<void>((resolve, reject) => {
 		server.once("error", reject);
 		server.listen(0, "127.0.0.1", resolve);
@@ -183,6 +194,12 @@ async function startHttpsGit(directory: string) {
 		url: `https://localhost:${address.port}/source.git`,
 		get interrupted() {
 			return interrupted;
+		},
+		get redirectedRequests() {
+			return redirectedRequests;
+		},
+		set redirectTarget(value: string | undefined) {
+			redirectTarget = value;
 		},
 		set interruptUpload(value: boolean) {
 			interruptUpload = value;
@@ -278,10 +295,35 @@ function restoreCA(value: string | undefined): void {
 	}
 }
 
+test("HTTPS import: credentials never follow a Git redirect", async ({
+	expect,
+}) => {
+	await withFixture(async ({ mf, fixture }) => {
+		fixture.redirectTarget = fixture.url.replace(
+			"/source.git",
+			"/redirected.git"
+		);
+		const url = fixture.url.replace(
+			"https://",
+			"https://reader:correct-password@"
+		);
+		const result = await call(mf, "import", [importOptions(url, "redirect")]);
+		expect(result.ok).toBe(false);
+		expect(fixture.redirectedRequests).toBe(0);
+		expect((await call(mf, "list")).body).toMatchObject({ total: 0 });
+	});
+});
+
 test("HTTPS import: full import exposes refs, file, log and Git clone through the public binding", async ({
 	expect,
 }) => {
 	await withFixture(async ({ mf, fixture, commits, directory }) => {
+		// Repository-local settings at the HTTPS source are not transferred by
+		// a bare clone, even when the source itself uses native Git.
+		await git(
+			["config", "core.hooksPath", path.join(directory, "source-hooks")],
+			path.join(directory, "source.git")
+		);
 		const url = fixture.url.replace(
 			"https://",
 			"https://reader:correct-password@"
@@ -308,6 +350,7 @@ test("HTTPS import: full import exposes refs, file, log and Git clone through th
 			"utf8"
 		);
 		expect(config).not.toContain("correct-password");
+		expect(config).not.toContain("source-hooks");
 		expect(config).not.toContain('remote "origin"');
 		expect(
 			(await call(mf, "readFile", [{ ref: "main", path: "README" }], "full"))

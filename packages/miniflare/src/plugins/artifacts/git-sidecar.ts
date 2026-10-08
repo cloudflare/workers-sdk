@@ -1,12 +1,13 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdir, stat } from "node:fs/promises";
+import { mkdir, readdir, rename, stat } from "node:fs/promises";
 import {
 	createServer,
 	type IncomingMessage,
 	type ServerResponse,
 } from "node:http";
+import path from "node:path";
 import { parentPort, workerData } from "node:worker_threads";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { assertGitAvailable, GitClient, gitEnvironment } from "./git-client";
@@ -19,7 +20,7 @@ import type { RepositoryState } from "./git-client";
 
 const adminPath = "/__local_artifacts__";
 const componentPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const repositoryLocks = new Map<string, Promise<void>>();
+type RepositoryLocks = Map<string, Promise<void>>;
 const decoder = new TextDecoder();
 
 if (parentPort) {
@@ -76,22 +77,26 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	await mkdir(root, { recursive: true });
 	await assertSupportedGitLayout(root);
 	await assertGitAvailable();
+	await cleanupRetiredRepositories(root);
 	const secret = createGitSecret();
+	const repositoryLocks: RepositoryLocks = new Map();
 	const server = createServer((request, response) => {
 		if (request.headers["x-local-artifacts-backend"] !== secret) {
 			response.writeHead(403).end("Forbidden");
 			return;
 		}
-		void handleRequest(root, request, response).catch((error: unknown) => {
-			if (response.headersSent) {
-				response.destroy(error instanceof Error ? error : undefined);
-			} else {
-				response.writeHead(500, { "Content-Type": "text/plain" });
-				response.end(
-					error instanceof Error ? error.message : "Native Git backend failed"
-				);
+		void handleRequest(root, repositoryLocks, request, response).catch(
+			(error: unknown) => {
+				if (response.headersSent) {
+					response.destroy(error instanceof Error ? error : undefined);
+				} else {
+					response.writeHead(500, { "Content-Type": "text/plain" });
+					response.end(
+						error instanceof Error ? error.message : "Native Git backend failed"
+					);
+				}
 			}
-		});
+		);
 	});
 	await new Promise<void>((resolve, reject) => {
 		server.once("error", reject);
@@ -140,12 +145,13 @@ function parseGitPath(pathname: string): {
 // packfiles on node:http rather than buffering them through a Worker router.
 async function handleRequest(
 	root: string,
+	locks: RepositoryLocks,
 	request: IncomingMessage,
 	response: ServerResponse
 ): Promise<void> {
 	const url = new URL(request.url ?? "/", "http://local-artifacts.invalid");
 	if (url.pathname === adminPath) {
-		await handleAdmin(root, request, response);
+		await handleAdmin(root, locks, request, response);
 		return;
 	}
 	const gitPath = parseGitPath(url.pathname);
@@ -160,7 +166,7 @@ async function handleRequest(
 		return;
 	}
 	const path = repositoryPath(root, namespace, repository);
-	await withRepositoryLocks([path], async () => {
+	await withRepositoryLocks(locks, [path], async () => {
 		const generation = request.headers["x-local-artifacts-generation"];
 		const configured = await new GitClient(path).generation();
 		if (typeof generation !== "string" || generation !== configured) {
@@ -179,6 +185,7 @@ async function handleRequest(
 
 async function handleAdmin(
 	root: string,
+	locks: RepositoryLocks,
 	request: IncomingMessage,
 	response: ServerResponse
 ): Promise<void> {
@@ -197,7 +204,7 @@ async function handleAdmin(
 		validateComponent(body.sourceName, "repository");
 		lockPaths.push(repositoryPath(root, body.namespace, body.sourceName));
 	}
-	await withRepositoryLocks(lockPaths, async () => {
+	await withRepositoryLocks(locks, lockPaths, async () => {
 		const result = await handleAction(root, body, new GitClient(repository));
 		response.writeHead(200, { "Content-Type": "application/json" });
 		response.end(JSON.stringify(result));
@@ -213,7 +220,7 @@ async function handleAction(
 		case "create":
 			return handleCreate(root, body, git);
 		case "delete":
-			await removeDir(git.repository);
+			await retireRepository(git.repository);
 			return true;
 		case "fork":
 			return handleFork(root, body, git);
@@ -289,7 +296,13 @@ async function withNewRepository(
 ): Promise<RepositoryState> {
 	await mkdir(root, { recursive: true });
 	if (await exists(git.repository)) {
-		throw new Error(`Repository "${body.name}" already exists on disk`);
+		// The namespace has no record for this name. A prior deletion may have
+		// committed metadata before the process stopped removing Git data.
+		// Never remove a directory that was not created by this simulator.
+		if ((await git.generation()) === null) {
+			throw new Error(`Repository "${body.name}" already exists on disk`);
+		}
+		await retireRepository(git.repository);
 	}
 	try {
 		await initialize();
@@ -298,6 +311,33 @@ async function withNewRepository(
 	} catch (error) {
 		await removeDir(git.repository);
 		throw error;
+	}
+}
+
+// Moving the directory out of its active path is atomic on the same volume.
+// A crash while removing its contents leaves only an inaccessible trash path;
+// the next sidecar startup retries cleanup without blocking name reuse.
+async function retireRepository(repository: string): Promise<void> {
+	const retired = `${repository}.deleting-${randomBytes(16).toString("hex")}`;
+	try {
+		await rename(repository, retired);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+			return;
+		}
+		throw error;
+	}
+	await removeDir(retired);
+}
+
+async function cleanupRetiredRepositories(root: string): Promise<void> {
+	for (const entry of await readdir(root, { withFileTypes: true })) {
+		if (
+			entry.isDirectory() &&
+			/^[0-9a-f]{32}\.git\.deleting-[0-9a-f]{32}$/.test(entry.name)
+		) {
+			await removeDir(path.join(root, entry.name));
+		}
 	}
 }
 
@@ -479,6 +519,7 @@ async function exists(path: string): Promise<boolean> {
 }
 
 async function withRepositoryLocks<T>(
+	repositoryLocks: RepositoryLocks,
 	paths: string[],
 	action: () => Promise<T>
 ): Promise<T> {

@@ -13,13 +13,49 @@ export interface LocalArtifactsBackend {
 // another thread, otherwise those calls prevent it from answering workerd.
 export class ArtifactsController {
 	#backends = new Map<string, Promise<LocalArtifactsBackend>>();
+	// Keep the old roots alive until workerd accepts the replacement config.
+	#activeRoots = new Set<string>();
+	#pendingRoots?: Set<string>;
+
+	beginUpdate(): void {
+		if (this.#pendingRoots) {
+			throw new Error("Artifacts runtime update already in progress");
+		}
+		this.#pendingRoots = new Set();
+	}
+
+	async commitUpdate(): Promise<void> {
+		const roots = this.#pendingRoots;
+		if (!roots) {
+			throw new Error("No Artifacts runtime update to commit");
+		}
+		this.#pendingRoots = undefined;
+		this.#activeRoots = roots;
+		await this.#closeExcept(roots);
+	}
+
+	async abortUpdate(): Promise<void> {
+		if (!this.#pendingRoots) {
+			return;
+		}
+		this.#pendingRoots = undefined;
+		await this.#closeExcept(this.#activeRoots);
+	}
 
 	get(root: string): Promise<LocalArtifactsBackend> {
+		if (!this.#pendingRoots) {
+			throw new Error("Artifacts backend requested outside runtime update");
+		}
+		this.#pendingRoots.add(root);
 		let backend = this.#backends.get(root);
 		if (!backend) {
 			backend = this.#start(root);
 			this.#backends.set(root, backend);
-			void backend.catch(() => this.#backends.delete(root));
+			void backend.catch(() => {
+				if (this.#backends.get(root) === backend) {
+					this.#backends.delete(root);
+				}
+			});
 		}
 		return backend;
 	}
@@ -58,17 +94,30 @@ export class ArtifactsController {
 		}
 	}
 
-	async dispose(): Promise<void> {
-		const backends = [...this.#backends.values()];
-		this.#backends.clear();
-		await Promise.all(
-			backends.map((backend) =>
+	async #closeExcept(roots: Set<string>): Promise<void> {
+		const retired = [...this.#backends].filter(([root]) => !roots.has(root));
+		for (const [root] of retired) {
+			this.#backends.delete(root);
+		}
+		const results = await Promise.allSettled(
+			retired.map(([, backend]) =>
 				backend.then(
 					({ sidecar }) => sidecar.close(),
 					() => undefined
 				)
 			)
 		);
+		for (const result of results) {
+			if (result.status === "rejected") {
+				process.emitWarning("Unable to stop a retired Artifacts Git backend");
+			}
+		}
+	}
+
+	async dispose(): Promise<void> {
+		this.#pendingRoots = undefined;
+		this.#activeRoots.clear();
+		await this.#closeExcept(this.#activeRoots);
 	}
 }
 
