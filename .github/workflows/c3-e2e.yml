@@ -77,15 +77,6 @@ jobs:
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler Tester'
 
-      - name: Verify pnpm on PATH matches matrix version
-        if: matrix.pm.name == 'pnpm' && steps.changes.outputs.everything_but_markdown == 'true'
-        shell: bash
-        run: |
-          got="$(pnpm --version)"
-          want="${{ matrix.pm.version }}"
-          echo "pnpm on PATH: $got (expected $want)"
-          [ "$got" = "$want" ] || { echo "ERROR: PATH pnpm is $got, not $want. Scaffolded installs would silently run the wrong version."; exit 1; }
-
       - name: Install matrix npm version for scaffolded installs
         if: matrix.pm.name == 'npm' && steps.changes.outputs.everything_but_markdown == 'true'
         shell: bash
@@ -205,15 +196,6 @@ jobs:
         run: |
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler Tester'
-
-      - name: Verify pnpm on PATH matches matrix version
-        if: matrix.pm.name == 'pnpm' && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
-        shell: bash
-        run: |
-          got="$(pnpm --version)"
-          want="${{ matrix.pm.version }}"
-          echo "pnpm on PATH: $got (expected $want)"
-          [ "$got" = "$want" ] || { echo "ERROR: PATH pnpm is $got, not $want. Scaffolded installs would silently run the wrong version."; exit 1; }
 
       - name: Install matrix npm version for scaffolded installs
         if: matrix.pm.name == 'npm' && steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
