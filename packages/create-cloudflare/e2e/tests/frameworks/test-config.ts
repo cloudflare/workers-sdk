@@ -106,10 +106,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "docusaurus:pages",
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun"],
-			// `create-docusaurus` installs internally (no `--no-install`),
-			// tripping `ERR_PNPM_IGNORED_BUILDS` on pnpm 11 before C3's
-			// recovery path can engage.
-			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
@@ -123,24 +119,13 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Dinosaurs are cool",
 			},
 			nodeCompat: false,
-			flags: [`--package-manager`, pm],
-			promptHandlers: [
-				// {
-				// 	matcher: /Which platform do you want to deploy to\?/,
-				// 	input: [keys.enter],
-				// },
-				{
-					matcher: /Which language do you want to use\?/,
-					input: [keys.enter],
-				},
-			],
+			// Passing the language avoids the generator keeping piped stdin open.
+			flags: ["--package-manager", pm, "--javascript"],
 		},
 		{
 			name: "docusaurus:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun"],
-			// See note on docusaurus:pages above.
-			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
@@ -154,13 +139,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Dinosaurs are cool",
 			},
 			nodeCompat: false,
-			flags: [`--package-manager`, pm],
-			promptHandlers: [
-				{
-					matcher: /Which language do you want to use\?/,
-					input: [keys.enter],
-				},
-			],
+			// Passing the language avoids the generator keeping piped stdin open.
+			flags: ["--package-manager", pm, "--javascript"],
 		},
 		{
 			name: "analog",
@@ -307,9 +287,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
-			// `create-hono --install` runs the install inside the generator,
-			// before C3's recovery path can engage. Fails on pnpm 11.
-			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Hello!",
@@ -332,8 +309,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
-			// See note on hono:pages above.
-			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			verifyDeploy: {
 				route: "/message",
 				expectedText: "Hello Hono!",
@@ -877,8 +852,6 @@ function getExperimentalFrameworkTestConfig(
 			name: "docusaurus:workers",
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun"],
-			// See note on docusaurus:pages above.
-			unsupportedPmRanges: { pnpm: ">=11.0.0" },
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
@@ -892,13 +865,8 @@ function getExperimentalFrameworkTestConfig(
 				expectedText: "Dinosaurs are cool",
 			},
 			nodeCompat: false,
-			flags: [`--package-manager`, pm],
-			promptHandlers: [
-				{
-					matcher: /Which language do you want to use\?/,
-					input: [keys.enter],
-				},
-			],
+			// Passing the language avoids the generator keeping piped stdin open.
+			flags: ["--package-manager", pm, "--javascript"],
 		},
 		{
 			name: "astro:workers",

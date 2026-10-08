@@ -6,7 +6,11 @@ import type { C3Context } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name, "classic"]);
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		"classic",
+		"--skip-install",
+	]);
 };
 
 const config: TemplateConfig = {
