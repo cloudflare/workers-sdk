@@ -1759,6 +1759,9 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
 				result,
 			});
+			// `run()` returns an RPC result, which keeps the engine busy until it is
+			// disposed, so a finished engine could never be evicted (issue #15809)
+			(result as Partial<Disposable> | undefined)?.[Symbol.dispose]?.();
 			// NOTE(lduarte): we want to run this in a transaction to guarentee ordering with running setstatus call
 			// in case that it returns immediately
 			await this.ctx.storage.transaction(async () => {
@@ -1766,6 +1769,9 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			});
 			// Dispose dup'd stubs; otherwise they leak across DO lifetimes.
 			clearRollbackRegistry(this.rollbackRegistry);
+			// Nothing runs after this, so stop the grace period wait, which would otherwise
+			// keep the finished engine busy for its full duration (issue #15809)
+			this.timeoutHandler.cancelGracePeriod();
 			this.isRunning = false;
 		} catch (err) {
 			if (isAbortError(err)) {
@@ -1823,6 +1829,7 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			await this.ctx.storage.transaction(async () => {
 				await this.setStatus(accountId, instance.id, InstanceStatus.Errored);
 			});
+			this.timeoutHandler.cancelGracePeriod();
 			this.isRunning = false;
 		}
 

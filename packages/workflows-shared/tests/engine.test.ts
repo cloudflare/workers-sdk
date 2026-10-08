@@ -11,6 +11,7 @@ import type {
 	DatabaseInstance,
 	DatabaseVersion,
 	DatabaseWorkflow,
+	Engine,
 	EngineLogs,
 } from "../src/engine";
 import type {
@@ -841,6 +842,51 @@ describe("Engine", () => {
 				).toBe(true);
 			}
 		);
+	});
+
+	describe("grace period", () => {
+		// A grace period left waiting keeps a finished engine busy, so it is never
+		// evicted and keeps its storage files open (issue #15809). The ids are unique
+		// so a retry runs a new instance instead of reading the finished one.
+		it("cancels the grace period when the workflow completes", async ({
+			expect,
+		}) => {
+			const engineStub = await runWorkflowAndAwait(
+				`GRACE-PERIOD-COMPLETE-${crypto.randomUUID()}`,
+				async (_event, step) => {
+					return await step.do("step", async () => "result");
+				}
+			);
+
+			await runInDurableObject<Engine, void>(engineStub, (engine) => {
+				expect(engine.timeoutHandler.latestGracePeriodAbortController).toBe(
+					undefined
+				);
+			});
+		});
+
+		it("cancels the grace period when the workflow fails", async ({
+			expect,
+		}) => {
+			const engineStub = await runWorkflowAndAwait(
+				`GRACE-PERIOD-ERRORED-${crypto.randomUUID()}`,
+				async (_event, step) => {
+					await step.do(
+						"step",
+						{ retries: { limit: 0, delay: "0 seconds" } },
+						async () => {
+							throw new Error("Step errors out");
+						}
+					);
+				}
+			);
+
+			await runInDurableObject<Engine, void>(engineStub, (engine) => {
+				expect(engine.timeoutHandler.latestGracePeriodAbortController).toBe(
+					undefined
+				);
+			});
+		});
 	});
 
 	describe("lifecycle methods", () => {
