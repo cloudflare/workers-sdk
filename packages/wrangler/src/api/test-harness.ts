@@ -12,7 +12,15 @@ import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
 } from "@cloudflare/workflows-shared/src/introspection";
-import { CorePaths, Headers, Request } from "miniflare";
+import {
+	convertV4MiniflareOptions,
+	CorePaths,
+	Headers,
+	Log,
+	LogLevel,
+	Miniflare,
+	Request,
+} from "miniflare";
 import { readConfig } from "../config";
 import {
 	buildMigrationQuery,
@@ -28,9 +36,11 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { runWithLogLevel } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
+import { unstable_getMiniflareWorkerOptions } from "./integrations/platform";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
+import { readTestHarnessBuildOutput } from "./test-harness-build-output";
 import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
@@ -58,8 +68,9 @@ import type {
 	DispatchFetch,
 	EmailHandlerResult,
 	Json,
-	Miniflare,
+	MiniflareOptions,
 	RequestInfo,
+	V4WorkerOptions,
 	WorkerdStructuredLog,
 } from "miniflare";
 
@@ -73,7 +84,30 @@ export type TestHarnessOptions = {
 	 * Workers to run in this server. The first worker is the primary worker.
 	 */
 	workers: WorkerInput[];
+	buildOutput?: never;
 };
+
+export type BuildOutputTestHarnessOptions = {
+	/** Project root containing `.cloudflare/output/v0` from a Build Output API build. */
+	root?: string | undefined;
+	/**
+	 * Run the built Worker artifacts through the test harness runtime.
+	 * Build Output container images are not started locally.
+	 */
+	buildOutput: true;
+	/** Test-only binding overrides, keyed by the built Worker name. */
+	workerOverrides?: Record<
+		string,
+		{
+			vars?: Record<string, Json>;
+			secrets?: Record<string, string>;
+			bindingOverrides?: Record<string, string>;
+		}
+	>;
+	workers?: never;
+};
+
+type HarnessOptions = TestHarnessOptions | BuildOutputTestHarnessOptions;
 
 export type ExportName<Module, Type> = string extends keyof Module
 	? string
@@ -357,6 +391,13 @@ export type TestHarness = {
 			| TestHarnessOptions
 			| ((currentOptions: TestHarnessOptions) => TestHarnessOptions)
 	): Promise<void>;
+	update(
+		options:
+			| BuildOutputTestHarnessOptions
+			| ((
+					currentOptions: BuildOutputTestHarnessOptions
+			  ) => BuildOutputTestHarnessOptions)
+	): Promise<void>;
 	/**
 	 * Restores the server to the options used when the current session first
 	 * started. Storage is recreated, and the server URL may change after reset.
@@ -420,10 +461,21 @@ type WorkerInput =
 			config: InlineConfig;
 	  };
 
-type ServerSession = {
-	primaryDevEnv: DevEnv;
-	devEnvs: DevEnv[];
-};
+type ServerSession =
+	| {
+			kind: "dev";
+			primaryDevEnv: DevEnv;
+			devEnvs: DevEnv[];
+	  }
+	| {
+			kind: "build-output";
+			miniflare: Miniflare;
+			configs: Map<string, Config>;
+			primaryWorkerName: string;
+			url: URL;
+	  };
+
+type DevServerSession = Extract<ServerSession, { kind: "dev" }>;
 
 type DebugLog = {
 	source: "server" | "runtime";
@@ -436,8 +488,8 @@ type DebugLog = {
 /**
  * Creates a local test server for running Workers.
  *
- * The server can run one or more Workers from Wrangler config files, including
- * generated configs from Vite, or from inline configuration objects.
+ * The server can run Workers from Wrangler config files, inline configuration
+ * objects, or a Build Output API build in `.cloudflare/output/v0`.
  *
  * @example
  * ```ts
@@ -448,8 +500,15 @@ type DebugLog = {
  * const response = await server.fetch("/api/users");
  * await server.close();
  * ```
+ *
+ * For projects built with the Build Output API, run the emitted artifacts:
+ *
+ * ```ts
+ * const server = createTestHarness({ buildOutput: true });
+ * await server.listen();
+ * ```
  */
-export function createTestHarness(options?: TestHarnessOptions): TestHarness {
+export function createTestHarness(options?: HarnessOptions): TestHarness {
 	let initialOptions = options;
 	let currentOptions = options;
 	let serverSession: ServerSession | undefined;
@@ -591,7 +650,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		}
 
 		const root = serverOptions.root ?? process.cwd();
-
 		return serverOptions.workers.map((input, index, list) => {
 			const isPrimaryWorker = index === 0;
 			const isMultiworker = list.length > 1;
@@ -649,9 +707,100 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		});
 	}
 
+	async function resolveBuildOutputMiniflareOptions(
+		serverOptions: BuildOutputTestHarnessOptions
+	): Promise<{ options: MiniflareOptions; configs: Map<string, Config> }> {
+		const workers = await readTestHarnessBuildOutput(
+			serverOptions.root ?? process.cwd()
+		);
+		const configs = new Map(workers.map(({ config }) => [config.name, config]));
+		for (const name of Object.keys(serverOptions.workerOverrides ?? {})) {
+			if (!configs.has(name)) {
+				throw new TypeError(
+					`Worker ${JSON.stringify(name)} does not exist in the Build Output.`
+				);
+			}
+		}
+
+		const miniflareWorkers: V4WorkerOptions[] = [];
+		for (const worker of workers) {
+			const { config, modules, bundleDir, warnings } = worker;
+			if (warnings) {
+				debugLog(warnings, config.name);
+			}
+			const overrides = serverOptions.workerOverrides?.[config.name];
+			const { workerOptions: sourceOptions, externalWorkers } =
+				unstable_getMiniflareWorkerOptions(config, undefined, {
+					overrides: { enableContainers: false },
+				});
+			const { modulesRules: _modulesRules, ...workerOptions } = sourceOptions;
+			const routes = [
+				...(config.route ? [config.route] : []),
+				...(config.routes ?? []),
+			].map((route) => (typeof route === "string" ? route : route.pattern));
+			const commonOptions = {
+				...workerOptions,
+				name: config.name,
+				routes,
+				bindings: {
+					...(workerOptions.bindings as V4WorkerOptions["bindings"]),
+					...overrides?.vars,
+					...overrides?.secrets,
+				},
+				serviceBindings: {
+					...(workerOptions.serviceBindings as V4WorkerOptions["serviceBindings"]),
+					...overrides?.bindingOverrides,
+				},
+			};
+			miniflareWorkers.push(
+				modules && bundleDir
+					? { ...commonOptions, rootPath: bundleDir, modules }
+					: { ...commonOptions, modules: true, script: "" },
+				...externalWorkers
+			);
+		}
+
+		return {
+			options: convertV4MiniflareOptions({
+				host: "127.0.0.1",
+				port: 0,
+				log: new Log(LogLevel.NONE),
+				logRequests: false,
+				unsafeTriggerHandlers: true,
+				telemetry: { enabled: false },
+				handleStructuredLogs: captureStructuredLog,
+				workers: miniflareWorkers,
+			}),
+			configs,
+		};
+	}
+
+	async function createBuildOutputSession(
+		serverOptions: BuildOutputTestHarnessOptions
+	): Promise<ServerSession> {
+		const { options: miniflareOptions, configs } =
+			await resolveBuildOutputMiniflareOptions(serverOptions);
+		const primaryWorkerName = configs.keys().next().value;
+		assert(primaryWorkerName, "Build Output contains no workers.");
+		const miniflare = new Miniflare(miniflareOptions);
+		try {
+			const url = await miniflare.ready;
+			return {
+				kind: "build-output",
+				miniflare,
+				configs,
+				primaryWorkerName,
+				url,
+			};
+		} catch (error) {
+			await miniflare.dispose();
+			throw error;
+		}
+	}
+
 	async function createSession(
 		serverOptions: TestHarnessOptions
-	): Promise<ServerSession> {
+	): Promise<DevServerSession> {
 		const inputs = resolveWorkerInputs(serverOptions);
 		const [, ...auxiliaryWorkers] = inputs;
 		const isMultiworker = auxiliaryWorkers.length > 0;
@@ -669,7 +818,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					proxyFactory: (devEnv) => new NoOpProxyController(devEnv),
 				})
 		);
-		const session: ServerSession = {
+		const session: DevServerSession = {
+			kind: "dev",
 			primaryDevEnv,
 			devEnvs: [primaryDevEnv, ...auxiliaryDevEnvs],
 		};
@@ -690,7 +840,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	async function updateConfig(
-		session: ServerSession,
+		session: DevServerSession,
 		inputs: WranglerStartDevWorkerInput[]
 	) {
 		for (const [index, workerInput] of inputs.entries()) {
@@ -717,7 +867,10 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		workerName: string | undefined
 	) {
 		if (workerName === undefined) {
-			const primaryWorkerName = session.primaryDevEnv.config.latestConfig?.name;
+			const primaryWorkerName =
+				session.kind === "build-output"
+					? session.primaryWorkerName
+					: session.primaryDevEnv.config.latestConfig?.name;
 			assert(
 				primaryWorkerName,
 				"Primary Worker name is not available. Add a Worker `name` or call server.getWorker(name)."
@@ -725,9 +878,12 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			return primaryWorkerName;
 		}
 
-		const workerExists = session.devEnvs.some((devEnv) => {
-			return devEnv.config.latestConfig?.name === workerName;
-		});
+		const workerExists =
+			session.kind === "build-output"
+				? session.configs.has(workerName)
+				: session.devEnvs.some(
+						(devEnv) => devEnv.config.latestConfig?.name === workerName
+					);
 
 		if (!workerExists) {
 			throw new TypeError(
@@ -739,9 +895,12 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	function getWorkerWranglerConfig(session: ServerSession, workerName: string) {
-		const workerConfig = session.devEnvs.find(
-			(devEnv) => devEnv.config.latestConfig?.name === workerName
-		)?.config.latestWranglerConfig;
+		const workerConfig =
+			session.kind === "build-output"
+				? session.configs.get(workerName)
+				: session.devEnvs.find(
+						(devEnv) => devEnv.config.latestConfig?.name === workerName
+					)?.config.latestWranglerConfig;
 		assert(
 			workerConfig,
 			`Worker ${JSON.stringify(workerName)} config is not available.`
@@ -808,7 +967,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	async function teardownSession(session: ServerSession) {
 		try {
 			debugLog("teardown - started");
-			await Promise.all(session.devEnvs.map((devEnv) => devEnv.teardown()));
+			if (session.kind === "build-output") {
+				await session.miniflare.dispose();
+			} else {
+				await Promise.all(session.devEnvs.map((devEnv) => devEnv.teardown()));
+			}
 			debugLog("teardown - completed");
 		} catch (error) {
 			debugLog("teardown - failed");
@@ -831,7 +994,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			workerdLogs = [];
 			debugLogs = [];
 			initialOptions = currentOptions;
-			startPromise = createSession(initialOptions)
+			startPromise = (
+				initialOptions.buildOutput === true
+					? createBuildOutputSession(initialOptions)
+					: createSession(initialOptions)
+			)
 				.then((session) => {
 					serverSession = session;
 					return session;
@@ -844,7 +1011,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return await startPromise;
 	}
 
-	async function waitForProxyReady(session: ServerSession) {
+	async function waitForProxyReady(session: DevServerSession) {
 		return new Promise<
 			Awaited<typeof session.primaryDevEnv.proxy.ready.promise>
 		>((resolve, reject) => {
@@ -881,7 +1048,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		});
 	}
 
-	async function waitForReloadComplete(session: ServerSession) {
+	async function waitForReloadComplete(session: DevServerSession) {
 		return new Promise<void>((resolve, reject) => {
 			const cleanup = () => {
 				for (const devEnv of session.devEnvs) {
@@ -932,12 +1099,15 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	async function getRuntimeMiniflare(session: ServerSession) {
+		if (session.kind === "build-output") {
+			return session.miniflare;
+		}
 		const miniflare = session.primaryDevEnv.runtimes[0].mf;
 		assert(miniflare, "Worker runtime is not available.");
 		return miniflare;
 	}
 
-	function getWorkerDevEnv(session: ServerSession, workerName: string) {
+	function getWorkerDevEnv(session: DevServerSession, workerName: string) {
 		const devEnv = session.devEnvs.find(
 			(d) => d.config.latestConfig?.name === workerName
 		);
@@ -973,7 +1143,10 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 		if (typeof input === "string" && !URL.canParse(input)) {
 			const session = await resolveSession();
-			const { url } = await session.primaryDevEnv.proxy.ready.promise;
+			const { url } =
+				session.kind === "build-output"
+					? session
+					: await session.primaryDevEnv.proxy.ready.promise;
 			const baseUrl = new URL(url);
 
 			if (
@@ -1010,14 +1183,18 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	return {
 		async listen() {
 			const session = serverSession ?? (await startServerSession());
-			const ready = await session.primaryDevEnv.proxy.ready.promise;
-
 			return {
-				url: ready.url,
+				url:
+					session.kind === "build-output"
+						? session.url
+						: (await session.primaryDevEnv.proxy.ready.promise).url,
 			};
 		},
 		async fetch(input, init) {
 			const session = await resolveSession();
+			if (session.kind === "build-output") {
+				return dispatchFetch(session.miniflare, input, init);
+			}
 			const miniflare = session.primaryDevEnv.proxy.proxyWorker;
 			assert(
 				miniflare,
@@ -1034,10 +1211,15 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				const session = await resolveSession();
 				const miniflare = await getRuntimeMiniflare(session);
 				const workerName = resolveWorkerName(session, name);
-				const bindingConfig = getWorkerDevEnv(session, workerName).config
-					.latestConfig?.bindings?.[bindingName];
+				const isWorkflowBinding =
+					session.kind === "build-output"
+						? getWorkerWranglerConfig(session, workerName).workflows.some(
+								(binding) => binding.binding === bindingName
+							)
+						: getWorkerDevEnv(session, workerName).config.latestConfig
+								?.bindings?.[bindingName]?.type === "workflow";
 
-				if (bindingConfig?.type !== "workflow") {
+				if (!isWorkflowBinding) {
 					throw new TypeError(
 						`No Workflow binding named ${JSON.stringify(bindingName)} found in ${JSON.stringify(workerName)} worker.`
 					);
@@ -1174,13 +1356,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
-					const workerConfig = getWorkerDevEnv(session, workerName).config
-						.latestWranglerConfig;
-
-					assert(
-						workerConfig,
-						`Worker ${JSON.stringify(workerName)} config is not available.`
-					);
+					const workerConfig = getWorkerWranglerConfig(session, workerName);
 					assert(
 						workerConfig.configPath,
 						`Worker ${JSON.stringify(workerName)} config path is not available.`
@@ -1347,15 +1523,25 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			// oxlint-disable-next-line no-console -- Use console.log() directly as the logger is disabled
 			console.log(message);
 		},
-		async update(updateInput) {
-			let nextOptions: TestHarnessOptions;
+		async update(
+			updateInput:
+				| HarnessOptions
+				| ((currentOptions: TestHarnessOptions) => TestHarnessOptions)
+				| ((
+						currentOptions: BuildOutputTestHarnessOptions
+				  ) => BuildOutputTestHarnessOptions)
+		) {
+			let nextOptions: HarnessOptions;
 
 			if (typeof updateInput === "function") {
 				assert(
 					currentOptions,
 					"Cannot update test harness options with a function before options have been configured. Pass options to createTestHarness() or call server.update(options) first."
 				);
-				nextOptions = updateInput(currentOptions);
+				const update = updateInput as (
+					currentOptions: HarnessOptions
+				) => HarnessOptions;
+				nextOptions = update(currentOptions);
 			} else {
 				nextOptions = updateInput;
 			}
@@ -1367,19 +1553,41 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 			if (serverSession) {
 				debugLog("update - started");
-				const nextInputs = resolveWorkerInputs(nextOptions);
-
-				if (nextInputs.length !== serverSession.devEnvs.length) {
-					throw new Error(
-						`Updating the number of workers running in the server is not supported.`
-					);
-				}
-
 				try {
-					await Promise.all([
-						waitForReloadComplete(serverSession),
-						updateConfig(serverSession, nextInputs),
-					]);
+					if (serverSession.kind === "build-output") {
+						if (nextOptions.buildOutput !== true) {
+							throw new Error(
+								"Updating between Build Output and source Worker modes is not supported."
+							);
+						}
+						const { options: miniflareOptions, configs } =
+							await resolveBuildOutputMiniflareOptions(nextOptions);
+						if (configs.size !== serverSession.configs.size) {
+							throw new Error(
+								"Updating the number of workers running in the server is not supported."
+							);
+						}
+						await serverSession.miniflare.setOptions(miniflareOptions);
+						serverSession.configs = configs;
+						serverSession.primaryWorkerName = configs.keys().next().value ?? "";
+						serverSession.url = await serverSession.miniflare.ready;
+					} else {
+						if (nextOptions.buildOutput === true) {
+							throw new Error(
+								"Updating between Build Output and source Worker modes is not supported."
+							);
+						}
+						const nextInputs = resolveWorkerInputs(nextOptions);
+						if (nextInputs.length !== serverSession.devEnvs.length) {
+							throw new Error(
+								"Updating the number of workers running in the server is not supported."
+							);
+						}
+						await Promise.all([
+							waitForReloadComplete(serverSession),
+							updateConfig(serverSession, nextInputs),
+						]);
+					}
 					debugLog("update - completed");
 				} catch (error) {
 					debugLog("update - failed");
