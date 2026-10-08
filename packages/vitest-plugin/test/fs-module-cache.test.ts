@@ -1,7 +1,43 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
+import { vi } from "vitest";
+import { CloudflarePoolWorker } from "../src/pool/cloudflare-pool-worker";
+import { structuredSerializableParse } from "../src/pool/index";
 import { test, vitestConfig } from "./helpers";
+import type { WorkerRequest } from "vitest/node";
+
+test("falls back to fetching missing warm-cache entries", async ({
+	expect,
+	tmpPath,
+}) => {
+	const cachedPath = path.join(tmpPath, "cached-module.js");
+	await fs.writeFile(cachedPath, "export const value = 42;");
+	const send = vi.fn();
+	const worker = Object.create(
+		CloudflarePoolWorker.prototype
+	) as CloudflarePoolWorker;
+	Object.assign(worker, {
+		socket: { send },
+		parsedPoolOptions: {},
+		options: { project: { config: { fsModuleCache: true } } },
+	});
+
+	worker.send({
+		t: "s",
+		i: 1,
+		r: {
+			"/missing": { cached: true, tmp: path.join(tmpPath, "missing.js") },
+			"/cached": { cached: true, tmp: cachedPath },
+		},
+	} as unknown as WorkerRequest);
+
+	const response = structuredSerializableParse(send.mock.calls[0][0]) as {
+		r: Record<string, { code: string }>;
+	};
+	expect(response.r).not.toHaveProperty("/missing");
+	expect(response.r["/cached"].code).toBe("export const value = 42;");
+});
 
 for (const moduleRegistry of [
 	"legacy_module_registry",
