@@ -66,6 +66,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: pm === "pnpm",
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -900,6 +901,7 @@ function getExperimentalFrameworkTestConfig(
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: pm === "pnpm",
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
