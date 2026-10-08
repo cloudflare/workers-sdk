@@ -1891,6 +1891,29 @@ describe("versions upload", () => {
 			});
 		});
 
+		test("should include durable_object_memory_mb in limits metadata", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				compatibility_date: "2024-01-01",
+				limits: { cpu_ms: 100, durable_object_memory_mb: 512 },
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.limits).toEqual({
+				cpu_ms: 100,
+				durable_object_memory_mb: 512,
+			});
+		});
+
 		test("should include worker export cache config without top-level cache", async ({
 			expect,
 		}) => {

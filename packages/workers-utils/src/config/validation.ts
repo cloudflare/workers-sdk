@@ -2251,6 +2251,14 @@ function normalizeAndValidateEnvironment(
 		environment.exports
 	);
 
+	warnIfDurableObjectMemoryHasNoDurableObjects(
+		diagnostics,
+		environment.limits,
+		environment.durable_objects,
+		environment.migrations,
+		environment.exports
+	);
+
 	validateWorkflowExportConflicts(diagnostics, environment.exports);
 
 	// `exports` is inherited by named environments but `containers` is not, so the
@@ -6500,6 +6508,8 @@ const validateRateLimitBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const DURABLE_OBJECT_MEMORY_MB_CHOICES = [128, 256, 512];
+
 function normalizeAndValidateLimits(
 	diagnostics: Diagnostics,
 	topLevelEnv: Environment | undefined,
@@ -6520,6 +6530,15 @@ function normalizeAndValidateLimits(
 			"subrequests",
 			rawEnv.limits.subrequests,
 			"number"
+		);
+
+		validateOptionalProperty(
+			diagnostics,
+			"limits",
+			"durable_object_memory_mb",
+			rawEnv.limits.durable_object_memory_mb,
+			"number",
+			DURABLE_OBJECT_MEMORY_MB_CHOICES
 		);
 	}
 
@@ -6950,6 +6969,15 @@ const validatePreviewsConfig =
 					"subrequests",
 					previews.limits.subrequests,
 					"number"
+				) && isValid;
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"durable_object_memory_mb",
+					previews.limits.durable_object_memory_mb,
+					"number",
+					DURABLE_OBJECT_MEMORY_MB_CHOICES
 				) && isValid;
 		}
 
@@ -8092,6 +8120,41 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 	\`\`\`
 	${formatConfigSnippet({ exports: suggestedExports }, configPath)}
 	\`\`\``);
+}
+
+/**
+ * Emit a warning if `limits.durable_object_memory_mb` is set but this Worker
+ * does not appear to export any Durable Object classes, since the limit only
+ * applies to Durable Objects.
+ */
+function warnIfDurableObjectMemoryHasNoDurableObjects(
+	diagnostics: Diagnostics,
+	limits: Config["limits"],
+	durableObjects: Config["durable_objects"],
+	migrations: Config["migrations"],
+	exports: Config["exports"]
+) {
+	if (limits?.durable_object_memory_mb === undefined) {
+		return;
+	}
+
+	const hasLocalDurableObjectBinding =
+		Array.isArray(durableObjects.bindings) &&
+		durableObjects.bindings.some((binding) => !binding.script_name);
+	const hasDurableObjectExport =
+		Object.keys(partitionExports(exports)["durable-object"]).length > 0;
+
+	if (
+		hasLocalDurableObjectBinding ||
+		migrations.length > 0 ||
+		hasDurableObjectExport
+	) {
+		return;
+	}
+
+	diagnostics.warnings.push(
+		`"limits.durable_object_memory_mb" is set, but this Worker does not export any Durable Objects. This limit only applies to Durable Objects exported by this Worker and will have no effect.`
+	);
 }
 
 /**
