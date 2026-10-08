@@ -209,6 +209,8 @@ function createMockPostgresNoSslServer(): Promise<{
 	});
 }
 
+const PUMP_CHUNK = Buffer.alloc(256 * 1024, "P");
+
 interface MockServer {
 	port: number;
 	close(): void;
@@ -260,14 +262,13 @@ function createMockPostgresPumpServer(
 					ca: caCert,
 				});
 				tlsSocket.on("error", () => socket.destroy());
-				tlsSocket.on("secure", () => {
-					const pump = setInterval(() => {
-						tlsSocket.write(Buffer.alloc(256 * 1024));
-					}, 1);
-					const stop = () => clearInterval(pump);
-					tlsSocket.on("close", stop);
-					tlsSocket.on("error", stop);
-				});
+				const pump = () => {
+					while (!tlsSocket.destroyed && tlsSocket.write(PUMP_CHUNK)) {}
+					if (!tlsSocket.destroyed) {
+						tlsSocket.once("drain", pump);
+					}
+				};
+				tlsSocket.on("secure", pump);
 			});
 		});
 	});
