@@ -495,6 +495,7 @@ function convertBindingsAndAssets(
 						binding: name,
 						database_id: binding.id,
 						database_name: binding.name,
+						jurisdiction: binding.jurisdiction,
 						remote: binding.dev?.remote,
 					})
 				);
