@@ -9,7 +9,7 @@ import {
 } from "node:http";
 import { parentPort, workerData } from "node:worker_threads";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
-import { GitClient, gitEnvironment, runGit } from "./git-client";
+import { assertGitAvailable, GitClient, gitEnvironment } from "./git-client";
 import {
 	assertSupportedGitLayout,
 	repositoryDirectory,
@@ -75,7 +75,7 @@ function createGitSecret(): string {
 export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	await mkdir(root, { recursive: true });
 	await assertSupportedGitLayout(root);
-	await runGit(["--version"]);
+	await assertGitAvailable();
 	const secret = createGitSecret();
 	const server = createServer((request, response) => {
 		if (request.headers["x-local-artifacts-backend"] !== secret) {

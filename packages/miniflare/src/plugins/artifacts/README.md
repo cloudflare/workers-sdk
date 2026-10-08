@@ -3,9 +3,13 @@
 For setup, persistence, Git authentication, and local/remote behavior, see
 [Local development](./LOCAL_DEVELOPMENT.md).
 
-The Artifacts plugin implements the local Artifacts binding in workerd. A Node
-worker thread runs the native Git backend. Unless `dev.remote` is explicitly
-`true`, an Artifacts binding uses local storage rather than contacting Cloudflare.
+The Artifacts plugin implements the local Artifacts binding in workerd. This
+first version requires Git installed globally on the host and available on
+PATH; Miniflare checks at local startup and gives installation instructions if
+Git is missing. A Node worker thread runs the native Git backend. Unless
+`dev.remote` is explicitly `true`, an Artifacts binding uses local storage
+rather than contacting Cloudflare. We plan to open-source a JavaScript Git
+engine in the future; it is not included in this version.
 
 ## Local startup
 
@@ -23,6 +27,7 @@ sequenceDiagram
     Plugin->>Plugin: Select local and validate namespace
     Plugin-->>MF: Bind to local namespace entrypoint
     MF->>Plugin: getServices()
+    Plugin->>Plugin: Verify host Git is available on PATH
     Plugin->>Controller: get(Git storage path)
     Controller->>Sidecar: Start worker thread and private HTTP listener
     Sidecar-->>Controller: Address and secret

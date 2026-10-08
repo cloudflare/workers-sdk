@@ -10,6 +10,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
+import { assertGitAvailable } from "./git-client";
 import { assertSupportedGitLayout } from "./storage";
 import type { Service, Socket } from "../../runtime";
 import type { MiniflareBinding, Plugin } from "../shared";
@@ -102,6 +103,9 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 			});
 		}
 		const namespaces = getLocalNamespaceNames(bindings);
+		if (namespaces.size > 0) {
+			await assertGitAvailable();
+		}
 		const root = getPersistPath(
 			ARTIFACTS_PLUGIN_NAME,
 			tmpPath,

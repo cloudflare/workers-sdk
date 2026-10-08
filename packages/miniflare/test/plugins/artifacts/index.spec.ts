@@ -780,15 +780,25 @@ test("artifacts: an explicit reset removes both metadata and Git repositories", 
 	await oldToken.body?.cancel();
 });
 
-test("artifacts: native Git absence fails before starting a sidecar listener", async ({
+test("artifacts: missing Git gives an actionable error during local startup", async ({
 	expect,
 }) => {
 	const root = await useTmp();
 	const previousPath = process.env.PATH;
 	process.env.PATH = root;
 	try {
+		for (const remote of [false, null]) {
+			const mf = new Miniflare(options("test", "REPOS", remote));
+			await expect(mf.ready).rejects.toThrow(
+				/Local Artifacts requires Git installed on the host and available on PATH.*Install Git.*git --version.*restart/i
+			);
+			// dispose() preserves the startup error after cleaning up the instance.
+			await expect(mf.dispose()).rejects.toThrow(
+				/Local Artifacts requires Git installed on the host and available on PATH/
+			);
+		}
 		await expect(startGitSidecar(path.join(root, "repos"))).rejects.toThrow(
-			/spawn git|ENOENT/
+			/Local Artifacts requires Git installed on the host and available on PATH/
 		);
 	} finally {
 		process.env.PATH = previousPath;

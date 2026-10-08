@@ -1,6 +1,10 @@
 # Develop with local Artifacts
 
-Local Artifacts uses a native Git executable and stores repositories on your machine. Install Git and check `git --version` on your PATH before starting a dev server or Worker test. This external Git requirement is the current implementation choice; it is not a production Artifacts requirement.
+## Prerequisite: Git
+
+This first version of the local Artifacts emulator requires Git installed globally on your development machine, with `git` available on the PATH of the process starting Wrangler, Vite, or Workers Vitest. Run `git --version` in that environment before starting the dev server or tests. If Git is missing or cannot run, local Artifacts fails at startup with installation instructions instead of waiting for a repository operation. Restart your dev tool after installing Git so it picks up the updated PATH.
+
+A binding with `"remote": true` does not start the local emulator and does not need local Git. Production Artifacts also does not require Git on your machine. We plan to open-source a JavaScript Git engine in the future; it is not part of this initial local release, which uses native Git.
 
 ## Configure a binding
 
@@ -63,7 +67,7 @@ A local binding does not contact Cloudflare for repository operations. **Explici
 
 ## Troubleshooting and limits
 
-- If startup reports Git missing, install Git and restart the tool with `git` available on PATH.
+- If startup says local Artifacts requires Git, install Git globally, check `git --version` in the dev tool's environment, and restart the tool with `git` on PATH.
 - If startup rejects an older storage layout, back it up and reset only the Artifacts persistence directory; a restart alone will not convert it.
 - If Git asks for a username and password, use any username and the repository token as the password. If Git reports unauthorized, check the repository, scope, expiry, and revocation; do not use a Cloudflare or GitHub account password.
 - If startup reports `Address already in use`, the dev or inspector port may be occupied. Pass `--port=0 --inspector-port=0` and use the printed `Ready on` URL.

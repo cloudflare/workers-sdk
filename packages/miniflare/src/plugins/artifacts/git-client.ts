@@ -50,6 +50,18 @@ export function gitEnvironment(
 	};
 }
 
+/** Verify host Git at startup and report how to install it if unavailable. */
+export async function assertGitAvailable(): Promise<void> {
+	try {
+		await runGit(["--version"], { timeout: 30_000 });
+	} catch (error) {
+		throw new Error(
+			"Local Artifacts requires Git installed on the host and available on PATH. Install Git, verify that `git --version` works, then restart your dev server or test runner.",
+			{ cause: error }
+		);
+	}
+}
+
 export async function runGit(
 	args: string[],
 	options: GitOptions = {}
