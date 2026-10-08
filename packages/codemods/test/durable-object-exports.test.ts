@@ -217,7 +217,7 @@ describe("Durable Object export inference", () => {
 				expect.objectContaining({
 					blocking: true,
 					code: "durable-object-transfer",
-					sourcePath: "env.staging.migrations.0.transferred_classes.0",
+					sourcePath: "env.staging.migrations[0].transferred_classes[0]",
 				}),
 			]);
 			const message = result.followUps[0]?.message;
@@ -250,7 +250,7 @@ describe("Durable Object export inference", () => {
 			expect.objectContaining({
 				code: "durable-object-transfer",
 				message: expect.stringContaining("`Current`"),
-				sourcePath: "migrations.0.transferred_classes.0",
+				sourcePath: "migrations[0].transferred_classes[0]",
 			}),
 		]);
 		expect(result.followUps[0]?.message).toContain("`Original`");
@@ -324,7 +324,7 @@ describe("Durable Object export inference", () => {
 			expect.objectContaining({
 				code: "durable-object-storage",
 				message: expect.stringContaining("`Current`"),
-				sourcePath: "migrations.0.renamed_classes",
+				sourcePath: "migrations[0].renamed_classes",
 			}),
 		]);
 	});
@@ -372,7 +372,7 @@ describe("Durable Object export inference", () => {
 			expect.objectContaining({
 				code: "durable-object-export",
 				message: expect.stringContaining("`Counter`"),
-				sourcePath: "durable_objects.bindings.0",
+				sourcePath: "durable_objects.bindings[0]",
 			}),
 		]);
 		const output = renderCloudflareConfig(result);
