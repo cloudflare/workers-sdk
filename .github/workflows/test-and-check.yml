@@ -212,7 +212,7 @@ jobs:
       - name: Test Vite plugin release source maps
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
         run: |
-          pnpm run build --filter=@cloudflare/vite-plugin
+          pnpm --filter @cloudflare/vite-plugin run build
           pnpm --filter @cloudflare/vite-plugin exec vitest run src/__tests__/package-sourcemaps.spec.ts
         env:
           SOURCEMAPS: "false"
