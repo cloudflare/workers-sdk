@@ -15,6 +15,7 @@ import {
 	getWorkerAssetsDir,
 	getWorkerConfigPath,
 } from "../paths";
+import { readBuildOutput } from "../read";
 import {
 	cleanBuildOutputDir,
 	writeContainerConfig,
@@ -244,11 +245,45 @@ describe("writeAssets", () => {
 		).toBe("hello");
 	});
 
+	it("dereferences symlinked files and directories", async ({ expect }) => {
+		const root = process.cwd();
+		const sourceDirectory = path.join(root, "public");
+		const sourceNestedDirectory = path.join(sourceDirectory, "nested");
+		fs.mkdirSync(sourceNestedDirectory, { recursive: true });
+		fs.writeFileSync(path.join(sourceNestedDirectory, "index.html"), "hello");
+		fs.symlinkSync(
+			"nested/index.html",
+			path.join(sourceDirectory, "index.html")
+		);
+		fs.symlinkSync("nested", path.join(sourceDirectory, "linked"), "dir");
+
+		await writeRootConfig(root, parsedSettingsConfig, {
+			isPreview: false,
+			mode: undefined,
+		});
+		await writeWorkerConfig({ root, config: parsedWorkerConfig });
+		await writeAssets({ root, sourceDirectory });
+
+		const output = await readBuildOutput(root);
+		const assetsDir = getWorkerAssetsDir(root);
+		expect(output.workers.default.assetsDir).toBe(assetsDir);
+		expect(fs.lstatSync(path.join(assetsDir, "index.html")).isFile()).toBe(
+			true
+		);
+		expect(fs.lstatSync(path.join(assetsDir, "linked")).isDirectory()).toBe(
+			true
+		);
+		expect(
+			fs.readFileSync(path.join(assetsDir, "linked/index.html"), "utf8")
+		).toBe("hello");
+	});
+
 	it("omits .cloudflare when the project root contains the assets", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		fs.writeFileSync(path.join(root, "index.html"), "hello");
+		fs.symlinkSync("index.html", path.join(root, "linked.html"));
 		await writeRootConfig(root, parsedSettingsConfig, {
 			isPreview: false,
 			mode: undefined,
@@ -259,6 +294,9 @@ describe("writeAssets", () => {
 		const assetsDir = getWorkerAssetsDir(root);
 		expect(fs.readFileSync(path.join(assetsDir, "index.html"), "utf8")).toBe(
 			"hello"
+		);
+		expect(fs.lstatSync(path.join(assetsDir, "linked.html")).isFile()).toBe(
+			true
 		);
 		expect(fs.existsSync(path.join(assetsDir, ".cloudflare"))).toBe(false);
 	});
