@@ -1,5 +1,62 @@
 # wrangler
 
+## 4.149.0
+
+### Minor Changes
+
+- [#16036](https://github.com/cloudflare/workers-sdk/pull/16036) [`9a58244`](https://github.com/cloudflare/workers-sdk/commit/9a58244a919289f9a8f3c7a81d410a52b96a9136) Thanks [@edevil](https://github.com/edevil)! - Support temporary event accounts in R2 and Containers commands
+
+  `wrangler r2` and `wrangler containers` commands now accept the hidden `--temporary` flag, so accounts created for an event can manage buckets, objects and containers directly. Every command that supports `--temporary` now also accepts a hidden `--event-code` flag, so the first command a participant runs can create the event account:
+
+  `wrangler r2 bucket create my-bucket --temporary --event-code <code>`
+
+  R2 and Containers are only available on event accounts. R2 custom domains, Sippy, external container registries and `wrangler cloudchamber` commands still require a logged-in account.
+
+### Patch Changes
+
+- [#16139](https://github.com/cloudflare/workers-sdk/pull/16139) [`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d) Thanks [@cpojer](https://github.com/cpojer)! - Update esbuild to 0.28.2
+
+  Align esbuild dependency with tooling using the latest 0.28 patch so package managers can share one installation instead of downloading a second native binary.
+
+- [#15632](https://github.com/cloudflare/workers-sdk/pull/15632) [`85b14e7`](https://github.com/cloudflare/workers-sdk/commit/85b14e79800fe71958755982061be91311b2089d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Honor Retry-After directives during static asset uploads
+
+  Static asset uploads now pause retries and pending uploads until the latest outstanding deadline requested by the API. A per-request limiter also keeps gateway retries at the reduced concurrency after the pause ends, preventing a deployment from immediately overloading a constrained asset service again.
+
+- [#16098](https://github.com/cloudflare/workers-sdk/pull/16098) [`fe607f9`](https://github.com/cloudflare/workers-sdk/commit/fe607f9d7d35b377d5e272e8f946598e3812fe41) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sharp      | 0.35.4 | 0.35.5 |
+
+- [#16093](https://github.com/cloudflare/workers-sdk/pull/16093) [`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Document that `addresses` catch-all entries must use the zone apex
+
+  A `*@domain` entry in `addresses` must use the zone apex, such as `*@example.com`. The zone catch-all also receives mail for every subdomain in the zone that has no literal rule.
+
+- [#16102](https://github.com/cloudflare/workers-sdk/pull/16102) [`757faa6`](https://github.com/cloudflare/workers-sdk/commit/757faa6687bdeaabfb5213bd0211da0e8fc767d3) Thanks [@tlq5l](https://github.com/tlq5l)! - Keep Preview secrets when deploying to an existing Preview
+
+  Secrets added to a Preview with `wrangler preview secret put` or `wrangler preview secret bulk` were lost the next time `wrangler preview` ran, because each new deployment was created from the Wrangler config, `--var` and `--secrets-file` values only.
+
+  `wrangler preview` now carries over the secrets of the Preview's latest deployment. A value passed in this deployment (`--secrets-file`, `--var` or a `previews` binding with the same name) still replaces the existing secret, and `wrangler preview secret delete` removes one.
+
+- [#15617](https://github.com/cloudflare/workers-sdk/pull/15617) [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82) Thanks [@jpatel3](https://github.com/jpatel3)! - Stop the update check from recommending deprecated versions
+
+  Previously, the "update available" notice shown by `wrangler` and `@cloudflare/vite-plugin` always pointed at whichever version was tagged `latest` on npm, even after that version had been deprecated for shipping a bug. Deprecated versions are now never recommended: if the latest release has been deprecated, the newest non-deprecated stable release below it is suggested instead, or nothing at all if you are already on it.
+
+  The check now reads the npm registry directly instead of going through the `update-check` package, which discarded the deprecation information. The on-disk cache location and one-hour refresh interval are unchanged.
+
+- [#16003](https://github.com/cloudflare/workers-sdk/pull/16003) [`6947df3`](https://github.com/cloudflare/workers-sdk/commit/6947df3ceb107605d766fae3ea461f9281c93a9f) Thanks [@oddharsh](https://github.com/oddharsh)! - Ship `using` and `await using` declarations to the runtime as written, for smaller Worker bundles
+
+  Workers and Pages Functions that use explicit resource management no longer carry about 1 KB of bundled helper code to emulate it. workerd supports `using` and `await using` natively at every compatibility date, so `wrangler deploy`, `wrangler versions upload` and Pages Functions builds now leave these declarations untouched.
+
+- [#15958](https://github.com/cloudflare/workers-sdk/pull/15958) [`82acf3c`](https://github.com/cloudflare/workers-sdk/commit/82acf3cdf14de30cc45a134c5f7762f41fba22b1) Thanks [@breken-ai](https://github.com/breken-ai)! - Apply each action's own condition in `wrangler r2 bucket lifecycle add`
+
+  When a lifecycle rule was added with both expiration and Infrequent Access transition flags, both actions read their condition from the same list of flags, which checked `--expire-days` first. `--expire-days 365 --ia-transition-days 30` therefore transitioned objects after 365 days instead of 30, and `--expire-date 2027-01-01 --ia-transition-days 30` deleted objects after 30 days instead of on the given date. Expiration now only reads `--expire-days`/`--expire-date`, and transition only reads `--ia-transition-days`/`--ia-transition-date`.
+
+- Updated dependencies [[`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d), [`e6f7663`](https://github.com/cloudflare/workers-sdk/commit/e6f76636249eeca2407a28f3e0e786c4db24ab19), [`fe607f9`](https://github.com/cloudflare/workers-sdk/commit/fe607f9d7d35b377d5e272e8f946598e3812fe41), [`8de6b3c`](https://github.com/cloudflare/workers-sdk/commit/8de6b3c3bf171521cc89f46a2f6e52c633a53b53), [`ae29445`](https://github.com/cloudflare/workers-sdk/commit/ae2944543a8be0b2b73d8d9140103fa1195c90d0), [`cc8e969`](https://github.com/cloudflare/workers-sdk/commit/cc8e969750703538507b471a59e7d56045ebb640), [`417b186`](https://github.com/cloudflare/workers-sdk/commit/417b18661812ee9b8d51fa51114a3ac73cbb48b1)]:
+  - miniflare@5.20261006.1-alpha
+
 ## 4.148.0
 
 ### Minor Changes

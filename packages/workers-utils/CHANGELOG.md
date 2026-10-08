@@ -1,5 +1,19 @@
 # @cloudflare/workers-utils
 
+## 0.47.1
+
+### Patch Changes
+
+- [#16093](https://github.com/cloudflare/workers-sdk/pull/16093) [`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Document that `addresses` catch-all entries must use the zone apex
+
+  A `*@domain` entry in `addresses` must use the zone apex, such as `*@example.com`. The zone catch-all also receives mail for every subdomain in the zone that has no literal rule.
+
+- [#15617](https://github.com/cloudflare/workers-sdk/pull/15617) [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82) Thanks [@jpatel3](https://github.com/jpatel3)! - Stop the update check from recommending deprecated versions
+
+  Previously, the "update available" notice shown by `wrangler` and `@cloudflare/vite-plugin` always pointed at whichever version was tagged `latest` on npm, even after that version had been deprecated for shipping a bug. Deprecated versions are now never recommended: if the latest release has been deprecated, the newest non-deprecated stable release below it is suggested instead, or nothing at all if you are already on it.
+
+  The check now reads the npm registry directly instead of going through the `update-check` package, which discarded the deprecation information. The on-disk cache location and one-hour refresh interval are unchanged.
+
 ## 0.47.0
 
 ### Minor Changes
