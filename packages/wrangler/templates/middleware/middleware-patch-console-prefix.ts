@@ -1,7 +1,6 @@
 /// <reference path="middleware-patch-console-prefix.d.ts"/>
 
 import { prefix } from "config:middleware/patch-console-prefix";
-import type { Middleware } from "./common";
 
 // Directly patch console methods to add worker prefix.
 // We capture the original method once and replace with a wrapper.
@@ -13,9 +12,3 @@ import type { Middleware } from "./common";
 		},
 	});
 });
-
-const passthrough: Middleware = (request, env, _ctx, middlewareCtx) => {
-	return middlewareCtx.next(request, env);
-};
-
-export default passthrough;

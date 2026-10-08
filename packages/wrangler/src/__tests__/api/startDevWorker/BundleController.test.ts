@@ -181,6 +181,110 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				`);
 		});
 
+		test.for([
+			{
+				name: "default to named-only",
+				initialExports: ["default"],
+				initialSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+				updatedExports: ["Api"],
+				updatedSource: "export class Api {}",
+			},
+			{
+				name: "named-only to default",
+				initialExports: ["Api"],
+				initialSource: "export class Api {}",
+				updatedExports: ["default"],
+				updatedSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+			},
+		])(
+			"reconfigures the middleware facade when exports change ($name)",
+			async (
+				{ initialExports, initialSource, updatedExports, updatedSource },
+				{ expect }
+			) => {
+				await seed({ "src/index.ts": initialSource });
+				const config = configDefaults({
+					entrypoint: path.resolve("src/index.ts"),
+					projectRoot: path.resolve("src"),
+					build: { exports: initialExports },
+				});
+
+				const initialBuild = bus.waitFor("bundleComplete");
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				const initialBundle = (await initialBuild).bundle;
+				expect(initialBundle.entry.exports).toEqual(initialExports);
+				expect(initialBundle.entrypointSource).toContain(
+					initialExports.includes("default")
+						? "middleware_loader_entry_default"
+						: "var Api = class"
+				);
+
+				const eventCountBeforeEdit = bus.events.length;
+				const rebuilt = bus.waitFor("bundleComplete");
+				await seed({ "src/index.ts": updatedSource });
+				const updatedBundle = (await rebuilt).bundle;
+				const rebuildEvents = bus.events.slice(eventCountBeforeEdit);
+				expect(rebuildEvents.filter(({ type }) => type === "error")).toEqual(
+					[]
+				);
+				expect(
+					rebuildEvents.filter(({ type }) => type === "bundleComplete")
+				).toHaveLength(1);
+				expect(updatedBundle.entry.exports).toEqual(updatedExports);
+				if (updatedExports.includes("default")) {
+					expect(updatedBundle.entrypointSource).toContain(
+						"middleware_loader_entry_default"
+					);
+				} else {
+					expect(updatedBundle.entrypointSource).not.toContain(
+						"middleware_loader_entry_default"
+					);
+					expect(updatedBundle.entrypointSource).toContain("var Api = class");
+				}
+			}
+		);
+
+		test.for([
+			{ name: "bundled", build: {} },
+			{ name: "unbundled", build: { bundle: false } },
+		])(
+			"publishes renamed named entrypoints ($name)",
+			async ({ build }, { expect }) => {
+				await seed({ "src/index.ts": "export class Api {}" });
+				const config = configDefaults({
+					entrypoint: path.resolve("src/index.ts"),
+					projectRoot: path.resolve("src"),
+					build: { ...build, exports: ["Api"] },
+				});
+
+				const initialBuild = bus.waitFor("bundleComplete");
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				expect((await initialBuild).bundle.entry.exports).toEqual(["Api"]);
+
+				// The initial bundle can be emitted before the unbundled file watcher
+				// has finished its initial scan, so repeat the edit until a rebuild
+				// observes it. Poll recorded events rather than registering a waiter
+				// per attempt, because timed-out waiters would consume later events.
+				let attempt = 0;
+				await vi.waitFor(
+					async () => {
+						await seed({
+							"src/index.ts": `export class Admin {} // ${attempt++}`,
+						});
+						const bundles = bus.events.filter(
+							(event) => event.type === "bundleComplete"
+						);
+						expect(bundles.at(-1)?.bundle.entry.exports).toEqual(["Admin"]);
+					},
+					{ timeout: 8_000, interval: 500 }
+				);
+			}
+		);
+
 		test("a watch-mode rebuild failure emits an error event and recovers", async ({
 			expect,
 		}) => {
@@ -367,6 +471,76 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				{ timeout: 5_000, interval: 500 }
 			);
 		});
+
+		test.for([
+			{
+				name: "default to named-only",
+				initialExports: ["default"],
+				initialSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+				updatedExports: ["Api"],
+				updatedSource: "export class Api {}",
+			},
+			{
+				name: "named-only to default",
+				initialExports: ["Api"],
+				initialSource: "export class Api {}",
+				updatedExports: ["default"],
+				updatedSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+			},
+		])(
+			"custom build refreshes exports when its output changes ($name)",
+			async (
+				{ initialExports, initialSource, updatedExports, updatedSource },
+				{ expect }
+			) => {
+				await seed({ "custom_build_dir/index.ts": initialSource });
+				const config = configDefaults({
+					entrypoint: path.resolve("out.ts"),
+					projectRoot: path.resolve("."),
+					build: {
+						custom: {
+							command: `node -e "fs.cpSync('custom_build_dir/index.ts', 'out.ts')"`,
+							watch: "custom_build_dir",
+						},
+						moduleRoot: path.resolve("."),
+						exports: initialExports,
+					},
+				});
+
+				await runInitialCustomBuild(config);
+				const initialBuild = bus.waitFor("bundleComplete");
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				expect((await initialBuild).bundle.entry.exports).toEqual(
+					initialExports
+				);
+
+				await vi.waitFor(
+					async () => {
+						const rebuilt = bus.waitFor("bundleComplete");
+						await seed({ "custom_build_dir/index.ts": updatedSource });
+						const updatedBundle = (await rebuilt).bundle;
+						expect(updatedBundle.entry.exports).toEqual(updatedExports);
+						if (updatedExports.includes("default")) {
+							expect(updatedBundle.entrypointSource).toContain(
+								"middleware_loader_entry_default"
+							);
+						} else {
+							expect(updatedBundle.entrypointSource).not.toContain(
+								"middleware_loader_entry_default"
+							);
+							expect(updatedBundle.entrypointSource).toContain(
+								"var Api = class"
+							);
+						}
+					},
+					{ timeout: 5_000, interval: 500 }
+				);
+			}
+		);
 
 		test("does not run the custom build command again for a config it has already been run for", async ({
 			expect,
