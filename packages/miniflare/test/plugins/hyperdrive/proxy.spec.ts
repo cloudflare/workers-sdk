@@ -209,6 +209,38 @@ function createMockPostgresNoSslServer(): Promise<{
 	});
 }
 
+interface MockServer {
+	port: number;
+	close(): void;
+}
+
+function startMockServer(
+	onConnection: (socket: net.Socket) => void
+): Promise<MockServer> {
+	const sockets = new Set<net.Socket>();
+	const server = net.createServer((socket) => {
+		sockets.add(socket);
+		socket.on("close", () => sockets.delete(socket));
+		socket.on("error", () => {});
+		onConnection(socket);
+	});
+	const close = () => {
+		server.close();
+		for (const socket of sockets) {
+			socket.destroy();
+		}
+	};
+
+	return new Promise((resolve, reject) => {
+		server.once("error", reject);
+		server.listen(0, "127.0.0.1", () => {
+			server.off("error", reject);
+			const address = server.address() as net.AddressInfo;
+			resolve({ port: address.port, close });
+		});
+	});
+}
+
 /**
  * Creates a mock Postgres server that accepts the SSL upgrade and then writes
  * large chunks continuously, so there is always data in flight towards the
@@ -217,34 +249,26 @@ function createMockPostgresNoSslServer(): Promise<{
 function createMockPostgresPumpServer(
 	serverCert: CertPair,
 	caCert: string
-): Promise<{ server: net.Server; port: number }> {
-	return new Promise((resolve) => {
-		const server = net.createServer((socket) => {
-			socket.on("error", () => {});
-			socket.once("data", () => {
-				socket.write("S", () => {
-					const tlsSocket = new tls.TLSSocket(socket, {
-						isServer: true,
-						key: serverCert.key,
-						cert: serverCert.cert,
-						ca: caCert,
-					});
-					tlsSocket.on("error", () => socket.destroy());
-					tlsSocket.on("secure", () => {
-						const pump = setInterval(() => {
-							tlsSocket.write(Buffer.alloc(256 * 1024));
-						}, 1);
-						const stop = () => clearInterval(pump);
-						tlsSocket.on("close", stop);
-						tlsSocket.on("error", stop);
-					});
+): Promise<MockServer> {
+	return startMockServer((socket) => {
+		socket.once("data", () => {
+			socket.write("S", () => {
+				const tlsSocket = new tls.TLSSocket(socket, {
+					isServer: true,
+					key: serverCert.key,
+					cert: serverCert.cert,
+					ca: caCert,
+				});
+				tlsSocket.on("error", () => socket.destroy());
+				tlsSocket.on("secure", () => {
+					const pump = setInterval(() => {
+						tlsSocket.write(Buffer.alloc(256 * 1024));
+					}, 1);
+					const stop = () => clearInterval(pump);
+					tlsSocket.on("close", stop);
+					tlsSocket.on("error", stop);
 				});
 			});
-		});
-
-		server.listen(0, "127.0.0.1", () => {
-			const address = server.address() as net.AddressInfo;
-			resolve({ server, port: address.port });
 		});
 	});
 }
@@ -254,20 +278,11 @@ function createMockPostgresPumpServer(
  * before answering, leaving a window in which the proxy is still negotiating
  * while the client goes away.
  */
-function createMockPostgresSlowServer(
-	delayMs: number
-): Promise<{ server: net.Server; port: number }> {
-	return new Promise((resolve) => {
-		const server = net.createServer((socket) => {
-			socket.on("error", () => {});
-			socket.once("data", () => {
-				setTimeout(() => socket.write("N"), delayMs);
-			});
-		});
-
-		server.listen(0, "127.0.0.1", () => {
-			const address = server.address() as net.AddressInfo;
-			resolve({ server, port: address.port });
+function createMockPostgresSlowServer(delayMs: number): Promise<MockServer> {
+	return startMockServer((socket) => {
+		socket.once("data", () => {
+			const reply = setTimeout(() => socket.write("N"), delayMs);
+			socket.once("close", () => clearTimeout(reply));
 		});
 	});
 }
@@ -701,7 +716,7 @@ describe("HyperdriveProxyController TLS modes", () => {
 	test("a client socket error does not take down the process", async ({
 		expect,
 	}) => {
-		const { server, port: dbPort } = await createMockPostgresPumpServer(
+		const { port: dbPort, close } = await createMockPostgresPumpServer(
 			certs.localhost,
 			certs.ca.cert
 		);
@@ -749,14 +764,14 @@ describe("HyperdriveProxyController TLS modes", () => {
 			expect(response.length).toBeGreaterThan(0);
 		} finally {
 			process.off("uncaughtException", collect);
-			server.close();
+			close();
 		}
 	});
 
 	test("a client reset during negotiation does not take down the process", async ({
 		expect,
 	}) => {
-		const { server, port: dbPort } = await createMockPostgresSlowServer(400);
+		const { port: dbPort, close } = await createMockPostgresSlowServer(400);
 		const uncaught: Error[] = [];
 		const collect = (err: Error) => uncaught.push(err);
 		process.on("uncaughtException", collect);
@@ -789,7 +804,7 @@ describe("HyperdriveProxyController TLS modes", () => {
 			expect(uncaught).toEqual([]);
 		} finally {
 			process.off("uncaughtException", collect);
-			server.close();
+			close();
 		}
 	});
 });
