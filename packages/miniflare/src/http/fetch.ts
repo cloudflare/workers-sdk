@@ -262,10 +262,6 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			// ephemeral port per dispatch, but surface failures instead of retrying
 			options.reset = false;
 
-			// A 421 is retried on a new connection by aborting this one. workerd
-			// often has not finished the response body yet, so the abort is not a
-			// completed request: it terminates the fetch, and the retry then writes
-			// no bytes against the original Content-Length.
 			const onHeaders = handler.onHeaders;
 			const onError = handler.onError;
 			if (onHeaders !== undefined && onError !== undefined) {
@@ -288,11 +284,13 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 					);
 				};
 				handler.onError = function (err) {
-					if (
+					// A 421 retry aborts this connection. Ignore that abort so the
+					// replayed body still matches Content-Length.
+					const retryAbort =
 						responseStatus === 421 &&
 						err instanceof DOMException &&
-						err.name === "AbortError"
-					) {
+						err.name === "AbortError";
+					if (retryAbort) {
 						return;
 					}
 					return onError.call(this, err);
