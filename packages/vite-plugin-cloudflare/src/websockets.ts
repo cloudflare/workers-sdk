@@ -14,7 +14,8 @@ import type * as vite from "vite";
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
 	miniflare: Miniflare,
-	entryWorkerName?: string
+	entryWorkerName?: string,
+	viteWebSocketEnabled = false
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -62,6 +63,9 @@ export function handleWebSocket(
 
 				// Ignore Vite HMR WebSockets but forward on all sandbox requests.
 				if (isViteRequest && !isSandboxRequest) {
+					if (!viteWebSocketEnabled) {
+						socket.destroy();
+					}
 					return;
 				}
 
