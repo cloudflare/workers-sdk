@@ -1,0 +1,16 @@
+{
+	"packages": [
+		{
+			"name": "wrangler",
+			"directory": "packages/wrangler"
+		},
+		{
+			"name": "miniflare",
+			"directory": "packages/miniflare"
+		},
+		{
+			"name": "@cloudflare/vite-plugin",
+			"directory": "packages/vite-plugin-cloudflare"
+		}
+	]
+}
