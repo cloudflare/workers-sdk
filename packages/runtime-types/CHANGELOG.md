@@ -1,5 +1,16 @@
 # @cloudflare/runtime-types
 
+## 0.1.9
+
+### Patch Changes
+
+- [#16148](https://github.com/cloudflare/workers-sdk/pull/16148) [`57f2a71`](https://github.com/cloudflare/workers-sdk/commit/57f2a71de46b5e79820d1e017feb4128b9e341b8) Thanks [@sx4im](https://github.com/sx4im)! - Use a reserved `.invalid` domain for runtime type generation
+
+  `wrangler types` dispatched runtime type generation to `http://dummy.com/...`, which is a real, publicly registered domain. A misrouted request could download arbitrary web content into the generated `.d.ts`. The dispatch URL now uses `dummy.invalid` (RFC 2606), which can never resolve, so such requests fail closed instead.
+
+- Updated dependencies [[`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d), [`e6f7663`](https://github.com/cloudflare/workers-sdk/commit/e6f76636249eeca2407a28f3e0e786c4db24ab19), [`fe607f9`](https://github.com/cloudflare/workers-sdk/commit/fe607f9d7d35b377d5e272e8f946598e3812fe41), [`8de6b3c`](https://github.com/cloudflare/workers-sdk/commit/8de6b3c3bf171521cc89f46a2f6e52c633a53b53), [`ae29445`](https://github.com/cloudflare/workers-sdk/commit/ae2944543a8be0b2b73d8d9140103fa1195c90d0), [`cc8e969`](https://github.com/cloudflare/workers-sdk/commit/cc8e969750703538507b471a59e7d56045ebb640), [`417b186`](https://github.com/cloudflare/workers-sdk/commit/417b18661812ee9b8d51fa51114a3ac73cbb48b1)]:
+  - miniflare@5.20261006.1-alpha
+
 ## 0.1.8
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @cloudflare/codemods
 
+## 0.4.2
+
+### Patch Changes
+
+- [#16143](https://github.com/cloudflare/workers-sdk/pull/16143) [`271ac8e`](https://github.com/cloudflare/workers-sdk/commit/271ac8e3fe67e350c4c9a5927c2f981ba320f134) Thanks [@cpojer](https://github.com/cpojer)! - Share bundled dependencies between the CLI and library entry points
+
+  Build both entry points together to avoid shipping the same migration implementation and dependencies twice. The CLI command and public library exports remain unchanged.
+
 ## 0.4.1
 
 ### Patch Changes

@@ -1,5 +1,22 @@
 # @cloudflare/build-output-utils
 
+## 0.9.0
+
+### Minor Changes
+
+- [#15981](https://github.com/cloudflare/workers-sdk/pull/15981) [`0d1bd50`](https://github.com/cloudflare/workers-sdk/commit/0d1bd50d6453e286160e78bee5143c7f7ce221fe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reject symlinks when reading experimental Build Output directories
+
+  Build Output directories must be portable and self-contained. The shared reader now rejects symlinks anywhere in the output tree, including links to files within it, and reports the offending path in a Build Output error before reading configs.
+
+### Patch Changes
+
+- [#16154](https://github.com/cloudflare/workers-sdk/pull/16154) [`7557322`](https://github.com/cloudflare/workers-sdk/commit/75573221a3e0f2cf0ea8b3d413797a9f1d1a6984) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Keep experimental Build Output portable when source assets are symlinks
+
+  Asset links are now copied as regular files and directories so Wrangler produces portable, self-contained Build Output that can be read successfully.
+
+- Updated dependencies [[`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717), [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215)]:
+  - @cloudflare/config@0.24.1
+
 ## 0.8.6
 
 ### Patch Changes
