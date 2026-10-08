@@ -21,13 +21,6 @@ import {
 import type { QueueResponse } from "../../triggers/queue-consumers";
 import type {
 	Binding,
-	CfAgentMemory,
-	CfAISearchNamespace,
-	CfD1Database,
-	CfDispatchNamespace,
-	CfFlagship,
-	CfKvNamespace,
-	CfR2Bucket,
 	ComplianceConfig,
 	Config,
 	RawConfig,
@@ -119,6 +112,10 @@ abstract class ProvisionResourceHandler<
 	connect(id: string): void {
 		// @ts-expect-error idField is a key of this.binding
 		this.binding[this.idField] = id;
+	}
+	getResolvedIdentifier(): string | undefined {
+		const identifier = this.binding[this.idField];
+		return typeof identifier === "string" ? identifier : undefined;
 	}
 
 	hasConfiguredResourceIdentifier(): boolean {
@@ -720,16 +717,6 @@ const HANDLERS = {
 			);
 			return preExistingKV.map((ns) => ({ title: ns.title, value: ns.id }));
 		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "kv_namespace" }>
-		): CfKvNamespace => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
-		},
 	},
 	d1: {
 		Handler: D1Handler,
@@ -746,16 +733,6 @@ const HANDLERS = {
 			);
 			return preExisting.map((db) => ({ title: db.name, value: db.uuid }));
 		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "d1" }>
-		): CfD1Database => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
-		},
 	},
 	r2_bucket: {
 		Handler: R2Handler,
@@ -770,16 +747,6 @@ const HANDLERS = {
 				value: bucket.name,
 			}));
 		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "r2_bucket" }>
-		): CfR2Bucket => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
-		},
 	},
 	ai_search_namespace: {
 		Handler: AISearchNamespaceHandler,
@@ -791,16 +758,6 @@ const HANDLERS = {
 			// AI Search namespaces don't have a general list API in this context.
 			// The provisioning system will create them if they don't exist.
 			return [];
-		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "ai_search_namespace" }>
-		): CfAISearchNamespace => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
 		},
 	},
 	agent_memory: {
@@ -821,16 +778,6 @@ const HANDLERS = {
 			// therefore safe and avoids an unnecessary list call at deploy time.
 			return [];
 		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "agent_memory" }>
-		): CfAgentMemory => {
-			const { type: _, ...rest } = binding;
-			return {
-				...rest,
-				binding: bindingName,
-			};
-		},
 	},
 	queue: {
 		Handler: QueueHandler,
@@ -848,16 +795,6 @@ const HANDLERS = {
 				value: queue.queue_name,
 			}));
 		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "queue" }>
-		): QueueProducer => ({
-			binding: bindingName,
-			queue:
-				typeof binding.queue_name === "string" ? binding.queue_name : undefined,
-			delivery_delay: binding.delivery_delay,
-			remote: binding.remote,
-		}),
 	},
 	dispatch_namespace: {
 		Handler: DispatchNamespaceHandler,
@@ -875,13 +812,6 @@ const HANDLERS = {
 				value: namespace.namespace_name,
 			}));
 		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "dispatch_namespace" }>
-		): CfDispatchNamespace => {
-			const { type: _, ...rest } = binding;
-			return { ...rest, binding: bindingName };
-		},
 	},
 	flagship: {
 		Handler: FlagshipHandler,
@@ -893,18 +823,13 @@ const HANDLERS = {
 			const apps = await listFlagshipApps(complianceConfig, accountId);
 			return apps.map((app) => ({ title: app.name, value: app.id }));
 		},
-		toConfig: (
-			bindingName: string,
-			binding: Extract<Binding, { type: "flagship" }>
-		): CfFlagship => {
-			const { type: _, ...rest } = binding;
-			return { ...rest, binding: bindingName };
-		},
 	},
 };
 
+type RawConfigEnvironment = NonNullable<RawConfig["env"]>[string];
+
 function getRawConfigBindings(
-	config: RawConfig,
+	config: RawConfigEnvironment,
 	resourceType: keyof typeof HANDLERS
 ): Array<{ binding: string }> {
 	if (resourceType === "queue") {
@@ -918,30 +843,25 @@ function getRawConfigBindings(
 function addBindingToPatch(
 	patch: RawConfig,
 	resourceType: ProvisionableBinding["type"],
-	binding: ReturnType<typeof toConfigBinding>
+	binding: Record<string, string>,
+	index: number
 ): void {
-	const serialisableBinding = Object.fromEntries(
-		Object.entries(binding).filter(
-			([_, value]) => value !== undefined && typeof value !== "symbol"
-		)
-	);
-
 	if (resourceType === "queue") {
 		patch.queues ??= {};
 		patch.queues.producers ??= [];
-		patch.queues.producers.push(serialisableBinding as QueueProducer);
+		patch.queues.producers[index] = binding as unknown as QueueProducer;
 		return;
 	}
 
 	const configField = HANDLERS[resourceType].configField;
 	patch[configField] ??= [];
-	(patch[configField] as unknown as Array<Record<string, unknown>>).push(
-		serialisableBinding
-	);
+	const patchBindings = patch[configField] as Array<Record<string, unknown>>;
+	patchBindings[index] = binding;
 }
 
 type PendingResource = {
 	binding: string;
+	provisioned?: boolean;
 	resourceType:
 		| "kv_namespace"
 		| "d1"
@@ -961,6 +881,63 @@ type PendingResource = {
 		| DispatchNamespaceHandler
 		| FlagshipHandler;
 };
+
+function writeProvisionedIdsToConfig(
+	configPath: string,
+	resources: PendingResource[],
+	targetEnvironment?: string
+): void {
+	const { rawConfig } = experimental_readRawConfig(
+		{ config: configPath },
+		{ useRedirectIfAvailable: false }
+	);
+	const environment =
+		targetEnvironment && rawConfig.env?.[targetEnvironment] !== undefined
+			? targetEnvironment
+			: undefined;
+	const configEnvironment = environment
+		? rawConfig.env?.[environment]
+		: rawConfig;
+	const patchEnvironment: RawConfigEnvironment = {};
+	const patch: RawConfig = environment
+		? { env: { [environment]: patchEnvironment } }
+		: patchEnvironment;
+	let hasChanges = false;
+
+	for (const resource of resources) {
+		const configBindings = getRawConfigBindings(
+			configEnvironment ?? {},
+			resource.resourceType
+		);
+		const index = configBindings.findIndex(
+			(binding) => binding.binding === resource.binding
+		);
+		const identifier = resource.handler.getResolvedIdentifier();
+		if (index === -1 || identifier === undefined) {
+			continue;
+		}
+
+		const identifierField =
+			resource.resourceType === "queue" ? "queue" : resource.handler.idField;
+		const existingIdentifier = (
+			configBindings[index] as Record<string, unknown>
+		)[identifierField];
+		if (existingIdentifier === identifier) {
+			continue;
+		}
+		addBindingToPatch(
+			patchEnvironment,
+			resource.resourceType,
+			{ [identifierField]: identifier },
+			index
+		);
+		hasChanges = true;
+	}
+
+	if (hasChanges) {
+		experimental_patchConfig(configPath, patch, false);
+	}
+}
 
 export type ProvisionBindingsResult = {
 	warnOnSkippedProvisioning: () => void;
@@ -1098,38 +1075,6 @@ function createHandler(
 	}
 }
 
-function toConfigBinding(
-	bindingName: string,
-	binding: ProvisionableBinding
-):
-	| CfKvNamespace
-	| CfR2Bucket
-	| CfD1Database
-	| CfAISearchNamespace
-	| CfAgentMemory
-	| QueueProducer
-	| CfDispatchNamespace
-	| CfFlagship {
-	switch (binding.type) {
-		case "kv_namespace":
-			return HANDLERS.kv_namespace.toConfig(bindingName, binding);
-		case "d1":
-			return HANDLERS.d1.toConfig(bindingName, binding);
-		case "r2_bucket":
-			return HANDLERS.r2_bucket.toConfig(bindingName, binding);
-		case "ai_search_namespace":
-			return HANDLERS.ai_search_namespace.toConfig(bindingName, binding);
-		case "agent_memory":
-			return HANDLERS.agent_memory.toConfig(bindingName, binding);
-		case "queue":
-			return HANDLERS.queue.toConfig(bindingName, binding);
-		case "dispatch_namespace":
-			return HANDLERS.dispatch_namespace.toConfig(bindingName, binding);
-		case "flagship":
-			return HANDLERS.flagship.toConfig(bindingName, binding);
-	}
-}
-
 async function collectPendingResources(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -1137,6 +1082,7 @@ async function collectPendingResources(
 	bindings: StartDevWorkerInput["bindings"]
 ): Promise<{
 	pendingResources: PendingResource[];
+	resolvedResources: PendingResource[];
 	skippedProvisioning: Map<keyof typeof HANDLERS, Set<string>>;
 }> {
 	let settings: Settings | undefined;
@@ -1148,6 +1094,7 @@ async function collectPendingResources(
 	}
 
 	const pendingResources: PendingResource[] = [];
+	const resolvedResources: PendingResource[] = [];
 	const skippedProvisioning = new Map<keyof typeof HANDLERS, Set<string>>();
 
 	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
@@ -1161,6 +1108,12 @@ async function collectPendingResources(
 			complianceConfig,
 			accountId
 		);
+		const resource: PendingResource = {
+			binding: bindingName,
+			resourceType: binding.type,
+			handler,
+		};
+		const configuredIdentifier = handler.getResolvedIdentifier();
 
 		let shouldProvision;
 		try {
@@ -1176,15 +1129,17 @@ async function collectPendingResources(
 		}
 
 		if (shouldProvision) {
-			pendingResources.push({
-				binding: bindingName,
-				resourceType: binding.type,
-				handler,
-			});
+			pendingResources.push(resource);
+		} else if (
+			configuredIdentifier === undefined &&
+			handler.getResolvedIdentifier() !== undefined
+		) {
+			resolvedResources.push(resource);
 		}
 	}
 
 	return {
+		resolvedResources,
 		pendingResources: pendingResources.sort(
 			(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
 		),
@@ -1203,7 +1158,7 @@ export async function provisionBindings(
 	}
 ): Promise<ProvisionBindingsResult> {
 	const configPath = config.userConfigPath ?? config.configPath;
-	const { pendingResources, skippedProvisioning } =
+	const { pendingResources, resolvedResources, skippedProvisioning } =
 		await collectPendingResources(config, accountId, scriptName, bindings);
 
 	if (pendingResources.length > 0) {
@@ -1258,6 +1213,8 @@ export async function provisionBindings(
 				scriptName,
 				autoCreate
 			);
+			resource.provisioned = true;
+			resolvedResources.push(resource);
 		}
 
 		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
@@ -1271,52 +1228,6 @@ export async function provisionBindings(
 			}
 		}
 
-		const patch: RawConfig = {};
-
-		const existingBindingNames = new Map<keyof typeof HANDLERS, Set<string>>();
-
-		const isUsingRedirectedConfig =
-			config.userConfigPath && config.userConfigPath !== config.configPath;
-
-		// If we're using a redirected config, then the redirected config potentially has injected
-		// bindings that weren't originally in the user config. These can be provisioned, but we
-		// should not write the IDs back to the user config file (because the bindings weren't there in the first place).
-		if (isUsingRedirectedConfig) {
-			const { rawConfig: unredirectedConfig } =
-				await experimental_readRawConfig(
-					{ config: config.userConfigPath },
-					{ useRedirectIfAvailable: false }
-				);
-			for (const resourceType of Object.keys(
-				HANDLERS
-			) as (keyof typeof HANDLERS)[]) {
-				const bindingNames = new Set<string>();
-				for (const binding of getRawConfigBindings(
-					unredirectedConfig,
-					resourceType
-				)) {
-					bindingNames.add(binding.binding);
-				}
-				existingBindingNames.set(resourceType, bindingNames);
-			}
-		}
-
-		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
-			if (!isProvisionableBinding(binding)) {
-				continue;
-			}
-
-			// See above for why we skip writing back some bindings to the config file.
-			if (
-				isUsingRedirectedConfig &&
-				!existingBindingNames.get(binding.type)?.has(bindingName)
-			) {
-				continue;
-			}
-			const bindingToWrite = toConfigBinding(bindingName, binding);
-			addBindingToPatch(patch, binding.type, bindingToWrite);
-		}
-
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
 		// This is not necessary, as future deploys can use inherited resources, but it can help with
 		// portability of the config file, and adds robustness to bindings being renamed.
@@ -1326,7 +1237,11 @@ export async function provisionBindings(
 			);
 		} else if (!isNonInteractiveOrCI()) {
 			try {
-				await experimental_patchConfig(configPath, patch, false);
+				writeProvisionedIdsToConfig(
+					configPath,
+					resolvedResources,
+					config.targetEnvironment
+				);
 				logger.log(
 					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
 				);
@@ -1334,6 +1249,19 @@ export async function provisionBindings(
 				// no-op — if the user is using TOML config we can't update it.
 				if (!(e instanceof PatchConfigError)) {
 					throw e;
+				}
+			}
+			if (
+				config.userConfigPath &&
+				config.userConfigPath !== config.configPath
+			) {
+				assert(config.configPath);
+				try {
+					writeProvisionedIdsToConfig(config.configPath, resolvedResources);
+				} catch (error) {
+					if (!(error instanceof PatchConfigError)) {
+						logger.warn(`Could not update the generated config: ${error}`);
+					}
 				}
 			}
 		}
