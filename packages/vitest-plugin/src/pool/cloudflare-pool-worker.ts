@@ -72,10 +72,16 @@ function inlineCachedModules(response: unknown): unknown {
 	}
 
 	let hasCachedModules = false;
-	const entries = Object.entries(response).map(([specifier, module]) => {
-		const inlinedModule = inlineCachedModule(module, cacheContents);
-		hasCachedModules ||= inlinedModule !== module;
-		return [specifier, inlinedModule];
+	const entries = Object.entries(response).flatMap(([specifier, module]) => {
+		try {
+			const inlinedModule = inlineCachedModule(module, cacheContents);
+			hasCachedModules ||= inlinedModule !== module;
+			return [[specifier, inlinedModule] as const];
+		} catch {
+			// Vitest fetches warm modules normally when their cached files disappear.
+			hasCachedModules = true;
+			return [];
+		}
 	});
 	return hasCachedModules ? Object.fromEntries(entries) : response;
 }
