@@ -283,7 +283,9 @@ describe("writeAssets", () => {
 	}) => {
 		const root = process.cwd();
 		fs.writeFileSync(path.join(root, "index.html"), "hello");
-		fs.symlinkSync("index.html", path.join(root, "linked.html"));
+		fs.mkdirSync(path.join(root, "nested"));
+		fs.writeFileSync(path.join(root, "nested/linked.html"), "linked");
+		fs.symlinkSync("nested", path.join(root, "linked"), "dir");
 		await writeRootConfig(root, parsedSettingsConfig, {
 			isPreview: false,
 			mode: undefined,
@@ -295,9 +297,12 @@ describe("writeAssets", () => {
 		expect(fs.readFileSync(path.join(assetsDir, "index.html"), "utf8")).toBe(
 			"hello"
 		);
-		expect(fs.lstatSync(path.join(assetsDir, "linked.html")).isFile()).toBe(
+		expect(fs.lstatSync(path.join(assetsDir, "linked")).isDirectory()).toBe(
 			true
 		);
+		expect(
+			fs.readFileSync(path.join(assetsDir, "linked/linked.html"), "utf8")
+		).toBe("linked");
 		expect(fs.existsSync(path.join(assetsDir, ".cloudflare"))).toBe(false);
 	});
 
