@@ -190,7 +190,7 @@ jobs:
       - name: Test Miniflare release source maps
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
         run: |
-          pnpm run build --filter=miniflare
+          pnpm --filter miniflare exec node scripts/build.mjs
           pnpm --filter miniflare exec vitest run test/sourcemap.spec.ts test/plugins/core/errors/index.spec.ts
         env:
           SOURCEMAPS: "false"
