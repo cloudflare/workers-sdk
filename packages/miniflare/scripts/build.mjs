@@ -33,6 +33,7 @@
 import { cpSync, existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import esbuild from "esbuild";
 import { getPackage, pkgRoot } from "./common.mjs";
 
@@ -419,13 +420,7 @@ async function buildPackage() {
 	const outPath = path.join(pkgRoot, "dist");
 	if (!watch) {
 		// A release build must not retain maps emitted by an earlier development build.
-		// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- Build-script cleanup must not import compiled workspace helpers.
-		await fs.rm(outPath, {
-			recursive: true,
-			force: true,
-			maxRetries: 5,
-			retryDelay: 100,
-		});
+		await removeDir(outPath);
 	}
 
 	const buildOptions = {
