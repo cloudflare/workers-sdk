@@ -200,6 +200,15 @@ jobs:
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.description }}
 
+      - name: Test Vite plugin release source maps
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
+        run: |
+          pnpm run build --filter=@cloudflare/vite-plugin
+          pnpm --filter @cloudflare/vite-plugin exec vitest run src/__tests__/package-sourcemaps.spec.ts
+        env:
+          SOURCEMAPS: "false"
+          CI_OS: ${{ matrix.description }}
+
       # Only cache an install that Miniflare marked as complete. Without this
       # check a job interrupted mid-download would publish a half-extracted
       # Chrome under the cache key, which — because `@puppeteer/browsers`
