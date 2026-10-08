@@ -90,7 +90,6 @@ function getProgressLogger(json: boolean): ProgressLogger {
 		return logger;
 	}
 	return {
-		...logger,
 		info: (...args: unknown[]) => logger.debug(...args),
 		log: (...args: unknown[]) => logger.debug(...args),
 	};
