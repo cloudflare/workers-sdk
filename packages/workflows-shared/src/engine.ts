@@ -1753,15 +1753,18 @@ export class Engine extends DurableObject<Env, EngineProps> {
 				event,
 				stubStep as unknown as WorkflowStep
 			);
-			await this.ctx.storage.put(WORKFLOW_OUTPUT_KEY, {
-				value: normalizeForStorage(result),
-			});
-			this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
-				result,
-			});
-			// `run()` returns an RPC result, which keeps the engine busy until it is
-			// disposed, so a finished engine could never be evicted (issue #15809)
-			(result as Partial<Disposable> | undefined)?.[Symbol.dispose]?.();
+			try {
+				await this.ctx.storage.put(WORKFLOW_OUTPUT_KEY, {
+					value: normalizeForStorage(result),
+				});
+				this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
+					result,
+				});
+			} finally {
+				// `run()` returns an RPC result, which keeps the engine busy until it is
+				// disposed, so a finished engine could never be evicted (issue #15809)
+				(result as Partial<Disposable> | undefined)?.[Symbol.dispose]?.();
+			}
 			// NOTE(lduarte): we want to run this in a transaction to guarentee ordering with running setstatus call
 			// in case that it returns immediately
 			await this.ctx.storage.transaction(async () => {
