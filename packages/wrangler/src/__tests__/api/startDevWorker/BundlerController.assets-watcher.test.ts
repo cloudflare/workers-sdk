@@ -241,6 +241,30 @@ describe("BundlerController — assets watcher", () => {
 		}
 	);
 
+	test("ignores .wrangler writes under the assets directory", async ({
+		expect,
+	}) => {
+		mockWatchers(expect);
+
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsConfig(),
+		});
+		await firstBundle;
+
+		const options = vi.mocked(watch).mock.calls[0]?.[1];
+		assert(options);
+		const { ignored } = options;
+		assert(ignored instanceof RegExp);
+		// chokidar v4 matches normalised forward-slash paths. The regexp also
+		// accepts backslashes, matching the no-bundle watcher.
+		expect(ignored.test("/proj/.wrangler/tmp/email/message")).toBe(true);
+		expect(ignored.test("/proj/.wrangler")).toBe(true);
+		expect(ignored.test("C:\\proj\\.wrangler\\tmp\\email")).toBe(true);
+		expect(ignored.test("/proj/assets/placeholder.txt")).toBe(false);
+	});
+
 	test("no watchers are created by a config reload that outlives teardown", async ({
 		expect,
 	}) => {

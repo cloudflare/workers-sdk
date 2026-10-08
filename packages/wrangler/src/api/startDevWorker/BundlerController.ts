@@ -524,6 +524,14 @@ export class BundlerController extends Controller {
 			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
+				// Ignore VCS dirs, dependencies, and the .wrangler dir (which
+				// contains miniflare state/cache files written by workerd at
+				// runtime — watching them causes an infinite reload loop).
+				// When assets.directory is the project root, those writes sit
+				// inside the watched tree. chokidar v4 normalises paths to
+				// forward slashes before matching, so a regex on path segments
+				// works cross-platform.
+				ignored: /[/\\](\.git|node_modules|\.wrangler)([/\\]|$)/,
 			})
 				.on("all", async (eventName, filePath) => {
 					const message = getAssetChangeMessage(eventName, filePath);
