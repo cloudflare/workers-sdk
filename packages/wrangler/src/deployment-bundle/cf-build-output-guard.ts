@@ -7,57 +7,58 @@ import {
 import { UserError } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils";
 
-/** Documentation for the `cf` CLI, which owns Build Output deployments. */
 const CF_DOCS_URL = "https://developers.cloudflare.com/cf/";
+
+/** Wrangler commands that refuse to deploy Cloudflare Build Output. */
+export type GuardedCommand = "deploy" | "versions upload" | "preview";
+
+/** The `cf` command that does the same job as each guarded Wrangler command. */
+const CF_EQUIVALENT: Record<GuardedCommand, string> = {
+	deploy: "cf deploy",
+	"versions upload": "cf workers versions create",
+	preview: "cf previews deploy",
+};
+
+interface ProjectSelection {
+	config: Pick<Config, "userConfigPath">;
+	/** The `--config` argument, when the user passed one. */
+	explicitConfigPath: string | undefined;
+	/** The resolved script argument, when the command received one. */
+	scriptPath: string | undefined;
+}
 
 /**
  * The directories that may hold the project being deployed.
  *
- * Build Output is written to the working directory of the build that produced
- * it, independent of where the Wrangler configuration lives, so the
- * configuration alone does not locate it.
+ * A build writes Build Output to its own working directory, so the
+ * configuration's location does not find it. Instead this mirrors
+ * `resolveWranglerConfigPath`: the project starts at the directory the command
+ * selected — `--config`, else the script argument, else the working directory
+ * — and its configuration may sit there or in a parent.
  *
- * With an explicit `--config` the user named the project, so only that
- * directory is relevant — unrelated Build Output beside the working directory
- * must not block it. Otherwise the configuration was discovered by searching
- * upwards and can belong to a parent, so both the working directory and the
- * configuration's directory can hold the project.
- *
- * @param config The configuration the command resolved.
- * @param explicitConfigPath The `--config` argument, when the user passed one.
- * @returns Absolute paths to inspect, without duplicates.
+ * `userConfigPath` rather than `configPath`, because a config redirect points
+ * the latter at a build directory.
  */
-function getProjectRoots(
-	config: Pick<Config, "userConfigPath">,
-	explicitConfigPath: string | undefined
-): string[] {
-	if (explicitConfigPath !== undefined) {
-		return [path.resolve(path.dirname(explicitConfigPath))];
-	}
+function getProjectRoots({
+	config,
+	explicitConfigPath,
+	scriptPath,
+}: ProjectSelection): string[] {
+	const selected = explicitConfigPath ?? scriptPath;
+	const leaf = selected !== undefined ? path.dirname(selected) : ".";
 
-	const workingDirectory = process.cwd();
-	// `path.dirname(".")` resolves to the working directory, so a project with
-	// no configuration file collapses to a single root.
-	const configRoot = path.resolve(path.dirname(config.userConfigPath ?? "."));
+	const leafRoot = path.resolve(leaf);
+	const configRoot = path.resolve(path.dirname(config.userConfigPath ?? leaf));
 
-	return configRoot === workingDirectory
-		? [workingDirectory]
-		: [workingDirectory, configRoot];
+	return leafRoot === configRoot ? [leafRoot] : [leafRoot, configRoot];
 }
 
 /**
  * Find a Cloudflare Build Output Specification directory in `projectRoot`.
  *
- * The check is deliberately assertive, mirroring `isOpenNextProject`: it
- * requires the versioned root config (`.cloudflare/output/<version>/config.json`)
- * rather than just a `.cloudflare` or `.cloudflare/output` directory. Wrangler
- * itself writes sibling `.cloudflare` subdirectories such as `.cloudflare/types`,
- * and a project may keep an unrelated `output` folder, so keying on a directory
- * name alone would report false positives.
- *
- * @param projectRoot Directory to inspect.
- * @returns Absolute path to the Build Output directory, or `undefined` when the
- * project does not contain one.
+ * Requires the versioned root config rather than the directory name, so the
+ * `.cloudflare/types` directory Wrangler generates itself, or an unrelated
+ * `output` folder, is not mistaken for Build Output.
  */
 export function findCloudflareBuildOutput(
 	projectRoot: string
@@ -67,9 +68,8 @@ export function findCloudflareBuildOutput(
 			return undefined;
 		}
 	} catch {
-		// A missing path is the common case. An unreadable one (EACCES, ELOOP, a
-		// name too long for the platform) is treated the same way: an unrelated
-		// filesystem error must never block a deployment.
+		// Usually just absent. An unreadable path is treated the same way, so a
+		// filesystem error cannot block a deployment.
 		return undefined;
 	}
 
@@ -77,38 +77,24 @@ export function findCloudflareBuildOutput(
 }
 
 /**
- * Stop a deployment that was started against Cloudflare Build Output.
+ * Stop a deployment started against Cloudflare Build Output, which belongs to
+ * the `cf` CLI. Must be called before any remote mutation.
  *
- * Build Output is produced for deployment through the `cf` CLI. Deploying it
- * with Wrangler reads a different configuration, so it can target the wrong
- * Worker or fail in ways that do not explain themselves. Callers must invoke
- * this before any remote mutation.
- *
- * @param options.config The configuration the command resolved.
- * @param options.explicitConfigPath The `--config` argument, when the user passed one.
- * @param commandName The Wrangler command being guarded, e.g. `"deploy"`.
  * @throws {UserError} When Build Output is present.
  */
 export function assertNoCloudflareBuildOutput(
-	{
-		config,
-		explicitConfigPath,
-	}: {
-		config: Pick<Config, "userConfigPath">;
-		explicitConfigPath: string | undefined;
-	},
-	commandName: string
+	selection: ProjectSelection,
+	commandName: GuardedCommand
 ): void {
-	for (const projectRoot of getProjectRoots(config, explicitConfigPath)) {
+	for (const projectRoot of getProjectRoots(selection)) {
 		const buildOutputDir = findCloudflareBuildOutput(projectRoot);
 		if (buildOutputDir === undefined) {
 			continue;
 		}
 
-		// Reported relative to the working directory so the message names the
-		// directory the user can act on, which is not `BUILD_OUTPUT_ROOT` when the
-		// project lives elsewhere. Separators are normalised so the text reads the
-		// same on every platform.
+		// Relative to the working directory, so the message names the directory
+		// the user can act on. Separators are normalised to read the same on
+		// every platform.
 		const location =
 			path.relative(process.cwd(), buildOutputDir).split(path.sep).join("/") ||
 			BUILD_OUTPUT_ROOT;
@@ -116,7 +102,7 @@ export function assertNoCloudflareBuildOutput(
 		throw new UserError(
 			`It looks like you've run \`wrangler ${commandName}\` in a project that builds for the Cloudflare CLI (\`cf\`).\n` +
 				`Cloudflare Build Output was found at \`${location}\`. Deploying it with Wrangler reads a different configuration, so it may target the wrong Worker.\n` +
-				"Please run `cf deploy` instead.\n" +
+				`Please run \`${CF_EQUIVALENT[commandName]}\` instead.\n` +
 				`If that directory is left over from an earlier build, delete it and run \`wrangler ${commandName}\` again.\n` +
 				`See ${CF_DOCS_URL} for more information.`,
 			{

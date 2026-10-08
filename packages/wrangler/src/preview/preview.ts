@@ -82,7 +82,11 @@ export const previewCommand = createCommand({
 		// Runs before authentication and any upload. `preview` has no `--dry-run`,
 		// so every invocation creates a Preview deployment.
 		assertNoCloudflareBuildOutput(
-			{ config, explicitConfigPath: args.config },
+			{
+				config,
+				explicitConfigPath: args.config,
+				scriptPath: args.script,
+			},
 			"preview"
 		);
 

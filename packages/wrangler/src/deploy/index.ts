@@ -144,7 +144,11 @@ export async function runDeployCommandHandler(
 	// there is no deployment to stop.
 	if (!args.dryRun) {
 		assertNoCloudflareBuildOutput(
-			{ config, explicitConfigPath: args.config },
+			{
+				config,
+				explicitConfigPath: args.config,
+				scriptPath: args.script,
+			},
 			"deploy"
 		);
 	}

@@ -37,25 +37,37 @@ async function seedBuildOutput(projectRoot = process.cwd()) {
 	return rootConfigPath;
 }
 
-/** A project with no Wrangler configuration file, so the project root is the cwd. */
+/** No configuration file, so the project root is the working directory. */
 const NO_USER_CONFIG = {
 	config: { userConfigPath: undefined },
 	explicitConfigPath: undefined,
+	scriptPath: undefined,
 };
 
-/** A project selected explicitly with `--config`. */
+/** A project named with `--config`. */
 function selectedConfig(configPath: string) {
 	return {
 		config: { userConfigPath: configPath },
 		explicitConfigPath: configPath,
+		scriptPath: undefined,
 	};
 }
 
-/** A configuration found by searching upwards, which may belong to a parent. */
+/** A configuration found by searching up from the working directory. */
 function inheritedConfig(configPath: string) {
 	return {
 		config: { userConfigPath: configPath },
 		explicitConfigPath: undefined,
+		scriptPath: undefined,
+	};
+}
+
+/** A project reached through a script argument outside the working directory. */
+function scriptArgument(scriptPath: string, configPath: string) {
+	return {
+		config: { userConfigPath: configPath },
+		explicitConfigPath: undefined,
+		scriptPath,
 	};
 }
 
@@ -293,6 +305,58 @@ describe("assertNoCloudflareBuildOutput", () => {
 				assertNoCloudflareBuildOutput(inheritedConfig(parentConfig), "deploy")
 			).toThrow(/Cloudflare Build Output was found/);
 		});
+	});
+
+	it("ignores Build Output in the launch directory when a script argument selects another project", async ({
+		expect,
+	}) => {
+		// Config discovery starts at the script's directory, so Build Output left
+		// in the directory the command was launched from is unrelated.
+		await seed({ "api/wrangler.jsonc": JSON.stringify({ name: "api" }) });
+		await seedBuildOutput(process.cwd());
+
+		expect(() =>
+			assertNoCloudflareBuildOutput(
+				scriptArgument(
+					path.join("api", "index.js"),
+					path.resolve("api/wrangler.jsonc")
+				),
+				"deploy"
+			)
+		).not.toThrow();
+	});
+
+	it("finds Build Output in the project a script argument selects", async ({
+		expect,
+	}) => {
+		await seed({ "api/wrangler.jsonc": JSON.stringify({ name: "api" }) });
+		await seedBuildOutput(path.resolve("api"));
+
+		expect(() =>
+			assertNoCloudflareBuildOutput(
+				scriptArgument(
+					path.join("api", "index.js"),
+					path.resolve("api/wrangler.jsonc")
+				),
+				"deploy"
+			)
+		).toThrow(/api\/\.cloudflare\/output/);
+	});
+
+	it("suggests the `cf` command matching the Wrangler command", async ({
+		expect,
+	}) => {
+		await seedBuildOutput(process.cwd());
+
+		expect(() =>
+			assertNoCloudflareBuildOutput(NO_USER_CONFIG, "deploy")
+		).toThrow(/`cf deploy`/);
+		expect(() =>
+			assertNoCloudflareBuildOutput(NO_USER_CONFIG, "versions upload")
+		).toThrow(/`cf workers versions create`/);
+		expect(() =>
+			assertNoCloudflareBuildOutput(NO_USER_CONFIG, "preview")
+		).toThrow(/`cf previews deploy`/);
 	});
 
 	it("ignores a nested project with no Build Output under an inherited configuration", async ({

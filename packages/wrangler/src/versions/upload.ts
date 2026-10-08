@@ -65,7 +65,11 @@ export const versionsUploadCommand = createCommand({
 		// nothing, so there is no version to stop.
 		if (!args.dryRun) {
 			assertNoCloudflareBuildOutput(
-				{ config, explicitConfigPath: args.config },
+				{
+					config,
+					explicitConfigPath: args.config,
+					scriptPath: args.script,
+				},
 				"versions upload"
 			);
 		}
