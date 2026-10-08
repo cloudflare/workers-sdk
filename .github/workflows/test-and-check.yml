@@ -190,7 +190,7 @@ jobs:
       - name: Test release source maps (Miniflare and Vite plugin)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
         run: |
-          pnpm run build --filter=miniflare --filter=@cloudflare/vite-plugin
+          pnpm run build --filter=miniflare --filter=@cloudflare/vite-plugin --force
           pnpm --filter miniflare exec vitest run test/sourcemap.spec.ts test/plugins/core/errors/index.spec.ts
           pnpm --filter @cloudflare/vite-plugin exec vitest run src/__tests__/package-sourcemaps.spec.ts
         env:
