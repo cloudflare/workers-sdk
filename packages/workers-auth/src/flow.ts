@@ -8,7 +8,7 @@ import { getOauthToken } from "./callback-server";
 import { getAPIToken, requireApiToken } from "./credentials";
 import { getOauthTokenViaDeviceFlow } from "./device-flow";
 import { getRevokeUrlFromEnv } from "./env-vars";
-import { ErrorAuthServerUnreachable } from "./errors";
+import { ErrorAuthServerUnreachable, ErrorOAuthChallenge } from "./errors";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
@@ -363,6 +363,9 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			});
 			return "refreshed";
 		} catch (e) {
+			if (e instanceof ErrorOAuthChallenge) {
+				throw e;
+			}
 			ctx.logger.debug(
 				`Token refresh failed: ${e instanceof Error ? e.message : String(e)}`
 			);

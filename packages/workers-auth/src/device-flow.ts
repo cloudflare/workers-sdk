@@ -3,7 +3,11 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { domainUsesAccess, getCloudflareAccessHeaders } from "./access";
 import { getAuthDomainFromEnv, getDeviceAuthUrl } from "./env-vars";
-import { toErrorClass } from "./errors";
+import {
+	ErrorOAuthChallenge,
+	getOAuthChallengeError,
+	toErrorClass,
+} from "./errors";
 import {
 	assertTrustedVerificationUrl,
 	generateVerificationUrl,
@@ -174,6 +178,10 @@ async function readJson(
 	logger: OAuthFlowContext["logger"]
 ): Promise<unknown> {
 	const text = await response.text();
+	const challenge = getOAuthChallengeError(response, text);
+	if (challenge) {
+		throw challenge;
+	}
 	try {
 		return JSON.parse(text);
 	} catch (e) {
@@ -251,7 +259,12 @@ async function requestDeviceAuthorization(
 	});
 
 	if (!response.ok) {
-		const body = await readJson(response, logger).catch(() => undefined);
+		const body = await readJson(response, logger).catch((error: unknown) => {
+			if (error instanceof ErrorOAuthChallenge) {
+				throw error;
+			}
+			return undefined;
+		});
 		const rawError =
 			body && typeof body === "object" && "error" in body
 				? String((body as { error: unknown }).error)
@@ -478,6 +491,9 @@ export async function getOauthTokenViaDeviceFlow(
 				isNonInteractiveOrCI
 			);
 		} catch (e) {
+			if (e instanceof ErrorOAuthChallenge) {
+				throw e;
+			}
 			// A single poll can fail transiently: a network blip, or the
 			// Cloudflare edge returning a non-JSON body (an HTML 5xx or a
 			// bot-challenge page) instead of the expected RFC 8628 response.

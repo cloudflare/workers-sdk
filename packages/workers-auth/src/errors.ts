@@ -14,6 +14,36 @@
  */
 import { UserError } from "@cloudflare/workers-utils";
 
+/** A Cloudflare edge challenge prevented an OAuth request from reaching the provider. */
+export class ErrorOAuthChallenge extends UserError {}
+
+/**
+ * Recognize the edge's challenge header, with an HTML marker fallback for
+ * challenged 403 responses that arrive without the header.
+ */
+export function getOAuthChallengeError(
+	response: {
+		status: number;
+		headers: { get(name: string): string | null };
+	},
+	body?: string
+): ErrorOAuthChallenge | undefined {
+	if (
+		response.headers.get("cf-mitigated") !== "challenge" &&
+		!(response.status === 403 && body?.includes("challenge-platform"))
+	) {
+		return undefined;
+	}
+
+	const rayId = response.headers.get("cf-ray");
+	return new ErrorOAuthChallenge(
+		"Cloudflare challenged this OAuth request from your IP address.\n" +
+			"Use `CLOUDFLARE_API_TOKEN` for CLI commands on this machine." +
+			(rayId ? `\nCloudflare Ray ID: ${rayId}` : ""),
+		{ telemetryMessage: "user oauth challenge" }
+	);
+}
+
 /**
  * A list of OAuth2AuthCodePKCE errors.
  *
