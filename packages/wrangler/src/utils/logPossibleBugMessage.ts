@@ -1,12 +1,13 @@
 import { logger } from "../logger";
 import { updateCheck } from "../update-check";
 import { fgGreenColor, resetColor } from "./constants";
+import { isBun } from "./is-bun";
 
 /**
  * Write a message to the log that tells the user what they might do after we have reported an unexpected error.
  */
 export async function logPossibleBugMessage() {
-	if (process.versions.bun) {
+	if (isBun()) {
 		logger.warn(
 			`Wrangler does not support the Bun runtime. Please try this command again using Node.js via \`npm\` or \`pnpm\`. Alternatively, make sure you're not passing the \`--bun\` flag when running \`bun run wrangler ...\``
 		);
