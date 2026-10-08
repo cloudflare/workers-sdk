@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import fs from "node:fs";
 import path from "node:path";
 import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
@@ -33,6 +34,51 @@ import type {
 	WorkerRequest,
 	WorkerResponse,
 } from "vitest/node";
+
+function inlineCachedModule(
+	module: unknown,
+	cacheContents: Map<string, string>
+): unknown {
+	if (
+		module === null ||
+		typeof module !== "object" ||
+		!("cached" in module) ||
+		module.cached !== true ||
+		!("tmp" in module) ||
+		typeof module.tmp !== "string"
+	) {
+		return module;
+	}
+
+	const { cached, tmp, ...result } = module;
+	let code = cacheContents.get(tmp);
+	if (code === undefined) {
+		code = fs.readFileSync(tmp, "utf8");
+		cacheContents.set(tmp, code);
+	}
+	return { ...result, code };
+}
+
+function inlineCachedModules(response: unknown): unknown {
+	const cacheContents = new Map<string, string>();
+	const inlined = inlineCachedModule(response, cacheContents);
+	if (
+		inlined !== response ||
+		response === null ||
+		typeof response !== "object" ||
+		Array.isArray(response)
+	) {
+		return inlined;
+	}
+
+	let hasCachedModules = false;
+	const entries = Object.entries(response).map(([specifier, module]) => {
+		const inlinedModule = inlineCachedModule(module, cacheContents);
+		hasCachedModules ||= inlinedModule !== module;
+		return [specifier, inlinedModule];
+	});
+	return hasCachedModules ? Object.fromEntries(entries) : response;
+}
 
 export class CloudflarePoolWorker implements PoolWorker {
 	name = "cloudflare-pool";
@@ -145,7 +191,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 		);
 
 		// Avoid mutating Vitest's message objects — shallow-copy the parts we modify
-		let toSend: WorkerRequest = message;
+		let toSend: unknown = message;
 		if (message.type === "start") {
 			// Users can write `vitest --inspect` to start an inspector connection for their tests
 			// We intercept that option and use it to enable inspection of the Workers running in workerd
@@ -191,6 +237,17 @@ export class CloudflarePoolWorker implements PoolWorker {
 					},
 				},
 			};
+		}
+		const rpcResponse = message as { t?: string; r?: unknown };
+		if (
+			this.options.project.config.fsModuleCache &&
+			rpcResponse.t === "s" &&
+			rpcResponse.r !== undefined
+		) {
+			const inlined = inlineCachedModules(rpcResponse.r);
+			if (inlined !== rpcResponse.r) {
+				toSend = { ...message, r: inlined };
+			}
 		}
 		this.socket.send(structuredSerializableStringify(toSend));
 	}
