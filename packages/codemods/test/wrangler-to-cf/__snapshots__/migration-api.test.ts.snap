@@ -7,7 +7,7 @@ exports[`migrateWranglerToCf > keeps transferred Durable Objects blocked until t
  * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
  */
 /**
- * TODO(@cloudflare): cf migrate: migrations.0.transferred_classes.0: The migration transfers Durable Object \`Original\` from Worker \`source-worker\` to \`Incoming\` (current class: \`Incoming\`). Whether it has been deployed cannot be determined from this config. If completed, keep a live export for \`Incoming\` with its existing storage backend. If pending, coordinate a two-phase transfer with the source Worker using \`state: "expecting-transfer"\`, \`transferFrom: "source-worker"\`, and matching storage. The transfer requires matching class names; perform any rename separately. Setting storage alone does not complete a pending transfer.
+ * TODO(@cloudflare): cf migrate: migrations[0].transferred_classes[0]: The migration transfers Durable Object \`Original\` from Worker \`source-worker\` to \`Incoming\` (current class: \`Incoming\`). Whether it has been deployed cannot be determined from this config. If completed, keep a live export for \`Incoming\` with its existing storage backend. If pending, coordinate a two-phase transfer with the source Worker using \`state: "expecting-transfer"\`, \`transferFrom: "source-worker"\`, and matching storage. The transfer requires matching class names; perform any rename separately. Setting storage alone does not complete a pending transfer.
  * @see https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/#transfer-a-durable-object-class-between-workers
  */
 throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");

@@ -162,7 +162,7 @@ describe("migrateWranglerToCf", () => {
 		expect(result.followUps).toEqual([
 			expect.objectContaining({
 				code: "durable-object-transfer",
-				sourcePath: "migrations.0.transferred_classes.0",
+				sourcePath: "migrations[0].transferred_classes[0]",
 			}),
 		]);
 		expect(output).toMatchSnapshot();

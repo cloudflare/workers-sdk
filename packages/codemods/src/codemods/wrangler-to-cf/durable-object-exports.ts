@@ -44,7 +44,7 @@ function replayDurableObjectMigrations(source: UnknownRecord, prefix: string) {
 	const inferred = new Map<string, UnknownRecord>();
 	const locations = new Map<string, MigrationLocation>();
 	for (const [index, migration] of getRecords(source, "migrations").entries()) {
-		const sourcePath = `${prefix}migrations.${index}`;
+		const sourcePath = `${prefix}migrations[${index}]`;
 		applyDeletedClasses(migration, inferred);
 		applyRenamedClasses(migration, sourcePath, inferred, locations);
 		applyCreatedClasses(migration, sourcePath, inferred, locations);
@@ -122,7 +122,7 @@ function applyTransferredClasses(
 		}
 		inferred.set(transfer.to, { type: "durable-object" });
 		locations.set(transfer.to, {
-			sourcePath: `${sourcePath}.transferred_classes.${index}`,
+			sourcePath: `${sourcePath}.transferred_classes[${index}]`,
 			transfer,
 		});
 	}
@@ -248,7 +248,7 @@ function reportMissingLocalExports(
 				`The local Durable Object binding \`${String(binding.name)}\` references \`${binding.class_name}\`, but no live export could be inferred. Verify its \`class_name\`, then add its creation migration or declare a live export with the correct storage backend.`,
 				{
 					docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
-					sourcePath: `${prefix}durable_objects.bindings.${index}`,
+					sourcePath: `${prefix}durable_objects.bindings[${index}]`,
 				}
 			)
 		);
