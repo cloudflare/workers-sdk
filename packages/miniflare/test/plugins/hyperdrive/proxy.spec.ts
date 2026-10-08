@@ -734,25 +734,26 @@ describe("HyperdriveProxyController TLS modes", () => {
 				sslmode: "require",
 			});
 
-			await new Promise<void>((resolve) => {
+			const firstResponse = await new Promise<string>((resolve) => {
 				const socket = net.connect({ host: "127.0.0.1", port: proxyPort }, () =>
 					socket.write("hello")
 				);
 				socket.on("error", () => {});
-				socket.once("data", () => {
+				socket.once("data", (data) => {
 					socket.pause();
 					setTimeout(() => {
 						socket.destroy();
-						resolve();
+						resolve(data.toString());
 					}, 50);
 				});
 			});
+			expect(firstResponse).toMatch(/^P+$/);
 
 			await new Promise((resolve) => setTimeout(resolve, 500));
 
 			expect(uncaught).toEqual([]);
 
-			const response = await sendThroughProxy(
+			const second = await connectThroughProxy(
 				await controller.createProxyServer({
 					name: "test-client-error-second",
 					targetHost: "127.0.0.1",
@@ -762,7 +763,8 @@ describe("HyperdriveProxyController TLS modes", () => {
 				}),
 				"hello"
 			);
-			expect(response.length).toBeGreaterThan(0);
+			second.socket.destroy();
+			expect(second.response).toMatch(/^P+$/);
 		} finally {
 			process.off("uncaughtException", collect);
 			close();
