@@ -1888,6 +1888,35 @@ describe("generate types - CLI", () => {
 		);
 	});
 
+	it("should report types as out of date when the Env body was edited (--check)", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				vars: {
+					myTomlVarA: "A from wrangler jsonc",
+				},
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		const typesPath = "worker-configuration.d.ts";
+		const types = fs.readFileSync(typesPath, "utf-8");
+		const edited = types.replace(
+			"interface __BaseEnv_Env {",
+			"interface __BaseEnv_Env {\n\tHAND_EDITED: string;"
+		);
+		expect(edited).not.toBe(types);
+		fs.writeFileSync(typesPath, edited, "utf-8");
+
+		await expect(
+			runWrangler("types --check --include-runtime=false")
+		).rejects.toThrow("Types at worker-configuration.d.ts are out of date.");
+	});
+
 	it("should report types as up to date for multi-worker setup without re-passing -c flags (--check)", async ({
 		expect,
 	}) => {

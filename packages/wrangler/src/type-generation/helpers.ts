@@ -130,11 +130,32 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
 };
 
 /**
+ * Env types as stored in the file. The runtime header is written between the
+ * Env header and this body.
+ */
+function committedEnvBody(typesFileLines: readonly string[]): string {
+	const envHeaderIndex = typesFileLines.findIndex((line) =>
+		line.startsWith(ENV_HEADER_COMMENT_PREFIX)
+	);
+	const afterEnvHeader =
+		envHeaderIndex === -1 ? [] : typesFileLines.slice(envHeaderIndex + 1);
+	const bodyLines = afterEnvHeader[0]?.startsWith(RUNTIME_HEADER_COMMENT_PREFIX)
+		? afterEnvHeader.slice(1)
+		: afterEnvHeader;
+	const markerIndex = bodyLines.findIndex((line) =>
+		line.startsWith(RUNTIME_TYPES_MARKER)
+	);
+	const envLines =
+		markerIndex === -1 ? bodyLines : bodyLines.slice(0, markerIndex);
+	return envLines.join("\n");
+}
+
+/**
  * Determines whether the generated types file is stale compared to the current config.
  *
  * Checks if the generated types file at the specified path is up-to-date
- * by comparing the recorded hash and runtime header with what would be
- * generated from the current config.
+ * by comparing the Env body, the recorded hash, and the runtime header with
+ * what would be generated from the current config.
  *
  * This function parses the wrangler command from the header to extract
  * the original options used for generation, ensuring accurate comparison.
@@ -240,7 +261,7 @@ export const checkTypesUpToDate = async (
 	// Check if env types are out of date
 	if (args.includeEnv) {
 		try {
-			const { envHeader } = await generateEnvTypes(
+			const { envHeader, envTypes } = await generateEnvTypes(
 				primaryConfig,
 				{ strictVars: args.strictVars, envFile: args.envFile, env: args.env },
 				args.envInterface,
@@ -251,7 +272,9 @@ export const checkTypesUpToDate = async (
 				false // don't log anything
 			);
 			const newHash = envHeader?.match(/hash: (?<hash>.*)\)/)?.groups?.hash;
-			envOutOfDate = maybeExistingHash !== newHash;
+			const envBodyMatches =
+				envTypes === undefined || committedEnvBody(typesFileLines) === envTypes;
+			envOutOfDate = maybeExistingHash !== newHash || !envBodyMatches;
 		} catch {
 			// If we can't generate env types for comparison, consider them out of date
 			envOutOfDate = true;
