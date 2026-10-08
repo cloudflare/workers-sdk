@@ -262,6 +262,43 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			// ephemeral port per dispatch, but surface failures instead of retrying
 			options.reset = false;
 
+			// A 421 is retried on a new connection by aborting this one. workerd
+			// often has not finished the response body yet, so the abort is not a
+			// completed request: it terminates the fetch, and the retry then writes
+			// no bytes against the original Content-Length.
+			const onHeaders = handler.onHeaders;
+			const onError = handler.onError;
+			if (onHeaders !== undefined && onError !== undefined) {
+				let responseStatus = 0;
+				handler.onHeaders = function (
+					status,
+					rawHeaders,
+					resume,
+					statusText
+				) {
+					if (status >= 200) {
+						responseStatus = status;
+					}
+					return onHeaders.call(
+						this,
+						status,
+						rawHeaders,
+						resume,
+						statusText
+					);
+				};
+				handler.onError = function (err) {
+					if (
+						responseStatus === 421 &&
+						err instanceof DOMException &&
+						err.name === "AbortError"
+					) {
+						return;
+					}
+					return onError.call(this, err);
+				};
+			}
+
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate
 			return this.runtimeDispatcher.dispatch(options, handler);

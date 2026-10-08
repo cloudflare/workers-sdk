@@ -5343,3 +5343,34 @@ test("Miniflare: dispatchFetch() preserves request body length", async ({
 	);
 	expect(await res.json()).toEqual({ contentLength: "7", body: "request" });
 });
+
+test("Miniflare: dispatchFetch() replays a known-length body after HTTP 421", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
+			async fetch(request) {
+				const body = await request.text();
+				return new Response("body=" + body, { status: 421 });
+			}
+		}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("https://alias.test/", {
+		method: "POST",
+		body: "{}",
+		redirect: "manual",
+	});
+	expect(res.status).toBe(421);
+	expect(res.headers.get("location")).toBeNull();
+	expect(await res.text()).toBe("body={}");
+});
