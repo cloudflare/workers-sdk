@@ -1,9 +1,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { previewBuildOutput } from "../src/preview/preview";
-import type { PreviewBuildOutput } from "../src/preview/preview";
+import type {
+	PreviewBuildOutput,
+	PreviewCallbacks,
+} from "../src/preview/preview";
 import type {
 	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
@@ -15,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 	createPreviewParentWorker: vi.fn(),
 	editPreview: vi.fn(),
 	getPreview: vi.fn(),
+	getPreviewDeployment: vi.fn(),
 	syncAssets: vi.fn(),
 }));
 
@@ -25,10 +30,16 @@ vi.mock("../src/preview/api", async (importOriginal) => ({
 	createPreviewParentWorker: mocks.createPreviewParentWorker,
 	editPreview: mocks.editPreview,
 	getPreview: mocks.getPreview,
+	getPreviewDeployment: mocks.getPreviewDeployment,
 }));
 
 vi.mock("../src/deploy/helpers/assets", () => ({
 	syncAssets: mocks.syncAssets,
+}));
+
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
+	verifyDockerInstalled: vi.fn(),
 }));
 
 vi.mock("../src/shared/context", () => ({
@@ -92,6 +103,7 @@ describe("previewBuildOutput", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getPreview.mockResolvedValue(previewResource);
+		mocks.getPreviewDeployment.mockResolvedValue(deploymentResource);
 		mocks.editPreview.mockResolvedValue(previewResource);
 		mocks.createPreview.mockResolvedValue(previewResource);
 		mocks.createPreviewParentWorker.mockResolvedValue(undefined);
@@ -125,6 +137,7 @@ describe("previewBuildOutput", () => {
 				placement: { mode: "smart" },
 				assets: {
 					htmlHandling: "auto-trailing-slash",
+					basePath: "/docs",
 					runWorkerFirst: true,
 				},
 				observability: { enabled: true },
@@ -175,11 +188,295 @@ describe("previewBuildOutput", () => {
 				jwt: "asset-token",
 				config: {
 					html_handling: "auto-trailing-slash",
+					base_path: "/docs",
 					run_worker_first: true,
 				},
 			},
 		});
 		expect(request).not.toHaveProperty("migrations");
+	});
+
+	it("deploys Build Output Containers through the caller callbacks", async ({
+		expect,
+	}) => {
+		const normalisedContainerConfig = [
+			{
+				name: "preview-worker_feature_ContainerDO",
+				class_name: "ContainerDO",
+			},
+		];
+		const getNormalizedContainerOptions = vi
+			.fn()
+			.mockResolvedValue(normalisedContainerConfig);
+		const deployPreviewContainers = vi.fn().mockResolvedValue(undefined);
+		const callbacks: PreviewCallbacks = {
+			getNormalizedContainerOptions,
+			deployPreviewContainers,
+		};
+
+		await previewBuildOutput(
+			"account-id",
+			{ name: "feature", json: true },
+			{
+				workerConfig: buildOutputConfig({
+					exports: {
+						ContainerDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "api-container",
+						},
+					},
+				}),
+				rootConfig: validRootConfig,
+				buildResult,
+				containers: [
+					{
+						name: "api-container",
+						image: { reference: "registry.cloudflare.com/api:latest" },
+						maxInstances: 1,
+					},
+				],
+			},
+			callbacks
+		);
+
+		expect(getNormalizedContainerOptions).toHaveBeenCalledWith(
+			expect.objectContaining({
+				account_id: "account-id",
+				containers: [
+					{
+						name: "preview-worker_feature_ContainerDO",
+						class_name: "ContainerDO",
+						image: "registry.cloudflare.com/api:latest",
+						max_instances: 1,
+					},
+				],
+				durable_objects: { bindings: [] },
+				exports: {
+					ContainerDO: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "api-container",
+					},
+				},
+			}),
+			{ dryRun: false }
+		);
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request).toMatchObject({
+			containers: [{ class_name: "ContainerDO" }],
+			exports: {
+				ContainerDO: { type: "durable-object", storage: "sqlite" },
+			},
+		});
+		expect(request.exports?.ContainerDO).not.toHaveProperty("container");
+		expect(deployPreviewContainers).toHaveBeenCalledWith(
+			expect.objectContaining({
+				containers: [
+					expect.objectContaining({
+						name: "preview-worker_feature_ContainerDO",
+					}),
+				],
+			}),
+			normalisedContainerConfig,
+			deploymentResource,
+			"account-id",
+			{ quiet: true, localImageReferences: new Map() }
+		);
+	});
+
+	it("deploys local Build Output image references through the caller callbacks", async ({
+		expect,
+	}) => {
+		const getNormalizedContainerOptions = vi.fn().mockResolvedValue([
+			{
+				name: "preview-worker_feature_ContainerDO",
+				class_name: "ContainerDO",
+			},
+		]);
+		const deployPreviewContainers = vi.fn().mockResolvedValue(undefined);
+
+		await previewBuildOutput(
+			"account-id",
+			{ name: "feature", json: true },
+			{
+				workerConfig: buildOutputConfig({
+					exports: {
+						ContainerDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "api-container",
+						},
+					},
+				}),
+				rootConfig: validRootConfig,
+				buildResult,
+				containers: [
+					{
+						name: "api-container",
+						image: { localReference: "api-container:latest" },
+						maxInstances: 1,
+					},
+				],
+			},
+			{ getNormalizedContainerOptions, deployPreviewContainers }
+		);
+		expect(verifyDockerInstalled).toHaveBeenCalledOnce();
+
+		expect(getNormalizedContainerOptions).toHaveBeenCalledWith(
+			expect.objectContaining({
+				containers: [
+					expect.objectContaining({ image: "api-container:latest" }),
+				],
+			}),
+			{ dryRun: false }
+		);
+		expect(deployPreviewContainers).toHaveBeenCalledWith(
+			expect.anything(),
+			[
+				{
+					name: "preview-worker_feature_ContainerDO",
+					class_name: "ContainerDO",
+				},
+			],
+			deploymentResource,
+			"account-id",
+			{
+				quiet: true,
+				localImageReferences: new Map([
+					["ContainerDO", "api-container:latest"],
+				]),
+			}
+		);
+	});
+
+	it("checks Docker before uploading a Preview with a local image", async ({
+		expect,
+	}) => {
+		vi.mocked(verifyDockerInstalled).mockRejectedValueOnce(
+			new Error("Docker unavailable")
+		);
+
+		await expect(
+			previewBuildOutput(
+				"account-id",
+				{ name: "feature", json: true },
+				{
+					workerConfig: buildOutputConfig({
+						exports: {
+							ContainerDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "api-container",
+							},
+						},
+					}),
+					rootConfig: validRootConfig,
+					buildResult,
+					containers: [
+						{
+							name: "api-container",
+							image: { localReference: "api-container:latest" },
+							maxInstances: 1,
+						},
+					],
+				},
+				{
+					getNormalizedContainerOptions: vi.fn().mockResolvedValue([
+						{
+							name: "preview-worker_feature_ContainerDO",
+							class_name: "ContainerDO",
+						},
+					]),
+					deployPreviewContainers: vi.fn(),
+				}
+			)
+		).rejects.toThrow("Docker unavailable");
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+	});
+
+	it("rejects Durable Object-managed Build Output Containers", async ({
+		expect,
+	}) => {
+		await expect(
+			previewBuildOutput(
+				"account-id",
+				{ name: "feature", json: true },
+				{
+					workerConfig: buildOutputConfig(),
+					rootConfig: validRootConfig,
+					buildResult,
+					containers: [
+						{
+							name: "api-container",
+							schedulingPolicy: "durable-object",
+						},
+					],
+				}
+			)
+		).rejects.toThrow(/don't support Durable Object-managed Containers/);
+		expect(mocks.getPreview).not.toHaveBeenCalled();
+	});
+
+	it("requires container callbacks before creating a Preview", async ({
+		expect,
+	}) => {
+		await expect(
+			previewBuildOutput(
+				"account-id",
+				{ name: "feature", json: true },
+				{
+					workerConfig: buildOutputConfig({
+						exports: {
+							ContainerDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "api-container",
+							},
+						},
+					}),
+					rootConfig: validRootConfig,
+					buildResult,
+					containers: [
+						{
+							name: "api-container",
+							image: { reference: "registry.cloudflare.com/api:latest" },
+							maxInstances: 1,
+						},
+					],
+				}
+			)
+		).rejects.toThrow(/require container deployment callbacks/);
+		expect(mocks.getPreview).not.toHaveBeenCalled();
+	});
+
+	it("rejects Container-backed exports missing from Build Output", async ({
+		expect,
+	}) => {
+		await expect(
+			previewBuildOutput(
+				"account-id",
+				{ name: "feature", json: true },
+				{
+					workerConfig: buildOutputConfig({
+						exports: {
+							ContainerDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "api-container",
+							},
+						},
+					}),
+					rootConfig: validRootConfig,
+					buildResult,
+				},
+				{
+					getNormalizedContainerOptions: vi.fn(),
+					deployPreviewContainers: vi.fn(),
+				}
+			)
+		).rejects.toThrow(/was not included in the Build Output/);
+		expect(mocks.getPreview).not.toHaveBeenCalled();
 	});
 
 	it("keeps Preview base config enabled when Build Output omits settings", async ({
@@ -339,6 +636,47 @@ describe("previewBuildOutput", () => {
 		expect(request).not.toHaveProperty("env");
 	});
 
+	it("keeps secrets from the latest deployment of an existing Preview", async ({
+		expect,
+	}) => {
+		mocks.getPreviewDeployment.mockResolvedValue({
+			...deploymentResource,
+			env: {
+				API_KEY: { type: "secret_text" },
+				MODE: { type: "plain_text", text: "old" },
+			},
+		});
+
+		await uploadPreview(buildOutputConfig());
+
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request.env).toEqual({ API_KEY: { type: "inherit" } });
+	});
+
+	it("does not look up the latest deployment of a new Preview", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValue(
+			Object.assign(new Error("Preview not found"), { code: 10025 })
+		);
+
+		await uploadPreview(buildOutputConfig());
+
+		expect(mocks.createPreview).toHaveBeenCalled();
+		expect(mocks.getPreviewDeployment).not.toHaveBeenCalled();
+	});
+
+	it("does not deploy when the latest deployment cannot be read", async ({
+		expect,
+	}) => {
+		mocks.getPreviewDeployment.mockRejectedValue(new Error("Internal error"));
+
+		await expect(uploadPreview(buildOutputConfig())).rejects.toThrow(
+			"Internal error"
+		);
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+	});
+
 	it.for<[string, ParsedOutputRootConfig | undefined]>([
 		["missing", undefined],
 		["non-Preview", { buildContext: { isPreview: false } }],
@@ -364,18 +702,6 @@ describe("previewBuildOutput", () => {
 		[
 			"streaming tail consumers",
 			{ tailConsumers: [{ worker: "tail-worker", streaming: true }] },
-		],
-		[
-			"Container-backed Durable Objects",
-			{
-				exports: {
-					ContainerDO: {
-						type: "durable-object",
-						storage: "sqlite",
-						container: "container-app",
-					},
-				},
-			},
 		],
 		["unsafe metadata", { unsafe: { metadata: { custom: true } } }],
 		[

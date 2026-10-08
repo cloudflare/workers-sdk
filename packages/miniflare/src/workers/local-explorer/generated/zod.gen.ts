@@ -379,6 +379,57 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 	})
 );
 
+export const zLocalExplorerScheduledRequest = z.object({
+	cron: z.string().regex(/.*\S.*/),
+	scheduled_time: z.int().gte(-9223372036854).lte(9223372036854).optional(),
+});
+
+export const zLocalExplorerScheduledResult = z.object({
+	outcome: z.string(),
+	noRetry: z.boolean(),
+});
+
+export const zFlagshipApp = z.object({
+	id: z.string(),
+	bindings: z.array(z.string()),
+});
+
+export const zFlagshipBaseCondition = z.object({
+	attribute: z.string(),
+	operator: z.enum([
+		"equals",
+		"not_equals",
+		"greater_than",
+		"less_than",
+		"greater_than_or_equals",
+		"less_than_or_equals",
+		"contains",
+		"starts_with",
+		"ends_with",
+		"in",
+		"not_in",
+		"has",
+		"not_has",
+	]),
+	value: z.unknown(),
+});
+
+export const zFlagshipEvaluation = z.object({
+	flagKey: z.string(),
+	value: z.unknown(),
+	variant: z.string(),
+	reason: z.enum([
+		"STATIC",
+		"TARGETING_MATCH",
+		"DEFAULT",
+		"DISABLED",
+		"SPLIT",
+		"ERROR",
+	]),
+	errorCode: z.string().optional(),
+	errorMessage: z.string().optional(),
+});
+
 export const zR2Object = z.object({
 	key: z.string().optional(),
 	etag: z.string().optional(),
@@ -436,6 +487,13 @@ export const zDoRawQueryResult = z.object({
 		.optional(),
 });
 
+/**
+ * Trigger metadata for a worker
+ */
+export const zLocalExplorerWorkerTriggers = z.object({
+	crons: z.array(z.string()),
+});
+
 export const zLocalExplorerNamedBinding = z.object({
 	bindingName: z.string(),
 });
@@ -470,12 +528,15 @@ export const zLocalExplorerWorkerBindings = z.object({
 	do: z.array(zLocalExplorerDoBinding).optional(),
 	workflows: z.array(zLocalExplorerWorkflowBinding).optional(),
 	sendEmail: z.array(zLocalExplorerNamedBinding).optional(),
+	flagship: z.array(zLocalExplorerResourceBinding).optional(),
 });
 
 export const zLocalExplorerWorker = z.object({
 	isSelf: z.boolean(),
 	name: z.string(),
+	persistenceScope: z.string().optional(),
 	bindings: zLocalExplorerWorkerBindings.optional(),
+	triggers: zLocalExplorerWorkerTriggers.optional(),
 });
 
 /**
@@ -636,6 +697,15 @@ export const zEmailRoutingItem = z.object({
 	subject: z.string(),
 	messageId: z.string(),
 	attachments: z.array(zEmailAttachment),
+	captureId: z
+		.uuid()
+		.regex(
+			/^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/
+		)
+		.optional(),
+	editAndResendAvailable: z.boolean().optional(),
+	editAndResendUnavailableReason: z.string().optional(),
+	capturedPortion: z.boolean().optional(),
 	to: z.string(),
 	cc: z.array(z.string()).optional(),
 	headers: z.record(z.string(), z.string()).optional(),
@@ -650,11 +720,19 @@ export const zEmailRoutingItem = z.object({
 });
 
 export const zEmailRoutingDetail = z.object({
-	worker: z.string().optional(),
+	worker: z.string(),
 	from: z.string(),
 	subject: z.string(),
 	messageId: z.string(),
 	attachments: z.array(zEmailAttachment),
+	captureId: z
+		.uuid()
+		.regex(
+			/^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/
+		),
+	editAndResendAvailable: z.boolean(),
+	editAndResendUnavailableReason: z.string().optional(),
+	capturedPortion: z.boolean(),
 	to: z.string(),
 	cc: z.array(z.string()).optional(),
 	headers: z.record(z.string(), z.string()).optional(),
@@ -744,6 +822,39 @@ export const zWorkersKvMetadataWritable = zWorkersKvAnyWritable.and(
 
 export const zWorkersKvNamespaceWritable = z.object({
 	title: zWorkersKvNamespaceTitle,
+});
+
+export const zFlagshipLogicalCondition = z.object({
+	logical_operator: z.enum(["AND", "OR"]),
+	clauses: z.array(z.lazy((): any => zFlagshipCondition)),
+});
+
+export const zFlagshipCondition = z.union([
+	zFlagshipBaseCondition,
+	zFlagshipLogicalCondition,
+]);
+
+export const zFlagshipRule = z.object({
+	priority: z.int(),
+	conditions: z.array(zFlagshipCondition),
+	serve_variation: z.string(),
+	rollout: z
+		.object({
+			percentage: z.number().gte(0).lte(100),
+			attribute: z.string().optional(),
+		})
+		.optional(),
+});
+
+export const zFlagshipFlag = z.object({
+	key: z.string(),
+	type: z.enum(["boolean", "string", "number", "json"]),
+	description: z.string().nullish(),
+	enabled: z.boolean(),
+	default_variation: z.string(),
+	variations: z.record(z.string(), z.unknown()),
+	rules: z.array(zFlagshipRule),
+	updated_at: z.string(),
 });
 
 export const zWorkersKvNamespaceListNamespacesData = z.object({
@@ -1143,6 +1254,28 @@ export const zR2BucketListObjectsResponse = zWorkersApiResponseCommon.and(
 	})
 );
 
+export const zR2BucketDeleteObjectData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		bucket_name: z.string(),
+		object_key: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete object response.
+ */
+export const zR2BucketDeleteObjectResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				key: z.string().optional(),
+			})
+			.optional(),
+	})
+);
+
 export const zR2BucketGetObjectData = z.object({
 	body: z.never().optional(),
 	path: z.object({
@@ -1223,6 +1356,24 @@ export const zLocalExplorerListWorkersResponse = zWorkersApiResponseCommon.and(
 	})
 );
 
+export const zLocalExplorerDispatchScheduledData = z.object({
+	body: zLocalExplorerScheduledRequest,
+	path: z.never().optional(),
+	query: z.object({
+		worker: z.string().min(1),
+	}),
+});
+
+/**
+ * Scheduled invocation result.
+ */
+export const zLocalExplorerDispatchScheduledResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: zLocalExplorerScheduledResult,
+		})
+	);
+
 export const zEmailListRoutingData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
@@ -1230,6 +1381,7 @@ export const zEmailListRoutingData = z.object({
 		.object({
 			worker: z.string().optional(),
 			email_id: z.string().optional(),
+			capture_id: z.uuid().optional(),
 			cursor: z.string().optional(),
 			per_page: z.int().gte(1).lte(100).optional().default(25),
 		})
@@ -1252,6 +1404,49 @@ export const zEmailListRoutingResponse = zWorkersApiResponseCommon.and(
 				has_more: z.boolean().optional(),
 			})
 			.optional(),
+	})
+);
+
+export const zEmailResendRoutingData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.object({
+		worker: z.string().min(1),
+		capture_id: z.uuid(),
+	}),
+});
+
+/**
+ * Email resend result.
+ */
+export const zEmailResendRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				messageId: z.string(),
+				outcome: z.enum(["ok", "exception"]),
+				rejectReason: z.string().optional(),
+				capturedPortion: z.boolean(),
+			})
+			.optional(),
+	})
+);
+
+export const zEmailResendDraftRoutingData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.object({
+		worker: z.string().min(1),
+		capture_id: z.uuid(),
+	}),
+});
+
+/**
+ * Composer projection response.
+ */
+export const zEmailResendDraftRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zEmailSendRequest.optional(),
 	})
 );
 
@@ -1568,3 +1763,145 @@ export const zObservabilityClearData = z.object({
  * Clear response.
  */
 export const zObservabilityClearResponse = zWorkersApiResponseCommon;
+
+export const zFlagshipListAppsData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List Flagship Apps response.
+ */
+export const zFlagshipListAppsResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zFlagshipApp).optional(),
+	})
+);
+
+export const zFlagshipDeleteFlagData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		app_id: z.string(),
+		flag_key: z.string(),
+	}),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Delete Flagship Flag response.
+ */
+export const zFlagshipDeleteFlagResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				success: z.boolean().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zFlagshipEvaluateFlagData = z.object({
+	body: z.object({
+		context: z.record(z.string(), z.unknown()).optional(),
+	}),
+	path: z.object({
+		app_id: z.string(),
+		flag_key: z.string(),
+	}),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Evaluate Flagship Flag response.
+ */
+export const zFlagshipEvaluateFlagResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zFlagshipEvaluation.optional(),
+	})
+);
+
+export const zFlagshipListFlagsData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		app_id: z.string(),
+	}),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * List Flagship Flags response.
+ */
+export const zFlagshipListFlagsResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zFlagshipFlag).optional(),
+	})
+);
+
+export const zFlagshipCreateFlagData = z.object({
+	body: z.object({
+		key: z.string(),
+		description: z.string().nullish(),
+		enabled: z.boolean().optional(),
+		default_variation: z.string(),
+		variations: z.record(z.string(), z.unknown()),
+		rules: z.array(zFlagshipRule).optional(),
+	}),
+	path: z.object({
+		app_id: z.string(),
+	}),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Create Flagship Flag response.
+ */
+export const zFlagshipCreateFlagResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zFlagshipFlag.optional(),
+	})
+);
+
+export const zFlagshipUpdateFlagData = z.object({
+	body: z.object({
+		description: z.string().nullish(),
+		enabled: z.boolean().optional(),
+		default_variation: z.string().optional(),
+		variations: z.record(z.string(), z.unknown()).optional(),
+		rules: z.array(zFlagshipRule).optional(),
+	}),
+	path: z.object({
+		app_id: z.string(),
+		flag_key: z.string(),
+	}),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Update Flagship Flag response.
+ */
+export const zFlagshipUpdateFlagResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zFlagshipFlag.optional(),
+	})
+);

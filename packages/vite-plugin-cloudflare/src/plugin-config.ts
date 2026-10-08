@@ -13,6 +13,7 @@ import {
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	DEFAULT_COMPAT_DATE,
+	formatZodError,
 	getWorkerNameFromProject,
 } from "@cloudflare/workers-utils";
 import { defu } from "defu";
@@ -49,6 +50,8 @@ export type PersistState = boolean | { path: string };
 export type TunnelConfig = {
 	autoStart?: boolean;
 	name?: string;
+	/** Email addresses or domain patterns allowed to authenticate to a Quick Tunnel. */
+	allowedMail?: string[];
 };
 
 interface BaseWorkerConfig {
@@ -110,14 +113,14 @@ interface ExperimentalNewConfig {
 	/** Options for type generation. */
 	types?: {
 		/**
-		 * Whether to auto-generate `worker-configuration.d.ts` at the project
-		 * root. Defaults to `true`.
+		 * Whether to auto-generate `.cloudflare/types/index.d.ts`. Defaults to
+		 * `true`.
 		 */
 		generate?: boolean;
 		/**
 		 * Whether to include the Worker's runtime types (generated from the
 		 * project's compatibility date and flags) in the generated
-		 * `worker-configuration.d.ts`. Defaults to `true`.
+		 * `.cloudflare/types/index.d.ts`. Defaults to `true`.
 		 */
 		includeRuntime?: boolean;
 	};
@@ -434,6 +437,16 @@ export async function resolvePluginConfig(
 	userConfig: vite.UserConfig,
 	viteEnv: vite.ConfigEnv
 ): Promise<ResolvedPluginConfig> {
+	if (typeof pluginConfig.tunnel === "object") {
+		if (
+			pluginConfig.tunnel.name !== undefined &&
+			(pluginConfig.tunnel.allowedMail?.length ?? 0) > 0
+		) {
+			throw new Error(
+				"`tunnel.allowedMail` is only supported for Quick Tunnels and cannot be used together with `tunnel.name`."
+			);
+		}
+	}
 	const resolvedNewConfig = normalizeNewConfig(
 		pluginConfig.experimental?.newConfig
 	);
@@ -446,6 +459,9 @@ export async function resolvePluginConfig(
 				: {
 						autoStart: pluginConfig.tunnel?.autoStart ?? false,
 						name: pluginConfig.tunnel?.name,
+						allowedMail: pluginConfig.tunnel?.allowedMail?.length
+							? pluginConfig.tunnel.allowedMail
+							: undefined,
 					},
 		experimental: {
 			headersAndRedirectsDevModeSupport:
@@ -527,7 +543,6 @@ export async function resolvePluginConfig(
 		const result = await loadNewConfig({
 			root,
 			mode: viteEnv.mode,
-			command: viteEnv.command,
 			types: resolvedNewConfig.types,
 		});
 		configPath = result.configPath;
@@ -796,8 +811,8 @@ function resolveWorker(
 }
 
 const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
-const TYPES_OUTPUT_FILENAME = "worker-configuration.d.ts";
-const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
+const TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
+const CONFIG_PACKAGE = "cf/config";
 
 /**
  * Load and convert a `cloudflare.config.ts` file via `@cloudflare/config`. Returns
@@ -806,14 +821,12 @@ const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
  * file, and the set of files imported while resolving the config (for
  * watch-mode).
  *
- * When `types.generate` is true, also writes `worker-configuration.d.ts` next
- * to the config when the generated content differs from what's already on disk.
- * Type generation only runs in dev.
+ * When `types.generate` is true, also writes `.cloudflare/types/index.d.ts`
+ * when the generated content differs from what's already on disk.
  */
 async function loadNewConfig(options: {
 	root: string;
 	mode: string;
-	command: "build" | "serve";
 	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<{
 	rawConfig: RawConfig;
@@ -836,7 +849,7 @@ async function loadNewConfig(options: {
 
 	if (!result.success) {
 		throw new Error(
-			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${result.error.message}`
+			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${formatZodError(result.error)}`
 		);
 	}
 
@@ -850,8 +863,8 @@ async function loadNewConfig(options: {
 
 	const rawConfig: RawConfig = convertToWranglerConfig(result.data);
 
-	if (options.command === "serve" && options.types.generate) {
-		await writeWorkerConfigurationDts({
+	if (options.types.generate) {
+		await writeCloudflareTypes({
 			root: options.root,
 			configPath,
 			includeRuntime: options.types.includeRuntime,
@@ -869,10 +882,9 @@ async function loadNewConfig(options: {
 }
 
 /**
- * Write `worker-configuration.d.ts` to the project root using
- * `@cloudflare/config`'s `generateTypes`, targeting the vite-plugin's
- * `experimental-config` subpath (so users don't need a direct dependency on
- * `@cloudflare/config`).
+ * Write `.cloudflare/types/index.d.ts` using
+ * `@cloudflare/config`'s `generateTypes`, targeting the public `cf/config`
+ * package used by `cloudflare.config.ts`.
  *
  * When `includeRuntime` is true, appends the Workers runtime types (generated
  * from the project's compatibility date/flags) after the inference block. The
@@ -883,16 +895,21 @@ async function loadNewConfig(options: {
  * check and the diff-before-write (only writes if content differs, to avoid
  * touching mtimes unnecessarily).
  */
-async function writeWorkerConfigurationDts(options: {
+async function writeCloudflareTypes(options: {
 	root: string;
 	configPath: string;
 	includeRuntime: boolean;
 	compatibilityDate: string;
 	compatibilityFlags: string[];
 }): Promise<void> {
-	const outputPath = path.resolve(options.root, TYPES_OUTPUT_FILENAME);
-	const relativeConfigPath =
-		"./" + path.relative(options.root, options.configPath);
+	const outputPath = path.resolve(options.root, TYPES_OUTPUT_PATH);
+	const outputDir = path.dirname(outputPath);
+	const relativeConfigPath = vite.normalizePath(
+		path.relative(outputDir, options.configPath)
+	);
+	const configImportPath = relativeConfigPath.startsWith(".")
+		? relativeConfigPath
+		: `./${relativeConfigPath}`;
 
 	let existingContent: string | undefined;
 	try {
@@ -902,8 +919,8 @@ async function writeWorkerConfigurationDts(options: {
 	}
 
 	let content = generateTypes({
-		configPath: relativeConfigPath,
-		packageName: EXPERIMENTAL_CONFIG_PKG,
+		configPath: configImportPath,
+		packageName: CONFIG_PACKAGE,
 	});
 
 	if (options.includeRuntime) {
@@ -916,6 +933,7 @@ async function writeWorkerConfigurationDts(options: {
 	}
 
 	if (existingContent !== content) {
+		await fsp.mkdir(outputDir, { recursive: true });
 		await fsp.writeFile(outputPath, content);
 	}
 }

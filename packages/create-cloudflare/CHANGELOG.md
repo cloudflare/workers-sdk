@@ -1,5 +1,141 @@
 # create-cloudflare
 
+## 2.73.4
+
+### Patch Changes
+
+- [#16139](https://github.com/cloudflare/workers-sdk/pull/16139) [`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d) Thanks [@cpojer](https://github.com/cpojer)! - Update esbuild to 0.28.2
+
+  Align esbuild dependency with tooling using the latest 0.28 patch so package managers can share one installation instead of downloading a second native binary.
+
+## 2.73.3
+
+### Patch Changes
+
+- [#16057](https://github.com/cloudflare/workers-sdk/pull/16057) [`ad54578`](https://github.com/cloudflare/workers-sdk/commit/ad54578e2eeb2942891b5f6344cb6a1b1ecbcce6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.3.6 | 16.3.8 |
+
+- [#16058](https://github.com/cloudflare/workers-sdk/pull/16058) [`f67fb2b`](https://github.com/cloudflare/workers-sdk/commit/f67fb2b2040a9c16717efd55fe6252afcb19c7cc) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.7.5 | 2.8.0 |
+
+- [#16060](https://github.com/cloudflare/workers-sdk/pull/16060) [`17c6c0d`](https://github.com/cloudflare/workers-sdk/commit/17c6c0dfa38e620cf9e569516db41f58baab472f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.2.0 | 22.2.1 |
+
+- [#16061](https://github.com/cloudflare/workers-sdk/pull/16061) [`f8093b7`](https://github.com/cloudflare/workers-sdk/commit/f8093b7c1bf5288a6c35d8add105719545d0fcaf) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.71.0 | 0.71.1 |
+
+## 2.73.2
+
+### Patch Changes
+
+- [#16017](https://github.com/cloudflare/workers-sdk/pull/16017) [`1bc7269`](https://github.com/cloudflare/workers-sdk/commit/1bc72691ef482c9d7a09b4c6dc2aa4e5004827d3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support SvelteKit 3 projects
+
+  Create Svelte projects with the SvelteKit 3-compatible Cloudflare adapter and preserve SvelteKit's generated types when adding Workers types.
+
+## 2.73.1
+
+### Patch Changes
+
+- [#15895](https://github.com/cloudflare/workers-sdk/pull/15895) [`9fecda5`](https://github.com/cloudflare/workers-sdk/commit/9fecda5f738d06f789a0d5c0b3fe1664ff18a53f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.1.8 | 22.2.0 |
+
+- [#15896](https://github.com/cloudflare/workers-sdk/pull/15896) [`5afa83a`](https://github.com/cloudflare/workers-sdk/commit/5afa83aa65b2ee4587a17d715279a763e873d229) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.3.5 | 16.3.6 |
+
+- [#15897](https://github.com/cloudflare/workers-sdk/pull/15897) [`f938656`](https://github.com/cloudflare/workers-sdk/commit/f93865676406a7616b3c2ed3e48e83e5ec010787) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.17.0 | 0.17.1 |
+
+- [#15898](https://github.com/cloudflare/workers-sdk/pull/15898) [`f1179eb`](https://github.com/cloudflare/workers-sdk/commit/f1179eb5b54dfa9dc2a36f1df27e13114a3bbc31) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.20.0 | 1.20.1 |
+
+- [#15899](https://github.com/cloudflare/workers-sdk/pull/15899) [`cce87c3`](https://github.com/cloudflare/workers-sdk/commit/cce87c3490042316225835d9c78425af34e25847) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.7.2 | 2.7.5 |
+
+## 2.73.0
+
+### Minor Changes
+
+- [#15636](https://github.com/cloudflare/workers-sdk/pull/15636) [`29099b1`](https://github.com/cloudflare/workers-sdk/commit/29099b1c2fc60fe3374dab31bd8ec8b255f1bd6c) Thanks [@ryanking13](https://github.com/ryanking13)! - Add Django, FastAPI, and Flask framework starters for Python Workers projects
+
+### Patch Changes
+
+- [#15885](https://github.com/cloudflare/workers-sdk/pull/15885) [`ff5039c`](https://github.com/cloudflare/workers-sdk/commit/ff5039c802790473a8d0d14f9970649633ae73c2) Thanks [@Zhong-z](https://github.com/Zhong-z)! - Validate project name format before checking for directory conflicts
+
+  Previously, when providing an invalid project name for an existing directory containing files, C3 reported that the directory already exists and contains conflicting files instead of reporting the invalid project name. Project name format validation is now performed before checking whether the directory already exists.
+
+## 2.72.13
+
+### Patch Changes
+
+- [#15677](https://github.com/cloudflare/workers-sdk/pull/15677) [`884990d`](https://github.com/cloudflare/workers-sdk/commit/884990d509802753cfec309599e7b1e5664c6bad) Thanks [@L4XB](https://github.com/L4XB)! - Stop `--lang` from hiding templates that have no language variants
+
+  `--lang` filtered out every template that does not declare `copyFiles` variants, because such a template has a single set of files and so no variant key to match the language against. That hid templates whose files are written in the requested language. `create-cloudflare --lang ts` dropped `API starter (OpenAPI compliant)` from the Application Starter list, and failed with `Unknown application type provided: openapi` when that template was named with `--type`. It also dropped 15 of the 18 framework starters, so `create-cloudflare --framework=hono --lang=ts` failed with `Unsupported framework: hono`.
+
+  A template that ships a single set of files now declares the `--lang` values it can be created with. For a framework whose own CLI writes the project, that is what the CLI can produce, since `--lang` is not passed to it: a framework that only scaffolds TypeScript, such as Qwik, Angular or Nuxt, is offered for `--lang ts` but not for `--lang js`. Python filtering is unchanged: it is only ever offered through an explicit `copyFiles` variant, so a template without one is still left out of `--lang python`.
+
+## 2.72.12
+
+### Patch Changes
+
+- [#15838](https://github.com/cloudflare/workers-sdk/pull/15838) [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.9.0 to fix slow parsing of very large TOML files
+
+  Parse time for TOML config files now grows linearly with their size, instead of with its square: a 40,000-line file that took 259 ms to parse now takes 17 ms, while typical `wrangler.toml` files parse in the same time as before. This addresses the `GHSA-r4xh-jqrq-34v2` advisory against earlier versions of the parser.
+
+  Some TOML syntax errors now point at the character that caused them. For example, a `wrangler.toml` containing `INVALID "FILE` is now reported as `illegal character in key` at the `"`, rather than `incomplete key-value` at the start of the line.
+
+## 2.72.11
+
+### Patch Changes
+
+- [#15662](https://github.com/cloudflare/workers-sdk/pull/15662) [`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.8.0
+
+  This updates the bundled TOML parser that reads `wrangler.toml` to a version that addresses two advisories against 1.5.2: `GHSA-7w5x-hrqm-74c2` (a value followed by a comment with no trailing newline, such as `a=[1 #`, put the parser in an infinite loop) and `GHSA-v3rj-xjv7-4jmq` (thousands of consecutive comment lines overflowed the stack). On the old version, `wrangler deploy` against a `wrangler.toml` ending in `a=[1 #` never returned; it now fails with `Invalid TOML document: cannot find end of structure`.
+
 ## 2.72.10
 
 ### Patch Changes

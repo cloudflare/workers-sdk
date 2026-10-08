@@ -17,3 +17,4 @@ export * from "./src/images";
 export * from "./src/spinner";
 export * from "./src/dev-options";
 export * from "./src/ssh";
+export * from "./src/registry-images";

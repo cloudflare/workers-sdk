@@ -252,6 +252,6 @@ describe("validation", () => {
 
 		expect(await result.exitCode).toBe(1);
 		expect(result.stderr).toMatch("Invalid `cloudflare.config.ts`");
-		expect(result.stderr).toMatch("compatibilityDate");
+		expect(result.stderr).toMatch("→ at worker.compatibilityDate");
 	});
 });

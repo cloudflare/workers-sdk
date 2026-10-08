@@ -2,6 +2,7 @@ import path from "node:path";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import {
+	CommandLineArgsError,
 	defaultWranglerConfig,
 	FatalError,
 	getCloudflareEnv,
@@ -46,7 +47,10 @@ import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
-import { temporaryArgDefinition } from "./temporary-commands";
+import {
+	eventCodeArgDefinition,
+	temporaryArgDefinition,
+} from "./temporary-commands";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	HandlerArgs,
@@ -75,7 +79,11 @@ export function createRegisterYargsCommand(
 			(subYargs) => {
 				if (def.type === "command") {
 					const args: NamedArgDefinitions = def.behaviour?.supportTemporary
-						? { ...def.args, temporary: temporaryArgDefinition }
+						? {
+								...def.args,
+								temporary: temporaryArgDefinition,
+								"event-code": eventCodeArgDefinition,
+							}
 						: (def.args ?? {});
 
 					const positionalArgs = new Set(def.positionalArgs);
@@ -235,9 +243,23 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
 
-			setTemporaryAllowed(
+			const temporaryAllowed =
 				def.behaviour?.supportTemporary === true &&
-					Boolean((args as { temporary?: boolean }).temporary)
+				Boolean((args as { temporary?: boolean }).temporary);
+			const eventCode =
+				"eventCode" in args && typeof args.eventCode === "string"
+					? args.eventCode
+					: undefined;
+			// Never silently ignore an event code on a command that would use
+			// real credentials.
+			if (eventCode && !temporaryAllowed) {
+				throw new CommandLineArgsError("--event-code requires --temporary.", {
+					telemetryMessage: "temporary event code temporary required",
+				});
+			}
+			setTemporaryAllowed(
+				temporaryAllowed,
+				eventCode ? { eventCode } : undefined
 			);
 
 			await run(experimentalFlags, async () => {
@@ -321,7 +343,6 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					// sets these values in the scope of deploy-helpers
 					initDeployHelpersContext({
 						logger,
-						createCloudflareClient,
 						fetchResult,
 						fetchListResult,
 						fetchPagedListResult,

@@ -20,7 +20,6 @@ import type {
  *   const { logger } = await import("./context");  // WRONG: captures undefined
  */
 export let logger: Logger;
-export let createCloudflareClient: DeployHelpersContext["createCloudflareClient"];
 export let fetchResult: FetchResultFetcher;
 export let fetchListResult: FetchListResultFetcher;
 export let fetchPagedListResult: FetchPagedListResultFetcher;
@@ -35,7 +34,6 @@ export let select: DeployHelpersContext["select"];
  */
 export function initDeployHelpersContext(ctx: DeployHelpersContext): void {
 	logger = ctx.logger;
-	createCloudflareClient = ctx.createCloudflareClient;
 	fetchResult = ctx.fetchResult;
 	fetchListResult = ctx.fetchListResult;
 	fetchPagedListResult = ctx.fetchPagedListResult;

@@ -16,6 +16,7 @@ import {
 	mergeBuildOutputProps,
 } from "../deployment-bundle/merge-config-args";
 import { logger } from "../logger";
+import { regenerateNewConfigTypes } from "../type-generation/new-config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 
 /**
@@ -30,10 +31,13 @@ export async function writeBuildOutput({
 	env?: string;
 	isPreview?: boolean;
 }): Promise<void> {
-	const { config, parsedConfig, mode } = await readNewConfig(
-		{ env },
-		{ isPreview }
-	);
+	const newConfig = await readNewConfig({ env }, { isPreview });
+	await regenerateNewConfigTypes({
+		cloudflareConfigPath: newConfig.cloudflareConfigPath,
+		workerConfig: newConfig.parsedConfig.worker,
+		types: newConfig.types,
+	});
+	const { config, parsedConfig, mode } = newConfig;
 	const { buildProps, assetsOptions } = await mergeBuildOutputProps(config);
 	const root = process.cwd();
 

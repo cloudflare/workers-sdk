@@ -2,6 +2,7 @@ import type {
 	DurableObjectExport,
 	Exports,
 	WorkerEntrypointExport,
+	WorkflowExport,
 } from "./environment";
 
 export type ExportType = Exports[string]["type"];
@@ -9,6 +10,7 @@ export type ExportType = Exports[string]["type"];
 export interface PartitionedExports {
 	"durable-object": Record<string, DurableObjectExport>;
 	worker: Record<string, WorkerEntrypointExport>;
+	workflow: Record<string, WorkflowExport>;
 }
 
 /**
@@ -18,7 +20,7 @@ export interface PartitionedExports {
  */
 function hasKnownExportType(entry: unknown): entry is Exports[string] {
 	const type = (entry as Exports[string] | null | undefined)?.type;
-	return type === "durable-object" || type === "worker";
+	return type === "durable-object" || type === "worker" || type === "workflow";
 }
 
 export function partitionExports(
@@ -27,6 +29,7 @@ export function partitionExports(
 	const partitioned: PartitionedExports = {
 		"durable-object": {},
 		worker: {},
+		workflow: {},
 	};
 
 	if (exports === undefined) {

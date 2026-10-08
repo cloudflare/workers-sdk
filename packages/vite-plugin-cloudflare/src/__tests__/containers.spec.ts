@@ -14,7 +14,7 @@ import {
 	prepareContainerImagesForVite,
 } from "../containers";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
-import type { ContainerTagToOptionsMap } from "../containers";
+import type { ContainerOptionsByWorker } from "../containers";
 import type { PreviewPluginContext } from "../context";
 import type { PreviewResolvedConfig } from "../plugin-config";
 import type * as vite from "vite";
@@ -147,37 +147,32 @@ test("prepares registry images with their owning Worker configuration", async ({
 		}
 	);
 
-	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map([
+	const containerOptionsByWorker: ContainerOptionsByWorker = new Map([
 		[
-			"cloudflare-dev/standard:build-id",
-			{
-				containerOptions: {
+			{ account_id: "standard-account" },
+			[
+				{
 					image_uri: "registry.cloudflare.com/standard:latest",
 					image_tag: "cloudflare-dev/standard:build-id",
 					class_name: "StandardDO",
 				},
-				workerConfig: { account_id: "standard-account" },
-			},
+			],
 		],
 		[
-			"cloudflare-dev/fedramp:build-id",
-			{
-				containerOptions: {
+			{ account_id: "fedramp-account", compliance_region: "fedramp_high" },
+			[
+				{
 					image_uri: "registry.fed.cloudflare.com/fedramp:latest",
 					image_tag: "cloudflare-dev/fedramp:build-id",
 					class_name: "FedRampDO",
 				},
-				workerConfig: {
-					account_id: "fedramp-account",
-					compliance_region: "fedramp_high",
-				},
-			},
+			],
 		],
 	]);
 
 	await prepareContainerImagesForVite({
 		dockerPath: "docker",
-		containerTagToOptionsMap,
+		containerOptionsByWorker,
 		logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 	});
 
@@ -195,6 +190,25 @@ test("prepares registry images with their owning Worker configuration", async ({
 			complianceRegion: "fedramp_high",
 		},
 	]);
+});
+
+test("prepares the sidecar for a configured Worker without images or registry credentials", async ({
+	expect,
+}) => {
+	vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
+	vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
+	await prepareContainerImagesForVite({
+		dockerPath: "test-docker",
+		containerOptionsByWorker: new Map([[{}, []]]),
+		logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+	});
+	expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
+		expect.objectContaining({
+			dockerPath: "test-docker",
+			containerOptions: [],
+		})
+	);
+	expect(OpenAPI.BASE).toBe("");
 });
 
 describe("Container image planning", () => {
@@ -264,14 +278,21 @@ describe("Container image planning", () => {
 			config: resolvedViteConfig,
 		} as vite.PreviewServer;
 
-		const { miniflareOptions, containerTagToOptionsMap } =
+		const { miniflareOptions, containerOptionsByWorker } =
 			await getPreviewMiniflareOptions(ctx, vitePreviewServer);
 
-		expect(containerTagToOptionsMap.size).toBe(2);
-		expect(new Set(containerTagToOptionsMap.keys()).size).toBe(2);
+		expect(containerOptionsByWorker.size).toBe(2);
+		const plannedImages = [...containerOptionsByWorker].flatMap(
+			([workerConfig, options]) =>
+				options.map((containerOptions) => ({ workerConfig, containerOptions }))
+		);
+		const imageTags = new Set(
+			plannedImages.map(({ containerOptions }) => containerOptions.image_tag)
+		);
+		expect(imageTags.size).toBe(2);
 		expect(
 			new Set(
-				[...containerTagToOptionsMap.values()].map(({ containerOptions }) =>
+				plannedImages.map(({ containerOptions }) =>
 					"dockerfile" in containerOptions
 						? containerOptions.dockerfile
 						: undefined
@@ -285,14 +306,12 @@ describe("Container image planning", () => {
 		);
 		expect(
 			new Map(
-				[...containerTagToOptionsMap.values()].map(
-					({ containerOptions, workerConfig }) => [
-						"dockerfile" in containerOptions
-							? containerOptions.dockerfile
-							: undefined,
-						workerConfig.account_id,
-					]
-				)
+				plannedImages.map(({ containerOptions, workerConfig }) => [
+					"dockerfile" in containerOptions
+						? containerOptions.dockerfile
+						: undefined,
+					workerConfig.account_id,
+				])
 			)
 		).toEqual(
 			new Map([
@@ -311,8 +330,6 @@ describe("Container image planning", () => {
 					: [];
 			})
 		);
-		expect(new Set(runtimeImageTags)).toEqual(
-			new Set(containerTagToOptionsMap.keys())
-		);
+		expect(new Set(runtimeImageTags)).toEqual(imageTags);
 	});
 });

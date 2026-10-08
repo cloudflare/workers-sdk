@@ -1,7 +1,7 @@
 import fs, { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parse, stringify } from "comment-json";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import type { C3Context, PackageJson } from "types";
 
 export const copyFile = (path: string, dest: string) => {

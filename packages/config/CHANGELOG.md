@@ -1,5 +1,155 @@
 # @cloudflare/config
 
+## 0.24.1
+
+### Patch Changes
+
+- [#16140](https://github.com/cloudflare/workers-sdk/pull/16140) [`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717) Thanks [@cpojer](https://github.com/cpojer)! - Update Zod to 4.6.5
+
+  Align the published Zod dependencies in Cloudflare configuration and the Vitest plugin with other tools using Zod 4.6.5 so consumers can reuse one installation.
+
+- [#16138](https://github.com/cloudflare/workers-sdk/pull/16138) [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215) Thanks [@Derpedyea](https://github.com/Derpedyea)! - Fix declaration emit for configs that use Durable Objects or wrap config helpers
+
+  Projects that generate TypeScript declarations can now export a Worker that declares a Durable Object, wrap helpers such as `bindings.kv()`, and re-export `defineConfig`, `defineContainer`, or `defineWorker`. Helper options types such as `KvBindingOptions` can now be imported by name, and `bindings.json()` values are no longer emitted as `any`.
+
+## 0.24.0
+
+### Minor Changes
+
+- [#16016](https://github.com/cloudflare/workers-sdk/pull/16016) [`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add `bindings.analytics()` as the preferred name for Analytics SQL bindings and deprecate `bindings.analyticsSQL()`.
+
+- [#15998](https://github.com/cloudflare/workers-sdk/pull/15998) [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `assets.base_path` support to Workers Assets
+
+  Serve an asset directory from a public URL prefix without changing its on-disk layout:
+
+  ```jsonc
+  {
+    "assets": {
+      "directory": "./public",
+      "base_path": "/docs"
+    }
+  }
+  ```
+
+  Wrangler, preview, Miniflare, and generated build configuration preserve the explicitly selected value, while the Asset Worker normalizes it and strips the prefix only for asset lookup. Requests passed to a user Worker, request-facing headers, and redirects retain the public path. Relative pathname inputs are interpreted as root-relative prefixes, URL-shaped values are rejected, and omitting the option preserves existing root-path behavior.
+
+  Authored `_headers` and `_redirects` rules continue to match full public paths. In particular, both the source and destination of an authored `200` asset rewrite must include the configured public prefix; Asset Worker-generated redirects are prefixed automatically.
+
+## 0.23.0
+
+### Minor Changes
+
+- [#15928](https://github.com/cloudflare/workers-sdk/pull/15928) [`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Allow `"us"` as a jurisdiction for Container applications
+
+  Container placement constraints now accept `constraints.jurisdiction: "us"` in Wrangler and typed Cloudflare configuration. This makes the US jurisdiction available alongside `"eu"` and `"fedramp"`.
+
+## 0.22.0
+
+### Minor Changes
+
+- [#15685](https://github.com/cloudflare/workers-sdk/pull/15685) [`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add native support for the Analytics SQL binding
+
+  Declare the zero-configuration binding in `wrangler.json` with `"analytics": { "binding": "ANALYTICS" }`. Wrangler uploads the `analytics` binding type and proxies it to the remote service during local development, so `wrangler dev` can call the binding without `unsafe.bindings`.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 producer bindings for existing streams
+
+  Configure a stream created through Wrangler, the Dashboard, or the API in `wrangler.json`:
+
+  ```jsonc
+  {
+    "k2": [
+      {
+        "binding": "ORDERS",
+        "stream": "0123456789abcdef0123456789abcdef"
+      }
+    ]
+  }
+  ```
+
+  The binding supports `env.ORDERS.send([{ content: new TextEncoder().encode("order"), headers: { event: "order.created" } }])`. Batches use either all `ArrayBuffer` or all `Uint8Array` content. Check the returned `success` value, handle rejected RPC promises, and retry only when the returned error explicitly allows it. Generated environment types describe this producer contract without requiring a separate application dependency.
+
+  K2 requires an enabled account. Deployment credentials need Worker deployment and K2 configuration-read access. Default Wrangler logins now request the K2 OAuth scopes; existing OAuth users should run `wrangler login` again to grant the new permissions. Development always uses a real K2 stream and may incur usage charges; no local simulator is provided. The `remote` setting can be omitted, `remote: true` suppresses the usage warning, and `remote: false` is rejected. Consumption is not part of this Worker binding.
+
+### Patch Changes
+
+- [#15916](https://github.com/cloudflare/workers-sdk/pull/15916) [`27bc20d`](https://github.com/cloudflare/workers-sdk/commit/27bc20d5b22e7156b59940275bd3d809e269d7ce) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix environment types for Worker configurations inferred as unions
+
+  `InferEnv` and generated Worker `Env` types now include every binding and runtime type that the configuration can produce. Bindings that are not always present are optional.
+
+## 0.21.0
+
+### Minor Changes
+
+- [#15951](https://github.com/cloudflare/workers-sdk/pull/15951) [`2a15ae2`](https://github.com/cloudflare/workers-sdk/commit/2a15ae21d210fcd36e485e7492b75198c8d7856c) Thanks [@flakey5](https://github.com/flakey5)! - Support SSH settings for Durable Object-managed Containers in the configuration API
+
+  `defineContainer` now accepts `ssh` and `authorizedKeys` with `schedulingPolicy: "durable-object"`, matching the `ssh` and `authorized_keys` fields that Wrangler already supports for these Containers. Previously the schema rejected them, so they could not be set from `cloudflare.config.ts`.
+
+  ```ts
+  defineContainer({
+    name: "sandbox",
+    schedulingPolicy: "durable-object",
+    ssh: { enabled: true },
+    authorizedKeys: [{ name: "laptop", publicKey: "ssh-ed25519 AAAA..." }],
+  });
+  ```
+
+## 0.20.0
+
+### Minor Changes
+
+- [#15877](https://github.com/cloudflare/workers-sdk/pull/15877) [`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add cross-Worker Workflow bindings to the experimental configuration API
+
+  Workflow bindings can now identify a Workflow by name and reference the Worker and exported `WorkflowEntrypoint` class that define it.
+
+### Patch Changes
+
+- [#15880](https://github.com/cloudflare/workers-sdk/pull/15880) [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Restore configuration field documentation in `define*` helpers
+
+  VS Code now displays JSDoc for fields passed to `defineConfig`, `defineContainer`, and `defineWorker` while retaining their exact inferred config types.
+
+## 0.19.0
+
+### Minor Changes
+
+- [#15874](https://github.com/cloudflare/workers-sdk/pull/15874) [`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use camelCase for Workflow export retention settings
+
+  The experimental `@cloudflare/config` API now accepts `defaultRetention`, `successRetention`, and `errorRetention`, consistently with its other authored configuration fields. These settings are converted to Wrangler's snake_case configuration shape at the integration boundary.
+
+## 0.18.0
+
+### Minor Changes
+
+- [#15786](https://github.com/cloudflare/workers-sdk/pull/15786) [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Support UDP connect handlers in local development
+
+  The experimental `connect` configuration now accepts `protocol: "udp"`, with optional `idle_timeout_ms` and `max_pending_bytes` settings. UDP datagrams are delivered to the Worker's `connect()` handler using workerd's value-mode socket streams, and can be tested with `Miniflare#dispatchConnect({ protocol: "udp" })`.
+
+- [#15779](https://github.com/cloudflare/workers-sdk/pull/15779) [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2) Thanks [@Naapperas](https://github.com/Naapperas)! - Support `workflow` entries in the `exports` configuration map
+
+  A Worker can now declare the Workflows it defines in `exports`, keyed by the `WorkflowEntrypoint` class name:
+
+  ```jsonc
+  {
+    "exports": {
+      "MyWorkflow": {
+        "type": "workflow",
+        "name": "my-workflow",
+        "limits": { "steps": 100 },
+        "schedules": "0 * * * *"
+      }
+    }
+  }
+  ```
+
+  A `workflow` export accepts the same settings as a `workflows` binding: `limits`, `concurrency`, `schedules`, and `default_retention`. `wrangler deploy` and `wrangler versions upload` send these entries to the upload API by name, and `wrangler deploy` and `wrangler triggers deploy` provision the Workflow with its settings, just as they do for `workflows` bindings owned by the Worker. A Workflow may be declared both as a binding and as an export, as long as both declarations use the same class and do not set the same setting to different values. A binding to another Worker's Workflow cannot share a name with an export. `@cloudflare/config` adds the matching `exports.workflow()` helper. Local development does not yet act on these entries.
+
+## 0.17.0
+
+### Minor Changes
+
+- [#15749](https://github.com/cloudflare/workers-sdk/pull/15749) [`ec5251a`](https://github.com/cloudflare/workers-sdk/commit/ec5251a92f561dbbba77694ac954d85298f44039) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Convert module entrypoints to strings before parsing experimental Worker configuration
+
+  `resolveAndParseConfig()` now converts a `cf-worker` module namespace to its string specifier alongside other authored references. `InputWorkerSchema` consequently accepts only the string form. The new `InputWorkerConfig` type exposes the schema's input type.
+
 ## 0.16.0
 
 ### Minor Changes

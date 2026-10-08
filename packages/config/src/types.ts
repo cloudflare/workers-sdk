@@ -12,6 +12,7 @@ import type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
+	AnalyticsSQLBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,
@@ -22,6 +23,7 @@ import type {
 	HyperdriveBinding,
 	ImagesBinding,
 	JsonBinding,
+	K2Binding,
 	KvBinding,
 	LogfwdrBinding,
 	MediaBinding,
@@ -42,8 +44,7 @@ import type {
 	VpcServiceBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
-	// TODO: re-enable when workflow bindings return.
-	// WorkflowBinding,
+	WorkflowBinding,
 } from "./bindings";
 import type { ConfigInput } from "./definition";
 import type {
@@ -53,6 +54,7 @@ import type {
 	DurableObjectRenamedExport,
 	DurableObjectTransferredExport,
 	WorkerEntrypointExport,
+	WorkflowExport,
 } from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
@@ -94,6 +96,7 @@ type Binding =
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
 	| AnalyticsEngineDatasetBinding
+	| AnalyticsSQLBinding
 	| ArtifactsBinding
 	| AssetsBinding
 	| BrowserBinding
@@ -104,6 +107,7 @@ type Binding =
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding
+	| K2Binding
 	| KvBinding
 	| LogfwdrBinding
 	| MediaBinding
@@ -123,9 +127,8 @@ type Binding =
 	| VpcNetworkBinding
 	| VpcServiceBinding
 	| WorkerBinding
-	| WorkerLoaderBinding;
-// TODO: re-enable when workflow bindings return.
-// | WorkflowBinding;
+	| WorkerLoaderBinding
+	| WorkflowBinding;
 
 /**
  * Union of all trigger definitions accepted in `triggers`.
@@ -140,7 +143,8 @@ type Trigger =
 /**
  * Union of all export definitions accepted in `exports`. Worker entries
  * configure WorkerEntrypoint exports. Durable Object entries configure live
- * classes and tombstone lifecycle operations.
+ * classes and tombstone lifecycle operations. Workflow entries declare the
+ * Workflows defined by the Worker.
  */
 type Export =
 	| DurableObjectCreatedExport
@@ -148,8 +152,8 @@ type Export =
 	| DurableObjectRenamedExport
 	| DurableObjectTransferredExport
 	| DurableObjectExpectingTransferExport
-	| WorkerEntrypointExport;
-// TODO: support Workflows
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /** An image source accepted in an authored Container configuration. */
 type ContainerImage =
@@ -176,7 +180,7 @@ type ContainerImage =
 	  };
 
 /** Application-wide observability settings shared by all Containers. */
-interface ContainerObservabilityConfig {
+export interface ContainerObservabilityConfig {
 	/** Whether observability is enabled. */
 	enabled?: boolean;
 	logs?: {
@@ -216,10 +220,29 @@ interface BaseContainerConfig {
 	 * @hidden
 	 */
 	unsafe?: Record<string, unknown>;
+
+	ssh?: {
+		/**
+		 * If enabled, users with write access to the Container application can
+		 * connect to it over SSH.
+		 *
+		 * @default true
+		 */
+		enabled: boolean;
+		/**
+		 * Port that the SSH service is running on.
+		 *
+		 * @default 22
+		 */
+		port?: number;
+	};
+
+	/** SSH public keys to put in the Container's authorized_keys file. */
+	authorizedKeys?: Array<{ name: string; publicKey: string }>;
 }
 
 /** A Container application managed with a standard scheduling policy. */
-interface StandardContainerConfig extends BaseContainerConfig {
+export interface StandardContainerConfig extends BaseContainerConfig {
 	/** Configures observability and optional targeting for Container instances. */
 	observability?: StandardContainerObservabilityConfig;
 
@@ -272,25 +295,6 @@ interface StandardContainerConfig extends BaseContainerConfig {
 	 */
 	schedulingPolicy?: "default" | "regional";
 
-	ssh?: {
-		/**
-		 * If enabled, users with write access to the Container application can
-		 * connect to it over SSH.
-		 *
-		 * @default false
-		 */
-		enabled: boolean;
-		/**
-		 * Port that the SSH service is running on.
-		 *
-		 * @default 22
-		 */
-		port?: number;
-	};
-
-	/** SSH public keys to put in the Container's authorized_keys file. */
-	authorizedKeys?: Array<{ name: string; publicKey: string }>;
-
 	/** Scheduling constraints for Container placement. */
 	constraints?: {
 		/** Limit Container placement to specific geographic regions. */
@@ -298,7 +302,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 			"ENAM" | "WNAM" | "EEUR" | "WEUR" | "APAC" | "SAM" | "ME" | "OC" | "AFR"
 		>;
 		/** Restrict Containers to compliance boundaries. */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 	};
 
 	rollout?: {
@@ -339,7 +343,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 }
 
 /** A Container application managed by a Durable Object. */
-interface DurableObjectContainerConfig extends BaseContainerConfig {
+export interface DurableObjectContainerConfig extends BaseContainerConfig {
 	schedulingPolicy: "durable-object";
 	/**
 	 * Configures application-wide observability. Instance targeting is not
@@ -422,6 +426,11 @@ export interface WorkerConfig {
 
 		/** How to handle requests that do not match an asset. */
 		notFoundHandling?: "single-page-application" | "404-page" | "none";
+
+		/**
+		 * The public URL prefix under which the application is served.
+		 */
+		basePath?: string;
 
 		/**
 		 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
@@ -631,13 +640,16 @@ export interface WorkerConfig {
 	 * Configuration for named exports declared by the Worker. Each entry's
 	 * key is the exported class name; the value configures the export.
 	 *
-	 * Only one export kind is currently supported:
-	 *
 	 * - Construct entries with `exports.durableObject(...)`.
 	 * - Declares Durable Object classes exported from this Worker.
 	 *   For more information about Durable Objects, see the documentation at
 	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects.
 	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
+	 *
+	 * - Construct entries with `exports.workflow(...)`.
+	 * - Declares Workflows defined by this Worker.
+	 *   For more information about Workflows, see the documentation at
+	 *   https://developers.cloudflare.com/workflows/.
 	 */
 	exports?: Record<string, Export>;
 }

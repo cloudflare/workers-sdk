@@ -1,5 +1,84 @@
 # @cloudflare/build-output-utils
 
+## 0.9.0
+
+### Minor Changes
+
+- [#15981](https://github.com/cloudflare/workers-sdk/pull/15981) [`0d1bd50`](https://github.com/cloudflare/workers-sdk/commit/0d1bd50d6453e286160e78bee5143c7f7ce221fe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reject symlinks when reading experimental Build Output directories
+
+  Build Output directories must be portable and self-contained. The shared reader now rejects symlinks anywhere in the output tree, including links to files within it, and reports the offending path in a Build Output error before reading configs.
+
+### Patch Changes
+
+- [#16154](https://github.com/cloudflare/workers-sdk/pull/16154) [`7557322`](https://github.com/cloudflare/workers-sdk/commit/75573221a3e0f2cf0ea8b3d413797a9f1d1a6984) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Keep experimental Build Output portable when source assets are symlinks
+
+  Asset links are now copied as regular files and directories so Wrangler produces portable, self-contained Build Output that can be read successfully.
+
+- Updated dependencies [[`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717), [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215)]:
+  - @cloudflare/config@0.24.1
+
+## 0.8.6
+
+### Patch Changes
+
+- Updated dependencies [[`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65), [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4)]:
+  - @cloudflare/config@0.24.0
+
+## 0.8.5
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/config@0.23.0
+
+## 0.8.4
+
+### Patch Changes
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22), [`27bc20d`](https://github.com/cloudflare/workers-sdk/commit/27bc20d5b22e7156b59940275bd3d809e269d7ce)]:
+  - @cloudflare/config@0.22.0
+
+## 0.8.3
+
+### Patch Changes
+
+- Updated dependencies [[`2a15ae2`](https://github.com/cloudflare/workers-sdk/commit/2a15ae21d210fcd36e485e7492b75198c8d7856c)]:
+  - @cloudflare/config@0.21.0
+
+## 0.8.2
+
+### Patch Changes
+
+- Updated dependencies [[`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff), [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f)]:
+  - @cloudflare/config@0.20.0
+
+## 0.8.1
+
+### Patch Changes
+
+- Updated dependencies [[`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33)]:
+  - @cloudflare/config@0.19.0
+
+## 0.8.0
+
+### Minor Changes
+
+- [#15844](https://github.com/cloudflare/workers-sdk/pull/15844) [`43f7ffb`](https://github.com/cloudflare/workers-sdk/commit/43f7ffbcbe020bc4c30809c6bd408059a6eeac87) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Allow frameworks to remove Worker bundles after prerendering
+
+  Build Output readers now ignore stale manifests when only static assets remain and omit non-default Workers that have neither a bundle nor assets. A default Worker must still contain deployable output.
+
+### Patch Changes
+
+- Updated dependencies [[`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/config@0.18.0
+
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`ec5251a`](https://github.com/cloudflare/workers-sdk/commit/ec5251a92f561dbbba77694ac954d85298f44039)]:
+  - @cloudflare/config@0.17.0
+
 ## 0.7.0
 
 ### Minor Changes

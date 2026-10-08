@@ -1,5 +1,179 @@
 # @cloudflare/containers-shared
 
+## 0.21.5
+
+### Patch Changes
+
+- Updated dependencies [[`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717), [`7557322`](https://github.com/cloudflare/workers-sdk/commit/75573221a3e0f2cf0ea8b3d413797a9f1d1a6984), [`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999), [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215), [`0d1bd50`](https://github.com/cloudflare/workers-sdk/commit/0d1bd50d6453e286160e78bee5143c7f7ce221fe), [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82)]:
+  - @cloudflare/config@0.24.1
+  - @cloudflare/build-output-utils@0.9.0
+  - @cloudflare/workers-utils@0.47.1
+  - @cloudflare/cli-shared-helpers@0.2.5
+
+## 0.21.4
+
+### Patch Changes
+
+- Updated dependencies [[`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65), [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef), [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f)]:
+  - @cloudflare/config@0.24.0
+  - @cloudflare/workers-utils@0.47.0
+  - @cloudflare/build-output-utils@0.8.6
+  - @cloudflare/cli-shared-helpers@0.2.4
+
+## 0.21.3
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/config@0.23.0
+  - @cloudflare/workers-utils@0.46.0
+  - @cloudflare/build-output-utils@0.8.5
+  - @cloudflare/cli-shared-helpers@0.2.3
+
+## 0.21.2
+
+### Patch Changes
+
+- Updated dependencies [[`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44)]:
+  - @cloudflare/workers-utils@0.45.1
+  - @cloudflare/build-output-utils@0.8.4
+  - @cloudflare/cli-shared-helpers@0.2.2
+  - @cloudflare/config@0.22.0
+
+## 0.21.1
+
+### Patch Changes
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22), [`27bc20d`](https://github.com/cloudflare/workers-sdk/commit/27bc20d5b22e7156b59940275bd3d809e269d7ce)]:
+  - @cloudflare/config@0.22.0
+  - @cloudflare/workers-utils@0.45.0
+  - @cloudflare/build-output-utils@0.8.4
+  - @cloudflare/cli-shared-helpers@0.2.1
+
+## 0.21.0
+
+### Minor Changes
+
+- [#15919](https://github.com/cloudflare/workers-sdk/pull/15919) [`91a3606`](https://github.com/cloudflare/workers-sdk/commit/91a3606a2a519a341f71a91f43a723f113dd9abf) Thanks [@flakey5](https://github.com/flakey5)! - Add `--tty` (`-t`) flag to `wrangler containers ssh` to force pseudo-terminal allocation
+
+  OpenSSH only allocates a pseudo-terminal when no remote command is given, so interactive commands such as `wrangler containers ssh <ID> -- bash` previously ran without a prompt or line editing. Pass `--tty` to force one:
+
+  `wrangler containers ssh <ID> --tty -- bash`
+
+### Patch Changes
+
+- Updated dependencies [[`2a15ae2`](https://github.com/cloudflare/workers-sdk/commit/2a15ae21d210fcd36e485e7492b75198c8d7856c)]:
+  - @cloudflare/config@0.21.0
+  - @cloudflare/build-output-utils@0.8.3
+
+## 0.20.3
+
+### Patch Changes
+
+- Updated dependencies [[`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff), [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f)]:
+  - @cloudflare/config@0.20.0
+  - @cloudflare/build-output-utils@0.8.2
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.20.2
+
+### Patch Changes
+
+- Updated dependencies [[`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33), [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b), [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd)]:
+  - @cloudflare/config@0.19.0
+  - @cloudflare/workers-utils@0.44.0
+  - @cloudflare/cli-shared-helpers@0.2.0
+  - @cloudflare/build-output-utils@0.8.1
+
+## 0.20.1
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+  - @cloudflare/build-output-utils@0.8.0
+  - @cloudflare/cli-shared-helpers@0.1.39
+  - @cloudflare/config@0.18.0
+
+## 0.20.0
+
+### Minor Changes
+
+- [#15792](https://github.com/cloudflare/workers-sdk/pull/15792) [`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f) Thanks [@flakey5](https://github.com/flakey5)! - Configure SSH for experimental Durable Object-managed Containers
+
+  Set `containers[].ssh` and `containers[].authorized_keys` when using `scheduling_policy: "durable_object"`. These are application-wide settings that follow the same rules as the existing Durable Object-managed Container settings: normal deployments create missing applications and update explicitly configured values, while omitted settings preserve the existing application configuration.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "containers": [
+      {
+        "name": "sandbox",
+        "class_name": "Sandbox",
+        "scheduling_policy": "durable_object",
+        "ssh": { "enabled": true },
+        "authorized_keys": [
+          { "name": "laptop", "public_key": "ssh-ed25519 AAAA..." }
+        ]
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`43f7ffb`](https://github.com/cloudflare/workers-sdk/commit/43f7ffbcbe020bc4c30809c6bd408059a6eeac87), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/workers-utils@0.42.0
+  - @cloudflare/build-output-utils@0.8.0
+  - @cloudflare/config@0.18.0
+  - @cloudflare/cli-shared-helpers@0.1.38
+
+## 0.19.2
+
+### Patch Changes
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+  - @cloudflare/build-output-utils@0.7.1
+  - @cloudflare/cli-shared-helpers@0.1.37
+  - @cloudflare/config@0.17.0
+
+## 0.19.1
+
+### Patch Changes
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+  - @cloudflare/build-output-utils@0.7.1
+  - @cloudflare/cli-shared-helpers@0.1.36
+  - @cloudflare/config@0.17.0
+
+## 0.19.0
+
+### Minor Changes
+
+- [#15703](https://github.com/cloudflare/workers-sdk/pull/15703) [`02c1d83`](https://github.com/cloudflare/workers-sdk/commit/02c1d83417e1f8f63af720a4de731ea4fe74f10d) Thanks [@KianNH](https://github.com/KianNH)! - Export shared Container registry image APIs
+
+  Expose `listContainerImages`, `deleteContainerImage`, and `parseContainerImageTag` with their result types so CLI consumers can reuse registry image listing, deletion, and reference validation.
+
+- [#15700](https://github.com/cloudflare/workers-sdk/pull/15700) [`275184d`](https://github.com/cloudflare/workers-sdk/commit/275184d38b936c7ebed60d282fc33f002b4ca7b1) Thanks [@KianNH](https://github.com/KianNH)! - Export shared Container SSH APIs
+
+  Expose `sshCommand`, `containersSshOptions`, `shouldUseStdio`, and the `ContainerSshArgs` type so CLI consumers can reuse Container SSH connection and proxy handling.
+
+### Patch Changes
+
+- [#15703](https://github.com/cloudflare/workers-sdk/pull/15703) [`02c1d83`](https://github.com/cloudflare/workers-sdk/commit/02c1d83417e1f8f63af720a4de731ea4fe74f10d) Thanks [@KianNH](https://github.com/KianNH)! - Improve Container image listing and deletion
+
+  List all image pages using read-only credentials, validate tags before deletion, and report successful deletion when the garbage-collection request fails.
+
+- [#15700](https://github.com/cloudflare/workers-sdk/pull/15700) [`275184d`](https://github.com/cloudflare/workers-sdk/commit/275184d38b936c7ebed60d282fc33f002b4ca7b1) Thanks [@KianNH](https://github.com/KianNH)! - Fix Container SSH connection setup and shutdown
+
+  Prevent SSH connections from stalling during setup and ensure proxy processes exit when sessions close.
+
+- Updated dependencies [[`ec5251a`](https://github.com/cloudflare/workers-sdk/commit/ec5251a92f561dbbba77694ac954d85298f44039)]:
+  - @cloudflare/config@0.17.0
+  - @cloudflare/build-output-utils@0.7.1
+
 ## 0.18.0
 
 ### Minor Changes

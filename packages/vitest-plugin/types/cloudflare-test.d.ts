@@ -230,6 +230,12 @@ declare module "cloudflare:test" {
 		list(): Promise<{ name: string; metadata?: { uuid: string } }[]>;
 		/** Get a secret's name by ID. */
 		get(id: string): Promise<string>;
+		/**
+		 * Releases the RPC stubs behind this admin API. Declare the result with
+		 * `using` so they are released at the end of the scope, since a stub left
+		 * for the garbage collector makes workerd warn that it was not disposed.
+		 */
+		[Symbol.dispose](): void;
 	}
 
 	/**
@@ -242,7 +248,7 @@ declare module "cloudflare:test" {
 	 * import { adminSecretsStore } from "cloudflare:test";
 	 * import { env } from "cloudflare:workers";
 	 *
-	 * const admin = adminSecretsStore(env.MY_SECRET);
+	 * using admin = adminSecretsStore(env.MY_SECRET);
 	 * await admin.create("my-secret-value");
 	 *
 	 * // Now env.MY_SECRET.get() will return "my-secret-value"
@@ -262,6 +268,13 @@ declare module "cloudflare:test" {
 	 * @returns A `WorkflowInstanceIntrospector` to control the instance's behavior.
 	 *
 	 * @remarks
+	 * ### Workflows on `ctx.exports`
+	 *
+	 * Workflows on `ctx.exports` can't be passed here. To introspect a Workflow
+	 * declared in `exports`, add a binding to it, such as a test-only binding in
+	 * the `miniflare.workflows` option. The instance is introspected even if it
+	 * is created through `ctx.exports`.
+	 *
 	 * ### Dispose
 	 *
 	 * The introspector must be disposed after the test to remove mocks and release
@@ -612,6 +625,13 @@ declare module "cloudflare:test" {
 	 * @returns A `WorkflowIntrospector` to control the instances behavior.
 	 *
 	 * @remarks
+	 * ### Workflows on `ctx.exports`
+	 *
+	 * Workflows on `ctx.exports` can't be passed here. To introspect a Workflow
+	 * declared in `exports`, add a binding to it, such as a test-only binding in
+	 * the `miniflare.workflows` option. Instances created through `ctx.exports`
+	 * are introspected too.
+	 *
 	 * ### Dispose
 	 *
 	 * The introspector must be disposed after the test to remove mocks and release

@@ -1,8 +1,16 @@
-import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+import {
+	DurableObject,
+	WorkerEntrypoint,
+	WorkflowEntrypoint,
+} from "cloudflare:workers";
 import { bindings } from "../bindings";
 import { defineWorker } from "../definition";
 import { exports as workerExports } from "../exports";
-import type { DurableObjectBinding, WorkerBinding } from "../bindings";
+import type {
+	DurableObjectBinding,
+	WorkerBinding,
+	WorkflowBinding,
+} from "../bindings";
 import type { InferEnv, UnwrapConfig } from "../inference";
 
 class Admin extends WorkerEntrypoint {
@@ -17,10 +25,13 @@ class Counter extends DurableObject {
 	}
 }
 
+class GreetingWorkflow extends WorkflowEntrypoint {}
+
 const entrypoint = {
 	default: { fetch: () => new Response() },
 	Admin,
 	Counter,
+	GreetingWorkflow,
 };
 
 const auxiliary = defineWorker({
@@ -29,6 +40,7 @@ const auxiliary = defineWorker({
 	entrypoint,
 	exports: {
 		Counter: workerExports.durableObject({ storage: "sqlite" }),
+		GreetingWorkflow: workerExports.workflow({ name: "greeting" }),
 	},
 });
 
@@ -56,6 +68,11 @@ const config = defineWorker({
 			worker: auxiliary,
 			exportName: "Counter",
 		}),
+		GREETING: bindings.workflow({
+			name: "greeting",
+			worker: auxiliary,
+			exportName: "GreetingWorkflow",
+		}),
 		DIRECT_ADMIN: {
 			type: "worker",
 			worker: auxiliary,
@@ -80,6 +97,13 @@ bindings.durableObject({
 	exportName: "Admin",
 });
 
+bindings.workflow({
+	name: "greeting",
+	worker: auxiliary,
+	// @ts-expect-error Only configured Workflow exports are accepted.
+	exportName: "Admin",
+});
+
 type Equal<T, U> =
 	(<V>() => V extends T ? 1 : 2) extends <V>() => V extends U ? 1 : 2
 		? true
@@ -94,10 +118,15 @@ export type WorkerExportNameTest = Assert<
 export type DurableObjectExportNameTest = Assert<
 	Equal<DurableObjectBinding<Auxiliary>["exportName"], "Counter">
 >;
+export type WorkflowExportNameTest = Assert<
+	Equal<WorkflowBinding<Auxiliary>["exportName"], "GreetingWorkflow">
+>;
 // @ts-expect-error Worker binding export names come from the referenced Worker.
 export type InvalidWorkerExportNameTest = WorkerBinding<Auxiliary, "Counter">;
 // @ts-expect-error Durable Object export names come from the referenced Worker.
 export type InvalidDoExportNameTest = DurableObjectBinding<Auxiliary, "Admin">;
+// @ts-expect-error Workflow export names come from the referenced Worker.
+export type InvalidWorkflowExportNameTest = WorkflowBinding<Auxiliary, "Admin">;
 export type AdminBindingTest = Assert<Equal<Env["ADMIN"], Fetcher<Admin>>>;
 export type DefaultBindingTest = Assert<Equal<Env["DEFAULT"], Fetcher>>;
 export type FactoryAdminBindingTest = Assert<
@@ -108,5 +137,8 @@ export type DirectAdminBindingTest = Assert<
 >;
 export type CounterBindingTest = Assert<
 	Equal<Env["COUNTER"], DurableObjectNamespace<Counter>>
+>;
+export type GreetingBindingTest = Assert<
+	Env["GREETING"] extends Workflow ? true : false
 >;
 export type ExternalBindingTest = Assert<Equal<Env["EXTERNAL"], Fetcher>>;

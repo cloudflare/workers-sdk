@@ -249,7 +249,7 @@ export class Socket_Https extends $.Struct {
 	static readonly _capnp = {
 		displayName: "https",
 		id: "de123876383cbbdc",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	_adoptOptions(value: $.Orphan<HttpOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -295,7 +295,7 @@ export class Socket_Tcp extends $.Struct {
 	static readonly _capnp = {
 		displayName: "tcp",
 		id: "b59d8ecf6886b64c",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	_adoptTlsOptions(value: $.Orphan<TlsOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -319,20 +319,66 @@ export class Socket_Tcp extends $.Struct {
 		return "Socket_Tcp_" + super.toString();
 	}
 }
+/**
+ * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+ * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+ * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+ * datagram (see Socket.protocol).
+ *
+ * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+ * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+ *
+ */
+export class Socket_Udp extends $.Struct {
+	static readonly _capnp = {
+		displayName: "udp",
+		id: "95ae058885f84b2a",
+		size: new $.ObjectSize(16, 5),
+		defaultIdleTimeoutMs: $.getUint32Mask(30000),
+		defaultMaxPendingBytes: $.getUint32Mask(262144),
+	};
+	get idleTimeoutMs(): number {
+		return $.utils.getUint32(4, this, Socket_Udp._capnp.defaultIdleTimeoutMs);
+	}
+	set idleTimeoutMs(value: number) {
+		$.utils.setUint32(4, value, this, Socket_Udp._capnp.defaultIdleTimeoutMs);
+	}
+	get maxPendingBytes(): number {
+		return $.utils.getUint32(8, this, Socket_Udp._capnp.defaultMaxPendingBytes);
+	}
+	set maxPendingBytes(value: number) {
+		$.utils.setUint32(8, value, this, Socket_Udp._capnp.defaultMaxPendingBytes);
+	}
+	toString(): string {
+		return "Socket_Udp_" + super.toString();
+	}
+}
 export const Socket_Which = {
 	HTTP: 0,
 	HTTPS: 1,
 	TCP: 2,
+	/**
+	 * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+	 * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+	 * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+	 * datagram (see Socket.protocol).
+	 *
+	 * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+	 * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+	 *
+	 */
+	UDP: 3,
 } as const;
 export type Socket_Which = (typeof Socket_Which)[keyof typeof Socket_Which];
 export class Socket extends $.Struct {
 	static readonly HTTP = Socket_Which.HTTP;
 	static readonly HTTPS = Socket_Which.HTTPS;
 	static readonly TCP = Socket_Which.TCP;
+	static readonly UDP = Socket_Which.UDP;
 	static readonly _capnp = {
 		displayName: "Socket",
 		id: "9a0eba45530ee79f",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	/**
 	 * Each socket has a unique name which can be used on the command line to override the socket's
@@ -360,6 +406,9 @@ export class Socket extends $.Struct {
 	 * - "unix-abstract:name": On Linux, listen on the given "abstract" Unix socket name.
 	 * - "example.com:80": Perform a DNS lookup to determine the address, and then listen on it. If
 	 *     this resolves to multiple addresses, listen on all of them.
+	 *
+	 * UDP sockets currently bind only the first address when a hostname resolves to multiple
+	 * addresses. Specify a numeric address when selecting the address family matters.
 	 *
 	 * (These are the formats supported by KJ's parseAddress().)
 	 *
@@ -422,6 +471,30 @@ export class Socket extends $.Struct {
 	}
 	set tcp(_: true) {
 		$.utils.setUint16(0, 2, this);
+	}
+	/**
+	 * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+	 * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+	 * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+	 * datagram (see Socket.protocol).
+	 *
+	 * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+	 * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+	 *
+	 */
+	get udp(): Socket_Udp {
+		$.utils.testWhich("udp", $.utils.getUint16(0, this), 3, this);
+		return $.utils.getAs(Socket_Udp, this);
+	}
+	_initUdp(): Socket_Udp {
+		$.utils.setUint16(0, 3, this);
+		return $.utils.getAs(Socket_Udp, this);
+	}
+	get _isUdp(): boolean {
+		return $.utils.getUint16(0, this) === 3;
+	}
+	set udp(_: true) {
+		$.utils.setUint16(0, 3, this);
 	}
 	_adoptService(value: $.Orphan<ServiceDesignator>): void {
 		$.utils.adopt(value, $.utils.getPointer(4, this));
@@ -765,6 +838,132 @@ export class ServiceDesignator extends $.Struct {
 	}
 	toString(): string {
 		return "ServiceDesignator_" + super.toString();
+	}
+}
+/**
+ * Minimal definition of a Workflow in the context of building a binding for it in `ctx.exports.*`
+ *
+ */
+export class WorkflowsEngine_Workflow extends $.Struct {
+	static readonly _capnp = {
+		displayName: "Workflow",
+		id: "82e47879abbb7e41",
+		size: new $.ObjectSize(0, 3),
+	};
+	/**
+	 * The name of the class extending `WorkflowEntrypoint`
+	 *
+	 */
+	get className(): string {
+		return $.utils.getText(0, this);
+	}
+	set className(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	/**
+	 * The name of the workflow
+	 *
+	 */
+	get name(): string {
+		return $.utils.getText(1, this);
+	}
+	set name(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	_adoptBindingService(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownBindingService(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.bindingService);
+	}
+	/**
+	 * Reference to the service implementing the Workflows public API.
+	 * This is used as the inner fetcher when building the Workflows binding
+	 *
+	 */
+	get bindingService(): ServiceDesignator {
+		return $.utils.getStruct(2, ServiceDesignator, this);
+	}
+	_hasBindingService(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initBindingService(): ServiceDesignator {
+		return $.utils.initStructAt(2, ServiceDesignator, this);
+	}
+	set bindingService(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
+	}
+	toString(): string {
+		return "WorkflowsEngine_Workflow_" + super.toString();
+	}
+}
+/**
+ * Defines an engine that allows running Workflows defined on this worker.
+ * These workflows are exposed through the `ctx.exports.*` mechanism
+ *
+ * Each Workflow gets assigned its own ActorNamespace, but all of them use the same underlying ActorClass
+ * to run the Workflows code.
+ *
+ * Additionally, a list of workflows can be given to specify which workflows can run or not,
+ * i.e., which workflows get a binding built for them.
+ *
+ */
+export class WorkflowsEngine extends $.Struct {
+	static readonly Workflow = WorkflowsEngine_Workflow;
+	static readonly _capnp = {
+		displayName: "WorkflowsEngine",
+		id: "a1ad8cc2170cdd0c",
+		size: new $.ObjectSize(0, 2),
+	};
+	static _Workflows: $.ListCtor<WorkflowsEngine_Workflow>;
+	_adoptActorClass(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(0, this));
+	}
+	_disownActorClass(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.actorClass);
+	}
+	/**
+	 * The actor class implementing the Workflows engine which all local Workflow-related ActorNamespaces
+	 * use to instantiate actors
+	 *
+	 */
+	get actorClass(): ServiceDesignator {
+		return $.utils.getStruct(0, ServiceDesignator, this);
+	}
+	_hasActorClass(): boolean {
+		return !$.utils.isNull($.utils.getPointer(0, this));
+	}
+	_initActorClass(): ServiceDesignator {
+		return $.utils.initStructAt(0, ServiceDesignator, this);
+	}
+	set actorClass(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(0, this));
+	}
+	_adoptWorkflows(value: $.Orphan<$.List<WorkflowsEngine_Workflow>>): void {
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownWorkflows(): $.Orphan<$.List<WorkflowsEngine_Workflow>> {
+		return $.utils.disown(this.workflows);
+	}
+	/**
+	 * List of local workflows that can run for this worker. This controls which workflows get a binding built
+	 * and placed on the `ctx.exports` object
+	 *
+	 */
+	get workflows(): $.List<WorkflowsEngine_Workflow> {
+		return $.utils.getList(1, WorkflowsEngine._Workflows, this);
+	}
+	_hasWorkflows(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initWorkflows(length: number): $.List<WorkflowsEngine_Workflow> {
+		return $.utils.initList(1, WorkflowsEngine._Workflows, length, this);
+	}
+	set workflows(value: $.List<WorkflowsEngine_Workflow>) {
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	toString(): string {
+		return "WorkflowsEngine_" + super.toString();
 	}
 }
 export const Worker_Module_Which = {
@@ -1243,15 +1442,83 @@ export class Worker_Binding_Type extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Type_Which;
 	}
 }
+export class Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy
+	extends $.Struct
+{
+	static readonly _capnp = {
+		displayName: "RetryPolicy",
+		id: "d9f9c39c6b94b8fb",
+		size: new $.ObjectSize(8, 0),
+		defaultMaxAttempts: $.getUint32Mask(4),
+		defaultTimeoutMs: $.getUint32Mask(10000),
+	};
+	/**
+	 * Maximum number of retries after the initial attempt. Zero disables retries, and one
+	 * allows a single retry. The default matches the runtime's default of five attempts in
+	 * total.
+	 *
+	 */
+	get maxAttempts(): number {
+		return $.utils.getUint32(
+			0,
+			this,
+			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
+				.defaultMaxAttempts
+		);
+	}
+	set maxAttempts(value: number) {
+		$.utils.setUint32(
+			0,
+			value,
+			this,
+			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
+				.defaultMaxAttempts
+		);
+	}
+	/**
+	 * Time in milliseconds, measured from the start of the call, after which no retry may
+	 * start. A retry still running when it expires is cancelled, and the caller gets the
+	 * error that caused the first retry. The initial request, and the first request after each
+	 * redirect, always run to completion. The clock starts after any output-gate wait, and a
+	 * redirect shares the original call's timeout. Must be between 500 and 60,000. The default
+	 * matches the runtime's default.
+	 *
+	 */
+	get timeoutMs(): number {
+		return $.utils.getUint32(
+			4,
+			this,
+			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
+				.defaultTimeoutMs
+		);
+	}
+	set timeoutMs(value: number) {
+		$.utils.setUint32(
+			4,
+			value,
+			this,
+			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
+				.defaultTimeoutMs
+		);
+	}
+	toString(): string {
+		return (
+			"Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy_" +
+			super.toString()
+		);
+	}
+}
 /**
  * The type of a Durable Object namespace binding.
  *
  */
 export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
+	static readonly RetryPolicy =
+		Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy;
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespaceDesignator",
 		id: "804f144ff477aac7",
-		size: new $.ObjectSize(0, 2),
+		size: new $.ObjectSize(0, 3),
 	};
 	/**
 	 * Exported class name that implements the Durable Object.
@@ -1280,6 +1547,41 @@ export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
 	}
 	set serviceName(value: string) {
 		$.utils.setText(1, value, this);
+	}
+	_adoptRetryPolicy(
+		value: $.Orphan<Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownRetryPolicy(): $.Orphan<Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy> {
+		return $.utils.disown(this.retryPolicy);
+	}
+	/**
+	 * Limits on how the runtime retries calls through stubs minted from this binding. When
+	 * absent, the runtime's default retry behavior applies.
+	 *
+	 */
+	get retryPolicy(): Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy {
+		return $.utils.getStruct(
+			2,
+			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy,
+			this
+		);
+	}
+	_hasRetryPolicy(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initRetryPolicy(): Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy {
+		return $.utils.initStructAt(
+			2,
+			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy,
+			this
+		);
+	}
+	set retryPolicy(
+		value: Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy
+	) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
 	toString(): string {
 		return (
@@ -3127,7 +3429,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly _capnp = {
 		displayName: "durableObjectStorage",
 		id: "cc72b3faa57827d4",
-		size: new $.ObjectSize(8, 15),
+		size: new $.ObjectSize(8, 16),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(2, this) === 0;
@@ -3192,7 +3494,7 @@ export class Worker_ContainerEngine extends $.Struct {
 	static readonly _capnp = {
 		displayName: "containerEngine",
 		id: "82de68f58dc2eb24",
-		size: new $.ObjectSize(8, 15),
+		size: new $.ObjectSize(8, 16),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(4, this) === 0;
@@ -3289,7 +3591,7 @@ export class Worker extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Worker",
 		id: "acfa77e88fd97d1c",
-		size: new $.ObjectSize(8, 15),
+		size: new $.ObjectSize(8, 16),
 		defaultGlobalOutbound: $.readRawPointer(
 			new Uint8Array([
 				16, 7, 80, 1, 3, 0, 0, 17, 9, 74, 0, 1, 255, 105, 110, 116, 101, 114,
@@ -3654,6 +3956,28 @@ export class Worker extends $.Struct {
 	}
 	set accessBindingService(value: ServiceDesignator) {
 		$.utils.copyFrom(value, $.utils.getPointer(14, this));
+	}
+	_adoptWorkflowsEngine(value: $.Orphan<WorkflowsEngine>): void {
+		$.utils.adopt(value, $.utils.getPointer(15, this));
+	}
+	_disownWorkflowsEngine(): $.Orphan<WorkflowsEngine> {
+		return $.utils.disown(this.workflowsEngine);
+	}
+	/**
+	 * the externally-supplied service responsible for running Workflows defined in this worker
+	 *
+	 */
+	get workflowsEngine(): WorkflowsEngine {
+		return $.utils.getStruct(15, WorkflowsEngine, this);
+	}
+	_hasWorkflowsEngine(): boolean {
+		return !$.utils.isNull($.utils.getPointer(15, this));
+	}
+	_initWorkflowsEngine(): WorkflowsEngine {
+		return $.utils.initStructAt(15, WorkflowsEngine, this);
+	}
+	set workflowsEngine(value: WorkflowsEngine) {
+		$.utils.copyFrom(value, $.utils.getPointer(15, this));
 	}
 	toString(): string {
 		return "Worker_" + super.toString();
@@ -4637,6 +4961,7 @@ export class FallbackServiceRequest extends $.Struct {
 Config._Services = $.CompositeList(Service);
 Config._Sockets = $.CompositeList(Socket);
 Config._Extensions = $.CompositeList(Extension);
+WorkflowsEngine._Workflows = $.CompositeList(WorkflowsEngine_Workflow);
 Worker_Binding_WrappedBinding._InnerBindings = $.CompositeList(Worker_Binding);
 Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges._Devices =
 	$.CompositeList(

@@ -1,6 +1,7 @@
 export * from "./public";
 export {
 	AnalyticsEngineDatasetBindingSchema,
+	AnalyticsSQLBindingSchema,
 	AssetsSchema,
 	BindingSchema,
 	BrowserBindingSchema,
@@ -30,6 +31,8 @@ export {
 	validateSingletonBindings,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowBindingSchema,
+	WorkflowExportSchema,
 } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";

@@ -128,6 +128,7 @@ export default {
 	// remote template and does not invoke this CLI.
 	frameworkCli: "create-vinext-app",
 	platform: "workers",
+	languages: ["ts"],
 	displayName: "Next.js",
 	generate,
 	transformPackageJson: async (_pkgJson, ctx) => {

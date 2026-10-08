@@ -202,7 +202,7 @@ type R2CatalogCredentialResponse = {
 };
 
 /**
- * Sets a Cloudflare token which R2 Data Catalog uses for async table maintenance
+ * Sets a Cloudflare token which Basin Catalog uses for async table maintenance
  * jobs (such as file compaction), where it needs direct access to the customer's R2 bucket.
  */
 export async function upsertR2CatalogCredential(

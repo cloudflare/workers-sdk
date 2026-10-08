@@ -19,6 +19,7 @@ import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
+import { resolveDurableObjectsCodeUpdateStrategy } from "../versions/deployment-args";
 import { getEntry } from "./entry";
 import { applyZoneArgsToRoutes } from "./route-zone-args";
 import type { HandlerArgs } from "../core/types";
@@ -169,6 +170,10 @@ export async function mergeDeployConfigArgs(
 			dispatchNamespace: args.dispatchNamespace,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
+			durableObjectsCodeUpdateStrategy: resolveDurableObjectsCodeUpdateStrategy(
+				args.durableObjectsCodeUpdateMode,
+				config.durable_objects.code_update_strategy
+			),
 			containers: {
 				...shared.containers,
 				standard: {

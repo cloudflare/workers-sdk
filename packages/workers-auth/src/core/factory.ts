@@ -37,6 +37,10 @@ import { createPreferences } from "./preferences";
 import { createTemporaryTermsPrompt } from "./temporary-terms";
 import type { UserAuthConfig } from "../config-file/auth";
 import type { TemporaryPreviewAccount } from "../config-file/temporary";
+import type {
+	TemporaryAccountLogger,
+	TemporaryAccountRequest,
+} from "../context";
 import type { CredentialStore } from "../credential-store";
 import type {
 	LoginOrRefreshFailureReason,
@@ -81,7 +85,10 @@ export interface CloudflareAuth {
 	/** The currently-active credential store for the active profile. */
 	getCredentialStore: () => CredentialStore;
 	/** Mark whether `--temporary` is permitted for the current invocation. */
-	setTemporaryAllowed: (allowed: boolean) => void;
+	setTemporaryAllowed: (
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	) => void;
 
 	/** Resolve API credentials (env / temporary account / stored OAuth token). */
 	getAPIToken: () => ApiCredentials | undefined;
@@ -156,16 +163,17 @@ function notLoggedInErrorBodies(
 		"no-credentials-login-failed": `No credentials were found and the login attempt was unsuccessful. Run \`${loginCommand}\` to try again.`,
 		"token-expired-non-interactive": `Your auth token has expired and could not be refreshed, and the environment is non-interactive. Run \`${loginCommand}\` in an interactive terminal or set a CLOUDFLARE_API_TOKEN.`,
 		"token-expired-login-failed": `Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful. Run \`${loginCommand}\` to try again.`,
+		"token-refresh-unreachable": `Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. This is usually a network problem (connectivity, proxy, or IPv6), not an invalid login: your stored credentials were left unchanged. Check your connection and try again.`,
 	};
 }
 
 function logTemporaryPreviewAccount(
-	logger: AuthContext["logger"],
+	temporaryAccountLogger: TemporaryAccountLogger,
 	temporaryPreviewAccount: TemporaryPreviewAccount,
 	cached: boolean
 ): void {
 	const claimExpiresAt = new Date(temporaryPreviewAccount.claim.expiresAt);
-	logger.log(
+	temporaryAccountLogger.log(
 		dedent`
 			Temporary account ready:
 				Account: ${temporaryPreviewAccount.account.name} (${cached ? "reused" : "created"})
@@ -187,6 +195,7 @@ export function createCloudflareAuth(
 	ctx: AuthContext
 ): CloudflareAuth {
 	const { logger } = ctx;
+	const temporaryAccountLogger = ctx.temporaryAccountLogger ?? logger;
 	const cliName = descriptor.cliName;
 	const NOT_LOGGED_IN_ERROR_BODIES = notLoggedInErrorBodies(
 		descriptor.commands.login
@@ -256,7 +265,11 @@ export function createCloudflareAuth(
 				descriptor.fileFormat,
 				descriptor.getTemporaryAccountConfigPath
 			),
-			prompt: createTemporaryTermsPrompt({ logger, prompt: ctx.prompt }),
+			prompt: createTemporaryTermsPrompt({
+				temporaryAccountLogger,
+				prompt: ctx.prompt,
+			}),
+			temporaryAccountLogger,
 		},
 	});
 
@@ -272,8 +285,11 @@ export function createCloudflareAuth(
 		return credentialStorage.getActiveStore(oauthFlow.getActiveProfile());
 	}
 
-	function setTemporaryAllowed(allowed: boolean): void {
-		oauthFlow.setTemporaryAllowed(allowed);
+	function setTemporaryAllowed(
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	): void {
+		oauthFlow.setTemporaryAllowed(allowed, request);
 	}
 
 	function getAPIToken(): ApiCredentials | undefined {
@@ -594,7 +610,11 @@ ${accounts
 
 			const { account: temporaryPreviewAccount, cached } =
 				await oauthFlow.activateTemporaryAccount();
-			logTemporaryPreviewAccount(logger, temporaryPreviewAccount, cached);
+			logTemporaryPreviewAccount(
+				temporaryAccountLogger,
+				temporaryPreviewAccount,
+				cached
+			);
 			return temporaryPreviewAccount.account.id;
 		}
 
@@ -608,6 +628,10 @@ ${accounts
 					`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for ${cliName} to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.`,
 					{ telemetryMessage: "user auth missing api token non interactive" }
 				);
+			} else if (result.reason === "token-refresh-unreachable") {
+				throw new UserError(NOT_LOGGED_IN_ERROR_BODIES[result.reason], {
+					telemetryMessage: "user auth token refresh unreachable",
+				});
 			} else {
 				// didn't login, let's just quit
 				throw new UserError("Did not login, quitting...", {

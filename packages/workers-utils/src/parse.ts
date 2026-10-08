@@ -1,7 +1,7 @@
 import { readFileSync as fsReadFileSync } from "node:fs";
 import { resolve } from "node:path";
 import * as jsoncParser from "jsonc-parser";
-import TOML, { TomlError } from "smol-toml";
+import * as TOML from "smol-toml";
 import { UserError } from "./errors";
 import type { TelemetryMessage } from "./errors";
 import type { ParseError as JsoncParseError } from "jsonc-parser";
@@ -117,7 +117,7 @@ export function parseTOML(tomlContent: string, filePath?: string): unknown {
 	try {
 		return TOML.parse(tomlContent);
 	} catch (err) {
-		if (!(err instanceof TomlError)) {
+		if (!(err instanceof TOML.TomlError)) {
 			throw err;
 		}
 

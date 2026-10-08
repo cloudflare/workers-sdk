@@ -4,6 +4,30 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
+		expect,
+	}) => {
+		const stream = "stream-v2:orders";
+		const remoteProxyConnectionString = new URL(
+			"http://127.0.0.1:8787"
+		) as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			name: "producer",
+			script: "export default {};",
+			modules: true,
+			k2: { ORDERS: { stream, remoteProxyConnectionString } },
+		});
+
+		expect(converted.workers[0].config.env?.ORDERS).toEqual({
+			type: "k2",
+			stream,
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
+			remoteProxyConnectionString
+		);
+	});
+
 	test("converts local, external, and unbound durable objects", ({
 		expect,
 	}) => {
@@ -70,6 +94,27 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts workflow exports to config exports", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			compatibilityDate: "2026-01-01",
+			script: "export default {};",
+			workflowExports: {
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			},
+		});
+
+		expect(converted.workers[0].config.exports).toMatchObject({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: {
+				type: "workflow",
+				name: "batch",
+				limits: { steps: 10 },
+			},
+		});
+	});
+
 	test("converts module source and representative bindings", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			rootPath: __dirname,
@@ -93,6 +138,7 @@ describe("convertV4MiniflareOptions", () => {
 			serviceBindings: { SERVICE: "other-worker" },
 			assets: { directory: "./public", binding: "ASSETS" },
 			browserRendering: { binding: "BROWSER", headful: true },
+			analyticsSql: { binding: "ANALYTICS" },
 			workflows: {
 				WORKFLOW: {
 					name: "workflow",
@@ -137,6 +183,7 @@ describe("convertV4MiniflareOptions", () => {
 				},
 				QUEUE: { type: "queue", name: "queue" },
 				SERVICE: { type: "worker", worker: "other-worker" },
+				ANALYTICS: { type: "analytics", dev: { remote: false } },
 				ASSETS: { type: "assets" },
 				BROWSER: { type: "browser", headful: true },
 				WORKFLOW: {
@@ -204,6 +251,33 @@ describe("convertV4MiniflareOptions", () => {
 			"addEventListener('fetch', () => {});"
 		);
 	});
+
+	test("converts cron triggers in exact input order", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			cronTriggers: ["*/5 * * * *", " 0 17 * * SUN "],
+		});
+
+		expect(converted.workers[0].config.triggers).toEqual([
+			{ type: "scheduled", schedule: "*/5 * * * *" },
+			{ type: "scheduled", schedule: " 0 17 * * SUN " },
+		]);
+	});
+
+	test.for([
+		{ label: "missing", cronTriggers: undefined },
+		{ label: "empty", cronTriggers: [] as string[] },
+	])(
+		"converts $label cron triggers to no scheduled entries",
+		({ cronTriggers }, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				cronTriggers,
+			});
+
+			expect(converted.workers[0].config.triggers).toBeUndefined();
+		}
+	);
 
 	test("resolves worker rootPath relative to shared rootPath", ({ expect }) => {
 		const sharedRootPath = path.join(__dirname, "project");
@@ -496,6 +570,7 @@ describe("convertV4MiniflareOptions", () => {
 				assetConfig: {
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
+					base_path: "/subpath",
 				},
 			},
 		});
@@ -503,6 +578,7 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.assets).toEqual({
 			directory: "./public",
 			hasUserWorker: true,
+			basePath: "/subpath",
 			htmlHandling: "auto-trailing-slash",
 			notFoundHandling: "single-page-application",
 			runWorkerFirst: true,

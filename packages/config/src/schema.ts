@@ -19,11 +19,17 @@ export const AssetsSchema = z.strictObject({
 	notFoundHandling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
+	basePath: z.string().optional(),
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
 export const BrowserBindingSchema = z.strictObject({
 	type: z.literal("browser"),
+	dev: RemoteBindingDevSchema.optional(),
+});
+
+export const AnalyticsSQLBindingSchema = z.strictObject({
+	type: z.literal("analytics"),
 	dev: RemoteBindingDevSchema.optional(),
 });
 
@@ -33,6 +39,13 @@ export const WorkerBindingSchema = z.strictObject({
 	exportName: z.string().optional(),
 	props: z.record(z.string(), z.unknown()).optional(),
 	dev: RemoteBindingDevSchema.optional(),
+});
+
+export const WorkflowBindingSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	worker: z.string(),
+	exportName: z.string(),
 });
 
 export const D1BindingSchema = z.strictObject({
@@ -117,6 +130,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({ type: z.literal("assets") }),
 	BrowserBindingSchema,
+	AnalyticsSQLBindingSchema,
 	D1BindingSchema,
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
@@ -155,6 +169,11 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("pipeline"),
 		name: z.string(),
+		dev: RemoteBindingDevSchema.optional(),
+	}),
+	z.strictObject({
+		type: z.literal("k2"),
+		stream: z.string(),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
 	QueueBindingSchema,
@@ -230,12 +249,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		),
 	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	worker: z.string(),
-	// 	exportName: z.string(),
-	// }),
+	WorkflowBindingSchema,
 ]);
 
 export const UnsafeBindingSchema = z.looseObject({
@@ -295,6 +309,7 @@ const SINGLETON_BINDING_TYPES = new Set([
 	"ai",
 	"assets",
 	"browser",
+	"analytics",
 	"images",
 	"media",
 	"stream",
@@ -450,6 +465,15 @@ const StandardContainerObservabilitySchema = z.union([
 const BaseContainerSchema = z.strictObject({
 	name: z.string().min(1),
 	unsafe: z.record(z.string(), z.unknown()).optional(),
+	ssh: z
+		.strictObject({
+			enabled: z.boolean(),
+			port: z.number().int().min(1).max(65_535).optional(),
+		})
+		.optional(),
+	authorizedKeys: z
+		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
+		.optional(),
 });
 
 const StandardContainerBaseSchema = BaseContainerSchema.extend({
@@ -473,15 +497,6 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 		])
 		.optional(),
 	schedulingPolicy: z.enum(["default", "regional"]).optional(),
-	ssh: z
-		.strictObject({
-			enabled: z.boolean(),
-			port: z.number().int().min(1).max(65_535).optional(),
-		})
-		.optional(),
-	authorizedKeys: z
-		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
-		.optional(),
 	constraints: z
 		.strictObject({
 			regions: z
@@ -499,7 +514,7 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 					])
 				)
 				.optional(),
-			jurisdiction: z.enum(["eu", "fedramp"]).optional(),
+			jurisdiction: z.enum(["eu", "fedramp", "us"]).optional(),
 		})
 		.optional(),
 	rollout: z
@@ -588,6 +603,31 @@ export const WorkerEntrypointExportSchema = z.strictObject({
 	cache: z.strictObject({ enabled: z.boolean() }).optional(),
 });
 
+const WorkflowRetentionSchema = z.union([
+	z.number().int().min(1),
+	z.string().min(1),
+]);
+
+export const WorkflowExportSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	limits: z
+		.strictObject({ steps: z.number().int().min(1).optional() })
+		.optional(),
+	concurrency: z
+		.strictObject({ limit: z.number().int().min(1).optional() })
+		.optional(),
+	schedules: z
+		.union([z.string().min(1), z.array(z.string().min(1)).min(1)])
+		.optional(),
+	defaultRetention: z
+		.strictObject({
+			successRetention: WorkflowRetentionSchema.optional(),
+			errorRetention: WorkflowRetentionSchema.optional(),
+		})
+		.optional(),
+});
+
 // Containers are only supported on the SQLite storage engine, so each live
 // variant enters the union split by `storage`: `container` exists on the
 // `sqlite` branch and is absent from the `legacy-kv` one. Splitting rather than
@@ -619,12 +659,7 @@ export const ExportSchema = z.union([
 	DurableObjectExpectingTransferSqliteExportSchema,
 	DurableObjectExpectingTransferLegacyKvExportSchema,
 	WorkerEntrypointExportSchema,
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	name: z.string(),
-	// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	// }),
+	WorkflowExportSchema,
 ]);
 
 const LimitsSchema = z.strictObject({
@@ -705,12 +740,22 @@ const TriggerSchema = z.discriminatedUnion("type", [
 		type: z.literal("scheduled"),
 		schedule: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("connect"),
-		protocol: z.enum(["tcp"]),
-		port: z.number(),
-		address: z.string().optional(),
-	}),
+	z.discriminatedUnion("protocol", [
+		z.strictObject({
+			type: z.literal("connect"),
+			protocol: z.literal("tcp"),
+			port: z.number(),
+			address: z.string().optional(),
+		}),
+		z.strictObject({
+			type: z.literal("connect"),
+			protocol: z.literal("udp"),
+			port: z.number(),
+			address: z.string().optional(),
+			idleTimeoutMs: z.number().int().min(0).max(0xffffffff).optional(),
+			maxPendingBytes: z.number().int().min(0).max(0xffffffff).optional(),
+		}),
+	]),
 ]);
 
 const UnsafeSchema = z.strictObject({

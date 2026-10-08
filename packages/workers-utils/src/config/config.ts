@@ -211,6 +211,10 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * or a `*@domain` catch-all (e.g. `"*@example.com"`). Every entry creates an
 	 * Email Routing rule whose action routes mail to this Worker.
 	 *
+	 * A `*@domain` catch-all must use the zone apex (e.g. `"*@example.com"`,
+	 * not `"*@mail.example.com"`). The zone catch-all also receives mail for
+	 * every subdomain in the zone that has no literal rule.
+	 *
 	 * This field is top-level only and applies to every environment of the
 	 * Worker; it cannot be set under `env.*`.
 	 *
@@ -446,11 +450,13 @@ export const defaultWranglerConfig: Config = {
 	containers: undefined,
 	send_email: [],
 	browser: undefined,
+	analytics: undefined,
 	unsafe: {},
 	mtls_certificates: [],
 	tail_consumers: undefined,
 	streaming_tail_consumers: undefined,
 	pipelines: [],
+	k2: [],
 	vpc_services: [],
 	vpc_networks: [],
 };

@@ -66,6 +66,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: pm === "pnpm",
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -85,6 +86,22 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: false,
 			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
+		},
+		{
+			name: "django",
+			argv: ["--accept-defaults"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Django on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from Django on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
 		},
 		{
 			name: "docusaurus:pages",
@@ -200,6 +217,42 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: false,
 			flags: ["--style", "sass"],
+		},
+		{
+			name: "fastapi",
+			// TODO: Unquarantine once FastAPI no longer creates an OpenTelemetry
+			// context key, which requires unavailable entropy, at import time.
+			// https://github.com/fastapi/fastapi/pull/16403
+			quarantine: true,
+			argv: ["--lang", "python"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from FastAPI on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from FastAPI on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
+			name: "flask",
+			argv: ["--lang", "python"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Flask on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from Flask on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
 		},
 		{
 			name: "gatsby:pages",
@@ -848,6 +901,7 @@ function getExperimentalFrameworkTestConfig(
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: pm === "pnpm",
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {

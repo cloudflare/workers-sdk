@@ -2,6 +2,7 @@
 
 import assert from "node:assert";
 import childProcess from "node:child_process";
+import diagnosticsChannel from "node:diagnostics_channel";
 import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -11,10 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
-import {
-	_forceColour,
-	NODEJS_COMPAT_DEFAULT_ON_DATE,
-} from "@cloudflare/workers-utils";
+import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
@@ -25,6 +23,7 @@ import {
 	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
+	Request,
 	Response,
 	viewToBuffer,
 } from "miniflare";
@@ -73,7 +72,7 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
+test("Miniflare: validates options", async ({ expect }) => {
 	// Check empty workers array rejected
 	expect(() => new Miniflare({ workers: [] })).toThrow(
 		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
@@ -141,10 +140,6 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 		)
 	);
 
-	// Disable colours for easier to read expectations
-	_forceColour(false);
-	onTestFinished(() => _forceColour());
-
 	// Check throws validation error with incorrect options
 	let error: MiniflareCoreError | undefined = undefined;
 	try {
@@ -166,17 +161,8 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.code).toEqual("ERR_VALIDATION");
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
-{
-  workers: [
-    /* [0] */ {
-      config: {
-        name: 42,
-              ^ Invalid input: expected string, received number
-        ...,
-      },
-    },
-  ],
-}`
+✖ Invalid input: expected string, received number
+  → at workers[0].config.name`
 	);
 
 	// Check throws validation error with primitive option
@@ -191,8 +177,7 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.code).toEqual("ERR_VALIDATION");
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
-'addEventListener(...)'
-^ Invalid input: expected object, received string`
+✖ Invalid input: expected object, received string`
 	);
 });
 
@@ -2067,8 +2052,19 @@ test("Miniflare: python modules", async ({ expect }) => {
 						modules: {
 							"index.py": {
 								type: "python",
-								contents:
-									"from test_module import add; from workers import Response, WorkerEntrypoint;\nclass Default(WorkerEntrypoint):\n  def fetch(self, request):\n    return Response(str(add(2,2)))",
+								contents: `from test_module import add
+from workers import Response, WorkerEntrypoint
+
+last_cron = ""
+
+class Default(WorkerEntrypoint):
+  def fetch(self, request):
+    return Response(str(add(2,2)) + ":" + last_cron)
+
+  async def scheduled(self, controller, env, ctx):
+    global last_cron
+    last_cron = controller.cron
+    controller.noRetry()`,
 							},
 							"test_module.py": {
 								type: "python",
@@ -2081,8 +2077,18 @@ test("Miniflare: python modules", async ({ expect }) => {
 		],
 	});
 	useDispose(mf);
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe("4");
+	let res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("4:");
+
+	const worker = await mf.getWorker();
+	expect(
+		await worker.scheduled({
+			cron: "python-cron",
+			scheduledTime: new Date(0),
+		})
+	).toEqual({ outcome: "ok", noRetry: true });
+	res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("4:python-cron");
 });
 
 test("Miniflare: HTTPS fetches using browser CA certificates", async ({
@@ -2181,6 +2187,7 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		log,
+		unsafeLocalExplorer: true,
 		unsafeTriggerHandlers: true,
 		workers: [
 			{
@@ -2195,6 +2202,7 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 				},
 				scheduled(controller) {
 					scheduledRun = true;
+					if (controller.cron === "failure") throw new Error("failure");
 					controller.noRetry();
 				}
 			}`),
@@ -2217,6 +2225,12 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("true");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/scheduled?format=json&cron=failure"
+	);
+	expect(res.status).toBe(500);
+	expect(await res.json()).toEqual({ outcome: "exception", noRetry: false });
 });
 
 test("Miniflare: manually triggered scheduled events with assets", async ({
@@ -3583,6 +3597,53 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 	expect(await text(socket)).toBe("hello");
 });
 
+test("Miniflare: connectHandlers deliver UDP datagrams to the Worker's connect() handler", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const reader = socket.readable.getReader();
+								const writer = socket.writable.getWriter();
+								const { value } = await reader.read();
+								await writer.write(value);
+							},
+						};
+					`),
+					triggers: [
+						{
+							type: "connect",
+							protocol: "udp",
+							address: "::1",
+							port: 0,
+							idleTimeoutMs: 1_000,
+							maxPendingBytes: 65_536,
+						},
+					],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+	await mf.ready;
+	await expect(mf.dispatchConnect()).rejects.toThrow(
+		"No TCP connect triggers configured for entrypoint worker"
+	);
+
+	const client = await mf.dispatchConnect({ protocol: "udp" });
+	client.send("hello");
+	const [message] = await once(client, "message");
+	expect(message.toString()).toBe("hello");
+});
+
 test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	expect,
 	onTestFinished,
@@ -3663,7 +3724,10 @@ test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
 							},
 						};
 					`),
-					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+					triggers: [
+						{ type: "connect", protocol: "tcp", port: 0 },
+						{ type: "connect", protocol: "udp", port: 0 },
+					],
 				},
 			},
 		],
@@ -3677,9 +3741,11 @@ test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
 
 	const socket = await mf.dispatchConnect();
 	const closed = once(socket, "close");
+	const datagramSocket = await mf.dispatchConnect({ protocol: "udp" });
+	const datagramClosed = once(datagramSocket, "close");
 	await mf.dispose();
 	disposed = true;
-	await closed;
+	await Promise.all([closed, datagramClosed]);
 	expect(socket.destroyed).toBe(true);
 });
 
@@ -3916,16 +3982,125 @@ test("Miniflare: workerd crash during startup => ERR_RUNTIME_FAILURE", async ({
 	});
 });
 
-test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
-	const runtimeRestarted = new DeferredPromise<void>();
+test.for(["GET", "POST", "PUT"])(
+	"Miniflare: dispatchFetch does not replay a processed %s after a response failure",
+	async (method, { expect }) => {
+		const pendingResponse = new DeferredPromise<http.ServerResponse>();
+		const gate = await useServer((req, res) => pendingResponse.resolve(res));
+		const mf = new Miniflare({
+			log: new TestLog(),
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2026-09-26",
+						manifest: singleModuleManifest(`
+			let counter = 0;
+			export default {
+				fetch(request) {
+					if (new URL(request.url).pathname === "/count") {
+						return new Response(String(counter));
+					}
+					counter++;
+					if (counter > 1) return new Response("unexpected replay");
+					const { readable, writable } = new FixedLengthStream(10);
+					new ReadableStream({
+						start(controller) {
+							controller.enqueue(new TextEncoder().encode("hello"));
+						},
+						async pull(controller) {
+							await fetch(${JSON.stringify(gate.http.href)});
+							controller.error(new Error("response failed after side effect"));
+						}
+					}).pipeTo(writable).catch(() => {});
+					return new Response(readable, { headers: { etag: '"replay-test"' } });
+				}
+			};
+		`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const worker = await mf.getWorker();
+		const response = await mf.dispatchFetch("http://placeholder/mutate", {
+			method,
+			headers: { "accept-encoding": "identity" },
+		});
+		assert(response.body);
+		const reader = response.body.getReader();
+		expect(await reader.read()).toEqual({
+			done: false,
+			value: utf8Encode("hello"),
+		});
+		const failedResponse = expect(reader.read()).rejects.toThrow();
+		// Fail the stream only after the client receives the first chunk
+		(await pendingResponse).end("ok");
+		await failedResponse;
+		const count = await worker.fetch("http://placeholder/count");
+		expect(await count.text()).toBe("1");
+	}
+);
+
+test("Miniflare: dispatchFetch closes idle runtime sockets before workerd", async ({
+	expect,
+	onTestFinished,
+}) => {
 	const mf = new Miniflare({
-		unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
 		workers: [
 			{
 				config: {
 					name: "",
-					compatibilityDate: "2025-05-01",
-					manifest: singleModuleManifest(`
+					compatibilityDate: "2026-09-26",
+					manifest: singleModuleManifest(
+						'export default { fetch() { return new Response("ok"); } };'
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	const runtimeOrigin = (await mf.ready).origin;
+	let runtimeSocket: net.Socket | undefined;
+	const onSendHeaders = (message: unknown) => {
+		const { request, socket } = message as {
+			request: { origin: string };
+			socket: net.Socket;
+		};
+		if (request.origin === runtimeOrigin) {
+			runtimeSocket = socket;
+		}
+	};
+	diagnosticsChannel.subscribe("undici:client:sendHeaders", onSendHeaders);
+	onTestFinished(() => {
+		diagnosticsChannel.unsubscribe("undici:client:sendHeaders", onSendHeaders);
+	});
+
+	const response = await mf.dispatchFetch("http://localhost/idle-close");
+	expect(await response.text()).toBe("ok");
+	assert(runtimeSocket);
+	const socket = runtimeSocket;
+	await expect
+		.poll(() => socket.destroyed, { interval: 50, timeout: 2_500 })
+		.toBe(true);
+
+	const nextResponse = await mf.dispatchFetch("http://localhost/idle-close");
+	expect(await nextResponse.text()).toBe("ok");
+});
+
+test.for(["GET", "POST", "PUT"])(
+	"Miniflare: workerd crash in %s handler => restart",
+	async (method, { expect }) => {
+		const runtimeRestarted = new DeferredPromise<void>();
+		const mf = new Miniflare({
+			unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2026-09-26",
+						manifest: singleModuleManifest(`
 			import { abortIsolate } from "cloudflare:workers";
 			let counter = 1;
 			export default {
@@ -3937,36 +4112,45 @@ test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
 				},
 			}
 		`),
+					},
 				},
-			},
-		],
-	});
-	useDispose(mf);
+			],
+		});
+		useDispose(mf);
 
-	const ready = await mf.ready;
-	const worker = await mf.getWorker();
-	const r1 = await mf.dispatchFetch("http://placeholder/");
-	expect(await r1.text()).toBe("ok 1");
+		const ready = await mf.ready;
+		const worker = await mf.getWorker();
+		const init = { method, body: method === "GET" ? undefined : "hello" };
+		const r1 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r1.text()).toBe("ok 1");
 
-	const r2 = await mf.dispatchFetch("http://placeholder/");
-	expect(await r2.text()).toBe("ok 2");
+		const r2 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r2.text()).toBe("ok 2");
 
-	// Trigger crash
-	await expect(
-		mf.dispatchFetch("http://placeholder/?crash=1")
-	).rejects.toThrow();
+		// Trigger crash
+		await expect(
+			mf.dispatchFetch("http://placeholder/?crash=1", init)
+		).rejects.toThrow();
 
-	await runtimeRestarted;
-	expect(await mf.ready).toEqual(ready);
-	expect(() => worker.fetch("http://placeholder/")).toThrow(/poisoned stub/);
+		await runtimeRestarted;
+		expect(await mf.ready).toEqual(ready);
+		expect(() => worker.fetch("http://placeholder/")).toThrow(/poisoned stub/);
 
-	// Starts over with counter = 1 again
-	const r3 = await fetch(ready);
-	expect(await r3.text()).toBe("ok 1");
-	const restartedWorker = await mf.getWorker();
-	const r4 = await restartedWorker.fetch("http://placeholder/");
-	expect(await r4.text()).toBe("ok 2");
-});
+		// Exercise the existing dispatch pool first, before other clients connect
+		// The counter starts over in the restarted runtime
+		for (let counter = 1; counter <= 3; counter++) {
+			const response = await mf.dispatchFetch("http://placeholder/", init);
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe(`ok ${counter}`);
+		}
+
+		const r3 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r3.text()).toBe("ok 4");
+		const restartedWorker = await mf.getWorker();
+		const r4 = await restartedWorker.fetch("http://placeholder/");
+		expect(await r4.text()).toBe("ok 5");
+	}
+);
 
 test("Miniflare: warns when workerd is restarted after a crash", async ({
 	expect,
@@ -5118,4 +5302,44 @@ test("Miniflare: dispatchFetch handles POST/PUT with non-2xx status", async ({
 		expect(res.status).toBe(status);
 		expect(await res.json()).toEqual({ method: "PUT", status });
 	}
+});
+
+test("Miniflare: dispatchFetch() preserves request body length", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
+			async fetch(request, env) {
+				await env.BUCKET.put("key", request.body);
+				const object = await env.BUCKET.get("key");
+				return Response.json({
+					contentLength: request.headers.get("Content-Length"),
+					body: await object.text(),
+				});
+			}
+		}`),
+					env: { BUCKET: { type: "r2", name: "BUCKET" } },
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	// `R2Bucket#put()` requires a known length, as it does for requests with a
+	// `Content-Length` in production
+	let res = await mf.dispatchFetch("http://localhost/", {
+		method: "PUT",
+		body: "value",
+	});
+	expect(await res.json()).toEqual({ contentLength: "5", body: "value" });
+
+	res = await mf.dispatchFetch(
+		new Request("http://localhost/", { method: "PUT", body: "request" })
+	);
+	expect(await res.json()).toEqual({ contentLength: "7", body: "request" });
 });

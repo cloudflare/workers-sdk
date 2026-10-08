@@ -89,7 +89,7 @@ async function writeBundleFiles(
  * `hasBundle` controls whether the config is written with a manifest and
  * whether the `bundle/` directory is created. `bundleDir` can override just the
  * directory creation (defaulting to `hasBundle`), which is useful for
- * exercising the "manifest present but bundle directory missing" validation.
+ * exercising stale manifests after a framework removes a bundle.
  */
 async function seedWorker(
 	root: string,
@@ -133,6 +133,82 @@ describe("readBuildOutput", () => {
 			mode: undefined,
 		});
 	});
+
+	it.for([
+		[".cloudflare", "dir"],
+		[".cloudflare/output", "dir"],
+		[".cloudflare/output/v0/workers/default/bundle/chunks/module.js", "file"],
+		[".cloudflare/output/v0/workers/default/assets/nested", "dir"],
+	] as const)(
+		"rejects a symlink at %s",
+		async ([relativePath, type], { expect }) => {
+			const root = process.cwd();
+			await seedWorker(root, { assets: true });
+			await writeBundleFiles(root, {
+				"chunks/module.js": "export default {};",
+			});
+			await fsp.mkdir(path.join(getWorkerAssetsDir(root), "nested"));
+
+			const symlinkPath = path.join(root, relativePath);
+			const targetPath = path.join(root, "symlink-target");
+			await fsp.rename(symlinkPath, targetPath);
+			await fsp.symlink(targetPath, symlinkPath, type);
+
+			await expect(readBuildOutput(root)).rejects.toThrow(
+				new BuildOutputError(
+					`symlink found at ${symlinkPath}. Symlinks are not permitted because the build output must be portable and self-contained.`
+				)
+			);
+		}
+	);
+
+	it("allows symlinks outside the build output directory", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		const linkedRoot = path.join(root, "linked-project");
+		await fsp.symlink(root, linkedRoot, "dir");
+		await fsp.symlink(
+			"does-not-exist",
+			path.join(root, ".cloudflare/cache"),
+			"dir"
+		);
+
+		const output = await readBuildOutput(linkedRoot);
+
+		expect(output.root).toBe(linkedRoot);
+		expect(output.workers.default.config.name).toBe("my-worker");
+	});
+
+	it.for([".cloudflare", ".cloudflare/output", ".cloudflare/output/v0"])(
+		"reports a missing root config when %s is absent",
+		async (relativePath, { expect }) => {
+			const root = process.cwd();
+			await fsp.rename(
+				path.join(root, relativePath),
+				path.join(root, "old-output")
+			);
+
+			await expect(readBuildOutput(root)).rejects.toThrow(
+				/no root config found/
+			);
+		}
+	);
+
+	it.for([".cloudflare", ".cloudflare/output"])(
+		"reports a missing root config when %s is a file",
+		async (relativePath, { expect }) => {
+			const root = process.cwd();
+			const directoryPath = path.join(root, relativePath);
+			await fsp.rename(directoryPath, path.join(root, "old-output"));
+			await fsp.writeFile(directoryPath, "");
+
+			await expect(readBuildOutput(root)).rejects.toThrow(
+				/no root config found/
+			);
+		}
+	);
 
 	it("reads the default Worker, keeping the manifest", async ({ expect }) => {
 		const root = process.cwd();
@@ -384,27 +460,54 @@ describe("readBuildOutput", () => {
 		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));
 	});
 
-	it("throws when the config has a manifest but no bundle directory", async ({
+	it("ignores a stale manifest for an assets-only Worker", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
-		await seedWorker(root, { hasBundle: true, bundleDir: false });
+		await seedWorker(root, {
+			hasBundle: true,
+			bundleDir: false,
+			assets: true,
+		});
 
-		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
-		await expect(readBuildOutput(root)).rejects.toThrow(
-			/contains a manifest, but no bundle directory exists/
-		);
+		const { workers } = await readBuildOutput(root);
+		const worker = workers.default;
+
+		expect(worker.config.manifest).toBeUndefined();
+		expect(worker.bundleDir).toBeUndefined();
+		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));
 	});
 
-	it("throws when the Worker has neither a bundle nor an assets directory", async ({
+	it("omits an additional Worker with no deployable output", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
-		await seedWorker(root, { hasBundle: false, assets: false });
+		await seedWorker(root);
+		await seedWorker(root, {
+			directoryName: "prerender",
+			name: "prerender-worker",
+			hasBundle: true,
+			bundleDir: false,
+		});
+
+		const { workers } = await readBuildOutput(root);
+
+		expect(workers).not.toHaveProperty("prerender");
+	});
+
+	it("throws when the default Worker has no deployable output", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root, {
+			hasBundle: true,
+			bundleDir: false,
+			assets: false,
+		});
 
 		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
 		await expect(readBuildOutput(root)).rejects.toThrow(
-			/has neither a bundle directory .* nor an assets directory/
+			`Default Worker at ${getWorkerDir(root)} has neither a bundle directory (${getWorkerBundleDir(root)}) nor an assets directory (${getWorkerAssetsDir(root)}).`
 		);
 	});
 

@@ -46,6 +46,7 @@ describe("InputWorkerSchema", () => {
 					MY_AI: { type: "ai" },
 					MY_ASSETS: { type: "assets" },
 					MY_BROWSER: { type: "browser" },
+					MY_ANALYTICS: { type: "analytics" },
 					MY_IMAGES: { type: "images" },
 					MY_MEDIA: { type: "media" },
 					MY_STREAM: { type: "stream" },
@@ -122,6 +123,7 @@ describe("InputWorkerSchema", () => {
 			["ai"],
 			["assets"],
 			["browser"],
+			["analytics"],
 			["images"],
 			["media"],
 			["stream"],
@@ -291,6 +293,29 @@ describe("InputWorkerSchema", () => {
 				);
 			}
 		});
+	});
+
+	describe("workflow bindings", () => {
+		const workflowBinding = {
+			type: "workflow",
+			name: "greeting",
+			worker: "workflow-worker",
+			exportName: "GreetingWorkflow",
+		} as const;
+
+		it("accepts a cross-Worker Workflow binding", ({ expect }) => {
+			expect(BindingSchema.safeParse(workflowBinding).success).toBe(true);
+		});
+
+		it.for(["name", "worker", "exportName"] as const)(
+			"requires %s",
+			(field, { expect }) => {
+				const binding: Record<string, unknown> = { ...workflowBinding };
+				delete binding[field];
+
+				expect(BindingSchema.safeParse(binding).success).toBe(false);
+			}
+		);
 	});
 
 	describe("entrypoint", () => {
@@ -535,6 +560,39 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts a UDP connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "udp",
+						port: 5432,
+						idleTimeoutMs: 1_000,
+						maxPendingBytes: 65_536,
+					},
+				],
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects UDP options on a TCP connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						idleTimeoutMs: 1_000,
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
@@ -720,6 +778,20 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts a Container with the us jurisdiction", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			constraints: { jurisdiction: "us" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({
+				constraints: { jurisdiction: "us" },
+			});
+		}
+	});
+
 	it("rejects a local image reference", ({ expect }) => {
 		const result = InputContainerSchema.safeParse({
 			...baseContainer,
@@ -807,6 +879,17 @@ describe("InputContainerSchema", () => {
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			observability: { enabled: true, logs: { enabled: true } },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts SSH settings for a Durable Object Container", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			ssh: { enabled: true, port: 2222 },
+			authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
 		});
 
 		expect(result.success).toBe(true);
@@ -1043,6 +1126,21 @@ describe("InputContainerSchema", () => {
 });
 
 describe("OutputContainerSchema", () => {
+	it("accepts a Container with the us jurisdiction", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			...baseOutputContainer,
+			image: { reference: "registry.example.com/my-image:digest" },
+			constraints: { jurisdiction: "us" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({
+				constraints: { jurisdiction: "us" },
+			});
+		}
+	});
+
 	it.for([
 		{ reference: "registry.example.com/my-image:digest" },
 		{ localReference: "locally-built-image:latest" },
@@ -1099,6 +1197,21 @@ describe("OutputContainerSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("preserves SSH settings for a Durable Object Container", ({ expect }) => {
+		const container = {
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			ssh: { enabled: true },
+			authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
+		};
+		const result = OutputContainerSchema.safeParse(container);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toEqual(container);
+		}
 	});
 
 	it("rejects unbuilt Durable Object Container images", ({ expect }) => {
@@ -1460,6 +1573,92 @@ describe("ExportSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("accepts a workflow export", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: exportConfig.workflow({ name: "greeting" }),
+			BatchWorkflow: exportConfig.workflow({
+				name: "batch",
+				limits: { steps: 10 },
+			}),
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.data?.exports).toEqual({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: { type: "workflow", name: "batch", limits: { steps: 10 } },
+		});
+	});
+
+	it("accepts every Workflow setting on a workflow export", ({ expect }) => {
+		const scheduled = exportConfig.workflow({
+			name: "scheduled",
+			limits: { steps: 10 },
+			concurrency: { limit: 2 },
+			schedules: ["0 * * * *"],
+			defaultRetention: {
+				successRetention: "3 days",
+				errorRetention: 86_400_000,
+			},
+		});
+		const result = parseExports({ ScheduledWorkflow: scheduled });
+
+		expect(result.success).toBe(true);
+		expect(result.data?.exports).toEqual({ ScheduledWorkflow: scheduled });
+	});
+
+	it("rejects invalid Workflow settings on a workflow export", ({ expect }) => {
+		for (const settings of [
+			{ schedules: "" },
+			{ schedules: [] },
+			{ schedules: [""] },
+			{ concurrency: { limit: 0 } },
+			{ defaultRetention: { successRetention: -1 } },
+			{ defaultRetention: { errorRetention: "" } },
+		]) {
+			const result = parseExports({
+				GreetingWorkflow: { type: "workflow", name: "greeting", ...settings },
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+
+	it("rejects a workflow export without a name", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: { type: "workflow" },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a workflow step limit that is not a positive integer", ({
+		expect,
+	}) => {
+		for (const steps of [0, -1, 1.5]) {
+			const result = parseExports({
+				GreetingWorkflow: {
+					type: "workflow",
+					name: "greeting",
+					limits: { steps },
+				},
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+
+	it("rejects Durable Object fields on a workflow export", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: {
+				type: "workflow",
+				name: "greeting",
+				storage: "sqlite",
+			},
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	// Containers require the SQLite storage engine. The check below is the type

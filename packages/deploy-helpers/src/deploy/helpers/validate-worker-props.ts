@@ -21,6 +21,7 @@ import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import { getDeployConfirmFunction } from "./deploy-confirm";
 import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
+import { validateOwnedWorkflowDeclarations } from "./owned-workflows";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
@@ -100,9 +101,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	validateOwnedWorkflowDeclarations(config, name);
+
 	if (props.command === "deploy") {
 		validateEventTriggerTargets(config, name);
-		validateRoutes(props.routes, props.assetsOptions);
+		const workersDevEnabled = getSubdomainValues(
+			config.workers_dev,
+			config.preview_urls,
+			props.routes
+		).workers_dev;
+		validateRoutes(props.routes, props.assetsOptions, workersDevEnabled);
 		assert(
 			!config.site || config.site.bucket,
 			"A [site] definition requires a `bucket` field with a path to the site's assets directory."
@@ -313,14 +321,12 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	if (config.workflows?.length) {
-		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
+	const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
 
-		if (workflowCheck.hasConflicts) {
-			logger.warn(workflowCheck.message);
-			if (!(await deployConfirm("Do you want to continue?"))) {
-				return { workerTag, tags, workerExists, aborted: true };
-			}
+	if (workflowCheck.hasConflicts) {
+		logger.warn(workflowCheck.message);
+		if (!(await deployConfirm("Do you want to continue?"))) {
+			return { workerTag, tags, workerExists, aborted: true };
 		}
 	}
 

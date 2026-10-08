@@ -3,7 +3,7 @@
 // Named types and helper factories for declaring event triggers.
 // ═══════════════════════════════════════════════════════════════════════════
 
-interface FetchTriggerOptions {
+export interface FetchTriggerOptions {
 	/**
 	 * A route that your Worker should be published to.
 	 *
@@ -26,7 +26,7 @@ export interface FetchTrigger extends FetchTriggerOptions {
 	type: "fetch";
 }
 
-interface QueueConsumerTriggerOptions {
+export interface QueueConsumerTriggerOptions {
 	/** The name of the queue from which this consumer should consume. */
 	name: string;
 	/** The queue to send messages that failed to be consumed. */
@@ -59,7 +59,7 @@ export interface QueueConsumerTrigger extends QueueConsumerTriggerOptions {
 	type: "queue";
 }
 
-interface ScheduledTriggerOptions {
+export interface ScheduledTriggerOptions {
 	/**
 	 * A "cron" definition to trigger a Worker's "scheduled" function.
 	 *
@@ -79,7 +79,7 @@ export interface ScheduledTrigger extends ScheduledTriggerOptions {
 	type: "scheduled";
 }
 
-interface EmailTriggerOptions {
+export interface EmailTriggerOptions {
 	/**
 	 * Inbound Email Routing addresses handled by this Worker.
 	 *
@@ -97,23 +97,33 @@ export interface EmailTrigger extends EmailTriggerOptions {
 	type: "email";
 }
 
-interface ConnectTriggerOptions {
-	/** The transport protocol to listen for. */
-	protocol: "tcp";
+export interface ConnectTriggerOptionsBase {
 	/** The port to listen on. */
 	port: number;
 	/** The address to bind to. Defaults to `127.0.0.1`. */
 	address?: string;
 }
 
+type TcpConnectTriggerOptions = ConnectTriggerOptionsBase & { protocol: "tcp" };
+
+type UdpConnectTriggerOptions = ConnectTriggerOptionsBase & {
+	protocol: "udp";
+	/** The idle timeout in milliseconds after which a peer flow is closed. */
+	idleTimeoutMs?: number;
+	/** The maximum number of pending datagram bytes per peer flow. */
+	maxPendingBytes?: number;
+};
+
+export type ConnectTriggerOptions =
+	| TcpConnectTriggerOptions
+	| UdpConnectTriggerOptions;
+
 /**
  * Connect trigger — invokes this Worker's `connect(socket, env, ctx)`
  * handler for raw socket connections received on the configured
  * protocol/port.
  */
-export interface ConnectTrigger extends ConnectTriggerOptions {
-	type: "connect";
-}
+export type ConnectTrigger = ConnectTriggerOptions & { type: "connect" };
 
 /**
  * Event triggers — fetch routes, queue consumers, cron schedules, Email

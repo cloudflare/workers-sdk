@@ -140,6 +140,11 @@ function convertWorkerOptions(
 		config.triggers.push({ type: "fetch", pattern: route });
 	}
 
+	for (const cron of worker.cronTriggers ?? []) {
+		config.triggers ??= [];
+		config.triggers.push({ type: "scheduled", schedule: cron });
+	}
+
 	for (const connectHandler of worker.connectHandlers ?? []) {
 		config.triggers ??= [];
 		config.triggers.push({ type: "connect", ...connectHandler });
@@ -150,6 +155,7 @@ function convertWorkerOptions(
 	addNamespaceBindings(env, "d1", worker.d1Databases, isRemote);
 	addR2Bindings(env, worker.r2Buckets, isRemote);
 	addDurableObjectBindings(env, exports, config.name, worker, isRemote);
+	addWorkflowExports(exports, worker);
 	addQueueBindings(
 		env,
 		config,
@@ -445,6 +451,28 @@ function addDurableObjectExport(
 	exports[object.className] = exported as Exports[string];
 }
 
+/**
+ * Translate the declarative `workflowExports` carrier (keyed by the exported
+ * class name) into `exports` entries. This is the export-side counterpart to
+ * the `workflows` binding loop in `addProductBindings`: bindings expose a
+ * workflow to another Worker via `env`, whereas exports declare a workflow this
+ * Worker owns on `ctx.exports`.
+ */
+function addWorkflowExports(exports: Exports, worker: ParsedV4WorkerOptions) {
+	for (const [className, workflow] of Object.entries(
+		worker.workflowExports ?? {}
+	)) {
+		exports[className] = {
+			type: "workflow",
+			name: workflow.name,
+			limits:
+				workflow.stepLimit === undefined
+					? undefined
+					: { steps: workflow.stepLimit },
+		} as Exports[string];
+	}
+}
+
 function addQueueBindings(
 	env: Env,
 	config: MiniflareWorkerConfig,
@@ -635,6 +663,14 @@ function addProductBindings(
 			dev: { remote: isRemote(worker.ai.remoteProxyConnectionString) },
 		};
 	}
+	if (worker.analyticsSql !== undefined) {
+		env[worker.analyticsSql.binding] = {
+			type: "analytics",
+			dev: {
+				remote: isRemote(worker.analyticsSql.remoteProxyConnectionString),
+			},
+		};
+	}
 	for (const [name, binding] of Object.entries(worker.agentMemory ?? {})) {
 		env[name] = {
 			type: "agent-memory",
@@ -680,6 +716,13 @@ function addProductBindings(
 		};
 	}
 	addPipelineBindings(env, worker.pipelines, isRemote);
+	for (const [name, binding] of Object.entries(worker.k2 ?? {})) {
+		env[name] = {
+			type: "k2",
+			stream: binding.stream,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const binding of worker.email?.send_email ?? []) {
 		env[binding.name] = {
 			type: "send-email",
@@ -830,6 +873,7 @@ function configAssets(
 	config.assets = {
 		directory: assets.directory,
 		hasUserWorker: getBooleanProperty(assets.routerConfig, "has_user_worker"),
+		basePath: getStringProperty(assets.assetConfig, "base_path"),
 		htmlHandling: getHtmlHandling(
 			getStringProperty(assets.assetConfig, "html_handling")
 		),

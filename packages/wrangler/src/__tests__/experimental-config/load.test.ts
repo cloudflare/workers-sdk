@@ -310,9 +310,7 @@ describe("loadNewConfig", () => {
 			});
 		});
 
-		it("formats Zod errors as a bulleted list with dotted paths", async ({
-			expect,
-		}) => {
+		it("formats Zod errors with dotted paths", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
 					'export default { worker: { name: 42, compatibilityDate: "2026-05-18" } };',
@@ -320,7 +318,7 @@ describe("loadNewConfig", () => {
 
 			await expect(
 				loadNewConfig({ cwd: process.cwd(), args: {} })
-			).rejects.toThrow(/\s*•\s+worker\.name:/);
+			).rejects.toThrow(/→ at worker\.name/);
 		});
 	});
 
@@ -479,12 +477,11 @@ describe("loadNewConfig", () => {
 			expect(result.types).toEqual({ generate: true, includeRuntime: true });
 		});
 
-		it("honors `dev.types.generate: false`", async ({ expect }) => {
+		it("honors `types.generate: false`", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
 					'export default { worker: { name: "w", compatibilityDate: "2026-05-18" } };',
-				"wrangler.config.ts":
-					"export default { dev: { types: { generate: false } } };",
+				"wrangler.config.ts": "export default { types: { generate: false } };",
 			});
 
 			const result = await loadNewConfig({
@@ -495,12 +492,12 @@ describe("loadNewConfig", () => {
 			expect(result.types).toEqual({ generate: false, includeRuntime: true });
 		});
 
-		it("honors `dev.types.includeRuntime: false`", async ({ expect }) => {
+		it("honors `types.includeRuntime: false`", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
 					'export default { worker: { name: "w", compatibilityDate: "2026-05-18" } };',
 				"wrangler.config.ts":
-					"export default { dev: { types: { includeRuntime: false } } };",
+					"export default { types: { includeRuntime: false } };",
 			});
 
 			const result = await loadNewConfig({
@@ -511,12 +508,12 @@ describe("loadNewConfig", () => {
 			expect(result.types).toEqual({ generate: true, includeRuntime: false });
 		});
 
-		it("is not threaded into the merged rawConfig.dev", async ({ expect }) => {
+		it("is not threaded into the merged raw config", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
 					'export default { worker: { name: "w", compatibilityDate: "2026-05-18" } };',
 				"wrangler.config.ts":
-					"export default { dev: { types: { generate: false }, port: 1234 } };",
+					"export default { types: { generate: false }, dev: { port: 1234 } };",
 			});
 
 			const result = await loadNewConfig({
@@ -524,10 +521,10 @@ describe("loadNewConfig", () => {
 				args: {},
 			});
 
-			// `dev.port` is mapped through; `dev.types` is intentionally not.
+			// `dev.port` is mapped through; `types` is consumed separately.
 			expect(result.rawConfig.dev).toMatchObject({ port: 1234 });
 			expect(
-				(result.rawConfig.dev as Record<string, unknown>).types
+				(result.rawConfig as Record<string, unknown>).types
 			).toBeUndefined();
 		});
 	});

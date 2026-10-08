@@ -32,6 +32,9 @@ export const r2BucketLifecycleListCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		supportTemporary: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -74,6 +77,9 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		description: "Add a lifecycle rule to an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		supportTemporary: true,
 	},
 	positionalArgs: ["bucket", "name", "prefix"],
 	args: {
@@ -130,7 +136,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation and data catalog validation prompt",
+			describe: "Skip confirmation and Basin Catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -256,18 +262,16 @@ export const r2BucketLifecycleAddCommand = createCommand({
 					},
 				};
 			} else {
-				if (expireDays !== undefined) {
+				// Only read the flags that belong to this action, so that combining
+				// expiration and transition flags keeps each action's own condition.
+				const actionDays = action === "expire" ? expireDays : iaTransitionDays;
+				const actionDate = action === "expire" ? expireDate : iaTransitionDate;
+				if (actionDays !== undefined) {
 					conditionType = "Age";
-					conditionValue = expireDays;
-				} else if (iaTransitionDays !== undefined) {
-					conditionType = "Age";
-					conditionValue = iaTransitionDays;
-				} else if (expireDate !== undefined) {
+					conditionValue = actionDays;
+				} else if (actionDate !== undefined) {
 					conditionType = "Date";
-					conditionValue = expireDate;
-				} else if (iaTransitionDate !== undefined) {
-					conditionType = "Date";
-					conditionValue = iaTransitionDate;
+					conditionValue = actionDate;
 				} else {
 					conditionValue = await prompt(
 						`Enter the number of days or a date (YYYY-MM-DD) after which to ${formatActionDescription(action)}`
@@ -351,8 +355,8 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		} catch (error) {
 			if (!force && isDataCatalogConflict(error)) {
 				const confirmed = await confirm(
-					"Data catalog is enabled for this bucket. " +
-						"Proceeding may leave the data catalog in an invalid state. Continue?",
+					"Basin Catalog is enabled for this bucket. " +
+						"Proceeding may leave Basin Catalog in an invalid state. Continue?",
 					{ defaultValue: false, fallbackValue: true }
 				);
 				if (!confirmed) {
@@ -380,6 +384,9 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 		description: "Remove a lifecycle rule from an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		supportTemporary: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -445,6 +452,9 @@ export const r2BucketLifecycleSetCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		supportTemporary: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -465,7 +475,7 @@ export const r2BucketLifecycleSetCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation and data catalog validation prompt",
+			describe: "Skip confirmation and Basin Catalog validation prompt",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -520,8 +530,8 @@ export const r2BucketLifecycleSetCommand = createCommand({
 		} catch (error) {
 			if (!force && isDataCatalogConflict(error)) {
 				const confirmed = await confirm(
-					"Data catalog is enabled for this bucket. " +
-						"Proceeding may leave the data catalog in an invalid state. Continue?",
+					"Basin Catalog is enabled for this bucket. " +
+						"Proceeding may leave Basin Catalog in an invalid state. Continue?",
 					{ defaultValue: false, fallbackValue: true }
 				);
 				if (!confirmed) {

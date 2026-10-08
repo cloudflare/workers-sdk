@@ -444,7 +444,7 @@ describe("deploy", () => {
 
 		await runWrangler("deploy ./my-worker/index.js");
 		expect(std.debug).toContain(
-			`{"main_module":"index.js","bindings":[{"name":"xyz","type":"json","json":123}],"compatibility_date":"2022-01-12","compatibility_flags":[]}`
+			`{"main_module":"index.js","bindings":[{"name":"xyz","type":"json","json":123}],"compatibility_date":"2022-01-12","compatibility_flags":[],"keep_bindings":["secret_text","secret_key"]}`
 		);
 	});
 
@@ -782,7 +782,7 @@ describe("deploy", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=k2.read%20k2.write%20account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -856,7 +856,100 @@ describe("deploy", () => {
 			expect(previewAccountRequests).toBe(1);
 			expect(contentTypeHeader).toBe("application/json");
 			expect(std.out).not.toContain("Attempting to login via OAuth...");
-			expect(std.out).toContain("Temporary account ready:");
+			expect(std.err).toContain("Temporary account ready:");
+		});
+
+		it("requires --temporary when --event-code is passed", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("deploy index.js --event-code ABCD-EFGH-JKMN")
+			).rejects.toThrow("--event-code requires --temporary");
+		});
+
+		it("rejects a blank event code", async ({ expect }) => {
+			await expect(
+				runWrangler('deploy index.js --temporary --event-code "   "')
+			).rejects.toThrow("--event-code cannot be empty");
+		});
+
+		it("rejects repeated event codes without exposing their values", async ({
+			expect,
+		}) => {
+			const firstCode = "SECRET-CODE-ONE";
+			const secondCode = "SECRET-CODE-TWO";
+			const error = await runWrangler(
+				`deploy index.js --temporary --event-code ${firstCode} --event-code ${secondCode}`
+			).catch((cause: unknown) => cause);
+
+			expect(String(error)).toContain("--event-code expects a single value");
+			expect(String(error)).not.toContain(firstCode);
+			expect(String(error)).not.toContain(secondCode);
+			expect(std.out).not.toContain(firstCode);
+			expect(std.err).not.toContain(firstCode);
+		});
+
+		it("provisions an event account before deploying", async ({ expect }) => {
+			setIsTTY(true);
+			mockPrompt({ text: TEMPORARY_TERMS_PROMPT, result: "yes" });
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockUploadWorkerRequest({ expectedAccountId: "preview-account-id" });
+			mockTemporaryPreviewChallenge();
+
+			let previewRequestBody: unknown;
+			msw.use(
+				http.get(
+					"*/accounts/preview-account-id/workers/services/:scriptName",
+					() =>
+						HttpResponse.json(
+							createFetchResult({
+								default_environment: {
+									script: { last_deployed_from: "wrangler" },
+								},
+							})
+						)
+				),
+				http.post(temporaryPreviewAccountUrl, async ({ request }) => {
+					previewRequestBody = await request.json();
+					return HttpResponse.json({
+						success: true,
+						result: {
+							account: {
+								id: "preview-account-id",
+								name: "Preview Account Alpha",
+								apiToken: "preview-account-token",
+								expiresAt: "2027-01-01T00:00:00.000Z",
+							},
+							claim: {
+								url: "https://dash.cloudflare.com/claim-preview",
+								expiresAt: "2027-01-02T00:00:00.000Z",
+							},
+							eventCodeAccepted: true,
+						},
+						errors: [],
+						messages: [],
+					});
+				})
+			);
+
+			await expect(
+				runWrangler(
+					'deploy index.js --temporary --event-code " ABCD-EFGH-JKMN "'
+				)
+			).resolves.toBeUndefined();
+
+			expect(previewRequestBody).toMatchObject({
+				eventCode: "ABCD-EFGH-JKMN",
+			});
+			const cache = fs.readFileSync(
+				path.join(getGlobalConfigPath(), "wrangler-temporary-account.toml"),
+				"utf8"
+			);
+			expect(cache).not.toContain("ABCD-EFGH-JKMN");
+			expect(std.out).not.toContain("ABCD-EFGH-JKMN");
+			expect(std.err).not.toContain("ABCD-EFGH-JKMN");
 		});
 
 		it("aborts in interactive mode when the terms are not accepted", async ({
@@ -915,7 +1008,7 @@ describe("deploy", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=k2.read%20k2.write%20account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -994,7 +1087,7 @@ describe("deploy", () => {
 			);
 
 			expect(previewAccountRequests).toBe(0);
-			expect(std.out).not.toContain("Temporary account ready:");
+			expect(std.err).not.toContain("Temporary account ready:");
 		});
 
 		describe("with temporary preview accounts", () => {
@@ -1081,12 +1174,12 @@ describe("deploy", () => {
 				expect(Buffer.from(solution.checkpoints, "base64").length).toBe(
 					(2 + 1) * 32
 				);
-				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).not.toContain("Temporary account ready:");
 				expect(std.out).not.toContain("Attempting to login via OAuth...");
-				expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
-				expect(std.out).toContain("Temporary account ready:");
-				expect(std.out).toContain("Account: Preview Account Alpha (created)");
-				expect(std.out).toContain("Claim within:");
+				expect(std.err).toContain(TEMPORARY_TERMS_NOTICE);
+				expect(std.err).toContain("Temporary account ready:");
+				expect(std.err).toContain("Account: Preview Account Alpha (created)");
+				expect(std.err).toContain("Claim within:");
 				expect(fs.existsSync(globalTemporaryAccountPath)).toBe(true);
 				expect(fs.existsSync(localTemporaryAccountPath)).toBe(false);
 				if (process.platform !== "win32") {
@@ -1138,7 +1231,7 @@ describe("deploy", () => {
 				);
 
 				expect(previewAccountRequests).toBe(0);
-				expect(std.out).not.toContain("Temporary account ready:");
+				expect(std.err).not.toContain("Temporary account ready:");
 			});
 
 			it("provisions the preview account against the staging API and caches it per-environment", async ({
@@ -1214,9 +1307,9 @@ describe("deploy", () => {
 				);
 
 				expect(stagingPreviewRequests).toBe(1);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.out).toContain("Temporary account ready:");
-				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(std.out).not.toContain("Temporary account ready:");
+				expect(std.err).toContain("Temporary account ready:");
+				expect(std.err).toContain("Account: Preview Account Alpha (created)");
 				expect(fs.existsSync(stagingTemporaryAccountPath)).toBe(true);
 				expect(fs.existsSync(productionTemporaryAccountPath)).toBe(false);
 			});
@@ -1311,8 +1404,8 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				expect(previewAccountRequests).toBe(1);
-				expect(std.out).toContain("Temporary account ready:");
-				expect(std.out).toContain("Account: Preview Account Alpha (reused)");
+				expect(std.err).toContain("Temporary account ready:");
+				expect(std.err).toContain("Account: Preview Account Alpha (reused)");
 			});
 
 			it("treats a malformed temporary preview account cache as a miss and refetches", async ({
@@ -1386,7 +1479,7 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				expect(previewAccountRequests).toBe(1);
-				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(std.err).toContain("Account: Preview Account Alpha (created)");
 				expect(TOML.parse(fs.readFileSync(cachePath, "utf-8"))).toMatchObject({
 					account: { id: "preview-account-id" },
 					claim: {

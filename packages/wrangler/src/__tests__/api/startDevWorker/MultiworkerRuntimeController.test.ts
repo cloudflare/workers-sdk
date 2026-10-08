@@ -82,6 +82,51 @@ describe("MultiworkerRuntimeController", () => {
 		});
 	});
 
+	it("tracks image-free Container preparation independently for each Worker", async ({
+		expect,
+	}) => {
+		const bus = new FakeBus();
+		const controller = new MultiworkerRuntimeController(bus, 2);
+		teardown(() => controller.teardown());
+		function workerEvent(name: string, enabled: boolean) {
+			return {
+				type: "bundleComplete" as const,
+				bundle: makeEsbuildBundle("export default {}"),
+				config: configDefaults({
+					name,
+					containerDevPlan: {
+						containerOptions: [],
+						containerRuntimeOptions: new Map([["Probe", {}]]),
+					},
+					dev: {
+						persist: "./persist",
+						remote: false,
+						enableContainers: enabled,
+						multiworkerPrimary: name === "worker-a",
+					},
+				}),
+			};
+		}
+		let reloadComplete = bus.waitFor("reloadComplete");
+		controller.onBundleComplete(workerEvent("worker-a", true));
+		controller.onBundleComplete(workerEvent("worker-b", false));
+		await reloadComplete;
+		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(1);
+
+		reloadComplete = bus.waitFor("reloadComplete");
+		controller.onBundleComplete(workerEvent("worker-b", true));
+		await reloadComplete;
+		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
+		for (const [args] of vi.mocked(prepareContainerImagesForDev).mock.calls) {
+			expect(args.containerOptions).toEqual([]);
+		}
+
+		reloadComplete = bus.waitFor("reloadComplete");
+		controller.onBundleComplete(workerEvent("worker-a", true));
+		await reloadComplete;
+		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
+	});
+
 	it("tracks successful image preparation plans per Worker", async ({
 		expect,
 	}) => {
@@ -101,19 +146,19 @@ describe("MultiworkerRuntimeController", () => {
 		): StartDevWorkerOptions {
 			return configDefaults({
 				name,
-				containerDevPlan: {
-					containerOptions:
-						imageUri === undefined
-							? []
-							: [
+				containerDevPlan:
+					imageUri === undefined
+						? undefined
+						: {
+								containerOptions: [
 									{
 										image_uri: imageUri,
 										class_name: "SharedContainer",
 										image_tag: imageTag,
 									},
 								],
-					containerRuntimeOptions: new Map(),
-				},
+								containerRuntimeOptions: new Map(),
+							},
 				dev: {
 					persist: "./persist",
 					remote: false,

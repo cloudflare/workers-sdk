@@ -1,5 +1,162 @@
 # @cloudflare/workers-auth
 
+## 0.13.1
+
+### Patch Changes
+
+- Updated dependencies [[`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999), [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82)]:
+  - @cloudflare/workers-utils@0.47.1
+
+## 0.13.0
+
+### Minor Changes
+
+- [#16068](https://github.com/cloudflare/workers-sdk/pull/16068) [`26e03e2`](https://github.com/cloudflare/workers-sdk/commit/26e03e2560fcc4b6aaa7f843d19ab1feb645fff1) Thanks [@edevil](https://github.com/edevil)! - Add a `temporaryAccountLogger` option for temporary-account notices
+
+  `AuthContext.temporaryAccountLogger` receives the terms notice, the proof-of-work message, and the "Temporary account ready" claim details. A CLI whose commands write parseable output to stdout can route these messages to stderr. When it is not set, the messages go to `logger` as before.
+
+### Patch Changes
+
+- Updated dependencies [[`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef), [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f)]:
+  - @cloudflare/workers-utils@0.47.0
+
+## 0.12.0
+
+### Minor Changes
+
+- [#16009](https://github.com/cloudflare/workers-sdk/pull/16009) [`f23dcb3`](https://github.com/cloudflare/workers-sdk/commit/f23dcb32ca0df051eaaf0222086a612a615c80a3) Thanks [@NuroDev](https://github.com/NuroDev)! - Allow cf to request the zone observability OAuth scopes
+
+  New cf OAuth logins request `zone-observability.read` and `zone-observability.write`. Existing sessions must authenticate again to receive them.
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/workers-utils@0.46.0
+
+## 0.11.1
+
+### Patch Changes
+
+- Updated dependencies [[`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44)]:
+  - @cloudflare/workers-utils@0.45.1
+
+## 0.11.0
+
+### Minor Changes
+
+- [#15978](https://github.com/cloudflare/workers-sdk/pull/15978) [`db011b1`](https://github.com/cloudflare/workers-sdk/commit/db011b100e9078a2812d4b30aeaec45ed2ca872e) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Allow cf to request the K2 OAuth scopes
+
+  New cf OAuth logins request `k2.consume`, `k2.produce`, `k2.read`, and `k2.write`, which are registered for the cf OAuth client. Existing sessions must authenticate again to receive them.
+
+## 0.10.0
+
+### Minor Changes
+
+- [#15883](https://github.com/cloudflare/workers-sdk/pull/15883) [`ae70e63`](https://github.com/cloudflare/workers-sdk/commit/ae70e637fd02164712583288b50b881f225936f6) Thanks [@Kmschr](https://github.com/Kmschr)! - Allow cf to request the account token creation scope
+
+  New cf OAuth logins can request `account_api_tokens:create`. Existing sessions must authenticate again to receive the scope.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 producer bindings for existing streams
+
+  Configure a stream created through Wrangler, the Dashboard, or the API in `wrangler.json`:
+
+  ```jsonc
+  {
+    "k2": [
+      {
+        "binding": "ORDERS",
+        "stream": "0123456789abcdef0123456789abcdef"
+      }
+    ]
+  }
+  ```
+
+  The binding supports `env.ORDERS.send([{ content: new TextEncoder().encode("order"), headers: { event: "order.created" } }])`. Batches use either all `ArrayBuffer` or all `Uint8Array` content. Check the returned `success` value, handle rejected RPC promises, and retry only when the returned error explicitly allows it. Generated environment types describe this producer contract without requiring a separate application dependency.
+
+  K2 requires an enabled account. Deployment credentials need Worker deployment and K2 configuration-read access. Default Wrangler logins now request the K2 OAuth scopes; existing OAuth users should run `wrangler login` again to grant the new permissions. Development always uses a real K2 stream and may incur usage charges; no local simulator is provided. The `remote` setting can be omitted, `remote: true` suppresses the usage warning, and `remote: false` is rejected. Consumption is not part of this Worker binding.
+
+- [#15948](https://github.com/cloudflare/workers-sdk/pull/15948) [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22) Thanks [@akoval-cf](https://github.com/akoval-cf)! - Add beta K2 stream management commands
+
+  Use `wrangler k2 streams create order_events`, `wrangler k2 streams list`, `wrangler k2 streams get <stream-id>`, and `wrangler k2 streams delete <stream-id>` to manage K2 streams. Creation enables Worker bindings but not HTTP ingestion by default, matching the dashboard. Pass `--http-enabled` to enable authenticated HTTP ingestion and print its endpoint. Creation prints the stream ID and a binding configuration with a `YOUR_BINDING_NAME` placeholder for the Worker's variable name, but does not edit the configuration file automatically.
+
+  All four commands support `--json`. Deletion requires confirmation, or `--force`/`-y` to skip it; use `--force --json` for JSON deletion output. Creation also accepts retention, HTTP authentication, Worker-input, and CORS options; listing supports pagination and a name filter. Default Wrangler logins now request `k2.read` and `k2.write`; existing OAuth users should run `wrangler login` again, or use a custom API token granting K2 Config Write. The account must be enabled for K2.
+
+### Patch Changes
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22)]:
+  - @cloudflare/workers-utils@0.45.0
+
+## 0.9.5
+
+### Patch Changes
+
+- [#15887](https://github.com/cloudflare/workers-sdk/pull/15887) [`86211fe`](https://github.com/cloudflare/workers-sdk/commit/86211feed191f3d181e16836e62b1875ae6e6606) Thanks [@alepacheco](https://github.com/alepacheco)! - Report an unreachable auth server instead of an expired login when refreshing an OAuth token
+
+  When the OAuth token endpoint could not be reached (for example a DNS failure or a connection timeout), the refresh failure was reported as "Your auth token has expired and could not be refreshed", with advice to run `wrangler login`; in an interactive terminal Wrangler also started a new browser login. A network failure says nothing about the stored refresh token, and a new login would need the same unreachable server. Wrangler now reports that the Cloudflare auth server could not be reached, leaves the stored credentials unchanged, and does not start a login, so the next run can refresh with the same token once the network is back.
+
+## 0.9.4
+
+### Patch Changes
+
+- [#15870](https://github.com/cloudflare/workers-sdk/pull/15870) [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Keep Node.js ESM packages working when consumers rebundle them as CommonJS
+
+  Node.js-targeted ESM bundles now provide a real `require` implementation for bundled CommonJS dependencies. This avoids downstream patches for dynamic require calls and keeps the packages usable when a consumer rebundles them to CommonJS.
+
+- Updated dependencies [[`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b)]:
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.9.3
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+
+## 0.9.2
+
+### Patch Changes
+
+- [#15838](https://github.com/cloudflare/workers-sdk/pull/15838) [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.9.0 to fix slow parsing of very large TOML files
+
+  Parse time for TOML config files now grows linearly with their size, instead of with its square: a 40,000-line file that took 259 ms to parse now takes 17 ms, while typical `wrangler.toml` files parse in the same time as before. This addresses the `GHSA-r4xh-jqrq-34v2` advisory against earlier versions of the parser.
+
+  Some TOML syntax errors now point at the character that caused them. For example, a `wrangler.toml` containing `INVALID "FILE` is now reported as `illegal character in key` at the `"`, rather than `incomplete key-value` at the start of the line.
+
+- Updated dependencies [[`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/workers-utils@0.42.0
+
+## 0.9.1
+
+### Patch Changes
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+
+## 0.9.0
+
+### Minor Changes
+
+- [#15688](https://github.com/cloudflare/workers-sdk/pull/15688) [`93ee76e`](https://github.com/cloudflare/workers-sdk/commit/93ee76e6eb99cbb1d42abb4f472eb00d61c0d7a1) Thanks [@penalosa](https://github.com/penalosa)! - Request every grantable scope registered for the cf OAuth client on login
+
+  The cf OAuth flow now requests all 468 scopes that are both accepted for its production client and grantable by the consent service, allowing cf commands to call the corresponding APIs. Six client-registered scopes without consent mappings remain excluded so browser and device login do not fail during authorization.
+
+### Patch Changes
+
+- [#15662](https://github.com/cloudflare/workers-sdk/pull/15662) [`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb) Thanks [@oddharsh](https://github.com/oddharsh)! - Update `smol-toml` to 1.8.0
+
+  This updates the bundled TOML parser that reads `wrangler.toml` to a version that addresses two advisories against 1.5.2: `GHSA-7w5x-hrqm-74c2` (a value followed by a comment with no trailing newline, such as `a=[1 #`, put the parser in an infinite loop) and `GHSA-v3rj-xjv7-4jmq` (thousands of consecutive comment lines overflowed the stack). On the old version, `wrangler deploy` against a `wrangler.toml` ending in `a=[1 #` never returned; it now fails with `Invalid TOML document: cannot find end of structure`.
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+
+## 0.8.0
+
+### Minor Changes
+
+- [#15763](https://github.com/cloudflare/workers-sdk/pull/15763) [`f07c4e2`](https://github.com/cloudflare/workers-sdk/commit/f07c4e2b366f1a31b193d06c3243e768fc3729b8) Thanks [@jdickson-cf](https://github.com/jdickson-cf)! - Include Account Tag Write in the default CF CLI OAuth scopes
+
+  New CF CLI logins now request permission to manage account resource tags. Existing sessions must reauthenticate to receive the additional scope.
+
 ## 0.7.4
 
 ### Patch Changes

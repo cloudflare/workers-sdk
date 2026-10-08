@@ -92,14 +92,17 @@ describe.sequential("DevRegistry", () => {
 			undefined,
 			new TestLog()
 		);
-		vi.useFakeTimers();
+		// Filesystem timestamps use the real clock, so only fake the retry timer.
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 		try {
 			registry.register({ worker: definition });
 			expect(
 				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
 			).toBe("previous-instance");
 
-			await vi.advanceTimersByTimeAsync(90_001);
+			const stale = new Date(Date.now() - 91_000);
+			await fs.utimes(definitionPath, stale, stale);
+			await vi.runOnlyPendingTimersAsync();
 
 			expect(
 				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
@@ -1266,7 +1269,17 @@ describe.sequential("DevRegistry", () => {
 						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
-						const instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
+						// Deterministic ids are unique: create() throws once the
+						// instance exists, so later attempts read it instead.
+						let instance;
+						try {
+							instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
+						} catch (e) {
+							if (!String(e).includes("instance.already_exists")) {
+								throw e;
+							}
+							instance = await env.MY_WORKFLOW.get("cross-worker-instance");
+						}
 						return Response.json({ id: instance.id });
 					}
 				}

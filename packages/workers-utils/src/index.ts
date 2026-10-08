@@ -12,7 +12,9 @@ export type { ExportType, PartitionedExports } from "./config/exports";
 export {
 	getDurableObjectExports,
 	hasDurableObjectExports,
+	isLiveDurableObjectExport,
 } from "./config/durable-object-exports";
+export type { LiveDurableObjectExport } from "./config/durable-object-exports";
 export {
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
@@ -207,7 +209,7 @@ export {
 	getWorkerNameFromProject,
 } from "./worker-name";
 
-export { _forceColour, formatZodError } from "./zod-format";
+export { formatZodError } from "./zod-format";
 
 export { toUrlPath } from "./url-path";
 export type { UrlPath } from "./url-path";

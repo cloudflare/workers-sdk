@@ -1,5 +1,143 @@
 # @cloudflare/autoconfig
 
+## 0.7.7
+
+### Patch Changes
+
+- Updated dependencies [[`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717), [`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999), [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215), [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82)]:
+  - @cloudflare/config@0.24.1
+  - @cloudflare/workers-utils@0.47.1
+  - @cloudflare/cli-shared-helpers@0.2.5
+
+## 0.7.6
+
+### Patch Changes
+
+- Updated dependencies [[`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65), [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef), [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f)]:
+  - @cloudflare/config@0.24.0
+  - @cloudflare/workers-utils@0.47.0
+  - @cloudflare/cli-shared-helpers@0.2.4
+
+## 0.7.5
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/config@0.23.0
+  - @cloudflare/workers-utils@0.46.0
+  - @cloudflare/cli-shared-helpers@0.2.3
+
+## 0.7.4
+
+### Patch Changes
+
+- Updated dependencies [[`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44)]:
+  - @cloudflare/workers-utils@0.45.1
+  - @cloudflare/cli-shared-helpers@0.2.2
+  - @cloudflare/config@0.22.0
+
+## 0.7.3
+
+### Patch Changes
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22), [`27bc20d`](https://github.com/cloudflare/workers-sdk/commit/27bc20d5b22e7156b59940275bd3d809e269d7ce)]:
+  - @cloudflare/config@0.22.0
+  - @cloudflare/workers-utils@0.45.0
+  - @cloudflare/cli-shared-helpers@0.2.1
+
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [[`2a15ae2`](https://github.com/cloudflare/workers-sdk/commit/2a15ae21d210fcd36e485e7492b75198c8d7856c)]:
+  - @cloudflare/config@0.21.0
+
+## 0.7.1
+
+### Patch Changes
+
+- [#15913](https://github.com/cloudflare/workers-sdk/pull/15913) [`3ea1365`](https://github.com/cloudflare/workers-sdk/commit/3ea1365509e64786471bac5dfee37ff60e5f75ff) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix the type generation script added to TypeScript projects configured for `cf`.
+
+  The `cf-typegen` script now runs `cf workers types` instead of the unsupported `cf types` command. Projects configured for Wrangler continue to use `wrangler types`.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#15805](https://github.com/cloudflare/workers-sdk/pull/15805) [`3572193`](https://github.com/cloudflare/workers-sdk/commit/35721935014b6740f39e5ed4cea1af717f26e252) Thanks [@edmundhung](https://github.com/edmundhung)! - Install the beta Cloudflare Vite plugin for cf
+
+  When targeting cf, autoconfig now installs `@cloudflare/vite-plugin@beta` so supported projects use the Vite plugin v2 prerelease instead of the latest stable release. Wrangler autoconfiguration continues to install the latest stable release.
+
+- [#15805](https://github.com/cloudflare/workers-sdk/pull/15805) [`3572193`](https://github.com/cloudflare/workers-sdk/commit/35721935014b6740f39e5ed4cea1af717f26e252) Thanks [@edmundhung](https://github.com/edmundhung)! - Reject frameworks that cf cannot currently configure
+
+  Autoconfig now directs Analog, Angular, Nuxt, Qwik, Solid Start, SvelteKit, Vike, and Waku projects to Wrangler when invoked by cf, before changing project files. Wrangler autoconfiguration remains supported for these frameworks.
+
+### Patch Changes
+
+- Updated dependencies [[`cde5d99`](https://github.com/cloudflare/workers-sdk/commit/cde5d99651678cde06da6721e194d2e6a21789ff), [`77e79b2`](https://github.com/cloudflare/workers-sdk/commit/77e79b2f5f1fa6a8f8ec2b04f8b288edac64bf9f)]:
+  - @cloudflare/config@0.20.0
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.6.6
+
+### Patch Changes
+
+- [#15870](https://github.com/cloudflare/workers-sdk/pull/15870) [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Keep Node.js ESM packages working when consumers rebundle them as CommonJS
+
+  Node.js-targeted ESM bundles now provide a real `require` implementation for bundled CommonJS dependencies. This avoids downstream patches for dynamic require calls and keeps the packages usable when a consumer rebundles them to CommonJS.
+
+- Updated dependencies [[`a34edd4`](https://github.com/cloudflare/workers-sdk/commit/a34edd4939479a5ae58277803178b87d9bd44b33), [`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b), [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd)]:
+  - @cloudflare/config@0.19.0
+  - @cloudflare/workers-utils@0.44.0
+  - @cloudflare/cli-shared-helpers@0.2.0
+
+## 0.6.5
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+  - @cloudflare/cli-shared-helpers@0.1.39
+  - @cloudflare/config@0.18.0
+
+## 0.6.4
+
+### Patch Changes
+
+- Updated dependencies [[`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/workers-utils@0.42.0
+  - @cloudflare/config@0.18.0
+  - @cloudflare/cli-shared-helpers@0.1.38
+
+## 0.6.3
+
+### Patch Changes
+
+- [#15812](https://github.com/cloudflare/workers-sdk/pull/15812) [`b37c5df`](https://github.com/cloudflare/workers-sdk/commit/b37c5df9b23fd2c06116d54bbeaf8da65014847c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Prevent static-site detection from failing on inaccessible child directories
+
+  Autoconfig now checks each candidate directory's `index.html` directly and ignores expected missing-file and permission errors. This allows commands such as `cf build` to run from directories containing protected folders, including a macOS home directory with `.Trash`.
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+  - @cloudflare/cli-shared-helpers@0.1.37
+  - @cloudflare/config@0.17.0
+
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+  - @cloudflare/cli-shared-helpers@0.1.36
+  - @cloudflare/config@0.17.0
+
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`ec5251a`](https://github.com/cloudflare/workers-sdk/commit/ec5251a92f561dbbba77694ac954d85298f44039)]:
+  - @cloudflare/config@0.17.0
+
 ## 0.6.0
 
 ### Minor Changes

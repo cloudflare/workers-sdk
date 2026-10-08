@@ -186,6 +186,7 @@ describe("convertToWranglerConfig", () => {
 					env: {
 						MY_AI: { type: "ai" },
 						MY_BROWSER: { type: "browser" },
+						MY_ANALYTICS: { type: "analytics" },
 						MY_IMAGES: { type: "images" },
 						MY_MEDIA: { type: "media" },
 						MY_STREAM: { type: "stream" },
@@ -196,6 +197,7 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI" });
 			expect(result.browser).toEqual({ binding: "MY_BROWSER" });
+			expect(result.analytics).toEqual({ binding: "MY_ANALYTICS" });
 			expect(result.images).toEqual({ binding: "MY_IMAGES" });
 			expect(result.media).toEqual({ binding: "MY_MEDIA" });
 			expect(result.stream).toEqual({ binding: "MY_STREAM" });
@@ -726,6 +728,32 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("maps Workflow binding to workflows", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						WORKFLOW: {
+							type: "workflow",
+							name: "greeting",
+							worker: "workflow-worker",
+							exportName: "GreetingWorkflow",
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect(result.workflows).toEqual([
+				{
+					binding: "WORKFLOW",
+					name: "greeting",
+					class_name: "GreetingWorkflow",
+					script_name: "workflow-worker",
+				},
+			]);
+		});
+
 		it("maps logfwdr binding to logfwdr.bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -1050,6 +1078,44 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("converts workflow export retention to snake_case", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+							concurrency: { limit: 2 },
+							schedules: "0 * * * *",
+							defaultRetention: {
+								successRetention: "3 days",
+								errorRetention: 86_400_000,
+							},
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				GreetingWorkflow: { type: "workflow", name: "greeting" },
+				BatchWorkflow: {
+					type: "workflow",
+					name: "batch",
+					limits: { steps: 10 },
+					concurrency: { limit: 2 },
+					schedules: "0 * * * *",
+					default_retention: {
+						success_retention: "3 days",
+						error_retention: 86_400_000,
+					},
+				},
+			});
+		});
+
 		it("emits no exports key when the map is empty", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -1065,13 +1131,13 @@ describe("convertToWranglerConfig", () => {
 			const config = {
 				...baseWorker,
 				exports: {
-					FutureExport: { type: "workflow" },
+					FutureExport: { type: "future" },
 				},
 			} as unknown as NonNullable<ParsedInputConfig["worker"]>;
 
 			expect(() =>
 				convertToWranglerConfig({ worker: config, containers: [] })
-			).toThrow(/Unknown export types found: - FutureExport : workflow/);
+			).toThrow(/Unknown export types found: - FutureExport : future/);
 		});
 	});
 
@@ -1243,6 +1309,32 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("maps UDP connect trigger to connect", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					triggers: [
+						{
+							type: "connect",
+							protocol: "udp",
+							port: 5432,
+							idleTimeoutMs: 1_000,
+							maxPendingBytes: 65_536,
+						},
+					],
+				},
+				containers: [],
+			});
+			expect(result.connect).toEqual([
+				{
+					protocol: "udp",
+					port: 5432,
+					idle_timeout_ms: 1_000,
+					max_pending_bytes: 65_536,
+				},
+			]);
+		});
+
 		it("maps connect trigger without an address", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -1318,6 +1410,7 @@ describe("convertToWranglerConfig", () => {
 					assets: {
 						htmlHandling: "none",
 						notFoundHandling: "404-page",
+						basePath: "/docs",
 						runWorkerFirst: ["/api/*"],
 					},
 				},
@@ -1326,6 +1419,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.assets).toEqual({
 				html_handling: "none",
 				not_found_handling: "404-page",
+				base_path: "/docs",
 				run_worker_first: ["/api/*"],
 			});
 		});
@@ -1441,7 +1535,7 @@ describe("convertToWranglerConfig", () => {
 				authorizedKeys: [{ name: "deploy", publicKey: "ssh-ed25519 key" }],
 				constraints: {
 					regions: ["ENAM", "WEUR"],
-					jurisdiction: "eu",
+					jurisdiction: "us",
 				},
 				rollout: {
 					kind: "full-auto",
@@ -1486,7 +1580,7 @@ describe("convertToWranglerConfig", () => {
 					authorized_keys: [{ name: "deploy", public_key: "ssh-ed25519 key" }],
 					constraints: {
 						regions: ["ENAM", "WEUR"],
-						jurisdiction: "eu",
+						jurisdiction: "us",
 					},
 					rollout_kind: "full_auto",
 					rollout_step_percentage: [50, 100],
@@ -1531,6 +1625,8 @@ describe("convertToWranglerConfig", () => {
 							enabled: true,
 							logs: { enabled: false },
 						},
+						ssh: { enabled: true, port: 2222 },
+						authorizedKeys: [{ name: "deploy", publicKey: "ssh-ed25519 key" }],
 						unsafe: {
 							configuration: { experimental_flags: ["allow_fast_images"] },
 						},
@@ -1554,6 +1650,8 @@ describe("convertToWranglerConfig", () => {
 						enabled: true,
 						logs: { enabled: false },
 					},
+					ssh: { enabled: true, port: 2222 },
+					authorized_keys: [{ name: "deploy", public_key: "ssh-ed25519 key" }],
 					unsafe: {
 						configuration: { experimental_flags: ["allow_fast_images"] },
 					},

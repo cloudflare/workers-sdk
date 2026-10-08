@@ -165,6 +165,44 @@ describe("ConfigController", () => {
 		});
 	});
 
+	it("should map UDP connect options for the local runtime", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export default {}",
+			"wrangler.json": JSON.stringify({
+				name: "udp-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-21",
+				connect: [
+					{
+						protocol: "udp",
+						port: 8080,
+						idle_timeout_ms: 1_000,
+						max_pending_bytes: 65_536,
+					},
+				],
+			}),
+		});
+
+		await controller.set({ config: "./wrangler.json" });
+
+		await expect(event).resolves.toMatchObject({
+			config: {
+				triggers: [
+					{
+						type: "connect",
+						protocol: "udp",
+						port: 8080,
+						idleTimeoutMs: 1_000,
+						maxPendingBytes: 65_536,
+					},
+				],
+			},
+		});
+	});
+
 	it("should plan named Container images for local runtime", async ({
 		expect,
 	}) => {

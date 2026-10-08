@@ -8,6 +8,7 @@ import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
+import { EXPLORER_REFRESH_HEADER } from "./explorer-refresh";
 import {
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
@@ -18,10 +19,14 @@ import {
 	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zLocalExplorerDispatchScheduledData,
 	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zFlagshipCreateFlagData,
+	zFlagshipEvaluateFlagData,
+	zFlagshipUpdateFlagData,
 	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 	zObservabilityQueryData,
 	zWorkflowsBatchDeleteInstancesData,
@@ -33,11 +38,22 @@ import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
 	getReceivedEmail,
+	getReceivedEmailByCaptureId,
+	getResendDraft,
 	getSentEmail,
 	listReceivedEmails,
 	listSentEmails,
+	resendCapturedEmail,
 	sendTestEmail,
 } from "./resources/email";
+import {
+	createFlagshipFlag,
+	deleteFlagshipFlag,
+	evaluateFlagshipFlag,
+	listFlagshipApps,
+	listFlagshipFlags,
+	updateFlagshipFlag,
+} from "./resources/flagship";
 import {
 	bulkDeleteKVValues,
 	bulkGetKVValues,
@@ -50,12 +66,14 @@ import {
 } from "./resources/kv";
 import { clearTraces, runQuery } from "./resources/observability";
 import {
+	deleteR2Object,
 	deleteR2Objects,
 	getR2Object,
 	listR2Buckets,
 	listR2Objects,
 	putR2Object,
 } from "./resources/r2";
+import { dispatchScheduledToWorker } from "./resources/scheduled";
 import {
 	changeWorkflowInstanceStatus,
 	createWorkflowInstance,
@@ -148,8 +166,7 @@ app.use("/api/*", async (c, next) => {
 				"Access-Control-Allow-Origin": origin ?? "*",
 				"Access-Control-Allow-Methods":
 					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers":
-					"Content-Type, cf-metadata-only, cf-r2-custom-metadata",
+				"Access-Control-Allow-Headers": `Content-Type, cf-metadata-only, cf-r2-custom-metadata, ${EXPLORER_REFRESH_HEADER}`,
 				"Access-Control-Max-Age": "86400",
 			},
 		});
@@ -342,6 +359,10 @@ app.put("/api/r2/buckets/:bucket_name/objects/:object_key", (c) =>
 	})
 );
 
+app.delete("/api/r2/buckets/:bucket_name/objects/:object_key{.+}", (c) =>
+	deleteR2Object(c, c.req.param("bucket_name"), c.req.param("object_key"))
+);
+
 app.delete(
 	"/api/r2/buckets/:bucket_name/objects",
 	validateRequestBody(zR2BucketDeleteObjectsData.shape.body),
@@ -424,6 +445,50 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 );
 
 // ============================================================================
+// Flagship Endpoints
+// ============================================================================
+
+app.get("/api/flagship/apps", (c) => listFlagshipApps(c));
+
+app.get("/api/flagship/apps/:app_id/flags", (c) =>
+	listFlagshipFlags(c, c.req.param("app_id"))
+);
+
+app.post(
+	"/api/flagship/apps/:app_id/flags",
+	validateRequestBody(zFlagshipCreateFlagData.shape.body),
+	(c) => createFlagshipFlag(c, c.req.param("app_id"), c.req.valid("json"))
+);
+
+app.patch(
+	"/api/flagship/apps/:app_id/flags/:flag_key",
+	validateRequestBody(zFlagshipUpdateFlagData.shape.body),
+	(c) =>
+		updateFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json")
+		)
+);
+
+app.delete("/api/flagship/apps/:app_id/flags/:flag_key", (c) =>
+	deleteFlagshipFlag(c, c.req.param("app_id"), c.req.param("flag_key"))
+);
+
+app.post(
+	"/api/flagship/apps/:app_id/flags/:flag_key/evaluate",
+	validateRequestBody(zFlagshipEvaluateFlagData.shape.body),
+	(c) =>
+		evaluateFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json").context ?? {}
+		)
+);
+
+// ============================================================================
 // Observability Endpoints
 // ============================================================================
 
@@ -436,17 +501,72 @@ app.post(
 app.post("/api/local/observability/clear", (c) => clearTraces(c));
 
 // ============================================================================
+// Scheduled Endpoints
+// ============================================================================
+
+app.post(
+	"/api/local/scheduled",
+	validateQuery(zLocalExplorerDispatchScheduledData.shape.query),
+	validateRequestBody(zLocalExplorerDispatchScheduledData.shape.body),
+	(c) => dispatchScheduledToWorker(c, c.req.valid("query"), c.req.valid("json"))
+);
+
+// ============================================================================
 // Email Endpoints
 // ============================================================================
 
-app.get(
-	"/api/local/email/routing",
-	validateQuery(zEmailListRoutingData.shape.query.unwrap()),
+const zEmailRoutingQuery = zEmailListRoutingData.shape.query
+	.unwrap()
+	.extend({ capture_id: z.uuid().optional() })
+	.superRefine((query, context) => {
+		if (query.capture_id !== undefined && query.email_id !== undefined) {
+			context.addIssue({
+				code: "custom",
+				message: "capture_id and email_id are mutually exclusive",
+			});
+		}
+		if (
+			query.capture_id !== undefined &&
+			(query.worker === undefined || query.worker.trim() === "")
+		) {
+			context.addIssue({
+				code: "custom",
+				path: ["worker"],
+				message: "Worker is required with capture_id",
+			});
+		}
+	});
+
+const zEmailCaptureOperationQuery = z.object({
+	worker: z.string().trim().min(1),
+	capture_id: z.uuid(),
+});
+
+app.get("/api/local/email/routing", validateQuery(zEmailRoutingQuery), (c) => {
+	const query = c.req.valid("query");
+	if (query.capture_id !== undefined) {
+		return getReceivedEmailByCaptureId(c, query.capture_id, query.worker ?? "");
+	}
+	return query.email_id === undefined
+		? listReceivedEmails(c, query)
+		: getReceivedEmail(c, query.email_id, query.worker);
+});
+
+app.post(
+	"/api/local/email/routing/resend",
+	validateQuery(zEmailCaptureOperationQuery),
 	(c) => {
 		const query = c.req.valid("query");
-		return query.email_id === undefined
-			? listReceivedEmails(c, query)
-			: getReceivedEmail(c, query.email_id, query.worker);
+		return resendCapturedEmail(c, query.worker, query.capture_id);
+	}
+);
+
+app.get(
+	"/api/local/email/routing/resend/draft",
+	validateQuery(zEmailCaptureOperationQuery),
+	(c) => {
+		const query = c.req.valid("query");
+		return getResendDraft(c, query.worker, query.capture_id);
 	}
 );
 
@@ -488,7 +608,7 @@ app.get("/api/local/workers", async (c) => {
 				return {
 					isSelf: true,
 					name,
-					bindings: explorerWorkerOpts[name],
+					...explorerWorkerOpts[name],
 				};
 			});
 
