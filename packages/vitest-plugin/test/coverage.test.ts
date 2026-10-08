@@ -110,8 +110,9 @@ test(
 					plugins: [
 						cloudflareTest({
 							miniflare: {
-								compatibilityDate: "2025-12-02",
-								compatibilityFlags: ["nodejs_compat"],
+								// Before weak_ref became the default; Vitest 5 still needs coverage.
+								compatibilityDate: "2025-04-01",
+								compatibilityFlags: ["nodejs_compat", "disable_weak_ref"],
 							},
 							wrangler: {
 								configPath: "./wrangler.jsonc",
@@ -174,7 +175,7 @@ test(
 			`,
 		});
 		const result = await vitestRun({ flags: ["--coverage"] });
-		expect(await result.exitCode).toBe(0);
+		expect(await result.exitCode, result.stderr).toBe(0);
 
 		// Read the JSON coverage summary to verify actual coverage values
 		const summaryPath = path.join(tmpPath, "coverage", "coverage-summary.json");
