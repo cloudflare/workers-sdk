@@ -2,6 +2,6 @@
 "create-cloudflare": patch
 ---
 
-Fix Docusaurus project creation with pnpm's strict build approvals
+Fix Docusaurus project creation with pnpm's strict build approvals.
 
-Defer dependency installation until C3 has written its build approvals. This also lets C3's approval and retry flow handle build scripts required by Docusaurus dependencies.
+Previously creating a Docusaurus project with pnpm could fail when dependency build scripts required approval. Now users can approve those scripts during setup and complete project creation.
