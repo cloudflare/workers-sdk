@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { seedRemoteHyperdriveBindings } from "@cloudflare/remote-bindings";
 import { createConnection } from "mysql2/promise";
 import dedent from "ts-dedent";
 import { afterAll, assert, beforeAll, describe, it } from "vitest";
@@ -71,13 +70,11 @@ interface TestConfig {
 		bindings: StartDevWorkerInput["bindings"];
 	};
 	/**
-	 * The Miniflare config (mostly bindings) for this test case. This will be merged with all other test cases to create a single Miniflare instance for all tests.
+	 * The Miniflare bindings installed while this test case is active.
 	 * @param connection The URL to the remote proxy session
-	 * @param hyperdriveConnectionStrings Edge credentials seeded for remote Hyperdrive bindings.
 	 */
 	miniflareConfig(
-		connection: RemoteProxyConnectionString | undefined,
-		hyperdriveConnectionStrings?: ReadonlyMap<string, string>
+		connection: RemoteProxyConnectionString | undefined
 	): MiniflareEnv;
 }
 
@@ -226,15 +223,16 @@ const testCases: TestCase[] = [
 						},
 					},
 				},
-				miniflareConfig: (connection, hyperdriveConnectionStrings) => ({
+				miniflareConfig: (connection) => ({
 					HYPERDRIVE_BINDING: {
 						type: "hyperdrive",
 						id,
 						dev: {
 							remote: remote(connection),
-							connectionString:
-								hyperdriveConnectionStrings?.get("HYPERDRIVE_BINDING") ??
-								"mysql://user:password@127.0.0.1:3306/database",
+							...(!connection && {
+								connectionString:
+									"mysql://user:password@127.0.0.1:3306/database",
+							}),
 						},
 					},
 				}),
@@ -713,6 +711,29 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 		const testConfigByTestCase = new Map<TestCase, TestConfig>();
 		const onTeardown = useTeardown({ timeout: testCases.length * 15_000 });
 		const activeTestCases = testCases.filter((testCase) => !testCase.skip);
+		function getMiniflareOptions(testConfig: TestConfig): MiniflareOptions {
+			return {
+				workers: [
+					{
+						config: {
+							name: "",
+							compatibilityDate: "2025-09-06",
+							manifest: createManifest(helper.tmpPath, [
+								"index.js",
+								...activeTestCases.map((testCase) => testCase.scriptPath),
+							]),
+							env: testConfig.miniflareConfig(
+								remoteProxySession.remoteProxyConnectionString
+							),
+						},
+						dev: {
+							remoteProxyConnectionString:
+								remoteProxySession.remoteProxyConnectionString,
+						},
+					},
+				],
+			};
+		}
 
 		beforeAll(async () => {
 			helper = new WranglerE2ETestHelper(onTeardown);
@@ -730,36 +751,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				testConfigs[0].remoteProxySessionConfig.bindings
 			);
 
-			// The proxy connection string is stable across `updateBindings` calls,
-			// so we can build the Miniflare instance once with all bindings merged.
-			// Each test script only touches its own binding (selected via the
-			// `x-test-module` header), so unused entries are dormant.
-			const env = Object.assign(
-				{},
-				...testConfigs.map((config) =>
-					config.miniflareConfig(remoteProxySession.remoteProxyConnectionString)
-				)
-			);
-			const miniflareConfig: MiniflareOptions = {
-				workers: [
-					{
-						config: {
-							name: "",
-							compatibilityDate: "2025-09-06",
-							manifest: createManifest(helper.tmpPath, [
-								"index.js",
-								...activeTestCases.map((testCase) => testCase.scriptPath),
-							]),
-							env,
-						},
-						dev: {
-							remoteProxyConnectionString:
-								remoteProxySession.remoteProxyConnectionString,
-						},
-					},
-				],
-			};
-			mf = new Miniflare(miniflareConfig);
+			mf = new Miniflare(getMiniflareOptions(testConfigs[0]));
 		}, activeTestCases.length * 15_000);
 
 		for (const testCase of activeTestCases) {
@@ -771,6 +763,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					await remoteProxySession.updateBindings(
 						testConfig.remoteProxySessionConfig.bindings
 					);
+					await mf.setOptions(getMiniflareOptions(testConfig));
 					const resp = await mf.dispatchFetch("http://example.com/", {
 						headers: { "x-test-module": testCase.scriptPath },
 					});
@@ -783,7 +776,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			);
 		}
 
-		it.for(["same-socket control", "seeded bridge"])(
+		it.for(["same-socket control", "session bridge"])(
 			"authenticates and queries through remote Hyperdrive (%s)",
 			async (mode, { expect }) => {
 				const hyperdriveCase = activeTestCases.find(
@@ -846,21 +839,31 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 						}
 						return;
 					}
-					const seededConnectionStrings = await seedRemoteHyperdriveBindings(
-						{ HYPERDRIVE_BINDING: { ...hyperdriveBinding, remote: true } },
-						session.remoteProxyConnectionString
+					await helper.seed({
+						"hyperdrive-query.jsonc": JSON.stringify({
+							name: "hyperdrive-query",
+							compatibility_date: "2026-09-01",
+							compatibility_flags: ["nodejs_compat"],
+							alias: {
+								"mysql2/promise": require.resolve("mysql2/promise"),
+							},
+						}),
+					});
+					await helper.run(
+						"wrangler deploy hyperdrive-query.js --config hyperdrive-query.jsonc --dry-run --outdir hyperdrive-query-output"
 					);
-					assert(seededConnectionStrings.has("HYPERDRIVE_BINDING"));
 					const queryOptions: MiniflareOptions = {
 						workers: [
 							{
 								config: {
 									name: "hyperdrive-query",
-									compatibilityDate: "2025-09-06",
-									manifest: createManifest(helper.tmpPath, ["hyperdrive.js"]),
+									compatibilityDate: "2026-09-01",
+									compatibilityFlags: ["nodejs_compat"],
+									manifest: createManifest(helper.tmpPath, [
+										"hyperdrive-query-output/hyperdrive-query.js",
+									]),
 									env: config.miniflareConfig(
-										session.remoteProxyConnectionString,
-										seededConnectionStrings
+										session.remoteProxyConnectionString
 									),
 								},
 								dev: {
@@ -898,9 +901,22 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 								await connection.end();
 							}
 						}
-						await Promise.all(Array.from({ length: 3 }, queryThroughBridge));
+						async function queryThroughWorker() {
+							const response = await queryMf.dispatchFetch("http://localhost/");
+							expect(response.status).toBe(200);
+							expect(await response.json()).toEqual([
+								{ remote_hyperdrive_probe: 1 },
+							]);
+						}
+						await Promise.all([
+							...Array.from({ length: 3 }, queryThroughBridge),
+							...Array.from({ length: 3 }, queryThroughWorker),
+						]);
 						await queryMf.setOptions(queryOptions);
-						await Promise.all(Array.from({ length: 3 }, queryThroughBridge));
+						await Promise.all([
+							...Array.from({ length: 3 }, queryThroughBridge),
+							...Array.from({ length: 3 }, queryThroughWorker),
+						]);
 					} finally {
 						await queryMf.dispose();
 					}

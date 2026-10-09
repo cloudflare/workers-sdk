@@ -1,3 +1,5 @@
+import assert from "node:assert";
+import { once } from "node:events";
 import net from "node:net";
 import path from "node:path";
 // The relay helper under unit test. It is the same implementation bundled into
@@ -808,18 +810,20 @@ function readFromSocket(
 	});
 }
 
-// The remote Hyperdrive path replaces the `connect()` model with a local TCP
-// bridge (`HyperdriveProxyController.createRemoteTcpBridge`): workerd's
-// `external.tcp` designator points at a Node `net.Server` on 127.0.0.1, which
-// relays each connection to the edge over a WebSocket into the real edge
-// binding via the same `handleConnect` path exercised above. A database client
-// (mysql2/pg) then speaks its wire protocol straight through the bridge.
 describe("Hyperdrive remote binding: local TCP bridge", () => {
 	test("relays bytes between a local TCP client and the edge binding", async ({
 		expect,
 	}) => {
-		// "Edge" running the real ProxyServerWorker, with a `HYPERDRIVE` binding
-		// wired to a connect-capable target that reflects the address and echoes.
+		const sockets = new Set<net.Socket>();
+		const database = net.createServer((socket) => {
+			sockets.add(socket);
+			socket.once("close", () => sockets.delete(socket));
+			socket.pipe(socket);
+		});
+		database.listen(0, "127.0.0.1");
+		await once(database, "listening");
+		const address = database.address();
+		assert(address !== null && typeof address !== "string");
 		const edge = new Miniflare({
 			workers: [
 				{
@@ -836,15 +840,15 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 								},
 							},
 						},
-						env: { HYPERDRIVE: { type: "worker", worker: "hd-target" } },
-					},
-				},
-				{
-					config: {
-						name: "hd-target",
-						compatibilityDate: COMPAT_DATE,
-						compatibilityFlags: ["experimental"],
-						manifest: singleModuleManifest(VPC_TARGET_SCRIPT),
+						env: {
+							HYPERDRIVE: {
+								type: "hyperdrive",
+								id: "db",
+								dev: {
+									connectionString: `mysql://user:password@127.0.0.1:${address.port}/database`,
+								},
+							},
+						},
 					},
 				},
 			],
@@ -855,6 +859,7 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 		const controller = new HyperdriveProxyController();
 		try {
 			const bridgePort = await controller.createRemoteTcpBridge({
+				bindingId: "db",
 				name: "hyperdrive:0:HYPERDRIVE",
 				bindingName: "HYPERDRIVE",
 				remoteProxyConnectionString: edgeUrl,
@@ -868,14 +873,19 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 				});
 				socket.write("PING\n");
 				const received = await readFromSocket(socket, "PING\n");
-				// The bridge sends a fixed connect address; the target reflects it.
-				expect(received).toContain("ADDR:hyperdrive.local:0|");
 				expect(received).toContain("PING\n");
 			} finally {
 				socket.destroy();
 			}
 		} finally {
 			controller.dispose();
+			await edge.dispose();
+			for (const socket of sockets) {
+				socket.destroy();
+			}
+			await new Promise<void>((resolve, reject) =>
+				database.close((error) => (error ? reject(error) : resolve()))
+			);
 		}
 	});
 });

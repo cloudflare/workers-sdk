@@ -412,8 +412,7 @@ export class LocalRuntimeController extends RuntimeController {
 						type: "devRegistryUpdate",
 						registry,
 					});
-				},
-				this.#remoteProxySessionData?.hyperdriveConnectionStrings
+				}
 			);
 			options.handleUncaughtError = this.dispatchRuntimeError;
 

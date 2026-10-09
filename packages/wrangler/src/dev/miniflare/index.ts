@@ -358,8 +358,7 @@ function pipelineEntry(
 }
 function hyperdriveEntry(
 	hyperdrive: CfHyperdrive,
-	remoteProxyConnectionString?: RemoteProxyConnectionString,
-	seededConnectionStrings?: ReadonlyMap<string, string>
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ):
 	| [string, string]
 	| [
@@ -369,33 +368,10 @@ function hyperdriveEntry(
 				remoteProxyConnectionString: RemoteProxyConnectionString;
 			},
 	  ] {
-	// Remote binding: tunnel the connection through the remote-bindings proxy to
-	// the edge Hyperdrive configuration. `localConnectionString` is still passed
-	// (seeded with the edge session's credentials, see
-	// `seedRemoteHyperdriveBindings`) so workerd can synthesise the binding's
-	// `connectionString`; miniflare uses `remoteProxyConnectionString` to stand
-	// up the local TCP bridge.
 	if (hyperdrive.remote && remoteProxyConnectionString) {
-		const seededConnectionString = seededConnectionStrings?.get(
-			hyperdrive.binding
-		);
-		if (seededConnectionString === undefined) {
-			// The edge session's credentials are what let a database client
-			// authenticate through the proxy; without them miniflare falls back to
-			// placeholder credentials (and a `mysql` scheme even for Postgres) and
-			// the login is rejected. They are prepared by
-			// `maybeStartOrUpdateRemoteProxySession`, so reaching this means the
-			// caller did not pass them on. Warn rather than throw so the session
-			// stays usable and fails visibly instead of silently.
-			logger.once.warn(
-				`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no edge credentials were provided for it, so connections through it will likely fail to authenticate.`
-			);
-		}
 		return [
 			hyperdrive.binding,
 			{
-				localConnectionString:
-					seededConnectionString ?? hyperdrive.localConnectionString,
 				remoteProxyConnectionString,
 			},
 		];
@@ -576,11 +552,7 @@ type MiniflareBindingsConfig = Pick<
 //  each plugin options schema and use those
 export function buildMiniflareBindingOptions(
 	config: MiniflareBindingsConfig,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	// Edge connection strings for remote Hyperdrive bindings, keyed by binding
-	// name (see `seedRemoteHyperdriveBindings`). Fetching them is async, so
-	// callers seed before calling this synchronous builder.
-	seededHyperdriveConnectionStrings?: ReadonlyMap<string, string>
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
 ): {
 	bindingOptions: WorkerOptionsBindings;
 	externalWorkers: V4WorkerOptions[];
@@ -976,11 +948,7 @@ export function buildMiniflareBindingOptions(
 		),
 		hyperdrives: Object.fromEntries(
 			hyperdrives.map((hyperdrive) =>
-				hyperdriveEntry(
-					hyperdrive,
-					remoteProxyConnectionString,
-					seededHyperdriveConnectionStrings
-				)
+				hyperdriveEntry(hyperdrive, remoteProxyConnectionString)
 			)
 		),
 		analyticsEngineDatasets: Object.fromEntries(
@@ -1249,10 +1217,7 @@ export async function buildMiniflareOptions(
 	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID,
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	onDevRegistryUpdate?: (registry: WorkerRegistry) => void,
-	// Edge credentials for remote Hyperdrive bindings, prepared once per remote
-	// proxy session (see `maybeStartOrUpdateRemoteProxySession`).
-	hyperdriveConnectionStrings?: ReadonlyMap<string, string>
+	onDevRegistryUpdate?: (registry: WorkerRegistry) => void
 ): Promise<Options> {
 	const upstream =
 		typeof config.localUpstream === "string"
@@ -1262,8 +1227,7 @@ export async function buildMiniflareOptions(
 	const { sourceOptions } = await buildSourceOptions(config);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
-		remoteProxyConnectionString,
-		hyperdriveConnectionStrings
+		remoteProxyConnectionString
 	);
 	if (bindingOptions.browserRendering && getBrowserRenderingHeadfulFromEnv()) {
 		bindingOptions.browserRendering.headful = true;

@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import { getBindingLocalSupport } from "@cloudflare/workers-utils";
 import { getRemoteBindingsAuthHook } from "./auth";
-import { seedRemoteHyperdriveBindings } from "./seed-hyperdrive-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { RemoteBindingsLogger } from "./logger";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
@@ -46,15 +45,6 @@ export type RemoteProxySessionData = {
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
 	auth?: AsyncHook<CfAccount>;
-	/**
-	 * Edge connection strings for remote Hyperdrive bindings, keyed by binding
-	 * name. The edge mints per-session credentials, so a database client has to
-	 * present *these* to authenticate through the proxy. Fetched here, once per
-	 * session, so that every consumer of a session — `wrangler dev`,
-	 * `getPlatformProxy()`, the Vite plugin, `vitest-pool-workers` — receives
-	 * usable credentials without repeating the setup.
-	 */
-	hyperdriveConnectionStrings: Map<string, string>;
 };
 
 export type RemoteBindingsContext = {
@@ -136,11 +126,6 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		session: remoteProxySession,
 		remoteBindings,
 		auth,
-		hyperdriveConnectionStrings: await seedRemoteHyperdriveBindings(
-			workerConfigObject.bindings,
-			remoteProxySession.remoteProxyConnectionString,
-			context.logger
-		),
 	};
 }
 

@@ -3,15 +3,10 @@ import {
 	maybeStartOrUpdateRemoteProxySession,
 	pickRemoteBindings,
 } from "./maybe-start-or-update-session";
-import { seedRemoteHyperdriveBindings } from "./seed-hyperdrive-bindings";
 import type { RemoteBindingsLogger } from "./logger";
 import type { RemoteProxySessionData } from "./maybe-start-or-update-session";
 import type { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { RemoteProxyConnectionString } from "miniflare";
-
-vi.mock("./seed-hyperdrive-bindings", () => ({
-	seedRemoteHyperdriveBindings: vi.fn(async () => new Map<string, string>()),
-}));
 
 function createTestLogger(): RemoteBindingsLogger {
 	return {
@@ -26,9 +21,7 @@ function createTestLogger(): RemoteBindingsLogger {
 }
 
 describe("maybeStartOrUpdateRemoteProxySession", () => {
-	it("retains the session and successful seeds after a partial seeding failure", async ({
-		expect,
-	}) => {
+	it("starts a session for remote Hyperdrive bindings", async ({ expect }) => {
 		const logger = createTestLogger();
 		const session = {
 			ready: Promise.resolve(),
@@ -42,10 +35,6 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			HEALTHY: { type: "hyperdrive" as const, id: "healthy", remote: true },
 			BROKEN: { type: "hyperdrive" as const, id: "broken", remote: true },
 		};
-		const seeded = new Map([
-			["HEALTHY", "mysql://user:password@host:3306/healthy"],
-		]);
-		vi.mocked(seedRemoteHyperdriveBindings).mockResolvedValueOnce(seeded);
 		const startSession = vi
 			.fn<typeof startRemoteProxySession>()
 			.mockResolvedValue(session);
@@ -57,12 +46,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			startSession
 		);
 		expect(result?.session).toBe(session);
-		expect(result?.hyperdriveConnectionStrings).toBe(seeded);
-		expect(seedRemoteHyperdriveBindings).toHaveBeenCalledWith(
-			bindings,
-			session.remoteProxyConnectionString,
-			logger
-		);
+		expect(result?.remoteBindings).toEqual(bindings);
 		expect(session.dispose).not.toHaveBeenCalled();
 	});
 
@@ -102,7 +86,6 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 					remote: true,
 				},
 			},
-			hyperdriveConnectionStrings: new Map(),
 		};
 
 		const result = await maybeStartOrUpdateRemoteProxySession(

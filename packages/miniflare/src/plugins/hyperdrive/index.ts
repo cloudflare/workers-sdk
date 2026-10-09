@@ -29,10 +29,8 @@ export function getHyperdriveServiceName(
 // Placeholder connection string used to synthesise the local Hyperdrive binding
 // when a remote binding has no local connection string. workerd still needs a
 // scheme/database/user/password to build the magic `connectionString` it exposes
-// to the Worker; the real origin lives at the edge. In normal `wrangler dev`
-// usage the caller seeds `dev.connectionString` with the edge session's
-// credentials before this runs (so a database client authenticates through the
-// proxy), and this placeholder is only reached when no seeding has occurred.
+// to the Worker; getServices replaces these fields with credentials from the
+// live remote session before installing the runtime configuration.
 const REMOTE_PLACEHOLDER_URL = new URL(
 	"mysql://user:password@hyperdrive.local:3306/database"
 );
@@ -51,6 +49,7 @@ function getHyperdrives(
 	name: string,
 	url: URL,
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	id: string,
 ][] {
 	return getEnvBindingsOfType(config, "hyperdrive").map(([name, binding]) => {
 		const remoteProxyConnectionString = getRemoteProxyConnectionString(
@@ -61,7 +60,7 @@ function getHyperdrives(
 			remoteProxyConnectionString && binding.dev.connectionString === undefined
 				? REMOTE_PLACEHOLDER_URL
 				: HyperdriveSchema.parse(binding.dev.connectionString);
-		return [name, url, remoteProxyConnectionString];
+		return [name, url, remoteProxyConnectionString, binding.id];
 	});
 }
 
@@ -179,7 +178,11 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 								getHyperdriveServiceName(workerIndex, name)
 							)
 						: undefined;
-					const nodeUrl = new URL(url);
+					const nodeUrl = new URL(
+						hyperdriveProxyController.getRemoteConnectionString(
+							getHyperdriveServiceName(workerIndex, name)
+						) ?? url
+					);
 					if (bridgePort !== undefined) {
 						nodeUrl.hostname = "127.0.0.1";
 						nodeUrl.port = String(bridgePort);
@@ -209,9 +212,14 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 			)
 		);
 	},
-	async getServices({ options, workerIndex, hyperdriveProxyController }) {
+	async getServices({
+		options,
+		workerIndex,
+		workerBindings,
+		hyperdriveProxyController,
+	}) {
 		const services = [];
-		for (const [name, url, remoteProxyConnectionString] of getHyperdrives(
+		for (const [name, url, remoteProxyConnectionString, id] of getHyperdrives(
 			options.config,
 			options.dev
 		)) {
@@ -224,8 +232,28 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 					await hyperdriveProxyController.createRemoteTcpBridge({
 						name: getHyperdriveServiceName(workerIndex, name),
 						bindingName: name,
+						bindingId: id,
 						remoteProxyConnectionString,
 					});
+				const connectionString =
+					hyperdriveProxyController.getRemoteConnectionString(
+						getHyperdriveServiceName(workerIndex, name)
+					);
+				const binding = workerBindings.find((binding) => binding.name === name);
+				if (
+					connectionString &&
+					binding &&
+					"hyperdrive" in binding &&
+					binding.hyperdrive
+				) {
+					const remoteUrl = HyperdriveSchema.parse(connectionString);
+					binding.hyperdrive.database = decodeURIComponent(
+						remoteUrl.pathname.replace(/^\//, "")
+					);
+					binding.hyperdrive.user = decodeURIComponent(remoteUrl.username);
+					binding.hyperdrive.password = decodeURIComponent(remoteUrl.password);
+					binding.hyperdrive.scheme = remoteUrl.protocol.replace(":", "");
+				}
 				services.push({
 					name: getHyperdriveServiceName(workerIndex, name),
 					external: {
