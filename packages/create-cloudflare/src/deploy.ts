@@ -7,6 +7,7 @@ import {
 	quoteShellArgs,
 	runCommand,
 } from "@cloudflare/cli-shared-helpers/command";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { readFile } from "helpers/files";
@@ -146,7 +147,10 @@ export const runDeploy = async (ctx: C3Context) => {
 		} else {
 			throw new Error("Failed to find deployment url.");
 		}
-	} catch {
+	} catch (e) {
+		if (e instanceof CancelError) {
+			throw e;
+		}
 		throw new Error("Failed to find deployment url.");
 	}
 

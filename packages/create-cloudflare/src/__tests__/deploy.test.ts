@@ -1,4 +1,5 @@
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { readFile } from "helpers/files";
@@ -196,6 +197,19 @@ describe("deploy helpers", async () => {
 			await expect(runDeploy(ctx)).rejects.toThrow(
 				"Failed to find deployment url."
 			);
+		});
+
+		test("cancelled cf deployment url lookup", async ({ expect }) => {
+			const ctx = createTestContext();
+			ctx.account = { id: "test1234", name: "Test Account" };
+			vi.mocked(usesCfCli).mockReturnValue(true);
+			mockInsideGitRepo(false);
+			vi.mocked(runCommand).mockResolvedValueOnce("");
+			vi.mocked(getDeploymentUrl).mockRejectedValueOnce(
+				new CancelError("Command cancelled")
+			);
+
+			await expect(runDeploy(ctx)).rejects.toThrow(CancelError);
 		});
 
 		test("no account in ctx", async ({ expect }) => {
