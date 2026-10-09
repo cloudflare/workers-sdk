@@ -590,7 +590,10 @@ export class HyperdriveProxyController {
 		// negotiation, or a live DB connection) could block dispose forever.
 		// Snapshot the keys before iterating: `#teardownServer` deletes from
 		// `#servers` as it goes.
-		for (const key of [...this.#servers.keys()]) {
+		for (const key of new Set([
+			...this.#servers.keys(),
+			...this.#connections.keys(),
+		])) {
 			this.#teardownServer(key);
 		}
 		this.#remoteBridgePorts.clear();
