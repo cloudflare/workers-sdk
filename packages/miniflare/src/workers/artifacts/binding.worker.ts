@@ -797,7 +797,6 @@ async function handleGitRequest(
 		return response;
 	}
 
-	const body = await response.arrayBuffer();
 	if (response.ok) {
 		try {
 			await state.syncAfterPush(repository.name, previousRefs);
@@ -805,11 +804,9 @@ async function handleGitRequest(
 			// Git has already accepted the push; metadata bookkeeping must not fail the client request.
 		}
 	}
-	return new Response(body, {
-		status: response.status,
-		statusText: response.statusText,
-		headers: response.headers,
-	});
+	// Forward the Git response stream instead of buffering an unbounded pack
+	// response in the Durable Object isolate.
+	return response;
 }
 
 async function authorize(
@@ -1197,9 +1194,19 @@ function contentType(path: string, bytes: Uint8Array): string {
 	if (extension && known[extension]) {
 		return known[extension];
 	}
-	return bytes.subarray(0, 8192).includes(0)
-		? "application/octet-stream"
-		: "text/plain;charset=utf-8";
+	const sample = bytes.subarray(0, 8192);
+	if (sample.includes(0)) {
+		return "application/octet-stream";
+	}
+	try {
+		// A sample may stop midway through a valid multibyte character.
+		new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(sample, {
+			stream: sample.length < bytes.length,
+		});
+		return "text/plain;charset=utf-8";
+	} catch {
+		return "application/octet-stream";
+	}
 }
 
 function decodeBase64(value: string): Uint8Array<ArrayBuffer> {
