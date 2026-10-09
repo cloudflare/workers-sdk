@@ -5,6 +5,7 @@
 
 import "cloudflare/shims/web";
 import process from "node:process";
+import { generateASSETSBinding } from "@cloudflare/deploy-helpers/pages-assets";
 import { FatalError, splitSqlQuery } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {
@@ -125,25 +126,16 @@ export function unstable_splitSqlQuery(sql: string): string[] {
 	return splitSqlQuery(sql);
 }
 
-// `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
-// `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
-// augmentations that pollute the `import`-site's typing environment.
-//
 export interface Unstable_ASSETSBindingsOptions {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
 	signal?: AbortSignal;
 }
-export const unstable_generateASSETSBinding: (
-	opts: Unstable_ASSETSBindingsOptions
-) => (request: Request) => Promise<Response> =
-	/* eslint-disable-next-line @typescript-eslint/no-require-imports --
-	   We `require` instead of `import`ing here to avoid polluting the main
-	   `wrangler` TypeScript project with the `global` augmentations. This
-	   relies on the fact that `require` is untyped.
-	*/
-	require("./miniflare-cli/assets").default;
+export const unstable_generateASSETSBinding =
+	generateASSETSBinding as unknown as (
+		opts: Unstable_ASSETSBindingsOptions
+	) => (request: Request) => Promise<Response>;
 
 export {
 	defaultWranglerConfig as unstable_defaultWranglerConfig,

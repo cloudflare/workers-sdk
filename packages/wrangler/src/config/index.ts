@@ -6,6 +6,7 @@ import {
 	FatalError,
 	isPagesConfig,
 	normalizeAndValidateConfig,
+	readConfig as sharedReadConfig,
 	UserError,
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
@@ -157,43 +158,12 @@ export function readConfig(
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
 ): Config {
-	const {
-		rawConfig,
-		configPath,
-		userConfigPath,
-		deployConfigPath,
-		redirected,
-	} = experimental_readRawConfig(args, options);
-	if (redirected) {
-		assert(configPath, "Redirected config found without a configPath");
-		assert(
-			deployConfigPath,
-			"Redirected config found without a deployConfigPath"
-		);
-		logger.info(dedent`
-				Using redirected Wrangler configuration.
-				 - Configuration being used: "${path.relative(".", configPath)}"
-				 - Original user's configuration: "${userConfigPath ? path.relative(".", userConfigPath) : "<no user config found>"}"
-				 - Deploy configuration file: "${path.relative(".", deployConfigPath)}"
-			`);
-	}
-
-	const { config, diagnostics } = normalizeAndValidateConfig(
-		rawConfig,
-		configPath,
-		userConfigPath,
-		args,
-		options.preserveOriginalMain
-	);
-
-	void logWarningsWithUpgradeHint(diagnostics, options?.hideWarnings);
-	if (diagnostics.hasErrors()) {
-		throw new UserError(diagnostics.renderErrors(), {
-			telemetryMessage: "config wrangler validation failed",
-		});
-	}
-
-	return config;
+	return sharedReadConfig(args, {
+		...options,
+		logger,
+		logWarnings: (diagnostics) =>
+			void logWarningsWithUpgradeHint(diagnostics, options.hideWarnings),
+	});
 }
 
 export function readPagesConfig(

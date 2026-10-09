@@ -20,10 +20,11 @@ import { logger, LOGGER_LEVELS } from "./logger";
 import type { KeyValue } from "./kv/helpers";
 import type {
 	ComplianceConfig,
-	Config,
 	LegacyAssetPaths,
 } from "@cloudflare/workers-utils";
 import type { XXHashAPI } from "xxhash-wasm";
+
+export { getSiteAssetPaths } from "@cloudflare/deploy-helpers/miniflare-options";
 
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = new Set(["node_modules"]);
@@ -443,37 +444,4 @@ function validateAssetKey(assetKey: string) {
  */
 function urlSafe(filePath: string): string {
 	return filePath.replace(/\\/g, "/");
-}
-
-/**
- * Get an object that describes what site assets to upload, if any.
- *
- * Uses the args (passed from the command line) if available,
- * falling back to those defined in the config.
- *
- * (This function corresponds to --site/config.site)
- *
- */
-export function getSiteAssetPaths(
-	config: Config,
-	assetDirectory?: string,
-	includePatterns = config.site?.include ?? [],
-	excludePatterns = config.site?.exclude ?? []
-): LegacyAssetPaths | undefined {
-	const baseDirectory = assetDirectory
-		? process.cwd()
-		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
-
-	assetDirectory ??= config.site?.bucket;
-
-	if (assetDirectory) {
-		return {
-			baseDirectory,
-			assetDirectory,
-			includePatterns,
-			excludePatterns,
-		};
-	} else {
-		return undefined;
-	}
 }
