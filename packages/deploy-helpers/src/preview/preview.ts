@@ -695,6 +695,7 @@ async function assemblePreviewDeploymentSettings(
 		assetsOptions?: PreviewAssetsOptions;
 		secrets?: Record<string, string>;
 		cliVars?: Record<string, string>;
+		isNewPreview: boolean;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -762,17 +763,18 @@ async function assemblePreviewDeploymentSettings(
 			...(options.tag && { "workers/tag": options.tag }),
 		};
 	}
-	if (config.migrations.length > 0) {
-		let latestDeploymentMigrationTag: string | undefined;
+	// The latest deployment holds the migration tag and the secrets that were
+	// set on the Preview. A new Preview has no deployment to take secrets from.
+	let latestDeployment: DeploymentResource | undefined;
+	if (config.migrations.length > 0 || !options.isNewPreview) {
 		try {
-			const latestDeployment = await getPreviewDeployment(
+			latestDeployment = await getPreviewDeployment(
 				config,
 				accountId,
 				workerName,
 				previewIdentifier,
 				"latest"
 			);
-			latestDeploymentMigrationTag = latestDeployment.migration_tag;
 		} catch (error) {
 			if (
 				!(
@@ -785,10 +787,12 @@ async function assemblePreviewDeploymentSettings(
 				throw error;
 			}
 		}
+	}
+	if (config.migrations.length > 0) {
 		const migrations = getPreviewMigrationsToUpload(
 			workerName,
 			config,
-			latestDeploymentMigrationTag
+			latestDeployment?.migration_tag
 		);
 		if (migrations) {
 			request.migrations = migrations;
@@ -852,6 +856,15 @@ async function assemblePreviewDeploymentSettings(
 		options.secrets ?? {}
 	)) {
 		env[secretName] = { type: "secret_text", text: secretValue };
+	}
+
+	// A new deployment replaces the whole environment, so secrets set on the
+	// Preview (e.g. with `wrangler preview secret put`) have to be inherited
+	// explicitly, otherwise this deployment would drop them.
+	for (const [name, binding] of Object.entries(latestDeployment?.env ?? {})) {
+		if (binding.type === "secret_text" && !Object.hasOwn(env, name)) {
+			env[name] = { type: "inherit" };
+		}
 	}
 
 	if (Object.keys(env).length > 0) {
@@ -1176,6 +1189,7 @@ async function runPreview(
 			assetsOptions,
 			secrets,
 			cliVars: args.cliVars,
+			isNewPreview,
 		}
 	);
 	const deployment = await createPreviewDeployment(

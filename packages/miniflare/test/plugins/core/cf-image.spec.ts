@@ -23,6 +23,7 @@ describe("cf.image local transforms", () => {
 	let mf: Miniflare;
 	let sourcePng: Buffer;
 	let sourceAvif: Buffer;
+	let sourceJpeg: Buffer;
 	let seenVia: (string | null)[] = [];
 
 	beforeAll(async () => {
@@ -51,6 +52,11 @@ describe("cf.image local transforms", () => {
 			.avif()
 			.toBuffer();
 
+		sourceJpeg = await sharp(sourcePng)
+			.jpeg()
+			.withMetadata({ orientation: 6 })
+			.toBuffer();
+
 		mf = new Miniflare({
 			workers: [
 				{
@@ -71,6 +77,11 @@ describe("cf.image local transforms", () => {
 								if (url.pathname === "/not-an-image") {
 									return new Response("this is definitely not an image", {
 										headers: { "content-type": "image/png" },
+									});
+								}
+								if (url.pathname === "/img.jpg") {
+									return new Response(sourceJpeg, {
+										headers: { "content-type": "image/jpeg" },
 									});
 								}
 								if (url.pathname === "/img.avif") {
@@ -103,6 +114,39 @@ describe("cf.image local transforms", () => {
 		const body = Buffer.from(await res.arrayBuffer());
 		return { res, body };
 	}
+
+	test("applies EXIF orientation before resizing", async ({ expect }) => {
+		expect((await sharp(sourceJpeg).metadata()).orientation).toBe(6);
+		const { res, body } = await transform(
+			{ width: 50, format: "png" },
+			"/img.jpg"
+		);
+		expect(res.status).toBe(200);
+		const metadata = await sharp(body).metadata();
+		expect(metadata.width).toBe(50);
+		expect(metadata.height).toBe(100);
+	});
+
+	test("format:json applies EXIF orientation before resizing", async ({
+		expect,
+	}) => {
+		expect((await sharp(sourceJpeg).metadata()).orientation).toBe(6);
+		const { res, body } = await transform(
+			{ width: 50, format: "json" },
+			"/img.jpg"
+		);
+		expect(res.status).toBe(200);
+		expect(JSON.parse(body.toString())).toEqual({
+			width: 50,
+			height: 100,
+			original: {
+				file_size: sourceJpeg.length,
+				width: 200,
+				height: 100,
+				format: "image/jpeg",
+			},
+		});
+	});
 
 	test("resizes with fit:cover to exact dimensions", async ({ expect }) => {
 		const { res, body } = await transform({

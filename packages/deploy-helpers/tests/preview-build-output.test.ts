@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 	createPreviewParentWorker: vi.fn(),
 	editPreview: vi.fn(),
 	getPreview: vi.fn(),
+	getPreviewDeployment: vi.fn(),
 	syncAssets: vi.fn(),
 }));
 
@@ -29,6 +30,7 @@ vi.mock("../src/preview/api", async (importOriginal) => ({
 	createPreviewParentWorker: mocks.createPreviewParentWorker,
 	editPreview: mocks.editPreview,
 	getPreview: mocks.getPreview,
+	getPreviewDeployment: mocks.getPreviewDeployment,
 }));
 
 vi.mock("../src/deploy/helpers/assets", () => ({
@@ -102,6 +104,7 @@ describe("previewBuildOutput", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getPreview.mockResolvedValue(previewResource);
+		mocks.getPreviewDeployment.mockResolvedValue(deploymentResource);
 		mocks.editPreview.mockResolvedValue(previewResource);
 		mocks.createPreview.mockResolvedValue(previewResource);
 		mocks.createPreviewParentWorker.mockResolvedValue(undefined);
@@ -632,6 +635,47 @@ describe("previewBuildOutput", () => {
 
 		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
 		expect(request).not.toHaveProperty("env");
+	});
+
+	it("keeps secrets from the latest deployment of an existing Preview", async ({
+		expect,
+	}) => {
+		mocks.getPreviewDeployment.mockResolvedValue({
+			...deploymentResource,
+			env: {
+				API_KEY: { type: "secret_text" },
+				MODE: { type: "plain_text", text: "old" },
+			},
+		});
+
+		await uploadPreview(buildOutputConfig());
+
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request.env).toEqual({ API_KEY: { type: "inherit" } });
+	});
+
+	it("does not look up the latest deployment of a new Preview", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValue(
+			Object.assign(new Error("Preview not found"), { code: 10025 })
+		);
+
+		await uploadPreview(buildOutputConfig());
+
+		expect(mocks.createPreview).toHaveBeenCalled();
+		expect(mocks.getPreviewDeployment).not.toHaveBeenCalled();
+	});
+
+	it("does not deploy when the latest deployment cannot be read", async ({
+		expect,
+	}) => {
+		mocks.getPreviewDeployment.mockRejectedValue(new Error("Internal error"));
+
+		await expect(uploadPreview(buildOutputConfig())).rejects.toThrow(
+			"Internal error"
+		);
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
 	});
 
 	it.for<[string, ParsedOutputRootConfig | undefined]>([

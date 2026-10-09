@@ -24,6 +24,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - Custom `scripts/build.mjs` bundles `src/index.ts` as CJS → `dist/src/index.js`
 - Also compiles ~30 embedded worker scripts via `worker:...` virtual import scheme — each triggers a nested esbuild sub-build producing standalone ESM worker scripts
 - Build outputs: `dist/`, `worker-metafiles/`
+- Release builds set `SOURCEMAPS=false` to omit package source maps; ordinary builds keep them for debugging. Non-watch builds clean `dist/` before compiling so maps from an earlier build cannot leak into a release. This does not disable user Worker source maps.
 
 ## Lint Status (Transitional)
 

@@ -241,9 +241,11 @@ export type CommandDefinition<
 
 		/**
 		 * Whether this command can authenticate with a temporary preview account
-		 * (via the hidden `--temporary` flag) when no real credentials are available.
-		 * Only enable this for commands whose API calls are covered by the temporary
-		 * preview-account deploy token (Workers, KV, D1, Hyperdrive, Queues, SSL/Certs).
+		 * (via the hidden `--temporary` and `--event-code` flags) when no real
+		 * credentials are available. Only enable this for commands whose API calls
+		 * are covered by the temporary preview-account deploy token (Workers, KV,
+		 * D1, Hyperdrive, Queues, SSL/Certs). R2 and Containers commands are also
+		 * enabled, but only work on event accounts created with `--event-code`.
 		 * @default false
 		 */
 		supportTemporary?: boolean;
