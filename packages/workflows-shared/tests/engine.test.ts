@@ -789,7 +789,9 @@ describe("Engine", () => {
 	describe("step timeout timers", () => {
 		it(
 			"cancels completed step timeout timers so sequential steps stay under the active-timeout quota",
-			{ timeout: 180_000 },
+			// Windows needs room for all 5,100 real callbacks; a timeout followed
+			// by replaying stored results previously hid incomplete attempts.
+			{ timeout: 300_000 },
 			async (context) => {
 				const { expect } = context;
 				const { attempt, start, progress } = trackTimerQuotaTest(context);
@@ -840,7 +842,9 @@ describe("Engine", () => {
 
 		it(
 			"cancels failed step timeout timers so sequential try/caught steps stay under the active-timeout quota",
-			{ timeout: 180_000 },
+			// Windows needs room for all 5,100 real callbacks; a timeout followed
+			// by replaying stored results previously hid incomplete attempts.
+			{ timeout: 300_000 },
 			async (context) => {
 				const { expect } = context;
 				const { attempt, start, progress } = trackTimerQuotaTest(context);
