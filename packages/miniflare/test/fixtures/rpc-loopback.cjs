@@ -1,10 +1,8 @@
 const assert = require("node:assert/strict");
-const { Miniflare, Log, LogLevel, Response } = require(
-	process.env.MINIFLARE_PATH
-);
+const { Miniflare, Log, LogLevel } = require(process.env.MINIFLARE_PATH);
 
 async function main() {
-	const miniflare = new Miniflare({
+	const options = {
 		log: new Log(LogLevel.ERROR),
 		workers: [
 			{
@@ -26,11 +24,6 @@ export class MyWorkflow extends WorkflowEntrypoint {
 }
 
 export default class Api extends WorkerEntrypoint {
-	async callNode() {
-		const response = await this.env.NODE_CALLBACK.fetch("http://placeholder/");
-		return response.text();
-	}
-
 	async startWorkflow(id) {
 		const instance = await this.env.MY_WORKFLOW.create({ id });
 		return instance.id;
@@ -46,12 +39,6 @@ export default class Api extends WorkerEntrypoint {
 						},
 					},
 					env: {
-						NODE_CALLBACK: {
-							type: "fetcher",
-							handler() {
-								return new Response("callback");
-							},
-						},
 						MY_WORKFLOW: {
 							type: "workflow",
 							name: "my-workflow",
@@ -62,24 +49,24 @@ export default class Api extends WorkerEntrypoint {
 				},
 			},
 		],
-	});
+	};
+	const miniflare = new Miniflare(options);
 	try {
 		const worker = await miniflare.getWorker("rpc-worker");
-		const method = process.argv[2];
-		assert(method === "callNode" || method === "startWorkflow");
 		process.stdout.write("calling RPC\n");
-		const firstCall = worker[method]();
-		assert(firstCall instanceof Promise);
-		const result = await firstCall;
-		if (method === "callNode") {
-			assert.equal(result, "callback");
-			assert.equal(await worker.callNode(), "callback");
-		} else {
-			assert.match(result, /^[0-9a-f-]{36}$/);
-			assert.equal(await worker.startWorkflow("rpc-instance"), "rpc-instance");
-			await worker.deleteWorkflow("rpc-instance");
-			assert.equal(await worker.startWorkflow("rpc-instance"), "rpc-instance");
-		}
+		const result = worker.startWorkflow();
+		assert.equal(typeof result, "string");
+		assert.match(result, /^[0-9a-f-]{36}$/);
+		assert.equal(worker.startWorkflow("rpc-instance"), "rpc-instance");
+		assert.equal(worker.deleteWorkflow("rpc-instance"), undefined);
+		assert.equal(worker.startWorkflow("rpc-instance"), "rpc-instance");
+		await miniflare.setOptions(options);
+		assert.throws(
+			() => worker.startWorkflow(),
+			/Attempted to use poisoned stub/
+		);
+		const replacement = await miniflare.getWorker("rpc-worker");
+		assert.equal(replacement.startWorkflow("after-reload"), "after-reload");
 		process.stdout.write("RPC completed\n");
 	} finally {
 		await miniflare.dispose();

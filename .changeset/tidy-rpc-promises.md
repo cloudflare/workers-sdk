@@ -2,6 +2,6 @@
 "miniflare": patch
 ---
 
-Fix Node.js RPC calls deadlocking when a Worker calls back into Node.js
+Fix Workflow creation deadlocking when called through a synchronous Node.js RPC proxy
 
-The first call to a Worker RPC method could block the Node.js event loop while waiting for the Worker to finish, preventing Node.js-backed bindings from responding. This also affected Workflow creation through Wrangler's `createTestHarness().getWorker().getExport()` API. RPC results now use the existing asynchronous promise bridge while preserving synchronous native APIs, returned RPC callables, lazy Secrets Store and Flagship admin factories, and Workflow storage deletion safeguards.
+Workflow storage bookkeeping now runs on a dedicated Node.js worker thread, so it can respond while the calling thread waits for an RPC result. This fixes Workflow creation through Wrangler's `createTestHarness().getWorker().getExport()` API without changing RPC return values, factories, or errors exposed by Miniflare and `getPlatformProxy()`. Workflow deletion continues to serialize pending deletions and wait for SQLite cleanup before reusing an instance ID.

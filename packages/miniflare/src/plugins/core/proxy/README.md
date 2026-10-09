@@ -26,13 +26,6 @@ and serialise the result. If a function returns a `Promise` once, all future
 calls will send asynchronous `CALL` operations instead, that resolve the
 `Promise` without an additional round trip.
 
-Worker RPC methods return `RpcPromise`s, which the proxy normalises to native
-`Promise`s before using this asynchronous bridge. Returned RPC callables and
-Miniflare's private Secrets Store and Flagship admin factories retain their
-existing synchronous call path. The admin accessors return the original factories
-without invoking or caching their results, preserving lazy creation, fresh admin
-objects on each call, and proxy invalidation after `setOptions()` or `dispose()`.
-
 If the function call had `ReadableStream` arguments, the first will be sent
 unbuffered after the rest of the arguments. All function calls with
 `ReadableStream` or `Blob` arguments are assumed to be asynchronous. This

@@ -8,7 +8,6 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { ReadableStream } from "node:stream/web";
-import { setTimeout as wait } from "node:timers/promises";
 import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
@@ -97,6 +96,10 @@ import {
 	cfImageLocalFetcher,
 	imagesLocalFetcher,
 } from "./plugins/images/fetcher";
+import {
+	SERVICE_WORKFLOW_STORAGE,
+	WorkflowStorageServer,
+} from "./plugins/workflows/storage";
 import {
 	HttpOptions_Style,
 	kInspectorSocket,
@@ -766,12 +769,6 @@ export function _initialiseInstanceRegistry() {
 	return (maybeInstanceRegistry = new Map());
 }
 
-type PendingWorkflowStorageDelete = {
-	promise: Promise<void>;
-	failed: boolean;
-	deleted: boolean;
-};
-
 /** Selects the Worker TCP trigger used by `Miniflare#dispatchConnect()`. */
 export interface DispatchConnectOptions {
 	/** Defaults to the entrypoint Worker. */
@@ -814,14 +811,6 @@ function closeDatagramSocket(socket: dgram.Socket): void {
 	}
 }
 
-const WORKFLOW_STORAGE_EXTENSIONS = [".sqlite", ".sqlite-shm", ".sqlite-wal"];
-const WORKFLOW_STORAGE_DELETE_RETRY_INTERVAL_MS = 50;
-const WORKFLOW_STORAGE_DELETE_TIMEOUT_MS = 2_000;
-const WORKFLOW_STORAGE_DELETE_ATTEMPTS =
-	WORKFLOW_STORAGE_DELETE_TIMEOUT_MS /
-		WORKFLOW_STORAGE_DELETE_RETRY_INTERVAL_MS +
-	1;
-
 export class Miniflare {
 	#previousSharedOpts?: ParsedInstanceOptions;
 	#previousWorkerOpts?: ParsedWorkerOptions[];
@@ -840,10 +829,7 @@ export class Miniflare {
 		string,
 		{ browserProcess: Process; wsEndpoint: string }
 	> = new Map();
-	#pendingWorkflowStorageDeletes = new Map<
-		string,
-		PendingWorkflowStorageDelete
-	>();
+	#workflowStorageServer?: WorkflowStorageServer;
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1336,293 +1322,23 @@ export class Miniflare {
 		}
 	}
 
-	/**
-	 * Lists Workflow Engine DO instances by reading filenames from the
-	 * persistence directory. Same pattern as #handleLoopbackDOStorageRequest
-	 * but also includes mtimeMs for sorting by most recently modified.
-	 *
-	 * @param url in format: /core/workflow-storage/<workflowName>
-	 * @returns [{ name: string, type: "file" | "directory", mtimeMs: number }, ...]
-	 */
-	async #handleLoopbackWorkflowStorageRequest(url: URL): Promise<Response> {
-		const workflowName = decodeURIComponent(
-			url.pathname.slice("/core/workflow-storage/".length)
-		);
-		assert(workflowName, "Workflow name is required");
-
-		const workflowsPersistPath = getPersistPath(
+	/** Keeps Workflow filesystem requests independent of the Node RPC caller. */
+	async #getWorkflowStorageServer(): Promise<{
+		storage: WorkflowStorageServer;
+		address: string;
+	}> {
+		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
 			this.#sharedOpts.isolatedResourcePersistencePath
 		);
-
-		// Engine DOs are stored under: <persistPath>/miniflare-workflows-<name>/<hexId>.sqlite
-		const uniqueKey = `miniflare-workflows-${workflowName}`;
-		const namespacePath = path.join(workflowsPersistPath, uniqueKey);
-
-		// Prevent directory traversal
-		if (
-			!namespacePath.startsWith(path.resolve(workflowsPersistPath) + path.sep)
-		) {
-			return new Response("Invalid workflow name", { status: 400 });
-		}
-
-		try {
-			const dirEntries = await fs.promises.readdir(namespacePath, {
-				withFileTypes: true,
-			});
-			// Include birthtimeMs so the handler can sort by file creation time
-			// without resolving Engine DO metadata for every instance.
-			const entries = await Promise.all(
-				dirEntries.map(async (entry) => {
-					let birthtimeMs = 0;
-					if (entry.isFile()) {
-						try {
-							const stat = await fs.promises.stat(
-								path.join(namespacePath, entry.name)
-							);
-							birthtimeMs = stat.birthtimeMs;
-						} catch {
-							// Ignore stat errors
-						}
-					}
-					return {
-						name: entry.name,
-						type: entry.isDirectory()
-							? ("directory" as const)
-							: ("file" as const),
-						birthtimeMs,
-					};
-				})
-			);
-			return Response.json(entries);
-		} catch (e) {
-			if (isFileNotFoundError(e)) {
-				return new Response("Not Found", { status: 404 });
-			}
-			throw e;
-		}
-	}
-
-	/** Removes an instance's SQLite files, retrying transient Windows locks. */
-	async #deleteWorkflowStorageFiles(
-		instancePath: string,
-		pendingDelete: PendingWorkflowStorageDelete
-	): Promise<void> {
-		let firstError: unknown;
-		let failed = false;
-		for (const ext of WORKFLOW_STORAGE_EXTENSIONS) {
-			const filePath = `${instancePath}${ext}`;
-			for (
-				let attempt = 0;
-				attempt < WORKFLOW_STORAGE_DELETE_ATTEMPTS;
-				attempt++
-			) {
-				try {
-					await fs.promises.unlink(filePath);
-					if (ext === ".sqlite") {
-						pendingDelete.deleted = true;
-					}
-					break;
-				} catch (error) {
-					if (isFileNotFoundError(error)) {
-						break;
-					}
-					const code =
-						typeof error === "object" && error !== null && "code" in error
-							? error.code
-							: undefined;
-					if (
-						(code !== "EBUSY" && code !== "EPERM") ||
-						attempt === WORKFLOW_STORAGE_DELETE_ATTEMPTS - 1
-					) {
-						if (!failed) {
-							firstError = error;
-							failed = true;
-						}
-						break;
-					}
-					await wait(WORKFLOW_STORAGE_DELETE_RETRY_INTERVAL_MS);
-				}
-			}
-		}
-		if (failed) {
-			throw firstError;
-		}
-	}
-
-	/** Runs a storage deletion after any earlier deletion for the same instance. */
-	async #runWorkflowStorageDelete(
-		instancePath: string,
-		defer: boolean,
-		pendingDelete: PendingWorkflowStorageDelete,
-		previousDelete?: PendingWorkflowStorageDelete
-	): Promise<void> {
-		await previousDelete?.promise;
-		pendingDelete.deleted = previousDelete?.deleted ?? false;
-		if (defer) {
-			await wait(100);
-		}
-		try {
-			await this.#deleteWorkflowStorageFiles(instancePath, pendingDelete);
-		} catch (error) {
-			pendingDelete.failed = true;
-			this.#log.error(
-				error instanceof Error ? error : new Error(String(error))
-			);
-		}
-		if (
-			!pendingDelete.failed &&
-			this.#pendingWorkflowStorageDeletes.get(instancePath) === pendingDelete
-		) {
-			this.#pendingWorkflowStorageDeletes.delete(instancePath);
-		}
-	}
-
-	/** Serializes storage deletions for one instance path. */
-	#queueWorkflowStorageDelete(
-		instancePath: string,
-		defer: boolean
-	): PendingWorkflowStorageDelete {
-		const previousDelete =
-			this.#pendingWorkflowStorageDeletes.get(instancePath);
-		const pendingDelete: PendingWorkflowStorageDelete = {
-			deleted: false,
-			failed: false,
-			promise: Promise.resolve(),
-		};
-		this.#pendingWorkflowStorageDeletes.set(instancePath, pendingDelete);
-		pendingDelete.promise = this.#runWorkflowStorageDelete(
-			instancePath,
-			defer,
-			pendingDelete,
-			previousDelete
+		this.#workflowStorageServer ??= new WorkflowStorageServer(
+			persistPath,
+			this.#loopbackSecret,
+			(error) => this.#log.error(error)
 		);
-		return pendingDelete;
-	}
-
-	/** Waits for a queued storage deletion, retrying one failed deletion. */
-	async #waitForWorkflowStorageDelete(
-		instancePath: string,
-		retried = false
-	): Promise<Response> {
-		const pendingDelete = this.#pendingWorkflowStorageDeletes.get(instancePath);
-		if (pendingDelete === undefined) {
-			return new Response(null, { status: 204 });
-		}
-		await pendingDelete.promise;
-
-		const latestDelete = this.#pendingWorkflowStorageDeletes.get(instancePath);
-		if (latestDelete === undefined) {
-			return new Response(null, { status: 204 });
-		}
-		if (latestDelete !== pendingDelete) {
-			return this.#waitForWorkflowStorageDelete(instancePath, retried);
-		}
-		if (!pendingDelete.failed) {
-			this.#pendingWorkflowStorageDeletes.delete(instancePath);
-			return new Response(null, { status: 204 });
-		}
-		if (retried || this.#disposeController.signal.aborted) {
-			return new Response("Failed to delete workflow instance", {
-				status: 500,
-			});
-		}
-
-		this.#queueWorkflowStorageDelete(instancePath, false);
-		return this.#waitForWorkflowStorageDelete(instancePath, true);
-	}
-
-	/**
-	 * Deletes a Workflow Engine DO instance by removing its .sqlite file
-	 * (and any associated -shm/-wal files) from the persistence directory.
-	 *
-	 * @param url in format: /core/workflow-storage/<workflowName>/<hexId>
-	 */
-	async #handleLoopbackWorkflowStorageDeleteRequest(
-		url: URL
-	): Promise<Response> {
-		const pathAfterPrefix = url.pathname.slice(
-			"/core/workflow-storage/".length
-		);
-		const slashIndex = pathAfterPrefix.indexOf("/");
-
-		const workflowName = decodeURIComponent(
-			slashIndex === -1 ? pathAfterPrefix : pathAfterPrefix.slice(0, slashIndex)
-		);
-		const hexId =
-			slashIndex === -1
-				? null
-				: decodeURIComponent(pathAfterPrefix.slice(slashIndex + 1));
-
-		assert(workflowName, "Workflow name is required");
-		if (url.searchParams.has("waitForPendingDelete") && !hexId) {
-			return new Response("Instance ID is required", { status: 400 });
-		}
-
-		const workflowsPersistPath = getPersistPath(
-			WORKFLOWS_PLUGIN_NAME,
-			this.#tmpPath,
-			this.#sharedOpts.isolatedResourcePersistencePath
-		);
-
-		const uniqueKey = `miniflare-workflows-${workflowName}`;
-		const namespacePath = path.join(workflowsPersistPath, uniqueKey);
-
-		// Prevent directory traversal
-		if (
-			!namespacePath.startsWith(path.resolve(workflowsPersistPath) + path.sep)
-		) {
-			return new Response("Invalid workflow name", { status: 400 });
-		}
-
-		if (hexId) {
-			const instancePath = path.join(namespacePath, hexId);
-			if (!instancePath.startsWith(namespacePath + path.sep)) {
-				return new Response("Invalid instance ID", { status: 400 });
-			}
-
-			if (url.searchParams.has("waitForPendingDelete")) {
-				return this.#waitForWorkflowStorageDelete(instancePath);
-			}
-
-			const pendingDelete = this.#queueWorkflowStorageDelete(
-				instancePath,
-				url.searchParams.has("defer")
-			);
-			if (url.searchParams.has("defer")) {
-				return new Response("Accepted", { status: 202 });
-			}
-			await pendingDelete.promise;
-			if (pendingDelete.failed) {
-				return new Response("Failed to delete workflow instance", {
-					status: 500,
-				});
-			}
-			if (!pendingDelete.deleted) {
-				return new Response("Not Found", { status: 404 });
-			}
-		} else {
-			// Delete ALL instances in the workflow
-			try {
-				const dirEntries = await fs.promises.readdir(namespacePath);
-				await Promise.all(
-					dirEntries
-						.filter((name) =>
-							WORKFLOW_STORAGE_EXTENSIONS.some((ext) => name.endsWith(ext))
-						)
-						.map((name) =>
-							fs.promises.unlink(path.join(namespacePath, name)).catch(() => {})
-						)
-				);
-			} catch (e) {
-				if (!isFileNotFoundError(e)) {
-					throw e;
-				}
-			}
-		}
-
-		return new Response("OK", { status: 200 });
+		const address = await this.#workflowStorageServer.configure(persistPath);
+		return { storage: this.#workflowStorageServer, address };
 	}
 
 	#handleLoopback = async (
@@ -1844,15 +1560,8 @@ export class Miniflare {
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {
-				if (
-					request.method === "DELETE" ||
-					url.searchParams.has("waitForPendingDelete")
-				) {
-					response =
-						await this.#handleLoopbackWorkflowStorageDeleteRequest(url);
-				} else {
-					response = await this.#handleLoopbackWorkflowStorageRequest(url);
-				}
+				const { storage } = await this.#getWorkflowStorageServer();
+				response = await storage.fetch(url, request.method);
 			} else if (url.pathname === "/core/dev-registry") {
 				// Used by the local explorer to aggregate resources across instances
 				const registryPath = this.#devRegistry.getRegistryPath();
@@ -2178,6 +1887,29 @@ export class Miniflare {
 
 		// Use Map to dedupe services by name
 		const services = new Map<string, Service>();
+		if (
+			workflowExporters.size > 0 ||
+			allWorkerOpts.some(
+				({ config }) => [...getEnvBindingsOfType(config, "workflow")].length > 0
+			)
+		) {
+			const { address } = await this.#getWorkflowStorageServer();
+			services.set(SERVICE_WORKFLOW_STORAGE, {
+				name: SERVICE_WORKFLOW_STORAGE,
+				external: {
+					address,
+					http: {
+						cfBlobHeader: CoreHeaders.CF_BLOB,
+						injectRequestHeaders: [
+							{
+								name: CoreHeaders.LOOPBACK_SECRET,
+								value: this.#loopbackSecret,
+							},
+						],
+					},
+				},
+			});
+		}
 		const extensions: Extension[] = [
 			{
 				modules: [
@@ -3917,11 +3649,7 @@ export class Miniflare {
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
 		this.#devRegistry.unregisterWorkers();
 		try {
-			await Promise.all(
-				[...this.#pendingWorkflowStorageDeletes.values()].map(
-					({ promise }) => promise
-				)
-			);
+			await this.#workflowStorageServer?.dispose();
 		} catch (error) {
 			if (!independentCleanupFailed) {
 				independentCleanupFailed = true;

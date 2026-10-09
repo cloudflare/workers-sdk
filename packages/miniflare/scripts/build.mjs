@@ -407,7 +407,7 @@ async function patchSourcemaps(outPath) {
 
 /**
  * Build the miniflare package:
- *   1. Run esbuild to bundle src/index.ts (+ dev-registry worker + test
+ *   1. Run esbuild to bundle src/index.ts (+ Workflow storage thread + test
  *      fixtures) into dist/ as CJS. The embedWorkersPlugin handles all
  *      "worker:..." imports by creating nested sub-builds.
  *   2. Copy local-explorer-ui assets into dist/.
@@ -446,7 +446,11 @@ async function buildPackage() {
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
-		entryPoints: [indexPath, ...fixtureBuilds],
+		entryPoints: [
+			indexPath,
+			path.join(pkgRoot, "src/plugins/workflows/storage-worker.ts"),
+			...fixtureBuilds,
+		],
 	};
 
 	if (watch) {

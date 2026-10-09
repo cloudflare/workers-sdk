@@ -67,23 +67,22 @@ test.for(["secrets-store", "flagship"])(
 	}
 );
 
-test.for(["callNode", "startWorkflow"])(
-	"first RPC call to %s can wait for Node loopback",
-	async (method, { expect }) => {
-		const { stdout } = await promisify(execFile)(
-			process.execPath,
-			[path.join(FIXTURES_PATH, "rpc-loopback.cjs"), method],
-			{
-				env: { ...process.env, MINIFLARE_PATH: require.resolve("miniflare") },
-				timeout: 20_000,
-				killSignal: "SIGKILL",
-			}
-		);
-		expect(stdout).toBe("calling RPC\nRPC completed\n");
-	}
-);
+test("first synchronous RPC call can create, delete and recreate a Workflow", async ({
+	expect,
+}) => {
+	const { stdout } = await promisify(execFile)(
+		process.execPath,
+		[path.join(FIXTURES_PATH, "rpc-loopback.cjs")],
+		{
+			env: { ...process.env, MINIFLARE_PATH: require.resolve("miniflare") },
+			timeout: 20_000,
+			killSignal: "SIGKILL",
+		}
+	);
+	expect(stdout).toBe("calling RPC\nRPC completed\n");
+});
 
-test("preserves RPC results and rejections through the promise bridge", async ({
+test("preserves synchronous RPC results, errors and arbitrary factories", async ({
 	expect,
 }) => {
 	const miniflare = new Miniflare({
@@ -119,12 +118,12 @@ export default class Api extends WorkerEntrypoint {
 	useDispose(miniflare);
 
 	interface RpcWorker {
-		echo(value: unknown): Promise<unknown>;
-		fail(): Promise<never>;
-		reject(): Promise<never>;
-		stream(): Promise<ReadableStream<Uint8Array>>;
-		target(): Promise<{ value: string; getValue(): Promise<string> }>;
-		nestedCallable(): Promise<() => () => string>;
+		echo(value: unknown): unknown;
+		fail(): never;
+		reject(): never;
+		stream(): ReadableStream<Uint8Array>;
+		target(): { value: string; getValue(): string };
+		nestedCallable(): () => () => string;
 	}
 	const worker = (await miniflare.getWorker(
 		"rpc-worker"
@@ -132,18 +131,18 @@ export default class Api extends WorkerEntrypoint {
 
 	for (const value of [undefined, null, "value", 123, { value: [1, 2] }]) {
 		const result = worker.echo(value);
-		expect(result).toBeInstanceOf(Promise);
-		await expect(result).resolves.toEqual(value);
+		expect(result).not.toBeInstanceOf(Promise);
+		expect(result).toEqual(value);
 	}
 
 	for (let invocation = 0; invocation < 2; invocation++) {
-		await expect(worker.fail()).rejects.toThrow("rpc failure");
-		await expect(worker.reject()).rejects.toThrow("rpc rejection");
-		expect(await text(await worker.stream())).toBe("stream body");
-		const target = await worker.target();
+		expect(() => worker.fail()).toThrow("rpc failure");
+		expect(() => worker.reject()).toThrow("rpc rejection");
+		expect(await text(worker.stream())).toBe("stream body");
+		const target = worker.target();
 		expect(target.value).toBe("target value");
-		await expect(target.getValue()).resolves.toBe("target value");
-		const outer = await worker.nestedCallable();
+		expect(target.getValue()).toBe("target value");
+		const outer = worker.nestedCallable();
 		for (let call = 0; call < 2; call++) {
 			const inner = outer();
 			expect(inner()).toBe("nested function value");

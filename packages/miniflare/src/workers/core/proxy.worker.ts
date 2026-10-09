@@ -2,8 +2,6 @@ import assert from "node:assert";
 import { Buffer } from "node:buffer";
 import { parse } from "devalue";
 import { readPrefix, reduceError } from "miniflare:shared";
-import { ADMIN_API as FLAGSHIP_ADMIN_API } from "../flagship/constants";
-import { ADMIN_API as SECRETS_STORE_ADMIN_API } from "../secrets-store/constants";
 import {
 	CoreBindings,
 	CoreHeaders,
@@ -348,16 +346,10 @@ export class ProxyServer implements DurableObject {
 					// We intentionally don't await this `output()` call so that it's treated as a regular promise
 					result = transform.output(args[2]);
 				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
-					if (
-						keyHeader === "__miniflareWrappedFunction" ||
-						keyHeader === FLAGSHIP_ADMIN_API ||
-						keyHeader === SECRETS_STORE_ADMIN_API
-					) {
-						result = await func(...args);
-						rpcAwaited = true;
-					} else {
-						result = Promise.resolve(func(...args));
-					}
+					// let's resolve RpcPromise instances right away (to support serialization)
+					result = await func(...args);
+					// Mark that we've awaited this RPC call, so we set the Promise header below
+					rpcAwaited = true;
 				} else {
 					result = func.apply(target, args);
 				}

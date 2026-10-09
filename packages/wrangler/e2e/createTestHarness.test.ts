@@ -1,7 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
 import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -18,6 +20,7 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
+import { WRANGLER_IMPORT } from "./helpers/wrangler";
 import type {
 	CloudflareWorkersModule,
 	D1Database,
@@ -1247,6 +1250,72 @@ describe("createTestHarness", () => {
 		const rpcExport = await rpcWorker.getExport();
 
 		expect(await rpcExport.getMessage("World")).toBe("Hello World");
+	});
+
+	it("creates a Workflow on the first synchronous RPC call", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "rpc-workflow-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-05-20",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "rpc-workflow",
+						class_name: "TestWorkflow",
+					},
+				],
+			}),
+			"src/index.ts": dedent`
+				import { WorkerEntrypoint, WorkflowEntrypoint } from "cloudflare:workers";
+				export class TestWorkflow extends WorkflowEntrypoint {
+					async run() { return "done"; }
+				}
+				export default class Api extends WorkerEntrypoint {
+					async createWorkflow(id) {
+						const instance = await this.env.WORKFLOW.create({ id });
+						return instance.id;
+					}
+					async deleteWorkflow(id) {
+						const instance = await this.env.WORKFLOW.get(id);
+						await instance.delete();
+					}
+				}
+			`,
+		});
+		const scriptPath = path.join(helper.tmpPath, "test-workflow.mjs");
+		await writeFile(
+			scriptPath,
+			dedent`
+				import assert from "node:assert/strict";
+				const { createTestHarness } = await import(${JSON.stringify(WRANGLER_IMPORT.href)});
+				const server = createTestHarness({
+					root: ${JSON.stringify(helper.tmpPath)},
+					workers: [{ configPath: "./wrangler.jsonc" }],
+				});
+				try {
+					await server.listen();
+					const api = await server.getWorker("rpc-workflow-worker").getExport();
+					const first = api.createWorkflow();
+					assert.equal(typeof first, "string");
+					assert.match(first, /^[0-9a-f-]{36}$/);
+					assert.equal(api.createWorkflow("explicit-id"), "explicit-id");
+					api.deleteWorkflow("explicit-id");
+					assert.equal(api.createWorkflow("explicit-id"), "explicit-id");
+					console.log("Workflow RPC completed");
+				} finally {
+					await server.close();
+				}
+			`
+		);
+		const { stdout } = await promisify(execFile)(
+			process.execPath,
+			[scriptPath],
+			{ timeout: 20_000, killSignal: "SIGKILL" }
+		);
+		expect(stdout).toContain("Workflow RPC completed");
 	});
 
 	it("uses runtime errors for missing binding override targets", async ({
