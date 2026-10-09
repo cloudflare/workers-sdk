@@ -1,0 +1,1286 @@
+import { execFile } from "node:child_process";
+import {
+	chmod,
+	mkdir,
+	readFile,
+	rename,
+	stat,
+	writeFile,
+} from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
+import { ArtifactsController, Miniflare } from "miniflare";
+import { test } from "vitest";
+import {
+	GitClient,
+	gitEnvironment,
+} from "../../../src/plugins/artifacts/git-client";
+import {
+	startGitSidecar,
+	type GitSidecar,
+} from "../../../src/plugins/artifacts/git-sidecar";
+import { repositoryPath } from "../../../src/plugins/artifacts/storage";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import type { MiniflareOptions } from "miniflare";
+
+const exec = promisify(execFile);
+const SCRIPT = `
+export default {
+  async fetch(request, env) {
+    const { method, name, args = [] } = await request.json();
+    try {
+      const target = name === undefined ? env.REPOS : await env.REPOS.get(name);
+      if (method === "keys") return Response.json(Object.keys(target));
+      const result = await target[method](...args);
+      if (result instanceof Blob) {
+        return Response.json({ bytes: [...new Uint8Array(await result.arrayBuffer())], type: result.type });
+      }
+      return Response.json(result);
+    } catch (error) {
+      return Response.json({ error: error.message, name: error.name, code: error.code, numericCode: error.numericCode }, { status: 400 });
+    }
+  }
+};
+`;
+
+function options(
+	namespace = "test",
+	binding = "REPOS",
+	remote: boolean | null = false
+): MiniflareOptions {
+	return {
+		cf: false,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2026-09-03",
+					env: {
+						[binding]: {
+							type: "artifacts",
+							namespace,
+							...(remote === null ? {} : { dev: { remote } }),
+						},
+					},
+					manifest: singleModuleManifest(SCRIPT),
+				},
+			},
+		],
+	};
+}
+
+function rpcRequest(
+	mf: Miniflare,
+	method: string,
+	args: unknown[] = [],
+	name?: string
+): Promise<Response> {
+	return mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({ method, args, name }),
+	});
+}
+
+async function rpc(
+	mf: Miniflare,
+	method: string,
+	args: unknown[] = [],
+	name?: string
+) {
+	const response = await rpcRequest(mf, method, args, name);
+	const result = (await response.json()) as any;
+	if (!response.ok) {
+		throw new Error(result.error);
+	}
+	return result;
+}
+
+async function rpcFailure(
+	mf: Miniflare,
+	method: string,
+	args: unknown[] = [],
+	name?: string
+) {
+	const response = await rpcRequest(mf, method, args, name);
+	return {
+		status: response.status,
+		...((await response.json()) as {
+			error: string;
+			name: string;
+			code: string;
+			numericCode: number;
+		}),
+	};
+}
+
+function git(args: string[], cwd?: string, extraEnv: NodeJS.ProcessEnv = {}) {
+	return exec("git", args, {
+		cwd,
+		env: {
+			...gitEnvironment(),
+			...extraEnv,
+			GIT_AUTHOR_NAME: "Miniflare",
+			GIT_AUTHOR_EMAIL: "miniflare@example.com",
+			GIT_COMMITTER_NAME: "Miniflare",
+			GIT_COMMITTER_EMAIL: "miniflare@example.com",
+		},
+	});
+}
+
+async function pushFixture(mf: Miniflare, directory: string) {
+	const created = await rpc(mf, "create", ["Repo"]);
+	await git(["init", "--initial-branch=main", directory]);
+	await writeFile(path.join(directory, "hello.txt"), "hello artifacts\n");
+	await writeFile(
+		path.join(directory, "bytes.bin"),
+		new Uint8Array([0, 255, 128, 1])
+	);
+	await writeFile(
+		path.join(directory, "payload.dat"),
+		new Uint8Array([255, 254, 128])
+	);
+	await git(["add", "."], directory);
+	await git(["commit", "-m", "fixture"], directory);
+	await git(
+		[
+			"-c",
+			`http.extraHeader=Authorization: Bearer ${created.token}`,
+			"push",
+			created.remote,
+			"main",
+		],
+		directory
+	);
+	return created;
+}
+
+async function createSidecarRepository(
+	sidecar: GitSidecar,
+	generation: string
+): Promise<void> {
+	const response = await fetch(
+		`http://${sidecar.address}/__local_artifacts__`,
+		{
+			method: "POST",
+			headers: {
+				"X-Local-Artifacts-Backend": sidecar.secret,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				action: "create",
+				namespace: "test",
+				name: "repo",
+				generation,
+			}),
+		}
+	);
+	if (!response.ok) {
+		throw new Error(`Sidecar create failed: ${await response.text()}`);
+	}
+	await response.body?.cancel();
+}
+
+test("artifacts: real RPC exposes current methods, not metadata or legacy methods", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	await rpc(mf, "create", ["Repo"]);
+	const keys = await rpc(mf, "keys", [], "Repo");
+	expect(keys).toContain("readFile");
+	expect(keys).not.toContain("id");
+	expect(keys).not.toContain("name");
+	expect(keys).not.toContain("file");
+	expect(keys).not.toContain("raw");
+	expect(
+		await rpc(mf, "readFile", [{ ref: "HEAD", path: "missing" }], "Repo")
+	).toBeNull();
+});
+
+test("artifacts: interrupted deletion leaves a replaceable orphaned generation", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const sidecar = await startGitSidecar(root);
+	try {
+		await createSidecarRepository(sidecar, "original");
+		const client = new GitClient(repositoryPath(root, "test", "repo"));
+		expect(await client.generation()).toBe("original");
+		// The namespace has committed the deletion, but the process exited
+		// before the native repository could be removed.
+		await createSidecarRepository(sidecar, "replacement");
+		expect(await client.generation()).toBe("replacement");
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test("artifacts: restart finishes cleanup after an interrupted Git deletion", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const active = repositoryPath(root, "test", "repo");
+	const retired = `${active}.deleting-${"a".repeat(32)}`;
+	const first = await startGitSidecar(root);
+	try {
+		await createSidecarRepository(first, "original");
+		// Simulate termination after metadata removal and the atomic rename,
+		// but before the retired directory's contents have been removed.
+		await rename(active, retired);
+	} finally {
+		await first.close();
+	}
+	const restarted = await startGitSidecar(root);
+	try {
+		await expect(stat(retired)).rejects.toMatchObject({ code: "ENOENT" });
+		await expect(stat(active)).rejects.toMatchObject({ code: "ENOENT" });
+	} finally {
+		await restarted.close();
+	}
+});
+
+test("artifacts: config update closes retired sidecars but abort preserves active ones", async ({
+	expect,
+}) => {
+	const directory = await useTmp();
+	const controller = new ArtifactsController();
+	const reachable = (address: string) => fetch(`http://${address}/`);
+	try {
+		controller.beginUpdate();
+		const first = await controller.get(path.join(directory, "first"));
+		await controller.commitUpdate();
+		controller.beginUpdate();
+		const candidate = await controller.get(path.join(directory, "candidate"));
+		await controller.abortUpdate();
+		expect((await reachable(first.sidecar.address)).status).toBe(403);
+		await expect(reachable(candidate.sidecar.address)).rejects.toThrow();
+		controller.beginUpdate();
+		const next = await controller.get(path.join(directory, "next"));
+		await controller.commitUpdate();
+		await expect(reachable(first.sidecar.address)).rejects.toThrow();
+		expect((await reachable(next.sidecar.address)).status).toBe(403);
+	} finally {
+		await controller.dispose();
+	}
+});
+
+test("artifacts: sidecar startup failures reject without crashing Miniflare", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const file = path.join(root, "not-a-directory");
+	await writeFile(file, "not a directory");
+	const controller = new ArtifactsController();
+	controller.beginUpdate();
+	try {
+		await expect(controller.get(file)).rejects.toThrow(
+			/Local Artifacts Git backend failed to start/
+		);
+		await controller.abortUpdate();
+	} finally {
+		await controller.dispose();
+	}
+});
+
+test("artifacts: a stopped backend is replaced on the next config update", async ({
+	expect,
+}) => {
+	const controller = new ArtifactsController();
+	const root = path.join(await useTmp(), "repos");
+	try {
+		controller.beginUpdate();
+		const first = await controller.get(root);
+		await controller.commitUpdate();
+		await first.sidecar.close();
+		controller.beginUpdate();
+		const replacement = await controller.get(root);
+		expect(replacement.sidecar.secret).not.toBe(first.sidecar.secret);
+		await controller.commitUpdate();
+	} finally {
+		await controller.dispose();
+	}
+});
+
+test("artifacts: omitted remote preserves remote routing without host Git", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const previousPath = process.env.PATH;
+	process.env.PATH = root;
+	try {
+		const mf = new Miniflare(options("test", "REPOS", null));
+		useDispose(mf);
+		await expect(mf.ready).resolves.toBeDefined();
+	} finally {
+		process.env.PATH = previousPath;
+	}
+});
+
+test("artifacts: rejects invalid local namespace before starting services", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options("../invalid"));
+	await expect(mf.ready).rejects.toThrow(
+		"Invalid local Artifacts namespace: ../invalid"
+	);
+	// dispose() preserves a startup failure after cleaning up the instance.
+	await expect(mf.dispose()).rejects.toThrow(
+		"Invalid local Artifacts namespace: ../invalid"
+	);
+});
+
+test("artifacts: names are case-insensitive for create, get, fork and delete", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const created = await rpc(mf, "create", ["Repo"]);
+	expect((await rpc(mf, "info", [], "rEpO")).id).toBe(created.id);
+	await expect(rpc(mf, "create", ["repo"])).rejects.toThrow(/already exists/i);
+	await expect(rpc(mf, "fork", ["REPO"], "repo")).rejects.toThrow(
+		/already exists/i
+	);
+	expect(await rpc(mf, "delete", ["REPO"])).toBe(true);
+	expect(await rpc(mf, "delete", ["repo"])).toBe(false);
+});
+
+test("artifacts: retained handles cannot access a replacement repository", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const { REPOS } = await mf.getBindings<{
+		REPOS: {
+			create(name: string): Promise<{ id: string }>;
+			get(name: string): Promise<{
+				info(): Promise<{ id: string }>;
+				createToken(): Promise<unknown>;
+			}>;
+			delete(name: string): Promise<boolean>;
+		};
+	}>();
+	const original = await REPOS.create("repo");
+	const retained = await REPOS.get("repo");
+	await REPOS.delete("repo");
+	const replacement = await REPOS.create("repo");
+	expect(replacement.id).not.toBe(original.id);
+	await expect(async () => retained.info()).rejects.toThrow(/not found/i);
+	await expect(async () => retained.createToken()).rejects.toThrow(
+		/not found/i
+	);
+	expect((await (await REPOS.get("repo")).info()).id).toBe(replacement.id);
+});
+
+test("artifacts: supports Node binding proxies", async ({ expect }) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const { REPOS } = await mf.getBindings<{
+		REPOS: {
+			create(name: string): Promise<{ name: string }>;
+			list(): Promise<{ total: number }>;
+		};
+	}>();
+	expect(await REPOS.create("node-repo")).toMatchObject({ name: "node-repo" });
+	expect(await REPOS.list()).toMatchObject({ total: 1 });
+});
+
+test("artifacts: aliases share a namespace while distinct namespaces are isolated", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		cf: false,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2026-09-03",
+					env: {
+						REPOS: {
+							type: "artifacts",
+							namespace: "shared",
+							dev: { remote: false },
+						},
+						ALIAS: {
+							type: "artifacts",
+							namespace: "shared",
+							dev: { remote: false },
+						},
+						OTHER: {
+							type: "artifacts",
+							namespace: "other",
+							dev: { remote: false },
+						},
+					},
+					manifest: singleModuleManifest(SCRIPT),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	const bindings = await mf.getBindings<{
+		REPOS: { create(name: string): Promise<unknown> };
+		ALIAS: { list(): Promise<{ total: number }> };
+		OTHER: { list(): Promise<{ total: number }> };
+	}>();
+	await bindings.REPOS.create("shared-repo");
+	expect((await bindings.ALIAS.list()).total).toBe(1);
+	expect((await bindings.OTHER.list()).total).toBe(0);
+});
+
+test("artifacts: two Workers can share a namespace through different bindings", async ({
+	expect,
+}) => {
+	const worker = (name: string, binding: string) => ({
+		config: {
+			name,
+			compatibilityDate: "2026-09-03",
+			env: {
+				[binding]: {
+					type: "artifacts" as const,
+					namespace: "shared",
+					dev: { remote: false },
+				},
+			},
+			manifest: singleModuleManifest(SCRIPT),
+		},
+	});
+	const mf = new Miniflare({
+		cf: false,
+		workers: [worker("first", "REPOS"), worker("second", "ALIAS")],
+	});
+	useDispose(mf);
+	const { REPOS } = await mf.getBindings<{
+		REPOS: { create(name: string): Promise<{ name: string }> };
+	}>("first");
+	const { ALIAS } = await mf.getBindings<{
+		ALIAS: { list(): Promise<{ total: number }> };
+	}>("second");
+	await REPOS.create("shared-repo");
+	expect((await ALIAS.list()).total).toBe(1);
+});
+
+test("artifacts: native Git reads commits, trees, blobs and files", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const source = path.join(await useTmp(), "source");
+	await pushFixture(mf, source);
+	const { stdout } = await git(["rev-parse", "HEAD"], source);
+	const hash = stdout.trim();
+	const commit = await rpc(mf, "readCommit", [hash], "Repo");
+	expect(commit.hash).toBe(hash);
+	expect((await rpc(mf, "log", [], "Repo"))[0].hash).toBe(hash);
+	const tree = await rpc(mf, "readTree", [commit.treeHash], "Repo");
+	const entry = tree.find(({ name }: { name: string }) => name === "hello.txt");
+	expect(entry).toBeDefined();
+	expect((await rpc(mf, "readBlob", [entry.hash], "Repo")).bytes).toEqual([
+		...new TextEncoder().encode("hello artifacts\n"),
+	]);
+	expect(
+		await rpc(mf, "readFile", [{ ref: "main", path: "hello.txt" }], "Repo")
+	).toEqual({
+		bytes: [...new TextEncoder().encode("hello artifacts\n")],
+		type: "text/plain;charset=utf-8",
+	});
+	expect(
+		await rpc(mf, "readFile", [{ ref: "main", path: "bytes.bin" }], "Repo")
+	).toEqual({ bytes: [0, 255, 128, 1], type: "application/octet-stream" });
+	expect(
+		await rpc(mf, "readFile", [{ ref: "main", path: "payload.dat" }], "Repo")
+	).toEqual({ bytes: [255, 254, 128], type: "application/octet-stream" });
+});
+
+test("artifacts: native Git push/clone and token revocation", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const directory = await useTmp();
+	const created = await pushFixture(mf, path.join(directory, "source"));
+	expect(new URL(created.remote).hostname).toBe("127.0.0.1");
+	const token = await rpc(mf, "createToken", ["read"], "Repo");
+	await git([
+		"-c",
+		`http.extraHeader=Authorization: Bearer ${token.plaintext}`,
+		"clone",
+		created.remote.replace("Repo.git", "repo.git"),
+		path.join(directory, "clone"),
+	]);
+	expect(
+		await readFile(path.join(directory, "clone", "hello.txt"), "utf8")
+	).toBe("hello artifacts\n");
+	const advertise = `${created.remote}/info/refs?service=git-upload-pack`;
+	const discovery = await fetch(advertise, {
+		headers: {
+			Authorization: `Bearer ${token.plaintext}`,
+			"Git-Protocol": "version=2",
+		},
+	});
+	expect(discovery.status).toBe(200);
+	expect(discovery.headers.get("content-type")).toContain(
+		"git-upload-pack-advertisement"
+	);
+	await discovery.body?.cancel();
+	const unsupported = await fetch(`${created.remote}/HEAD`, {
+		headers: { Authorization: `Bearer ${created.token}` },
+	});
+	expect(unsupported.status).toBe(404);
+	await unsupported.body?.cancel();
+	const unauthenticated = await fetch(advertise);
+	expect(unauthenticated.status).toBe(401);
+	await unauthenticated.body?.cancel();
+	await rpc(mf, "revokeToken", [token.id], "Repo");
+	const revoked = await fetch(advertise, {
+		headers: { Authorization: `Bearer ${token.plaintext}` },
+	});
+	expect(revoked.status).toBe(401);
+	await revoked.body?.cancel();
+});
+
+test.skipIf(process.platform === "win32")(
+	"artifacts: large push replies drain before ref synchronization",
+	async ({ expect }) => {
+		const root = await useTmp();
+		const { stdout: gitPath } = await exec("which", ["git"]);
+		const wrapper = path.join(root, "git");
+		await writeFile(
+			wrapper,
+			`#!/bin/sh
+case " $* " in
+  *" http-backend "*)
+    printf 'Content-Type: application/x-git-receive-pack-result\\r\\n\\r\\n'
+    dd if=/dev/zero bs=1048576 count=2 2>/dev/null
+    exit 0 ;;
+esac
+exec '${gitPath.trim().replaceAll("'", "'\\''")}' "$@"
+`
+		);
+		await chmod(wrapper, 0o755);
+		const previousPath = process.env.PATH;
+		process.env.PATH = `${root}:${previousPath}`;
+		try {
+			const mf = new Miniflare(options());
+			useDispose(mf);
+			const created = await rpc(mf, "create", ["repo"]);
+			const response = await fetch(`${created.remote}/git-receive-pack`, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${created.token}`,
+					"Content-Type": "application/x-git-receive-pack-request",
+				},
+				body: "",
+				signal: AbortSignal.timeout(15_000),
+			});
+			expect(response.status).toBe(200);
+			expect((await response.arrayBuffer()).byteLength).toBe(2 * 1024 * 1024);
+		} finally {
+			process.env.PATH = previousPath;
+		}
+	},
+	20_000
+);
+
+test.skipIf(process.platform === "win32")(
+	"artifacts: canceled push reply synchronizes committed refs",
+	async ({ expect }) => {
+		const root = await useTmp();
+		const { stdout: gitPath } = await exec("which", ["git"]);
+		const gitBinary = gitPath.trim().replaceAll("'", "'\\''");
+		const wrapper = path.join(root, "git");
+		await writeFile(
+			wrapper,
+			`#!/bin/sh
+case " $* " in
+  *" http-backend "*)
+    if [ "$REQUEST_METHOD" = POST ]; then
+      repo="$GIT_PROJECT_ROOT\${PATH_INFO%/git-receive-pack}"
+      tree=$('${gitBinary}' -C "$repo" hash-object -t tree -w --stdin </dev/null) || exit 2
+      commit=$('${gitBinary}' -C "$repo" -c user.name=Fixture -c user.email=fixture@example.test commit-tree "$tree" -m fixture) || exit 3
+      '${gitBinary}' -C "$repo" update-ref refs/heads/main "$commit" || exit 4
+      printf '%s\\n%s\\n' "$repo" "$commit" > '${path.join(root, "ref-marker")}'
+      printf 'Content-Type: application/x-git-receive-pack-result\\r\\n\\r\\n'
+      dd if=/dev/zero bs=1048576 count=32 2>/dev/null
+      exit 0
+    fi ;;
+esac
+exec '${gitBinary}' "$@"
+`
+		);
+		await chmod(wrapper, 0o755);
+		const previousPath = process.env.PATH;
+		process.env.PATH = `${root}:${previousPath}`;
+		try {
+			const mf = new Miniflare(options());
+			useDispose(mf);
+			const created = await rpc(mf, "create", ["repo"]);
+			expect((await rpc(mf, "info", [], "repo")).lastPushAt).toBeNull();
+			const response = await fetch(`${created.remote}/git-receive-pack`, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${created.token}`,
+					"Content-Type": "application/x-git-receive-pack-request",
+				},
+				body: "",
+				signal: AbortSignal.timeout(15_000),
+			});
+			expect(response.status).toBe(200);
+			if (!response.body) {
+				throw new Error("Git response has no body");
+			}
+			const reader = response.body.getReader();
+			expect((await reader.read()).done).toBe(false);
+			await reader.cancel();
+			const [repo, commit] = (
+				await readFile(path.join(root, "ref-marker"), "utf8")
+			)
+				.trim()
+				.split(String.fromCharCode(10));
+			const { stdout: actualRef } = await exec(gitPath.trim(), [
+				"-C",
+				repo,
+				"rev-parse",
+				"refs/heads/main",
+			]);
+			expect(actualRef.trim()).toBe(commit);
+			let lastPushAt: string | null = null;
+			for (let attempt = 0; attempt < 50; attempt++) {
+				lastPushAt = (await rpc(mf, "info", [], "repo")).lastPushAt;
+				if (lastPushAt) {
+					break;
+				}
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+			expect(lastPushAt).toEqual(expect.any(String));
+		} finally {
+			process.env.PATH = previousPath;
+		}
+	},
+	20_000
+);
+
+test("artifacts: read-only and read-scoped tokens reject Git pushes", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const directory = await useTmp();
+	const writable = await pushFixture(mf, path.join(directory, "source"));
+	const readToken = await rpc(mf, "createToken", ["read"], "Repo");
+	const withReadToken = await fetch(
+		`${writable.remote}/info/refs?service=git-receive-pack`,
+		{
+			headers: { Authorization: `Bearer ${readToken.plaintext}` },
+		}
+	);
+	expect(withReadToken.status).toBe(403);
+	await withReadToken.body?.cancel();
+	const readOnly = await rpc(
+		mf,
+		"fork",
+		["read-only", { readOnly: true }],
+		"Repo"
+	);
+	const writeAttempt = await fetch(
+		`${readOnly.remote}/info/refs?service=git-receive-pack`,
+		{
+			headers: { Authorization: `Bearer ${readOnly.token}` },
+		}
+	);
+	expect(writeAttempt.status).toBe(403);
+	await writeAttempt.body?.cancel();
+	const readAttempt = await fetch(
+		`${readOnly.remote}/info/refs?service=git-upload-pack`,
+		{ headers: { Authorization: `Bearer ${readOnly.token}` } }
+	);
+	expect(readAttempt.status).toBe(200);
+	await readAttempt.body?.cancel();
+});
+
+test("artifacts: metadata and Git data survive restart and binding rename", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const first = new Miniflare({ ...options(), resourcePersistencePath: root });
+	useDispose(first);
+	const created = await pushFixture(first, path.join(await useTmp(), "source"));
+	await first.dispose();
+	const second = new Miniflare({
+		...options("test", "RENAMED"),
+		resourcePersistencePath: root,
+	});
+	useDispose(second);
+	const { RENAMED } = await second.getBindings<{
+		RENAMED: {
+			get(name: string): Promise<{
+				info(): Promise<{ id: string; remote: string }>;
+				readFile(args: { ref: string; path: string }): Promise<Blob>;
+			}>;
+		};
+	}>();
+	const repo = await RENAMED.get("repo");
+	const info = await repo.info();
+	expect(info.id).toBe(created.id);
+	expect(
+		await (await repo.readFile({ ref: "main", path: "hello.txt" })).text()
+	).toBe("hello artifacts\n");
+	const response = await fetch(
+		`${info.remote}/info/refs?service=git-upload-pack`,
+		{ headers: { Authorization: `Bearer ${created.token}` } }
+	);
+	expect(response.status).toBe(200);
+	await response.body?.cancel();
+});
+
+test("artifacts: namespaces and instances are isolated; reload preserves state", async ({
+	expect,
+}) => {
+	const first = new Miniflare(options());
+	const second = new Miniflare(options());
+	useDispose(first);
+	useDispose(second);
+	await rpc(first, "create", ["repo"]);
+	expect((await rpc(second, "list")).total).toBe(0);
+	await first.setOptions(options());
+	expect((await rpc(first, "list")).total).toBe(1);
+	await first.setOptions(options("another"));
+	expect((await rpc(first, "list")).total).toBe(0);
+});
+
+test("artifacts: lists pages and deletes a repository and its handle", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	for (const name of ["one", "two", "three"]) {
+		await rpc(mf, "create", [name]);
+	}
+	const first = await rpc(mf, "list", [{ limit: 2 }]);
+	expect(first).toMatchObject({ total: 3 });
+	expect(first.repos).toHaveLength(2);
+	expect(first.repos[0]).toMatchObject({
+		status: "ready",
+		jurisdiction: "unrestricted",
+	});
+	expect(first.cursor).toEqual(expect.any(String));
+	const second = await rpc(mf, "list", [{ limit: 2, cursor: first.cursor }]);
+	expect(second).toMatchObject({ total: 3 });
+	expect(second.repos).toHaveLength(1);
+	expect(second.cursor).toBeUndefined();
+	expect(
+		[...first.repos, ...second.repos].map((repo) => repo.name).sort()
+	).toEqual(["one", "three", "two"]);
+	const { REPOS } = await mf.getBindings<{
+		REPOS: {
+			get(name: string): Promise<{ info(): Promise<{ name: string }> }>;
+		};
+	}>();
+	const handle = await REPOS.get("ONE");
+	expect((await handle.info()).name).toBe("one");
+	expect(await rpc(mf, "delete", ["one"])).toBe(true);
+	await expect(async () => handle.info()).rejects.toThrow(/not found/i);
+	expect(await rpcFailure(mf, "get", ["one"])).toMatchObject({
+		code: "NOT_FOUND",
+	});
+	expect((await rpc(mf, "list")).total).toBe(2);
+});
+
+test("artifacts: token metadata, revocation and validation", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const created = await rpc(mf, "create", ["repo"]);
+	const readToken = await rpc(mf, "createToken", ["read", 60], "repo");
+	expect(readToken).toMatchObject({
+		scope: "read",
+		expiresAt: expect.any(String),
+	});
+	const listed = await rpc(mf, "listTokens", [], "repo");
+	expect(listed.total).toBe(2);
+	expect(JSON.stringify(listed)).not.toContain(created.token);
+	expect(JSON.stringify(listed)).not.toContain(readToken.plaintext);
+	expect(
+		listed.tokens.every((token: { state: string }) => token.state === "active")
+	).toBe(true);
+	expect(await rpc(mf, "revokeToken", [readToken.plaintext], "repo")).toBe(
+		true
+	);
+	expect(await rpc(mf, "revokeToken", [readToken.id], "repo")).toBe(false);
+	expect((await rpc(mf, "listTokens", [], "repo")).total).toBe(1);
+	expect(
+		await rpcFailure(mf, "createToken", ["write", 59], "repo")
+	).toMatchObject({
+		status: 400,
+		name: "ArtifactsError",
+		code: "INVALID_TTL",
+	});
+	expect(
+		await rpcFailure(mf, "createToken", ["write", 31_536_001], "repo")
+	).toMatchObject({
+		code: "INVALID_TTL",
+	});
+	expect(await rpcFailure(mf, "revokeToken", ["bad"], "repo")).toMatchObject({
+		code: "INVALID_INPUT",
+	});
+});
+
+test("artifacts: rejects invalid inputs and returns null for missing objects", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	expect(await rpcFailure(mf, "create", ["invalid/name"])).toMatchObject({
+		code: "INVALID_REPO_NAME",
+		numericCode: 10101,
+	});
+	await rpc(mf, "create", ["repo"]);
+	expect(await rpcFailure(mf, "list", [{ limit: 0 }])).toMatchObject({
+		code: "INVALID_INPUT",
+	});
+	expect(await rpcFailure(mf, "readBlob", ["bad"], "repo")).toMatchObject({
+		code: "INVALID_INPUT",
+	});
+	const absentHash = "0".repeat(40);
+	expect(await rpc(mf, "readBlob", [absentHash], "repo")).toBeNull();
+	expect(await rpc(mf, "readTree", [absentHash], "repo")).toBeNull();
+	expect(await rpc(mf, "readCommit", [absentHash], "repo")).toBeNull();
+	expect(
+		await rpc(mf, "readFile", [{ ref: "main", path: "missing" }], "repo")
+	).toBeNull();
+	expect(
+		await rpcFailure(mf, "readFile", [{ ref: "main" }], "repo")
+	).toMatchObject({
+		code: "INVALID_INPUT",
+	});
+	expect(await rpcFailure(mf, "log", [{ limit: 0 }], "repo")).toMatchObject({
+		code: "INVALID_INPUT",
+	});
+	expect(
+		await rpcFailure(mf, "import", [
+			{
+				source: { url: "http://example.test/repo.git" },
+				target: { name: "imported" },
+			},
+		])
+	).toMatchObject({
+		code: "INVALID_INPUT",
+	});
+	expect(
+		await rpcFailure(mf, "import", [
+			{ source: { url: "not a url" }, target: { name: "imported" } },
+		])
+	).toMatchObject({
+		code: "INVALID_INPUT",
+	});
+});
+
+test("artifacts: Git credentials are scoped to the repository and operation", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const first = await rpc(mf, "create", ["first"]);
+	const second = await rpc(mf, "create", ["second"]);
+	const readToken = await rpc(mf, "createToken", ["read"], "first");
+	const firstRead = `${first.remote}/info/refs?service=git-upload-pack`;
+	const firstWrite = `${first.remote}/info/refs?service=git-receive-pack`;
+	const secondRead = `${second.remote}/info/refs?service=git-upload-pack`;
+	const basic = `Basic ${Buffer.from(`git:${readToken.plaintext}`).toString("base64")}`;
+	const read = await fetch(firstRead, { headers: { Authorization: basic } });
+	expect(read.status).toBe(200);
+	await read.body?.cancel();
+	const write = await fetch(firstWrite, { headers: { Authorization: basic } });
+	expect(write.status).toBe(403);
+	await write.body?.cancel();
+	const wrongRepo = await fetch(secondRead, {
+		headers: { Authorization: `Bearer ${first.token}` },
+	});
+	expect(wrongRepo.status).toBe(401);
+	await wrongRepo.body?.cancel();
+});
+
+test("artifacts: forks an empty repo and selects which branches to copy", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	await rpc(mf, "create", ["empty"]);
+	const emptyFork = await rpc(mf, "fork", ["empty-fork"], "empty");
+	expect(emptyFork.defaultBranch).toBe("main");
+
+	const directory = path.join(await useTmp(), "source");
+	const created = await pushFixture(mf, directory);
+	await git(["checkout", "-b", "feature"], directory);
+	await writeFile(path.join(directory, "feature.txt"), "feature branch\n");
+	await git(["add", "."], directory);
+	await git(["commit", "-m", "feature"], directory);
+	await git(
+		[
+			"-c",
+			`http.extraHeader=Authorization: Bearer ${created.token}`,
+			"push",
+			created.remote,
+			"feature",
+		],
+		directory
+	);
+	const mainOnly = await rpc(mf, "fork", ["main-only"], "Repo");
+	const all = await rpc(
+		mf,
+		"fork",
+		["all", { defaultBranchOnly: false, description: "all refs" }],
+		"Repo"
+	);
+	expect(mainOnly.defaultBranch).toBe("main");
+	expect((await rpc(mf, "info", [], "all")).description).toBe("all refs");
+	expect(
+		await rpc(mf, "readFile", [{ ref: "feature", path: "feature.txt" }], "all")
+	).toMatchObject({ bytes: [...new TextEncoder().encode("feature branch\n")] });
+	expect(
+		await rpc(
+			mf,
+			"readFile",
+			[{ ref: "feature", path: "feature.txt" }],
+			"main-only"
+		)
+	).toBeNull();
+	expect(all.token).toEqual(expect.any(String));
+});
+
+test("artifacts: log pages commits and files resolve only valid paths", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const directory = path.join(await useTmp(), "source");
+	const created = await pushFixture(mf, directory);
+	const firstHash = (await git(["rev-parse", "HEAD"], directory)).stdout.trim();
+	await writeFile(path.join(directory, "second.txt"), "second\n");
+	await mkdir(path.join(directory, "folder"));
+	await writeFile(path.join(directory, "folder", "nested.txt"), "nested\n");
+	await git(["add", "."], directory);
+	await git(["commit", "-m", "second"], directory);
+	await git(
+		[
+			"-c",
+			`http.extraHeader=Authorization: Bearer ${created.token}`,
+			"push",
+			created.remote,
+			"main",
+		],
+		directory
+	);
+	const secondHash = (
+		await git(["rev-parse", "HEAD"], directory)
+	).stdout.trim();
+	expect(
+		(await rpc(mf, "log", [{ limit: 1 }], "Repo")).map(
+			(commit: { hash: string }) => commit.hash
+		)
+	).toEqual([secondHash]);
+	expect(
+		(await rpc(mf, "log", [{ limit: 1, offset: 1 }], "Repo")).map(
+			(commit: { hash: string }) => commit.hash
+		)
+	).toEqual([firstHash]);
+	expect(
+		await rpc(mf, "readFile", [{ ref: "main", path: "../hello.txt" }], "Repo")
+	).toBeNull();
+	expect(
+		await rpc(mf, "readFile", [{ ref: "main", path: "folder" }], "Repo")
+	).toBeNull();
+	expect(
+		await rpc(
+			mf,
+			"readFile",
+			[{ ref: "main", path: "folder/nested.txt" }],
+			"Repo"
+		)
+	).toMatchObject({ bytes: [...new TextEncoder().encode("nested\n")] });
+	expect(
+		await rpc(mf, "readFile", [{ ref: "main", path: "missing" }], "Repo")
+	).toBeNull();
+	expect(
+		await rpc(mf, "readFile", [{ ref: "missing", path: "hello.txt" }], "Repo")
+	).toBeNull();
+});
+
+test("artifacts: concurrent creations serialize without duplicate repositories", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	await Promise.all(
+		Array.from({ length: 8 }, (_, index) =>
+			rpc(mf, "create", [`repo-${index}`])
+		)
+	);
+	const duplicate = await Promise.allSettled([
+		rpc(mf, "create", ["same"]),
+		rpc(mf, "create", ["same"]),
+	]);
+	expect(duplicate.map((result) => result.status).sort()).toEqual([
+		"fulfilled",
+		"rejected",
+	]);
+	expect((await rpc(mf, "list")).total).toBe(9);
+});
+
+test("artifacts: an explicit reset removes both metadata and Git repositories", async ({
+	expect,
+}) => {
+	const persistence = await useTmp();
+	const first = new Miniflare({
+		...options(),
+		resourcePersistencePath: persistence,
+	});
+	useDispose(first);
+	const created = await pushFixture(first, path.join(await useTmp(), "source"));
+	await first.dispose();
+	await removeDir(path.join(persistence, "artifacts"));
+	const second = new Miniflare({
+		...options(),
+		resourcePersistencePath: persistence,
+	});
+	useDispose(second);
+	expect((await rpc(second, "list")).total).toBe(0);
+	const fresh = await rpc(second, "create", ["Repo"]);
+	expect(fresh.id).not.toBe(created.id);
+	const oldToken = await fetch(
+		`${fresh.remote}/info/refs?service=git-upload-pack`,
+		{ headers: { Authorization: `Bearer ${created.token}` } }
+	);
+	expect(oldToken.status).toBe(401);
+	await oldToken.body?.cancel();
+});
+
+test("artifacts: missing Git gives an actionable error during local startup", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const previousPath = process.env.PATH;
+	process.env.PATH = root;
+	try {
+		const mf = new Miniflare(options());
+		await expect(mf.ready).rejects.toThrow(
+			/requires Git 2\.32 or newer on PATH.*Install Git.*restart/i
+		);
+		// dispose() preserves the startup error after cleaning up the instance.
+		await expect(mf.dispose()).rejects.toThrow(
+			/requires Git 2\.32 or newer on PATH/
+		);
+		await expect(startGitSidecar(path.join(root, "repos"))).rejects.toThrow(
+			/requires Git 2\.32 or newer on PATH/
+		);
+	} finally {
+		process.env.PATH = previousPath;
+	}
+});
+
+test.skipIf(process.platform === "win32")(
+	"artifacts: Git older than 2.32 fails during local startup with upgrade instructions",
+	async ({ expect }) => {
+		const root = await useTmp();
+		const fakeGit = path.join(root, "git");
+		await writeFile(fakeGit, "#!/bin/sh\nprintf 'git version 2.31.99\\n'\n");
+		await chmod(fakeGit, 0o755);
+		const previousPath = process.env.PATH;
+		process.env.PATH = root;
+		try {
+			const mf = new Miniflare(options());
+			await expect(mf.ready).rejects.toThrow(
+				/requires Git 2\.32 or newer.*Found git version 2\.31\.99.*Upgrade Git.*restart/i
+			);
+			await expect(mf.dispose()).rejects.toThrow(/requires Git 2\.32 or newer/);
+			await expect(startGitSidecar(path.join(root, "repos"))).rejects.toThrow(
+				/requires Git 2\.32 or newer.*Upgrade Git/
+			);
+		} finally {
+			process.env.PATH = previousPath;
+		}
+	}
+);
+
+test("artifacts: sidecar creates a repository without host Git config", async ({
+	expect,
+}) => {
+	const sidecar = await startGitSidecar(path.join(await useTmp(), "repos"));
+	try {
+		const response = await fetch(
+			`http://${sidecar.address}/__local_artifacts__`,
+			{
+				method: "POST",
+				headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+				body: JSON.stringify({
+					action: "create",
+					namespace: "test",
+					name: "repo",
+					generation: "test-generation",
+					defaultBranch: "main",
+				}),
+			}
+		);
+		const body = await response.text();
+		expect(response.status, body).toBe(200);
+		expect(JSON.parse(body)).toEqual({ defaultBranch: "main", refs: {} });
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test("artifacts: stale deletion cannot remove a replacement generation", async ({
+	expect,
+}) => {
+	const root = path.join(await useTmp(), "repos");
+	const sidecar = await startGitSidecar(root);
+	try {
+		const deleteGeneration = async (generation: string) => {
+			const response = await fetch(
+				`http://${sidecar.address}/__local_artifacts__`,
+				{
+					method: "POST",
+					headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+					body: JSON.stringify({
+						action: "delete",
+						namespace: "test",
+						name: "repo",
+						generation,
+					}),
+				}
+			);
+			expect(response.status).toBe(200);
+			await response.body?.cancel();
+		};
+		await createSidecarRepository(sidecar, "original-generation");
+		await deleteGeneration("original-generation");
+		await createSidecarRepository(sidecar, "replacement-generation");
+		await deleteGeneration("original-generation");
+		expect(
+			await new GitClient(repositoryPath(root, "test", "repo")).generation()
+		).toBe("replacement-generation");
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test.skipIf(process.platform === "win32")(
+	"artifacts: smart HTTP pushes cannot run repository-local hooks",
+	async ({ expect }) => {
+		const root = path.join(await useTmp(), "repos");
+		const sidecar = await startGitSidecar(root);
+		try {
+			await createSidecarRepository(sidecar, "hook-generation");
+			const repository = repositoryPath(root, "test", "repo");
+			const hooks = path.join(await useTmp(), "hooks");
+			const marker = path.join(await useTmp(), "hook-ran");
+			await mkdir(hooks);
+			const hook = path.join(hooks, "pre-receive");
+			await writeFile(hook, `#!/bin/sh\nprintf ran > '${marker}'\n`);
+			await chmod(hook, 0o755);
+			await git(["-C", repository, "config", "core.hooksPath", hooks]);
+
+			const source = path.join(await useTmp(), "source");
+			await git(["init", "--initial-branch=main", source]);
+			await writeFile(path.join(source, "README"), "fixture\n");
+			await git(["add", "README"], source);
+			await git(["commit", "-m", "fixture"], source);
+			await git(
+				["push", `http://${sidecar.address}/git/test/repo.git`, "main"],
+				source,
+				{
+					GIT_CONFIG_COUNT: "3",
+					GIT_CONFIG_KEY_1: "http.extraHeader",
+					GIT_CONFIG_VALUE_1: `X-Local-Artifacts-Backend: ${sidecar.secret}`,
+					GIT_CONFIG_KEY_2: "http.extraHeader",
+					GIT_CONFIG_VALUE_2: "X-Local-Artifacts-Generation: hook-generation",
+				}
+			);
+			await expect(stat(marker)).rejects.toMatchObject({ code: "ENOENT" });
+		} finally {
+			await sidecar.close();
+		}
+	}
+);
+
+test("artifacts: shallow imports stay shallow when cloned with Git protocol v2", async ({
+	expect,
+}) => {
+	const workspace = await useTmp();
+	const source = path.join(workspace, "source");
+	await git(["init", "--initial-branch=main", source]);
+	for (const index of [1, 2, 3]) {
+		await writeFile(path.join(source, "README"), `version ${index}\n`);
+		await git(["add", "README"], source);
+		await git(["commit", "-m", `version ${index}`], source);
+	}
+
+	const sidecar = await startGitSidecar(path.join(workspace, "repos"));
+	try {
+		const response = await fetch(
+			`http://${sidecar.address}/__local_artifacts__`,
+			{
+				method: "POST",
+				headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+				body: JSON.stringify({
+					action: "import",
+					namespace: "test",
+					name: "repo",
+					generation: "shallow-generation",
+					sourceUrl: pathToFileURL(source).href,
+					branch: "main",
+					depth: 1,
+				}),
+			}
+		);
+		const body = await response.text();
+		expect(response.status, body).toBe(200);
+
+		const gitHeaders = {
+			GIT_CONFIG_COUNT: "3",
+			GIT_CONFIG_KEY_1: "http.extraHeader",
+			GIT_CONFIG_VALUE_1: `X-Local-Artifacts-Backend: ${sidecar.secret}`,
+			GIT_CONFIG_KEY_2: "http.extraHeader",
+			GIT_CONFIG_VALUE_2: "X-Local-Artifacts-Generation: shallow-generation",
+		};
+		const clone = path.join(workspace, "clone");
+		const remote = `http://${sidecar.address}/git/test/repo.git`;
+		await git(
+			["-c", "protocol.version=2", "clone", remote, clone],
+			undefined,
+			gitHeaders
+		);
+		expect(
+			(await git(["rev-parse", "--is-shallow-repository"], clone)).stdout.trim()
+		).toBe("true");
+		expect(
+			(await git(["rev-list", "--count", "HEAD"], clone)).stdout.trim()
+		).toBe("1");
+		await git(
+			["-c", "protocol.version=2", "fetch", "origin"],
+			clone,
+			gitHeaders
+		);
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test("artifacts: disposing the sidecar closes its private listener", async ({
+	expect,
+}) => {
+	const sidecar = await startGitSidecar(path.join(await useTmp(), "repos"));
+	const address = `http://${sidecar.address}/missing`;
+	try {
+		const response = await fetch(address, {
+			headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+		});
+		expect(response.status).toBe(404);
+		await response.body?.cancel();
+	} finally {
+		await sidecar.close();
+	}
+	await expect(fetch(address)).rejects.toThrow();
+});
