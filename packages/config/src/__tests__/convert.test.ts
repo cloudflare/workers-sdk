@@ -728,6 +728,27 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("omits script_name for a durable-object binding to the Worker itself", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						DO: {
+							type: "durable-object",
+							worker: baseWorker.name,
+							exportName: "MyDO",
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.durable_objects).toEqual({
+				bindings: [{ name: "DO", class_name: "MyDO" }],
+			});
+		});
+
 		it("maps Workflow binding to workflows", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
