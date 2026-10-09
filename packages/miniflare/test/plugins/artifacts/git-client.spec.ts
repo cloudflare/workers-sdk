@@ -293,6 +293,40 @@ test("failed imports discard partial clones without exposing URL credentials", a
 	await expect(stat(repository)).rejects.toMatchObject({ code: "ENOENT" });
 });
 
+test.skipIf(process.platform === "win32")(
+	"a failed partial clone removes only its staging directory",
+	async ({ expect }) => {
+		const workspace = await useTmp();
+		const target = path.join(workspace, "target.git");
+		const stagedMarker = path.join(workspace, "staged-clone");
+		const bin = path.join(workspace, "bin");
+		await mkdir(bin);
+		const wrapper = path.join(bin, "git");
+		await writeFile(
+			wrapper,
+			`#!/bin/sh\nfor target do :; done\nmkdir -p "$target"\nprintf 'partial clone\\n' > "$target/config"\nprintf '%s' "$target" > '${stagedMarker}'\nprintf 'fatal: simulated clone failure\\n' >&2\nexit 1\n`
+		);
+		await chmod(wrapper, 0o755);
+		const previousPath = process.env.PATH;
+		process.env.PATH = `${bin}:${previousPath}`;
+		try {
+			await expect(
+				new GitClient(target).importFrom("https://example.invalid/repo.git")
+			).rejects.toThrow("Git import failed");
+			const staged = await readFile(stagedMarker, "utf8");
+			expect(staged).toContain(path.join(workspace, ".artifacts-import-"));
+			await expect(stat(staged)).rejects.toMatchObject({ code: "ENOENT" });
+			expect((await readdir(workspace)).sort()).toEqual([
+				"bin",
+				"staged-clone",
+			]);
+			await expect(stat(target)).rejects.toMatchObject({ code: "ENOENT" });
+		} finally {
+			process.env.PATH = previousPath;
+		}
+	}
+);
+
 test("failed imports never remove a pre-existing target", async ({
 	expect,
 }) => {
@@ -373,12 +407,13 @@ test.skipIf(process.platform === "win32")(
 		const bin = path.join(workspace, "bin");
 		const cloneArgs = path.join(workspace, "clone-args");
 		const configKey = path.join(workspace, "authorization-key");
+		const configValue = path.join(workspace, "authorization-value");
 		await mkdir(bin);
 		const realGit = (await exec("which", ["git"])).stdout.trim();
 		const wrapper = path.join(bin, "git");
 		await writeFile(
 			wrapper,
-			`#!/bin/sh\nprintf '%s' "$*" > '${cloneArgs}'\nprintf '%s' "$GIT_CONFIG_KEY_1" > '${configKey}'\nexec '${realGit}' "$@"\n`
+			`#!/bin/sh\nprintf '%s' "$*" > '${cloneArgs}'\nprintf '%s' "$GIT_CONFIG_KEY_1" > '${configKey}'\nprintf '%s' "$GIT_CONFIG_VALUE_1" > '${configValue}'\nexec '${realGit}' "$@"\n`
 		);
 		await chmod(wrapper, 0o755);
 		const previousPath = process.env.PATH;
@@ -395,6 +430,9 @@ test.skipIf(process.platform === "win32")(
 			expect(args).toContain("protocol.ssh.allow=never");
 			expect(await readFile(configKey, "utf8")).toBe(
 				"http.https://127.0.0.1:1/.extraHeader"
+			);
+			expect(await readFile(configValue, "utf8")).toBe(
+				`Authorization: Basic ${Buffer.from("reader:credential-canary").toString("base64")}`
 			);
 			for (const url of [
 				"git@example.invalid:team/repo.git",
