@@ -824,9 +824,9 @@ const CONFIG_PACKAGE = "cf/config";
  * When `types.generate` is true, also writes `.cloudflare/types/index.d.ts`
  * when the generated content differs from what's already on disk.
  */
-async function loadNewConfig(options: {
+export async function loadNewConfig(options: {
 	root: string;
-	mode: string;
+	mode?: string;
 	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<{
 	rawConfig: RawConfig;
