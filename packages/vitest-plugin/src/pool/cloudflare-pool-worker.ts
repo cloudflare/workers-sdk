@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import fs from "node:fs";
 import path from "node:path";
 import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
@@ -37,31 +36,41 @@ import type {
 
 function inlineCachedModule(
 	module: unknown,
-	cacheContents: Map<string, string>
+	project: PoolOptions["project"]
 ): unknown {
 	if (
 		module === null ||
 		typeof module !== "object" ||
 		!("cached" in module) ||
 		module.cached !== true ||
+		!("id" in module) ||
+		typeof module.id !== "string" ||
 		!("tmp" in module) ||
 		typeof module.tmp !== "string"
 	) {
 		return module;
 	}
 
-	const { cached, tmp, ...result } = module;
-	let code = cacheContents.get(tmp);
-	if (code === undefined) {
-		code = fs.readFileSync(tmp, "utf8");
-		cacheContents.set(tmp, code);
+	const { cached, tmp, id, ...result } = module;
+	for (const environment of Object.values(project.vite.environments)) {
+		const transform =
+			environment.moduleGraph.getModuleById(id)?.transformResult;
+		if (
+			transform &&
+			"__vitestTmp" in transform &&
+			transform.__vitestTmp === tmp
+		) {
+			return { ...result, id, code: transform.code };
+		}
 	}
-	return { ...result, code };
+	return undefined;
 }
 
-function inlineCachedModules(response: unknown): unknown {
-	const cacheContents = new Map<string, string>();
-	const inlined = inlineCachedModule(response, cacheContents);
+function inlineCachedModules(
+	response: unknown,
+	project: PoolOptions["project"]
+): unknown {
+	const inlined = inlineCachedModule(response, project);
 	if (
 		inlined !== response ||
 		response === null ||
@@ -73,15 +82,12 @@ function inlineCachedModules(response: unknown): unknown {
 
 	let hasCachedModules = false;
 	const entries = Object.entries(response).flatMap(([specifier, module]) => {
-		try {
-			const inlinedModule = inlineCachedModule(module, cacheContents);
-			hasCachedModules ||= inlinedModule !== module;
-			return [[specifier, inlinedModule] as const];
-		} catch {
-			// Vitest fetches warm modules normally when their cached files disappear.
-			hasCachedModules = true;
-			return [];
-		}
+		const inlinedModule = inlineCachedModule(module, project);
+		const changed = inlinedModule !== module;
+		hasCachedModules ||= changed;
+		return changed && inlinedModule === undefined
+			? []
+			: [[specifier, inlinedModule] as const];
 	});
 	return hasCachedModules ? Object.fromEntries(entries) : response;
 }
@@ -250,9 +256,18 @@ export class CloudflarePoolWorker implements PoolWorker {
 			rpcResponse.t === "s" &&
 			rpcResponse.r !== undefined
 		) {
-			const inlined = inlineCachedModules(rpcResponse.r);
+			const inlined = inlineCachedModules(rpcResponse.r, this.options.project);
 			if (inlined !== rpcResponse.r) {
-				toSend = { ...message, r: inlined };
+				toSend =
+					inlined === undefined
+						? {
+								...message,
+								r: undefined,
+								e: new Error(
+									"The cached module transform is no longer available."
+								),
+							}
+						: { ...message, r: inlined };
 			}
 		}
 		this.socket.send(structuredSerializableStringify(toSend));
