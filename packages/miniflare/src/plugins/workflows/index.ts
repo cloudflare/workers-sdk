@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
 import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
 import { MiniflareCoreError } from "../../shared";
+import { CoreBindings } from "../../workers";
 import {
 	getUserServiceName,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
@@ -14,13 +15,18 @@ import {
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	SERVICE_DEV_REGISTRY_PROXY,
-	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { SERVICE_WORKFLOW_STORAGE } from "./storage";
 import type { Service, ServiceDesignator } from "../../runtime";
 import type { ParsedWorkerOptions, Plugin, WorkflowExporters } from "../shared";
 
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
 export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
+
+const WORKER_BINDING_WORKFLOW_STORAGE = {
+	name: CoreBindings.SERVICE_LOOPBACK,
+	service: { name: SERVICE_WORKFLOW_STORAGE },
+};
 
 /** Service implementing the Workflow API for `env` and `ctx.exports`. */
 export function getWorkflowBindingServiceName(workflowName: string) {
@@ -281,7 +287,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							json: JSON.stringify(binding.name),
 						},
 						// Workflow deletion needs the Node.js host to remove its SQLite files.
-						WORKER_BINDING_SERVICE_LOOPBACK,
+						WORKER_BINDING_WORKFLOW_STORAGE,
 						...(stepLimit !== undefined
 							? [
 									{
@@ -318,7 +324,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 				...engineWorker,
 				...getStreamingTails(config.name),
 				bindings: [
-					WORKER_BINDING_SERVICE_LOOPBACK,
+					WORKER_BINDING_WORKFLOW_STORAGE,
 					{ name: "STEP_LIMITS", json: JSON.stringify(stepLimits) },
 				],
 			},
@@ -342,7 +348,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 						},
 						{ name: "BINDING_NAME", json: JSON.stringify(className) },
 						{ name: "WORKFLOW_NAME", json: JSON.stringify(workflow.name) },
-						WORKER_BINDING_SERVICE_LOOPBACK,
+						WORKER_BINDING_WORKFLOW_STORAGE,
 					],
 				},
 			})

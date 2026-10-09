@@ -349,6 +349,25 @@ describe("getPlatformProxy()", () => {
 					"
 				`);
 			});
+			it("preserves synchronous RPC methods and arbitrary factories", async ({
+				expect,
+			}) => {
+				await expect(
+					runInNode(/* javascript */ `(() => {
+						const sum = env.WORKER.sum([1, 2, 3]);
+						const firstCounter = env.WORKER.getCounter();
+						const secondCounter = env.WORKER.getCounter();
+						return JSON.stringify({
+							sum,
+							firstValue: firstCounter.increment(4),
+							secondValue: secondCounter.value,
+							distinct: firstCounter !== secondCounter,
+						});
+					})()`)
+				).resolves.toBe(
+					'{"sum":6,"firstValue":4,"secondValue":0,"distinct":true}\n'
+				);
+			});
 			it("can obtain and interact with returned functions", async ({
 				expect,
 			}) => {
