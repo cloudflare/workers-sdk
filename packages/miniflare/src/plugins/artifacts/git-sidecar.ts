@@ -1,14 +1,7 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import {
-	mkdir,
-	mkdtemp,
-	readdir,
-	rename,
-	stat,
-	unlink,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rename, stat } from "node:fs/promises";
 import {
 	createServer,
 	type IncomingMessage,
@@ -378,14 +371,9 @@ async function cleanupInterruptedRepositories(root: string): Promise<void> {
 	const retired = /^[0-9a-f]{32}\.git\.deleting-[0-9a-f]{32}$/;
 	const partialImport = /^\.artifacts-import-[a-zA-Z0-9]{6}$/;
 	const partialCreation = /^\.artifacts-stage-[a-zA-Z0-9]{6}$/;
-	const abandonedLock = /^\.artifacts-create-[0-9a-f]{32}\.lock$/;
-	// A persistence directory has one live dev server. On its next startup,
-	// creation locks from a terminated process are no longer held.
+	// Only staging and retired directories are safe to remove. A creation
+	// lock may still be held by another process, so never clear it here.
 	for (const entry of await readdir(root, { withFileTypes: true })) {
-		if (entry.isFile() && abandonedLock.test(entry.name)) {
-			await unlink(path.join(root, entry.name));
-			continue;
-		}
 		if (
 			entry.isDirectory() &&
 			(retired.test(entry.name) ||
