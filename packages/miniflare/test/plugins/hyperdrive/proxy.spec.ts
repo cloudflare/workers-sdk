@@ -6,7 +6,7 @@ import path from "node:path";
 import tls from "node:tls";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, test } from "vitest";
+import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import {
 	HyperdriveProxyController,
 	POSTGRES_SSL_REQUEST_PACKET,
@@ -244,6 +244,25 @@ function sendThroughProxy(
 			clearTimeout(timer);
 			reject(err);
 		});
+	});
+}
+
+/**
+ * Sends `message` through the proxy and resolves on the first reply, leaving
+ * the connection open so the sockets on both sides of the proxy still exist.
+ */
+function connectThroughProxy(
+	proxyPort: number,
+	message: string
+): Promise<{ socket: net.Socket; response: string }> {
+	return new Promise((resolve, reject) => {
+		const socket = net.connect({ host: "127.0.0.1", port: proxyPort }, () =>
+			socket.write(message)
+		);
+		socket.once("data", (data) =>
+			resolve({ socket, response: data.toString() })
+		);
+		socket.once("error", reject);
 	});
 }
 
@@ -549,6 +568,72 @@ describe("HyperdriveProxyController TLS modes", () => {
 			server.close();
 		}
 	});
+
+	test.for([
+		{ sslmode: "disable", serverSupportsSsl: false },
+		{ sslmode: "prefer", serverSupportsSsl: false },
+		{ sslmode: "require", serverSupportsSsl: true },
+	])(
+		"sslmode=$sslmode turns on noDelay for the client and database sockets",
+		async ({ sslmode, serverSupportsSsl }, { expect }) => {
+			const { server, port: dbPort } = serverSupportsSsl
+				? await createMockPostgresServer(certs.localhost, certs.ca.cert)
+				: await createMockPostgresNoSslServer();
+			const acceptedByDb: net.Socket[] = [];
+			server.on("connection", (socket) => acceptedByDb.push(socket));
+
+			const noDelaySockets = new Set<net.Socket>();
+			const setNoDelay = net.Socket.prototype.setNoDelay;
+			const spy = vi
+				.spyOn(net.Socket.prototype, "setNoDelay")
+				.mockImplementation(function (this: net.Socket, noDelay) {
+					if (noDelay !== false) {
+						noDelaySockets.add(this);
+					}
+					return setNoDelay.call(this, noDelay);
+				});
+			let client: net.Socket | undefined;
+
+			try {
+				const proxyPort = await controller.createProxyServer({
+					name: `test-nodelay-${sslmode}`,
+					targetHost: "127.0.0.1",
+					targetPort: String(dbPort),
+					scheme: "postgres",
+					sslmode,
+				});
+
+				const { socket, response } = await connectThroughProxy(
+					proxyPort,
+					"hello"
+				);
+				client = socket;
+				expect(response).toBe("ECHO:hello");
+
+				// With `prefer` the proxy reconnects after the 'N', and the second
+				// connection is the one that carries the traffic.
+				const pipedDbConnection = acceptedByDb.at(-1);
+				const sockets = [...noDelaySockets];
+				expect(
+					sockets.some(
+						(s) =>
+							s.localPort === proxyPort && s.remotePort === socket.localPort
+					)
+				).toBe(true);
+				expect(
+					sockets.some(
+						(s) =>
+							s.remotePort === dbPort &&
+							s.localPort === pipedDbConnection?.remotePort
+					)
+				).toBe(true);
+			} finally {
+				spy.mockRestore();
+				client?.destroy();
+				server.close();
+			}
+		}
+	);
 });
 
 describe("MySQL ssl-mode parsing via Miniflare", () => {
@@ -708,4 +793,167 @@ describe("sslrootcert connection string parsing", () => {
 		const url = new URL(connectionString);
 		expect(url.searchParams.get("sslrootcert")).toBeNull();
 	});
+});
+
+test("reuses a Hyperdrive proxy listener for an unchanged target", async ({
+	expect,
+}) => {
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "reload-reuse",
+		targetHost: "127.0.0.1",
+		targetPort: "5432",
+		scheme: "postgres",
+		sslmode: "require",
+	};
+	try {
+		const firstPort = await controller.createProxyServer(config);
+		const secondPort = await controller.createProxyServer(config);
+		expect(secondPort).toBe(firstPort);
+	} finally {
+		controller.dispose();
+	}
+});
+
+test("concurrent requests for one Hyperdrive target share a listener", async ({
+	expect,
+}) => {
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "concurrent-reuse",
+		targetHost: "127.0.0.1",
+		targetPort: "5432",
+		scheme: "postgres",
+		sslmode: "require",
+	};
+	try {
+		const [firstPort, secondPort] = await Promise.all([
+			controller.createProxyServer(config),
+			controller.createProxyServer(config),
+		]);
+		expect(secondPort).toBe(firstPort);
+	} finally {
+		controller.dispose();
+	}
+});
+
+test("retiring a proxy stops new connections but preserves an active one", async ({
+	expect,
+}) => {
+	const database = net.createServer((socket) => {
+		socket.on("data", (data) => socket.write(data));
+	});
+	await new Promise<void>((resolve) =>
+		database.listen(0, "127.0.0.1", resolve)
+	);
+	const address = database.address();
+	if (address === null || typeof address === "string") {
+		throw new Error("Expected a TCP database port");
+	}
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "live-connection",
+		targetHost: "127.0.0.1",
+		targetPort: String(address.port),
+		scheme: "postgres",
+		sslmode: "disable",
+	};
+	let client: net.Socket | undefined;
+	try {
+		controller.beginUpdate();
+		const oldPort = await controller.createProxyServer(config);
+		controller.commitUpdate(new Set([`127.0.0.1:${oldPort}`]));
+
+		client = net.connect(oldPort, "127.0.0.1");
+		await new Promise<void>((resolve, reject) => {
+			client?.once("connect", resolve);
+			client?.once("error", reject);
+		});
+		client.on("error", () => {});
+		const activeClient = client;
+		const exchange = (message: string) =>
+			new Promise<string>((resolve) => {
+				activeClient.once("data", (data) => resolve(data.toString()));
+				activeClient.write(message);
+			});
+		expect(await exchange("before")).toBe("before");
+
+		controller.beginUpdate();
+		const newPort = await controller.createProxyServer({
+			...config,
+			targetPort: String(address.port + 1),
+		});
+		controller.commitUpdate(new Set([`127.0.0.1:${newPort}`]));
+
+		expect(await exchange("after")).toBe("after");
+		await expect(
+			new Promise<void>((resolve, reject) => {
+				const next = net.connect(oldPort, "127.0.0.1");
+				next.once("connect", () => {
+					next.destroy();
+					resolve();
+				});
+				next.once("error", reject);
+			})
+		).rejects.toMatchObject({ code: "ECONNREFUSED" });
+	} finally {
+		client?.destroy();
+		controller.dispose();
+		database.close();
+	}
+});
+
+test("reuses a remote Hyperdrive bridge for an unchanged target", async ({
+	expect,
+}) => {
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "hyperdrive:0:DB",
+		bindingName: "DB",
+		remoteProxyConnectionString: new URL("http://127.0.0.1:1/"),
+	};
+	try {
+		const firstPort = await controller.createRemoteTcpBridge(config);
+		const secondPort = await controller.createRemoteTcpBridge(config);
+		expect(secondPort).toBe(firstPort);
+		expect(controller.getRemoteBridgePort(config.name)).toBe(firstPort);
+	} finally {
+		controller.dispose();
+	}
+});
+
+test("retires a remote Hyperdrive bridge a reload stops using", async ({
+	expect,
+}) => {
+	// Removing a remote binding, or switching it to local, leaves no service
+	// pointing at its bridge. The commit must close that listener and forget
+	// its port, so Node-side bindings stop handing out a dead address.
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "hyperdrive:0:DB",
+		bindingName: "DB",
+		remoteProxyConnectionString: new URL("http://127.0.0.1:1/"),
+	};
+	try {
+		controller.beginUpdate();
+		const port = await controller.createRemoteTcpBridge(config);
+		controller.commitUpdate(new Set([`127.0.0.1:${port}`]));
+
+		controller.beginUpdate();
+		controller.commitUpdate(new Set());
+
+		expect(controller.getRemoteBridgePort(config.name)).toBeUndefined();
+		await expect(
+			new Promise<void>((resolve, reject) => {
+				const next = net.connect(port, "127.0.0.1");
+				next.once("connect", () => {
+					next.destroy();
+					resolve();
+				});
+				next.once("error", reject);
+			})
+		).rejects.toMatchObject({ code: "ECONNREFUSED" });
+	} finally {
+		controller.dispose();
+	}
 });

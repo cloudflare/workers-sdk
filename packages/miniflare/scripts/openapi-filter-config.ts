@@ -465,6 +465,61 @@ const config = {
 				},
 			},
 			"/r2/buckets/{bucket_name}/objects/{object_key}": {
+				delete: {
+					description: "Delete an object from an R2 bucket.",
+					operationId: "r2-bucket-delete-object",
+					parameters: [
+						{
+							in: "path",
+							name: "bucket_name",
+							required: true,
+							schema: { type: "string" },
+						},
+						{
+							in: "path",
+							name: "object_key",
+							required: true,
+							schema: { type: "string" },
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												properties: {
+													result: {
+														type: "object",
+														properties: { key: { type: "string" } },
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Delete object response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Delete object failure.",
+						},
+					},
+					summary: "Delete Object from R2 Bucket",
+					tags: ["R2 Bucket"],
+				},
 				get: {
 					description:
 						"Get an object from an R2 bucket. Use cf-metadata-only header for HEAD-like behavior.",

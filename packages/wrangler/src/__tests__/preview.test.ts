@@ -2988,6 +2988,85 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should keep secrets that a new deployment of an existing Preview does not set", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secrets.json",
+				JSON.stringify({ ROTATED_SECRET: "new-value" })
+			);
+			const preview = {
+				id: "preview-id-keep-secrets",
+				name: "test-preview",
+				slug: "test-preview",
+				urls: ["https://test-preview.test-worker.cloudflare.app"],
+				worker_name: "test-worker",
+				created_on: new Date().toISOString(),
+			};
+			let deploymentRequestBody:
+				| { env?: Record<string, { type: string; text?: string }> }
+				| undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => HttpResponse.json({ success: true, result: preview })
+				),
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-latest",
+								preview_id: preview.id,
+								preview_name: preview.name,
+								env: {
+									KEPT_SECRET: { type: "secret_text" },
+									ROTATED_SECRET: { type: "secret_text" },
+									CLI_VAR: { type: "secret_text" },
+									ENVIRONMENT: { type: "secret_text" },
+									OLD_VAR: { type: "plain_text", text: "old" },
+								},
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-keep-secrets",
+								preview_id: preview.id,
+								preview_name: preview.name,
+								urls: ["https://keep123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json --var CLI_VAR:from-cli"
+			);
+
+			expect(deploymentRequestBody?.env).toEqual({
+				KEPT_SECRET: { type: "inherit" },
+				// Values supplied by this deployment replace the existing secret
+				ROTATED_SECRET: { type: "secret_text", text: "new-value" },
+				CLI_VAR: { type: "plain_text", text: "from-cli" },
+				ENVIRONMENT: { type: "plain_text", text: "preview" },
+				MY_KV: { type: "kv_namespace", namespace_id: "preview-kv-id" },
+			});
+		});
+
 		test("should not warn about inheritable top-level bindings missing from previews", async ({
 			expect,
 		}) => {
