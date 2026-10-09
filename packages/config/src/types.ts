@@ -632,9 +632,11 @@ export interface WorkerConfig {
 
 	/**
 	 * Bindings exposed on the Worker's `env` object. Construct entries with
-	 * `bindings.kv(...)`, `bindings.r2(...)`, etc.
+	 * `bindings.kv(...)`, `bindings.r2(...)`, etc. Entries set to `false`,
+	 * `null`, or `undefined` are omitted, which allows bindings to be included
+	 * conditionally.
 	 */
-	env?: Record<string, Binding>;
+	env?: Record<string, Binding | false | null | undefined>;
 
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's
