@@ -583,6 +583,84 @@ exec '${gitPath.trim().replaceAll("'", "'\\''")}' "$@"
 	20_000
 );
 
+test.skipIf(process.platform === "win32")(
+	"artifacts: canceled push reply synchronizes committed refs",
+	async ({ expect }) => {
+		const root = await useTmp();
+		const { stdout: gitPath } = await exec("which", ["git"]);
+		const gitBinary = gitPath.trim().replaceAll("'", "'\\''");
+		const wrapper = path.join(root, "git");
+		await writeFile(
+			wrapper,
+			`#!/bin/sh
+case " $* " in
+  *" http-backend "*)
+    if [ "$REQUEST_METHOD" = POST ]; then
+      repo="$GIT_PROJECT_ROOT\${PATH_INFO%/git-receive-pack}"
+      tree=$('${gitBinary}' -C "$repo" hash-object -t tree -w --stdin </dev/null) || exit 2
+      commit=$('${gitBinary}' -C "$repo" -c user.name=Fixture -c user.email=fixture@example.test commit-tree "$tree" -m fixture) || exit 3
+      '${gitBinary}' -C "$repo" update-ref refs/heads/main "$commit" || exit 4
+      printf '%s\\n%s\\n' "$repo" "$commit" > '${path.join(root, "ref-marker")}'
+      printf 'Content-Type: application/x-git-receive-pack-result\\r\\n\\r\\n'
+      dd if=/dev/zero bs=1048576 count=32 2>/dev/null
+      exit 0
+    fi ;;
+esac
+exec '${gitBinary}' "$@"
+`
+		);
+		await chmod(wrapper, 0o755);
+		const previousPath = process.env.PATH;
+		process.env.PATH = `${root}:${previousPath}`;
+		try {
+			const mf = new Miniflare(options());
+			useDispose(mf);
+			const created = await rpc(mf, "create", ["repo"]);
+			expect((await rpc(mf, "info", [], "repo")).lastPushAt).toBeNull();
+			const response = await fetch(`${created.remote}/git-receive-pack`, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${created.token}`,
+					"Content-Type": "application/x-git-receive-pack-request",
+				},
+				body: "",
+				signal: AbortSignal.timeout(15_000),
+			});
+			expect(response.status).toBe(200);
+			if (!response.body) {
+				throw new Error("Git response has no body");
+			}
+			const reader = response.body.getReader();
+			expect((await reader.read()).done).toBe(false);
+			await reader.cancel();
+			const [repo, commit] = (
+				await readFile(path.join(root, "ref-marker"), "utf8")
+			)
+				.trim()
+				.split(String.fromCharCode(10));
+			const { stdout: actualRef } = await exec(gitPath.trim(), [
+				"-C",
+				repo,
+				"rev-parse",
+				"refs/heads/main",
+			]);
+			expect(actualRef.trim()).toBe(commit);
+			let lastPushAt: string | null = null;
+			for (let attempt = 0; attempt < 50; attempt++) {
+				lastPushAt = (await rpc(mf, "info", [], "repo")).lastPushAt;
+				if (lastPushAt) {
+					break;
+				}
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+			expect(lastPushAt).toEqual(expect.any(String));
+		} finally {
+			process.env.PATH = previousPath;
+		}
+	},
+	20_000
+);
+
 test("artifacts: read-only and read-scoped tokens reject Git pushes", async ({
 	expect,
 }) => {
