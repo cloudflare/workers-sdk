@@ -424,7 +424,7 @@ describe("buildCommand", () => {
 				"-v",
 				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			],
-			{ encoding: "utf8" }
+			{ encoding: "utf8", stdio: "pipe" }
 		);
 	});
 });
