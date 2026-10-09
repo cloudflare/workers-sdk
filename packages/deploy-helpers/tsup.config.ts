@@ -11,6 +11,9 @@ export default defineConfig(() => [
 		entry: {
 			index: "src/index.ts",
 			context: "src/shared/context.ts",
+			"dev-vars": "src/dev/dev-vars.ts",
+			"miniflare-options": "src/dev/miniflare-options.ts",
+			"pages-assets": "src/dev/pages-assets.ts",
 			"create-worker-upload-form":
 				"src/deploy/helpers/create-worker-upload-form.ts",
 			"startup-profile": "src/startup-profile.ts",
@@ -22,12 +25,25 @@ export default defineConfig(() => [
 			js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url || (typeof __filename === "string" ? __filename : "/"));',
 		},
 		format: "esm",
-		dts: true,
+		// `pages-assets.ts` can't be type-checked (see `pages-assets-types.ts`),
+		// so its declarations come from a separate file.
+		dts: {
+			entry: {
+				index: "src/index.ts",
+				context: "src/shared/context.ts",
+				"dev-vars": "src/dev/dev-vars.ts",
+				"miniflare-options": "src/dev/miniflare-options.ts",
+				"pages-assets": "src/dev/pages-assets-types.ts",
+				"create-worker-upload-form":
+					"src/deploy/helpers/create-worker-upload-form.ts",
+				"startup-profile": "src/startup-profile.ts",
+			},
+		},
 		outDir: "dist",
 		tsconfig: "tsconfig.json",
 		metafile: true,
 		sourcemap: process.env.SOURCEMAPS !== "false",
-		noExternal: [/^@cloudflare\/workers-shared(\/.*)?$/],
+		noExternal: [/^@cloudflare\/(workers|pages)-shared(\/.*)?$/],
 		external: [
 			/^@cloudflare\//,
 			"blake3-wasm",
@@ -36,7 +52,10 @@ export default defineConfig(() => [
 			"pretty-bytes",
 			"undici",
 			"chalk",
+			"chokidar",
 			"dotenv",
+			"dotenv-expand",
+			"mime",
 			"command-exists",
 			"esbuild",
 			"ws",

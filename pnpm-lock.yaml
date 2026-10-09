@@ -2039,6 +2039,9 @@ importers:
       chalk:
         specifier: catalog:default
         version: 5.3.0
+      chokidar:
+        specifier: 4.0.3
+        version: 4.0.3
       command-exists:
         specifier: catalog:default
         version: 1.2.9
@@ -2048,6 +2051,12 @@ importers:
       dotenv:
         specifier: catalog:default
         version: 16.3.1
+      dotenv-expand:
+        specifier: 12.0.2
+        version: 12.0.2
+      mime:
+        specifier: 3.0.0
+        version: 3.0.0
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -2064,12 +2073,18 @@ importers:
         specifier: catalog:default
         version: 8.21.0
     devDependencies:
+      '@cloudflare/pages-shared':
+        specifier: workspace:*
+        version: link:../pages-shared
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20261006.1
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
@@ -2079,6 +2094,9 @@ importers:
       '@types/json-diff':
         specifier: ^1.0.3
         version: 1.0.3
+      '@types/mime':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
@@ -4142,6 +4160,9 @@ importers:
 
   packages/vitest-plugin:
     dependencies:
+      blake3-wasm:
+        specifier: 2.1.5
+        version: 2.1.5
       cjs-module-lexer:
         specifier: 1.2.3
         version: 1.2.3
@@ -4151,9 +4172,6 @@ importers:
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
       zod:
         specifier: catalog:default
         version: 4.4.3
@@ -4161,6 +4179,9 @@ importers:
       '@cloudflare/config':
         specifier: workspace:*
         version: link:../config
+      '@cloudflare/deploy-helpers':
+        specifier: workspace:*
+        version: link:../deploy-helpers
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
@@ -4652,9 +4673,6 @@ importers:
       '@cloudflare/pages-functions':
         specifier: workspace:*
         version: link:../pages-functions
-      '@cloudflare/pages-shared':
-        specifier: workspace:^
-        version: link:../pages-shared
       '@cloudflare/remote-bindings':
         specifier: workspace:*
         version: link:../remote-bindings
@@ -4787,9 +4805,6 @@ importers:
       dotenv:
         specifier: catalog:default
         version: 16.3.1
-      dotenv-expand:
-        specifier: ^12.0.2
-        version: 12.0.2
       empathic:
         specifier: ^2.0.0
         version: 2.0.0
@@ -11403,10 +11418,6 @@ packages:
 
   dotenv@16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
-    engines: {node: '>=12'}
-
-  dotenv@17.2.4:
-    resolution: {integrity: sha512-mudtfb4zRB4bVvdj0xRo+e6duH1csJRM8IukBqfTRvHotn9+LBXB8ynAidP9zHqoRC/fsllXgk4kCKlR21fIhw==}
     engines: {node: '>=12'}
 
   dotenv@17.4.2:
@@ -22105,7 +22116,7 @@ snapshots:
       chokidar: 5.0.0
       confbox: 0.2.4
       defu: 6.1.4
-      dotenv: 17.2.4
+      dotenv: 17.4.2
       exsolve: 1.0.8
       giget: 2.0.0
       jiti: 2.6.1
@@ -22755,8 +22766,6 @@ snapshots:
   dotenv@16.3.1: {}
 
   dotenv@16.6.1: {}
-
-  dotenv@17.2.4: {}
 
   dotenv@17.4.2: {}
 

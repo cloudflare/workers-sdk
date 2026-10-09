@@ -8,6 +8,7 @@ import {
 	normalizeAndValidateConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { splitSqlQuery } from "@cloudflare/workers-utils/d1-splitter";
 import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
@@ -22,7 +23,6 @@ import {
 	getUnappliedMigrationNames,
 	resolveMigrationsConfig,
 } from "../d1/migrations/helpers";
-import { splitSqlQuery } from "../d1/splitter";
 import { getDatabaseInfoFromConfig } from "../d1/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { createContainerDevPlan } from "@cloudflare/containers-shared";
+import { getZoneFromConfig } from "@cloudflare/deploy-helpers/miniflare-options";
 import {
 	DEFAULT_COMPAT_DATE,
 	extractBindingsOfType,
@@ -9,19 +9,15 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
-import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
-	buildSitesOptions,
 	getDefaultProjectTmpPath,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
-import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
-import { getZoneFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
@@ -38,11 +34,14 @@ import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/expe
 import type {
 	RemoteProxyConnectionString,
 	V4MiniflareOptions,
-	V4ModuleRule,
-	V4WorkerOptions,
 } from "miniflare";
 
-export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
+export {
+	getMiniflareWorkerOptions as unstable_getMiniflareWorkerOptions,
+	type MiniflareWorkerOptions as Unstable_MiniflareWorkerOptions,
+	type SourcelessWorkerOptions,
+} from "@cloudflare/deploy-helpers/miniflare-options";
+export { getVarsForDev as unstable_getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
 export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
@@ -51,31 +50,6 @@ export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectCla
  */
 export function unstable_getDevCompatibilityDate() {
 	return DEFAULT_COMPAT_DATE;
-}
-
-/**
- * Derive the zone value used for the outbound `CF-Worker` header from a
- * normalized Wrangler config, for callers outside of `wrangler dev`
- * (`getPlatformProxy`, `unstable_getMiniflareWorkerOptions`).
- *
- * Falls back to the zone of the first configured route (via
- * {@link getZoneFromRoute}, which prefers the route's `zone_name` field
- * when present and otherwise falls back to the pattern's hostname), or
- * `undefined` if no routes are set — in which case Miniflare keeps its
- * default of `${workerName}.example.com`.
- *
- * `dev.host` is intentionally NOT consulted here: the `dev` config block is
- * specific to `wrangler dev` and should not influence behaviour under
- * `@cloudflare/vite-plugin`, `@cloudflare/vitest-plugin`, or
- * `getPlatformProxy`. Users who need a custom `CF-Worker` host in those
- * environments should configure a `route` instead.
- */
-function getZoneFromConfig(config: Config): string | undefined {
-	const firstRoute = config.route ?? config.routes?.[0];
-	if (firstRoute) {
-		return getZoneFromRoute(firstRoute);
-	}
-	return undefined;
 }
 
 export type {
@@ -386,162 +360,4 @@ function deepFreeze<T extends Record<string | number | symbol, unknown>>(
 			deepFreeze(prop as Record<string | number | symbol, unknown>);
 		}
 	});
-}
-
-export type SourcelessWorkerOptions = Omit<
-	V4WorkerOptions,
-	"script" | "scriptPath" | "modules" | "modulesRoot"
-> & { modulesRules?: V4ModuleRule[] };
-
-export interface Unstable_MiniflareWorkerOptions {
-	workerOptions: SourcelessWorkerOptions;
-	define: Record<string, string>;
-	main?: string;
-	externalWorkers: V4WorkerOptions[];
-}
-
-export function unstable_getMiniflareWorkerOptions(
-	configPath: string,
-	env?: string,
-	options?: {
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		overrides?: {
-			assets?: Partial<AssetsOptions>;
-			enableContainers?: boolean;
-		};
-		containerBuildId?: string;
-	}
-): Unstable_MiniflareWorkerOptions;
-export function unstable_getMiniflareWorkerOptions(
-	config: Config,
-	env?: string,
-	options?: {
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		overrides?: {
-			assets?: Partial<AssetsOptions>;
-			enableContainers?: boolean;
-		};
-		containerBuildId?: string;
-	}
-): Unstable_MiniflareWorkerOptions;
-export function unstable_getMiniflareWorkerOptions(
-	configOrConfigPath: string | Config,
-	env?: string,
-	options?: {
-		envFiles?: string[];
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		overrides?: {
-			assets?: Partial<AssetsOptions>;
-			enableContainers?: boolean;
-		};
-		containerBuildId?: string;
-	}
-): Unstable_MiniflareWorkerOptions {
-	const config =
-		typeof configOrConfigPath === "string"
-			? readConfig({ config: configOrConfigPath, env })
-			: configOrConfigPath;
-
-	const modulesRules: V4ModuleRule[] = config.rules
-		.concat(DEFAULT_MODULE_RULES)
-		.map((rule) => ({
-			type: rule.type,
-			include: rule.globs,
-			fallthrough: rule.fallthrough,
-		}));
-
-	const enableContainers =
-		options?.overrides?.enableContainers !== undefined
-			? options.overrides.enableContainers
-			: config.dev.enable_containers;
-	const containerPlan = enableContainers
-		? createContainerDevPlan({
-				containers: config.containers,
-				exports: config.exports,
-				containerBuildId: options?.containerBuildId,
-				configPath: config.configPath,
-			})
-		: undefined;
-	const bindings = getBindings(
-		config,
-		env,
-		options?.envFiles,
-		true,
-		undefined,
-		undefined
-	);
-
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
-		{
-			name: config.name,
-			complianceRegion: config.compliance_region,
-			bindings,
-			queueConsumers: config.queues.consumers,
-			migrations: config.migrations,
-			exports: config.exports,
-			tails: config.tail_consumers,
-			streamingTails: config.streaming_tail_consumers,
-			containerRuntimeOptions: containerPlan?.containerRuntimeOptions,
-			enableContainers,
-		},
-		options?.remoteProxyConnectionString
-	);
-
-	const sitesAssetPaths = getSiteAssetPaths(config);
-	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
-	const projectRoot = config.userConfigPath
-		? path.dirname(config.userConfigPath)
-		: process.cwd();
-	// Only resolve assets if a directory is available (from config or overrides).
-	// When assets are configured without a directory (e.g. when using
-	// @cloudflare/vite-plugin, which handles asset serving independently),
-	// there's nothing for Miniflare to serve, so skip asset setup entirely.
-	const hasAssetsDirectory =
-		config.assets?.directory || options?.overrides?.assets?.directory;
-	const processedAssetOptions = hasAssetsDirectory
-		? getAssetsOptions({
-				args: {
-					assets: undefined,
-				},
-				config,
-				// For getPlatformProxy we don't need to validate the directory's existence
-				validateDirectoryExistence: false,
-				overrides: options?.overrides?.assets,
-			})
-		: undefined;
-	const assetOptions = processedAssetOptions
-		? buildAssetOptions({ assets: processedAssetOptions })
-		: {};
-
-	const workerOptions: SourcelessWorkerOptions = {
-		rootPath: projectRoot,
-		compatibilityDate: config.compatibility_date,
-		compatibilityFlags: config.compatibility_flags,
-		modulesRules,
-		zone: getZoneFromConfig(config),
-		access: config.access?.dev,
-		connectHandlers: config.connect.map((handler) => ({
-			protocol: handler.protocol,
-			port: handler.port,
-			address: handler.address,
-			...(handler.protocol === "udp"
-				? {
-						idleTimeoutMs: handler.idle_timeout_ms,
-						maxPendingBytes: handler.max_pending_bytes,
-					}
-				: {}),
-		})),
-		cronTriggers: config.triggers.crons,
-
-		...bindingOptions,
-		...sitesOptions,
-		...assetOptions,
-	};
-
-	return {
-		workerOptions,
-		define: config.define,
-		main: config.main,
-		externalWorkers,
-	};
 }
