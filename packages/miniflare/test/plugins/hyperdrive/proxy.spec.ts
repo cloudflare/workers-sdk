@@ -902,3 +902,58 @@ test("retiring a proxy stops new connections but preserves an active one", async
 		database.close();
 	}
 });
+
+test("reuses a remote Hyperdrive bridge for an unchanged target", async ({
+	expect,
+}) => {
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "hyperdrive:0:DB",
+		bindingName: "DB",
+		remoteProxyConnectionString: new URL("http://127.0.0.1:1/"),
+	};
+	try {
+		const firstPort = await controller.createRemoteTcpBridge(config);
+		const secondPort = await controller.createRemoteTcpBridge(config);
+		expect(secondPort).toBe(firstPort);
+		expect(controller.getRemoteBridgePort(config.name)).toBe(firstPort);
+	} finally {
+		controller.dispose();
+	}
+});
+
+test("retires a remote Hyperdrive bridge a reload stops using", async ({
+	expect,
+}) => {
+	// Removing a remote binding, or switching it to local, leaves no service
+	// pointing at its bridge. The commit must close that listener and forget
+	// its port, so Node-side bindings stop handing out a dead address.
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "hyperdrive:0:DB",
+		bindingName: "DB",
+		remoteProxyConnectionString: new URL("http://127.0.0.1:1/"),
+	};
+	try {
+		controller.beginUpdate();
+		const port = await controller.createRemoteTcpBridge(config);
+		controller.commitUpdate(new Set([`127.0.0.1:${port}`]));
+
+		controller.beginUpdate();
+		controller.commitUpdate(new Set());
+
+		expect(controller.getRemoteBridgePort(config.name)).toBeUndefined();
+		await expect(
+			new Promise<void>((resolve, reject) => {
+				const next = net.connect(port, "127.0.0.1");
+				next.once("connect", () => {
+					next.destroy();
+					resolve();
+				});
+				next.once("error", reject);
+			})
+		).rejects.toMatchObject({ code: "ECONNREFUSED" });
+	} finally {
+		controller.dispose();
+	}
+});
