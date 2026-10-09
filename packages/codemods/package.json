@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/codemods",
-	"version": "0.4.1",
+	"version": "0.4.2",
 	"description": "Codemods for upgrading Cloudflare developer projects",
 	"keywords": [
 		"cloudflare",

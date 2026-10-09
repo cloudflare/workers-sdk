@@ -262,18 +262,16 @@ export const r2BucketLifecycleAddCommand = createCommand({
 					},
 				};
 			} else {
-				if (expireDays !== undefined) {
+				// Only read the flags that belong to this action, so that combining
+				// expiration and transition flags keeps each action's own condition.
+				const actionDays = action === "expire" ? expireDays : iaTransitionDays;
+				const actionDate = action === "expire" ? expireDate : iaTransitionDate;
+				if (actionDays !== undefined) {
 					conditionType = "Age";
-					conditionValue = expireDays;
-				} else if (iaTransitionDays !== undefined) {
-					conditionType = "Age";
-					conditionValue = iaTransitionDays;
-				} else if (expireDate !== undefined) {
+					conditionValue = actionDays;
+				} else if (actionDate !== undefined) {
 					conditionType = "Date";
-					conditionValue = expireDate;
-				} else if (iaTransitionDate !== undefined) {
-					conditionType = "Date";
-					conditionValue = iaTransitionDate;
+					conditionValue = actionDate;
 				} else {
 					conditionValue = await prompt(
 						`Enter the number of days or a date (YYYY-MM-DD) after which to ${formatActionDescription(action)}`

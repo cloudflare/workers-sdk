@@ -27,7 +27,12 @@ test("chunks large WebSocket messages bi-directionally", async ({
 	});
 	// Increase buffer size to allow the `exec` command to receive this large output.
 	// If this is not big enough the child process running Vitest will exit with a SIGINT signal
-	const result = await vitestRun({ maxBuffer: bigText.length + 10000 });
+	// Pin the reporter so the Worker's large console message is emitted to stdout,
+	// exercising the return WebSocket frame as well as the module load.
+	const result = await vitestRun({
+		flags: ["--reporter=default"],
+		maxBuffer: bigText.length + 10000,
+	});
 	await result.exitCode;
 	// ...and logs it back
 	expect(result.stdout).toMatch(bigText);

@@ -44,6 +44,7 @@
 		"@types/mime-types": "^3.0.1",
 		"@types/node": "catalog:default",
 		"@types/nunjucks": "^3.2.6",
+		"@vitest/ui": "catalog:vitest5",
 		"better-auth": "^1.4.6",
 		"cf": "catalog:default",
 		"cjs-wasm-module-dep": "file:./module-resolution/vendor/cjs-wasm-module-dep",
@@ -59,7 +60,7 @@
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
-		"vitest": "catalog:default",
+		"vitest": "catalog:vitest5",
 		"wasm-module-dep": "file:./module-resolution/vendor/wasm-module-dep",
 		"wrangler": "workspace:*"
 	}

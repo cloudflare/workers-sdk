@@ -131,12 +131,20 @@ export async function getAuthURL(
 
 /**
  * Refresh an access token from the remote service.
+ *
+ * @param logger Logger used for token-exchange diagnostics.
+ * @param isNonInteractiveOrCI Whether interactive Access login is unavailable.
+ * @param clientId OAuth client identifier for the consuming CLI.
+ * @param storage Storage containing the current refresh token.
+ * @param cliDisplayName Consumer name used in actionable Access errors.
+ * @returns The refreshed OAuth access context.
  */
 export async function exchangeRefreshTokenForAccessToken(
 	logger: OAuthFlowContext["logger"],
 	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
 	clientId: string,
-	storage: AuthConfigStorage
+	storage: AuthConfigStorage,
+	cliDisplayName: string
 ): Promise<AccessContext> {
 	// Read the refresh token fresh from disk on every call so we always pick up
 	// the latest rotation written by a sibling Wrangler process.
@@ -154,7 +162,12 @@ export async function exchangeRefreshTokenForAccessToken(
 		client_id: clientId,
 	});
 
-	const response = await fetchAuthToken(params, logger, isNonInteractiveOrCI);
+	const response = await fetchAuthToken(
+		params,
+		logger,
+		isNonInteractiveOrCI,
+		cliDisplayName
+	);
 
 	if (response.status >= 400) {
 		let tokenExchangeResErr = undefined;
@@ -224,14 +237,23 @@ export async function exchangeRefreshTokenForAccessToken(
 }
 
 /**
- * Fetch an access token from the remote service.
+ * Exchanges an authorization code for an access token.
+ *
+ * @param state Current OAuth flow state containing the authorization code.
+ * @param logger Logger used for token-exchange diagnostics.
+ * @param isNonInteractiveOrCI Whether interactive Access login is unavailable.
+ * @param clientId OAuth client identifier for the consuming CLI.
+ * @param redirectUri Registered OAuth redirect URI.
+ * @param cliDisplayName Consumer name used in actionable Access errors.
+ * @returns The exchanged OAuth access context.
  */
 export async function exchangeAuthCodeForAccessToken(
 	state: OAuthFlowState,
 	logger: OAuthFlowContext["logger"],
 	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
 	clientId: string,
-	redirectUri: string
+	redirectUri: string,
+	cliDisplayName: string
 ): Promise<AccessContext> {
 	const { authorizationCode, codeVerifier = "" } = state;
 
@@ -249,7 +271,12 @@ export async function exchangeAuthCodeForAccessToken(
 		code_verifier: codeVerifier,
 	});
 
-	const response = await fetchAuthToken(params, logger, isNonInteractiveOrCI);
+	const response = await fetchAuthToken(
+		params,
+		logger,
+		isNonInteractiveOrCI,
+		cliDisplayName
+	);
 	if (!response.ok) {
 		const { error } = (await getJSONFromResponse(response, logger)) as {
 			error: string;
@@ -297,11 +324,18 @@ export async function exchangeAuthCodeForAccessToken(
  *
  * Note that the `body` of the POST request is form-urlencoded so
  * can be represented by a URLSearchParams object.
+ *
+ * @param body Form-encoded OAuth token request parameters.
+ * @param logger Logger used for request diagnostics.
+ * @param isNonInteractiveOrCI Whether interactive Access login is unavailable.
+ * @param cliDisplayName Consumer name used in actionable Access errors.
+ * @returns The OAuth token endpoint response.
  */
 export async function fetchAuthToken(
 	body: URLSearchParams,
 	logger: OAuthFlowContext["logger"],
-	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
+	cliDisplayName: string
 ): Promise<Response> {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
@@ -321,6 +355,7 @@ export async function fetchAuthToken(
 		const accessHeaders = await getCloudflareAccessHeaders({
 			logger,
 			isNonInteractiveOrCI,
+			cliDisplayName,
 		});
 		Object.assign(headers, accessHeaders);
 	}

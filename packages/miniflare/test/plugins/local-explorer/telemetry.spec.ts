@@ -54,6 +54,20 @@ describe("getRouteName", () => {
 		).toBe("email.routing.resend.draft");
 	});
 
+	test.for(["folder/file.txt", "folder/nested/file.txt", "folder%2Ffile.txt"])(
+		"maps path-like R2 keys to the object route: %s",
+		(key, { expect }) => {
+			expect(
+				getRouteName(
+					`/cdn-cgi/local/explorer/api/r2/buckets/test/objects/${key}`
+				)
+			).toBe("r2.object");
+			expect(
+				getRouteName("/cdn-cgi/local/explorer/api/r2/buckets/test/objects")
+			).toBe("r2.objects");
+		}
+	);
+
 	test("returns unknown for unrecognized paths", ({ expect }) => {
 		expect(getRouteName("/cdn-cgi/local/explorer/api/unknown/path")).toBe(
 			"unknown"

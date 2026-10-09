@@ -1,7 +1,7 @@
 // Root vitest config for the vitest-plugin-examples fixture.
-// Per the Vitest 4 docs, only `globalSetup`, `reporters`, `coverage`, and
-// other "global" options are inherited from this root config; project test
-// options (testTimeout, retry, etc.) are NOT inherited. Each project under
+// File-based projects use only run-level options (`globalSetup`, `reporters`,
+// `coverage`, etc.) from this root config; project test options (testTimeout,
+// retry, etc.) are NOT inherited. Each project under
 // `*/vitest.*config.*ts` extends `vitest.shared.ts` directly via mergeConfig.
 import { defineConfig } from "vitest/config";
 

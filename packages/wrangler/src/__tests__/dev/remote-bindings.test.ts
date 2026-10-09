@@ -874,6 +874,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		assert(sessionOptions);
 		const { auth, logger: _logger, ...rest1 } = sessionOptions;
 		expect(rest1).toEqual({
+			cliDisplayName: "Wrangler",
 			complianceRegion: undefined,
 			workerName: "worker",
 		});
@@ -918,6 +919,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		assert(sessionOptions);
 		const { auth: auth2, logger: _logger, ...rest2 } = sessionOptions;
 		expect(rest2).toEqual({
+			cliDisplayName: "Wrangler",
 			complianceRegion: undefined,
 			workerName: "worker",
 		});

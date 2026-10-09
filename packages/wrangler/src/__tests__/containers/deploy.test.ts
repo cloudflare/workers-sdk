@@ -3098,7 +3098,7 @@ describe("wrangler deploy with containers", () => {
 			]);
 
 			await expect(runWrangler("deploy index.js")).rejects.toThrow(
-				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config and deploy once, then deploy again with target_instance_percentage or target_instance_count."
+				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config file and deploy once, then deploy again with target_instance_percentage or target_instance_count."
 			);
 		});
 
@@ -3147,7 +3147,7 @@ describe("wrangler deploy with containers", () => {
 			]);
 
 			await expect(runWrangler("deploy index.js")).rejects.toThrow(
-				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config and deploy once, then deploy again with target_instance_percentage or target_instance_count."
+				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config file and deploy once, then deploy again with target_instance_percentage or target_instance_count."
 			);
 		});
 

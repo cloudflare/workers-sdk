@@ -2671,6 +2671,17 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig(reusePorts = false) {
+		this.#hyperdriveProxyController.beginUpdate();
+		try {
+			await this.#assembleAndUpdateConfigInternal(reusePorts);
+		} finally {
+			// If assembly or runtime startup failed, keep the old listeners and
+			// close only the new candidates. A successful update already committed.
+			this.#hyperdriveProxyController.abortUpdate();
+		}
+	}
+
+	async #assembleAndUpdateConfigInternal(reusePorts = false) {
 		await this.#closeBrowserProcesses();
 
 		// This function must be run with `#runtimeMutex` held
@@ -2781,6 +2792,14 @@ export class Miniflare {
 					"There is likely additional logging output above."
 			);
 		}
+		// Use the assembled services: duplicate binding names may have been dropped.
+		const activeExternalAddresses = new Set<string>();
+		for (const service of config.services ?? []) {
+			if ("external" in service && service.external?.address !== undefined) {
+				activeExternalAddresses.add(service.external.address);
+			}
+		}
+		this.#hyperdriveProxyController.commitUpdate(activeExternalAddresses);
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.

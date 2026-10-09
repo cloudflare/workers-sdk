@@ -187,6 +187,17 @@ jobs:
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
 
+      - name: Test release source maps (Miniflare and Vite plugin)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
+        run: |
+          rm -rf packages/miniflare/dist packages/vite-plugin-cloudflare/dist
+          pnpm run build --filter=miniflare --filter=@cloudflare/vite-plugin
+          pnpm --filter miniflare exec vitest run test/sourcemap.spec.ts test/plugins/core/errors/index.spec.ts
+          pnpm --filter @cloudflare/vite-plugin exec vitest run src/__tests__/package-sourcemaps.spec.ts
+        env:
+          SOURCEMAPS: "false"
+          CI_OS: ${{ matrix.description }}
+
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
         # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
