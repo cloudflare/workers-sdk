@@ -170,6 +170,24 @@ test("failed imports never remove a pre-existing target", async ({
 	expect(await readFile(marker, "utf8")).toBe("keep me\n");
 });
 
+test("failed Git imports clean their target and hide URL credentials", async ({
+	expect,
+}) => {
+	const repository = path.join(await useTmp(), "failed.git");
+	let failure: unknown;
+	try {
+		await new GitClient(repository).importFrom(
+			"https://reader:credential-canary@127.0.0.1:1/missing.git"
+		);
+	} catch (error) {
+		failure = error;
+	}
+	expect(failure).toBeInstanceOf(Error);
+	expect(String(failure)).toContain("Git import failed");
+	expect(String(failure)).not.toContain("credential-canary");
+	await expect(stat(repository)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
 test("Git log rejects invalid pagination before starting a history read", async ({
 	expect,
 }) => {
