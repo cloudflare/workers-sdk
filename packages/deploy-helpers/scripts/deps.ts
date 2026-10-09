@@ -18,8 +18,11 @@ export const EXTERNAL_DEPENDENCIES = [
 	// which already bundles these packages itself.
 	"blake3-wasm",
 	"chalk",
+	"chokidar",
 	"command-exists",
 	"dotenv",
+	"dotenv-expand",
+	"mime",
 	"p-queue",
 	"pretty-bytes",
 	"undici",

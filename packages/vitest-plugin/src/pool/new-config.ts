@@ -13,9 +13,9 @@ export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
 
 /**
  * Load a `cloudflare.config.ts` and normalise it into the same `Config` shape
- * that `wrangler.unstable_readConfig()` produces for a Wrangler configuration
+ * that `readConfig()` produces for a Wrangler configuration
  * file, so that everything downstream (bindings, remote proxy sessions,
- * `unstable_getMiniflareWorkerOptions()`) is oblivious to which config format
+ * `getMiniflareWorkerOptions()`) is oblivious to which config format
  * the project uses.
  *
  * This mirrors the `@cloudflare/vite-plugin` implementation of

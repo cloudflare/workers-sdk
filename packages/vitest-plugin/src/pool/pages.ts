@@ -1,5 +1,5 @@
+import type { Logger } from "@cloudflare/workers-utils";
 import type { Request, Response } from "miniflare";
-import type { Unstable_ASSETSBindingsOptions } from "wrangler";
 
 // Track all AbortControllers created by buildPagesASSETSBinding so they can
 // be cleaned up when the last pool worker stops. This is necessary because
@@ -41,7 +41,8 @@ export async function buildPagesASSETSBinding(
 		);
 	}
 
-	const { unstable_generateASSETSBinding } = await import("wrangler"); // (lazy)
+	const { generateASSETSBinding } =
+		await import("@cloudflare/deploy-helpers/pages-assets"); // (lazy)
 
 	// Create the AbortController after the import succeeds so we don't leak
 	// a registered controller if the import throws.
@@ -53,8 +54,8 @@ export async function buildPagesASSETSBinding(
 		debugWithSanitization: console.debug,
 		loggerLevel: "info",
 		columns: process.stdout.columns,
-	} as unknown as Unstable_ASSETSBindingsOptions["log"];
-	return unstable_generateASSETSBinding({
+	} as unknown as Logger;
+	return generateASSETSBinding({
 		log,
 		directory: assetsPath,
 		signal: ac.signal,

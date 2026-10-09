@@ -282,6 +282,7 @@ describe("the real workspace", () => {
 			    "@cloudflare/cli-shared-helpers",
 			    "@cloudflare/pages-shared",
 			    "@cloudflare/runtime-types",
+			    "@cloudflare/vitest-plugin",
 			    "@cloudflare/workers-auth",
 			    "wrangler",
 			  ],
@@ -289,7 +290,6 @@ describe("the real workspace", () => {
 			    "@cloudflare/autoconfig",
 			    "@cloudflare/containers-shared",
 			    "@cloudflare/vite-plugin",
-			    "@cloudflare/vitest-plugin",
 			  ],
 			  [
 			    "@cloudflare/deploy-helpers",
@@ -298,7 +298,7 @@ describe("the real workspace", () => {
 		`);
 	});
 
-	it("should publish wrangler before the packages that pin it", ({
+	it("should publish miniflare and wrangler before the packages that pin them", ({
 		expect,
 	}) => {
 		const packagesDir = resolve(__dirname, "../../../packages");
@@ -311,7 +311,7 @@ describe("the real workspace", () => {
 			tierOf("wrangler")
 		);
 		expect(tierOf("@cloudflare/vitest-plugin")).toBeGreaterThan(
-			tierOf("wrangler")
+			tierOf("miniflare")
 		);
 	});
 });

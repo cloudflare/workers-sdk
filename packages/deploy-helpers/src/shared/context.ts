@@ -19,7 +19,9 @@ import type {
  *   import { logger } from "./context";  // correct: live binding
  *   const { logger } = await import("./context");  // WRONG: captures undefined
  */
-export let logger: Logger;
+// Defaults to the console (hiding debug logs) so that the local development
+// helpers can be used by consumers that never initialise the context.
+export let logger: Logger = { ...console, debug() {} };
 export let fetchResult: FetchResultFetcher;
 export let fetchListResult: FetchListResultFetcher;
 export let fetchPagedListResult: FetchPagedListResultFetcher;

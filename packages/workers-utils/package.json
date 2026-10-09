@@ -43,6 +43,10 @@
 			"import": "./dist/compatibility-date.mjs",
 			"types": "./dist/compatibility-date.d.mts"
 		},
+		"./d1-splitter": {
+			"import": "./dist/d1-splitter.mjs",
+			"types": "./dist/d1-splitter.d.mts"
+		},
 		"./docker-path": {
 			"import": "./dist/docker-path.mjs",
 			"types": "./dist/docker-path.d.mts"
