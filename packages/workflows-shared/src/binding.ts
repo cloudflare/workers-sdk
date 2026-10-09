@@ -319,7 +319,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		);
 
 		if (introspectionSession !== undefined) {
-			const modifier = stub.getInstanceModifier();
+			using modifier = await stub.getInstanceModifier();
 			introspectionSession.instanceIds.push(id);
 			for (const operation of introspectionSession.operations) {
 				await applyWorkflowIntrospectionOperation(modifier, operation);
