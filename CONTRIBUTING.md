@@ -24,7 +24,7 @@ AI tools let our team generate proposed code changes quickly. Reviewing those ch
 
 If you are not a registered collaborator, please discuss your proposed change in an issue before investing time in a PR. A maintainer may register you as a collaborator when we decide to work with you on a change.
 
-New PRs from unregistered collaborators are automatically closed, including PRs for small changes. We will take an initial look at a closed PR and decide whether it is something we want to invest in reviewing and maintaining. We may reopen it if we decide to proceed, but we cannot guarantee that it will be reopened or receive a full review.
+New PRs from unregistered collaborators are automatically closed, including PRs for small changes. We will take an initial look at a closed PR and decide whether it is something we want to invest time in reviewing and maintaining. We may reopen it if we decide to proceed, but we cannot guarantee that it will be reopened or receive a full review.
 
 ## tl;dr for contributing to Wrangler
 
