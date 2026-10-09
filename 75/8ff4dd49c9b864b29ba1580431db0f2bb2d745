@@ -1,0 +1,118 @@
+packages/wrangler/src/__tests__/deploy/bindings.test.ts
+  s_6aa689848a6f25::t_d28e9134c69b4c 1430,1449
+packages/deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts
+  s_6aa689848a6f25::t_33c5ccf33ab64c 247-258
+packages/deploy-helpers/src/preview/shared.ts
+  s_6aa689848a6f25::t_f1ac6dd0a79122 531
+packages/wrangler/src/__tests__/preview.test.ts
+  s_6aa689848a6f25::t_6cb911fd562bc9 965-966,977-980
+  s_45a8ffb64dcea1::t_cd4831b63a1aa6 962-964,981
+packages/workers-utils/src/worker.ts
+  s_6aa689848a6f25::t_fe0edf9aca4fdb 4,201
+packages/workers-utils/src/types.ts
+  s_6aa689848a6f25::t_9054fdb7661942 8,107
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_6aa689848a6f25::t_d3762499756946 44-49,143-160
+packages/workers-utils/src/map-worker-metadata-bindings.ts
+  s_6aa689848a6f25::t_42b05009821fdf 59
+packages/config/src/__tests__/schema.test.ts
+  s_f70c3d9c923e90::t_eac1a098336520 236-246
+  s_45a8ffb64dcea1::t_127e33f88e1b5c 1476-1513
+packages/workers-utils/src/config/environment.ts
+  s_6aa689848a6f25::t_3b7da5221c938a 938,949,976
+  s_6aa689848a6f25::t_21dc16393759ec 937
+  s_6aa689848a6f25::t_02f39b92aa8385 939-941,946-948
+  s_6aa689848a6f25::t_d99398297a555c 950-952
+  s_6aa689848a6f25::t_f84b2a17ab1596 977
+packages/deploy-helpers/src/preview/api.ts
+  s_6aa689848a6f25::t_66792b7fc6538b 9,65
+packages/workers-utils/src/config/validation.ts
+  s_6aa689848a6f25::t_7d30a942e3a278 3022-3023,3026-3027,3037,3040,3051,3058-3113,8138,8140,8149,8161,8166-8167,8169,8171
+  s_45a8ffb64dcea1::t_d8ef83665198ef 60,2230-2235,3020-3021,3024-3025,3028-3036,3038-3039,3041-3042,3114-3115,7197-7202,7208,7298-7303,7309,8128-8129,8133-8137,8139,8141-8143,8145-8148,8150,8152,8154-8160,8162-8165,8168,8170
+packages/wrangler/src/__tests__/config/configuration.test.ts
+  s_6aa689848a6f25::t_168b862ca0bc3f 108-143
+  s_aba07865ed25d7::t_c35f0b1a53e574 144-181
+packages/workers-utils/tests/map-worker-metadata-bindings.test.ts
+  s_6aa689848a6f25::t_93dc68b5e8dd2e 86,97
+packages/wrangler/src/__tests__/create-worker-upload-form/bindings.test.ts
+  s_6aa689848a6f25::t_da076d80e2abc0 232
+  s_45a8ffb64dcea1::t_fcb446f41781e2 199-217
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_6aa689848a6f25::t_e475d27b48a0e3 2061-2146,2155,2164,2166,2170,2172-2173,2175,2178,2180,2185,2190,2192,2196,2198,2200-2201,2216,2223,2235,2248,2250,2254,2256-2259,2487-2492,2497,2500-2501,2507-2508,2515-2520,2522,2525-2527,2531,2537,2542,2547,2552-2558
+  s_45a8ffb64dcea1::t_59df1dbe6680bf 2147-2154,2156-2163,2165,2167-2169,2171,2176-2177,2179,2181-2184,2186-2188,2191,2193-2195,2197,2202-2215,2217-2222,2224-2234,2236-2247,2249,2251-2253,2255,2260-2267,2485-2486,2493-2496,2498-2499,2502-2506,2509-2514,2521,2523-2524,2528-2530,2532-2536,2538-2541,2543-2546,2548-2551,2559-2561,3078
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_6aa689848a6f25::t_5db5d404dead17 1979-1985,2047
+.changeset/durable-object-retry-policy.md
+  s_45a8ffb64dcea1::t_33607b68c0d91d 1-26,28-29
+packages/config/src/__tests__/convert.test.ts
+  s_45a8ffb64dcea1::t_60cbfe17816139 923-961
+packages/miniflare/src/config/v4-schema.ts
+  s_f70c3d9c923e90::t_05612f96df376a 246-247
+  s_f70c3d9c923e90::t_4730cc9070c2e4 243-245,248-278,777-788
+packages/miniflare/test/config/v4-convert.spec.ts
+  s_f70c3d9c923e90::t_0d6477b39cc643 73-92,97,99-100,102-103,105,109-110,118-120,123,125-126
+  s_f70c3d9c923e90::t_0af5333c54b753 93-96,98
+  s_45a8ffb64dcea1::t_d12f1a984044aa 101,104,106-108,111-117,121-122,124,127-132
+packages/miniflare/test/runtime/config.spec.ts
+  s_f70c3d9c923e90::t_47b713925d072c 122-156
+  s_45a8ffb64dcea1::t_5c6e249193a06b 157
+packages/miniflare/test/config/v4-schema.spec.ts
+  s_f70c3d9c923e90::t_8e9a10f891449f 192-212
+  s_45a8ffb64dcea1::t_e9e83dc8044d34 213-226
+packages/wrangler/src/__tests__/unstable-get-miniflare-worker-options.test.ts
+  s_f70c3d9c923e90::t_2440e1fc0250a0 355-387,408,430-431
+  s_45a8ffb64dcea1::t_70766e4e372584 388-407,409-429
+packages/miniflare/test/plugins/do/index.spec.ts
+  s_f70c3d9c923e90::t_d5c2b6d7d0a96c 61-125,128,131,135-136,141-143,145,147,149,152-154,156-157,159-161
+  s_45a8ffb64dcea1::t_b8f5093b20f60e 126-127,129-130,132-134,137-140,144,146,148,150-151,155,158,162
+packages/miniflare/src/config/v4-convert.ts
+  s_45a8ffb64dcea1::t_ea5121c0b7e714 444-464,471
+packages/miniflare/src/index.ts
+  s_45a8ffb64dcea1::t_ff2c2c75c5779f 372
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_45a8ffb64dcea1::t_90ed68fa582439 1483,1486-1487,1489-1490,1492,1495,2825-2880,3194,3200,3275-3309
+packages/miniflare/src/runtime/config/workerd.ts
+  s_45a8ffb64dcea1::t_fdc822636eea0a 226,230-234
+packages/wrangler/src/dev/miniflare/index.ts
+  s_45a8ffb64dcea1::t_8c426be0d7e0ac 9,43,695-711,787,791-792,1073-1076,1082-1083
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "758ff4dd49c9b864b29ba1580431db0f2bb2d745",
+  "prompts": {},
+  "sessions": {
+    "s_45a8ffb64dcea1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee0069e0cffeoM7dpVyGMk9RLX",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_6aa689848a6f25": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2861135affeN8CpyDm2tLcoX2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_aba07865ed25d7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee005c4c4ffehm4JW43XAuZ1UR",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_f70c3d9c923e90": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2fdf8364ffeOHX8yTIJunIGkw",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}
