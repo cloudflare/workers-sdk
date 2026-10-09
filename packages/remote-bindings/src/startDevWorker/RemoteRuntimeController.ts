@@ -397,6 +397,10 @@ export class RemoteRuntimeController {
 	// ******************
 
 	onUpdateStart() {
+		// Unlike Wrangler's copy, this needs no "bundle pending" guard against a
+		// retry reloading the previous bundle: `DevEnv.update()` calls
+		// `onBundleComplete()` synchronously right after this, so there is no
+		// window in which the stored bundle is stale while the proxy is paused.
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();

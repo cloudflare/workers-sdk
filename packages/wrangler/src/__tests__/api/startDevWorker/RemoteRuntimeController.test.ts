@@ -90,6 +90,10 @@ function makeBundle(): Bundle {
 	};
 }
 
+function countReloads(bus: FakeBus): number {
+	return bus.events.filter((event) => event.type === "reloadComplete").length;
+}
+
 describe("RemoteRuntimeController", () => {
 	mockConsoleMethods();
 	const teardown = useTeardown();
@@ -282,30 +286,49 @@ describe("RemoteRuntimeController", () => {
 			expect(createPreviewSession).toHaveBeenCalledTimes(2);
 		});
 
-		it("should retain the refresh timer when a rebuild fails", async ({
+		it("should keep the session fresh through a failed rebuild without reloading the stale bundle", async ({
 			expect,
 		}) => {
+			// A failed build never reaches this controller, so it looks exactly
+			// like one still running: the proxy stays paused and the only bundle
+			// on hand is the one being replaced. The refresh must keep the
+			// session alive for the next save, but must not reload that bundle.
 			vi.useFakeTimers();
+			// Match the worker name so the recovering reload reuses the refreshed
+			// session instead of recreating it for a name change.
+			vi.mocked(createPreviewSession).mockResolvedValue({
+				value: "test-session-value",
+				host: "test.workers.dev",
+				name: "test-worker",
+			});
 			const { controller, bus } = setup();
 			const config = makeConfig();
+			const bundle = makeBundle();
 			controller.onBundleStart({ type: "bundleStart", config });
-			controller.onBundleComplete({
-				type: "bundleComplete",
-				config,
-				bundle: makeBundle(),
-			});
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 			await bus.waitFor("reloadComplete");
 
 			controller.onBundleStart({ type: "bundleStart", config });
+			vi.mocked(createPreviewSession).mockClear();
 			vi.mocked(createWorkerPreview).mockClear();
-			const reloadPromise = bus.waitFor(
-				"reloadComplete",
-				undefined,
-				60 * 60 * 1000
-			);
+			const reloadsBefore = countReloads(bus);
+
 			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
-			await reloadPromise;
-			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
+
+			expect(createPreviewSession).toHaveBeenCalledTimes(1);
+			expect(createWorkerPreview).not.toHaveBeenCalled();
+			expect(countReloads(bus)).toBe(reloadsBefore);
+
+			// The next save recovers onto the session the refresh kept alive.
+			const fixed = { ...bundle, path: "/virtual/fixed.mjs" };
+			const reloadPromise = bus.waitFor("reloadComplete");
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: fixed,
+			});
+			expect(await reloadPromise).toMatchObject({ bundle: fixed });
+			expect(createPreviewSession).toHaveBeenCalledTimes(1);
 		});
 
 		it("should stop refreshing when switching to local mode", async ({
@@ -529,7 +552,7 @@ describe("RemoteRuntimeController", () => {
 			expect(createPreviewSession).not.toHaveBeenCalled();
 		});
 
-		it("should retry after an aborted refresh when the rebuild never completes", async ({
+		it("should renew the session but not reload the stale bundle when an aborted refresh's rebuild never completes", async ({
 			expect,
 		}) => {
 			vi.useFakeTimers();
@@ -555,14 +578,66 @@ describe("RemoteRuntimeController", () => {
 			await vi.advanceTimersByTimeAsync(0);
 			vi.mocked(createWorkerPreview).mockClear();
 
-			const reloadPromise = bus.waitFor(
-				"reloadComplete",
-				undefined,
-				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
-			);
+			vi.mocked(createPreviewSession).mockClear();
+			const reloadsBefore = countReloads(bus);
 			await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+
+			// The retry still runs — the aborted refresh's session is renewed —
+			// but it must not upload the bundle the rebuild is replacing.
+			expect(createPreviewSession).toHaveBeenCalledTimes(1);
+			expect(createWorkerPreview).not.toHaveBeenCalled();
+			expect(countReloads(bus)).toBe(reloadsBefore);
+		});
+
+		it("should not resume the stale bundle when a rebuild outlasts the retry interval", async ({
+			expect,
+		}) => {
+			// The race from review: a refresh in flight at minute 50 is aborted by
+			// a save, the build then takes two minutes, and the one-minute retry
+			// fires mid-build. Reloading the old bundle there would emit
+			// `reloadComplete`, which tells the proxy to play the code being
+			// replaced while the rebuild is still running.
+			vi.useFakeTimers();
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+			vi.mocked(createWorkerPreview).mockImplementationOnce(
+				(...args: unknown[]) =>
+					new Promise((_resolve, reject) => {
+						const signal = args[5] as AbortSignal;
+						signal.addEventListener("abort", () => {
+							reject(new DOMException("aborted", "AbortError"));
+						});
+					})
+			);
+
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000);
+			controller.onBundleStart({ type: "bundleStart", config });
+			await vi.advanceTimersByTimeAsync(0);
+			vi.mocked(createWorkerPreview).mockClear();
+			const reloadsBefore = countReloads(bus);
+
+			// Minute 51: the retry fires while the build is still running.
+			await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+			expect(createWorkerPreview).not.toHaveBeenCalled();
+			expect(countReloads(bus)).toBe(reloadsBefore);
+
+			// Minute 52: the build lands, and only now does the proxy get a reload.
+			await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+			const rebuilt = { ...bundle, path: "/virtual/rebuilt.mjs" };
+			const reloadPromise = bus.waitFor("reloadComplete");
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: rebuilt,
+			});
+			expect(await reloadPromise).toMatchObject({ bundle: rebuilt });
 			expect(createWorkerPreview).toHaveBeenCalledTimes(1);
-			expect(await reloadPromise).toMatchObject({ bundle });
+			expect(countReloads(bus)).toBe(reloadsBefore + 1);
 		});
 
 		it("should not recreate the refresh timer when a thrown error surfaces after a concurrent rebuild aborted it", async ({

@@ -64,6 +64,12 @@ export class RemoteRuntimeController extends RuntimeController {
 	// Timer for proactive token refresh before the 1-hour expiry
 	#refreshTimer?: ReturnType<typeof setTimeout>;
 	#sessionCreatedAt?: number;
+	// Set from `bundleStart` until the next `bundleComplete`. A failed build
+	// never reaches this controller — `DevEnv` routes bundler errors to its own
+	// handler — so this also stays set after a failed build, until the user's
+	// next save produces a bundle. Both cases call for the same thing: the
+	// proxy is paused, and the only bundle on hand is the one being replaced.
+	#bundlePending = false;
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
@@ -473,6 +479,21 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.#latestRoutes
 			);
 
+			if (this.#bundlePending) {
+				// `onBundleStart()` paused the proxy for a rebuild that hasn't
+				// produced a bundle yet. Uploading `#latestBundle` now would emit
+				// `reloadComplete` and unpause the proxy onto the code being
+				// replaced. Keeping the fresh session is all this refresh needs to
+				// do: the rebuild's `bundleComplete` uploads onto it (and plays the
+				// proxy), so a long or failed build still recovers on the next save
+				// without its session having expired in the meantime.
+				logger.debug(
+					"Refreshed the remote preview session; deferring the reload until the pending bundle completes"
+				);
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_INTERVAL);
+				return;
+			}
+
 			const refreshed = await this.#updatePreviewToken(
 				this.#latestConfig,
 				this.#latestBundle,
@@ -527,12 +548,14 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 		this.#abortController = new AbortController();
+		this.#bundlePending = true;
 		if (!this.#refreshTimer && this.#latestProxyData && !this.tearingDown) {
 			this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 		}
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;
+		this.#bundlePending = false;
 
 		if (!ev.config.dev?.remote) {
 			void this.#mutex.runWith(() => this.teardown());
