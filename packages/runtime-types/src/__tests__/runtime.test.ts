@@ -167,4 +167,58 @@ describe("generateRuntimeTypes", () => {
 		).rejects.toThrow("boom");
 		expect(disposeMock).toHaveBeenCalledTimes(1);
 	});
+
+	it("rejects an HTML response even when it is ok", async ({ expect }) => {
+		// Parked domains return HTTP 200 with an HTML body; writing that into
+		// the generated .d.ts must fail loudly instead (issue #16094).
+		dispatchFetchMock.mockResolvedValue({
+			ok: true,
+			headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+			text: async () =>
+				"<!DOCTYPE html><html><head><title>Parked</title></head></html>",
+		});
+
+		await expect(
+			generateRuntimeTypes({
+				compatibilityDate: "2024-11-06",
+			})
+		).rejects.toThrow(
+			/returned an HTML document.*http:\/\/dummy\.invalid\/2024-11-06/
+		);
+		expect(disposeMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("rejects an HTML-looking body without a content-type header", async ({
+		expect,
+	}) => {
+		dispatchFetchMock.mockResolvedValue({
+			ok: true,
+			headers: new Headers(),
+			text: async () => "<html><body>not types</body></html>",
+		});
+
+		await expect(
+			generateRuntimeTypes({
+				compatibilityDate: "2024-11-06",
+			})
+		).rejects.toThrow(/looks like an HTML document/);
+		expect(disposeMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("accepts declaration content with a plain-text content-type", async ({
+		expect,
+	}) => {
+		dispatchFetchMock.mockResolvedValue({
+			ok: true,
+			headers: new Headers({ "content-type": "text/plain;charset=UTF-8" }),
+			text: async () => "declare const x: number;",
+		});
+
+		const result = await generateRuntimeTypes({
+			compatibilityDate: "2024-11-06",
+		});
+
+		expect(result.runtimeTypes).toBe("declare const x: number;");
+		expect(result.isCached).toBe(false);
+	});
 });

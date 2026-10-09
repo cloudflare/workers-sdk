@@ -133,8 +133,47 @@ async function generate({
 			throw new Error(text);
 		}
 
+		validateRuntimeTypesResponse(res, text, path);
+
 		return text;
 	} finally {
 		await mf.dispose();
+	}
+}
+
+/**
+ * Matches the start of an HTML document. Parked domains (and other misrouted
+ * pages) return HTTP 200 with an HTML body, so the `res.ok` check above is not
+ * enough to keep third-party web content out of the generated `.d.ts` file.
+ */
+const HTML_DOCUMENT_PATTERN = /^\s*<(?:!doctype\s+html|html[\s>])/i;
+
+/**
+ * Rejects dispatch responses that are clearly not TypeScript declarations.
+ * Without this, an HTML page returned with HTTP 200 (e.g. from a parked
+ * domain) would be written verbatim into the generated types file.
+ *
+ * @param res The response from the type generation dispatch endpoint.
+ * @param text The response body, expected to be TypeScript declarations.
+ * @param url The dispatch URL, included in errors to aid diagnosis.
+ */
+function validateRuntimeTypesResponse(
+	res: Response,
+	text: string,
+	url: string
+): void {
+	const contentType = (res.headers?.get("content-type") ?? "").toLowerCase();
+	if (
+		contentType.includes("text/html") ||
+		contentType.includes("application/xhtml")
+	) {
+		throw new Error(
+			`Failed to generate runtime types: the type generation endpoint returned an HTML document (content-type: ${contentType}) instead of TypeScript declarations (${url}). The generated types were not written.`
+		);
+	}
+	if (HTML_DOCUMENT_PATTERN.test(text)) {
+		throw new Error(
+			`Failed to generate runtime types: the type generation endpoint returned what looks like an HTML document instead of TypeScript declarations (${url}). The generated types were not written.`
+		);
 	}
 }
