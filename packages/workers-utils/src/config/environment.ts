@@ -1967,6 +1967,14 @@ export interface UserLimits {
 	cpu_ms?: number;
 	/** Maximum allowed number of fetch requests that a Worker's invocation can execute */
 	subrequests?: number;
+	/**
+	 * Maximum memory, in megabytes, available to each isolate hosting this Worker's Durable Objects.
+	 *
+	 * Applies only to Durable Objects exported by this Worker, not to the Worker's stateless invocations.
+	 *
+	 * @default 128
+	 */
+	durable_object_memory_mb?: 128 | 256 | 512;
 }
 
 export type Assets = {

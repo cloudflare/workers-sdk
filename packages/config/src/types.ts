@@ -505,6 +505,13 @@ export interface WorkerConfig {
 		cpuMs?: number;
 		/** Maximum allowed number of fetch requests that a Worker's invocation can execute. */
 		subrequests?: number;
+		/**
+		 * Maximum memory, in megabytes, available to each isolate hosting this Worker's Durable Objects.
+		 * Applies only to Durable Objects exported by this Worker.
+		 *
+		 * @default 128
+		 */
+		durableObjectMemoryMb?: 128 | 256 | 512;
 	};
 
 	/**

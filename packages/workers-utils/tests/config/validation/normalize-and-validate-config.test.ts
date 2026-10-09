@@ -14302,6 +14302,75 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[limits]", () => {
+			it("should accept a valid durable_object_memory_mb", ({ expect }) => {
+				const rawConfig = {
+					limits: { durable_object_memory_mb: 256 },
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+					},
+					migrations: [{ tag: "v1", new_sqlite_classes: ["MyDurableObject"] }],
+				} as unknown as RawConfig;
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.limits).toEqual({ durable_object_memory_mb: 256 });
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).not.toContain(
+					"durable_object_memory_mb"
+				);
+			});
+
+			it("should error on an invalid durable_object_memory_mb", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					limits: { durable_object_memory_mb: 300 },
+					durable_objects: {
+						bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+					},
+					migrations: [{ tag: "v1", new_sqlite_classes: ["MyDurableObject"] }],
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "limits.durable_object_memory_mb" field to be one of [128,256,512] but got 300.'
+				);
+			});
+
+			it("should warn if durable_object_memory_mb is set without any Durable Objects", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					limits: { durable_object_memory_mb: 512 },
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toContain(
+					'"limits.durable_object_memory_mb" is set, but this Worker does not export any Durable Objects.'
+				);
+			});
+		});
+
 		describe("[previews]", () => {
 			it("should validate top-level previews config", ({ expect }) => {
 				const rawConfig = {
@@ -14435,6 +14504,50 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.limits with durable_object_memory_mb", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						limits: {
+							durable_object_memory_mb: 512,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error on an invalid previews.limits.durable_object_memory_mb", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						limits: {
+							durable_object_memory_mb: 300,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "previews.limits.durable_object_memory_mb" field to be one of [128,256,512] but got 300.'
+				);
 			});
 
 			it("should accept previews.limits with only subrequests", ({

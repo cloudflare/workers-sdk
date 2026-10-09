@@ -190,6 +190,12 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			expected: { cpu_ms: 50 },
 		},
 		{
+			label: "limits with durable_object_memory_mb",
+			overrides: { limits: { cpu_ms: 50, durable_object_memory_mb: 256 } },
+			key: "limits",
+			expected: { cpu_ms: 50, durable_object_memory_mb: 256 },
+		},
+		{
 			label: "observability",
 			overrides: { observability: { enabled: true } },
 			key: "observability",
