@@ -4,6 +4,27 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test("Artifacts defaults to local and only an explicit connection is remote", ({
+		expect,
+	}) => {
+		const remoteProxyConnectionString = new URL(
+			"http://127.0.0.1:8787"
+		) as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			artifacts: {
+				LOCAL: { namespace: "local" },
+				REMOTE: { namespace: "remote", remoteProxyConnectionString },
+			},
+		});
+		expect(converted.workers[0].config.env?.LOCAL).toMatchObject({
+			dev: { remote: false },
+		});
+		expect(converted.workers[0].config.env?.REMOTE).toMatchObject({
+			dev: { remote: true },
+		});
+	});
 	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
 		expect,
 	}) => {
