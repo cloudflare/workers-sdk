@@ -73,7 +73,7 @@ function createDefinitionResolver(ctx: ConfigContext): ResolveDefinition {
 	};
 }
 
-async function normalizeWorkerReferences(
+async function normalizeWorkerEnv(
 	resolved: unknown,
 	resolveDefinition: ResolveDefinition
 ): Promise<unknown> {
@@ -83,6 +83,11 @@ async function normalizeWorkerReferences(
 
 	const env: Record<PropertyKey, unknown> = { ...resolved.env };
 	for (const [bindingName, binding] of Object.entries(env)) {
+		if (binding === false || binding === null || binding === undefined) {
+			delete env[bindingName];
+			continue;
+		}
+
 		if (
 			!isRecord(binding) ||
 			typeof binding.type !== "string" ||
@@ -177,7 +182,7 @@ async function normalizeWorkerConfig(
 	resolveDefinition: ResolveDefinition,
 	containers: unknown[]
 ): Promise<NormalizeWorkerResult> {
-	const partiallyNormalizedConfig = await normalizeWorkerReferences(
+	const partiallyNormalizedConfig = await normalizeWorkerEnv(
 		normalizeWorkerEntrypoint(resolved),
 		resolveDefinition
 	);

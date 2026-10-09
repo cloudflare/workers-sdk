@@ -42,6 +42,13 @@ export interface AccessContext {
 	refreshToken?: RefreshToken;
 }
 
+/**
+ * How long to wait for the token endpoint before giving up. It normally
+ * answers in well under a second, but a stalled proxy tunnel can otherwise
+ * leave the request hanging for many minutes with no output.
+ */
+const TOKEN_REQUEST_TIMEOUT_MS = 30_000;
+
 type TokenResponse =
 	| {
 			access_token: string;
@@ -365,6 +372,7 @@ export async function fetchAuthToken(
 			method: "POST",
 			body: body.toString(),
 			headers,
+			signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
 		});
 		if (!response.ok) {
 			// Log at debug level — callers handle non-OK responses and surface
@@ -383,7 +391,12 @@ export async function fetchAuthToken(
 		// `fetch` only rejects when no HTTP response arrived at all, so this is a
 		// network failure rather than a verdict on the credentials.
 		const cause = (e as { cause?: { code?: unknown } } | undefined)?.cause;
-		const code = typeof cause?.code === "string" ? ` (${cause.code})` : "";
+		const code =
+			(e as Error | undefined)?.name === "TimeoutError"
+				? ` (timed out after ${TOKEN_REQUEST_TIMEOUT_MS / 1000} seconds)`
+				: typeof cause?.code === "string"
+					? ` (${cause.code})`
+					: "";
 		throw new ErrorAuthServerUnreachable(
 			`Could not reach the Cloudflare auth server at ${getTokenUrlFromEnv()}${code}.`,
 			{ cause: e, telemetryMessage: "user oauth token endpoint unreachable" }
