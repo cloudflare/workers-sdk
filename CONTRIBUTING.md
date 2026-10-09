@@ -6,7 +6,7 @@ Below you can find some guidance on how to be most effective when contributing t
 
 ## Start with an issue
 
-For most external contributors, the most effective way to help is through [issues](https://github.com/cloudflare/workers-sdk/issues). You can make a valuable contribution by:
+For the majority of external contributors, the most effective way to help is through [issues](https://github.com/cloudflare/workers-sdk/issues). You can make a valuable contribution by:
 
 - Reporting a problem with the affected package version, your environment, and the behavior you expected.
 - Providing a minimal reproduction that we can run to investigate a bug.
