@@ -80,7 +80,8 @@ vi.mock("os", async (importOriginal) => {
 	const os = await importOriginal<typeof import("os")>();
 	function homedir() {
 		// Let's just grab the HOME env var and then we can override that in tests
-		return (process.env as Record<string, string>).HOME;
+		// eslint-disable-next-line turbo/no-undeclared-env-vars -- HOME is overridden by tests.
+		return process.env.HOME ?? os.homedir();
 	}
 	return {
 		...os,

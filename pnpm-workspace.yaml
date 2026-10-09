@@ -69,13 +69,17 @@ allowBuilds:
   sharp: true
   playwright-chromium: true
   prisma: true
-  # Explicitly silence warnings for packages whose postinstall scripts are not
-  # required for correct operation.
+  # Explicitly block scripts that are not required for correct operation.
+  # pnpm 11+ fails installation when build scripts lack an explicit decision.
+  "@cdktf/node-pty-prebuilt-multiarch": false
   "@google/genai": false # preinstall is a no-op
+  "@prisma/engines": false
+  "@sentry/cli": false
   protobufjs: false # version-scheme diagnostic warning only
   msw: false # copies mockServiceWorker.js to msw.workerDirectory — unused in this repo
   core-js: false # telemetry
   core-js-pure: false # telemetry
+  yarn: false
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Dependency resolution (migrated from package.json "pnpm" field in pnpm 10)
@@ -86,7 +90,7 @@ overrides:
   "@types/react-tabs>@types/react": "^18"
   "@types/react-transition-group>@types/react": "^18"
   "@cloudflare/elements>@types/react": "^18"
-  "@types/node": "$@types/node"
+  "@types/node": "catalog:default"
   "@types/node>undici-types": "catalog:default"
 
 peerDependencyRules:

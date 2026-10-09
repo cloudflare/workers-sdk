@@ -35,7 +35,9 @@ export const installPackages = async (
 	config: InstallConfig = {}
 ) => {
 	const { npm } = detectPackageManager();
-	return cliPackages.installPackages(npm, packages, config);
+	return installWithBuildApprovalRetry(npm, () =>
+		cliPackages.installPackages(npm, packages, config)
+	);
 };
 
 /**
@@ -44,7 +46,9 @@ export const installPackages = async (
  */
 export async function installWrangler() {
 	const { npm } = detectPackageManager();
-	return cliPackages.installWrangler(npm, false);
+	return installWithBuildApprovalRetry(npm, () =>
+		cliPackages.installWrangler(npm, false)
+	);
 }
 
 /**
@@ -60,7 +64,11 @@ export const npmInstall = async (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 
 	if (npm === "pnpm") {
-		await pnpmInstallWithBuildApprovalRetry(npm);
+		await installWithBuildApprovalRetry(
+			npm,
+			() => runPnpmInstallQuiet(npm, "Installing dependencies"),
+			() => runPnpmInstallQuiet(npm, "Re-running install")
+		);
 		return;
 	}
 
@@ -90,17 +98,19 @@ const runPnpmInstallQuiet = async (
 	}
 };
 
-const pnpmInstallWithBuildApprovalRetry = async (
-	npm: string
+const installWithBuildApprovalRetry = async (
+	npm: string,
+	install: () => Promise<void>,
+	retryInstall = install
 ): Promise<void> => {
 	try {
-		await runPnpmInstallQuiet(npm, "Installing dependencies");
+		await install();
 		return;
 	} catch (err) {
-		if (!isPnpmIgnoredBuildsError(err)) {
+		if (npm !== "pnpm" || !isPnpmIgnoredBuildsError(err)) {
 			throw err;
 		}
-		await recoverFromIgnoredBuilds(npm, err);
+		await recoverFromIgnoredBuilds(npm, err, retryInstall);
 	}
 };
 
@@ -154,7 +164,8 @@ const promptOrEOF = async (packages: string[]): Promise<boolean> => {
 
 const recoverFromIgnoredBuilds = async (
 	npm: string,
-	originalErr: Error
+	originalErr: Error,
+	retryInstall: () => Promise<void>
 ): Promise<void> => {
 	const packages = extractIgnoredBuildPackages(originalErr);
 
@@ -190,7 +201,7 @@ const recoverFromIgnoredBuilds = async (
 	});
 
 	try {
-		await runPnpmInstallQuiet(npm, "Re-running install");
+		await retryInstall();
 	} catch (retryErr) {
 		if (isPnpmIgnoredBuildsError(retryErr)) {
 			throw new IgnoredBuildsError(
