@@ -252,6 +252,58 @@ describe("resolvePluginConfig", () => {
 		).toBe("2025-06-01");
 	});
 
+	test("applies Wrangler customizers to native Worker configuration", async ({
+		expect,
+	}) => {
+		writeEntryConfig({ noEntrypoint: true });
+		const result = await resolvePluginConfig(
+			{
+				wranglerConfig(workerConfig) {
+					workerConfig.main = "virtual:flue/worker";
+					workerConfig.compatibility_flags.push("nodejs_compat");
+					workerConfig.durable_objects.bindings.push({
+						name: "FLUE_ECHO_AGENT",
+						class_name: "FlueEchoAgent",
+					});
+				},
+			},
+			{ root },
+			buildEnv
+		);
+
+		expect(result.type).toBe("workers");
+
+		if (result.type !== "workers") {
+			throw new Error("Expected a Worker after customizing its entrypoint");
+		}
+
+		expect(result.environmentNameToWorkerMap.get("ssr")?.config).toMatchObject({
+			entrypoint: "virtual:flue/worker",
+			compatibilityFlags: ["nodejs_compat"],
+			env: {
+				FLUE_ECHO_AGENT: {
+					type: "durable-object",
+					worker: "entry-worker",
+					exportName: "FlueEchoAgent",
+				},
+			},
+		});
+	});
+
+	test("rejects combining native and Wrangler customizers", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+
+		await expect(
+			resolvePluginConfig(
+				{ config: {}, wranglerConfig: {} },
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow("`config` and `wranglerConfig` cannot be used together.");
+	});
+
 	test("resolves entry and auxiliary Workers configured only in Vite", async ({
 		expect,
 	}) => {
@@ -696,6 +748,23 @@ describe("resolvePluginConfig", () => {
 				}),
 			]);
 		}
+	});
+
+	test("preview does not invoke Wrangler customizers", async ({ expect }) => {
+		readBuildOutputPreviewMock.mockResolvedValue({
+			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
+			workers: [],
+		});
+		const customizer = vi.fn();
+
+		await resolvePluginConfig(
+			{ wranglerConfig: customizer },
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(customizer).not.toHaveBeenCalled();
 	});
 
 	test("preview selects the prerender Build Output during a build", async ({

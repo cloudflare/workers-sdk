@@ -49,6 +49,10 @@ export function getLocalWorkerdCompatibilityDate(_options?: {
 }
 
 export type { PluginConfig } from "./plugin-config";
+export type {
+	WranglerWorkerConfig,
+	WranglerWorkerConfigCustomizer,
+} from "./wrangler-config";
 export type { WorkerConfig } from "@cloudflare/config";
 
 const sharedContext: SharedContext = {

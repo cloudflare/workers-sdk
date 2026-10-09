@@ -55,7 +55,8 @@
 		"@cloudflare/unenv-preset": "2.16.2",
 		"miniflare": "5.20260930.0-alpha",
 		"unenv": "2.0.0-rc.24",
-		"ws": "catalog:default"
+		"ws": "catalog:default",
+		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
@@ -67,6 +68,8 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
+		"@flue/runtime": "2.2.2",
+		"@flue/vite": "2.2.2",
 		"@remix-run/node-fetch-server": "^0.8.0",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",

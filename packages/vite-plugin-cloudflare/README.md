@@ -16,6 +16,33 @@ export default defineConfig({
 
 ## Documentation
 
+### Wrangler-compatible customizers (Vite v2)
+
+Use `wranglerConfig` for framework customizers written for the Vite v1 Wrangler
+configuration contract. Native customizers continue to use `config`; the two
+options cannot be combined.
+
+```ts
+import { cloudflare } from "@cloudflare/vite-plugin";
+import { flue, flueWorkerConfig } from "@flue/vite";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [flue(), cloudflare({ wranglerConfig: flueWorkerConfig() })],
+});
+```
+
+The compatibility view supports `main`, `compatibility_date`,
+`compatibility_flags`, and `durable_objects.bindings`. Customizers can mutate the
+view or return partial overrides. Cloudflare converts these changes back into
+native configuration and validates them with its schemas; unsupported fields,
+service environments, duplicate bindings, and binding collisions are rejected.
+
+Keep Durable Object exports/storage and all other settings in
+`cloudflare.config.ts`. The adapter does not translate migration histories or
+load Wrangler configuration files. Preview serves built output without invoking
+customizers, just as it does for native `config` callbacks.
+
 Full documentation can be found [here](https://developers.cloudflare.com/workers/vite-plugin/).
 
 ## Features

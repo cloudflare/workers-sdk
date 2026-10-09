@@ -27,7 +27,9 @@ import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
 import { isPreviewBuild } from "./build-output-env";
 import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
+import { customizeWranglerWorkerConfig } from "./wrangler-config";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
+import type { WranglerWorkerConfigCustomizer } from "./wrangler-config";
 import type {
 	ParsedInputContainerConfig,
 	InputWorkerConfig,
@@ -62,6 +64,7 @@ type DevOnly = boolean | (() => boolean);
 
 interface EntryWorkerOptions extends BaseWorkerOptions {
 	config?: EntryWorkerConfigCustomizer;
+	wranglerConfig?: WranglerWorkerConfigCustomizer;
 	/**
 	 * Whether the entry Worker should be omitted from the production build.
 	 * Can be a boolean or a function that returns a boolean. The function is
@@ -222,7 +225,22 @@ function createDefaultWorkerConfig(name: string): ParsedInputWorkerConfig {
 function resolveEntryWorkerConfig(options: {
 	workerConfig: ParsedInputWorkerConfig;
 	configCustomizer: EntryWorkerConfigCustomizer | undefined;
+	wranglerConfigCustomizer: WranglerWorkerConfigCustomizer | undefined;
 }): ResolvedWorker {
+	if (options.wranglerConfigCustomizer !== undefined) {
+		if (options.configCustomizer !== undefined) {
+			throw new Error("`config` and `wranglerConfig` cannot be used together.");
+		}
+
+		return resolveWorkerType({
+			config: customizeWranglerWorkerConfig(
+				options.workerConfig,
+				options.wranglerConfigCustomizer
+			),
+			isEntryWorker: true,
+		});
+	}
+
 	const configResult =
 		typeof options.configCustomizer === "function"
 			? options.configCustomizer(options.workerConfig)
@@ -382,6 +400,7 @@ export async function resolvePluginConfig(
 				? createDefaultWorkerConfig(getWorkerNameFromProject(root))
 				: loadedConfig.parsedConfig.worker,
 		configCustomizer: pluginConfig.config,
+		wranglerConfigCustomizer: pluginConfig.wranglerConfig,
 	});
 
 	const environmentNameToWorkerMap = new Map<string, Worker>();
