@@ -13,7 +13,7 @@ const BASE_OPTIONS = {
 	target: "wrangler" as const,
 	projectPath: process.cwd(),
 	workerName: "my-angular-app",
-	outputDir: "dist/my-angular-app/",
+	outputDir: "dist/",
 	dryRun: false,
 	packageManager: NpmPackageManager,
 	isWorkspaceRoot: false,
@@ -54,6 +54,7 @@ describe("Angular framework configure()", () => {
 					"my-angular-app": {
 						architect: {
 							build: {
+								builder: "@angular/build:application",
 								options: {
 									browser: "src/main.ts",
 									tsConfig: "tsconfig.app.json",
@@ -78,8 +79,91 @@ describe("Angular framework configure()", () => {
 			const result = await framework.configure(BASE_OPTIONS);
 
 			expect(result.workerConfig).toEqual({});
-			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
+			expect(result.buildConfig?.assetsDirectory).toBe(
+				"dist/my-angular-app/browser"
+			);
 			expect(result.workerConfig).not.toHaveProperty("entrypoint");
+		});
+
+		it("uses a custom application builder output path", async ({ expect }) => {
+			await writeFile(
+				resolve("angular.json"),
+				JSON.stringify({
+					projects: {
+						"my-angular-app": {
+							architect: {
+								build: {
+									builder: "@angular/build:application",
+									options: {
+										outputPath: {
+											base: "custom-output",
+											browser: "client",
+										},
+									},
+								},
+							},
+						},
+					},
+				})
+			);
+
+			const framework = new Angular({ id: "angular", name: "Angular" });
+			const result = await framework.configure(BASE_OPTIONS);
+
+			expect(result.buildConfig?.assetsDirectory).toBe("custom-output/client");
+		});
+
+		it("uses the default browser directory for a string output path", async ({
+			expect,
+		}) => {
+			await writeFile(
+				resolve("angular.json"),
+				JSON.stringify({
+					projects: {
+						"my-angular-app": {
+							architect: {
+								build: {
+									builder: "@angular/build:application",
+									options: { outputPath: "custom-output" },
+								},
+							},
+						},
+					},
+				})
+			);
+
+			const framework = new Angular({ id: "angular", name: "Angular" });
+			const result = await framework.configure(BASE_OPTIONS);
+
+			expect(result.buildConfig?.assetsDirectory).toBe("custom-output/browser");
+		});
+
+		it("preserves the detected output path for the legacy browser builder", async ({
+			expect,
+		}) => {
+			await writeFile(
+				resolve("angular.json"),
+				JSON.stringify({
+					projects: {
+						"my-angular-app": {
+							architect: {
+								build: {
+									builder: "@angular/build:browser",
+									options: {},
+								},
+							},
+						},
+					},
+				})
+			);
+
+			const framework = new Angular({ id: "angular", name: "Angular" });
+			const result = await framework.configure({
+				...BASE_OPTIONS,
+				outputDir: "dist/my-angular-app/",
+			});
+
+			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
 		});
 
 		it("does not support Cloudflare modes", ({ expect }) => {
@@ -139,7 +223,9 @@ describe("Angular framework configure()", () => {
 			});
 
 			expect(result.workerConfig).toEqual({});
-			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
+			expect(result.buildConfig?.assetsDirectory).toBe(
+				"dist/my-angular-app/browser"
+			);
 			expect(installSpy).not.toHaveBeenCalled();
 		});
 	});
@@ -152,6 +238,7 @@ describe("Angular framework configure()", () => {
 					"my-angular-app": {
 						architect: {
 							build: {
+								builder: "@angular/build:application",
 								options: {
 									browser: "src/main.ts",
 									tsConfig: "tsconfig.app.json",
@@ -179,7 +266,9 @@ describe("Angular framework configure()", () => {
 			const result = await framework.configure(BASE_OPTIONS);
 
 			expect(result.workerConfig).toEqual({});
-			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
+			expect(result.buildConfig?.assetsDirectory).toBe(
+				"dist/my-angular-app/browser"
+			);
 			expect(result.workerConfig).not.toHaveProperty("entrypoint");
 		});
 
@@ -239,9 +328,7 @@ describe("Angular framework configure()", () => {
 					ASSETS: { type: "assets" },
 				},
 			});
-			expect(result.buildConfig?.assetsDirectory).toBe(
-				"dist/my-angular-app/browser"
-			);
+			expect(result.buildConfig?.assetsDirectory).toBe("dist/browser");
 		});
 
 		it("sets experimentalPlatform in angular.json when ssr was true (Angular <22)", async ({
@@ -338,9 +425,7 @@ describe("Angular framework configure()", () => {
 					ASSETS: { type: "assets" },
 				},
 			});
-			expect(result.buildConfig?.assetsDirectory).toBe(
-				"dist/my-angular-app/browser"
-			);
+			expect(result.buildConfig?.assetsDirectory).toBe("dist/browser");
 		});
 
 		it("sets SSR configurationDescription", async ({ expect }) => {
