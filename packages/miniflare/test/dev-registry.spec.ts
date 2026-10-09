@@ -16,6 +16,24 @@ import type {
 	WorkerRegistry,
 } from "miniflare";
 
+const fsRace = vi.hoisted(() => ({
+	unlinkBeforeUtimes: undefined as string | undefined,
+}));
+
+vi.mock("node:fs", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs")>();
+	return {
+		...actual,
+		utimesSync: (...args: Parameters<typeof actual.utimesSync>) => {
+			if (args[0] === fsRace.unlinkBeforeUtimes) {
+				fsRace.unlinkBeforeUtimes = undefined;
+				actual.unlinkSync(args[0]);
+			}
+			actual.utimesSync(...args);
+		},
+	};
+});
+
 describe.sequential("DevRegistry", () => {
 	test("waits for the filesystem watcher to be ready", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
@@ -160,6 +178,43 @@ describe.sequential("DevRegistry", () => {
 				})
 			);
 		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("re-registers its entry when stale cleanup removes it mid-heartbeat", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+
+			// After a machine wakes, a peer's sweep can delete the entry after the
+			// heartbeat has confirmed it exists but before it touches the mtime.
+			fsRace.unlinkBeforeUtimes = definitionPath;
+			await vi.advanceTimersByTimeAsync(10_001);
+			expect(fsRace.unlinkBeforeUtimes).toBeUndefined();
+
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
+				...definition,
+				instanceId: registry.instanceId,
+			});
+		} finally {
+			fsRace.unlinkBeforeUtimes = undefined;
 			await registry.dispose();
 			vi.useRealTimers();
 		}
