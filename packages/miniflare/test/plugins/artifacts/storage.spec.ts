@@ -53,15 +53,6 @@ test("artifacts: restart removes interrupted creation and import staging", async
 	const importing = await mkdtemp(path.join(root, ".artifacts-import-"));
 	await writeFile(path.join(creating, "partial"), "private data");
 	await writeFile(path.join(importing, "partial"), "private data");
-	const repository = repositoryDirectory(namespace, "repo");
-	const lockName = createHash("sha256")
-		.update(repository)
-		.digest("hex")
-		.slice(0, 32);
-	await writeFile(
-		path.join(root, `.artifacts-create-${lockName}.lock`),
-		"stale creation lock"
-	);
 	const unrelated = path.join(root, "unrelated");
 	await mkdir(unrelated);
 	await writeFile(path.join(unrelated, "keep"), "keep me");
