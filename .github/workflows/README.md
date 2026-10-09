@@ -31,7 +31,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Posts [the Workers SDK response](../vouch-pr-response.md) and closes PRs from unregistered collaborators.
 - Safety model
   - Uses `pull_request_target` so the token can comment on and close fork PRs.
-  - Checks out the trusted PR base commit to read the response template; the Vouch action reads the contributor list from the repository's default branch.
+  - Checks out the current head of the repository's default branch (`main`) to read the response template, including for PRs targeting older branches. The Vouch action also reads the contributor list from the default branch.
   - Does not check out or execute PR head code. Checkout credentials are not persisted, and token permissions are limited to reading contents and writing PRs.
 - Maintaining the list
   - Add or remove GitHub usernames in `.github/VOUCHED.td` through a reviewed PR. Write-access collaborators and bots do not need list entries.
