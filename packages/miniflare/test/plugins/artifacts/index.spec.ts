@@ -945,14 +945,14 @@ test("artifacts: missing Git gives an actionable error during local startup", as
 	try {
 		const mf = new Miniflare(options());
 		await expect(mf.ready).rejects.toThrow(
-			/Local Artifacts requires Git installed on the host and available on PATH.*Install Git.*git --version.*restart/i
+			/requires Git 2\.32 or newer on PATH.*Install Git.*restart/i
 		);
 		// dispose() preserves the startup error after cleaning up the instance.
 		await expect(mf.dispose()).rejects.toThrow(
-			/Local Artifacts requires Git installed on the host and available on PATH/
+			/requires Git 2\.32 or newer on PATH/
 		);
 		await expect(startGitSidecar(path.join(root, "repos"))).rejects.toThrow(
-			/Local Artifacts requires Git installed on the host and available on PATH/
+			/requires Git 2\.32 or newer on PATH/
 		);
 	} finally {
 		process.env.PATH = previousPath;
