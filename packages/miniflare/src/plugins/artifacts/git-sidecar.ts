@@ -10,7 +10,12 @@ import {
 import path from "node:path";
 import { parentPort, workerData } from "node:worker_threads";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
-import { assertGitAvailable, GitClient, gitEnvironment } from "./git-client";
+import {
+	assertGitAvailable,
+	GitClient,
+	gitArgumentsWithoutHooks,
+	gitEnvironment,
+} from "./git-client";
 import {
 	assertSupportedGitLayout,
 	repositoryDirectory,
@@ -25,13 +30,26 @@ const decoder = new TextDecoder();
 
 if (parentPort) {
 	const port = parentPort;
-	void startGitSidecar(workerData.root).then((sidecar) => {
-		port.postMessage({ address: sidecar.address, secret: sidecar.secret });
-		port.once("message", async () => {
-			await sidecar.close();
+	void startGitSidecar(workerData.root).then(
+		(sidecar) => {
+			port.postMessage({ address: sidecar.address, secret: sidecar.secret });
+			port.once("message", () => {
+				void sidecar.close().then(
+					() => port.close(),
+					() => port.close()
+				);
+			});
+		},
+		(error: unknown) => {
+			port.postMessage({
+				error:
+					error instanceof Error
+						? error.message
+						: "Unable to start local Artifacts Git backend",
+			});
 			port.close();
-		});
-	});
+		}
+	);
 }
 
 export interface GitSidecar {
@@ -220,7 +238,12 @@ async function handleAction(
 		case "create":
 			return handleCreate(root, body, git);
 		case "delete":
-			await retireRepository(git.repository);
+			// A retried tombstone must never delete a replacement repository.
+			if (
+				(await git.generation()) === required(body.generation, "generation")
+			) {
+				await retireRepository(git.repository);
+			}
 			return true;
 		case "fork":
 			return handleFork(root, body, git);
@@ -379,7 +402,7 @@ async function runGitHttpBackend(
 	query: string
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const child = spawn("git", ["http-backend"], {
+		const child = spawn("git", gitArgumentsWithoutHooks(["http-backend"]), {
 			env: {
 				...gitEnvironment(),
 				GIT_PROJECT_ROOT: root,

@@ -442,6 +442,7 @@ test("HTTPS import: Basic URL credentials, missing repos/branches, duplicate tar
 			const failure = await call(mf, "import", [importOptions(url, name)]);
 			expect(failure.ok).toBe(false);
 			expect(failure.body).toMatchObject({ code: "REMOTE_AUTH_REQUIRED" });
+			expect(JSON.stringify(failure.body)).not.toContain("wrong-password");
 		}
 		const missing = await call(mf, "import", [
 			importOptions(valid.replace("source.git", "missing.git"), "absent"),

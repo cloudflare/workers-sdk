@@ -118,9 +118,9 @@ export default {
       await state.failSaveOnce();
       return Response.json(true);
     }
-    if (action === "backendStatus") {
+    if (action === "backendStatus" || action === "failDelete") {
       return env.gitBackend.fetch("http://backend/__local_artifacts__", {
-        method: "POST", body: JSON.stringify({ action: "status" })
+        method: "POST", body: JSON.stringify({ action: action === "failDelete" ? "failDelete" : "status" })
       });
     }
     if (action === "git") {
@@ -178,13 +178,21 @@ function clockOptions(
 					name: "backend",
 					compatibilityDate: "2026-09-03",
 					manifest: singleModuleManifest(`let deleteCount = 0;
+          let failDelete = false;
           export default {
             async fetch(request) {
               if (new URL(request.url).pathname !== "/__local_artifacts__")
                 return new Response("Git advertisement", { status: 200 });
               const { action } = await request.json();
               if (action === "status") return Response.json({ deleteCount });
-              if (action === "delete") deleteCount++;
+              if (action === "failDelete") { failDelete = true; return Response.json(true); }
+              if (action === "delete") {
+                if (failDelete) {
+                  failDelete = false;
+                  return new Response("Injected Git deletion failure", { status: 500 });
+                }
+                deleteCount++;
+              }
               if (action === "create" || action === "fork")
                 return Response.json({ defaultBranch: "main", refs: {} });
               return Response.json({ refs: {} });
@@ -259,6 +267,43 @@ test("artifacts: a failed metadata write cannot delete Git contents", async ({
 	expect(
 		await (await clockRequest(mf, { action: "backendStatus" })).json()
 	).toEqual({ deleteCount: 1 });
+});
+
+test("artifacts: failed Git deletion stays retryable across a restart", async ({
+	expect,
+}) => {
+	const script = await clockedWorker();
+	const root = await useTmp();
+	const first = new Miniflare(clockOptions(script, root));
+	useDispose(first);
+	const created = await clockRpc(first, "create", ["repo"]);
+	await (await clockRequest(first, { action: "failDelete" })).body?.cancel();
+	const failed = await clockRequest(first, {
+		method: "delete",
+		args: ["repo"],
+	});
+	expect(failed.status).toBe(400);
+	await failed.body?.cancel();
+	expect((await clockRpc(first, "list")).total).toBe(0);
+	const inaccessible = await clockRequest(first, {
+		method: "get",
+		args: ["repo"],
+	});
+	expect(inaccessible.status).toBe(400);
+	await inaccessible.body?.cancel();
+	expect(
+		await (await clockRequest(first, { action: "backendStatus" })).json()
+	).toEqual({ deleteCount: 0 });
+	await first.dispose();
+
+	const restarted = new Miniflare(clockOptions(script, root));
+	useDispose(restarted);
+	expect(await clockRpc(restarted, "delete", ["repo"])).toBe(true);
+	expect(
+		await (await clockRequest(restarted, { action: "backendStatus" })).json()
+	).toEqual({ deleteCount: 1 });
+	const replacement = await clockRpc(restarted, "create", ["repo"]);
+	expect(replacement.id).not.toBe(created.id);
 });
 
 test("artifacts: token expiry is exclusive at the exact workerd clock boundary and persists", async ({

@@ -4,7 +4,7 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
-	test("Artifacts defaults to local and only an explicit connection is remote", ({
+	test("Artifacts keeps legacy remote defaults until the local-default switch", ({
 		expect,
 	}) => {
 		const remoteProxyConnectionString = new URL(
@@ -18,8 +18,9 @@ describe("convertV4MiniflareOptions", () => {
 				REMOTE: { namespace: "remote", remoteProxyConnectionString },
 			},
 		});
-		expect(converted.workers[0].config.env?.LOCAL).toMatchObject({
-			dev: { remote: false },
+		expect(converted.workers[0].config.env?.LOCAL).toEqual({
+			type: "artifacts",
+			namespace: "local",
 		});
 		expect(converted.workers[0].config.env?.REMOTE).toMatchObject({
 			dev: { remote: true },

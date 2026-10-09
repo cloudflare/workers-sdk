@@ -39,7 +39,11 @@ sequenceDiagram
 metadata disk, internal Git backend service, and Git socket. The controller
 reuses a sidecar per Git storage path and closes it when Miniflare is disposed.
 The socket used by Git clients and the sidecar's private HTTP listener are
-**different endpoints**.
+**different endpoints**. If the sidecar exits after startup, the controller
+forgets its endpoint and warns; an explicit Miniflare configuration reload
+reconnects, but existing workerd connections do not recover automatically.
+Restart the dev server or reload its configuration if Git operations stop
+working after a sidecar exit.
 
 ## Local binding RPC
 
@@ -117,7 +121,11 @@ repository tokens before forwarding. The internal service injects the sidecar
 secret; the client's `Authorization` header is removed before that hop. For a
 successful push, the Durable Object refreshes repository metadata before
 returning the response. The sidecar uses native `git http-backend` for Git smart
-HTTP rather than reproducing Git's pack protocol.
+HTTP rather than reproducing Git's pack protocol. All native Git commands
+(including the HTTP backend) override repository-local hook configuration.
+A failed deletion leaves an inaccessible, persisted tombstone, so retrying
+`delete()` or creating the same name can finish native Git cleanup even after a
+process restart.
 
 ## Explicit remote binding
 
@@ -142,5 +150,7 @@ sequenceDiagram
 ```
 
 A local binding does not automatically synchronize with production Artifacts.
-An explicit repository import may contact its specified HTTPS Git remote; that
-is distinct from enabling a remote Artifacts binding.
+An explicit repository import may contact its specified HTTPS Git remote from
+the developer's host, including private-network hosts; it does not follow HTTP
+redirects. This is distinct from enabling a remote Artifacts binding. Do not
+pass an untrusted URL to `import()` when the host can access sensitive services.
