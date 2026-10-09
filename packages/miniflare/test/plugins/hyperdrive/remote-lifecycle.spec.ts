@@ -6,7 +6,15 @@ import { test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { HyperdriveProxyController } from "../../../src/plugins/hyperdrive/hyperdrive-proxy";
 
-test.for(["active", "removed", "changed", "restored", "reconnected", "ended"])(
+test.for([
+	"active",
+	"removed",
+	"changed",
+	"aborted",
+	"restored",
+	"reconnected",
+	"ended",
+])(
 	"disposes live connections from a %s remote listener",
 	async (state, { expect }) => {
 		const edge = new WebSocketServer({ port: 0, host: "127.0.0.1" });
@@ -56,7 +64,7 @@ test.for(["active", "removed", "changed", "restored", "reconnected", "ended"])(
 			if (state !== "active" && state !== "ended") {
 				controller.beginUpdate();
 				const activeAddresses = new Set<string>();
-				if (state === "changed") {
+				if (state === "changed" || state === "aborted") {
 					const nextPort = await controller.createRemoteTcpBridge({
 						...config,
 						remoteProxyConnectionString: new URL(
@@ -65,9 +73,16 @@ test.for(["active", "removed", "changed", "restored", "reconnected", "ended"])(
 					});
 					activeAddresses.add(`127.0.0.1:${nextPort}`);
 				}
-				controller.commitUpdate(activeAddresses);
+				if (state === "aborted") {
+					controller.abortUpdate();
+					expect(controller.getRemoteBridgePort(config.name)).toBe(port);
+				} else {
+					controller.commitUpdate(activeAddresses);
+				}
 				expect(client.destroyed).toBe(false);
-				expect(edge.clients.size).toBe(state === "changed" ? 2 : 1);
+				await vi.waitFor(() =>
+					expect(edge.clients.size).toBe(state === "changed" ? 2 : 1)
+				);
 			}
 			if (state === "restored" || state === "reconnected") {
 				const retiredSession = Array.from(edge.clients)[0];

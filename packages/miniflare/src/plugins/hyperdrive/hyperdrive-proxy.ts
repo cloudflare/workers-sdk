@@ -128,7 +128,10 @@ export class HyperdriveProxyController {
 	// Map a binding and target to the listening proxy server and port
 	#servers = new Map<string, { server: net.Server; port: number }>();
 	#starting = new Map<string, Promise<number>>();
-	#update?: { created: Set<string> };
+	#update?: {
+		created: Set<string>;
+		remoteBridgePorts: Map<string, number>;
+	};
 	#disposed = false;
 	// Sockets currently accepted by each server, keyed the same way as
 	// `#servers`. Retiring a listener deliberately leaves its live connections
@@ -588,7 +591,10 @@ export class HyperdriveProxyController {
 		if (this.#update !== undefined) {
 			throw new Error("Hyperdrive proxy configuration update already started");
 		}
-		this.#update = { created: new Set() };
+		this.#update = {
+			created: new Set(),
+			remoteBridgePorts: new Map(this.#remoteBridgePorts),
+		};
 	}
 
 	/** Stops listeners omitted by the successfully installed runtime config. */
@@ -605,7 +611,7 @@ export class HyperdriveProxyController {
 		}
 	}
 
-	/** Discards new listeners when the runtime config could not be installed. */
+	/** Discards new listeners and restores addresses after a failed config update. */
 	abortUpdate(): void {
 		const update = this.#update;
 		if (update === undefined) {
@@ -615,6 +621,14 @@ export class HyperdriveProxyController {
 		for (const key of update.created) {
 			this.#retireServer(key);
 		}
+		const activePorts = new Set(
+			Array.from(this.#servers.values(), ({ port }) => port)
+		);
+		this.#remoteBridgePorts = new Map(
+			Array.from(update.remoteBridgePorts).filter(([, port]) =>
+				activePorts.has(port)
+			)
+		);
 	}
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
