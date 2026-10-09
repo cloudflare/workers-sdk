@@ -58,6 +58,108 @@ const STATEFUL_SCRIPT = (responsePrefix = "") => `
   }
 `;
 
+test("emits a Durable Object class's retry policy on its namespace, not its bindings", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const configPath = path.join(tmp, "workerd-config.json");
+	const originalDebugPath = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
+	process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = configPath;
+	onTestFinished(() => {
+		if (originalDebugPath === undefined) {
+			delete process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
+		} else {
+			process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = originalDebugPath;
+		}
+	});
+
+	const mf = new Miniflare({
+		unsafeDevRegistryPath: path.join(tmp, "registry"),
+		workers: [
+			{
+				config: {
+					name: "worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+						export class Object {}
+						export class Default {}
+						export default { fetch() { return new Response("ok"); } }
+					`),
+					env: {
+						LOCAL: {
+							type: "durable-object",
+							worker: "worker",
+							exportName: "Object",
+						},
+					},
+					exports: {
+						Object: {
+							type: "durable-object",
+							storage: "sqlite",
+							retry: { maxAttempts: 3, timeoutMs: 12_345 },
+						},
+						Default: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+			{
+				config: {
+					name: "caller",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+						export default { fetch() { return new Response("ok"); } }
+					`),
+					env: {
+						CROSS_WORKER: {
+							type: "durable-object",
+							worker: "worker",
+							exportName: "Object",
+						},
+						EXTERNAL: {
+							type: "durable-object",
+							worker: "external-worker",
+							exportName: "Object",
+						},
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	await mf.ready;
+
+	const config = JSON.parse(await fs.readFile(configPath, "utf8")) as {
+		services: {
+			name: string;
+			worker?: {
+				bindings?: { durableObjectNamespace?: Record<string, unknown> }[];
+				durableObjectNamespaces?: { className: string }[];
+			};
+		}[];
+	};
+	const worker = config.services.find(
+		(service) => service.name === "core:user:worker"
+	)?.worker;
+	const getNamespace = (className: string) =>
+		worker?.durableObjectNamespaces?.find(
+			(namespace) => namespace.className === className
+		);
+
+	// `env` bindings, bindings from other Workers, and `ctx.exports` all resolve
+	// to this namespace, so they share its policy.
+	expect(getNamespace("Object")).toMatchObject({
+		retryPolicy: { maxAttempts: 3, timeoutMs: 12_345 },
+	});
+	expect(getNamespace("Default")).not.toHaveProperty("retryPolicy");
+	const namespaceBindings = config.services
+		.flatMap((service) => service.worker?.bindings ?? [])
+		.flatMap((binding) => binding.durableObjectNamespace ?? []);
+	expect(namespaceBindings.length).toBeGreaterThanOrEqual(3);
+	for (const binding of namespaceBindings) {
+		expect(binding).not.toHaveProperty("retryPolicy");
+	}
+});
+
 test("persists Durable Object data in-memory between options reloads", async ({
 	expect,
 }) => {

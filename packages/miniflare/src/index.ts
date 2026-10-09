@@ -369,6 +369,7 @@ function getDurableObjectClassNames(
 				unsafeUniqueKey: exported.unsafeUniqueKey,
 				unsafePreventEviction: exported.unsafePreventEviction,
 				container: exported.container,
+				retryPolicy: exported.retry,
 			});
 		}
 	}

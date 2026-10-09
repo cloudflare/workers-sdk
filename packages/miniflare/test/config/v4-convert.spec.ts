@@ -94,6 +94,66 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts Durable Object retry options to class exports without filling defaults", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			durableObjects: {
+				ABSENT: { className: "Absent" },
+				PARTIAL: { className: "Partial", retryTimeoutMs: 500 },
+				CONFIGURED: {
+					className: "Configured",
+					retryMaxAttempts: 7,
+					retryTimeoutMs: 12_345,
+				},
+				// A later entry without retry options keeps the class's policy.
+				CONFIGURED_AGAIN: { className: "Configured" },
+				EXTERNAL: { className: "External", scriptName: "other-worker" },
+			},
+			additionalUnboundDurableObjects: [
+				{ className: "Unbound", retryMaxAttempts: 0 },
+			],
+		});
+		const { env, exports } = converted.workers[0].config;
+
+		for (const binding of Object.values(env ?? {})) {
+			expect(binding).not.toHaveProperty("retry");
+		}
+		expect(exports?.Absent).toHaveProperty("retry", undefined);
+		expect(exports?.Partial).toHaveProperty("retry", {
+			maxAttempts: undefined,
+			timeoutMs: 500,
+		});
+		expect(exports?.Configured).toHaveProperty("retry", {
+			maxAttempts: 7,
+			timeoutMs: 12_345,
+		});
+		expect(exports?.Unbound).toHaveProperty("retry", {
+			maxAttempts: 0,
+			timeoutMs: undefined,
+		});
+		expect(exports).not.toHaveProperty("External");
+	});
+
+	test("rejects different retry options for one Durable Object class", ({
+		expect,
+	}) => {
+		expect(() =>
+			convertV4MiniflareOptions({
+				name: "worker",
+				script: "export default {};",
+				durableObjects: {
+					FIRST: { className: "Object", retryMaxAttempts: 1 },
+					SECOND: { className: "Object", retryMaxAttempts: 2 },
+				},
+			})
+		).toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: Durable Object entries for "Object" set different retry options. A Durable Object class has one retry policy, so they must match.]`
+		);
+	});
+
 	test("converts workflow exports to config exports", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			name: "worker",

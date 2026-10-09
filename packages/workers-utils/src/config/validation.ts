@@ -14,6 +14,7 @@ import { getContainerNameToClassNameMap } from "./containers";
 import { Diagnostics } from "./diagnostics";
 import {
 	getDurableObjectExports,
+	hasDurableObjectExports,
 	isLiveDurableObjectExport,
 } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
@@ -56,6 +57,7 @@ import type {
 	CustomDomainRoute,
 	ContainerObservability,
 	DispatchNamespaceOutbound,
+	DurableObjectBindings,
 	DurableObjectExport,
 	Environment,
 	Observability,
@@ -2251,6 +2253,12 @@ function normalizeAndValidateEnvironment(
 		environment.exports
 	);
 
+	validateDurableObjectRetryConflicts(
+		diagnostics,
+		environment.durable_objects,
+		environment.exports
+	);
+
 	validateWorkflowExportConflicts(diagnostics, environment.exports);
 
 	// `exports` is inherited by named environments but `containers` is not, so the
@@ -3035,6 +3043,29 @@ const validateDurableObjectBinding: ValidatorFn = (
 		isValid = false;
 	}
 
+	if (
+		"retry" in value &&
+		!validateDurableObjectRetryPolicy(
+			diagnostics,
+			`${field}.retry`,
+			value.retry
+		)
+	) {
+		isValid = false;
+	}
+
+	if (
+		"retry" in value &&
+		value.retry !== undefined &&
+		"script_name" in value &&
+		value.script_name !== undefined
+	) {
+		diagnostics.errors.push(
+			`"${field}.retry" is not allowed on a binding with "script_name". The Worker that exports the Durable Object owns its retry policy.`
+		);
+		isValid = false;
+	}
+
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
@@ -3043,11 +3074,70 @@ const validateDurableObjectBinding: ValidatorFn = (
 		"class_name",
 		"environment",
 		"name",
+		"retry",
 		"script_name",
 	]);
 
 	return isValid;
 };
+
+/**
+ * Validate a Durable Object `retry` policy against the limits the runtime and
+ * API accept. Unknown properties are errors, matching the API.
+ *
+ * @param diagnostics - Collector for validation errors.
+ * @param field - Config path of the `retry` field, used in error messages.
+ * @param value - The raw `retry` value.
+ * @returns `true` when the policy is valid or absent.
+ */
+function validateDurableObjectRetryPolicy(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): boolean {
+	if (value === undefined) {
+		return true;
+	}
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`Expected "${field}" to be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const retry = value as Record<string, unknown>;
+	let isValid = true;
+	for (const [name, minimum, maximum] of [
+		["max_attempts", 0, 10],
+		["timeout_ms", 500, 60_000],
+	] as const) {
+		const limit = retry[name];
+		if (
+			limit !== undefined &&
+			(typeof limit !== "number" ||
+				!Number.isInteger(limit) ||
+				limit < minimum ||
+				limit > maximum)
+		) {
+			diagnostics.errors.push(
+				`"${field}.${name}" must be an integer between ${minimum} and ${maximum}, but got ${JSON.stringify(limit)}.`
+			);
+			isValid = false;
+		}
+	}
+
+	const unexpectedFields = Object.keys(retry).filter(
+		(key) => key !== "max_attempts" && key !== "timeout_ms"
+	);
+	if (unexpectedFields.length > 0) {
+		diagnostics.errors.push(
+			`Unexpected fields found in ${field} field: ${unexpectedFields.map((key) => `"${key}"`).join(", ")}`
+		);
+		isValid = false;
+	}
+
+	return isValid;
+}
 
 const workflowNameFormatMessage = `Workflow names must be 1-64 characters long, start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or hyphens.`;
 
@@ -7196,11 +7286,17 @@ function validateDurableObjectExport(
 					durableObjectExport
 				) && valid;
 			valid =
+				validateDurableObjectRetryPolicy(
+					diagnostics,
+					`exports.${className}.retry`,
+					durableObjectExport.retry
+				) && valid;
+			valid =
 				validateDurableObjectExportProperties(
 					diagnostics,
 					className,
 					durableObjectExport,
-					["type", "state", "storage", "container"]
+					["type", "state", "storage", "container", "retry"]
 				) && valid;
 			break;
 		}
@@ -7291,11 +7387,17 @@ function validateDurableObjectExport(
 					durableObjectExport
 				) && valid;
 			valid =
+				validateDurableObjectRetryPolicy(
+					diagnostics,
+					`exports.${className}.retry`,
+					durableObjectExport.retry
+				) && valid;
+			valid =
 				validateDurableObjectExportProperties(
 					diagnostics,
 					className,
 					durableObjectExport,
-					["type", "state", "storage", "transfer_from", "container"]
+					["type", "state", "storage", "transfer_from", "container", "retry"]
 				) && valid;
 			break;
 		}
@@ -8111,6 +8213,58 @@ function errorIfMigrationsAndExportsBothSet(
 		diagnostics.errors.push(
 			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
 		);
+	}
+}
+
+/**
+ * A Durable Object class has one retry policy, owned by the Worker that exports
+ * it. A Worker that declares Durable Objects with `exports` sets it on the
+ * class's `exports` entry. Otherwise bindings to the class from this Worker set
+ * it, and they must agree. Bindings with `script_name` are rejected by
+ * {@link validateDurableObjectBinding}, so they are skipped here.
+ */
+function validateDurableObjectRetryConflicts(
+	diagnostics: Diagnostics,
+	durableObjects: Config["durable_objects"],
+	exports: Config["exports"]
+) {
+	if (!Array.isArray(durableObjects.bindings)) {
+		return;
+	}
+
+	const usesExports = hasDurableObjectExports(exports);
+	const bindingsByClassName = new Map<string, DurableObjectBindings[number]>();
+	for (const binding of durableObjects.bindings) {
+		// Malformed bindings and policies have already been reported by the
+		// field validators, which run first but do not remove them from the config.
+		if (
+			typeof binding !== "object" ||
+			binding === null ||
+			typeof binding.retry !== "object" ||
+			binding.retry === null ||
+			binding.script_name !== undefined
+		) {
+			continue;
+		}
+
+		if (usesExports) {
+			diagnostics.errors.push(
+				`The Durable Object binding "${binding.name}" sets "retry", but this Worker declares its Durable Objects in "exports". Set it on "exports.${binding.class_name}.retry" instead.`
+			);
+			continue;
+		}
+
+		const existing = bindingsByClassName.get(binding.class_name);
+		if (existing === undefined) {
+			bindingsByClassName.set(binding.class_name, binding);
+		} else if (
+			existing.retry?.max_attempts !== binding.retry.max_attempts ||
+			existing.retry?.timeout_ms !== binding.retry.timeout_ms
+		) {
+			diagnostics.errors.push(
+				`The Durable Object bindings "${existing.name}" and "${binding.name}" set different "retry" policies for "${binding.class_name}". A Durable Object class has one retry policy, so they must match.`
+			);
+		}
 	}
 }
 

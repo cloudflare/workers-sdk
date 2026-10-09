@@ -922,6 +922,45 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("converts retry policies on live durable-object exports", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					exports: {
+						MyDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							retry: { maxAttempts: 0, timeoutMs: 500 },
+						},
+						Incoming: {
+							type: "durable-object",
+							state: "expecting-transfer",
+							storage: "legacy-kv",
+							transferFrom: "source-worker",
+							retry: { timeoutMs: 12_345 },
+						},
+					},
+				},
+				containers: [],
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				MyDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					retry: { max_attempts: 0, timeout_ms: 500 },
+				},
+				Incoming: {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "legacy-kv",
+					transfer_from: "source-worker",
+					retry: { timeout_ms: 12_345 },
+				},
+			});
+		});
+
 		it('treats an explicit `state: "created"` like the default and omits it on the wire', ({
 			expect,
 		}) => {

@@ -352,6 +352,83 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 		});
 	});
 
+	it("applies a Durable Object class's retry policy to every local entry for the class", ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				main: "./index.js",
+				compatibility_date: "2024-10-04",
+				exports: {
+					Absent: { type: "durable-object", storage: "sqlite" },
+					Exported: {
+						type: "durable-object",
+						storage: "sqlite",
+						retry: { max_attempts: 7, timeout_ms: 12_345 },
+					},
+					Unbound: {
+						type: "durable-object",
+						storage: "sqlite",
+						retry: { max_attempts: 0 },
+					},
+				},
+				durable_objects: {
+					bindings: [
+						{ name: "ABSENT", class_name: "Absent" },
+						{ name: "EXPORTED", class_name: "Exported" },
+						{ name: "EXTERNAL", class_name: "Exported", script_name: "other" },
+					],
+				},
+			},
+			"./wrangler.json"
+		);
+
+		const { workerOptions } =
+			unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+		expect(workerOptions.durableObjects).toMatchObject({
+			ABSENT: { retryMaxAttempts: undefined, retryTimeoutMs: undefined },
+			EXPORTED: { retryMaxAttempts: 7, retryTimeoutMs: 12_345 },
+			EXTERNAL: { retryMaxAttempts: undefined, retryTimeoutMs: undefined },
+		});
+		expect(workerOptions.additionalUnboundDurableObjects).toMatchObject([
+			{ className: "Unbound", retryMaxAttempts: 0, retryTimeoutMs: undefined },
+		]);
+	});
+
+	it("applies a retry policy from a same-Worker binding to the other bindings for the class", ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				main: "./index.js",
+				compatibility_date: "2024-10-04",
+				migrations: [{ tag: "v1", new_sqlite_classes: ["Counter"] }],
+				durable_objects: {
+					bindings: [
+						{ name: "FIRST", class_name: "Counter" },
+						{
+							name: "SECOND",
+							class_name: "Counter",
+							retry: { timeout_ms: 500 },
+						},
+					],
+				},
+			},
+			"./wrangler.json"
+		);
+
+		const { workerOptions } =
+			unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+		expect(workerOptions.durableObjects).toMatchObject({
+			FIRST: { retryMaxAttempts: undefined, retryTimeoutMs: 500 },
+			SECOND: { retryMaxAttempts: undefined, retryTimeoutMs: 500 },
+		});
+	});
+
 	describe("typed services bindings with `dev.plugin`", () => {
 		it("routes a typed service binding with `dev.plugin` to miniflare's unsafe-binding plugin pathway", ({
 			expect,

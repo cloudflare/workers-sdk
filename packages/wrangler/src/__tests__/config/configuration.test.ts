@@ -105,6 +105,80 @@ describe("readConfig()", () => {
 	});
 });
 
+describe.each(["jsonc", "toml"])("Durable Object retry in %s", (configType) => {
+	runInTempDir();
+
+	it("inherits export policies into named environments", ({ expect }) => {
+		const configPath = `wrangler.${configType}`;
+		writeWranglerConfig(
+			{
+				exports: {
+					MyDurableObject: {
+						type: "durable-object",
+						storage: "sqlite",
+						retry: { max_attempts: 5, timeout_ms: 10_000 },
+					},
+				},
+				env: {
+					staging: {
+						exports: {
+							MyDurableObject: {
+								type: "durable-object",
+								storage: "sqlite",
+								retry: { max_attempts: 0 },
+							},
+						},
+					},
+					production: {},
+				},
+			},
+			configPath
+		);
+
+		const getRetry = (env?: string) => {
+			const exported = readConfig({ config: configPath, env }).exports
+				.MyDurableObject;
+			return "retry" in exported ? exported.retry : undefined;
+		};
+		expect(getRetry()).toEqual({ max_attempts: 5, timeout_ms: 10_000 });
+		expect(getRetry("staging")).toEqual({ max_attempts: 0 });
+		expect(getRetry("production")).toEqual({
+			max_attempts: 5,
+			timeout_ms: 10_000,
+		});
+	});
+
+	it("does not inherit binding policies into named environments", ({
+		expect,
+	}) => {
+		const configPath = `wrangler.${configType}`;
+		writeWranglerConfig(
+			{
+				migrations: [{ tag: "v1", new_sqlite_classes: ["MyDurableObject"] }],
+				durable_objects: {
+					bindings: [
+						{
+							name: "MY_DO",
+							class_name: "MyDurableObject",
+							retry: { max_attempts: 5 },
+						},
+					],
+				},
+				env: { production: {} },
+			},
+			configPath
+		);
+
+		expect(
+			readConfig({ config: configPath }).durable_objects.bindings[0].retry
+		).toEqual({ max_attempts: 5 });
+		expect(
+			readConfig({ config: configPath, env: "production" }).durable_objects
+				.bindings
+		).toEqual([]);
+	});
+});
+
 describe("experimental_readRawConfig()", () => {
 	describe.each(["json", "jsonc", "toml"])(
 		`with %s config files`,

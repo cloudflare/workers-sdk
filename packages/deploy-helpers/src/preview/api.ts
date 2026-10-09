@@ -6,6 +6,7 @@ import type {
 	CfPlacement,
 	CfUserLimits,
 	Config,
+	DurableObjectRetryPolicy,
 	Json,
 	Observability,
 } from "@cloudflare/workers-utils";
@@ -61,6 +62,7 @@ export interface Binding {
 	entrypoint?: string;
 	class_name?: string;
 	script_name?: string;
+	retry?: DurableObjectRetryPolicy;
 }
 
 export type EnvBindings = Record<string, Binding>;

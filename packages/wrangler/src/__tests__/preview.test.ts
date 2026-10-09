@@ -959,6 +959,11 @@ describe("wrangler preview", () => {
 							class_name: "Counter",
 							script_name: "counter-worker",
 						},
+						{
+							name: "LOCAL",
+							class_name: "Local",
+							retry: { max_attempts: 5, timeout_ms: 10_000 },
+						},
 					],
 				},
 			});
@@ -968,6 +973,11 @@ describe("wrangler preview", () => {
 					type: "durable_object_namespace",
 					class_name: "Counter",
 					script_name: "counter-worker",
+				},
+				LOCAL: {
+					type: "durable_object_namespace",
+					class_name: "Local",
+					retry: { max_attempts: 5, timeout_ms: 10_000 },
 				},
 			});
 		});

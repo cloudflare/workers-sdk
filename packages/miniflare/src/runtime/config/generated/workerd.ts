@@ -1442,79 +1442,11 @@ export class Worker_Binding_Type extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Type_Which;
 	}
 }
-export class Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy
-	extends $.Struct
-{
-	static readonly _capnp = {
-		displayName: "RetryPolicy",
-		id: "d9f9c39c6b94b8fb",
-		size: new $.ObjectSize(8, 0),
-		defaultMaxAttempts: $.getUint32Mask(4),
-		defaultTimeoutMs: $.getUint32Mask(10000),
-	};
-	/**
-	 * Maximum number of retries after the initial attempt. Zero disables retries, and one
-	 * allows a single retry. The default matches the runtime's default of five attempts in
-	 * total.
-	 *
-	 */
-	get maxAttempts(): number {
-		return $.utils.getUint32(
-			0,
-			this,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
-				.defaultMaxAttempts
-		);
-	}
-	set maxAttempts(value: number) {
-		$.utils.setUint32(
-			0,
-			value,
-			this,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
-				.defaultMaxAttempts
-		);
-	}
-	/**
-	 * Time in milliseconds, measured from the start of the call, after which no retry may
-	 * start. A retry still running when it expires is cancelled, and the caller gets the
-	 * error that caused the first retry. The initial request, and the first request after each
-	 * redirect, always run to completion. The clock starts after any output-gate wait, and a
-	 * redirect shares the original call's timeout. Must be between 500 and 60,000. The default
-	 * matches the runtime's default.
-	 *
-	 */
-	get timeoutMs(): number {
-		return $.utils.getUint32(
-			4,
-			this,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
-				.defaultTimeoutMs
-		);
-	}
-	set timeoutMs(value: number) {
-		$.utils.setUint32(
-			4,
-			value,
-			this,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
-				.defaultTimeoutMs
-		);
-	}
-	toString(): string {
-		return (
-			"Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy_" +
-			super.toString()
-		);
-	}
-}
 /**
  * The type of a Durable Object namespace binding.
  *
  */
 export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
-	static readonly RetryPolicy =
-		Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy;
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespaceDesignator",
 		id: "804f144ff477aac7",
@@ -1548,39 +1480,19 @@ export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
 	set serviceName(value: string) {
 		$.utils.setText(1, value, this);
 	}
-	_adoptRetryPolicy(
-		value: $.Orphan<Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy>
-	): void {
+	_adoptObsolete2(value: $.Orphan<$.Pointer>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
 	}
-	_disownRetryPolicy(): $.Orphan<Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy> {
-		return $.utils.disown(this.retryPolicy);
+	_disownObsolete2(): $.Orphan<$.Pointer> {
+		return $.utils.disown(this.obsolete2);
 	}
-	/**
-	 * Limits on how the runtime retries calls through stubs minted from this binding. When
-	 * absent, the runtime's default retry behavior applies.
-	 *
-	 */
-	get retryPolicy(): Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy {
-		return $.utils.getStruct(
-			2,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy,
-			this
-		);
+	get obsolete2(): $.Pointer {
+		return $.utils.getPointer(2, this);
 	}
-	_hasRetryPolicy(): boolean {
+	_hasObsolete2(): boolean {
 		return !$.utils.isNull($.utils.getPointer(2, this));
 	}
-	_initRetryPolicy(): Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy {
-		return $.utils.initStructAt(
-			2,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy,
-			this
-		);
-	}
-	set retryPolicy(
-		value: Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy
-	) {
+	set obsolete2(value: $.Pointer) {
 		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
 	toString(): string {
@@ -2910,6 +2822,62 @@ export class Worker_Binding extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Which;
 	}
 }
+export class Worker_DurableObjectNamespace_RetryPolicy extends $.Struct {
+	static readonly _capnp = {
+		displayName: "RetryPolicy",
+		id: "d2c20e152efcfa1f",
+		size: new $.ObjectSize(8, 0),
+		defaultMaxAttempts: $.getUint32Mask(4),
+		defaultTimeoutMs: $.getUint32Mask(10000),
+	};
+	/**
+	 * Maximum number of retries after the initial attempt. Zero disables retries, and one allows
+	 * a single retry. The default matches the runtime's default of five attempts in total.
+	 *
+	 */
+	get maxAttempts(): number {
+		return $.utils.getUint32(
+			0,
+			this,
+			Worker_DurableObjectNamespace_RetryPolicy._capnp.defaultMaxAttempts
+		);
+	}
+	set maxAttempts(value: number) {
+		$.utils.setUint32(
+			0,
+			value,
+			this,
+			Worker_DurableObjectNamespace_RetryPolicy._capnp.defaultMaxAttempts
+		);
+	}
+	/**
+	 * Time in milliseconds, measured from the start of the call, after which no retry may start.
+	 * A retry still running when it expires is cancelled, and the caller gets the error that
+	 * caused the first retry. The initial request, and the first request after each redirect,
+	 * always run to completion. The clock starts after any output-gate wait, and a redirect
+	 * shares the original call's timeout. Must be between 500 and 60,000. The default matches
+	 * the runtime's default.
+	 *
+	 */
+	get timeoutMs(): number {
+		return $.utils.getUint32(
+			4,
+			this,
+			Worker_DurableObjectNamespace_RetryPolicy._capnp.defaultTimeoutMs
+		);
+	}
+	set timeoutMs(value: number) {
+		$.utils.setUint32(
+			4,
+			value,
+			this,
+			Worker_DurableObjectNamespace_RetryPolicy._capnp.defaultTimeoutMs
+		);
+	}
+	toString(): string {
+		return "Worker_DurableObjectNamespace_RetryPolicy_" + super.toString();
+	}
+}
 export class Worker_DurableObjectNamespace_ContainerOptions_NamedImage
 	extends $.Struct
 {
@@ -3223,12 +3191,13 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	static readonly UNIQUE_KEY = Worker_DurableObjectNamespace_Which.UNIQUE_KEY;
 	static readonly EPHEMERAL_LOCAL =
 		Worker_DurableObjectNamespace_Which.EPHEMERAL_LOCAL;
+	static readonly RetryPolicy = Worker_DurableObjectNamespace_RetryPolicy;
 	static readonly ContainerOptions =
 		Worker_DurableObjectNamespace_ContainerOptions;
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespace",
 		id: "b429dd547d15747d",
-		size: new $.ObjectSize(8, 3),
+		size: new $.ObjectSize(8, 4),
 	};
 	/**
 	 * Exported class name that implements the Durable Object.
@@ -3302,6 +3271,41 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	}
 	set enableSql(value: boolean) {
 		$.utils.setBit(17, value, this);
+	}
+	_adoptRetryPolicy(
+		value: $.Orphan<Worker_DurableObjectNamespace_RetryPolicy>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(3, this));
+	}
+	_disownRetryPolicy(): $.Orphan<Worker_DurableObjectNamespace_RetryPolicy> {
+		return $.utils.disown(this.retryPolicy);
+	}
+	/**
+	 * Limits on how the runtime retries calls to Durable Objects in this namespace. They apply to
+	 * every stub for the namespace, whether it comes from a binding in this or another Worker, or
+	 * from `ctx.exports`. When absent, the runtime's default retry behavior applies. Not supported
+	 * for `ephemeralLocal` namespaces.
+	 *
+	 */
+	get retryPolicy(): Worker_DurableObjectNamespace_RetryPolicy {
+		return $.utils.getStruct(
+			3,
+			Worker_DurableObjectNamespace_RetryPolicy,
+			this
+		);
+	}
+	_hasRetryPolicy(): boolean {
+		return !$.utils.isNull($.utils.getPointer(3, this));
+	}
+	_initRetryPolicy(): Worker_DurableObjectNamespace_RetryPolicy {
+		return $.utils.initStructAt(
+			3,
+			Worker_DurableObjectNamespace_RetryPolicy,
+			this
+		);
+	}
+	set retryPolicy(value: Worker_DurableObjectNamespace_RetryPolicy) {
+		$.utils.copyFrom(value, $.utils.getPointer(3, this));
 	}
 	_adoptContainer(
 		value: $.Orphan<Worker_DurableObjectNamespace_ContainerOptions>

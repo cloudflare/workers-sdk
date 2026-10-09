@@ -1976,7 +1976,13 @@ describe("versions upload", () => {
 				],
 				services: [{ binding: "MY_SERVICE", service: "other-worker" }],
 				durable_objects: {
-					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+					bindings: [
+						{
+							name: "MY_DO",
+							class_name: "MyDurableObject",
+							retry: { max_attempts: 5, timeout_ms: 10_000 },
+						},
+					],
 				},
 				queues: {
 					producers: [{ binding: "MY_QUEUE", queue: "my-queue" }],
@@ -2038,6 +2044,7 @@ describe("versions upload", () => {
 						type: "durable_object_namespace",
 						name: "MY_DO",
 						class_name: "MyDurableObject",
+						retry: { max_attempts: 5, timeout_ms: 10_000 },
 					}),
 					expect.objectContaining({
 						type: "queue",

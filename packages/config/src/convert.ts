@@ -3,6 +3,7 @@ import {
 	type RawConfig,
 	type ContainerApp,
 	type DurableObjectContainerImage,
+	type DurableObjectRetryPolicy,
 	type Exports,
 } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
@@ -916,6 +917,9 @@ function convertExports(
 					storage: value.storage,
 					...(value.storage === "sqlite" &&
 						value.container !== undefined && { container: value.container }),
+					...(value.retry !== undefined && {
+						retry: convertDurableObjectRetry(value.retry),
+					}),
 				};
 				break;
 			}
@@ -950,6 +954,9 @@ function convertExports(
 					transfer_from: value.transferFrom,
 					...(value.storage === "sqlite" &&
 						value.container !== undefined && { container: value.container }),
+					...(value.retry !== undefined && {
+						retry: convertDurableObjectRetry(value.retry),
+					}),
 				};
 				break;
 			}
@@ -970,6 +977,16 @@ function convertExports(
 	if (Object.keys(converted).length > 0) {
 		result.exports = converted;
 	}
+}
+
+function convertDurableObjectRetry(retry: {
+	maxAttempts?: number;
+	timeoutMs?: number;
+}): DurableObjectRetryPolicy {
+	return omitUndefined({
+		max_attempts: retry.maxAttempts,
+		timeout_ms: retry.timeoutMs,
+	});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
