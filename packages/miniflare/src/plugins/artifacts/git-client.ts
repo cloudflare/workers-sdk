@@ -43,6 +43,9 @@ export function gitEnvironment(
 	}
 	return {
 		...env,
+		// libcurl can consult ~/.netrc even with Git credential helpers disabled.
+		// Point HOME at a unique, nonexistent path rather than the host account.
+		HOME: path.join(tmpdir(), `miniflare-artifacts-home-${randomUUID()}`),
 		GIT_CONFIG_NOSYSTEM: "1",
 		// Git for Windows cannot read null-device paths. A unique, nonexistent
 		// config path prevents it from falling back to the host's Git settings.
@@ -75,7 +78,7 @@ export function assertSupportedGitVersion(output: string): void {
 				? ` Found ${match[0]}.`
 				: " Could not determine Git version from `git --version`.";
 		throw new Error(
-			`Local Artifacts requires Git 2.32 or newer.${found} Upgrade Git, verify that \`git --version\` reports 2.32 or newer, then restart your dev server or test runner.`
+			`Local Artifacts requires Git 2.32 or newer.${found} Upgrade Git, then restart your dev server or test runner.`
 		);
 	}
 }
@@ -88,7 +91,7 @@ export async function assertGitAvailable(): Promise<void> {
 		version = decoder.decode(result.stdout);
 	} catch (error) {
 		throw new Error(
-			"Local Artifacts requires Git installed on the host and available on PATH. Install Git 2.32 or newer, verify that `git --version` works, then restart your dev server or test runner.",
+			"Local Artifacts requires Git 2.32 or newer on PATH. Install Git, then restart your dev server or test runner.",
 			{ cause: error }
 		);
 	}
@@ -240,6 +243,19 @@ export class GitClient {
 		defaultBranchOnly: boolean
 	): Promise<void> {
 		const sourceBranch = `refs/heads/${branch}`;
+		const validBranch = await runGit(["check-ref-format", sourceBranch], {
+			allowFailure: true,
+		});
+		if (validBranch.status !== 0) {
+			throw new Error("Git fork source branch is invalid");
+		}
+		const sourceRepository = await source.git(
+			["rev-parse", "--is-bare-repository"],
+			{ allowFailure: true }
+		);
+		if (sourceRepository.status !== 0) {
+			throw new Error("Git fork source is not a repository");
+		}
 		const sourceHasBranch = await source.git(
 			["rev-parse", "--verify", "--quiet", sourceBranch],
 			{ allowFailure: true }
@@ -256,7 +272,17 @@ export class GitClient {
 				this.repository,
 			]);
 		} else if (defaultBranchOnly) {
-			// Git cannot clone a named branch that has no commits yet.
+			// Only an unborn HEAD on the requested branch permits an empty fork.
+			// A typo or a missing source must never create a repository instead.
+			const head = await source.git(["symbolic-ref", "HEAD"], {
+				allowFailure: true,
+			});
+			if (
+				head.status !== 0 ||
+				decoder.decode(head.stdout).trim() !== sourceBranch
+			) {
+				throw new Error("Git fork source branch does not exist");
+			}
 			await this.init(branch);
 		} else {
 			await runGit([
@@ -293,6 +319,8 @@ export class GitClient {
 				"http.followRedirects=false",
 				"-c",
 				"protocol.ext.allow=never",
+				"-c",
+				"protocol.ssh.allow=never",
 				"clone",
 				"--bare",
 			];
@@ -355,7 +383,7 @@ export class GitClient {
 				refs[name] = oid;
 			}
 		}
-		const head = await this.git(["symbolic-ref", "--short", "HEAD"], {
+		const head = await this.git(["symbolic-ref", "HEAD"], {
 			allowFailure: true,
 		});
 		const defaultBranch =
@@ -411,18 +439,25 @@ export class GitClient {
 		if (!commit) {
 			return null;
 		}
-		const entry = await this.git(["ls-tree", "-z", commit, "--", path], {
-			allowFailure: true,
-		});
+		const entry = await this.git(
+			["--literal-pathspecs", "ls-tree", "-z", commit, "--", path],
+			{ allowFailure: true }
+		);
 		if (entry.status !== 0 || entry.stdout.length === 0) {
 			return null;
 		}
 		const line = decoder.decode(entry.stdout).split("\0", 1)[0] ?? "";
-		const match = /^(\d+) \w+ [0-9a-f]{40}\t([\s\S]+)$/.exec(line);
-		if (!match?.[1] || match[2] !== path || match[1] === "040000") {
+		const match = /^(\d+) \w+ ([0-9a-f]{40})\t([\s\S]+)$/.exec(line);
+		if (
+			!match?.[1] ||
+			!match[2] ||
+			match[3] !== path ||
+			match[1] === "040000"
+		) {
 			return null;
 		}
-		const object = await this.git(["cat-file", "blob", `${commit}:${path}`], {
+		// Read the matched object, not a revision expression built from a path.
+		const object = await this.git(["cat-file", "blob", match[2]], {
 			allowFailure: true,
 		});
 		return object.status === 0
@@ -525,11 +560,24 @@ function importSource(url: string): {
 	url: string;
 	authorization?: { origin: string; value: string };
 } {
-	// Native Git also accepts local paths and scp-style remotes. Only parse
-	// HTTP(S) URLs, where userinfo can otherwise be written into Git config.
+	// SSH reads host config and private keys outside the sanitized Git env.
+	// Local paths remain supported, but never hand an SSH source to Git.
 	if (/^ext::/i.test(url)) {
 		throw new Error("Git import protocol ext is not supported");
 	}
+	if (/^[a-z][a-z\d+.-]*::/i.test(url)) {
+		throw new Error("Git import remote helpers are not supported");
+	}
+	if (isSshSource(url)) {
+		throw new Error("Git import SSH sources are not supported");
+	}
+	if (
+		/^[a-z][a-z\d+.-]*:\/\//i.test(url) &&
+		!/^(?:https?|file|git):\/\//i.test(url)
+	) {
+		throw new Error("Git import protocol is not supported");
+	}
+	// Only parse HTTP(S) URLs, where userinfo can be written into Git config.
 	if (!/^https?:\/\//i.test(url)) {
 		return { url };
 	}
@@ -554,6 +602,19 @@ function importSource(url: string): {
 	// The sanitized URL is what Git records in config even if the host process
 	// exits mid-clone. The one-time HTTP header is passed through process env.
 	return { url: source.href, authorization: { origin, value } };
+}
+
+function isSshSource(source: string): boolean {
+	if (/^(?:ssh|git\+ssh|ssh\+git):\/\//i.test(source)) {
+		return true;
+	}
+	// Git interprets a colon before the first slash as scp-style SSH, except
+	// for absolute Windows drive paths. Ordinary local paths remain accepted.
+	return (
+		!path.win32.isAbsolute(source) &&
+		/^[^/]+:/.test(source) &&
+		!/^[a-z][a-z\d+.-]*:\/\//i.test(source)
+	);
 }
 
 async function assertImportTargetAvailable(repository: string): Promise<void> {

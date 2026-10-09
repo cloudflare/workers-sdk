@@ -45,6 +45,7 @@ test("Git subprocesses do not inherit Cloudflare or host credentials", ({
 		PATH: "/usr/bin",
 		CLOUDFLARE_API_TOKEN: "production-secret",
 		GIT_CONFIG_GLOBAL: "/home/user/.gitconfig",
+		HOME: "/home/user",
 		GIT_CONFIG_PARAMETERS: "'credential.helper=unsafe'",
 		GIT_ASKPASS: "/home/user/askpass",
 		GITHUB_TOKEN: "github-secret",
@@ -56,6 +57,8 @@ test("Git subprocesses do not inherit Cloudflare or host credentials", ({
 	expect(env.GITHUB_TOKEN).toBeUndefined();
 	expect(env.GIT_CONFIG_VALUE_0).toBe("");
 	expect(env.GIT_CONFIG_COUNT).toBe("1");
+	expect(env.HOME).toContain("miniflare-artifacts-home-");
+	expect(env.HOME).not.toBe("/home/user");
 	if (process.platform === "win32") {
 		expect(env.GIT_CONFIG_GLOBAL).toContain("miniflare-artifacts-empty-");
 	} else {
@@ -153,6 +156,48 @@ test("Git client imports, reads and forks a local repository", async ({
 	expect((await forked.state()).refs["refs/heads/main"]).toBe(commit.hash);
 });
 
+test("Git fork only creates an empty target for a valid unborn source branch", async ({
+	expect,
+}) => {
+	const directory = await useTmp();
+	const source = new GitClient(path.join(directory, "source.git"));
+	const target = new GitClient(path.join(directory, "fork.git"));
+	await expect(target.forkFrom(source, "main", true)).rejects.toThrow(
+		"Git fork source is not a repository"
+	);
+	await expect(stat(target.repository)).rejects.toMatchObject({
+		code: "ENOENT",
+	});
+
+	await source.init("main");
+	await expect(target.forkFrom(source, "typo", true)).rejects.toThrow(
+		"Git fork source branch does not exist"
+	);
+	await expect(target.forkFrom(source, "main~1", true)).rejects.toThrow(
+		"Git fork source branch is invalid"
+	);
+	await target.forkFrom(source, "main", true);
+	expect(await target.state()).toEqual({ defaultBranch: "main", refs: {} });
+});
+
+test("Git state and forks keep the branch when a tag has the same name", async ({
+	expect,
+}) => {
+	const directory = await useTmp();
+	const sourcePath = path.join(directory, "source");
+	await git(["init", "--initial-branch=main", sourcePath]);
+	const source = new GitClient(sourcePath);
+	await writeFile(path.join(sourcePath, "README"), "first\n");
+	await git(["add", "README"], sourcePath);
+	await git(["commit", "-m", "first"], sourcePath);
+	const commit = (await git(["rev-parse", "HEAD"], sourcePath)).stdout.trim();
+	await git(["tag", "main", commit], sourcePath);
+	expect((await source.state()).defaultBranch).toBe("main");
+	const target = new GitClient(path.join(directory, "fork.git"));
+	await target.forkFrom(source, (await source.state()).defaultBranch, true);
+	expect((await target.state()).refs["refs/heads/main"]).toBe(commit);
+});
+
 test("Git import accepts a native local repository path", async ({
 	expect,
 }) => {
@@ -202,11 +247,16 @@ test("Git import rejects remote-ext commands before invoking Git", async ({
 }) => {
 	const workspace = await useTmp();
 	const marker = path.join(workspace, "must-not-run");
+	const client = new GitClient(path.join(workspace, "target.git"));
 	await expect(
-		new GitClient(path.join(workspace, "target.git")).importFrom(
-			`ext::sh -c 'touch ${marker}'`
-		)
+		client.importFrom(`ext::sh -c 'touch ${marker}'`)
 	).rejects.toThrow("Git import protocol ext is not supported");
+	await expect(client.importFrom(`other::touch ${marker}`)).rejects.toThrow(
+		"Git import remote helpers are not supported"
+	);
+	await expect(
+		client.importFrom("custom://example.invalid/repo")
+	).rejects.toThrow("Git import protocol is not supported");
 	await expect(stat(marker)).rejects.toMatchObject({ code: "ENOENT" });
 	expect(
 		(await readdir(workspace)).filter((name) => name.startsWith(".artifacts-"))
@@ -317,7 +367,7 @@ test.skipIf(process.platform === "win32")(
 );
 
 test.skipIf(process.platform === "win32")(
-	"Git clone sanitizes HTTPS credentials and preserves scp-style sources",
+	"Git clone sanitizes HTTPS credentials and rejects SSH sources",
 	async ({ expect }) => {
 		const workspace = await useTmp();
 		const bin = path.join(workspace, "bin");
@@ -328,7 +378,7 @@ test.skipIf(process.platform === "win32")(
 		const wrapper = path.join(bin, "git");
 		await writeFile(
 			wrapper,
-			`#!/bin/sh\nprintf '%s' "$*" > '${cloneArgs}'\nprintf '%s' "$GIT_CONFIG_KEY_1" > '${configKey}'\ncase " $* " in\n  *"git@example.invalid:team/repo.git"*) exit 1 ;;\nesac\nexec '${realGit}' "$@"\n`
+			`#!/bin/sh\nprintf '%s' "$*" > '${cloneArgs}'\nprintf '%s' "$GIT_CONFIG_KEY_1" > '${configKey}'\nexec '${realGit}' "$@"\n`
 		);
 		await chmod(wrapper, 0o755);
 		const previousPath = process.env.PATH;
@@ -342,18 +392,24 @@ test.skipIf(process.platform === "win32")(
 			const args = await readFile(cloneArgs, "utf8");
 			expect(args).toContain("https://127.0.0.1:1/missing.git");
 			expect(args).not.toContain("credential-canary");
+			expect(args).toContain("protocol.ssh.allow=never");
 			expect(await readFile(configKey, "utf8")).toBe(
 				"http.https://127.0.0.1:1/.extraHeader"
 			);
-			await expect(
-				new GitClient(path.join(workspace, "scp.git")).importFrom(
-					"git@example.invalid:team/repo.git"
-				)
-			).rejects.toThrow("Git import failed");
-			expect(await readFile(cloneArgs, "utf8")).toContain(
-				"git@example.invalid:team/repo.git"
+			for (const url of [
+				"git@example.invalid:team/repo.git",
+				"example.invalid:team/repo.git",
+				"ssh://git@example.invalid/team/repo.git",
+				"git+ssh://git@example.invalid/team/repo.git",
+			]) {
+				await expect(
+					new GitClient(path.join(workspace, "ssh.git")).importFrom(url)
+				).rejects.toThrow("Git import SSH sources are not supported");
+				expect(await readFile(cloneArgs, "utf8")).toBe(args);
+			}
+			expect(await readFile(configKey, "utf8")).toBe(
+				"http.https://127.0.0.1:1/.extraHeader"
 			);
-			expect(await readFile(configKey, "utf8")).toBe("");
 		} finally {
 			process.env.PATH = previousPath;
 		}
@@ -376,6 +432,33 @@ test("failed Git imports clean their target and hide URL credentials", async ({
 	expect(String(failure)).toContain("Git import failed");
 	expect(String(failure)).not.toContain("credential-canary");
 	await expect(stat(repository)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+test("Git readFile uses literal paths and the matched blob hash", async ({
+	expect,
+}) => {
+	const directory = await useTmp();
+	const repository = path.join(directory, "files");
+	await git(["init", "--initial-branch=main", repository]);
+	for (const [name, content] of [
+		["README", "plain\n"],
+		[":README", "colon\n"],
+		["[README", "bracket\n"],
+	]) {
+		await writeFile(path.join(repository, name), content);
+	}
+	await git(["add", "-A"], repository);
+	await git(["commit", "-m", "literal filenames"], repository);
+	const client = new GitClient(repository);
+	for (const [name, content] of [
+		["README", "plain\n"],
+		[":README", "colon\n"],
+		["[README", "bracket\n"],
+	]) {
+		expect((await client.readFile("HEAD", name))?.data).toBe(
+			Buffer.from(content).toString("base64")
+		);
+	}
 });
 
 test("Git log rejects invalid pagination before starting a history read", async ({
