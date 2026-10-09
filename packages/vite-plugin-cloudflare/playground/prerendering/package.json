@@ -5,7 +5,6 @@
 	"scripts": {
 		"build:default": "vite build",
 		"build:assets-only": "vite build -c ./vite.config.assets-only.ts",
-		"build:assets-only-config": "vite build -c ./vite.config.assets-only-config.ts",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
