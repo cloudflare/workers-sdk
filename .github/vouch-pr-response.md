@@ -6,4 +6,4 @@ AI tools now let our team generate proposed code changes quickly. Reviewing chan
 
 For the majority of external contributors, the most effective way to help is through [issues](https://github.com/cloudflare/workers-sdk/issues): describing a problem or use case, providing a minimal reproduction, investigating its cause, or helping us verify a fix. Those contributions help us understand what needs to change and are very welcome.
 
-We will take an initial look at this PR and decide whether it is something we want to invest in reviewing and maintaining. We may reopen it if we decide to proceed, but we cannot guarantee that it will be reopened or receive a full review.
+We will take an initial look at this PR and decide whether it is something we want to invest time in reviewing and maintaining. We may reopen it if we decide to proceed, but we cannot guarantee that it will be reopened or receive a full review.
