@@ -33,7 +33,10 @@ import type {
 	RawConfig,
 	RawEnvironment,
 } from "../../../../../workers-utils/src";
-import type { RemoteProxySession } from "../../remoteBindings";
+import type {
+	RemoteProxySession,
+	RemoteProxySessionData,
+} from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	RemoteProxyConnectionString,
@@ -180,15 +183,16 @@ export async function getPlatformProxy<
 		env,
 	});
 
-	let remoteProxySession: RemoteProxySession | undefined = undefined;
+	let remoteProxySessionData: RemoteProxySessionData | null = null;
 	if (config.configPath && options.remoteBindings !== false) {
-		remoteProxySession = (
+		remoteProxySessionData =
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,
 				environment: env,
-			})) ?? {}
-		).session;
+			})) ?? null;
 	}
+	const remoteProxySession: RemoteProxySession | undefined =
+		remoteProxySessionData?.session;
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig({
 		config,

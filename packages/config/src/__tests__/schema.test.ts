@@ -92,7 +92,10 @@ describe("InputWorkerSchema", () => {
 					HYPERDRIVE: {
 						type: "hyperdrive",
 						id: "hyperdrive-id",
-						dev: { connectionString: "postgres://localhost/database" },
+						dev: {
+							remote: true,
+							connectionString: "postgres://localhost/database",
+						},
 					},
 					R2: {
 						type: "r2",
