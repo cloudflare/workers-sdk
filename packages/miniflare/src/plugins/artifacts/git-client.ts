@@ -277,6 +277,9 @@ export class GitClient {
 		return withRepositoryCreationLock(this.repository, async () => {
 			await assertImportTargetAvailable(this.repository);
 			const source = importSource(url);
+			if (depth !== undefined && (!Number.isSafeInteger(depth) || depth < 1)) {
+				throw new RangeError("Git import depth must be a positive integer");
+			}
 			// Clone into a private, atomically reserved sibling. Even if another
 			// process creates the final path during the clone, cleanup only touches
 			// the directory we own, never that other process's repository.
@@ -285,12 +288,21 @@ export class GitClient {
 			);
 			// An import may carry credentials. Never let Git redirect them to a
 			// different destination (or silently expand the requested network access).
-			const args = ["-c", "http.followRedirects=false", "clone", "--bare"];
+			const args = [
+				"-c",
+				"http.followRedirects=false",
+				"-c",
+				"protocol.ext.allow=never",
+				"clone",
+				"--bare",
+			];
 			if (branch) {
 				args.push("--branch", branch, "--single-branch");
 			}
-			if (depth) {
-				args.push("--depth", String(depth));
+			if (depth !== undefined) {
+				// Git's local-path optimization ignores --depth. Use its transport
+				// instead; --no-local has no effect on network remotes.
+				args.push("--depth", String(depth), "--no-local");
 			}
 			args.push(source.url, staged);
 			try {
@@ -515,6 +527,9 @@ function importSource(url: string): {
 } {
 	// Native Git also accepts local paths and scp-style remotes. Only parse
 	// HTTP(S) URLs, where userinfo can otherwise be written into Git config.
+	if (/^ext::/i.test(url)) {
+		throw new Error("Git import protocol ext is not supported");
+	}
 	if (!/^https?:\/\//i.test(url)) {
 		return { url };
 	}

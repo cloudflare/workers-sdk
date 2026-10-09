@@ -165,6 +165,54 @@ test("Git import accepts a native local repository path", async ({
 	expect((await git(["remote"], target)).stdout).toBe("");
 });
 
+test("Git import honors depth for a native local path", async ({ expect }) => {
+	const workspace = await useTmp();
+	const source = path.join(workspace, "source");
+	const target = path.join(workspace, "shallow.git");
+	await git(["init", "--initial-branch=main", source]);
+	for (const version of [1, 2, 3]) {
+		await writeFile(path.join(source, "README"), `version ${version}\n`);
+		await git(["add", "README"], source);
+		await git(["commit", "-m", `version ${version}`], source);
+	}
+	await new GitClient(target).importFrom(source, "main", 1);
+	expect(
+		(await git(["rev-list", "--count", "HEAD"], target)).stdout.trim()
+	).toBe("1");
+	expect(
+		(await git(["rev-parse", "--is-shallow-repository"], target)).stdout.trim()
+	).toBe("true");
+});
+
+test("Git import rejects invalid depths without leaving staging files", async ({
+	expect,
+}) => {
+	const workspace = await useTmp();
+	const client = new GitClient(path.join(workspace, "target.git"));
+	for (const depth of [0, -1, 1.5, Number.NaN]) {
+		await expect(
+			client.importFrom(path.join(workspace, "source.git"), "main", depth)
+		).rejects.toThrow("Git import depth must be a positive integer");
+	}
+	expect(await readdir(workspace)).toEqual([]);
+});
+
+test("Git import rejects remote-ext commands before invoking Git", async ({
+	expect,
+}) => {
+	const workspace = await useTmp();
+	const marker = path.join(workspace, "must-not-run");
+	await expect(
+		new GitClient(path.join(workspace, "target.git")).importFrom(
+			`ext::sh -c 'touch ${marker}'`
+		)
+	).rejects.toThrow("Git import protocol ext is not supported");
+	await expect(stat(marker)).rejects.toMatchObject({ code: "ENOENT" });
+	expect(
+		(await readdir(workspace)).filter((name) => name.startsWith(".artifacts-"))
+	).toEqual([]);
+});
+
 test.skipIf(process.platform === "win32")(
 	"Git import staging supports a long target component",
 	async ({ expect }) => {
