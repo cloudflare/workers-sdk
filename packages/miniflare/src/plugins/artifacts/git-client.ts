@@ -240,7 +240,7 @@ export class GitClient {
 			// A bare clone records remote.origin.url in its local Git config. It may
 			// include credentials used only for the import. Never retain the remote.
 			await this.git(["remote", "remove", "origin"]);
-		} catch {
+		} catch (error) {
 			// Git errors can echo URL credentials; do not propagate the raw error.
 			// A failed clone can also leave a config containing the import URL.
 			try {
@@ -250,9 +250,7 @@ export class GitClient {
 					`Git import failed and the partial repository at "${this.repository}" could not be removed. Delete it before retrying.`
 				);
 			}
-			throw new Error(
-				"Git import failed. Check the source URL, credentials, TLS certificate, and network access."
-			);
+			throw safeImportError(error);
 		}
 	}
 
@@ -451,6 +449,30 @@ export class GitClient {
 		}
 		return null;
 	}
+}
+
+function safeImportError(error: unknown): Error {
+	const detail = error instanceof Error ? error.message.toLowerCase() : "";
+	if (
+		detail.includes("authentication failed") ||
+		detail.includes("could not read username") ||
+		detail.includes("http 401") ||
+		detail.includes("returned error: 401")
+	) {
+		return new Error("Git import authentication failed. Check credentials.");
+	}
+	if (detail.includes("remote branch") && detail.includes("not found")) {
+		return new Error("Git import remote branch not found.");
+	}
+	if (detail.includes("does not appear to be a git repository")) {
+		return new Error("Git import URL does not appear to be a git repository.");
+	}
+	if (detail.includes("not found")) {
+		return new Error("Git import remote repository not found.");
+	}
+	return new Error(
+		"Git import failed. Check the source URL, credentials, TLS certificate, and network access."
+	);
 }
 
 function commitHeader(headers: string[], name: string): string | undefined {
