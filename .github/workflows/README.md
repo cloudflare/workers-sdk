@@ -21,6 +21,21 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 
 ## PR related actions
 
+### Vouch (vouch.yml)
+
+- Triggers
+  - A new PR is opened on the Cloudflare repository.
+  - Reopening a PR does not trigger the check, so maintainers can reopen one after triage.
+- Actions
+  - Allows bots, collaborators with write access, and authors listed in [`.github/VOUCHED.td`](../VOUCHED.td).
+  - Posts [the Workers SDK response](../vouch-pr-response.md) and closes PRs from unregistered collaborators.
+- Safety model
+  - Uses `pull_request_target` so the token can comment on and close fork PRs.
+  - Checks out the current head of the repository's default branch (`main`) to read the response template, including for PRs targeting older branches. The Vouch action also reads the contributor list from the default branch.
+  - Does not check out or execute PR head code. Checkout credentials are not persisted, and token permissions are limited to reading contents and writing PRs.
+- Maintaining the list
+  - Add or remove GitHub usernames in `.github/VOUCHED.td` through a reviewed PR. Write-access collaborators and bots do not need list entries.
+
 ### Tests + Checks (test-and-check.yml)
 
 - Triggers
@@ -32,6 +47,21 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and Oxlint + Oxfmt checks.
   - Adds the PR to a GitHub project
   - Makes sure that Wrangler's warning for old Node.js versions works.
+- Test scheduling
+  - Each OS starts Vite/Vitest integrations independently of the other packages, fixtures in two package shards, and dev-registry in a dedicated partition. Wrangler and Miniflare use three complete Vitest file shards on Windows and two on Linux/macOS. Tools and release source map tests run on Linux. All existing platform coverage is retained.
+  - Fixture shards execute whole packages, preserving custom test commands and multi-project suites. New fixtures with a `test:ci` script are assigned automatically. dev-registry starts independently so it cannot queue behind other fixtures. The remaining fixtures are balanced using duration estimates in `tools/test/run-fixture-shard.ts`.
+  - The six existing `Tests (OS, suite)` checks remain as branch-protection gates. Each waits for all test partitions and fails if any partition fails, is cancelled, or is skipped. Individual partition checks and Turbo summaries identify the failing workload.
+  - Run the CI fixture groups locally with `pnpm run test:ci:fixtures --group=remaining --shard=1/2` and `pnpm run test:ci:fixtures --group=dev-registry --shard=1/1`. Omitting `--group` includes every fixture, as before. Run a runtime shard with `CI_TEST_SHARD=1/3 pnpm test:ci --filter=wrangler --filter=miniflare` (use `/2` for Linux/macOS). The runtime test tasks hash the shard environment variable without changing build cache keys.
+- Uncached benchmarks
+  - Add `ci:no-turbo-cache` before pushing a commit to disable both local and remote Turbo cache reads and writes, including dependent builds and repository checks. Remove the label afterwards to restore normal caching. Adding or removing the label alone does not start this workflow; reruns retain the label state from the original event.
+  - pnpm's dependency download cache and the Chrome binary cache remain enabled. These do not cache test execution. Every Turbo invocation emits a run summary so cache status and task duration can be verified in the artifacts.
+  - A rebase does not force tests to run: Turbo hashes file contents, dependency tasks, configuration, and declared environment inputs. Commit SHAs are passed through without being hashed, so unchanged tasks can reuse results across commits and branches.
+- Retry diagnostics
+  - Each test partition writes a GitHub job summary and `test-retries.json` in its Turbo artifact. It lists visible successful and exhausted Vitest retries, their test file, retry count, and combined attempt duration. Cached log replays are excluded. Streamed test output is captured independently in `.turbo/ci-logs`, so retry reports still work when Turbo cache writes are disabled. The capture helper preserves the pnpm exit code and releases pipes left open by orphaned processes after command exit, preventing a Windows failure from hanging the job. The default reporter can omit fast successful retries; missing or cancelled logs can also make the report incomplete.
+  - The Workflows timer-quota regressions retain all 5,100 real steps, timers, and storage operations. Each attempt uses a fresh instance and verifies 5,100 callback executions, preventing retries from replaying persisted steps. They fetch only terminal log events and assert the completed count. Each attempt logs its progress, phase, time, and errors, keeping an initial failure visible even if a retry passes. Their five-minute timeout accommodates full execution on Windows; it does not reduce the step count or replace real storage/RPC/timers.
+  - Interactive container tests wait for HTTP readiness independently of process state, keeping their assertions, 90-second test deadline, and zero whole-test retries. Fixture cleanup waits until its containers are gone, tolerating concurrent removal by Wrangler.
+  - The workflow attempt number identifies job-level reruns. Assertion polling (`vi.waitFor`, `expect.poll`) and retries inside custom test commands are separate mechanisms and are not counted by this report. Wrangler's E2E file retry loop runs in `e2e-wrangler.yml`, outside this workflow.
+  - Run `node -r esbuild-register tools/test/report-test-retries.ts` after a local Turbo test run with `--summarize` to inspect retry results.
 
 ### Wrangler E2E tests (e2e-wrangler.yml)
 

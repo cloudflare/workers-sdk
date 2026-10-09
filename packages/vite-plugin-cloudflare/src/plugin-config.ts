@@ -233,6 +233,7 @@ export interface Worker {
 }
 
 interface BaseResolvedConfig {
+	cliDisplayName: string;
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport"> & {
@@ -451,6 +452,11 @@ export async function resolvePluginConfig(
 		pluginConfig.experimental?.newConfig
 	);
 	const shared = {
+		// Note: `cf-vite` currently sets this flag for every invocation, so it is
+		//       hopefully a sufficient signal for us to know that `cf` is the CLI in use.
+		//       We might need to revisit this or add a dedicated env variable if this
+		//       assumption turns out to be wrong.
+		cliDisplayName: isForcedBuildOutput() ? "cf" : "Wrangler",
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
 		tunnel:

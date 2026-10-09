@@ -1,4 +1,5 @@
 import { APIError, UserError } from "@cloudflare/workers-utils";
+import { cliPresentation } from "../../shared/context";
 import { INVALID_INHERIT_BINDING_CODE } from "./error-codes";
 import type { Binding, Config } from "@cloudflare/workers-utils";
 
@@ -34,9 +35,9 @@ export function addRequiredSecretsInheritBindings(
 	if (options.type === "deploy" && !options.workerExists) {
 		throw new UserError(
 			`The following required secrets have not been set: ${inheritedSecrets.join(", ")}\n` +
-				`This Worker does not exist yet, so secrets cannot be set in advance with \`wrangler secret put\`.\n` +
+				`This Worker does not exist yet, so secrets cannot be set in advance with \`${cliPresentation.commands.secretPut}\`.\n` +
 				`To deploy a new Worker with secrets, supply them via a secrets file:\n` +
-				`  wrangler deploy --secrets-file <path-to-file>\n` +
+				`  ${cliPresentation.commands.deploy} --secrets-file <path-to-file>\n` +
 				`where the file contains lines in the format \`SECRET_NAME=value\` (or JSON).\n` +
 				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`,
 			{ telemetryMessage: "required secrets missing before first deploy" }
@@ -71,8 +72,15 @@ export function handleMissingSecretsError(
 
 	if (missingSecretNames.length > 0) {
 		err.preventReport();
-		const secretPutCommand = `wrangler ${options.type === "deploy" ? "" : "versions "}secret put`;
-		const secretsFileCommand = `wrangler ${options.type === "deploy" ? "deploy" : "versions upload"} --secrets-file <path-to-file>`;
+		const secretPutCommand =
+			options.type === "deploy"
+				? cliPresentation.commands.secretPut
+				: cliPresentation.commands.versionsSecretPut;
+		const secretsFileCommand = `${
+			options.type === "deploy"
+				? cliPresentation.commands.deploy
+				: cliPresentation.commands.versionsUpload
+		} --secrets-file <path-to-file>`;
 		const action = options.type === "deploy" ? "deploying" : "uploading";
 		throw new UserError(
 			`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +

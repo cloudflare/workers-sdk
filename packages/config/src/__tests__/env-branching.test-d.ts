@@ -60,6 +60,53 @@ const branchedConfig = defineConfig((ctx) =>
 			}
 );
 
+const configWithUnmatchedEnvKeys = defineConfig((ctx) =>
+	ctx.isPreview
+		? {
+				worker: {
+					name: "preview-app-with-unmatched-env-keys",
+					compatibilityDate: "2026-10-08",
+					env: {
+						PREVIEW_JOBS: bindings.queue<PreviewJob>({
+							name: "preview-jobs",
+						}),
+					},
+				},
+			}
+		: {
+				worker: {
+					name: "production-app-with-unmatched-env-keys",
+					compatibilityDate: "2026-10-08",
+					env: {
+						PRODUCTION_JOBS: bindings.queue<ProductionJob>({
+							name: "production-jobs",
+						}),
+					},
+				},
+			}
+);
+
+declare const includeConditionalBindings: boolean;
+
+const workerWithConditionalBindings = defineWorker({
+	name: "worker-with-conditional-bindings",
+	compatibilityDate: "2026-10-08",
+	env: {
+		ALWAYS: bindings.text("always"),
+		ALWAYS_FALSE: false,
+		ALWAYS_NULL: null,
+		ALWAYS_UNDEFINED: undefined,
+		AND_EXPRESSION:
+			includeConditionalBindings && bindings.text("and-expression"),
+		NULL_TERNARY: includeConditionalBindings
+			? bindings.text("null-ternary")
+			: null,
+		UNDEFINED_TERNARY: includeConditionalBindings
+			? bindings.text("undefined-ternary")
+			: undefined,
+	},
+});
+
 const branchedWorker = defineWorker((ctx) => ({
 	name: "worker",
 	compatibilityDate: "2026-09-28",
@@ -124,6 +171,16 @@ const workerWithMissingEnvBranch = defineWorker((ctx) =>
 type Config = UnwrapConfig<typeof branchedConfig>;
 type Worker = UnwrapConfig<Config["worker"]>;
 type Env = InferEnv<Worker>;
+type ConfigWithUnmatchedEnvKeys = UnwrapConfig<
+	typeof configWithUnmatchedEnvKeys
+>;
+type WorkerWithInlineUnmatchedEnvKeys = UnwrapConfig<
+	ConfigWithUnmatchedEnvKeys["worker"]
+>;
+type InlineUnmatchedEnv = InferEnv<WorkerWithInlineUnmatchedEnvKeys>;
+type ConditionalEnv = InferEnv<
+	UnwrapConfig<typeof workerWithConditionalBindings>
+>;
 type DefinedWorkerEnv = InferEnv<UnwrapConfig<typeof branchedWorker>>;
 type WorkerWithoutEnv = UnwrapConfig<typeof workerWithoutEnv>;
 type InferredEnvWithoutEnv = InferEnv<WorkerWithoutEnv>;
@@ -149,6 +206,16 @@ type ExpectedMissingEnvBranch = {
 	APP_CONFIG?: typeof previewAppConfig;
 	JOBS?: Queue<PreviewJob>;
 };
+type ExpectedInlineUnmatchedEnv = {
+	PREVIEW_JOBS?: Queue<PreviewJob>;
+	PRODUCTION_JOBS?: Queue<ProductionJob>;
+};
+type ExpectedConditionalEnv = {
+	ALWAYS: "always";
+	AND_EXPRESSION?: "and-expression";
+	NULL_TERNARY?: "null-ternary";
+	UNDEFINED_TERNARY?: "undefined-ternary";
+};
 
 export type BranchedEnvMergesBranchesTest = Assert<
 	Equivalent<Env, ExpectedEnv>
@@ -167,6 +234,15 @@ export type UnmatchedEnvMakesBranchKeysOptionalTest = Assert<
 >;
 export type MissingEnvBranchMakesBindingsOptionalTest = Assert<
 	Equivalent<MissingEnvBranch, ExpectedMissingEnvBranch>
+>;
+export type InlineUnmatchedEnvMakesBranchKeysOptionalTest = Assert<
+	Equivalent<InlineUnmatchedEnv, ExpectedInlineUnmatchedEnv>
+>;
+export type ConditionalBindingValuesMakeKeysOptionalTest = Assert<
+	Equivalent<ConditionalEnv, ExpectedConditionalEnv>
+>;
+export type AlwaysOmittedBindingValuesHaveNoKeysTest = Assert<
+	Equal<keyof ConditionalEnv, keyof ExpectedConditionalEnv>
 >;
 
 export type BranchedJsonBindingTest = Assert<
@@ -207,3 +283,9 @@ export interface GeneratedEnvCanExtendUnmatchedEnvTest extends UnmatchedEnv {}
 
 // oxlint-disable-next-line typescript-eslint/no-empty-object-type -- the generated interface is intentionally empty
 export interface GeneratedEnvCanExtendMissingEnvBranchTest extends MissingEnvBranch {}
+
+// oxlint-disable-next-line typescript-eslint/no-empty-object-type -- the generated interface is intentionally empty
+export interface GeneratedEnvCanExtendInlineUnmatchedEnvTest extends InlineUnmatchedEnv {}
+
+// oxlint-disable-next-line typescript-eslint/no-empty-object-type -- the generated interface is intentionally empty
+export interface GeneratedEnvCanExtendConditionalEnvTest extends ConditionalEnv {}

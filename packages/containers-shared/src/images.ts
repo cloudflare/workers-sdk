@@ -1,6 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
+import { cliPresentation } from "./context";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
@@ -66,7 +67,7 @@ export async function pullImage(
 		}
 		logger?.warn(
 			"Unable to retrieve configured registry credentials from Cloudflare." +
-				"\nUnless this is a public image, you will need to run `wrangler containers registries configure` before deploying." +
+				`\nUnless this is a public image, you will need to run \`${cliPresentation.commands.containerRegistryConfigure}\` before deploying.` +
 				"\nAttempting to pull image anyway..."
 		);
 	}
@@ -143,7 +144,7 @@ export async function prepareContainerImagesForDev(args: {
 			containerOptions.length !== 1
 				? "the configured images"
 				: "the configured image",
-		hint: "To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or pass --enable-containers=false.",
+		hint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${cliPresentation.displayConfigFileName} or pass --enable-containers=false.`,
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {

@@ -6,7 +6,7 @@ import {
 	getCIMatchTag,
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
-import { fetchResult, logger } from "../../shared/context";
+import { cliPresentation, fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
 	ComplianceConfig,
@@ -72,7 +72,7 @@ export async function verifyWorkerMatchesCITag(
 			);
 		} else {
 			throw new FatalError(
-				"Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build. " +
+				`${cliPresentation.displayName} cannot validate that your Worker name matches what is expected by the build system. Please retry the build. ` +
 					"If the problem persists, please contact support.",
 				{ telemetryMessage: "ci match tag validation failed" }
 			);

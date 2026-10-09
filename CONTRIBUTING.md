@@ -1,12 +1,34 @@
 # Contributing
 
-Wrangler is an open-source project and we welcome contributions from you. Thank you!
+Workers SDK is an open-source project, and we welcome your help improving Wrangler and the other tools in this repository. Thank you!
 
 Below you can find some guidance on how to be most effective when contributing to the project.
 
+## Start with an issue
+
+For the majority of external contributors, the most effective way to help is through [issues](https://github.com/cloudflare/workers-sdk/issues). You can make a valuable contribution by:
+
+- Reporting a problem with the affected package version, your environment, and the behavior you expected.
+- Providing a minimal reproduction that we can run to investigate a bug.
+- Investigating an existing issue, narrowing down its cause, or identifying when a regression started.
+- Describing a use case and why the current behavior does not meet your needs.
+- Trying a proposed fix or a released version and reporting whether it resolves an issue.
+
+Check existing issues before opening a new one, and add relevant information to an existing issue where possible. These contributions help us understand which changes will be most useful and are very welcome.
+
+## Pull requests and registered collaborators
+
+We use [Vouch](https://github.com/mitchellh/vouch) to limit pull requests to registered collaborators: people with repository write access or people a maintainer has vouched for in [`.github/VOUCHED.td`](.github/VOUCHED.td).
+
+AI tools let our team generate proposed code changes quickly. Reviewing those changes, checking that they solve the right problem, and maintaining code quality over time still take substantial care and effort. Limiting PRs to registered collaborators helps us focus that effort where it is most useful.
+
+If you are not a registered collaborator, please discuss your proposed change in an issue before investing time in a PR. A maintainer may register you as a collaborator when we decide to work with you on a change.
+
+New PRs from unregistered collaborators are automatically closed, including PRs for small changes. We will take an initial look at a closed PR and decide whether it is something we want to invest time in reviewing and maintaining. We may reopen it if we decide to proceed, but we cannot guarantee that it will be reopened or receive a full review.
+
 ## tl;dr for contributing to Wrangler
 
-Useful commands for developing Wrangler (all commands below should be run in the project root):
+For registered collaborators, these are useful commands for developing Wrangler (all commands below should be run in the project root):
 
 - `pnpm i; pnpm build` will build everything in workers-sdk.
 - `pnpm dev -F wrangler` will watch and build changes while you develop. Fixtures use the build output from this, and are useful for messing around during dev (`fixtures/worker-ts` is a useful blank slate).
@@ -20,7 +42,7 @@ Before committing/submitting a PR:
 
 ## Before getting started
 
-We really appreciate your interest in making a contribution, and we want to make sure that the process is as smooth and transparent as possible! To this end, we note that the Workers team is actively doing development in this repository, and while we consistently strive to communicate status and current thinking around all open issues, there may be times when context surrounding certain items is not up to date. Therefore, **for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.** This will give us opportunity to flag any considerations you should be aware of before you spend time developing. Of course, for trivial changes, please feel free to go directly to filing a PR, with the understanding that the PR itself will serve as the place to discuss details of the change.
+The Workers team is actively developing this repository, and the context around an issue may not always be up to date. **For non-trivial changes, registered collaborators should always engage on the issue or create a discussion or feature request issue before writing code.** This gives us an opportunity to discuss priorities and flag considerations before you spend time developing. Registered collaborators can open PRs for trivial changes directly, with the PR serving as the place to discuss the details.
 
 Thanks so much for helping us improve the [workers-sdk](https://github.com/cloudflare/workers-sdk), and we look forward to your contribution!
 
@@ -47,7 +69,7 @@ Wrangler is built and run on the Node.js JavaScript runtime.
 
 #### For External Contributors
 
-Any contributions you make will be via [Pull Requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) on [GitHub](https://github.com/) developed in a local git repository and pushed to your own fork of the repository.
+Once a maintainer has registered you as a collaborator, develop changes in a local git repository and push them to your own fork before opening a [Pull Request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) on [GitHub](https://github.com/). You do not need to fork the repository to help with issues, reproductions, or testing proposed fixes.
 
 - Ensure you have [created an account](https://docs.github.com/en/get-started/onboarding/getting-started-with-your-github-account) on GitHub.
 - [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/workers-sdk).

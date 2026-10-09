@@ -1,5 +1,17 @@
 # @cloudflare/config
 
+## 0.24.1
+
+### Patch Changes
+
+- [#16140](https://github.com/cloudflare/workers-sdk/pull/16140) [`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717) Thanks [@cpojer](https://github.com/cpojer)! - Update Zod to 4.6.5
+
+  Align the published Zod dependencies in Cloudflare configuration and the Vitest plugin with other tools using Zod 4.6.5 so consumers can reuse one installation.
+
+- [#16138](https://github.com/cloudflare/workers-sdk/pull/16138) [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215) Thanks [@Derpedyea](https://github.com/Derpedyea)! - Fix declaration emit for configs that use Durable Objects or wrap config helpers
+
+  Projects that generate TypeScript declarations can now export a Worker that declares a Durable Object, wrap helpers such as `bindings.kv()`, and re-export `defineConfig`, `defineContainer`, or `defineWorker`. Helper options types such as `KvBindingOptions` can now be imported by name, and `bindings.json()` values are no longer emitted as `any`.
+
 ## 0.24.0
 
 ### Minor Changes

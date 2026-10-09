@@ -1,5 +1,39 @@
 # miniflare
 
+## 5.20261006.1-alpha
+
+### Patch Changes
+
+- [#16139](https://github.com/cloudflare/workers-sdk/pull/16139) [`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d) Thanks [@cpojer](https://github.com/cpojer)! - Update esbuild to 0.28.2
+
+  Align esbuild dependency with tooling using the latest 0.28 patch so package managers can share one installation instead of downloading a second native binary.
+
+- [#15939](https://github.com/cloudflare/workers-sdk/pull/15939) [`e6f7663`](https://github.com/cloudflare/workers-sdk/commit/e6f76636249eeca2407a28f3e0e786c4db24ab19) Thanks [@00200200](https://github.com/00200200)! - Fix local Workflows hitting the timer quota on long runs
+
+  Long local workflows no longer fail from timer exhaustion. Step timeout timers, sleep, waitForEvent, and grace-period waits now cancel their underlying timers when finished or aborted, instead of remaining until their original deadlines.
+
+- [#16098](https://github.com/cloudflare/workers-sdk/pull/16098) [`fe607f9`](https://github.com/cloudflare/workers-sdk/commit/fe607f9d7d35b377d5e272e8f946598e3812fe41) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sharp      | 0.35.4 | 0.35.5 |
+
+- [#15879](https://github.com/cloudflare/workers-sdk/pull/15879) [`8de6b3c`](https://github.com/cloudflare/workers-sdk/commit/8de6b3c3bf171521cc89f46a2f6e52c633a53b53) Thanks [@dawNotPoi](https://github.com/dawNotPoi)! - Stop Hyperdrive proxy listeners from accumulating across local development reloads
+
+  Miniflare now reuses a listener when a Hyperdrive binding keeps the same target and closes listeners no longer used after a configuration update. Changing or removing a binding, including switching to `sslmode=disable`, no longer leaves stale listening ports in `wrangler dev`.
+
+- [#16106](https://github.com/cloudflare/workers-sdk/pull/16106) [`ae29445`](https://github.com/cloudflare/workers-sdk/commit/ae2944543a8be0b2b73d8d9140103fa1195c90d0) Thanks [@Arthur031221](https://github.com/Arthur031221)! - Fix the local Images binding and `cf.image` transforms ignoring EXIF orientation. Previously, photos stored with an EXIF orientation flag (e.g. phone portrait photos, stored as landscape pixels plus a rotation flag) came back sideways from local transforms, while the production Images binding auto-orients them. Local dev now bakes the EXIF rotation into the pixels before applying transforms, matching production behavior.
+
+- [#16041](https://github.com/cloudflare/workers-sdk/pull/16041) [`cc8e969`](https://github.com/cloudflare/workers-sdk/commit/cc8e969750703538507b471a59e7d56045ebb640) Thanks [@Shubham-Padkonde](https://github.com/Shubham-Padkonde)! - Support single-object R2 deletion through the Local Explorer API
+
+  Local R2 clients can now delete an object with `DELETE /r2/buckets/{bucket_name}/objects/{object_key}` instead of having to use the bulk-delete endpoint. The route handles path-like keys and uses the same storage service as other local R2 operations.
+
+- [#16144](https://github.com/cloudflare/workers-sdk/pull/16144) [`417b186`](https://github.com/cloudflare/workers-sdk/commit/417b18661812ee9b8d51fa51114a3ac73cbb48b1) Thanks [@cpojer](https://github.com/cpojer)! - Honor the source-map setting in release builds
+
+  Omit Miniflare's own source maps when building with `SOURCEMAPS=false`, reducing the installed package size. Development builds continue to include self-contained source maps, and source maps for user Workers remain supported.
+
 ## 5.20261006.0-alpha
 
 ### Minor Changes

@@ -41,7 +41,7 @@ export function maybeStartOrUpdateRemoteProxySession(
 		wranglerOrWorkerConfigObject,
 		preExistingRemoteProxySessionData,
 		auth,
-		{ logger },
+		{ cliDisplayName: "Wrangler", logger },
 		startRemoteProxySession
 	);
 }

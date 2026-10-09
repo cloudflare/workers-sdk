@@ -47,6 +47,12 @@ runs:
       shell: bash
       run: echo "NODE_COMPILE_CACHE=$HOME/.node_compile_cache" >> $GITHUB_ENV
 
+    # NODE_VERSION is already a global Turbo input. Record the runtime actually
+    # installed so changing Node versions cannot reuse previous test results.
+    - name: Record Node.js version for Turbo cache keys
+      shell: bash
+      run: echo "NODE_VERSION=$(node --version)" >> "$GITHUB_ENV"
+
     - name: "Configure turbo repo cache environment variables"
       if: inputs.turbo-api
       shell: bash
