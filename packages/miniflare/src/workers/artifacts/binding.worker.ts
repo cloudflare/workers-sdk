@@ -123,6 +123,7 @@ type BackendRequest =
 	  }
 	| { action: "import"; sourceUrl: string; branch?: string; depth?: number }
 	| { action: "refs" }
+	| { action: "abortPush"; requestId: string }
 	| { action: "readBlob"; hash: string }
 	| { action: "readTree"; hash: string }
 	| { action: "readCommit"; hash: string }
@@ -540,7 +541,12 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	}
 
 	override async fetch(request: Request): Promise<Response> {
-		return handleGitRequest(this, this.env.config.namespace, request);
+		return handleGitRequest(
+			this,
+			this.env.config.namespace,
+			request,
+			(promise) => this.ctx.waitUntil(promise)
+		);
 	}
 
 	async repos(): Promise<RepositoryMap> {
@@ -610,10 +616,18 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		}
 	}
 
-	gitFetch(repository: Repository, request: Request): Promise<Response> {
+	gitFetch(
+		repository: Repository,
+		request: Request,
+		requestId?: string
+	): Promise<Response> {
 		const headers = new Headers(request.headers);
 		headers.delete("Authorization");
+		headers.delete("X-Local-Artifacts-Request-Id");
 		headers.set("X-Local-Artifacts-Generation", repository.id);
+		if (requestId) {
+			headers.set("X-Local-Artifacts-Request-Id", requestId);
+		}
 		const url = new URL(request.url);
 		url.pathname = url.pathname.replace(
 			/^\/git\/[^/]+\/[^/]+\.git/,
@@ -762,7 +776,8 @@ function parseGitRoute(
 async function handleGitRequest(
 	state: LocalArtifactsNamespaceObject,
 	namespace: string,
-	request: Request
+	request: Request,
+	keepAlive: (promise: Promise<void>) => void
 ): Promise<Response> {
 	const route = parseGitRoute(request, namespace);
 	if (!route) {
@@ -792,8 +807,9 @@ async function handleGitRequest(
 	const previousRefs = route.push
 		? (await state.backend<BackendState>(repository, { action: "refs" })).refs
 		: undefined;
-	const response = await state.gitFetch(repository, request);
-	if (!previousRefs) {
+	const requestId = route.push ? crypto.randomUUID() : undefined;
+	const response = await state.gitFetch(repository, request, requestId);
+	if (!previousRefs || !requestId) {
 		return response;
 	}
 
@@ -811,12 +827,46 @@ async function handleGitRequest(
 		await syncRefs();
 		return response;
 	}
-	// Drain the response with backpressure before querying refs: the sidecar
-	// holds its repository lock until Git finishes writing this body. Flush
-	// delays EOF until metadata is synchronized without buffering the pack.
-	const body = response.body.pipeThrough(
-		new TransformStream<Uint8Array, Uint8Array>({ flush: syncRefs })
-	);
+	// A canceled response may leave the sidecar blocked on its output socket.
+	// Stop only this push, then synchronize after its repository lock releases.
+	const reader = response.body.getReader();
+	let canceled = false;
+	let synchronization: Promise<void> | undefined;
+	const syncOnce = () => (synchronization ??= syncRefs());
+	const body = new ReadableStream<Uint8Array>({
+		async pull(controller) {
+			try {
+				const { done, value } = await reader.read();
+				if (done) {
+					await syncOnce();
+					if (!canceled) {
+						controller.close();
+					}
+				} else if (!canceled) {
+					controller.enqueue(value);
+				}
+			} catch (error) {
+				keepAlive(syncOnce());
+				if (!canceled) {
+					controller.error(error);
+				}
+			}
+		},
+		cancel() {
+			canceled = true;
+			keepAlive(
+				(async () => {
+					try {
+						await state.backend(repository, { action: "abortPush", requestId });
+					} catch {
+						// The sidecar may already have finished or stopped.
+					}
+					void reader.cancel().catch(() => {});
+					await syncOnce();
+				})()
+			);
+		},
+	});
 	return new Response(body, {
 		status: response.status,
 		statusText: response.statusText,

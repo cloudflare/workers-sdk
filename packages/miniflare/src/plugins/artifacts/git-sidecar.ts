@@ -27,6 +27,11 @@ import type { RepositoryState } from "./git-client";
 const adminPath = "/__local_artifacts__";
 const componentPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 type RepositoryLocks = Map<string, Promise<void>>;
+type InFlightGitRequest = {
+	path: string;
+	generation: string;
+	abort: () => void;
+};
 const decoder = new TextDecoder();
 
 if (parentPort) {
@@ -70,7 +75,8 @@ interface AdminRequest {
 		| "readTree"
 		| "readCommit"
 		| "file"
-		| "log";
+		| "log"
+		| "abortPush";
 	namespace: string;
 	name: string;
 	defaultBranch?: string;
@@ -86,6 +92,7 @@ interface AdminRequest {
 	limit?: number;
 	offset?: number;
 	generation?: string;
+	requestId?: string;
 }
 
 function createGitSecret(): string {
@@ -99,23 +106,28 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	await cleanupInterruptedRepositories(root);
 	const secret = createGitSecret();
 	const repositoryLocks: RepositoryLocks = new Map();
+	const inFlight = new Map<string, InFlightGitRequest>();
 	const server = createServer((request, response) => {
 		if (request.headers["x-local-artifacts-backend"] !== secret) {
 			response.writeHead(403).end("Forbidden");
 			return;
 		}
-		void handleRequest(root, repositoryLocks, request, response).catch(
-			(error: unknown) => {
-				if (response.headersSent) {
-					response.destroy(error instanceof Error ? error : undefined);
-				} else {
-					response.writeHead(500, { "Content-Type": "text/plain" });
-					response.end(
-						error instanceof Error ? error.message : "Native Git backend failed"
-					);
-				}
+		void handleRequest(
+			root,
+			repositoryLocks,
+			inFlight,
+			request,
+			response
+		).catch((error: unknown) => {
+			if (response.headersSent) {
+				response.destroy(error instanceof Error ? error : undefined);
+			} else {
+				response.writeHead(500, { "Content-Type": "text/plain" });
+				response.end(
+					error instanceof Error ? error.message : "Native Git backend failed"
+				);
 			}
-		);
+		});
 	});
 	await new Promise<void>((resolve, reject) => {
 		server.once("error", reject);
@@ -165,12 +177,13 @@ function parseGitPath(pathname: string): {
 async function handleRequest(
 	root: string,
 	locks: RepositoryLocks,
+	inFlight: Map<string, InFlightGitRequest>,
 	request: IncomingMessage,
 	response: ServerResponse
 ): Promise<void> {
 	const url = new URL(request.url ?? "/", "http://local-artifacts.invalid");
 	if (url.pathname === adminPath) {
-		await handleAdmin(root, locks, request, response);
+		await handleAdmin(root, locks, inFlight, request, response);
 		return;
 	}
 	const gitPath = parseGitPath(url.pathname);
@@ -192,19 +205,40 @@ async function handleRequest(
 			response.writeHead(409).end("Repository generation changed");
 			return;
 		}
-		await runGitHttpBackend(
-			root,
-			request,
-			response,
-			`/${repositoryDirectory(namespace, repository)}${suffix}`,
-			url.search.slice(1)
-		);
+		const requestId = request.headers["x-local-artifacts-request-id"];
+		const trackPush =
+			request.method === "POST" &&
+			suffix === "/git-receive-pack" &&
+			typeof requestId === "string" &&
+			/^[0-9a-f-]{36}$/.test(requestId);
+		try {
+			await runGitHttpBackend(
+				root,
+				request,
+				response,
+				`/${repositoryDirectory(namespace, repository)}${suffix}`,
+				url.search.slice(1),
+				trackPush
+					? (abort) =>
+							inFlight.set(requestId, {
+								path,
+								generation,
+								abort,
+							})
+					: undefined
+			);
+		} finally {
+			if (trackPush) {
+				inFlight.delete(requestId);
+			}
+		}
 	});
 }
 
 async function handleAdmin(
 	root: string,
 	locks: RepositoryLocks,
+	inFlight: Map<string, InFlightGitRequest>,
 	request: IncomingMessage,
 	response: ServerResponse
 ): Promise<void> {
@@ -218,6 +252,18 @@ async function handleAdmin(
 	validateComponent(body.namespace, "namespace");
 	validateComponent(body.name, "repository");
 	const repository = repositoryPath(root, body.namespace, body.name);
+	if (body.action === "abortPush") {
+		const active = inFlight.get(required(body.requestId, "requestId"));
+		if (
+			active?.path === repository &&
+			active.generation === required(body.generation, "generation")
+		) {
+			active.abort();
+		}
+		response.writeHead(200, { "Content-Type": "application/json" });
+		response.end("true");
+		return;
+	}
 	const lockPaths = [repository];
 	if (body.action === "fork" && body.sourceName) {
 		validateComponent(body.sourceName, "repository");
@@ -420,7 +466,8 @@ async function runGitHttpBackend(
 	request: IncomingMessage,
 	response: ServerResponse,
 	pathInfo: string,
-	query: string
+	query: string,
+	registerAbort?: (abort: () => void) => void
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const child = spawn("git", gitArgumentsWithoutHooks(["http-backend"]), {
@@ -468,6 +515,13 @@ async function runGitHttpBackend(
 				child.kill();
 			}
 		};
+		registerAbort?.(() => {
+			child.kill();
+			response.destroy();
+			child.stdout.destroy();
+			child.stderr.destroy();
+			child.stdin.destroy();
+		});
 		const write = (chunk: Buffer) => {
 			if (!response.write(chunk)) {
 				child.stdout.pause();
