@@ -116,7 +116,7 @@ export const d1ExecuteCommand = createCommand({
 		} = args;
 
 		const existingLogLevel = logger.loggerLevel;
-		if (json) {
+		if (json && existingLogLevel !== "none") {
 			// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
 			logger.loggerLevel = "error";
 		}
@@ -227,7 +227,7 @@ export async function executeSql({
 	preview: boolean | undefined;
 }) {
 	const existingLogLevel = logger.loggerLevel;
-	if (json) {
+	if (json && existingLogLevel !== "none") {
 		// set loggerLevel to error to avoid logs appearing in JSON output
 		logger.loggerLevel = "error";
 	}

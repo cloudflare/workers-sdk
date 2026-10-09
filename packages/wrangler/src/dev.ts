@@ -269,6 +269,13 @@ export const dev = createCommand({
 				"Use an existing named Cloudflare Tunnel when `--tunnel` is enabled.",
 			type: "string",
 		},
+		"tunnel-allowed-mail": {
+			describe:
+				"Require email authentication for a Quick Tunnel. Accepts an exact address or domain wildcard such as user@example.com or *@example.org. May be repeated or comma-separated.",
+			type: "string",
+			array: true,
+			nargs: 1,
+		},
 	},
 	async validateArgs(args) {
 		if (args.nodeCompat) {
@@ -281,6 +288,14 @@ export const dev = createCommand({
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload.",
 				{ telemetryMessage: "dev command live reload remote conflict" }
+			);
+		}
+		if (args.tunnelName && (args.tunnelAllowedMail?.length ?? 0) > 0) {
+			throw new UserError(
+				"--tunnel-allowed-mail is only supported for Quick Tunnels and cannot be used with --tunnel-name.",
+				{
+					telemetryMessage: "dev command tunnel allowed mail named conflict",
+				}
 			);
 		}
 		if (args.tunnel && args.remote) {

@@ -4,6 +4,8 @@ interface Env {
 
 export default {
 	async fetch(request, env) {
+		// The build must ship this declaration as written (see base-tests.ts)
+		using _scope = { [Symbol.dispose]() {} };
 		const url = new URL(request.url);
 
 		if (url.pathname === "/prerendered") {

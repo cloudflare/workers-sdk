@@ -1,10 +1,19 @@
 import { getInstalledPackageVersion } from "@cloudflare/workers-utils";
 
-const MINIMUM_WRANGLER_VERSION = "4.100.0";
+// Match the Wrangler version constraint in cf's dev/known-impls.ts.
+export const MINIMUM_WRANGLER_VERSION = "4.136.0";
 const SEMVER_PATTERN =
 	/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
+const DECLARED_VERSION_PATTERN =
+	/^(?:\^|~|>=)?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/;
 
-function isVersionSupported(version: string): boolean {
+/**
+ * Checks an installed Wrangler version against the minimum required by cf dev.
+ *
+ * @param version Exact version of the installed Wrangler package.
+ * @returns Whether the version passes the minimum version check.
+ */
+export function isVersionSupported(version: string): boolean {
 	const match = SEMVER_PATTERN.exec(version);
 	if (!match) {
 		return false;
@@ -24,25 +33,33 @@ function isVersionSupported(version: string): boolean {
 }
 
 /**
- * Ensures the project can load a generated wrangler.config.ts file.
+ * Selects a Wrangler specifier when its declaration or installation needs updating.
  *
- * @param projectDirectory Directory containing the Wrangler configuration.
+ * @param projectDirectory Directory containing the Worker's package.json.
+ * @param declaredVersion Wrangler version, range, or tag declared in package.json.
+ * @returns `latest` when an update is needed, or undefined otherwise.
  */
-export function assertCompatibleWranglerVersion(
-	projectDirectory: string
-): void {
+export function getWranglerUpgradeSpec(
+	projectDirectory: string,
+	declaredVersion: string
+): string | undefined {
+	if (declaredVersion === "latest") {
+		return declaredVersion;
+	}
+
 	const installedVersion = getInstalledPackageVersion(
 		"wrangler",
 		projectDirectory
 	);
-	if (installedVersion && isVersionSupported(installedVersion)) {
-		return;
+	const declaredMinimum = DECLARED_VERSION_PATTERN.exec(declaredVersion)?.[1];
+	const declaredCompatible =
+		declaredMinimum !== undefined && isVersionSupported(declaredMinimum);
+	if (
+		declaredCompatible &&
+		(installedVersion === undefined || isVersionSupported(installedVersion))
+	) {
+		return undefined;
 	}
 
-	const detectedVersion = installedVersion
-		? `Detected version ${installedVersion}.`
-		: "No local Wrangler installation was found.";
-	throw new Error(
-		`Generating wrangler.config.ts requires wrangler ${MINIMUM_WRANGLER_VERSION} or newer because earlier versions do not export wrangler/experimental-config. ${detectedVersion} Update Wrangler and retry the migration.`
-	);
+	return "latest";
 }

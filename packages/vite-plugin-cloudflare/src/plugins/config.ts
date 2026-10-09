@@ -7,6 +7,7 @@ import {
 import { normalizePath } from "vite";
 import { createBuildApp } from "../build";
 import {
+	applyWorkerEsbuildSupported,
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
@@ -85,6 +86,17 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				ctx.resolvedPluginConfig,
 				ctx.resolvedViteConfig
 			);
+
+			// Assets-only configs can still hold Worker environments (a prerender
+			// Worker), so this covers both resolved config types.
+			const {
+				environmentNameToWorkerMap,
+				environmentNameToChildEnvironmentNamesMap,
+			} = ctx.resolvedPluginConfig;
+			applyWorkerEsbuildSupported(resolvedViteConfig, [
+				...environmentNameToWorkerMap.keys(),
+				...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
+			]);
 
 			forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
 			if (ctx.resolvedViteConfig.command === "build") {

@@ -90,7 +90,7 @@ describe("codemod runner", () => {
 			 * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
 			 */
 			/**
-			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` as a dev dependency before using the generated configuration.
+			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` and \`@cloudflare/vite-plugin@beta\` as dev dependencies before using the generated configuration.
 			 */
 			throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
@@ -174,7 +174,7 @@ describe("codemod runner", () => {
 		const cwd = await createProject({
 			"node_modules/wrangler/package.json": JSON.stringify({
 				name: "wrangler",
-				version: "4.100.0",
+				version: "4.136.0",
 			}),
 			"worker/custom.json": JSON.stringify({
 				compatibility_date: "2026-09-24",
@@ -197,16 +197,13 @@ describe("codemod runner", () => {
 		]);
 		expect(await readFile(path.join(cwd, "worker/wrangler.config.ts"), "utf8"))
 			.toMatchInlineSnapshot(`
-			"import { defineWranglerConfig } from "wrangler/experimental-config";
+				"import { defineWranglerConfig } from "wrangler/experimental-config";
 
-			export default defineWranglerConfig({
-				noBundle: true,
-				types: {
-					generate: false,
-				},
-			});
-			"
-		`);
+				export default defineWranglerConfig({
+					noBundle: true,
+				});
+				"
+			`);
 	});
 
 	it("requires an exact config when discovery is ambiguous", async ({
@@ -617,7 +614,10 @@ export default defineWorkersProject({
 		const configPath = "wrangler.json";
 		const cwd = await createProject({
 			"package.json": JSON.stringify({
-				devDependencies: { cf: "1.0.0" },
+				devDependencies: {
+					"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
+					cf: "1.0.0",
+				},
 				name: "dry-run-test",
 			}),
 			[configPath]: JSON.stringify({

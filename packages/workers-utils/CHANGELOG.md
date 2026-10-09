@@ -1,5 +1,68 @@
 # @cloudflare/workers-utils
 
+## 0.47.1
+
+### Patch Changes
+
+- [#16093](https://github.com/cloudflare/workers-sdk/pull/16093) [`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Document that `addresses` catch-all entries must use the zone apex
+
+  A `*@domain` entry in `addresses` must use the zone apex, such as `*@example.com`. The zone catch-all also receives mail for every subdomain in the zone that has no literal rule.
+
+- [#15617](https://github.com/cloudflare/workers-sdk/pull/15617) [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82) Thanks [@jpatel3](https://github.com/jpatel3)! - Stop the update check from recommending deprecated versions
+
+  Previously, the "update available" notice shown by `wrangler` and `@cloudflare/vite-plugin` always pointed at whichever version was tagged `latest` on npm, even after that version had been deprecated for shipping a bug. Deprecated versions are now never recommended: if the latest release has been deprecated, the newest non-deprecated stable release below it is suggested instead, or nothing at all if you are already on it.
+
+  The check now reads the npm registry directly instead of going through the `update-check` package, which discarded the deprecation information. The on-disk cache location and one-hour refresh interval are unchanged.
+
+## 0.47.0
+
+### Minor Changes
+
+- [#15998](https://github.com/cloudflare/workers-sdk/pull/15998) [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `assets.base_path` support to Workers Assets
+
+  Serve an asset directory from a public URL prefix without changing its on-disk layout:
+
+  ```jsonc
+  {
+    "assets": {
+      "directory": "./public",
+      "base_path": "/docs"
+    }
+  }
+  ```
+
+  Wrangler, preview, Miniflare, and generated build configuration preserve the explicitly selected value, while the Asset Worker normalizes it and strips the prefix only for asset lookup. Requests passed to a user Worker, request-facing headers, and redirects retain the public path. Relative pathname inputs are interpreted as root-relative prefixes, URL-shaped values are rejected, and omitting the option preserves existing root-path behavior.
+
+  Authored `_headers` and `_redirects` rules continue to match full public paths. In particular, both the source and destination of an authored `200` asset rewrite must include the configured public prefix; Asset Worker-generated redirects are prefixed automatically.
+
+### Patch Changes
+
+- [#15534](https://github.com/cloudflare/workers-sdk/pull/15534) [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef) Thanks [@vahidshaik1901](https://github.com/vahidshaik1901)! - Improve guidance for conflicting Wrangler configuration files
+
+  When user and generated deploy configurations are found under different base paths, Wrangler now identifies the expected deploy configuration location, suggests how to resolve the conflict, and links to the relevant documentation.
+
+- [#16030](https://github.com/cloudflare/workers-sdk/pull/16030) [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f) Thanks [@edmundhung](https://github.com/edmundhung)! - Extend `startTunnel()` to support email-protected Quick Tunnels
+
+  Pass a list of email addresses or domain patterns through `TunnelOptions.allowedMail` to restrict access to a Quick Tunnel.
+
+## 0.46.0
+
+### Minor Changes
+
+- [#15928](https://github.com/cloudflare/workers-sdk/pull/15928) [`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Allow `"us"` as a jurisdiction for Container applications
+
+  Container placement constraints now accept `constraints.jurisdiction: "us"` in Wrangler and typed Cloudflare configuration. This makes the US jurisdiction available alongside `"eu"` and `"fedramp"`.
+
+## 0.45.1
+
+### Patch Changes
+
+- [#15639](https://github.com/cloudflare/workers-sdk/pull/15639) [`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44) Thanks [@hugo-vicente11](https://github.com/hugo-vicente11)! - Add `--allowed-mail` to the experimental `wrangler tunnel quick-start` command
+
+  The option forwards exact email addresses, comma-separated lists, and wildcard domains to `cloudflared`. It can be specified more than once to combine multiple recipient rules.
+
+  Email-protected tunnels require `cloudflared` 2026.9.2 or later. Wrangler checks the selected binary before starting the tunnel and reports an upgrade error when it is incompatible.
+
 ## 0.45.0
 
 ### Minor Changes

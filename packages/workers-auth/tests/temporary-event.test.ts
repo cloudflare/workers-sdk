@@ -148,7 +148,7 @@ describe("temporary event accounts", () => {
 			getOrCreateTemporaryPreviewAccount({
 				storage,
 				prompt: async () => true,
-				logger: silentLogger,
+				temporaryAccountLogger: silentLogger,
 				request: { eventCode: EVENT_CODE },
 			})
 		).rejects.toThrow("did not acknowledge the event code");
@@ -168,7 +168,7 @@ describe("temporary event accounts", () => {
 					promptCalls += 1;
 					return true;
 				},
-				logger: silentLogger,
+				temporaryAccountLogger: silentLogger,
 				request: { eventCode: EVENT_CODE },
 			})
 		).rejects.toThrow("A temporary account is already cached");

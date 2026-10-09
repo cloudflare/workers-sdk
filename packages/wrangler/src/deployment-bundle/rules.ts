@@ -21,7 +21,17 @@ interface RedundantRule {
 	default: boolean;
 }
 
-export function parseRules(userRules: Rule[] = []): ParsedRules {
+/**
+ * Resolve user-defined and default module rules using their fallthrough settings.
+ *
+ * @param userRules - User-defined module rules
+ * @param logWarnings - Whether to warn about shadowed rules
+ * @returns Effective rules and the rules they shadowed
+ */
+export function parseRules(
+	userRules: Rule[] = [],
+	logWarnings = true
+): ParsedRules {
 	const rules: Rule[] = [...userRules, ...DEFAULT_MODULE_RULES];
 
 	const completedRuleLocations: Record<string, number> = {};
@@ -53,7 +63,7 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 
 	for (const completedRuleType in completedRuleLocations) {
 		const r = redundantRules[completedRuleType];
-		if (r) {
+		if (r && logWarnings) {
 			const completedRuleIndex = completedRuleLocations[completedRuleType];
 			let warning = `The ${
 				completedRuleIndex >= userRules.length ? "default " : ""

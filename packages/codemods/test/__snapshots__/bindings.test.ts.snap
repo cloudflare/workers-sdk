@@ -230,6 +230,19 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
         },
       },
       {
+        "key": "ANALYTICS",
+        "value": {
+          "args": [
+            {
+              "kind": "object",
+              "properties": [],
+            },
+          ],
+          "callee": "bindings.analytics",
+          "kind": "call",
+        },
+      },
+      {
         "key": "VERSION",
         "value": {
           "args": [],
@@ -294,10 +307,10 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
     },
     {
       "blocking": true,
-      "code": "workflows-unsupported",
+      "code": "workflow-missing-class",
       "docsUrl": undefined,
-      "message": "Workflow bindings are not supported by the new config and were not migrated.",
-      "sourcePath": "workflows",
+      "message": "The Workflow binding at \`workflows.0\` has no \`class_name\` and was not migrated.",
+      "sourcePath": "workflows.0",
     },
   ],
   "imports": [

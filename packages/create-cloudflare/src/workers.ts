@@ -101,6 +101,7 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
  * - set workers-types to latest entrypoint if installed
  * - remove workers-types if runtime types have been generated
  * - add generated types file if types were generated
+ * - preserve SvelteKit generated types when required
  * - add node if node compat
  */
 export async function updateTsConfig(
@@ -123,6 +124,9 @@ export async function updateTsConfig(
 
 		const currentTypes: string[] = config.compilerOptions?.types ?? [];
 		let newTypes = new Set(currentTypes);
+		if (config.extends === "$app/tsconfig") {
+			newTypes.add("$app/types");
+		}
 		if (ctx.template.workersTypes === "installed") {
 			const entrypointVersion = getLatestTypesEntrypoint(ctx);
 			const explicitEntrypoint = currentTypes.some((t) =>

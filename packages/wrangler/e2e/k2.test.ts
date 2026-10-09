@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { getCloudflareApiBaseUrl } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
 import { fetch } from "undici";
@@ -298,6 +299,33 @@ async function waitForRevision(
 	);
 }
 
+/**
+ * Fetches from a newly deployed Worker, retrying while workers.dev serves its
+ * HTML "Page not found" page instead of the Worker.
+ *
+ * After deployment, a Worker with bindings can alternate between that page and
+ * the Worker for several seconds, so one successful readiness request does not
+ * mean later requests will reach the Worker.
+ */
+async function fetchDeployedWorker(
+	url: URL,
+	init: NonNullable<Parameters<typeof fetch>[1]>
+) {
+	const deadline = Date.now() + 30_000;
+	for (;;) {
+		const response = await fetch(url, init);
+		const isNotFoundPage =
+			response.status === 404 &&
+			response.headers.get("content-type")?.startsWith("text/html");
+		if (!isNotFoundPage || Date.now() > deadline) {
+			return response;
+		}
+		// The Worker does not run when this page is served, so retrying a produce request cannot append records twice.
+		await response.body?.cancel();
+		await setTimeout(250);
+	}
+}
+
 async function readProducerJsonResponse(
 	response: Awaited<ReturnType<typeof fetch>>
 ): Promise<unknown> {
@@ -410,7 +438,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("K2 producer live E2E", () => {
 					await waitForRevision(expect, url, accessHeaders, "uploaded");
 				}
 			}
-			const produced = await fetch(new URL("/produce", url), {
+			const produced = await fetchDeployedWorker(new URL("/produce", url), {
 				method: "POST",
 				headers: accessHeaders,
 				redirect: "manual",
@@ -418,19 +446,25 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("K2 producer live E2E", () => {
 			expect(await readProducerJsonResponse(produced)).toEqual({
 				success: true,
 			});
-			const arrayBuffer = await fetch(new URL("/produce?array-buffer", url), {
-				method: "POST",
-				headers: accessHeaders,
-				redirect: "manual",
-			});
+			const arrayBuffer = await fetchDeployedWorker(
+				new URL("/produce?array-buffer", url),
+				{
+					method: "POST",
+					headers: accessHeaders,
+					redirect: "manual",
+				}
+			);
 			expect(await readProducerJsonResponse(arrayBuffer)).toEqual({
 				success: true,
 			});
-			const invalid = await fetch(new URL("/produce?invalid", url), {
-				method: "POST",
-				headers: accessHeaders,
-				redirect: "manual",
-			});
+			const invalid = await fetchDeployedWorker(
+				new URL("/produce?invalid", url),
+				{
+					method: "POST",
+					headers: accessHeaders,
+					redirect: "manual",
+				}
+			);
 			expect(await readProducerJsonResponse(invalid)).toMatchObject({
 				success: false,
 				error: { code: 10204, retryable: false },

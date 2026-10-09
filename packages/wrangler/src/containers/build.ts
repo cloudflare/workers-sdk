@@ -18,6 +18,9 @@ export const containersBuildCommand = createCommand({
 		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
+	behaviour: {
+		supportTemporary: true,
+	},
 	args: {
 		PATH: {
 			type: "string",
@@ -64,6 +67,9 @@ export const containersPushCommand = createCommand({
 		description: "Push a local image to the Cloudflare managed registry",
 		status: "stable",
 		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		supportTemporary: true,
 	},
 	args: {
 		TAG: {

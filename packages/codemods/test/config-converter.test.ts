@@ -87,6 +87,38 @@ describe("Wrangler environment and tooling conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("treats a Workflow whose script_name names the environment's Worker as local", ({
+		expect,
+	}) => {
+		const result = convert(
+			{
+				compatibility_date: "2026-09-23",
+				env: {
+					staging: {
+						workflows: [
+							{
+								binding: "JOBS",
+								class_name: "Jobs",
+								limits: { steps: 20 },
+								name: "jobs-staging",
+								script_name: "app-staging",
+							},
+						],
+					},
+				},
+				main: "src/index.ts",
+				name: "app",
+			},
+			"wrangler"
+		);
+
+		expect(result.cloudflareConfig).toContain('worker: "app-staging"');
+		expect(result.cloudflareConfig).toContain("Jobs: exports.workflow({");
+		expect(result.cloudflareConfig).toContain("steps: 20");
+		expect(result.codes).not.toContain("unsupported-binding-options");
+		expect(result).toMatchSnapshot();
+	});
+
 	it("reports Vite source maps as non-blocking guidance", ({ expect }) => {
 		const converted = convertWranglerConfig(
 			{
@@ -211,22 +243,23 @@ describe("Wrangler environment and tooling conversion", () => {
 		expect(result.wranglerConfig?.match(/top-level/g)).toHaveLength(8);
 		expect(result.wranglerConfig?.match(/port: 8787/g)).toHaveLength(2);
 		expect(result.wranglerConfig?.match(/sendMetrics: true/g)).toHaveLength(2);
-		expect(result.wranglerConfig?.match(/generate: true/g)).toHaveLength(2);
+		expect(result.wranglerConfig).not.toContain("generate:");
 	});
 
-	it("preserves Wrangler type generation behavior", ({ expect }) => {
+	it("omits redundant Wrangler type generation settings", ({ expect }) => {
 		const baseConfig = {
 			compatibility_date: "2026-09-23",
 			name: "example-worker",
 		};
 
-		expect(convert(baseConfig, "wrangler").wranglerConfig).toContain(
-			"generate: false"
-		);
+		expect(convert(baseConfig, "wrangler").wranglerConfig).toBeNull();
+		expect(
+			convert({ ...baseConfig, dev: { port: 8787 } }, "wrangler").wranglerConfig
+		).not.toContain("generate:");
 		expect(
 			convert({ ...baseConfig, dev: { generate_types: true } }, "wrangler")
 				.wranglerConfig
-		).toContain("generate: true");
+		).toBeNull();
 		expect(
 			convert({ ...baseConfig, dev: { generate_types: false } }, "wrangler")
 				.wranglerConfig

@@ -243,6 +243,29 @@ describe("ProxyClient", () => {
 		expect(() => defaultCache.match(key)).toThrow(error);
 		expect(() => namedCache.match(key)).toThrow(error);
 	});
+	test("rejects getters disposed while the synchronous worker starts", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
+		await mf.ready;
+		const rejected = expect(mf.getCaches()).rejects.toMatchObject({
+			code: "ERR_DISPOSED",
+		});
+		// Let getCaches() get past `ready` and start the worker before disposing
+		await new Promise((resolve) => setImmediate(resolve));
+		await mf.dispose();
+		await rejected;
+	});
 	test("logging proxies provides useful information", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [

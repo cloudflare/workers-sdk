@@ -1,5 +1,45 @@
 # @cloudflare/containers-shared
 
+## 0.21.5
+
+### Patch Changes
+
+- Updated dependencies [[`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717), [`7557322`](https://github.com/cloudflare/workers-sdk/commit/75573221a3e0f2cf0ea8b3d413797a9f1d1a6984), [`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999), [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215), [`0d1bd50`](https://github.com/cloudflare/workers-sdk/commit/0d1bd50d6453e286160e78bee5143c7f7ce221fe), [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82)]:
+  - @cloudflare/config@0.24.1
+  - @cloudflare/build-output-utils@0.9.0
+  - @cloudflare/workers-utils@0.47.1
+  - @cloudflare/cli-shared-helpers@0.2.5
+
+## 0.21.4
+
+### Patch Changes
+
+- Updated dependencies [[`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65), [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef), [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f)]:
+  - @cloudflare/config@0.24.0
+  - @cloudflare/workers-utils@0.47.0
+  - @cloudflare/build-output-utils@0.8.6
+  - @cloudflare/cli-shared-helpers@0.2.4
+
+## 0.21.3
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/config@0.23.0
+  - @cloudflare/workers-utils@0.46.0
+  - @cloudflare/build-output-utils@0.8.5
+  - @cloudflare/cli-shared-helpers@0.2.3
+
+## 0.21.2
+
+### Patch Changes
+
+- Updated dependencies [[`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44)]:
+  - @cloudflare/workers-utils@0.45.1
+  - @cloudflare/build-output-utils@0.8.4
+  - @cloudflare/cli-shared-helpers@0.2.2
+  - @cloudflare/config@0.22.0
+
 ## 0.21.1
 
 ### Patch Changes
