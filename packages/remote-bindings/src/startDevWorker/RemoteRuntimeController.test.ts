@@ -160,7 +160,7 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		await controller.teardown();
 	});
 
-	it("also retries when only the token upload fails, since that failure never throws", async ({
+	it("retries when only the token upload fails, since that failure never throws", async ({
 		expect,
 	}) => {
 		createPreviewSession.mockResolvedValue(session);
