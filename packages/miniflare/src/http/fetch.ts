@@ -272,9 +272,9 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 					resume,
 					statusText
 				) {
-					// 1xx replies arrive here before the final status;
-					// keep the final status >= 200
 					if (status >= 200) {
+						// 1xx replies arrive here before the final status;
+						// keep the final status >= 200
 						responseStatus = status;
 					}
 					return onHeaders.call(
