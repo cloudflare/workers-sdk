@@ -486,6 +486,12 @@ export type DurableObjectExport =
 			 * @optional
 			 */
 			container?: string;
+			/**
+			 * Retry policy for calls to this Durable Object, however it is reached.
+			 *
+			 * @optional
+			 */
+			retry?: DurableObjectRetryPolicy;
 	  }
 	| { type: "durable-object"; state: "deleted" }
 	| { type: "durable-object"; state: "renamed"; renamed_to: string }
@@ -507,6 +513,12 @@ export type DurableObjectExport =
 			 * @optional
 			 */
 			container?: string;
+			/**
+			 * Retry policy for calls to this Durable Object, however it is reached.
+			 *
+			 * @optional
+			 */
+			retry?: DurableObjectRetryPolicy;
 	  };
 
 export interface WorkerEntrypointExport {
@@ -922,6 +934,36 @@ interface EnvironmentInheritable {
 	previews: PreviewsConfig | undefined;
 }
 
+/**
+ * Retry policy for calls to a Durable Object class. The Worker that exports the
+ * class owns the policy, and it applies however the class is reached: through
+ * `env`, `ctx.exports`, or bindings from other Workers. Omitted properties use
+ * the runtime defaults. The limits are upper bounds and do not make otherwise
+ * ineligible calls retryable.
+ */
+export interface DurableObjectRetryPolicy {
+	/**
+	 * Maximum number of retries after the initial request, not the total number
+	 * of attempts. Defaults to 4. Zero disables retries.
+	 *
+	 * @minimum 0
+	 * @maximum 10
+	 * @asType integer
+	 */
+	max_attempts?: number;
+	/**
+	 * Retry timeout in milliseconds, measured from the start of the call.
+	 * No retry starts after it expires, and a retry still running when it expires
+	 * is cancelled. This is not a request timeout: the initial request always runs
+	 * to completion. Defaults to 10000.
+	 *
+	 * @minimum 500
+	 * @maximum 60000
+	 * @asType integer
+	 */
+	timeout_ms?: number;
+}
+
 export type DurableObjectBindings = {
 	/** The name of the binding used to refer to the Durable Object */
 	name: string;
@@ -931,6 +973,12 @@ export type DurableObjectBindings = {
 	script_name?: string;
 	/** The service environment of the script_name to bind to */
 	environment?: string;
+	/**
+	 * Retry policy for the Durable Object class. Only allowed on bindings to a
+	 * class in this Worker (no `script_name`), and only when the Worker uses
+	 * `migrations`. With `exports`, set `exports.<class>.retry` instead.
+	 */
+	retry?: DurableObjectRetryPolicy;
 }[];
 
 export type DurableObjectCodeUpdateStrategy = {

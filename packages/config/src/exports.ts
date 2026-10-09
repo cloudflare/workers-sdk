@@ -41,6 +41,31 @@ export type DurableObjectStorageOptions<
 			storage: "legacy-kv";
 	  };
 
+/** Options shared by the live Durable Object export states. */
+export interface DurableObjectRetryOptions {
+	/**
+	 * Retry policy for calls to this Durable Object. It applies however the
+	 * Durable Object is reached: through `env`, `ctx.exports`, or bindings from
+	 * other Workers. Omitted properties use the runtime defaults.
+	 */
+	retry?: {
+		/**
+		 * Maximum number of retries after the initial request, not the total
+		 * number of attempts. An integer from 0 to 10, defaulting to 4. Zero
+		 * disables retries.
+		 */
+		maxAttempts?: number;
+		/**
+		 * Retry timeout in milliseconds, measured from the start of the call.
+		 * No retry starts after it expires, and a retry still running when it
+		 * expires is cancelled. This is not a request timeout: the initial request
+		 * always runs to completion. An integer from 500 to 60000, defaulting to
+		 * 10000.
+		 */
+		timeoutMs?: number;
+	};
+}
+
 /**
  * Declares a provisioned Durable Object class exported from this Worker.
  *
@@ -55,7 +80,8 @@ export type DurableObjectCreatedExportOptions<
 		| undefined,
 > = {
 	state?: "created";
-} & DurableObjectStorageOptions<TContainer>;
+} & DurableObjectRetryOptions &
+	DurableObjectStorageOptions<TContainer>;
 
 /**
  * Retire a provisioned Durable Object namespace whose class has
@@ -109,7 +135,8 @@ export type DurableObjectExpectingTransferExportOptions<
 	 * The source Worker for the two-phase cross-Worker transfer.
 	 */
 	transferFrom: string;
-} & DurableObjectStorageOptions<TContainer>;
+} & DurableObjectRetryOptions &
+	DurableObjectStorageOptions<TContainer>;
 
 // A type intersection rather than an `interface ... extends`, because the
 // options are a union over `storage` and an interface cannot extend a union.

@@ -487,6 +487,34 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("sends the retry policy with the export", async ({ expect }) => {
+			writeWranglerConfig({
+				exports: {
+					MyDO: {
+						type: "durable-object",
+						storage: "sqlite",
+						retry: { max_attempts: 0, timeout_ms: 500 },
+					},
+				},
+			});
+			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedExports: {
+					MyDO: {
+						type: "durable-object",
+						storage: "sqlite",
+						retry: { max_attempts: 0, timeout_ms: 500 },
+					},
+				},
+				useOldUploadApi: true,
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		it("renders the success-side reconciliation envelope", async ({
 			expect,
 		}) => {

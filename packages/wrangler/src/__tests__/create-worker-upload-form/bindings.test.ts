@@ -196,6 +196,25 @@ describe("createWorkerUploadForm — bindings", () => {
 			});
 		});
 
+		it("should include the retry policy of a binding to this Worker", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				MY_DO: {
+					type: "durable_object_namespace",
+					class_name: "MyDO",
+					retry: { max_attempts: 0, timeout_ms: 500 },
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "MY_DO",
+				type: "durable_object_namespace",
+				class_name: "MyDO",
+				retry: { max_attempts: 0, timeout_ms: 500 },
+			});
+		});
+
 		it("should omit optional script_name and environment when not provided", ({
 			expect,
 		}) => {
@@ -210,6 +229,7 @@ describe("createWorkerUploadForm — bindings", () => {
 			expect(doBinding).toBeDefined();
 			expect(doBinding?.script_name).toBeUndefined();
 			expect(doBinding?.environment).toBeUndefined();
+			expect(doBinding?.retry).toBeUndefined();
 		});
 	});
 

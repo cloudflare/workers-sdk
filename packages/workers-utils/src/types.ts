@@ -5,6 +5,7 @@ import type {
 	ContainerApp,
 	ContainerEngine,
 	DurableObjectCodeUpdateStrategy,
+	DurableObjectRetryPolicy,
 	Exports,
 	DurableObjectMigration,
 	Observability,
@@ -103,6 +104,7 @@ export type WorkerMetadataBinding =
 			script_name?: string;
 			environment?: string;
 			namespace_id?: string;
+			retry?: DurableObjectRetryPolicy;
 	  }
 	| {
 			type: "workflow";

@@ -2058,6 +2058,243 @@ describe("normalizeAndValidateConfig()", () => {
 					    - binding should have a "script_name" field if "environment" is present."
 				`);
 			});
+
+			it("should not add a retry policy when it is omitted", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects.bindings[0]).not.toHaveProperty("retry");
+			});
+
+			it.for([
+				{},
+				{ max_attempts: 5 },
+				{ timeout_ms: 10_000 },
+				{ max_attempts: 0 },
+				{ max_attempts: 0, timeout_ms: 500 },
+				{ max_attempts: 10, timeout_ms: 60_000 },
+			])("should preserve the valid retry policy %o", (retry, { expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [
+								{ name: "MY_DO", class_name: "MyDurableObject", retry },
+							],
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects.bindings[0].retry).toEqual(retry);
+			});
+
+			it.for([
+				[null, 'Expected "durable_objects.bindings[0].retry" to be an object'],
+				[false, 'Expected "durable_objects.bindings[0].retry" to be an object'],
+				[[], 'Expected "durable_objects.bindings[0].retry" to be an object'],
+				[
+					{ max_attempts: -1 },
+					'"durable_objects.bindings[0].retry.max_attempts" must be an integer between 0 and 10, but got -1.',
+				],
+				[{ max_attempts: 11 }, "retry.max_attempts"],
+				[{ max_attempts: 1.5 }, "retry.max_attempts"],
+				[{ max_attempts: "5" }, "retry.max_attempts"],
+				[{ timeout_ms: -1 }, "retry.timeout_ms"],
+				[{ timeout_ms: 0 }, "retry.timeout_ms"],
+				[
+					{ timeout_ms: 499 },
+					'"durable_objects.bindings[0].retry.timeout_ms" must be an integer between 500 and 60000, but got 499.',
+				],
+				[{ timeout_ms: 60_001 }, "retry.timeout_ms"],
+				[{ timeout_ms: 1.5 }, "retry.timeout_ms"],
+				[{ timeout_ms: "10000" }, "retry.timeout_ms"],
+				[
+					{ enabled: true },
+					'Unexpected fields found in durable_objects.bindings[0].retry field: "enabled"',
+				],
+			] as const)(
+				"should reject the invalid retry policy %o",
+				([retry, expectedError], { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							durable_objects: {
+								bindings: [
+									{ name: "MY_DO", class_name: "MyDurableObject", retry },
+								],
+							},
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(expectedError);
+				}
+			);
+
+			it("should reject a retry policy on a binding with script_name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [
+								{
+									name: "MY_DO",
+									class_name: "MyDurableObject",
+									script_name: "other-worker",
+									retry: { max_attempts: 0 },
+								},
+							],
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					`"durable_objects.bindings[0].retry" is not allowed on a binding with "script_name". The Worker that exports the Durable Object owns its retry policy.`
+				);
+			});
+
+			it("should report a malformed retry policy without throwing", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [
+								{
+									name: "FIRST",
+									class_name: "MyDurableObject",
+									retry: { max_attempts: 0 },
+								},
+								{
+									name: "SECOND",
+									class_name: "MyDurableObject",
+									retry: null,
+								},
+							],
+						},
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					`Expected "durable_objects.bindings[1].retry" to be an object but got null.`
+				);
+			});
+
+			it("should reject a retry policy on a binding when the Worker uses exports", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [
+								{
+									name: "MY_DO",
+									class_name: "MyDurableObject",
+									retry: { max_attempts: 0 },
+								},
+							],
+						},
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The Durable Object binding "MY_DO" sets "retry", but this Worker declares its Durable Objects in "exports". Set it on "exports.MyDurableObject.retry" instead."
+				`);
+			});
+
+			it("should reject bindings that set different retry policies for one class", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [
+								{
+									name: "FIRST",
+									class_name: "MyDurableObject",
+									retry: { max_attempts: 2 },
+								},
+								{
+									name: "SECOND",
+									class_name: "MyDurableObject",
+									retry: { max_attempts: 2, timeout_ms: 500 },
+								},
+							],
+						},
+						migrations: [
+							{ tag: "v1", new_sqlite_classes: ["MyDurableObject"] },
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The Durable Object bindings "FIRST" and "SECOND" set different "retry" policies for "MyDurableObject". A Durable Object class has one retry policy, so they must match."
+				`);
+			});
+
+			it("should accept bindings that agree on one class's retry policy", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [
+								{
+									name: "FIRST",
+									class_name: "MyDurableObject",
+									retry: { max_attempts: 2, timeout_ms: 500 },
+								},
+								{
+									name: "SECOND",
+									class_name: "MyDurableObject",
+									retry: { timeout_ms: 500, max_attempts: 2 },
+								},
+								{ name: "THIRD", class_name: "MyDurableObject" },
+							],
+						},
+						migrations: [
+							{ tag: "v1", new_sqlite_classes: ["MyDurableObject"] },
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		describe("[migrations]", () => {
@@ -2273,6 +2510,83 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("accepts a retry policy on live durable-object entries", ({
+				expect,
+			}) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						Created: {
+							type: "durable-object",
+							storage: "sqlite",
+							retry: { max_attempts: 0, timeout_ms: 500 },
+						},
+						Incoming: {
+							type: "durable-object",
+							state: "expecting-transfer",
+							storage: "sqlite",
+							transfer_from: "source-worker",
+							retry: { timeout_ms: 60_000 },
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("rejects an invalid retry policy on a durable-object entry", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							MyDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								retry: { max_attempts: 11, enabled: true },
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.MyDO.retry.max_attempts" must be an integer between 0 and 10, but got 11.
+					  - Unexpected fields found in exports.MyDO.retry field: "enabled""
+				`);
+			});
+
+			it("rejects a retry policy on a tombstone", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							MyDO: {
+								type: "durable-object",
+								state: "deleted",
+								retry: { max_attempts: 0 },
+							} as DurableObjectExport,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					`"exports.MyDO.retry" is forbidden on state "deleted".`
+				);
 			});
 
 			it("accepts worker entries with cache config", ({ expect }) => {
@@ -2791,7 +3105,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "exports.MyDO.transfer_from" is forbidden on state "created".
-					  - Allowed properties are: type, state, storage, and container."
+					  - Allowed properties are: type, state, storage, container, and retry."
 				`);
 			});
 

@@ -550,6 +550,11 @@ export type ParsedOutputContainerConfig = z.output<
 	typeof OutputContainerSchema
 >;
 
+const DurableObjectRetrySchema = z.strictObject({
+	maxAttempts: z.number().int().min(0).max(10).optional(),
+	timeoutMs: z.number().int().min(500).max(60_000).optional(),
+});
+
 // `state` defaults to `"created"` (live) when omitted. Tombstones use one of
 // `"deleted"`, `"renamed"`, `"transferred"`; `"expecting-transfer"` is a live
 // entry awaiting incoming data via the two-phase cross-script transfer flow.
@@ -558,6 +563,7 @@ export const DurableObjectCreatedExportSchema = z.strictObject({
 	state: z.literal("created").optional(),
 	storage: z.enum(["sqlite", "legacy-kv"]),
 	container: z.string().optional(),
+	retry: DurableObjectRetrySchema.optional(),
 });
 
 export const DurableObjectDeletedExportSchema = z.strictObject({
@@ -583,6 +589,7 @@ export const DurableObjectExpectingTransferExportSchema = z.strictObject({
 	storage: z.enum(["sqlite", "legacy-kv"]),
 	transferFrom: z.string(),
 	container: z.string().optional(),
+	retry: DurableObjectRetrySchema.optional(),
 });
 
 export const WorkerEntrypointExportSchema = z.strictObject({

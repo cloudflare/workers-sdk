@@ -233,6 +233,17 @@ describe("InputWorkerSchema", () => {
 		});
 	});
 
+	it("rejects `retry` on a durable-object binding", ({ expect }) => {
+		const result = BindingSchema.safeParse({
+			type: "durable-object",
+			worker: "worker",
+			exportName: "Object",
+			retry: { maxAttempts: 0 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
 	describe("send-email bindings", () => {
 		it.for([
 			["no address restrictions", { type: "send-email" }],
@@ -1460,6 +1471,44 @@ describe("ExportSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it.for([
+		[{}, true],
+		[{ maxAttempts: 0, timeoutMs: 500 }, true],
+		[{ maxAttempts: 10, timeoutMs: 60_000 }, true],
+		[{ maxAttempts: -1 }, false],
+		[{ maxAttempts: 11 }, false],
+		[{ maxAttempts: 1.5 }, false],
+		[{ timeoutMs: 0 }, false],
+		[{ timeoutMs: 499 }, false],
+		[{ timeoutMs: 60_001 }, false],
+		[{ timeoutMs: 1.5 }, false],
+		[{ enabled: true }, false],
+	] as const)(
+		"validates the retry policy %o on live durable-object exports (valid: %s)",
+		([retry, valid], { expect }) => {
+			const result = parseExports({
+				Created: { type: "durable-object", storage: "legacy-kv", retry },
+				Incoming: {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "sqlite",
+					transferFrom: "source-worker",
+					retry,
+				},
+			});
+
+			expect(result.success).toBe(valid);
+		}
+	);
+
+	it("rejects `retry` on a tombstone", ({ expect }) => {
+		const result = parseExports({
+			OldDO: { type: "durable-object", state: "deleted", retry: {} },
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("rejects `container` on a tombstone", ({ expect }) => {
