@@ -36,35 +36,40 @@ process.exitCode = 7;`
 	expect(captured).toContain(result.stderr);
 });
 
-it("returns promptly when an orphaned descendant retains the output pipes", ({
-	expect,
-}) => {
-	const script = path.join(root, "pnpm.cjs");
-	const log = path.join(root, "logs/output.log");
-	writeFileSync(
-		script,
-		`const {spawn} = require('node:child_process');
+it.for([0, 7])(
+	"returns promptly with exit code %i when an orphan retains the output pipes",
+	(exitCode, { expect }) => {
+		const script = path.join(root, "pnpm.cjs");
+		const log = path.join(root, "logs/output.log");
+		writeFileSync(
+			script,
+			`const {spawn} = require('node:child_process');
 const child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], {stdio: ['ignore', 'inherit', 'inherit']});
 child.unref();
 console.log(child.pid);
 console.error('failed command');
-process.exitCode = 7;`
-	);
-	const start = performance.now();
-	const result = spawnSync(process.execPath, [wrapper, log, "run", "test:ci"], {
-		encoding: "utf8",
-		env: { ...process.env, npm_execpath: script },
-		timeout: 5_000,
-	});
-	const pid = Number(result.stdout.trim());
-	try {
-		expect(result.status).toBe(7);
-		expect(result.error).toBeUndefined();
-		expect(performance.now() - start).toBeLessThan(5_000);
-		expect(readFileSync(log, "utf8")).toContain("failed command\n");
-	} finally {
-		if (Number.isSafeInteger(pid) && pid > 0) {
-			process.kill(pid);
+process.exitCode = ${exitCode};`
+		);
+		const start = performance.now();
+		const result = spawnSync(
+			process.execPath,
+			[wrapper, log, "run", "test:ci"],
+			{
+				encoding: "utf8",
+				env: { ...process.env, npm_execpath: script },
+				timeout: 5_000,
+			}
+		);
+		const pid = Number(result.stdout.trim());
+		try {
+			expect(result.status).toBe(exitCode);
+			expect(result.error).toBeUndefined();
+			expect(performance.now() - start).toBeLessThan(5_000);
+			expect(readFileSync(log, "utf8")).toContain("failed command\n");
+		} finally {
+			if (Number.isSafeInteger(pid) && pid > 0) {
+				process.kill(pid);
+			}
 		}
 	}
-});
+);
