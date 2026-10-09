@@ -143,20 +143,8 @@ export function convertWorkerConfig(
 	}
 
 	const tailConsumers: OutputValue[] = [];
-	for (const [index, entry] of getRecords(source, "tail_consumers").entries()) {
-		let worker = entry.service;
-		if (typeof entry.environment === "string" && typeof worker === "string") {
-			worker = `${worker}-${entry.environment}`;
-			report(
-				createFollowUp(
-					"service-environment",
-					"A tail consumer used a legacy service environment. Verify the generated Worker name.",
-					{ sourcePath: `${sourcePrefix || "config"}.tail_consumers.${index}` }
-				)
-			);
-		}
-
-		const value = toOutputValue(worker);
+	for (const entry of getRecords(source, "tail_consumers")) {
+		const value = toOutputValue(entry.service);
 		if (value !== undefined) {
 			tailConsumers.push({
 				kind: "object",
