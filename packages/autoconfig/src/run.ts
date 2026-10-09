@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -30,6 +30,7 @@ import {
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
+import { writePnpmBuildApprovals } from "./pnpm-build-approvals";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
@@ -203,6 +204,10 @@ export async function runAutoConfig(
 	logger.debug(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
+
+	if (autoConfigDetails.packageJson && packageManager.type === "pnpm") {
+		await writePnpmBuildApprovals(autoConfigDetails.projectPath);
+	}
 
 	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
 		if (target === "cf") {
@@ -571,6 +576,25 @@ export async function buildOperationsSummary(
 			logger.log(` - ${packageName} (devDependency)`);
 		}
 		logger.log("");
+	}
+
+	if (
+		autoConfigDetails.packageJson &&
+		autoConfigDetails.packageManager.type === "pnpm"
+	) {
+		const approvals = await writePnpmBuildApprovals(
+			autoConfigDetails.projectPath,
+			{ dryRun: true }
+		);
+		if (approvals) {
+			logger.log(
+				`🔨 Allow dependency build scripts in ${relative(autoConfigDetails.projectPath, approvals.workspacePath)}:`
+			);
+			for (const name of approvals.packages) {
+				logger.log(` - ${name}`);
+			}
+			logger.log("");
+		}
 	}
 
 	if (autoConfigDetails.packageJson) {

@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
-import { NpmPackageManager } from "@cloudflare/workers-utils";
+import {
+	NpmPackageManager,
+	PnpmPackageManager,
+} from "@cloudflare/workers-utils";
 import {
 	mockConsoleMethods,
 	runInTempDir,
@@ -422,4 +425,94 @@ describe("runAutoConfig()", () => {
 			existingBuildConfig
 		);
 	});
+	it.for(["pnpm", "npm"] as const)(
+		"sets up pnpm approvals before installing with %s",
+		async (manager, { expect }) => {
+			const packageJson = { name: "build-approval-app" };
+			await seed({ "package.json": JSON.stringify(packageJson) });
+			const install = vi
+				.spyOn(cliPackages, "installPackages")
+				.mockImplementation(async () => {
+					expect(existsSync("pnpm-workspace.yaml")).toBe(manager === "pnpm");
+					if (manager === "pnpm") {
+						expect(readFileSync("pnpm-workspace.yaml", "utf8")).toContain(
+							"workerd: true"
+						);
+					}
+				});
+			await runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: packageJson.name,
+					framework: new ViteBuildToolFramework({
+						id: "static",
+						name: "Static",
+					}),
+					outputDir: "dist",
+					packageJson,
+					packageManager:
+						manager === "pnpm" ? PnpmPackageManager : NpmPackageManager,
+				},
+				{
+					context: createMockContext(),
+					skipConfirmations: true,
+					runBuild: false,
+				}
+			);
+			expect(install).toHaveBeenCalledTimes(1);
+		}
+	);
+
+	it.for(["dry-run", "cancelled"] as const)(
+		"leaves pnpm policy untouched for %s setup",
+		async (mode, { expect }) => {
+			const packageJson = { name: "unchanged-app" };
+			const original = "# keep existing policy\nallowBuilds: {sharp: true}\n";
+			await seed({
+				"package.json": JSON.stringify(packageJson),
+				"pnpm-workspace.yaml": original,
+			});
+			const context = createMockContext();
+			vi.mocked(context.dialogs.confirm).mockImplementation(async (message) => {
+				if (message === "Proceed with setup?") {
+					expect(context.logger.log).toHaveBeenCalledWith(
+						"🔨 Allow dependency build scripts in pnpm-workspace.yaml:"
+					);
+					expect(context.logger.log).toHaveBeenCalledWith(" - esbuild");
+					expect(context.logger.log).toHaveBeenCalledWith(" - workerd");
+					expect(readFileSync("pnpm-workspace.yaml", "utf8")).toBe(original);
+				}
+				return false;
+			});
+			const install = vi
+				.spyOn(cliPackages, "installPackages")
+				.mockResolvedValue();
+			const result = runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: packageJson.name,
+					framework: new ViteBuildToolFramework({
+						id: "static",
+						name: "Static",
+					}),
+					outputDir: "dist",
+					packageJson,
+					packageManager: PnpmPackageManager,
+				},
+				{ context, dryRun: mode === "dry-run", runBuild: false }
+			);
+			if (mode === "cancelled") {
+				await expect(result).rejects.toThrow("Setup cancelled");
+			} else {
+				await result;
+			}
+			expect(readFileSync("pnpm-workspace.yaml", "utf8")).toBe(original);
+			expect(context.logger.log).toHaveBeenCalledWith(
+				"🔨 Allow dependency build scripts in pnpm-workspace.yaml:"
+			);
+			expect(install).not.toHaveBeenCalled();
+		}
+	);
 });
