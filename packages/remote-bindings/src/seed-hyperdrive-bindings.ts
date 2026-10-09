@@ -1,4 +1,6 @@
+import { setTimeout as delay } from "node:timers/promises";
 import WebSocket from "ws";
+import type { RemoteBindingsLogger } from "./logger";
 import type { Binding } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
 
@@ -80,11 +82,13 @@ async function fetchEdgeConnectionString(
  * and re-establishing the remote session on every file save.
  *
  * Returns an empty map when there is no remote proxy session or no remote
- * Hyperdrive bindings.
+ * Hyperdrive bindings. Failed bindings are retried and omitted from the map
+ * without discarding successful seeds. Warnings never include credentials.
  */
 export async function seedRemoteHyperdriveBindings(
 	bindings: Record<string, Binding> | undefined,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	logger?: Pick<RemoteBindingsLogger, "warn">
 ): Promise<Map<string, string>> {
 	const seeded = new Map<string, string>();
 
@@ -105,11 +109,24 @@ export async function seedRemoteHyperdriveBindings(
 
 	await Promise.all(
 		remoteHyperdrives.map(async ([name]) => {
-			const connectionString = await fetchEdgeConnectionString(
-				remoteProxyConnectionString,
-				name
-			);
-			seeded.set(name, connectionString);
+			for (let attempt = 1; attempt <= 3; attempt++) {
+				try {
+					const connectionString = await fetchEdgeConnectionString(
+						remoteProxyConnectionString,
+						name
+					);
+					seeded.set(name, connectionString);
+					return;
+				} catch {
+					if (attempt < 3) {
+						await delay(500 * attempt);
+					} else {
+						logger?.warn(
+							`Unable to seed remote Hyperdrive binding "${name}". Other bindings are still available. Restart local development to retry.`
+						);
+					}
+				}
+			}
 		})
 	);
 

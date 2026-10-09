@@ -138,7 +138,8 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		auth,
 		hyperdriveConnectionStrings: await seedRemoteHyperdriveBindings(
 			workerConfigObject.bindings,
-			remoteProxySession.remoteProxyConnectionString
+			remoteProxySession.remoteProxyConnectionString,
+			context.logger
 		),
 	};
 }
