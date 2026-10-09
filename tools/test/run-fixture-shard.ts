@@ -5,13 +5,19 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { parseTestShard } from "./vitest-shard.cjs";
 
-// The longest fixtures in Windows CI run 37921304285 (2026-10-09).
+// The longest fixtures on the macOS critical path in uncached CI run
+// 37943018431 (2026-10-09).
 // Estimates only affect scheduling; every eligible package is always assigned.
 const estimatedSeconds: Record<string, number> = {
-	"dev-registry": 230,
-	"entrypoints-rpc-tests": 140,
+	"dev-registry": 250,
+	"create-test-harness-example": 120,
+	"entrypoints-rpc-tests": 80,
 	"vitest-plugin-examples": 80,
+	"get-platform-proxy": 60,
+	"worker-logs": 50,
 };
+
+type FixtureGroup = "all" | "dev-registry" | "remaining";
 
 /**
  * Assign all fixture packages with CI tests to disjoint, deterministic shards.
@@ -20,12 +26,14 @@ const estimatedSeconds: Record<string, number> = {
  * @param root Workspace root containing the fixtures directory.
  * @param shard One-based shard index and count, e.g. `1/2`.
  * @param platform Runner platform; retains the existing Linux Browser Run exclusion.
+ * @param group CI runs dev-registry independently so it cannot sit behind other fixtures.
  * @returns Relative package paths to select with Turbo filters.
  */
 export function getFixtureShard(
 	root: string,
 	shard: string,
-	platform: NodeJS.Platform = process.platform
+	platform: NodeJS.Platform = process.platform,
+	group: FixtureGroup = "all"
 ): string[] {
 	const { index, count } = parseTestShard(shard);
 
@@ -47,7 +55,14 @@ export function getFixtureShard(
 				manifest.scripts?.["test:ci"] !== undefined &&
 				!(platform === "linux" && name === "browser-run")
 			);
-		});
+		})
+		.filter((name) =>
+			group === "all"
+				? true
+				: group === "dev-registry"
+					? name === "dev-registry"
+					: name !== "dev-registry"
+		);
 	const duration = (name: string) => estimatedSeconds[name] ?? 30;
 	fixtures.sort(
 		(a, b) => duration(b) - duration(a) || a.localeCompare(b, "en")
@@ -66,11 +81,20 @@ export function getFixtureShard(
 }
 
 if (require.main === module) {
-	const { values } = parseArgs({ options: { shard: { type: "string" } } });
+	const { values } = parseArgs({
+		options: { shard: { type: "string" }, group: { type: "string" } },
+	});
 	assert(values.shard, "Expected --shard=<index>/<count>");
+	const group = values.group ?? "all";
+	assert(
+		group === "all" || group === "dev-registry" || group === "remaining",
+		"Expected --group=all, dev-registry, or remaining"
+	);
 	const root = path.resolve(__dirname, "../..");
-	const fixtures = getFixtureShard(root, values.shard);
-	console.log(`Fixture shard ${values.shard}:\n${fixtures.join("\n")}`);
+	const fixtures = getFixtureShard(root, values.shard, process.platform, group);
+	console.log(
+		`Fixture group ${group}, shard ${values.shard}:\n${fixtures.join("\n")}`
+	);
 	// Use pnpm's Node entry point rather than a shell or Windows .cmd shim.
 	// eslint-disable-next-line turbo/no-undeclared-env-vars -- pnpm provides this entry point to the root script, which runs outside Turbo
 	const pnpmPath = process.env.npm_execpath;

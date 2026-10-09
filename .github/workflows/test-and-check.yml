@@ -110,20 +110,32 @@ jobs:
           - packages-and-tools
           - runtime
           - fixtures
+          - dev-registry
         shard: [1, 2]
         exclude:
           # The other packages run once per OS; tools and release source maps
           # are tested on Linux only.
-          # Wrangler/Miniflare files and fixture packages each cover two shards.
+          # dev-registry starts independently to avoid a long tail of fixtures.
           - suite: packages-and-tools
+            shard: 2
+          - suite: dev-registry
             shard: 2
         include:
           - os: macos-latest
             description: macOS
+            runtime-shards: 2
           - os: ubuntu-latest
             description: Linux
+            runtime-shards: 2
           - os: windows-latest
             description: Windows
+            runtime-shards: 3
+          # The Windows runtime partitions take longer than the other OSes.
+          - os: windows-latest
+            description: Windows
+            suite: runtime
+            shard: 3
+            runtime-shards: 3
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -186,7 +198,10 @@ jobs:
       - name: Run tests (tools only)
         # tools _only_ needs to be tested on Linux because they're only intended to run in CI
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
-        run: pnpm run test:ci --log-order=stream --filter="@cloudflare/tools"
+        run: |
+          mkdir -p .turbo/ci-logs
+          pnpm run test:ci --log-order=stream --filter="@cloudflare/tools" 2>&1 | tee .turbo/ci-logs/tools.log
+        shell: bash
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/tools/index.html
@@ -198,7 +213,10 @@ jobs:
         # The @cloudflare/vitest-plugin tests skipped are things like watch mode, which constantly times out probably due to the github runners in use.
         # Wrangler and Miniflare run in the runtime partitions below. Keep the
         # broad filter so new packages automatically retain CI coverage.
-        run: pnpm run test:ci --summarize --log-order=stream --concurrency=3 --filter="./packages/*" --filter="!wrangler" --filter="!miniflare" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-plugin"' || '' }}
+        run: |
+          mkdir -p .turbo/ci-logs
+          pnpm run test:ci --summarize --log-order=stream --concurrency=3 --filter="./packages/*" --filter="!wrangler" --filter="!miniflare" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-plugin"' || '' }} 2>&1 | tee .turbo/ci-logs/packages.log
+        shell: bash
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
@@ -207,11 +225,14 @@ jobs:
 
       - name: Run tests (Wrangler and Miniflare shard)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'runtime'
-        # Both shards run on every OS, using Vitest's complete file partition.
+        # Use Vitest's complete file partition: three shards on Windows, two elsewhere.
         # Keep Miniflare's single worker and Wrangler's per-file isolation.
-        run: pnpm run test:ci --summarize --log-order=stream --concurrency=2 --filter=wrangler --filter=miniflare
+        run: |
+          mkdir -p .turbo/ci-logs
+          pnpm run test:ci --summarize --log-order=stream --concurrency=2 --filter=wrangler --filter=miniflare 2>&1 | tee .turbo/ci-logs/runtime.log
+        shell: bash
         env:
-          CI_TEST_SHARD: ${{ format('{0}/2', matrix.shard) }}
+          CI_TEST_SHARD: ${{ format('{0}/{1}', matrix.shard, matrix.runtime-shards) }}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
@@ -233,10 +254,25 @@ jobs:
         # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
         # Partition whole packages so their custom test scripts still run in full.
         # Each runner keeps concurrency=2 to limit workerd resource contention.
-        run: pnpm run test:ci:fixtures --shard="$TEST_SHARD/2"
+        run: |
+          mkdir -p .turbo/ci-logs
+          pnpm run test:ci:fixtures --group=remaining --shard="$TEST_SHARD/2" 2>&1 | tee .turbo/ci-logs/fixtures.log
         shell: bash
         env:
           TEST_SHARD: ${{ matrix.shard }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (dev-registry)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'dev-registry'
+        # Start this long fixture without queuing behind the remaining packages.
+        run: |
+          mkdir -p .turbo/ci-logs
+          pnpm run test:ci:fixtures --group=dev-registry --shard=1/1 2>&1 | tee .turbo/ci-logs/dev-registry.log
+        shell: bash
+        env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
@@ -288,6 +324,7 @@ jobs:
           path: |
             .turbo/runs
             .turbo/test-retries.json
+            .turbo/ci-logs
 
   # These names are required by branch protection. Every partition must succeed
   # before any required test check passes, including when a partition is cancelled.

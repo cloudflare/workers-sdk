@@ -58,6 +58,32 @@ describe("getFixtureShard", () => {
 		expect(getFixtureShard(root, "1/2", "win32")).toEqual(first);
 	});
 
+	it.for(["darwin", "linux", "win32"] as const)(
+		"covers all fixtures across the dedicated and remaining groups on %s",
+		(platform, { expect }) => {
+			for (const name of [
+				"dev-registry",
+				"entrypoints-rpc-tests",
+				"create-test-harness-example",
+				"browser-run",
+				"new-fixture",
+			]) {
+				fixture(name);
+			}
+			const dedicated = getFixtureShard(root, "1/1", platform, "dev-registry");
+			const remaining = [1, 2].flatMap((index) =>
+				getFixtureShard(root, `${index}/2`, platform, "remaining")
+			);
+			expect(dedicated).toEqual(["./fixtures/dev-registry"]);
+			expect([...dedicated, ...remaining].sort()).toEqual(
+				getFixtureShard(root, "1/1", platform).sort()
+			);
+			expect(new Set([...dedicated, ...remaining]).size).toBe(
+				dedicated.length + remaining.length
+			);
+		}
+	);
+
 	it("retains the existing Linux-only Browser Run exclusion", ({ expect }) => {
 		fixture("browser-run");
 		fixture("other");
@@ -126,4 +152,42 @@ describe("getFixtureShard", () => {
 			]);
 		}
 	);
+
+	it("launches the dedicated fixture and rejects unknown groups", ({
+		expect,
+	}) => {
+		const workspaceRoot = path.resolve(__dirname, "../../..");
+		const pnpmPath = path.join(root, "pnpm.cjs");
+		const argsPath = path.join(root, "args.json");
+		writeFileSync(
+			pnpmPath,
+			`require("node:fs").writeFileSync(${JSON.stringify(argsPath)}, JSON.stringify(process.argv.slice(2)));`
+		);
+		for (const group of ["dev-registry", "unknown"]) {
+			const result = spawnSync(
+				process.execPath,
+				[
+					"-r",
+					"esbuild-register",
+					"tools/test/run-fixture-shard.ts",
+					`--group=${group}`,
+					"--shard=1/1",
+				],
+				{
+					cwd: workspaceRoot,
+					env: { ...process.env, npm_execpath: pnpmPath },
+					encoding: "utf8",
+				}
+			);
+			expect(result.status).toBe(group === "dev-registry" ? 0 : 1);
+		}
+		expect(JSON.parse(readFileSync(argsPath, "utf8"))).toEqual([
+			"run",
+			"test:ci",
+			"--summarize",
+			"--concurrency=2",
+			"--log-order=stream",
+			"--filter=./fixtures/dev-registry",
+		]);
+	});
 });

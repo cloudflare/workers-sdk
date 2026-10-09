@@ -33,35 +33,44 @@ describe("getVitestShard", () => {
 		"partitions the real %s configuration without omitting or duplicating files",
 		async (pkg, { expect }) => {
 			const root = path.resolve(__dirname, "../../../packages", pkg);
-			const partitions: string[][] = [];
-			let allFiles: string[] = [];
-			for (const shard of [undefined, "1/2", "2/2"]) {
-				vi.stubEnv("CI_TEST_SHARD", shard);
-				const ctx = await createVitest("test", { root });
-				try {
-					const files = await ctx.globTestSpecifications();
-					if (shard === undefined) {
-						expect(ctx.config.shard).toBeUndefined();
-						allFiles = files.map((file) => file.moduleId);
-					} else {
-						expect(ctx.config.shard).toEqual({
-							index: Number(shard[0]),
-							count: 2,
-						});
-						const Sequencer = ctx.config.sequence.sequencer;
-						partitions.push(
-							(await new Sequencer(ctx).shard(files)).map(
-								(file) => file.moduleId
-							)
-						);
+			for (const count of [2, 3]) {
+				const partitions: string[][] = [];
+				let allFiles: string[] = [];
+				const shards = [
+					undefined,
+					...Array.from(
+						{ length: count },
+						(_, index) => `${index + 1}/${count}`
+					),
+				];
+				for (const shard of shards) {
+					vi.stubEnv("CI_TEST_SHARD", shard);
+					const ctx = await createVitest("test", { root });
+					try {
+						const files = await ctx.globTestSpecifications();
+						if (shard === undefined) {
+							expect(ctx.config.shard).toBeUndefined();
+							allFiles = files.map((file) => file.moduleId);
+						} else {
+							expect(ctx.config.shard).toEqual({
+								index: Number(shard[0]),
+								count,
+							});
+							const Sequencer = ctx.config.sequence.sequencer;
+							partitions.push(
+								(await new Sequencer(ctx).shard(files)).map(
+									(file) => file.moduleId
+								)
+							);
+						}
+					} finally {
+						await ctx.close();
 					}
-				} finally {
-					await ctx.close();
 				}
+				expect(allFiles.length).toBeGreaterThan(0);
+				expect(partitions.flat().sort()).toEqual(allFiles.sort());
+				expect(new Set(partitions.flat()).size).toBe(allFiles.length);
 			}
-			expect(allFiles.length).toBeGreaterThan(0);
-			expect(partitions.flat().sort()).toEqual(allFiles.sort());
-			expect(new Set(partitions.flat()).size).toBe(allFiles.length);
 		}
 	);
 });

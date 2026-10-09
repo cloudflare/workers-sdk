@@ -110,6 +110,35 @@ describe("test retry reports", () => {
 		});
 	});
 
+	it("reads independently captured uncached output and excludes cached replays", ({
+		expect,
+	}) => {
+		mkdirSync(path.join(root, ".turbo/ci-logs"));
+		writeFileSync(
+			path.join(root, ".turbo/ci-logs/packages.log"),
+			["fresh", "cached"]
+				.flatMap((name) =>
+					log.split("\r\n").map((line) => `${name}:test:ci: ${line}`)
+				)
+				.join("\n")
+		);
+		writeFileSync(
+			path.join(root, ".turbo/runs/1.json"),
+			JSON.stringify({
+				tasks: [
+					{ ...task("fresh"), logFile: "no-writes-fresh.log" },
+					{ ...task("cached", 1, "HIT"), logFile: "no-writes-cached.log" },
+				],
+			})
+		);
+		expect(collectTestRetries(root)).toMatchObject({
+			scannedTasks: 1,
+			cachedTasks: 1,
+			missingLogs: [],
+			retries: [{ task: "fresh#test:ci" }, { task: "fresh#test:ci" }],
+		});
+	});
+
 	it("writes the JSON artifact and GitHub summary through the CLI", ({
 		expect,
 	}) => {

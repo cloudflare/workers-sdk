@@ -80,18 +80,46 @@ export function collectTestRetries(root: string) {
 	const missingLogs: string[] = [];
 	let cachedTasks = 0;
 	let scannedTasks = 0;
+	// Turbo does not retain task logs when all cache writes are disabled.
+	// CI captures streamed output independently so benchmarks remain observable.
+	const capturedLogs = new Map<string, string[]>();
+	const captureDir = path.join(root, ".turbo/ci-logs");
+	for (const file of existsSync(captureDir) ? readdirSync(captureDir) : []) {
+		if (!file.endsWith(".log")) {
+			continue;
+		}
+		const contents = stripVTControlCharacters(
+			readFileSync(path.join(captureDir, file), "utf8")
+		);
+		for (const line of contents.split(/\r?\n/)) {
+			const match = /^(\S+):test:ci: ?(.*)$/.exec(line);
+			if (!match) {
+				continue;
+			}
+			const taskId = `${match[1]}#test:ci`;
+			if (/^cache (?:hit|miss|bypass),/.test(match[2])) {
+				capturedLogs.set(taskId, []);
+			}
+			const lines = capturedLogs.get(taskId) ?? [];
+			lines.push(match[2]);
+			capturedLogs.set(taskId, lines);
+		}
+	}
 	for (const task of tasks.values()) {
 		if (task.cache.status === "HIT") {
 			cachedTasks++;
 			continue;
 		}
 		const log = path.resolve(root, task.logFile);
-		if (!existsSync(log)) {
+		const contents = existsSync(log)
+			? readFileSync(log, "utf8")
+			: capturedLogs.get(task.taskId)?.join("\n");
+		if (contents === undefined) {
 			missingLogs.push(task.taskId);
 			continue;
 		}
 		scannedTasks++;
-		retries.push(...parseTestRetries(readFileSync(log, "utf8"), task.taskId));
+		retries.push(...parseTestRetries(contents, task.taskId));
 	}
 	return {
 		scannedTasks,
