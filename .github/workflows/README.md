@@ -32,6 +32,11 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and Oxlint + Oxfmt checks.
   - Adds the PR to a GitHub project
   - Makes sure that Wrangler's warning for old Node.js versions works.
+- Test scheduling
+  - Each OS runs the other packages together, Wrangler and Miniflare in two Vitest file shards, and fixtures in two package shards. Tools and release source map tests run on Linux. All existing platform coverage is retained.
+  - Fixture shards execute whole packages, preserving custom test commands and multi-project suites. New fixtures with a `test:ci` script are assigned automatically. The longest fixtures are spread across shards using duration estimates in `tools/test/run-fixture-shard.ts`.
+  - The six existing `Tests (OS, suite)` checks remain as branch-protection gates. Each waits for all test partitions and fails if any partition fails, is cancelled, or is skipped. Individual partition checks and Turbo summaries identify the failing workload.
+  - Run a fixture shard locally with `pnpm run test:ci:fixtures --shard=1/2`. Run a runtime shard with `CI_TEST_SHARD=1/2 pnpm test:ci --filter=wrangler --filter=miniflare`. The runtime test tasks hash the shard environment variable without changing build cache keys.
 
 ### Wrangler E2E tests (e2e-wrangler.yml)
 

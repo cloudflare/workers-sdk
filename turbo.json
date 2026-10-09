@@ -6,6 +6,7 @@
 	"globalEnv": ["CI_OS", "NODE_VERSION", "X_LOCAL_OBSERVABILITY_BATCH_SIZE"],
 	"globalPassThroughEnv": [
 		"CI",
+		"CI_TEST_SHARD",
 		"CLOUDFLARE_CONTAINER_REGISTRY",
 		"E2E_SHARD",
 		"E2E_SHARD_COUNT",

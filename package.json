@@ -28,6 +28,7 @@
 		"prettify": "oxfmt",
 		"test": "dotenv -- turbo test",
 		"test:ci": "dotenv -- turbo test:ci",
+		"test:ci:fixtures": "node -r esbuild-register tools/test/run-fixture-shard.ts",
 		"test:e2e": "dotenv -- turbo test:e2e",
 		"test:e2e:c3": "dotenv -- node -r esbuild-register packages/create-cloudflare/scripts/e2e/run-tests.ts",
 		"test:e2e:wrangler": "dotenv -- node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
