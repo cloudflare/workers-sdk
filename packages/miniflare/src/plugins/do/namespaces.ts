@@ -52,6 +52,7 @@ export function getDurableObjectNamespaces(
 				unsafeUniqueKey,
 				unsafePreventEviction: preventEviction,
 				container,
+				retryPolicy,
 			},
 		]) => {
 			const uniqueKey = getDurableObjectUniqueKey(
@@ -64,6 +65,7 @@ export function getDurableObjectNamespaces(
 					? undefined
 					: { ...container, privileges: containerPrivileges };
 
+			// workerd does not support retry policies on ephemeral namespaces.
 			return uniqueKey === undefined
 				? {
 						className,
@@ -77,6 +79,7 @@ export function getDurableObjectNamespaces(
 						enableSql,
 						uniqueKey,
 						preventEviction,
+						retryPolicy,
 						container: containerOptions,
 					};
 		}

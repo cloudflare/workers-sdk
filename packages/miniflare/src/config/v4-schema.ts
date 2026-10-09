@@ -240,29 +240,42 @@ const V4R2BucketsSchema = z.union([
 	z.array(z.string()),
 ]);
 
-const V4DurableObjectSchema = z.object({
-	className: z.string(),
-	scriptName: z.string().optional(),
-	useSQLite: z.boolean().optional(),
-	unsafeUniqueKey: z
-		.union([
-			z.string(),
-			z.custom<typeof kUnsafeEphemeralUniqueKey>(
-				(value) => value === kUnsafeEphemeralUniqueKey
-			),
-		])
-		.optional(),
-	unsafePreventEviction: z.boolean().optional(),
-	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
-	container: z
-		.object({
-			imageName: z.string().optional(),
-			images: z
-				.array(z.object({ name: z.string(), image: z.string() }))
-				.optional(),
-		})
-		.optional(),
-});
+const V4DurableObjectSchema = z
+	.object({
+		className: z.string(),
+		scriptName: z.string().optional(),
+		retryMaxAttempts: z.number().int().min(0).max(10).optional(),
+		retryTimeoutMs: z.number().int().min(500).max(60_000).optional(),
+		useSQLite: z.boolean().optional(),
+		unsafeUniqueKey: z
+			.union([
+				z.string(),
+				z.custom<typeof kUnsafeEphemeralUniqueKey>(
+					(value) => value === kUnsafeEphemeralUniqueKey
+				),
+			])
+			.optional(),
+		unsafePreventEviction: z.boolean().optional(),
+		remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
+		container: z
+			.object({
+				imageName: z.string().optional(),
+				images: z
+					.array(z.object({ name: z.string(), image: z.string() }))
+					.optional(),
+			})
+			.optional(),
+	})
+	.refine(
+		(value) =>
+			value.scriptName === undefined ||
+			(value.retryMaxAttempts === undefined &&
+				value.retryTimeoutMs === undefined),
+		{
+			message:
+				"Retry options are not allowed with 'scriptName'. The Worker that exports the Durable Object owns its retry policy.",
+		}
+	);
 
 const V4QueueMessageDelaySchema = z.number().int().min(0).max(86400).optional();
 const V4QueueProducerOptionsSchema = z.object({
@@ -761,6 +774,18 @@ export type V4Namespace = Record<string, string | V4IdEntry> | string[];
 export type V4DurableObject = {
 	className: string;
 	scriptName?: string;
+	/**
+	 * Maximum number of retries after the initial request (0-10, default 4). Zero
+	 * disables retries. Applies to the class, not this binding, so it is not
+	 * allowed with `scriptName`.
+	 */
+	retryMaxAttempts?: number;
+	/**
+	 * Retry timeout in milliseconds, measured from the start of the call
+	 * (500-60000, default 10000). Applies to the class, not this binding, so it
+	 * is not allowed with `scriptName`.
+	 */
+	retryTimeoutMs?: number;
 	useSQLite?: boolean;
 	unsafeUniqueKey?: string | symbol;
 	unsafePreventEviction?: boolean;

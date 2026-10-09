@@ -441,12 +441,34 @@ function addDurableObjectExport(
 		string
 	>
 ) {
+	// The retry options configure the class, so every entry for the class must
+	// agree. Entries that omit them keep a policy set by an earlier entry.
+	const { retryMaxAttempts, retryTimeoutMs } = object;
+	const retry =
+		retryMaxAttempts === undefined && retryTimeoutMs === undefined
+			? undefined
+			: { maxAttempts: retryMaxAttempts, timeoutMs: retryTimeoutMs };
+	const existing = exports[object.className];
+	const existingRetry =
+		existing !== undefined && "retry" in existing ? existing.retry : undefined;
+	if (
+		retry !== undefined &&
+		existingRetry !== undefined &&
+		(retry.maxAttempts !== existingRetry.maxAttempts ||
+			retry.timeoutMs !== existingRetry.timeoutMs)
+	) {
+		throw new TypeError(
+			`Durable Object entries for "${object.className}" set different retry options. A Durable Object class has one retry policy, so they must match.`
+		);
+	}
+
 	const exported = {
 		type: "durable-object",
 		storage: object.useSQLite ? "sqlite" : "legacy-kv",
 		unsafeUniqueKey: object.unsafeUniqueKey,
 		unsafePreventEviction: object.unsafePreventEviction,
 		container: object.container,
+		retry: retry ?? existingRetry,
 	};
 	exports[object.className] = exported as Exports[string];
 }

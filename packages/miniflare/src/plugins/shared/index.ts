@@ -13,6 +13,7 @@ import type {
 	Service,
 	ServiceDesignator,
 	Worker_Binding,
+	Worker_DurableObjectNamespace_RetryPolicy,
 	Worker_Module,
 } from "../../runtime";
 import type { Log } from "../../shared";
@@ -43,6 +44,7 @@ export type DurableObjectClassNames = Map<
 			unsafeUniqueKey?: UnsafeUniqueKey;
 			unsafePreventEviction?: boolean;
 			container?: DOContainerOptions;
+			retryPolicy?: Worker_DurableObjectNamespace_RetryPolicy;
 		}
 	>
 >;

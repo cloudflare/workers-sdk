@@ -119,3 +119,39 @@ test("serializes a Worker's Workflows engine", ({ expect }) => {
 	expect(workflow.bindingService.name).toBe("workflows:my-workflow");
 	expect(workflow.bindingService.entrypoint).toBe("WorkflowBinding");
 });
+
+test("serializes Durable Object namespace retry policies", ({ expect }) => {
+	const buffer = serializeConfig({
+		services: [
+			{
+				name: "worker",
+				worker: {
+					durableObjectNamespaces: [
+						{ className: "Default", uniqueKey: "default" },
+						{
+							className: "Disabled",
+							uniqueKey: "disabled",
+							retryPolicy: { maxAttempts: 0 },
+						},
+						{
+							className: "Configured",
+							uniqueKey: "configured",
+							retryPolicy: { maxAttempts: 7, timeoutMs: 500 },
+						},
+					],
+				},
+			},
+		],
+	});
+	const namespaces = new Message(buffer, false)
+		.getRoot(CapnpConfig)
+		.services.get(0).worker.durableObjectNamespaces;
+	const disabledPolicy = namespaces.get(1).retryPolicy;
+	const configuredPolicy = namespaces.get(2).retryPolicy;
+
+	expect(namespaces.get(0)._hasRetryPolicy()).toBe(false);
+	expect(disabledPolicy.maxAttempts).toBe(0);
+	expect(disabledPolicy.timeoutMs).toBe(10_000);
+	expect(configuredPolicy.maxAttempts).toBe(7);
+	expect(configuredPolicy.timeoutMs).toBe(500);
+});

@@ -223,8 +223,14 @@ export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
 	enableSql?: boolean;
+	retryPolicy?: Worker_DurableObjectNamespace_RetryPolicy;
 	container?: Worker_DurableObjectNamespace_ContainerOptions;
 } & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
+
+export interface Worker_DurableObjectNamespace_RetryPolicy {
+	maxAttempts?: number;
+	timeoutMs?: number;
+}
 
 export interface Worker_DurableObjectNamespace_ContainerOptions {
 	imageName?: string;

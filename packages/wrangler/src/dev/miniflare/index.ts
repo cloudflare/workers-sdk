@@ -6,6 +6,7 @@ import {
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
 	getWranglerHiddenDirPath,
+	isLiveDurableObjectExport,
 	isUnsafeBindingType,
 	partitionExports,
 	UserError,
@@ -39,6 +40,7 @@ import type {
 	ConnectHandler,
 	Config,
 	ContainerEngine,
+	DurableObjectRetryPolicy,
 	LegacyAssetPaths,
 	ServiceFetch,
 } from "@cloudflare/workers-utils";
@@ -690,6 +692,23 @@ export function buildMiniflareBindingOptions(
 		config.exports
 	);
 
+	// A retry policy belongs to the Durable Object class, not to a binding. It
+	// comes from the class's export, or from a binding to the class in this
+	// Worker. Config validation ensures the sources agree.
+	const classNameToRetry = new Map<string, DurableObjectRetryPolicy>();
+	for (const [className, exported] of Object.entries(
+		partitionExports(config.exports)["durable-object"]
+	)) {
+		if (isLiveDurableObjectExport(exported) && exported.retry !== undefined) {
+			classNameToRetry.set(className, exported.retry);
+		}
+	}
+	for (const { class_name, script_name, retry } of durableObjects) {
+		if (script_name === undefined && retry !== undefined) {
+			classNameToRetry.set(class_name, retry);
+		}
+	}
+
 	const externalWorkers: V4WorkerOptions[] = [];
 
 	for (const ai of aiBindings) {
@@ -765,9 +784,12 @@ export function buildMiniflareBindingOptions(
 
 	for (const [className, useSQLite] of classNameToUseSQLite) {
 		if (!durableObjects.find((d) => d.class_name === className)) {
+			const retry = classNameToRetry.get(className);
 			additionalUnboundDurableObjects.push({
 				className,
 				scriptName: undefined,
+				retryMaxAttempts: retry?.max_attempts,
+				retryTimeoutMs: retry?.timeout_ms,
 				useSQLite,
 				container: config.enableContainers
 					? config.containerRuntimeOptions?.get(className)
@@ -1048,11 +1070,17 @@ export function buildMiniflareBindingOptions(
 		durableObjects: Object.fromEntries(
 			durableObjects.map(
 				({ name, class_name: className, script_name: scriptName }) => {
+					const retry =
+						scriptName === undefined
+							? classNameToRetry.get(className)
+							: undefined;
 					return [
 						name,
 						{
 							className,
 							scriptName,
+							retryMaxAttempts: retry?.max_attempts,
+							retryTimeoutMs: retry?.timeout_ms,
 							useSQLite: classNameToUseSQLite.get(className),
 							container: config.enableContainers
 								? config.containerRuntimeOptions?.get(className)
