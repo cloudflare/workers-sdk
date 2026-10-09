@@ -4,7 +4,7 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
-	test("Artifacts keeps legacy remote defaults until the local-default switch", ({
+	test("Artifacts preserves omitted remote settings for local-default routing", ({
 		expect,
 	}) => {
 		const remoteProxyConnectionString = new URL(
