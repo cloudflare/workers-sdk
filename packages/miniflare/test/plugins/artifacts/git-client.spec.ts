@@ -130,8 +130,14 @@ test("Git client imports, reads and forks a local repository", async ({
 	expect(commit.message).toBe("fixture");
 	expect((await imported.readCommit(commit.hash))?.hash).toBe(commit.hash);
 	expect(await imported.readTree(commit.treeHash)).toMatchObject([
-		{ name: "hello.txt" },
+		{ name: "hello.txt", mode: "100644", type: "blob" },
 	]);
+	await git(["tag", "-a", "v1", "-m", "release"], imported.repository);
+	const tag = (
+		await git(["rev-parse", "refs/tags/v1"], imported.repository)
+	).stdout.trim();
+	expect(await imported.readCommit(tag)).toBeNull();
+	expect(await imported.readBlob(tag)).toBeNull();
 	const blob = (
 		await git(["rev-parse", "HEAD:hello.txt"], source)
 	).stdout.trim();

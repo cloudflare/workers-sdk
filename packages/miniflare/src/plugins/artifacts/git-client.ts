@@ -157,16 +157,32 @@ export interface RepositoryState {
 	refs: Record<string, string>;
 }
 
+export interface GitPerson {
+	name: string;
+	email: string;
+}
+
 export interface CommitMetadata {
 	hash: string;
 	treeHash: string;
 	message: string;
-	author: { name: string; email: string };
-	committer: { name: string; email: string };
+	author: GitPerson;
+	committer: GitPerson;
 	parents: string[];
 	authoredAt: number;
 	committedAt: number;
 }
+
+export type GitTreeEntryType = "tree" | "blob" | "symlink" | "gitlink" | "exec";
+
+export interface GitTreeEntry {
+	name: string;
+	mode: string;
+	hash: string;
+	type: GitTreeEntryType;
+}
+
+type GitObjectType = "blob" | "tree" | "commit" | "tag";
 
 /** Repository-scoped Git operations; clone/init are supported before it exists. */
 export class GitClient {
@@ -309,12 +325,7 @@ export class GitClient {
 		return { data: Buffer.from(object.stdout).toString("base64") };
 	}
 
-	async readTree(hash: string): Promise<Array<{
-		name: string;
-		mode: string;
-		hash: string;
-		type: string;
-	}> | null> {
+	async readTree(hash: string): Promise<GitTreeEntry[] | null> {
 		if ((await this.objectType(hash)) !== "tree") {
 			return null;
 		}
@@ -419,11 +430,13 @@ export class GitClient {
 		return commits;
 	}
 
-	private async objectType(hash: string): Promise<string | null> {
+	private async objectType(hash: string): Promise<GitObjectType | null> {
 		const result = await this.git(["cat-file", "-t", hash], {
 			allowFailure: true,
 		});
-		return result.status === 0 ? decoder.decode(result.stdout).trim() : null;
+		return result.status === 0
+			? parseGitObjectType(decoder.decode(result.stdout).trim())
+			: null;
 	}
 
 	private async resolveCommit(ref: string): Promise<string | null> {
@@ -525,6 +538,18 @@ function safeImportError(error: unknown): Error {
 	);
 }
 
+function parseGitObjectType(value: string): GitObjectType {
+	switch (value) {
+		case "blob":
+		case "tree":
+		case "commit":
+		case "tag":
+			return value;
+		default:
+			throw new Error(`Unsupported Git object type: ${value}`);
+	}
+}
+
 function commitHeader(headers: string[], name: string): string | undefined {
 	return headers
 		.find((line) => line.startsWith(`${name} `))
@@ -535,7 +560,7 @@ function parseCommitIdentity(
 	headers: string[],
 	name: string
 ): {
-	person: { name: string; email: string };
+	person: GitPerson;
 	time: number;
 } {
 	const match = /^(.*) <([^<>]*)> (-?\d+) [+-]\d{4}$/.exec(
@@ -573,7 +598,7 @@ function parseCommit(hash: string, value: string): CommitMetadata {
 	};
 }
 
-function treeEntryType(mode: string): string {
+function treeEntryType(mode: string): GitTreeEntryType {
 	if (mode === "40000") {
 		return "tree";
 	}
