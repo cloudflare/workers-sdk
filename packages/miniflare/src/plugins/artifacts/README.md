@@ -84,7 +84,11 @@ while creating a repository, a leftover creation lock blocks reuse until you
 confirm no other dev server uses the directory and remove the lock named in
 the error. Import URL credentials are passed to Git as an ephemeral HTTPS
 authorization header,
-not recorded in a repository's Git config. Repository locks are process-local:
+not recorded in a repository's Git config. Host Git runs with an isolated HOME
+so it cannot read the developer's `.netrc`; SSH/scp-style imports and Git remote
+helpers are rejected rather than accessing host SSH keys or executing helpers.
+The local Worker binding accepts only explicit HTTPS imports; filesystem paths
+are available only to the internal Git client. Repository locks are process-local:
 do not run two dev servers against the same Artifacts persistence directory at
 the same time. Older draft storage layouts are not migrated automatically:
 startup rejects a detected old layout rather than silently creating empty
