@@ -199,6 +199,7 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Run tests (fixtures)
+        timeout-minutes: ${{ matrix.os == 'windows-latest' && 8 || 30 }}
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
         # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
         # Since the dev registry is now file-based (not network-based), fixture tests can safely run in parallel.
@@ -210,6 +211,15 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.description }}
+
+      - name: Inspect Windows fixture processes
+        if: failure() && matrix.os == 'windows-latest' && matrix.suite == 'fixtures'
+        shell: pwsh
+        run: |
+          Get-CimInstance -ClassName Win32_Process |
+            Where-Object { $_.Name -in @('cmd.exe', 'esbuild.exe', 'node.exe', 'pnpm.exe', 'pnpm-native.exe', 'workerd.exe') } |
+            Select-Object ProcessId, ParentProcessId, Name |
+            Format-Table -AutoSize
 
       # Only cache an install that Miniflare marked as complete. Without this
       # check a job interrupted mid-download would publish a half-extracted

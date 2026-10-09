@@ -7,7 +7,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
-		reporters: ["default"],
+		reporters:
+			process.platform === "win32"
+				? ["default", "hanging-process"]
+				: ["default"],
 		projects: [
 			"*/vitest.*config.*ts",
 			// workerd's Windows SQLite VFS uses kj::Path::toString() (Unix-style
