@@ -13,7 +13,7 @@ const workflow = readFileSync(
 function filtersFor(log: string, platform: string): string[] {
 	const command = workflow
 		.split("\n")
-		.find((line) => line.includes(`tee .turbo/ci-logs/${log}.log`));
+		.find((line) => line.includes(`test:ci:logged .turbo/ci-logs/${log}.log`));
 	if (command === undefined) {
 		throw new Error(`Missing CI command for ${log}`);
 	}

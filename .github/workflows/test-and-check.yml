@@ -203,7 +203,7 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p .turbo/ci-logs
-          pnpm run test:ci --log-order=stream --filter="@cloudflare/tools" 2>&1 | tee .turbo/ci-logs/tools.log
+          pnpm run test:ci:logged .turbo/ci-logs/tools.log run test:ci --log-order=stream --filter="@cloudflare/tools"
         shell: bash
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -216,7 +216,7 @@ jobs:
         # broad filter so new packages automatically retain CI coverage.
         run: |
           mkdir -p .turbo/ci-logs
-          pnpm run test:ci --summarize --log-order=stream --concurrency=3 --filter="./packages/*" --filter="!wrangler" --filter="!miniflare" --filter="!@cloudflare/vite-plugin" --filter="!@cloudflare/vitest-plugin" 2>&1 | tee .turbo/ci-logs/packages.log
+          pnpm run test:ci:logged .turbo/ci-logs/packages.log run test:ci --summarize --log-order=stream --concurrency=3 --filter="./packages/*" --filter="!wrangler" --filter="!miniflare" --filter="!@cloudflare/vite-plugin" --filter="!@cloudflare/vitest-plugin"
         shell: bash
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -231,7 +231,7 @@ jobs:
         # tests; the comprehensive vitest-plugin-examples fixture still runs.
         run: |
           mkdir -p .turbo/ci-logs
-          pnpm run test:ci --summarize --log-order=stream --concurrency=2 --filter="@cloudflare/vite-plugin" ${{ matrix.os != 'windows-latest' && '--filter="@cloudflare/vitest-plugin"' || '' }} 2>&1 | tee .turbo/ci-logs/integrations.log
+          pnpm run test:ci:logged .turbo/ci-logs/integrations.log run test:ci --summarize --log-order=stream --concurrency=2 --filter="@cloudflare/vite-plugin" ${{ matrix.os != 'windows-latest' && '--filter="@cloudflare/vitest-plugin"' || '' }}
         shell: bash
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -245,7 +245,7 @@ jobs:
         # Keep Miniflare's single worker and Wrangler's per-file isolation.
         run: |
           mkdir -p .turbo/ci-logs
-          pnpm run test:ci --summarize --log-order=stream --concurrency=2 --filter=wrangler --filter=miniflare 2>&1 | tee .turbo/ci-logs/runtime.log
+          pnpm run test:ci:logged .turbo/ci-logs/runtime.log run test:ci --summarize --log-order=stream --concurrency=2 --filter=wrangler --filter=miniflare
         shell: bash
         env:
           CI_TEST_SHARD: ${{ format('{0}/{1}', matrix.shard, matrix.runtime-shards) }}
@@ -272,7 +272,7 @@ jobs:
         # Each runner keeps concurrency=2 to limit workerd resource contention.
         run: |
           mkdir -p .turbo/ci-logs
-          pnpm run test:ci:fixtures --group=remaining --shard="$TEST_SHARD/2" 2>&1 | tee .turbo/ci-logs/fixtures.log
+          pnpm run test:ci:logged .turbo/ci-logs/fixtures.log run test:ci:fixtures --group=remaining --shard="$TEST_SHARD/2"
         shell: bash
         env:
           TEST_SHARD: ${{ matrix.shard }}
@@ -286,7 +286,7 @@ jobs:
         # Start this long fixture without queuing behind the remaining packages.
         run: |
           mkdir -p .turbo/ci-logs
-          pnpm run test:ci:fixtures --group=dev-registry --shard=1/1 2>&1 | tee .turbo/ci-logs/dev-registry.log
+          pnpm run test:ci:logged .turbo/ci-logs/dev-registry.log run test:ci:fixtures --group=dev-registry --shard=1/1
         shell: bash
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
