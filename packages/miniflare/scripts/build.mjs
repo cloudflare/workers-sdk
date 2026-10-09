@@ -446,7 +446,13 @@ async function buildPackage() {
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
-		entryPoints: [indexPath, ...fixtureBuilds],
+		entryPoints: [
+			indexPath,
+			// A separate thread keeps native Git available during synchronous Node
+			// binding-proxy calls, which block Miniflare's main event loop.
+			path.join(pkgRoot, "src/plugins/artifacts/git-sidecar.ts"),
+			...fixtureBuilds,
+		],
 	};
 
 	if (watch) {
