@@ -794,8 +794,8 @@ function addProductBindings(
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			// At this stage, only explicit V5 dev.remote: false selects local.
-			// Do not reinterpret an omitted legacy setting as that opt-in.
+			// Preserve omitted legacy settings so the Artifacts plugin applies
+			// the same local default as a V5 binding.
 			...(binding.remoteProxyConnectionString === undefined
 				? {}
 				: { dev: { remote: isRemote(binding.remoteProxyConnectionString) } }),
