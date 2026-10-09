@@ -192,10 +192,13 @@ describe("deploy helpers", async () => {
 			vi.mocked(usesCfCli).mockReturnValue(true);
 			mockInsideGitRepo(false);
 			vi.mocked(runCommand).mockResolvedValueOnce("");
-			vi.mocked(getDeploymentUrl).mockResolvedValueOnce(undefined);
+			vi.mocked(getDeploymentUrl).mockRejectedValueOnce(
+				new Error("Failed to find deployment url: the reason why.")
+			);
 
+			// The reason that the lookup failed is reported to the user
 			await expect(runDeploy(ctx)).rejects.toThrow(
-				"Failed to find deployment url."
+				"Failed to find deployment url: the reason why."
 			);
 		});
 

@@ -7,7 +7,6 @@ import {
 	quoteShellArgs,
 	runCommand,
 } from "@cloudflare/cli-shared-helpers/command";
-import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { readFile } from "helpers/files";
@@ -136,23 +135,15 @@ export const runDeploy = async (ctx: C3Context) => {
 		)}`,
 	});
 
-	try {
-		const url = outputFile
-			? readDeploymentUrl(outputFile)
-			: await getDeploymentUrl(ctx.project.path, ctx.account.id);
-		const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
-		const deployedUrlMatch = url?.match(deployedUrlRegex);
-		if (deployedUrlMatch) {
-			ctx.deployment.url = deployedUrlMatch[0];
-		} else {
-			throw new Error("Failed to find deployment url.");
-		}
-	} catch (e) {
-		if (e instanceof CancelError) {
-			throw e;
-		}
+	const url = outputFile
+		? readDeploymentUrl(outputFile)
+		: await getDeploymentUrl(ctx.project.path, ctx.account.id);
+	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
+	const deployedUrlMatch = url?.match(deployedUrlRegex);
+	if (!deployedUrlMatch) {
 		throw new Error("Failed to find deployment url.");
 	}
+	ctx.deployment.url = deployedUrlMatch[0];
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
 	if (ctx.deployment.url?.endsWith(".pages.dev")) {
@@ -167,17 +158,21 @@ export const runDeploy = async (ctx: C3Context) => {
  * Reads the deployment URL from the output file written by Wrangler.
  *
  * @param outputFile The path that `WRANGLER_OUTPUT_FILE_PATH` pointed Wrangler at.
- * @returns The URL of the deployment, if one was reported.
+ * @returns The URL of the deployment, if one was reported and could be read.
  */
 function readDeploymentUrl(outputFile: string): string | undefined {
-	const entries = readFile(outputFile)
-		.split("\n")
-		.filter(Boolean)
-		.map((entry) => JSON.parse(entry));
-	return (
-		entries.find((entry) => entry.type === "deploy")?.targets?.[0] ??
-		entries.find((entry) => entry.type === "pages-deploy")?.url
-	);
+	try {
+		const entries = readFile(outputFile)
+			.split("\n")
+			.filter(Boolean)
+			.map((entry) => JSON.parse(entry));
+		return (
+			entries.find((entry) => entry.type === "deploy")?.targets?.[0] ??
+			entries.find((entry) => entry.type === "pages-deploy")?.url
+		);
+	} catch {
+		return undefined;
+	}
 }
 
 export const maybeOpenBrowser = async (ctx: C3Context) => {

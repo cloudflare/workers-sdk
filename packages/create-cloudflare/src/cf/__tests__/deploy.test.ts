@@ -60,19 +60,27 @@ describe("getDeploymentUrl", () => {
 			})
 		);
 
-		await expect(getDeploymentUrl(".", "test1234")).resolves.toBeUndefined();
+		await expect(getDeploymentUrl(".", "test1234")).rejects.toThrow(
+			"Failed to find deployment url: the `my-worker` Worker is not available on workers.dev."
+		);
 	});
 
 	test("no Build Output", async ({ expect }) => {
-		await expect(getDeploymentUrl(".", "test1234")).resolves.toBeUndefined();
+		await expect(getDeploymentUrl(".", "test1234")).rejects.toThrow(
+			"Failed to find deployment url: could not read the Worker's name from `.cloudflare/output/v0/workers/default/worker.config.json`."
+		);
 		expect(runWranglerCommand).not.toHaveBeenCalled();
 	});
 
 	test("cf workers get error", async ({ expect }) => {
 		writeDefaultWorkerConfig("my-worker");
-		vi.mocked(runWranglerCommand).mockRejectedValueOnce(new Error("fail!"));
+		vi.mocked(runWranglerCommand).mockRejectedValueOnce(
+			new Error("Worker not found")
+		);
 
-		await expect(getDeploymentUrl(".", "test1234")).resolves.toBeUndefined();
+		await expect(getDeploymentUrl(".", "test1234")).rejects.toThrow(
+			"Failed to find deployment url: `cf workers get my-worker` failed.\nWorker not found"
+		);
 	});
 
 	test("cancelled", async ({ expect }) => {

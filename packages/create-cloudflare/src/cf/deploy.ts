@@ -25,17 +25,27 @@ type CfWorker = {
  *
  * @param projectPath The path to the project directory.
  * @param accountId The ID of the account that the Worker was deployed to.
- * @returns The Worker's workers.dev URL, if it has one.
+ * @returns The Worker's workers.dev URL.
+ * @throws If the URL cannot be found, with the reason why.
  */
 export async function getDeploymentUrl(
 	projectPath: string,
 	accountId: string
-): Promise<string | undefined> {
-	const { npx } = detectPackageManager();
+): Promise<string> {
+	let name: string;
 	try {
-		const { name } = readJSON(
-			join(projectPath, DEFAULT_WORKER_CONFIG_PATH)
-		) as { name: string };
+		({ name } = readJSON(join(projectPath, DEFAULT_WORKER_CONFIG_PATH)) as {
+			name: string;
+		});
+	} catch {
+		throw new Error(
+			`Failed to find deployment url: could not read the Worker's name from \`${DEFAULT_WORKER_CONFIG_PATH}\`.`
+		);
+	}
+
+	const { npx } = detectPackageManager();
+	let worker: CfWorker;
+	try {
 		const output = await runWranglerCommand(
 			[npx, "cf", "workers", "get", name],
 			{
@@ -44,14 +54,22 @@ export async function getDeploymentUrl(
 			}
 		);
 		// Skip anything, such as warnings, printed around the JSON object
-		const { subdomain } = JSON.parse(
+		worker = JSON.parse(
 			output.slice(output.indexOf("{"), output.lastIndexOf("}") + 1)
 		) as CfWorker;
-		return subdomain?.enabled ? subdomain.url : undefined;
 	} catch (e) {
 		if (e instanceof CancelError) {
 			throw e;
 		}
-		return undefined;
+		throw new Error(
+			`Failed to find deployment url: \`cf workers get ${name}\` failed.\n${e instanceof Error ? e.message : String(e)}`
+		);
 	}
+
+	if (!worker.subdomain?.enabled || !worker.subdomain.url) {
+		throw new Error(
+			`Failed to find deployment url: the \`${name}\` Worker is not available on workers.dev.`
+		);
+	}
+	return worker.subdomain.url;
 }
