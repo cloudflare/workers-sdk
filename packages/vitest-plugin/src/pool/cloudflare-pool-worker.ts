@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import fs from "node:fs";
 import path from "node:path";
 import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
@@ -34,43 +35,24 @@ import type {
 	WorkerResponse,
 } from "vitest/node";
 
-function inlineCachedModule(
-	module: unknown,
-	project: PoolOptions["project"]
-): unknown {
+function inlineCachedModule(module: unknown): unknown {
 	if (
 		module === null ||
 		typeof module !== "object" ||
 		!("cached" in module) ||
 		module.cached !== true ||
-		!("id" in module) ||
-		typeof module.id !== "string" ||
 		!("tmp" in module) ||
 		typeof module.tmp !== "string"
 	) {
 		return module;
 	}
 
-	const { cached, tmp, id, ...result } = module;
-	for (const environment of Object.values(project.vite.environments)) {
-		const transform =
-			environment.moduleGraph.getModuleById(id)?.transformResult;
-		if (
-			transform &&
-			"__vitestTmp" in transform &&
-			transform.__vitestTmp === tmp
-		) {
-			return { ...result, id, code: transform.code };
-		}
-	}
-	return undefined;
+	const { cached, tmp, ...result } = module;
+	return { ...result, code: fs.readFileSync(tmp, "utf8") };
 }
 
-function inlineCachedModules(
-	response: unknown,
-	project: PoolOptions["project"]
-): unknown {
-	const inlined = inlineCachedModule(response, project);
+function inlineCachedModules(response: unknown): unknown {
+	const inlined = inlineCachedModule(response);
 	if (
 		inlined !== response ||
 		response === null ||
@@ -82,12 +64,15 @@ function inlineCachedModules(
 
 	let hasCachedModules = false;
 	const entries = Object.entries(response).flatMap(([specifier, module]) => {
-		const inlinedModule = inlineCachedModule(module, project);
-		const changed = inlinedModule !== module;
-		hasCachedModules ||= changed;
-		return changed && inlinedModule === undefined
-			? []
-			: [[specifier, inlinedModule] as const];
+		try {
+			const inlinedModule = inlineCachedModule(module);
+			hasCachedModules ||= inlinedModule !== module;
+			return [[specifier, inlinedModule] as const];
+		} catch {
+			// Vitest fetches warm modules normally when their cached files disappear.
+			hasCachedModules = true;
+			return [];
+		}
 	});
 	return hasCachedModules ? Object.fromEntries(entries) : response;
 }
@@ -256,18 +241,9 @@ export class CloudflarePoolWorker implements PoolWorker {
 			rpcResponse.t === "s" &&
 			rpcResponse.r !== undefined
 		) {
-			const inlined = inlineCachedModules(rpcResponse.r, this.options.project);
+			const inlined = inlineCachedModules(rpcResponse.r);
 			if (inlined !== rpcResponse.r) {
-				toSend =
-					inlined === undefined
-						? {
-								...message,
-								r: undefined,
-								e: new Error(
-									"The cached module transform is no longer available."
-								),
-							}
-						: { ...message, r: inlined };
+				toSend = { ...message, r: inlined };
 			}
 		}
 		this.socket.send(structuredSerializableStringify(toSend));
