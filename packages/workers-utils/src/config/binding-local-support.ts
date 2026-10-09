@@ -57,6 +57,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	// TODO: Miniflare currently ignores `remote: true` on queues, tracked in #13727.
 	queue: "local-and-remote",
 	flagship: "local-and-remote",
+	artifacts: "local-and-remote",
 	analytics_engine: "local-and-remote",
 
 	vectorize: "remote",
@@ -70,7 +71,6 @@ const BINDING_LOCAL_SUPPORT: Record<
 	ai_search_namespace:
 		"DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	media: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
-	artifacts: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_service: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_network: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	agent_memory: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",

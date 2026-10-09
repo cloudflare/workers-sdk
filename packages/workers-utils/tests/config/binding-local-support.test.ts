@@ -90,6 +90,12 @@ describe("validateBindingRemoteSetting", () => {
 			expect(() =>
 				validateBindingRemoteSetting("flagship", undefined, warn)
 			).not.toThrow();
+			expect(() =>
+				validateBindingRemoteSetting("artifacts", false, warn)
+			).not.toThrow();
+			expect(() =>
+				validateBindingRemoteSetting("artifacts", undefined, warn)
+			).not.toThrow();
 			expect(warn).not.toHaveBeenCalled();
 		});
 	});

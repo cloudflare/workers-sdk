@@ -80,6 +80,30 @@ describe("printBindings", () => {
 		expect(output).toMatch(/K2 Stream\s+not supported/);
 	});
 
+	test.for([
+		{ label: "default", remote: undefined, disabled: false, mode: "local" },
+		{ label: "explicit local", remote: false, disabled: false, mode: "local" },
+		{ label: "explicit remote", remote: true, disabled: false, mode: "remote" },
+		{ label: "remote disabled", remote: true, disabled: true, mode: "local" },
+	])(
+		"labels Artifacts bindings as $mode for $label",
+		({ remote, disabled, mode }, { expect }) => {
+			const output = captureBindings(
+				{
+					REPOS: {
+						type: "artifacts",
+						namespace: "review",
+						...(remote === undefined ? {} : { remote }),
+					},
+				},
+				{ local: true, remoteBindingsDisabled: disabled }
+			);
+			expect(output).toMatch(
+				new RegExp(`env\\.REPOS \\(review\\)\\s+Artifacts\\s+${mode}`)
+			);
+		}
+	);
+
 	test.for([{ class_name: "Sandbox" }, { name: "Sandbox" }])(
 		"prints Durable Object-managed containers using their configured identity %j",
 		(identity, { expect }) => {
