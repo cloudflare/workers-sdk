@@ -1,6 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:https";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -486,7 +486,7 @@ test("HTTPS import: untrusted TLS fails closed without a CA", async ({
 test("HTTPS import: interrupted upload cleans partial target and retry succeeds", async ({
 	expect,
 }) => {
-	await withFixture(async ({ mf, fixture }) => {
+	await withFixture(async ({ mf, fixture, directory }) => {
 		const valid = fixture.url.replace(
 			"https://",
 			"https://reader:correct-password@"
@@ -497,6 +497,14 @@ test("HTTPS import: interrupted upload cleans partial target and retry succeeds"
 		expect(failed.body).toMatchObject({ code: "UPSTREAM_UNAVAILABLE" });
 		expect(fixture.interrupted).toBeGreaterThan(0);
 		expect((await call(mf, "list")).body).toMatchObject({ total: 0 });
+		const [namespaceDirectory] = await readdir(
+			path.join(directory, "persist", "artifacts")
+		);
+		expect(
+			await readdir(
+				path.join(directory, "persist", "artifacts", namespaceDirectory, "git")
+			)
+		).toEqual([]);
 		fixture.interruptUpload = false;
 		expect((await call(mf, "import", [importOptions(valid, "retry")])).ok).toBe(
 			true

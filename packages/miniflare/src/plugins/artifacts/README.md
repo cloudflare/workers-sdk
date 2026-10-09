@@ -78,7 +78,12 @@ repository-scoped Git commands and result parsing. Read operations such as
 reach the same binding through Miniflare's Node binding proxy. Namespace and
 repository names are hashed into short, namespace-scoped on-disk paths; this
 leaves room for Git packfiles and workerd SQLite files on platforms with path
-length limits. Older draft storage layouts are not migrated automatically:
+length limits. Creation, fork, and import use private staging directories;
+interrupted staging is removed on the next backend startup. Import URL
+credentials are passed to Git as an ephemeral HTTPS authorization header,
+not recorded in a repository's Git config. Repository locks are process-local:
+do not run two dev servers against the same Artifacts persistence directory at
+the same time. Older draft storage layouts are not migrated automatically:
 startup rejects a detected old layout rather than silently creating empty
 repositories. Back up any local repositories before resetting the Artifacts
 persistence directory. Do not delete the persistence directory without first
