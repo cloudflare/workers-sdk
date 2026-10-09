@@ -1,8 +1,10 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { lstat } from "node:fs/promises";
 import { devNull, tmpdir } from "node:os";
 import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 
 const decoder = new TextDecoder();
 type GitOptions = { allowFailure?: boolean; timeout?: number };
@@ -88,12 +90,23 @@ export async function assertGitAvailable(): Promise<void> {
 	assertSupportedGitVersion(version);
 }
 
+/** Override repository-local hook configuration for any host Git command. */
+export function gitArgumentsWithoutHooks(args: string[]): string[] {
+	// Command-line config outranks repository-local config; environment config
+	// does not. Use a nonexistent path that is unique for each invocation.
+	const noHooks = path.join(
+		tmpdir(),
+		`miniflare-artifacts-no-hooks-${randomUUID()}`
+	);
+	return ["-c", `core.hooksPath=${noHooks}`, ...args];
+}
+
 export async function runGit(
 	args: string[],
 	options: GitOptions = {}
 ): Promise<GitResult> {
 	return new Promise((resolve, reject) => {
-		const child = spawn("git", args, {
+		const child = spawn("git", gitArgumentsWithoutHooks(args), {
 			env: gitEnvironment(),
 			stdio: ["pipe", "pipe", "pipe"],
 		});
@@ -202,6 +215,16 @@ export class GitClient {
 		branch?: string,
 		depth?: number
 	): Promise<void> {
+		// Only clean up directories created by this import. A failed clone into
+		// an existing path must never remove someone else's repository.
+		try {
+			await lstat(this.repository);
+			throw new Error("Git import target already exists");
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+				throw error;
+			}
+		}
 		// An import may carry credentials. Never let Git redirect them to a
 		// different destination (or silently expand the requested network access).
 		const args = ["-c", "http.followRedirects=false", "clone", "--bare"];
@@ -212,11 +235,25 @@ export class GitClient {
 			args.push("--depth", String(depth));
 		}
 		args.push(url, this.repository);
-		await runGit(args);
-		// A bare clone records remote.origin.url in its local Git config. It may
-		// include Basic credentials or query tokens used only for the import.
-		// Local repositories do not fetch from the upstream after creation.
-		await this.git(["remote", "remove", "origin"]);
+		try {
+			await runGit(args);
+			// A bare clone records remote.origin.url in its local Git config. It may
+			// include credentials used only for the import. Never retain the remote.
+			await this.git(["remote", "remove", "origin"]);
+		} catch {
+			// Git errors can echo URL credentials; do not propagate the raw error.
+			// A failed clone can also leave a config containing the import URL.
+			try {
+				await removeDir(this.repository);
+			} catch {
+				throw new Error(
+					`Git import failed and the partial repository at "${this.repository}" could not be removed. Delete it before retrying.`
+				);
+			}
+			throw new Error(
+				"Git import failed. Check the source URL, credentials, TLS certificate, and network access."
+			);
+		}
 	}
 
 	async configure(generation: string): Promise<void> {
@@ -328,16 +365,23 @@ export class GitClient {
 	}
 
 	async log(ref?: string, limit = 50, offset = 0): Promise<CommitMetadata[]> {
-		const commit = await this.resolveCommit(ref ?? "HEAD", ref === undefined);
+		if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
+			throw new RangeError(
+				"Git log limit must be an integer between 1 and 1000"
+			);
+		}
+		if (!Number.isSafeInteger(offset) || offset < 0) {
+			throw new RangeError("Git log offset must be a non-negative integer");
+		}
+		const commit = await this.resolveCommit(ref ?? "HEAD");
 		if (!commit) {
 			return [];
 		}
-		const effectiveLimit = Math.min(limit, 1000);
 		const revs = await this.git(
 			[
 				"rev-list",
 				"--first-parent",
-				`--max-count=${effectiveLimit}`,
+				`--max-count=${limit}`,
 				`--skip=${offset}`,
 				commit,
 			],
@@ -351,15 +395,22 @@ export class GitClient {
 			.trim()
 			.split("\n")
 			.filter(Boolean);
-		return Promise.all(
-			hashes.map(async (hash) => {
-				const commitMetadata = await this.readCommit(hash);
-				if (!commitMetadata) {
-					throw new Error(`Commit disappeared: ${hash}`);
-				}
-				return commitMetadata;
-			})
-		);
+		const commits: CommitMetadata[] = [];
+		// Each read starts a native process. Bound concurrent reads even for the
+		// largest valid history page so one request cannot exhaust host resources.
+		for (let start = 0; start < hashes.length; start += 8) {
+			const batch = await Promise.all(
+				hashes.slice(start, start + 8).map(async (hash) => {
+					const commit = await this.readCommit(hash);
+					if (!commit) {
+						throw new Error(`Commit disappeared: ${hash}`);
+					}
+					return commit;
+				})
+			);
+			commits.push(...batch);
+		}
+		return commits;
 	}
 
 	private async objectType(hash: string): Promise<string | null> {
@@ -369,16 +420,27 @@ export class GitClient {
 		return result.status === 0 ? decoder.decode(result.stdout).trim() : null;
 	}
 
-	private async resolveCommit(
-		ref: string,
-		allowHead = false
-	): Promise<string | null> {
-		const candidates = allowHead
-			? ["HEAD"]
-			: /^[0-9a-f]{40}$/.test(ref)
-				? [ref]
-				: [`refs/heads/${ref}`, `refs/tags/${ref}`];
+	private async resolveCommit(ref: string): Promise<string | null> {
+		let candidates: string[];
+		if (ref === "HEAD" || /^[0-9a-f]{40}$/.test(ref)) {
+			candidates = [ref];
+		} else if (ref.startsWith("refs/")) {
+			if (!ref.startsWith("refs/heads/") && !ref.startsWith("refs/tags/")) {
+				return null;
+			}
+			candidates = [ref];
+		} else {
+			candidates = [`refs/heads/${ref}`, `refs/tags/${ref}`];
+		}
 		for (const candidate of candidates) {
+			if (candidate.startsWith("refs/")) {
+				const valid = await this.git(["check-ref-format", candidate], {
+					allowFailure: true,
+				});
+				if (valid.status !== 0) {
+					continue;
+				}
+			}
 			const result = await this.git(
 				["rev-parse", "--verify", "--quiet", `${candidate}^{commit}`],
 				{ allowFailure: true }

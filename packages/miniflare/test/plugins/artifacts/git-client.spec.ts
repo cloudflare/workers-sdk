@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { chmod, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { devNull } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -10,6 +10,7 @@ import {
 	assertSupportedGitVersion,
 	GitClient,
 	gitEnvironment,
+	runGit,
 } from "../../../src/plugins/artifacts/git-client";
 import { useTmp } from "../../test-shared";
 
@@ -46,6 +47,7 @@ test("Git subprocesses do not inherit Cloudflare or host credentials", ({
 	expect(env.GIT_ASKPASS).toBeUndefined();
 	expect(env.GITHUB_TOKEN).toBeUndefined();
 	expect(env.GIT_CONFIG_VALUE_0).toBe("");
+	expect(env.GIT_CONFIG_COUNT).toBe("1");
 	if (process.platform === "win32") {
 		expect(env.GIT_CONFIG_GLOBAL).toContain("miniflare-artifacts-empty-");
 	} else {
@@ -137,6 +139,74 @@ test("Git client imports, reads and forks a local repository", async ({
 	expect((await forked.state()).refs["refs/heads/main"]).toBe(commit.hash);
 });
 
+test("failed imports discard partial clones without exposing URL credentials", async ({
+	expect,
+}) => {
+	const repository = path.join(await useTmp(), "failed.git");
+	const client = new GitClient(repository);
+	const url = "https://reader:example-password@127.0.0.1:1/missing.git";
+	let failure: unknown;
+	try {
+		await client.importFrom(url);
+	} catch (error) {
+		failure = error;
+	}
+	expect(String(failure)).toMatch(/Git import failed.*source URL/);
+	expect(String(failure)).not.toContain("example-password");
+	expect(String(failure)).not.toContain(url);
+	await expect(stat(repository)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+test("failed imports never remove a pre-existing target", async ({
+	expect,
+}) => {
+	const repository = path.join(await useTmp(), "existing.git");
+	await mkdir(repository);
+	const marker = path.join(repository, "keep.txt");
+	await writeFile(marker, "keep me\n");
+	await expect(
+		new GitClient(repository).importFrom("https://127.0.0.1:1/missing.git")
+	).rejects.toThrow("Git import target already exists");
+	expect(await readFile(marker, "utf8")).toBe("keep me\n");
+});
+
+test("Git log rejects invalid pagination before starting a history read", async ({
+	expect,
+}) => {
+	const client = new GitClient(path.join(await useTmp(), "empty.git"));
+	await client.init("main");
+	for (const limit of [-1, 0, 1001, 1.5, Number.POSITIVE_INFINITY]) {
+		await expect(client.log("HEAD", limit)).rejects.toThrow(
+			/Git log limit must be an integer between 1 and 1000/
+		);
+	}
+	for (const offset of [-1, 1.5, Number.POSITIVE_INFINITY]) {
+		await expect(client.log("HEAD", 1, offset)).rejects.toThrow(
+			/Git log offset must be a non-negative integer/
+		);
+	}
+});
+
+test("Git commands override repository-local hooksPath configuration", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const target = path.join(root, "target.git");
+	const hooks = path.join(root, "host-hooks");
+	await new GitClient(target).init("main");
+	await git(["-C", target, "config", "core.hooksPath", hooks]);
+	const result = await runGit([
+		"-C",
+		target,
+		"config",
+		"--get",
+		"core.hooksPath",
+	]);
+	const effective = result.stdout.toString().trim();
+	expect(effective).toContain("miniflare-artifacts-no-hooks-");
+	expect(effective).not.toBe(hooks);
+});
+
 test("Git client reads pre-1970 commit timestamps", async ({ expect }) => {
 	const directory = await useTmp();
 	const repository = path.join(directory, "history");
@@ -162,6 +232,39 @@ test("Git client reads pre-1970 commit timestamps", async ({ expect }) => {
 		committedAt: -1,
 	});
 	expect(await client.log()).toMatchObject([{ hash, authoredAt: -1 }]);
+});
+
+test("Git reads HEAD, named and qualified refs without evaluating revision expressions", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const source = path.join(root, "source");
+	await git(["init", "--initial-branch=main", source]);
+	await writeFile(path.join(source, "README"), "first\n");
+	await git(["add", "README"], source);
+	await git(["commit", "-m", "first"], source);
+	await writeFile(path.join(source, "README"), "second\n");
+	await git(["add", "README"], source);
+	await git(["commit", "-m", "second"], source);
+	await git(["tag", "release"], source);
+	const client = new GitClient(path.join(root, "imported.git"));
+	await client.importFrom(pathToFileURL(source).href);
+	for (const ref of [
+		"main",
+		"HEAD",
+		"refs/heads/main",
+		"release",
+		"refs/tags/release",
+	]) {
+		expect((await client.readFile(ref, "README"))?.data).toBe(
+			Buffer.from("second\n").toString("base64")
+		);
+		expect((await client.log(ref))[0]?.message).toBe("second");
+	}
+	for (const ref of ["main~1", "main^{commit}", "refs/heads/main~1"]) {
+		expect(await client.readFile(ref, "README")).toBeNull();
+		expect(await client.log(ref)).toEqual([]);
+	}
 });
 
 test("Git log follows the first-parent chain through merges", async ({
