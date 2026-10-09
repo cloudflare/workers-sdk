@@ -73,25 +73,8 @@ export default defineConfig({
 
 exports[`Wrangler Worker configuration conversion > converts core settings, triggers, bindings, and exports 1`] = `
 {
-  "followUps": [
-    {
-      "blocking": true,
-      "code": "durable-object-review",
-      "docsUrl": "https://developers.cloudflare.com/workers/runtime-apis/context/#exports",
-      "message": "Durable Object exports require manual review after migration.",
-      "sourcePath": "exports.Counter",
-    },
-  ],
+  "followUps": [],
   "output": "import { bindings, defineConfig, exports, triggers } from "cf/config";
-
-/**
- * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
- */
-/**
- * TODO(@cloudflare): cf migrate: exports.Counter: Durable Object exports require manual review after migration.
- * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
- */
-throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
 export default defineConfig({
 	accountId: "account-id",
@@ -167,10 +150,6 @@ export default defineConfig({
 				},
 			}),
 		},
-		/**
-		 * TODO(@cloudflare): cf migrate: Durable Object exports require manual review after migration.
-		 * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
-		 */
 	},
 });
 ",
@@ -203,13 +182,6 @@ exports[`Wrangler Worker configuration conversion > guards output that requires 
     },
     {
       "blocking": true,
-      "code": "durable-object-migrations",
-      "docsUrl": "https://developers.cloudflare.com/workers/runtime-apis/context/#exports",
-      "message": "Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example \`exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }\`.",
-      "sourcePath": "migrations",
-    },
-    {
-      "blocking": true,
       "code": "container-review",
       "docsUrl": undefined,
       "message": "Containers require manual review and were not migrated.",
@@ -223,7 +195,7 @@ exports[`Wrangler Worker configuration conversion > guards output that requires 
       "sourcePath": "site",
     },
   ],
-  "output": "import { defineConfig, triggers } from "cf/config";
+  "output": "import { defineConfig, exports, triggers } from "cf/config";
 
 /**
  * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
@@ -236,10 +208,6 @@ exports[`Wrangler Worker configuration conversion > guards output that requires 
  */
 /**
  * TODO(@cloudflare): cf migrate: config.routes.0: A route uses a zone ID. Verify the generated fetch trigger target.
- */
-/**
- * TODO(@cloudflare): cf migrate: migrations: Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example \`exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }\`.
- * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
  */
 /**
  * TODO(@cloudflare): cf migrate: containers: Containers require manual review and were not migrated.
@@ -266,6 +234,11 @@ export default defineConfig({
 				zone: "zone-id",
 			}),
 		],
+		exports: {
+			Counter: exports.durableObject({
+				storage: "legacy-kv",
+			}),
+		},
 		unsafe: {
 			metadata: {
 				build: "test",
@@ -276,10 +249,6 @@ export default defineConfig({
 		},
 		/**
 		 * TODO(@cloudflare): cf migrate: A route uses a zone ID. Verify the generated fetch trigger target.
-		 */
-		/**
-		 * TODO(@cloudflare): cf migrate: Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example \`exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }\`.
-		 * @see https://developers.cloudflare.com/workers/runtime-apis/context/#exports
 		 */
 		/**
 		 * TODO(@cloudflare): cf migrate: Containers require manual review and were not migrated.
