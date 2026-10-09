@@ -3765,9 +3765,10 @@ export class Miniflare {
 			SECRET_STORE_PLUGIN_NAME,
 			bindingName,
 			workerName
-		).then((binding) => {
+		).then(async (binding) => {
 			// @ts-expect-error We exposed an admin API on this key
-			return binding[ADMIN_API];
+			const admin: SecretsStoreSecretAdmin = await binding[ADMIN_API]();
+			return () => admin;
 		});
 	}
 	getSecretsStoreSecret(
@@ -3814,9 +3815,10 @@ export class Miniflare {
 		workerName?: string
 	): Promise<() => FlagshipAdmin> {
 		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName).then(
-			(binding) => {
+			async (binding) => {
 				// @ts-expect-error We exposed an admin API on this key
-				return binding[FLAGSHIP_ADMIN_API];
+				const admin: FlagshipAdmin = await binding[FLAGSHIP_ADMIN_API]();
+				return () => admin;
 			}
 		);
 	}

@@ -243,6 +243,7 @@ export class ProxyServer implements DurableObject {
 		let status = 200;
 		let result: unknown;
 		let unbufferedRest: ReadableStream | undefined;
+		let rpcAwaited = false;
 		if (opHeader === ProxyOps.GET) {
 			// If no key header is specified, just return the target
 			result = keyHeader === null ? target : target[keyHeader];
@@ -345,7 +346,12 @@ export class ProxyServer implements DurableObject {
 					// We intentionally don't await this `output()` call so that it's treated as a regular promise
 					result = transform.output(args[2]);
 				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
-					result = Promise.resolve(func(...args));
+					if (keyHeader === "__miniflareWrappedFunction") {
+						result = await func(...args);
+						rpcAwaited = true;
+					} else {
+						result = Promise.resolve(func(...args));
+					}
 				} else {
 					result = func.apply(target, args);
 				}
@@ -363,7 +369,7 @@ export class ProxyServer implements DurableObject {
 		}
 
 		const headers = new Headers();
-		if (allowAsync && result instanceof Promise) {
+		if (allowAsync && (result instanceof Promise || rpcAwaited)) {
 			// Note we only resolve `Promise`s if we're allowing async operations.
 			// Otherwise, we'll treat the `Promise` as a native target. This allows
 			// us to use regular HTTP status/headers to indicate whether the `Promise`

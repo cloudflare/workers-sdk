@@ -67,7 +67,7 @@ export default class Api extends WorkerEntrypoint {
 		reject(): Promise<never>;
 		stream(): Promise<ReadableStream<Uint8Array>>;
 		target(): Promise<{ value: string; getValue(): Promise<string> }>;
-		nestedCallable(): Promise<() => Promise<() => Promise<string>>>;
+		nestedCallable(): Promise<() => () => string>;
 	}
 	const worker = (await miniflare.getWorker(
 		"rpc-worker"
@@ -88,9 +88,9 @@ export default class Api extends WorkerEntrypoint {
 		await expect(target.getValue()).resolves.toBe("target value");
 		const outer = await worker.nestedCallable();
 		for (let call = 0; call < 2; call++) {
-			const inner = await outer();
-			await expect(inner()).resolves.toBe("nested function value");
-			await expect(inner()).resolves.toBe("nested function value");
+			const inner = outer();
+			expect(inner()).toBe("nested function value");
+			expect(inner()).toBe("nested function value");
 		}
 	}
 });
