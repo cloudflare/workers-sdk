@@ -26,7 +26,23 @@ export async function regenerateNewConfigTypes(options: {
 	if (!options.types.generate) {
 		return;
 	}
+	try {
+		await generateNewConfigTypes({
+			cloudflareConfigPath: options.cloudflareConfigPath,
+			workerConfig: options.workerConfig,
+			includeRuntime: options.types.includeRuntime,
+		});
+	} catch (error) {
+		logger.error(error);
+	}
+}
 
+/** Generate types from the new config without swallowing errors for CLI callers. */
+export async function generateNewConfigTypes(options: {
+	cloudflareConfigPath: string;
+	workerConfig: ParsedInputWorkerConfig;
+	includeRuntime: boolean;
+}): Promise<void> {
 	// Read the existing file once: it feeds both the runtime-types cache check
 	// and the diff-before-write.
 	let existing: string | undefined;
@@ -36,48 +52,38 @@ export async function regenerateNewConfigTypes(options: {
 		// File doesn't exist yet — fall through to write.
 	}
 
-	let content: string;
-	try {
-		const outputDir = path.dirname(path.resolve(NEW_CONFIG_TYPES_OUTPUT_PATH));
-		const relativeConfigPath = path
-			.relative(outputDir, options.cloudflareConfigPath)
-			.replaceAll("\\", "/");
-		const configImportPath = relativeConfigPath.startsWith(".")
-			? relativeConfigPath
-			: `./${relativeConfigPath}`;
-		content = generateTypes({
-			configPath: configImportPath,
-			packageName: "cf/config",
-		});
+	const outputDir = path.dirname(path.resolve(NEW_CONFIG_TYPES_OUTPUT_PATH));
+	const relativeConfigPath = path
+		.relative(outputDir, options.cloudflareConfigPath)
+		.replaceAll("\\", "/");
+	const configImportPath = relativeConfigPath.startsWith(".")
+		? relativeConfigPath
+		: `./${relativeConfigPath}`;
+	let content = generateTypes({
+		configPath: configImportPath,
+		packageName: "cf/config",
+	});
 
-		if (options.types.includeRuntime) {
-			const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
-				config: {
-					compatibility_date: options.workerConfig.compatibilityDate,
-					compatibility_flags: options.workerConfig.compatibilityFlags ?? [],
-				},
-				existingContent: existing,
-			});
-			content += `\n${runtimeHeader}\n${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`;
-		}
-	} catch (e) {
-		logger.error(e);
-		return;
+	if (options.includeRuntime) {
+		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+			config: {
+				compatibility_date: options.workerConfig.compatibilityDate,
+				compatibility_flags: options.workerConfig.compatibilityFlags ?? [],
+			},
+			existingContent: existing,
+		});
+		content += `\n${runtimeHeader}\n${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`;
 	}
 
 	if (existing === content) {
 		return;
 	}
 
-	try {
-		await mkdir(path.dirname(NEW_CONFIG_TYPES_OUTPUT_PATH), {
-			recursive: true,
-		});
-		await writeFile(NEW_CONFIG_TYPES_OUTPUT_PATH, content);
-		logger.log(
-			`📝 Regenerated ${NEW_CONFIG_TYPES_OUTPUT_PATH} from ${path.relative(process.cwd(), options.cloudflareConfigPath)}.`
-		);
-	} catch (e) {
-		logger.error(e);
-	}
+	await mkdir(path.dirname(NEW_CONFIG_TYPES_OUTPUT_PATH), {
+		recursive: true,
+	});
+	await writeFile(NEW_CONFIG_TYPES_OUTPUT_PATH, content);
+	logger.log(
+		`📝 Regenerated ${NEW_CONFIG_TYPES_OUTPUT_PATH} from ${path.relative(process.cwd(), options.cloudflareConfigPath)}.`
+	);
 }

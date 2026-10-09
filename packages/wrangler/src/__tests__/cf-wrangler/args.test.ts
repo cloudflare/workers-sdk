@@ -3,7 +3,30 @@ import {
 	ArgParseError,
 	parseArgs,
 	parseBuildArgs,
+	parseTypesArgs,
 } from "../../cf-wrangler/args";
+
+describe("cf-wrangler parseTypesArgs", () => {
+	it("generates runtime types by default", ({ expect }) => {
+		expect(parseTypesArgs([])).toEqual({
+			mode: undefined,
+			includeRuntime: true,
+		});
+	});
+
+	it("accepts a mode and disables runtime types", ({ expect }) => {
+		expect(
+			parseTypesArgs(["--mode", "preview", "--no-include-runtime"])
+		).toEqual({
+			mode: "preview",
+			includeRuntime: false,
+		});
+	});
+
+	it("rejects unsupported flags", ({ expect }) => {
+		expect(() => parseTypesArgs(["--port", "8787"])).toThrow(ArgParseError);
+	});
+});
 
 describe("cf-wrangler parseArgs", () => {
 	describe("happy paths", () => {

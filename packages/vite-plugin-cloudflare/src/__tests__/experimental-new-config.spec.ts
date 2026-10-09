@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import { resolvePluginConfig } from "../plugin-config";
+import { loadNewConfig, resolvePluginConfig } from "../plugin-config";
 import type { PluginConfig, WorkersResolvedConfig } from "../plugin-config";
 
 // Stub the runtime-types generator: the real one spawns workerd via Miniflare.
@@ -410,6 +410,26 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 			`interface Env extends Cloudflare.Env {}\n\n${FAKE_RUNTIME_HEADER}`
 		);
 		expect(generateRuntimeTypesMock).toHaveBeenCalledTimes(1);
+	});
+
+	test("generates types without runtime declarations for the cf-vite delegate", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			"export default { worker: { name: 'test-worker', entrypoint: './src/index.ts', compatibilityDate: '2024-12-30' } };"
+		);
+
+		await loadNewConfig({
+			root: tempDir,
+			mode: "development",
+			types: { generate: true, includeRuntime: false },
+		});
+
+		const content = fs.readFileSync(typesPath(), "utf8");
+		expect(content).toContain('import("cf/config")');
+		expect(content).not.toContain(RUNTIME_MARKER);
+		expect(generateRuntimeTypesMock).not.toHaveBeenCalled();
 	});
 
 	test("does not write the .d.ts when types.generate is false", async ({

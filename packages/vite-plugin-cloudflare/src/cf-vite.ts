@@ -4,8 +4,8 @@
  * EXPERIMENTAL / internal: spawned by Cloudflare's "cf-dev" parent
  * process, not invoked directly by end users. Contract may change.
  *
- * Usage: `<pkgRoot>/bin/cf-vite <verb> [flags...]`. `dev` and `build`
- * are the verbs today; future verbs follow the same shape.
+ * Usage: `<pkgRoot>/bin/cf-vite <verb> [flags...]`. `dev`, `build`, and
+ * `types` are the current verbs; future verbs follow the same shape.
  * Unknown/missing verbs exit 2 (also the parent's version-detection
  * signal).
  *
@@ -37,6 +37,7 @@
 import { parseArgs as nodeParseArgs } from "node:util";
 import { createBuilder, createServer } from "vite";
 import { FORCE_BUILD_OUTPUT_ENV_VAR } from "./build-output-env";
+import { loadNewConfig } from "./plugin-config";
 import type { InlineConfig, ServerOptions } from "vite";
 
 interface DevArgs {
@@ -102,6 +103,34 @@ interface BuildArgs {
 	mode?: string;
 }
 
+interface TypesArgs extends BuildArgs {
+	includeRuntime: boolean;
+}
+
+function parseTypesArgs(argv: string[]): TypesArgs {
+	let parsed;
+	try {
+		parsed = nodeParseArgs({
+			args: argv,
+			options: {
+				mode: { type: "string" },
+				"include-runtime": { type: "boolean", default: true },
+			},
+			strict: true,
+			allowPositionals: false,
+			allowNegative: true,
+		});
+	} catch (error) {
+		throw new ArgParseError(
+			error instanceof Error ? error.message : String(error)
+		);
+	}
+	return {
+		mode: parsed.values.mode,
+		includeRuntime: parsed.values["include-runtime"] ?? true,
+	};
+}
+
 function parseBuildArgs(argv: string[]): BuildArgs {
 	let parsed;
 	try {
@@ -143,11 +172,14 @@ async function main(): Promise<number> {
 	if (verb === "build") {
 		return runBuild(userArgv);
 	}
+	if (verb === "types") {
+		return runTypes(userArgv);
+	}
 
 	// Format mirrors `cf-wrangler`.
 	process.stderr.write(
 		`Error: unknown subcommand "${verb ?? ""}".\n` +
-			`Usage: cf-vite <dev|build> [args]\n`
+			`Usage: cf-vite <dev|build|types> [args]\n`
 	);
 	return 2;
 }
@@ -243,6 +275,26 @@ async function runBuild(userArgv: string[]): Promise<number> {
 	const builder = await createBuilder(inlineConfig);
 	await builder.buildApp();
 
+	return 0;
+}
+
+async function runTypes(userArgv: string[]): Promise<number> {
+	let args: TypesArgs;
+	try {
+		args = parseTypesArgs(userArgv);
+	} catch (error) {
+		if (error instanceof ArgParseError) {
+			process.stderr.write(`Error: ${error.message}\n`);
+			return 2;
+		}
+		throw error;
+	}
+
+	await loadNewConfig({
+		root: process.cwd(),
+		mode: args.mode,
+		types: { generate: true, includeRuntime: args.includeRuntime },
+	});
 	return 0;
 }
 
