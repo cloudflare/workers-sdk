@@ -608,10 +608,10 @@ function isSshSource(source: string): boolean {
 	if (/^(?:ssh|git\+ssh|ssh\+git):\/\//i.test(source)) {
 		return true;
 	}
-	// Git interprets a colon before the first slash as scp-style SSH, except
-	// for absolute Windows drive paths. Ordinary local paths remain accepted.
+	// Git interprets a colon before the first slash as scp-style SSH. Only
+	// Windows treats drive-relative and drive-absolute names as local paths.
 	return (
-		!path.win32.isAbsolute(source) &&
+		!(process.platform === "win32" && /^[a-z]:/i.test(source)) &&
 		/^[^/]+:/.test(source) &&
 		!/^[a-z][a-z\d+.-]*:\/\//i.test(source)
 	);

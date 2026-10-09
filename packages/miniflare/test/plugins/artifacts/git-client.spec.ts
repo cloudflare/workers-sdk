@@ -210,6 +210,25 @@ test("Git import accepts a native local repository path", async ({
 	expect((await git(["remote"], target)).stdout).toBe("");
 });
 
+test.skipIf(process.platform !== "win32")(
+	"Git import accepts a Windows drive-relative repository path",
+	async ({ expect }) => {
+		const workspace = await useTmp();
+		const source = path.join(workspace, "source.git");
+		const target = path.join(workspace, "target.git");
+		await git(["init", "--bare", source]);
+		const previousDirectory = process.cwd();
+		process.chdir(workspace);
+		try {
+			const driveRelative = `${path.parse(workspace).root[0]}:source.git`;
+			await new GitClient(target).importFrom(driveRelative);
+			expect((await stat(target)).isDirectory()).toBe(true);
+		} finally {
+			process.chdir(previousDirectory);
+		}
+	}
+);
+
 test("Git import honors depth for a native local path", async ({ expect }) => {
 	const workspace = await useTmp();
 	const source = path.join(workspace, "source");
@@ -478,21 +497,22 @@ test("Git readFile uses literal paths and the matched blob hash", async ({
 	const directory = await useTmp();
 	const repository = path.join(directory, "files");
 	await git(["init", "--initial-branch=main", repository]);
-	for (const [name, content] of [
+	const files: [string, string][] = [
 		["README", "plain\n"],
-		[":README", "colon\n"],
 		["[README", "bracket\n"],
-	]) {
+	];
+	// Windows cannot create a filename beginning with ':'. The bracket case
+	// still exercises literal pathspec matching there.
+	if (process.platform !== "win32") {
+		files.push([":README", "colon\n"]);
+	}
+	for (const [name, content] of files) {
 		await writeFile(path.join(repository, name), content);
 	}
 	await git(["add", "-A"], repository);
 	await git(["commit", "-m", "literal filenames"], repository);
 	const client = new GitClient(repository);
-	for (const [name, content] of [
-		["README", "plain\n"],
-		[":README", "colon\n"],
-		["[README", "bracket\n"],
-	]) {
+	for (const [name, content] of files) {
 		expect((await client.readFile("HEAD", name))?.data).toBe(
 			Buffer.from(content).toString("base64")
 		);
