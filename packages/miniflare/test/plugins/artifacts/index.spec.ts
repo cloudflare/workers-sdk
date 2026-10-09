@@ -137,6 +137,10 @@ async function pushFixture(mf: Miniflare, directory: string) {
 		path.join(directory, "bytes.bin"),
 		new Uint8Array([0, 255, 128, 1])
 	);
+	await writeFile(
+		path.join(directory, "payload.dat"),
+		new Uint8Array([255, 254, 128])
+	);
 	await git(["add", "."], directory);
 	await git(["commit", "-m", "fixture"], directory);
 	await git(
@@ -484,6 +488,9 @@ test("artifacts: native Git reads commits, trees, blobs and files", async ({
 	expect(
 		await rpc(mf, "readFile", [{ ref: "main", path: "bytes.bin" }], "Repo")
 	).toEqual({ bytes: [0, 255, 128, 1], type: "application/octet-stream" });
+	expect(
+		await rpc(mf, "readFile", [{ ref: "main", path: "payload.dat" }], "Repo")
+	).toEqual({ bytes: [255, 254, 128], type: "application/octet-stream" });
 });
 
 test("artifacts: native Git push/clone and token revocation", async ({
