@@ -15,7 +15,8 @@
 		// `build` script: turbo inserts a no-op `#build` node for the missing
 		// script which inherits `dependsOn: ["^build"]` from the root config,
 		// folding `@cloudflare/vite-plugin#build` and its entire dependency
-		// graph into these tasks' hashes. Do not remove it.
+		// graph into these tasks' hashes. Do not remove it. Some playgrounds also
+		// run `wrangler`, which the plugin doesn't depend on, so it is listed too.
 		//
 		// That covers local runs. CI passes `--only`
 		// (`.github/workflows/vite-plugin-playgrounds.yml`), which strips
@@ -25,7 +26,7 @@
 		// invalidation. Without it these tests replay from cache whenever a PR
 		// only touches the plugin, wrangler, miniflare or workerd (#14967).
 		"test:ci:serve": {
-			"dependsOn": ["build"],
+			"dependsOn": ["build", "wrangler#build"],
 			"env": [
 				"NODE_DEBUG",
 				"NODE_ENV",
@@ -41,7 +42,7 @@
 			"outputLogs": "new-only"
 		},
 		"test:ci:build": {
-			"dependsOn": ["build"],
+			"dependsOn": ["build", "wrangler#build"],
 			"env": [
 				"NODE_DEBUG",
 				"NODE_ENV",

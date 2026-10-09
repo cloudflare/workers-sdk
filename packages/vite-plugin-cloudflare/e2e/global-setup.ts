@@ -17,8 +17,11 @@ declare module "vitest" {
 // Using a global setup means we can modify tests without having to re-install
 // packages into our temporary directory
 export default async function ({ provide }: TestProject) {
+	// The fixtures use `wrangler` (e.g. for `wrangler deploy`), which the plugin
+	// no longer depends on, so it must be published explicitly.
 	const stopMockNpmRegistry = await startMockNpmRegistry(
-		"@cloudflare/vite-plugin"
+		"@cloudflare/vite-plugin",
+		"wrangler"
 	);
 
 	// Create temporary directory to host projects used for testing.

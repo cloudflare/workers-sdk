@@ -8,7 +8,8 @@
 		},
 		"test:e2e": {
 			"env": ["$TURBO_EXTENDS$", "CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS"],
-			"dependsOn": ["build"],
+			// The e2e fixtures install `wrangler` from the mock npm registry.
+			"dependsOn": ["build", "wrangler#build"],
 			"inputs": ["e2e/**"]
 		}
 	}
