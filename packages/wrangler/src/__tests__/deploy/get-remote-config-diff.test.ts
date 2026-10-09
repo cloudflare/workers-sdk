@@ -836,4 +836,104 @@ describe("getRemoteConfigsDiff", () => {
 		`);
 		expect(nonDestructive).toBe(false);
 	});
+
+	it("should not treat optional binding fields that are undefined remotely as deleted", ({
+		expect,
+	}) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				// The remote config sets the optional binding fields that aren't set to undefined
+				durable_objects: {
+					bindings: [
+						{
+							name: "MY_DO",
+							class_name: "MyDurableObject",
+							script_name: undefined,
+							environment: undefined,
+						},
+					],
+				},
+				r2_buckets: [
+					{
+						binding: "MY_BUCKET",
+						bucket_name: "my-bucket",
+						jurisdiction: undefined,
+					},
+				],
+				services: [
+					{
+						binding: "MY_SERVICE",
+						service: "my-service",
+						environment: undefined,
+						entrypoint: undefined,
+					},
+				],
+			},
+			{
+				name: "my-worker",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				durable_objects: {
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+				},
+				r2_buckets: [{ binding: "MY_BUCKET", bucket_name: "my-bucket" }],
+				services: [{ binding: "MY_SERVICE", service: "my-service" }],
+			} as unknown as Config
+		);
+
+		expect(diff).toBeNull();
+		expect(nonDestructive).toBe(true);
+	});
+
+	it("should still treat optional binding fields that are only set remotely as deleted", ({
+		expect,
+	}) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				durable_objects: {
+					bindings: [
+						{
+							name: "MY_DO",
+							class_name: "MyDurableObject",
+							script_name: "other-worker",
+							environment: undefined,
+						},
+					],
+				},
+			},
+			{
+				name: "my-worker",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				durable_objects: {
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+				},
+			} as unknown as Config
+		);
+
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			   durable_objects: {
+			     bindings: [
+			       {
+			-        script_name: "other-worker"
+			       }
+			     ]
+			   }
+			 }
+			"
+		`);
+		expect(nonDestructive).toBe(false);
+	});
 });
