@@ -811,81 +811,97 @@ function readFromSocket(
 }
 
 describe("Hyperdrive remote binding: local TCP bridge", () => {
-	test("relays bytes between a local TCP client and the edge binding", async ({
-		expect,
-	}) => {
-		const sockets = new Set<net.Socket>();
-		const database = net.createServer((socket) => {
-			sockets.add(socket);
-			socket.once("close", () => sockets.delete(socket));
-			socket.pipe(socket);
-		});
-		database.listen(0, "127.0.0.1");
-		await once(database, "listening");
-		const address = database.address();
-		assert(address !== null && typeof address !== "string");
-		const edge = new Miniflare({
-			workers: [
-				{
-					config: {
-						name: "proxy-server",
-						compatibilityDate: COMPAT_DATE,
-						compatibilityFlags: ["experimental"],
-						manifest: {
-							mainModule: "ProxyServerWorker.js",
-							modules: {
-								"ProxyServerWorker.js": {
-									type: "esm",
-									contents: proxyServerBundle,
+	test.for(["client disconnect", "database reset"])(
+		"relays bytes between a local TCP client and the edge binding (%s)",
+		async (closeMode, { expect }) => {
+			const sockets = new Set<net.Socket>();
+			const socketErrors: Error[] = [];
+			const database = net.createServer((socket) => {
+				sockets.add(socket);
+				socket.on("error", (error) => socketErrors.push(error));
+				socket.once("close", () => sockets.delete(socket));
+				socket.pipe(socket);
+			});
+			database.listen(0, "127.0.0.1");
+			await once(database, "listening");
+			const address = database.address();
+			assert(address !== null && typeof address !== "string");
+			const edge = new Miniflare({
+				workers: [
+					{
+						config: {
+							name: "proxy-server",
+							compatibilityDate: COMPAT_DATE,
+							compatibilityFlags: ["experimental"],
+							manifest: {
+								mainModule: "ProxyServerWorker.js",
+								modules: {
+									"ProxyServerWorker.js": {
+										type: "esm",
+										contents: proxyServerBundle,
+									},
 								},
 							},
-						},
-						env: {
-							HYPERDRIVE: {
-								type: "hyperdrive",
-								id: "db",
-								dev: {
-									connectionString: `mysql://user:password@127.0.0.1:${address.port}/database`,
+							env: {
+								HYPERDRIVE: {
+									type: "hyperdrive",
+									id: "db",
+									dev: {
+										connectionString: `mysql://user:password@127.0.0.1:${address.port}/database`,
+									},
 								},
 							},
 						},
 					},
-				},
-			],
-		});
-		useDispose(edge);
-		const edgeUrl = await edge.ready;
-
-		const controller = new HyperdriveProxyController();
-		try {
-			const bridgePort = await controller.createRemoteTcpBridge({
-				bindingId: "db",
-				name: "hyperdrive:0:HYPERDRIVE",
-				bindingName: "HYPERDRIVE",
-				remoteProxyConnectionString: edgeUrl,
+				],
 			});
+			useDispose(edge);
+			const edgeUrl = await edge.ready;
 
-			const socket = net.connect(bridgePort, "127.0.0.1");
+			const controller = new HyperdriveProxyController();
 			try {
-				await new Promise<void>((resolve, reject) => {
-					socket.once("connect", resolve);
-					socket.once("error", reject);
+				const bridgePort = await controller.createRemoteTcpBridge({
+					bindingId: "db",
+					name: "hyperdrive:0:HYPERDRIVE",
+					bindingName: "HYPERDRIVE",
+					remoteProxyConnectionString: edgeUrl,
 				});
-				socket.write("PING\n");
-				const received = await readFromSocket(socket, "PING\n");
-				expect(received).toContain("PING\n");
+
+				const socket = net.connect(bridgePort, "127.0.0.1");
+				socket.on("error", (error) => socketErrors.push(error));
+				try {
+					await new Promise<void>((resolve, reject) => {
+						socket.once("connect", resolve);
+						socket.once("error", reject);
+					});
+					socket.write("PING\n");
+					const received = await readFromSocket(socket, "PING\n");
+					expect(received).toContain("PING\n");
+					if (closeMode === "database reset") {
+						const closed = new Promise<void>((resolve) =>
+							socket.once("close", () => resolve())
+						);
+						for (const databaseSocket of sockets) {
+							databaseSocket.resetAndDestroy();
+						}
+						await closed;
+					}
+				} finally {
+					socket.destroy();
+				}
 			} finally {
-				socket.destroy();
+				controller.dispose();
+				await edge.dispose();
+				for (const socket of sockets) {
+					socket.destroy();
+				}
+				await new Promise<void>((resolve, reject) =>
+					database.close((error) => (error ? reject(error) : resolve()))
+				);
+				for (const error of socketErrors) {
+					expect(error).toMatchObject({ code: "ECONNRESET" });
+				}
 			}
-		} finally {
-			controller.dispose();
-			await edge.dispose();
-			for (const socket of sockets) {
-				socket.destroy();
-			}
-			await new Promise<void>((resolve, reject) =>
-				database.close((error) => (error ? reject(error) : resolve()))
-			);
 		}
-	});
+	);
 });
