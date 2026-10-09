@@ -265,12 +265,18 @@ jobs:
             ~/Library/Caches/.wrangler/chrome
             ~/AppData/Local/xdg.cache/.wrangler/chrome
 
+      - name: Report test retries
+        if: always() && steps.changes.outputs.everything_but_markdown == 'true'
+        run: node -r esbuild-register tools/test/report-test-retries.ts
+
       - name: Upload turbo logs
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.suite }}-${{ matrix.shard }}
-          path: .turbo/runs
+          path: |
+            .turbo/runs
+            .turbo/test-retries.json
 
   # These names are required by branch protection. Every partition must succeed
   # before any required test check passes, including when a partition is cancelled.
