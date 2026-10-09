@@ -38,7 +38,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - The six existing `Tests (OS, suite)` checks remain as branch-protection gates. Each waits for all test partitions and fails if any partition fails, is cancelled, or is skipped. Individual partition checks and Turbo summaries identify the failing workload.
   - Run a fixture shard locally with `pnpm run test:ci:fixtures --shard=1/2`. Run a runtime shard with `CI_TEST_SHARD=1/2 pnpm test:ci --filter=wrangler --filter=miniflare`. The runtime test tasks hash the shard environment variable without changing build cache keys.
 - Retry diagnostics
-  - Each test partition writes a GitHub job summary and `test-retries.json` in its Turbo artifact. It lists successful and exhausted Vitest retries, their test file, retry count, and combined attempt duration. Cached log replays are excluded; missing or cancelled logs can make the report incomplete.
+  - Each test partition writes a GitHub job summary and `test-retries.json` in its Turbo artifact. It lists visible successful and exhausted Vitest retries, their test file, retry count, and combined attempt duration. Cached log replays are excluded. The default reporter can omit fast successful retries; missing or cancelled logs can also make the report incomplete.
   - The workflow attempt number identifies job-level reruns. Assertion polling (`vi.waitFor`, `expect.poll`) and retries inside custom test commands are separate mechanisms and are not counted by this report. Wrangler's E2E file retry loop runs in `e2e-wrangler.yml`, outside this workflow.
   - Run `node -r esbuild-register tools/test/report-test-retries.ts` after a local Turbo test run with `--summarize` to inspect retry results.
 

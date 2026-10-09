@@ -143,7 +143,7 @@ export function formatTestRetries(
 	}
 	lines.push(
 		"",
-		"This reports Vitest test retries, not assertion polling or retries inside custom test commands. A cancelled run may have incomplete logs.",
+		"This reports visible Vitest retry markers. The default reporter can omit fast successful retries. Assertion polling and retries inside custom test commands are not counted, and a cancelled run may have incomplete logs.",
 		""
 	);
 	return lines.join("\n");
