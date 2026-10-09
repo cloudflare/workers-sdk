@@ -3,6 +3,7 @@ import path from "node:path";
 import * as esbuild from "esbuild";
 import { dedent } from "ts-dedent";
 import { defineConfig } from "vitest/config";
+import { getVitestShard } from "../../tools/test/vitest-shard.cjs";
 import type { PluginOption } from "vite";
 
 const TEMPLATES_DIR = path.join(import.meta.dirname, "templates");
@@ -61,6 +62,7 @@ export default defineConfig({
 	test: {
 		testTimeout: 50_000,
 		pool: "forks",
+		shard: getVitestShard(),
 		retry: 0,
 		include: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
 		// eslint-disable-next-line turbo/no-undeclared-env-vars -- TEST_REPORT_PATH is optionally set by CI

@@ -24,10 +24,37 @@ import type {
 	WorkflowStepConfig,
 	WorkflowStepContext,
 } from "cloudflare:workers";
+import type { TestContext } from "vitest";
 
 afterEach(async () => {
 	await workerdUnsafe.abortAllDurableObjects();
 });
+
+/** Keep first-attempt failures and progress visible even when Vitest retries pass. */
+function trackTimerQuotaTest({ task, onTestFinished }: TestContext) {
+	const start = performance.now();
+	const attempt = (task.result?.retryCount ?? 0) + 1;
+	const previousErrors = task.result?.errors?.length ?? 0;
+	const progress = { completed: 0, phase: "steps", stepsMs: 0 };
+	onTestFinished(() => {
+		console.info(
+			"Workflows timer quota:",
+			JSON.stringify({
+				test: task.name,
+				attempt,
+				...progress,
+				elapsedMs: Math.round(performance.now() - start),
+				errors: task.result?.errors
+					?.slice(previousErrors)
+					.map(({ name, message }) => ({
+						name,
+						message,
+					})),
+			})
+		);
+	});
+	return { attempt, start, progress };
+}
 
 describe("Engine", () => {
 	it("should not retry after NonRetryableError is thrown", async ({
@@ -762,15 +789,21 @@ describe("Engine", () => {
 	describe("step timeout timers", () => {
 		it(
 			"cancels completed step timeout timers so sequential steps stay under the active-timeout quota",
-			{ timeout: 180_000 },
-			async ({ expect }) => {
+			// Windows needs room for all 5,100 real callbacks; a timeout followed
+			// by replaying stored results previously hid incomplete attempts.
+			{ timeout: 300_000 },
+			async (context) => {
+				const { expect } = context;
+				const { attempt, start, progress } = trackTimerQuotaTest(context);
 				// workerd's isolate allows 10,000 active timers. Each step.do() starts a
 				// 10-minute scheduler.wait() for the step timeout. If that wait is not
 				// cancelled when the step finishes, 5,000 sequential immediate steps hit
 				// QuotaExceededError (issue #15788).
+				// Vitest retries retain storage. A fresh ID ensures every attempt
+				// executes real callbacks instead of replaying earlier step results.
 				const steps = 5_100;
 				const engineStub = await runWorkflowAndAwait(
-					"STEP-TIMEOUT-TIMER-QUOTA",
+					`STEP-TIMEOUT-TIMER-QUOTA-${attempt}`,
 					async (_event, step) => {
 						for (let i = 0; i < steps; i++) {
 							await step.do(
@@ -779,34 +812,50 @@ describe("Engine", () => {
 									retries: { limit: 0, delay: "0 seconds" },
 									timeout: "10 minutes",
 								},
-								async () => i
+								async () => {
+									progress.completed++;
+									return i;
+								}
 							);
 						}
 						return { completed: steps };
 					}
 				);
 
-				const logs = (await engineStub.readLogs()) as EngineLogs;
-				const failure = logs.logs.find(
-					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
-				);
+				progress.stepsMs = Math.round(performance.now() - start);
+				progress.phase = "terminal events";
+				// Avoid returning 25,000+ step events over RPC when only the terminal
+				// events are asserted. All real steps and storage operations still run.
+				const failure = (
+					await engineStub.readLogsFromEvent(InstanceEvent.WORKFLOW_FAILURE)
+				).logs[0];
 				expect(failure, JSON.stringify(failure)).toBeUndefined();
-				expect(
-					logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
-				).toBe(true);
+				const success = (
+					await engineStub.readLogsFromEvent(InstanceEvent.WORKFLOW_SUCCESS)
+				).logs[0];
+				expect(success).toBeDefined();
+				expect(success?.metadata.result).toEqual({ completed: steps });
+				expect(progress.completed).toBe(steps);
+				progress.phase = "complete";
 			}
 		);
 
 		it(
 			"cancels failed step timeout timers so sequential try/caught steps stay under the active-timeout quota",
-			{ timeout: 180_000 },
-			async ({ expect }) => {
+			// Windows needs room for all 5,100 real callbacks; a timeout followed
+			// by replaying stored results previously hid incomplete attempts.
+			{ timeout: 300_000 },
+			async (context) => {
+				const { expect } = context;
+				const { attempt, start, progress } = trackTimerQuotaTest(context);
 				// Same 10,000-timer quota as the success-path case. Failed steps used
 				// to leave scheduler.wait() running because the error handler never
 				// aborted stepExecutionSignal (issue #15788).
+				// Vitest retries retain storage. A fresh ID ensures every attempt
+				// executes real callbacks instead of replaying earlier step results.
 				const steps = 5_100;
 				const engineStub = await runWorkflowAndAwait(
-					"STEP-TIMEOUT-TIMER-QUOTA-FAILURES",
+					`STEP-TIMEOUT-TIMER-QUOTA-FAILURES-${attempt}`,
 					async (_event, step) => {
 						for (let i = 0; i < steps; i++) {
 							try {
@@ -817,6 +866,7 @@ describe("Engine", () => {
 										timeout: "10 minutes",
 									},
 									async () => {
+										progress.completed++;
 										throw new Error("immediate step failure");
 									}
 								);
@@ -831,14 +881,21 @@ describe("Engine", () => {
 					}
 				);
 
-				const logs = (await engineStub.readLogs()) as EngineLogs;
-				const failure = logs.logs.find(
-					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
-				);
+				progress.stepsMs = Math.round(performance.now() - start);
+				progress.phase = "terminal events";
+				// Avoid returning 25,000+ step events over RPC when only the terminal
+				// events are asserted. All real steps and storage operations still run.
+				const failure = (
+					await engineStub.readLogsFromEvent(InstanceEvent.WORKFLOW_FAILURE)
+				).logs[0];
 				expect(failure, JSON.stringify(failure)).toBeUndefined();
-				expect(
-					logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
-				).toBe(true);
+				const success = (
+					await engineStub.readLogsFromEvent(InstanceEvent.WORKFLOW_SUCCESS)
+				).logs[0];
+				expect(success).toBeDefined();
+				expect(success?.metadata.result).toEqual({ completed: steps });
+				expect(progress.completed).toBe(steps);
+				progress.phase = "complete";
 			}
 		);
 	});
