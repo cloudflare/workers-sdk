@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
@@ -43,6 +43,30 @@ test("artifacts: sidecar rejects legacy storage without removing it", async ({
 	expect(await readFile(path.join(legacy, "sentinel"), "utf8")).toBe(
 		"preserve me"
 	);
+});
+
+test("artifacts: restart removes interrupted creation and import staging", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const prefix = path.join(root, repositoryDirectory(namespace, "repo"));
+	const creating = await mkdtemp(path.join(root, ".artifacts-stage-"));
+	const importing = await mkdtemp(`${prefix}.import-`);
+	await writeFile(path.join(creating, "partial"), "private data");
+	await writeFile(path.join(importing, "partial"), "private data");
+	const unrelated = path.join(root, "unrelated");
+	await mkdir(unrelated);
+	await writeFile(path.join(unrelated, "keep"), "keep me");
+
+	const sidecar = await startGitSidecar(root);
+	try {
+		expect(await readdir(root)).toEqual(["unrelated"]);
+		expect(await readFile(path.join(unrelated, "keep"), "utf8")).toBe(
+			"keep me"
+		);
+	} finally {
+		await sidecar.close();
+	}
 });
 
 test("artifacts: legacy metadata layout is detected without resetting it", async ({
