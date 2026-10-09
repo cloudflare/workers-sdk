@@ -66,6 +66,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: pm === "pnpm",
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -164,9 +165,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "analog",
-			// @analogjs/vite-plugin-angular is incompatible with @angular/build 22.2.0.
-			// See https://github.com/analogjs/analog/issues/2574.
-			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -903,6 +901,7 @@ function getExperimentalFrameworkTestConfig(
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: pm === "pnpm",
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -1177,9 +1176,6 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "analog",
-			// @analogjs/vite-plugin-angular is incompatible with @angular/build 22.2.0.
-			// See https://github.com/analogjs/analog/issues/2574.
-			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],

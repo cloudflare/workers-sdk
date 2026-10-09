@@ -11,6 +11,10 @@ import type { Logger } from "@cloudflare/workers-utils";
 export interface OAuthFlowTemporaryContext {
 	/** Persistence backend for the cached temporary preview account. */
 	storage: TemporaryAccountStorage;
+	/** Consumer name used in temporary-account errors. */
+	cliDisplayName?: string;
+	/** Consumer command used to clear a cached temporary account. */
+	logoutCommand?: string;
 	/**
 	 * Hook to customise the terms-acceptance interactive prompt
 	 *  - question: the question to ask a user in interactive mode.
@@ -19,6 +23,11 @@ export interface OAuthFlowTemporaryContext {
 	 *    always return true
 	 */
 	prompt: (question: string, notice: string) => Promise<boolean>;
+	/**
+	 * Where progress messages emitted while provisioning go (for example the
+	 * proof-of-work notice).
+	 */
+	temporaryAccountLogger: TemporaryAccountLogger;
 }
 
 /** Optional provisioning inputs for a newly-created temporary account. */
@@ -43,6 +52,14 @@ export interface OAuthConsentPages {
  * Consumers pass in an implementation that maps to their own logging surface.
  */
 export type OAuthFlowLogger = Logger;
+
+/**
+ * Sink for temporary-account notices: the terms notice, the proof-of-work
+ * notice, and the claim details. They are not part of a command's output, so a
+ * CLI can route them to stderr to keep them out of output written to stdout
+ * (JSON, piped object contents, …).
+ */
+export type TemporaryAccountLogger = Pick<OAuthFlowLogger, "log">;
 
 /**
  * Dependency-injection surface for {@link createOAuthFlow}.
@@ -103,7 +120,7 @@ export interface OAuthFlowContext {
 	 * into the copy the flow prints to the user — "To authorize <name>, please
 	 * visit ...". Consumer-specific, so it is required.
 	 */
-	displayName: string;
+	cliDisplayName: string;
 
 	/**
 	 * The command that restarts the device authorization flow (e.g.

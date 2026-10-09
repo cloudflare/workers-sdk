@@ -92,8 +92,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 				Current Version ID: 00000000-0000-0000-0000-000000000000"
 			`);
 			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`
-				"▲ [WARNING] Because 'workers_dev' is not in your Wrangler file, it will be enabled for this deployment by default.
-				  To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false' in your Wrangler file."
+				"▲ [WARNING] Because 'workers_dev' is not in your Wrangler config file, it will be enabled for this deployment by default.
+				  To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false' in your Wrangler config file."
 			`);
 		});
 

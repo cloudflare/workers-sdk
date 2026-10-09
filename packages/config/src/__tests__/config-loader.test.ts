@@ -47,6 +47,40 @@ describe("resolveAndParseConfig", () => {
 		});
 	});
 
+	it("omits conditionally disabled env bindings", async ({ expect }) => {
+		const config = defineConfig(({ mode }) => ({
+			worker: {
+				name: "conditional-bindings",
+				compatibilityDate,
+				env: {
+					ALWAYS: bindings.text("always"),
+					STAGING_ONLY: mode === "staging" && bindings.text("staging"),
+					PRODUCTION_ONLY:
+						mode === "staging" ? null : bindings.text("production"),
+					ALWAYS_DISABLED: undefined,
+				},
+			},
+		}));
+
+		const staging = await resolveAndParseConfig(config, {
+			isPreview: false,
+			mode: "staging",
+		});
+		const production = await resolveAndParseConfig(config, {
+			isPreview: false,
+			mode: "production",
+		});
+
+		expect(staging.success && staging.data.worker?.env).toEqual({
+			ALWAYS: { type: "text", value: "always" },
+			STAGING_ONLY: { type: "text", value: "staging" },
+		});
+		expect(production.success && production.data.worker?.env).toEqual({
+			ALWAYS: { type: "text", value: "always" },
+			PRODUCTION_ONLY: { type: "text", value: "production" },
+		});
+	});
+
 	it("resolves a project with defined and inline resources", async ({
 		expect,
 	}) => {

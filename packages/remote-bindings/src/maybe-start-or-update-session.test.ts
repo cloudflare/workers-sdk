@@ -64,7 +64,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			{ bindings: {} },
 			existingSession,
 			undefined,
-			{ logger: createTestLogger() },
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() },
 			startSession
 		);
 
@@ -81,7 +81,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			{ bindings: {} },
 			undefined,
 			undefined,
-			{ logger: createTestLogger() },
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() },
 			startSession
 		);
 

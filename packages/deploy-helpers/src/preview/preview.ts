@@ -18,7 +18,7 @@ import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form"
 import { parseBulkInputToObject } from "../deploy/helpers/parse-bulk-input";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
-import { confirm, logger } from "../shared/context";
+import { cliPresentation, confirm, logger } from "../shared/context";
 import { getSubdomainValues } from "../triggers/deploy";
 import {
 	createPreview,
@@ -337,7 +337,7 @@ function buildPreviewContainerConfig(
 			continue;
 		}
 		throw new UserError(
-			`The container class_name "${className}" in "previews.containers" does not match any Durable Object class in your ${configFileName(config.configPath)} file. Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".`,
+			`The container class_name "${className}" in "previews.containers" does not match any Durable Object class in your ${configFileName(config.configPath, config.userConfigPath)} file. Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".`,
 			{
 				telemetryMessage: "no preview DO class matches container class_name",
 			}
@@ -541,8 +541,8 @@ export function formatNoActivePreviewUrlsMessage(config: Config): string {
 		customDomainRoute?.previews_enabled === true;
 	const cautionText =
 		workersDevAlreadyConfigured && customDomainAlreadyConfigured
-			? "Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again."
-			: "Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again.";
+			? `Caution: \`${cliPresentation.commands.deploy}\` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running \`${cliPresentation.commands.deploy}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${cliPresentation.commands.preview}\` again.`
+			: `Caution: \`${cliPresentation.commands.deploy}\` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run \`${cliPresentation.commands.deploy}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${cliPresentation.commands.preview}\` again.`;
 	let workersDevInstruction = `Add this to your ${configName}:`;
 	if (config.preview_urls === true) {
 		workersDevInstruction = `Your ${configName} already contains:`;
@@ -594,7 +594,8 @@ function getPreviewMigrationsToUpload(
 		if (foundIndex === -1) {
 			logger.warn(
 				`The published preview for ${workerName} has a migration tag "${currentMigrationTag}", which was not found in your ${configFileName(
-					config.configPath
+					config.configPath,
+					config.userConfigPath
 				)} file. You may have already deleted it. Applying all available migrations to the preview...`
 			);
 			return {
@@ -694,6 +695,7 @@ async function assemblePreviewDeploymentSettings(
 		assetsOptions?: PreviewAssetsOptions;
 		secrets?: Record<string, string>;
 		cliVars?: Record<string, string>;
+		isNewPreview: boolean;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -761,17 +763,18 @@ async function assemblePreviewDeploymentSettings(
 			...(options.tag && { "workers/tag": options.tag }),
 		};
 	}
-	if (config.migrations.length > 0) {
-		let latestDeploymentMigrationTag: string | undefined;
+	// The latest deployment holds the migration tag and the secrets that were
+	// set on the Preview. A new Preview has no deployment to take secrets from.
+	let latestDeployment: DeploymentResource | undefined;
+	if (config.migrations.length > 0 || !options.isNewPreview) {
 		try {
-			const latestDeployment = await getPreviewDeployment(
+			latestDeployment = await getPreviewDeployment(
 				config,
 				accountId,
 				workerName,
 				previewIdentifier,
 				"latest"
 			);
-			latestDeploymentMigrationTag = latestDeployment.migration_tag;
 		} catch (error) {
 			if (
 				!(
@@ -784,10 +787,12 @@ async function assemblePreviewDeploymentSettings(
 				throw error;
 			}
 		}
+	}
+	if (config.migrations.length > 0) {
 		const migrations = getPreviewMigrationsToUpload(
 			workerName,
 			config,
-			latestDeploymentMigrationTag
+			latestDeployment?.migration_tag
 		);
 		if (migrations) {
 			request.migrations = migrations;
@@ -851,6 +856,15 @@ async function assemblePreviewDeploymentSettings(
 		options.secrets ?? {}
 	)) {
 		env[secretName] = { type: "secret_text", text: secretValue };
+	}
+
+	// A new deployment replaces the whole environment, so secrets set on the
+	// Preview (e.g. with `wrangler preview secret put`) have to be inherited
+	// explicitly, otherwise this deployment would drop them.
+	for (const [name, binding] of Object.entries(latestDeployment?.env ?? {})) {
+		if (binding.type === "secret_text" && !Object.hasOwn(env, name)) {
+			env[name] = { type: "inherit" };
+		}
 	}
 
 	if (Object.keys(env).length > 0) {
@@ -962,7 +976,7 @@ function logMissingCustomDomainPreviewUrlsWarning(
 
 	logger.log("");
 	logger.warn(
-		"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
+		`Custom domain Preview URLs are configured, but none are active for this Preview. If you added \`previews_enabled = true\` after your last deployment, run \`${cliPresentation.commands.deploy}\` once to publish the custom domain Preview route, then run \`${cliPresentation.commands.preview}\` again. If you already deployed with that setting, the custom domain may still be provisioning.`
 	);
 }
 
@@ -1175,6 +1189,7 @@ async function runPreview(
 			assetsOptions,
 			secrets,
 			cliVars: args.cliVars,
+			isNewPreview,
 		}
 	);
 	const deployment = await createPreviewDeployment(

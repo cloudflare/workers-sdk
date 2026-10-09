@@ -8,12 +8,16 @@ import type { StartDevWorkerInput } from "@cloudflare/workers-utils";
 
 export type StartRemoteProxySessionOptions = Omit<
 	PackageStartRemoteProxySessionOptions,
-	"logger"
+	"cliDisplayName" | "logger"
 >;
 
 export function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options: StartRemoteProxySessionOptions = {}
 ): Promise<RemoteProxySession> {
-	return startRemoteProxySessionFromPackage(bindings, { ...options, logger });
+	return startRemoteProxySessionFromPackage(bindings, {
+		...options,
+		cliDisplayName: "Wrangler",
+		logger,
+	});
 }

@@ -36,6 +36,8 @@
 	],
 	"ignorePatterns": [
 		"CHANGELOG.md",
+		// tsup deletes these generated config bundles while checks run concurrently.
+		"**/tsup.config.bundled_*.{mjs,cjs}",
 		// In the C3 templates, in particular framework templates, we want to be able to
 		// use any format that the framework authors prefer/use in their own templates,
 		// so let's ignore all the c3 template files, exlcuding the c3.ts ones, and tests

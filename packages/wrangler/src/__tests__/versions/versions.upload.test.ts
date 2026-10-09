@@ -281,9 +281,9 @@ describe("versions upload", () => {
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(1);
-			expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
-			expect(std.out).toContain("Temporary account ready:");
-			expect(std.out).toContain("Account: Preview Account Alpha (created)");
+			expect(std.err).toContain(TEMPORARY_TERMS_NOTICE);
+			expect(std.err).toContain("Temporary account ready:");
+			expect(std.err).toContain("Account: Preview Account Alpha (created)");
 			expect(std.out).toContain("Uploaded test-name");
 		});
 	});
@@ -839,7 +839,7 @@ describe("versions upload", () => {
 			});
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in your Wrangler config file. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
 
 				"
 			`);

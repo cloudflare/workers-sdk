@@ -99,6 +99,30 @@ describe("temporary event accounts", () => {
 		expect(createBody).not.toHaveProperty("eventCode");
 	});
 
+	it("names the consuming CLI in unsupported challenge errors", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(`${PREVIEWS_URL}/challenge`, () =>
+				HttpResponse.json({
+					result: {
+						challengeToken: "challenge-token",
+						seed: Buffer.alloc(32, 1).toString("base64url"),
+						k: 0,
+						g: 2,
+					},
+				})
+			)
+		);
+
+		await expect(createTemporaryPreviewAccount(silentLogger)).rejects.toThrow(
+			"not supported by this version of Wrangler"
+		);
+		await expect(
+			createTemporaryPreviewAccount(silentLogger, undefined, "cf")
+		).rejects.toThrow("not supported by this version of cf");
+	});
+
 	it("sends the event code only in the creation request and requires acknowledgement", async ({
 		expect,
 	}) => {
@@ -148,14 +172,14 @@ describe("temporary event accounts", () => {
 			getOrCreateTemporaryPreviewAccount({
 				storage,
 				prompt: async () => true,
-				logger: silentLogger,
+				temporaryAccountLogger: silentLogger,
 				request: { eventCode: EVENT_CODE },
 			})
 		).rejects.toThrow("did not acknowledge the event code");
 		expect(storage.writes).toEqual([]);
 	});
 
-	it("rejects an event code when a valid temporary account is cached", async ({
+	it("rejects an event code when a valid temporary account is cached for Wrangler", async ({
 		expect,
 	}) => {
 		const storage = createStorage(previewAccount);
@@ -168,10 +192,33 @@ describe("temporary event accounts", () => {
 					promptCalls += 1;
 					return true;
 				},
-				logger: silentLogger,
+				temporaryAccountLogger: silentLogger,
 				request: { eventCode: EVENT_CODE },
 			})
-		).rejects.toThrow("A temporary account is already cached");
+		).rejects.toThrow("run `wrangler logout` and retry");
+		expect(promptCalls).toBe(0);
+		expect(storage.writes).toEqual([]);
+	});
+
+	it("rejects an event code when a valid temporary account is cached for cf", async ({
+		expect,
+	}) => {
+		const storage = createStorage(previewAccount);
+		let promptCalls = 0;
+
+		await expect(
+			getOrCreateTemporaryPreviewAccount({
+				storage,
+				prompt: async () => {
+					promptCalls += 1;
+					return true;
+				},
+				temporaryAccountLogger: silentLogger,
+				cliDisplayName: "cf",
+				logoutCommand: "cf auth logout",
+				request: { eventCode: EVENT_CODE },
+			})
+		).rejects.toThrow("run `cf auth logout` and retry");
 		expect(promptCalls).toBe(0);
 		expect(storage.writes).toEqual([]);
 	});

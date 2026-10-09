@@ -22,6 +22,7 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "miniflare";
+import semverMajor from "semver/functions/major.js";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { guessWorkerExports } from "./guess-exports";
@@ -31,7 +32,7 @@ import {
 	isFileNotFoundError,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
-import { handleLoopbackRequest } from "./loopback";
+import { createLoopbackHandler } from "./loopback";
 import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
@@ -296,6 +297,7 @@ function rewriteStreamingTailSelfReferences(
 }
 
 async function buildProjectWorkerOptions(
+	ctx: Vitest,
 	project: TestProject,
 	customOptions: WorkersPoolOptionsWithDefines,
 	main: string | undefined
@@ -414,6 +416,39 @@ async function buildProjectWorkerOptions(
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_v8_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_process_v2");
 
+	const vitestMajorVersion = semverMajor(getVitestVersion(ctx));
+	if (vitestMajorVersion >= 5) {
+		// Vitest 5's spy package constructs a FinalizationRegistry when imported
+		// and a WeakRef for every mock. Workerd gates both APIs behind this flag.
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"weak_ref",
+			"to support Vitest 5",
+			runnerWorker.compatibilityDate >= "2025-05-05"
+		);
+	}
+	// The Worker cannot read the host's installed Vitest version, so pass it
+	// explicitly for its runner and coverage setup.
+	runnerWorker.bindings ??= {};
+	runnerWorker.bindings.__VITEST_POOL_WORKERS_VITEST_MAJOR_VERSION =
+		String(vitestMajorVersion);
+
+	// V8 coverage drives the isolate's Profiler domain through node:inspector.
+	// The real Session implementation is intentionally local-dev-only.
+	const { coverage } = project.serializedConfig;
+	if (coverage.enabled && coverage.provider === "v8") {
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"nodejs_inspector_module",
+			'because Vitest\'s `coverage.provider` is set to `"v8"`'
+		);
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"nodejs_inspector_local_dev",
+			'because Vitest\'s `coverage.provider` is set to `"v8"`'
+		);
+	}
+
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
 	runnerWorker.unsafeUseModuleFallbackService = true;
@@ -422,7 +457,9 @@ async function buildProjectWorkerOptions(
 	runnerWorker.serviceBindings ??= {};
 	runnerWorker.serviceBindings[SELF_SERVICE_BINDING] = kCurrentWorker;
 	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
-		handleLoopbackRequest;
+		createLoopbackHandler(
+			project.serializedConfig.coverage.coverageFilesDirectory
+		);
 
 	// Build wrappers for entrypoints and Durable Objects defined in this worker
 	runnerWorker.durableObjects ??= {};
@@ -654,6 +691,7 @@ async function buildProjectMiniflareOptions(
 ): Promise<MiniflareOptions> {
 	const moduleFallbackService = getModuleFallbackService(ctx);
 	const [runnerWorker, ...auxiliaryWorkers] = await buildProjectWorkerOptions(
+		ctx,
 		project,
 		customOptions,
 		main
@@ -808,26 +846,12 @@ function getUpstreamVitestVersion(pkgJson: PackageJson): string | undefined {
 	return pkgJson.bundledVersions?.vitest;
 }
 
-export function assertCompatibleVitestVersion(ctx: Vitest) {
-	// Some package managers don't enforce `peerDependencies` requirements,
-	// so add a runtime sanity check to ensure things don't break in strange ways.
-	const poolPkgJson = getPackageJson(__dirname);
+function getVitestVersion(ctx: Vitest): string {
 	const vitestPkgJson = getPackageJson(ctx.distPath);
-	assert(
-		poolPkgJson !== undefined,
-		"Expected to find `package.json` for `@cloudflare/vitest-plugin`"
-	);
 	assert(
 		vitestPkgJson !== undefined,
 		"Expected to find `package.json` for `vitest`"
 	);
-
-	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
-	assert(
-		expectedVitestVersion !== undefined,
-		"Expected to find `@cloudflare/vitest-plugin`'s `vitest` version constraint"
-	);
-
 	const actualVitestVersion =
 		vitestPkgJson.name === "vitest"
 			? vitestPkgJson.version
@@ -836,6 +860,25 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 		actualVitestVersion !== undefined,
 		"Expected to find `vitest`'s version"
 	);
+	return actualVitestVersion;
+}
+
+export function assertCompatibleVitestVersion(ctx: Vitest) {
+	// Some package managers don't enforce `peerDependencies` requirements,
+	// so add a runtime sanity check to ensure things don't break in strange ways.
+	const poolPkgJson = getPackageJson(__dirname);
+	assert(
+		poolPkgJson !== undefined,
+		"Expected to find `package.json` for `@cloudflare/vitest-plugin`"
+	);
+
+	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
+	assert(
+		expectedVitestVersion !== undefined,
+		"Expected to find `@cloudflare/vitest-plugin`'s `vitest` version constraint"
+	);
+
+	const actualVitestVersion = getVitestVersion(ctx);
 
 	// Hard error on Vitest v3, which definitely won't work
 	if (semverSatisfies(actualVitestVersion, "3.x")) {
@@ -857,20 +900,29 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
  * Ensures that the specified compatibility feature is enabled for Vitest to work.
  * @param compatibilityFlags The list of current compatibility flags.
  * @param feature The name of the feature to enable.
+ * @param reason An optional explanation of why the feature is needed.
+ * @param enabledByDefault Whether the compatibility date enables this feature.
+ * @returns Nothing.
  */
-function ensureFeature(compatibilityFlags: string[], feature: string) {
+function ensureFeature(
+	compatibilityFlags: string[],
+	feature: string,
+	reason = "to support the Vitest runner",
+	enabledByDefault = false
+): void {
 	const flagToEnable = `enable_${feature}`;
 	const flagToDisable = `disable_${feature}`;
-	if (!compatibilityFlags.includes(flagToEnable)) {
+	if (!enabledByDefault && !compatibilityFlags.includes(flagToEnable)) {
 		debug(
-			"Adding `%s` compatibility flag during tests as this feature is needed to support the Vitest runner.",
-			flagToEnable
+			"Adding `%s` compatibility flag during tests as this feature is needed %s.",
+			flagToEnable,
+			reason
 		);
 		compatibilityFlags.push(flagToEnable);
 	}
 	if (compatibilityFlags.includes(flagToDisable)) {
 		log.warn(
-			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
+			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed ${reason}.`
 		);
 		compatibilityFlags.splice(compatibilityFlags.indexOf(flagToDisable), 1);
 	}
