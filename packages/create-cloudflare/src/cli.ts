@@ -20,13 +20,14 @@ import {
 	detectPackageManager,
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
-import { installWrangler, npmInstall } from "helpers/packages";
+import { installCf, installWrangler, npmInstall } from "helpers/packages";
 import {
 	getPnpmIgnoredBuildsGuidance,
 	isIgnoredBuildsError,
 	writePnpmBuildApprovals,
 } from "helpers/pnpmBuildApprovals";
 import { version } from "../package.json";
+import { usesCfCli } from "./cf/config";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, offerGit } from "./git";
@@ -169,9 +170,13 @@ const configure = async (ctx: C3Context) => {
 		"Step 2 of 3"
 	);
 
-	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
-	// If we _didn't_ install Wrangler when using autoconfig we'd end up with a double install (one from `npx` and one from autoconfig)
-	await installWrangler();
+	if (usesCfCli(ctx.project.path)) {
+		await installCf();
+	} else {
+		// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
+		// If we _didn't_ install Wrangler when using autoconfig we'd end up with a double install (one from `npx` and one from autoconfig)
+		await installWrangler();
+	}
 
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();

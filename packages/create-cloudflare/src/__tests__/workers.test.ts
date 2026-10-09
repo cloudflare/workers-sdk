@@ -4,6 +4,7 @@ import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, usesTypescript, writeFile } from "helpers/files";
 import { installPackages } from "helpers/packages";
 import { beforeEach, describe, test, vi } from "vitest";
+import { usesCfCli } from "../cf/config";
 import { addTypes, updateTsConfig } from "../workers";
 import { createTestContext } from "./helpers";
 import type { C3Context } from "types";
@@ -12,6 +13,7 @@ vi.mock("helpers/files");
 vi.mock("helpers/compatDate");
 vi.mock("helpers/packages");
 vi.mock("fs");
+vi.mock("../cf/config");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
 beforeEach(() => {
@@ -139,6 +141,40 @@ describe("updateTsConfig", () => {
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
 			`./worker-configuration.d.ts`
 		);
+	});
+
+	test("will not add generated types file for cf projects", async ({
+		expect,
+	}) => {
+		vi.mocked(usesCfCli).mockReturnValue(true);
+		vi.mocked(readFile).mockImplementation((path) =>
+			path.includes("tsconfig.json")
+				? `{ "compilerOptions": { "types" : ["@cloudflare/workers-types"]} }`
+				: "// Runtime types generated with workerd"
+		);
+
+		await updateTsConfig(ctx, { usesNodeCompat: false });
+
+		const written = vi.mocked(writeFile).mock.calls[0][1];
+		expect(written).not.toContain(".cloudflare/types");
+		expect(written).not.toContain("@cloudflare/workers-types");
+		// The runtime types are read from where `cf` generates them
+		expect(readFile).toHaveBeenCalledWith("./.cloudflare/types/index.d.ts");
+	});
+
+	test("will not add an empty types list for cf projects", async ({
+		expect,
+	}) => {
+		vi.mocked(usesCfCli).mockReturnValue(true);
+		vi.mocked(readFile).mockImplementation((path) =>
+			path.includes("tsconfig.json")
+				? `{ "compilerOptions": {} }`
+				: "// Runtime types generated with workerd"
+		);
+
+		await updateTsConfig(ctx, { usesNodeCompat: false });
+
+		expect(writeFile).not.toHaveBeenCalled();
 	});
 
 	test("preserves SvelteKit generated types", async ({ expect }) => {

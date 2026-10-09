@@ -3,12 +3,8 @@ import { runWranglerCommand } from "helpers/command";
 import { hasSparrowSourceKey } from "helpers/sparrow";
 import { beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
-import {
-	chooseAccount,
-	isLoggedIn,
-	listAccounts,
-	wranglerLogin,
-} from "../accounts";
+import { usesCfCli } from "../../cf/config";
+import { chooseAccount, isLoggedIn, listAccounts, login } from "../accounts";
 
 const loggedInWhoamiOutput = `
 -------------------------------------------------------
@@ -35,8 +31,20 @@ const loginSuccessOutput = `
 Successfully logged in.
 `;
 
+const cfLoggedInWhoamiOutput = JSON.stringify({
+	authenticated: true,
+	tokenValid: true,
+	accounts: [{ id: "g8s9dl23jv90xa0xxxx990ds09xxxxda", name: "testacct" }],
+});
+
+const cfLoggedOutWhoamiOutput = JSON.stringify({
+	authenticated: false,
+	error: "Not logged in",
+});
+
 vi.mock("helpers/command");
 vi.mock("helpers/sparrow");
+vi.mock("../../cf/config");
 vi.mock("which-pm-runs");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
@@ -65,15 +73,35 @@ describe("wrangler account helpers", () => {
 			// Should not call wrangler whoami when env var is set
 			expect(runWranglerCommand).not.toHaveBeenCalled();
 		});
+
+		test("lists accounts with cf for cf projects", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
+			vi.mocked(usesCfCli).mockReturnValue(true);
+			vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+				cfLoggedInWhoamiOutput
+			);
+
+			const testCtx = createTestContext();
+			await chooseAccount(testCtx);
+
+			expect(testCtx.account).toEqual({
+				id: "g8s9dl23jv90xa0xxxx990ds09xxxxda",
+				name: "testacct",
+			});
+			expect(runWranglerCommand).toHaveBeenCalledWith(
+				["npx", "cf", "auth", "whoami"],
+				expect.anything()
+			);
+		});
 	});
 
-	describe("wranglerLogin", async () => {
+	describe("login", async () => {
 		test("logged in", async ({ expect }) => {
 			const mock = vi
 				.mocked(runWranglerCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
 
-			const loggedIn = await wranglerLogin(ctx);
+			const loggedIn = await login(ctx);
 
 			expect(loggedIn).toBe(true);
 			expect(mock).toHaveBeenCalledWith(
@@ -94,7 +122,7 @@ describe("wrangler account helpers", () => {
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
 				.mockReturnValueOnce(Promise.resolve(loginSuccessOutput));
 
-			const loggedIn = await wranglerLogin(ctx);
+			const loggedIn = await login(ctx);
 
 			expect(loggedIn).toBe(true);
 			expect(mock).toHaveBeenCalledWith(
@@ -115,7 +143,7 @@ describe("wrangler account helpers", () => {
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
 				.mockReturnValueOnce(Promise.resolve(loginDeniedOutput));
 
-			const loggedIn = await wranglerLogin(ctx);
+			const loggedIn = await login(ctx);
 
 			expect(loggedIn).toBe(false);
 			expect(mock).toHaveBeenCalledWith(
@@ -128,6 +156,53 @@ describe("wrangler account helpers", () => {
 			);
 			expect(spinner.start).toHaveBeenCalledTimes(2);
 			expect(spinner.stop).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	describe("login (cf)", () => {
+		beforeEach(() => {
+			vi.mocked(usesCfCli).mockReturnValue(true);
+		});
+
+		test("logged in", async ({ expect }) => {
+			vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+				cfLoggedInWhoamiOutput
+			);
+
+			await expect(login(ctx)).resolves.toBe(true);
+			expect(runWranglerCommand).toHaveBeenCalledOnce();
+			expect(runWranglerCommand).toHaveBeenCalledWith(
+				["npx", "cf", "auth", "whoami"],
+				expect.anything()
+			);
+		});
+
+		test("logged out (successful login)", async ({ expect }) => {
+			vi.mocked(runWranglerCommand)
+				.mockResolvedValueOnce(cfLoggedOutWhoamiOutput)
+				.mockResolvedValueOnce("")
+				.mockResolvedValueOnce(cfLoggedInWhoamiOutput);
+
+			await expect(login(ctx)).resolves.toBe(true);
+			expect(runWranglerCommand).toHaveBeenCalledWith([
+				"npx",
+				"cf",
+				"auth",
+				"login",
+				"--force",
+			]);
+			expect(runWranglerCommand).not.toHaveBeenCalledWith(
+				["npx", "wrangler", "login"],
+				expect.anything()
+			);
+		});
+
+		test("logged out (login failed)", async ({ expect }) => {
+			vi.mocked(runWranglerCommand)
+				.mockResolvedValueOnce(cfLoggedOutWhoamiOutput)
+				.mockRejectedValueOnce(new Error("fail!"));
+
+			await expect(login(ctx)).resolves.toBe(false);
 		});
 	});
 

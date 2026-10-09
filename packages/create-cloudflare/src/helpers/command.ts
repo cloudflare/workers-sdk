@@ -3,9 +3,9 @@ import { readMetricsConfig } from "./metrics-config";
 import type { RunOptions } from "@cloudflare/cli-shared-helpers/command";
 
 /**
- * Runs a wrangler command with C3-specific telemetry handling.
+ * Runs a wrangler (or `cf`) command with C3-specific telemetry handling.
  *
- * - Sets WRANGLER_SEND_METRICS=false when C3 telemetry is disabled
+ * - Sets WRANGLER_SEND_METRICS=false when C3 telemetry is disabled, which `cf` also respects
  * - Always sets WRANGLER_HIDE_BANNER=true for cleaner output
  */
 export const runWranglerCommand = async (

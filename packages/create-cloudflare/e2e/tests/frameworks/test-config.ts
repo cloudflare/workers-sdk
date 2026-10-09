@@ -402,9 +402,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--variant", "vinext"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
-			// preview script is `build && start` (wrangler dev on build output).
+			// preview script is `build && start` (vite preview on build output).
 			verifyPreview: {
-				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "vinext + Cloudflare Workers",
 			},
