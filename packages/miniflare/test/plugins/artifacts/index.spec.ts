@@ -262,6 +262,43 @@ test("artifacts: config update closes retired sidecars but abort preserves activ
 	}
 });
 
+test("artifacts: sidecar startup failures reject without crashing Miniflare", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const file = path.join(root, "not-a-directory");
+	await writeFile(file, "not a directory");
+	const controller = new ArtifactsController();
+	controller.beginUpdate();
+	try {
+		await expect(controller.get(file)).rejects.toThrow(
+			/Local Artifacts Git backend failed to start/
+		);
+		await controller.abortUpdate();
+	} finally {
+		await controller.dispose();
+	}
+});
+
+test("artifacts: a stopped backend is replaced on the next config update", async ({
+	expect,
+}) => {
+	const controller = new ArtifactsController();
+	const root = path.join(await useTmp(), "repos");
+	try {
+		controller.beginUpdate();
+		const first = await controller.get(root);
+		await controller.commitUpdate();
+		await first.sidecar.close();
+		controller.beginUpdate();
+		const replacement = await controller.get(root);
+		expect(replacement.sidecar.secret).not.toBe(first.sidecar.secret);
+		await controller.commitUpdate();
+	} finally {
+		await controller.dispose();
+	}
+});
+
 test("artifacts: omitted remote preserves remote routing without host Git", async ({
 	expect,
 }) => {
@@ -965,6 +1002,80 @@ test("artifacts: sidecar creates a repository without host Git config", async ({
 		await sidecar.close();
 	}
 });
+
+test("artifacts: stale deletion cannot remove a replacement generation", async ({
+	expect,
+}) => {
+	const root = path.join(await useTmp(), "repos");
+	const sidecar = await startGitSidecar(root);
+	try {
+		const deleteGeneration = async (generation: string) => {
+			const response = await fetch(
+				`http://${sidecar.address}/__local_artifacts__`,
+				{
+					method: "POST",
+					headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+					body: JSON.stringify({
+						action: "delete",
+						namespace: "test",
+						name: "repo",
+						generation,
+					}),
+				}
+			);
+			expect(response.status).toBe(200);
+			await response.body?.cancel();
+		};
+		await createSidecarRepository(sidecar, "original-generation");
+		await deleteGeneration("original-generation");
+		await createSidecarRepository(sidecar, "replacement-generation");
+		await deleteGeneration("original-generation");
+		expect(
+			await new GitClient(repositoryPath(root, "test", "repo")).generation()
+		).toBe("replacement-generation");
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test.skipIf(process.platform === "win32")(
+	"artifacts: smart HTTP pushes cannot run repository-local hooks",
+	async ({ expect }) => {
+		const root = path.join(await useTmp(), "repos");
+		const sidecar = await startGitSidecar(root);
+		try {
+			await createSidecarRepository(sidecar, "hook-generation");
+			const repository = repositoryPath(root, "test", "repo");
+			const hooks = path.join(await useTmp(), "hooks");
+			const marker = path.join(await useTmp(), "hook-ran");
+			await mkdir(hooks);
+			const hook = path.join(hooks, "pre-receive");
+			await writeFile(hook, `#!/bin/sh\nprintf ran > '${marker}'\n`);
+			await chmod(hook, 0o755);
+			await git(["-C", repository, "config", "core.hooksPath", hooks]);
+
+			const source = path.join(await useTmp(), "source");
+			await git(["init", "--initial-branch=main", source]);
+			await writeFile(path.join(source, "README"), "fixture\n");
+			await git(["add", "README"], source);
+			await git(["commit", "-m", "fixture"], source);
+			await git(
+				["push", `http://${sidecar.address}/git/test/repo.git`, "main"],
+				source,
+				{
+					GIT_CONFIG_COUNT: "3",
+					GIT_CONFIG_KEY_1: "http.extraHeader",
+					GIT_CONFIG_VALUE_1: `X-Local-Artifacts-Backend: ${sidecar.secret}`,
+					GIT_CONFIG_KEY_2: "http.extraHeader",
+					GIT_CONFIG_VALUE_2: "X-Local-Artifacts-Generation: hook-generation",
+				}
+			);
+			await expect(stat(marker)).rejects.toMatchObject({ code: "ENOENT" });
+		} finally {
+			await sidecar.close();
+		}
+	}
+);
 
 test("artifacts: shallow imports stay shallow when cloned with Git protocol v2", async ({
 	expect,

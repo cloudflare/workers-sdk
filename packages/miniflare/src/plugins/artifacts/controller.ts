@@ -49,7 +49,11 @@ export class ArtifactsController {
 		this.#pendingRoots.add(root);
 		let backend = this.#backends.get(root);
 		if (!backend) {
-			backend = this.#start(root);
+			backend = this.#start(root, () => {
+				if (this.#backends.get(root) === backend) {
+					this.#backends.delete(root);
+				}
+			});
 			this.#backends.set(root, backend);
 			void backend.catch(() => {
 				if (this.#backends.get(root) === backend) {
@@ -60,7 +64,10 @@ export class ArtifactsController {
 		return backend;
 	}
 
-	async #start(root: string): Promise<LocalArtifactsBackend> {
+	async #start(
+		root: string,
+		onExit: () => void
+	): Promise<LocalArtifactsBackend> {
 		const port = await getPort({ host: "127.0.0.1" });
 		// __dirname is dist/src in the bundled Miniflare entry point.
 		const worker = new Worker(
@@ -69,10 +76,19 @@ export class ArtifactsController {
 		);
 		try {
 			const endpoint = await waitForSidecarReady(worker);
+			let stopping = false;
 			worker.on("error", (error) => {
 				process.emitWarning(
 					`Local Artifacts Git backend failed: ${error.message}`
 				);
+			});
+			worker.once("exit", (code) => {
+				onExit();
+				if (!stopping) {
+					process.emitWarning(
+						`Local Artifacts Git backend exited (${code}). Restart the dev server or reload its configuration to reconnect.`
+					);
+				}
 			});
 			return {
 				port,
@@ -82,6 +98,7 @@ export class ArtifactsController {
 						if (worker.threadId === -1) {
 							return;
 						}
+						stopping = true;
 						const exited = once(worker, "exit");
 						worker.postMessage("close");
 						await exited;
@@ -121,6 +138,10 @@ export class ArtifactsController {
 	}
 }
 
+type SidecarStartupMessage =
+	| Pick<GitSidecar, "address" | "secret">
+	| { error: string };
+
 function waitForSidecarReady(
 	worker: Worker
 ): Promise<Pick<GitSidecar, "address" | "secret">> {
@@ -130,9 +151,17 @@ function waitForSidecarReady(
 			worker.off("error", failed);
 			worker.off("exit", exited);
 		}
-		function ready(value: Pick<GitSidecar, "address" | "secret">) {
+		function ready(value: SidecarStartupMessage) {
 			cleanup();
-			resolve(value);
+			if ("error" in value) {
+				reject(
+					new Error(
+						`Local Artifacts Git backend failed to start: ${value.error}`
+					)
+				);
+			} else {
+				resolve(value);
+			}
 		}
 		function failed(error: Error) {
 			cleanup();

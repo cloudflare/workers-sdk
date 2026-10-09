@@ -51,6 +51,8 @@ interface Repository {
 	createdAt: string;
 	updatedAt: string;
 	lastPushAt?: string | undefined;
+	// A failed native deletion stays retryable without exposing the repository.
+	deleting?: boolean;
 	tokens: RepositoryToken[];
 }
 
@@ -261,6 +263,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			validateName(name);
 			validateRepositoryOptions(options);
 			const repositories = await this.repos();
+			await this.finishDeletion(repositories, name);
 			if (hasRepository(repositories, name)) {
 				throw new ArtifactsError(
 					"ALREADY_EXISTS",
@@ -316,6 +319,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		return this.exclusive(async () => {
 			const { source, target, sourceUrl } = parseImportRequest(options);
 			const repositories = await this.repos();
+			await this.finishDeletion(repositories, target.name);
 			if (hasRepository(repositories, target.name)) {
 				throw new ArtifactsError(
 					"ALREADY_EXISTS",
@@ -371,9 +375,9 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			);
 		}
 		const offset = decodeCursor(options.cursor);
-		const repositories = Object.values(await this.repos()).sort((left, right) =>
-			right.createdAt.localeCompare(left.createdAt)
-		);
+		const repositories = Object.values(await this.repos())
+			.filter((repository) => !repository.deleting)
+			.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 		const page = repositories
 			.slice(offset, offset + limit)
 			.map((repository) => ({
@@ -397,16 +401,18 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		return this.exclusive(async () => {
 			validateName(name);
 			const repositories = await this.repos();
-			if (!hasRepository(repositories, name)) {
+			const repository = repositories[name.toLowerCase()];
+			if (!repository) {
 				return false;
 			}
-			const repository = getRepo(repositories, name);
-			// Persist removal first. If storage fails, the Git contents and
-			// metadata must both remain usable. Git cleanup first retires the
-			// directory atomically; startup or a later creation cleans orphans.
-			delete repositories[name.toLowerCase()];
-			await this.saveRepos(repositories);
-			await this.backend(repository, { action: "delete" });
+			// Persist a tombstone before Git cleanup. A storage failure leaves the
+			// live repository intact; a backend failure remains retryable by delete
+			// or the next creation of this name, including after a process restart.
+			if (!repository.deleting) {
+				repository.deleting = true;
+				await this.saveRepos(repositories);
+			}
+			await this.finishDeletion(repositories, name);
 			return true;
 		});
 	}
@@ -487,6 +493,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			validateRepositoryOptions(options);
 			const repositories = await this.repos();
 			const source = getRepo(repositories, sourceName, expectedId);
+			await this.finishDeletion(repositories, name);
 			if (hasRepository(repositories, name)) {
 				throw new ArtifactsError(
 					"ALREADY_EXISTS",
@@ -549,6 +556,19 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 
 	saveRepos(repositories: RepositoryMap): Promise<void> {
 		return this.ctx.storage.put("repos", repositories);
+	}
+
+	private async finishDeletion(
+		repositories: RepositoryMap,
+		name: string
+	): Promise<void> {
+		const repository = repositories[name.toLowerCase()];
+		if (!repository?.deleting) {
+			return;
+		}
+		await this.backend(repository, { action: "delete" });
+		delete repositories[name.toLowerCase()];
+		await this.saveRepos(repositories);
 	}
 
 	async getRepo(name: string, expectedId?: string): Promise<Repository> {
@@ -906,6 +926,7 @@ function getRepo(
 	const repository = repositories[name.toLowerCase()];
 	if (
 		!repository ||
+		repository.deleting ||
 		(expectedId !== undefined && repository.id !== expectedId)
 	) {
 		throw new ArtifactsError("NOT_FOUND", `Repository not found: ${name}.`);
