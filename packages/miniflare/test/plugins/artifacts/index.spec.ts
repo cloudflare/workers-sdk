@@ -540,6 +540,49 @@ test("artifacts: native Git push/clone and token revocation", async ({
 	await revoked.body?.cancel();
 });
 
+test.skipIf(process.platform === "win32")(
+	"artifacts: large push replies drain before ref synchronization",
+	async ({ expect }) => {
+		const root = await useTmp();
+		const { stdout: gitPath } = await exec("which", ["git"]);
+		const wrapper = path.join(root, "git");
+		await writeFile(
+			wrapper,
+			`#!/bin/sh
+case " $* " in
+  *" http-backend "*)
+    printf 'Content-Type: application/x-git-receive-pack-result\\r\\n\\r\\n'
+    dd if=/dev/zero bs=1048576 count=2 2>/dev/null
+    exit 0 ;;
+esac
+exec '${gitPath.trim().replaceAll("'", "'\\''")}' "$@"
+`
+		);
+		await chmod(wrapper, 0o755);
+		const previousPath = process.env.PATH;
+		process.env.PATH = `${root}:${previousPath}`;
+		try {
+			const mf = new Miniflare(options());
+			useDispose(mf);
+			const created = await rpc(mf, "create", ["repo"]);
+			const response = await fetch(`${created.remote}/git-receive-pack`, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${created.token}`,
+					"Content-Type": "application/x-git-receive-pack-request",
+				},
+				body: "",
+				signal: AbortSignal.timeout(15_000),
+			});
+			expect(response.status).toBe(200);
+			expect((await response.arrayBuffer()).byteLength).toBe(2 * 1024 * 1024);
+		} finally {
+			process.env.PATH = previousPath;
+		}
+	},
+	20_000
+);
+
 test("artifacts: read-only and read-scoped tokens reject Git pushes", async ({
 	expect,
 }) => {

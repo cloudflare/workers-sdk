@@ -797,16 +797,31 @@ async function handleGitRequest(
 		return response;
 	}
 
-	if (response.ok) {
+	if (!response.ok) {
+		return response;
+	}
+	const syncRefs = async () => {
 		try {
 			await state.syncAfterPush(repository.name, previousRefs);
 		} catch {
 			// Git has already accepted the push; metadata bookkeeping must not fail the client request.
 		}
+	};
+	if (!response.body) {
+		await syncRefs();
+		return response;
 	}
-	// Forward the Git response stream instead of buffering an unbounded pack
-	// response in the Durable Object isolate.
-	return response;
+	// Drain the response with backpressure before querying refs: the sidecar
+	// holds its repository lock until Git finishes writing this body. Flush
+	// delays EOF until metadata is synchronized without buffering the pack.
+	const body = response.body.pipeThrough(
+		new TransformStream<Uint8Array, Uint8Array>({ flush: syncRefs })
+	);
+	return new Response(body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers: response.headers,
+	});
 }
 
 async function authorize(
