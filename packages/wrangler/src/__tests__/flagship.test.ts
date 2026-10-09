@@ -773,6 +773,28 @@ describe("flagship", () => {
 			expect(std.out).toContain("Enabled flag");
 		});
 
+		it("keeps flag metadata when updating a flag", async ({ expect }) => {
+			const metadata = { owner: "growth", ticket: 42 };
+			mockGet("apps/app-1/flags/new-ui", {
+				key: "new-ui",
+				enabled: false,
+				default_variation: "off",
+				variations: { on: true, off: false },
+				rules: [],
+				metadata,
+			});
+			const body = captureBody("put", "apps/app-1/flags/new-ui", {
+				key: "new-ui",
+				enabled: true,
+				default_variation: "off",
+				variations: { on: true, off: false },
+				rules: [],
+				metadata,
+			});
+			await runWrangler("flagship flags enable app-1 new-ui");
+			await expect(body).resolves.toMatchObject({ enabled: true, metadata });
+		});
+
 		it("disables multiple flags", async ({ expect }) => {
 			const updated: string[] = [];
 			msw.use(
@@ -1796,6 +1818,7 @@ describe("flagship", () => {
 					rollout: { percentage: 50 },
 				},
 			],
+			metadata: { owner: "growth" },
 		};
 
 		beforeEach(() => writeWranglerConfig());
@@ -1815,6 +1838,7 @@ describe("flagship", () => {
 					enabled: true,
 					default_variation: "off",
 					rules: REMOTE_FLAG.rules,
+					metadata: REMOTE_FLAG.metadata,
 				}),
 			]);
 			expect(std.out).toContain("Pulled 1 flag from app-1");

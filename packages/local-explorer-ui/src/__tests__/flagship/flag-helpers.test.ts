@@ -14,8 +14,10 @@ import {
 	validateFlagKey,
 	validateRuleDrafts,
 } from "../../components/flagship/flag-helpers";
-import type { FlagshipRule } from "../../api";
-import type { VariationDraft } from "../../components/flagship/flag-helpers";
+import type {
+	FlagshipRule,
+	VariationDraft,
+} from "../../components/flagship/flag-helpers";
 
 function first<T>(values: T[]): T {
 	const [value] = values;

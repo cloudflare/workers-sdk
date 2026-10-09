@@ -17,6 +17,7 @@ const STRING_FLAG = {
 	default_variation: "control",
 	enabled: true,
 	variations: { control: "blue", treatment: "red" },
+	rules: [],
 };
 const RULED_FLAG = {
 	...STRING_FLAG,
@@ -138,22 +139,6 @@ async function saveFlag(): Promise<void> {
 
 describe("Flagship", () => {
 	beforeEach(cleanupFlags);
-
-	test("closes an open dialog when the selected worker changes", async () => {
-		await seedFlag(STRING_FLAG);
-		await navigateToFlagshipApp();
-		await openEditDialog(STRING_FLAG.key);
-		await page.evaluate(() => {
-			const url = new URL(window.location.href);
-			url.searchParams.set("worker", "worker-w-resources");
-			window.history.pushState(window.history.state, "", url);
-			window.dispatchEvent(new PopStateEvent("popstate"));
-		});
-		await page.waitForSelector('[role="dialog"]', {
-			state: "hidden",
-			timeout: 10_000,
-		});
-	});
 
 	test("creates, edits, and deletes a flag", async ({ expect }) => {
 		await navigateToFlagshipApp();

@@ -13,7 +13,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { flagshipCreateFlag, flagshipUpdateFlag } from "../../api";
 import {
 	alignSplits,
-	canonicalRules,
 	defaultServeToRules,
 	defaultVariationsForType,
 	FLAG_TYPE_LABELS,
@@ -35,7 +34,7 @@ import {
 } from "./flag-helpers";
 import { Field, TextInput } from "./FormFields";
 import { RuleEditor } from "./RuleEditor";
-import type { FlagshipFlag, FlagshipUpdateFlagData } from "../../api";
+import type { FlagshipFlag, FlagshipJsonValue } from "../../api";
 import type { JSX } from "react";
 
 const TYPE_TABS = (
@@ -53,7 +52,6 @@ interface FlagDialogProps {
 	onOpenChange: (open: boolean) => void;
 	onSaved: () => Promise<void>;
 	open: boolean;
-	worker?: string;
 }
 
 interface FormState {
@@ -91,36 +89,6 @@ function emptyForm(): FormState {
 	};
 }
 
-type UpdateBody = NonNullable<FlagshipUpdateFlagData["body"]>;
-
-interface SavedValues {
-	default_variation: string;
-	description: string | null;
-	enabled: boolean;
-	rules: UpdateBody["rules"];
-	variations: Record<string, unknown>;
-}
-
-function changedFields(flag: FlagshipFlag, next: SavedValues): UpdateBody {
-	const body: UpdateBody = {};
-	if (next.default_variation !== flag.default_variation) {
-		body.default_variation = next.default_variation;
-	}
-	if (next.description !== (flag.description ?? null)) {
-		body.description = next.description;
-	}
-	if (next.enabled !== flag.enabled) {
-		body.enabled = next.enabled;
-	}
-	if (JSON.stringify(next.variations) !== JSON.stringify(flag.variations)) {
-		body.variations = next.variations;
-	}
-	if (canonicalRules(next.rules) !== canonicalRules(flag.rules)) {
-		body.rules = next.rules;
-	}
-	return body;
-}
-
 function formFromFlag(flag: FlagshipFlag): FormState {
 	const { type } = flag;
 	const variations = variationDraftsFrom(type, flag.variations);
@@ -154,7 +122,6 @@ export function FlagDialog({
 	onOpenChange,
 	onSaved,
 	open,
-	worker,
 }: FlagDialogProps): JSX.Element {
 	const [form, setForm] = useState<FormState>(emptyForm);
 	const [error, setError] = useState<FormError | null>(null);
@@ -303,7 +270,7 @@ export function FlagDialog({
 		}
 
 		const names = new Set<string>();
-		const variations: Record<string, unknown> = {};
+		const variations: Record<string, FlagshipJsonValue> = {};
 		for (const row of form.variations) {
 			const name = row.name.trim();
 			if (name === "") {
@@ -382,15 +349,17 @@ export function FlagDialog({
 		try {
 			if (editing) {
 				await flagshipUpdateFlag({
-					body: changedFields(flag, {
+					body: {
 						default_variation: defaultVariation,
 						description,
 						enabled: form.enabled,
+						key: flag.key,
+						// The dialog doesn't edit metadata, and PUT clears it if omitted.
+						metadata: flag.metadata,
 						rules,
 						variations,
-					}),
+					},
 					path: { app_id: appId, flag_key: flag.key },
-					query: { worker },
 				});
 			} else {
 				await flagshipCreateFlag({
@@ -403,7 +372,6 @@ export function FlagDialog({
 						variations,
 					},
 					path: { app_id: appId },
-					query: { worker },
 				});
 			}
 		} catch (caught) {

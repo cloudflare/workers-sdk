@@ -3820,6 +3820,7 @@ export type {
 	Flag,
 	FlagChanges,
 	FlagInput,
+	FlagMetadata,
 	FlagType,
 	Rule,
 } from "./workers/flagship/flags";
