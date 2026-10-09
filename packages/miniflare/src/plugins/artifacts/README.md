@@ -79,8 +79,10 @@ reach the same binding through Miniflare's Node binding proxy. Namespace and
 repository names are hashed into short, namespace-scoped on-disk paths; this
 leaves room for Git packfiles and workerd SQLite files on platforms with path
 length limits. Creation, fork, and import use private staging directories;
-interrupted staging and creation locks are removed on the next backend
-startup. Import URL credentials are passed to Git as an ephemeral HTTPS
+interrupted staging is removed on the next backend startup. If a process dies
+while creating a repository, a leftover creation lock blocks reuse until you
+confirm no other dev server uses the directory and remove the lock named in
+the error. Import URL credentials are passed to Git as an ephemeral HTTPS
 authorization header,
 not recorded in a repository's Git config. Repository locks are process-local:
 do not run two dev servers against the same Artifacts persistence directory at
