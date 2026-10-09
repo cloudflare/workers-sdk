@@ -1,15 +1,12 @@
+import { DEFAULT_MODULE_RULES } from "@cloudflare/deploy-helpers/miniflare-options";
 import { logger } from "../logger";
 import type { Rule } from "@cloudflare/workers-utils";
+
+export { DEFAULT_MODULE_RULES };
 
 export function isJavaScriptModuleRule(rule: Rule) {
 	return rule.type === "ESModule" || rule.type === "CommonJS";
 }
-
-export const DEFAULT_MODULE_RULES: Rule[] = [
-	{ type: "Text", globs: ["**/*.txt", "**/*.html", "**/*.sql"] },
-	{ type: "Data", globs: ["**/*.bin"] },
-	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
-];
 
 export interface ParsedRules {
 	rules: Rule[];

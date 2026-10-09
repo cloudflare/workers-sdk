@@ -1,14 +1,18 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
-import * as wrangler from "wrangler";
+import {
+	normalizeAndValidateConfig,
+	readConfig,
+} from "@cloudflare/workers-utils";
 import type {
 	ResolvedAssetsOnlyConfig,
 	ResolvedWorkerConfig,
 } from "./plugin-config";
 import type { Optional } from "./utils";
-import type { RawConfig } from "@cloudflare/workers-utils";
-import type { Unstable_Config as RawWorkerConfig } from "wrangler";
+import type {
+	Config as RawWorkerConfig,
+	RawConfig,
+} from "@cloudflare/workers-utils";
 
 export type WorkerResolvedConfig =
 	| AssetsOnlyWorkerResolvedConfig
@@ -181,10 +185,10 @@ function readWorkerConfig(
 	config: WorkerConfig;
 	nonApplicable: NonApplicableConfigMap;
 } {
-	const normalized = wrangler.unstable_readConfig(
+	const normalized = readConfig(
 		{ config: configPath, env },
 		// Preserve the original `main` value so that Vite can resolve it
-		{ preserveOriginalMain: true }
+		{ preserveOriginalMain: true, logger: console }
 	);
 	return processNormalizedWorkerConfig(normalized);
 }

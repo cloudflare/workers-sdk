@@ -30,10 +30,10 @@
 
 `parseCustomPoolOptions()` in `src/pool/config.ts` resolves at most one configuration
 file into a normalised `Config`, then shares every downstream step (remote proxy
-session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, tails):
+session, `getMiniflareWorkerOptions()`, `main`, defines, module rules, tails):
 
 - `wrangler: { configPath, environment }` — a Wrangler configuration file, via
-  `wrangler.unstable_readConfig()`
+  `readConfig()` from `@cloudflare/workers-utils`
 - `experimental: { newConfig }` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
   (`@cloudflare/config`'s `loadAndParseConfig()` → `convertToWranglerConfig()` →
   `normalizeAndValidateConfig()`). Mirrors `@cloudflare/vite-plugin`'s

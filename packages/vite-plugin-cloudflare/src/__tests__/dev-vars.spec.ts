@@ -1,9 +1,9 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { removeDirSync } from "@cloudflare/workers-utils";
+import { getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
+import { readConfig, removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, test } from "vitest";
-import * as wrangler from "wrangler";
 import { getLocalDevVarsForPreview, quoteForDotenv } from "../dev-vars";
 
 /**
@@ -26,7 +26,7 @@ describe("quoteForDotenv", () => {
 			path.join(dir, ".dev.vars"),
 			`KEY=${quoteForDotenv(value)}\n`
 		);
-		const vars = wrangler.unstable_getVarsForDev(
+		const vars = getVarsForDev(
 			path.join(dir, "wrangler.json"),
 			undefined,
 			{},
@@ -109,16 +109,17 @@ describe("getLocalDevVarsForPreview", () => {
 		writeFileSync(path.join(inputDir, "wrangler.json"), "{}");
 		writeFileSync(path.join(inputDir, ".dev.vars"), `KEY='${value}'\n`);
 
-		const config = wrangler.unstable_readConfig({
-			config: path.join(inputDir, "wrangler.json"),
-		});
+		const config = readConfig(
+			{ config: path.join(inputDir, "wrangler.json") },
+			{ logger: console }
+		);
 		const serialized = getLocalDevVarsForPreview(config, undefined);
 		expect(serialized).toBeDefined();
 
 		writeFileSync(path.join(outputDir, "wrangler.json"), "{}");
 		writeFileSync(path.join(outputDir, ".dev.vars"), serialized ?? "");
 
-		const vars = wrangler.unstable_getVarsForDev(
+		const vars = getVarsForDev(
 			path.join(outputDir, "wrangler.json"),
 			undefined,
 			{},

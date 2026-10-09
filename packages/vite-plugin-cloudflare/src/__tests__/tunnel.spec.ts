@@ -10,8 +10,8 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
-import * as wrangler from "wrangler";
 import { PluginContext } from "../context";
+import { resolveNamedTunnel } from "../named-tunnel";
 import {
 	QUICK_TUNNEL_ALLOWED_HOST,
 	resolveDevTunnelOrigin,
@@ -25,7 +25,7 @@ import type { TunnelConfig } from "../plugin-config";
 import type * as vite from "vite";
 
 vi.mock("@cloudflare/workers-utils");
-vi.mock("wrangler");
+vi.mock("../named-tunnel");
 
 function createMockPluginContext(options: {
 	type: "workers" | "preview";
@@ -574,7 +574,7 @@ describe("tunnel plugin", () => {
 	it("starts a named preview tunnel and keeps only allowed hosts", async ({
 		expect,
 	}) => {
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+		vi.mocked(resolveNamedTunnel).mockResolvedValue({
 			hostnames: [
 				"dev.example.com",
 				"preview.example.com",
@@ -609,7 +609,7 @@ describe("tunnel plugin", () => {
 
 		await setupPreviewTunnel(previewServer, ctx, tunnelManager);
 
-		expect(wrangler.unstable_resolveNamedTunnel).toHaveBeenCalledWith(
+		expect(resolveNamedTunnel).toHaveBeenCalledWith(
 			"my-tunnel",
 			expect.any(URL),
 			{
@@ -626,7 +626,7 @@ describe("tunnel plugin", () => {
 	it("throws when no named preview tunnel hosts are allowed", async ({
 		expect,
 	}) => {
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+		vi.mocked(resolveNamedTunnel).mockResolvedValue({
 			hostnames: ["dev.example.com", "preview.example.com"],
 			token: "TOKEN",
 		});
@@ -671,9 +671,7 @@ describe("tunnel plugin", () => {
 			hostnames: string[];
 			token: string;
 		}>();
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
-			namedTunnelDeferred.promise
-		);
+		vi.mocked(resolveNamedTunnel).mockReturnValue(namedTunnelDeferred.promise);
 
 		const server = await createServer();
 		const tunnelManager = new TunnelManager(server.config.logger);
@@ -710,9 +708,7 @@ describe("tunnel plugin", () => {
 			hostnames: string[];
 			token: string;
 		}>();
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
-			namedTunnelDeferred.promise
-		);
+		vi.mocked(resolveNamedTunnel).mockReturnValue(namedTunnelDeferred.promise);
 
 		const server = await createServer();
 		const tunnelManager = new TunnelManager(server.config.logger);

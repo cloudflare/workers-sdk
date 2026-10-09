@@ -1,6 +1,8 @@
 import assert from "node:assert";
-import { partitionExports } from "@cloudflare/workers-utils";
-import * as wrangler from "wrangler";
+import {
+	getDurableObjectClassNameToUseSQLiteMap,
+	partitionExports,
+} from "@cloudflare/workers-utils";
 import { debuglog } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { Worker, WorkersResolvedConfig } from "./plugin-config";
@@ -41,12 +43,10 @@ function getWorkerNameToDurableObjectExportsMap(
 		workers.map((worker) => [
 			worker.config.name,
 			new Set(
-				wrangler
-					.unstable_getDurableObjectClassNameToUseSQLiteMap(
-						worker.config.migrations,
-						worker.config.exports
-					)
-					.keys()
+				getDurableObjectClassNameToUseSQLiteMap(
+					worker.config.migrations,
+					worker.config.exports
+				).keys()
 			),
 		])
 	);

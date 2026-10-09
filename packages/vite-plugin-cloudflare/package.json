@@ -53,13 +53,13 @@
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "catalog:default",
-		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/build-output-utils": "workspace:*",
 		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/runtime-types": "workspace:*",
@@ -89,8 +89,7 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
-		"wrangler": "workspace:^"
+		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0"
 	},
 	"workers-sdk": {
 		"prerelease": true

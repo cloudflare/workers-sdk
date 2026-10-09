@@ -29,9 +29,9 @@ import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import { getServerWatchConfig } from "./wrangler-watch-ignore";
 import type { PluginContext } from "../context";
+import type { RawConfig as Unstable_RawConfig } from "@cloudflare/workers-utils";
 import type { EnvironmentOptions, UserConfig } from "vite";
 import type * as vite from "vite";
-import type { Unstable_RawConfig } from "wrangler";
 
 /**
  * Plugin to handle configuration and config file watching

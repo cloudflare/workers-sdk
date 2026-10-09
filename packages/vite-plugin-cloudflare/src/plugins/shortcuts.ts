@@ -1,11 +1,14 @@
 import {
+	convertConfigToBindings,
+	printBindings,
+} from "@cloudflare/workers-utils";
+import {
 	CorePaths,
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
 } from "miniflare";
 import open from "open";
 import colors from "picocolors";
-import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
@@ -55,12 +58,11 @@ export function addShortcuts(
 			const workerConfigs = ctx.allWorkerConfigs;
 
 			for (const workerConfig of workerConfigs) {
-				const bindings =
-					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-						workerConfig
-					);
+				const bindings = convertConfigToBindings(workerConfig, {
+					usePreviewIds: true,
+				});
 
-				wrangler.unstable_printBindings(bindings, {
+				printBindings(bindings, {
 					tailConsumers: workerConfig.tail_consumers,
 					streamingTailConsumers: workerConfig.streaming_tail_consumers,
 					containers: workerConfig.containers,

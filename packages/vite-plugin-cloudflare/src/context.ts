@@ -13,9 +13,9 @@ import type {
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type { Config as Unstable_Config } from "@cloudflare/workers-utils";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 /**
  * Used to store state that should persist across server restarts.

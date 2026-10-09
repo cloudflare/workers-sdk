@@ -1,3 +1,4 @@
+export { getRemoteBindingsAuthHook } from "./auth";
 export {
 	maybeStartOrUpdateRemoteProxySession,
 	pickRemoteBindings,

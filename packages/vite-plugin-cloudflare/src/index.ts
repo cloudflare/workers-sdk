@@ -1,5 +1,4 @@
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
-import { assertWranglerVersion } from "./assert-wrangler-version";
 import { isForcedBuildOutput } from "./build-output-env";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
@@ -57,8 +56,6 @@ const sharedContext: SharedContext = {
 	restartingDevServerCount: 0,
 	tunnelHostnames: new Set(),
 };
-
-await assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.

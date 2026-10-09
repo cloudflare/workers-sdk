@@ -8,7 +8,7 @@ import { writeDeployConfig } from "../deploy-config";
 import { getLocalDevVarsForPreview } from "../dev-vars";
 import { createPlugin } from "../utils";
 import type { ResolvedWorkerConfig } from "../plugin-config";
-import type { Unstable_RawConfig } from "wrangler";
+import type { RawConfig as Unstable_RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Plugin to generate additional output files as part of the build, including the output `wrangler.json` file.

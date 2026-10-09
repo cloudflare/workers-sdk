@@ -4,11 +4,11 @@ import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import encodeQR from "qr";
-import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
+import { resolveNamedTunnel } from "../named-tunnel";
 import { debuglog, createPlugin } from "../utils";
 import type { PluginContext } from "../context";
-import type { Tunnel } from "@cloudflare/workers-utils";
+import type { Config, Tunnel } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 function createPublicExposureWarning(
@@ -129,7 +129,7 @@ export class TunnelManager {
 		shortcutPressed?: boolean;
 		allowedHosts: true | string[] | undefined;
 		accountId: string | undefined;
-		complianceRegion: wrangler.Unstable_Config["compliance_region"];
+		complianceRegion: Config["compliance_region"];
 	}): Promise<string[] | null> {
 		const allowedMail = normalizeAllowedMail(options.allowedMail);
 
@@ -158,14 +158,10 @@ export class TunnelManager {
 
 			const namedTunnel =
 				options.name !== undefined
-					? await wrangler.unstable_resolveNamedTunnel(
-							options.name,
-							new URL(options.origin),
-							{
-								accountId: options.accountId,
-								complianceRegion: options.complianceRegion,
-							}
-						)
+					? await resolveNamedTunnel(options.name, new URL(options.origin), {
+							accountId: options.accountId,
+							complianceRegion: options.complianceRegion,
+						})
 					: undefined;
 
 			if (abortController.signal.aborted) {

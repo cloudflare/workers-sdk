@@ -9,7 +9,7 @@ import type {
 	ParsedInputContainerConfig,
 	ParsedOutputContainerConfig,
 } from "@cloudflare/config";
-import type { Unstable_Config } from "wrangler";
+import type { Config as Unstable_Config } from "@cloudflare/workers-utils";
 
 export interface Bundle {
 	rootPath: string;

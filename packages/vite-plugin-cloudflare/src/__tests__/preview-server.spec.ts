@@ -4,8 +4,6 @@ import { createBuilder, preview } from "vite";
 import { afterEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
 
-vi.mock("@cloudflare/workers-utils");
-
 const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 
 describe("preview server", () => {

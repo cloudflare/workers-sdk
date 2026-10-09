@@ -1,14 +1,14 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as wrangler from "wrangler";
+import { readConfig } from "@cloudflare/workers-utils";
 import { resolveDevOnly } from "./plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
+import type { Config as Unstable_Config } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 interface DeployConfig {
 	configPath: string;
@@ -39,7 +39,7 @@ export function getWorkerConfigs(
 			path.dirname(deployConfigPath),
 			configPath
 		);
-		return wrangler.unstable_readConfig({ config: resolvedConfigPath });
+		return readConfig({ config: resolvedConfigPath }, { logger: console });
 	});
 }
 

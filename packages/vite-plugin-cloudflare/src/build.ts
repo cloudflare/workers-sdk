@@ -9,8 +9,8 @@ import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
+import type { Config as Unstable_Config } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 const CLIENT_FALLBACK_ENTRY_NAME = "__cloudflare_fallback_entry__";
 

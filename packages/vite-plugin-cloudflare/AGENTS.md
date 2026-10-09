@@ -6,7 +6,7 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 
 ## STRUCTURE
 
-- `src/index.ts` — Plugin factory (uses top-level `await` for `assertWranglerVersion()`)
+- `src/index.ts` — Plugin factory
 - `src/cf-vite.ts` — `cf-vite` delegate binary entry (see below)
 - `bin/cf-vite` — shebang shim that dynamic-imports `dist/cf-vite.mjs`
 - `src/workers/` — 4 internal worker entries: `asset-worker`, `router-worker`, `runner-worker`, `vite-proxy-worker`
@@ -78,8 +78,7 @@ contract so the parent can drive either impl interchangeably.
 
 ## CONVENTIONS
 
-- No named imports from `"wrangler"` — must use `import * as wrangler from "wrangler"` (namespace import only, enforced by eslint)
-- Top-level `await` in entry — only possible because ESM-only
+- Do not depend on `wrangler`. Import shared config, binding and local development helpers from `@cloudflare/workers-utils` and `@cloudflare/deploy-helpers` (granular entry points such as `@cloudflare/deploy-helpers/miniflare-options`) instead
 - Playground directory `worker-♫/` has unicode in name (intentional)
 
 ## TESTING

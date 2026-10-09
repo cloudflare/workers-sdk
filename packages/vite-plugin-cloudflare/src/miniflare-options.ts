@@ -10,8 +10,10 @@ import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
+import { getMiniflareWorkerOptions } from "@cloudflare/deploy-helpers/miniflare-options";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
+	convertConfigToBindings,
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
@@ -27,7 +29,6 @@ import {
 	convertV4MiniflareOptions,
 } from "miniflare";
 import { globSync } from "tinyglobby";
-import * as wrangler from "wrangler";
 import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
@@ -56,6 +57,7 @@ import type {
 } from "./context";
 import type { PersistState } from "./plugin-config";
 import type { ModuleType } from "@cloudflare/config";
+import type { SourcelessWorkerOptions } from "@cloudflare/deploy-helpers/miniflare-options";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
@@ -69,7 +71,6 @@ import type {
 	WorkerOptions,
 } from "miniflare";
 import type * as vite from "vite";
-import type { SourcelessWorkerOptions } from "wrangler";
 
 const INTERNAL_WORKERS_COMPATIBILITY_DATE = "2024-10-04";
 // Used to mark HTML assets as being in the public directory so that they can be resolved from their root relative paths
@@ -347,10 +348,9 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
-							const bindings =
-								wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-									worker.config
-								);
+							const bindings = convertConfigToBindings(worker.config, {
+								usePreviewIds: true,
+							});
 
 							const preExistingRemoteProxySession = worker.config.configPath
 								? remoteProxySessionsDataMap.get(worker.config.configPath)
@@ -402,21 +402,20 @@ export async function getDevMiniflareOptions(
 									})?.containerOptions ?? []
 								);
 							}
-							const miniflareWorkerOptions =
-								wrangler.unstable_getMiniflareWorkerOptions(
-									{
-										...worker.config,
-										assets: undefined,
-									},
-									resolvedPluginConfig.cloudflareEnv,
-									{
-										remoteProxyConnectionString:
-											remoteProxySessionData?.session
-												?.remoteProxyConnectionString,
+							const miniflareWorkerOptions = getMiniflareWorkerOptions(
+								{
+									...worker.config,
+									assets: undefined,
+								},
+								resolvedPluginConfig.cloudflareEnv,
+								{
+									remoteProxyConnectionString:
+										remoteProxySessionData?.session
+											?.remoteProxyConnectionString,
 
-										containerBuildId,
-									}
-								);
+									containerBuildId,
+								}
+							);
 
 							const { externalWorkers } = miniflareWorkerOptions;
 							const workerOptions =
@@ -768,10 +767,9 @@ export async function getPreviewMiniflareOptions(
 		await Promise.all(
 			resolvedPluginConfig.workers.map(async (previewWorker) => {
 				const workerConfig = previewWorker.config;
-				const bindings =
-					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-						workerConfig
-					);
+				const bindings = convertConfigToBindings(workerConfig, {
+					usePreviewIds: true,
+				});
 
 				const preExistingRemoteProxySessionData = workerConfig.configPath
 					? remoteProxySessionsDataMap.get(workerConfig.configPath)
@@ -822,13 +820,16 @@ export async function getPreviewMiniflareOptions(
 						})?.containerOptions ?? []
 					);
 				}
-				const miniflareWorkerOptions =
-					wrangler.unstable_getMiniflareWorkerOptions(workerConfig, undefined, {
+				const miniflareWorkerOptions = getMiniflareWorkerOptions(
+					workerConfig,
+					undefined,
+					{
 						remoteProxyConnectionString:
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
 
 						containerBuildId,
-					});
+					}
+				);
 
 				const { externalWorkers } = miniflareWorkerOptions;
 

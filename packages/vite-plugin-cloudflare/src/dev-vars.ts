@@ -1,10 +1,10 @@
 import * as path from "node:path";
-import * as wrangler from "wrangler";
+import { getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { Unstable_Config } from "wrangler";
+import type { Config as Unstable_Config } from "@cloudflare/workers-utils";
 
 /**
  * Gets any variables with which to augment the Worker config in preview mode.
@@ -16,7 +16,7 @@ export function getLocalDevVarsForPreview(
 	config: Unstable_Config,
 	cloudflareEnv: string | undefined
 ): string | undefined {
-	const dotDevDotVars = wrangler.unstable_getVarsForDev(
+	const dotDevDotVars = getVarsForDev(
 		config.configPath,
 		undefined, // We don't currently support setting a list of custom `.env` files.
 		{}, // Don't pass actual vars since these will be loaded from the wrangler.json.

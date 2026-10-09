@@ -20,8 +20,8 @@ import type {
 } from "./plugin-config";
 import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
+import type { Config as Unstable_Config } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 /**
  * Returns true if the `changedFile` matches one of the _headers or _redirects files,

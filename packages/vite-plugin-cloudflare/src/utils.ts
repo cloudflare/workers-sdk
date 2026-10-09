@@ -12,9 +12,25 @@ import * as vite from "vite";
 import { PROXY_SHARED_SECRET } from "./constants";
 import { warnIfQuickTunnelSseResponse } from "./plugins/tunnel";
 import type { PluginContext } from "./context";
+import type { RemoteBindingsLogger } from "@cloudflare/remote-bindings";
 import type * as http from "node:http";
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
+
+/**
+ * Console logger for the shared workers-sdk helpers, with debug output routed to `debuglog`
+ */
+export const consoleLogger: RemoteBindingsLogger = {
+	loggerLevel: "log",
+	debug: debuglog,
+	log: console.log,
+	info: console.info,
+	warn: console.warn,
+	error: console.error,
+	console(method, ...args) {
+		Reflect.apply(console[method], console, args);
+	},
+};
 
 /**
  * Creates an internal plugin to be used inside the main `vite-plugin-cloudflare` plugin.

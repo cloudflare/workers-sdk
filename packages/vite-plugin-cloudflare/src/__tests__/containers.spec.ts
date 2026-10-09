@@ -4,10 +4,10 @@ import {
 	OpenAPI,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
+import { readConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { resolveConfig } from "vite";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import * as wrangler from "wrangler";
 import {
 	configureContainerPull,
 	normalizeContainerImageUris,
@@ -17,8 +17,8 @@ import { getPreviewMiniflareOptions } from "../miniflare-options";
 import type { ContainerOptionsByWorker } from "../containers";
 import type { PreviewPluginContext } from "../context";
 import type { PreviewResolvedConfig } from "../plugin-config";
+import type { Config as Unstable_Config } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const original =
@@ -251,7 +251,7 @@ describe("Container image planning", () => {
 					},
 				})
 			);
-			return wrangler.unstable_readConfig({ config: configPath });
+			return readConfig({ config: configPath }, { logger: console });
 		}
 
 		const resolvedViteConfig = await resolveConfig(

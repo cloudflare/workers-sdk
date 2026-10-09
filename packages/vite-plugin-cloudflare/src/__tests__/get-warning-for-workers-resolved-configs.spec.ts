@@ -1,7 +1,7 @@
 import { describe, test } from "vitest";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { ResolvedWorkerConfig } from "../plugin-config";
-import type { Unstable_Config as RawWorkerConfig } from "wrangler";
+import type { Config as RawWorkerConfig } from "@cloudflare/workers-utils";
 
 describe("getWarningForWorkersConfigs", () => {
 	describe("no warning needed", () => {

@@ -13,12 +13,12 @@ import {
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	DEFAULT_COMPAT_DATE,
+	defaultWranglerConfig,
 	formatZodError,
 	getWorkerNameFromProject,
 } from "@cloudflare/workers-utils";
 import { defu } from "defu";
 import * as vite from "vite";
-import * as wrangler from "wrangler";
 import { isForcedBuildOutput, isPreviewBuild } from "./build-output-env";
 import { readBuildOutputWorkers } from "./build-output-preview";
 import { getWorkerConfigs } from "./deploy-config";
@@ -43,8 +43,10 @@ import type {
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
-import type { RawConfig } from "@cloudflare/workers-utils";
-import type { Unstable_Config } from "wrangler";
+import type {
+	Config as Unstable_Config,
+	RawConfig,
+} from "@cloudflare/workers-utils";
 
 export type PersistState = boolean | { path: string };
 export type TunnelConfig = {
@@ -394,7 +396,7 @@ function resolveWorkerConfig(
 		}));
 	} else {
 		// No file: start with defaults
-		workerConfig = { ...wrangler.unstable_defaultWranglerConfig };
+		workerConfig = { ...defaultWranglerConfig };
 		raw = structuredClone(workerConfig);
 		nonApplicable = {
 			replacedByVite: new Set(),
