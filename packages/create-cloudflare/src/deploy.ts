@@ -14,6 +14,7 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
 import * as TOML from "smol-toml";
 import { usesCfCli } from "./cf/config";
+import { getDeploymentUrl } from "./cf/deploy";
 import { isInsideGitRepo } from "./git";
 import { chooseAccount, login } from "./wrangler/accounts";
 import {
@@ -116,16 +117,13 @@ export const runDeploy = async (ctx: C3Context) => {
 			: []),
 	];
 
-	// `cf` has no equivalent of Wrangler's output file, so for projects that use
-	// it the deployment URL is read from the deploy command's output instead
 	const useCf = usesCfCli(ctx.project.path);
 	const outputFile = useCf
 		? undefined
 		: join(await mkdtemp(join(tmpdir(), "c3-wrangler-deploy-")), "output.json");
 
-	const output = await runCommand(deployCmd, {
+	await runCommand(deployCmd, {
 		cwd: ctx.project.path,
-		captureOutput: useCf,
 		env: {
 			CLOUDFLARE_ACCOUNT_ID: ctx.account.id,
 			NODE_ENV: "production",
@@ -138,10 +136,11 @@ export const runDeploy = async (ctx: C3Context) => {
 	});
 
 	try {
-		const url = outputFile ? readDeploymentUrl(outputFile) : output;
-		const deployedUrlRegex = /https:\/\/[\w.-]+\.(pages|workers)\.dev/g;
-		// Deploy commands report the deployment URL last, after any other URLs
-		const deployedUrlMatch = [...(url ?? "").matchAll(deployedUrlRegex)].at(-1);
+		const url = outputFile
+			? readDeploymentUrl(outputFile)
+			: await getDeploymentUrl(ctx.project.path, ctx.account.id);
+		const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
+		const deployedUrlMatch = url?.match(deployedUrlRegex);
 		if (deployedUrlMatch) {
 			ctx.deployment.url = deployedUrlMatch[0];
 		} else {

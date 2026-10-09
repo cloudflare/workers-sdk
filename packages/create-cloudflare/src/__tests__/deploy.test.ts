@@ -4,12 +4,14 @@ import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { readFile } from "helpers/files";
 import { beforeEach, describe, test, vi } from "vitest";
 import { usesCfCli } from "../cf/config";
+import { getDeploymentUrl } from "../cf/deploy";
 import { offerToDeploy, runDeploy } from "../deploy";
 import { chooseAccount, login } from "../wrangler/accounts";
 import { createTestContext } from "./helpers";
 
 vi.mock("@cloudflare/cli-shared-helpers/command");
 vi.mock("../cf/config");
+vi.mock("../cf/deploy");
 vi.mock("../wrangler/accounts");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
 vi.mock("which-pm-runs");
@@ -158,35 +160,42 @@ describe("deploy helpers", async () => {
 			expect(ctx.deployment.url).toBe(deployedUrl);
 		});
 
-		test("reads the deployment url from the output of cf projects", async ({
-			expect,
-		}) => {
+		test("looks up the deployment url of cf projects", async ({ expect }) => {
 			const ctx = createTestContext();
 			ctx.account = { id: "test1234", name: "Test Account" };
 			vi.mocked(usesCfCli).mockReturnValue(true);
 			mockInsideGitRepo(false);
-			vi.mocked(runCommand).mockResolvedValueOnce(
-				[
-					"Note: Preview URLs look like https://<VERSION_PREFIX>-test.<YOUR_SUBDOMAIN>.workers.dev",
-					"Deployed test triggers",
-					"  https://test.example.workers.dev",
-					"Deployed to: https://test.example.workers.dev",
-				].join("\n")
+			vi.mocked(runCommand).mockResolvedValueOnce("");
+			vi.mocked(getDeploymentUrl).mockResolvedValueOnce(
+				"https://test.example.workers.dev"
 			);
 
 			await runDeploy(ctx);
 
+			// The output isn't captured, so that `cf deploy` can prompt the user
 			expect(runCommand).toHaveBeenLastCalledWith(
 				["npm", "run", "deploy"],
-				expect.objectContaining({
-					captureOutput: true,
-					env: expect.objectContaining({
-						WRANGLER_OUTPUT_FILE_PATH: undefined,
-					}),
-				})
+				expect.not.objectContaining({ captureOutput: true })
+			);
+			expect(getDeploymentUrl).toHaveBeenCalledWith(
+				ctx.project.path,
+				"test1234"
 			);
 			expect(readFile).not.toHaveBeenCalled();
 			expect(ctx.deployment.url).toBe("https://test.example.workers.dev");
+		});
+
+		test("cf project without a deployment url", async ({ expect }) => {
+			const ctx = createTestContext();
+			ctx.account = { id: "test1234", name: "Test Account" };
+			vi.mocked(usesCfCli).mockReturnValue(true);
+			mockInsideGitRepo(false);
+			vi.mocked(runCommand).mockResolvedValueOnce("");
+			vi.mocked(getDeploymentUrl).mockResolvedValueOnce(undefined);
+
+			await expect(runDeploy(ctx)).rejects.toThrow(
+				"Failed to find deployment url."
+			);
 		});
 
 		test("no account in ctx", async ({ expect }) => {

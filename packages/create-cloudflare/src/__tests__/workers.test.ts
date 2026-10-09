@@ -162,7 +162,9 @@ describe("updateTsConfig", () => {
 		expect(readFile).toHaveBeenCalledWith("./.cloudflare/types/index.d.ts");
 	});
 
-	test("will not add an empty types list", async ({ expect }) => {
+	test("will not add an empty types list for cf projects", async ({
+		expect,
+	}) => {
 		vi.mocked(usesCfCli).mockReturnValue(true);
 		vi.mocked(readFile).mockImplementation((path) =>
 			path.includes("tsconfig.json")

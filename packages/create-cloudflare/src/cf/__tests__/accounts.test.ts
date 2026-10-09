@@ -92,6 +92,7 @@ describe("cf account helpers", () => {
 				"cf",
 				"auth",
 				"login",
+				"--force",
 			]);
 		});
 

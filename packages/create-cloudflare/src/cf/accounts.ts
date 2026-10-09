@@ -52,13 +52,16 @@ export async function listAccounts(): Promise<Record<string, string>> {
  *
  * The command runs with inherited stdio because its default device
  * authorization flow prints a code that the user must confirm in the browser.
+ * C3 only logs in when the existing credentials are missing or invalid, so
+ * `--force` is passed to replace any invalid credentials, which `cf` would
+ * otherwise treat as already being logged in.
  *
  * @returns `true` if `cf` is authenticated once the login flow completes.
  */
 export async function login(): Promise<boolean> {
 	const { npx } = detectPackageManager();
 	try {
-		await runWranglerCommand([npx, "cf", "auth", "login"]);
+		await runWranglerCommand([npx, "cf", "auth", "login", "--force"]);
 	} catch (e) {
 		if (e instanceof CancelError) {
 			throw e;

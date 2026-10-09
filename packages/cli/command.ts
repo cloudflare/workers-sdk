@@ -1,7 +1,6 @@
 import { spawn } from "cross-spawn";
 import { CancelError } from "./error";
 import { isInteractive, spinner } from "./interactive";
-import { stderr, stdout } from "./streams";
 import { stripAnsi } from ".";
 
 /**
@@ -33,7 +32,7 @@ type PrintOptions<T> = {
  *
  * @param command - The command to run as an array of strings
  * @param opts.silent - Should the command's stdout and stderr be dispalyed to the user
- * @param opts.captureOutput - Should the output of the command the returned as a string. Unless `silent` is set, the output is still displayed to the user.
+ * @param opts.captureOutput - Should the output of the command the returned as a string.
  * @param opts.env - An object of environment variables to be injected when running the command
  * @param opts.cwd - The directory in which the command should be run
  * @param opts.useSpinner - Should a spinner be shown when running the command
@@ -54,17 +53,10 @@ export const runCommand = async (
 		promise() {
 			const [executable, ...args] = command;
 			const abortController = new AbortController();
-			// Capturing the output of a command that isn't silent requires piping it
-			// through to the terminal, while leaving stdin attached for any prompts
-			const tee = opts.captureOutput === true && !opts.silent;
 			const cmd = spawn(executable, [...args], {
 				// TODO: ideally inherit stderr, but npm install uses this for warnings
 				// stdio: [ioMode, ioMode, "inherit"],
-				stdio: opts.silent
-					? "pipe"
-					: tee
-						? ["inherit", "pipe", "pipe"]
-						: "inherit",
+				stdio: opts.silent ? "pipe" : "inherit",
 				env: {
 					...process.env,
 					...opts.env,
@@ -78,15 +70,9 @@ export const runCommand = async (
 			if (opts.captureOutput ?? opts.silent) {
 				cmd.stdout?.on("data", (data) => {
 					output += data;
-					if (tee) {
-						stdout.write(data);
-					}
 				});
 				cmd.stderr?.on("data", (data) => {
 					output += data;
-					if (tee) {
-						stderr.write(data);
-					}
 				});
 			}
 

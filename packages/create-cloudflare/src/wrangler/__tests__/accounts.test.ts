@@ -189,6 +189,7 @@ describe("wrangler account helpers", () => {
 				"cf",
 				"auth",
 				"login",
+				"--force",
 			]);
 			expect(runWranglerCommand).not.toHaveBeenCalledWith(
 				["npx", "wrangler", "login"],
