@@ -10,6 +10,10 @@ permissions:
 env:
   # We run `playwright install` manually instead
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+  # Use the PR label for deliberate benchmarks, including nested Turbo builds.
+  # Dependency and browser downloads retain their separate caches.
+  TURBO_CACHE: ${{ contains(github.event.pull_request.labels.*.name, 'ci:no-turbo-cache') && 'local:,remote:' || 'local:rw,remote:rw' }}
+  TURBO_RUN_SUMMARY: "true"
 
 jobs:
   add-to-project:
@@ -80,6 +84,13 @@ jobs:
 
       - name: Check for error message on Node.js < v22
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
+
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: turbo-runs-checks
+          path: .turbo/runs
 
   test-partitions:
     timeout-minutes: 30

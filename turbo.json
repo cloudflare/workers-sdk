@@ -84,6 +84,12 @@
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/vitest.shared.ts",
+				"$TURBO_ROOT$/fixtures/shared/src/**",
+				"$TURBO_ROOT$/fixtures/shared/package.json"
+			],
 			"outputLogs": "new-only"
 		},
 		"test:e2e": {
