@@ -256,7 +256,7 @@ export type UnwrapConfig<TConfig> = TConfig extends (
 		: TConfig;
 
 /** Extract the authored binding map from each possible config branch. */
-type ConfigEnv<TConfig> = TConfig extends {
+type ExtractEnv<TConfig> = TConfig extends {
 	env: infer TEnv extends Record<string, any>;
 }
 	? TEnv
@@ -272,15 +272,36 @@ type UnionProperty<T, K extends PropertyKey> = T extends unknown
 		: never
 	: never;
 
-/** Merge binding maps, making bindings absent from some branches optional. */
-type MergeEnv<
-	TEnv,
-	TRequiredKey extends PropertyKey = keyof TEnv,
-	TOptionalKey extends PropertyKey = Exclude<KeysOfUnion<TEnv>, TRequiredKey>,
-> = {
-	[K in TRequiredKey]: InferBindingType<UnionProperty<TEnv, K>>;
+type OmittedEnvBinding = false | null | undefined;
+
+/** Collect keys that can produce a binding in at least one branch. */
+type EnabledEnvKeys<TEnv> = {
+	[K in KeysOfUnion<TEnv>]: Exclude<
+		UnionProperty<TEnv, K>,
+		OmittedEnvBinding
+	> extends never
+		? never
+		: K;
+}[KeysOfUnion<TEnv>];
+
+/** Collect keys that are present and enabled in every binding-map branch. */
+type RequiredEnvKeys<TEnv> = {
+	[K in EnabledEnvKeys<TEnv>]: [TEnv] extends [Record<K, unknown>]
+		? Extract<UnionProperty<TEnv, K>, OmittedEnvBinding> extends never
+			? K
+			: never
+		: never;
+}[EnabledEnvKeys<TEnv>];
+
+/** Merge binding maps, making absent or conditionally omitted bindings optional. */
+type MergeEnv<TEnv> = {
+	[K in RequiredEnvKeys<TEnv>]: InferBindingType<
+		Exclude<UnionProperty<TEnv, K>, OmittedEnvBinding>
+	>;
 } & {
-	[K in TOptionalKey]?: InferBindingType<UnionProperty<TEnv, K>>;
+	[
+		K in Exclude<EnabledEnvKeys<TEnv>, RequiredEnvKeys<TEnv>>
+	]?: InferBindingType<Exclude<UnionProperty<TEnv, K>, OmittedEnvBinding>>;
 };
 
 /**
@@ -306,7 +327,7 @@ type MergeEnv<
  * export type Env = InferEnv<WorkerConfig>;
  * ```
  */
-export type InferEnv<TUnwrappedConfig> = MergeEnv<ConfigEnv<TUnwrappedConfig>>;
+export type InferEnv<TUnwrappedConfig> = MergeEnv<ExtractEnv<TUnwrappedConfig>>;
 
 /**
  * Infer the Durable Object namespace names from a Worker config's exports.
