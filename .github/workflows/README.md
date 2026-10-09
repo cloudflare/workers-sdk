@@ -21,6 +21,21 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 
 ## PR related actions
 
+### Vouch (vouch.yml)
+
+- Triggers
+  - A new PR is opened on the Cloudflare repository.
+  - Reopening a PR does not trigger the check, so maintainers can reopen one after triage.
+- Actions
+  - Allows bots, collaborators with write access, and authors listed in [`.github/VOUCHED.td`](../VOUCHED.td).
+  - Posts [the Workers SDK response](../vouch-pr-response.md) and closes PRs from unregistered collaborators.
+- Safety model
+  - Uses `pull_request_target` so the token can comment on and close fork PRs.
+  - Checks out the current head of the repository's default branch (`main`) to read the response template, including for PRs targeting older branches. The Vouch action also reads the contributor list from the default branch.
+  - Does not check out or execute PR head code. Checkout credentials are not persisted, and token permissions are limited to reading contents and writing PRs.
+- Maintaining the list
+  - Add or remove GitHub usernames in `.github/VOUCHED.td` through a reviewed PR. Write-access collaborators and bots do not need list entries.
+
 ### Tests + Checks (test-and-check.yml)
 
 - Triggers
