@@ -1,0 +1,89 @@
+packages/wrangler/src/__tests__/deploy/bindings.test.ts
+  s_6aa689848a6f25::t_d28e9134c69b4c 1430,1449
+packages/deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts
+  s_6aa689848a6f25::t_33c5ccf33ab64c 247-258
+packages/deploy-helpers/src/preview/shared.ts
+  s_6aa689848a6f25::t_f1ac6dd0a79122 531
+packages/wrangler/src/__tests__/preview.test.ts
+  s_6aa689848a6f25::t_6cb911fd562bc9 965-966,977-980
+  s_45a8ffb64dcea1::t_cd4831b63a1aa6 962-964,981
+packages/workers-utils/src/worker.ts
+  s_6aa689848a6f25::t_fe0edf9aca4fdb 4,201
+packages/workers-utils/src/types.ts
+  s_6aa689848a6f25::t_9054fdb7661942 8,107
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_6aa689848a6f25::t_d3762499756946 44-49,143-160
+packages/workers-utils/src/map-worker-metadata-bindings.ts
+  s_6aa689848a6f25::t_42b05009821fdf 59
+packages/config/src/__tests__/schema.test.ts
+  s_f70c3d9c923e90::t_eac1a098336520 236-246
+  s_45a8ffb64dcea1::t_127e33f88e1b5c 1476-1513
+packages/workers-utils/src/config/environment.ts
+  s_6aa689848a6f25::t_3b7da5221c938a 938,949,976
+  s_6aa689848a6f25::t_21dc16393759ec 937
+  s_6aa689848a6f25::t_02f39b92aa8385 939-941,946-948
+  s_6aa689848a6f25::t_d99398297a555c 950-952
+  s_6aa689848a6f25::t_f84b2a17ab1596 977-979
+packages/deploy-helpers/src/preview/api.ts
+  s_6aa689848a6f25::t_66792b7fc6538b 9,65
+packages/workers-utils/src/config/validation.ts
+  s_6aa689848a6f25::t_7d30a942e3a278 3021-3022,3025-3026,3036,3039,3050,3057-3112,8137,8139,8147,8156,8164,8169-8170,8172,8174
+  s_45a8ffb64dcea1::t_d8ef83665198ef 59,2229-2234,3019-3020,3023-3024,3027-3035,3037-3038,3040-3041,3113-3114,7196-7201,7207,7297-7302,7308,8127-8136,8138,8140-8146,8148-8155,8157-8163,8165-8168,8171,8173
+packages/wrangler/src/__tests__/config/configuration.test.ts
+  s_6aa689848a6f25::t_168b862ca0bc3f 108-143
+  s_aba07865ed25d7::t_c35f0b1a53e574 144-181
+packages/workers-utils/tests/map-worker-metadata-bindings.test.ts
+  s_6aa689848a6f25::t_93dc68b5e8dd2e 86,97
+packages/wrangler/src/__tests__/create-worker-upload-form/bindings.test.ts
+  s_6aa689848a6f25::t_da076d80e2abc0 232
+  s_45a8ffb64dcea1::t_fcb446f41781e2 199-217
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_6aa689848a6f25::t_e475d27b48a0e3 2061-2146,2155,2164,2166,2170,2172-2175,2178,2180,2185,2194,2196,2200,2202-2205,2220,2227,2239,2252,2254,2258,2260-2263,2491-2496,2501,2504-2505,2511-2512,2519-2524,2526,2529-2531,2535,2541,2546,2551,2556-2562
+  s_45a8ffb64dcea1::t_59df1dbe6680bf 2147-2154,2156-2163,2165,2167-2169,2171,2176-2177,2179,2181-2184,2186-2193,2195,2197-2199,2201,2206-2219,2221-2226,2228-2238,2240-2251,2253,2255-2257,2259,2264-2271,2489-2490,2497-2500,2502-2503,2506-2510,2513-2518,2525,2527-2528,2532-2534,2536-2540,2542-2545,2547-2550,2552-2555,2563-2565,3082
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_6aa689848a6f25::t_5db5d404dead17 1979-1985,2047
+.changeset/durable-object-retry-policy.md
+  s_45a8ffb64dcea1::t_33607b68c0d91d 1-29
+packages/config/src/__tests__/convert.test.ts
+  s_45a8ffb64dcea1::t_60cbfe17816139 923-961
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "abe81ba560f9ab8e5a1373dc3117a4f859ac50d1",
+  "prompts": {},
+  "sessions": {
+    "s_45a8ffb64dcea1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee0069e0cffeoM7dpVyGMk9RLX",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_6aa689848a6f25": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2861135affeN8CpyDm2tLcoX2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_aba07865ed25d7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee005c4c4ffehm4JW43XAuZ1UR",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_f70c3d9c923e90": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2fdf8364ffeOHX8yTIJunIGkw",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}
