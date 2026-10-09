@@ -153,6 +153,30 @@ test("Git client imports, reads and forks a local repository", async ({
 	expect((await forked.state()).refs["refs/heads/main"]).toBe(commit.hash);
 });
 
+test("Git import accepts a native local repository path", async ({
+	expect,
+}) => {
+	const workspace = await useTmp();
+	const source = path.join(workspace, "source.git");
+	const target = path.join(workspace, "local.git");
+	await git(["init", "--bare", source]);
+	await new GitClient(target).importFrom(source);
+	expect((await stat(target)).isDirectory()).toBe(true);
+	expect((await git(["remote"], target)).stdout).toBe("");
+});
+
+test.skipIf(process.platform === "win32")(
+	"Git import staging supports a long target component",
+	async ({ expect }) => {
+		const workspace = await useTmp();
+		const source = path.join(workspace, "source.git");
+		const target = path.join(workspace, "r".repeat(250));
+		await git(["init", "--bare", source]);
+		await new GitClient(target).importFrom(source);
+		expect((await stat(target)).isDirectory()).toBe(true);
+	}
+);
+
 test("failed imports discard partial clones without exposing URL credentials", async ({
 	expect,
 }) => {
@@ -217,6 +241,11 @@ test.skipIf(process.platform === "win32")(
 				await delay(20);
 			}
 			expect(await readFile(ready, "utf8")).toBe("ready");
+			await expect(
+				new GitClient(target).importFrom(pathToFileURL(source).href)
+			).rejects.toThrow(
+				"Another local process is creating this Git repository"
+			);
 			await mkdir(target);
 			await writeFile(marker, "keep me\n");
 			await writeFile(release, "continue");
@@ -224,10 +253,12 @@ test.skipIf(process.platform === "win32")(
 				"Git import target already exists"
 			);
 			expect(await readFile(marker, "utf8")).toBe("keep me\n");
+			const remaining = await readdir(workspace);
 			expect(
-				(await readdir(workspace)).some((name) =>
-					name.startsWith("target.git.import-")
-				)
+				remaining.some((name) => name.startsWith(".artifacts-import-"))
+			).toBe(false);
+			expect(
+				remaining.some((name) => name.startsWith(".artifacts-create-"))
 			).toBe(false);
 		} finally {
 			await writeFile(release, "continue");
@@ -238,7 +269,7 @@ test.skipIf(process.platform === "win32")(
 );
 
 test.skipIf(process.platform === "win32")(
-	"Git clone receives a sanitized URL and ephemeral HTTP authorization",
+	"Git clone sanitizes HTTPS credentials and preserves scp-style sources",
 	async ({ expect }) => {
 		const workspace = await useTmp();
 		const bin = path.join(workspace, "bin");
@@ -249,7 +280,7 @@ test.skipIf(process.platform === "win32")(
 		const wrapper = path.join(bin, "git");
 		await writeFile(
 			wrapper,
-			`#!/bin/sh\nprintf '%s' "$*" > '${cloneArgs}'\nprintf '%s' "$GIT_CONFIG_KEY_1" > '${configKey}'\nexec '${realGit}' "$@"\n`
+			`#!/bin/sh\nprintf '%s' "$*" > '${cloneArgs}'\nprintf '%s' "$GIT_CONFIG_KEY_1" > '${configKey}'\ncase " $* " in\n  *"git@example.invalid:team/repo.git"*) exit 1 ;;\nesac\nexec '${realGit}' "$@"\n`
 		);
 		await chmod(wrapper, 0o755);
 		const previousPath = process.env.PATH;
@@ -266,6 +297,15 @@ test.skipIf(process.platform === "win32")(
 			expect(await readFile(configKey, "utf8")).toBe(
 				"http.https://127.0.0.1:1/.extraHeader"
 			);
+			await expect(
+				new GitClient(path.join(workspace, "scp.git")).importFrom(
+					"git@example.invalid:team/repo.git"
+				)
+			).rejects.toThrow("Git import failed");
+			expect(await readFile(cloneArgs, "utf8")).toContain(
+				"git@example.invalid:team/repo.git"
+			);
+			expect(await readFile(configKey, "utf8")).toBe("");
 		} finally {
 			process.env.PATH = previousPath;
 		}

@@ -1,10 +1,11 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { lstat, mkdtemp, rename } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdtemp, open, rename, unlink } from "node:fs/promises";
 import { devNull, tmpdir } from "node:os";
 import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
+import type { FileHandle } from "node:fs/promises";
 
 const decoder = new TextDecoder();
 type GitOptions = {
@@ -184,6 +185,38 @@ export interface GitTreeEntry {
 
 type GitObjectType = "blob" | "tree" | "commit" | "tag";
 
+/** Only one host process may publish a repository at this path at a time. */
+export async function withRepositoryCreationLock<T>(
+	repository: string,
+	action: () => Promise<T>
+): Promise<T> {
+	const name = createHash("sha256")
+		.update(path.basename(repository))
+		.digest("hex")
+		.slice(0, 32);
+	const lockPath = path.join(
+		path.dirname(repository),
+		`.artifacts-create-${name}.lock`
+	);
+	let lock: FileHandle;
+	try {
+		lock = await open(lockPath, "wx", 0o600);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+			throw new Error(
+				`Another local process is creating this Git repository. Stop it and retry; if it crashed, remove "${lockPath}" only after confirming no process uses this storage path.`
+			);
+		}
+		throw error;
+	}
+	try {
+		return await action();
+	} finally {
+		await lock.close();
+		await unlink(lockPath);
+	}
+}
+
 /** Repository-scoped Git operations; clone/init are supported before it exists. */
 export class GitClient {
 	constructor(readonly repository: string) {}
@@ -241,41 +274,45 @@ export class GitClient {
 		branch?: string,
 		depth?: number
 	): Promise<void> {
-		await assertImportTargetAvailable(this.repository);
-		const source = importSource(url);
-		// Clone into a private, atomically reserved sibling. Even if another
-		// process creates the final path during the clone, cleanup only touches
-		// the directory we own, never that other process's repository.
-		const staged = await mkdtemp(`${this.repository}.import-`);
-		// An import may carry credentials. Never let Git redirect them to a
-		// different destination (or silently expand the requested network access).
-		const args = ["-c", "http.followRedirects=false", "clone", "--bare"];
-		if (branch) {
-			args.push("--branch", branch, "--single-branch");
-		}
-		if (depth) {
-			args.push("--depth", String(depth));
-		}
-		args.push(source.url, staged);
-		try {
-			await runGit(args, { httpAuthorization: source.authorization });
-			// A bare clone records remote.origin.url in its local Git config. It may
-			// include credentials used only for the import. Never retain the remote.
-			await new GitClient(staged).git(["remote", "remove", "origin"]);
+		return withRepositoryCreationLock(this.repository, async () => {
 			await assertImportTargetAvailable(this.repository);
-			await rename(staged, this.repository);
-		} catch (error) {
-			// Git errors can echo URL credentials; do not propagate the raw error.
-			// A failed clone can also leave a config containing the import URL.
-			try {
-				await removeDir(staged);
-			} catch {
-				throw new Error(
-					`Git import failed and the partial repository at "${staged}" could not be removed. Delete it before retrying.`
-				);
+			const source = importSource(url);
+			// Clone into a private, atomically reserved sibling. Even if another
+			// process creates the final path during the clone, cleanup only touches
+			// the directory we own, never that other process's repository.
+			const staged = await mkdtemp(
+				path.join(path.dirname(this.repository), ".artifacts-import-")
+			);
+			// An import may carry credentials. Never let Git redirect them to a
+			// different destination (or silently expand the requested network access).
+			const args = ["-c", "http.followRedirects=false", "clone", "--bare"];
+			if (branch) {
+				args.push("--branch", branch, "--single-branch");
 			}
-			throw safeImportError(error);
-		}
+			if (depth) {
+				args.push("--depth", String(depth));
+			}
+			args.push(source.url, staged);
+			try {
+				await runGit(args, { httpAuthorization: source.authorization });
+				// A bare clone records remote.origin.url in its local Git config. It may
+				// include credentials used only for the import. Never retain the remote.
+				await new GitClient(staged).git(["remote", "remove", "origin"]);
+				await assertImportTargetAvailable(this.repository);
+				await rename(staged, this.repository);
+			} catch (error) {
+				// Git errors can echo URL credentials; do not propagate the raw error.
+				// A failed clone can also leave a config containing the import URL.
+				try {
+					await removeDir(staged);
+				} catch {
+					throw new Error(
+						`Git import failed and the partial repository at "${staged}" could not be removed. Delete it before retrying.`
+					);
+				}
+				throw safeImportError(error);
+			}
+		});
 	}
 
 	async configure(generation: string): Promise<void> {
@@ -476,6 +513,11 @@ function importSource(url: string): {
 	url: string;
 	authorization?: { origin: string; value: string };
 } {
+	// Native Git also accepts local paths and scp-style remotes. Only parse
+	// HTTP(S) URLs, where userinfo can otherwise be written into Git config.
+	if (!/^https?:\/\//i.test(url)) {
+		return { url };
+	}
 	let source: URL;
 	try {
 		source = new URL(url);
