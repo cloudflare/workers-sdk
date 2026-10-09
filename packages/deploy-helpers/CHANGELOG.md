@@ -1,5 +1,24 @@
 # @cloudflare/deploy-helpers
 
+## 0.20.2
+
+### Patch Changes
+
+- [#16161](https://github.com/cloudflare/workers-sdk/pull/16161) [`fcf625d`](https://github.com/cloudflare/workers-sdk/commit/fcf625da014474f656a962b9313dec54563f3573) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Clarify the Worker not found error during CI deploy validation
+
+  Wrangler now reports that the configured Worker could not be found in the account instead of incorrectly describing the failure as a name mismatch.
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+- Updated dependencies [[`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9), [`d8b1fca`](https://github.com/cloudflare/workers-sdk/commit/d8b1fca2ba2fec3d3945fa6ec719b8f6766ad610)]:
+  - @cloudflare/containers-shared@0.21.6
+  - @cloudflare/workers-utils@0.47.2
+  - @cloudflare/config@0.25.0
+  - miniflare@5.20261006.1-alpha
+  - @cloudflare/cli-shared-helpers@0.2.6
+
 ## 0.20.1
 
 ### Patch Changes

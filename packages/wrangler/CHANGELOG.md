@@ -1,5 +1,28 @@
 # wrangler
 
+## 4.150.0
+
+### Minor Changes
+
+- [#16128](https://github.com/cloudflare/workers-sdk/pull/16128) [`daae435`](https://github.com/cloudflare/workers-sdk/commit/daae4351fb517f8a93106a00c6a2a5b31600242a) Thanks [@redsteadz](https://github.com/redsteadz)! - Stop `wrangler deploy`, `wrangler versions upload` and `wrangler preview` in projects that build for the Cloudflare CLI (`cf`)
+
+  If your project builds through `cf`, deploying it with Wrangler reads a different configuration, so it could update the wrong Worker or fail without explaining why. These commands now stop before uploading anything, name the `.cloudflare/output` directory they found, and tell you to run `cf deploy` instead. If that directory is just left over from an earlier build, deleting it restores the Wrangler workflow.
+
+  Ordinary Wrangler projects are unaffected, and `--dry-run` still works on `deploy` and `versions upload`. This is a new guard for the experimental Build Output Specification rather than a fix, and it gives three stable commands a failure mode they did not have before, so it is a minor.
+
+### Patch Changes
+
+- [#16161](https://github.com/cloudflare/workers-sdk/pull/16161) [`fcf625d`](https://github.com/cloudflare/workers-sdk/commit/fcf625da014474f656a962b9313dec54563f3573) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Clarify the Worker not found error during CI deploy validation
+
+  Wrangler now reports that the configured Worker could not be found in the account instead of incorrectly describing the failure as a name mismatch.
+
+- [#16151](https://github.com/cloudflare/workers-sdk/pull/16151) [`cafd3f9`](https://github.com/cloudflare/workers-sdk/commit/cafd3f94207bd2c886e6ab20de17e45e0eb50f1e) Thanks [@DevVettel](https://github.com/DevVettel)! - Time out the OAuth token request instead of waiting indefinitely
+
+  The request that exchanges an authorization code or refresh token for an access token had no timeout, so a stalled connection (for example behind an HTTP proxy) could leave `wrangler login` hanging silently for many minutes after the browser step had succeeded. The request now gives up after 30 seconds and reports that the Cloudflare auth server could not be reached.
+
+- Updated dependencies []:
+  - miniflare@5.20261006.1-alpha
+
 ## 4.149.0
 
 ### Minor Changes
