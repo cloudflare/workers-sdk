@@ -130,8 +130,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 				Current Version ID: 00000000-0000-0000-0000-000000000000"
 			`);
 			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`
-				"▲ [WARNING] Because your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be enabled for this deployment by default.
-				  To override this setting, you can disable Preview URLs by explicitly setting 'preview_urls = false' in your Wrangler file."
+				"▲ [WARNING] Because your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler config file, Preview URLs will be enabled for this deployment by default.
+				  To override this setting, you can disable Preview URLs by explicitly setting 'preview_urls = false' in your Wrangler config file."
 			`);
 		});
 	});
