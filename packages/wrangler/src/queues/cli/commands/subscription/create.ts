@@ -19,6 +19,8 @@ function parseSourceArgument(
 		workflowName?: string;
 		zoneId?: string;
 		domain?: string;
+		sourceNamespace?: string;
+		sourceRepoName?: string;
 	}
 ): EventSource {
 	switch (source as EventSourceType) {
@@ -26,7 +28,23 @@ function parseSourceArgument(
 			return { type: EventSourceType.ARTIFACTS };
 
 		case EventSourceType.ARTIFACTS_REPO:
-			return { type: EventSourceType.ARTIFACTS_REPO };
+			if (!args.sourceNamespace) {
+				throw new UserError(
+					`--source-namespace is required when using source '${EventSourceType.ARTIFACTS_REPO}'`,
+					{ telemetryMessage: "queues subscription create missing namespace" }
+				);
+			}
+			if (!args.sourceRepoName) {
+				throw new UserError(
+					`--source-repo-name is required when using source '${EventSourceType.ARTIFACTS_REPO}'`,
+					{ telemetryMessage: "queues subscription create missing repo name" }
+				);
+			}
+			return {
+				type: EventSourceType.ARTIFACTS_REPO,
+				namespace: args.sourceNamespace,
+				repo_name: args.sourceRepoName,
+			};
 
 		case EventSourceType.BROWSER_RUN:
 			return { type: EventSourceType.BROWSER_RUN };
@@ -133,7 +151,8 @@ export const queuesSubscriptionCreateCommand = createCommand({
 			choices: EVENT_SOURCE_TYPES,
 		},
 		events: {
-			describe: "Comma-separated list of event types to subscribe to",
+			describe:
+				"Comma-separated list of event types to subscribe to (for artifacts.repo, use pushed, not cf.artifacts.repo.pushed)",
 			type: "string",
 			demandOption: true,
 		},
@@ -167,6 +186,15 @@ export const queuesSubscriptionCreateCommand = createCommand({
 				"Sending domain — zone apex or verified subdomain (required for email.sending source)",
 			type: "string",
 		},
+		"source-namespace": {
+			describe: "Artifacts namespace (required for artifacts.repo source)",
+			type: "string",
+		},
+		"source-repo-name": {
+			describe:
+				"Artifacts repository name (required for artifacts.repo source)",
+			type: "string",
+		},
 	},
 	async handler(args, { config }) {
 		const source = parseSourceArgument(args.source, {
@@ -175,6 +203,8 @@ export const queuesSubscriptionCreateCommand = createCommand({
 			workflowName: args.workflowName,
 			zoneId: args.zoneId,
 			domain: args.domain,
+			sourceNamespace: args.sourceNamespace,
+			sourceRepoName: args.sourceRepoName,
 		});
 
 		const events = args.events

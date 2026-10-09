@@ -141,6 +141,20 @@ describe("updateTsConfig", () => {
 		);
 	});
 
+	test("preserves SvelteKit generated types", async ({ expect }) => {
+		vi.mocked(readFile).mockImplementation((path) =>
+			path.includes("tsconfig.json")
+				? `{ "extends": "$app/tsconfig", "compilerOptions": {} }`
+				: "no runtime types here"
+		);
+
+		await updateTsConfig(ctx, { usesNodeCompat: false });
+
+		const written = vi.mocked(writeFile).mock.calls[0][1];
+		expect(written).toContain(`"$app/types"`);
+		expect(written).toContain(`"./worker-configuration.d.ts"`);
+	});
+
 	test("skips modification when tsconfig uses project references", async ({
 		expect,
 	}) => {

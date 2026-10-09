@@ -160,7 +160,7 @@ export const ASSETS_PLUGIN: Plugin = {
 			}
 		}
 
-		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
+		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage:${options.config.name}`;
 		const storageService: Service = {
 			name: storageServiceName,
 			disk: {
@@ -220,6 +220,7 @@ export const ASSETS_PLUGIN: Plugin = {
 			compatibility_flags: options.config.compatibilityFlags,
 			html_handling: assets.htmlHandling,
 			not_found_handling: assets.notFoundHandling,
+			base_path: assets.basePath,
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
 			debug: true,

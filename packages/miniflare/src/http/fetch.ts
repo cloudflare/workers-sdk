@@ -254,11 +254,13 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 
 			options.headers = headers;
 
-			// Sometimes, keep-alive connections can sometimes cause issues with sockets
-			// disconnecting unexpectedly. To mitigate this, try to avoid keep-alive race
-			// conditions by telling the runtime to close the connection immediately after
-			// the request is complete
-			options.reset = true;
+			// Worker handlers can have side effects even for GET/HEAD, so never
+			// replay a request after a transport failure or pipeline it behind another
+			options.idempotent = false;
+
+			// Reuse successful connections for every method to avoid consuming one
+			// ephemeral port per dispatch, but surface failures instead of retrying
+			options.reset = false;
 
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate

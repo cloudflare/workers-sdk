@@ -1410,6 +1410,7 @@ describe("convertToWranglerConfig", () => {
 					assets: {
 						htmlHandling: "none",
 						notFoundHandling: "404-page",
+						basePath: "/docs",
 						runWorkerFirst: ["/api/*"],
 					},
 				},
@@ -1418,6 +1419,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.assets).toEqual({
 				html_handling: "none",
 				not_found_handling: "404-page",
+				base_path: "/docs",
 				run_worker_first: ["/api/*"],
 			});
 		});
@@ -1533,7 +1535,7 @@ describe("convertToWranglerConfig", () => {
 				authorizedKeys: [{ name: "deploy", publicKey: "ssh-ed25519 key" }],
 				constraints: {
 					regions: ["ENAM", "WEUR"],
-					jurisdiction: "eu",
+					jurisdiction: "us",
 				},
 				rollout: {
 					kind: "full-auto",
@@ -1578,7 +1580,7 @@ describe("convertToWranglerConfig", () => {
 					authorized_keys: [{ name: "deploy", public_key: "ssh-ed25519 key" }],
 					constraints: {
 						regions: ["ENAM", "WEUR"],
-						jurisdiction: "eu",
+						jurisdiction: "us",
 					},
 					rollout_kind: "full_auto",
 					rollout_step_percentage: [50, 100],

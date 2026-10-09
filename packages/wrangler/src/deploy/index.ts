@@ -4,7 +4,6 @@ import {
 } from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
-	CommandLineArgsError,
 	getDockerPath,
 	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
@@ -18,6 +17,7 @@ import {
 	buildDeployContainerImages,
 	buildDurableObjectContainerImages,
 } from "../deployment-bundle/build-container-images";
+import { assertNoCloudflareBuildOutput } from "../deployment-bundle/cf-build-output-guard";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -42,23 +42,6 @@ import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 import type { Config } from "@cloudflare/workers-utils";
 
-function parseEventCode(value: string | string[]): string {
-	if (Array.isArray(value)) {
-		throw new CommandLineArgsError("--event-code expects a single value.", {
-			telemetryMessage: "deploy event code multiple values",
-		});
-	}
-
-	const eventCode = value.trim();
-	if (!eventCode) {
-		throw new CommandLineArgsError("--event-code cannot be empty.", {
-			telemetryMessage: "deploy event code empty",
-		});
-	}
-
-	return eventCode;
-}
-
 export const deployCommand = createCommand({
 	metadata: {
 		description: "🆙 Deploy a Worker to Cloudflare",
@@ -71,13 +54,6 @@ export const deployCommand = createCommand({
 		...experimentalNewConfigArg,
 		...sharedDeployVersionsArgs,
 		...durableObjectsCodeUpdateModeArg,
-		"event-code": {
-			describe: "Create a temporary account for an event",
-			type: "string",
-			requiresArg: true,
-			hidden: true,
-			coerce: parseEventCode,
-		},
 		triggers: {
 			describe: "cron schedules to attach",
 			alias: ["schedule", "schedules"],
@@ -146,14 +122,6 @@ export const deployCommand = createCommand({
 		suggestSkillsAfterHandler: true,
 	},
 	validateArgs(args) {
-		if (
-			args.eventCode &&
-			!(args as typeof args & { temporary?: boolean }).temporary
-		) {
-			throw new CommandLineArgsError("--event-code requires --temporary.", {
-				telemetryMessage: "deploy event code temporary required",
-			});
-		}
 		validateDeployVersionsArgs(args, "deploy");
 		validateRouteZoneArgs(args);
 	},
@@ -171,6 +139,20 @@ export async function runDeployCommandHandler(
 		pagesToWorkersDelegation = false,
 	}: { config: Config; pagesToWorkersDelegation?: boolean }
 ): Promise<void> {
+	// Runs before autoconfig, which may write a config file, and so before any
+	// local or remote mutation. `--dry-run` is exempt: it uploads nothing, so
+	// there is no deployment to stop.
+	if (!args.dryRun) {
+		assertNoCloudflareBuildOutput(
+			{
+				config,
+				explicitConfigPath: args.config,
+				scriptPath: args.script,
+			},
+			"deploy"
+		);
+	}
+
 	const detectedAgent = detectAgent();
 	const shouldUseProjectName =
 		detectedAgent.isAgent && !args.name && !config.name;

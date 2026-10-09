@@ -37,7 +37,10 @@ import { createPreferences } from "./preferences";
 import { createTemporaryTermsPrompt } from "./temporary-terms";
 import type { UserAuthConfig } from "../config-file/auth";
 import type { TemporaryPreviewAccount } from "../config-file/temporary";
-import type { TemporaryAccountRequest } from "../context";
+import type {
+	TemporaryAccountLogger,
+	TemporaryAccountRequest,
+} from "../context";
 import type { CredentialStore } from "../credential-store";
 import type {
 	LoginOrRefreshFailureReason,
@@ -165,12 +168,12 @@ function notLoggedInErrorBodies(
 }
 
 function logTemporaryPreviewAccount(
-	logger: AuthContext["logger"],
+	temporaryAccountLogger: TemporaryAccountLogger,
 	temporaryPreviewAccount: TemporaryPreviewAccount,
 	cached: boolean
 ): void {
 	const claimExpiresAt = new Date(temporaryPreviewAccount.claim.expiresAt);
-	logger.log(
+	temporaryAccountLogger.log(
 		dedent`
 			Temporary account ready:
 				Account: ${temporaryPreviewAccount.account.name} (${cached ? "reused" : "created"})
@@ -192,6 +195,7 @@ export function createCloudflareAuth(
 	ctx: AuthContext
 ): CloudflareAuth {
 	const { logger } = ctx;
+	const temporaryAccountLogger = ctx.temporaryAccountLogger ?? logger;
 	const cliName = descriptor.cliName;
 	const NOT_LOGGED_IN_ERROR_BODIES = notLoggedInErrorBodies(
 		descriptor.commands.login
@@ -261,7 +265,11 @@ export function createCloudflareAuth(
 				descriptor.fileFormat,
 				descriptor.getTemporaryAccountConfigPath
 			),
-			prompt: createTemporaryTermsPrompt({ logger, prompt: ctx.prompt }),
+			prompt: createTemporaryTermsPrompt({
+				temporaryAccountLogger,
+				prompt: ctx.prompt,
+			}),
+			temporaryAccountLogger,
 		},
 	});
 
@@ -602,7 +610,11 @@ ${accounts
 
 			const { account: temporaryPreviewAccount, cached } =
 				await oauthFlow.activateTemporaryAccount();
-			logTemporaryPreviewAccount(logger, temporaryPreviewAccount, cached);
+			logTemporaryPreviewAccount(
+				temporaryAccountLogger,
+				temporaryPreviewAccount,
+				cached
+			);
 			return temporaryPreviewAccount.account.id;
 		}
 

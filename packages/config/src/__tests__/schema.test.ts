@@ -778,6 +778,20 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts a Container with the us jurisdiction", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			constraints: { jurisdiction: "us" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({
+				constraints: { jurisdiction: "us" },
+			});
+		}
+	});
+
 	it("rejects a local image reference", ({ expect }) => {
 		const result = InputContainerSchema.safeParse({
 			...baseContainer,
@@ -1112,6 +1126,21 @@ describe("InputContainerSchema", () => {
 });
 
 describe("OutputContainerSchema", () => {
+	it("accepts a Container with the us jurisdiction", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			...baseOutputContainer,
+			image: { reference: "registry.example.com/my-image:digest" },
+			constraints: { jurisdiction: "us" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({
+				constraints: { jurisdiction: "us" },
+			});
+		}
+	});
+
 	it.for([
 		{ reference: "registry.example.com/my-image:digest" },
 		{ localReference: "locally-built-image:latest" },

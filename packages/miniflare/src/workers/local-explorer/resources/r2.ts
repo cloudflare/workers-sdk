@@ -350,6 +350,26 @@ export async function putR2Object(
 type DeleteObjectsBody = z.output<typeof zR2BucketDeleteObjectsData>["body"];
 
 /**
+ * Delete a single object, returning the object key in the API envelope.
+ *
+ * @see https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/objects/methods/delete/
+ */
+export async function deleteR2Object(
+	c: AppContext,
+	bucket_name: string,
+	object_key: string
+): Promise<Response> {
+	const response = await sendR2PutRequest(c, bucket_name, {
+		method: "delete",
+		objects: [object_key],
+	});
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
+	}
+	return c.json(wrapResponse({ key: object_key }));
+}
+
+/**
  * Delete one or more objects from an R2 bucket.
  *
  * Accepts an array of object keys to delete.
