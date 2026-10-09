@@ -794,7 +794,11 @@ function addProductBindings(
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+			// Preserve omitted legacy settings so the Artifacts plugin applies
+			// the same local default as a V5 binding.
+			...(binding.remoteProxyConnectionString === undefined
+				? {}
+				: { dev: { remote: isRemote(binding.remoteProxyConnectionString) } }),
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {

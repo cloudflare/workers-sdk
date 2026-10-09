@@ -457,12 +457,14 @@ export function printBindings(
 
 	if (artifacts.length > 0) {
 		output.push(
-			...artifacts.map(({ binding, namespace }) => {
+			...artifacts.map(({ binding, namespace, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("artifacts"),
 					value: namespace,
-					mode: getMode({ isSimulatedLocally: false }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);
