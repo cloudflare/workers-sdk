@@ -303,19 +303,10 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 	}
 });
 
-test("artifacts: omitted remote preserves remote routing without host Git", async ({
-	expect,
-}) => {
-	const root = await useTmp();
-	const previousPath = process.env.PATH;
-	process.env.PATH = root;
-	try {
-		const mf = new Miniflare(options("test", "REPOS", null));
-		useDispose(mf);
-		await expect(mf.ready).resolves.toBeDefined();
-	} finally {
-		process.env.PATH = previousPath;
-	}
+test("artifacts: omitted remote remains offline", async ({ expect }) => {
+	const mf = new Miniflare(options("test", "REPOS", null));
+	useDispose(mf);
+	expect((await rpc(mf, "create", ["offline"])).name).toBe("offline");
 });
 
 test("artifacts: rejects invalid local namespace before starting services", async ({
@@ -1064,14 +1055,16 @@ test("artifacts: missing Git gives an actionable error during local startup", as
 	const previousPath = process.env.PATH;
 	process.env.PATH = root;
 	try {
-		const mf = new Miniflare(options());
-		await expect(mf.ready).rejects.toThrow(
-			/requires Git 2\.32 or newer on PATH.*Install Git.*restart/i
-		);
-		// dispose() preserves the startup error after cleaning up the instance.
-		await expect(mf.dispose()).rejects.toThrow(
-			/requires Git 2\.32 or newer on PATH/
-		);
+		for (const remote of [false, null]) {
+			const mf = new Miniflare(options("test", "REPOS", remote));
+			await expect(mf.ready).rejects.toThrow(
+				/requires Git 2\.32 or newer on PATH.*Install Git.*restart/i
+			);
+			// dispose() preserves the startup error after cleaning up the instance.
+			await expect(mf.dispose()).rejects.toThrow(
+				/requires Git 2\.32 or newer on PATH/
+			);
+		}
 		await expect(startGitSidecar(path.join(root, "repos"))).rejects.toThrow(
 			/requires Git 2\.32 or newer on PATH/
 		);

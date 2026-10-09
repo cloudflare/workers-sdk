@@ -176,16 +176,27 @@ describe("printBindings -- Flagship bindings", () => {
 });
 
 describe("printBindings -- Artifacts bindings", () => {
-	it("shows Artifacts bindings", ({ expect }) => {
-		const output = callPrintBindings({
-			MY_ARTIFACTS: {
-				type: "artifacts",
-				namespace: "default",
-			},
-		});
+	it.for([
+		{ label: "default", remote: undefined, mode: "local" },
+		{ label: "explicit local", remote: false, mode: "local" },
+		{ label: "explicit remote", remote: true, mode: "remote" },
+	])(
+		"shows $label Artifacts bindings as $mode",
+		({ remote, mode }, { expect }) => {
+			const output = callPrintBindings(
+				{
+					MY_ARTIFACTS: {
+						type: "artifacts",
+						namespace: "default",
+						...(remote === undefined ? {} : { remote }),
+					},
+				},
+				true
+			);
 
-		expect(output).toContain("MY_ARTIFACTS");
-		expect(output).toContain("Artifacts");
-		expect(output).toContain("default");
-	});
+			expect(output).toMatch(
+				new RegExp(`env\\.MY_ARTIFACTS \\(default\\)\\s+Artifacts\\s+${mode}`)
+			);
+		}
+	);
 });
