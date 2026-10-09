@@ -33,23 +33,27 @@ afterEach(async () => {
 /** Keep first-attempt failures and progress visible even when Vitest retries pass. */
 function trackTimerQuotaTest({ task, onTestFinished }: TestContext) {
 	const start = performance.now();
+	const attempt = (task.result?.retryCount ?? 0) + 1;
+	const previousErrors = task.result?.errors?.length ?? 0;
 	const progress = { completed: 0, phase: "steps", stepsMs: 0 };
 	onTestFinished(() => {
 		console.info(
 			"Workflows timer quota:",
 			JSON.stringify({
 				test: task.name,
-				attempt: (task.result?.retryCount ?? 0) + 1,
+				attempt,
 				...progress,
 				elapsedMs: Math.round(performance.now() - start),
-				errors: task.result?.errors?.map(({ name, message }) => ({
-					name,
-					message,
-				})),
+				errors: task.result?.errors
+					?.slice(previousErrors)
+					.map(({ name, message }) => ({
+						name,
+						message,
+					})),
 			})
 		);
 	});
-	return { start, progress };
+	return { attempt, start, progress };
 }
 
 describe("Engine", () => {
@@ -788,14 +792,16 @@ describe("Engine", () => {
 			{ timeout: 180_000 },
 			async (context) => {
 				const { expect } = context;
-				const { start, progress } = trackTimerQuotaTest(context);
+				const { attempt, start, progress } = trackTimerQuotaTest(context);
 				// workerd's isolate allows 10,000 active timers. Each step.do() starts a
 				// 10-minute scheduler.wait() for the step timeout. If that wait is not
 				// cancelled when the step finishes, 5,000 sequential immediate steps hit
 				// QuotaExceededError (issue #15788).
+				// Vitest retries retain storage. A fresh ID ensures every attempt
+				// executes real callbacks instead of replaying earlier step results.
 				const steps = 5_100;
 				const engineStub = await runWorkflowAndAwait(
-					"STEP-TIMEOUT-TIMER-QUOTA",
+					`STEP-TIMEOUT-TIMER-QUOTA-${attempt}`,
 					async (_event, step) => {
 						for (let i = 0; i < steps; i++) {
 							await step.do(
@@ -804,9 +810,11 @@ describe("Engine", () => {
 									retries: { limit: 0, delay: "0 seconds" },
 									timeout: "10 minutes",
 								},
-								async () => i
+								async () => {
+									progress.completed++;
+									return i;
+								}
 							);
-							progress.completed++;
 						}
 						return { completed: steps };
 					}
@@ -835,13 +843,15 @@ describe("Engine", () => {
 			{ timeout: 180_000 },
 			async (context) => {
 				const { expect } = context;
-				const { start, progress } = trackTimerQuotaTest(context);
+				const { attempt, start, progress } = trackTimerQuotaTest(context);
 				// Same 10,000-timer quota as the success-path case. Failed steps used
 				// to leave scheduler.wait() running because the error handler never
 				// aborted stepExecutionSignal (issue #15788).
+				// Vitest retries retain storage. A fresh ID ensures every attempt
+				// executes real callbacks instead of replaying earlier step results.
 				const steps = 5_100;
 				const engineStub = await runWorkflowAndAwait(
-					"STEP-TIMEOUT-TIMER-QUOTA-FAILURES",
+					`STEP-TIMEOUT-TIMER-QUOTA-FAILURES-${attempt}`,
 					async (_event, step) => {
 						for (let i = 0; i < steps; i++) {
 							try {
@@ -852,6 +862,7 @@ describe("Engine", () => {
 										timeout: "10 minutes",
 									},
 									async () => {
+										progress.completed++;
 										throw new Error("immediate step failure");
 									}
 								);
@@ -861,7 +872,6 @@ describe("Engine", () => {
 									throw e;
 								}
 							}
-							progress.completed++;
 						}
 						return { completed: steps };
 					}
