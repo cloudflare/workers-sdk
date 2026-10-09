@@ -1,7 +1,14 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdir, mkdtemp, readdir, rename, stat } from "node:fs/promises";
+import {
+	mkdir,
+	mkdtemp,
+	readdir,
+	rename,
+	stat,
+	unlink,
+} from "node:fs/promises";
 import {
 	createServer,
 	type IncomingMessage,
@@ -15,6 +22,7 @@ import {
 	GitClient,
 	gitArgumentsWithoutHooks,
 	gitEnvironment,
+	withRepositoryCreationLock,
 } from "./git-client";
 import {
 	assertSupportedGitLayout,
@@ -318,32 +326,36 @@ async function withNewRepository(
 	initialize: (staged: GitClient) => Promise<void>
 ): Promise<RepositoryState> {
 	await mkdir(root, { recursive: true });
-	if (await exists(git.repository)) {
-		// The namespace has no record for this name. A prior deletion may have
-		// committed metadata before the process stopped removing Git data.
-		// Never remove a directory that was not created by this simulator.
-		if ((await git.generation()) === null) {
-			throw new Error(`Repository "${body.name}" already exists on disk`);
-		}
-		await retireRepository(git.repository);
-	}
-	// All initialization and cleanup happens under an owned staging directory.
-	// A failed clone or fork must not remove a repository created concurrently
-	// at the final path by another host process.
-	const stagingDirectory = await mkdtemp(path.join(root, ".artifacts-stage-"));
-	const staged = new GitClient(path.join(stagingDirectory, "repo.git"));
-	try {
-		await initialize(staged);
-		await staged.configure(required(body.generation, "generation"));
-		const state = await staged.state();
+	return withRepositoryCreationLock(git.repository, async () => {
 		if (await exists(git.repository)) {
-			throw new Error(`Repository "${body.name}" already exists on disk`);
+			// The namespace has no record for this name. A prior deletion may have
+			// committed metadata before the process stopped removing Git data.
+			// Never remove a directory that was not created by this simulator.
+			if ((await git.generation()) === null) {
+				throw new Error(`Repository "${body.name}" already exists on disk`);
+			}
+			await retireRepository(git.repository);
 		}
-		await rename(staged.repository, git.repository);
-		return state;
-	} finally {
-		await removeDir(stagingDirectory);
-	}
+		// All initialization and cleanup happens under an owned staging directory.
+		// A failed clone or fork must not remove a repository created concurrently
+		// at the final path by another host process.
+		const stagingDirectory = await mkdtemp(
+			path.join(root, ".artifacts-stage-")
+		);
+		const staged = new GitClient(path.join(stagingDirectory, "repo.git"));
+		try {
+			await initialize(staged);
+			await staged.configure(required(body.generation, "generation"));
+			const state = await staged.state();
+			if (await exists(git.repository)) {
+				throw new Error(`Repository "${body.name}" already exists on disk`);
+			}
+			await rename(staged.repository, git.repository);
+			return state;
+		} finally {
+			await removeDir(stagingDirectory);
+		}
+	});
 }
 
 // Moving the directory out of its active path is atomic on the same volume.
@@ -364,9 +376,16 @@ async function retireRepository(repository: string): Promise<void> {
 
 async function cleanupInterruptedRepositories(root: string): Promise<void> {
 	const retired = /^[0-9a-f]{32}\.git\.deleting-[0-9a-f]{32}$/;
-	const partialImport = /^[0-9a-f]{32}\.git\.import-[a-zA-Z0-9]{6}$/;
+	const partialImport = /^\.artifacts-import-[a-zA-Z0-9]{6}$/;
 	const partialCreation = /^\.artifacts-stage-[a-zA-Z0-9]{6}$/;
+	const abandonedLock = /^\.artifacts-create-[0-9a-f]{32}\.lock$/;
+	// A persistence directory has one live dev server. On its next startup,
+	// creation locks from a terminated process are no longer held.
 	for (const entry of await readdir(root, { withFileTypes: true })) {
+		if (entry.isFile() && abandonedLock.test(entry.name)) {
+			await unlink(path.join(root, entry.name));
+			continue;
+		}
 		if (
 			entry.isDirectory() &&
 			(retired.test(entry.name) ||
