@@ -1,7 +1,15 @@
 import { execFile } from "node:child_process";
-import { chmod, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import {
+	chmod,
+	mkdir,
+	readFile,
+	readdir,
+	stat,
+	writeFile,
+} from "node:fs/promises";
 import { devNull } from "node:os";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { test } from "vitest";
@@ -169,6 +177,59 @@ test("failed imports never remove a pre-existing target", async ({
 	).rejects.toThrow("Git import target already exists");
 	expect(await readFile(marker, "utf8")).toBe("keep me\n");
 });
+
+test.skipIf(process.platform === "win32")(
+	"a concurrent repository is never removed by failed import cleanup",
+	async ({ expect }) => {
+		const workspace = await useTmp();
+		const source = path.join(workspace, "source.git");
+		const target = path.join(workspace, "target.git");
+		const marker = path.join(target, "keep.txt");
+		const ready = path.join(workspace, "clone-ready");
+		const release = path.join(workspace, "clone-release");
+		const bin = path.join(workspace, "bin");
+		await git(["init", "--bare", source]);
+		await mkdir(bin);
+		const realGit = (await exec("which", ["git"])).stdout.trim();
+		const wrapper = path.join(bin, "git");
+		await writeFile(
+			wrapper,
+			`#!/bin/sh\ncase " $* " in\n  *" clone "*)\n    printf ready > '${ready}'\n    while [ ! -f '${release}' ]; do sleep 0.02; done\n    ;;\nesac\nexec '${realGit}' "$@"\n`
+		);
+		await chmod(wrapper, 0o755);
+
+		const previousPath = process.env.PATH;
+		process.env.PATH = `${bin}:${previousPath}`;
+		const importing = new GitClient(target).importFrom(
+			pathToFileURL(source).href
+		);
+		try {
+			for (let attempt = 0; attempt < 250; attempt++) {
+				if ((await readdir(workspace)).includes("clone-ready")) {
+					break;
+				}
+				await delay(20);
+			}
+			expect(await readFile(ready, "utf8")).toBe("ready");
+			await mkdir(target);
+			await writeFile(marker, "keep me\n");
+			await writeFile(release, "continue");
+			await expect(importing).rejects.toThrow(
+				"Git import target already exists"
+			);
+			expect(await readFile(marker, "utf8")).toBe("keep me\n");
+			expect(
+				(await readdir(workspace)).some((name) =>
+					name.startsWith("target.git.import-")
+				)
+			).toBe(false);
+		} finally {
+			await writeFile(release, "continue");
+			await importing.catch(() => {});
+			process.env.PATH = previousPath;
+		}
+	}
+);
 
 test("failed Git imports clean their target and hide URL credentials", async ({
 	expect,

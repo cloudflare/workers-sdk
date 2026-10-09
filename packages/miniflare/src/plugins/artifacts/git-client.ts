@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { lstat } from "node:fs/promises";
+import { lstat, mkdtemp, rename } from "node:fs/promises";
 import { devNull, tmpdir } from "node:os";
 import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
@@ -215,16 +215,11 @@ export class GitClient {
 		branch?: string,
 		depth?: number
 	): Promise<void> {
-		// Only clean up directories created by this import. A failed clone into
-		// an existing path must never remove someone else's repository.
-		try {
-			await lstat(this.repository);
-			throw new Error("Git import target already exists");
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-				throw error;
-			}
-		}
+		await assertImportTargetAvailable(this.repository);
+		// Clone into a private, atomically reserved sibling. Even if another
+		// process creates the final path during the clone, cleanup only touches
+		// the directory we own, never that other process's repository.
+		const staged = await mkdtemp(`${this.repository}.import-`);
 		// An import may carry credentials. Never let Git redirect them to a
 		// different destination (or silently expand the requested network access).
 		const args = ["-c", "http.followRedirects=false", "clone", "--bare"];
@@ -234,20 +229,22 @@ export class GitClient {
 		if (depth) {
 			args.push("--depth", String(depth));
 		}
-		args.push(url, this.repository);
+		args.push(url, staged);
 		try {
 			await runGit(args);
 			// A bare clone records remote.origin.url in its local Git config. It may
 			// include credentials used only for the import. Never retain the remote.
-			await this.git(["remote", "remove", "origin"]);
+			await new GitClient(staged).git(["remote", "remove", "origin"]);
+			await assertImportTargetAvailable(this.repository);
+			await rename(staged, this.repository);
 		} catch (error) {
 			// Git errors can echo URL credentials; do not propagate the raw error.
 			// A failed clone can also leave a config containing the import URL.
 			try {
-				await removeDir(this.repository);
+				await removeDir(staged);
 			} catch {
 				throw new Error(
-					`Git import failed and the partial repository at "${this.repository}" could not be removed. Delete it before retrying.`
+					`Git import failed and the partial repository at "${staged}" could not be removed. Delete it before retrying.`
 				);
 			}
 			throw safeImportError(error);
@@ -451,8 +448,23 @@ export class GitClient {
 	}
 }
 
+async function assertImportTargetAvailable(repository: string): Promise<void> {
+	try {
+		await lstat(repository);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+			return;
+		}
+		throw error;
+	}
+	throw new Error("Git import target already exists");
+}
+
 function safeImportError(error: unknown): Error {
 	const detail = error instanceof Error ? error.message.toLowerCase() : "";
+	if (detail === "git import target already exists") {
+		return new Error("Git import target already exists");
+	}
 	if (
 		detail.includes("authentication failed") ||
 		detail.includes("could not read username") ||
