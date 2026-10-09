@@ -1,5 +1,19 @@
 # @cloudflare/containers-shared
 
+## 0.21.6
+
+### Patch Changes
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+- Updated dependencies [[`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9), [`d8b1fca`](https://github.com/cloudflare/workers-sdk/commit/d8b1fca2ba2fec3d3945fa6ec719b8f6766ad610)]:
+  - @cloudflare/workers-utils@0.47.2
+  - @cloudflare/config@0.25.0
+  - @cloudflare/build-output-utils@0.9.1
+  - @cloudflare/cli-shared-helpers@0.2.6
+
 ## 0.21.5
 
 ### Patch Changes

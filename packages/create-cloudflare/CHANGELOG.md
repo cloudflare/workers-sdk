@@ -1,5 +1,23 @@
 # create-cloudflare
 
+## 2.74.0
+
+### Minor Changes
+
+- [#16129](https://github.com/cloudflare/workers-sdk/pull/16129) [`070c3f2`](https://github.com/cloudflare/workers-sdk/commit/070c3f299238c7c1b81f3eaae2bdd801f5aacfd3) Thanks [@james-elicx](https://github.com/james-elicx)! - Support projects configured with `cloudflare.config.ts` and the `cf` CLI
+
+  Framework generators can now scaffold projects that use `cloudflare.config.ts` and the `cf` CLI in place of a Wrangler configuration file. C3 detects these projects and installs `cf` instead of Wrangler, logs in and selects accounts with `cf`, and looks up the deployed Worker's URL with `cf`. Projects that use Wrangler are unaffected.
+
+### Patch Changes
+
+- [#16129](https://github.com/cloudflare/workers-sdk/pull/16129) [`070c3f2`](https://github.com/cloudflare/workers-sdk/commit/070c3f299238c7c1b81f3eaae2bdd801f5aacfd3) Thanks [@james-elicx](https://github.com/james-elicx)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From         | To    |
+  | ----------------- | ------------ | ----- |
+  | create-vinext-app | 1.0.0-beta.3 | 1.0.0 |
+
 ## 2.73.4
 
 ### Patch Changes
