@@ -1,13 +1,16 @@
 # Artifacts in Miniflare
 
+For setup, persistence, Git authentication, and local/remote behavior, see
+[Local development](./LOCAL_DEVELOPMENT.md).
+
 The Artifacts plugin implements the local Artifacts binding in workerd. This
 first version requires Git 2.32 or newer installed globally on the host and
 available on PATH. Miniflare checks the Git version at local startup and gives
 installation or upgrade instructions if needed. A Node worker thread runs the
-native Git backend. Set `dev.remote` to `false` explicitly to select local
-storage; an omitted setting retains remote binding behavior in this stage.
-We plan to open-source a JavaScript Git engine in the future; it is not
-included in this version.
+native Git backend. Unless `dev.remote` is explicitly `true`, an Artifacts
+binding uses local storage rather than contacting Cloudflare. We plan to
+open-source a JavaScript Git engine in the future; it is not included in this
+version.
 
 ## Local startup
 

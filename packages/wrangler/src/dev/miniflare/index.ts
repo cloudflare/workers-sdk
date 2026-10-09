@@ -1006,7 +1006,9 @@ export function buildMiniflareBindingOptions(
 				binding.binding,
 				{
 					namespace: binding.namespace,
-					remoteProxyConnectionString,
+					remoteProxyConnectionString: binding.remote
+						? remoteProxyConnectionString
+						: undefined,
 				},
 			])
 		),
