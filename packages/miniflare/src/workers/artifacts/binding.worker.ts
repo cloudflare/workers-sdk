@@ -966,6 +966,15 @@ function parseImportRequest(options: ImportRepositoryOptions): {
 			"Invalid source.url: must be an HTTPS URL."
 		);
 	}
+	if (
+		source.depth !== undefined &&
+		(!Number.isSafeInteger(source.depth) || source.depth < 1)
+	) {
+		throw new ArtifactsError(
+			"INVALID_INPUT",
+			"Invalid source.depth: must be a positive integer."
+		);
+	}
 	return { source, target, sourceUrl };
 }
 

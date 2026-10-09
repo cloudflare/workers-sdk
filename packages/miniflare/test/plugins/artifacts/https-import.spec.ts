@@ -423,6 +423,21 @@ test("HTTPS import: depth and branch constrain the imported history and refs", a
 	});
 });
 
+test("HTTPS import: invalid depth reports invalid input before contacting Git", async ({
+	expect,
+}) => {
+	await withFixture(async ({ mf, fixture }) => {
+		for (const depth of [0, -1, 1.5, "1", null]) {
+			const result = await call(mf, "import", [
+				{ source: { url: fixture.url, depth }, target: { name: "shallow" } },
+			]);
+			expect(result.ok).toBe(false);
+			expect(result.body).toMatchObject({ code: "INVALID_INPUT" });
+		}
+		expect((await call(mf, "list")).body).toMatchObject({ total: 0 });
+	});
+});
+
 test("HTTPS import: Basic URL credentials, missing repos/branches, duplicate targets and retries", async ({
 	expect,
 }) => {
