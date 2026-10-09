@@ -231,6 +231,41 @@ test.skipIf(process.platform === "win32")(
 	}
 );
 
+test.skipIf(process.platform === "win32")(
+	"Git clone receives a sanitized URL and ephemeral HTTP authorization",
+	async ({ expect }) => {
+		const workspace = await useTmp();
+		const bin = path.join(workspace, "bin");
+		const cloneArgs = path.join(workspace, "clone-args");
+		const configKey = path.join(workspace, "authorization-key");
+		await mkdir(bin);
+		const realGit = (await exec("which", ["git"])).stdout.trim();
+		const wrapper = path.join(bin, "git");
+		await writeFile(
+			wrapper,
+			`#!/bin/sh\nprintf '%s' "$*" > '${cloneArgs}'\nprintf '%s' "$GIT_CONFIG_KEY_1" > '${configKey}'\nexec '${realGit}' "$@"\n`
+		);
+		await chmod(wrapper, 0o755);
+		const previousPath = process.env.PATH;
+		process.env.PATH = `${bin}:${previousPath}`;
+		try {
+			await expect(
+				new GitClient(path.join(workspace, "failed.git")).importFrom(
+					"https://reader:credential-canary@127.0.0.1:1/missing.git"
+				)
+			).rejects.toThrow("Git import failed");
+			const args = await readFile(cloneArgs, "utf8");
+			expect(args).toContain("https://127.0.0.1:1/missing.git");
+			expect(args).not.toContain("credential-canary");
+			expect(await readFile(configKey, "utf8")).toBe(
+				"http.https://127.0.0.1:1/.extraHeader"
+			);
+		} finally {
+			process.env.PATH = previousPath;
+		}
+	}
+);
+
 test("failed Git imports clean their target and hide URL credentials", async ({
 	expect,
 }) => {

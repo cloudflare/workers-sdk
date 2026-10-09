@@ -7,7 +7,11 @@ import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 
 const decoder = new TextDecoder();
-type GitOptions = { allowFailure?: boolean; timeout?: number };
+type GitOptions = {
+	allowFailure?: boolean;
+	timeout?: number;
+	httpAuthorization?: { origin: string; value: string };
+};
 type GitResult = { stdout: Buffer; stderr: Buffer; status: number };
 
 // Git runs on the host, never in the user's Worker. Do not inherit Cloudflare
@@ -106,8 +110,14 @@ export async function runGit(
 	options: GitOptions = {}
 ): Promise<GitResult> {
 	return new Promise((resolve, reject) => {
+		const env = gitEnvironment();
+		if (options.httpAuthorization) {
+			env.GIT_CONFIG_COUNT = "2";
+			env.GIT_CONFIG_KEY_1 = `http.${options.httpAuthorization.origin}/.extraHeader`;
+			env.GIT_CONFIG_VALUE_1 = options.httpAuthorization.value;
+		}
 		const child = spawn("git", gitArgumentsWithoutHooks(args), {
-			env: gitEnvironment(),
+			env,
 			stdio: ["pipe", "pipe", "pipe"],
 		});
 		const stdout: Buffer[] = [];
@@ -216,6 +226,7 @@ export class GitClient {
 		depth?: number
 	): Promise<void> {
 		await assertImportTargetAvailable(this.repository);
+		const source = importSource(url);
 		// Clone into a private, atomically reserved sibling. Even if another
 		// process creates the final path during the clone, cleanup only touches
 		// the directory we own, never that other process's repository.
@@ -229,9 +240,9 @@ export class GitClient {
 		if (depth) {
 			args.push("--depth", String(depth));
 		}
-		args.push(url, staged);
+		args.push(source.url, staged);
 		try {
-			await runGit(args);
+			await runGit(args, { httpAuthorization: source.authorization });
 			// A bare clone records remote.origin.url in its local Git config. It may
 			// include credentials used only for the import. Never retain the remote.
 			await new GitClient(staged).git(["remote", "remove", "origin"]);
@@ -446,6 +457,33 @@ export class GitClient {
 		}
 		return null;
 	}
+}
+
+function importSource(url: string): {
+	url: string;
+	authorization?: { origin: string; value: string };
+} {
+	let source: URL;
+	try {
+		source = new URL(url);
+	} catch {
+		throw new Error("Git import source URL is invalid");
+	}
+	if (!source.username && !source.password) {
+		return { url };
+	}
+	if (source.protocol !== "https:") {
+		throw new Error("Git import credentials require HTTPS");
+	}
+	const value = `Authorization: Basic ${Buffer.from(
+		`${decodeURIComponent(source.username)}:${decodeURIComponent(source.password)}`
+	).toString("base64")}`;
+	const origin = source.origin;
+	source.username = "";
+	source.password = "";
+	// The sanitized URL is what Git records in config even if the host process
+	// exits mid-clone. The one-time HTTP header is passed through process env.
+	return { url: source.href, authorization: { origin, value } };
 }
 
 async function assertImportTargetAvailable(repository: string): Promise<void> {
