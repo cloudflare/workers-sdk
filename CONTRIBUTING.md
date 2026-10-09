@@ -20,7 +20,7 @@ Check existing issues before opening a new one, and add relevant information to 
 
 We use [Vouch](https://github.com/mitchellh/vouch) to limit pull requests to registered collaborators: people with repository write access or people a maintainer has vouched for in [`.github/VOUCHED.td`](.github/VOUCHED.td).
 
-AI tools let our team generate proposed code changes quite quickly. Reviewing those changes, checking that they solve the right problem, and maintaining code quality over time still take substantial care and effort. Limiting PRs to registered collaborators helps us focus that effort where it is most useful.
+AI tools let our team generate proposed code changes quickly. Reviewing those changes, checking that they solve the right problem, and maintaining code quality over time still take substantial care and effort. Limiting PRs to registered collaborators helps us focus that effort where it is most useful.
 
 If you are not a registered collaborator, please discuss your proposed change in an issue before investing time in a PR. A maintainer may register you as a collaborator when we decide to work with you on a change.
 
