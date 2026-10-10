@@ -262,6 +262,32 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			// ephemeral port per dispatch, but surface failures instead of retrying
 			options.reset = false;
 
+			const onHeaders = handler.onHeaders;
+			const onError = handler.onError;
+			if (onHeaders !== undefined && onError !== undefined) {
+				let responseStatus = 0;
+				handler.onHeaders = function (status, rawHeaders, resume, statusText) {
+					if (status >= 200) {
+						// 1xx replies arrive here before the final status;
+						// keep the final status >= 200
+						responseStatus = status;
+					}
+					return onHeaders.call(this, status, rawHeaders, resume, statusText);
+				};
+				handler.onError = function (err) {
+					// A 421 retry aborts this connection. Ignore that abort so the
+					// replayed body still matches Content-Length.
+					const retryAbort =
+						responseStatus === 421 &&
+						err instanceof DOMException &&
+						err.name === "AbortError";
+					if (retryAbort) {
+						return;
+					}
+					return onError.call(this, err);
+				};
+			}
+
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate
 			return this.runtimeDispatcher.dispatch(options, handler);
