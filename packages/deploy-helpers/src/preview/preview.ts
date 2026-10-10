@@ -114,6 +114,8 @@ export type PreviewResult = {
 	preview: PreviewResource;
 	deployment: DeploymentResource;
 	isNewPreview: boolean;
+	/** PR fields used by the summary, preferring deployment annotations over CI metadata. */
+	pullRequest?: Pick<PullRequestMetadata, "url" | "number">;
 };
 
 export type PreviewBuildOutputRootConfig = ParsedBuildOutputRootConfig & {
@@ -908,21 +910,36 @@ function formatUrlLines(label: string, urls: string[] | undefined): string[] {
 	];
 }
 
+function resolvePreviewPullRequest(
+	deployment: DeploymentResource,
+	pullRequest: PullRequestMetadata | undefined
+): PreviewResult["pullRequest"] {
+	const url =
+		deployment.annotations?.["workers/pull_request_url"] ?? pullRequest?.url;
+	const number =
+		deployment.annotations?.["workers/pull_request_number"] ??
+		pullRequest?.number;
+	if (!url && !number) {
+		return undefined;
+	}
+	return {
+		...(url !== undefined && { url }),
+		...(number !== undefined && { number }),
+	};
+}
+
 function formatPreviewDeploymentSummary(
 	config: Config,
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
 	isNew: boolean,
-	pullRequest: PullRequestMetadata | undefined,
+	pullRequest: PreviewResult["pullRequest"],
 	deployCommand: string | undefined,
 	previewCommand: string | undefined
 ): string {
 	const statusLabel = isNew ? chalk.green("(new)") : chalk.dim("(updated)");
-	const pullRequestUrl =
-		deployment.annotations?.["workers/pull_request_url"] ?? pullRequest?.url;
-	const pullRequestNumber =
-		deployment.annotations?.["workers/pull_request_number"] ??
-		pullRequest?.number;
+	const pullRequestUrl = pullRequest?.url;
+	const pullRequestNumber = pullRequest?.number;
 	const hasActiveUrls =
 		(previewResource.urls?.length ?? 0) > 0 ||
 		(deployment.urls?.length ?? 0) > 0;
@@ -1279,6 +1296,10 @@ async function runPreview(
 		}
 	}
 
+	const resolvedPullRequest = resolvePreviewPullRequest(
+		deployment,
+		pullRequest
+	);
 	if (args.json && args.log !== false) {
 		logger.log(
 			JSON.stringify({ preview: previewResource, deployment }, null, 2)
@@ -1287,16 +1308,23 @@ async function runPreview(
 		const productionBindingsExpectedInPreview =
 			options.productionBindingsExpectedInPreview ?? {};
 		if (Object.keys(productionBindingsExpectedInPreview).length > 0) {
-			const previewBaseConfig = await getPreviewBaseConfig(
-				config,
-				accountId,
-				workerName
-			);
-			logMissingPreviewsBindingsWarning(
-				productionBindingsExpectedInPreview,
-				previewBaseConfig.env,
-				deploymentRequest.env ?? {}
-			);
+			try {
+				const previewBaseConfig = await getPreviewBaseConfig(
+					config,
+					accountId,
+					workerName
+				);
+				logMissingPreviewsBindingsWarning(
+					productionBindingsExpectedInPreview,
+					previewBaseConfig.env,
+					deploymentRequest.env ?? {}
+				);
+			} catch {
+				// This lookup is diagnostic-only; the deployment is already live.
+				logger.warn(
+					"The Preview was deployed, but its missing bindings could not be checked because the parent Worker's configuration could not be retrieved."
+				);
+			}
 		}
 
 		if (args.log !== false) {
@@ -1306,7 +1334,7 @@ async function runPreview(
 				previewResource,
 				deployment,
 				isNewPreview,
-				pullRequest,
+				resolvedPullRequest,
 				options.deployCommand,
 				options.previewCommand
 			)
@@ -1322,7 +1350,12 @@ async function runPreview(
 		);
 	}
 
-	return { preview: previewResource, deployment, isNewPreview };
+	return {
+		preview: previewResource,
+		deployment,
+		isNewPreview,
+		...(resolvedPullRequest && { pullRequest: resolvedPullRequest }),
+	};
 }
 
 /**
