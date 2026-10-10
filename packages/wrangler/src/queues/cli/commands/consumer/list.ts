@@ -2,6 +2,7 @@ import { createCommand } from "../../../../core/create-command";
 import { logger } from "../../../../logger";
 import { listConsumers } from "../../../client";
 import { mapHttpConsumerForDisplay } from "./http-pull/list";
+import { mapNotificationConsumerForDisplay } from "./notification/list";
 import { mapWorkerConsumerForDisplay } from "./worker/list";
 
 export const queuesConsumerListCommand = createCommand({
@@ -51,6 +52,16 @@ export const queuesConsumerListCommand = createCommand({
 		if (httpConsumers.length > 0) {
 			logger.log(`HTTP pull consumers:`);
 			logger.table(httpConsumers.map(mapHttpConsumerForDisplay));
+		}
+
+		const notificationConsumers = consumers.filter(
+			(c) => c.type === "notification"
+		);
+		if (notificationConsumers.length > 0) {
+			logger.log(`Notification consumers:`);
+			logger.table(
+				notificationConsumers.map(mapNotificationConsumerForDisplay)
+			);
 		}
 	},
 });
