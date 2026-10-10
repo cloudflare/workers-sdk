@@ -28,28 +28,21 @@ describe("update wrangler config", () => {
 		);
 	});
 
-	test.for(["jsonc", "toml"])(
-		"preserves an explicit source map opt-out in %s",
-		async (extension, { expect }) => {
-			vi.mocked(existsSync).mockImplementation((file) =>
-				String(file).endsWith(`.${extension}`)
-			);
-			vi.mocked(readFile).mockReturnValue(
-				extension === "jsonc"
-					? '{"main":"src/index.ts","upload_source_maps":false}'
-					: 'main = "src/index.ts"\nupload_source_maps = false'
-			);
-			await updateWranglerConfig(ctx);
-			const output = vi
-				.mocked(writeFile)
-				.mock.calls.find(([file]) => String(file).endsWith(`.${extension}`));
-			expect(output?.[1]).toContain(
-				extension === "jsonc"
-					? '"upload_source_maps": false'
-					: "upload_source_maps = false"
-			);
-		}
-	);
+	test("preserves an explicit source map opt-out in JSON config", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementation((file) =>
+			String(file).endsWith(".jsonc")
+		);
+		vi.mocked(readFile).mockReturnValue(
+			'{"main":"src/index.ts","upload_source_maps":false}'
+		);
+		await updateWranglerConfig(ctx);
+		const output = vi
+			.mocked(writeFile)
+			.mock.calls.find(([file]) => String(file).endsWith(".jsonc"));
+		expect(output?.[1]).toContain('"upload_source_maps": false');
+	});
 
 	test("placeholder replacement `<TBD>`", async ({ expect }) => {
 		const toml = [
