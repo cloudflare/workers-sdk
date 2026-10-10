@@ -14,6 +14,10 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Wrangler depends on a pinned version of Miniflare.
 	"miniflare",
 
+	// Public fetch options expose Undici's MockAgent type. Keep its class identity
+	// shared with consumers; tsup's noExternal override still bundles its runtime.
+	"undici",
+
 	// @cloudflare/workers-types is an optional peer dependency of wrangler, so users can
 	// get the types by installing the package (to what version they prefer) themselves
 	"@cloudflare/workers-types",

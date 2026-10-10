@@ -1,6 +1,19 @@
 import { defineConfig } from "tsup";
 import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 
+const declarationOptions = {
+	resolve: ["@cloudflare/workers-shared", "jsonc-parser", "zod", /^\./],
+	compilerOptions: {
+		baseUrl: ".",
+		paths: {
+			"@cloudflare/workers-shared": ["../workers-shared/index.ts"],
+			// tsup 8.3 does not load Zod's default .d.cts entry point. Resolve its
+			// published ESM declarations without changing the runtime build.
+			zod: ["./node_modules/zod/index.d.ts"],
+		},
+	},
+};
+
 export default defineConfig(() => [
 	{
 		treeshake: true,
@@ -9,7 +22,7 @@ export default defineConfig(() => [
 		entry: ["src/browser.ts"],
 		platform: "node",
 		format: "esm",
-		dts: true,
+		dts: declarationOptions,
 		outDir: "dist",
 		tsconfig: "tsconfig.json",
 		metafile: true,
@@ -44,7 +57,7 @@ export default defineConfig(() => [
 			js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url || (typeof __filename === "string" ? __filename : "/"));',
 		},
 		format: "esm",
-		dts: true,
+		dts: declarationOptions,
 		outDir: "dist",
 		tsconfig: "tsconfig.json",
 		metafile: true,

@@ -79,15 +79,17 @@
 		"test:debug": "pnpm run test --silent=false --verbose=true",
 		"test:e2e": "dotenv -- vitest run -c ./e2e/vitest.config.mts",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
-		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
+		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json && node -r esbuild-register scripts/check-published-declarations.ts"
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
+		"undici": "catalog:default",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "catalog:default"
 	},
@@ -111,7 +113,6 @@
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@netlify/build-info": "10.5.1",
@@ -184,7 +185,6 @@
 		"tsdown": "0.16.3",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"vitest-websocket-mock": "^0.4.0",
 		"ws": "catalog:default",
