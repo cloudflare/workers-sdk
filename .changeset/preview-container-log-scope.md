@@ -1,5 +1,5 @@
 ---
-"@cloudflare/cli-shared-helpers": patch
+"@cloudflare/cli-shared-helpers": minor
 "wrangler": patch
 ---
 
