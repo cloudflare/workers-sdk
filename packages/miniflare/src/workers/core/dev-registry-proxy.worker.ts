@@ -1,11 +1,12 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
-import { CorePaths } from "./constants";
+import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
 import {
 	findQueueConsumer,
 	openDebugPortClient,
 	resolveSharedStorageOwner,
 	resolveTarget,
+	setRegistry,
 	tailEventsReplacer,
 	tailEventsReviver,
 	workerNotFoundMessage,
@@ -34,6 +35,7 @@ const HANDLER_RESERVED_KEYS = new Set([
 ]);
 
 interface Env {
+	[CoreBindings.DATA_DEV_REGISTRY_SECRET]: ArrayBuffer;
 	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
 	DEV_REGISTRY_INSTANCE_ID: string;
 	MINIFLARE_LOOPBACK: Fetcher;
@@ -273,3 +275,34 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		}
 	}
 }
+
+export default {
+	async fetch(request, env) {
+		const supplied = new TextEncoder().encode(
+			request.headers.get(CoreHeaders.DEV_REGISTRY_SECRET) ?? ""
+		);
+		const expected = env[CoreBindings.DATA_DEV_REGISTRY_SECRET];
+		if (
+			expected === undefined ||
+			supplied.byteLength !== expected.byteLength ||
+			!crypto.subtle.timingSafeEqual(supplied, expected)
+		) {
+			return new Response("Forbidden", { status: 403 });
+		}
+		const url = new URL(request.url);
+		if (
+			url.pathname !== "/" ||
+			url.hostname !== "127.0.0.1" ||
+			!/^127\.0\.0\.1(?::\d+)?$/.test(request.headers.get("Host") ?? "") ||
+			request.headers.has("Origin")
+		) {
+			return new Response("Forbidden", { status: 403 });
+		}
+		if (request.method !== "POST") {
+			return new Response("Not Found", { status: 404 });
+		}
+		const data = await request.json<Record<string, RegistryEntry>>();
+		setRegistry(data);
+		return new Response("ok");
+	},
+} satisfies ExportedHandler<Env>;

@@ -10,6 +10,7 @@ import type {
 	Config,
 	ConfigBindingFieldName,
 	RawConfig,
+	Route,
 } from "@cloudflare/workers-utils";
 
 // Exhaustive map of all binding keys in CfWorkerInit["bindings"].
@@ -131,6 +132,7 @@ function normalizeLocalResolvedConfigAsRemote(
 		workers_dev: subdomainValues.workers_dev,
 		preview_urls: subdomainValues.preview_urls,
 		observability: normalizeObservability(localResolvedConfig.observability),
+		routes: localResolvedConfig.routes?.map(normalizeCustomDomainRoute),
 	};
 
 	removeRemoteConfigFieldFromBindings(normalizedConfig);
@@ -144,6 +146,59 @@ function normalizeLocalResolvedConfigAsRemote(
 	}
 
 	return normalizedConfig;
+}
+
+/** Fill in effective custom-domain defaults without changing ordinary Worker routes. */
+function normalizeCustomDomainRoute(route: Route): Route {
+	if (typeof route === "string" || !route.custom_domain) {
+		return route;
+	}
+
+	return {
+		...route,
+		enabled: ("enabled" in route ? route.enabled : undefined) ?? true,
+		previews_enabled:
+			("previews_enabled" in route ? route.previews_enabled : undefined) ??
+			false,
+	};
+}
+
+/**
+ * Ignore a zone name inferred by Cloudflare only when the matching local custom
+ * domain leaves zone resolution implicit. Explicit zone choices must still diff.
+ */
+function normalizeRemoteCustomDomainRoute(
+	route: Route,
+	localRoutes: Route[]
+): Route {
+	const normalized = normalizeCustomDomainRoute(route);
+	if (
+		typeof normalized === "string" ||
+		!normalized.custom_domain ||
+		!("zone_name" in normalized)
+	) {
+		return normalized;
+	}
+
+	const matching = localRoutes.find(
+		(candidate) =>
+			typeof candidate !== "string" &&
+			candidate.custom_domain &&
+			candidate.pattern === normalized.pattern
+	);
+	if (
+		matching &&
+		typeof matching !== "string" &&
+		(!("zone_name" in matching) || matching.zone_name === undefined) &&
+		(!("zone_id" in matching) || matching.zone_id === undefined) &&
+		(normalized.pattern === normalized.zone_name ||
+			normalized.pattern.endsWith(`.${normalized.zone_name}`))
+	) {
+		const { zone_name: _, ...withoutInferredZone } = normalized;
+		return { ...withoutInferredZone, custom_domain: true };
+	}
+
+	return normalized;
 }
 
 /**
@@ -383,6 +438,9 @@ function normalizeRemoteConfigAsResolvedLocal(
 
 	normalizedRemote.observability = normalizeObservability(
 		normalizedRemote.observability
+	);
+	normalizedRemote.routes = normalizedRemote.routes?.map((route) =>
+		normalizeRemoteCustomDomainRoute(route, localConfig.routes ?? [])
 	);
 
 	// We reorder the remote config so that its ordering follows that

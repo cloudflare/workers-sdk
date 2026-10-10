@@ -151,6 +151,7 @@ export interface CfPreviewToken {
  */
 async function tryExpandToken(
 	exchangeUrl: string,
+	cliDisplayName: string,
 	abortSignal: AbortSignal
 ): Promise<string | null> {
 	try {
@@ -158,6 +159,7 @@ async function tryExpandToken(
 
 		const accessHeaders = await getAccessHeaders(switchedExchangeUrl.hostname, {
 			logger,
+			cliDisplayName,
 		});
 		const headers: HeadersInit = { ...accessHeaders };
 
@@ -203,7 +205,8 @@ export async function createPreviewSession(
 	complianceConfig: ComplianceConfig,
 	account: CfAccount,
 	abortSignal: AbortSignal,
-	name: string
+	name: string,
+	cliDisplayName: string
 ): Promise<CfPreviewSession> {
 	const { accountId } = account;
 	const initUrl = `/accounts/${accountId}/workers/subdomain/edge-preview`;
@@ -214,7 +217,11 @@ export async function createPreviewSession(
 	}>(complianceConfig, account, initUrl, undefined, withTimeout(abortSignal));
 
 	const previewSessionToken = exchange_url
-		? ((await tryExpandToken(exchange_url, withTimeout(abortSignal))) ?? token)
+		? ((await tryExpandToken(
+				exchange_url,
+				cliDisplayName,
+				withTimeout(abortSignal)
+			)) ?? token)
 		: token;
 
 	try {

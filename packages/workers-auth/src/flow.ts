@@ -353,7 +353,8 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				ctx.logger,
 				ctx.isNonInteractiveOrCI,
 				getClientId(),
-				storage
+				storage,
+				ctx.cliDisplayName
 			);
 			storage.write({
 				oauth_token,
@@ -366,7 +367,10 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			ctx.logger.debug(
 				`Token refresh failed: ${e instanceof Error ? e.message : String(e)}`
 			);
-			return e instanceof ErrorAuthServerUnreachable
+			// The token request's timeout can also fire while the response body is
+			// still being read, after `fetchAuthToken` has already returned.
+			return e instanceof ErrorAuthServerUnreachable ||
+				(e instanceof Error && e.name === "TimeoutError")
 				? "unreachable"
 				: "rejected";
 		}
@@ -550,7 +554,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	}> {
 		if (!ctx.temporary) {
 			throw new UserError(
-				"Temporary preview accounts are not supported by this CLI.",
+				`Temporary preview accounts are not supported by ${ctx.cliDisplayName}.`,
 				{ telemetryMessage: "user temporary account unsupported" }
 			);
 		}

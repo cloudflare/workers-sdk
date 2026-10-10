@@ -171,6 +171,7 @@ export type { Counter } from "./prometheus-metrics";
 export type { Tunnel, TunnelOptions } from "./tunnel";
 export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
+export * from "./cli-presentation";
 
 export * from "./cfetch";
 

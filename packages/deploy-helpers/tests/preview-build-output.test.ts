@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
 	getPreview: vi.fn(),
 	getPreviewBaseConfig: vi.fn(),
 	confirm: vi.fn(),
+	getPreviewDeployment: vi.fn(),
 	syncAssets: vi.fn(),
 }));
 
@@ -36,6 +37,7 @@ vi.mock("../src/preview/api", async (importOriginal) => ({
 	editPreview: mocks.editPreview,
 	getPreview: mocks.getPreview,
 	getPreviewBaseConfig: mocks.getPreviewBaseConfig,
+	getPreviewDeployment: mocks.getPreviewDeployment,
 }));
 
 vi.mock("../src/deploy/helpers/assets", () => ({
@@ -47,7 +49,8 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	verifyDockerInstalled: vi.fn(),
 }));
 
-vi.mock("../src/shared/context", () => ({
+vi.mock("../src/shared/context", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/shared/context")>()),
 	logger: console,
 	confirm: mocks.confirm,
 }));
@@ -110,6 +113,7 @@ describe("previewBuildOutput", () => {
 		mocks.getPreview.mockResolvedValue(previewResource);
 		mocks.getPreviewBaseConfig.mockResolvedValue({});
 		mocks.confirm.mockResolvedValue(true);
+		mocks.getPreviewDeployment.mockResolvedValue(deploymentResource);
 		mocks.editPreview.mockResolvedValue(previewResource);
 		mocks.createPreview.mockResolvedValue(previewResource);
 		mocks.createPreviewParentWorker.mockResolvedValue(undefined);
@@ -762,6 +766,47 @@ describe("previewBuildOutput", () => {
 
 		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
 		expect(request).not.toHaveProperty("env");
+	});
+
+	it("keeps secrets from the latest deployment of an existing Preview", async ({
+		expect,
+	}) => {
+		mocks.getPreviewDeployment.mockResolvedValue({
+			...deploymentResource,
+			env: {
+				API_KEY: { type: "secret_text" },
+				MODE: { type: "plain_text", text: "old" },
+			},
+		});
+
+		await uploadPreview(buildOutputConfig());
+
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request.env).toEqual({ API_KEY: { type: "inherit" } });
+	});
+
+	it("does not look up the latest deployment of a new Preview", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValue(
+			Object.assign(new Error("Preview not found"), { code: 10025 })
+		);
+
+		await uploadPreview(buildOutputConfig());
+
+		expect(mocks.createPreview).toHaveBeenCalled();
+		expect(mocks.getPreviewDeployment).not.toHaveBeenCalled();
+	});
+
+	it("does not deploy when the latest deployment cannot be read", async ({
+		expect,
+	}) => {
+		mocks.getPreviewDeployment.mockRejectedValue(new Error("Internal error"));
+
+		await expect(uploadPreview(buildOutputConfig())).rejects.toThrow(
+			"Internal error"
+		);
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
 	});
 
 	it.for<[string, ParsedOutputRootConfig | undefined]>([

@@ -471,7 +471,7 @@ for (const source of imageSource) {
 				`If Docker is not installed, download it from https://docs.docker.com/get-started/get-docker/`
 			);
 			expect(output).toContain(
-				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or pass --enable-containers=false.`
+				`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config file or pass --enable-containers=false.`
 			);
 			vi.unstubAllEnvs();
 		});
