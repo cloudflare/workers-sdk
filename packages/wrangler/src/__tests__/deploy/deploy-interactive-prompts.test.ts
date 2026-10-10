@@ -1052,37 +1052,40 @@ describe("deploy: interactive deploy config prompts", () => {
 		expect(std.out).toContain("Proceeding with deployment...");
 	});
 
-	it("should include upload_source_maps in generated wrangler.jsonc when --upload-source-maps is passed", async ({
-		expect,
-	}) => {
-		setIsTTY(true);
-		writeWorkerSource();
-		mockPrompt({
-			text: "What do you want to name your project?",
-			result: "test-worker",
-		});
-		mockConfirm({
-			text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
-			result: true,
-		});
-		mockConfirm({
-			text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
-			result: true,
-		});
+	it.for([true, false])(
+		"preserves source map upload setting %s in generated wrangler.jsonc",
+		async (upload, { expect }) => {
+			setIsTTY(true);
+			writeWorkerSource();
+			mockPrompt({
+				text: "What do you want to name your project?",
+				result: "test-worker",
+			});
+			mockConfirm({
+				text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
+				result: true,
+			});
+			mockConfirm({
+				text: "Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+				result: true,
+			});
 
-		await runWrangler("deploy ./index.js --upload-source-maps --dry-run");
-		expect(std.out).toContain("--dry-run: exiting now.");
-		const writtenConfig = JSON.parse(
-			fs.readFileSync("wrangler.jsonc", "utf-8")
-		);
-		expect(writtenConfig).toEqual({
-			name: "test-worker",
-			compatibility_date: DEFAULT_COMPAT_DATE,
-			main: "./index.js",
-			upload_source_maps: true,
-		});
-		expect(std.out).toContain("Proceeding with deployment...");
-	});
+			await runWrangler(
+				`deploy ./index.js --${upload ? "" : "no-"}upload-source-maps --dry-run`
+			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+			const writtenConfig = JSON.parse(
+				fs.readFileSync("wrangler.jsonc", "utf-8")
+			);
+			expect(writtenConfig).toEqual({
+				name: "test-worker",
+				compatibility_date: DEFAULT_COMPAT_DATE,
+				main: "./index.js",
+				upload_source_maps: upload,
+			});
+			expect(std.out).toContain("Proceeding with deployment...");
+		}
+	);
 
 	it("should include no_bundle in generated wrangler.jsonc when --no-bundle is passed", async ({
 		expect,

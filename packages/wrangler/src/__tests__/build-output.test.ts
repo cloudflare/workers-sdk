@@ -269,33 +269,34 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		);
 	});
 
-	it("writes source maps when `uploadSourceMaps` is enabled", async ({
-		expect,
-	}) => {
-		await seed({
-			"cloudflare.config.ts": `export default { worker: {
+	it.for([undefined, true, false])(
+		"emits build-output maps with uploadSourceMaps %s",
+		async (upload, { expect }) => {
+			await seed({
+				"cloudflare.config.ts": `export default { worker: {
 				name: "${WORKER_NAME}",
 				compatibilityDate: "2026-05-18",
 				entrypoint: "./src/index.js",
 			} };`,
-			"wrangler.config.ts": `export default {
-				uploadSourceMaps: true,
-			};`,
-			"src/index.js": `export default {
+				"wrangler.config.ts": `export default ${JSON.stringify({ uploadSourceMaps: upload })};`,
+				"src/index.js": `export default {
 				async fetch() { return new Response("mapped"); }
 			};`,
-		});
+			});
 
-		await runWrangler(
-			"build --experimental-new-config --experimental-cf-build-output"
-		);
+			await runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output"
+			);
 
-		const manifest = readOutputConfig().manifest as {
-			modules: Record<string, { type: string }>;
-		};
-		expect(manifest.modules["index.js.map"]).toEqual({ type: "sourcemap" });
-		expect(fs.existsSync(bundlePath("index.js.map"))).toBe(true);
-	});
+			const manifest = readOutputConfig().manifest as {
+				modules: Record<string, { type: string }>;
+			};
+			expect(manifest.modules["index.js.map"]).toEqual(
+				upload === false ? undefined : { type: "sourcemap" }
+			);
+			expect(fs.existsSync(bundlePath("index.js.map"))).toBe(upload !== false);
+		}
+	);
 
 	it("errors when --experimental-cf-build-output is used without --experimental-new-config", async ({
 		expect,

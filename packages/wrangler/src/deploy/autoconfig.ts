@@ -293,8 +293,8 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		if (args.minify) {
 			configContent.minify = true;
 		}
-		if (args.uploadSourceMaps) {
-			configContent.upload_source_maps = true;
+		if (args.uploadSourceMaps !== undefined) {
+			configContent.upload_source_maps = args.uploadSourceMaps;
 		}
 		if (args.bundle === false) {
 			configContent.no_bundle = true;
@@ -354,7 +354,13 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 				...(args.jsxFragment ? [`--jsx-fragment ${args.jsxFragment}`] : []),
 				...(args.tsconfig ? [`--tsconfig ${args.tsconfig}`] : []),
 				...(args.minify ? ["--minify"] : []),
-				...(args.uploadSourceMaps ? ["--upload-source-maps"] : []),
+				...(args.uploadSourceMaps === undefined
+					? []
+					: [
+							args.uploadSourceMaps
+								? "--upload-source-maps"
+								: "--no-upload-source-maps",
+						]),
 				...(args.bundle === false ? ["--no-bundle"] : []),
 				...(args.logpush ? ["--logpush"] : []),
 				...(args.keepVars ? ["--keep-vars"] : []),

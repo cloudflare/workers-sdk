@@ -107,7 +107,7 @@ export const previewCommand = createCommand({
 				name: previewConfig.name,
 				compatibilityDate: previewConfig.compatibility_date,
 				compatibilityFlags: previewConfig.compatibility_flags,
-				uploadSourceMaps: previewConfig.upload_source_maps,
+				uploadSourceMaps: previewConfig.upload_source_maps ?? true,
 				jsxFactory: previewConfig.jsx_factory,
 				jsxFragment: previewConfig.jsx_fragment,
 				tsconfig: previewConfig.tsconfig,

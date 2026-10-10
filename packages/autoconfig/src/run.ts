@@ -351,6 +351,7 @@ function getWranglerConfig(
 	const wranglerConfig = ensureNodejsCompatIsEnabled({
 		$schema: "node_modules/wrangler/config-schema.json",
 		...convertedWranglerConfig,
+		...(convertedWranglerConfig.main ? { upload_source_maps: true } : {}),
 		...(configurationResults.buildConfig?.assetsDirectory
 			? {
 					assets: {
@@ -423,6 +424,10 @@ export async function saveWranglerJsonc(
 	const mergedWranglerConfig = ensureNodejsCompatIsEnabled({
 		...existingWranglerConfig,
 		...wranglerConfig,
+		upload_source_maps:
+			existingWranglerConfig.upload_source_maps ??
+			wranglerConfig.upload_source_maps ??
+			((wranglerConfig.main ?? existingWranglerConfig.main) ? true : undefined),
 	});
 
 	await writeFile(

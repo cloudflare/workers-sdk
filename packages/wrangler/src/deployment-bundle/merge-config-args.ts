@@ -74,7 +74,8 @@ async function mergeSharedConfigArgs(
 	const metricsHeaders = await getMetricsUsageHeaders(config.send_metrics);
 	const sendMetrics = metricsHeaders !== undefined;
 
-	const uploadSourceMaps = args.uploadSourceMaps ?? config.upload_source_maps;
+	const uploadSourceMaps =
+		args.uploadSourceMaps ?? config.upload_source_maps ?? true;
 
 	const shared: SharedDeployVersionsProps = {
 		entry,
@@ -253,7 +254,7 @@ export async function mergeBuildOutputProps(config: Config): Promise<{
 		name: config.name,
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
-		uploadSourceMaps: config.upload_source_maps,
+		uploadSourceMaps: config.upload_source_maps ?? true,
 		jsxFactory: config.jsx_factory,
 		jsxFragment: config.jsx_fragment,
 		tsconfig: config.tsconfig,
