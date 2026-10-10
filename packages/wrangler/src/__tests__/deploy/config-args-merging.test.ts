@@ -1174,28 +1174,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		});
 
 		describe("versions upload", () => {
-			it.for([
-				{ upload: undefined, cli: "", included: true },
-				{ upload: false, cli: "", included: false },
-				{ upload: true, cli: " --no-upload-source-maps", included: false },
-				{ upload: false, cli: " --upload-source-maps", included: true },
-			])(
-				"uploads maps with config $upload and CLI '$cli'",
-				async ({ upload, cli, included }, { expect }) => {
-					writeWranglerConfig({
-						main: "./index.js",
-						upload_source_maps: upload,
-					});
-					writeWorkerSource();
-					mockGetScript();
-					const requests = mockUploadVersion();
-					await runWrangler(`versions upload${cli}`);
-					// eslint-disable-next-line @typescript-eslint/no-deprecated -- Inspect the multipart upload using the standard Web API.
-					const form = await requests[0].formData();
-					expect(form.has("index.js.map")).toBe(included);
-				}
-			);
-
 			it("--upload-source-maps overrides config", async ({ expect }) => {
 				writeWranglerConfig({
 					upload_source_maps: false,

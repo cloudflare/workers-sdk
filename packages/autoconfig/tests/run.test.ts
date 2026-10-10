@@ -49,40 +49,6 @@ describe("runAutoConfig()", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it.for([undefined, false])(
-		"enables upload defaults and preserves opt-out %s",
-		async (upload, { expect }) => {
-			await seed({
-				"package.json": JSON.stringify({
-					name: "source-maps-app",
-					scripts: { build: "vite build" },
-				}),
-				"wrangler.jsonc": JSON.stringify({ upload_source_maps: upload }),
-				"src/index.ts": "export default {}",
-			});
-			await runAutoConfig(
-				{
-					configured: false,
-					projectPath: process.cwd(),
-					workerName: "source-maps-app",
-					framework: new ViteBuildToolFramework({ id: "vite", name: "Vite" }),
-					outputDir: "dist",
-					packageManager: NpmPackageManager,
-				},
-				{
-					target: "wrangler",
-					context: createMockContext(),
-					skipConfirmations: true,
-					runBuild: false,
-					enableTargetCliInstallation: false,
-				}
-			);
-			expect(
-				JSON.parse(readFileSync("wrangler.jsonc", "utf8")).upload_source_maps
-			).toBe(upload ?? true);
-		}
-	);
-
 	it("rejects autoconfiguration for an unsupported framework", async ({
 		expect,
 	}) => {

@@ -1329,29 +1329,6 @@ export default { fetch() { return new Response(mod); } };`;
 		});
 	});
 	describe("source maps", () => {
-		it.for([
-			{ upload: undefined, cli: "", included: true },
-			{ upload: false, cli: "", included: false },
-			{ upload: true, cli: " --no-upload-source-maps", included: false },
-			{ upload: false, cli: " --upload-source-maps", included: true },
-		])(
-			"uploads source maps with config $upload and CLI '$cli'",
-			async ({ upload, cli, included }, { expect }) => {
-				writeWranglerConfig({ main: "index.ts", upload_source_maps: upload });
-				writeWorkerSource({ format: "ts" });
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					expectedMainModule: "index.js",
-					expectedModules: {
-						"index.js.map": included
-							? expect.stringContaining('"index.ts"')
-							: null,
-					},
-				});
-				await runWrangler(`deploy${cli}`);
-			}
-		);
-
 		it("should include source map with bundle when upload_source_maps = true", async ({
 			expect,
 		}) => {

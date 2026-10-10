@@ -36,7 +36,7 @@ export type BuildProps = {
 	compatibilityDate: string | undefined;
 	/** Merged: --compatibility-flags arg ?? config.compatibility_flags. */
 	compatibilityFlags: string[];
-	/** Merged: --upload-source-maps arg ?? config.upload_source_maps ?? true. */
+	/** Merged: --upload-source-maps arg ?? config.upload_source_maps. */
 	uploadSourceMaps: boolean | undefined;
 	/** Merged: --jsx-factory arg || config.jsx_factory. */
 	jsxFactory: string;

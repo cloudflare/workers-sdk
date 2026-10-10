@@ -283,11 +283,6 @@ export function createCloudflareEnvironmentOptions({
 			},
 		},
 		build: {
-			// Resolve before Vite merges plugin defaults so explicit opt-outs survive.
-			sourcemap:
-				userConfig.environments?.[environmentName]?.build?.sourcemap ??
-				userConfig.build?.sourcemap ??
-				workerConfig.upload_source_maps !== false,
 			createEnvironment(name, config) {
 				return new vite.BuildEnvironment(name, config);
 			},
