@@ -3,6 +3,7 @@ import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	extractBindingsOfType,
+	getWranglerHiddenDirPath,
 	getWranglerTmpDir,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
@@ -524,6 +525,12 @@ export class BundlerController extends Controller {
 			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
+				// workerd and the dev bundler write under the project's `.wrangler`
+				// directory, and under `dev.persist` when that path is set elsewhere.
+				// Watching either directory reloads on those writes. Ignore a write
+				// directory only when it is inside the assets root, so an assets
+				// directory that merely lives under `node_modules` still refreshes.
+				ignored: ignoredDevWrite(assetsDir, devSessionWriteDirs(config)),
 			})
 				.on("all", async (eventName, filePath) => {
 					const message = getAssetChangeMessage(eventName, filePath);
@@ -653,4 +660,56 @@ export class BundlerController extends Controller {
 	) {
 		this.bus.dispatch({ type: "bundleComplete", config, bundle });
 	}
+}
+
+/**
+ * Directories this dev session writes. `.wrangler` holds tmp, cache, and the
+ * default state dir. `dev.persist` is that default, or a `--persist-to` path.
+ */
+function devSessionWriteDirs(config: StartDevWorkerOptions): string[] {
+	const dirs = [getWranglerHiddenDirPath(config.projectRoot)];
+	if (typeof config.dev.persist === "string") {
+		dirs.push(path.resolve(config.dev.persist));
+	}
+	return dirs;
+}
+
+/**
+ * Ignore `writeDirs` that sit inside `assetsDir`. The assets root itself is
+ * never a write root, so a persist path equal to the assets directory does not
+ * suppress every asset. chokidar tests forward-slash paths; callers may also
+ * pass the backslash form `path.resolve` returns on Windows.
+ */
+function ignoredDevWrite(
+	assetsDir: string,
+	writeDirs: string[]
+): (filePath: string) => boolean {
+	const roots = writeDirs.filter((dir) => isStrictDescendant(assetsDir, dir));
+	return (filePath) => roots.some((root) => isInsideDir(root, filePath));
+}
+
+function isStrictDescendant(parent: string, child: string): boolean {
+	const root = posixPath(parent);
+	const nested = posixPath(child);
+	return nested.startsWith(childPrefix(root));
+}
+
+function isInsideDir(root: string, filePath: string): boolean {
+	const base = posixPath(root);
+	const file = posixPath(filePath);
+	return file === base || file.startsWith(childPrefix(base));
+}
+
+function childPrefix(root: string): string {
+	return root.endsWith("/") ? root : `${root}/`;
+}
+
+function posixPath(filePath: string): string {
+	const normalized = filePath.replaceAll("\\", "/");
+	// `C:/` is a drive root. Stripping the slash would make it `C:`, which is a
+	// different path.
+	if (normalized === "/" || /^[A-Za-z]:\/$/.test(normalized)) {
+		return normalized;
+	}
+	return normalized.replace(/\/+$/, "");
 }
