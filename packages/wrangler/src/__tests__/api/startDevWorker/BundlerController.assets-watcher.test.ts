@@ -60,6 +60,23 @@ function assetsConfig() {
 	});
 }
 
+function assetsAt(
+	directory: string,
+	persist: string = path.join(path.resolve("."), ".wrangler/state")
+): StartDevWorkerOptions {
+	const config = configDefaults({
+		projectRoot: path.resolve("."),
+		assets: {
+			directory,
+			binding: undefined,
+			routerConfig: { has_user_worker: true },
+			assetConfig: {},
+		},
+	});
+	config.dev.persist = persist;
+	return config;
+}
+
 /**
  * A config that makes the controller create two watchers: one for the custom
  * build's watched paths and one for the assets directory.
@@ -103,6 +120,18 @@ function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 			return watcher;
 		},
 	};
+}
+
+function ignoredFromLastWatch(): (filePath: string) => boolean {
+	const options = vi.mocked(watch).mock.calls.at(-1)?.[1];
+	assert(options);
+	const { ignored } = options;
+	assert(typeof ignored === "function");
+	return (filePath) => Boolean(ignored(filePath));
+}
+
+function posix(filePath: string): string {
+	return filePath.replaceAll("\\", "/");
 }
 
 describe("BundlerController — assets watcher", () => {
@@ -246,23 +275,60 @@ describe("BundlerController — assets watcher", () => {
 	}) => {
 		mockWatchers(expect);
 
+		const projectRoot = path.resolve(".");
 		const firstBundle = bus.waitFor("bundleComplete");
 		controller.onConfigUpdate({
 			type: "configUpdate",
-			config: assetsConfig(),
+			config: assetsAt(projectRoot),
 		});
 		await firstBundle;
 
-		const options = vi.mocked(watch).mock.calls[0]?.[1];
-		assert(options);
-		const { ignored } = options;
-		assert(ignored instanceof RegExp);
-		// chokidar v4 matches normalised forward-slash paths. The regexp also
-		// accepts backslashes, matching the no-bundle watcher.
-		expect(ignored.test("/proj/.wrangler/tmp/email/message")).toBe(true);
-		expect(ignored.test("/proj/.wrangler")).toBe(true);
-		expect(ignored.test("C:\\proj\\.wrangler\\tmp\\email")).toBe(true);
-		expect(ignored.test("/proj/assets/placeholder.txt")).toBe(false);
+		const ignored = ignoredFromLastWatch();
+		// chokidar v4 passes normalised forward-slash paths.
+		expect(ignored(posix(`${projectRoot}/.wrangler/tmp/email/message`))).toBe(
+			true
+		);
+		expect(ignored(posix(`${projectRoot}/.wrangler`))).toBe(true);
+		expect(ignored(`${projectRoot}\\.wrangler\\tmp\\email`)).toBe(true);
+		expect(ignored(posix(`${projectRoot}/placeholder.txt`))).toBe(false);
+		expect(ignored(posix(projectRoot))).toBe(false);
+		// A directory that is only named `.wrangler` is not this session's write dir.
+		expect(ignored(posix(`${projectRoot}/vendor/.wrangler/note`))).toBe(false);
+	});
+
+	test("ignores a persist directory inside the assets tree", async ({
+		expect,
+	}) => {
+		mockWatchers(expect);
+
+		const projectRoot = path.resolve(".");
+		const persist = path.join(projectRoot, "persist-state");
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsAt(projectRoot, persist),
+		});
+		await firstBundle;
+
+		const ignored = ignoredFromLastWatch();
+		expect(ignored(posix(`${persist}/v3/kv`))).toBe(true);
+		expect(ignored(posix(`${projectRoot}/placeholder.txt`))).toBe(false);
+	});
+
+	test("watches assets that live under node_modules", async ({ expect }) => {
+		mockWatchers(expect);
+
+		const assetsDir = path.resolve("node_modules/example/public");
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsAt(assetsDir),
+		});
+		await firstBundle;
+
+		const ignored = ignoredFromLastWatch();
+		expect(ignored(posix(assetsDir))).toBe(false);
+		expect(ignored(posix(`${assetsDir}/new.html`))).toBe(false);
 	});
 
 	test("no watchers are created by a config reload that outlives teardown", async ({
