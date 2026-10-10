@@ -60,14 +60,14 @@ export function urlFromParts(
 
 /**
  * Rewrites the absolute URLs inside a single header value (e.g. `Location`,
- * `Origin`, `Access-Control-Allow-Origin`), mapping only those whose host
- * that match the target host.
+ * `Origin`, `Access-Control-Allow-Origin`), mapping only those whose origin
+ * matches the target origin.
  *
  * This function ensures that the host is replaced in a robust manner avoiding
  * corruptions (that can happen for example if a naive replacement was used).
  *
  * @param value - The raw header value string that may contain absolute URLs to rewrite.
- * @param from - The URL whose host should be matched against URLs found in the header value.
+ * @param from - The URL whose origin should be matched against URLs found in the header value.
  * @param to - The URL whose origin will replace the matched origin in the header value.
  * @returns The header value string with all matching absolute URLs rewritten to use the target origin.
  */
@@ -90,7 +90,7 @@ export function rewriteUrlInHeaderValue(
 			} catch {
 				return match;
 			}
-			if (url.host !== from.host) {
+			if (url.origin !== from.origin) {
 				return match;
 			}
 			return to.origin + rest;
