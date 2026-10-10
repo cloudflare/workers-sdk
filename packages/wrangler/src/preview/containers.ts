@@ -1,4 +1,4 @@
-import { getLogLevel, setLogLevel } from "@cloudflare/cli-shared-helpers";
+import { runWithLogLevel as runWithCliLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	apply,
 	buildAndMaybePush,
@@ -61,16 +61,10 @@ export async function deployPreviewContainers(
 		);
 	}
 
-	// Two independent log levels gate stdout here. `logger` reads an
-	// AsyncLocalStorage override and `@cloudflare/cli`'s `logRaw` reads module
-	// level state, so lowering one leaves the other printing. `logger` drops
-	// messages above its level instead of redirecting them, so it stays at
-	// `warn` to keep warnings and errors on stderr. `logRaw` only writes to
-	// stdout, so it can go lower.
-	const previousLogLevel = getLogLevel();
-	setLogLevel("error");
-	try {
-		return await runWithLogLevel("warn", () =>
+	// Both Wrangler's logger and the raw CLI output need a per-call level.
+	// Keep warnings and errors on stderr while suppressing stdout progress.
+	return runWithCliLogLevel("warn", () =>
+		runWithLogLevel("warn", () =>
 			applyPreviewContainers(
 				scopedConfig,
 				normalisedContainerConfig,
@@ -78,10 +72,8 @@ export async function deployPreviewContainers(
 				accountId,
 				options.localImageReferences
 			)
-		);
-	} finally {
-		setLogLevel(previousLogLevel);
-	}
+		)
+	);
 }
 
 /**

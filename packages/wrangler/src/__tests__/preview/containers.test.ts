@@ -1,4 +1,9 @@
 import {
+	getLogLevel,
+	logRaw,
+	setLogLevel,
+} from "@cloudflare/cli-shared-helpers";
+import {
 	apply,
 	buildAndMaybePush,
 	listDurableObjects,
@@ -6,9 +11,10 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
-import { beforeEach, describe, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { logger } from "../../logger";
 import { deployPreviewContainers } from "../../preview/containers";
+import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import type {
 	ContainerNormalizedConfig,
@@ -64,8 +70,13 @@ const deployment = {
 
 describe("deployPreviewContainers", () => {
 	const std = mockConsoleMethods();
+	const cliOut = collectCLIOutput();
+	const defaultLogLevel = getLogLevel();
+
+	afterEach(() => setLogLevel(defaultLogLevel));
 
 	beforeEach(() => {
+		setLogLevel("log");
 		vi.mocked(apply).mockReset();
 		vi.mocked(buildAndMaybePush).mockReset();
 		vi.mocked(listDurableObjects).mockReset();
@@ -279,4 +290,72 @@ describe("deployPreviewContainers", () => {
 		expect(std.warn).toContain("a container warning");
 		expect(std.out).toBe("");
 	});
+
+	test.for([false, true])(
+		"isolates overlapping container output (second quiet=%s)",
+		async (secondQuiet, { expect }) => {
+			const container = containerConfig();
+			const config = {
+				...defaultWranglerConfig,
+				containers: [container],
+			} as unknown as Config;
+			const firstStarted = Promise.withResolvers<void>();
+			const secondStarted = Promise.withResolvers<void>();
+			const releaseFirst = Promise.withResolvers<void>();
+			const releaseSecond = Promise.withResolvers<void>();
+			vi.mocked(apply)
+				.mockImplementationOnce(async () => {
+					firstStarted.resolve();
+					await releaseFirst.promise;
+					logger.log("first container progress");
+					logRaw("first container progress");
+					logger.warn("first container warning");
+				})
+				.mockImplementationOnce(async () => {
+					secondStarted.resolve();
+					await releaseSecond.promise;
+					logger.log("second container progress");
+					logRaw("second container progress");
+					logger.warn("second container warning");
+				});
+
+			const first = deployPreviewContainers(
+				config,
+				[container],
+				deployment,
+				ACCOUNT_ID,
+				{ quiet: true }
+			);
+			await firstStarted.promise;
+			const second = deployPreviewContainers(
+				config,
+				[container],
+				deployment,
+				ACCOUNT_ID,
+				{ quiet: secondQuiet }
+			);
+			await secondStarted.promise;
+			logRaw("outside progress during deployments");
+			releaseFirst.resolve();
+			await first;
+			logRaw("outside progress after first deployment");
+			releaseSecond.resolve();
+			await second;
+
+			expect(cliOut.out).toContain("outside progress during deployments");
+			expect(cliOut.out).toContain("outside progress after first deployment");
+			expect(cliOut.out).not.toContain("first container progress");
+			expect(std.out).not.toContain("first container progress");
+			if (secondQuiet) {
+				expect(cliOut.out).not.toContain("second container progress");
+				expect(std.out).not.toContain("second container progress");
+			} else {
+				expect(cliOut.out).toContain("second container progress");
+				expect(std.out).toContain("second container progress");
+			}
+			expect(std.warn).toContain("first container warning");
+			expect(std.warn).toContain("second container warning");
+			expect(getLogLevel()).toBe("log");
+		}
+	);
 });

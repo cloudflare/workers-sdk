@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
 	getPreviewBaseConfig: vi.fn(),
 	confirm: vi.fn(),
 	getPreviewDeployment: vi.fn(),
+	getPullRequestMetadata: vi.fn(),
 	syncAssets: vi.fn(),
 }));
 
@@ -42,6 +43,11 @@ vi.mock("../src/preview/api", async (importOriginal) => ({
 
 vi.mock("../src/deploy/helpers/assets", () => ({
 	syncAssets: mocks.syncAssets,
+}));
+
+vi.mock("../src/preview/shared", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/preview/shared")>()),
+	getPullRequestMetadata: mocks.getPullRequestMetadata,
 }));
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
@@ -114,6 +120,7 @@ describe("previewBuildOutput", () => {
 		mocks.getPreviewBaseConfig.mockResolvedValue({});
 		mocks.confirm.mockResolvedValue(true);
 		mocks.getPreviewDeployment.mockResolvedValue(deploymentResource);
+		mocks.getPullRequestMetadata.mockReturnValue(undefined);
 		mocks.editPreview.mockResolvedValue(previewResource);
 		mocks.createPreview.mockResolvedValue(previewResource);
 		mocks.createPreviewParentWorker.mockResolvedValue(undefined);
@@ -242,6 +249,90 @@ describe("previewBuildOutput", () => {
 			uploadPreview(buildOutputConfig(), undefined, { log: false })
 		).rejects.toBe(error);
 		expect(std.out).toBe("");
+	});
+
+	it.for([false, true])(
+		"returns a successful deployment when the warning lookup fails (json=%s)",
+		async (json, { expect }) => {
+			mocks.getPreviewBaseConfig.mockRejectedValueOnce(
+				new Error("Base config request failed")
+			);
+			const result = await previewBuildOutput(
+				"account-id",
+				{ name: "feature", log: false, json },
+				{
+					workerConfig: buildOutputConfig(),
+					rootConfig: validRootConfig,
+					buildResult,
+				},
+				{
+					productionBindingsExpectedInPreview: { KV: { type: "kv_namespace" } },
+					getNormalizedContainerOptions: undefined,
+					deployPreviewContainers: undefined,
+				}
+			);
+			expect(result.deployment).toEqual(deploymentResource);
+			expect(mocks.createPreviewDeployment).toHaveBeenCalledOnce();
+			expect(mocks.getPreviewBaseConfig).toHaveBeenCalledOnce();
+			expect(std.out).toBe("");
+			expect(std.warn).toContain(
+				"The Preview was deployed, but its missing bindings could not be checked"
+			);
+		}
+	);
+
+	it.for([{}, { log: false, json: true }])(
+		"returns the PR metadata used by the summary when annotations are missing %j",
+		async (args, { expect }) => {
+			const pullRequest = {
+				url: "https://github.com/example/project/pull/17",
+				number: "17",
+			};
+			mocks.getPullRequestMetadata.mockReturnValueOnce(pullRequest);
+			const result = await uploadPreview(buildOutputConfig(), undefined, args);
+			expect(result).toMatchObject({
+				preview: previewResource,
+				deployment: deploymentResource,
+				isNewPreview: false,
+				pullRequest,
+			});
+			if (args.log === false) {
+				expect(std.out).toBe("");
+			} else {
+				expect(std.out).toContain(`Pull Request: ${pullRequest.url}`);
+			}
+		}
+	);
+
+	it("prefers deployment PR annotations while falling back to CI for missing fields", async ({
+		expect,
+	}) => {
+		mocks.getPullRequestMetadata.mockReturnValueOnce({
+			url: "https://github.com/example/project/pull/17",
+			number: "17",
+		});
+		mocks.createPreviewDeployment.mockResolvedValueOnce({
+			...deploymentResource,
+			annotations: { "workers/pull_request_url": "https://example.com/pr/42" },
+		});
+		const result = await uploadPreview(buildOutputConfig(), undefined, {});
+		expect(result.pullRequest).toEqual({
+			url: "https://example.com/pr/42",
+			number: "17",
+		});
+		expect(std.out).toContain("Pull Request: https://example.com/pr/42");
+	});
+
+	it("returns the resolved PR number when no URL is available", async ({
+		expect,
+	}) => {
+		mocks.createPreviewDeployment.mockResolvedValueOnce({
+			...deploymentResource,
+			annotations: { "workers/pull_request_number": "42" },
+		});
+		const result = await uploadPreview(buildOutputConfig(), undefined, {});
+		expect(result.pullRequest).toEqual({ number: "42" });
+		expect(std.out).toContain("Pull Request: #42");
 	});
 
 	it("uploads only bindings and settings from resolved Build Output", async ({
