@@ -106,6 +106,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "nuxt",
 	frameworkCli: "nuxi",
+	frameworkCliNodeVersion: "^22.21.0 || ^24.11.0 || >=26.0.0",
 	platform: "workers",
 	languages: ["ts"],
 	displayName: "Nuxt",
