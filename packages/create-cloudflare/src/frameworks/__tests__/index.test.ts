@@ -1,4 +1,7 @@
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { mockPackageManager } from "helpers/__tests__/mocks";
 import nuxt from "templates/nuxt/c3";
 import { afterEach, describe, test, vi } from "vitest";
@@ -133,4 +136,29 @@ describe("framework CLI Node.js requirements", () => {
 			{ env: {} }
 		);
 	});
+});
+
+describe("Nuxt Node.js version pin", () => {
+	runInTempDir();
+
+	test.for(Object.entries(nuxt.platformVariants))(
+		"writes a supported .node-version inside the %s project",
+		async ([platform, template], { expect }) => {
+			const ctx = createTestContext(`nuxt-${platform}`);
+			ctx.project.path = resolve(ctx.project.path);
+			ctx.template = template;
+			mockPackageManager("pnpm");
+			vi.mocked(runCommand).mockImplementationOnce(async () => {
+				mkdirSync(ctx.project.path);
+				return "";
+			});
+
+			await template.generate?.(ctx);
+
+			expect(
+				readFileSync(join(ctx.project.path, ".node-version"), "utf-8")
+			).toBe("22.23.1");
+			expect(existsSync(".node-version")).toBe(false);
+		}
+	);
 });

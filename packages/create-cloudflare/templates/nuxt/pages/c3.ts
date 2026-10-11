@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
@@ -27,7 +28,7 @@ const generate = async (ctx: C3Context) => {
 		gitFlag,
 	]);
 
-	writeFile("./.node-version", "18");
+	writeFile(join(ctx.project.path, ".node-version"), "22.23.1");
 
 	logRaw(""); // newline
 };
