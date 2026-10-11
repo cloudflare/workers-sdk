@@ -43,9 +43,13 @@ export const spawnWithLogging = (
 	});
 
 	proc.stdout.on("data", (data) => {
+		// A timed-out attempt can close its log before the child stops emitting.
+		if (logStream.writableEnded || logStream.destroyed) {
+			return;
+		}
 		const lines: string[] = data.toString().split("\n");
 
-		lines.forEach(async (line) => {
+		lines.forEach((line) => {
 			const stripped = stripAnsi(line).trim();
 			if (stripped.length > 0) {
 				logStream.write(`${stripped}\n`);
@@ -54,7 +58,9 @@ export const spawnWithLogging = (
 	});
 
 	proc.stderr.on("data", (data) => {
-		logStream.write(data);
+		if (!logStream.writableEnded && !logStream.destroyed) {
+			logStream.write(data);
+		}
 	});
 
 	return proc;

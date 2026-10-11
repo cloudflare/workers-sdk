@@ -56,6 +56,34 @@ describe("test retry reports", () => {
 		]);
 	});
 
+	it("extracts verbose E2E retries without a preceding file summary", ({
+		expect,
+	}) => {
+		const verbose = [
+			" ✓ e2e/tests/frameworks/frameworks.test.ts > E2E: Web frameworks > qwik (pages) 120000ms (retry x1)",
+			" × e2e/tests/frameworks/frameworks.test.ts > E2E: Web frameworks > gatsby (pages) 600000ms (retry x1)",
+			" ✓ e2e/tests/frameworks/frameworks.test.ts > E2E: Web frameworks > vue (workers) 50000ms",
+		].join("\n");
+		expect(parseTestRetries(verbose, "create-cloudflare#test:e2e")).toEqual([
+			{
+				task: "create-cloudflare#test:e2e",
+				file: "e2e/tests/frameworks/frameworks.test.ts",
+				test: "E2E: Web frameworks > qwik (pages)",
+				outcome: "passed",
+				retries: 1,
+				durationMs: 120000,
+			},
+			{
+				task: "create-cloudflare#test:e2e",
+				file: "e2e/tests/frameworks/frameworks.test.ts",
+				test: "E2E: Web frameworks > gatsby (pages)",
+				outcome: "failed",
+				retries: 1,
+				durationMs: 600000,
+			},
+		]);
+	});
+
 	function task(name: string, startTime = 1, status = "MISS") {
 		const logFile = `.turbo/${name}.log`;
 		writeFileSync(path.join(root, logFile), log);
@@ -136,6 +164,52 @@ describe("test retry reports", () => {
 			cachedTasks: 1,
 			missingLogs: [],
 			retries: [{ task: "fresh#test:ci" }, { task: "fresh#test:ci" }],
+		});
+	});
+
+	it("reports fresh E2E tasks from captured output, excluding cached E2E results", ({
+		expect,
+	}) => {
+		mkdirSync(path.join(root, ".turbo/ci-logs"));
+		const verbose =
+			" ✓ e2e/tests/frameworks/frameworks.test.ts > E2E: Web frameworks > qwik (pages) 120000ms (retry x1)";
+		writeFileSync(
+			path.join(root, ".turbo/ci-logs/c3.log"),
+			[
+				`create-cloudflare:test:e2e: cache miss, executing abc`,
+				`create-cloudflare:test:e2e: ${verbose}`,
+				`cached:test:e2e: ${verbose}`,
+			].join("\n")
+		);
+		writeFileSync(
+			path.join(root, ".turbo/runs/1.json"),
+			JSON.stringify({
+				tasks: [
+					{
+						...task("create-cloudflare"),
+						taskId: "create-cloudflare#test:e2e",
+						task: "test:e2e",
+						logFile: "no-writes.log",
+					},
+					{
+						...task("cached", 1, "HIT"),
+						taskId: "cached#test:e2e",
+						task: "test:e2e",
+					},
+				],
+			})
+		);
+		expect(collectTestRetries(root)).toMatchObject({
+			scannedTasks: 1,
+			cachedTasks: 1,
+			missingLogs: [],
+			retries: [
+				{
+					task: "create-cloudflare#test:e2e",
+					test: "E2E: Web frameworks > qwik (pages)",
+					retries: 1,
+				},
+			],
 		});
 	});
 

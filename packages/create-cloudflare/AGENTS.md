@@ -30,4 +30,6 @@ Project scaffolding CLI for Cloudflare Workers. Main source entry: `src/cli.ts`.
 - E2E tests run across pnpm/npm (yarn/bun also supported but not in CI), Linux/Windows
 - Own vitest setup: mocks `log-update` and `@cloudflare/cli-shared-helpers/streams`
 - CI has experimental matrix for framework testing
+- Framework CI uses case shards within one test file (three normal, two experimental), controlled by `E2E_FRAMEWORK_SHARD`. Preserve coverage across every shard and keep shard selections in the test's Turbo cache inputs.
+- Whole-framework retries default to zero; cases with observed transient failures opt into a retry in `e2e/tests/frameworks/test-config.ts`. `E2E_TEST_RETRIES` overrides this for local investigations.
 - Python/UV installed in CI for Python framework E2E tests

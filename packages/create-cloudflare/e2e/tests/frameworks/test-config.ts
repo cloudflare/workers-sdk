@@ -10,6 +10,8 @@ import type { FrameworkTestConfig } from "../../helpers/framework-helpers";
 
 export type NamedFrameworkTestConfig = FrameworkTestConfig & {
 	name: string;
+	/** Whole-test retries for observed transient failures; other cases fail once. */
+	retry?: number;
 };
 
 /**
@@ -256,6 +258,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "gatsby:pages",
+			// npm needed a second attempt in C3 release run 38121668726.
+			retry: pm === "npm" ? 1 : 0,
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun", "pnpm", "yarn"],
 			promptHandlers: [
@@ -351,6 +355,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "qwik:pages",
+			// npm needed a second attempt in C3 release run 38121668726.
+			retry: pm === "npm" ? 1 : 0,
 			argv: ["--platform", "pages"],
 			promptHandlers: [
 				{

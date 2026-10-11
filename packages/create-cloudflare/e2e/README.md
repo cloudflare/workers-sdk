@@ -32,6 +32,24 @@ The tests that run can be controlled by combining any of the following environme
 - `E2E_TEST_PM` + `E2E_TEST_PM_VERSION` - which package manager to simulate in the tests - without these variables the tests simulate `pnpm`.
 - `E2E_RUN_DEPLOY_TESTS` - whether to ask C3 to deploy generated projects and run tests against the deployed version - if this is not set to `"true"`, generated projects are only tested locally.
 - `CLOUDFLARE_API_TOKEN` - the API token to use in tests that connect to Cloudflare - without this variable tests that require Cloudflare access are skipped.
+- `E2E_FRAMEWORK_SHARD` - optional framework case shard in the form `index/count`, with a one-based index. Invalid values fail the run. Without it, all matching cases are collected, including skipped cases.
+- `E2E_TEST_RETRIES` - optional non-negative integer override for framework whole-test retries. Framework tests default to zero retries; only cases with an observed transient failure opt into one retry in `test-config.ts`. Set this to `0` to disable even those retries when investigating a failure. Readiness polling within each attempt is unchanged.
+
+### Running a framework shard
+
+All framework cases live in one file, so Vitest's file sharding cannot divide this suite. CI runs three case shards per normal package-manager entry and two shards for experimental pnpm. Each runner retains Vitest's default limit of five concurrent tests.
+
+To reproduce a shard locally, run:
+
+```bash
+E2E_FRAMEWORK_SHARD=1/3 pnpm test:e2e -F create-cloudflare -- frameworks
+```
+
+Cases are sorted by their full names and distributed round-robin after applying the framework filter and excluding quarantined or unsupported cases. New frameworks and variants are assigned automatically. Use the same package manager, package-manager version, experimental mode, filter, and shard count as CI to reproduce its selection.
+
+The existing required framework checks wait for every framework shard. Failed, cancelled, or skipped shard jobs fail these checks; deliberately skipped test steps still succeed when framework coverage is not requested.
+
+CI publishes per-attempt logs, Vitest's `results.json`, Turbo summaries, and a retry report. The reported Vitest test duration includes waiting for a concurrency slot, hooks, and all attempts, so use the job/Turbo task duration to measure the critical path. Cached test replays are excluded from retry reports.
 
 ### Running in experimental mode
 
