@@ -16,7 +16,7 @@ import { BundlerController } from "../../../api/startDevWorker/BundlerController
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
-import type { FSWatcher } from "chokidar";
+import type { FSWatcher, Matcher } from "chokidar";
 
 // Mock chokidar so we can drive watcher events and errors directly, without
 // depending on the filesystem delivering them.
@@ -122,16 +122,9 @@ function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 			assert(watcher);
 			return watcher;
 		},
-		/** Directory list passed as `ignored` on the `watch()` call at `index`. */
-		ignoredDirs(index: number): string[] {
-			const options = calls[index];
-			assert(options);
-			const { ignored } = options;
-			assert(Array.isArray(ignored));
-			return ignored.map((entry) => {
-				assert(typeof entry === "string");
-				return entry;
-			});
+		ignoredDirs(index: number): (Matcher | undefined)[] {
+			const ignored = calls[index]?.ignored;
+			return Array.isArray(ignored) ? ignored : [ignored];
 		},
 	};
 }

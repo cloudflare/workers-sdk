@@ -668,10 +668,9 @@ export class BundlerController extends Controller {
  * default state dir. `dev.persist` is that default, or a `--persist-to` path.
  */
 function getDevSessionWriteDirs(config: StartDevWorkerOptions): string[] {
-	const wranglerDir = getWranglerHiddenDirPath(config.projectRoot);
-	const persistDir =
-		config.dev.persist === false ? undefined : path.resolve(config.dev.persist);
-	return [wranglerDir, persistDir].filter(
-		(dir): dir is string => dir !== undefined
-	);
+	const dirs = [getWranglerHiddenDirPath(config.projectRoot)];
+	if (config.dev.persist !== false) {
+		dirs.push(path.resolve(config.dev.persist));
+	}
+	return dirs;
 }
