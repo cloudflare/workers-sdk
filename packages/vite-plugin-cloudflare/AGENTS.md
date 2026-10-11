@@ -30,7 +30,7 @@ API and not meant for direct end-user invocation. It is the sibling of
 `wrangler`'s `cf-wrangler` binary, and the two MUST keep a shared spawn
 contract so the parent can drive either impl interchangeably.
 
-- **Verb dispatch.** `cf-vite <verb> [flags]`. `dev` and `build` are the
+- **Verb dispatch.** `cf-vite <verb> [flags]`. `dev`, `build`, and `types` are the
   verbs today; future verbs (`deploy`) follow the same shape.
   Unknown/missing verbs exit `2` (this doubles as the parent's
   version-detection signal — no JSON handshake).
@@ -48,6 +48,9 @@ contract so the parent can drive either impl interchangeably.
   a build and exit `2`). Preview build context is supplied through
   `CLOUDFLARE_PREVIEW_BUILD`, which also works when a framework runs Vite as
   part of its own build command.
+- **`types`** `cf-vite types` generates `.cloudflare/types/index.d.ts` using
+  this plugin's installed runtime types. It accepts `--mode` and
+  `--no-include-runtime`; other flags exit `2`.
 - **Build Output Specification forced for every verb.** `main()` sets
   `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` unconditionally (before Vite
   loads the user's config), enabling `experimental.newConfig` +

@@ -15,6 +15,10 @@ export interface BuildArgs {
 	mode?: string; // maps to wrangler's `env` (named environment)
 }
 
+export interface TypesArgs extends BuildArgs {
+	includeRuntime: boolean;
+}
+
 export class ArgParseError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -93,4 +97,29 @@ export function parseBuildArgs(argv: string[]): BuildArgs {
 	}
 
 	return out;
+}
+
+/** Parse flags shared with the Vite delegate's standalone type generation. */
+export function parseTypesArgs(argv: string[]): TypesArgs {
+	let parsed;
+	try {
+		parsed = nodeParseArgs({
+			args: argv,
+			options: {
+				mode: { type: "string" },
+				"include-runtime": { type: "boolean", default: true },
+			},
+			strict: true,
+			allowPositionals: false,
+			allowNegative: true,
+		});
+	} catch (error) {
+		throw new ArgParseError(
+			error instanceof Error ? error.message : String(error)
+		);
+	}
+	return {
+		mode: parsed.values.mode,
+		includeRuntime: parsed.values["include-runtime"] ?? true,
+	};
 }

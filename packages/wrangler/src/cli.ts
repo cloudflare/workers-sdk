@@ -109,10 +109,12 @@ export { resolveNamedTunnel as unstable_resolveNamedTunnel } from "./tunnel/clie
 // which calls these in-process. Not a stable public API.
 export { runCfWranglerBuild } from "./cf-wrangler/build";
 export { runCfWranglerDev } from "./cf-wrangler/dev";
+export { runCfWranglerTypes } from "./cf-wrangler/types";
 export {
 	ArgParseError,
 	parseBuildArgs as parseCfWranglerBuildArgs,
 	parseArgs as parseCfWranglerArgs,
+	parseTypesArgs as parseCfWranglerTypesArgs,
 } from "./cf-wrangler/args";
 
 // Export internal APIs required by the Vitest integration as `unstable_`

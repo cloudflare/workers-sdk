@@ -8,8 +8,10 @@ const {
 	ArgParseError,
 	parseCfWranglerBuildArgs,
 	parseCfWranglerArgs,
+	parseCfWranglerTypesArgs,
 	runCfWranglerBuild,
 	runCfWranglerDev,
+	runCfWranglerTypes,
 } = require("../wrangler-dist/cli.js");
 
 const argv = process.argv.slice(2);
@@ -23,6 +25,10 @@ const verbHandlers = {
 	build: {
 		parse: parseCfWranglerBuildArgs,
 		run: runCfWranglerBuild,
+	},
+	types: {
+		parse: parseCfWranglerTypesArgs,
+		run: runCfWranglerTypes,
 	},
 };
 
