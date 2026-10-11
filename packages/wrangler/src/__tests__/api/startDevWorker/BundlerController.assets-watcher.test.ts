@@ -98,11 +98,14 @@ type FakeWatcher = EventEmitter & { close: ReturnType<typeof vi.fn> };
 
 /**
  * Make `watch()` hand the controller watchers whose events we drive ourselves,
- * recording every one so that tests can assert they all get closed.
+ * recording every call so that tests can close them and read the options for
+ * a call they name.
  */
 function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 	const created: FakeWatcher[] = [];
-	vi.mocked(watch).mockImplementation(() => {
+	const calls: Array<Parameters<typeof watch>[1]> = [];
+	vi.mocked(watch).mockImplementation((_paths, options) => {
+		calls.push(options);
 		const fakeWatcher = new EventEmitter() as FakeWatcher;
 		let closing: Promise<void> | undefined;
 		// Repeated `close()` calls return the same promise, as chokidar's do.
@@ -119,18 +122,18 @@ function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 			assert(watcher);
 			return watcher;
 		},
+		/** Directory list passed as `ignored` on the `watch()` call at `index`. */
+		ignoredDirs(index: number): string[] {
+			const options = calls[index];
+			assert(options);
+			const { ignored } = options;
+			assert(Array.isArray(ignored));
+			return ignored.map((entry) => {
+				assert(typeof entry === "string");
+				return entry;
+			});
+		},
 	};
-}
-
-function ignoredDirsFromLastWatch(): string[] {
-	const options = vi.mocked(watch).mock.calls.at(-1)?.[1];
-	assert(options);
-	const { ignored } = options;
-	assert(Array.isArray(ignored));
-	return ignored.map((entry) => {
-		assert(typeof entry === "string");
-		return entry;
-	});
 }
 
 describe("BundlerController — assets watcher", () => {
@@ -270,7 +273,7 @@ describe("BundlerController — assets watcher", () => {
 	);
 
 	test("ignores the dev session write directories", async ({ expect }) => {
-		mockWatchers(expect);
+		const watchers = mockWatchers(expect);
 
 		const projectRoot = path.resolve(".");
 		const firstBundle = bus.waitFor("bundleComplete");
@@ -279,8 +282,9 @@ describe("BundlerController — assets watcher", () => {
 			config: assetsAt(projectRoot),
 		});
 		await firstBundle;
+		await watchers.at(0);
 
-		expect(ignoredDirsFromLastWatch()).toEqual([
+		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 			path.join(projectRoot, ".wrangler/state"),
 		]);
@@ -289,7 +293,7 @@ describe("BundlerController — assets watcher", () => {
 	test("ignores a persist directory inside the assets tree", async ({
 		expect,
 	}) => {
-		mockWatchers(expect);
+		const watchers = mockWatchers(expect);
 
 		const projectRoot = path.resolve(".");
 		const persist = path.join(projectRoot, "persist-state");
@@ -299,15 +303,16 @@ describe("BundlerController — assets watcher", () => {
 			config: assetsAt(projectRoot, persist),
 		});
 		await firstBundle;
+		await watchers.at(0);
 
-		expect(ignoredDirsFromLastWatch()).toEqual([
+		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 			persist,
 		]);
 	});
 
 	test("watches assets that live under node_modules", async ({ expect }) => {
-		mockWatchers(expect);
+		const watchers = mockWatchers(expect);
 
 		const projectRoot = path.resolve(".");
 		const assetsDir = path.resolve("node_modules/example/public");
@@ -317,8 +322,9 @@ describe("BundlerController — assets watcher", () => {
 			config: assetsAt(assetsDir),
 		});
 		await firstBundle;
+		await watchers.at(0);
 
-		expect(ignoredDirsFromLastWatch()).toEqual([
+		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 			path.join(projectRoot, ".wrangler/state"),
 		]);
@@ -327,7 +333,7 @@ describe("BundlerController — assets watcher", () => {
 	test("keeps watching when the persist path is the assets directory", async ({
 		expect,
 	}) => {
-		mockWatchers(expect);
+		const watchers = mockWatchers(expect);
 
 		const projectRoot = path.resolve(".");
 		const assetsDir = path.resolve("public");
@@ -337,8 +343,9 @@ describe("BundlerController — assets watcher", () => {
 			config: assetsAt(assetsDir, assetsDir),
 		});
 		await firstBundle;
+		await watchers.at(0);
 
-		expect(ignoredDirsFromLastWatch()).toEqual([
+		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 		]);
 	});
