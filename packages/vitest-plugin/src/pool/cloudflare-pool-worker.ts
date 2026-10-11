@@ -35,7 +35,10 @@ import type {
 	WorkerResponse,
 } from "vitest/node";
 
-function inlineCachedModule(module: unknown): unknown {
+function inlineCachedModule(
+	module: unknown,
+	cacheContents: Map<string, string>
+): unknown {
 	if (
 		module === null ||
 		typeof module !== "object" ||
@@ -48,11 +51,17 @@ function inlineCachedModule(module: unknown): unknown {
 	}
 
 	const { cached, tmp, ...result } = module;
-	return { ...result, code: fs.readFileSync(tmp, "utf8") };
+	let code = cacheContents.get(tmp);
+	if (code === undefined) {
+		code = fs.readFileSync(tmp, "utf8");
+		cacheContents.set(tmp, code);
+	}
+	return { ...result, code };
 }
 
 function inlineCachedModules(response: unknown): unknown {
-	const inlined = inlineCachedModule(response);
+	const cacheContents = new Map<string, string>();
+	const inlined = inlineCachedModule(response, cacheContents);
 	if (
 		inlined !== response ||
 		response === null ||
@@ -65,7 +74,7 @@ function inlineCachedModules(response: unknown): unknown {
 	let hasCachedModules = false;
 	const entries = Object.entries(response).flatMap(([specifier, module]) => {
 		try {
-			const inlinedModule = inlineCachedModule(module);
+			const inlinedModule = inlineCachedModule(module, cacheContents);
 			hasCachedModules ||= inlinedModule !== module;
 			return [[specifier, inlinedModule] as const];
 		} catch {
