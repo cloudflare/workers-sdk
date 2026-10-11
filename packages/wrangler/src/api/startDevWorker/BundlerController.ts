@@ -521,7 +521,7 @@ export class BundlerController extends Controller {
 		this.#debouncedRefreshBundle = debouncedRefreshBundle;
 
 		if (config.dev.watch !== false && config.assets?.directory) {
-			const assetsDir = config.assets.directory;
+			const assetsDir = path.resolve(config.assets.directory);
 			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
@@ -530,7 +530,7 @@ export class BundlerController extends Controller {
 				// only when it is the assets directory, or the watcher would ignore
 				// the tree it was created to watch.
 				ignored: devSessionWriteDirs(config).filter(
-					(dir) => path.resolve(dir) !== path.resolve(assetsDir)
+					(dir) => path.resolve(dir) !== assetsDir
 				),
 			})
 				.on("all", async (eventName, filePath) => {
