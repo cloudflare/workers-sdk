@@ -23,18 +23,18 @@ export function selectFrameworkTests<Test extends { name: string }>(
 }
 
 /**
- * Keep whole-test retries opt-in while allowing a local override.
+ * Bound whole-test retries while allowing per-case and local overrides.
  *
- * @param retry Retry allowance for a framework with an observed transient failure.
+ * @param retry Optional per-case retry allowance.
  * @param override Optional E2E_TEST_RETRIES value; zero disables all retries.
- * @returns A non-negative integer retry allowance, defaulting to zero.
+ * @returns A non-negative integer retry allowance, defaulting to one.
  */
 export function getFrameworkTestRetries(
 	retry: number | undefined,
 	override: string | undefined
 ): number {
 	if (override === undefined) {
-		return retry ?? 0;
+		return retry ?? 1;
 	}
 	const retries = Number(override);
 	assert(

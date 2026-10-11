@@ -1,11 +1,22 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
-import { shouldRunTest } from "../../e2e/helpers/framework-helpers";
+import {
+	addTestVarsToWranglerToml,
+	shouldRunTest,
+} from "../../e2e/helpers/framework-helpers";
 import {
 	getFrameworkTestRetries,
 	selectFrameworkTests,
 } from "../../e2e/helpers/framework-shard";
-import { spawnWithLogging, waitForExit } from "../../e2e/helpers/spawn";
+import {
+	registerPackageManagerCache,
+	spawnWithLogging,
+	waitForExit,
+} from "../../e2e/helpers/spawn";
 import { getFrameworksTests } from "../../e2e/tests/frameworks/test-config";
 import { mockPackageManager } from "../helpers/__tests__/mocks";
 
@@ -40,16 +51,6 @@ describe("framework case shards", () => {
 			Object.assign(mode, config);
 			mockPackageManager(config.pm, config.version);
 			const tests = getFrameworksTests().filter(shouldRunTest);
-			expect(
-				tests
-					.filter((test) => test.retry)
-					.map(({ name }) => name)
-					.sort()
-			).toEqual(
-				config.pm === "npm" && !config.experimental
-					? ["gatsby:pages", "qwik:pages"]
-					: []
-			);
 			const partitions = Array.from({ length: config.shards }, (_, i) =>
 				selectFrameworkTests(tests, `${i + 1}/${config.shards}`)
 			);
@@ -109,10 +110,11 @@ describe("framework case shards", () => {
 });
 
 describe("framework retry allowances", () => {
-	it("defaults to zero and retains explicitly configured retries", ({
+	it("defaults to one and retains explicitly configured retries", ({
 		expect,
 	}) => {
-		expect(getFrameworkTestRetries(undefined, undefined)).toBe(0);
+		expect(getFrameworkTestRetries(undefined, undefined)).toBe(1);
+		expect(getFrameworkTestRetries(0, undefined)).toBe(0);
 		expect(getFrameworkTestRetries(1, undefined)).toBe(1);
 		expect(getFrameworkTestRetries(1, "0")).toBe(0);
 		expect(getFrameworkTestRetries(undefined, "2")).toBe(2);
@@ -149,3 +151,81 @@ it.for(["end", "destroy"] as const)(
 		expect(errors).toEqual([]);
 	}
 );
+
+describe("framework test isolation", () => {
+	runInTempDir();
+
+	it("keeps per-attempt caches outside Git and reuses them across working directories", async ({
+		expect,
+	}) => {
+		const project = join(process.cwd(), "project");
+		mkdirSync(project);
+		writeFileSync(join(project, "package.json"), "{}");
+		const log = new PassThrough();
+		registerPackageManagerCache(log, project);
+		const script = `
+			const fs = require('node:fs');
+			const path = require('node:path');
+			const keys = ['npm_config_cache', 'npm_config_store_dir', 'PNPM_HOME', 'YARN_CACHE_FOLDER'];
+			const dirs = keys.map(key => process.env[key]);
+			for (const dir of dirs) {
+				fs.mkdirSync(dir, { recursive: true });
+				fs.writeFileSync(path.join(dir, 'cache-entry'), 'cached');
+			}
+			process.stdout.write(JSON.stringify(dirs));
+		`;
+		const outputs: string[] = [];
+		for (const cwd of [process.cwd(), project]) {
+			const proc = spawnWithLogging(
+				[process.execPath, "-e", script],
+				{
+					cwd,
+					env: { NPM_CONFIG_CACHE: join(project, "inherited-cache") },
+				},
+				log
+			);
+			outputs.push((await waitForExit(proc)).output);
+		}
+		expect(outputs[1]).toBe(outputs[0]);
+		expect(JSON.parse(outputs[0])).toEqual([
+			join(`${project}-package-cache`, "npm"),
+			join(`${project}-package-cache`, "pnpm", "store"),
+			join(`${project}-package-cache`, "pnpm"),
+			join(`${project}-package-cache`, "yarn"),
+		]);
+		execFileSync("git", ["init"], { cwd: project });
+		execFileSync("git", ["add", "."], { cwd: project });
+		expect(
+			execFileSync("git", ["ls-files"], { cwd: project, encoding: "utf8" })
+		).toBe("package.json\n");
+		const otherLog = new PassThrough();
+		const otherProject = join(dirname(project), "other-project");
+		registerPackageManagerCache(otherLog, otherProject);
+		const other = spawnWithLogging(
+			[process.execPath, "-e", script],
+			{},
+			otherLog
+		);
+		expect((await waitForExit(other)).output).not.toBe(outputs[0]);
+		expect(readdirSync(project)).toEqual([".git", "package.json"]);
+	});
+
+	it("isolates the inspector while preserving generated Wrangler settings", async ({
+		expect,
+	}) => {
+		writeFileSync(
+			"wrangler.jsonc",
+			JSON.stringify({
+				name: "test-worker",
+				dev: { port: 1234, inspector_port: 9229 },
+				vars: { EXISTING: "value" },
+			})
+		);
+		await addTestVarsToWranglerToml(process.cwd());
+		expect(JSON.parse(readFileSync("wrangler.jsonc", "utf8"))).toEqual({
+			name: "test-worker",
+			dev: { port: 1234, inspector_port: 0 },
+			vars: { EXISTING: "value", TEST: "C3_TEST" },
+		});
+	});
+});

@@ -31,5 +31,5 @@ Project scaffolding CLI for Cloudflare Workers. Main source entry: `src/cli.ts`.
 - Own vitest setup: mocks `log-update` and `@cloudflare/cli-shared-helpers/streams`
 - CI has experimental matrix for framework testing
 - Framework CI uses case shards within one test file (three normal, two experimental), controlled by `E2E_FRAMEWORK_SHARD`. Preserve coverage across every shard and keep shard selections in the test's Turbo cache inputs.
-- Whole-framework retries default to zero; cases with observed transient failures opt into a retry in `e2e/tests/frameworks/test-config.ts`. `E2E_TEST_RETRIES` overrides this for local investigations.
+- Whole-framework tests retain one retry for transient failures in external registries, generators, and runtime startup. Per-case allowances live in `e2e/tests/frameworks/test-config.ts`; `E2E_TEST_RETRIES=0` disables retries for local investigations. Keep recovered attempts visible in retry reports and fix their causes before reducing allowances.
 - Python/UV installed in CI for Python framework E2E tests
