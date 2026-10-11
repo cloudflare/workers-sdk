@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import {
 	addTestVarsToWranglerToml,
 	shouldRunTest,
@@ -40,43 +40,66 @@ vi.mock("../../e2e/helpers/constants", async (importOriginal) => ({
 }));
 
 describe("framework case shards", () => {
-	it.for([
-		{ pm: "pnpm", version: "10.33.0", experimental: false, shards: 3 },
-		{ pm: "pnpm", version: "11.5.1", experimental: false, shards: 3 },
-		{ pm: "npm", version: "11.7.0", experimental: false, shards: 3 },
-		{ pm: "pnpm", version: "10.33.0", experimental: true, shards: 2 },
-	])(
-		"preserves all eligible cases for $pm@$version, experimental=$experimental",
-		(config, { expect }) => {
-			Object.assign(mode, config);
-			mockPackageManager(config.pm, config.version);
-			const tests = getFrameworksTests().filter(shouldRunTest);
-			const partitions = Array.from({ length: config.shards }, (_, i) =>
-				selectFrameworkTests(tests, `${i + 1}/${config.shards}`)
-			);
-			const names = tests.map(({ name }) => name).sort();
-			expect(names.length).toBeGreaterThan(config.shards);
-			expect(
-				partitions
-					.flat()
-					.map(({ name }) => name)
-					.sort()
-			).toEqual(names);
-			expect(new Set(partitions.flat().map(({ name }) => name)).size).toBe(
-				names.length
-			);
-			expect(
-				Math.max(...partitions.map((part) => part.length)) -
-					Math.min(...partitions.map((part) => part.length))
-			).toBeLessThanOrEqual(1);
-			for (let i = 0; i < config.shards; i++) {
+	describe.each(["linux", "darwin", "win32"] as const)("on %s", (platform) => {
+		beforeEach(() => {
+			vi.spyOn(process, "platform", "get").mockReturnValue(platform);
+		});
+
+		it.for([
+			{ pm: "pnpm", version: "10.33.0", experimental: false, shards: 3 },
+			{ pm: "pnpm", version: "11.5.1", experimental: false, shards: 3 },
+			{ pm: "npm", version: "11.7.0", experimental: false, shards: 3 },
+			{ pm: "pnpm", version: "10.33.0", experimental: true, shards: 2 },
+		])(
+			"preserves all eligible cases for $pm@$version, experimental=$experimental",
+			(config, { expect }) => {
+				Object.assign(mode, config);
+				mockPackageManager(config.pm, config.version);
+				const configuredTests = getFrameworksTests();
+				const tests = configuredTests.filter(shouldRunTest);
+				const partitions = Array.from({ length: config.shards }, (_, i) =>
+					selectFrameworkTests(tests, `${i + 1}/${config.shards}`)
+				);
+				const names = tests.map(({ name }) => name).sort();
 				expect(
-					selectFrameworkTests(
-						[...tests].reverse(),
-						`${i + 1}/${config.shards}`
-					)
-				).toEqual(partitions[i]);
+					partitions
+						.flat()
+						.map(({ name }) => name)
+						.sort()
+				).toEqual(names);
+				expect(new Set(partitions.flat().map(({ name }) => name)).size).toBe(
+					names.length
+				);
+				expect(
+					Math.max(...partitions.map((part) => part.length)) -
+						Math.min(...partitions.map((part) => part.length))
+				).toBeLessThanOrEqual(1);
+				for (let i = 0; i < config.shards; i++) {
+					expect(
+						selectFrameworkTests(
+							[...tests].reverse(),
+							`${i + 1}/${config.shards}`
+						)
+					).toEqual(partitions[i]);
+				}
 			}
+		);
+	});
+
+	it.for([0, 1, 2])(
+		"preserves %s cases split across three shards",
+		(count, { expect }) => {
+			const tests = Array.from({ length: count }, (_, i) => ({
+				name: `framework-${i}`,
+			}));
+			const partitions = Array.from({ length: 3 }, (_, i) =>
+				selectFrameworkTests(tests, `${i + 1}/3`)
+			);
+			expect(partitions).toEqual([
+				tests.slice(0, 1),
+				tests.slice(1, 2),
+				tests.slice(2, 3),
+			]);
 		}
 	);
 
