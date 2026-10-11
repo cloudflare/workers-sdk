@@ -141,9 +141,17 @@ describe("framework CLI Node.js requirements", () => {
 describe("Nuxt Node.js version pin", () => {
 	runInTempDir();
 
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
 	test.for(Object.entries(nuxt.platformVariants))(
 		"writes a supported .node-version inside the %s project",
 		async ([platform, template], { expect }) => {
+			vi.stubGlobal("process", {
+				...process,
+				versions: { ...process.versions, node: "22.23.1" },
+			});
 			const ctx = createTestContext(`nuxt-${platform}`);
 			ctx.project.path = resolve(ctx.project.path);
 			ctx.template = template;
