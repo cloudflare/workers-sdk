@@ -9,6 +9,10 @@ import WebSocket from "ws";
 import type { Log } from "../../shared";
 import type { RpcStub } from "capnweb";
 
+const REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS = 3;
+const REMOTE_HYPERDRIVE_CONNECTION_TIMEOUT_MS = 10_000;
+const REMOTE_HYPERDRIVE_RETRY_BACKOFF_MS = 500;
+
 export interface HyperdriveProxyConfig {
 	// Name of the Hyperdrive binding
 	name: string;
@@ -537,12 +541,23 @@ export class HyperdriveProxyController {
 	}
 
 	async #connectRemoteHyperdrive(wsHref: string, bindingName: string) {
-		for (let attempt = 1; attempt <= 3; attempt++) {
-			const websocket = new WebSocket(wsHref);
+		for (
+			let attempt = 1;
+			attempt <= REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS;
+			attempt++
+		) {
+			const websocket = new WebSocket(wsHref, {
+				headers: process.env.CF_TRACE_ID
+					? { "cf-trace-id": process.env.CF_TRACE_ID }
+					: undefined,
+			});
 			const stub = newWebSocketRpcSession<RemoteHyperdrive>(
 				websocket as unknown as globalThis.WebSocket
 			);
-			const timeout = setTimeout(() => websocket.terminate(), 10_000);
+			const timeout = setTimeout(
+				() => websocket.terminate(),
+				REMOTE_HYPERDRIVE_CONNECTION_TIMEOUT_MS
+			);
 			try {
 				const connectionString = await stub.getConnectionString();
 				if (typeof connectionString !== "string") {
@@ -554,8 +569,8 @@ export class HyperdriveProxyController {
 			} finally {
 				clearTimeout(timeout);
 			}
-			if (attempt < 3) {
-				await delay(500 * attempt);
+			if (attempt < REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS) {
+				await delay(REMOTE_HYPERDRIVE_RETRY_BACKOFF_MS * attempt);
 			}
 		}
 		this.log?.warn(
