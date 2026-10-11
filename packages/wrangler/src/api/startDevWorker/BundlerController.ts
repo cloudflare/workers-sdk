@@ -529,7 +529,7 @@ export class BundlerController extends Controller {
 				// `.wrangler` and `dev.persist` do not reload. Drop a write directory
 				// only when it is the assets directory, or the watcher would ignore
 				// the tree it was created to watch.
-				ignored: devSessionWriteDirs(config).filter(
+				ignored: getDevSessionWriteDirs(config).filter(
 					(dir) => path.resolve(dir) !== assetsDir
 				),
 			})
@@ -667,10 +667,11 @@ export class BundlerController extends Controller {
  * Directories this dev session writes. `.wrangler` holds tmp, cache, and the
  * default state dir. `dev.persist` is that default, or a `--persist-to` path.
  */
-function devSessionWriteDirs(config: StartDevWorkerOptions): string[] {
-	const dirs = [getWranglerHiddenDirPath(config.projectRoot)];
-	if (typeof config.dev.persist === "string") {
-		dirs.push(path.resolve(config.dev.persist));
-	}
-	return dirs;
+function getDevSessionWriteDirs(config: StartDevWorkerOptions): string[] {
+	const wranglerDir = getWranglerHiddenDirPath(config.projectRoot);
+	const persistDir =
+		config.dev.persist === false ? undefined : path.resolve(config.dev.persist);
+	return [wranglerDir, persistDir].filter(
+		(dir): dir is string => dir !== undefined
+	);
 }
