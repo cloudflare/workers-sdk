@@ -649,6 +649,27 @@ class D1Handler extends ProvisionResourceHandler<
 			accountId
 		);
 	}
+	private throwIfJurisdictionMismatch(db: DatabaseInfo): void {
+		const requestedJurisdiction = this.binding.jurisdiction;
+		if (!requestedJurisdiction || requestedJurisdiction === db.jurisdiction) {
+			return;
+		}
+
+		const existingJurisdiction = db.jurisdiction ?? "default";
+		const matchingConfigAction = db.jurisdiction
+			? `set "jurisdiction" to "${db.jurisdiction}"`
+			: `remove "jurisdiction"`;
+		throw new UserError(
+			dedent`
+				D1 database "${db.name}" (${db.uuid}) is in jurisdiction "${existingJurisdiction}", but the "${this.bindingName}" binding specifies jurisdiction "${requestedJurisdiction}".
+
+				A D1 database's jurisdiction cannot be changed after creation. Either:
+				  - ${matchingConfigAction} in your configuration to keep using this database, or
+				  - set a new "database_name" for this binding so a new database is provisioned in "${requestedJurisdiction}" (then migrate your data).
+			`,
+			{ telemetryMessage: "d1 provision jurisdiction mismatch" }
+		);
+	}
 	async canInherit(settings: Settings | undefined): Promise<boolean> {
 		const maybeInherited = settings?.bindings.find(
 			(existing) =>
@@ -677,6 +698,9 @@ class D1Handler extends ProvisionResourceHandler<
 			if (nameMatches && jurisdictionMatches) {
 				return true;
 			}
+			if (nameMatches) {
+				this.throwIfJurisdictionMismatch(dbFromId);
+			}
 		}
 		return false;
 	}
@@ -693,6 +717,7 @@ class D1Handler extends ProvisionResourceHandler<
 				this.accountId,
 				this.binding.database_name
 			);
+			this.throwIfJurisdictionMismatch(db);
 
 			// This database_name exists! We don't need to provision it.
 			return db.uuid;
