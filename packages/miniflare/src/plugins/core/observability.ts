@@ -7,13 +7,18 @@ import {
 	getUserServiceName,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 } from "./constants";
+import type { TracedServices } from "../../workers/observability/otlp-to-store";
+
+export type { TracedServices };
 
 /**
- * Builds the trace collector service and the storage behind it. Miniflare core
- * attaches the collector to the user's worker(s) as a tail consumer (see the
- * `unsafeObservability` wiring in this plugin). The collector also hosts the
- * `TraceStore` Durable Object and binds to it, so captured spans and logs are
- * saved there for the Local Explorer / `wrangler observability` to read.
+ * Builds the trace collector service and the storage behind it. workerd exports
+ * every traced invocation's spans to the collector over OTLP (Miniflare sets
+ * `tracing.otlp` to it), and Miniflare core attaches the collector to the user's
+ * worker(s) as a tail consumer for their logs (see the `unsafeObservability`
+ * wiring in this plugin). The collector also hosts the `TraceStore` Durable
+ * Object and binds to it, so captured spans and logs are saved there for the
+ * Local Explorer / `wrangler observability` to read.
  */
 
 /** DO class name — must match the class exported by collector.worker.ts. */
@@ -24,13 +29,16 @@ const TRACE_STORE_BINDING = "TRACE_STORE";
 const OBSERVABILITY_BATCH_SIZE_ENV = "X_LOCAL_OBSERVABILITY_BATCH_SIZE";
 /** Binding name — must match the collector worker's `Env.TRACE_BATCH_SIZE`. */
 const TRACE_BATCH_SIZE_BINDING = "TRACE_BATCH_SIZE";
+/** Binding name — must match the collector worker's `Env.TRACED_SERVICES`. */
+const TRACED_SERVICES_BINDING = "TRACED_SERVICES";
 /** Disk service backing the TraceStore DO's SQLite storage. */
 const OBSERVABILITY_STORAGE_SERVICE_NAME = "obs:storage";
 
 export function getObservabilityServices(
 	tmpPath: string,
 	isolatedResourcePersistencePath: string | undefined,
-	runtimeEnv: Record<string, string> | undefined
+	runtimeEnv: Record<string, string> | undefined,
+	tracedServices: TracedServices
 ): Service[] {
 	// The TraceStore DO is SQLite-backed, so it needs disk-backed storage (the
 	// in-memory option doesn't support SQL). Persist under `.wrangler/state` when
@@ -54,14 +62,15 @@ export function getObservabilityServices(
 			disk: { path: storagePath, writable: true },
 		},
 		{
-			// User workers' `streamingTails` references resolve through
-			// getUserServiceName(), so register the collector under that same
+			// User workers' `streamingTails` references, and `tracing.otlp`, resolve
+			// through getUserServiceName(), so register the collector under that same
 			// prefixed name.
 			name: getUserServiceName(OBSERVABILITY_COLLECTOR_SERVICE_NAME),
 			worker: {
 				compatibilityDate: "2026-01-01",
-				// The collector consumes tails; it isn't tailed itself, so it doesn't
-				// need OBSERVABILITY_COMPAT_FLAGS (those go on the user workers).
+				// The collector consumes tails and spans; it isn't tailed or traced
+				// itself, so it doesn't need OBSERVABILITY_COMPAT_FLAGS (those go on
+				// the user workers).
 				compatibilityFlags: ["nodejs_compat"],
 				modules: [
 					{
@@ -86,6 +95,10 @@ export function getObservabilityServices(
 					{
 						name: TRACE_BATCH_SIZE_BINDING,
 						json: JSON.stringify(batchSize),
+					},
+					{
+						name: TRACED_SERVICES_BINDING,
+						json: JSON.stringify(tracedServices),
 					},
 				],
 			},

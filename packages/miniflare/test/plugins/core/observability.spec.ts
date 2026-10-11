@@ -6,13 +6,14 @@ import { singleModuleManifest, useDispose } from "../../test-shared";
 
 // Local observability wiring.
 //
-// When `unsafeObservability` is enabled, Miniflare core attaches the collector
-// to each user worker (as a tail consumer) and adds the compatibility flags
-// workerd needs to emit those tail events. The caller sets nothing per worker;
-// wrangler and the Vite plugin just turn on the one option. The wiring tests
-// below check that this produces a valid, working config. The store tests call
-// the `TraceStore` Durable Object and the collector's read API directly over
-// RPC, separately from tail capture.
+// When `unsafeObservability` is enabled, Miniflare makes the collector workerd's
+// OTLP collector (`tracing.otlp`), so it receives every invocation's spans, and
+// attaches it to each user worker as a tail consumer for its logs, adding the
+// compatibility flags workerd needs to emit those tail events. The caller sets
+// nothing per worker; wrangler and the Vite plugin just turn on the one option.
+// The wiring tests below check that this produces a valid, working config. The
+// store tests call the `TraceStore` Durable Object and the collector's read API
+// directly over RPC, separately from capture.
 
 function plainWorker(script: string): WorkerOptions {
 	return {
@@ -230,6 +231,23 @@ export default {
 			}], []);
 			return new Response("repersisted");
 		}
+		if (url.pathname === "/pending") {
+			const store = env.TRACE_STORE.get(env.TRACE_STORE.idFromName("singleton"));
+			const span = (spanId, parentId, startMs) => ({
+				traceId: "trace-pending", spanId, parentId, service: "user",
+				name: spanId, kind: "http", startMs, durationMs: 1, outcome: "ok",
+				error: null, attributes: { "faas.trigger": "http" },
+			});
+			// First a callee, whose caller is exported later, and an invocation
+			// started by a span that is never stored; then the caller.
+			await store.persist(
+				url.searchParams.get("caller")
+					? [span("caller", null, 9000)]
+					: [span("callee", "caller", 9001), span("started", "dropped", 9002)],
+				[]
+			);
+			return new Response("persisted");
+		}
 		if (url.pathname.startsWith("/wobs/")) {
 			return env.WOBS.fetch(
 				new Request("http://collector" + url.pathname.slice("/wobs".length) + url.search, request)
@@ -393,6 +411,37 @@ interface WtSpan {
 	attributes: string | null;
 }
 
+describe("unsafeObservability (parents)", () => {
+	test("keeps a span whose parent isn't stored as a root until the parent arrives", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			workers: [storeWorker()],
+		});
+		useDispose(mf);
+		const parents = async () =>
+			Object.fromEntries(
+				(
+					await queryStore(
+						mf,
+						"SELECT span_id, parent_id FROM spans WHERE trace_id = 'trace-pending'"
+					)
+				).map((row) => [row.span_id, row.parent_id])
+			);
+
+		await mf.dispatchFetch("http://localhost/pending");
+		expect(await parents()).toEqual({ callee: null, started: null });
+
+		await mf.dispatchFetch("http://localhost/pending?caller=1");
+		expect(await parents()).toEqual({
+			caller: null,
+			callee: "caller",
+			started: null,
+		});
+	});
+});
+
 describe("unsafeObservability (write-through capture)", () => {
 	test("opens spans in-flight, merges streamed attributes, and finalises on close", async ({
 		expect,
@@ -508,10 +557,10 @@ describe("unsafeObservability (write-through capture)", () => {
 });
 
 // A plain user worker (no manual seeding): it does some work, logs, and proxies
-// `/wobs/*` to the collector's read API. With `unsafeObservability`, core attaches
-// the collector as a streaming-tail consumer, so the worker's invocation is folded
-// (via cf-to-otel) into spans/logs and persisted — nothing observability-specific
-// is wired here by hand.
+// `/wobs/*` to the collector's read API. With `unsafeObservability`, workerd
+// exports the worker's spans to the collector and streams its tail there, so the
+// invocation is folded into spans/logs and persisted — nothing
+// observability-specific is wired here by hand.
 const CAPTURE_WORKER = `export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
@@ -551,7 +600,7 @@ async function flush() {
 	await new Promise((resolve) => setTimeout(resolve, 1000));
 }
 
-describe("unsafeObservability (capture via cf-to-otel)", () => {
+describe("unsafeObservability (capture via OTLP)", () => {
 	test("captures a worker's trace, child spans, and logs", async ({
 		expect,
 	}) => {
@@ -573,7 +622,7 @@ describe("unsafeObservability (capture via cf-to-otel)", () => {
 			mf,
 			TRACE_LIST_SQL
 		)) as unknown as TraceRow[];
-		// cf-to-otel names the root fetch span after the method.
+		// workerd names the invocation's fetch span after the method.
 		const completed = traces.filter(
 			(t) => t.name === "GET" && t.outcome !== null
 		);
@@ -599,7 +648,7 @@ describe("unsafeObservability (capture via cf-to-otel)", () => {
 		expect(logs.some((l) => l.message.includes("handled request"))).toBe(true);
 		expect(logs.some((l) => l.message.includes("/orders"))).toBe(true);
 
-		// The root span carries the cf-to-otel-shaped attributes, incl. the HTTP
+		// The root span carries the attributes workerd exports, incl. the HTTP
 		// status folded in as an attribute (not a column) per the schema.
 		const root = spans.find((s) => {
 			const a = JSON.parse(s.attributes ?? "{}");
@@ -611,6 +660,13 @@ describe("unsafeObservability (capture via cf-to-otel)", () => {
 		expect(attrs["http.response.status_code"]).toBe(200);
 		expect(attrs["cloudflare.outcome"]).toBe("ok");
 		expect(typeof attrs["cpu_time_ms"]).toBe("number");
+
+		// Only the user worker's spans are kept: workerd also exports those of
+		// Miniflare's own Workers (such as the entry Worker the request came
+		// through), so the invocation, which they started, is the trace's root.
+		const services = await queryStore(mf, "SELECT DISTINCT service FROM spans");
+		expect(services).toEqual([{ service: "user" }]);
+		expect(root).toMatchObject({ parent_id: null });
 	});
 
 	test("captures an uncaught exception as a span error and error log", async ({
@@ -643,9 +699,9 @@ describe("unsafeObservability (capture via cf-to-otel)", () => {
 	});
 });
 
-// Two user workers with a service binding between them. The collector is attached
-// to *every* user worker, so both invocations are captured; each span records its
-// owning worker (`service`) for multi-worker attribution.
+// Two user workers with a service binding between them. The collector keeps the
+// spans of *every* user worker, so both invocations are captured; each span
+// records its owning worker (`service`) for multi-worker attribution.
 const DOWNSTREAM_WORKER = `export default {
 	async fetch(request, env) {
 		await env.CACHE.get("b-key");
@@ -710,8 +766,9 @@ interface DetailSpan {
 
 // A Workflow, plus a fetch handler that kicks off an instance and proxies
 // `/wobs/*` to the collector. The Workflows engine runs as its own service (not
-// through the core plugin's per-user-worker path), so it's wired for tailing
-// separately; without that, a workflow run leaves no trace in the store.
+// through the core plugin's per-user-worker path), so the collector is told to
+// keep its spans separately; without that, a workflow run leaves no trace in the
+// store.
 const WORKFLOW_CAPTURE_WORKER = `
 import { WorkflowEntrypoint } from "cloudflare:workers";
 export class CaptureWorkflow extends WorkflowEntrypoint {
@@ -766,7 +823,7 @@ describe("unsafeObservability (workflows)", () => {
 		await (await mf.dispatchFetch("http://localhost/start")).text();
 
 		// The engine runs the workflow asynchronously; poll until its spans land
-		// (attributed to the workflow `name` we pass through the collector props).
+		// (attributed to the workflow `name`).
 		const begin = performance.now();
 		let workflowSpans: Record<string, unknown>[] = [];
 		while (performance.now() - begin < 5000) {
@@ -781,7 +838,6 @@ describe("unsafeObservability (workflows)", () => {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
 
-		// Before the engine service was wired for tailing this was always empty.
 		expect(workflowSpans.length).toBeGreaterThan(0);
 		expect(workflowSpans.every((s) => s.service === "capture-workflow")).toBe(
 			true
