@@ -59,4 +59,4 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 ## Version Pinning
 
 - Miniflare minor version must match workerd minor version
-- `.github/changeset-version.js` enforces this: if changeset bumps miniflare minor beyond workerd's, it converts to patch
+- `tools/deployments/changeset-version.ts` enforces this: if changeset bumps miniflare minor beyond workerd's, it converts to patch
