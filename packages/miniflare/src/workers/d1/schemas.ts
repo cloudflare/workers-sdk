@@ -33,9 +33,13 @@ export const D1RpcRequestSchema = z.object({
 /** The bookmark may also be a first-query routing constraint. */
 export type D1RpcRequest = z.infer<typeof D1RpcRequestSchema>;
 
-/** Execution metadata returned by the local D1 database worker. */
+/** D1 query metadata; geography is optional because local execution has no colo. */
 export const D1MetaSchema = z.object({
 	served_by: z.string(),
+	served_by_primary: z.boolean().optional(),
+	served_by_region: z.string().optional(),
+	served_by_colo: z.string().optional(),
+	timings: z.object({ sql_duration_ms: z.number() }).optional(),
 	duration: z.number(),
 	changes: z.number(),
 	last_row_id: z.number(),
@@ -43,8 +47,9 @@ export const D1MetaSchema = z.object({
 	size_after: z.number(),
 	rows_read: z.number(),
 	rows_written: z.number(),
+	total_attempts: z.number().optional(),
 });
-/** Metadata shared by the HTTP and RPC protocols. */
+/** SQL duration excludes request handling and result serialization. */
 export type D1Meta = z.infer<typeof D1MetaSchema>;
 
 /** Rows-and-columns results preserve duplicate column names and empty rows. */

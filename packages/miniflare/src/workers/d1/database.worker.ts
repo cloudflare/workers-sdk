@@ -116,15 +116,18 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 	}
 
 	#query = (format: D1ResultsFormat, query: D1Query): D1SuccessResponse => {
-		const beforeTime = performance.now();
-
 		const beforeSize = this.state.storage.sql.databaseSize;
 		const beforeChanges = this.#changes();
 
 		const params = convertParams(query.params ?? []);
+		// Include cursor consumption in SQL time, but exclude metadata queries and
+		// blob/object conversion so duration has the same meaning as in D1.
+		const beforeTime = performance.now();
 		const cursor = this.db.prepare(query.sql)(...params);
 		const columns = cursor.columnNames;
-		const rows = convertRows(Array.from(cursor.raw()));
+		const rawRows = Array.from(cursor.raw());
+		const duration = performance.now() - beforeTime;
+		const rows = convertRows(rawRows);
 
 		let results = undefined;
 		if (format === "ROWS_AND_COLUMNS") {
@@ -135,11 +138,9 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		// Note that the "NONE" format behaviour here is inconsistent with workerd.
 		// See comment: https://github.com/cloudflare/workers-sdk/pull/5917#issuecomment-2133313156
 
-		const afterTime = performance.now();
 		const afterSize = this.state.storage.sql.databaseSize;
 		const afterChanges = this.#changes();
 
-		const duration = afterTime - beforeTime;
 		const changes = afterChanges.totalChanges - beforeChanges.totalChanges;
 
 		const hasChanges = changes !== 0;
@@ -152,6 +153,9 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 			results,
 			meta: {
 				served_by,
+				served_by_primary: true,
+				total_attempts: 1,
+				timings: { sql_duration_ms: duration },
 				duration,
 				changes,
 				last_row_id: afterChanges.lastRowId,

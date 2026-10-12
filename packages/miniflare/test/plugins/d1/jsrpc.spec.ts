@@ -61,6 +61,48 @@ test("query returns raw parameterized results and execution metadata", async ({
 	expect(response.status).toBe(200);
 });
 
+test.for([
+	{ transport: "RPC", compatibilityFlags: ["d1_binding_jsrpc"] },
+	{ transport: "HTTP", compatibilityFlags: [] },
+])(
+	"$transport queries report local primary, attempt, and SQL timing metadata",
+	async ({ transport, compatibilityFlags }, { expect }) => {
+		const mf = createD1Worker(
+			`
+		const response = ${
+			transport === "RPC"
+				? 'await env.DB.query({ queries: [{ sql: "SELECT ? AS answer", params: [42] }] })'
+				: 'await env.DB.prepare("SELECT ? AS answer").bind(42).all()'
+		};
+		const meta = ${transport === "RPC" ? "response.results[0].meta" : "response.meta"};
+		return Response.json({
+			meta,
+			timingMatches: meta.duration === meta.timings?.sql_duration_ms,
+		});
+	`,
+			compatibilityFlags
+		);
+		const response = await mf.dispatchFetch("http://localhost");
+		expect(await response.json()).toMatchObject({
+			meta: {
+				served_by: "miniflare.db",
+				served_by_primary: true,
+				total_attempts: 1,
+				duration: expect.any(Number),
+				timings: { sql_duration_ms: expect.any(Number) },
+				changes: 0,
+				last_row_id: 0,
+				changed_db: false,
+				size_after: expect.any(Number),
+				rows_read: 0,
+				rows_written: 0,
+			},
+			timingMatches: true,
+		});
+		expect(response.status).toBe(200);
+	}
+);
+
 test("SQL errors propagate directly and convenience methods preserve their prefixes and causes", async ({
 	expect,
 }) => {
