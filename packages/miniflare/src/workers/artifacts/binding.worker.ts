@@ -402,10 +402,11 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		return this.exclusive(async () => {
 			validateName(name);
 			const repositories = await this.repos();
-			const repository = repositories[name.toLowerCase()];
-			if (!repository) {
+			const key = name.toLowerCase();
+			if (!Object.hasOwn(repositories, key)) {
 				return false;
 			}
+			const repository = repositories[key];
 			// Persist a tombstone before Git cleanup. A storage failure leaves the
 			// live repository intact; a backend failure remains retryable by delete
 			// or the next creation of this name, including after a process restart.
@@ -568,12 +569,16 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		repositories: RepositoryMap,
 		name: string
 	): Promise<void> {
-		const repository = repositories[name.toLowerCase()];
-		if (!repository?.deleting) {
+		const key = name.toLowerCase();
+		if (!Object.hasOwn(repositories, key)) {
+			return;
+		}
+		const repository = repositories[key];
+		if (!repository.deleting) {
 			return;
 		}
 		await this.backend(repository, { action: "delete" });
-		delete repositories[name.toLowerCase()];
+		delete repositories[key];
 		await this.saveRepos(repositories);
 	}
 
@@ -640,11 +645,12 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 
 	async syncAfterPush(
 		name: string,
+		id: string,
 		previousRefs: Record<string, string>
 	): Promise<void> {
 		await this.exclusive(async () => {
 			const repositories = await this.repos();
-			const repository = getRepo(repositories, name);
+			const repository = getRepo(repositories, name, id);
 			const state = await this.backend<BackendState>(repository, {
 				action: "refs",
 			});
@@ -818,7 +824,7 @@ async function handleGitRequest(
 	}
 	const syncRefs = async () => {
 		try {
-			await state.syncAfterPush(repository.name, previousRefs);
+			await state.syncAfterPush(repository.name, repository.id, previousRefs);
 		} catch {
 			// Git has already accepted the push; metadata bookkeeping must not fail the client request.
 		}
@@ -985,9 +991,12 @@ function getRepo(
 	name: string,
 	expectedId?: string
 ): Repository {
-	const repository = repositories[name.toLowerCase()];
+	const key = name.toLowerCase();
+	if (!Object.hasOwn(repositories, key)) {
+		throw new ArtifactsError("NOT_FOUND", `Repository not found: ${name}.`);
+	}
+	const repository = repositories[key];
 	if (
-		!repository ||
 		repository.deleting ||
 		(expectedId !== undefined && repository.id !== expectedId)
 	) {

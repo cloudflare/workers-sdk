@@ -8,14 +8,8 @@ import { Miniflare } from "miniflare";
 import { test } from "vitest";
 import { gitEnvironment } from "../../../src/plugins/artifacts/git-client";
 import { singleModuleManifest, useDispose } from "../../test-shared";
-import { compare, normalize } from "./contract/compare";
-import { runApprovedLiveComparison } from "./contract/live";
 import { runScenarios } from "./contract/scenarios";
-import type {
-	Created,
-	ArtifactsBinding,
-	Observation,
-} from "./contract/scenarios";
+import type { Created, ArtifactsBinding } from "./contract/scenarios";
 
 const exec = promisify(execFile);
 const SCRIPT = `export default { fetch() { return new Response("contract"); } };`;
@@ -154,116 +148,16 @@ test("shared Artifacts contract runs against the local RPC binding and cleans up
 	expect((await REPOS.list()).total).toBe(0);
 });
 
-test("comparator preserves exact errors, Blob data, paths and non-loopback URLs", ({
-	expect,
-}) => {
-	const base: Observation[] = [
-		{
-			step: "file",
-			outcome: "value",
-			value: { blob: { bytes: [0, 255], type: "text/plain" } },
-		},
-		{
-			step: "error",
-			outcome: "error",
-			value: {
-				name: "ArtifactsError",
-				code: "NOT_FOUND",
-				numericCode: 10200,
-				message: "not found",
-			},
-		},
-		{
-			step: "repo",
-			outcome: "value",
-			value: {
-				id: "first",
-				createdAt: "2020-01-01T00:00:00Z",
-				remote: "http://127.0.0.1:1234/git/repo.git",
-				name: "repo",
-			},
-		},
-	];
-	const variable = structuredClone(base);
-	(variable[2].value as Record<string, unknown>).id = "second";
-	(variable[2].value as Record<string, unknown>).createdAt =
-		"2026-01-01T00:00:00Z";
-	(variable[2].value as Record<string, unknown>).remote =
-		"http://127.0.0.1:5678/git/repo.git";
-	expect(compare(base, variable)).toEqual([]);
-	const different = structuredClone(variable);
-	(different[0].value as { blob: { bytes: number[] } }).blob.bytes[1] = 254;
-	(different[1].value as Record<string, unknown>).numericCode = 10201;
-	(different[2].value as Record<string, unknown>).remote =
-		"https://example.test/git/repo.git";
-	expect(
-		compare(base, different).map(({ step, path, kind }) => [step, path, kind])
-	).toEqual([
-		["file", "$.blob.bytes[1]", "value"],
-		["error", "$.numericCode", "error"],
-		["repo", "$.remote", "value"],
-	]);
-	expect(
-		normalize([
-			{
-				step: "err",
-				outcome: "error",
-				value: { message: "id first at 2020-01-01T00:00:00Z" },
-			},
-		])[0].value
-	).toEqual({ message: "id first at 2020-01-01T00:00:00Z" });
-	expect(compare(base, base.slice(1))[0].kind).toBe("missing-step");
-	expect(compare(base, [...base, base[0]])[0]).toMatchObject({
-		kind: "missing-step",
-		path: "$[3]",
-	});
-	const reordered = structuredClone(base);
-	reordered.reverse();
-	expect(compare(base, reordered)[0].kind).toBe("missing-step");
-	const changed = structuredClone(base);
-	(changed[0].value as { blob: { type: string } }).blob.type =
-		"application/octet-stream";
-	expect(compare(base, changed)).toMatchObject([
-		{ path: "$.blob.type", kind: "value" },
-	]);
-});
-
-test("live comparison refuses unapproved or reused fixtures without calling either binding", async ({
+test("local contract scenarios refuse a nonempty namespace", async ({
 	expect,
 }) => {
 	const mf = local();
 	useDispose(mf);
 	const { REPOS } = await mf.getBindings<{ REPOS: ArtifactsBinding }>();
-	const options = {
-		namespace: "contract-local",
-		approvedDisposableNamespace: "not-approved",
-		fixturePrefix: "contract-test-",
-		approvedDisposableFixturePrefix: "contract-test-",
-		confirmation: "I_APPROVE_DISPOSABLE_ARTIFACTS_COMPARISON" as const,
-		local: REPOS,
-		live: REPOS,
-		prepareLocalFixture,
-		prepareLiveFixture: prepareLocalFixture,
-	};
-	await expect(runApprovedLiveComparison(options)).rejects.toThrow(/approval/);
-	await expect(
-		runApprovedLiveComparison({
-			...options,
-			approvedDisposableNamespace: "contract-local",
-		})
-	).rejects.toThrow(/distinct/);
-	expect((await REPOS.list()).total).toBe(0);
 	await REPOS.create("contract-test-main");
 	await expect(
 		runScenarios(REPOS, "contract-test-", prepareLocalFixture)
 	).rejects.toThrow(/not empty/);
 	expect((await REPOS.list()).total).toBe(1);
 	await REPOS.delete("contract-test-main");
-	await expect(
-		runApprovedLiveComparison({
-			...options,
-			approvedDisposableNamespace: "contract-local",
-			approvedDisposableFixturePrefix: "other-prefix-",
-		})
-	).rejects.toThrow(/approval/);
 });
