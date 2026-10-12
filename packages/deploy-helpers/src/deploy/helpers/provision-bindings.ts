@@ -113,9 +113,12 @@ abstract class ProvisionResourceHandler<
 		// @ts-expect-error idField is a key of this.binding
 		this.binding[this.idField] = id;
 	}
+	/** Returns the resource identifier, or undefined if it is empty or inherited. */
 	getResolvedIdentifier(): string | undefined {
 		const identifier = this.binding[this.idField];
-		return typeof identifier === "string" ? identifier : undefined;
+		return typeof identifier === "string" && identifier.length > 0
+			? identifier
+			: undefined;
 	}
 
 	hasConfiguredResourceIdentifier(): boolean {
@@ -861,7 +864,6 @@ function addBindingToPatch(
 
 type PendingResource = {
 	binding: string;
-	provisioned?: boolean;
 	resourceType:
 		| "kv_namespace"
 		| "d1"
@@ -1214,7 +1216,6 @@ export async function provisionBindings(
 				scriptName,
 				autoCreate
 			);
-			resource.provisioned = true;
 			resolvedResources.push(resource);
 		}
 

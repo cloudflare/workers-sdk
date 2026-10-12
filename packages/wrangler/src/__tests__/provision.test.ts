@@ -1593,60 +1593,72 @@ describe("resource provisioning", () => {
 			rmSync(".wrangler/deploy/config.json");
 		});
 
-		it("writes a D1 ID resolved by name when another binding is provisioned", async ({
-			expect,
-		}) => {
-			writeWranglerConfig({
-				main: "index.js",
-				kv_namespaces: [{ binding: "KV" }],
-				d1_databases: [
+		it.for([undefined, ""])(
+			"writes a D1 ID resolved by name when another binding is provisioned (database_id: %s)",
+			async (databaseId, { expect }) => {
+				writeWranglerConfig({
+					main: "index.js",
+					kv_namespaces: [{ binding: "KV" }],
+					d1_databases: [
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: "stale-d1-id",
+							migrations_dir: "migrations",
+						},
+					],
+				});
+				writeRedirectedWranglerConfig({
+					main: "../index.js",
+					kv_namespaces: [{ binding: "KV" }],
+					d1_databases: [
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: databaseId,
+							migrations_dir: "../migrations",
+						},
+					],
+				});
+				mockGetSettings();
+				mockGetD1Database(expect, "existing-db-name", {
+					name: "existing-db-name",
+					uuid: "existing-d1-id",
+				});
+				mockListKVNamespacesRequest(expect);
+				mockCreateKVNamespace(expect, { resultId: "new-kv-id" });
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{ name: "KV", type: "kv_namespace", namespace_id: "new-kv-id" },
+						{ name: "D1", type: "d1", id: "existing-d1-id" },
+					],
+				});
+
+				await runWrangler("deploy");
+
+				expect(readWranglerConfig().d1_databases).toEqual([
 					{
 						binding: "D1",
 						database_name: "existing-db-name",
-						database_id: "stale-d1-id",
+						database_id: "existing-d1-id",
 						migrations_dir: "migrations",
 					},
-				],
-			});
-			writeRedirectedWranglerConfig({
-				main: "../index.js",
-				kv_namespaces: [{ binding: "KV" }],
-				d1_databases: [
-					{
-						binding: "D1",
-						database_name: "existing-db-name",
-						migrations_dir: "../migrations",
-					},
-				],
-			});
-			mockGetSettings();
-			mockGetD1Database(expect, "existing-db-name", {
-				name: "existing-db-name",
-				uuid: "existing-d1-id",
-			});
-			mockListKVNamespacesRequest(expect);
-			mockCreateKVNamespace(expect, { resultId: "new-kv-id" });
-			mockUploadWorkerRequest({
-				expectedBindings: [
-					{ name: "KV", type: "kv_namespace", namespace_id: "new-kv-id" },
-					{ name: "D1", type: "d1", id: "existing-d1-id" },
-				],
-			});
-
-			await runWrangler("deploy");
-
-			expect(readWranglerConfig().d1_databases).toEqual([
-				{
-					binding: "D1",
-					database_name: "existing-db-name",
-					database_id: "existing-d1-id",
-					migrations_dir: "migrations",
-				},
-			]);
-			expect(readWranglerConfig().kv_namespaces).toEqual([
-				{ binding: "KV", id: "new-kv-id" },
-			]);
-		});
+				]);
+				expect(readWranglerConfig().kv_namespaces).toEqual([
+					{ binding: "KV", id: "new-kv-id" },
+				]);
+				expect(readWranglerConfig("./dist/wrangler.json").d1_databases).toEqual(
+					[
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: "existing-d1-id",
+							migrations_dir: "../migrations",
+						},
+					]
+				);
+			}
+		);
 
 		it("can inject additional bindings in redirected config that aren't written back to disk", async ({
 			expect,
