@@ -13,6 +13,7 @@ import {
 	escapePackageName,
 	filterUnpublished,
 	findPublishablePackages,
+	getDistTag,
 	publishAllPackages,
 	publishTier,
 	waitForPropagation,
@@ -445,6 +446,26 @@ describe("filterUnpublished()", () => {
 	});
 });
 
+describe("getDistTag()", () => {
+	it("should derive stable and prerelease tags", ({ expect }) => {
+		expect(getDistTag("1.2.3")).toBe("latest");
+		expect(getDistTag("5.20261006.2-beta")).toBe("beta");
+		expect(getDistTag("2.0.0-beta.0")).toBe("beta");
+		expect(getDistTag("2.0.0-beta.sha-abcdef123")).toBe("beta");
+	});
+
+	it("should reject invalid versions and numeric prerelease tags", ({
+		expect,
+	}) => {
+		expect(() => getDistTag("not-a-version")).toThrow(
+			"Cannot derive an npm dist-tag"
+		);
+		expect(() => getDistTag("2.0.0-0")).toThrow(
+			"Cannot use prerelease identifier"
+		);
+	});
+});
+
 describe("waitForPropagation()", () => {
 	const baseOptions = {
 		registry: REGISTRY,
@@ -732,7 +753,6 @@ describe("publishAllPackages()", () => {
 			packagesDir,
 			dryRun: false,
 			registry: REGISTRY,
-			distTag: "latest",
 			concurrency: 4,
 			propagation: {
 				skip: false,

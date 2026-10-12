@@ -205,7 +205,9 @@ describe("validateChangesets()", () => {
 					"miniflare",
 					{
 						name: "miniflare",
-						"workers-sdk": { npmPrereleaseIdentifier: "alpha" },
+						"workers-sdk": {
+							npmPrerelease: { tag: "beta", numbered: false },
+						},
 					},
 				],
 				["package-b", { name: "package-b" }],
@@ -254,5 +256,45 @@ describe("validateChangesets()", () => {
 			  "Major version bumps are not allowed for package "package-c" in changeset at "major-three.md".",
 			]
 		`);
+	});
+
+	it("should validate npm prerelease configuration", ({ expect }) => {
+		const errors = validateChangesets(
+			new Map<string, PackageJSON>([
+				[
+					"valid-package",
+					{
+						name: "valid-package",
+						"workers-sdk": {
+							npmPrerelease: { tag: "beta", numbered: true },
+						},
+					},
+				],
+				[
+					"invalid-tag",
+					{
+						name: "invalid-tag",
+						"workers-sdk": {
+							npmPrerelease: { tag: "beta.1", numbered: false },
+						},
+					},
+				],
+				[
+					"invalid-numbered",
+					{
+						name: "invalid-numbered",
+						"workers-sdk": {
+							npmPrerelease: { tag: "beta" },
+						},
+					},
+				],
+			]),
+			[]
+		);
+
+		expect(errors).toEqual([
+			'Invalid npmPrerelease tag for package "invalid-tag".',
+			'Invalid npmPrerelease numbered value for package "invalid-numbered".',
+		]);
 	});
 });
