@@ -1,3 +1,4 @@
+import type { CommandMetadata } from "../command-metadata";
 import type {
 	fetchKVGetValue,
 	fetchResult,
@@ -61,28 +62,7 @@ export type MetadataCategory =
 	| "Networking & security";
 
 export type Command = `wrangler${string}`;
-export type Metadata = {
-	description: string;
-	status: "experimental" | "alpha" | "private beta" | "open beta" | "stable";
-	statusMessage?: string;
-	deprecated?: boolean;
-	deprecatedMessage?: string;
-	hidden?: boolean;
-	owner: Teams;
-	/** Prints something at the bottom of the help */
-	epilogue?: string;
-	examples?: {
-		command: string;
-		description: string;
-	}[];
-	hideGlobalFlags?: string[];
-	/**
-	 * Optional category for grouping commands in the help output.
-	 * Commands with the same category will be grouped together under a shared heading.
-	 * Commands without a category will appear under the default "COMMANDS" group.
-	 */
-	category?: MetadataCategory;
-};
+export type Metadata = CommandMetadata<Teams, MetadataCategory>;
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &
 	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type">;
