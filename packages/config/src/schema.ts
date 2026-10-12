@@ -942,14 +942,20 @@ type _ResolvedBinding<TBinding> = TBinding extends {
 	: TBinding;
 
 type _ResolvedWorkerConfigEnv =
-	| Record<string, _ResolvedBinding<NonNullable<WorkerConfig["env"]>[string]>>
+	| Record<
+			string,
+			Exclude<
+				_ResolvedBinding<NonNullable<WorkerConfig["env"]>[string]>,
+				false | null | undefined
+			>
+	  >
 	| undefined;
 
 /**
- * Drift checks between the schema and resolved public `env` types. Authored
- * cross-Worker bindings may contain a Worker config reference; the config
- * loader replaces those references with names before parsing. Schema input is
- * otherwise intentionally broader for bindings with cross-field validation.
+ * Drift checks between the schema and resolved public `env` types. The config
+ * loader removes omitted bindings and replaces cross-Worker config references
+ * with names before parsing. Schema input is otherwise intentionally broader
+ * for bindings with cross-field validation.
  *
  * These checks catch fields or bindings that are missing, renamed, or typed
  * differently between the public definitions and the schema.

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
+import { renderOauthErrorPage } from "../../src/callback-server";
 import {
 	CF_CLI,
 	createCfAuth,
@@ -43,11 +44,26 @@ describe("cf auth layer", () => {
 	it("uses cf's auth subcommands in user guidance", ({ expect }) => {
 		expect(CF_CLI.commands).toEqual({
 			login: "cf auth login",
+			logout: "cf auth logout",
 			whoami: "cf auth whoami",
 			createProfile: "cf auth create",
 			deviceLogin: "cf auth login",
 		});
 		expect(CF_CLI.displayName).toBe("cf");
+	});
+
+	it("uses and escapes the consumer display name in OAuth errors", ({
+		expect,
+	}) => {
+		const page = renderOauthErrorPage("cf<script>", {
+			code: "access_denied",
+			description: "Denied <strong>here</strong>",
+		});
+
+		expect(page).toContain("<title>cf&lt;script&gt; login failed</title>");
+		expect(page).toContain("<h1>cf&lt;script&gt; login failed</h1>");
+		expect(page).toContain("Denied &lt;strong&gt;here&lt;/strong&gt;");
+		expect(page).not.toContain("Wrangler login failed");
 	});
 
 	it("resolves its config directory to `cloudflare` (no leading dot, not `.wrangler`)", ({

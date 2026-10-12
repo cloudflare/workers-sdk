@@ -75,7 +75,12 @@ export type CommandBehaviour<Args> = {
 	 * @default true
 	 */
 	sendMetrics?: boolean;
-	/** Enable authentication using a temporary preview account. */
+	/**
+	 * Whether this command can use a temporary preview account with the hidden
+	 * `--temporary` or `--event-code` flags. R2 and Containers commands work
+	 * only with event accounts created using `--event-code`.
+	 * `default false
+	 */
 	supportTemporary?: boolean;
 	/** Offer Cloudflare skills after a successful handler invocation. */
 	suggestSkillsAfterHandler?: boolean | ((args: Args) => boolean);

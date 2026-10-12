@@ -55,15 +55,6 @@ type ContextualConfig<TInput, TConfig> =
 					: never
 				: never;
 
-/** Create a type-safe identity helper for a configuration value or factory. */
-export function createConfigDefiner<TConfig>() {
-	return function define<const TInput extends ConfigInput<TConfig>>(
-		config: TInput & ContextualConfig<TInput, TConfig>
-	): TInput {
-		return config;
-	};
-}
-
 export type ContainerDefinition<T extends ContainerConfig = ContainerConfig> =
 	ConfigInput<T>;
 
@@ -88,7 +79,11 @@ export type WorkerReference = string | WorkerDefinition;
  * });
  * ```
  */
-export const defineConfig = createConfigDefiner<CloudflareConfig>();
+export function defineConfig<
+	const TInput extends ConfigInput<CloudflareConfig>,
+>(config: TInput & ContextualConfig<TInput, CloudflareConfig>): TInput {
+	return config;
+}
 
 /**
  * Define a Container.
@@ -103,7 +98,11 @@ export const defineConfig = createConfigDefiner<CloudflareConfig>();
  * });
  * ```
  */
-export const defineContainer = createConfigDefiner<ContainerConfig>();
+export function defineContainer<
+	const TInput extends ConfigInput<ContainerConfig>,
+>(config: TInput & ContextualConfig<TInput, ContainerConfig>): TInput {
+	return config;
+}
 
 /**
  * Define a Worker.
@@ -118,4 +117,8 @@ export const defineContainer = createConfigDefiner<ContainerConfig>();
  * });
  * ```
  */
-export const defineWorker = createConfigDefiner<WorkerConfig>();
+export function defineWorker<const TInput extends ConfigInput<WorkerConfig>>(
+	config: TInput & ContextualConfig<TInput, WorkerConfig>
+): TInput {
+	return config;
+}

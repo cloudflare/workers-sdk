@@ -14,7 +14,7 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/workers\/durable_objects\/namespaces\/[^/]+\/query$/, "do.query"],
 	[/^\/workers\/durable_objects\/namespaces\/[^/]+\/objects$/, "do.objects"],
 	[/^\/workers\/durable_objects\/namespaces$/, "do.namespaces"],
-	[/^\/r2\/buckets\/[^/]+\/objects\/[^/]+$/, "r2.object"],
+	[/^\/r2\/buckets\/[^/]+\/objects\/.+$/, "r2.object"],
 	[/^\/r2\/buckets\/[^/]+\/objects$/, "r2.objects"],
 	[/^\/r2\/buckets\/[^/]+$/, "r2.bucket"],
 	[/^\/r2\/buckets$/, "r2.buckets"],

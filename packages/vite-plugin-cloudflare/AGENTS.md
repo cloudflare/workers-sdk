@@ -20,6 +20,7 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 - Outputs ESM (`.mjs`) to `dist/index.mjs`
 - `src/cf-vite.ts` is a second top-level tsdown entry, bundled to `dist/cf-vite.mjs` (no dts)
 - Also bundles 4 internal worker scripts from `src/workers/*/index.ts` as separate neutral-platform outputs to `dist/workers/`
+- Release builds set `SOURCEMAPS=false` to omit the plugin's JavaScript and declaration maps. Normal builds retain maps for debugging; the setting does not change source maps for applications built with the plugin.
 
 ## cf-vite DELEGATE BINARY (experimental / internal)
 

@@ -161,7 +161,8 @@ export type CommandDefinition<
 		/** Warn when environments are defined but none has been selected. */
 		warnIfMultipleEnvsConfiguredButNoneSpecified?: boolean;
 		/**
-		 * Suppress the active-profile banner while keeping the main banner.
+		 * By default, the banner will print the active profile name.
+		 * Set to false to suppress that detail while retaining the main banner.
 		 * @default true
 		 */
 		printActiveProfile?: boolean;

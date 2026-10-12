@@ -180,7 +180,7 @@ type ContainerImage =
 	  };
 
 /** Application-wide observability settings shared by all Containers. */
-interface ContainerObservabilityConfig {
+export interface ContainerObservabilityConfig {
 	/** Whether observability is enabled. */
 	enabled?: boolean;
 	logs?: {
@@ -242,7 +242,7 @@ interface BaseContainerConfig {
 }
 
 /** A Container application managed with a standard scheduling policy. */
-interface StandardContainerConfig extends BaseContainerConfig {
+export interface StandardContainerConfig extends BaseContainerConfig {
 	/** Configures observability and optional targeting for Container instances. */
 	observability?: StandardContainerObservabilityConfig;
 
@@ -343,7 +343,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 }
 
 /** A Container application managed by a Durable Object. */
-interface DurableObjectContainerConfig extends BaseContainerConfig {
+export interface DurableObjectContainerConfig extends BaseContainerConfig {
 	schedulingPolicy: "durable-object";
 	/**
 	 * Configures application-wide observability. Instance targeting is not
@@ -632,9 +632,11 @@ export interface WorkerConfig {
 
 	/**
 	 * Bindings exposed on the Worker's `env` object. Construct entries with
-	 * `bindings.kv(...)`, `bindings.r2(...)`, etc.
+	 * `bindings.kv(...)`, `bindings.r2(...)`, etc. Entries set to `false`,
+	 * `null`, or `undefined` are omitted, which allows bindings to be included
+	 * conditionally.
 	 */
-	env?: Record<string, Binding>;
+	env?: Record<string, Binding | false | null | undefined>;
 
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's

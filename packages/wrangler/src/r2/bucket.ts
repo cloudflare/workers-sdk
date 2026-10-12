@@ -39,6 +39,9 @@ export const r2BucketCreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		supportTemporary: true,
+	},
 	positionalArgs: ["name"],
 	args: {
 		name: {
@@ -138,6 +141,9 @@ export const r2BucketUpdateStorageClassCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		supportTemporary: true,
+	},
 	positionalArgs: ["name"],
 	args: {
 		name: {
@@ -189,6 +195,7 @@ export const r2BucketListCommand = createCommand({
 		owner: "Product: R2",
 	},
 	behaviour: {
+		supportTemporary: true,
 		// This is an account-level command and does not require a valid project config.
 		// Keeping config parsing out of the critical path avoids blocking users who are
 		// using `wrangler r2 bucket list` to debug/fix an invalid wrangler.jsonc/toml.
@@ -239,6 +246,7 @@ export const r2BucketInfoCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 
@@ -285,6 +293,9 @@ export const r2BucketDeleteCommand = createCommand({
 		description: "Delete an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		supportTemporary: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

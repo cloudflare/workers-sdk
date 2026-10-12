@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { cliPresentation } from "../shared/context";
 
 /**
  * Pure plan logic for the `addresses` config field: build the plan request and
@@ -162,7 +163,7 @@ function describeConflictOwner(remote: PlanRemoteRule): string {
 			? `owned by worker "${remote.owner_worker_name}"`
 			: "owned by another Worker";
 	}
-	return "managed outside Wrangler";
+	return `managed outside ${cliPresentation.displayName}`;
 }
 
 /**

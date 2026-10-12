@@ -78,6 +78,10 @@ Contains the registry `Map`, `resolveTarget()`, `connectToActor()`, `createProxy
 
 When the filesystem watcher detects a change to an external service, Miniflare pushes the updated registry to the proxy worker via HTTP POST on a dedicated socket (`SOCKET_DEV_REGISTRY`). This avoids routing through the entry worker, which can break on Windows (WSARecv error 64).
 
+Registry pushes carry a random per-instance credential in `MF-Dev-Registry-Secret`. The proxy verifies the credential before parsing the body or replacing its registry. The credential is kept in the owning process and the proxy's private binding; it is never advertised in registry files. Updates accept only the expected loopback host and root path, and reject browser Origin headers.
+
+The Node.js loopback service also requires a separate per-instance credential, injected by workerd on internal requests. This covers registry discovery, storage helpers, custom services, browser control, and WebSocket upgrades. The opt-in workerd module-fallback protocol remains available on the root path only, without internal dispatch headers, because that protocol cannot supply authentication headers. These checks authenticate Miniflare's HTTP control plane; debugger RPC and module-fallback transport authentication remain separate workerd protocol changes.
+
 The push always reads the latest registry state (not a captured snapshot) and retries up to 3 times with 500ms delays.
 
 ### Shared Storage Candidates

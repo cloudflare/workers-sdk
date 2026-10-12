@@ -10,7 +10,7 @@
 				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"
 			],
-			"inputs": ["$TURBO_DEFAULT$", "!e2e/**", "!vitest-e2e.config.ts"],
+			"inputs": ["$TURBO_DEFAULT$", "!e2e/**", "!vitest-e2e.config.mts"],
 			"outputs": ["dist/**"]
 		},
 		"test:ci": {
@@ -26,6 +26,7 @@
 				"E2E_TEST_PM_VERSION",
 				"E2E_WORKER_TEMPLATE_TO_TEST",
 				"E2E_FRAMEWORK_TEMPLATE_TO_TEST",
+				"E2E_FRAMEWORK_SHARD",
 				"E2E_PROJECT_PATH",
 				"E2E_TEST_RETRIES",
 				"E2E_RUN_DEPLOY_TESTS",
@@ -34,8 +35,13 @@
 				"pnpm_config_verify_deps_before_run"
 			],
 			"dependsOn": ["build"],
-			"inputs": ["e2e/**", "vitest-e2e.config.ts", "!e2e/README.md"],
-			"outputs": [".e2e-logs", ".e2e-logs-experimental"]
+			"inputs": [
+				"e2e/**",
+				"vitest-e2e.config.mts",
+				"$TURBO_ROOT$/tools/test/vitest-shard.cjs",
+				"!e2e/README.md"
+			],
+			"outputs": [".e2e-logs/**", ".e2e-logs-experimental/**"]
 		}
 	}
 }

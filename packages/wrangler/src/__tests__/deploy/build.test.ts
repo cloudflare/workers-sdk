@@ -215,6 +215,32 @@ describe("deploy", () => {
 			);
 		});
 	});
+	describe("explicit resource management", () => {
+		it("should preserve using declarations instead of lowering them", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"index.js",
+				`
+export default {
+	async fetch() {
+		await using session = { async [Symbol.asyncDispose]() {} };
+		using socket = { [Symbol.dispose]() {} };
+		return new Response("ok");
+	},
+};
+`
+			);
+			await runWrangler("deploy index.js --dry-run --outdir dist");
+
+			const output = fs.readFileSync("dist/index.js", "utf-8");
+			expect(output).toContain("await using session = ");
+			expect(output).toContain("using socket = ");
+			expect(output).not.toContain("__using");
+			expect(output).not.toContain("__callDispose");
+		});
+	});
 	describe("custom builds", () => {
 		beforeEach(() => {
 			vi.unstubAllGlobals();

@@ -19,6 +19,7 @@ export const containersSshCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !shouldUseStdio(args),
 	},
 	args: {

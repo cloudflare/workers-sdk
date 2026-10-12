@@ -44,4 +44,13 @@ describe("configFileName", () => {
 		expect(configFileName("wrangler.yaml")).toBe("Wrangler configuration");
 		expect(configFileName(undefined)).toBe("Wrangler configuration");
 	});
+
+	it("prefers the user-authored configuration path", ({ expect }) => {
+		expect(
+			configFileName(
+				"/project/.cloudflare/output/v0/workers/default/config.json",
+				"/project/cloudflare.config.ts"
+			)
+		).toBe("cloudflare.config.ts");
+	});
 });

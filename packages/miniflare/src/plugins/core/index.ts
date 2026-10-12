@@ -754,6 +754,8 @@ export const CORE_PLUGIN: Plugin = {
 
 export interface GlobalServicesOptions {
 	sharedOptions: ParsedInstanceOptions;
+	/** Per-instance credential for internal loopback requests. */
+	loopbackSecret: string;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
 	tmpPath: string;
@@ -768,6 +770,7 @@ export interface GlobalServicesOptions {
 }
 export function getGlobalServices({
 	sharedOptions,
+	loopbackSecret,
 	allWorkerRoutes,
 	fallbackWorkerName,
 	tmpPath,
@@ -929,7 +932,14 @@ export function getGlobalServices({
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
-			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
+			external: {
+				http: {
+					cfBlobHeader: CoreHeaders.CF_BLOB,
+					injectRequestHeaders: [
+						{ name: CoreHeaders.LOOPBACK_SECRET, value: loopbackSecret },
+					],
+				},
+			},
 		},
 		{
 			name: SERVICE_ENTRY,

@@ -2,6 +2,7 @@ import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
 import {
+	zR2BucketDeleteObjectResponse,
 	zR2BucketDeleteObjectsResponse,
 	zR2BucketGetObjectResponse,
 	zR2BucketListObjectsResponse,
@@ -336,6 +337,52 @@ describe("R2 API", () => {
 		});
 	});
 
+	describe("DELETE /r2/buckets/:bucket_name/objects/:object_key", () => {
+		test.for([
+			["single-delete.txt", "single-delete.txt"],
+			["folder/file.txt", "folder/file.txt"],
+			["folder/space #%.txt", "folder%2Fspace%20%23%25.txt"],
+		])(
+			"deletes only the requested object %s",
+			async ([key, path], { expect }) => {
+				const r2 = await mf.getR2Bucket("TEST_BUCKET");
+				const otherBucket = await mf.getR2Bucket("ANOTHER_BUCKET");
+				await r2.put(key, "delete me");
+				await r2.put(`${key}.keep`, "keep me");
+				await otherBucket.put(key, "keep in other bucket");
+
+				const response = await mf.dispatchFetch(
+					`${BASE_URL}/r2/buckets/test-bucket/objects/${path}`,
+					{ method: "DELETE" }
+				);
+
+				const data = await expectValidResponse(
+					response,
+					zR2BucketDeleteObjectResponse,
+					expect
+				);
+				expect(data.result).toEqual({ key });
+				expect(await r2.get(key)).toBeNull();
+				expect(await (await r2.get(`${key}.keep`))?.text()).toBe("keep me");
+				expect(await (await otherBucket.get(key))?.text()).toBe(
+					"keep in other bucket"
+				);
+			}
+		);
+
+		test("succeeds when the object does not exist", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects/missing.txt`,
+				{ method: "DELETE" }
+			);
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: { key: "missing.txt" },
+			});
+		});
+	});
+
 	describe("DELETE /r2/buckets/:bucket_name/objects", () => {
 		test("deletes objects from bucket", async ({ expect }) => {
 			const r2 = await mf.getR2Bucket("TEST_BUCKET");
@@ -433,6 +480,20 @@ test("addresses arbitrary bucket IDs without an R2 binding", async ({
 		const getResponse = await dispatchFetchWithRetry(mf, objectUrl);
 		expect(getResponse.status).toBe(200);
 		expect(await getResponse.text()).toBe("unbound-content");
+
+		const deleteResponse = await dispatchFetchWithRetry(mf, objectUrl, {
+			method: "DELETE",
+		});
+		expect(
+			await expectValidResponse(
+				deleteResponse,
+				zR2BucketDeleteObjectResponse,
+				expect
+			)
+		).toMatchObject({ result: { key: "unbound.txt" } });
+		const missingResponse = await dispatchFetchWithRetry(mf, objectUrl);
+		expect(missingResponse.status).toBe(404);
+		await missingResponse.json();
 	} finally {
 		await disposeWithRetry(mf);
 	}
@@ -456,6 +517,20 @@ test("routes arbitrary bucket IDs through the shared-storage owner", async ({
 		const getResponse = await dispatchFetchWithRetry(owner, objectUrl);
 		expect(getResponse.status).toBe(200);
 		expect(await getResponse.text()).toBe("written-through-client");
+
+		const deleteResponse = await dispatchFetchWithRetry(client, objectUrl, {
+			method: "DELETE",
+		});
+		expect(
+			await expectValidResponse(
+				deleteResponse,
+				zR2BucketDeleteObjectResponse,
+				expect
+			)
+		).toMatchObject({ result: { key: "shared.txt" } });
+		const missingResponse = await dispatchFetchWithRetry(owner, objectUrl);
+		expect(missingResponse.status).toBe(404);
+		await missingResponse.json();
 	} finally {
 		await Promise.all([disposeWithRetry(client), disposeWithRetry(owner)]);
 	}
