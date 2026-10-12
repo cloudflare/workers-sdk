@@ -79,7 +79,7 @@ export type CommandBehaviour<Args> = {
 	 * Whether this command can use a temporary preview account with the hidden
 	 * `--temporary` or `--event-code` flags. R2 and Containers commands work
 	 * only with event accounts created using `--event-code`.
-	 * `default false
+	 * @default false
 	 */
 	supportTemporary?: boolean;
 	/** Offer Cloudflare skills after a successful handler invocation. */
