@@ -12,6 +12,7 @@ export const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 export const isExperimental = process.env.E2E_EXPERIMENTAL === "true";
 export const workerTemplateToTest = process.env.E2E_WORKER_TEMPLATE_TO_TEST;
 export const frameworkToTestFilter = process.env.E2E_FRAMEWORK_TEMPLATE_TO_TEST;
+export const frameworkTestShard = process.env.E2E_FRAMEWORK_SHARD;
 export const testPackageManager = isOneOf(
 	"E2E_TEST_PM",
 	["pnpm", "npm", "yarn", "bun"] as const,
@@ -20,9 +21,7 @@ export const testPackageManager = isOneOf(
 export const testPackageManagerVersion = process.env.E2E_TEST_PM_VERSION ?? "";
 export const runDeployTests = process.env.E2E_RUN_DEPLOY_TESTS === "true";
 export const customTempProjectPath = process.env.E2E_PROJECT_PATH;
-export const testRetries = process.env.E2E_TEST_RETRIES
-	? parseInt(process.env.E2E_TEST_RETRIES)
-	: 1;
+export const testRetries = process.env.E2E_TEST_RETRIES;
 
 /** Key codes for interactive prompts. */
 export const keys = {

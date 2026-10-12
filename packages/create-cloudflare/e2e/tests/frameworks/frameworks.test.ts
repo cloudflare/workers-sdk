@@ -6,6 +6,7 @@ import { deleteProject, deleteWorker } from "../../../scripts/common";
 import { usesCfCli } from "../../../src/cf/config";
 import {
 	frameworkToTestFilter,
+	frameworkTestShard,
 	isExperimental,
 	TEST_TIMEOUT,
 	testRetries,
@@ -23,12 +24,23 @@ import {
 	verifyPreviewScript,
 	verifyTypes,
 } from "../../helpers/framework-helpers";
+import {
+	getFrameworkTestRetries,
+	selectFrameworkTests,
+} from "../../helpers/framework-shard";
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
 import { getFrameworksTests } from "./test-config";
 import type { RunnerTestSuite } from "vitest";
 
-const frameworkTests = getFrameworksTests();
+const allFrameworkTests = getFrameworksTests();
+const frameworkTests = selectFrameworkTests(
+	// Balance runnable cases; quarantined and unsupported cases consume no time.
+	frameworkTestShard === undefined
+		? allFrameworkTests
+		: allFrameworkTests.filter(shouldRunTest),
+	frameworkTestShard
+);
 
 describe
 	.skipIf(frameworkTests.length === 0)
@@ -67,7 +79,7 @@ describe
 					variantLabel ? ` [${variantLabel}]` : ""
 				}`,
 				{
-					retry: testRetries,
+					retry: getFrameworkTestRetries(testConfig.retry, testRetries),
 					timeout: testConfig.timeout || TEST_TIMEOUT,
 				},
 				async ({ expect, logStream, project }) => {

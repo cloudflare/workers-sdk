@@ -168,9 +168,16 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 
 - Triggers
   - Updates to PRs.
+  - PRs in the merge queue.
 - Actions
-  - Runs the E2E tests for C3.
-  - C3 E2E tests do not receive Cloudflare API credentials.
+  - Runs C3 E2E tests without Cloudflare API credentials.
+  - Runs framework tests when C3 changes, on release PRs, in the merge queue, or with `run-c3-frameworks-tests`.
+  - Runs framework cases in parallel shards. Required framework checks wait for all shards to succeed.
+  - Framework tests default to one retry.
+  - Uploads test logs, Vitest results, Turbo summaries, and retry reports.
+  - `ci:no-turbo-cache` disables Turbo caching for tests and builds; apply it before pushing.
+
+See [C3 E2E instructions](../../packages/create-cloudflare/e2e/README.md) for local testing and configuration.
 
 ### Rerun Code Owners (rerun-codeowners.yml + rerun-codeowners-privileged.yml)
 
