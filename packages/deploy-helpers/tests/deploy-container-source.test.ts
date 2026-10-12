@@ -193,6 +193,18 @@ describe("deploy container source", () => {
 
 		expect(config).not.toHaveProperty("containers");
 		await deploy(props, config as ContainerlessConfig, buildResult, {
+			deployCommand: "test-cli deploy",
+			versionsDeployCommand: "test-cli versions deploy",
+			d1ListCommand: "test-cli d1 list",
+			d1DeleteCommand: "test-cli d1 delete <database-id>",
+			queueCreateCommand: (queueName) => `test-cli queue create ${queueName}`,
+			secretPutCommand: "test-cli secret put",
+			workersDevConfigFieldName: "workersDev",
+			workersDevConfigAssignment: (value) => `workersDev: ${value}`,
+			previewUrlsConfigFieldName: "previewUrls",
+			previewUrlsConfigAssignment: (value) => `previewUrls: ${value}`,
+			observabilityTargetPercentageField: "targetInstancePercentage",
+			observabilityTargetCountField: "targetInstanceCount",
 			syncWorkersSite: undefined,
 		});
 
@@ -209,6 +221,9 @@ describe("deploy container source", () => {
 				dispatchNamespace: undefined,
 				scriptName: "worker",
 				versionId: "00000000-0000-0000-0000-000000000001",
+				configFileName: "Wrangler configuration",
+				observabilityTargetPercentageField: "targetInstancePercentage",
+				observabilityTargetCountField: "targetInstanceCount",
 			}
 		);
 	});

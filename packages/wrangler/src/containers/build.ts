@@ -56,7 +56,10 @@ export const containersBuildCommand = createCommand({
 	},
 	positionalArgs: ["PATH"],
 	async handler(args, { config }) {
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({
+			logger,
+			fetchResult,
+		});
 		await fillOpenAPIConfiguration(config, containersScope);
 		await buildCommand(args, config);
 	},
@@ -85,7 +88,10 @@ export const containersPushCommand = createCommand({
 	},
 	positionalArgs: ["TAG"],
 	async handler(args, { config }) {
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({
+			logger,
+			fetchResult,
+		});
 		await fillOpenAPIConfiguration(config, containersScope);
 		await pushCommand(args, await getOrSelectAccountId(config), config);
 	},

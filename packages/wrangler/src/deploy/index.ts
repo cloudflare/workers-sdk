@@ -249,6 +249,19 @@ export async function runDeployCommandHandler(
 			config,
 			buildResult,
 			{
+				deployCommand: "wrangler deploy",
+				versionsDeployCommand: "wrangler versions deploy",
+				d1ListCommand: "wrangler d1 list",
+				d1DeleteCommand: "wrangler d1 delete <database-name>",
+				queueCreateCommand: (queueName) =>
+					`wrangler queues create ${queueName}`,
+				secretPutCommand: "wrangler secret put",
+				workersDevConfigFieldName: "workers_dev",
+				workersDevConfigAssignment: (value) => `workers_dev = ${value}`,
+				previewUrlsConfigFieldName: "preview_urls",
+				previewUrlsConfigAssignment: (value) => `preview_urls = ${value}`,
+				observabilityTargetPercentageField: "target_instance_percentage",
+				observabilityTargetCountField: "target_instance_count",
 				syncWorkersSite,
 			}
 		);

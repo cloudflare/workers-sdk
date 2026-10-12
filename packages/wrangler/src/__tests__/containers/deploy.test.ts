@@ -145,7 +145,7 @@ describe("wrangler deploy with containers", () => {
 			})
 		);
 		await expect(runWrangler("deploy index.js")).rejects.toThrow(
-			"The Worker version was deployed, but Wrangler could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command"
+			"The Worker version was deployed, but the CLI could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command"
 		);
 		expect(applicationRequests).toBe(1);
 		expect(std.out).toContain("Uploaded test-name");
@@ -3098,7 +3098,7 @@ describe("wrangler deploy with containers", () => {
 			]);
 
 			await expect(runWrangler("deploy index.js")).rejects.toThrow(
-				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config file and deploy once, then deploy again with target_instance_percentage or target_instance_count."
+				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your wrangler.toml and deploy once, then deploy again with target_instance_percentage or target_instance_count."
 			);
 		});
 
@@ -3147,7 +3147,7 @@ describe("wrangler deploy with containers", () => {
 			]);
 
 			await expect(runWrangler("deploy index.js")).rejects.toThrow(
-				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config file and deploy once, then deploy again with target_instance_percentage or target_instance_count."
+				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your wrangler.toml and deploy once, then deploy again with target_instance_percentage or target_instance_count."
 			);
 		});
 

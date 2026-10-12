@@ -18,7 +18,7 @@ import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form"
 import { parseBulkInputToObject } from "../deploy/helpers/parse-bulk-input";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
-import { cliPresentation, confirm, logger } from "../shared/context";
+import { confirm, logger } from "../shared/context";
 import { getSubdomainValues } from "../triggers/deploy";
 import {
 	createPreview,
@@ -143,10 +143,10 @@ export function assertPreviewBuildOutputRootConfig(
 	}
 }
 
-// Building and applying a container to Cloudchamber requires wrangler-only
+// Building and applying a container to Cloudchamber requires consumer-owned
 // dependencies (Docker, the containers API client) that deploy-helpers has
-// no direct dependency on. As with `DeployCallbacks` (see ../deploy/deploy.ts),
-// the wrangler-specific implementation is injected by the caller.
+// no direct dependency on. As with `DeployOptions` (see ../deploy/deploy.ts),
+// implementations that are injected by the caller.
 //
 // `getNormalizedContainerOptions` validates and normalises container config
 // without needing the preview deployment to exist yet, so `preview()` runs it
@@ -155,7 +155,9 @@ export function assertPreviewBuildOutputRootConfig(
 // running that advertises containers nothing ever built. `deployPreviewContainers`
 // does need the deployment, since that's what resolves each container's DO
 // namespace_id, so it still runs after.
-export type PreviewCallbacks = {
+export type PreviewOptions = {
+	deployCommand?: string;
+	previewCommand?: string;
 	productionBindingsExpectedInPreview?: Record<string, { type: string }>;
 	getNormalizedContainerOptions:
 		| ((
@@ -408,7 +410,7 @@ async function prepareContainersForPreview(
 	config: Config,
 	workerName: string,
 	previewSlug: string,
-	callbacks: PreviewCallbacks,
+	options: PreviewOptions,
 	localImageReferences: Map<string, string>
 ): Promise<{
 	scopedContainerConfig: Config | undefined;
@@ -418,7 +420,7 @@ async function prepareContainersForPreview(
 		(config.previews as PreviewsConfig | undefined)?.containers ?? [];
 	if (
 		previewContainers.length === 0 ||
-		!callbacks.getNormalizedContainerOptions
+		!options.getNormalizedContainerOptions
 	) {
 		return { scopedContainerConfig: undefined, normalisedContainerConfig: [] };
 	}
@@ -433,10 +435,12 @@ async function prepareContainersForPreview(
 		return { scopedContainerConfig: undefined, normalisedContainerConfig: [] };
 	}
 
-	const normalisedContainerConfig =
-		await callbacks.getNormalizedContainerOptions(scopedContainerConfig, {
+	const normalisedContainerConfig = await options.getNormalizedContainerOptions(
+		scopedContainerConfig,
+		{
 			dryRun: false,
-		});
+		}
+	);
 
 	const containersNeedingDocker = normalisedContainerConfig.filter(
 		(container) => "dockerfile" in container
@@ -456,8 +460,8 @@ async function prepareContainersForPreview(
 	// Applying containers checks the token's scope as well, but only after the
 	// deployment exists. Checking it here stops a badly scoped token from
 	// leaving a live preview that advertises containers nothing ever built.
-	if (callbacks.verifyContainersScope) {
-		await callbacks.verifyContainersScope(scopedContainerConfig);
+	if (options.verifyContainersScope) {
+		await options.verifyContainersScope(scopedContainerConfig);
 	}
 
 	return { scopedContainerConfig, normalisedContainerConfig };
@@ -485,7 +489,11 @@ function formatPreviewConfigUpdate(
 	).trimEnd();
 }
 
-export function formatNoActivePreviewUrlsMessage(config: Config): string {
+export function formatNoActivePreviewUrlsMessage(
+	config: Config,
+	deployCommand = "your deploy command",
+	previewCommand = "the preview command"
+): string {
 	const customDomainRouteEntries = (config.routes ?? [])
 		.filter(isCustomDomainRoute)
 		.map((route) => ({ route, singular: false }));
@@ -541,8 +549,8 @@ export function formatNoActivePreviewUrlsMessage(config: Config): string {
 		customDomainRoute?.previews_enabled === true;
 	const cautionText =
 		workersDevAlreadyConfigured && customDomainAlreadyConfigured
-			? `Caution: \`${cliPresentation.commands.deploy}\` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running \`${cliPresentation.commands.deploy}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${cliPresentation.commands.preview}\` again.`
-			: `Caution: \`${cliPresentation.commands.deploy}\` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run \`${cliPresentation.commands.deploy}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${cliPresentation.commands.preview}\` again.`;
+			? `Caution: \`${deployCommand}\` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running \`${deployCommand}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${previewCommand}\` again.`
+			: `Caution: \`${deployCommand}\` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run \`${deployCommand}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${previewCommand}\` again.`;
 	let workersDevInstruction = `Add this to your ${configName}:`;
 	if (config.preview_urls === true) {
 		workersDevInstruction = `Your ${configName} already contains:`;
@@ -895,7 +903,9 @@ function formatPreviewDeploymentSummary(
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
 	isNew: boolean,
-	pullRequest?: PullRequestMetadata
+	pullRequest: PullRequestMetadata | undefined,
+	deployCommand: string | undefined,
+	previewCommand: string | undefined
 ): string {
 	const statusLabel = isNew ? chalk.green("(new)") : chalk.dim("(updated)");
 	const pullRequestUrl =
@@ -918,7 +928,15 @@ function formatPreviewDeploymentSummary(
 				]
 			: []),
 		...formatUrlLines("Unique Deployment", deployment.urls),
-		...(hasActiveUrls ? [] : [formatNoActivePreviewUrlsMessage(config)]),
+		...(hasActiveUrls
+			? []
+			: [
+					formatNoActivePreviewUrlsMessage(
+						config,
+						deployCommand,
+						previewCommand
+					),
+				]),
 	].join("\n");
 }
 
@@ -962,7 +980,9 @@ function previewUrlMatchesCustomDomain(url: string, customDomains: string[]) {
 function logMissingCustomDomainPreviewUrlsWarning(
 	config: Config,
 	previewResource: PreviewResource,
-	deployment: DeploymentResource
+	deployment: DeploymentResource,
+	deployCommand = "your deploy command",
+	previewCommand = "the preview command"
 ) {
 	const customDomains = getPreviewCustomDomainHostnames(config);
 	const urls = [...(previewResource.urls ?? []), ...(deployment.urls ?? [])];
@@ -976,7 +996,7 @@ function logMissingCustomDomainPreviewUrlsWarning(
 
 	logger.log("");
 	logger.warn(
-		`Custom domain Preview URLs are configured, but none are active for this Preview. If you added \`previews_enabled = true\` after your last deployment, run \`${cliPresentation.commands.deploy}\` once to publish the custom domain Preview route, then run \`${cliPresentation.commands.preview}\` again. If you already deployed with that setting, the custom domain may still be provisioning.`
+		`Custom domain Preview URLs are configured, but none are active for this Preview. If you enabled Preview URLs after your last deployment, run \`${deployCommand}\` once to publish the custom domain Preview route, then run \`${previewCommand}\` again. If you already deployed with that setting, the custom domain may still be provisioning.`
 	);
 }
 
@@ -1071,7 +1091,7 @@ async function runPreview(
 	config: Config,
 	buildResult: PreviewWorkerBuildResult | undefined,
 	assetsOptions: PreviewAssetsOptions | undefined,
-	callbacks: PreviewCallbacks,
+	options: PreviewOptions,
 	workerName: string,
 	replaceTailConsumersAfterCreate = false,
 	localImageReferences = new Map<string, string>()
@@ -1170,7 +1190,7 @@ async function runPreview(
 			config,
 			workerName,
 			previewResource.slug,
-			callbacks,
+			options,
 			localImageReferences
 		);
 
@@ -1212,10 +1232,10 @@ async function runPreview(
 	if (
 		normalisedContainerConfig.length > 0 &&
 		scopedContainerConfig &&
-		callbacks.deployPreviewContainers
+		options.deployPreviewContainers
 	) {
 		try {
-			await callbacks.deployPreviewContainers(
+			await options.deployPreviewContainers(
 				scopedContainerConfig,
 				normalisedContainerConfig,
 				deployment,
@@ -1239,7 +1259,7 @@ async function runPreview(
 		);
 	} else {
 		const productionBindingsExpectedInPreview =
-			callbacks.productionBindingsExpectedInPreview ?? {};
+			options.productionBindingsExpectedInPreview ?? {};
 		if (Object.keys(productionBindingsExpectedInPreview).length > 0) {
 			const previewBaseConfig = await getPreviewBaseConfig(
 				config,
@@ -1259,13 +1279,17 @@ async function runPreview(
 				previewResource,
 				deployment,
 				isNewPreview,
-				pullRequest
+				pullRequest,
+				options.deployCommand,
+				options.previewCommand
 			)
 		);
 		logMissingCustomDomainPreviewUrlsWarning(
 			config,
 			previewResource,
-			deployment
+			deployment,
+			options.deployCommand,
+			options.previewCommand
 		);
 	}
 
@@ -1283,7 +1307,7 @@ async function runPreview(
  * @param config Resolved Wrangler configuration.
  * @param buildResult Compiled Worker code and modules.
  * @param assetsOptions Static asset configuration and artifacts.
- * @param callbacks Wrangler container integrations.
+ * @param options Consumer-specific command paths and Container integrations.
  */
 export async function preview(
 	accountId: string,
@@ -1291,7 +1315,7 @@ export async function preview(
 	config: Config,
 	buildResult: WorkerBuildResult,
 	assetsOptions: PreviewAssetsOptions | undefined,
-	callbacks: PreviewCallbacks
+	options: PreviewOptions
 ): Promise<PreviewResult> {
 	return runPreview(
 		accountId,
@@ -1299,7 +1323,7 @@ export async function preview(
 		config,
 		buildResult,
 		assetsOptions,
-		callbacks,
+		options,
 		resolveWorkerName(args, config)
 	);
 }
@@ -1315,7 +1339,7 @@ export async function previewBuildOutput(
 	accountId: string,
 	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json">,
 	buildOutput: PreviewBuildOutput,
-	callbacks?: PreviewCallbacks
+	options?: PreviewOptions
 ): Promise<PreviewResult> {
 	const { workerConfig, rootConfig, buildResult, assets } = buildOutput;
 	assertPreviewBuildOutputRootConfig(rootConfig);
@@ -1374,8 +1398,8 @@ export async function previewBuildOutput(
 	);
 	if (
 		previewContainers.length > 0 &&
-		(callbacks?.getNormalizedContainerOptions === undefined ||
-			callbacks.deployPreviewContainers === undefined)
+		(options?.getNormalizedContainerOptions === undefined ||
+			options.deployPreviewContainers === undefined)
 	) {
 		throw new UserError(
 			"Preview uploads from Build Output with Containers require container deployment callbacks.",
@@ -1438,7 +1462,7 @@ export async function previewBuildOutput(
 		previewConfig,
 		previewBuildResult,
 		assetsOptions,
-		callbacks ?? {
+		options ?? {
 			getNormalizedContainerOptions: undefined,
 			deployPreviewContainers: undefined,
 		},

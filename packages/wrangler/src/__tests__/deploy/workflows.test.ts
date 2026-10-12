@@ -1731,7 +1731,7 @@ describe("deploy", () => {
 					"Workflow names must be unique per account."
 				);
 				expect(std.warn).toContain(
-					"If this reassignment is unintended, rename the workflow(s) in your Wrangler config file."
+					"If this reassignment is unintended, rename the workflow(s) in your wrangler.toml."
 				);
 			});
 
@@ -2056,7 +2056,7 @@ describe("deploy", () => {
 					    - "my-workflow" (currently belongs to "other-worker")
 
 					  Deploying will reassign these workflows to "test-name". Workflow names must be unique per account.
-					  If this reassignment is unintended, rename the workflow(s) in your Wrangler config file.
+					  If this reassignment is unintended, rename the workflow(s) in your wrangler.toml.
 
 					"
 				`);

@@ -19,13 +19,10 @@ import type {
 	Entry,
 	ContainerApp,
 	DurableObjectCodeUpdateStrategy,
-	CliPresentationOverrides,
 } from "@cloudflare/workers-utils";
 
 /** API, logging, and prompt implementations supplied by the consumer. */
 export type DeployHelpersContext = {
-	/** Consumer-specific names and commands used in user-facing output. */
-	cliPresentation?: CliPresentationOverrides;
 	fetchResult: FetchResultFetcher;
 	fetchListResult: FetchListResultFetcher;
 	fetchPagedListResult: FetchPagedListResultFetcher;
@@ -207,4 +204,9 @@ export type TriggerProps = {
 	firstDeploy: boolean;
 	dryRun: boolean;
 	validated: boolean;
+	queueCreateCommand: (queueName: string) => string;
+	workersDevConfigFieldName: string;
+	workersDevConfigAssignment: (value: boolean) => string;
+	previewUrlsConfigFieldName: string;
+	previewUrlsConfigAssignment: (value: boolean) => string;
 };

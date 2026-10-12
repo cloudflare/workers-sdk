@@ -136,6 +136,8 @@ export const previewCommand = createCommand({
 			buildResult,
 			assetsOptions,
 			{
+				deployCommand: "wrangler deploy",
+				previewCommand: "wrangler preview",
 				productionBindingsExpectedInPreview,
 				getNormalizedContainerOptions,
 				deployPreviewContainers,

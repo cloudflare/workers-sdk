@@ -5,14 +5,13 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
-import { CF_CLI_PRESENTATION, removeDirSync } from "@cloudflare/workers-utils";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	AccountService,
 	ApplicationsService,
 	buildCommand,
 	cleanupBuiltImages,
-	cliPresentation,
 	buildContainerImages,
 	deployContainers,
 	getCloudflareContainerRegistry,
@@ -210,7 +209,10 @@ describe("buildCommand", () => {
 				throw new Error(`Unexpected fetchResult path: ${path}`);
 			}
 		) as FetchResultFetcher;
-		initContainersSharedContext({ logger, fetchResult: fetchResultMock });
+		initContainersSharedContext({
+			logger,
+			fetchResult: fetchResultMock,
+		});
 	});
 
 	afterEach(() => {
@@ -246,26 +248,6 @@ describe("buildCommand", () => {
 			"-",
 			dir,
 		]);
-	});
-
-	it("resolves consumer-specific presentation copy", ({ expect }) => {
-		initContainersSharedContext({
-			cliPresentation: CF_CLI_PRESENTATION,
-			logger,
-			fetchResult: fetchResultMock,
-		});
-
-		expect(cliPresentation).toMatchObject({
-			cliName: "cf",
-			displayConfigFileName: "cloudflare.config.ts",
-			configFields: {
-				containerObservabilityTargetPercentage: "targetInstancePercentage",
-				containerObservabilityTargetCount: "targetInstanceCount",
-			},
-			commands: {
-				containerRegistryConfigure: "cf containers registries create",
-			},
-		});
 	});
 
 	it("tags and pushes new images, returning the pushed digest", async ({
@@ -458,7 +440,10 @@ describe("deploy container image build and push", () => {
 				throw new Error(`Unexpected fetchResult path: ${path}`);
 			}
 		) as FetchResultFetcher;
-		initContainersSharedContext({ logger, fetchResult: fetchResultMock });
+		initContainersSharedContext({
+			logger,
+			fetchResult: fetchResultMock,
+		});
 	});
 
 	afterEach(() => {
@@ -495,12 +480,7 @@ describe("deploy container image build and push", () => {
 		]);
 	});
 
-	it("keeps the internal image tag stable for cf", async ({ expect }) => {
-		initContainersSharedContext({
-			cliPresentation: CF_CLI_PRESENTATION,
-			logger,
-			fetchResult: fetchResultMock,
-		});
+	it("keeps the internal image tag stable", async ({ expect }) => {
 		const { dir, args } = createBuildArgs();
 		tempDirs.push(dir);
 		const container = {
@@ -775,7 +755,7 @@ describe("caller-specific container guidance", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("uses cloudflare.config.ts field names for cf", async ({ expect }) => {
+	it("uses consumer-owned config field names", async ({ expect }) => {
 		const container = {
 			...dockerfileContainer,
 			observability: {
@@ -793,7 +773,6 @@ describe("caller-specific container guidance", () => {
 			},
 		]) as unknown as FetchPagedListResultFetcher;
 		initContainersSharedContext({
-			cliPresentation: CF_CLI_PRESENTATION,
 			logger,
 			fetchResult: vi.fn() as never,
 			fetchPagedListResult,
@@ -821,10 +800,13 @@ describe("caller-specific container guidance", () => {
 					versionId: "version-id",
 					accountId: "account-id",
 					scriptName: "worker",
+					configFileName: "test.config.ts",
+					observabilityTargetPercentageField: "targetInstancePercentage",
+					observabilityTargetCountField: "targetInstanceCount",
 				}
 			)
 		).rejects.toThrow(
-			"Set containers[].observability.enabled = false in your cloudflare.config.ts and deploy once, then deploy again with targetInstancePercentage or targetInstanceCount."
+			"Set containers[].observability.enabled = false in your test.config.ts and deploy once, then deploy again with targetInstancePercentage or targetInstanceCount."
 		);
 	});
 });
@@ -835,7 +817,10 @@ describe("buildCommand arguments", () => {
 		tempDirs = [];
 		inspectOutputs = [];
 		mockDockerProcesses();
-		initContainersSharedContext({ logger, fetchResult: vi.fn() });
+		initContainersSharedContext({
+			logger,
+			fetchResult: vi.fn(),
+		});
 	});
 
 	afterEach(() => {

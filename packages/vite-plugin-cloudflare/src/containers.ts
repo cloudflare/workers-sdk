@@ -16,7 +16,6 @@ import type {
 	ViteLogger,
 } from "@cloudflare/containers-shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
-
 /**
  * Configures the Containers API client used to retrieve image pull credentials.
  *
@@ -80,6 +79,7 @@ export async function prepareContainerImagesForVite(options: {
 	containerOptions: ContainerDevOptions[];
 	settings: ParsedInputSettingsConfig;
 	logger: ViteLogger;
+	cliDisplayName: string;
 }): Promise<void> {
 	const complianceRegion = toApiComplianceRegion(
 		options.settings.complianceRegion
@@ -125,5 +125,12 @@ export async function prepareContainerImagesForVite(options: {
 		onContainerImagePreparationEnd: () => {},
 		logger: options.logger,
 		complianceConfig,
+		configFileName: "cloudflare.config.ts",
+		// TODO: The Vite plugin should not own this `cf` command. Remove the
+		// hardcoded value once `cf` can provide it directly.
+		registryConfigureCommand:
+			options.cliDisplayName === "cf"
+				? "cf containers registries create"
+				: "wrangler containers registries configure",
 	});
 }

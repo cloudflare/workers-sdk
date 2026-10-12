@@ -374,6 +374,8 @@ describe("prepareContainerImagesForDev", () => {
 			const result = await prepareContainerImagesForDev({
 				dockerPath: "test-docker",
 				containerOptions: [],
+				configFileName: "test config file",
+				registryConfigureCommand: "test registry configure",
 				onContainerImagePreparationStart: onStart,
 				onContainerImagePreparationEnd: onEnd,
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
