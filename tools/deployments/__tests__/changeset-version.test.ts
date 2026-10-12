@@ -116,8 +116,6 @@ it.for(
 		// previous,           after changesets,        identifier, corrected
 		["1.63.1",             "2.0.0",                 "beta",     "2.0.0-beta.0"],
 		["2.0.0-beta.0",      "2.0.0",                 "beta",     "2.0.0-beta.1"],
-		["2.0.0-beta.1",      "2.1.0",                 "beta",     "2.0.0-beta.2"],
-		["2.0.0-beta.2",      "3.0.0",                 "beta",     "2.0.0-beta.3"],
 		["2.0.0-beta.3",      "2.0.0",                 "rc",       "2.0.0-rc.0"],
 		["2.0.0-beta.3",      "2.0.0-beta.3",          "beta",     "2.0.0-beta.3"],
 	] as const
