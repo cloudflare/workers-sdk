@@ -1,10 +1,19 @@
-import type { CommandMetadata } from "../command-metadata";
 import type {
 	fetchKVGetValue,
 	fetchResult,
 	fetchListResult,
 	fetchPagedListResult,
 } from "../cfetch";
+import type {
+	CommandAliasData,
+	CommandBehaviour,
+	CommandDefinitionData,
+	CommandDefinitionTreeNode,
+	CommandIdentity,
+	CommandMetadata,
+	CommandNamespaceData,
+	Command as SharedCommand,
+} from "../command-types";
 import type { confirm, prompt } from "../dialogs";
 import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
@@ -61,7 +70,7 @@ export type MetadataCategory =
 	| "Storage & databases"
 	| "Networking & security";
 
-export type Command = `wrangler${string}`;
+export type Command = SharedCommand;
 export type Metadata = CommandMetadata<Teams, MetadataCategory>;
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &
@@ -133,125 +142,32 @@ export type HandlerContext = {
 
 export type CommandDefinition<
 	NamedArgDefs extends NamedArgDefinitions = NamedArgDefinitions,
-> = {
-	/**
-	 * Descriptive information about the command which does not affect behaviour.
-	 * This is used for the CLI --help and subcommand --help output.
-	 * This should be used as the source-of-truth for status and ownership.
-	 */
-	metadata: Metadata;
-	/**
-	 * Controls shared behaviour across all commands.
-	 * This will allow wrangler commands to remain consistent and only diverge intentionally.
-	 */
-	behaviour?: {
-		/**
-		 * By default, wrangler's version banner will be printed before the handler is executed.
-		 * Set this value to `false` to skip printing the banner.
-		 *
-		 * @default true
-		 */
-		printBanner?: boolean | ((args: HandlerArgs<NamedArgDefs>) => boolean);
-
-		/**
-		 * Opt-in to printing a metrics banner for this command.
-		 * @default false
-		 */
+> = CommandDefinitionData<
+	Metadata,
+	NamedArgDefs,
+	CommandBehaviour<HandlerArgs<NamedArgDefs>> & {
+		/** Opt in to the metrics banner for this command. */
 		printMetricsBanner?: boolean;
-
 		/**
-		 * By default, wrangler will print warnings about the Wrangler configuration file.
-		 * Set this value to `false` to skip printing these warnings.
-		 */
-		printConfigWarnings?: boolean;
-
-		/**
-		 * By default, wrangler will read & provide the wrangler.toml/wrangler.json configuration.
-		 * Set this value to `false` to skip this.
-		 */
-		provideConfig?: boolean;
-
-		/**
-		 * By default, wrangler will provide experimental flags in the handler context,
-		 * according to the default values in register-yargs.command.ts
-		 * Use this to override those defaults per command.
+		 * Override experimental flags supplied to a command's handler context.
 		 */
 		overrideExperimentalFlags?: (
 			args: HandlerArgs<NamedArgDefs>
 		) => ExperimentalFlags;
-
-		/**
-		 * If true, then look for a redirect file at `.wrangler/deploy/config.json` and use that to find the Wrangler configuration file.
-		 */
-		useConfigRedirectIfAvailable?: boolean;
-
-		/**
-		 * If true, print a message about whether the command is operating on a local or remote resource
-		 */
+		/** Print whether this command operates on local or remote resources. */
 		printResourceLocation?:
 			| ((args: HandlerArgs<NamedArgDefs>) => boolean)
 			| boolean;
-
-		/**
-		 * If true, check for environments in the wrangler config, if there are some and the user hasn't specified an environment
-		 * using the `-e|--env` cli flag, show a warning suggesting that one should instead be specified.
-		 */
+		/** Warn when environments are defined but none has been selected. */
 		warnIfMultipleEnvsConfiguredButNoneSpecified?: boolean;
-
 		/**
-		 * Opt out of sending metrics for this command
-		 * @default true
-		 */
-		sendMetrics?: boolean;
-
-		/**
-		 * After the command handler completes successfully, suggest installing
-		 * Cloudflare skills for detected AI coding agents that don't have them.
-		 *
-		 * When set to `true`, the suggestion always runs after the handler.
-		 * When set to a function, it receives the parsed args and should return
-		 * `true` to enable the suggestion — use this to skip the prompt in modes
-		 * where interactive output is inappropriate (e.g. `--json`).
-		 *
-		 * @default false
-		 */
-		suggestSkillsAfterHandler?:
-			| boolean
-			| ((args: HandlerArgs<NamedArgDefs>) => boolean);
-
-		/**
-		 * Whether this command can authenticate with a temporary preview account
-		 * (via the hidden `--temporary` flag) when no real credentials are available.
-		 * Only enable this for commands whose API calls are covered by the temporary
-		 * preview-account deploy token (Workers, KV, D1, Hyperdrive, Queues, SSL/Certs).
-		 * @default false
-		 */
-		supportTemporary?: boolean;
-
-		/**
-		 * By default, the banner will print "Active profile: <name>" when a non-default
-		 * profile is resolved. Set to `false` to suppress this line while still printing
-		 * the rest of the banner.
-		 *
+		 * Suppress the active-profile banner while keeping the main banner.
 		 * @default true
 		 */
 		printActiveProfile?: boolean;
-	};
-
-	/**
-	 * A plain key-value object describing the CLI args for this command.
-	 * Shared args can be defined as another plain object and spread into this.
-	 */
-	args?: NamedArgDefs;
-
-	/**
-	 * Optionally declare some of the named args as positional args.
-	 * The order of this array is the order they are expected in the command.
-	 * Use args[key].demandOption and args[key].array to declare required and variadic
-	 * positional args, respectively.
-	 */
-	positionalArgs?: Array<StringKeyOf<NamedArgDefs>>;
-
+	},
+	Array<StringKeyOf<NamedArgDefs>>
+> & {
 	/**
 	 * A hook to implement custom validation of the args before the handler is called.
 	 * Throw `CommandLineArgsError` with actionable error message if args are invalid.
@@ -275,36 +191,19 @@ export type CommandDefinition<
 	) => void | Promise<void>;
 };
 
-export type NamespaceDefinition = {
-	metadata: Metadata;
-};
+export type NamespaceDefinition = CommandNamespaceData<Metadata>;
+export type AliasDefinition = CommandAliasData<Metadata>;
 
-export type AliasDefinition = {
-	aliasOf: Command;
-	metadata?: Partial<Metadata>;
-};
-
-export type InternalCommandDefinition = {
-	type: "command";
-	command: Command;
-} & CommandDefinition;
-
-export type InternalNamespaceDefinition = {
-	type: "namespace";
-	command: Command;
-} & NamespaceDefinition;
-
-export type InternalAliasDefinition = {
-	type: "alias";
-	command: Command;
-} & AliasDefinition;
+export type InternalCommandDefinition = CommandIdentity<"command"> &
+	CommandDefinition;
+export type InternalNamespaceDefinition = CommandIdentity<"namespace"> &
+	NamespaceDefinition;
+export type InternalAliasDefinition = CommandIdentity<"alias"> &
+	AliasDefinition;
 
 export type InternalDefinition =
 	| InternalCommandDefinition
 	| InternalNamespaceDefinition
 	| InternalAliasDefinition;
-export type DefinitionTreeNode = {
-	definition?: InternalDefinition;
-	subtree: DefinitionTree;
-};
+export type DefinitionTreeNode = CommandDefinitionTreeNode<InternalDefinition>;
 export type DefinitionTree = Map<string, DefinitionTreeNode>;

@@ -1,5 +1,13 @@
 import { createCLIParser } from "./index";
-import type { CommandMetadata } from "./command-metadata";
+import type {
+	CommandAliasData,
+	CommandBehaviour,
+	CommandDefinitionData,
+	CommandDefinitionTreeNode,
+	CommandIdentity,
+	CommandMetadata,
+	CommandNamespaceData,
+} from "./command-types";
 
 export type ExperimentalCommandMetadata = CommandMetadata<string, string>;
 
@@ -42,50 +50,39 @@ export type ExperimentalCommandArgDefinition = {
 	type?: "array" | "count" | "boolean" | "number" | "string";
 };
 
-export type ExperimentalCommandBehaviour = {
-	printBanner?: boolean | ((args: unknown) => boolean);
-	provideConfig?: boolean;
-	printConfigWarnings?: boolean;
-	useConfigRedirectIfAvailable?: boolean;
-	sendMetrics?: boolean;
-	supportTemporary?: boolean;
-	suggestSkillsAfterHandler?: boolean | ((args: unknown) => boolean);
+/**
+ * Yargs's internal ArgDefinition is intentionally projected into public
+ * option metadata: Yargs is not a published Wrangler dependency.
+ */
+export type ExperimentalCommandBehaviour = CommandBehaviour<unknown> & {
 	[key: string]: unknown;
 };
 
-export type ExperimentalCommandCommandDefinition = {
-	type: "command";
-	command: `wrangler${string}`;
-	metadata: ExperimentalCommandMetadata;
-	args?: Record<string, ExperimentalCommandArgDefinition>;
-	behaviour?: ExperimentalCommandBehaviour;
-	positionalArgs?: string[];
-	validateArgs?: (...args: unknown[]) => unknown;
-	handler?: (...args: unknown[]) => unknown;
-};
+export type ExperimentalCommandCommandDefinition = CommandIdentity<"command"> &
+	CommandDefinitionData<
+		ExperimentalCommandMetadata,
+		Record<string, ExperimentalCommandArgDefinition>,
+		ExperimentalCommandBehaviour,
+		string[]
+	> & {
+		validateArgs?: (...args: unknown[]) => unknown;
+		handler?: (...args: unknown[]) => unknown;
+	};
 
-export type ExperimentalCommandNamespaceDefinition = {
-	type: "namespace";
-	command: `wrangler${string}`;
-	metadata: ExperimentalCommandMetadata;
-};
+export type ExperimentalCommandNamespaceDefinition =
+	CommandIdentity<"namespace"> &
+		CommandNamespaceData<ExperimentalCommandMetadata>;
 
-export type ExperimentalCommandAliasDefinition = {
-	type: "alias";
-	command: `wrangler${string}`;
-	aliasOf: `wrangler${string}`;
-	metadata?: Partial<ExperimentalCommandMetadata>;
-};
+export type ExperimentalCommandAliasDefinition = CommandIdentity<"alias"> &
+	CommandAliasData<ExperimentalCommandMetadata>;
 
 export type ExperimentalCommandDefinition =
 	| ExperimentalCommandCommandDefinition
 	| ExperimentalCommandNamespaceDefinition
 	| ExperimentalCommandAliasDefinition;
 
-export type ExperimentalDefinitionTreeNode = {
-	definition?: ExperimentalCommandDefinition;
-	subtree: Map<string, ExperimentalDefinitionTreeNode>;
-};
+export type ExperimentalDefinitionTreeNode =
+	CommandDefinitionTreeNode<ExperimentalCommandDefinition>;
 
 export type ExperimentalGlobalFlags = Record<
 	string,

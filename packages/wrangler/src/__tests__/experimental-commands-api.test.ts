@@ -1,8 +1,33 @@
-import { assert, describe, test } from "vitest";
+import { assert, describe, expectTypeOf, test } from "vitest";
 import { experimental_getWranglerCommands } from "../experimental-commands-api";
-import type { ExperimentalDefinitionTreeNode } from "../experimental-commands-api";
+import type { CommandDefinitionTreeNode } from "../command-types";
+import type {
+	Command,
+	DefinitionTreeNode,
+	InternalDefinition,
+	Metadata,
+} from "../core/types";
+import type {
+	ExperimentalCommandDefinition,
+	ExperimentalCommandMetadata,
+	ExperimentalDefinitionTreeNode,
+} from "../experimental-commands-api";
 
 describe("experimental_getWranglerCommands", () => {
+	test("shares registry metadata and recursive structure with internal commands", () => {
+		expectTypeOf<Metadata>().toExtend<ExperimentalCommandMetadata>();
+		expectTypeOf<ExperimentalCommandMetadata>().not.toExtend<Metadata>();
+		expectTypeOf<
+			ExperimentalCommandDefinition["command"]
+		>().toEqualTypeOf<Command>();
+		expectTypeOf<DefinitionTreeNode>().toEqualTypeOf<
+			CommandDefinitionTreeNode<InternalDefinition>
+		>();
+		expectTypeOf<ExperimentalDefinitionTreeNode>().toEqualTypeOf<
+			CommandDefinitionTreeNode<ExperimentalCommandDefinition>
+		>();
+	});
+
 	test("returns global flags", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().globalFlags;
 
