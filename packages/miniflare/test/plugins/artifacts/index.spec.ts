@@ -266,6 +266,66 @@ test("artifacts: config update closes retired sidecars but abort preserves activ
 	}
 });
 
+test.skipIf(process.platform === "win32")(
+	"artifacts: disposing a sidecar stops a stalled Git import",
+	async ({ expect }) => {
+		const root = await useTmp();
+		const { stdout: gitPath } = await exec("which", ["git"]);
+		const wrapper = path.join(root, "git");
+		const marker = path.join(root, "clone-started");
+		await writeFile(
+			wrapper,
+			`#!/bin/sh
+case " $* " in
+  *" clone "*)
+    printf started > '${marker}'
+    exec sleep 120 ;;
+esac
+exec '${gitPath.trim().replaceAll("'", "'\\''")}' "$@"
+`
+		);
+		await chmod(wrapper, 0o755);
+		const previousPath = process.env.PATH;
+		process.env.PATH = `${root}:${previousPath}`;
+		const controller = new ArtifactsController();
+		try {
+			controller.beginUpdate();
+			const { sidecar } = await controller.get(path.join(root, "repos"));
+			await controller.commitUpdate();
+			const pending = fetch(`http://${sidecar.address}/__local_artifacts__`, {
+				method: "POST",
+				headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+				body: JSON.stringify({
+					action: "import",
+					namespace: "test",
+					name: "stalled",
+					generation: "stalled-generation",
+					sourceUrl: "https://example.invalid/source.git",
+				}),
+				signal: AbortSignal.timeout(10_000),
+			}).catch(() => undefined);
+			let started = false;
+			for (let attempt = 0; attempt < 50; attempt++) {
+				started = await stat(marker).then(
+					() => true,
+					() => false
+				);
+				if (started) {
+					break;
+				}
+				await new Promise((resolve) => setTimeout(resolve, 50));
+			}
+			expect(started).toBe(true);
+			await expect(controller.dispose()).resolves.toBeUndefined();
+			await pending;
+		} finally {
+			process.env.PATH = previousPath;
+			await controller.dispose();
+		}
+	},
+	12_000
+);
+
 test("artifacts: sidecar startup failures reject without crashing Miniflare", async ({
 	expect,
 }) => {
@@ -371,6 +431,37 @@ test("artifacts: retained handles cannot access a replacement repository", async
 		/not found/i
 	);
 	expect((await (await REPOS.get("repo")).info()).id).toBe(replacement.id);
+});
+
+test("artifacts: restored repository maps ignore inherited names and pin handles", async ({
+	expect,
+}) => {
+	const resourcePersistencePath = await useTmp();
+	const first = new Miniflare({ ...options(), resourcePersistencePath });
+	useDispose(first);
+	await rpc(first, "create", ["other"]);
+	await first.dispose();
+	const second = new Miniflare({ ...options(), resourcePersistencePath });
+	useDispose(second);
+	for (const name of ["constructor", "toString"]) {
+		await expect(rpc(second, "get", [name])).rejects.toThrow(/not found/i);
+		expect(await rpc(second, "delete", [name])).toBe(false);
+	}
+	const { REPOS } = await second.getBindings<{
+		REPOS: {
+			get(name: string): Promise<{ info(): Promise<{ id: string }> }>;
+		};
+	}>();
+	const created = await rpc(second, "create", ["constructor"]);
+	const retained = await REPOS.get("constructor");
+	expect((await retained.info()).id).toBe(created.id);
+	expect(await rpc(second, "delete", ["constructor"])).toBe(true);
+	const replacement = await rpc(second, "create", ["constructor"]);
+	expect(replacement.id).not.toBe(created.id);
+	await expect(async () => retained.info()).rejects.toThrow(/not found/i);
+	expect((await (await REPOS.get("constructor")).info()).id).toBe(
+		replacement.id
+	);
 });
 
 test("artifacts: supports Node binding proxies", async ({ expect }) => {
@@ -875,6 +966,17 @@ test("artifacts: rejects invalid inputs and returns null for missing objects", a
 	).toMatchObject({
 		code: "INVALID_INPUT",
 	});
+	for (const depth of [0, -1, 1.5, "1", null]) {
+		expect(
+			await rpcFailure(mf, "import", [
+				{
+					source: { url: "https://example.test/repo.git", depth },
+					target: { name: "imported" },
+				},
+			])
+		).toMatchObject({ code: "INVALID_INPUT" });
+	}
+	expect((await rpc(mf, "list")).total).toBe(1);
 });
 
 test("artifacts: Git credentials are scoped to the repository and operation", async ({
@@ -1006,27 +1108,6 @@ test("artifacts: log pages commits and files resolve only valid paths", async ({
 	expect(
 		await rpc(mf, "readFile", [{ ref: "missing", path: "hello.txt" }], "Repo")
 	).toBeNull();
-});
-
-test("artifacts: concurrent creations serialize without duplicate repositories", async ({
-	expect,
-}) => {
-	const mf = new Miniflare(options());
-	useDispose(mf);
-	await Promise.all(
-		Array.from({ length: 8 }, (_, index) =>
-			rpc(mf, "create", [`repo-${index}`])
-		)
-	);
-	const duplicate = await Promise.allSettled([
-		rpc(mf, "create", ["same"]),
-		rpc(mf, "create", ["same"]),
-	]);
-	expect(duplicate.map((result) => result.status).sort()).toEqual([
-		"fulfilled",
-		"rejected",
-	]);
-	expect((await rpc(mf, "list")).total).toBe(9);
 });
 
 test("artifacts: an explicit reset removes both metadata and Git repositories", async ({

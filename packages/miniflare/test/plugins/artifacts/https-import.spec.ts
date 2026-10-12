@@ -113,6 +113,10 @@ async function startHttpsGit(directory: string) {
 				response.writeHead(302, { Location: redirectTarget }).end();
 				return;
 			}
+			if (stallInfoRefs && request.url?.startsWith("/source.git/info/refs")) {
+				stalledRequests++;
+				return;
+			}
 			if (
 				interruptUpload &&
 				request.url?.startsWith("/source.git/git-upload-pack")
@@ -179,6 +183,8 @@ async function startHttpsGit(directory: string) {
 	);
 	let interruptUpload = false;
 	let interrupted = 0;
+	let stallInfoRefs = false;
+	let stalledRequests = 0;
 	let redirectTarget: string | undefined;
 	let redirectedRequests = 0;
 	await new Promise<void>((resolve, reject) => {
@@ -194,6 +200,12 @@ async function startHttpsGit(directory: string) {
 		url: `https://localhost:${address.port}/source.git`,
 		get interrupted() {
 			return interrupted;
+		},
+		get stalledRequests() {
+			return stalledRequests;
+		},
+		set stallInfoRefs(value: boolean) {
+			stallInfoRefs = value;
 		},
 		get redirectedRequests() {
 			return redirectedRequests;
@@ -423,20 +435,29 @@ test("HTTPS import: depth and branch constrain the imported history and refs", a
 	});
 });
 
-test("HTTPS import: invalid depth reports invalid input before contacting Git", async ({
+test("HTTPS import: disposal stops a Git clone stalled by the origin", async ({
 	expect,
 }) => {
 	await withFixture(async ({ mf, fixture }) => {
-		for (const depth of [0, -1, 1.5, "1", null]) {
-			const result = await call(mf, "import", [
-				{ source: { url: fixture.url, depth }, target: { name: "shallow" } },
-			]);
-			expect(result.ok).toBe(false);
-			expect(result.body).toMatchObject({ code: "INVALID_INPUT" });
+		fixture.stallInfoRefs = true;
+		const pending = call(mf, "import", [
+			importOptions(
+				fixture.url.replace("https://", "https://reader:correct-password@"),
+				"stalled"
+			),
+		]).catch(() => undefined);
+		for (
+			let attempt = 0;
+			attempt < 100 && fixture.stalledRequests === 0;
+			attempt++
+		) {
+			await new Promise((resolve) => setTimeout(resolve, 50));
 		}
-		expect((await call(mf, "list")).body).toMatchObject({ total: 0 });
+		expect(fixture.stalledRequests).toBeGreaterThan(0);
+		await expect(mf.dispose()).resolves.toBeUndefined();
+		await pending;
 	});
-});
+}, 15_000);
 
 test("HTTPS import: Basic URL credentials, missing repos/branches, duplicate targets and retries", async ({
 	expect,

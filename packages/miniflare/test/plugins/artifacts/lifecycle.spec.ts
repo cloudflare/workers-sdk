@@ -407,6 +407,24 @@ test("artifacts: concurrent same-name creates and forks commit one winner each",
 	expect(child.source).toBe(`artifacts:${namespace}/source`);
 });
 
+test("artifacts: a delayed push cannot update a replacement repository", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(clockOptions(await clockedWorker()));
+	useDispose(mf);
+	const original = await clockRpc(mf, "create", ["repo"]);
+	await clockRpc(mf, "delete", ["repo"]);
+	const replacement = await clockRpc(mf, "create", ["repo"]);
+	expect(replacement.id).not.toBe(original.id);
+	const before = await clockRpc(mf, "info", [], "repo");
+	await expect(
+		clockRpc(mf, "syncAfterPush", ["repo", original.id, {}])
+	).rejects.toThrow(/NOT_FOUND/);
+	const after = await clockRpc(mf, "info", [], "repo");
+	expect(after.updatedAt).toBe(before.updatedAt);
+	expect(after.lastPushAt).toBe(before.lastPushAt);
+});
+
 test("artifacts: import and fork metadata remain distinct across concurrent creations", async ({
 	expect,
 }) => {

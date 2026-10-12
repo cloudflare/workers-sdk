@@ -15,6 +15,7 @@ import {
 	GitClient,
 	gitArgumentsWithoutHooks,
 	gitEnvironment,
+	stopGitProcess,
 	withRepositoryCreationLock,
 } from "./git-client";
 import {
@@ -105,6 +106,7 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	await assertGitAvailable();
 	await cleanupInterruptedRepositories(root);
 	const secret = createGitSecret();
+	const shutdown = new AbortController();
 	const repositoryLocks: RepositoryLocks = new Map();
 	const inFlight = new Map<string, InFlightGitRequest>();
 	const server = createServer((request, response) => {
@@ -117,7 +119,8 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 			repositoryLocks,
 			inFlight,
 			request,
-			response
+			response,
+			shutdown.signal
 		).catch((error: unknown) => {
 			if (response.headersSent) {
 				response.destroy(error instanceof Error ? error : undefined);
@@ -148,6 +151,7 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 		address,
 		secret,
 		close() {
+			shutdown.abort();
 			server.closeAllConnections();
 			return new Promise<void>((resolve, reject) => {
 				server.close((error) => (error ? reject(error) : resolve()));
@@ -179,11 +183,12 @@ async function handleRequest(
 	locks: RepositoryLocks,
 	inFlight: Map<string, InFlightGitRequest>,
 	request: IncomingMessage,
-	response: ServerResponse
+	response: ServerResponse,
+	signal: AbortSignal
 ): Promise<void> {
 	const url = new URL(request.url ?? "/", "http://local-artifacts.invalid");
 	if (url.pathname === adminPath) {
-		await handleAdmin(root, locks, inFlight, request, response);
+		await handleAdmin(root, locks, inFlight, request, response, signal);
 		return;
 	}
 	const gitPath = parseGitPath(url.pathname);
@@ -200,7 +205,7 @@ async function handleRequest(
 	const path = repositoryPath(root, namespace, repository);
 	await withRepositoryLocks(locks, [path], async () => {
 		const generation = request.headers["x-local-artifacts-generation"];
-		const configured = await new GitClient(path).generation();
+		const configured = await new GitClient(path, signal).generation();
 		if (typeof generation !== "string" || generation !== configured) {
 			response.writeHead(409).end("Repository generation changed");
 			return;
@@ -225,7 +230,8 @@ async function handleRequest(
 								generation,
 								abort,
 							})
-					: undefined
+					: undefined,
+				signal
 			);
 		} finally {
 			if (trackPush) {
@@ -240,7 +246,8 @@ async function handleAdmin(
 	locks: RepositoryLocks,
 	inFlight: Map<string, InFlightGitRequest>,
 	request: IncomingMessage,
-	response: ServerResponse
+	response: ServerResponse,
+	signal: AbortSignal
 ): Promise<void> {
 	if (request.method !== "POST") {
 		response.writeHead(405).end("Method not allowed");
@@ -270,7 +277,11 @@ async function handleAdmin(
 		lockPaths.push(repositoryPath(root, body.namespace, body.sourceName));
 	}
 	await withRepositoryLocks(locks, lockPaths, async () => {
-		const result = await handleAction(root, body, new GitClient(repository));
+		const result = await handleAction(
+			root,
+			body,
+			new GitClient(repository, signal)
+		);
 		response.writeHead(200, { "Content-Type": "application/json" });
 		response.end(JSON.stringify(result));
 	});
@@ -336,7 +347,7 @@ function handleFork(
 	if (!sourceBranch) {
 		throw new Error("Fork source branch is required");
 	}
-	const source = new GitClient(
+	const source = git.withRepository(
 		repositoryPath(root, body.namespace, sourceName)
 	);
 	return withNewRepository(root, body, git, (staged) =>
@@ -381,7 +392,7 @@ async function withNewRepository(
 		const stagingDirectory = await mkdtemp(
 			path.join(root, ".artifacts-stage-")
 		);
-		const staged = new GitClient(path.join(stagingDirectory, "repo.git"));
+		const staged = git.withRepository(path.join(stagingDirectory, "repo.git"));
 		try {
 			await initialize(staged);
 			await staged.configure(required(body.generation, "generation"));
@@ -467,7 +478,8 @@ async function runGitHttpBackend(
 	response: ServerResponse,
 	pathInfo: string,
 	query: string,
-	registerAbort?: (abort: () => void) => void
+	registerAbort?: (abort: () => void) => void,
+	signal?: AbortSignal
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const child = spawn("git", gitArgumentsWithoutHooks(["http-backend"]), {
@@ -485,14 +497,22 @@ async function runGitHttpBackend(
 				REMOTE_ADDR: request.socket.remoteAddress ?? "127.0.0.1",
 			},
 			stdio: ["pipe", "pipe", "pipe"],
+			detached: process.platform !== "win32",
+			signal,
 		});
+		const stop = () => stopGitProcess(child);
+		if (signal?.aborted) {
+			stop();
+		} else {
+			signal?.addEventListener("abort", stop, { once: true });
+		}
 		let header = Buffer.alloc(0);
 		let headersSent = false;
 		let settled = false;
 		let timedOut = false;
 		const timeout = setTimeout(() => {
 			timedOut = true;
-			child.kill();
+			stop();
 		}, 300_000);
 		timeout.unref();
 		const stderr: Buffer[] = [];
@@ -502,6 +522,7 @@ async function runGitHttpBackend(
 			}
 			settled = true;
 			clearTimeout(timeout);
+			signal?.removeEventListener("abort", stop);
 			request.off("aborted", abort);
 			response.off("close", abort);
 			if (error) {
@@ -512,15 +533,12 @@ async function runGitHttpBackend(
 		};
 		const abort = () => {
 			if (!response.writableEnded) {
-				child.kill();
+				stop();
 			}
 		};
 		registerAbort?.(() => {
-			child.kill();
+			stop();
 			response.destroy();
-			child.stdout.destroy();
-			child.stderr.destroy();
-			child.stdin.destroy();
 		});
 		const write = (chunk: Buffer) => {
 			if (!response.write(chunk)) {
@@ -547,7 +565,7 @@ async function runGitHttpBackend(
 			const index = crlf >= 0 ? crlf : lf;
 			if (index < 0) {
 				if (header.length > 64 * 1024) {
-					child.kill();
+					stop();
 				}
 				return;
 			}
