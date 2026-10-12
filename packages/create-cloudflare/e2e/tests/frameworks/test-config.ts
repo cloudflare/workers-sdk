@@ -10,6 +10,8 @@ import type { FrameworkTestConfig } from "../../helpers/framework-helpers";
 
 export type NamedFrameworkTestConfig = FrameworkTestConfig & {
 	name: string;
+	/** Override the default single whole-test retry for this case. */
+	retry?: number;
 };
 
 /**
@@ -326,6 +328,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "qwik:pages",
+			// Cold npm installs and builds can exceed the default five-minute budget.
+			timeout: pm === "npm" ? LONG_TIMEOUT : undefined,
 			argv: ["--platform", "pages"],
 			promptHandlers: [
 				{
@@ -349,6 +353,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "qwik:workers",
+			timeout: pm === "npm" ? LONG_TIMEOUT : undefined,
 			argv: ["--platform", "workers"],
 			promptHandlers: [
 				{

@@ -16,6 +16,7 @@ const packages = {
 	tools: "@cloudflare/tools",
 	"fixtures/node-env": "@fixture/node-env",
 	"packages/workers-auth": "@cloudflare/workers-auth",
+	"packages/create-cloudflare": "create-cloudflare",
 };
 
 interface Task {
@@ -70,7 +71,11 @@ describe("Turbo test cache inputs", () => {
 				path.join(root, directory, "package.json"),
 				JSON.stringify({
 					name,
-					scripts: { build: "node --version", "test:ci": "node --version" },
+					scripts: {
+						build: "node --version",
+						"test:ci": "node --version",
+						"test:e2e": "node --version",
+					},
 				})
 			);
 			writeFileSync(path.join(root, directory, "test.ts"), "export {};\n");
@@ -78,6 +83,26 @@ describe("Turbo test cache inputs", () => {
 		writeFileSync(
 			path.join(root, "tools/turbo.json"),
 			readFileSync(path.join(repository, "tools/turbo.json"))
+		);
+		writeFileSync(
+			path.join(root, "packages/create-cloudflare/turbo.json"),
+			readFileSync(
+				path.join(repository, "packages/create-cloudflare/turbo.json")
+			)
+		);
+		mkdirSync(path.join(root, "packages/create-cloudflare/e2e"));
+		writeFileSync(
+			path.join(root, "packages/create-cloudflare/e2e/test.ts"),
+			"export {};\n"
+		);
+		writeFileSync(
+			path.join(root, "packages/create-cloudflare/vitest-e2e.config.mts"),
+			"export {};\n"
+		);
+		mkdirSync(path.join(root, "tools/test"));
+		writeFileSync(
+			path.join(root, "tools/test/vitest-shard.cjs"),
+			"exports.parseTestShard = () => {};\n"
 		);
 		writeFileSync(path.join(root, "vitest.shared.ts"), "export {};\n");
 		mkdirSync(path.join(root, "fixtures/shared/src"), { recursive: true });
@@ -115,20 +140,24 @@ describe("Turbo test cache inputs", () => {
 
 	afterEach(() => clean([root]));
 
-	function plan(nodeVersion = "v22.22.1"): Task[] {
+	function plan(
+		nodeVersion = "v22.22.1",
+		task = "test:ci",
+		env: Record<string, string> = {}
+	): Task[] {
 		const result = spawnSync(
 			process.execPath,
 			[
 				require.resolve("turbo/bin/turbo"),
 				"run",
-				"test:ci",
+				task,
 				"--dry=json",
 				"--no-daemon",
 			],
 			{
 				cwd: root,
 				encoding: "utf8",
-				env: { ...process.env, NODE_VERSION: nodeVersion },
+				env: { ...process.env, NODE_VERSION: nodeVersion, ...env },
 			}
 		);
 		if (result.status !== 0) {
@@ -154,7 +183,7 @@ describe("Turbo test cache inputs", () => {
 			expect(hashes(after, "build")).toEqual(hashes(before, "build"));
 			const testsBefore = hashes(before, "test:ci");
 			const testsAfter = hashes(after, "test:ci");
-			expect(Object.keys(testsAfter)).toHaveLength(3);
+			expect(Object.keys(testsAfter)).toHaveLength(4);
 			for (const [task, hash] of Object.entries(testsAfter)) {
 				expect(hash, task).not.toBe(testsBefore[task]);
 			}
@@ -164,9 +193,42 @@ describe("Turbo test cache inputs", () => {
 	it("hashes the Node.js runtime version", ({ expect }) => {
 		const before = hashes(plan(), "test:ci");
 		const after = hashes(plan("v22.23.1"), "test:ci");
-		expect(Object.keys(after)).toHaveLength(3);
+		expect(Object.keys(after)).toHaveLength(4);
 		for (const [task, hash] of Object.entries(after)) {
 			expect(hash, task).not.toBe(before[task]);
 		}
 	});
+
+	it.for(["E2E_FRAMEWORK_SHARD", "E2E_TEST_RETRIES"])(
+		"hashes C3's %s selection without invalidating builds",
+		(key, { expect }) => {
+			const values =
+				key === "E2E_FRAMEWORK_SHARD" ? ["1/3", "2/3"] : ["0", "1"];
+			const before = plan(undefined, "test:e2e", { [key]: values[0] });
+			const after = plan(undefined, "test:e2e", { [key]: values[1] });
+			expect(hashes(after, "build")).toEqual(hashes(before, "build"));
+			expect(hashes(after, "test:e2e")["create-cloudflare#test:e2e"]).not.toBe(
+				hashes(before, "test:e2e")["create-cloudflare#test:e2e"]
+			);
+		}
+	);
+
+	it.for([
+		"packages/create-cloudflare/vitest-e2e.config.mts",
+		"tools/test/vitest-shard.cjs",
+		"packages/create-cloudflare/e2e/test.ts",
+	])(
+		"invalidates C3 E2E tests when %s changes without invalidating its build",
+		(file, { expect }) => {
+			const before = plan(undefined, "test:e2e");
+			writeFileSync(path.join(root, file), "export const changed = true;\n");
+			const after = plan(undefined, "test:e2e");
+			expect(hashes(after, "build")["create-cloudflare#build"]).toBe(
+				hashes(before, "build")["create-cloudflare#build"]
+			);
+			expect(hashes(after, "test:e2e")["create-cloudflare#test:e2e"]).not.toBe(
+				hashes(before, "test:e2e")["create-cloudflare#test:e2e"]
+			);
+		}
+	);
 });

@@ -36,11 +36,17 @@ export function parseTestRetries(log: string, task: string): RetriedTest[] {
 			file = module[1];
 		}
 		const test = /^\s*([✓×]) (.+?)\s+(\d+)ms \(retry x(\d+)\)\s*$/.exec(line);
+		// The verbose reporter repeats the file and suite path on each test line.
+		const verbose =
+			test && /^(.+?\.(?:test|spec)\.[cm]?[jt]sx?) > (.+)$/.exec(test[2]);
+		if (verbose) {
+			file = verbose[1];
+		}
 		if (test && file) {
 			retries.push({
 				task,
 				file,
-				test: test[2],
+				test: verbose?.[2] ?? test[2],
 				outcome: test[1] === "✓" ? "passed" : "failed",
 				durationMs: Number(test[3]),
 				retries: Number(test[4]),
@@ -62,7 +68,7 @@ export function collectTestRetries(root: string) {
 			tasks: TurboTask[];
 		};
 		for (const task of run.tasks) {
-			if (task.task !== "test:ci" || !task.execution) {
+			if (!["test:ci", "test:e2e"].includes(task.task) || !task.execution) {
 				continue;
 			}
 			// A later invocation can overwrite the same task log. Match that log
@@ -92,16 +98,16 @@ export function collectTestRetries(root: string) {
 			readFileSync(path.join(captureDir, file), "utf8")
 		);
 		for (const line of contents.split(/\r?\n/)) {
-			const match = /^(\S+):test:ci: ?(.*)$/.exec(line);
+			const match = /^(\S+):(test:ci|test:e2e): ?(.*)$/.exec(line);
 			if (!match) {
 				continue;
 			}
-			const taskId = `${match[1]}#test:ci`;
-			if (/^cache (?:hit|miss|bypass),/.test(match[2])) {
+			const taskId = `${match[1]}#${match[2]}`;
+			if (/^cache (?:hit|miss|bypass),/.test(match[3])) {
 				capturedLogs.set(taskId, []);
 			}
 			const lines = capturedLogs.get(taskId) ?? [];
-			lines.push(match[2]);
+			lines.push(match[3]);
 			capturedLogs.set(taskId, lines);
 		}
 	}
@@ -158,7 +164,7 @@ export function formatTestRetries(
 					`| ${escapeCell(test.task)} / ${escapeCell(test.file)} | ${escapeCell(test.test)} | ${test.outcome} | ${test.retries} | ${(test.durationMs / 1000).toFixed(2)}s |`
 			),
 			"",
-			"Total test time includes all attempts and their hooks; it is not the time spent only on retries."
+			"Total test time includes all attempts, their hooks, and any wait for a concurrency slot; it is not the time spent only on retries."
 		);
 	} else {
 		lines.push("No Vitest retry markers found in the scanned tasks.");

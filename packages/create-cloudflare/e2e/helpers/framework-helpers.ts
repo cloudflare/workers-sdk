@@ -137,11 +137,17 @@ export function updateWranglerConfig(
  *
  * This is rather than having a wrangler configuration file in the e2e test's fixture folder,
  * which overwrites any that comes from the framework's template.
+ * Also isolate the inspector port for concurrent local sessions.
  */
 export async function addTestVarsToWranglerToml(projectPath: string) {
 	updateWranglerConfig(projectPath, (config) => {
 		return {
 			...config,
+			// Concurrent preview sessions must not race for the default inspector port.
+			dev: {
+				...(config.dev as Record<string, unknown> | undefined),
+				inspector_port: 0,
+			},
 			vars: {
 				...(config.vars as Record<string, unknown>),
 				TEST: "C3_TEST",
