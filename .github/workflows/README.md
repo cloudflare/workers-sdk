@@ -170,17 +170,14 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Updates to PRs.
   - PRs in the merge queue.
 - Actions
-  - Runs the E2E tests for C3.
-  - C3 E2E tests do not receive Cloudflare API credentials.
-- Framework scheduling
-  - Framework coverage runs when C3 changes, on release PRs, in the merge queue, or with `run-c3-frameworks-tests`. Normal pnpm 10, pnpm 11, and npm coverage each use three framework case shards; experimental pnpm uses two. The four historical framework check names remain as gates that require every shard to succeed, including failure for cancelled or skipped shard jobs.
-  - Shards divide eligible cases within the single framework test file and retain five concurrent cases per runner. New cases are assigned automatically. The shard and retry override are test cache inputs; build caches are shared across shards.
-  - Whole-framework tests retain one retry for transient registry, generator, and runtime startup failures. Cases can override this allowance in `e2e/tests/frameworks/test-config.ts`; `E2E_TEST_RETRIES=0` disables retries for investigations. Recovered attempts remain visible in retry reports. Existing quarantines and unsupported package-manager ranges are retained.
-- Diagnostics and benchmarks
-  - Every C3 job captures streamed output, reports visible Vitest retries, and uploads the report alongside its Turbo summary. E2E artifacts include individual attempt logs and `results.json`, including experimental runs. Cached replays are excluded from retry reports; reported test times include concurrency-slot waits and must not be interpreted as individual framework execution costs.
-  - `ci:no-turbo-cache` disables test and build cache reads/writes as in the test/check workflow. Apply it before pushing the benchmark commit; adding the label alone does not trigger a run. Dependency download caches remain enabled.
-  - Before sharding, the npm framework job took about 20 minutes in [release run 38122973797](https://github.com/cloudflare/workers-sdk/actions/runs/38122973797) and 25 minutes in the [preceding failed release run](https://github.com/cloudflare/workers-sdk/actions/runs/38121668726). Measure fresh shard task and whole-workflow durations after the change to confirm the improvement; extra runners also incur dependency/build setup costs.
-  - See [C3 E2E instructions](../../packages/create-cloudflare/e2e/README.md) for local shard and retry overrides.
+  - Runs C3 E2E tests without Cloudflare API credentials.
+  - Runs framework tests when C3 changes, on release PRs, in the merge queue, or with `run-c3-frameworks-tests`.
+  - Runs framework cases in parallel shards. Required framework checks wait for all shards to succeed.
+  - Framework tests default to one retry.
+  - Uploads test logs, Vitest results, Turbo summaries, and retry reports.
+  - `ci:no-turbo-cache` disables Turbo caching for tests and builds; apply it before pushing.
+
+See [C3 E2E instructions](../../packages/create-cloudflare/e2e/README.md) for local testing and configuration.
 
 ### Rerun Code Owners (rerun-codeowners.yml + rerun-codeowners-privileged.yml)
 
