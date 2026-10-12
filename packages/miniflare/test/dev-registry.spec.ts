@@ -40,6 +40,51 @@ describe.sequential("DevRegistry", () => {
 		}
 	});
 
+	test("leaves no filesystem watcher behind with shared storage", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const resourcePersistencePath = await useTmp();
+		const isolatedResourcePersistencePath = await useTmp();
+
+		const watchers = () =>
+			process.getActiveResourcesInfo().filter((name) => name === "FSEventWrap")
+				.length;
+		const before = watchers();
+
+		// Shared storage makes every instance watch the registry and heartbeat a
+		// storage-candidate entry into it, so a directory scan can still be in
+		// flight when disposal starts.
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			resourcePersistencePath,
+			isolatedResourcePersistencePath,
+			unsafeEnableSharedStorage: true,
+			workers: [
+				{
+					config: {
+						name: "shared-storage-worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("ok"); } };`
+						),
+					},
+				},
+			],
+		});
+		await mf.ready;
+		await mf.dispose();
+
+		// A scan that outlives `close()` re-enters chokidar's `add()`, which resets
+		// its `closed` flag and clears unwatched paths, attaching a native watcher
+		// nothing can reach. Wait past a storage-candidate heartbeat (2s) so that
+		// re-attach has had its chance, then assert once: polling until success
+		// would hide a watcher that never goes away.
+		await new Promise((resolve) => setTimeout(resolve, 3_000));
+
+		expect(watchers()).toBe(before);
+	});
+
 	test("surfaces fresh legacy entries and removes them when stale", async ({
 		expect,
 	}) => {

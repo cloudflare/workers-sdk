@@ -48,6 +48,10 @@ export class DevRegistry {
 	> = new Map();
 	private watcher: FSWatcher | undefined;
 	private watcherReadyPromise: Promise<void> | undefined;
+	// Set by `dispose()`. Chokidar's `close()` is not final — `FSWatcher#add()`
+	// resets `closed` to false — so a watch that is still being installed can
+	// attach a native watcher after disposal and keep the process alive.
+	private disposed = false;
 
 	// UUID to let us tell whether a dev registry entry was added by _this_ Miniflare process
 	public instanceId: string;
@@ -74,6 +78,10 @@ export class DevRegistry {
 		watchQueueConsumers = false,
 		watchStorageCandidates = false
 	): Promise<void> {
+		if (this.disposed) {
+			return;
+		}
+
 		if (
 			(services.size === 0 &&
 				!watchQueueConsumers &&
@@ -106,6 +114,14 @@ export class DevRegistry {
 				// negligible.
 				usePolling: process.platform === "win32",
 				interval: 100,
+				// `close()` does not stop a directory scan that is already in
+				// flight. When it finishes, chokidar re-enters `add()`, which sets
+				// `closed` back to false and clears paths passed to `unwatch()`, so
+				// it attaches a native watcher we can no longer reach and the
+				// process never exits. `ignored` is a user option: `add()` does not
+				// clear it, and it is consulted on every rebuilt match list, so a
+				// predicate reading `disposed` refuses that late re-attach.
+				ignored: () => this.disposed,
 			}).on("all", () => {
 				this.refresh();
 			});
@@ -127,6 +143,7 @@ export class DevRegistry {
 	 * to ensure all workers are unregistered within the exit hook
 	 */
 	public dispose(): Promise<void> | undefined {
+		this.disposed = true;
 		this.unregisterWorkers();
 		if (this.storageCandidateRefresh !== undefined) {
 			clearInterval(this.storageCandidateRefresh);
