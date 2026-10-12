@@ -1417,7 +1417,7 @@ describe("resource provisioning", () => {
 			rmSync(".wrangler/deploy/config.json");
 		});
 
-		it("writes provisioned IDs to the top-level legacy fallback", async ({
+		it("writes provisioned IDs to the root config when no environment section exists", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
