@@ -59,7 +59,7 @@ export async function verifyWorkerMatchesCITag(
 		logger.debug(e);
 		if (isWorkerNotFoundError(e)) {
 			throw new FatalError(
-				`The name in your ${configFileName(configPath)} file (${workerName}) must match the name of your Worker. Please update the name field in your ${configFileName(configPath)} file.`,
+				`The Worker "${workerName}" was not found in your account. Check that the name in your ${configFileName(configPath)} file is correct and that the Worker exists in this account.`,
 				{ telemetryMessage: "ci match tag worker not found" }
 			);
 		} else if (e instanceof APIError) {

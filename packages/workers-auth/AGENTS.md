@@ -146,10 +146,11 @@ Each CLI is a thin **descriptor + entrypoint**:
     CLI's registration, and device authorization is its default interactive
     login flow. cf carries its own scope policy (`src/cf/scopes.ts`): the raw
     client registration is kept separate from the known-grantable catalog used
-    for validation, types, and login defaults. Requestable scopes must both
-    appear in the client registration and resolve in the consent service's Bach
-    catalog; registered exceptions stay explicit negative regressions. Retain
-    separately verified, grandfathered legacy scopes and registration order.
+    for validation and types, and sensitive requestable scopes can be excluded
+    from login defaults. Requestable scopes must both appear in the client
+    registration and resolve in the consent service's Bach catalog; registered
+    exceptions stay explicit negative regressions. Retain separately verified,
+    grandfathered legacy scopes and registration order.
     This is distinct from wrangler's smaller `src/core/scopes.ts` key →
     description map, so cf does not re-export `DefaultScopes`.
 

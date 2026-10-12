@@ -41,6 +41,15 @@ describe.sequential("Local Browser", () => {
 			},
 		});
 		const text = await response.text();
+		if (!response.ok) {
+			// Keep the full error available to the existing targeted retry condition.
+			// Assertion errors truncate long response bodies before matching it.
+			const error = new Error(
+				`Browser request failed (${response.status}): ${text}`
+			);
+			console.error(error.message);
+			throw error;
+		}
 
 		return text;
 	}
@@ -50,20 +59,20 @@ describe.sequential("Local Browser", () => {
 			it("Doesn't run a browser, just testing that the worker is running!", async ({
 				expect,
 			}) => {
-				await expect(
-					fetchText(`http://${ip}:${port}/?lib=${lib}`)
-				).resolves.toEqual("Please add an ?url=https://example.com/ parameter");
+				expect(await fetchText(`http://${ip}:${port}/?lib=${lib}`)).toEqual(
+					"Please add an ?url=https://example.com/ parameter"
+				);
 			});
 
 			it(
 				"Run a browser, and check the page title",
 				BROWSER_RENDERING_RETRY,
 				async ({ expect }) => {
-					await expect(
-						fetchText(
+					expect(
+						await fetchText(
 							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=title`
 						)
-					).resolves.toEqual("Example Domain");
+					).toEqual("Example Domain");
 				}
 			);
 
@@ -71,11 +80,11 @@ describe.sequential("Local Browser", () => {
 				"Run a browser, and check p text content",
 				BROWSER_RENDERING_RETRY,
 				async ({ expect }) => {
-					await expect(
-						fetchText(
+					expect(
+						await fetchText(
 							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=alter`
 						)
-					).resolves.toEqual(
+					).toEqual(
 						`New paragraph text set by ${lib === "playwright" ? "Playwright" : "Puppeteer"}!`
 					);
 				}
@@ -85,11 +94,11 @@ describe.sequential("Local Browser", () => {
 				"Disconnect a browser, and check its session connection status",
 				BROWSER_RENDERING_RETRY,
 				async ({ expect }) => {
-					await expect(
-						fetchText(
+					expect(
+						await fetchText(
 							`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=disconnect`
 						)
-					).resolves.toEqual(`Browser disconnected`);
+					).toEqual(`Browser disconnected`);
 				}
 			);
 		});

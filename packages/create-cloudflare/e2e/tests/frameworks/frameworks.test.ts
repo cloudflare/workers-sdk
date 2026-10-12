@@ -3,6 +3,7 @@ import { cp } from "node:fs/promises";
 import { join } from "node:path";
 import { beforeAll, describe } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
+import { usesCfCli } from "../../../src/cf/config";
 import {
 	frameworkToTestFilter,
 	isExperimental,
@@ -101,9 +102,9 @@ describe
 						const pkgJsonPath = join(project.path, "package.json");
 						expect(pkgJsonPath).toExist();
 
-						// Wrangler should be installed
-						const wranglerPath = join(project.path, "node_modules/wrangler");
-						expect(wranglerPath).toExist();
+						// The project's Cloudflare CLI should be installed
+						const cliPackage = usesCfCli(project.path) ? "cf" : "wrangler";
+						expect(join(project.path, "node_modules", cliPackage)).toExist();
 
 						await addTestVarsToWranglerToml(project.path);
 
