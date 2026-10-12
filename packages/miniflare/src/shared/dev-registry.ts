@@ -48,9 +48,16 @@ export class DevRegistry {
 	> = new Map();
 	private watcher: FSWatcher | undefined;
 	private watcherReadyPromise: Promise<void> | undefined;
-	// Set by `dispose()`. Chokidar's `close()` is not final — `FSWatcher#add()`
-	// resets `closed` to false — so a watch that is still being installed can
-	// attach a native watcher after disposal and keep the process alive.
+	// Chokidar's `close()` is not final — `FSWatcher#add()` resets `closed` to
+	// false — so a scan that is still in flight can attach a native watcher after
+	// we have closed and dropped ours, keeping the process alive. Each watcher
+	// therefore carries its own liveness flag, cleared immediately before the
+	// `close()` that retires it, and consulted by that watcher's `ignored`
+	// predicate. Per-watcher rather than per-registry because a registry outlives
+	// its watchers: `updateRegistryPath()` retires one and opens another.
+	private watcherLiveness: { live: boolean } | undefined;
+	// Set by `dispose()`, which retires the registry itself rather than one
+	// watcher, so `watch()` cannot start a new one afterwards.
 	private disposed = false;
 
 	// UUID to let us tell whether a dev registry entry was added by _this_ Miniflare process
@@ -104,6 +111,7 @@ export class DevRegistry {
 		mkdirSync(this.registryPath, { recursive: true });
 
 		if (!this.watcher) {
+			const liveness = { live: true };
 			const watcher = watch(this.registryPath, {
 				// On Windows, chokidar's default `fs.watch` backend
 				// (`ReadDirectoryChangesW`) frequently drops or delays create
@@ -120,11 +128,14 @@ export class DevRegistry {
 				// it attaches a native watcher we can no longer reach and the
 				// process never exits. `ignored` is a user option: `add()` does not
 				// clear it, and it is consulted on every rebuilt match list, so a
-				// predicate reading `disposed` refuses that late re-attach.
-				ignored: () => this.disposed,
+				// predicate closing over this watcher's liveness refuses that late
+				// re-attach — whether the watcher was retired by `dispose()` or by
+				// `updateRegistryPath()`.
+				ignored: () => !liveness.live,
 			}).on("all", () => {
 				this.refresh();
 			});
+			this.watcherLiveness = liveness;
 			this.watcher = watcher;
 			// Chokidar installs native watchers asynchronously during its initial
 			// scan. Wait until their closers are registered before allowing disposal.
@@ -151,10 +162,29 @@ export class DevRegistry {
 		}
 
 		// Only this step is async and could be awaited
-		return this.watcher?.close().finally(() => {
-			this.watcher = undefined;
-			this.watcherReadyPromise = undefined;
-		});
+		return this.retireWatcher();
+	}
+
+	/**
+	 * Close the current watcher and forget it, refusing any native watcher a scan
+	 * still in flight would otherwise attach once `close()` has returned.
+	 *
+	 * Marking the watcher dead *before* closing it is what makes that refusal
+	 * work: the `ignored` predicate installed in `watch()` reads this flag, and
+	 * chokidar re-reads the predicate when a re-entrant `add()` rebuilds its
+	 * match list.
+	 */
+	private retireWatcher(): Promise<void> | undefined {
+		if (this.watcherLiveness !== undefined) {
+			this.watcherLiveness.live = false;
+			this.watcherLiveness = undefined;
+		}
+
+		const watcher = this.watcher;
+		this.watcher = undefined;
+		this.watcherReadyPromise = undefined;
+
+		return watcher?.close();
 	}
 
 	/**
@@ -228,15 +258,17 @@ export class DevRegistry {
 			// if we put the file straight back.
 			this.unregisterWorkers();
 
-			// Close the existing watcher if it exists.
-			// It will watch the new path if there is any dependent services in a later step
-			await this.watcher?.close();
+			// Retire the existing watcher if it exists. A later step watches the new
+			// path if there are any dependent services. Retiring rather than closing
+			// directly also refuses a native watcher on the *old* path that a scan
+			// still in flight would otherwise attach after `close()` returns, which
+			// would outlive the reference cleared here and survive disposal.
+			await this.retireWatcher();
 			if (this.storageCandidateRefresh !== undefined) {
 				clearInterval(this.storageCandidateRefresh);
 				this.storageCandidateRefresh = undefined;
 			}
 
-			this.watcher = undefined;
 			this.registryPath = registryPath;
 		}
 	}

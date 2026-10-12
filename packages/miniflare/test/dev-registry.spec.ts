@@ -72,6 +72,11 @@ describe.sequential("DevRegistry", () => {
 				},
 			],
 		});
+		// Registered before awaiting startup so a rejected `ready` still tears the
+		// instance down. `disposeWithRetry` treats an already-disposed instance as
+		// success, so the explicit disposal under test below is not disturbed.
+		useDispose(mf);
+
 		await mf.ready;
 		await mf.dispose();
 
@@ -80,6 +85,61 @@ describe.sequential("DevRegistry", () => {
 		// nothing can reach. Wait past a storage-candidate heartbeat (2s) so that
 		// re-attach has had its chance, then assert once: polling until success
 		// would hide a watcher that never goes away.
+		await new Promise((resolve) => setTimeout(resolve, 3_000));
+
+		expect(watchers()).toBe(before);
+	});
+
+	test("leaves no filesystem watcher behind after a registry path change", async ({
+		expect,
+	}) => {
+		const firstRegistryPath = await useTmp();
+		const secondRegistryPath = await useTmp();
+		const resourcePersistencePath = await useTmp();
+		const isolatedResourcePersistencePath = await useTmp();
+
+		const watchers = () =>
+			process.getActiveResourcesInfo().filter((name) => name === "FSEventWrap")
+				.length;
+		const before = watchers();
+
+		const workers = [
+			{
+				config: {
+					name: "shared-storage-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } };`
+					),
+				},
+			},
+		] satisfies MiniflareOptions["workers"];
+
+		const mf = new Miniflare({
+			unsafeDevRegistryPath: firstRegistryPath,
+			resourcePersistencePath,
+			isolatedResourcePersistencePath,
+			unsafeEnableSharedStorage: true,
+			workers,
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		// `updateRegistryPath()` retires the watcher for the old path while the
+		// registry itself stays usable, so a disposal-wide flag would not cover it.
+		// A scan of the old path still in flight could otherwise re-attach a
+		// watcher that outlives the reference being cleared here, and survive the
+		// disposal below.
+		await mf.setOptions({
+			unsafeDevRegistryPath: secondRegistryPath,
+			resourcePersistencePath,
+			isolatedResourcePersistencePath,
+			unsafeEnableSharedStorage: true,
+			workers,
+		});
+		await mf.ready;
+		await mf.dispose();
+
 		await new Promise((resolve) => setTimeout(resolve, 3_000));
 
 		expect(watchers()).toBe(before);
