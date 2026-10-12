@@ -61,8 +61,10 @@ export function gitEnvironment(
 	};
 }
 
-// Git's HTTPS helper can outlive a killed parent and keep its pipes/socket open.
-// Each POSIX invocation owns a process group so disposal can stop the whole tree.
+/**
+ * Stop a Git invocation's process tree so HTTPS helpers cannot keep its pipes open.
+ * POSIX invocations own a process group; Windows requires taskkill /T.
+ */
 export function stopGitProcess(child: ChildProcessWithoutNullStreams): void {
 	if (process.platform === "win32" && child.pid !== undefined) {
 		// Git for Windows can spawn git-remote-https; killing only git leaves it alive.
@@ -269,6 +271,7 @@ export class GitClient {
 		private readonly signal?: AbortSignal
 	) {}
 
+	/** Create a client for another repository with the same cancellation signal. */
 	withRepository(repository: string): GitClient {
 		return new GitClient(repository, this.signal);
 	}
