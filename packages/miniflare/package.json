@@ -116,6 +116,9 @@
 	},
 	"workers-sdk": {
 		"prerelease": true,
-		"npmPrereleaseIdentifier": "alpha"
+		"npmPrerelease": {
+			"tag": "beta",
+			"numbered": false
+		}
 	}
 }
