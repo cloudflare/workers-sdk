@@ -3,6 +3,7 @@
 	"name": "<WORKER_NAME>",
 	"compatibility_date": "<COMPATIBILITY_DATE>",
 	"main": "./workers/app.ts",
+	"upload_source_maps": true,
 	"vars": {
 		"VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare"
 	}
