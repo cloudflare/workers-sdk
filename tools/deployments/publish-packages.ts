@@ -436,7 +436,11 @@ export function getDistTag(version: string): string {
 		return "latest";
 	}
 	const tag = identifiers[0];
-	if (typeof tag !== "string" || !/^[A-Za-z][0-9A-Za-z-]*$/.test(tag)) {
+	if (
+		typeof tag !== "string" ||
+		tag === "latest" ||
+		!/^[A-Za-z][0-9A-Za-z-]*$/.test(tag)
+	) {
 		throw new Error(
 			`Cannot use prerelease identifier ${tag} as an npm dist-tag`
 		);

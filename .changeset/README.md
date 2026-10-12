@@ -127,7 +127,7 @@ To release an npm package as a prerelease while other packages continue receivin
 }
 ```
 
-The tag is appended to versions and used as the npm dist-tag. Numbered prereleases advance a counter such as `2.0.0-beta.0`, `2.0.0-beta.1`, and so on. Unnumbered prereleases advance the package's patch version instead, producing versions such as `5.20260723.0-beta` and `5.20260723.1-beta`.
+The tag is appended to versions and used as the npm dist-tag. The `latest` tag is reserved for stable releases and cannot be used for a prerelease. Numbered prereleases advance a counter such as `2.0.0-beta.0`, `2.0.0-beta.1`, and so on. Unnumbered prereleases advance the package's patch version instead, producing versions such as `5.20260723.0-beta` and `5.20260723.1-beta`.
 
 Add a changeset when starting a prerelease. Miniflare requires a major changeset when beginning a new major prerelease because its minor version remains aligned with workerd. While a prerelease is active, major, minor, and patch changesets all advance it by one release. Updating workerd updates Miniflare's date and resets its patch to `0`.
 

@@ -73,7 +73,7 @@ function setPkg(filePath: string, newPkg: PackageJSON): void {
 const rootPath = resolve(__dirname, "../..");
 const packagesPath = join(rootPath, "packages");
 
-function getNpmPrereleaseConfig(
+export function getNpmPrereleaseConfig(
 	pkg: PackageJSON
 ): NpmPrereleaseConfig | undefined {
 	const config = pkg["workers-sdk"]?.npmPrerelease;
@@ -86,7 +86,9 @@ function getNpmPrereleaseConfig(
 	);
 	const { tag, numbered } = config as Record<string, unknown>;
 	assert(
-		typeof tag === "string" && /^[A-Za-z][0-9A-Za-z-]*$/.test(tag),
+		typeof tag === "string" &&
+			tag !== "latest" &&
+			/^[A-Za-z][0-9A-Za-z-]*$/.test(tag),
 		`Invalid ${pkg.name} npmPrerelease tag`
 	);
 	assert(

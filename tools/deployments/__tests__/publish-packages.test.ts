@@ -464,6 +464,12 @@ describe("getDistTag()", () => {
 			"Cannot use prerelease identifier"
 		);
 	});
+
+	it("should reject latest as a prerelease tag", ({ expect }) => {
+		expect(() => getDistTag("2.0.0-latest.0")).toThrow(
+			"Cannot use prerelease identifier latest as an npm dist-tag"
+		);
+	});
 });
 
 describe("waitForPropagation()", () => {

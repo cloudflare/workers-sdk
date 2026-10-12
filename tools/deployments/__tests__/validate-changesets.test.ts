@@ -288,6 +288,15 @@ describe("validateChangesets()", () => {
 						},
 					},
 				],
+				[
+					"latest-tag",
+					{
+						name: "latest-tag",
+						"workers-sdk": {
+							npmPrerelease: { tag: "latest", numbered: true },
+						},
+					},
+				],
 			]),
 			[]
 		);
@@ -295,6 +304,7 @@ describe("validateChangesets()", () => {
 		expect(errors).toEqual([
 			'Invalid npmPrerelease tag for package "invalid-tag".',
 			'Invalid npmPrerelease numbered value for package "invalid-numbered".',
+			'Invalid npmPrerelease tag for package "latest-tag".',
 		]);
 	});
 });

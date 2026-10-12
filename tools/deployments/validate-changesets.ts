@@ -37,6 +37,7 @@ export function validateChangesets(
 		}
 		if (
 			typeof config.tag !== "string" ||
+			config.tag === "latest" ||
 			!/^[A-Za-z][0-9A-Za-z-]*$/.test(config.tag)
 		) {
 			errors.push(`Invalid npmPrerelease tag for package "${pkg.name}".`);

@@ -1,9 +1,22 @@
 import { it } from "vitest";
 import {
+	getNpmPrereleaseConfig,
 	getNextMiniflarePrereleaseVersion,
 	getNextMiniflareVersion,
 	getNextNpmPrereleaseVersion,
 } from "../changeset-version";
+
+it("rejects latest as an npm prerelease tag", ({ expect }) => {
+	expect(() =>
+		getNpmPrereleaseConfig({
+			name: "package-a",
+			version: "1.0.0",
+			"workers-sdk": {
+				npmPrerelease: { tag: "latest", numbered: true },
+			},
+		})
+	).toThrow("Invalid package-a npmPrerelease tag");
+});
 
 // prettier-ignore
 const miniflareVersionTestCases = [
