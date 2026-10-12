@@ -8,27 +8,17 @@ import {
 } from "miniflare:shared";
 import { z } from "miniflare:zod";
 import { dumpSql } from "./dumpSql";
+import {
+	D1QueriesSchema,
+	D1_SESSION_COMMIT_TOKEN_HTTP_HEADER,
+} from "./schemas";
+import type { D1Meta, D1Query, D1RowsAndColumns, D1Value } from "./schemas";
 import type {
 	MiniflareDurableObjectEnv,
 	RouteHandler,
 	TypedSqlStorage,
 	TypedValue,
 } from "miniflare:shared";
-
-const D1ValueSchema = z.union([
-	z.number(),
-	z.string(),
-	z.null(),
-	z.number().array(),
-]);
-type D1Value = z.infer<typeof D1ValueSchema>;
-
-const D1QuerySchema = z.object({
-	sql: z.string(),
-	params: z.array(D1ValueSchema).nullable().optional(),
-});
-type D1Query = z.infer<typeof D1QuerySchema>;
-const D1QueriesSchema = z.union([D1QuerySchema, z.array(D1QuerySchema)]);
 
 const D1_EXPORT_PRAGMA = `PRAGMA miniflare_d1_export(?,?,?);`;
 type D1ExportPragma = [
@@ -41,35 +31,18 @@ const D1ResultsFormatSchema = z
 
 type D1ResultsFormat = z.infer<typeof D1ResultsFormatSchema>;
 
-interface D1RowsAndColumns {
-	columns: string[];
-	rows: D1Value[][];
-}
-
 type D1Results = D1RowsAndColumns | Record<string, D1Value>[] | undefined;
 
 const served_by = "miniflare.db";
 interface D1SuccessResponse {
 	success: true;
 	results: D1Results;
-	meta: {
-		served_by: string;
-		duration: number;
-		changes: number;
-		last_row_id: number;
-		changed_db: boolean;
-		size_after: number;
-		rows_read: number;
-		rows_written: number;
-	};
+	meta: D1Meta;
 }
 interface D1FailureResponse {
 	success: false;
 	error: string;
 }
-
-// See https://github.com/cloudflare/workerd/blob/bcaf44290296c71f396175c30b43cff6b570231f/src/cloudflare/internal/d1-api.ts#L68-L72
-const D1_SESSION_COMMIT_TOKEN_HTTP_HEADER = "x-cf-d1-session-commit-token";
 
 export class D1Error extends HttpError {
 	constructor(readonly cause: unknown) {
