@@ -10,6 +10,7 @@ import {
 import path from "node:path";
 import { parentPort, workerData } from "node:worker_threads";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
+import { z } from "zod";
 import {
 	assertGitAvailable,
 	GitClient,
@@ -65,36 +66,59 @@ export interface GitSidecar {
 	close(): Promise<void>;
 }
 
-interface AdminRequest {
-	action:
-		| "create"
-		| "delete"
-		| "fork"
-		| "import"
-		| "refs"
-		| "readBlob"
-		| "readTree"
-		| "readCommit"
-		| "file"
-		| "log"
-		| "abortPush";
-	namespace: string;
-	name: string;
-	defaultBranch?: string;
-	defaultBranchOnly?: boolean;
-	sourceName?: string;
-	sourceBranch?: string;
-	sourceUrl?: string;
-	branch?: string;
-	depth?: number;
-	hash?: string;
-	ref?: string;
-	path?: string;
-	limit?: number;
-	offset?: number;
-	generation?: string;
-	requestId?: string;
-}
+const adminBase = z.object({
+	namespace: z.string().regex(componentPattern),
+	name: z.string().regex(componentPattern),
+});
+const generatedRepo = adminBase.extend({ generation: z.string().min(1) });
+const AdminRequestSchema = z.discriminatedUnion("action", [
+	generatedRepo.extend({
+		action: z.literal("create"),
+		defaultBranch: z.string().optional(),
+	}),
+	generatedRepo.extend({ action: z.literal("delete") }),
+	generatedRepo.extend({
+		action: z.literal("fork"),
+		sourceName: z.string().regex(componentPattern),
+		sourceBranch: z.string().min(1),
+		defaultBranchOnly: z.boolean().optional(),
+	}),
+	generatedRepo.extend({
+		action: z.literal("import"),
+		sourceUrl: z.string().min(1),
+		branch: z.string().optional(),
+		depth: z.number().optional(),
+	}),
+	adminBase.extend({ action: z.literal("refs") }),
+	adminBase.extend({ action: z.literal("readBlob"), hash: z.string().min(1) }),
+	adminBase.extend({ action: z.literal("readTree"), hash: z.string().min(1) }),
+	adminBase.extend({
+		action: z.literal("readCommit"),
+		hash: z.string().min(1),
+	}),
+	adminBase.extend({
+		action: z.literal("file"),
+		ref: z.string().min(1),
+		path: z.string().min(1),
+	}),
+	adminBase.extend({
+		action: z.literal("log"),
+		ref: z.string().optional(),
+		limit: z.number().optional(),
+		offset: z.number().optional(),
+	}),
+	generatedRepo.extend({
+		action: z.literal("abortPush"),
+		requestId: z.uuid(),
+	}),
+]);
+
+type AdminRequest = z.infer<typeof AdminRequestSchema>;
+type GitAction = Exclude<AdminRequest, { action: "abortPush" }>;
+type CreateRequest = Extract<AdminRequest, { action: "create" }>;
+type ForkRequest = Extract<AdminRequest, { action: "fork" }>;
+type ImportRequest = Extract<AdminRequest, { action: "import" }>;
+type NewRepositoryRequest = CreateRequest | ForkRequest | ImportRequest;
 
 function createGitSecret(): string {
 	return randomBytes(32).toString("hex");
@@ -253,18 +277,13 @@ async function handleAdmin(
 		response.writeHead(405).end("Method not allowed");
 		return;
 	}
-	const body = JSON.parse(
-		decoder.decode(await readRequest(request))
-	) as AdminRequest;
-	validateComponent(body.namespace, "namespace");
-	validateComponent(body.name, "repository");
+	const body = AdminRequestSchema.parse(
+		JSON.parse(decoder.decode(await readRequest(request)))
+	);
 	const repository = repositoryPath(root, body.namespace, body.name);
 	if (body.action === "abortPush") {
-		const active = inFlight.get(required(body.requestId, "requestId"));
-		if (
-			active?.path === repository &&
-			active.generation === required(body.generation, "generation")
-		) {
+		const active = inFlight.get(body.requestId);
+		if (active?.path === repository && active.generation === body.generation) {
 			active.abort();
 		}
 		response.writeHead(200, { "Content-Type": "application/json" });
@@ -272,8 +291,7 @@ async function handleAdmin(
 		return;
 	}
 	const lockPaths = [repository];
-	if (body.action === "fork" && body.sourceName) {
-		validateComponent(body.sourceName, "repository");
+	if (body.action === "fork") {
 		lockPaths.push(repositoryPath(root, body.namespace, body.sourceName));
 	}
 	await withRepositoryLocks(locks, lockPaths, async () => {
@@ -289,7 +307,7 @@ async function handleAdmin(
 
 async function handleAction(
 	root: string,
-	body: AdminRequest,
+	body: GitAction,
 	git: GitClient
 ): Promise<unknown> {
 	switch (body.action) {
@@ -297,9 +315,7 @@ async function handleAction(
 			return handleCreate(root, body, git);
 		case "delete":
 			// A retried tombstone must never delete a replacement repository.
-			if (
-				(await git.generation()) === required(body.generation, "generation")
-			) {
+			if ((await git.generation()) === body.generation) {
 				await retireRepository(git.repository);
 			}
 			return true;
@@ -310,16 +326,13 @@ async function handleAction(
 		case "refs":
 			return git.state();
 		case "readBlob":
-			return git.readBlob(required(body.hash, "hash"));
+			return git.readBlob(body.hash);
 		case "readTree":
-			return git.readTree(required(body.hash, "hash"));
+			return git.readTree(body.hash);
 		case "readCommit":
-			return git.readCommit(required(body.hash, "hash"));
+			return git.readCommit(body.hash);
 		case "file":
-			return git.readFile(
-				required(body.ref, "ref"),
-				required(body.path, "path")
-			);
+			return git.readFile(body.ref, body.path);
 		case "log":
 			return git.log(body.ref, body.limit, body.offset);
 	}
@@ -327,7 +340,7 @@ async function handleAction(
 
 function handleCreate(
 	root: string,
-	body: AdminRequest,
+	body: CreateRequest,
 	git: GitClient
 ): Promise<RepositoryState> {
 	return withNewRepository(root, body, git, (staged) =>
@@ -337,16 +350,10 @@ function handleCreate(
 
 function handleFork(
 	root: string,
-	body: AdminRequest,
+	body: ForkRequest,
 	git: GitClient
 ): Promise<RepositoryState> {
 	const { sourceName, sourceBranch } = body;
-	if (!sourceName) {
-		throw new Error("Fork source is required");
-	}
-	if (!sourceBranch) {
-		throw new Error("Fork source branch is required");
-	}
 	const source = git.withRepository(
 		repositoryPath(root, body.namespace, sourceName)
 	);
@@ -357,13 +364,10 @@ function handleFork(
 
 function handleImport(
 	root: string,
-	body: AdminRequest,
+	body: ImportRequest,
 	git: GitClient
 ): Promise<RepositoryState> {
 	const { sourceUrl } = body;
-	if (!sourceUrl) {
-		throw new Error("Import source is required");
-	}
 	return withNewRepository(root, body, git, (staged) =>
 		staged.importFrom(sourceUrl, body.branch, body.depth)
 	);
@@ -371,7 +375,7 @@ function handleImport(
 
 async function withNewRepository(
 	root: string,
-	body: AdminRequest,
+	body: NewRepositoryRequest,
 	git: GitClient,
 	initialize: (staged: GitClient) => Promise<void>
 ): Promise<RepositoryState> {
@@ -395,7 +399,7 @@ async function withNewRepository(
 		const staged = git.withRepository(path.join(stagingDirectory, "repo.git"));
 		try {
 			await initialize(staged);
-			await staged.configure(required(body.generation, "generation"));
+			await staged.configure(body.generation);
 			const state = await staged.state();
 			if (await exists(git.repository)) {
 				throw new Error(`Repository "${body.name}" already exists on disk`);
@@ -440,13 +444,6 @@ async function cleanupInterruptedRepositories(root: string): Promise<void> {
 			await removeDir(path.join(root, entry.name));
 		}
 	}
-}
-
-function required(value: string | undefined, name: string): string {
-	if (!value) {
-		throw new Error(`${name} is required`);
-	}
-	return value;
 }
 
 function parseGitBackendHeaders(headerBytes: Buffer): {
