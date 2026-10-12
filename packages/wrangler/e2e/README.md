@@ -66,6 +66,13 @@ pnpm test:e2e:wrangler
 > You can find your subdomain in the Cloudflare dashboard under **Workers & Pages**.
 > It defaults to `devprod-testing7928.workers.dev` (the CI account).
 
+The Cloudflare Access tests need a self-hosted Access application covering a
+wildcard of Worker names on that subdomain (for example
+`my-access-test-*.<your-subdomain>.workers.dev`) with an interactive-login
+policy. Set `E2E_ACCESS_WORKER_PREFIX=my-access-test-` to run them; otherwise
+they are skipped when `E2E_ACCOUNT_WORKERS_DEV_DOMAIN` is overridden. The CI
+account uses `wrangler-wildcard-test-`.
+
 ### Focusing on a single e2e test file
 
 If you want to run a subset of tests (e.g. just one) while retaining the turborepo cache for the builds of the dependencies, you can provide the list of test files via the `WRANGLER_E2E_TEST_FILE` environment variable.

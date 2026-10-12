@@ -1,11 +1,21 @@
+import {
+	APIError,
+	resolveNamedTunnel as resolveNamedTunnelWithCredentials,
+} from "@cloudflare/workers-utils";
 import { describe, it, vi } from "vitest";
-import { createCloudflareClient } from "../../cfetch/internal";
 import { resolveNamedTunnel, resolveTunnelId } from "../../tunnel/client";
+import * as user from "../../user";
+import { mockApiToken } from "../helpers/mock-account-id";
 import type Cloudflare from "cloudflare";
 
-vi.mock("../../cfetch/internal");
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/workers-utils")>()),
+	resolveNamedTunnel: vi.fn(),
+}));
 
 describe("resolveTunnelId", () => {
+	mockApiToken();
+
 	it("returns UUID input without calling API", async ({ expect }) => {
 		const sdk = {
 			zeroTrust: {
@@ -51,50 +61,10 @@ describe("resolveTunnelId", () => {
 	it("resolves a named tunnel target from matching ingress rules", async ({
 		expect,
 	}) => {
-		vi.mocked(createCloudflareClient).mockReturnValue({
-			zeroTrust: {
-				tunnels: {
-					cloudflared: {
-						// @ts-expect-error -- partial mock
-						list({ name }: { name?: string }) {
-							expect(name).toBe("my-tunnel");
-							return [
-								{
-									id: "11111111-1111-4111-8111-111111111111",
-									name: "my-tunnel",
-								},
-							];
-						},
-						configurations: {
-							// @ts-expect-error -- partial mock
-							get(tunnelId: string) {
-								expect(tunnelId).toBe("11111111-1111-4111-8111-111111111111");
-								return Promise.resolve({
-									config: {
-										ingress: [
-											{
-												hostname: "dev.example.com",
-												service: "http://localhost:8787",
-											},
-											{
-												hostname: "other.example.com",
-												service: "http://localhost:3000",
-											},
-										],
-									},
-								});
-							},
-						},
-						token: {
-							// @ts-expect-error -- partial mock
-							get(tunnelId: string) {
-								expect(tunnelId).toBe("11111111-1111-4111-8111-111111111111");
-								return Promise.resolve("TOKEN");
-							},
-						},
-					},
-				},
-			},
+		const requireAuthSpy = vi.spyOn(user, "requireAuth");
+		vi.mocked(resolveNamedTunnelWithCredentials).mockResolvedValue({
+			hostnames: ["dev.example.com"],
+			token: "TOKEN",
 		});
 
 		await expect(
@@ -106,116 +76,43 @@ describe("resolveTunnelId", () => {
 			hostnames: ["dev.example.com"],
 			token: "TOKEN",
 		});
+		expect(requireAuthSpy).toHaveBeenCalledWith({
+			account_id: "account",
+			compliance_region: undefined,
+		});
+		expect(resolveNamedTunnelWithCredentials).toHaveBeenCalledWith(
+			"my-tunnel",
+			expect.any(URL),
+			{
+				accountId: "account",
+				apiToken: { apiToken: "some-api-token" },
+				complianceRegion: undefined,
+				logger: expect.any(Object),
+				userAgent: expect.stringMatching(/^wrangler\//),
+			}
+		);
 	});
 
-	it("throws when a named tunnel has no ingress for the local port", async ({
+	it("shows API token guidance for named tunnel permission errors", async ({
 		expect,
 	}) => {
-		vi.mocked(createCloudflareClient).mockReturnValue({
-			zeroTrust: {
-				tunnels: {
-					cloudflared: {
-						// @ts-expect-error -- partial mock
-						list() {
-							return [
-								{
-									id: "test-tunnel-id",
-									name: "my-tunnel",
-								},
-							];
-						},
-						configurations: {
-							// @ts-expect-error -- partial mock
-							get() {
-								return Promise.resolve({
-									config: {
-										ingress: [
-											{
-												hostname: "dev.example.com",
-												service: "http://localhost:3000",
-											},
-											{
-												hostname: "admin.example.com",
-												service: "http://localhost:4000",
-											},
-										],
-									},
-								});
-							},
-						},
-						// @ts-expect-error -- partial mock
-						token: {
-							get() {
-								throw new Error("should not be called");
-							},
-						},
-					},
-				},
-			},
-		});
+		for (const status of [401, 403]) {
+			vi.mocked(resolveNamedTunnelWithCredentials).mockRejectedValueOnce(
+				new APIError({
+					text: "A request to the Cloudflare API failed.",
+					telemetryMessage: "test tunnel api error",
+					status,
+				})
+			);
 
-		await expect(
-			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
-				accountId: "test-account-id",
-				complianceRegion: undefined,
-			})
-		).rejects.toThrowErrorMatchingInlineSnapshot(`
-			[Error: Tunnel "my-tunnel" has no route for http://localhost:8787/
-
-			Resolved routes:
-			  - dev.example.com -> http://localhost:3000
-			  - admin.example.com -> http://localhost:4000
-
-			Update your local server settings or the tunnel routes in the Cloudflare dashboard:
-			https://dash.cloudflare.com/test-account-id/tunnels/test-tunnel-id
-			]
-		`);
-	});
-
-	it("shows compact setup guidance when a named tunnel has no ingress rules", async ({
-		expect,
-	}) => {
-		vi.mocked(createCloudflareClient).mockReturnValue({
-			zeroTrust: {
-				tunnels: {
-					cloudflared: {
-						// @ts-expect-error -- partial mock
-						list() {
-							return [
-								{
-									id: "test-tunnel-id",
-									name: "my-tunnel",
-								},
-							];
-						},
-						configurations: {
-							// @ts-expect-error -- partial mock
-							get() {
-								return Promise.resolve({ config: { ingress: [] } });
-							},
-						},
-						// @ts-expect-error -- partial mock
-						token: {
-							get() {
-								throw new Error("should not be called");
-							},
-						},
-					},
-				},
-			},
-		});
-
-		await expect(
-			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
-				accountId: "test-account-id",
-				complianceRegion: undefined,
-			})
-		).rejects.toThrowErrorMatchingInlineSnapshot(`
-			[Error: Tunnel "my-tunnel" has no routes configured.
-
-			Add a route for http://localhost:8787/ in the Cloudflare dashboard:
-			https://dash.cloudflare.com/test-account-id/tunnels/test-tunnel-id
-			]
-		`);
+			await expect(
+				resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+					accountId: "account",
+					complianceRegion: undefined,
+				})
+			).rejects.toThrow(
+				"Cloudflare Tunnel commands require API token authentication with tunnel permissions."
+			);
+		}
 	});
 });

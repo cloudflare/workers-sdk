@@ -260,11 +260,15 @@ describe("middleware", () => {
 				addEventListener("scheduled", (event) => {
 					throw new Error("Error in scheduled worker");
 				});
+				addEventListener("scheduled", (event) => {
+					throw new Error("Unexpected second scheduled listener");
+				});
 				`;
 
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await startWorker({
+					compatibilityDate: "2026-09-15",
 					entrypoint: "index.js",
 					dev: {
 						server: { hostname: "127.0.0.1", port: 0 },

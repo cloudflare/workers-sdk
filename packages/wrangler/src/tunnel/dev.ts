@@ -40,7 +40,7 @@ export class TunnelManager {
 
 		logger.warn(
 			(isQuickTunnel
-				? chalk.dim("Once connected, this tunnel will be ") +
+				? chalk.dim("Once connected, this tunnel may be ") +
 					"publicly accessible"
 				: chalk.dim(
 						"Once connected, this tunnel may be reachable from the Internet"
@@ -70,6 +70,7 @@ export class TunnelManager {
 		const nextTunnel = startTunnel({
 			origin,
 			token: namedTunnel?.token,
+			allowedMail: tunnelConfig?.allowedMail,
 			extendHint: "Press [a] to extend by 1 hour.",
 			logger,
 		});

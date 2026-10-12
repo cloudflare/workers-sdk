@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { partitionExports } from "@cloudflare/workers-utils";
 import * as wrangler from "wrangler";
 import { debuglog } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
@@ -75,7 +76,10 @@ function getWorkerNameToWorkflowEntrypointExportsMap(
 	workers: Worker[]
 ): Map<string, Set<string>> {
 	const workerNameToWorkflowEntrypointExportsMap = new Map(
-		workers.map((worker) => [worker.config.name, new Set<string>()])
+		workers.map((worker) => [
+			worker.config.name,
+			new Set(Object.keys(partitionExports(worker.config.exports).workflow)),
+		])
 	);
 
 	for (const worker of workers) {

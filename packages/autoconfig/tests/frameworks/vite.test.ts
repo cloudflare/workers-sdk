@@ -10,6 +10,7 @@ import { createMockContext } from "../helpers/mock-context";
 const context = createMockContext();
 
 const BASE_OPTIONS = {
+	target: "cf" as const,
 	projectPath: ".",
 	workerName: "my-vite-app",
 	outputDir: "dist",
@@ -26,10 +27,31 @@ describe("Vite framework", () => {
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
 	});
 
+	it("accepts Cloudflare modes", ({ expect }) => {
+		const framework = new Vite({ id: "vite", name: "Vite" });
+
+		expect(framework.supportsMode).toBe(true);
+	});
+
 	describe("isConfigured()", () => {
 		it("returns false when no vite config file exists", ({ expect }) => {
 			const framework = new Vite({ id: "vite", name: "Vite" });
 			expect(framework.isConfigured(".")).toBe(false);
+		});
+
+		it("only treats the Cloudflare plugin as configured in legacy Wrangler mode", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`import { cloudflare } from "@cloudflare/vite-plugin";
+				 import { defineConfig } from "vite";
+				 export default defineConfig({ plugins: [cloudflare()] });`
+			);
+			const framework = new Vite({ id: "vite", name: "Vite" });
+
+			expect(framework.isConfigured(".")).toBe(false);
+			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
 		});
 	});
 
@@ -39,6 +61,11 @@ describe("Vite framework", () => {
 		}) => {
 			const framework = new Vite({ id: "vite", name: "Vite" });
 			const result = await framework.configure(BASE_OPTIONS);
+			expect(cliPackages.installPackages).toHaveBeenCalledWith(
+				"npm",
+				["@cloudflare/vite-plugin@beta"],
+				expect.anything()
+			);
 
 			expect(existsSync("vite.config.js")).toBe(true);
 			const content = readFileSync("vite.config.js", "utf-8");
@@ -47,11 +74,23 @@ describe("Vite framework", () => {
 			);
 			expect(content).toContain("plugins: [cloudflare()]");
 
-			expect(result.wranglerConfig).toEqual({
+			expect(result.workerConfig).toEqual({
 				assets: {
-					not_found_handling: "single-page-application",
+					notFoundHandling: "single-page-application",
 				},
 			});
+			expect(result.buildTool).toBe("vite");
+		});
+
+		it("installs the stable plugin for Wrangler", async ({ expect }) => {
+			const framework = new Vite({ id: "vite", name: "Vite" });
+			await framework.configure({ ...BASE_OPTIONS, target: "wrangler" });
+
+			expect(cliPackages.installPackages).toHaveBeenCalledWith(
+				"npm",
+				["@cloudflare/vite-plugin"],
+				expect.anything()
+			);
 		});
 
 		it("uses .ts extension when the project has a tsconfig.json", async ({
@@ -101,9 +140,9 @@ export default defineConfig({
 
 			expect(existsSync("vite.config.ts")).toBe(false);
 			expect(existsSync("vite.config.js")).toBe(false);
-			expect(result.wranglerConfig).toEqual({
+			expect(result.workerConfig).toEqual({
 				assets: {
-					not_found_handling: "single-page-application",
+					notFoundHandling: "single-page-application",
 				},
 			});
 		});

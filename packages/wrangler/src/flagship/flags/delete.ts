@@ -1,8 +1,8 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { runBulk } from "../bulk";
-import { deleteFlag } from "../client";
 import { jsonFriendlyError } from "../shared";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 
 export const flagshipFlagsDeleteCommand = createCommand({
 	metadata: {
@@ -36,6 +36,7 @@ export const flagshipFlagsDeleteCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config, confirm }) {
@@ -56,9 +57,11 @@ export const flagshipFlagsDeleteCommand = createCommand({
 				return;
 			}
 		}
-		await runBulk(keys, (key) => deleteFlag(config, appId, key), {
-			json: args.json,
-			onSuccess: (_flag, key) => logger.log(`✅ Deleted flag '${key}'`),
-		});
+		await withFlagStore(args, config, appId, (store) =>
+			runBulk(keys, (key) => store.deleteFlag(key), {
+				json: args.json,
+				onSuccess: (_flag, key) => logger.log(`✅ Deleted flag '${key}'`),
+			})
+		);
 	},
 });

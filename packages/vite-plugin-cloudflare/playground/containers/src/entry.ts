@@ -1,5 +1,6 @@
 interface Env {
 	DOCKERFILE_APP: Fetcher;
+	NAMED_IMAGES_APP: Fetcher;
 	REGISTRY_APP: Fetcher;
 }
 
@@ -19,6 +20,12 @@ export default {
 			service = env.DOCKERFILE_APP;
 			prefix = "/dockerfile";
 		} else if (
+			url.pathname === "/named-images" ||
+			url.pathname.startsWith("/named-images/")
+		) {
+			service = env.NAMED_IMAGES_APP;
+			prefix = "/named-images";
+		} else if (
 			url.pathname === "/registry" ||
 			url.pathname.startsWith("/registry/")
 		) {
@@ -28,7 +35,7 @@ export default {
 
 		if (!service) {
 			return new Response(
-				"Not found. Use `/dockerfile/...` or `/registry/...`.",
+				"Not found. Use `/dockerfile/...`, `/named-images/...`, or `/registry/...`.",
 				{ status: 404 }
 			);
 		}

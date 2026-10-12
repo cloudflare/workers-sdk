@@ -423,7 +423,6 @@ test("operations persist cached data", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -468,7 +467,6 @@ test("operations are no-ops when caching disabled", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},

@@ -1,7 +1,7 @@
 ---
 description: Cloudflare Workers SDK engineer. Triages issues, reviews PRs, and implements fixes.
 mode: primary
-model: anthropic/claude-opus-4-8
+model: cloudflare-ai-gateway/openai/gpt-5.6-terra
 temperature: 0.2
 ---
 
@@ -148,7 +148,7 @@ Use triage mode when you are asked to investigate rather than change code.
 - Add regression tests for bug fixes.
 - Run `pnpm test:ci --filter <package>` for the touched area.
 - Do not leave `.only()` in tests.
-- Use `vitest-pool-workers` when you need actual Workers runtime behavior.
+- Use `vitest-plugin` when you need actual Workers runtime behavior.
 
 **Git:**
 

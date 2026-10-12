@@ -9,7 +9,7 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
-describe("r2 data catalog force flag", () => {
+describe("Basin Catalog force flag", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 	mockAccountId();
@@ -65,7 +65,7 @@ describe("r2 data catalog force flag", () => {
 
 			setIsTTY(true);
 			mockConfirm({
-				text: "Data catalog is enabled for this bucket. Proceeding may leave the data catalog in an invalid state. Continue?",
+				text: "Basin Catalog is enabled for this bucket. Proceeding may leave Basin Catalog in an invalid state. Continue?",
 				result: true,
 			});
 
@@ -82,7 +82,7 @@ describe("r2 data catalog force flag", () => {
 									{
 										code: 10081,
 										message:
-											"Data Catalog is enabled for this bucket. This operation could leave your bucket's Data Catalog in an invalid state.",
+											"Basin Catalog is enabled for this bucket. This operation could leave your bucket's Basin Catalog in an invalid state.",
 									},
 								]),
 								{ status: 409 }
@@ -107,7 +107,7 @@ describe("r2 data catalog force flag", () => {
 		}) => {
 			setIsTTY(true);
 			mockConfirm({
-				text: "Data catalog is enabled for this bucket. Proceeding may leave the data catalog in an invalid state. Continue?",
+				text: "Basin Catalog is enabled for this bucket. Proceeding may leave Basin Catalog in an invalid state. Continue?",
 				result: false,
 			});
 
@@ -120,7 +120,7 @@ describe("r2 data catalog force flag", () => {
 								{
 									code: 10081,
 									message:
-										"Data Catalog is enabled for this bucket. This operation could leave your bucket's Data Catalog in an invalid state.",
+										"Basin Catalog is enabled for this bucket. This operation could leave your bucket's Basin Catalog in an invalid state.",
 								},
 							]),
 							{ status: 409 }
@@ -177,7 +177,7 @@ describe("r2 data catalog force flag", () => {
 
 			setIsTTY(true);
 			mockConfirm({
-				text: "Data catalog is enabled for this bucket. Proceeding may leave the data catalog in an invalid state. Continue?",
+				text: "Basin Catalog is enabled for this bucket. Proceeding may leave Basin Catalog in an invalid state. Continue?",
 				result: true,
 			});
 
@@ -194,7 +194,7 @@ describe("r2 data catalog force flag", () => {
 									{
 										code: 10081,
 										message:
-											"Data Catalog is enabled for this bucket. This operation could leave your bucket's Data Catalog in an invalid state.",
+											"Basin Catalog is enabled for this bucket. This operation could leave your bucket's Basin Catalog in an invalid state.",
 									},
 								]),
 								{ status: 409 }
@@ -216,7 +216,7 @@ describe("r2 data catalog force flag", () => {
 		}) => {
 			setIsTTY(true);
 			mockConfirm({
-				text: "Data catalog is enabled for this bucket. Proceeding may leave the data catalog in an invalid state. Continue?",
+				text: "Basin Catalog is enabled for this bucket. Proceeding may leave Basin Catalog in an invalid state. Continue?",
 				result: false,
 			});
 
@@ -229,7 +229,7 @@ describe("r2 data catalog force flag", () => {
 								{
 									code: 10081,
 									message:
-										"Data Catalog is enabled for this bucket. This operation could leave your bucket's Data Catalog in an invalid state.",
+										"Basin Catalog is enabled for this bucket. This operation could leave your bucket's Basin Catalog in an invalid state.",
 								},
 							]),
 							{ status: 409 }
@@ -253,7 +253,7 @@ describe("r2 data catalog force flag", () => {
 
 			setIsTTY(true);
 			mockConfirm({
-				text: "Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?",
+				text: "Bulk upload may overwrite existing objects. If this bucket has Basin Catalog enabled, this operation could leave the catalog in an invalid state. Continue?",
 				result: true,
 			});
 
@@ -294,7 +294,7 @@ describe("r2 data catalog force flag", () => {
 
 			setIsTTY(true);
 			mockConfirm({
-				text: "Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?",
+				text: "Bulk upload may overwrite existing objects. If this bucket has Basin Catalog enabled, this operation could leave the catalog in an invalid state. Continue?",
 				result: false,
 			});
 
@@ -412,7 +412,7 @@ describe("r2 data catalog force flag", () => {
 
 			setIsTTY(true);
 			mockConfirm({
-				text: "Data catalog is enabled for this bucket. Proceeding may leave the data catalog in an invalid state. Continue?",
+				text: "Basin Catalog is enabled for this bucket. Proceeding may leave Basin Catalog in an invalid state. Continue?",
 				result: true,
 			});
 
@@ -432,7 +432,7 @@ describe("r2 data catalog force flag", () => {
 									{
 										code: 10081,
 										message:
-											"Data Catalog is enabled for this bucket. This operation could leave your bucket's Data Catalog in an invalid state.",
+											"Basin Catalog is enabled for this bucket. This operation could leave your bucket's Basin Catalog in an invalid state.",
 									},
 								]),
 								{ status: 409 }
@@ -456,7 +456,7 @@ describe("r2 data catalog force flag", () => {
 		}) => {
 			setIsTTY(true);
 			mockConfirm({
-				text: "Data catalog is enabled for this bucket. Proceeding may leave the data catalog in an invalid state. Continue?",
+				text: "Basin Catalog is enabled for this bucket. Proceeding may leave Basin Catalog in an invalid state. Continue?",
 				result: false,
 			});
 
@@ -474,7 +474,7 @@ describe("r2 data catalog force flag", () => {
 								{
 									code: 10081,
 									message:
-										"Data Catalog is enabled for this bucket. This operation could leave your bucket's Data Catalog in an invalid state.",
+										"Basin Catalog is enabled for this bucket. This operation could leave your bucket's Basin Catalog in an invalid state.",
 								},
 							]),
 							{ status: 409 }
@@ -556,9 +556,9 @@ describe("r2 data catalog force flag", () => {
 				text: "Are you sure you want to overwrite all existing lifecycle rules for bucket 'my-bucket'?",
 				result: true,
 			});
-			// Second confirm: the data catalog conflict prompt
+			// Second confirm: Basin Catalog conflict prompt
 			mockConfirm({
-				text: "Data catalog is enabled for this bucket. Proceeding may leave the data catalog in an invalid state. Continue?",
+				text: "Basin Catalog is enabled for this bucket. Proceeding may leave Basin Catalog in an invalid state. Continue?",
 				result: true,
 			});
 
@@ -591,7 +591,7 @@ describe("r2 data catalog force flag", () => {
 									{
 										code: 10081,
 										message:
-											"Data Catalog is enabled for this bucket. This operation could leave your bucket's Data Catalog in an invalid state.",
+											"Basin Catalog is enabled for this bucket. This operation could leave your bucket's Basin Catalog in an invalid state.",
 									},
 								]),
 								{ status: 409 }
@@ -621,9 +621,9 @@ describe("r2 data catalog force flag", () => {
 				text: "Are you sure you want to overwrite all existing lifecycle rules for bucket 'my-bucket'?",
 				result: true,
 			});
-			// Second confirm: the data catalog conflict prompt
+			// Second confirm: Basin Catalog conflict prompt
 			mockConfirm({
-				text: "Data catalog is enabled for this bucket. Proceeding may leave the data catalog in an invalid state. Continue?",
+				text: "Basin Catalog is enabled for this bucket. Proceeding may leave Basin Catalog in an invalid state. Continue?",
 				result: false,
 			});
 
@@ -652,7 +652,7 @@ describe("r2 data catalog force flag", () => {
 								{
 									code: 10081,
 									message:
-										"Data Catalog is enabled for this bucket. This operation could leave your bucket's Data Catalog in an invalid state.",
+										"Basin Catalog is enabled for this bucket. This operation could leave your bucket's Basin Catalog in an invalid state.",
 								},
 							]),
 							{ status: 409 }

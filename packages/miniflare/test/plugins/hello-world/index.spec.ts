@@ -7,7 +7,6 @@ test("hello-world", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-01-01",
 					env: {

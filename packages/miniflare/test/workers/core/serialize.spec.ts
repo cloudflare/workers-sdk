@@ -66,3 +66,37 @@ test("serialize Headers object consisting of multiple Set-Cookie headers", ({
 		"cookie2=value_for_cookie_2; Path=/; HttpOnly;",
 	]);
 });
+
+test("serialize Headers instance from a different `Headers` implementation", ({
+	expect,
+}) => {
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/6047.
+	// Node's global `Headers` is backed by an internal copy of `undici` that
+	// isn't `instanceof` the `undici` package Miniflare imports, so previously
+	// failed to serialise with `DevalueError: Cannot stringify arbitrary
+	// non-POJOs`.
+	const impl = NODE_PLATFORM_IMPL;
+
+	const headers = new globalThis.Headers([["x-key", "value"]]);
+	expect(headers).not.toBeInstanceOf(impl.Headers);
+
+	const serialized = stringify(headers, createHTTPReducers(impl));
+	const deserialized = parse(serialized, createHTTPRevivers(impl));
+	expect(deserialized).toBeInstanceOf(impl.Headers);
+	expect(deserialized.get("x-key")).toBe("value");
+});
+
+test("does not treat an object with a forged Headers tag as Headers", ({
+	expect,
+}) => {
+	// `Symbol.toStringTag` alone isn't a reliable brand, since any object can
+	// set it. The reducer must also check for the shape a real `Headers` has,
+	// so a forged tag doesn't get its (possibly side-effecting) methods
+	// invoked.
+	const impl = NODE_PLATFORM_IMPL;
+	const fake = { [Symbol.toStringTag]: "Headers" };
+
+	expect(() => stringify(fake, createHTTPReducers(impl))).toThrow(
+		/symbolic keys/
+	);
+});

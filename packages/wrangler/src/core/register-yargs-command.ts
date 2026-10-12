@@ -2,6 +2,7 @@ import path from "node:path";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import {
+	CommandLineArgsError,
 	defaultWranglerConfig,
 	FatalError,
 	getCloudflareEnv,
@@ -31,6 +32,7 @@ import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import {
+	categoriseArgs,
 	COMMAND_ARG_ALLOW_LIST,
 	getAllowedArgs,
 	sanitizeArgKeys,
@@ -45,7 +47,10 @@ import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
-import { temporaryArgDefinition } from "./temporary-commands";
+import {
+	eventCodeArgDefinition,
+	temporaryArgDefinition,
+} from "./temporary-commands";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	HandlerArgs,
@@ -74,7 +79,11 @@ export function createRegisterYargsCommand(
 			(subYargs) => {
 				if (def.type === "command") {
 					const args: NamedArgDefinitions = def.behaviour?.supportTemporary
-						? { ...def.args, temporary: temporaryArgDefinition }
+						? {
+								...def.args,
+								temporary: temporaryArgDefinition,
+								"event-code": eventCodeArgDefinition,
+							}
 						: (def.args ?? {});
 
 					const positionalArgs = new Set(def.positionalArgs);
@@ -234,9 +243,23 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
 
-			setTemporaryAllowed(
+			const temporaryAllowed =
 				def.behaviour?.supportTemporary === true &&
-					Boolean((args as { temporary?: boolean }).temporary)
+				Boolean((args as { temporary?: boolean }).temporary);
+			const eventCode =
+				"eventCode" in args && typeof args.eventCode === "string"
+					? args.eventCode
+					: undefined;
+			// Never silently ignore an event code on a command that would use
+			// real credentials.
+			if (eventCode && !temporaryAllowed) {
+				throw new CommandLineArgsError("--event-code requires --temporary.", {
+					telemetryMessage: "temporary event code temporary required",
+				});
+			}
+			setTemporaryAllowed(
+				temporaryAllowed,
+				eventCode ? { eventCode } : undefined
 			);
 
 			await run(experimentalFlags, async () => {
@@ -298,10 +321,12 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					sanitizedCommand
 				);
 				const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
-				const sanitizedArgs = sanitizeArgValues(
-					argsWithSanitizedKeys,
-					allowedArgs
-				);
+				const sanitizedArgs = {
+					...sanitizeArgValues(argsWithSanitizedKeys, allowedArgs),
+					// Categorised positional args (e.g. the deploy path) are added
+					// separately because positionals are excluded by sanitizeArgKeys.
+					...categoriseArgs(args, allowedArgs),
+				};
 				const argsUsed = Object.keys(argsWithSanitizedKeys).sort();
 
 				dispatcher.sendCommandEvent(
@@ -359,15 +384,20 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						shouldSuggestSkills === true ||
 						(typeof shouldSuggestSkills === "function" &&
 							shouldSuggestSkills(args) === true);
+					// We are currently not sure whether the automatic skills installation is beneficial
+					// so we are skipping it for the time being (we might potentially re-enable it later on)
+					const shouldInstall = false;
 
 					if (suggestSkillsEnabled) {
 						try {
-							const justInstalled = await runSkillsInstallFlow({
-								force: false,
-								command: sanitizedCommand,
-								promptMessage:
-									skillInstallPromptMessageAfterWranglerCommandHandler,
-							});
+							const justInstalled = shouldInstall
+								? await runSkillsInstallFlow({
+										force: false,
+										command: sanitizedCommand,
+										promptMessage:
+											skillInstallPromptMessageAfterWranglerCommandHandler,
+									})
+								: false;
 
 							// Only check for updates when the install flow did not
 							// just perform a fresh install — a brand-new install

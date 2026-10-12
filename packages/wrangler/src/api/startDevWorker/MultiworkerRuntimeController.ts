@@ -1,7 +1,5 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
-import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { convertV4MiniflareOptions, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
@@ -9,7 +7,6 @@ import { logger } from "../../logger";
 import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
-	getContainerDevOptions,
 	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
@@ -17,6 +14,7 @@ import type { RemoteProxySession } from "../remoteBindings";
 import type { ControllerBus } from "./BaseController";
 import type { BundleCompleteEvent } from "./events";
 import type { Binding } from "./index";
+import type { ContainerImagePreparationState } from "./LocalRuntimeController";
 
 // Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
 function ensureMatchingSql(options: MF.Options) {
@@ -93,9 +91,10 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		} | null
 	>();
 
-	// If this doesn't match what is in config, trigger a rebuild.
-	// Used for the rebuild hotkey
-	#currentContainerBuildId: string | undefined;
+	#containerImagePreparationState = new Map<
+		string,
+		ContainerImagePreparationState
+	>();
 
 	#canStartMiniflare() {
 		return (
@@ -172,50 +171,17 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				return;
 			}
 
-			if (
-				data.config.containers?.length &&
-				this.#currentContainerBuildId !== data.config.dev.containerBuildId
-			) {
-				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
-				// Assemble container options and build if necessary
-				assert(
-					data.config.dev.containerBuildId,
-					"Build ID should be set if containers are enabled and defined"
+			const containerImagePreparationState = await this.prepareContainerImages(
+				data,
+				this.#containerImagePreparationState.get(workerName)
+			);
+			if (containerImagePreparationState === undefined) {
+				this.#containerImagePreparationState.delete(workerName);
+			} else {
+				this.#containerImagePreparationState.set(
+					workerName,
+					containerImagePreparationState
 				);
-				const containerOptions = await getContainerDevOptions(
-					data.config.containers,
-					data.config.dev.containerBuildId
-				);
-				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
-				// keep track of them so we can clean up later
-				for (const container of containerOptions ?? []) {
-					this.containerImageTagsSeen.add(container.image_tag);
-				}
-				await prepareContainerImagesForDev({
-					dockerPath: this.dockerPath,
-					containerOptions,
-					onContainerImagePreparationStart: (buildStartEvent) => {
-						this.containerBeingBuilt = {
-							...buildStartEvent,
-							abortRequested: false,
-						};
-					},
-					onContainerImagePreparationEnd: () => {
-						this.containerBeingBuilt = undefined;
-					},
-					logger: logger,
-					complianceConfig: {
-						compliance_region: data.config.complianceRegion,
-					},
-				});
-				if (this.containerBeingBuilt) {
-					this.containerBeingBuilt.abortRequested = false;
-				}
-
-				this.#currentContainerBuildId = data.config.dev.containerBuildId;
-				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
-				// The actual user worker's miniflare instance is blocked until the containers are built
-				logger.log(chalk.dim("⎔ Container image(s) ready"));
 			}
 
 			// Bail out if a newer bundle for this worker arrived while we

@@ -1,9 +1,13 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
+import {
+	extractBindingsOfType,
+	INHERIT_SYMBOL,
+	isUnsafeBindingType,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { FormData } from "undici";
-import { extractBindingsOfType, isUnsafeBindingType } from "./binding-utils";
 import { handleUnsafeCapnp } from "./capnp";
 import type {
 	AssetConfigMetadata,
@@ -64,6 +68,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		code_update_strategy,
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
@@ -86,6 +91,7 @@ export function createWorkerUploadForm(
 	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
+		base_path: assets?.assetConfig?.base_path,
 		run_worker_first: assets?.run_worker_first,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
@@ -130,7 +136,6 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const websearch = extractBindingsOfType("websearch", bindings)[0];
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
@@ -157,10 +162,12 @@ export function createWorkerUploadForm(
 	);
 	const mtls_certificates = extractBindingsOfType("mtls_certificate", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
 	const wasm_modules = extractBindingsOfType("wasm_module", bindings);
 	const browser = extractBindingsOfType("browser", bindings)[0];
+	const analytics = extractBindingsOfType("analytics", bindings)[0];
 	const ai = extractBindingsOfType("ai", bindings)[0];
 	const images = extractBindingsOfType("images", bindings)[0];
 	const stream = extractBindingsOfType("stream", bindings)[0];
@@ -219,25 +226,25 @@ export function createWorkerUploadForm(
 	});
 
 	send_email.forEach((emailBinding: CfSendEmailBindings) => {
-		const destination_address =
-			"destination_address" in emailBinding
-				? emailBinding.destination_address
-				: undefined;
-		const allowed_destination_addresses =
-			"allowed_destination_addresses" in emailBinding
-				? emailBinding.allowed_destination_addresses
-				: undefined;
-		const allowed_sender_addresses =
-			"allowed_sender_addresses" in emailBinding
-				? emailBinding.allowed_sender_addresses
-				: undefined;
-		metadataBindings.push({
+		const shared = {
 			name: emailBinding.name,
-			type: "send_email",
-			destination_address,
-			allowed_destination_addresses,
-			allowed_sender_addresses,
-		});
+			type: "send_email" as const,
+			allowed_sender_addresses: emailBinding.allowed_sender_addresses,
+		};
+		if (emailBinding.destination_address !== undefined) {
+			metadataBindings.push({
+				...shared,
+				destination_address: emailBinding.destination_address,
+			});
+		} else if (emailBinding.allowed_destination_addresses !== undefined) {
+			metadataBindings.push({
+				...shared,
+				allowed_destination_addresses:
+					emailBinding.allowed_destination_addresses,
+			});
+		} else {
+			metadataBindings.push(shared);
+		}
 	});
 
 	durable_objects.forEach(({ name, class_name, script_name, environment }) => {
@@ -386,13 +393,6 @@ export function createWorkerUploadForm(
 			instance_name,
 		});
 	});
-
-	if (websearch !== undefined) {
-		metadataBindings.push({
-			name: websearch.binding,
-			type: "websearch",
-		});
-	}
 
 	agent_memory.forEach(({ binding, namespace }) => {
 		if (options?.dryRun) {
@@ -587,6 +587,10 @@ export function createWorkerUploadForm(
 		}
 	});
 
+	k2.forEach(({ binding, stream: k2Stream }) => {
+		metadataBindings.push({ name: binding, type: "k2", stream: k2Stream });
+	});
+
 	worker_loaders.forEach(({ binding }) => {
 		metadataBindings.push({
 			name: binding,
@@ -628,6 +632,13 @@ export function createWorkerUploadForm(
 			name: browser.binding,
 			type: "browser",
 			raw: browser.raw,
+		});
+	}
+
+	if (analytics !== undefined) {
+		metadataBindings.push({
+			name: analytics.binding,
+			type: "analytics",
 		});
 	}
 
@@ -878,6 +889,7 @@ export function createWorkerUploadForm(
 				: worker.containers.map((c) => ({
 						...(c.name !== undefined && { name: c.name }),
 						...(c.class_name !== undefined && { class_name: c.class_name }),
+						...(c.images !== undefined && { images: c.images }),
 					})),
 
 		...(compatibility_date && { compatibility_date }),
@@ -885,6 +897,7 @@ export function createWorkerUploadForm(
 			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
+		...(code_update_strategy && { code_update_strategy }),
 		...(configuredExports &&
 			Object.keys(configuredExports).length > 0 && {
 				exports: configuredExports,
@@ -914,7 +927,6 @@ export function createWorkerUploadForm(
 			metadata[key] = options.unsafe.metadata[key];
 		}
 	}
-
 	formData.set("metadata", JSON.stringify(metadata));
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {

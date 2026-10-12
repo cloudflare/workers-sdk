@@ -1,4 +1,5 @@
-import assert from "node:assert";
+import { createHash } from "node:crypto";
+import path from "node:path";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import {
@@ -8,13 +9,25 @@ import {
 	type Worker_Module,
 } from "../../runtime";
 import { CoreBindings } from "../../workers";
+import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
+import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
+import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
+import { getFlagshipService } from "../flagship";
 import {
-	extractObjectEntryId,
 	getEnvBindingsOfType,
+	getTriggersOfType,
+	getRemoteProxyConnectionString,
+	getStorageService,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
 import {
+	getWorkflowBindingServiceName,
+	getWorkflowNamespaceKey,
+	WORKFLOWS_PLUGIN_NAME,
+} from "../workflows";
+import {
+	EMAIL_STORE_SERVICE_NAME,
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
@@ -22,12 +35,15 @@ import {
 } from "./constants";
 import type {
 	DurableObjectClassNames,
+	ParsedInstanceOptions,
 	ParsedWorkerOptions,
+	WorkflowExporters,
 	WorkflowOption,
 } from "../shared";
 import type {
 	BindingIdMap,
 	ExplorerWorkerOpts,
+	FlagshipBindingInfo,
 	WorkerResourceBindings,
 	WorkflowBindingInfo,
 } from "./types";
@@ -39,12 +55,17 @@ export interface ExplorerServicesOptions {
 	hasDurableObjects: boolean;
 	workerNames: string[];
 	explorerWorkerOpts: ExplorerWorkerOpts;
+	workflowExporters: WorkflowExporters;
 	telemetry: {
 		enabled: boolean;
 		deviceId?: string;
 	};
 	/** Whether local observability is enabled — gates the collector binding. */
 	observabilityEnabled: boolean;
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>;
 }
 
 /**
@@ -60,13 +81,21 @@ export function getExplorerServices(
 		hasDurableObjects,
 		workerNames,
 		explorerWorkerOpts,
+		workflowExporters,
 		telemetry,
 		observabilityEnabled,
+		sharedOptions,
 	} = options;
+	const workflowProxyBindings = proxyBindings.filter((binding) =>
+		binding.name?.startsWith(
+			`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:workflows:`
+		)
+	);
 
 	const explorerBindings: Worker_Binding[] = [
-		// Gives explorer access to all user resource bindings
-		...proxyBindings,
+		// Workflow creation still uses the configured binding API. D1, KV and R2
+		// operations use the dedicated internal storage service bindings below.
+		...workflowProxyBindings,
 		{
 			name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
 			json: JSON.stringify(bindingIdMap),
@@ -84,6 +113,30 @@ export function getExplorerServices(
 			name: CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES,
 			json: JSON.stringify(workerNames),
 		},
+		{
+			name: CoreBindings.SERVICE_D1,
+			service: getStorageService(
+				D1_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
+		},
+		{
+			name: CoreBindings.SERVICE_KV,
+			service: getStorageService(
+				KV_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
+		},
+		{
+			name: CoreBindings.SERVICE_R2,
+			service: getStorageService(
+				R2_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
+		},
 		// Per-worker resource bindings for the /local/workers endpoint
 		{
 			name: CoreBindings.JSON_EXPLORER_WORKER_OPTS,
@@ -98,6 +151,18 @@ export function getExplorerServices(
 			// workerdDebugPort bindings don't have any additional configuration
 			workerdDebugPort: kVoid,
 		},
+		// The email store service is registered alongside the explorer (see the
+		// core plugin's getServices), so it's always available to read from here.
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
+		// Direct service bindings to each user worker in this instance. These let
+		// the explorer invoke a worker's handlers (e.g. `email()`.
+		...workerNames.map((name) => ({
+			name: `${CoreBindings.SERVICE_EXPLORER_USER_WORKER_PREFIX}${name}`,
+			service: { name: getUserServiceName(name) },
+		})),
 	];
 
 	// Only bind the observability collector when observability is enabled —
@@ -131,13 +196,53 @@ export function getExplorerServices(
 	// for the instance detail view. Same pattern as DO namespace bindings above.
 	// The Engine DO has no alarms and its constructor is idempotent, so waking
 	// it up for reads is safe.
+	// Exported Workflows run their Engines in the Worker that exports them.
 	for (const workflowInfo of Object.values(bindingIdMap.workflows)) {
+		const exporter = workflowExporters.get(workflowInfo.name);
 		explorerBindings.push({
 			name: workflowInfo.engineBinding,
-			durableObjectNamespace: {
-				className: "Engine",
-				serviceName: `workflows:${workflowInfo.name}`,
-			},
+			durableObjectNamespace:
+				exporter === undefined
+					? {
+							className: "Engine",
+							serviceName: `workflows:${workflowInfo.name}`,
+						}
+					: {
+							className: getWorkflowNamespaceKey(workflowInfo.name),
+							serviceName: getUserServiceName(exporter.workerName),
+						},
+		});
+
+		// A Workflow declared only in `exports` has no proxy binding to reuse.
+		if (
+			!workflowProxyBindings.some(
+				(binding) => binding.name === workflowInfo.binding
+			)
+		) {
+			explorerBindings.push({
+				name: workflowInfo.binding,
+				wrapped: {
+					moduleName: `${WORKFLOWS_PLUGIN_NAME}:local-wrapped-binding`,
+					innerBindings: [
+						{
+							name: "binding",
+							service: {
+								name: getWorkflowBindingServiceName(workflowInfo.name),
+								entrypoint: "WorkflowBinding",
+							},
+						},
+					],
+				},
+			});
+		}
+	}
+
+	// Bind each locally simulated Flagship app's binding worker, so the
+	// explorer can read and write its flag store through the admin API.
+	for (const flagshipInfo of Object.values(bindingIdMap.flagship)) {
+		explorerBindings.push({
+			name: flagshipInfo.binding,
+			service: getFlagshipService(flagshipInfo.appId, sharedOptions),
 		});
 	}
 
@@ -151,7 +256,7 @@ export function getExplorerServices(
 			name: SERVICE_LOCAL_EXPLORER,
 			worker: {
 				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
+				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
 				modules: [
 					{
 						name: "explorer.worker.js",
@@ -165,12 +270,15 @@ export function getExplorerServices(
 }
 
 /**
- * Build binding ID map from proxyBindings, durableObjectClassNames, and workflow options.
+ * Build binding ID map from worker options, proxy bindings, Durable Object
+ * class names, exported Workflows, and workflow options.
  * Maps resource IDs to binding information for the local explorer.
  */
 export function constructExplorerBindingMap(
+	allWorkerOpts: ParsedWorkerOptions[],
 	proxyBindings: Worker_Binding[],
 	durableObjectClassNames: DurableObjectClassNames,
+	workflowExporters: WorkflowExporters,
 	workflowOptions?: Map<string, WorkflowOption>
 ): BindingIdMap {
 	const IDToBindingName: BindingIdMap = {
@@ -179,74 +287,54 @@ export function constructExplorerBindingMap(
 		do: {},
 		r2: {},
 		workflows: {},
+		flagship: Object.create(null) as BindingIdMap["flagship"],
 	};
 
-	for (const binding of proxyBindings) {
-		// D1 bindings: name = "MINIFLARE_PROXY:d1:worker-*:BINDING".
-		// Local databases share one entry service ("d1:db:entry") and carry their
-		// id in props; remote databases share one proxy service ("d1:db:remote").
-		if (
-			binding.name?.startsWith(
-				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`
-			) &&
-			"wrapped" in binding
-		) {
-			const [innerBinding] = binding.wrapped?.innerBindings ?? [];
-			assert(innerBinding && "service" in innerBinding);
-
-			const databaseId =
-				extractObjectEntryId(innerBinding.service?.props?.json) ??
-				innerBinding.service?.name?.replace(/^d1:db:/, "");
-			assert(databaseId);
-
-			// Remote databases share one proxy service ("d1:db:remote"). Remote
-			// resources aren't surfaced in the explorer, so skip them — otherwise
-			// they'd all collide under the literal id "remote".
-			if (databaseId !== "remote") {
-				IDToBindingName.d1[databaseId] = binding.name;
+	for (const workerOpts of allWorkerOpts) {
+		for (const { id: appId, bindingName } of getLocalFlagshipBindings(
+			workerOpts
+		)) {
+			const existing = IDToBindingName.flagship[appId];
+			if (existing === undefined) {
+				IDToBindingName.flagship[appId] = {
+					appId,
+					binding: `EXPLORER_FLAGSHIP_${appId}`,
+					bindings: [bindingName],
+				} satisfies FlagshipBindingInfo;
+			} else {
+				existing.bindings.push(bindingName);
+			}
+		}
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"d1"
+		)) {
+			if (
+				getRemoteProxyConnectionString(binding, workerOpts.dev) === undefined
+			) {
+				IDToBindingName.d1[binding.id] = bindingName;
 			}
 		}
 
-		// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING".
-		// Local namespaces share one entry service ("kv:ns:entry") and carry their
-		// id in props; remote namespaces share one proxy service ("kv:ns:remote")
-		// and aren't surfaced in the explorer.
-		if (
-			binding.name?.startsWith(
-				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
-			) &&
-			"kvNamespace" in binding &&
-			binding.kvNamespace?.name?.startsWith("kv:ns:")
-		) {
-			const namespaceId =
-				extractObjectEntryId(binding.kvNamespace.props?.json) ??
-				binding.kvNamespace.name.replace(/^kv:ns:/, "");
-			// Remote namespaces share one proxy service ("kv:ns:remote"). Remote
-			// resources aren't surfaced in the explorer, so skip them — otherwise
-			// they'd all collide under the literal id "remote".
-			if (namespaceId !== "remote") {
-				IDToBindingName.kv[namespaceId] = binding.name;
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"kv"
+		)) {
+			if (
+				getRemoteProxyConnectionString(binding, workerOpts.dev) === undefined
+			) {
+				IDToBindingName.kv[binding.id] = bindingName;
 			}
 		}
 
-		// R2 bindings: name = "MINIFLARE_PROXY:r2:worker:BINDING".
-		// Local buckets share one entry service ("r2:bucket:entry") and carry their
-		// id in props; remote buckets share one proxy service ("r2:bucket:remote").
-		if (
-			binding.name?.startsWith(
-				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:r2:`
-			) &&
-			"r2Bucket" in binding &&
-			binding.r2Bucket?.name?.startsWith("r2:bucket:")
-		) {
-			const bucketName =
-				extractObjectEntryId(binding.r2Bucket.props?.json) ??
-				binding.r2Bucket.name.replace(/^r2:bucket:/, "");
-			// Remote buckets share one proxy service ("r2:bucket:remote"). Remote
-			// resources aren't surfaced in the explorer, so skip them — otherwise
-			// they'd all collide under the literal id "remote".
-			if (bucketName !== "remote") {
-				IDToBindingName.r2[bucketName] = binding.name;
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"r2"
+		)) {
+			if (
+				getRemoteProxyConnectionString(binding, workerOpts.dev) === undefined
+			) {
+				IDToBindingName.r2[binding.name] = bindingName;
 			}
 		}
 	}
@@ -315,7 +403,31 @@ export function constructExplorerBindingMap(
 		}
 	}
 
+	// A Workflow declared only in `exports` has no binding to find above, so the
+	// explorer gets its own binding to it (see `getExplorerServices()`).
+	for (const [workflowName, exporter] of workflowExporters) {
+		IDToBindingName.workflows[workflowName] ??= {
+			name: workflowName,
+			className: exporter.className,
+			scriptName: exporter.workerName,
+			binding: `EXPLORER_WORKFLOW_BINDING_${workflowName}`,
+			engineBinding: `EXPLORER_WORKFLOW_ENGINE_${workflowName}`,
+		};
+	}
+
 	return IDToBindingName;
+}
+
+/** Returns the locally simulated Flagship bindings configured for a worker. */
+export function getLocalFlagshipBindings(
+	workerOpts: ParsedWorkerOptions
+): WorkerResourceBindings["flagship"] {
+	return getEnvBindingsOfType(workerOpts.config, "flagship")
+		.filter(
+			([, binding]) =>
+				getRemoteProxyConnectionString(binding, workerOpts.dev) === undefined
+		)
+		.map(([bindingName, binding]) => ({ id: binding.id, bindingName }));
 }
 
 /**
@@ -339,6 +451,8 @@ export function constructExplorerWorkerOpts(
 			r2: [],
 			do: [],
 			workflows: [],
+			sendEmail: [],
+			flagship: [],
 		};
 
 		for (const [bindingName, binding] of getEnvBindingsOfType(
@@ -367,7 +481,7 @@ export function constructExplorerWorkerOpts(
 			"durable-object"
 		)) {
 			const className = binding.exportName;
-			const scriptName = binding.workerName;
+			const scriptName = binding.worker;
 			const serviceName = getUserServiceName(scriptName);
 			const uniqueKey = `${scriptName}-${className}`;
 
@@ -392,14 +506,52 @@ export function constructExplorerWorkerOpts(
 				id: workflow.name,
 				bindingName,
 				className: workflow.exportName,
-				scriptName: workflow.workerName ?? workerName,
+				scriptName: workflow.worker ?? workerName,
 			});
 		}
 
-		result[workerName] = bindings;
+		for (const [bindingName] of getEnvBindingsOfType(
+			workerOpts.config,
+			"send-email"
+		) ?? {}) {
+			bindings.sendEmail.push({ bindingName });
+		}
+
+		bindings.flagship.push(...getLocalFlagshipBindings(workerOpts));
+
+		result[workerName] = {
+			bindings,
+			triggers: {
+				crons: getTriggersOfType(workerOpts.config, "scheduled").map(
+					(trigger) => trigger.schedule
+				),
+			},
+			persistenceScope: getPersistenceScope(workerOpts.dev.rootPath),
+		};
 	}
 
 	return result;
+}
+
+/**
+ * Derive a project-scoped browser persistence key without sending the project
+ * root itself to the Local Explorer UI. Normalising here keeps equivalent
+ * direct structured Miniflare paths aligned with paths from the V4 converter.
+ *
+ * Keep the domain/version prefix stable: changing it intentionally invalidates
+ * persisted Local Explorer state. Return no scope if a future caller cannot
+ * provide a usable project root, allowing the UI to fall back safely.
+ */
+export function getPersistenceScope(
+	projectRoot: string | undefined
+): string | undefined {
+	if (!projectRoot) {
+		return undefined;
+	}
+
+	return createHash("sha256")
+		.update(`local-explorer:persistence-scope:v1\0${path.resolve(projectRoot)}`)
+		.digest("hex");
 }
 
 /**

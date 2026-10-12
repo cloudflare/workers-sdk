@@ -111,8 +111,11 @@ function buildTlsConnectionOptions(
  * each Hyperdrive binding through a randomly assigned local port.
  */
 export class HyperdriveProxyController {
-	// Map hyperdrive binding name to proxy server
-	#servers = new Map<string, net.Server>();
+	// Map a binding and target to the listening proxy server and port
+	#servers = new Map<string, { server: net.Server; port: number }>();
+	#starting = new Map<string, Promise<number>>();
+	#update?: { created: Set<string> };
+	#disposed = false;
 	log?: Log;
 
 	/**
@@ -122,9 +125,46 @@ export class HyperdriveProxyController {
 	 * @returns A promise that resolves to the port number of the proxy server.
 	 */
 	async createProxyServer(config: HyperdriveProxyConfig): Promise<number> {
+		if (this.#disposed) {
+			throw new Error("Hyperdrive proxy controller has been disposed");
+		}
+		const { name, targetHost, targetPort, scheme, sslmode, sslrootcert } =
+			config;
+		const key = JSON.stringify([
+			name,
+			targetHost,
+			targetPort,
+			scheme,
+			sslmode,
+			sslrootcert,
+		]);
+		const update = this.#update;
+		const existing = this.#servers.get(key);
+		if (existing !== undefined) {
+			return existing.port;
+		}
+		const starting = this.#starting.get(key);
+		if (starting !== undefined) {
+			return starting;
+		}
+		const promise = this.#startProxyServer(config, key, update);
+		this.#starting.set(key, promise);
+		try {
+			return await promise;
+		} finally {
+			this.#starting.delete(key);
+		}
+	}
+
+	async #startProxyServer(
+		config: HyperdriveProxyConfig,
+		key: string,
+		update?: { created: Set<string> }
+	): Promise<number> {
 		const { name, targetHost, targetPort, scheme, sslmode, sslrootcert } =
 			config;
 		const server = net.createServer((clientSocket) => {
+			clientSocket.setNoDelay(true);
 			this.#handleConnection(
 				clientSocket,
 				targetHost,
@@ -145,15 +185,20 @@ export class HyperdriveProxyController {
 			server.once("error", reject);
 			server.listen(0, "127.0.0.1", () => {
 				server.off("error", reject);
-				const address = server.address() as net.AddressInfo;
-				if (address && typeof address !== "string") {
+				const address = server.address();
+				if (address !== null && typeof address !== "string") {
 					resolve(address.port);
 				} else {
 					reject(new Error("Invalid port"));
 				}
 			});
 		});
-		this.#servers.set(name, server);
+		if (this.#disposed || (update !== undefined && this.#update !== update)) {
+			server.close();
+			throw new Error("Hyperdrive proxy configuration update was interrupted");
+		}
+		this.#servers.set(key, { server, port });
+		update?.created.add(key);
 		return port;
 	}
 
@@ -177,6 +222,7 @@ export class HyperdriveProxyController {
 	) {
 		// Connect to real database
 		const dbSocket = net.connect({ host: targetHost, port: targetPort });
+		dbSocket.setNoDelay(true);
 		const sslmodeRequire = sslmode === "require";
 		const sslmodePrefer = sslmode === "prefer";
 		const sslmodeVerifyFull = sslmode === "verify-full";
@@ -225,13 +271,52 @@ export class HyperdriveProxyController {
 		dbSocket.pipe(clientSocket);
 	}
 
+	/** Begins tracking proxy servers created for the next runtime config. */
+	beginUpdate(): void {
+		if (this.#update !== undefined) {
+			throw new Error("Hyperdrive proxy configuration update already started");
+		}
+		this.#update = { created: new Set() };
+	}
+
+	/** Stops listeners omitted by the successfully installed runtime config. */
+	commitUpdate(activeAddresses: ReadonlySet<string>): void {
+		const update = this.#update;
+		if (update === undefined) {
+			return;
+		}
+		this.#update = undefined;
+		for (const [key, { server, port }] of this.#servers) {
+			if (!activeAddresses.has(`127.0.0.1:${port}`)) {
+				server.close();
+				this.#servers.delete(key);
+			}
+		}
+	}
+
+	/** Discards new listeners when the runtime config could not be installed. */
+	abortUpdate(): void {
+		const update = this.#update;
+		if (update === undefined) {
+			return;
+		}
+		this.#update = undefined;
+		for (const key of update.created) {
+			const entry = this.#servers.get(key);
+			entry?.server.close();
+			this.#servers.delete(key);
+		}
+	}
+
 	/** Disposes of the proxy servers when shutting down the worker.*/
 	dispose(): void {
+		this.#disposed = true;
+		this.#update = undefined;
 		// Stop accepting new connections on each proxy server. We don't await
 		// server.close() because net.Server waits for all existing connections
 		// to end before calling the callback, and lingering TCP sockets (e.g.
 		// from in-progress TLS negotiation) could block dispose indefinitely.
-		for (const server of this.#servers.values()) {
+		for (const { server } of this.#servers.values()) {
 			server.close();
 		}
 		this.#servers.clear();
@@ -407,6 +492,7 @@ async function createPlainTCPConnection(
 	clientSocket: net.Socket
 ): Promise<net.Socket> {
 	const dbSocket = net.connect({ host: targetHost, port: targetPort });
+	dbSocket.setNoDelay(true);
 
 	// Wait for connection to be established
 	await new Promise<void>((resolve, reject) => {
@@ -510,7 +596,9 @@ function mysqlSupportsSSL(payload: Buffer<ArrayBuffer>): boolean {
 	let offset = 1;
 
 	// Find end of server_version string (null terminator)
-	while (offset < payloadLength && payload[offset] != 0x00) offset++;
+	while (offset < payloadLength && payload[offset] != 0x00) {
+		offset++;
+	}
 
 	// Skip null terminator
 	offset++;
@@ -520,8 +608,9 @@ function mysqlSupportsSSL(payload: Buffer<ArrayBuffer>): boolean {
 	offset += MYSQL_AUTH_PLUGIN_DATA_PART_1_LENGTH;
 	offset += MYSQL_FILLER_LENGTH;
 	// Ensure there are enough bytes left for fixed fields
-	if (offset + MYSQL_CAPABILITY_FLAGS_LOWER_LENGTH > payloadLength)
+	if (offset + MYSQL_CAPABILITY_FLAGS_LOWER_LENGTH > payloadLength) {
 		return false;
+	}
 
 	// Read 2-byte little-endian capability_flags_lower
 	const caps = payload[offset] | (payload[offset + 1] << 8);

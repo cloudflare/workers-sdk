@@ -18,6 +18,10 @@ const b = recast.types.builders;
 const t = recast.types.namedTypes;
 
 export class Vike extends Framework {
+	readonly env = {
+		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+	} as const;
+
 	async configure({
 		projectPath,
 		dryRun,
@@ -60,8 +64,9 @@ export class Vike extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "virtual:photon:cloudflare:server-entry",
+			buildTool: "vite",
+			workerConfig: {
+				entrypoint: "virtual:photon:cloudflare:server-entry",
 			},
 			packageJsonScriptsOverrides: {
 				preview: "vike build && vike preview",

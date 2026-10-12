@@ -1,9 +1,21 @@
 import {
+	cleanupBuiltImages,
+	initContainersSharedContext,
+} from "@cloudflare/containers-shared";
+import {
 	versionsUpload,
 	type AssetUploadStats,
 } from "@cloudflare/deploy-helpers";
-import { analyseBundle } from "../check/commands";
+import {
+	getDockerPath,
+	getDurableObjectContainerApps,
+} from "@cloudflare/workers-utils";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
+import { buildDurableObjectContainerImages } from "../deployment-bundle/build-container-images";
+import { assertNoCloudflareBuildOutput } from "../deployment-bundle/cf-build-output-guard";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -14,8 +26,8 @@ import {
 	mergeVersionsUploadConfigArgs,
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { writeOutput } from "../output";
 import { getScriptName } from "../utils/getScriptName";
 
 export const versionsUploadCommand = createCommand({
@@ -49,6 +61,19 @@ export const versionsUploadCommand = createCommand({
 		validateDeployVersionsArgs(args, "versions upload");
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
+		// Runs before any build or upload work. `--dry-run` is exempt: it uploads
+		// nothing, so there is no version to stop.
+		if (!args.dryRun) {
+			assertNoCloudflareBuildOutput(
+				{
+					config,
+					explicitConfigPath: args.config,
+					scriptPath: args.script,
+				},
+				"versions upload"
+			);
+		}
+
 		// Merge CLI args with config (includes Sites validation and assets validation)
 		const { props, buildProps } = await mergeVersionsUploadConfigArgs(
 			args,
@@ -59,34 +84,38 @@ export const versionsUploadCommand = createCommand({
 		try {
 			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 			const preMergeName = getScriptName(args, config);
-			const workerNameOverridden =
+			props.workerNameOverridden =
 				props.name !== undefined && props.name !== preMergeName;
 
 			const buildResult = await buildWorker(buildProps, config);
 
-			const {
-				versionId,
-				workerTag,
-				assetUploadStats: uploadStats,
-				versionPreviewUrl,
-				versionPreviewAliasUrl,
-			} = await versionsUpload(props, config, buildResult, {
-				analyseBundle: analyseBundle,
+			initContainersSharedContext({
+				logger,
+				fetchPagedListResult,
+				fetchResult,
 			});
+			props.containers.durableObjects.builtImages =
+				await buildDurableObjectContainerImages(props, config);
+			if (
+				!props.dryRun &&
+				getDurableObjectContainerApps(props.containers.source).length > 0
+			) {
+				await fillOpenAPIConfiguration(config, containersScope);
+			}
+			const { assetUploadStats: uploadStats } = await versionsUpload(
+				props,
+				config,
+				buildResult
+			);
 			assetUploadStats = uploadStats;
-
-			writeOutput({
-				type: "version-upload",
-				version: 1,
-				worker_name: props.name ?? null,
-				worker_tag: workerTag,
-				version_id: versionId,
-				preview_url: versionPreviewUrl,
-				preview_alias_url: versionPreviewAliasUrl,
-				wrangler_environment: args.env,
-				worker_name_overridden: workerNameOverridden,
-			});
 		} finally {
+			if (props.containers.durableObjects.builtImages.length > 0) {
+				const dockerPath = getDockerPath();
+				await cleanupBuiltImages(
+					props.containers.durableObjects.builtImages,
+					dockerPath
+				);
+			}
 			metrics.sendMetricsEvent(
 				"upload worker version",
 				{

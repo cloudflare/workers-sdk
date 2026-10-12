@@ -82,7 +82,6 @@ test("source maps workers", async ({ expect }) => {
 			// Default service-worker with a co-located source map on disk.
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { MESSAGE: { type: "json", value: "unnamed" } },
@@ -94,7 +93,6 @@ test("source maps workers", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/a" }],
@@ -108,7 +106,6 @@ test("source maps workers", async ({ expect }) => {
 			// Module workers with co-located source maps on disk.
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/b" }],
@@ -125,7 +122,6 @@ test("source maps workers", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "c",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/c" }],
@@ -143,7 +139,6 @@ test("source maps workers", async ({ expect }) => {
 			// Module worker with a source map provided through the manifest (Wrangler style).
 			{
 				config: {
-					type: "worker",
 					name: "e",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/e" }],
@@ -168,7 +163,6 @@ test("source maps workers", async ({ expect }) => {
 			// (e.g. Wrangler no-bundle with pre-built dependencies).
 			{
 				config: {
-					type: "worker",
 					name: "h",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/h" }],
@@ -190,7 +184,6 @@ test("source maps workers", async ({ expect }) => {
 			// script. These are preserved as-is (no rewriting).
 			{
 				config: {
-					type: "worker",
 					name: "i",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/i" }],
@@ -306,7 +299,9 @@ function getSourceMapURL(
 	const ws = new NodeWebSocket(inspectorURL);
 
 	const finish = (error?: Error) => {
-		if (settled) return;
+		if (settled) {
+			return;
+		}
 		settled = true;
 		clearTimeout(timeout);
 		if (error) {
@@ -333,7 +328,9 @@ function getSourceMapURL(
 	}, 10_000);
 
 	ws.on("message", async (raw) => {
-		if (settled) return;
+		if (settled) {
+			return;
+		}
 		try {
 			const message = JSON.parse(raw.toString("utf8"));
 			if (message.method === "Debugger.scriptParsed") {
@@ -405,7 +402,6 @@ test("responds with pretty error page", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					// Old `modules: true` + inline `script` reported this module as
@@ -568,7 +564,6 @@ test("invokes handleUncaughtError with the revived error", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
@@ -599,7 +594,6 @@ test("reports the revived error for HEAD requests", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
@@ -624,7 +618,6 @@ test("rejects HEAD dispatchFetch with the user error, not a parse error", async 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
@@ -662,7 +655,6 @@ test("degrades without leaking a parse error when HEAD has no payload header", a
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(NO_PAYLOAD_HEADER_SCRIPT),
@@ -720,7 +712,6 @@ test("still reports the error when a stack frame's file URL has no local path", 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(UNMAPPABLE_STACK_SCRIPT),
@@ -755,7 +746,6 @@ test("keeps building the error response when handleUncaughtError throws", async 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
@@ -793,7 +783,6 @@ test("absorbs a rejecting async handleUncaughtError callback", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),

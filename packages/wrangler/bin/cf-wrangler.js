@@ -125,6 +125,7 @@ function createDevOptions(parsedArgs) {
 		containerEngine: undefined,
 		tunnel: undefined,
 		tunnelName: undefined,
+		tunnelAllowedMail: undefined,
 		envFile: undefined,
 		onReady: undefined,
 	};

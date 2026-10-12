@@ -1,5 +1,6 @@
 import { describe, test, vi } from "vitest";
 import {
+	MiniflareOptionsSchema,
 	MiniflareWorkerConfigSchema,
 	WorkerOptionsSchema,
 } from "../../src/config/schema";
@@ -11,7 +12,6 @@ vi.mock("../../src/plugins/shared/constants", () => ({
 describe("MiniflareWorkerConfigSchema", () => {
 	test("requires manifest modulesRoot to be absolute", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			manifest: {
@@ -34,7 +34,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("defaults manifest modulesRoot to cwd", ({ expect }) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			manifest: {
@@ -49,7 +48,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 	test("requires dev rootPath to be absolute", ({ expect }) => {
 		const result = WorkerOptionsSchema.safeParse({
 			config: {
-				type: "worker",
 				name: "api",
 				compatibilityDate: "2026-01-01",
 			},
@@ -70,7 +68,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 	test("defaults dev rootPath to cwd", ({ expect }) => {
 		const parsed = WorkerOptionsSchema.parse({
 			config: {
-				type: "worker",
 				name: "api",
 				compatibilityDate: "2026-01-01",
 			},
@@ -83,7 +80,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 		expect,
 	}) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -108,7 +104,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("rejects duplicate singleton bindings", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -132,7 +127,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("allows duplicate non-singleton bindings", ({ expect }) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -151,7 +145,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 		expect,
 	}) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -164,7 +157,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("preserves explicit resource binding identifiers", ({ expect }) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -187,13 +179,12 @@ describe("MiniflareWorkerConfigSchema", () => {
 		});
 	});
 
-	test("requires Hyperdrive localConnectionString", ({ expect }) => {
+	test("requires Hyperdrive dev.connectionString", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
-				HYPERDRIVE: { type: "hyperdrive", id: "hyperdrive" },
+				HYPERDRIVE: { type: "hyperdrive", id: "hyperdrive", dev: {} },
 			},
 		});
 
@@ -201,7 +192,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 		if (!result.success) {
 			expect(result.error.issues).toEqual([
 				expect.objectContaining({
-					path: ["env", "HYPERDRIVE", "localConnectionString"],
+					path: ["env", "HYPERDRIVE", "dev", "connectionString"],
 					message: "Invalid input: expected string, received undefined",
 				}),
 			]);
@@ -209,28 +200,56 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 		expect(
 			MiniflareWorkerConfigSchema.parse({
-				type: "worker",
 				name: "api",
 				compatibilityDate: "2026-01-01",
 				env: {
 					HYPERDRIVE: {
 						type: "hyperdrive",
 						id: "hyperdrive",
-						localConnectionString:
-							"postgres://user:password@localhost:5432/database",
+						dev: {
+							connectionString:
+								"postgres://user:password@localhost:5432/database",
+						},
 					},
 				},
 			}).env?.HYPERDRIVE
 		).toEqual({
 			type: "hyperdrive",
 			id: "hyperdrive",
-			localConnectionString: "postgres://user:password@localhost:5432/database",
+			dev: {
+				connectionString: "postgres://user:password@localhost:5432/database",
+			},
 		});
+	});
+
+	test("rejects dev options on Workflow bindings", ({ expect }) => {
+		const result = MiniflareWorkerConfigSchema.safeParse({
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			env: {
+				WORKFLOW: {
+					type: "workflow",
+					name: "workflow",
+					worker: "api",
+					exportName: "Workflow",
+					dev: { remote: true },
+				},
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual([
+				expect.objectContaining({
+					path: ["env", "WORKFLOW"],
+					message: 'Unrecognized key: "dev"',
+				}),
+			]);
+		}
 	});
 
 	test("strips tombstoned durable object exports", ({ expect }) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			exports: {
@@ -266,5 +285,103 @@ describe("MiniflareWorkerConfigSchema", () => {
 			},
 			Entrypoint: { type: "worker" },
 		});
+	});
+
+	test("preserves workflow exports", ({ expect }) => {
+		const parsed = MiniflareWorkerConfigSchema.parse({
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			exports: {
+				GreetingWorkflow: { type: "workflow", name: "greeting" },
+				BatchWorkflow: {
+					type: "workflow",
+					name: "batch",
+					limits: { steps: 10 },
+				},
+			},
+		});
+
+		expect(parsed.exports).toEqual({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: {
+				type: "workflow",
+				name: "batch",
+				limits: { steps: 10 },
+			},
+		});
+	});
+
+	test("rejects unresolved Container images on live Durable Object exports", ({
+		expect,
+	}) => {
+		const exports = [
+			{ type: "durable-object", storage: "sqlite" },
+			{
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "old-worker/ContainerObject",
+			},
+		];
+
+		for (const exported of exports) {
+			const result = MiniflareWorkerConfigSchema.safeParse({
+				name: "api",
+				compatibilityDate: "2026-01-01",
+				exports: {
+					ContainerObject: {
+						...exported,
+						container: { images: [{ name: "app", image: null }] },
+					},
+				},
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+});
+
+describe("MiniflareOptionsSchema", () => {
+	const worker = {
+		config: {
+			name: "worker",
+			compatibilityDate: "2025-01-01",
+		},
+	};
+
+	test("resolves the isolated root to the resource root without shared storage", ({
+		expect,
+	}) => {
+		const parsed = MiniflareOptionsSchema.parse({
+			resourcePersistencePath: "/state",
+			workers: [worker],
+		});
+
+		// Nothing is shared, so every resource is isolated and belongs under the
+		// configured resource root. Readers must not have to work this out.
+		expect(parsed.isolatedResourcePersistencePath).toBe("/state");
+	});
+
+	test("keeps an explicit isolated root when shared storage is enabled", ({
+		expect,
+	}) => {
+		const parsed = MiniflareOptionsSchema.parse({
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: "/shared",
+			isolatedResourcePersistencePath: "/isolated",
+			unsafeDevRegistryPath: "/registry",
+			workers: [worker],
+		});
+
+		expect(parsed.resourcePersistencePath).toBe("/shared");
+		expect(parsed.isolatedResourcePersistencePath).toBe("/isolated");
+	});
+
+	test("leaves the isolated root unset when nothing is persisted", ({
+		expect,
+	}) => {
+		const parsed = MiniflareOptionsSchema.parse({ workers: [worker] });
+
+		expect(parsed.isolatedResourcePersistencePath).toBeUndefined();
 	});
 });

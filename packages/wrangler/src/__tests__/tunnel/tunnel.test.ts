@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { UserError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -275,6 +276,63 @@ describe("tunnel commands", () => {
 			expect(calledArgs).toContain("--url");
 			expect(calledArgs).toContain("http://localhost:3000");
 			expect(calledArgs).toContain("--no-autoupdate");
+			expect(calledArgs).not.toContain("--allowed-mail");
+		});
+
+		it.each([
+			{
+				name: "repeated flags",
+				command:
+					"--allowed-mail alice@example.com --allowed-mail bob@example.com",
+				expected: ["alice@example.com", "bob@example.com"],
+			},
+			{
+				name: "comma-separated addresses",
+				command: "--allowed-mail alice@example.com,bob@example.com",
+				expected: ["alice@example.com,bob@example.com"],
+			},
+			{
+				name: "wildcard domain",
+				command: "--allowed-mail '*@example.com'",
+				expected: ["*@example.com"],
+			},
+		])("should forward $name to cloudflared", async ({ command, expected }) => {
+			const { spawnCloudflared } = await import("@cloudflare/workers-utils");
+
+			await runWrangler(`tunnel quick-start http://localhost:3000 ${command}`);
+
+			const [calledArgs] = vi.mocked(spawnCloudflared).mock.calls[0] as [
+				string[],
+			];
+			assert.deepStrictEqual(calledArgs, [
+				"tunnel",
+				"--no-autoupdate",
+				"--url",
+				"http://localhost:3000",
+				"--loglevel",
+				"info",
+				...expected.flatMap((allowedMail) => ["--allowed-mail", allowedMail]),
+			]);
+		});
+
+		it("should accept allowed mail before the URL", async ({ expect }) => {
+			const { spawnCloudflared } = await import("@cloudflare/workers-utils");
+
+			await runWrangler(
+				"tunnel quick-start --allowed-mail alice@example.com http://localhost:3000"
+			);
+
+			const [calledArgs] = vi.mocked(spawnCloudflared).mock.calls[0] as [
+				string[],
+			];
+			expect(calledArgs).toContain("http://localhost:3000");
+			expect(calledArgs).toContain("alice@example.com");
+		});
+
+		it("should reject allowed mail without a value", async ({ expect }) => {
+			await expect(() =>
+				runWrangler("tunnel quick-start http://localhost:3000 --allowed-mail")
+			).rejects.toThrow("Not enough arguments following: allowed-mail");
 		});
 
 		it("should require a URL argument", async ({ expect }) => {

@@ -19,7 +19,7 @@ const jsonArg = {
 export const artifactsNamespacesNamespace = createNamespace({
 	metadata: {
 		description: "Manage Artifacts namespaces",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 });
@@ -50,7 +50,7 @@ function formatDefinedValues(
 export const artifactsNamespacesListCommand = createCommand({
 	metadata: {
 		description: "List Artifacts namespaces",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {
@@ -86,7 +86,7 @@ export const artifactsNamespacesListCommand = createCommand({
 export const artifactsNamespacesGetCommand = createCommand({
 	metadata: {
 		description: "Get an Artifacts namespace",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {

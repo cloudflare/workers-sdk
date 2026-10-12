@@ -1,4 +1,11 @@
-export type WorkerRegistry = Record<string, WorkerDefinition>;
+export type WorkerRegistry = Record<
+	string,
+	WorkerDefinition & {
+		// stat.birthtime
+		created: number;
+		instanceId?: string;
+	}
+>;
 
 export type WorkerDefinition = {
 	/**
@@ -24,4 +31,6 @@ export type WorkerDefinition = {
 	 * this to route messages for these queues to this process's queue broker.
 	 */
 	queueConsumers?: string[];
+	/** Canonical persistence root when this instance can own shared storage. */
+	storageScope?: string;
 };

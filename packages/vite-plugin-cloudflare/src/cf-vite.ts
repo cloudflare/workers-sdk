@@ -26,7 +26,9 @@
  * `build` runs Vite's full multi-environment app build via
  * `createBuilder().buildApp()` (NOT the legacy single-environment
  * `build()` helper, which would skip the plugin's worker builds). It
- * accepts only `--mode` (the other shared flags don't apply to a build).
+ * accepts only `--mode`. Preview build context is supplied through the
+ * `CLOUDFLARE_PREVIEW_BUILD` environment variable so framework-owned build
+ * commands can use the same contract.
  *
  * Exit codes: 0 graceful, 2 unknown verb / parse error, 130 SIGINT,
  * 143 SIGTERM.

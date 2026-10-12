@@ -104,6 +104,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-qwik",
 	displayName: "Qwik",
 	platform: "workers",
+	languages: ["ts"],
 	copyFiles: {
 		path: "./templates",
 	},

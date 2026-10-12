@@ -10,18 +10,48 @@ import {
 
 export { __facade_register__, __facade_registerInternal__ };
 
-// Miniflare 2's `EventTarget` follows the spec and doesn't allow exceptions to
-// be caught by `dispatchEvent`. Instead it has a custom `ThrowingEventTarget`
-// class that rethrows errors from event listeners in `dispatchEvent`.
-// We'd like errors to be propagated to the top-level `addEventListener`, so
-// we'd like to use `ThrowingEventTarget`. Unfortunately, `ThrowingEventTarget`
-// isn't exposed on the global scope, but `WorkerGlobalScope` (which extends
-// `ThrowingEventTarget`) is. Therefore, we get at it in this nasty way.
-let __FACADE_EVENT_TARGET__: EventTarget;
-if ((globalThis as any).MINIFLARE) {
-	__FACADE_EVENT_TARGET__ = new (Object.getPrototypeOf(WorkerGlobalScope))();
-} else {
-	__FACADE_EVENT_TARGET__ = new EventTarget();
+const __FACADE_EVENT_TARGET__ = new EventTarget();
+const __facade_eventListenerErrors__ = new WeakMap<Event, unknown>();
+const __facade_eventListenerWrappers__ = new WeakMap<
+	EventListenerOrEventListenerObject,
+	EventListener
+>();
+
+// Facade events model runtime event delivery, so listener exceptions must
+// propagate even when EventTarget uses spec-compliant report-and-continue semantics.
+function __facade_getEventListenerWrapper__(
+	listener: EventListenerOrEventListenerObject
+): EventListener {
+	const existingWrapper = __facade_eventListenerWrappers__.get(listener);
+	if (existingWrapper !== undefined) {
+		return existingWrapper;
+	}
+
+	const wrapper: EventListener = function (this: EventTarget, event) {
+		try {
+			if (typeof listener === "function") {
+				listener.call(this, event);
+			} else {
+				listener.handleEvent(event);
+			}
+		} catch (error) {
+			__facade_eventListenerErrors__.set(event, error);
+			event.stopImmediatePropagation();
+		}
+	};
+	__facade_eventListenerWrappers__.set(listener, wrapper);
+	return wrapper;
+}
+
+function __facade_dispatchEvent__(event: Event): boolean {
+	const result = __FACADE_EVENT_TARGET__.dispatchEvent(event);
+	if (!__facade_eventListenerErrors__.has(event)) {
+		return result;
+	}
+
+	const error = __facade_eventListenerErrors__.get(event);
+	__facade_eventListenerErrors__.delete(event);
+	throw error;
 }
 
 function __facade_isSpecialEvent__(
@@ -37,7 +67,9 @@ globalThis.addEventListener = function (type, listener, options) {
 	if (__facade_isSpecialEvent__(type)) {
 		__FACADE_EVENT_TARGET__.addEventListener(
 			type,
-			listener as EventListenerOrEventListenerObject,
+			__facade_getEventListenerWrapper__(
+				listener as EventListenerOrEventListenerObject
+			),
 			options
 		);
 	} else {
@@ -48,7 +80,9 @@ globalThis.removeEventListener = function (type, listener, options) {
 	if (__facade_isSpecialEvent__(type)) {
 		__FACADE_EVENT_TARGET__.removeEventListener(
 			type,
-			listener as EventListenerOrEventListenerObject,
+			__facade_getEventListenerWrapper__(
+				listener as EventListenerOrEventListenerObject
+			),
 			options
 		);
 	} else {
@@ -57,7 +91,7 @@ globalThis.removeEventListener = function (type, listener, options) {
 };
 globalThis.dispatchEvent = function (event) {
 	if (__facade_isSpecialEvent__(event.type)) {
-		return __FACADE_EVENT_TARGET__.dispatchEvent(event);
+		return __facade_dispatchEvent__(event);
 	} else {
 		return __facade__originalDispatchEvent__(event);
 	}
@@ -184,7 +218,7 @@ __facade__originalAddEventListener__("fetch", (event) => {
 				noRetry() {},
 			});
 
-			__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+			__facade_dispatchEvent__(facadeEvent);
 			event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 		}
 	};
@@ -195,7 +229,7 @@ __facade__originalAddEventListener__("fetch", (event) => {
 			passThroughOnException: ctx.passThroughOnException,
 		});
 
-		__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+		__facade_dispatchEvent__(facadeEvent);
 		facadeEvent[__facade_dispatched__] = true;
 		event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 
@@ -224,6 +258,6 @@ __facade__originalAddEventListener__("scheduled", (event) => {
 		noRetry: event.noRetry.bind(event),
 	});
 
-	__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+	__facade_dispatchEvent__(facadeEvent);
 	event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 });

@@ -4,9 +4,13 @@
 	"type": "module",
 	"scripts": {
 		"build:default": "vite build --app",
+		"build:exports": "vite build -c ./vite.config.exports.ts",
+		"cf-typegen": "wrangler types -c ./wrangler.exports.jsonc --no-include-runtime",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
-		"preview": "vite preview"
+		"dev:exports": "vite dev -c ./vite.config.exports.ts",
+		"preview": "vite preview",
+		"preview:exports": "vite preview -c ./vite.config.exports.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",

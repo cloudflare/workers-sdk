@@ -40,10 +40,10 @@ export function isNonNegativeNumber(str: string): boolean {
 }
 
 /**
- * Helper to detect if a command errored due to the data catalog validation.
+ * Helper to detect if a command errored due to Basin Catalog validation.
  *
  * @param error The specific error returned by an API
- * @returns True if failed due to data catalog check, false otherwise
+ * @returns True if failed due to Basin Catalog check, false otherwise
  */
 export function isDataCatalogConflict(error: unknown): boolean {
 	return error instanceof APIError && error.code === 10081;

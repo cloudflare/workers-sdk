@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { getEdgeKvUploadConcurrency } from "@cloudflare/deploy-helpers";
 import {
+	createDeferred,
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
@@ -27,20 +28,13 @@ import {
 	mockDeploymentsListRequest,
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
+	mockServiceScriptData,
 	writeAssets,
 } from "./helpers";
 import type { AssetManifest } from "../../assets";
 import type { FormData } from "undici";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -62,6 +56,56 @@ vi.mock("@cloudflare/cli-shared-helpers/command");
 
 function createJwt(payload: Record<string, unknown>) {
 	return `header.${Buffer.from(JSON.stringify(payload)).toString("base64")}.signature`;
+}
+
+function controlLongTimeouts(minimumDelayMs: number) {
+	type ControlledTimeout = {
+		callback: () => void;
+		deadline: number;
+	};
+
+	const immediateSetTimeout = globalThis.setTimeout;
+	const immediateClearTimeout = globalThis.clearTimeout;
+	let now = Date.now();
+	const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+	const controlledTimeouts = new Set<ControlledTimeout>();
+	const scheduledDelays: number[] = [];
+
+	vi.stubGlobal("setTimeout", (callback: () => void, delay = 0) => {
+		scheduledDelays.push(delay);
+		if (delay < minimumDelayMs) {
+			return immediateSetTimeout(callback, delay);
+		}
+
+		const timeout = { callback, deadline: now + delay };
+		controlledTimeouts.add(timeout);
+		return timeout;
+	});
+	vi.stubGlobal(
+		"clearTimeout",
+		(timeout: ReturnType<typeof setTimeout> | ControlledTimeout) => {
+			if (!controlledTimeouts.delete(timeout as ControlledTimeout)) {
+				immediateClearTimeout(timeout as ReturnType<typeof setTimeout>);
+			}
+		}
+	);
+
+	return {
+		controlledTimeouts,
+		scheduledDelays,
+		advanceBy(delay: number): void {
+			now += delay;
+			for (const timeout of controlledTimeouts) {
+				if (timeout.deadline <= now) {
+					controlledTimeouts.delete(timeout);
+					timeout.callback();
+				}
+			}
+		},
+		restore(): void {
+			dateNowSpy.mockRestore();
+		},
+	};
 }
 
 describe("deploy", () => {
@@ -1214,6 +1258,634 @@ describe("deploy", () => {
 			sendMetricsEventSpy.mockRestore();
 		});
 
+		describe.each([
+			{ name: "legacy", useSingleAssetUpload: false },
+			{ name: "single-file", useSingleAssetUpload: true },
+		])("$name asset uploads", ({ useSingleAssetUpload }) => {
+			it("should only recover concurrency after post-throttle successes", async ({
+				expect,
+			}) => {
+				vi.stubEnv("WRANGLER_LOG", "debug");
+
+				const assets = Array.from({ length: 7 }, (_, index) => ({
+					filePath: `file-${index}.txt`,
+					content: `Content of file-${index}`,
+				}));
+				writeAssets(assets);
+				writeWranglerConfig({ assets: { directory: "assets" } });
+
+				const uploadJwt = createJwt({
+					wrangler_single_asset_uploads: useSingleAssetUpload,
+					edge_kv_upload_concurrency: 3,
+				});
+				const completionJwt = "<<aus-completion-token>>";
+				const assetIndexByHash = new Map<string, number>();
+				const assetHashByPath = new Map<string, string>();
+				const uploadAttemptsByHash = new Map<string, number>();
+				const gatewayResponseGate = createDeferred<void>();
+				const uploadGates = Array.from({ length: assets.length }, () =>
+					createDeferred<void>()
+				);
+
+				function expectUploadAttemptsByPath(
+					expectedAttemptsByPath: Record<string, number>
+				) {
+					const actualAttemptsByPath = Object.fromEntries(
+						Array.from(assetHashByPath, ([assetPath, assetHash]) => [
+							assetPath,
+							uploadAttemptsByHash.get(assetHash),
+						])
+					);
+					expect(actualAttemptsByPath).toMatchObject(expectedAttemptsByPath);
+				}
+
+				async function handleUpload(assetHash: string) {
+					const assetIndex = assetIndexByHash.get(assetHash);
+					if (assetIndex === undefined) {
+						throw new Error("Unexpected asset hash");
+					}
+
+					const uploadAttemptCount =
+						(uploadAttemptsByHash.get(assetHash) ?? 0) + 1;
+					uploadAttemptsByHash.set(assetHash, uploadAttemptCount);
+					if (assetIndex === 0 && uploadAttemptCount === 1) {
+						await gatewayResponseGate.promise;
+						return HttpResponse.text("gateway timeout", { status: 524 });
+					}
+
+					await uploadGates[assetIndex].promise;
+					return HttpResponse.json(createFetchResult({ jwt: completionJwt }), {
+						status: 201,
+					});
+				}
+
+				msw.use(
+					http.post(
+						"*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session",
+						async ({ request }) => {
+							const { manifest } = (await request.json()) as {
+								manifest: AssetManifest;
+							};
+							const hashes = Object.entries(manifest)
+								.sort(([leftPath], [rightPath]) =>
+									leftPath.localeCompare(rightPath)
+								)
+								.map(([assetPath, entry], index) => {
+									assetIndexByHash.set(entry.hash, index);
+									assetHashByPath.set(assetPath, entry.hash);
+									uploadAttemptsByHash.set(entry.hash, 0);
+									return entry.hash;
+								});
+
+							return HttpResponse.json(
+								createFetchResult({
+									jwt: uploadJwt,
+									buckets: hashes.map((hash) => [hash]),
+								}),
+								{ status: 201 }
+							);
+						}
+					),
+					http.post(
+						"*/accounts/some-account-id/workers/assets/upload/:hash",
+						({ params }) => handleUpload(String(params.hash))
+					),
+					http.post(
+						"*/accounts/some-account-id/workers/assets/upload",
+						async ({ request }) => {
+							// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
+							const formData = await request.formData();
+							const [hash] = formData.keys();
+							return handleUpload(hash);
+						}
+					)
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedAssets: { jwt: completionJwt, config: {} },
+					expectedType: "none",
+				});
+
+				const deployPromise = runWrangler("deploy");
+
+				try {
+					await vi.waitFor(
+						() => {
+							expectUploadAttemptsByPath({
+								"/file-0.txt": 1,
+								"/file-1.txt": 1,
+								"/file-2.txt": 1,
+							});
+						},
+						{ timeout: 10_000 }
+					);
+					expectUploadAttemptsByPath({
+						"/file-3.txt": 0,
+						"/file-4.txt": 0,
+						"/file-5.txt": 0,
+						"/file-6.txt": 0,
+					});
+					gatewayResponseGate.resolve();
+					await vi.waitFor(() => {
+						expect(std.debug).toContain(
+							"Asset upload concurrency throttled to 1 after a gateway error."
+						);
+					});
+
+					// The retry remains queued at concurrency one until the requests that
+					// started before the gateway error have completed.
+					uploadGates[1].resolve();
+					uploadGates[2].resolve();
+					await vi.waitFor(() => {
+						expect(std.info).toContain("Uploaded 2 of 7 assets");
+						expectUploadAttemptsByPath({
+							"/file-0.txt": 2,
+							"/file-1.txt": 1,
+							"/file-2.txt": 1,
+						});
+					});
+					await new Promise<void>((resolve) => setImmediate(resolve));
+					expectUploadAttemptsByPath({
+						"/file-3.txt": 0,
+						"/file-4.txt": 0,
+						"/file-5.txt": 0,
+						"/file-6.txt": 0,
+					});
+					expect(std.debug).not.toContain("Asset upload concurrency recovered");
+
+					// The retry started after the throttle, so its success restores one slot.
+					uploadGates[0].resolve();
+					await vi.waitFor(() => {
+						expectUploadAttemptsByPath({
+							"/file-3.txt": 1,
+							"/file-4.txt": 1,
+						});
+					});
+					expectUploadAttemptsByPath({
+						"/file-5.txt": 0,
+						"/file-6.txt": 0,
+					});
+
+					// One more post-throttle success restores the configured concurrency.
+					uploadGates[3].resolve();
+					await vi.waitFor(() => {
+						expectUploadAttemptsByPath({
+							"/file-5.txt": 1,
+							"/file-6.txt": 1,
+						});
+					});
+				} finally {
+					gatewayResponseGate.resolve();
+					for (const uploadGate of uploadGates) {
+						uploadGate.resolve();
+					}
+					await deployPromise;
+				}
+
+				expectUploadAttemptsByPath({
+					"/file-0.txt": 2,
+					"/file-1.txt": 1,
+					"/file-2.txt": 1,
+					"/file-3.txt": 1,
+					"/file-4.txt": 1,
+					"/file-5.txt": 1,
+					"/file-6.txt": 1,
+				});
+				expect(
+					std.debug.match(
+						/Asset upload concurrency (?:throttled to 1 after a gateway error|recovered to [23])\./g
+					)
+				).toEqual([
+					"Asset upload concurrency throttled to 1 after a gateway error.",
+					"Asset upload concurrency recovered to 2.",
+					"Asset upload concurrency recovered to 3.",
+				]);
+			});
+		});
+
+		it("should pause retries and queued uploads for Retry-After", async ({
+			expect,
+		}) => {
+			const retryAfterMs = 120_000;
+			const clock = controlLongTimeouts(100_000);
+
+			const assets = Array.from({ length: 3 }, (_, index) => ({
+				filePath: `file-${index}.txt`,
+				content: `Content of file-${index}`,
+			}));
+			writeAssets(assets);
+			writeWranglerConfig({ assets: { directory: "assets" } });
+
+			const uploadJwt = createJwt({
+				wrangler_single_asset_uploads: true,
+				edge_kv_upload_concurrency: 2,
+			});
+			const completionJwt = "<<aus-completion-token>>";
+			const assetIndexByHash = new Map<string, number>();
+			const uploadAttempts = [0, 0, 0];
+			const secondUploadGate = createDeferred<void>();
+
+			msw.use(
+				http.post(
+					"*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session",
+					async ({ request }) => {
+						const { manifest } = (await request.json()) as {
+							manifest: AssetManifest;
+						};
+						const hashes = Object.entries(manifest)
+							.sort(([leftPath], [rightPath]) =>
+								leftPath.localeCompare(rightPath)
+							)
+							.map(([, entry], index) => {
+								assetIndexByHash.set(entry.hash, index);
+								return entry.hash;
+							});
+
+						return HttpResponse.json(
+							createFetchResult({
+								jwt: uploadJwt,
+								buckets: hashes.map((hash) => [hash]),
+							}),
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					"*/accounts/some-account-id/workers/assets/upload/:hash",
+					async ({ params }) => {
+						const assetIndex = assetIndexByHash.get(String(params.hash));
+						if (assetIndex === undefined) {
+							throw new Error("Unexpected asset hash");
+						}
+
+						uploadAttempts[assetIndex]++;
+						if (assetIndex === 0 && uploadAttempts[assetIndex] === 1) {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10013, message: "service unavailable" },
+								]),
+								{
+									status: 503,
+									headers: { "Retry-After": "120" },
+								}
+							);
+						}
+						if (assetIndex === 1) {
+							await secondUploadGate.promise;
+						}
+
+						return HttpResponse.json(
+							createFetchResult({ jwt: completionJwt }),
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: { jwt: completionJwt, config: {} },
+				expectedType: "none",
+			});
+
+			const deployPromise = runWrangler("deploy");
+
+			try {
+				await vi.waitFor(() => {
+					expect(uploadAttempts).toEqual([1, 1, 0]);
+					expect(clock.controlledTimeouts.size).toBe(1);
+				});
+				expect(clock.scheduledDelays).not.toContain(1_000);
+				expect(std.info).toContain(
+					'Received a "Retry-After" header from the Cloudflare API. Waiting 120 second(s) before retrying...'
+				);
+
+				secondUploadGate.resolve();
+				await vi.waitFor(() => {
+					expect(std.info).toContain("Uploaded 1 of 3 assets");
+				});
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(uploadAttempts).toEqual([1, 1, 0]);
+
+				clock.advanceBy(retryAfterMs - 1);
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(uploadAttempts).toEqual([1, 1, 0]);
+
+				clock.advanceBy(1);
+				await vi.waitFor(() => {
+					expect(uploadAttempts).toEqual([2, 1, 1]);
+				});
+				expect(clock.controlledTimeouts.size).toBe(0);
+			} finally {
+				secondUploadGate.resolve();
+				clock.advanceBy(retryAfterMs);
+				try {
+					await deployPromise;
+				} finally {
+					clock.restore();
+				}
+			}
+		});
+
+		it("should pause a queued retry when another retry receives Retry-After", async ({
+			expect,
+		}) => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			const retryAfterMs = 120_000;
+			const clock = controlLongTimeouts(100_000);
+			const assets = Array.from({ length: 3 }, (_, index) => ({
+				filePath: `file-${index}.txt`,
+				content: `Content of file-${index}`,
+			}));
+			writeAssets(assets);
+			writeWranglerConfig({ assets: { directory: "assets" } });
+
+			const uploadJwt = createJwt({
+				wrangler_single_asset_uploads: true,
+				edge_kv_upload_concurrency: 2,
+			});
+			const completionJwt = "<<aus-completion-token>>";
+			const assetIndexByHash = new Map<string, number>();
+			const uploadAttempts = [0, 0, 0];
+			const bothGatewayRequestsStarted = createDeferred<void>();
+			const firstRetryResponseGate = createDeferred<void>();
+			const retryOrder: number[] = [];
+			let gatewayRequestsStarted = 0;
+
+			msw.use(
+				http.post(
+					"*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session",
+					async ({ request }) => {
+						const { manifest } = (await request.json()) as {
+							manifest: AssetManifest;
+						};
+						const hashes = Object.entries(manifest)
+							.sort(([leftPath], [rightPath]) =>
+								leftPath.localeCompare(rightPath)
+							)
+							.map(([, entry], index) => {
+								assetIndexByHash.set(entry.hash, index);
+								return entry.hash;
+							});
+
+						return HttpResponse.json(
+							createFetchResult({
+								jwt: uploadJwt,
+								buckets: hashes.map((hash) => [hash]),
+							}),
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					"*/accounts/some-account-id/workers/assets/upload/:hash",
+					async ({ params }) => {
+						const assetIndex = assetIndexByHash.get(String(params.hash));
+						if (assetIndex === undefined) {
+							throw new Error("Unexpected asset hash");
+						}
+
+						uploadAttempts[assetIndex]++;
+						if (assetIndex < 2 && uploadAttempts[assetIndex] === 1) {
+							gatewayRequestsStarted++;
+							if (gatewayRequestsStarted === 2) {
+								bothGatewayRequestsStarted.resolve();
+							}
+							await bothGatewayRequestsStarted.promise;
+							return HttpResponse.text("gateway timeout", {
+								status: 524,
+								headers: { "Retry-After": "120" },
+							});
+						}
+						if (assetIndex < 2 && uploadAttempts[assetIndex] === 2) {
+							retryOrder.push(assetIndex);
+							if (retryOrder.length === 1) {
+								await firstRetryResponseGate.promise;
+								return HttpResponse.json(
+									createFetchResult(null, false, [
+										{ code: 10013, message: "service unavailable" },
+									]),
+									{
+										status: 503,
+										headers: { "Retry-After": "120" },
+									}
+								);
+							}
+						}
+
+						return HttpResponse.json(
+							createFetchResult({ jwt: completionJwt }),
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: { jwt: completionJwt, config: {} },
+				expectedType: "none",
+			});
+
+			const deployPromise = runWrangler("deploy");
+
+			try {
+				await vi.waitFor(() => {
+					expect(uploadAttempts).toEqual([1, 1, 0]);
+					expect(clock.controlledTimeouts.size).toBe(1);
+				});
+
+				clock.advanceBy(retryAfterMs - 1);
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(uploadAttempts).toEqual([1, 1, 0]);
+
+				clock.advanceBy(1);
+				await vi.waitFor(() => {
+					expect(retryOrder).toHaveLength(1);
+				});
+				expect(uploadAttempts.slice(0, 2).sort()).toEqual([1, 2]);
+				expect(uploadAttempts[2]).toBe(0);
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(retryOrder).toHaveLength(1);
+
+				firstRetryResponseGate.resolve();
+				await vi.waitFor(() => {
+					expect(clock.controlledTimeouts.size).toBe(1);
+					expect(
+						std.info.match(/Asset upload failed\. Retrying/g)
+					).toHaveLength(3);
+					expect(
+						std.info.match(/Received a "Retry-After" header/g)
+					).toHaveLength(2);
+				});
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(retryOrder).toHaveLength(1);
+				expect(uploadAttempts.slice(0, 2).sort()).toEqual([1, 2]);
+
+				clock.advanceBy(retryAfterMs - 1);
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(retryOrder).toHaveLength(1);
+
+				clock.advanceBy(1);
+				await vi.waitFor(() => {
+					expect(retryOrder).toHaveLength(2);
+				});
+				await deployPromise;
+
+				expect(uploadAttempts.slice(0, 2).sort()).toEqual([2, 3]);
+				expect(uploadAttempts[2]).toBe(1);
+				expect(std.debug).toContain("Asset upload concurrency recovered to 2.");
+			} finally {
+				bothGatewayRequestsStarted.resolve();
+				firstRetryResponseGate.resolve();
+				clock.advanceBy(retryAfterMs);
+				try {
+					await deployPromise;
+				} finally {
+					clock.restore();
+				}
+			}
+		});
+
+		it("should cancel pending retries after an upload fails", async ({
+			expect,
+		}) => {
+			const retryAfterMs = 120_000;
+			const retryDelayMs = 1_000;
+			const clock = controlLongTimeouts(500);
+			const assets = Array.from({ length: 4 }, (_, index) => ({
+				filePath: `file-${index}.txt`,
+				content: `Content of file-${index}`,
+			}));
+			writeAssets(assets);
+			writeWranglerConfig({ assets: { directory: "assets" } });
+
+			const uploadJwt = createJwt({
+				wrangler_single_asset_uploads: true,
+				edge_kv_upload_concurrency: 3,
+			});
+			const assetIndexByHash = new Map<string, number>();
+			const uploadAttempts = [0, 0, 0, 0];
+			const permanentFailureGate = createDeferred<void>();
+			const lateRequestStarted = createDeferred<void>();
+			const lateResponseGate = createDeferred<void>();
+			const lateResponseReturned = createDeferred<void>();
+			let lateRequest: Request | undefined;
+
+			msw.use(
+				http.post(
+					"*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session",
+					async ({ request }) => {
+						const { manifest } = (await request.json()) as {
+							manifest: AssetManifest;
+						};
+						const hashes = Object.entries(manifest)
+							.sort(([leftPath], [rightPath]) =>
+								leftPath.localeCompare(rightPath)
+							)
+							.map(([, entry], index) => {
+								assetIndexByHash.set(entry.hash, index);
+								return entry.hash;
+							});
+
+						return HttpResponse.json(
+							createFetchResult({
+								jwt: uploadJwt,
+								buckets: hashes.map((hash) => [hash]),
+							}),
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					"*/accounts/some-account-id/workers/assets/upload/:hash",
+					async ({ params, request }) => {
+						const assetIndex = assetIndexByHash.get(String(params.hash));
+						if (assetIndex === undefined) {
+							throw new Error("Unexpected asset hash");
+						}
+
+						uploadAttempts[assetIndex]++;
+						if (assetIndex === 0) {
+							await permanentFailureGate.promise;
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10013, message: "permanent upload failure" },
+								]),
+								{ status: 500, headers: { "Retry-After": "0" } }
+							);
+						}
+						if (assetIndex === 1 && uploadAttempts[assetIndex] === 1) {
+							lateRequest = request;
+							lateRequestStarted.resolve();
+							await lateResponseGate.promise;
+							lateResponseReturned.resolve();
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10013, message: "late Retry-After response" },
+								]),
+								{
+									status: 503,
+									headers: { "Retry-After": "120" },
+								}
+							);
+						}
+						if (assetIndex === 2 && uploadAttempts[assetIndex] === 1) {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10013, message: "retrying upload" },
+								]),
+								{ status: 500 }
+							);
+						}
+
+						return HttpResponse.json(
+							createFetchResult({ jwt: "<<aus-completion-token>>" }),
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			const deployPromise = runWrangler("deploy");
+
+			try {
+				// Hold one request open and one bucket in exponential backoff before
+				// allowing another bucket to exhaust its retries.
+				await lateRequestStarted.promise;
+				await vi.waitFor(() => {
+					expect(clock.controlledTimeouts.size).toBe(1);
+				});
+				permanentFailureGate.resolve();
+				await expect(deployPromise).rejects.toThrow(
+					"A request to the Cloudflare API"
+				);
+				expect(uploadAttempts).toEqual([6, 1, 1, 0]);
+				expect(lateRequest?.signal.aborted).toBe(true);
+				expect(clock.controlledTimeouts.size).toBe(0);
+
+				// A response that arrives after the deployment failed must not restart
+				// either the Retry-After timer or any cancelled bucket.
+				lateResponseGate.resolve();
+				await lateResponseReturned.promise;
+				await new Promise<void>((resolve) => setImmediate(resolve));
+
+				expect(clock.controlledTimeouts.size).toBe(0);
+				expect(uploadAttempts).toEqual([6, 1, 1, 0]);
+				expect(std.info.match(/Received a "Retry-After" header/g)).toHaveLength(
+					1
+				);
+
+				clock.advanceBy(retryDelayMs);
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(uploadAttempts).toEqual([6, 1, 1, 0]);
+			} finally {
+				permanentFailureGate.resolve();
+				lateResponseGate.resolve();
+				clock.advanceBy(Math.max(retryAfterMs, retryDelayMs));
+				await deployPromise.catch(() => undefined);
+				clock.restore();
+			}
+		});
+
 		it("should send bulk asset upload stats with deploy metrics", async ({
 			expect,
 		}) => {
@@ -1535,6 +2207,10 @@ describe("deploy", () => {
 				expectedCompatibilityFlags: ["nodejs_compat"],
 				expectedMainModule: undefined,
 				expectedDispatchNamespace: "my-namespace",
+			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "my-namespace",
 			});
 			await runWrangler("deploy --dispatch-namespace my-namespace");
 		});

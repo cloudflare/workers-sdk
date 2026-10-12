@@ -112,6 +112,9 @@ describe("sidebar-state", () => {
 				kv: true,
 				r2: false,
 				workflows: true,
+				email: false,
+				"cron-triggers": false,
+				flagship: true,
 			};
 			storageStub.setItem(GROUPS_STORAGE_KEY, JSON.stringify(stored));
 			expect(loadGroupState()).toEqual(stored);
@@ -159,6 +162,9 @@ describe("sidebar-state", () => {
 				kv: false,
 				r2: true,
 				workflows: false,
+				email: true,
+				"cron-triggers": false,
+				flagship: false,
 			};
 			saveGroupState(state);
 			const raw = storageStub.getItem(GROUPS_STORAGE_KEY);
@@ -185,6 +191,9 @@ describe("sidebar-state", () => {
 				kv: true,
 				r2: false,
 				workflows: true,
+				email: true,
+				"cron-triggers": true,
+				flagship: true,
 			};
 			saveGroupState(state);
 			expect(loadGroupState()).toEqual(state);

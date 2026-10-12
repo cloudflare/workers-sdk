@@ -33,6 +33,7 @@
 import { cpSync, existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import esbuild from "esbuild";
 import { getPackage, pkgRoot } from "./common.mjs";
 
@@ -40,6 +41,7 @@ import { getPackage, pkgRoot } from "./common.mjs";
 
 const argv = process.argv.slice(2);
 const watch = argv[0] === "--watch";
+const sourcemap = process.env.SOURCEMAPS !== "false";
 
 // --- Helpers ---
 
@@ -97,6 +99,18 @@ const localExplorerWorkerPath = path.join(
 	"local-explorer",
 	"explorer.worker.ts"
 );
+const assetWorkerPaths = new Set([
+	path.join(workersRoot, "assets", "assets.worker.ts"),
+	path.join(workersRoot, "assets", "router.worker.ts"),
+]);
+const workersSharedSentryPath = path.join(
+	pkgRoot,
+	"..",
+	"workers-shared",
+	"utils",
+	"sentry.ts"
+);
+const noopSentryPath = path.join(workersRoot, "assets", "sentry-noop.ts");
 
 /**
  * Test fixtures that need to be transpiled by esbuild as part of the build.
@@ -124,6 +138,47 @@ const rewriteNodeToInternalPlugin = {
 			const module = args.path.substring("node:".length);
 			return { path: `node-internal:internal_${module}`, external: true };
 		});
+	},
+};
+
+/**
+ * Replaces the production Sentry setup used by the asset and router Workers.
+ * Miniflare never binds the required Sentry credentials, so the production
+ * implementation always returns before initialising Toucan.
+ *
+ * @type {esbuild.Plugin}
+ */
+const noopSentryPlugin = {
+	name: "noop-sentry",
+	setup(build) {
+		build.onResolve({ filter: /sentry(?:\.ts)?$/ }, (args) => {
+			const importPath = path.resolve(args.resolveDir, args.path);
+			if (
+				importPath === workersSharedSentryPath ||
+				`${importPath}.ts` === workersSharedSentryPath
+			) {
+				return { path: noopSentryPath };
+			}
+		});
+	},
+};
+
+/**
+ * esbuild plugin that redirects Zod imports to the shared workerd extension.
+ *
+ * Without this, every embedded worker importing Zod gets its own copy of the
+ * library. Keeping the rewrite here also covers imports from generated code and
+ * workspace packages bundled into Miniflare's workers.
+ *
+ * @type {esbuild.Plugin}
+ */
+const aliasZodToMiniflareExtensionPlugin = {
+	name: "alias-zod-to-miniflare-extension",
+	setup(build) {
+		build.onResolve({ filter: /^zod$/ }, () => ({
+			external: true,
+			path: "miniflare:zod",
+		}));
 	},
 };
 
@@ -184,7 +239,7 @@ const embedWorkersPlugin = {
 					format: "esm",
 					target: "esnext",
 					bundle: true,
-					sourcemap: true,
+					sourcemap,
 					sourcesContent: true,
 					// These virtual modules are provided by workerd at runtime
 					external: [
@@ -198,12 +253,19 @@ const embedWorkersPlugin = {
 					minifySyntax: true,
 					outdir: build.initialOptions.outdir,
 					outbase: pkgRoot,
-					// Shared extension workers need node:* → node-internal:*
-					plugins:
-						args.path === miniflareSharedExtensionPath ||
+					plugins: [
+						// Shared extension workers need node:* → node-internal:*
+						...(args.path === miniflareSharedExtensionPath ||
 						args.path === miniflareZodExtensionPath
 							? [rewriteNodeToInternalPlugin]
-							: [],
+							: []),
+						...(assetWorkerPaths.has(args.path) ? [noopSentryPlugin] : []),
+						// The Zod extension must bundle the real package, while all other
+						// workers import that single shared copy.
+						...(args.path === miniflareZodExtensionPath
+							? []
+							: [aliasZodToMiniflareExtensionPlugin]),
+					],
 					// Inject SPARROW_SOURCE_KEY for the local explorer telemetry
 					define:
 						args.path === localExplorerWorkerPath
@@ -356,13 +418,17 @@ async function buildPackage() {
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
 	const outPath = path.join(pkgRoot, "dist");
+	if (!watch) {
+		// A release build must not retain maps emitted by an earlier development build.
+		await removeDir(outPath);
+	}
 
 	const buildOptions = {
 		platform: "node",
 		format: "cjs",
 		target: "esnext",
 		bundle: true,
-		sourcemap: true,
+		sourcemap,
 		sourcesContent: true,
 		tsconfig: path.join(pkgRoot, "tsconfig.json"),
 		external: [
@@ -391,7 +457,9 @@ async function buildPackage() {
 	}
 
 	copyLocalExplorerUi(outPath, pkgRoot);
-	await patchSourcemaps(outPath);
+	if (sourcemap) {
+		await patchSourcemaps(outPath);
+	}
 }
 
 buildPackage().catch((e) => {

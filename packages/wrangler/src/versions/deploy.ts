@@ -7,16 +7,23 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { initContainersSharedContext } from "@cloudflare/containers-shared";
 import {
 	type ApiVersion,
+	deployVersionedDurableObjectContainerApplications,
+	getVersionedDurableObjectContainerApplications,
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
 	printVersions,
 	renderInconsistentExportsAcrossVersionsError,
+	resolveVersionedDurableObjectContainerApplications,
 } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
@@ -26,9 +33,14 @@ import {
 	fetchDeployableVersions,
 	fetchDeploymentVersions,
 	fetchLatestDeployment,
+	fetchVersion,
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
+import {
+	durableObjectsCodeUpdateModeArg,
+	resolveDurableObjectsCodeUpdateStrategy,
+} from "./deployment-args";
 import type { Percentage, VersionCache, VersionId } from "./types";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
@@ -54,6 +66,7 @@ export const versionsDeployCommand = createCommand({
 
 	args: {
 		...experimentalNewConfigArg,
+		...durableObjectsCodeUpdateModeArg,
 		name: {
 			describe: "Name of the worker",
 			type: "string",
@@ -198,10 +211,38 @@ export const versionsDeployCommand = createCommand({
 			helpText: "(optional)",
 		});
 
+		const selectedVersions = await Promise.all(
+			confirmedVersionsToDeploy.map((versionId) =>
+				fetchVersion(config, accountId, workerName, versionId)
+			)
+		);
+		const containerApplications =
+			getVersionedDurableObjectContainerApplications(
+				selectedVersions,
+				workerName
+			);
+
 		if (args.dryRun) {
 			cli.cancel("--dry-run: exiting");
 			return;
 		}
+
+		if (containerApplications.length > 0) {
+			initContainersSharedContext({
+				logger,
+				fetchPagedListResult,
+				fetchResult,
+			});
+			await fillOpenAPIConfiguration(config, containersScope);
+		}
+
+		const resolvedContainerApplications =
+			await resolveVersionedDurableObjectContainerApplications(config, {
+				applications: containerApplications,
+				accountId,
+				scriptName: workerName,
+				allowMissingNamespaces: true,
+			});
 
 		const start = Date.now();
 
@@ -215,7 +256,12 @@ export const versionsDeployCommand = createCommand({
 						accountId,
 						workerName,
 						confirmedVersionTraffic,
-						message
+						message,
+						undefined,
+						resolveDurableObjectsCodeUpdateStrategy(
+							args.durableObjectsCodeUpdateMode,
+							config.durable_objects.code_update_strategy
+						)
 					);
 				},
 			});
@@ -245,6 +291,26 @@ export const versionsDeployCommand = createCommand({
 				);
 			}
 			throw e;
+		}
+
+		// createDeployment reconciles declarative exports before returning.
+		// As with a normal deploy, applications are created after the Worker
+		// deployment succeeds so a rejected deployment cannot leak applications.
+		try {
+			await deployVersionedDurableObjectContainerApplications(config, {
+				applications: resolvedContainerApplications,
+				accountId,
+				scriptName: workerName,
+			});
+		} catch (error) {
+			throw new UserError(
+				"The Worker Versions were deployed successfully, but Wrangler could not finish creating their Durable Object-managed Container applications. Re-run the same `wrangler versions deploy` command to retry the idempotent application creation.",
+				{
+					telemetryMessage:
+						"versions deploy durable object container application creation failed after deployment",
+					cause: error,
+				}
+			);
 		}
 
 		await maybePatchSettings(config, accountId, workerName);

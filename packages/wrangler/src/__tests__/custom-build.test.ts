@@ -31,6 +31,18 @@ describe("Custom Builds", () => {
 		}
 	});
 
+	// POSIX-only: `kill` is not a `cmd.exe` command, and Windows has no real
+	// signals anyway — a terminated process there reports a non-zero exit code,
+	// which `throwOnError` already covers.
+	it.skipIf(process.platform === "win32")(
+		"runCustomBuild throws UserError when a command is terminated by a signal",
+		async ({ expect }) => {
+			await expect(
+				runCustomBuild("/", "/", { command: "kill -TERM $$" }, undefined)
+			).rejects.toThrow(UserError);
+		}
+	);
+
 	it("runCommand aborts the custom build command", async ({ expect }) => {
 		const aborter = new AbortController();
 		const commandPromise = runCommand(

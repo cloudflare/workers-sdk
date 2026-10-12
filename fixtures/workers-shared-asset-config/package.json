@@ -11,7 +11,7 @@
 		"type:tests": "tsc -p ./tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/vitest-plugin": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",

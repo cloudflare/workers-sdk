@@ -10,7 +10,9 @@ import {
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
+import { buildOutputContainers } from "../build-output-containers";
 import {
+	applyWorkerEsbuildSupported,
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
@@ -25,6 +27,7 @@ import {
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
+import { getServerWatchConfig } from "./wrangler-watch-ignore";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
 import type * as vite from "vite";
@@ -72,6 +75,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						ctx.getTunnelHostnames(),
 						userConfig.server?.allowedHosts
 					),
+					watch: getServerWatchConfig(userConfig.server?.watch),
 					fs: {
 						deny: [
 							...defaultDeniedFiles,
@@ -101,6 +105,17 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				ctx.resolvedPluginConfig,
 				ctx.resolvedViteConfig
 			);
+
+			// Assets-only configs can still hold Worker environments (a prerender
+			// Worker), so this covers both resolved config types.
+			const {
+				environmentNameToWorkerMap,
+				environmentNameToChildEnvironmentNamesMap,
+			} = ctx.resolvedPluginConfig;
+			applyWorkerEsbuildSupported(resolvedViteConfig, [
+				...environmentNameToWorkerMap.keys(),
+				...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
+			]);
 
 			if (ctx.resolvedPluginConfig.experimental.newConfig?.cfBuildOutput) {
 				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
@@ -223,7 +238,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 							entryWorkerNewConfig,
 							`No config found for "${entryWorkerEnvironmentName}" environment`
 						);
-						await writeWorkerConfig(builder.config.root, entryWorkerNewConfig);
+						await writeWorkerConfig({
+							root: builder.config.root,
+							config: entryWorkerNewConfig,
+						});
 					} else {
 						const entryWorkerConfig = ctx.getWorkerConfig(
 							entryWorkerEnvironmentName
@@ -266,6 +284,11 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						);
 					}
 				}
+
+				await buildOutputContainers(
+					ctx.resolvedPluginConfig,
+					builder.config.root
+				);
 			},
 		},
 	};

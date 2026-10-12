@@ -2,6 +2,7 @@ import { fetch } from "undici";
 import { beforeAll, describe, it } from "vitest";
 
 const REMOTE = "https://playground-testing.devprod.cloudflare.dev";
+const PREVIEW_COOKIE_NAME = "__Host-token";
 const PREVIEW_REMOTE =
 	"https://random-data.playground-testing.devprod.cloudflare.dev";
 
@@ -95,7 +96,7 @@ describe("Preview Worker", () => {
 		);
 		expect(resp.headers.get("location")).toEqual("/hello?world");
 		expect(resp.headers.get("set-cookie") ?? "").toEqual(
-			`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
+			`${PREVIEW_COOKIE_NAME}=${defaultUserToken}; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 		);
 	});
 	it("shouldn't be redirected with no token", async ({ expect }) => {
@@ -143,7 +144,7 @@ describe("Preview Worker", () => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			method: "GET",
 			headers: {
-				cookie: `token=${defaultUserToken}`,
+				cookie: `${PREVIEW_COOKIE_NAME}=${defaultUserToken}`,
 			},
 		});
 
@@ -155,7 +156,7 @@ describe("Preview Worker", () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/redirect`, {
 			method: "GET",
 			headers: {
-				cookie: `token=${defaultUserToken}`,
+				cookie: `${PREVIEW_COOKIE_NAME}=${defaultUserToken}`,
 			},
 			redirect: "manual",
 		});
@@ -170,7 +171,7 @@ describe("Preview Worker", () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
 			method: "PUT",
 			headers: {
-				cookie: `token=${defaultUserToken}`,
+				cookie: `${PREVIEW_COOKIE_NAME}=${defaultUserToken}`,
 			},
 			redirect: "manual",
 		});
@@ -182,7 +183,7 @@ describe("Preview Worker", () => {
 			method: "PUT",
 			headers: {
 				"X-Custom-Header": "custom",
-				cookie: `token=${defaultUserToken}`,
+				cookie: `${PREVIEW_COOKIE_NAME}=${defaultUserToken}`,
 			},
 			redirect: "manual",
 		});
@@ -193,7 +194,7 @@ describe("Preview Worker", () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/status`, {
 			method: "PUT",
 			headers: {
-				cookie: `token=${defaultUserToken}`,
+				cookie: `${PREVIEW_COOKIE_NAME}=${defaultUserToken}`,
 			},
 			redirect: "manual",
 		});
@@ -221,7 +222,7 @@ describe("Preview Worker", () => {
 	it("should reject invalid token", async ({ expect }) => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			headers: {
-				cookie: `token=TEST_TOKEN`,
+				cookie: `${PREVIEW_COOKIE_NAME}=TEST_TOKEN`,
 			},
 		});
 		expect(resp.status).toBe(400);
@@ -342,7 +343,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toEqual(
-				`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
+				`${PREVIEW_COOKIE_NAME}=${defaultUserToken}; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 			);
 		});
 		it("should allow workers.cloudflare.com", async ({ expect }) => {
@@ -364,7 +365,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toEqual(
-				`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
+				`${PREVIEW_COOKIE_NAME}=${defaultUserToken}; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 			);
 		});
 		it("should allow workers-playground.pages.dev", async ({ expect }) => {
@@ -387,7 +388,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toEqual(
-				`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
+				`${PREVIEW_COOKIE_NAME}=${defaultUserToken}; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 			);
 		});
 		it("should allow workers-playground.workers.dev", async ({ expect }) => {
@@ -409,7 +410,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toEqual(
-				`token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
+				`${PREVIEW_COOKIE_NAME}=${defaultUserToken}; Path=/; HttpOnly; Secure; SameSite=None; Partitioned`
 			);
 		});
 		it("should reject unknown referer", async ({ expect }) => {

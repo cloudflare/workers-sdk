@@ -13,6 +13,7 @@ export default defineConfig({
 		tanstackRouter({
 			target: "react",
 			autoCodeSplitting: true,
+			routeFileIgnorePattern: "shared",
 		}),
 		react(),
 		svgr(),

@@ -220,6 +220,7 @@ export async function unstable_dev(
 		types: false,
 		tunnel: undefined,
 		tunnelName: undefined,
+		tunnelAllowedMail: undefined,
 		experimentalNewConfig: false,
 	};
 

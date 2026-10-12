@@ -122,10 +122,10 @@ npm i https://pkg.pr.new/@cloudflare/vite-plugin@main
 
 </p></details>
 
-<details><summary><b>@cloudflare/vitest-pool-workers</b></summary><p>
+<details><summary><b>@cloudflare/vitest-plugin</b></summary><p>
 
 ```
-npm i https://pkg.pr.new/@cloudflare/vitest-pool-workers@main
+npm i https://pkg.pr.new/@cloudflare/vitest-plugin@main
 ```
 
 </p></details>

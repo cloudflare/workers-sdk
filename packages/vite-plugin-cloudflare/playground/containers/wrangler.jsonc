@@ -8,6 +8,10 @@
 			"service": "dockerfile-container-app",
 		},
 		{
+			"binding": "NAMED_IMAGES_APP",
+			"service": "named-images-container-app",
+		},
+		{
 			"binding": "REGISTRY_APP",
 			"service": "registry-container-app",
 		},

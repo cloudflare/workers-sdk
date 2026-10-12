@@ -154,8 +154,11 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		const rows = convertRows(Array.from(cursor.raw()));
 
 		let results = undefined;
-		if (format === "ROWS_AND_COLUMNS") results = { columns, rows };
-		else results = rowsToObjects(columns, rows);
+		if (format === "ROWS_AND_COLUMNS") {
+			results = { columns, rows };
+		} else {
+			results = rowsToObjects(columns, rows);
+		}
 		// Note that the "NONE" format behaviour here is inconsistent with workerd.
 		// See comment: https://github.com/cloudflare/workers-sdk/pull/5917#issuecomment-2133313156
 
@@ -187,7 +190,10 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		};
 	};
 
-	#txn(queries: D1Query[], format: D1ResultsFormat): D1SuccessResponse[] {
+	async #txn(
+		queries: D1Query[],
+		format: D1ResultsFormat
+	): Promise<{ results: D1SuccessResponse[]; commitToken: string }> {
 		// Filter out queries that are just comments
 		queries = queries.filter(
 			(query) => query.sql.replace(/^\s+--.*/gm, "").trim().length > 0
@@ -198,9 +204,21 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		}
 
 		try {
-			return this.state.storage.transactionSync(() =>
-				queries.map(this.#query.bind(this, format))
-			);
+			// Roll back the queries if bookmark retrieval fails, so a catchable
+			// D1_ERROR never reports these writes as failed after committing them.
+			return await this.state.storage.transaction(async () => {
+				const results = queries.map(this.#query.bind(this, format));
+				let commitToken: string;
+				try {
+					commitToken = await this.state.storage.getCurrentBookmark();
+				} catch (e) {
+					const message = e instanceof Error ? e.message : String(e);
+					throw new Error(`Failed to get session commit token: ${message}`, {
+						cause: e,
+					});
+				}
+				return { results, commitToken };
+			});
 		} catch (e) {
 			throw new D1Error(e);
 		}
@@ -210,7 +228,9 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 	@POST("/execute")
 	queryExecute: RouteHandler = async (req) => {
 		let queries = D1QueriesSchema.parse(await req.json());
-		if (!Array.isArray(queries)) queries = [queries];
+		if (!Array.isArray(queries)) {
+			queries = [queries];
+		}
 
 		// Special local-mode-only handlers
 		if (this.#isExportPragma(queries)) {
@@ -222,11 +242,10 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 			searchParams.get("resultsFormat")
 		);
 
-		return Response.json(this.#txn(queries, resultsFormat), {
-			headers: {
-				[D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]:
-					await this.state.storage.getCurrentBookmark(),
-			},
+		const { results, commitToken } = await this.#txn(queries, resultsFormat);
+
+		return Response.json(results, {
+			headers: { [D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]: commitToken },
 		});
 	};
 

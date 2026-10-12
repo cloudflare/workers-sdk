@@ -1,5 +1,6 @@
 import { APIError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../../shared/context";
+import { cliPresentation, fetchResult } from "../../shared/context";
+import { getWorkflowsOwnedByScript } from "./owned-workflows";
 import type { Config } from "@cloudflare/workers-utils";
 
 export type Workflow = {
@@ -53,11 +54,9 @@ export async function checkWorkflowConflicts(
 	| { hasConflicts: false }
 	| { hasConflicts: true; conflicts: WorkflowConflict[]; message: string }
 > {
-	const workflowsToDeploy = config.workflows?.filter(
-		(w) => w.script_name === undefined || w.script_name === scriptName
-	);
+	const workflowsToDeploy = getWorkflowsOwnedByScript(config, scriptName);
 
-	if (!workflowsToDeploy?.length) {
+	if (!workflowsToDeploy.length) {
 		return { hasConflicts: false };
 	}
 
@@ -85,7 +84,7 @@ export async function checkWorkflowConflicts(
 
 	const message =
 		`The following workflow(s) already exist and belong to different workers:\n${conflictList}\n\n` +
-		`Deploying will reassign these workflows to "${scriptName}". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in the Wrangler config.`;
+		`Deploying will reassign these workflows to "${scriptName}". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in your ${cliPresentation.displayConfigFileName}.`;
 
 	return { hasConflicts: true, conflicts, message };
 }

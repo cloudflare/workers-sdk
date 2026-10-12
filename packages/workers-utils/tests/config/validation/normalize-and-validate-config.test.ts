@@ -1,5 +1,5 @@
 import path from "node:path";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { assert, describe, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
@@ -92,8 +92,8 @@ describe("normalizeAndValidateConfig()", () => {
 			site: undefined,
 			text_blobs: undefined,
 			browser: undefined,
+			analytics: undefined,
 			ai: undefined,
-			websearch: undefined,
 			version_metadata: undefined,
 			triggers: {
 				crons: undefined,
@@ -125,6 +125,7 @@ describe("normalizeAndValidateConfig()", () => {
 			tail_consumers: undefined,
 			streaming_tail_consumers: undefined,
 			pipelines: [],
+			k2: [],
 			workflows: [],
 			userConfigPath: undefined,
 			topLevelName: undefined,
@@ -1460,6 +1461,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected "observability.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.traces.enabled" to be of type boolean but got "INVALID".
+				  - Expected "observability.issues.enabled" to be of type boolean but got undefined.
 				  - Expected "observability.head_sampling_rate" to be of type number but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.head_sampling_rate" to be of type number but got "INVALID".
@@ -1770,22 +1772,150 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if durable_objects.bindings is not defined", ({
+			it("should default durable_objects.bindings when only a code update strategy is defined", ({
 				expect,
 			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ durable_objects: {} } as unknown as RawConfig,
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							code_update_strategy: {
+								mode: "deferred",
+								max_delay: 1.001,
+							},
+						},
+					},
 					undefined,
 					undefined,
 					{ env: undefined }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - The field "durable_objects" is missing the required "bindings" property."
-				`);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [],
+					code_update_strategy: { mode: "deferred", max_delay: 1.001 },
+				});
 			});
+
+			it("should support a code update strategy alongside durable object bindings", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							bindings: [{ name: "CHAT_ROOM", class_name: "ChatRoom" }],
+							code_update_strategy: {
+								mode: "deferred",
+								max_delay: 86400,
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [{ name: "CHAT_ROOM", class_name: "ChatRoom" }],
+					code_update_strategy: { mode: "deferred", max_delay: 86400 },
+				});
+			});
+
+			it("should accept a millisecond-precision code update delay near the maximum", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						durable_objects: {
+							code_update_strategy: { mode: "deferred", max_delay: 65536.001 },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects.code_update_strategy).toEqual({
+					mode: "deferred",
+					max_delay: 65536.001,
+				});
+			});
+
+			for (const { name, strategy, expectedError } of [
+				{
+					name: "is not an object",
+					strategy: [],
+					expectedError:
+						'The field "durable_objects.code_update_strategy" should be an object',
+				},
+				{
+					name: "has no mode",
+					strategy: {},
+					expectedError:
+						'"durable_objects.code_update_strategy.mode" is a required field.',
+				},
+				{
+					name: "has an unknown mode",
+					strategy: { mode: "gradual" },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.mode" field to be one of',
+				},
+				{
+					name: "has a non-number max delay",
+					strategy: { mode: "deferred", max_delay: "60" },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be of type number',
+				},
+				{
+					name: "has a negative max delay",
+					strategy: { mode: "deferred", max_delay: -1 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be between 0 and 86400 seconds',
+				},
+				{
+					name: "has a max delay greater than 24 hours",
+					strategy: { mode: "deferred", max_delay: 86400.001 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to be between 0 and 86400 seconds',
+				},
+				{
+					name: "has a max delay below one millisecond",
+					strategy: { mode: "deferred", max_delay: 0.0005 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to use millisecond precision',
+				},
+				{
+					name: "has sub-millisecond precision",
+					strategy: { mode: "deferred", max_delay: 1.0005 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to use millisecond precision',
+				},
+				{
+					name: "has sub-millisecond precision near the maximum",
+					strategy: { mode: "deferred", max_delay: 86399.9995 },
+					expectedError:
+						'Expected "durable_objects.code_update_strategy.max_delay" to use millisecond precision',
+				},
+			] as const) {
+				it(`should error if durable_objects.code_update_strategy ${name}`, ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							durable_objects: {
+								code_update_strategy: strategy,
+							},
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.renderErrors()).toContain(expectedError);
+				});
+			}
 
 			it("should error if durable_objects.bindings is an object", ({
 				expect,
@@ -2187,6 +2317,259 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
+			it("accepts workflow entries", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+						ScheduledWorkflow: {
+							type: "workflow",
+							name: "scheduled",
+							limits: { steps: 5 },
+							concurrency: { limit: 2 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when a workflow entry is missing a name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentionally invalid shape under test
+							GreetingWorkflow: { type: "workflow" } as any,
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow.name" is a required field.'
+				);
+			});
+
+			it("warns when workflow entries include unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								storage: "sqlite",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in exports.GreetingWorkflow field: "storage"'
+				);
+			});
+
+			it("errors when a workflow entry name has an invalid format", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							SpacedWorkflow: { type: "workflow", name: "bad name" },
+							EmptyWorkflow: { type: "workflow", name: "" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.SpacedWorkflow.name" is invalid.'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.EmptyWorkflow.name" is invalid.'
+				);
+			});
+
+			it("errors when a workflow step limit is not a positive integer", ({
+				expect,
+			}) => {
+				for (const steps of [0, -1, 1.5]) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							exports: {
+								GreetingWorkflow: {
+									type: "workflow",
+									name: "greeting",
+									limits: { steps },
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(
+						`"exports.GreetingWorkflow" export "limits.steps" field must be a positive integer but got ${steps}.`
+					);
+				}
+			});
+
+			it("errors when workflow export settings are invalid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							EmptyScheduleWorkflow: {
+								type: "workflow",
+								name: "empty-schedule",
+								schedules: "",
+							},
+							EmptySchedulesWorkflow: {
+								type: "workflow",
+								name: "empty-schedules",
+								schedules: [],
+							},
+							ConcurrencyWorkflow: {
+								type: "workflow",
+								name: "concurrency",
+								concurrency: { limit: 0 },
+							},
+							RetentionWorkflow: {
+								type: "workflow",
+								name: "retention",
+								default_retention: { error_retention: -1 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.EmptyScheduleWorkflow" export "schedules" field must not be an empty string.
+					  - "exports.EmptySchedulesWorkflow" export "schedules" field must not be an empty array.
+					  - "exports.ConcurrencyWorkflow" export "concurrency.limit" field must be a positive integer but got 0.
+					  - "exports.RetentionWorkflow" export "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("warns when a workflow step limit exceeds the production maximum", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 30_000 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					"exceeds the production maximum of 25,000"
+				);
+			});
+
+			it("accepts a Workflow declared by both a binding and a matching export", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						workflows: [
+							{
+								binding: "GREETING",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+								limits: { steps: 10 },
+							},
+							{
+								binding: "BATCH",
+								name: "batch",
+								class_name: "BatchWorkflow",
+								script_name: "my-worker",
+							},
+						],
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								limits: { steps: 10 },
+							},
+							BatchWorkflow: {
+								type: "workflow",
+								name: "batch",
+								limits: { steps: 5 },
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("errors when two exports declare the same Workflow", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: { type: "workflow", name: "greeting" },
+							OtherWorkflow: { type: "workflow", name: "greeting" },
+						},
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.GreetingWorkflow" and "exports.OtherWorkflow" both declare the Workflow "greeting". Workflow names must be unique.'
+				);
+			});
+
 			it("errors when worker cache enabled is not a boolean", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -2430,7 +2813,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "exports.Weird.type" must be "durable-object" or "worker", but got "container"."
+					  - "exports.Weird.type" must be "durable-object", "worker", or "workflow", but got "container"."
 				`);
 			});
 
@@ -2657,36 +3040,39 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("errors when `container` is combined with `legacy-kv` storage", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "my-worker",
-						containers: [
-							{
-								name: "my-container",
-								image: "registry.cloudflare.com/something:hello",
+			it.for(["default", "durable_object"] as const)(
+				"errors when `container` is combined with `legacy-kv` storage (%s)",
+				(scheduling_policy, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "my-worker",
+							containers: [
+								{
+									name: "my-container",
+									...(scheduling_policy === "durable_object"
+										? { scheduling_policy }
+										: { image: "registry.cloudflare.com/something:hello" }),
+								},
+							],
+							exports: {
+								MyDO: {
+									type: "durable-object",
+									storage: "legacy-kv",
+									container: "my-container",
+								},
 							},
-						],
-						exports: {
-							MyDO: {
-								type: "durable-object",
-								storage: "legacy-kv",
-								container: "my-container",
-							},
-						},
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "exports.MyDO.container" requires "storage" to be "sqlite". Containers are not supported on Durable Objects using the "legacy-kv" storage backend."
 				`);
-			});
+				}
+			);
 
 			for (const state of ["deleted", "renamed", "transferred"] as const) {
 				it(`errors when \`container\` is set on a ${state} tombstone`, ({
@@ -2724,73 +3110,79 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[containers] linked via `exports`", () => {
-			it("errors when `container` names a container that does not exist", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "my-worker",
-						containers: [
-							{
-								name: "my-container",
-								image: "registry.cloudflare.com/something:hello",
+			it.for(["default", "durable_object"] as const)(
+				"errors when `container` names a container that does not exist (%s)",
+				(scheduling_policy, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "my-worker",
+							containers: [
+								{
+									name: "my-container",
+									...(scheduling_policy === "durable_object"
+										? { scheduling_policy }
+										: { image: "registry.cloudflare.com/something:hello" }),
+								},
+							],
+							exports: {
+								MyDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "missing-container",
+								},
 							},
-						],
-						exports: {
-							MyDO: {
-								type: "durable-object",
-								storage: "sqlite",
-								container: "missing-container",
-							},
-						},
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "exports.MyDO.container" references a container named "missing-container", but no container with that name is defined in "containers".
 					  - The container "my-container" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field."
 				`);
-			});
+				}
+			);
 
-			it("errors when two Durable Object exports reference the same container", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "my-worker",
-						containers: [
-							{
-								name: "my-container",
-								image: "registry.cloudflare.com/something:hello",
+			it.for(["default", "durable_object"] as const)(
+				"errors when two Durable Object exports reference the same container (%s)",
+				(scheduling_policy, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "my-worker",
+							containers: [
+								{
+									name: "my-container",
+									...(scheduling_policy === "durable_object"
+										? { scheduling_policy }
+										: { image: "registry.cloudflare.com/something:hello" }),
+								},
+							],
+							exports: {
+								MyDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "my-container",
+								},
+								OtherDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "my-container",
+								},
 							},
-						],
-						exports: {
-							MyDO: {
-								type: "durable-object",
-								storage: "sqlite",
-								container: "my-container",
-							},
-							OtherDO: {
-								type: "durable-object",
-								storage: "sqlite",
-								container: "my-container",
-							},
-						},
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The container "my-container" is referenced by more than one Durable Object export (MyDO, OtherDO). A container can only back a single Durable Object."
 				`);
-			});
+				}
+			);
 
 			it("reports the duplicate claim only once when the container also sets `class_name`", ({
 				expect,
@@ -2868,41 +3260,44 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("errors when a different export claims a container that already names its class", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "my-worker",
-						containers: [
-							{
-								name: "my-container",
-								image: "registry.cloudflare.com/something:hello",
-								class_name: "MyDO",
+			it.for(["default", "durable_object"] as const)(
+				"errors when a different export claims a container that already names its class (%s)",
+				(scheduling_policy, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "my-worker",
+							containers: [
+								{
+									name: "my-container",
+									...(scheduling_policy === "durable_object"
+										? { scheduling_policy }
+										: { image: "registry.cloudflare.com/something:hello" }),
+									class_name: "MyDO",
+								},
+							],
+							exports: {
+								// `MyDO` does not name a container, so the mismatch is only
+								// visible from the other direction: `OtherDO` claims the
+								// container that `MyDO` has already been given.
+								MyDO: { type: "durable-object", storage: "sqlite" },
+								OtherDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "my-container",
+								},
 							},
-						],
-						exports: {
-							// `MyDO` does not name a container, so the mismatch is only
-							// visible from the other direction: `OtherDO` claims the
-							// container that `MyDO` has already been given.
-							MyDO: { type: "durable-object", storage: "sqlite" },
-							OtherDO: {
-								type: "durable-object",
-								storage: "sqlite",
-								container: "my-container",
-							},
-						},
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The container "my-container" sets "class_name" to "MyDO", but "exports.OtherDO.container" references it. A Durable Object and its container must reference each other consistently."
 				`);
-			});
+				}
+			);
 
 			it("allows a consistent round trip between a container and its export", ({
 				expect,
@@ -3476,6 +3871,111 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.hasErrors()).toBeFalsy();
 			});
+
+			describe("[assets.base_path]", () => {
+				it.for(["/", "/subpath", "/subpath/", "/a/../b"])(
+					"accepts the string value %s for downstream normalization",
+					(basePath, { expect }) => {
+						const { config, diagnostics } = normalizeAndValidateConfig(
+							{ assets: { directory: "./public", base_path: basePath } },
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+
+						expect(config.assets?.base_path).toBe(basePath);
+						expect(diagnostics.hasErrors()).toBe(false);
+						expect(diagnostics.hasWarnings()).toBe(false);
+					}
+				);
+
+				it.for([
+					{ value: null, rendered: "null" },
+					{ value: 123, rendered: "123" },
+				])(
+					"errors when base_path is $rendered",
+					({ value, rendered }, { expect }) => {
+						const { diagnostics } = normalizeAndValidateConfig(
+							{
+								assets: { directory: "./public", base_path: value },
+							} as unknown as RawConfig,
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+
+						expect(diagnostics.hasErrors()).toBe(true);
+						expect(diagnostics.renderErrors()).toBe(
+							`Processing wrangler configuration:\n  - Expected "assets.base_path" to be of type string but got ${rendered}.`
+						);
+					}
+				);
+
+				it("inherits base_path into a named environment", ({ expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							assets: { directory: "./public", base_path: "/subpath/" },
+							env: { staging: {} },
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.base_path).toBe("/subpath/");
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("preserves base_path in a named environment", ({ expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							env: {
+								staging: {
+									assets: {
+										directory: "./public",
+										base_path: "/subpath/",
+									},
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.base_path).toBe("/subpath/");
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("drops top-level asset fields when a named environment replaces the object", ({
+					expect,
+				}) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							assets: {
+								directory: "./public",
+								base_path: "/subpath",
+								run_worker_first: ["/*"],
+							},
+							env: {
+								staging: {
+									assets: {
+										directory: "./staging-public",
+									},
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.directory).toBe("./staging-public");
+					expect(config.assets?.base_path).toBeUndefined();
+					expect(config.assets?.run_worker_first).toBeUndefined();
+					expect(diagnostics.hasWarnings()).toBe(false);
+				});
+			});
 		});
 
 		describe("[browser]", () => {
@@ -3540,47 +4040,30 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		describe("[websearch]", () => {
-			it("should accept a valid websearch binding", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: { binding: "WEBSEARCH" } } as RawConfig,
+		describe("[analytics]", () => {
+			it("accepts an Analytics SQL binding", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ analytics: { binding: "ANALYTICS" } } as RawConfig,
 					undefined,
 					undefined,
 					{ env: undefined }
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.analytics).toEqual({ binding: "ANALYTICS" });
 			});
 
-			it("should error if websearch is an array", ({ expect }) => {
+			it("requires a binding name", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: [] } as unknown as RawConfig,
+					{ analytics: {} } as RawConfig,
 					undefined,
 					undefined,
 					{ env: undefined }
 				);
 
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - The field "websearch" should be an object but got []."
-				`);
-			});
-
-			it("should error if websearch has no binding name", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: {} } as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
+				expect(diagnostics.renderErrors()).toContain(
+					'binding should have a string "binding" field'
 				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - binding should have a string "binding" field."
-				`);
 			});
 		});
 
@@ -4619,6 +5102,745 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			});
 
+			it("should accept a Durable Object-managed container alongside migrations", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						durable_objects: {
+							bindings: [
+								{
+									name: "SANDBOX",
+									class_name: "Sandbox",
+								},
+							],
+						},
+						migrations: [
+							{
+								tag: "v1",
+								new_sqlite_classes: ["Sandbox"],
+							},
+						],
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								images: {
+									sandbox: {
+										dockerfile: "./Dockerfile",
+									},
+									tools: {
+										image:
+											"registry.cloudflare.com/account/tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.migrations).toEqual([
+					{
+						tag: "v1",
+						new_sqlite_classes: ["Sandbox"],
+					},
+				]);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "test-worker-name-sandbox",
+						scheduling_policy: "durable_object",
+						images: {
+							sandbox: {
+								dockerfile: "./Dockerfile",
+							},
+							tools: {
+								image:
+									"registry.cloudflare.com/account/tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+							},
+						},
+					},
+				]);
+			});
+
+			it("should preserve an explicit Durable Object-managed container name without named images", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								name: "sandbox-app",
+								scheduling_policy: "durable_object",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+					},
+				]);
+			});
+
+			it.for([
+				undefined,
+				[],
+				[
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+					},
+				],
+			])(
+				"allows user variables with containers %j",
+				(containers, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers,
+							vars: {
+								USER_IMAGES: "user value",
+							},
+						} as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(false);
+				}
+			);
+
+			it("should append the environment to a generated Durable Object-managed container name", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						env: {
+							staging: {
+								containers: [
+									{
+										class_name: "Sandbox",
+										scheduling_policy: "durable_object",
+									},
+								],
+							},
+						},
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "test-worker-name-sandbox-staging",
+						scheduling_policy: "durable_object",
+					},
+				]);
+			});
+
+			it("should reject scheduler fields on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								image: "./Dockerfile",
+								max_instances: 5,
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Unsupported fields for Durable Object-managed Containers in containers: "image","max_instances"'
+				);
+			});
+
+			it("should accept ssh and authorized_keys on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								ssh: { enabled: true, port: 2222 },
+								authorized_keys: [
+									{
+										name: "laptop",
+										public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+									},
+								],
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						scheduling_policy: "durable_object",
+						name: "sandboxes",
+						ssh: { enabled: true, port: 2222 },
+						authorized_keys: [
+							{
+								name: "laptop",
+								public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+							},
+						],
+					},
+				]);
+			});
+
+			it("should reject deprecated wrangler_ssh on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								wrangler_ssh: { enabled: true },
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'Unsupported fields for Durable Object-managed Containers in containers: "wrangler_ssh"'
+				);
+			});
+
+			it("should keep ssh when re-validating a normalized Durable Object-managed container", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					containers: [
+						{
+							class_name: "Sandbox",
+							scheduling_policy: "durable_object",
+							name: "sandboxes",
+							ssh: { enabled: true },
+						},
+					],
+				} as RawConfig;
+				const first = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				const second = normalizeAndValidateConfig(
+					{ containers: first.config.containers } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(second.diagnostics.hasErrors()).toBe(false);
+				expect(second.config.containers?.[0].ssh).toEqual({ enabled: true });
+			});
+
+			it("should reject invalid ssh and authorized_keys on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								ssh: { enabled: "yes", port: 70000 },
+								authorized_keys: [
+									{ name: "laptop", public_key: "ssh-rsa AAAAB3NzaC1yc2E" },
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.ssh.enabled must be a boolean
+					  - containers.ssh.port must be a number between 1 and 65535 inclusive
+					  - containers.authorized_keys[0].public_key is an unsupported key type. Please provide an ED25519 public key."
+				`);
+			});
+
+			it("should require a name or class name for a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								scheduling_policy: "durable_object",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"containers.name" is required when "containers.class_name" is not defined'
+				);
+			});
+
+			it.for([undefined, "staging"])(
+				"accepts a name-only managed container with inherited exports in environment %s",
+				(env, { expect }) => {
+					const containers = [
+						{ name: "sandbox", scheduling_policy: "durable_object" as const },
+					];
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "worker",
+							exports: {
+								Sandbox: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "sandbox",
+								},
+							},
+							...(env === undefined
+								? { containers }
+								: { env: { staging: { containers } } }),
+						},
+						undefined,
+						undefined,
+						{ env }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(config.containers).toEqual(containers);
+					expect(config.exports.Sandbox).toEqual({
+						type: "durable-object",
+						storage: "sqlite",
+						container: "sandbox",
+					});
+				}
+			);
+
+			it.for(["", 123])(
+				"rejects an invalid explicit managed class name %j even when an export links the container",
+				(class_name, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: [
+								{
+									name: "sandbox",
+									class_name,
+									scheduling_policy: "durable_object",
+								},
+							],
+							exports: {
+								Sandbox: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "sandbox",
+								},
+							},
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain("containers.class_name");
+				}
+			);
+
+			it("should reject malformed Durable Object-managed container images", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								images: {
+									missing: {},
+									docker: { dockerfile: "" },
+									remote: { image: "" },
+									both: {
+										dockerfile: "./Dockerfile",
+										image:
+											"registry.cloudflare.com/account/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				const errors = diagnostics.renderErrors();
+				expect(errors).toContain(
+					'"containers.images.missing" must specify exactly one of "dockerfile" or "image".'
+				);
+				expect(errors).toContain(
+					'"containers.images.docker.dockerfile" must be a non-empty string.'
+				);
+				expect(errors).toContain(
+					'"containers.images.remote.image" must be a non-empty string.'
+				);
+				expect(errors).toContain(
+					'"containers.images.both" must specify exactly one of "dockerfile" or "image".'
+				);
+			});
+
+			describe("Durable Object-managed image build options", () => {
+				function validateBuildOptions(
+					options: Record<string, unknown>,
+					registryImage = false
+				) {
+					const source = registryImage
+						? {
+								image: `registry.cloudflare.com/account/app@sha256:${"a".repeat(64)}`,
+							}
+						: { dockerfile: "./docker/Dockerfile" };
+					return normalizeAndValidateConfig(
+						{
+							name: "worker",
+							containers: [
+								{
+									name: "sandbox",
+									scheduling_policy: "durable_object",
+									images: { app: { ...source, ...options } },
+								},
+							],
+							exports: {
+								Sandbox: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "sandbox",
+								},
+							},
+						},
+						path.resolve("config/wrangler.jsonc"),
+						undefined,
+						{ env: undefined }
+					);
+				}
+
+				it.for([
+					{},
+					{ build_context: "../workspace" },
+					{ build_vars: {} },
+					{
+						build_context: "./context",
+						build_vars: { VERSION: "1.2.3", OPTIONAL_VALUE: "" },
+					},
+				])("preserves Dockerfile build options %j", (options, { expect }) => {
+					const { config, diagnostics } = validateBuildOptions(options);
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(config.containers?.[0].images?.app).toEqual({
+						dockerfile: "./docker/Dockerfile",
+						...options,
+					});
+				});
+
+				it.for(["", null, 17, []])(
+					"rejects invalid build_context %j",
+					(build_context, { expect }) => {
+						const { diagnostics } = validateBuildOptions({ build_context });
+						expect(diagnostics.renderErrors()).toContain(
+							'"containers.images.app.build_context" must be a non-empty string.'
+						);
+					}
+				);
+
+				it.for([null, [], "VERSION=1", { VERSION: 1 }, { VERSION: null }])(
+					"rejects invalid build_vars %j",
+					(build_vars, { expect }) => {
+						const { diagnostics } = validateBuildOptions({ build_vars });
+						expect(diagnostics.renderErrors()).toContain(
+							'"containers.images.app.build_vars" must be an object with string values.'
+						);
+					}
+				);
+
+				it.for(["build_context", "build_vars"] as const)(
+					"rejects %s on registry image entries",
+					(property, { expect }) => {
+						const { diagnostics } = validateBuildOptions(
+							{ [property]: property === "build_context" ? "." : {} },
+							true
+						);
+						expect(diagnostics.renderErrors()).toContain(
+							`Unexpected fields found in containers.images.app field: "${property}"`
+						);
+					}
+				);
+			});
+
+			describe("Durable Object-managed image references", () => {
+				const digest = "a".repeat(64);
+				function containers(image: string): RawConfig["containers"] {
+					return [
+						{
+							name: "sandbox",
+							class_name: "Sandbox",
+							scheduling_policy: "durable_object",
+							images: { app: { image } },
+						},
+					];
+				}
+
+				it.for([
+					"registry.cloudflare.com/account/app:latest",
+					"registry.cloudflare.com/account/app",
+					`registry.cloudflare.com/account/app:latest@sha256:${digest}`,
+					"registry.cloudflare.com/account/app@sha256:abc",
+					`registry.cloudflare.com/account/app@sha256:${"g".repeat(64)}`,
+					`registry.cloudflare.com/account/app@sha256:${"A".repeat(64)}`,
+					`registry.cloudflare.com/account/app@sha256:${digest}a`,
+					`registry.cloudflare.com/account/app@sha512:${digest}`,
+					`docker.io/account/app@sha256:${digest}`,
+					`registry.cloudflare.com.evil.com/account/app@sha256:${digest}`,
+					`https://registry.cloudflare.com/account/app@sha256:${digest}`,
+					`registry.cloudflare.com/app@sha256:${digest}`,
+					`registry.cloudflare.com/account//app@sha256:${digest}`,
+					`registry.cloudflare.com/account/app@sha256:${digest}\n`,
+				])("rejects invalid image %s", (image, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ containers: containers(image) },
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.renderErrors()).toContain(
+						'"containers.images.app.image" must be a digest-pinned image in the managed registry'
+					);
+				});
+
+				it.for([
+					{ registry: "registry.cloudflare.com", staging: false, fed: false },
+					{
+						registry: "staging.registry.cloudflare.com",
+						staging: true,
+						fed: false,
+					},
+					{
+						registry: "registry.fed.cloudflare.com",
+						staging: false,
+						fed: true,
+					},
+					{
+						registry: "staging.registry.fed.cloudflare.com",
+						staging: true,
+						fed: true,
+					},
+				])(
+					"accepts a digest in $registry",
+					({ registry, staging, fed }, { expect }) => {
+						vi.stubEnv(
+							"WRANGLER_API_ENVIRONMENT",
+							staging ? "staging" : "production"
+						);
+						const { diagnostics } = normalizeAndValidateConfig(
+							{
+								compliance_region: fed ? "fedramp_high" : "public",
+								containers: containers(
+									`${registry}/account/nested/app__tools-1.0@sha256:${digest}`
+								),
+							},
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+						expect(diagnostics.hasErrors()).toBe(false);
+					}
+				);
+
+				it("inherits the compliance region in a named environment", ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "fedramp_high",
+							env: {
+								production: {
+									containers: containers(
+										`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+									),
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("uses a named environment's compliance region override", ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "public",
+							env: {
+								production: {
+									compliance_region: "fedramp_high",
+									containers: containers(
+										`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+									),
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("honors the compliance region environment variable", ({
+					expect,
+				}) => {
+					vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("honors an explicit registry override without interpreting it as a pattern", ({
+					expect,
+				}) => {
+					vi.stubEnv(
+						"CLOUDFLARE_CONTAINER_REGISTRY",
+						"registry.example.com:5000"
+					);
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registry.example.com:5000/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+					const invalid = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registryXexample.com:5000/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(invalid.diagnostics.hasErrors()).toBe(true);
+				});
+
+				it("rejects images from a different managed registry", ({ expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "fedramp_high",
+							containers: containers(
+								`registry.cloudflare.com/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.renderErrors()).toContain(
+						"registry.fed.cloudflare.com/<account-id>"
+					);
+				});
+			});
+
+			it("should reject named images on a scheduler-backed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "Sandbox",
+								image: "./Dockerfile",
+								images: {
+									sandbox: { dockerfile: "./Dockerfile" },
+								},
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in containers field: "images"'
+				);
+			});
+
 			it("should provide a name in a named environment that inherits the top level worker name", ({
 				expect,
 			}) => {
@@ -4756,6 +5978,345 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Expected "containers.image_vars" to be of type object but got "invalid".
 					  - Expected "containers.scheduling_policy" field to be one of ["regional","moon","default"] but got "invalid".
 					  - Expected "containers.instance_type" field to be one of ["lite","basic","standard-1","standard-2","standard-3","standard-4","dev","standard"] but got "invalid"."
+				`);
+			});
+
+			it("should allow shorthand container observability", ({ expect }) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.[0]?.observability).toEqual({
+					enabled: true,
+				});
+			});
+
+			it.for([
+				{ label: "an empty object", observability: {} },
+				{ label: "an empty logs object", observability: { logs: {} } },
+			])(
+				"should reject container observability with $label",
+				({ observability }, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "test-worker",
+							containers: [
+								{
+									name: "test-container",
+									class_name: "TestClass",
+									image: "registry.cloudflare.com/test:latest",
+									observability,
+								},
+							],
+						} satisfies RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+						"Processing wrangler configuration:
+						  - "containers.observability.enabled" or "containers.observability.logs.enabled" is required."
+					`);
+				}
+			);
+
+			it("should allow nested container observability logs and targeting", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									logs: {
+										enabled: true,
+									},
+									target_instance_count: 2,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers?.[0]?.observability).toEqual({
+					logs: { enabled: true },
+					target_instance_count: 2,
+				});
+			});
+
+			it("should preserve container observability as a full override of root observability", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						observability: {
+							enabled: true,
+						},
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: false,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.observability).toEqual({ enabled: true });
+				expect(config.containers?.[0]?.observability).toEqual({
+					enabled: false,
+				});
+			});
+
+			it("should explain that targeting requires container-level enablement", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						observability: { enabled: true },
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: { target_instance_count: 2 },
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.observability.target_instance_count" requires "containers.observability.enabled" or "containers.observability.logs.enabled" to be true because container observability overrides root observability."
+				`);
+			});
+
+			it("should error when container observability is not an object", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: "enabled",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.observability" should be an object but got "enabled"."
+				`);
+			});
+
+			it("should error on invalid nested container observability values", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: "true",
+									logs: "enabled",
+									target_instance_percentage: "10",
+									target_instance_count: 0.5,
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "containers.observability.enabled" to be of type boolean but got "true".
+					  - Expected "containers.observability.logs" to be of type object but got "enabled".
+					  - Expected "containers.observability.target_instance_percentage" to be of type number but got "10".
+					  - "containers.observability.target_instance_percentage" and "containers.observability.target_instance_count" cannot both be set.
+					  - "containers.observability.target_instance_count" must be a positive integer.
+					  - "containers.observability.target_instance_percentage" requires "containers.observability.enabled" or "containers.observability.logs.enabled" to be true because container observability overrides root observability.
+					  - "containers.observability.target_instance_count" requires "containers.observability.enabled" or "containers.observability.logs.enabled" to be true because container observability overrides root observability."
+				`);
+			});
+
+			it("should error when container observability enabled values conflict", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									logs: {
+										enabled: false,
+									},
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.observability.enabled" and "containers.observability.logs.enabled" cannot be set to different values."
+				`);
+			});
+
+			it("should error when container observability logs is an array", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									logs: [],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "containers.observability.logs" to be of type object but got []."
+				`);
+			});
+
+			it("should error when both container observability targeting fields are set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									target_instance_percentage: 10,
+									target_instance_count: 2,
+								},
+							},
+						],
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.observability.target_instance_percentage" and "containers.observability.target_instance_count" cannot both be set."
+				`);
+			});
+
+			it("should warn on unsupported extra container observability keys", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								name: "test-container",
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								observability: {
+									enabled: true,
+									invalid_key: "nope",
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in containers.observability field: "invalid_key""
 				`);
 			});
 
@@ -5271,7 +6832,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp""
+					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp", "us""
 				`);
 			});
 
@@ -5303,31 +6864,32 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should allow valid constraints.regions and constraints.jurisdiction", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "test-worker",
-						containers: [
-							{
-								class_name: "TestClass",
-								image: "registry.cloudflare.com/test:latest",
-								constraints: {
-									regions: ["ENAM", "WNAM"],
-									jurisdiction: "fedramp",
+			it.for(["eu", "fedramp", "us"] as const)(
+				"should allow valid constraints.regions and constraints.jurisdiction %s",
+				(jurisdiction, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "test-worker",
+							containers: [
+								{
+									class_name: "TestClass",
+									image: "registry.cloudflare.com/test:latest",
+									constraints: {
+										regions: ["ENAM", "WNAM"],
+										jurisdiction,
+									},
 								},
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.hasErrors()).toBe(false);
-			});
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(false);
+				}
+			);
 		});
 
 		describe("[kv_namespaces]", () => {
@@ -6037,7 +7599,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of "tcp" but got {"port":8081}."
+					  - "connect[0]" should have a "protocol" field of "tcp" or "udp" but got {"port":8081}."
 				`);
 			});
 
@@ -6055,7 +7617,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of "tcp" but got "ftp"."
+					  - "connect[0]" should have a "protocol" field of "tcp" or "udp" but got "ftp"."
 				`);
 			});
 
@@ -6150,6 +7712,49 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should warn if UDP options are configured for TCP", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [{ protocol: "tcp", port: 8081, idle_timeout_ms: 1_000 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in connect[0] field: "idle_timeout_ms""
+				`);
+			});
+
+			it("should error if UDP options are not unsigned 32-bit integers", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{
+								protocol: "udp",
+								port: 8081,
+								idle_timeout_ms: 1.5,
+								max_pending_bytes: 0x100000000,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have an integer "idle_timeout_ms" field between 0 and 4294967295 but got {"protocol":"udp","port":8081,"idle_timeout_ms":1.5,"max_pending_bytes":4294967296}.
+					  - "connect[0]" should have an integer "max_pending_bytes" field between 0 and 4294967295 but got {"protocol":"udp","port":8081,"idle_timeout_ms":1.5,"max_pending_bytes":4294967296}."
+				`);
+			});
+
 			it("should accept a valid connect config with multiple unique protocol/port combinations", ({
 				expect,
 			}) => {
@@ -6158,6 +7763,7 @@ describe("normalizeAndValidateConfig()", () => {
 						connect: [
 							{ protocol: "tcp", port: 8081, address: "*" },
 							{ protocol: "tcp", port: 8082 },
+							{ protocol: "udp", port: 8081 },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -6170,6 +7776,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.connect).toEqual([
 					{ protocol: "tcp", port: 8081, address: "*" },
 					{ protocol: "tcp", port: 8082 },
+					{ protocol: "udp", port: 8081 },
 				]);
 			});
 
@@ -8143,6 +9750,163 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "workflows[0]" has a step limit of 30000, which exceeds the production maximum of 25,000. This configuration may not work when deployed."
+				`);
+			});
+
+			it("should accept valid default_retention values", ({ expect }) => {
+				const validRetentions = [
+					{ success_retention: "3 days" },
+					{ error_retention: "1 hour" },
+					{ success_retention: 86400000 },
+					{ success_retention: "7 days", error_retention: 3600000 },
+				];
+
+				for (const default_retention of validRetentions) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							workflows: [
+								{
+									binding: "MY_WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									default_retention,
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(
+						diagnostics.hasErrors(),
+						`expected ${JSON.stringify(default_retention)} to be valid, got: ${diagnostics.renderErrors()}`
+					).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+				}
+			});
+
+			it("should error if default_retention is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: "3 days",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have an object "default_retention" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","default_retention":"3 days"}."
+				`);
+			});
+
+			// The duration grammar belongs to the Workflows API, which rejects unknown units at deploy
+			// time. Validating it here too would reject values that a newer API version accepts.
+			it("should not police the duration grammar", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { success_retention: "3 bananas" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if a default_retention value is an empty string", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { success_retention: "" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "default_retention.success_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ""."
+				`);
+			});
+
+			it("should error if a default_retention value is negative", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { error_retention: -1 },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("should warn on unexpected default_retention fields", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { retention: "3 days" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in workflows[0].default_retention field: "retention""
 				`);
 			});
 
@@ -10356,23 +12120,30 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if durable_objects.bindings is not defined", ({
+			it("should allow a named environment code update strategy without bindings", ({
 				expect,
 			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						env: {
+							ENV1: {
+								durable_objects: {
+									code_update_strategy: { mode: "immediate" },
+								},
+							},
+						},
+					},
 					undefined,
 					undefined,
 					{ env: "ENV1" }
 				);
 
 				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-
-					  - "env.ENV1" environment configuration
-					    - The field "env.ENV1.durable_objects" is missing the required "bindings" property."
-				`);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.durable_objects).toEqual({
+					bindings: [],
+					code_update_strategy: { mode: "immediate" },
+				});
 			});
 
 			it("should error if durable_objects.bindings is an object", ({
@@ -11485,6 +13256,7 @@ describe("normalizeAndValidateConfig()", () => {
 						observability: {
 							notEnabled: "true",
 							head_sampling_rate: true,
+							redact_query_string: "true",
 						},
 					} as unknown as RawConfig,
 					undefined,
@@ -11501,8 +13273,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
-					  - Expected "observability.head_sampling_rate" to be of type number but got true."
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.issues.enabled" is required.
+					  - Expected "observability.head_sampling_rate" to be of type number but got true.
+					  - Expected "observability.redact_query_string" to be of type boolean but got "true"."
 				`);
 			});
 
@@ -11522,12 +13295,32 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error if observability issues is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: { issues: null },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.issues.enabled" is required.
+					  - "observability.issues" should be an object but got null."
+				`);
+			});
+
 			it("should not warn on full observability config", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						observability: {
 							enabled: true,
 							head_sampling_rate: 1,
+							redact_query_string: true,
 							logs: {
 								enabled: true,
 								head_sampling_rate: 1,
@@ -12534,6 +14327,49 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should reject a preview code update strategy", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						previews: {
+							durable_objects: {
+								code_update_strategy: { mode: "immediate" },
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "previews.durable_objects" is missing the required "bindings" property.'
+				);
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in previews.durable_objects field: "code_update_strategy"'
+				);
+			});
+
+			it("should reject invalid targeted placement in previews config", ({
+				expect,
+			}) => {
+				const invalidPlacements = [
+					{ mode: "targeted" },
+					{ mode: "targeted", region: "" },
+					{ mode: "off", region: "WEU" },
+				];
+
+				for (const placement of invalidPlacements) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ previews: { placement } } as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.renderErrors()).toContain('"previews.placement');
+				}
+			});
+
 			it("should accept previews.queues as an object with producers", ({
 				expect,
 			}) => {
@@ -12553,6 +14389,31 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.ai_search and previews.ai_search_namespaces", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						ai_search_namespaces: [
+							{ binding: "AI_SEARCH", namespace: "preview-ns" },
+						],
+						ai_search: [
+							{ binding: "SEARCH", instance_name: "preview-instance" },
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
 			it("should accept previews.stream as a named simple binding", ({
@@ -12674,6 +14535,47 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 			});
 
+			it("should accept previews.analytics", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						analytics: { binding: "ANALYTICS" },
+					},
+				} as unknown as RawConfig;
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.previews?.analytics).toEqual({ binding: "ANALYTICS" });
+			});
+
+			it("should reject previews.analytics without a binding name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						analytics: {},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'binding should have a string "binding" field.'
+				);
+			});
+
 			it("should reject previews.queues when passed as a flat array", ({
 				expect,
 			}) => {
@@ -12720,6 +14622,173 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderErrors()).toContain(
 					'The field "previews.browser" should be an object'
+				);
+			});
+
+			it("should accept previews.containers without a name", ({ expect }) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.containers in a named environment that relies on the inherited top-level name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					env: {
+						staging: {
+							previews: {
+								containers: [
+									{
+										class_name: "MyContainer",
+										image: "registry.cloudflare.com/test:latest",
+									},
+								],
+							},
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.containers when the worker name is omitted", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).not.toContain(
+					'Must have either a top level "name"'
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject a previews.containers entry that sets a name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+							{
+								class_name: "OtherContainer",
+								image: "registry.cloudflare.com/other:latest",
+								name: "custom-name",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"previews.containers[1].name" cannot be set'
+				);
+			});
+
+			it("should reject two previews.containers entries sharing a class_name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/other:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"previews.containers" declares more than one container for the Durable Object class "MyContainer"'
+				);
+			});
+
+			it("should reject previews.containers entries missing image", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [{ class_name: "MyContainer" }],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"containers.image" field must be defined'
 				);
 			});
 		});

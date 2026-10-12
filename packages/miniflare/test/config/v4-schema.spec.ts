@@ -52,6 +52,58 @@ describe("V4MiniflareOptionsSchema", () => {
 		});
 	});
 
+	test("parses workflowExports carrier", ({ expect }) => {
+		const parsed = V4MiniflareOptionsSchema.parse({
+			script: "export default {}",
+			workflowExports: {
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			},
+		});
+
+		expect(parsed).toMatchObject({
+			workflowExports: {
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			},
+		});
+	});
+
+	test("parses Durable Object Container named images", ({ expect }) => {
+		const parsed = V4MiniflareOptionsSchema.parse({
+			script: "export default {}",
+			durableObjects: {
+				OBJECT: {
+					className: "Object",
+					container: {
+						images: [{ name: "api", image: "example-api:latest" }],
+					},
+				},
+				EMPTY: { className: "Empty", container: {} },
+				DEFAULT_IMAGE: {
+					className: "DefaultImage",
+					container: { imageName: "example:latest" },
+				},
+			},
+		});
+
+		expect(parsed).toMatchObject({
+			durableObjects: {
+				OBJECT: {
+					className: "Object",
+					container: {
+						images: [{ name: "api", image: "example-api:latest" }],
+					},
+				},
+				EMPTY: { className: "Empty", container: {} },
+				DEFAULT_IMAGE: {
+					className: "DefaultImage",
+					container: { imageName: "example:latest" },
+				},
+			},
+		});
+	});
+
 	test("parses a multi-worker v4-shaped config", ({ expect }) => {
 		const parsed = V4MiniflareOptionsSchema.parse({
 			rootPath: "./project",
@@ -76,6 +128,30 @@ describe("V4MiniflareOptionsSchema", () => {
 			resourcePersistencePath: "./state",
 			workers: [{ name: "a" }, { name: "b" }],
 		});
+	});
+
+	test("parses exact cron trigger strings", ({ expect }) => {
+		const parsed = V4MiniflareOptionsSchema.parse({
+			script: "export default {};",
+			cronTriggers: ["*/5 * * * *", " 0 17 * * SUN "],
+		});
+
+		expect(parsed).toMatchObject({
+			cronTriggers: ["*/5 * * * *", " 0 17 * * SUN "],
+		});
+	});
+
+	test("accepts missing and empty cron triggers", ({ expect }) => {
+		const missing = V4MiniflareOptionsSchema.parse({
+			script: "export default {};",
+		});
+		const empty = V4MiniflareOptionsSchema.parse({
+			script: "export default {};",
+			cronTriggers: [],
+		});
+
+		expect(missing).not.toHaveProperty("cronTriggers");
+		expect(empty).toMatchObject({ cronTriggers: [] });
 	});
 
 	test("accepts unknown top-level keys like v4 plugin-by-plugin parsing", ({

@@ -89,13 +89,17 @@ export class StreamObject extends DurableObject<Env> {
 		});
 
 		const row = get(this.#stmts.getVideo({ id }));
-		if (row === undefined) throw new NotFoundError(`Video not found: ${id}`);
+		if (row === undefined) {
+			throw new NotFoundError(`Video not found: ${id}`);
+		}
 		return row;
 	}
 
 	async getVideo(id: string): Promise<VideoRow> {
 		const row = get(this.#stmts.getVideo({ id }));
-		if (row === undefined) throw new NotFoundError(`Video not found: ${id}`);
+		if (row === undefined) {
+			throw new NotFoundError(`Video not found: ${id}`);
+		}
 		return row;
 	}
 
@@ -160,7 +164,9 @@ export class StreamObject extends DurableObject<Env> {
 
 	async generateToken(id: string): Promise<string> {
 		const row = get(this.#stmts.getVideo({ id }));
-		if (row === undefined) throw new NotFoundError(`Video not found: ${id}`);
+		if (row === undefined) {
+			throw new NotFoundError(`Video not found: ${id}`);
+		}
 
 		const payload = {
 			sub: id,
@@ -175,8 +181,9 @@ export class StreamObject extends DurableObject<Env> {
 		language: string
 	): Promise<CaptionRow> {
 		const video = get(this.#stmts.getVideo({ id: videoId }));
-		if (video === undefined)
+		if (video === undefined) {
 			throw new NotFoundError(`Video not found: ${videoId}`);
+		}
 
 		const label =
 			new Intl.DisplayNames(["en"], { type: "language" }).of(language) ??
@@ -200,8 +207,9 @@ export class StreamObject extends DurableObject<Env> {
 		});
 
 		const row = get(this.#stmts.getCaption({ video_id: videoId, language }));
-		if (row === undefined)
+		if (row === undefined) {
 			throw new NotFoundError(`Caption not found: ${videoId}/${language}`);
+		}
 		return row;
 	}
 
@@ -211,8 +219,9 @@ export class StreamObject extends DurableObject<Env> {
 		input: ReadableStream
 	): Promise<CaptionRow> {
 		const video = get(this.#stmts.getVideo({ id: videoId }));
-		if (video === undefined)
+		if (video === undefined) {
 			throw new NotFoundError(`Video not found: ${videoId}`);
+		}
 
 		const label =
 			new Intl.DisplayNames(["en"], { type: "language" }).of(language) ??
@@ -238,8 +247,9 @@ export class StreamObject extends DurableObject<Env> {
 		});
 
 		const row = get(this.#stmts.getCaption({ video_id: videoId, language }));
-		if (row === undefined)
+		if (row === undefined) {
 			throw new NotFoundError(`Caption not found: ${videoId}/${language}`);
+		}
 		return row;
 	}
 
@@ -248,8 +258,9 @@ export class StreamObject extends DurableObject<Env> {
 		language?: string
 	): Promise<CaptionRow[]> {
 		const video = get(this.#stmts.getVideo({ id: videoId }));
-		if (video === undefined)
+		if (video === undefined) {
 			throw new NotFoundError(`Video not found: ${videoId}`);
+		}
 
 		if (language !== undefined) {
 			const row = get(this.#stmts.getCaption({ video_id: videoId, language }));
@@ -315,15 +326,17 @@ export class StreamObject extends DurableObject<Env> {
 		});
 
 		const row = get(this.#stmts.getWatermark({ id }));
-		if (row === undefined)
+		if (row === undefined) {
 			throw new NotFoundError(`Watermark not found: ${id}`);
+		}
 		return row;
 	}
 
 	async getWatermark(id: string): Promise<WatermarkRow> {
 		const row = get(this.#stmts.getWatermark({ id }));
-		if (row === undefined)
+		if (row === undefined) {
 			throw new NotFoundError(`Watermark not found: ${id}`);
+		}
 		return row;
 	}
 
@@ -333,8 +346,9 @@ export class StreamObject extends DurableObject<Env> {
 
 	async deleteWatermark(id: string): Promise<void> {
 		const deleted = get(this.#stmts.deleteWatermark({ id }));
-		if (deleted === undefined)
+		if (deleted === undefined) {
 			throw new NotFoundError(`Watermark not found: ${id}`);
+		}
 		if (deleted.blob_id !== null) {
 			await this.#blob.delete(deleted.blob_id);
 		}
@@ -345,8 +359,9 @@ export class StreamObject extends DurableObject<Env> {
 		downloadType: StreamDownloadType = "default"
 	): Promise<DownloadRow[]> {
 		const video = get(this.#stmts.getVideo({ id: videoId }));
-		if (video === undefined)
+		if (video === undefined) {
 			throw new NotFoundError(`Video not found: ${videoId}`);
+		}
 
 		this.#stmts.upsertDownload({
 			video_id: videoId,
@@ -360,8 +375,9 @@ export class StreamObject extends DurableObject<Env> {
 
 	async listDownloads(videoId: string): Promise<DownloadRow[]> {
 		const video = get(this.#stmts.getVideo({ id: videoId }));
-		if (video === undefined)
+		if (video === undefined) {
 			throw new NotFoundError(`Video not found: ${videoId}`);
+		}
 		return all(this.#stmts.listDownloads({ video_id: videoId }));
 	}
 
@@ -609,19 +625,23 @@ function sqlStmts(db: TypedSql, now: () => string) {
 		stmtDeleteVideoDownloads({ id });
 
 		const videoRow = get(stmtDeleteVideo({ id }));
-		if (videoRow === undefined)
+		if (videoRow === undefined) {
 			throw new NotFoundError(`Video not found: ${id}`);
+		}
 
 		const blobIds = captionBlobs;
-		if (videoRow.blob_id !== null) blobIds.push(videoRow.blob_id);
+		if (videoRow.blob_id !== null) {
+			blobIds.push(videoRow.blob_id);
+		}
 		return blobIds;
 	});
 
 	const updateVideo = db.txn(
 		(id: string, params: StreamUpdateVideoParams): VideoRow => {
 			const current = get(stmtGetVideo({ id }));
-			if (current === undefined)
+			if (current === undefined) {
 				throw new NotFoundError(`Video not found: ${id}`);
+			}
 
 			const nowValue = now();
 			stmtUpdateVideo({
@@ -654,8 +674,9 @@ function sqlStmts(db: TypedSql, now: () => string) {
 			});
 
 			const updated = get(stmtGetVideo({ id }));
-			if (updated === undefined)
+			if (updated === undefined) {
 				throw new NotFoundError(`Video not found: ${id}`);
+			}
 			return updated;
 		}
 	);

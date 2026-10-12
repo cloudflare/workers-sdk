@@ -79,6 +79,13 @@ export function mapWorkerMetadataBindings(
 							};
 						}
 						break;
+					case "analytics":
+						{
+							configObj.analytics = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "ai":
 						{
 							configObj.ai = {
@@ -298,13 +305,6 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
-					case "websearch":
-						{
-							configObj.websearch = {
-								binding: binding.name,
-							};
-						}
-						break;
 					case "agent_memory": {
 						configObj.agent_memory = [
 							...(configObj.agent_memory ?? []),
@@ -343,6 +343,12 @@ export function mapWorkerMetadataBindings(
 
 								...(binding.pipeline && { pipeline: binding.pipeline }),
 							},
+						];
+						break;
+					case "k2":
+						configObj.k2 = [
+							...(configObj.k2 ?? []),
+							{ binding: binding.name, stream: binding.stream },
 						];
 						break;
 					case "assets":

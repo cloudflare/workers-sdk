@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils";
 import { getErrorType } from "../core/handle-errors";
 
@@ -30,10 +31,50 @@ export function sanitizeArgKeys(
 export const REDACT = Symbol("REDACT");
 /** Allow all values for this arg. */
 export const ALLOW = Symbol("ALLOW");
+/**
+ * Transform this arg's value into a coarse, non-identifying category label
+ * instead of logging it raw. Return `null` to record that the arg was absent,
+ * or `undefined` to omit the arg entirely.
+ *
+ * Categorisers are the safe way to gather telemetry about high-cardinality or
+ * potentially sensitive values (such as file paths) — only the returned label
+ * is ever sent, never the original value. Unlike the other allow-list values,
+ * categorisers are also applied to positional args (see `categoriseArgs`).
+ */
+export type Categoriser = (value: unknown) => string | null | undefined;
 export type AllowedArgs = {
-	[arg: string]: unknown[] | typeof REDACT | typeof ALLOW;
+	[arg: string]: unknown[] | typeof REDACT | typeof ALLOW | Categoriser;
 };
 export type AllowList = Record<string, AllowedArgs>;
+
+/**
+ * Categorises a positional path argument (e.g. the entry-point or assets path
+ * passed to `wrangler deploy` / `wrangler versions upload`) into a coarse,
+ * non-identifying label.
+ *
+ * The raw value is never returned — paths can leak sensitive information and
+ * are too high-cardinality to analyse. Relational references (`.`, `..`) are
+ * surfaced as their own categories; anything else is resolved against the
+ * filesystem to distinguish files from directories, mirroring how the deploy
+ * path positional is actually interpreted. Returns `null` when no positional
+ * was provided so the property is always present in telemetry.
+ */
+export function categorisePositionalPath(value: unknown): string | null {
+	if (typeof value !== "string" || value.length === 0) {
+		return null;
+	}
+	if (value === "." || value === "./" || value === ".\\") {
+		return "current-dir";
+	}
+	if (value === ".." || value.startsWith("../") || value.startsWith("..\\")) {
+		return "parent-relative";
+	}
+	try {
+		return statSync(value).isDirectory() ? "directory" : "file";
+	} catch {
+		return "not-found";
+	}
+}
 
 /**
  * A list of all the command args that are allowed.
@@ -42,10 +83,12 @@ export type AllowList = Record<string, AllowedArgs>;
  * The top level "*" applies to all commands.
  * Specific commands can override or add to the allow list.
  *
- * Each arg can have one of three values:
+ * Each arg can have one of four values:
  * - an array of strings: only those specific values are allowed
  * - REDACT: the arg value will always be redacted
  * - ALLOW: all values for that arg are allowed
+ * - a Categoriser function: the value is transformed into a coarse category
+ *   label (also applied to positional args)
  */
 export const COMMAND_ARG_ALLOW_LIST: AllowList = {
 	// * applies to all commands.
@@ -97,6 +140,12 @@ export const COMMAND_ARG_ALLOW_LIST: AllowList = {
 	},
 	deploy: {
 		containersRollout: ["immediate", "gradual"],
+		// Categorise the entry-point/assets positional without logging the raw path.
+		path: categorisePositionalPath,
+	},
+	"versions upload": {
+		// `versions upload` shares the same positional path semantics as `deploy`.
+		path: categorisePositionalPath,
 	},
 };
 
@@ -149,6 +198,33 @@ export function sanitizeArgValues(
 			result[key] = "<REDACTED>";
 		} else if (Array.isArray(allowedValuesForArg)) {
 			result[key] = allowedValuesForArg.includes(value) ? value : "<REDACTED>";
+		}
+	}
+	return result;
+}
+
+/**
+ * Applies categoriser transforms from the allow-list to the raw args.
+ *
+ * Unlike {@link sanitizeArgValues}, this reads from the *full* args object
+ * rather than the argv-filtered set produced by {@link sanitizeArgKeys}. That
+ * is what allows positional args — which are otherwise deliberately excluded
+ * from telemetry — to be safely categorised into a fixed label. Only args whose
+ * allow-list entry is a {@link Categoriser} are considered, and only the label
+ * it returns (never the raw value) is emitted. A `null` result is recorded as-is
+ * (the arg was absent); an `undefined` result omits the arg entirely.
+ */
+export function categoriseArgs(
+	args: Record<string, unknown>,
+	allowedArgs: AllowedArgs
+): Record<string, string | null> {
+	const result: Record<string, string | null> = {};
+	for (const [key, allowed] of Object.entries(allowedArgs)) {
+		if (typeof allowed === "function") {
+			const category = allowed(args[key]);
+			if (category !== undefined) {
+				result[key] = category;
+			}
 		}
 	}
 	return result;

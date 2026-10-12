@@ -321,8 +321,12 @@ export async function waitForReady(proc: Process) {
 	const match = await vi.waitUntil(
 		() => proc.stdout.match(/Local:\s+(http:\/\/localhost:\d+)/),
 		// buildAndPreview does a full build before starting the server,
-		// so allow more time than the default.
-		{ interval: 100, timeout: 30_000 }
+		// so allow more time than the default. Windows package-manager startup
+		// is also slower on loaded CI runners.
+		{
+			interval: 100,
+			timeout: process.platform === "win32" ? 60_000 : 30_000,
+		}
 	);
 	return match[1];
 }

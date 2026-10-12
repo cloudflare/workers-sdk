@@ -1,4 +1,4 @@
-import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
+import { convertConfigToBindings } from "@cloudflare/workers-utils";
 import type { StartDevWorkerOptions } from ".";
 import type { AdditionalDevProps } from "../../dev";
 import type { Config, ConfigBindingFieldName } from "@cloudflare/workers-utils";

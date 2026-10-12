@@ -8,12 +8,11 @@ export default {
 		if (url) {
 			url = new URL(url).toString(); // normalize
 			switch (action) {
-				case "select": {
+				case "title": {
 					await using browser = await playwright.launch(env.MYBROWSER);
 					const page = await browser.newPage();
 					await page.goto(url);
-					const h1Text = await page.locator("h1").textContent();
-					return new Response(h1Text);
+					return new Response(await page.title());
 				}
 
 				case "alter": {

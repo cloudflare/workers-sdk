@@ -1,1 +1,1 @@
-export { printBindings, warnOrError } from "@cloudflare/deploy-helpers";
+export { printBindings } from "@cloudflare/workers-utils";

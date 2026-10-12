@@ -31,7 +31,7 @@ const COMPLIANCE_CONFIG: ComplianceConfig = { compliance_region: undefined };
  * here rather than being invisible in wrangler's own test suite.
  */
 const TEST_CLI = {
-	displayName: "TestCLI",
+	cliDisplayName: "TestCLI",
 	deviceLoginCommand: "testcli auth login --device",
 };
 
@@ -77,7 +77,7 @@ function createTestContext(): {
 					error: "consent denied page copy",
 				},
 			},
-			displayName: TEST_CLI.displayName,
+			cliDisplayName: TEST_CLI.cliDisplayName,
 			deviceLoginCommand: TEST_CLI.deviceLoginCommand,
 			redirectUri: "http://localhost:9999/oauth/callback",
 			storageFactory: () => ({

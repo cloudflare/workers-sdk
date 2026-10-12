@@ -1,5 +1,10 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
-	"tasks": {}
+	"tasks": {
+		"build": {
+			"env": ["SOURCEMAPS", "WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST"],
+			"outputs": ["dist/**"]
+		}
+	}
 }

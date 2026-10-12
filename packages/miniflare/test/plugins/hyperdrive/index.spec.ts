@@ -10,7 +10,6 @@ test("fields match expected", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -29,7 +28,7 @@ test("fields match expected", async ({ expect }) => {
 						HYPERDRIVE: {
 							type: "hyperdrive",
 							id: "hyperdrive",
-							localConnectionString: connectionString,
+							dev: { connectionString },
 						},
 					},
 				},
@@ -55,7 +54,6 @@ test("fields in binding proxy match expected", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest("export default { fetch() {} }"),
@@ -63,7 +61,7 @@ test("fields in binding proxy match expected", async ({ expect }) => {
 						HYPERDRIVE: {
 							type: "hyperdrive",
 							id: "hyperdrive",
-							localConnectionString: connectionString,
+							dev: { connectionString },
 						},
 					},
 				},
@@ -90,7 +88,6 @@ test("validates config", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -101,12 +98,11 @@ test("validates config", async ({ expect }) => {
 	const mf = new Miniflare(opts);
 	useDispose(mf);
 
-	function withHyperdrive(localConnectionString: string): MiniflareOptions {
+	function withHyperdrive(connectionString: string): MiniflareOptions {
 		return {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -114,7 +110,7 @@ test("validates config", async ({ expect }) => {
 							HYPERDRIVE: {
 								type: "hyperdrive",
 								id: "hyperdrive",
-								localConnectionString,
+								dev: { connectionString },
 							},
 						},
 					},
@@ -166,7 +162,6 @@ test("sets default port based on protocol", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(script),
@@ -174,8 +169,10 @@ test("sets default port based on protocol", async ({ expect }) => {
 						HYPERDRIVE: {
 							type: "hyperdrive",
 							id: "hyperdrive",
-							localConnectionString:
-								"postgresql://user:password@localhost/database",
+							dev: {
+								connectionString:
+									"postgresql://user:password@localhost/database",
+							},
 						},
 					},
 				},
@@ -187,13 +184,12 @@ test("sets default port based on protocol", async ({ expect }) => {
 	let res = await mf.dispatchFetch("http://localhost/");
 	expect(await res.text()).toBe("5432");
 
-	// The config schema types `localConnectionString` as a string, so URL
+	// The config schema types `dev.connectionString` as a string, so URL
 	// objects (accepted by the old `hyperdrives` option) must be serialised.
 	await mf.setOptions({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(script),
@@ -201,9 +197,11 @@ test("sets default port based on protocol", async ({ expect }) => {
 						HYPERDRIVE: {
 							type: "hyperdrive",
 							id: "hyperdrive",
-							localConnectionString: new URL(
-								"postgres://user:password@localhost/database"
-							).toString(),
+							dev: {
+								connectionString: new URL(
+									"postgres://user:password@localhost/database"
+								).toString(),
+							},
 						},
 					},
 				},
@@ -244,7 +242,7 @@ describe("proxy server creation", () => {
 							{
 								type: "hyperdrive",
 								id: name,
-								localConnectionString: url,
+								dev: { connectionString: url },
 							},
 						])
 					),

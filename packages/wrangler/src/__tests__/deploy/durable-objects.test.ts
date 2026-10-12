@@ -25,14 +25,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -208,10 +200,13 @@ describe("deploy", () => {
 						{ new_classes: ["SomeOtherClass"] },
 					],
 				},
+				expectedDurableObjectsCodeUpdateStrategy: { mode: "immediate" },
 				useOldUploadApi: true,
 			});
 
-			await runWrangler("deploy index.js");
+			await runWrangler(
+				"deploy index.js --durable-objects-code-update-mode immediate"
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
@@ -241,6 +236,7 @@ describe("deploy", () => {
 						{ name: "SOMENAME", class_name: "SomeClass" },
 						{ name: "SOMEOTHERNAME", class_name: "SomeOtherClass" },
 					],
+					code_update_strategy: { mode: "deferred", max_delay: 45.678 },
 				},
 				migrations: [
 					{ tag: "v1", new_classes: ["SomeClass"] },
@@ -264,6 +260,10 @@ describe("deploy", () => {
 							new_classes: ["SomeOtherClass"],
 						},
 					],
+				},
+				expectedDurableObjectsCodeUpdateStrategy: {
+					mode: "deferred",
+					max_delay: 45.678,
 				},
 				useOldUploadApi: true,
 			});

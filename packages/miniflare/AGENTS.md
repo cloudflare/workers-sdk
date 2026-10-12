@@ -12,6 +12,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `src/workers/core/dev-registry-proxy.worker.ts` — Proxy worker for cross-process service bindings via debug port RPC
 - `src/workers/core/dev-registry-proxy-shared.worker.ts` — Shared proxy logic (registry Map, DO proxy class, tail serializers)
 - `src/shared/dev-registry.ts` — Filesystem-based worker registry (chokidar watch, heartbeat, stale cleanup)
+- `src/shared/persist-root-lock.ts` — Token-safe startup serialisation for shared persistent storage
 - `src/shared/DEV_REGISTRY.md` — Full architecture doc for the dev registry
 - `src/runtime/config/generated/workerd.ts` — Generated workerd Cap'n Proto config types
 - `test/` — Tests (`.spec.ts` naming, NOT `.test.ts`)
@@ -23,10 +24,11 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - Custom `scripts/build.mjs` bundles `src/index.ts` as CJS → `dist/src/index.js`
 - Also compiles ~30 embedded worker scripts via `worker:...` virtual import scheme — each triggers a nested esbuild sub-build producing standalone ESM worker scripts
 - Build outputs: `dist/`, `worker-metafiles/`
+- Release builds set `SOURCEMAPS=false` to omit package source maps; ordinary builds keep them for debugging. Non-watch builds clean `dist/` before compiling so maps from an earlier build cannot leak into a release. This does not disable user Worker source maps.
 
 ## Lint Status (Transitional)
 
-- Many shared ESLint rules temporarily DISABLED: `curly`, `no-explicit-any`, `consistent-type-imports`, `no-shadow`, `no-floating-promises`, others
+- Many shared ESLint rules temporarily DISABLED: `no-explicit-any`, `consistent-type-imports`, `no-shadow`, `no-floating-promises`, others
 - Comment in config: "temporarily enabled while we transition Miniflare to use the standard workers-sdk eslint config"
 - `no-console: error` is on, except for `src/workers/` and `scripts/`
 

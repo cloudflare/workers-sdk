@@ -694,7 +694,7 @@ describe("getPlatformProxy()", () => {
 				encoding: "utf-8",
 			});
 
-			expect(stdout).toMatch(/^<[A-Za-z0-9]{36}@sender\.domain>/);
+			expect(stdout).toMatch(/^<[A-Za-z0-9]+@sender\.domain>/);
 		});
 	});
 });

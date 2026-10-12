@@ -386,7 +386,8 @@ export async function waitForPropagation(
 				);
 			}
 			if (resolvable) {
-				options.log(`  ${name}@${version}: resolvable`);
+				const elapsed = options.now() - start;
+				options.log(`  ${name}@${version}: resolvable (${elapsed}ms)`);
 				pending.delete(name);
 			}
 		}

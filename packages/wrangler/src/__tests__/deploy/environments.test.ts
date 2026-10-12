@@ -32,17 +32,10 @@ import {
 	mockGetScriptWithTags,
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
+	mockServiceScriptData,
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -144,6 +137,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("--keep-vars", () => {
+		beforeEach(() => mockGetSettings({ result: { bindings: [] } }));
 		it("should send keepVars when keep-vars is passed in", async ({
 			expect,
 		}) => {
@@ -244,6 +238,10 @@ describe("deploy", () => {
 				expectedMainModule: "index.js",
 				expectedDispatchNamespace: "test-dispatch-namespace",
 			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "test-dispatch-namespace",
+			});
 
 			await runWrangler(
 				"deploy --dispatch-namespace test-dispatch-namespace index.js"
@@ -268,6 +266,8 @@ describe("deploy", () => {
 				observability: {
 					enabled: true,
 					head_sampling_rate: 0.5,
+					redact_query_string: true,
+					issues: { enabled: true },
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
@@ -276,6 +276,8 @@ describe("deploy", () => {
 				expectedObservability: {
 					enabled: true,
 					head_sampling_rate: 0.5,
+					redact_query_string: true,
+					issues: { enabled: true },
 				},
 			});
 
@@ -842,7 +844,7 @@ describe("deploy", () => {
 			).resolves.toHaveProperty("tags", ["some-tag"]);
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in your Wrangler config file. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
 
 				"
 			`);
@@ -1117,6 +1119,10 @@ describe("deploy", () => {
 					"workers/tag": "v2.0.0",
 				},
 				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "test-dispatch-namespace",
 			});
 
 			await runWrangler(

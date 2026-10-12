@@ -10,7 +10,10 @@ import type {
 	TemporaryAccountStorage,
 	TemporaryPreviewAccount,
 } from "./config-file/temporary";
-import type { OAuthFlowLogger } from "./context";
+import type {
+	TemporaryAccountLogger,
+	TemporaryAccountRequest,
+} from "./context";
 import type { PowSolution } from "./pow";
 
 export const TEMPORARY_TERMS_URLS = {
@@ -37,11 +40,114 @@ type TemporaryAccountPayload = {
 		url?: string;
 		expiresAt?: string;
 	};
+	eventCodeAccepted?: boolean;
 };
 
 type TemporaryAccountResponse = {
 	result?: TemporaryAccountPayload;
 };
+
+const EVENT_ACCOUNT_ERRORS = new Map<
+	number,
+	{ message: string; telemetryMessage: string; fatal?: true }
+>([
+	[
+		1035,
+		{
+			message: "The event code is malformed. Check it and try again.",
+			telemetryMessage: "deploy temporary event code invalid",
+		},
+	],
+	[
+		1036,
+		{
+			message: "The event code was not found. Check it and try again.",
+			telemetryMessage: "deploy temporary event not found",
+		},
+	],
+	[
+		1037,
+		{
+			message: "This event has not started yet.",
+			telemetryMessage: "deploy temporary event not started",
+		},
+	],
+	[
+		1038,
+		{
+			message: "This event has ended.",
+			telemetryMessage: "deploy temporary event expired",
+		},
+	],
+	[
+		1039,
+		{
+			message: "This event is disabled. Contact the event organizer.",
+			telemetryMessage: "deploy temporary event disabled",
+		},
+	],
+	[
+		1040,
+		{
+			message: "This event has no temporary accounts remaining.",
+			telemetryMessage: "deploy temporary event exhausted",
+		},
+	],
+	[
+		1041,
+		{
+			message:
+				"The event account could not be prepared. Try again later or contact the event organizer.",
+			telemetryMessage: "deploy temporary event provisioning unavailable",
+			fatal: true,
+		},
+	],
+]);
+
+function getResponseErrorCode(body: unknown): number | undefined {
+	if (typeof body !== "object" || body === null || !("errors" in body)) {
+		return undefined;
+	}
+
+	const { errors } = body;
+	if (!Array.isArray(errors) || errors.length === 0) {
+		return undefined;
+	}
+
+	const [error] = errors;
+	if (typeof error !== "object" || error === null || !("code" in error)) {
+		return undefined;
+	}
+
+	return typeof error.code === "number" ? error.code : undefined;
+}
+
+async function getEventAccountError(
+	response: Response
+): Promise<UserError | FatalError | undefined> {
+	let body: unknown;
+	try {
+		body = await response.json();
+	} catch {
+		return undefined;
+	}
+
+	const errorCode = getResponseErrorCode(body);
+	if (errorCode === undefined) {
+		return undefined;
+	}
+
+	const eventError = EVENT_ACCOUNT_ERRORS.get(errorCode);
+	if (!eventError) {
+		return undefined;
+	}
+
+	const options = { telemetryMessage: eventError.telemetryMessage };
+	if (eventError.fatal) {
+		return new FatalError(eventError.message, options);
+	}
+	return new UserError(eventError.message, options);
+}
 
 function getTemporaryPreviewUrl(): string {
 	return `${getCloudflareApiBaseUrl(COMPLIANCE_REGION_CONFIG_PUBLIC)}/provisioning/previews`;
@@ -97,10 +203,16 @@ type PowChallengeResponse = {
 	};
 };
 
-// Requests a proof-of-work challenge and solves it. The challenge is required:
-// any failure aborts provisioning.
+/**
+ * Requests and solves the proof-of-work challenge required for provisioning.
+ *
+ * @param temporaryAccountLogger Logger used to report challenge progress.
+ * @param cliDisplayName Consumer name used in actionable errors.
+ * @returns The proof-of-work solution required by the provisioning request.
+ */
 async function requestPowSolution(
-	logger: OAuthFlowLogger
+	temporaryAccountLogger: TemporaryAccountLogger,
+	cliDisplayName: string
 ): Promise<PowSolution> {
 	const response = await fetch(getTemporaryPreviewChallengeUrl(), {
 		method: "POST",
@@ -149,7 +261,7 @@ async function requestPowSolution(
 		Buffer.from(seed, "base64url").length !== 32
 	) {
 		throw new FatalError(
-			"The proof-of-work challenge is not supported by this version of Wrangler.",
+			`The proof-of-work challenge is not supported by this version of ${cliDisplayName}.`,
 			{
 				telemetryMessage:
 					"deploy temporary account challenge difficulty unsupported",
@@ -157,18 +269,25 @@ async function requestPowSolution(
 		);
 	}
 
-	logger.log("Solving proof-of-work challenge…");
+	temporaryAccountLogger.log("Solving proof-of-work challenge…");
 	return solveChallenge({ challengeToken, seed, k, g });
 }
 
 /**
  * Provision a brand new temporary preview account from the public provisioning
- * endpoint
+ * endpoint.
+ *
+ * @param temporaryAccountLogger Logger used to report provisioning progress.
+ * @param request Optional inputs for event-scoped account provisioning.
+ * @param cliDisplayName Consumer name used in actionable errors.
+ * @returns The newly provisioned temporary preview account.
  */
 export async function createTemporaryPreviewAccount(
-	logger: OAuthFlowLogger
+	temporaryAccountLogger: TemporaryAccountLogger,
+	request?: TemporaryAccountRequest,
+	cliDisplayName = "Wrangler"
 ): Promise<TemporaryPreviewAccount> {
-	const pow = await requestPowSolution(logger);
+	const pow = await requestPowSolution(temporaryAccountLogger, cliDisplayName);
 
 	const response = await fetch(getTemporaryPreviewUrl(), {
 		method: "POST",
@@ -179,10 +298,17 @@ export async function createTemporaryPreviewAccount(
 			acceptTermsOfService: "yes",
 			challengeToken: pow.challengeToken,
 			solution: pow.solution,
+			...(request?.eventCode ? { eventCode: request.eventCode } : {}),
 		}),
 	});
 
 	if (!response.ok) {
+		if (request?.eventCode) {
+			const eventError = await getEventAccountError(response);
+			if (eventError) {
+				throw eventError;
+			}
+		}
 		throw new FatalError(
 			`Failed to create a temporary preview account (${response.status} ${response.statusText}).`,
 			{ telemetryMessage: "deploy temporary account create failed" }
@@ -207,6 +333,7 @@ export async function createTemporaryPreviewAccount(
 	const accountExpiresAt = previewAccount?.account?.expiresAt;
 	const claimUrl = previewAccount?.claim?.url;
 	const claimExpiresAt = previewAccount?.claim?.expiresAt;
+	const eventCodeAccepted = previewAccount?.eventCodeAccepted;
 
 	if (
 		accountId === undefined ||
@@ -219,6 +346,15 @@ export async function createTemporaryPreviewAccount(
 		throw new FatalError(
 			"Failed to create a temporary preview account because the response was missing required fields.",
 			{ telemetryMessage: "deploy temporary account response incomplete" }
+		);
+	}
+
+	if (request?.eventCode && eventCodeAccepted !== true) {
+		throw new FatalError(
+			"Failed to create a temporary preview account because the response did not acknowledge the event code.",
+			{
+				telemetryMessage: "deploy temporary event acknowledgement missing",
+			}
 		);
 	}
 
@@ -238,13 +374,21 @@ export async function createTemporaryPreviewAccount(
 
 /**
  * Return the cached temporary preview account if one is still valid, otherwise
- * mint a fresh one (running `beforeCreate` first, e.g. a terms-acceptance gate)
- * and persist it to the injected storage.
+ * mint a fresh one after terms acceptance and persist it to the injected
+ * storage.
+ *
+ * @param options Storage, prompting, logging, and consumer presentation inputs.
+ * @returns The active temporary preview account and whether it came from cache.
  */
 export async function getOrCreateTemporaryPreviewAccount(options: {
 	storage: TemporaryAccountStorage;
 	prompt: (question: string, notice: string) => Promise<boolean>;
-	logger: OAuthFlowLogger;
+	temporaryAccountLogger: TemporaryAccountLogger;
+	/** Consumer name used in temporary-account errors. */
+	cliDisplayName?: string;
+	/** Consumer command used to clear a cached temporary account. */
+	logoutCommand?: string;
+	request?: TemporaryAccountRequest;
 }): Promise<{
 	account: TemporaryPreviewAccount;
 	cached: boolean;
@@ -253,6 +397,14 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 		options.storage
 	);
 	if (cachedPreviewAccount) {
+		if (options.request?.eventCode) {
+			throw new UserError(
+				`A temporary account is already cached. Rerun without --event-code to reuse it, or run \`${options.logoutCommand ?? "wrangler logout"}\` and retry to create an account for this event.`,
+				{
+					telemetryMessage: "deploy temporary event cache conflict",
+				}
+			);
+		}
 		return { account: cachedPreviewAccount, cached: true };
 	}
 
@@ -268,7 +420,9 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 	}
 
 	const temporaryPreviewAccount = await createTemporaryPreviewAccount(
-		options.logger
+		options.temporaryAccountLogger,
+		options.request,
+		options.cliDisplayName
 	);
 	options.storage.write(temporaryPreviewAccount);
 

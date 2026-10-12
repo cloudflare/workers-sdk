@@ -4,6 +4,7 @@ import type {
 	CustomDomainRoute,
 	ContainerApp,
 	ContainerEngine,
+	DurableObjectCodeUpdateStrategy,
 	Exports,
 	DurableObjectMigration,
 	Observability,
@@ -18,6 +19,7 @@ import type {
 	CfAISearch,
 	CfAISearchNamespace,
 	CfAnalyticsEngineDataset,
+	CfAnalyticsSQLBinding,
 	CfBrowserBinding,
 	CfD1Database,
 	CfDispatchNamespace,
@@ -34,6 +36,7 @@ import type {
 	CfMTlsCertificate,
 	CfModule,
 	CfPipeline,
+	CfK2Binding,
 	CfPlacement,
 	CfQueue,
 	CfR2Bucket,
@@ -49,7 +52,6 @@ import type {
 	CfVectorize,
 	CfVpcNetwork,
 	CfVpcService,
-	CfWebSearch,
 	CfWorkerLoader,
 	CfWorkflow,
 	CfScriptFormat,
@@ -79,6 +81,7 @@ export type WorkerMetadataBinding =
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string; raw?: boolean }
+	| { type: "analytics"; name: string }
 	| { type: "ai"; name: string; staging?: boolean; raw?: boolean }
 	| { type: "images"; name: string; raw?: boolean }
 	| { type: "stream"; name: string }
@@ -86,7 +89,6 @@ export type WorkerMetadataBinding =
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "ai_search_namespace"; name: string; namespace: string }
 	| { type: "ai_search"; name: string; instance_name: string }
-	| { type: "websearch"; name: string }
 	| { type: "agent_memory"; name: string; namespace: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
@@ -165,6 +167,7 @@ export type WorkerMetadataBinding =
 	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
 	| { type: "pipelines"; name: string; stream?: string; pipeline?: string }
+	| { type: "k2"; name: string; stream: string }
 	| {
 			type: "secrets_store_secret";
 			name: string;
@@ -213,6 +216,7 @@ export type WorkerMetadataBinding =
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
+	base_path?: AssetConfig["base_path"];
 	run_worker_first?: boolean | string[];
 	_redirects?: string;
 	_headers?: string;
@@ -273,6 +277,7 @@ type WorkerMetadataPut = {
 	compatibility_flags?: string[];
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	exports?: CfExports;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
@@ -294,7 +299,11 @@ type WorkerMetadataPut = {
 	observability?: Observability | undefined;
 	// `class_name` is omitted when the container is instead referenced from the
 	// Durable Object's `exports` entry via its `container` field.
-	containers?: { name?: string; class_name?: string }[];
+	containers?: {
+		name?: string;
+		class_name?: string;
+		images?: Record<string, string>;
+	}[];
 	package_dependencies?: Array<{
 		name: string;
 		packageJsonVersion: string;
@@ -425,6 +434,21 @@ export type BinaryFile = File<Uint8Array>; // Note: Node's `Buffer`s are instanc
 
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 
+type ConnectHandlerBase = {
+	port: number;
+	address?: string;
+};
+
+export type TcpConnectHandler = ConnectHandlerBase & { protocol: "tcp" };
+
+export type UdpConnectHandler = ConnectHandlerBase & {
+	protocol: "udp";
+	idleTimeoutMs?: number;
+	maxPendingBytes?: number;
+};
+
+export type ConnectHandler = TcpConnectHandler | UdpConnectHandler;
+
 export type Trigger =
 	| { type: "workers.dev" }
 	| { type: "route"; pattern: string } // SimpleRoute
@@ -433,15 +457,13 @@ export type Trigger =
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
 	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">)
-	| {
-			type: "connect";
-			protocol: "tcp";
-			port: number;
-			address?: string;
-	  };
+	| ({ type: "connect" } & ConnectHandler);
 
-type BindingOmit<T> = Omit<T, "binding">;
-type NameOmit<T> = Omit<T, "name">;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+	? Omit<T, K>
+	: never;
+type BindingOmit<T> = DistributiveOmit<T, "binding">;
+type NameOmit<T> = DistributiveOmit<T, "name">;
 export type Binding =
 	| {
 			type: "plain_text";
@@ -460,6 +482,7 @@ export type Binding =
 	| { type: "wasm_module"; source: BinaryFile }
 	| { type: "text_blob"; source: File }
 	| ({ type: "browser" } & BindingOmit<CfBrowserBinding>)
+	| ({ type: "analytics" } & BindingOmit<CfAnalyticsSQLBinding>)
 	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
 	| ({ type: "images" } & BindingOmit<CfImagesBinding>)
 	| ({ type: "stream" } & BindingOmit<CfStreamBinding>)
@@ -473,7 +496,6 @@ export type Binding =
 	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
 	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
 	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
-	| ({ type: "websearch" } & BindingOmit<CfWebSearch>)
 	| ({ type: "agent_memory" } & BindingOmit<CfAgentMemory>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)
@@ -482,6 +504,7 @@ export type Binding =
 	| ({ type: "dispatch_namespace" } & BindingOmit<CfDispatchNamespace>)
 	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
+	| ({ type: "k2" } & BindingOmit<CfK2Binding>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "artifacts" } & BindingOmit<CfArtifacts>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
@@ -687,6 +710,8 @@ export interface StartDevWorkerInput {
 		tunnel?: {
 			enabled: boolean;
 			name?: string;
+			/** Email addresses or domain patterns allowed to authenticate to a Quick Tunnel. */
+			allowedMail?: string[];
 		};
 	};
 	legacy?: {

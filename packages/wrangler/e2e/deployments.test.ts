@@ -408,6 +408,61 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			expect(text).toContain("<h1>404.html</h1>");
 		});
 
+		it("serves assets only beneath the configured base path", async ({
+			expect,
+		}) => {
+			const assetName = `base-path-${workerName}.txt`;
+			const assetBody = `asset response from ${workerName}`;
+			const workerBody = `user Worker response from ${workerName}`;
+
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							workers_dev = true
+							[assets]
+							directory = "public"
+							base_path = "/blog/"
+					`,
+				"src/index.ts": dedent`
+							export default {
+								fetch() {
+									return new Response("${workerBody}")
+								}
+							}`,
+				[`public/${assetName}`]: assetBody,
+				"package.json": dedent`
+							{
+								"name": "${workerName}",
+								"version": "0.0.0",
+								"private": true
+							}`,
+			});
+
+			const output = await helper.run(`wrangler deploy`);
+			validateAssetUploadLogs(expect, output, [`/${assetName}`]);
+			const deployedUrl = getDeployedUrl(output);
+
+			const assetResponse = await waitForWorkersDev(
+				new URL(`/blog/${assetName}`, deployedUrl).href,
+				async (candidate) =>
+					candidate.status === 200 &&
+					(await candidate.clone().text()) === assetBody
+			);
+			expect(assetResponse.status).toBe(200);
+			expect(await assetResponse.text()).toBe(assetBody);
+
+			const workerResponse = await waitForWorkersDev(
+				new URL(`/${assetName}`, deployedUrl).href,
+				async (candidate) =>
+					candidate.status === 200 &&
+					(await candidate.clone().text()) === workerBody
+			);
+			expect(workerResponse.status).toBe(200);
+			expect(await workerResponse.text()).toBe(workerBody);
+		});
+
 		it("runs the user Worker ahead of matching assets when run_worker_first = true", async ({
 			expect,
 		}) => {

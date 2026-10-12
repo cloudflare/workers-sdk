@@ -70,14 +70,16 @@ export const CF_CLI: CliDescriptor = {
 	displayName: CF_DISPLAY_NAME,
 	commands: {
 		login: "cf auth login",
+		logout: "cf auth logout",
 		whoami: "cf auth whoami",
 		createProfile: "cf auth create",
-		deviceLogin: "cf auth login --device",
+		deviceLogin: "cf auth login",
 	},
 	keyringServiceName: CF_KEYRING_SERVICE_NAME,
 	clientId: getClientIdFromEnv,
 	consent: CF_CONSENT_PAGES,
 	redirectUri: CF_OAUTH_CALLBACK_URL,
+	useDeviceFlowByDefault: true,
 	// cf only supports the scoped `CLOUDFLARE_API_TOKEN` env var, not the global
 	// API key + email pair, so the global-key resolution is disabled.
 	allowGlobalAuthKey: false,

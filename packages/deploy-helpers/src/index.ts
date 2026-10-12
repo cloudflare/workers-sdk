@@ -16,7 +16,6 @@ export * from "./deploy/helpers/secrets-validation";
 export * from "./deploy/helpers/diff-json";
 export * from "./deploy/helpers/config-diffs";
 export * from "./deploy/helpers/parse-bulk-input";
-export * from "./deploy/helpers/binding-utils";
 export * from "./deploy/helpers/capnp";
 export * from "./deploy/helpers/create-worker-upload-form";
 export * from "./deploy/helpers/workers-sites-bindings";
@@ -38,14 +37,17 @@ export * from "./deploy/helpers/versions-api";
 export * from "./deploy/helpers/check-workflow-conflicts";
 export * from "./deploy/helpers/download-worker-config";
 export * from "./deploy/helpers/durable";
+export * from "./deploy/helpers/durable-object-container-applications";
 export * from "./deploy/helpers/exports";
 export * from "./deploy/helpers/exports-reconciliation";
 export * from "./deploy/helpers/inconsistent-exports";
 export * from "./deploy/helpers/binding-depends-on-export";
 export * from "./deploy/helpers/match-tag";
 export * from "./deploy/helpers/check-remote-secrets-override";
-export * from "./deploy/helpers/confirm-latest-deployment-overwrite";
-export * from "./deploy/helpers/print-bindings";
+export {
+	confirmLatestDeploymentOverwrite,
+	printVersions,
+} from "./deploy/helpers/confirm-latest-deployment-overwrite";
 export * from "./deploy/helpers/assets";
 export * from "./deploy/helpers/hash";
 export * from "./deploy/helpers/jwt";
@@ -55,6 +57,4 @@ export * from "./preview/api";
 export * from "./preview/shared";
 export * from "./preview/preview";
 export * from "./preview/format";
-export * from "./preview/merge-deep";
-export * from "./preview/settings";
 export * from "./preview/box";

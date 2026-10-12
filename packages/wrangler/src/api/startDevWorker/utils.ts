@@ -384,13 +384,18 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				};
 				break;
 			}
+			case "k2": {
+				const b = binding as Extract<WorkerMetadataBinding, { type: "k2" }>;
+				output[name] = { type: "k2", stream: b.stream };
+				break;
+			}
 			case "browser":
+			case "analytics":
 			case "ai":
 			case "images":
 			case "stream":
 			case "version_metadata":
 			case "media":
-			case "websearch":
 			case "inherit": {
 				// These have the same structure (just type and possibly some flags)
 				const { name: _name, ...rest } = binding;

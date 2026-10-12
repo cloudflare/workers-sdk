@@ -1,10 +1,10 @@
 export * from "./public";
 export {
 	AnalyticsEngineDatasetBindingSchema,
+	AnalyticsSQLBindingSchema,
 	AssetsSchema,
 	BindingSchema,
 	BrowserBindingSchema,
-	ConfigExportsSchema,
 	D1BindingSchema,
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
@@ -12,33 +12,52 @@ export {
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
 	ExportSchema,
+	InputConfigSchema,
+	InputContainerSchema,
+	InputSettingsSchema,
 	InputWorkerSchema,
 	KnownBindingSchema,
 	KVBindingSchema,
+	OutputContainerSchema,
+	OutputRootConfigSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
 	QueueBindingSchema,
 	R2BindingSchema,
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
-	SettingsSchema,
 	TailConsumerSchema,
 	UnsafeBindingSchema,
 	validateSingletonBindings,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowBindingSchema,
+	WorkflowExportSchema,
 } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
-export { loadAndValidateConfig } from "./config-loader";
-export { resolveExportDefinition } from "./definition";
+export {
+	loadAndParseConfig,
+	loadAndParseConfigSettings,
+	resolveAndParseConfig,
+	resolveAndParseConfigSettings,
+} from "./config-loader";
 export type { LoadConfigResult } from "./load";
-export type { LoadAndValidateConfigResult } from "./config-loader";
 export type {
-	ParsedConfigExports,
+	ConfigParseResult,
+	ConfigSettingsParseResult,
+	LoadAndParseConfigSettingsResult,
+	LoadAndParseConfigResult,
+} from "./config-loader";
+export type {
+	InputWorkerConfig,
+	ParsedInputConfig,
+	ParsedInputContainerConfig,
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
+	ParsedOutputContainerConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 	ModuleType,
 } from "./schema";

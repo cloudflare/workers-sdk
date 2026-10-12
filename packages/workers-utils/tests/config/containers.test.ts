@@ -2,6 +2,9 @@ import { describe, test } from "vitest";
 import {
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
 } from "../../src/config/containers";
 import type { ContainerApp, Exports } from "../../src/config/environment";
@@ -9,6 +12,65 @@ import type { ContainerApp, Exports } from "../../src/config/environment";
 function container(props: Partial<ContainerApp>): ContainerApp {
 	return { image: "./Dockerfile", ...props };
 }
+
+describe("Durable Object-managed containers", () => {
+	test("selects only durable_object entries", ({ expect }) => {
+		const containers: ContainerApp[] = [
+			container({ class_name: "Scheduled" }),
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+				images: {
+					sandbox: {
+						dockerfile: "./Dockerfile",
+					},
+				},
+			},
+		];
+
+		expect(isDurableObjectContainerApp(containers[0])).toBe(false);
+		expect(isDurableObjectContainerApp(containers[1])).toBe(true);
+		expect(getDurableObjectContainerApps(containers)).toEqual([containers[1]]);
+	});
+
+	test("resolves managed class names without changing the original configuration", ({
+		expect,
+	}) => {
+		const containers: ContainerApp[] = [
+			container({ name: "scheduled", class_name: "Scheduled" }),
+			{
+				name: "explicit",
+				class_name: "Explicit",
+				scheduling_policy: "durable_object",
+			},
+			{ name: "sandbox", scheduling_policy: "durable_object", images: {} },
+		];
+		const resolved = getResolvedDurableObjectContainerApps(containers, {
+			Sandbox: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "sandbox",
+			},
+		});
+
+		expect(resolved).toEqual([
+			containers[1],
+			{ ...containers[2], class_name: "Sandbox" },
+		]);
+		expect(containers[2]).not.toHaveProperty("class_name");
+	});
+
+	test("rejects an unresolved managed container before using its class name", ({
+		expect,
+	}) => {
+		expect(() =>
+			getResolvedDurableObjectContainerApps(
+				[{ name: "sandbox", scheduling_policy: "durable_object" }],
+				{}
+			)
+		).toThrow('The container "sandbox" is not linked to a Durable Object.');
+	});
+});
 
 describe("getContainerNameToClassNameMap", () => {
 	test("returns an empty map when exports are undefined", ({ expect }) => {

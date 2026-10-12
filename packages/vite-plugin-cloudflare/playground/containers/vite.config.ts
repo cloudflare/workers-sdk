@@ -12,6 +12,7 @@ export default defineConfig({
 			configPath: "wrangler.jsonc",
 			auxiliaryWorkers: [
 				{ configPath: "wrangler.docker.jsonc" },
+				{ configPath: "wrangler.named-images.jsonc" },
 				...(isDevProdTestingAccount
 					? [{ configPath: "wrangler.registry.jsonc" }]
 					: []),

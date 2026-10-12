@@ -1,4 +1,4 @@
-import { SharedBindings } from "./constants";
+import { SharedBindings, SharedHeaders } from "./constants";
 import type { MiniflareDurableObjectCf } from "./object.worker";
 
 interface Props {
@@ -15,19 +15,30 @@ export default <ExportedHandler<Env, unknown, unknown, Props>>{
 	async fetch(request, env, ctx) {
 		// Prefer the namespace passed at runtime via `ctx.props` (props-based
 		// model: one entry service serves many namespaces). Fall back to the
-		// static binding for callers that still bake the namespace in.
+		// static binding for callers that still bake the namespace in, then to
+		// the internal request header for callers addressing resources dynamically.
+		const requestNamespace = request.headers.get(SharedHeaders.NAMESPACE);
 		const name =
 			ctx.props[SharedBindings.TEXT_NAMESPACE] ??
-			env[SharedBindings.TEXT_NAMESPACE];
+			env[SharedBindings.TEXT_NAMESPACE] ??
+			requestNamespace ??
+			undefined;
 		if (name === undefined) {
 			throw new Error(
-				"object-entry worker: no namespace provided via props or binding"
+				"object-entry worker: no namespace provided via props, binding, or request header"
 			);
 		}
 		const objectNamespace = env[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT];
 		const id = objectNamespace.idFromName(name);
 		const stub = objectNamespace.get(id);
 		const cf: MiniflareDurableObjectCf = { miniflare: { name } };
-		return await stub.fetch(request, { cf: cf as Record<string, unknown> });
+		if (requestNamespace !== null) {
+			const headers = new Headers(request.headers);
+			headers.delete(SharedHeaders.NAMESPACE);
+			request = new Request(request, { headers });
+		}
+		return await stub.fetch(request, {
+			cf: cf as Record<string, unknown>,
+		});
 	},
 };
