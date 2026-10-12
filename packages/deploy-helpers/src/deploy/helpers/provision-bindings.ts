@@ -999,29 +999,28 @@ function writeProvisionedIdsToConfig(
 			continue;
 		}
 
-		const configBinding = toConfigBinding(
-			resource.binding,
-			resource.handler.binding
-		);
-		const identifierField =
-			resource.resourceType === "queue" ? "queue" : resource.handler.idField;
-		const identifier = (configBinding as Record<string, unknown>)[
-			identifierField
-		];
-		if (typeof identifier !== "string" || identifier.length === 0) {
+		const identifier = resource.handler.getResolvedIdentifier();
+		if (identifier === undefined) {
 			continue;
 		}
-
-		const existingIdentifier = (
-			configBindings[index] as Record<string, unknown>
-		)[identifierField];
-		if (existingIdentifier === identifier) {
+		const { binding: _, ...configBinding } = toConfigBinding(resource.binding, {
+			type: resource.resourceType,
+			[resource.handler.idField]: identifier,
+		} as ProvisionableBinding);
+		const identifierPatch: Record<string, string> = {};
+		const existingBinding = configBindings[index] as Record<string, unknown>;
+		for (const [field, value] of Object.entries(configBinding)) {
+			if (typeof value === "string" && value !== existingBinding[field]) {
+				identifierPatch[field] = value;
+			}
+		}
+		if (Object.keys(identifierPatch).length === 0) {
 			continue;
 		}
 		addBindingToPatch(
 			patchEnvironment,
 			resource.resourceType,
-			{ [identifierField]: identifier },
+			identifierPatch,
 			index
 		);
 		hasChanges = true;

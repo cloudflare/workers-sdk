@@ -1458,6 +1458,11 @@ describe("resource provisioning", () => {
 			expect(readWranglerConfig().queues?.producers).toEqual([
 				{ binding: "QUEUE", queue: "test-name-queue", delivery_delay: 5 },
 			]);
+			expect(
+				readWranglerConfig("./dist/wrangler.json").queues?.producers
+			).toEqual([
+				{ binding: "QUEUE", queue: "test-name-queue", delivery_delay: 10 },
+			]);
 
 			rmSync(".wrangler/deploy/config.json");
 		});
