@@ -1,18 +1,7 @@
 import { createCLIParser } from "./index";
+import type { CommandMetadata } from "./command-metadata";
 
-export type ExperimentalCommandMetadata = {
-	description: string;
-	status: "experimental" | "alpha" | "private beta" | "open beta" | "stable";
-	statusMessage?: string;
-	deprecated?: boolean;
-	deprecatedMessage?: string;
-	hidden?: boolean;
-	owner: string;
-	category?: string;
-	epilogue?: string;
-	examples?: Array<{ command: string; description: string }>;
-	hideGlobalFlags?: string[];
-};
+export type ExperimentalCommandMetadata = CommandMetadata<string, string>;
 
 type ExperimentalStringRequirement =
 	| string
