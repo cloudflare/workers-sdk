@@ -65,6 +65,9 @@ export type DurableObjectCreatedExportOptions<
  * other Worker may hold a `durableObject` binding to the namespace.
  */
 export interface DurableObjectDeletedExportOptions {
+	/**
+	 * The lifecycle state of the Durable Object export.
+	 */
 	state: "deleted";
 }
 
@@ -74,6 +77,9 @@ export interface DurableObjectDeletedExportOptions {
  * `durableObject` entry in the same `exports` map.
  */
 export interface DurableObjectRenamedExportOptions {
+	/**
+	 * The lifecycle state of the Durable Object export.
+	 */
 	state: "renamed";
 	/**
 	 * The destination class name. Must be a valid JavaScript identifier and
@@ -88,6 +94,9 @@ export interface DurableObjectRenamedExportOptions {
  * The target Worker must first deploy an `expectingTransfer` entry naming this Worker via `transferFrom`.
  */
 export interface DurableObjectTransferredExportOptions {
+	/**
+	 * The lifecycle state of the Durable Object export.
+	 */
 	state: "transferred";
 	/**
 	 * The destination Worker. Must reference a Worker in the same account.
@@ -151,6 +160,9 @@ type DurableObjectExports =
 	| DurableObjectExpectingTransferExport;
 
 export interface WorkerEntrypointExportOptions {
+	/**
+	 * Specify the cache behavior of the entrypoint.
+	 */
 	cache?: {
 		/** Whether cache is enabled for this entrypoint. */
 		enabled: boolean;
@@ -167,10 +179,16 @@ export interface WorkflowExportOptions {
 	 * be unique within the account.
 	 */
 	name: string;
+	/**
+	 * Execution limits for instances of this Workflow.
+	 */
 	limits?: {
 		/** Maximum number of steps a single Workflow instance may run. */
 		steps?: number;
 	};
+	/**
+	 * Concurrency limits for instances of this Workflow.
+	 */
 	concurrency?: {
 		/** Maximum number of Workflow instances that can run concurrently. */
 		limit?: number;

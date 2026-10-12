@@ -489,10 +489,46 @@ export interface WorkerConfig {
 	 * More details: https://developers.cloudflare.com/workers/platform/smart-placement/
 	 */
 	placement?:
-		| { mode: "off" | "smart"; hint?: string }
-		| { mode?: "targeted"; region: string }
-		| { mode?: "targeted"; host: string }
-		| { mode?: "targeted"; hostname: string };
+		| {
+				/**
+				 * Placement mode. `"smart"` places the Worker close to backend infrastructure, while `"off"` disables placement optimization.
+				 */
+				mode: "off" | "smart";
+				/**
+				 * A hostname or network location hint to guide Smart Placement decisions.
+				 */
+				hint?: string;
+		  }
+		| {
+				/**
+				 * Placement mode for targeted placement.
+				 *
+				 * @default "targeted"
+				 */
+				mode?: "targeted";
+				/** The geographic region to run the Worker in. */
+				region: string;
+		  }
+		| {
+				/**
+				 * Placement mode for targeted placement.
+				 *
+				 * @default "targeted"
+				 */
+				mode?: "targeted";
+				/** The backend host to place the Worker near. */
+				host: string;
+		  }
+		| {
+				/**
+				 * Placement mode for targeted placement.
+				 *
+				 * @default "targeted"
+				 */
+				mode?: "targeted";
+				/** The backend hostname to place the Worker near. */
+				hostname: string;
+		  };
 
 	/**
 	 * Specify limits for runtime behavior.
@@ -538,7 +574,9 @@ export interface WorkerConfig {
 			/** Whether real-time Issues are enabled. */
 			enabled?: boolean;
 		};
+		/** Settings for Worker logs. */
 		logs?: {
+			/** Whether log collection is enabled for this Worker. */
 			enabled?: boolean;
 			/** The sampling rate. */
 			headSamplingRate?: number;
@@ -557,7 +595,9 @@ export interface WorkerConfig {
 			 */
 			destinations?: string[];
 		};
+		/** Settings for Worker traces. */
 		traces?: {
+			/** Whether trace collection is enabled for this Worker. */
 			enabled?: boolean;
 			/** The sampling rate. */
 			headSamplingRate?: number;
