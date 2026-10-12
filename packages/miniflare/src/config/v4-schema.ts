@@ -329,6 +329,10 @@ const V4HyperdriveConnectionSchema = z
 const V4HyperdriveSchema = z.union([
 	V4HyperdriveConnectionSchema,
 	z.object({
+		localConnectionString: z.union([z.string(), z.instanceof(URL)]).optional(),
+		remoteProxyConnectionString: RemoteProxyConnectionStringSchema,
+	}),
+	z.object({
 		localConnectionString: V4HyperdriveConnectionSchema.optional(),
 		remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
 	}),

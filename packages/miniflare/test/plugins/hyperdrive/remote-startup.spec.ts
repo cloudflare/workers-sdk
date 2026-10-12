@@ -1,10 +1,230 @@
 import assert from "node:assert";
 import { once } from "node:events";
 import net from "node:net";
+import { setTimeout as delay } from "node:timers/promises";
 import { newWebSocketRpcSession } from "capnweb";
+import { Miniflare } from "miniflare";
 import { test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { HyperdriveProxyController } from "../../../src/plugins/hyperdrive/hyperdrive-proxy";
+import { singleModuleManifest } from "../../test-shared";
+import type { RemoteProxyConnectionString } from "miniflare";
+
+test.for([
+	["dispose", "credentials"],
+	["dispose", "backoff"],
+	["abort update", "credentials"],
+	["abort update", "backoff"],
+	["abort signal", "credentials"],
+	["abort signal", "backoff"],
+])("cancels startup on %s during %s", async ([action, phase], { expect }) => {
+	const edge = new WebSocketServer({ port: 0, host: "127.0.0.1" });
+	await once(edge, "listening");
+	const address = edge.address();
+	assert(address !== null && typeof address !== "string");
+	const abortController = new AbortController();
+	const controller = new HyperdriveProxyController(abortController.signal);
+	const requested = Promise.withResolvers<void>();
+	const closed = Promise.withResolvers<void>();
+	let attempts = 0;
+	edge.on("connection", (websocket) => {
+		attempts++;
+		websocket.once("close", () => closed.resolve());
+		newWebSocketRpcSession(websocket as unknown as WebSocket, {
+			getConnectionString() {
+				requested.resolve();
+				if (phase === "backoff") {
+					throw new Error("retry startup");
+				}
+				return new Promise<string>(() => {});
+			},
+		});
+	});
+	try {
+		controller.beginUpdate();
+		const starting = controller.createRemoteTcpBridge({
+			name: "hyperdrive:0:DB",
+			bindingName: "DB",
+			bindingId: "db",
+			remoteProxyConnectionString: new URL(`http://127.0.0.1:${address.port}`),
+		});
+		const rejected = expect(starting).rejects.toMatchObject({
+			name: "AbortError",
+		});
+		await requested.promise;
+		if (phase === "backoff") {
+			await closed.promise;
+			await delay(25);
+		}
+		if (action === "abort update") {
+			controller.abortUpdate();
+		} else if (action === "abort signal") {
+			abortController.abort();
+		} else {
+			controller.dispose();
+		}
+		await rejected;
+		await vi.waitFor(() => expect(edge.clients.size).toBe(0));
+		await delay(600);
+		expect(attempts).toBe(1);
+		expect(controller.getRemoteBridgePort("hyperdrive:0:DB")).toBeUndefined();
+	} finally {
+		controller.dispose();
+		for (const websocket of edge.clients) {
+			websocket.terminate();
+		}
+		await new Promise<void>((resolve, reject) =>
+			edge.close((error) => (error ? reject(error) : resolve()))
+		);
+	}
+});
+
+test("Miniflare disposal cancels pending Hyperdrive initialization", async ({
+	expect,
+}) => {
+	const edge = new WebSocketServer({ port: 0, host: "127.0.0.1" });
+	await once(edge, "listening");
+	const address = edge.address();
+	assert(address !== null && typeof address !== "string");
+	const requested = Promise.withResolvers<void>();
+	edge.on("connection", (websocket) => {
+		newWebSocketRpcSession(websocket as unknown as WebSocket, {
+			getConnectionString() {
+				requested.resolve();
+				return new Promise<string>(() => {});
+			},
+		});
+	});
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "test",
+					compatibilityDate: "2026-09-01",
+					manifest: singleModuleManifest("export default {}"),
+					env: { DB: { type: "hyperdrive", id: "db", dev: { remote: true } } },
+				},
+				dev: {
+					remoteProxyConnectionString: new URL(
+						`http://127.0.0.1:${address.port}`
+					) as RemoteProxyConnectionString,
+				},
+			},
+		],
+	});
+	const ready = expect(mf.ready).rejects.toMatchObject({
+		code: "ERR_DISPOSED",
+	});
+	try {
+		await requested.promise;
+		await mf.dispose();
+		await ready;
+		await vi.waitFor(() => expect(edge.clients.size).toBe(0));
+	} finally {
+		await mf.dispose();
+		for (const websocket of edge.clients) {
+			websocket.terminate();
+		}
+		await new Promise<void>((resolve, reject) =>
+			edge.close((error) => (error ? reject(error) : resolve()))
+		);
+	}
+});
+
+test("an early client reset releases its pending socket without breaking the session", async ({
+	expect,
+}) => {
+	const edge = new WebSocketServer({ port: 0, host: "127.0.0.1" });
+	await once(edge, "listening");
+	const address = edge.address();
+	assert(address !== null && typeof address !== "string");
+	const requested = Promise.withResolvers<void>();
+	const release = Promise.withResolvers<void>();
+	const aborted = vi.fn();
+	let connections = 0;
+	edge.on("connection", (websocket) => {
+		newWebSocketRpcSession(websocket as unknown as WebSocket, {
+			getConnectionString() {
+				return "mysql://user:password@hyperdrive.local:3306/database";
+			},
+			async connect() {
+				if (++connections === 1) {
+					requested.resolve();
+					await release.promise;
+					let readableController:
+						| ReadableStreamDefaultController<Uint8Array>
+						| undefined;
+					return {
+						readable: new ReadableStream<Uint8Array>({
+							start(streamController) {
+								readableController = streamController;
+							},
+						}),
+						writable: new WritableStream<Uint8Array>({
+							abort() {
+								aborted();
+								readableController?.close();
+							},
+						}),
+					};
+				}
+				return {
+					readable: new ReadableStream<Uint8Array>({
+						start(streamController) {
+							streamController.enqueue(new TextEncoder().encode("ready"));
+							streamController.close();
+						},
+					}),
+					writable: new WritableStream<Uint8Array>(),
+				};
+			},
+		});
+	});
+	const controller = new HyperdriveProxyController();
+	const createServer = vi.spyOn(net, "createServer");
+	const accepted = Promise.withResolvers<net.Socket>();
+	let client: net.Socket | undefined;
+	let nextClient: net.Socket | undefined;
+	try {
+		const port = await controller.createRemoteTcpBridge({
+			name: "hyperdrive:0:DB",
+			bindingName: "DB",
+			bindingId: "db",
+			remoteProxyConnectionString: new URL(`http://127.0.0.1:${address.port}`),
+		});
+		const server = createServer.mock.results[0].value as net.Server;
+		server.once("connection", accepted.resolve);
+		client = net.connect(port, "127.0.0.1");
+		client.on("error", vi.fn());
+		await once(client, "connect");
+		client.write("hello");
+		await requested.promise;
+		const acceptedSocket = await accepted.promise;
+		const closed = new Promise<void>((resolve) =>
+			acceptedSocket.once("close", () => resolve())
+		);
+		client.resetAndDestroy();
+		await closed;
+		release.resolve();
+		await vi.waitFor(() => expect(aborted).toHaveBeenCalledOnce());
+		nextClient = net.connect(port, "127.0.0.1");
+		const [chunk] = await once(nextClient, "data");
+		expect(chunk.toString()).toBe("ready");
+		expect(edge.clients.size).toBe(1);
+	} finally {
+		release.resolve();
+		client?.destroy();
+		nextClient?.destroy();
+		controller.dispose();
+		createServer.mockRestore();
+		for (const websocket of edge.clients) {
+			websocket.terminate();
+		}
+		await new Promise<void>((resolve, reject) =>
+			edge.close((error) => (error ? reject(error) : resolve()))
+		);
+	}
+});
 
 test.for([undefined, "hyperdrive-startup-trace"])(
 	"recovers from a failed startup connection with CF_TRACE_ID=%s",

@@ -87,7 +87,11 @@ test("Worker and Node clients keep session credentials despite a failing binding
 						compatibilityDate: "2026-09-01",
 						manifest: singleModuleManifest(script),
 						env: {
-							DB: { type: "hyperdrive", id, dev: { remote: true } },
+							DB: {
+								type: "hyperdrive",
+								id,
+								dev: { remote: true, connectionString: "unused-invalid-local" },
+							},
 							BROKEN: {
 								type: "hyperdrive",
 								id: "broken",

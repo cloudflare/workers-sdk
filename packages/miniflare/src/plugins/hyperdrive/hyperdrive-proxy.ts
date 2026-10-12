@@ -132,9 +132,12 @@ export class HyperdriveProxyController {
 	// Map a binding and target to the listening proxy server and port
 	#servers = new Map<string, { server: net.Server; port: number }>();
 	#starting = new Map<string, Promise<number>>();
+	#abortController = new AbortController();
+	#signal: AbortSignal;
 	#update?: {
 		created: Set<string>;
 		remoteBridgePorts: Map<string, number>;
+		abortController: AbortController;
 	};
 	#disposed = false;
 	// Sockets currently accepted by each server, keyed the same way as
@@ -157,6 +160,12 @@ export class HyperdriveProxyController {
 		{ stub: RpcStub<RemoteHyperdrive>; connectionString: string }
 	>();
 	log?: Log;
+
+	constructor(signal?: AbortSignal) {
+		this.#signal = signal
+			? AbortSignal.any([this.#abortController.signal, signal])
+			: this.#abortController.signal;
+	}
 
 	/**
 	 * Tracks a server's accepted socket so it can be forced closed on
@@ -289,10 +298,20 @@ export class HyperdriveProxyController {
 				sslrootcert
 			);
 		});
+		return this.#startServer(key, server, "proxy server", name, update);
+	}
+
+	async #startServer(
+		key: string,
+		server: net.Server,
+		description: string,
+		name: string,
+		update?: { created: Set<string> }
+	): Promise<number> {
 		server.on("error", (err) => {
 			this.log?.error(
 				new Error(
-					`Hyperdrive proxy server error for binding "${name}": ${err.message}`
+					`Hyperdrive ${description} error for binding "${name}": ${err.message}`
 				)
 			);
 		});
@@ -482,9 +501,16 @@ export class HyperdriveProxyController {
 		name: string,
 		bindingName: string,
 		wsHref: string,
-		update?: { created: Set<string> }
+		update?: { created: Set<string>; abortController: AbortController }
 	): Promise<number> {
-		const session = await this.#connectRemoteHyperdrive(wsHref, bindingName);
+		const signal = update
+			? AbortSignal.any([this.#signal, update.abortController.signal])
+			: this.#signal;
+		const session = await this.#connectRemoteHyperdrive(
+			wsHref,
+			bindingName,
+			signal
+		);
 		const server = net.createServer((clientSocket) => {
 			clientSocket.setNoDelay(true);
 			this.#trackConnection(key, clientSocket);
@@ -494,37 +520,19 @@ export class HyperdriveProxyController {
 				clientSocket.destroy();
 			}
 		});
-		server.on("error", (err) => {
-			this.log?.error(
-				new Error(
-					`Hyperdrive remote bridge error for binding "${name}": ${err.message}`
-				)
-			);
-		});
-		const port = await new Promise<number>((resolve, reject) => {
-			server.once("error", reject);
-			server.listen(0, "127.0.0.1", () => {
-				server.off("error", reject);
-				const address = server.address();
-				if (address !== null && typeof address !== "string") {
-					resolve(address.port);
-				} else {
-					reject(new Error("Invalid port"));
-				}
-			});
-		}).catch((error: unknown) => {
+		const port = await this.#startServer(
+			key,
+			server,
+			"remote bridge",
+			name,
+			update
+		).catch((error: unknown) => {
 			session?.stub[Symbol.dispose]();
 			throw error;
 		});
-		if (this.#disposed || (update !== undefined && this.#update !== update)) {
-			server.close();
-			session?.stub[Symbol.dispose]();
-			throw new Error("Hyperdrive proxy configuration update was interrupted");
-		}
 		if (session) {
 			this.#remoteSessions.set(key, session);
 		}
-		this.#servers.set(key, { server, port });
 		session?.stub.onRpcBroken(() => {
 			if (
 				!this.#disposed &&
@@ -536,16 +544,20 @@ export class HyperdriveProxyController {
 				);
 			}
 		});
-		update?.created.add(key);
 		return port;
 	}
 
-	async #connectRemoteHyperdrive(wsHref: string, bindingName: string) {
+	async #connectRemoteHyperdrive(
+		wsHref: string,
+		bindingName: string,
+		signal: AbortSignal
+	) {
 		for (
 			let attempt = 1;
 			attempt <= REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS;
 			attempt++
 		) {
+			signal.throwIfAborted();
 			const websocket = new WebSocket(wsHref, {
 				headers: process.env.CF_TRACE_ID
 					? { "cf-trace-id": process.env.CF_TRACE_ID }
@@ -554,23 +566,33 @@ export class HyperdriveProxyController {
 			const stub = newWebSocketRpcSession<RemoteHyperdrive>(
 				websocket as unknown as globalThis.WebSocket
 			);
+			function abortConnection() {
+				stub[Symbol.dispose]();
+				websocket.terminate();
+			}
+			signal.addEventListener("abort", abortConnection, { once: true });
 			const timeout = setTimeout(
 				() => websocket.terminate(),
 				REMOTE_HYPERDRIVE_CONNECTION_TIMEOUT_MS
 			);
 			try {
 				const connectionString = await stub.getConnectionString();
+				signal.throwIfAborted();
 				if (typeof connectionString !== "string") {
 					throw new Error("Missing Hyperdrive connection string");
 				}
 				return { stub, connectionString };
 			} catch {
 				stub[Symbol.dispose]();
+				signal.throwIfAborted();
 			} finally {
 				clearTimeout(timeout);
+				signal.removeEventListener("abort", abortConnection);
 			}
 			if (attempt < REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS) {
-				await delay(REMOTE_HYPERDRIVE_RETRY_BACKOFF_MS * attempt);
+				await delay(REMOTE_HYPERDRIVE_RETRY_BACKOFF_MS * attempt, undefined, {
+					signal,
+				});
 			}
 		}
 		this.log?.warn(
@@ -586,9 +608,20 @@ export class HyperdriveProxyController {
 		stub: RpcStub<RemoteHyperdrive>
 	): Promise<void> {
 		clientSocket.pause();
+		function destroyClient() {
+			clientSocket.destroy();
+		}
+		clientSocket.on("error", destroyClient);
 		try {
 			const socket = await stub.connect();
 			try {
+				if (clientSocket.destroyed) {
+					await Promise.allSettled([
+						socket.readable.cancel(),
+						socket.writable.abort(),
+					]);
+					return;
+				}
 				await Promise.all([
 					pipeline(clientSocket, Writable.fromWeb(socket.writable)),
 					pipeline(Readable.fromWeb(socket.readable), clientSocket),
@@ -598,6 +631,8 @@ export class HyperdriveProxyController {
 			}
 		} catch {
 			clientSocket.destroy();
+		} finally {
+			clientSocket.off("error", destroyClient);
 		}
 	}
 
@@ -609,6 +644,7 @@ export class HyperdriveProxyController {
 		this.#update = {
 			created: new Set(),
 			remoteBridgePorts: new Map(this.#remoteBridgePorts),
+			abortController: new AbortController(),
 		};
 	}
 
@@ -633,6 +669,7 @@ export class HyperdriveProxyController {
 			return;
 		}
 		this.#update = undefined;
+		update.abortController.abort();
 		for (const key of update.created) {
 			this.#retireServer(key);
 		}
@@ -649,6 +686,7 @@ export class HyperdriveProxyController {
 	/** Disposes of the proxy servers when shutting down the worker.*/
 	dispose(): void {
 		this.#disposed = true;
+		this.#abortController.abort();
 		this.#update = undefined;
 		// Destroying every tracked connection (rather than only closing the
 		// listener) is what makes this safe to call synchronously: a

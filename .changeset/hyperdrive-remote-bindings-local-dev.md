@@ -23,7 +23,7 @@ Hyperdrive bindings were local-only in `wrangler dev`, so exercising the databas
 }
 ```
 
-Database clients such as `mysql2` and `pg` work unchanged, and `localConnectionString` is optional when remote bindings are enabled. Database connections use credentials from the same remote session. When remote bindings are turned off, the binding uses its `localConnectionString` with a warning, or explains what to fix if there is none.
+Database clients such as `mysql2` and `pg` work unchanged, and `localConnectionString` is ignored when remote bindings are enabled. Database connections use credentials from the same remote session. When remote bindings are turned off, the binding uses its `localConnectionString` with a warning, or explains what to fix if there is none.
 
 Remote Hyperdrive works in `wrangler dev` (single- and multi-worker), `getPlatformProxy()`, `@cloudflare/vite-plugin`, and `@cloudflare/vitest-plugin`. If one Hyperdrive binding fails to connect, other remote bindings remain available.
 

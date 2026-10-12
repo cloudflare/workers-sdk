@@ -27,7 +27,7 @@ export function getHyperdriveServiceName(
 }
 
 // Placeholder connection string used to synthesise the local Hyperdrive binding
-// when a remote binding has no local connection string. workerd still needs a
+// instead of an unused local connection string. workerd still needs a
 // scheme/database/user/password to build the magic `connectionString` it exposes
 // to the Worker; getServices replaces these fields with credentials from the
 // live remote session before installing the runtime configuration.
@@ -39,8 +39,8 @@ const REMOTE_PLACEHOLDER_URL = new URL(
  * Resolves `hyperdrive` env bindings, parsing each connection string.
  *
  * A binding with `dev.remote: true` (and a remote proxy session) is reached
- * through a local TCP bridge relaying to the edge, so it may omit
- * `dev.connectionString` — the placeholder above stands in when it does.
+ * through a local TCP bridge relaying to the edge. Its `dev.connectionString`
+ * is ignored; the placeholder is replaced with the session credentials.
  */
 function getHyperdrives(
 	config: ParsedMiniflareWorkerConfig,
@@ -56,10 +56,9 @@ function getHyperdrives(
 			binding,
 			dev
 		);
-		const url =
-			remoteProxyConnectionString && binding.dev.connectionString === undefined
-				? REMOTE_PLACEHOLDER_URL
-				: HyperdriveSchema.parse(binding.dev.connectionString);
+		const url = remoteProxyConnectionString
+			? REMOTE_PLACEHOLDER_URL
+			: HyperdriveSchema.parse(binding.dev.connectionString);
 		return [name, url, remoteProxyConnectionString, binding.id];
 	});
 }

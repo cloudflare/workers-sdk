@@ -2,6 +2,28 @@ import { describe, test } from "vitest";
 import { V4MiniflareOptionsSchema } from "../../src/config/v4-schema";
 
 describe("V4MiniflareOptionsSchema", () => {
+	test.for(["unused-invalid-local", new URL("https://unused.example.com")])(
+		"ignores local Hyperdrive connection strings when a remote proxy is provided: %s",
+		(localConnectionString, { expect }) => {
+			expect(() =>
+				V4MiniflareOptionsSchema.parse({
+					script: "export default {}",
+					hyperdrives: {
+						DB: {
+							localConnectionString,
+							remoteProxyConnectionString: new URL("http://127.0.0.1:1234"),
+						},
+					},
+				})
+			).not.toThrow();
+			expect(() =>
+				V4MiniflareOptionsSchema.parse({
+					script: "export default {}",
+					hyperdrives: { DB: { localConnectionString } },
+				})
+			).toThrow();
+		}
+	);
 	test("parses a single-worker v4-shaped config", ({ expect }) => {
 		const parsed = V4MiniflareOptionsSchema.parse({
 			rootPath: "./project",
