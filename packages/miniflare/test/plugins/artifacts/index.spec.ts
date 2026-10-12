@@ -182,6 +182,48 @@ async function createSidecarRepository(
 	await response.body?.cancel();
 }
 
+test("artifacts: sidecar parses admin actions before modifying repositories", async ({
+	expect,
+}) => {
+	const sidecar = await startGitSidecar(path.join(await useTmp(), "repos"));
+	const admin = (body: unknown) =>
+		fetch(`http://${sidecar.address}/__local_artifacts__`, {
+			method: "POST",
+			headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+			body: JSON.stringify(body),
+		});
+	const common = { namespace: "test", name: "repo" };
+	try {
+		for (const body of [
+			{ ...common, action: "unknown" },
+			{ ...common, action: "create" },
+			{ ...common, action: "create", generation: "gen", namespace: "../bad" },
+			{ ...common, action: "fork", generation: "gen", sourceName: 42 },
+			{ ...common, action: "import", generation: "gen", sourceUrl: 42 },
+			{ ...common, action: "delete", generation: null },
+			{ ...common, action: "abortPush", generation: "gen", requestId: "bad" },
+			{ ...common, action: "readBlob", hash: null },
+			{ ...common, action: "file", ref: "main", path: [] },
+		]) {
+			const response = await admin(body);
+			expect(response.status, JSON.stringify(body)).toBe(500);
+			await response.body?.cancel();
+		}
+		const created = await admin({
+			...common,
+			action: "create",
+			generation: "gen",
+		});
+		expect(created.status).toBe(200);
+		await created.body?.cancel();
+		const refs = await admin({ ...common, action: "refs" });
+		expect(refs.status).toBe(200);
+		expect(await refs.json()).toMatchObject({ refs: {} });
+	} finally {
+		await sidecar.close();
+	}
+});
+
 test("artifacts: real RPC exposes current methods, not metadata or legacy methods", async ({
 	expect,
 }) => {
