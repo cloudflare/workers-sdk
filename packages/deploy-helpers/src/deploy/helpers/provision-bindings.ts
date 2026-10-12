@@ -21,6 +21,13 @@ import {
 import type { QueueResponse } from "../../triggers/queue-consumers";
 import type {
 	Binding,
+	CfAgentMemory,
+	CfAISearchNamespace,
+	CfD1Database,
+	CfDispatchNamespace,
+	CfFlagship,
+	CfKvNamespace,
+	CfR2Bucket,
 	ComplianceConfig,
 	Config,
 	RawConfig,
@@ -720,6 +727,16 @@ const HANDLERS = {
 			);
 			return preExistingKV.map((ns) => ({ title: ns.title, value: ns.id }));
 		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "kv_namespace" }>
+		): CfKvNamespace => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
 	d1: {
 		Handler: D1Handler,
@@ -736,6 +753,16 @@ const HANDLERS = {
 			);
 			return preExisting.map((db) => ({ title: db.name, value: db.uuid }));
 		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "d1" }>
+		): CfD1Database => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
 	r2_bucket: {
 		Handler: R2Handler,
@@ -750,6 +777,16 @@ const HANDLERS = {
 				value: bucket.name,
 			}));
 		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "r2_bucket" }>
+		): CfR2Bucket => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
 	ai_search_namespace: {
 		Handler: AISearchNamespaceHandler,
@@ -761,6 +798,16 @@ const HANDLERS = {
 			// AI Search namespaces don't have a general list API in this context.
 			// The provisioning system will create them if they don't exist.
 			return [];
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "ai_search_namespace" }>
+		): CfAISearchNamespace => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
 		},
 	},
 	agent_memory: {
@@ -781,6 +828,16 @@ const HANDLERS = {
 			// therefore safe and avoids an unnecessary list call at deploy time.
 			return [];
 		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "agent_memory" }>
+		): CfAgentMemory => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
 	queue: {
 		Handler: QueueHandler,
@@ -798,6 +855,16 @@ const HANDLERS = {
 				value: queue.queue_name,
 			}));
 		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "queue" }>
+		): QueueProducer => ({
+			binding: bindingName,
+			queue:
+				typeof binding.queue_name === "string" ? binding.queue_name : undefined,
+			delivery_delay: binding.delivery_delay,
+			remote: binding.remote,
+		}),
 	},
 	dispatch_namespace: {
 		Handler: DispatchNamespaceHandler,
@@ -815,6 +882,13 @@ const HANDLERS = {
 				value: namespace.namespace_name,
 			}));
 		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "dispatch_namespace" }>
+		): CfDispatchNamespace => {
+			const { type: _, ...rest } = binding;
+			return { ...rest, binding: bindingName };
+		},
 	},
 	flagship: {
 		Handler: FlagshipHandler,
@@ -825,6 +899,13 @@ const HANDLERS = {
 		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
 			const apps = await listFlagshipApps(complianceConfig, accountId);
 			return apps.map((app) => ({ title: app.name, value: app.id }));
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "flagship" }>
+		): CfFlagship => {
+			const { type: _, ...rest } = binding;
+			return { ...rest, binding: bindingName };
 		},
 	},
 };
@@ -914,13 +995,23 @@ function writeProvisionedIdsToConfig(
 		const index = configBindings.findIndex(
 			(binding) => binding.binding === resource.binding
 		);
-		const identifier = resource.handler.getResolvedIdentifier();
-		if (index === -1 || identifier === undefined) {
+		if (index === -1) {
 			continue;
 		}
 
+		const configBinding = toConfigBinding(
+			resource.binding,
+			resource.handler.binding
+		);
 		const identifierField =
 			resource.resourceType === "queue" ? "queue" : resource.handler.idField;
+		const identifier = (configBinding as Record<string, unknown>)[
+			identifierField
+		];
+		if (typeof identifier !== "string" || identifier.length === 0) {
+			continue;
+		}
+
 		const existingIdentifier = (
 			configBindings[index] as Record<string, unknown>
 		)[identifierField];
@@ -1074,6 +1165,38 @@ function createHandler(
 				complianceConfig,
 				accountId
 			);
+	}
+}
+
+function toConfigBinding(
+	bindingName: string,
+	binding: ProvisionableBinding
+):
+	| CfKvNamespace
+	| CfR2Bucket
+	| CfD1Database
+	| CfAISearchNamespace
+	| CfAgentMemory
+	| QueueProducer
+	| CfDispatchNamespace
+	| CfFlagship {
+	switch (binding.type) {
+		case "kv_namespace":
+			return HANDLERS.kv_namespace.toConfig(bindingName, binding);
+		case "d1":
+			return HANDLERS.d1.toConfig(bindingName, binding);
+		case "r2_bucket":
+			return HANDLERS.r2_bucket.toConfig(bindingName, binding);
+		case "ai_search_namespace":
+			return HANDLERS.ai_search_namespace.toConfig(bindingName, binding);
+		case "agent_memory":
+			return HANDLERS.agent_memory.toConfig(bindingName, binding);
+		case "queue":
+			return HANDLERS.queue.toConfig(bindingName, binding);
+		case "dispatch_namespace":
+			return HANDLERS.dispatch_namespace.toConfig(bindingName, binding);
+		case "flagship":
+			return HANDLERS.flagship.toConfig(bindingName, binding);
 	}
 }
 
