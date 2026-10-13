@@ -37,7 +37,7 @@ import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
 import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
-import { SharedBindings } from "../../workers";
+import { CoreHeaders, SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
 import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
 import {
@@ -287,6 +287,11 @@ export const ASSETS_PLUGIN: Plugin = {
 		const routerService: Service = {
 			name: `${ROUTER_SERVICE_NAME}:${id}`,
 			worker: {
+				// Access authenticates the router invocation. Consuming the blob here
+				// prevents its context from reaching the user Worker through a fetch.
+				...(options.config.access?.dev
+					? { accessBlobHeader: CoreHeaders.ACCESS_BLOB }
+					: {}),
 				// TODO: read these from the wrangler.toml
 				compatibilityDate: "2024-07-31",
 				compatibilityFlags: [

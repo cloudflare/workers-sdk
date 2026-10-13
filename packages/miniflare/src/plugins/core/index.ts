@@ -28,6 +28,7 @@ import { kVoid } from "../../runtime";
 import { MiniflareCoreError, type Log } from "../../shared";
 import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
+import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import { getDurableObjectNamespaces } from "../do/namespaces";
@@ -802,10 +803,21 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_USER_FALLBACK,
 			service: { name: fallbackWorkerName },
 		},
-		...workerNames.map((name) => ({
-			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
-			service: { name: getUserServiceName(name) },
-		})),
+		...workerNames.map((name) => {
+			const worker = allWorkerOpts?.find(
+				(options) => options.config.name === name
+			);
+			// Match the fallback's assets pipeline while keeping Vitest runner
+			// invocations on the runner itself (its SELF binding invokes the router).
+			const serviceName =
+				worker?.config.assets && !name.startsWith("vitest-plugin-runner-")
+					? `${RPC_PROXY_SERVICE_NAME}:${name}`
+					: getUserServiceName(name);
+			return {
+				name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
+				service: { name: serviceName },
+			};
+		}),
 		{
 			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
 			durableObjectNamespace: { className: "ProxyServer" },
