@@ -1,5 +1,25 @@
 # miniflare
 
+## 5.20261006.2-beta
+
+### Patch Changes
+
+- [#16224](https://github.com/cloudflare/workers-sdk/pull/16224) [`5152bf8`](https://github.com/cloudflare/workers-sdk/commit/5152bf8c3591863243da275debf02ecbf66f560e) Thanks [@adrianhall](https://github.com/adrianhall)! - Fix short-lived local sessions hanging instead of exiting after `dispose()`
+
+  A Miniflare instance using shared local storage could keep the Node process alive after `dispose()` resolved, because a filesystem watcher on the dev registry directory was left running. A one-shot local command would do its work and print its result, then never exit — `cf d1 migrations apply --local`, for example, applied every migration successfully and still had to be killed. Disposal now releases the watcher reliably, so the process exits on its own.
+
+- [#16146](https://github.com/cloudflare/workers-sdk/pull/16146) [`9f87de8`](https://github.com/cloudflare/workers-sdk/commit/9f87de8cd6e8ff5afedb5430acd8776cb239844e) Thanks [@armancharan](https://github.com/armancharan)! - Replay the request body when `dispatchFetch()` retries HTTP 421
+
+  A known-length POST that receives 421 used to throw `UND_ERR_REQ_CONTENT_LENGTH_MISMATCH`. The retry aborted the connection before the response was finished, which dropped the body while keeping the original `Content-Length`. The abort from that retry is now ignored so the same bytes are sent again.
+
+- [#16221](https://github.com/cloudflare/workers-sdk/pull/16221) [`9be5ec7`](https://github.com/cloudflare/workers-sdk/commit/9be5ec7cf2c3988d0a446a5207d0d23def541cf5) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Promote Miniflare v5 prereleases from alpha to beta.
+
+  This aligns the Miniflare prereleases with `cf` and `@cloudflare/vite-plugin`.
+
+- [#16219](https://github.com/cloudflare/workers-sdk/pull/16219) [`d232454`](https://github.com/cloudflare/workers-sdk/commit/d232454ca9059b7722a013ab128354d7e44a2031) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Honor `X-Forwarded-Proto` for incoming development requests behind TLS-terminating proxies
+
+  Miniflare now uses the original client protocol when constructing URLs for network requests. This also prevents Wrangler from downgrading HTTPS URLs in response headers such as `Location` and `WWW-Authenticate` when a tunnel forwards requests over HTTP. Explicit programmatic request URLs and configured upstream origins remain authoritative.
+
 ## 5.20261006.1-alpha
 
 ### Patch Changes
