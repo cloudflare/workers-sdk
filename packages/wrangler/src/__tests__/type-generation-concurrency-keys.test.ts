@@ -57,6 +57,20 @@ describe("renderConcurrencyKeyDeclaration", () => {
 				'\t\t\t| "warehouse-db";',
 				"\t}",
 				"}",
+				"declare namespace CloudflareWorkersModule {",
+				"\texport interface WorkflowStep {",
+				"\t\tdo<T extends Rpc.Serializable<T>>(",
+				"\t\t\tname: string,",
+				"\t\t\tconfig: WorkflowStepConfig & {",
+				"\t\t\t\tconcurrency:",
+				'\t\t\t\t\t| Cloudflare.GlobalProps["concurrencyKeys"]',
+				'\t\t\t\t\t| readonly Cloudflare.GlobalProps["concurrencyKeys"][];',
+				"\t\t\t},",
+				"\t\t\tcallback: (ctx: WorkflowStepContext) => Promise<T>,",
+				"\t\t\trollbackOptions?: WorkflowStepRollbackOptions<T>",
+				"\t\t): Promise<T>;",
+				"\t}",
+				"}",
 			].join("\n")
 		);
 	});

@@ -5671,6 +5671,20 @@ describe("concurrency key type generation", () => {
 					| "warehouse-db";
 			}
 		}
+		declare namespace CloudflareWorkersModule {
+			export interface WorkflowStep {
+				do<T extends Rpc.Serializable<T>>(
+					name: string,
+					config: WorkflowStepConfig & {
+						concurrency:
+							| Cloudflare.GlobalProps["concurrencyKeys"]
+							| readonly Cloudflare.GlobalProps["concurrencyKeys"][];
+					},
+					callback: (ctx: WorkflowStepContext) => Promise<T>,
+					rollbackOptions?: WorkflowStepRollbackOptions<T>
+				): Promise<T>;
+			}
+		}
 		// End concurrency keys
 	`;
 
