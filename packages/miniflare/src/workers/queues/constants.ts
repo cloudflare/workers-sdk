@@ -1,3 +1,15 @@
+// Internal to Miniflare; these names never identify user-configured Queues.
+export const ARTIFACTS_EVENT_INBOX_SERVICE_NAME =
+	"queues:artifacts-event-inbox";
+export const ARTIFACTS_EVENT_INBOX_CLASS_NAME = "ArtifactsEventInbox";
+
+/** Unique RPC service for an Artifacts namespace's event producer. */
+export function getArtifactsEventProducerServiceName(
+	namespace: string
+): string {
+	return `queues:artifacts-event-producer:${namespace}`;
+}
+
 export const QueueBindings = {
 	SERVICE_WORKER_PREFIX: "MINIFLARE_WORKER_",
 	MAYBE_JSON_QUEUE_PRODUCERS: "MINIFLARE_QUEUE_PRODUCERS",

@@ -1,4 +1,6 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+import { V1, type ArtifactsEvent, type RepoSnapshot } from "./events";
+import type { ArtifactsEventProducer } from "../queues/event-producer.worker";
 
 const repoName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
@@ -206,6 +208,7 @@ interface LocalArtifactsEnvironment {
 	config: { namespace: string; origin: string };
 	localArtifactsNamespace: DurableObjectNamespace<LocalArtifactsNamespaceObject>;
 	gitBackend: Fetcher;
+	QUEUE_WORKER: Service<ArtifactsEventProducer>;
 }
 
 type RepositoryMap = Record<string, Repository>;
@@ -295,6 +298,17 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 						"Unable to persist Artifacts repository"
 					);
 				}
+				this.publish(
+					V1.repoCreated({
+						repo: eventRepoSnapshot(repository),
+					})
+				);
+				this.publish(
+					V1.tokenCreated({
+						repo: { namespace: repository.namespace, name: repository.name },
+						token: eventToken(token.record),
+					})
+				);
 				return createRepoResult(repository, token);
 			} catch (error) {
 				if (error instanceof ArtifactsError) {
@@ -361,6 +375,21 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					"Unable to persist imported Artifacts repository"
 				);
 			}
+			this.publish(
+				V1.repoImported({
+					repo: eventRepoSnapshot(repository),
+					importedFrom: {
+						url: publicSourceUrl.href,
+						branch: source.branch ?? null,
+					},
+				})
+			);
+			this.publish(
+				V1.tokenCreated({
+					repo: { namespace: repository.namespace, name: repository.name },
+					token: eventToken(token.record),
+				})
+			);
 			return createRepoResult(repository, token);
 		});
 	}
@@ -430,6 +459,12 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			const repository = getRepo(repositories, name, expectedId);
 			const token = await createToken(repository, scope, ttl);
 			await this.saveRepos(repositories);
+			this.publish(
+				V1.tokenCreated({
+					repo: { namespace: repository.namespace, name: repository.name },
+					token: eventToken(token.record),
+				})
+			);
 			return tokenResult(token);
 		});
 	}
@@ -480,6 +515,12 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			}
 			token.revokedAt = new Date().toISOString();
 			await this.saveRepos(repositories);
+			this.publish(
+				V1.tokenRevoked({
+					repo: { namespace: repository.namespace, name: repository.name },
+					token: { id: token.id },
+				})
+			);
 			return true;
 		});
 	}
@@ -537,6 +578,18 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					"Unable to persist forked Artifacts repository"
 				);
 			}
+			this.publish(
+				V1.repoForked({
+					repo: eventRepoSnapshot(fork),
+					forkedFrom: { namespace: source.namespace, name: source.name },
+				})
+			);
+			this.publish(
+				V1.tokenCreated({
+					repo: { namespace: fork.namespace, name: fork.name },
+					token: eventToken(token.record),
+				})
+			);
 			return createRepoResult(fork, token);
 		});
 	}
@@ -580,6 +633,11 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		await this.backend(repository, { action: "delete" });
 		delete repositories[key];
 		await this.saveRepos(repositories);
+		this.publish(
+			V1.repoDeleted({
+				repo: eventRepoSnapshot(repository),
+			})
+		);
 	}
 
 	async getRepo(name: string, expectedId?: string): Promise<Repository> {
@@ -662,6 +720,15 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		});
 	}
 
+	private publish(event: ArtifactsEvent): void {
+		// Committed mutations must not fail because local event delivery failed.
+		this.ctx.waitUntil(
+			this.env.QUEUE_WORKER.sendEvent(event).catch(() => {
+				console.warn("Unable to publish local Artifacts event");
+			})
+		);
+	}
+
 	private async exclusive<T>(action: () => Promise<T>): Promise<T> {
 		const previous = this.operations;
 		let release!: () => void;
@@ -675,6 +742,29 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			release();
 		}
 	}
+}
+
+function eventRepoSnapshot(repository: Repository): RepoSnapshot {
+	return {
+		id: repository.id,
+		namespace: repository.namespace,
+		name: repository.name,
+		jurisdiction: "unrestricted",
+		defaultBranch: repository.defaultBranch,
+		description: repository.description ?? null,
+		readOnly: repository.readOnly,
+		createdAt: repository.createdAt,
+		updatedAt: repository.updatedAt,
+		lastPushAt: repository.lastPushAt ?? null,
+	};
+}
+
+function eventToken(token: RepositoryToken): {
+	id: string;
+	scope: string;
+	expiresAt: string;
+} {
+	return { id: token.id, scope: token.scope, expiresAt: token.expiresAt };
 }
 
 function createRepoHandle(

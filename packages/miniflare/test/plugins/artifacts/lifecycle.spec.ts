@@ -3,7 +3,7 @@ import { once } from "node:events";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { transform } from "esbuild";
+import { build } from "esbuild";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
@@ -101,7 +101,19 @@ async function clockedWorker(): Promise<string> {
 		source = source.replace(original, replacement);
 	}
 	source = `let testClock = 0;\n${source}\n${clockedFetch}`;
-	return (await transform(source, { loader: "ts", format: "esm" })).code;
+	const result = await build({
+		stdin: {
+			contents: source,
+			resolveDir: path.dirname(workerSource),
+			sourcefile: workerSource,
+			loader: "ts",
+		},
+		bundle: true,
+		format: "esm",
+		write: false,
+		external: ["cloudflare:workers"],
+	});
+	return result.outputFiles[0].text;
 }
 
 const clockedFetch = `
@@ -136,7 +148,11 @@ export default {
       return Response.json({ code: error.code, message: error.message }, { status: 400 });
     }
   }
-};`;
+};
+// The lifecycle fixture tests storage failure handling, not event delivery.
+export class EventSink extends WorkerEntrypoint {
+  async sendEvent() {}
+}`;
 
 function clockOptions(
 	script: string,
@@ -164,6 +180,11 @@ function clockOptions(
 							exportName: "LocalArtifactsNamespaceObject",
 						},
 						gitBackend: { type: "worker", worker: "backend" },
+						QUEUE_WORKER: {
+							type: "worker",
+							worker: "clocked",
+							exportName: "EventSink",
+						},
 					},
 					exports: {
 						LocalArtifactsNamespaceObject: {

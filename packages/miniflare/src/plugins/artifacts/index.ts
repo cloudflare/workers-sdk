@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import SCRIPT from "worker:artifacts/binding";
+import { getArtifactsEventProducerServiceName } from "../../workers/queues/constants";
 import {
 	buildRemoteProxyProps,
 	getEnvBindingsOfType,
@@ -181,6 +182,13 @@ async function createLocalNamespaceRuntime(
 					durableObjectNamespace: { className: OBJECT_CLASS },
 				},
 				{ name: "gitBackend", service: { name: backendName } },
+				{
+					name: "QUEUE_WORKER",
+					service: {
+						name: getArtifactsEventProducerServiceName(namespace),
+						entrypoint: "ArtifactsEventProducer",
+					},
+				},
 			],
 			// Keys must be unique across namespaces in one workerd, but should
 			// not repeat the long service prefix in SQLite's directory name.
