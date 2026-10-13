@@ -5,7 +5,8 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
-	// TODO(release): Revert these Cloudflare packages to workspace dependencies.
+	// These packages are shared with `cf`, so they must remain external rather
+	// than being bundled into the Vite plugin.
 	"@cloudflare/build-output-utils",
 	"@cloudflare/config",
 	"@cloudflare/runtime-types",
