@@ -1,5 +1,30 @@
 # @cloudflare/config
 
+## 0.25.0
+
+### Minor Changes
+
+- [#16175](https://github.com/cloudflare/workers-sdk/pull/16175) [`d8b1fca`](https://github.com/cloudflare/workers-sdk/commit/d8b1fca2ba2fec3d3945fa6ec719b8f6766ad610) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Allow Worker bindings to be included conditionally
+
+  Binding entries set to `false`, `null`, or `undefined` are now omitted from `env`. Generated environment types make conditionally included bindings optional.
+
+  ```ts
+  export default defineConfig(({ mode }) => ({
+    worker: {
+      name: "my-worker",
+      compatibilityDate: "2026-10-09",
+      env: {
+        PRODUCTION_KV:
+          mode === "production" && bindings.kv({ id: "production-kv-id" }),
+        STAGING_API_ORIGIN:
+          mode === "staging"
+            ? bindings.text("https://staging.example.com")
+            : undefined,
+      },
+    },
+  }));
+  ```
+
 ## 0.24.1
 
 ### Patch Changes
