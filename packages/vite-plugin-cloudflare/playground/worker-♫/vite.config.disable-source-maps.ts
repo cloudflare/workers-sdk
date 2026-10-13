@@ -5,7 +5,7 @@ export default defineConfig({
 	environments: {
 		worker: {
 			build: {
-				sourcemap: true,
+				sourcemap: false,
 			},
 		},
 	},
