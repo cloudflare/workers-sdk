@@ -1,0 +1,37 @@
+packages/vitest-plugin/src/pool/plugin.ts
+  s_ec7ca26dd5bb2d::t_363b7c670137ee 71,81-89,127-130,134
+packages/vitest-plugin/test/fs-module-cache.test.ts
+  s_09d77d62d4fbe9::t_7a4280c56981bc 1,60,71,79,102-175,232-286
+  s_09d77d62d4fbe9::t_e9c9b293d86b9a 176-231
+packages/vitest-plugin/test/coverage.test.ts
+  h_0282ef8cb84129 28,124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df8fd096c0c1d535caf498c7ef1e4544ada86b37",
+  "prompts": {},
+  "humans": {
+    "h_0282ef8cb84129": {
+      "author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  },
+  "sessions": {
+    "s_09d77d62d4fbe9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec9822b80ffenibwjT5gJ0A3w4",
+        "model": "unknown"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    },
+    "s_ec7ca26dd5bb2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec98ec49cffevguEA0Nu5mSJ0W",
+        "model": "unknown"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}
