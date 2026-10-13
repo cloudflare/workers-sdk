@@ -39,6 +39,7 @@ export {
 	configFileName,
 	experimental_readRawConfig,
 } from "./config";
+export { readConfig } from "./config/read-config";
 export {
 	experimental_patchConfig,
 	PatchConfigError,

@@ -21,10 +21,11 @@ export async function readD1Migrations(
 	migrationsPathOrOptions: string | ReadD1MigrationsOptions
 ): Promise<D1Migration[]> {
 	const files = listD1MigrationFiles(migrationsPathOrOptions);
-	const { unstable_splitSqlQuery } = await import("wrangler"); // (lazy)
+	const { splitSqlQuery } =
+		await import("@cloudflare/workers-utils/d1-splitter"); // (lazy)
 	return files.map(({ name, filePath }) => {
 		const migration = fs.readFileSync(filePath, "utf8");
-		const queries = unstable_splitSqlQuery(migration);
+		const queries = splitSqlQuery(migration);
 		return { name, queries };
 	});
 }

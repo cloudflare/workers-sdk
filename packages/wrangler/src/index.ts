@@ -2,6 +2,10 @@ import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
+	getDefaultEnvFiles,
+	loadDotEnv,
+} from "@cloudflare/deploy-helpers/dev-vars";
+import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
 } from "@cloudflare/workers-utils";
@@ -113,7 +117,6 @@ import {
 	cloudchamberSshNamespace,
 } from "./cloudchamber";
 import { completionsCommand } from "./complete";
-import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import {
 	containersBuildCommand,
 	containersDeleteCommand,

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import { getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
 import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import {
 	CommandLineArgsError,
@@ -20,7 +21,6 @@ import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { parseRules } from "../deployment-bundle/rules";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
-import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
 import {

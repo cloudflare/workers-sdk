@@ -4,7 +4,7 @@ import {
 	mayContainMultipleStatements,
 	normalizeSqlLineEndings,
 	splitSqlQuery,
-} from "../../d1/splitter";
+} from "../src/d1-splitter";
 
 describe("normalizeSqlLineEndings()", () => {
 	it("should preserve CRLF inside quoted SQL values and identifiers", ({

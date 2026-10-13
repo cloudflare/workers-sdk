@@ -3,8 +3,8 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { readD1Migrations } from "../src/pool/d1";
 
-vi.mock("wrangler", () => ({
-	unstable_splitSqlQuery: (sql: string) => [sql.trim()],
+vi.mock("@cloudflare/workers-utils/d1-splitter", () => ({
+	splitSqlQuery: (sql: string) => [sql.trim()],
 }));
 
 describe("readD1Migrations", () => {

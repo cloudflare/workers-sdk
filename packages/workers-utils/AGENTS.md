@@ -19,10 +19,12 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 
 - Validation pipeline normalizes wrangler.json/toml into typed config objects
 - Used by wrangler for all config loading
+- `readConfig(args, { logger })` — reads, normalizes and validates a Wrangler config file. The caller passes its logger; wrangler wraps it to add its upgrade hint on config warnings.
 
 ### D1 migrations
 
 - `getD1MigrationFiles({ projectPath, migrationsDir, migrationsPattern })` — shared glob-based discovery used by Wrangler and the Vitest plugin. Honour `migrations_pattern` rather than recursively collecting every `.sql` file.
+- `@cloudflare/workers-utils/d1-splitter` — `splitSqlQuery()` (port of SQLite's statement scanner), used by `wrangler d1 execute`, `createTestHarness()` and the Vitest plugin's `readD1Migrations()`.
 
 ### Shared runtime utilities
 

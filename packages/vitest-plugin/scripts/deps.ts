@@ -5,6 +5,10 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
+	// Loads its WebAssembly module relative to its own files, so it can't be
+	// bundled. Used to hash Pages assets for the `ASSETS` binding.
+	"blake3-wasm",
+
 	// Has optional native N-API bindings for performance - may not bundle correctly
 	"cjs-module-lexer",
 

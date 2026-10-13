@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { caseInsensitiveEnv } from "../config/case-insensitive-env";
+import { caseInsensitiveEnv } from "../src/dev/case-insensitive-env";
 
 describe("caseInsensitiveEnv", () => {
 	it("resolves get/has/delete case-insensitively", ({ expect }) => {

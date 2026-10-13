@@ -5,11 +5,12 @@ import {
 	getCloudflareLoadDevVarsFromDotEnv,
 } from "@cloudflare/workers-utils";
 import dotenv from "dotenv";
-import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
-import { logger } from "../logger";
-import type { Binding } from "../api/startDevWorker/types";
-import type { Config } from "@cloudflare/workers-utils";
+import { logger } from "../shared/context";
+import { getDefaultEnvFiles, loadDotEnv } from "./dot-env";
+import type { Binding, Config } from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";
+
+export { getDefaultEnvFiles, loadDotEnv } from "./dot-env";
 
 /**
  * A binding type for vars - plain_text, json, or secret_text.

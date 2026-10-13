@@ -26,6 +26,18 @@
 			"import": "./dist/context.mjs",
 			"types": "./dist/context.d.mts"
 		},
+		"./dev-vars": {
+			"import": "./dist/dev-vars.mjs",
+			"types": "./dist/dev-vars.d.mts"
+		},
+		"./miniflare-options": {
+			"import": "./dist/miniflare-options.mjs",
+			"types": "./dist/miniflare-options.d.mts"
+		},
+		"./pages-assets": {
+			"import": "./dist/pages-assets.mjs",
+			"types": "./dist/pages-assets.d.mts"
+		},
 		"./create-worker-upload-form": {
 			"import": "./dist/create-worker-upload-form.mjs",
 			"types": "./dist/create-worker-upload-form.d.mts"
@@ -51,9 +63,12 @@
 		"@cloudflare/workers-utils": "workspace:*",
 		"blake3-wasm": "2.1.5",
 		"chalk": "catalog:default",
+		"chokidar": "4.0.3",
 		"command-exists": "catalog:default",
 		"devtools-protocol": "0.0.1182435",
 		"dotenv": "catalog:default",
+		"dotenv-expand": "12.0.2",
+		"mime": "3.0.0",
 		"miniflare": "workspace:*",
 		"p-queue": "9.0.0",
 		"pretty-bytes": "6.1.1",
@@ -61,11 +76,14 @@
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
+		"@cloudflare/pages-shared": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@types/command-exists": "^1.2.0",
 		"@types/json-diff": "^1.0.3",
+		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
 		"@types/ws": "^8.5.7",
 		"concurrently": "^8.2.2",

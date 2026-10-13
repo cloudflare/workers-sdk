@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
-import { getVarsForDev } from "../../dev/dev-vars";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
 describe("getVarsForDev", () => {

@@ -15,6 +15,18 @@ const MONOREPO_PACKAGE_ALIASES = {
 		__dirname,
 		"../deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts"
 	),
+	"@cloudflare/deploy-helpers/dev-vars": path.join(
+		__dirname,
+		"../deploy-helpers/src/dev/dev-vars.ts"
+	),
+	"@cloudflare/deploy-helpers/miniflare-options": path.join(
+		__dirname,
+		"../deploy-helpers/src/dev/miniflare-options.ts"
+	),
+	"@cloudflare/deploy-helpers/pages-assets": path.join(
+		__dirname,
+		"../deploy-helpers/src/dev/pages-assets.ts"
+	),
 	"@cloudflare/deploy-helpers/startup-profile": path.join(
 		__dirname,
 		"../deploy-helpers/src/startup-profile.ts"

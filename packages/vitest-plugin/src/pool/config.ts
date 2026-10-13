@@ -1,8 +1,11 @@
 import path from "node:path";
+import { getMiniflareWorkerOptions } from "@cloudflare/deploy-helpers/miniflare-options";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
+	convertConfigToBindings,
 	formatZodError,
 	getCloudflareComplianceRegion,
+	readConfig,
 } from "@cloudflare/workers-utils";
 import {
 	Log,
@@ -402,14 +405,12 @@ async function parseCustomPoolOptions(
 		options.wrangler.configPath = configPath;
 		environment = options.wrangler.environment;
 
-		// Lazily import `wrangler` if and when we need it. Parse the config once so
-		// we can pass the parsed config straight into
-		// `unstable_getMiniflareWorkerOptions` without re-parsing it.
-		const wrangler = await import("wrangler");
-		config = wrangler.unstable_readConfig({
-			config: configPath,
-			env: environment,
-		});
+		// Parse the config once so we can pass the parsed config straight into
+		// `getMiniflareWorkerOptions` without re-parsing it.
+		config = readConfig(
+			{ config: configPath, env: environment },
+			{ logger: remoteBindingsLogger }
+		);
 	}
 
 	if (configPath !== undefined && config !== undefined) {
@@ -419,10 +420,6 @@ async function parseCustomPoolOptions(
 			workerName: config.topLevelName,
 		};
 
-		// Already imported above for a Wrangler config; the module registry makes
-		// this a no-op when it was, and keeps it lazy when it wasn't
-		const wrangler = await import("wrangler");
-
 		const preExistingRemoteProxySessionData =
 			remoteProxySessionsDataMap.get(configPath);
 
@@ -430,10 +427,7 @@ async function parseCustomPoolOptions(
 			? await maybeStartOrUpdateRemoteProxySession(
 					{
 						name: config.name ?? "worker",
-						bindings:
-							wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-								config
-							) ?? {},
+						bindings: convertConfigToBindings(config, { usePreviewIds: true }),
 						complianceRegion: getCloudflareComplianceRegion(config),
 						account_id: config.account_id,
 						profileDir: path.dirname(configPath),
@@ -449,7 +443,7 @@ async function parseCustomPoolOptions(
 		}
 
 		const { workerOptions, externalWorkers, define, main } =
-			wrangler.unstable_getMiniflareWorkerOptions(config, environment, {
+			getMiniflareWorkerOptions(config, environment, {
 				overrides: {
 					assets: options.miniflare.assets,
 					// doesn't work with containers yet so let's just disable it
