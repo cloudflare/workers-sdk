@@ -25,8 +25,7 @@ test(
 						}),
 					],
 					test: {
-						// Temporarily disable filesystem caching until PR #16163 is merged.
-						fsModuleCache: false,
+						fsModuleCache: true,
 						fileParallelism: false,
 						isolate: true,
 						coverage: {
@@ -142,8 +141,7 @@ test(
 						})
 					],
 					test: {
-						// Temporarily disable filesystem caching until PR #16163 is merged.
-						fsModuleCache: false,
+						fsModuleCache: true,
 						sequence: { sequencer: DeterministicSequencer },
 						testTimeout: 90_000,
 						coverage: {
