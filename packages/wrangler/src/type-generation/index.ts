@@ -23,6 +23,7 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqli
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
+import { resolveConcurrencyKeysSection } from "./concurrency-keys";
 import {
 	checkTypesUpToDate,
 	DEFAULT_WORKERS_TYPES_FILE_NAME,
@@ -36,6 +37,7 @@ import { K2_PRODUCER_TYPE } from "./k2";
 import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
+import type { ConcurrencyKeysMode } from "./concurrency-keys";
 import type {
 	Config,
 	Entry,
@@ -88,6 +90,7 @@ export interface GenerateTypesOptions {
 
 interface ResolvedGenerateTypesOptions {
 	config: Config;
+	concurrencyKeys: ConcurrencyKeysMode;
 	envHeaderCommand?: string;
 	env?: string;
 	envFile?: string[];
@@ -164,6 +167,12 @@ export const typesCommand = createCommand({
 				"Check if the types at the provided path are up to date without regenerating them",
 			type: "boolean",
 		},
+		"concurrency-keys": {
+			type: "boolean",
+			default: true,
+			describe:
+				"Type Workflow step concurrency keys from the account in `account_id` (requires a Workflow defined by this Worker)",
+		},
 	},
 	validateArgs(args) {
 		// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
@@ -214,6 +223,7 @@ export const typesCommand = createCommand({
 			validateOptions: false,
 			validateOutputPath: false,
 			source: "cli",
+			concurrencyKeys: args.concurrencyKeys ? "fetch" : "off",
 		});
 
 		resolvedOptions.envHeaderCommand = buildGenerateTypesHeaderCommand(
@@ -305,6 +315,7 @@ export async function generateTypesFromWranglerOptions(
 		validateOptions: true,
 		validateOutputPath: false,
 		source: "api",
+		concurrencyKeys: "keep",
 	});
 	resolvedOptions.envHeaderCommand = buildGenerateTypesHeaderCommand(
 		options,
@@ -392,6 +403,10 @@ function buildGenerateTypesHeaderCommand(
 		commandParts.push(`--env-interface=${options.envInterface}`);
 	}
 
+	if (resolvedOptions.concurrencyKeys === "off") {
+		commandParts.push("--concurrency-keys=false");
+	}
+
 	if (resolvedOptions.path !== DEFAULT_WORKERS_TYPES_FILE_NAME) {
 		commandParts.push(resolvedOptions.path);
 	}
@@ -418,11 +433,13 @@ async function resolveGenerateTypesOptions(
 		validateOptions,
 		validateOutputPath,
 		source,
+		concurrencyKeys,
 	}: {
 		logSecondaryEntries: boolean;
 		validateOptions: boolean;
 		validateOutputPath: boolean;
 		source: "cli" | "api";
+		concurrencyKeys: ConcurrencyKeysMode;
 	}
 ): Promise<ResolvedGenerateTypesOptions> {
 	const envInterface = options.envInterface ?? "Env";
@@ -462,6 +479,7 @@ async function resolveGenerateTypesOptions(
 
 	return {
 		config,
+		concurrencyKeys,
 		env: options.env,
 		envFile: options.envFile,
 		envInterface,
@@ -495,6 +513,13 @@ async function generateTypesFromResolvedOptions(
 	const header: string[] = ["/* eslint-disable */"];
 	const content: string[] = [];
 
+	let existingContent: string | undefined;
+	try {
+		existingContent = await fs.promises.readFile(options.path, "utf8");
+	} catch {
+		// No existing types file — generate from scratch.
+	}
+
 	let env: string | null = null;
 	if (options.includeEnv) {
 		if (log) {
@@ -520,19 +545,21 @@ async function generateTypesFromResolvedOptions(
 			header.push(envHeader);
 			content.push(envTypes);
 		}
+
+		const concurrencyKeysSection = await resolveConcurrencyKeysSection(
+			options.config,
+			options.concurrencyKeys,
+			existingContent
+		);
+		if (concurrencyKeysSection !== undefined) {
+			content.push(concurrencyKeysSection);
+		}
 	}
 
 	let runtime: string | null = null;
 	if (options.includeRuntime) {
 		if (log) {
 			logger.log("Generating runtime types...\n");
-		}
-
-		let existingContent: string | undefined;
-		try {
-			existingContent = await fs.promises.readFile(options.path, "utf8");
-		} catch {
-			// No existing types file — generate from scratch.
 		}
 
 		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
