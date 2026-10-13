@@ -15,51 +15,78 @@ describe("cf-wrangler build", () => {
 	mockConsoleMethods();
 	afterEach(() => vi.unstubAllEnvs());
 
-	it("emits Preview Build Output", async ({ expect }) => {
-		vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", "true");
-		await seed({
-			"cloudflare.config.ts": `export default ({ isPreview }) => ({
+	it.for([false, true])(
+		"emits Build Output (isPreview: %s)",
+		async (isPreview, { expect }) => {
+			vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", String(isPreview));
+			await seed({
+				"cloudflare.config.ts": `export default ({ isPreview }) => ({
 				worker: {
 					name: isPreview ? "preview-worker" : "production-worker",
 					compatibilityDate: "2026-05-18",
 					entrypoint: "./src/index.js",
+					domains: ["example.com", {
+						hostname: "previews.example.com",
+						production: false,
+						previews: true,
+					}],
 				},
 			});`,
-			"src/index.js": `export default {
+				"src/index.js": `export default {
 				async fetch() { return new Response("hello"); }
 			};`,
-		});
+			});
 
-		const exitCode = await runCfWranglerBuild({});
+			const exitCode = await runCfWranglerBuild({});
 
-		expect(exitCode).toBe(0);
-		expect(
-			fs.existsSync(
-				path.resolve(".cloudflare/output/v0/workers/default/worker.config.json")
-			)
-		).toBe(true);
-		expect(
-			fs.existsSync(
-				path.resolve(".cloudflare/output/v0/workers/default/bundle/index.js")
-			)
-		).toBe(true);
-		const worker = JSON.parse(
-			fs.readFileSync(
-				path.resolve(
-					".cloudflare/output/v0/workers/default/worker.config.json"
-				),
-				"utf8"
-			)
-		);
-		const rootConfig = JSON.parse(
-			fs.readFileSync(path.resolve(".cloudflare/output/v0/config.json"), "utf8")
-		);
+			expect(exitCode).toBe(0);
+			expect(
+				fs.existsSync(
+					path.resolve(
+						".cloudflare/output/v0/workers/default/worker.config.json"
+					)
+				)
+			).toBe(true);
+			expect(
+				fs.existsSync(
+					path.resolve(".cloudflare/output/v0/workers/default/bundle/index.js")
+				)
+			).toBe(true);
+			const worker = JSON.parse(
+				fs.readFileSync(
+					path.resolve(
+						".cloudflare/output/v0/workers/default/worker.config.json"
+					),
+					"utf8"
+				)
+			);
+			const rootConfig = JSON.parse(
+				fs.readFileSync(
+					path.resolve(".cloudflare/output/v0/config.json"),
+					"utf8"
+				)
+			);
 
-		expect(worker).toMatchObject({ name: "preview-worker" });
-		expect(rootConfig).toMatchObject({
-			buildContext: { isPreview: true },
-		});
-	});
+			expect(worker).toMatchObject({
+				name: isPreview ? "preview-worker" : "production-worker",
+			});
+			if (isPreview) {
+				expect(worker).not.toHaveProperty("domains");
+			} else {
+				expect(worker.domains).toEqual([
+					"example.com",
+					{
+						hostname: "previews.example.com",
+						production: false,
+						previews: true,
+					},
+				]);
+			}
+			expect(rootConfig).toMatchObject({
+				buildContext: { isPreview },
+			});
+		}
+	);
 
 	it("emits an assets-only project whose assets directory is the project root", async ({
 		expect,

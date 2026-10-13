@@ -1396,6 +1396,57 @@ describe("convertToWranglerConfig", () => {
 	});
 
 	describe("domains", () => {
+		it.for([
+			{ production: true, previews: false },
+			{ production: false, previews: true },
+			{ production: true, previews: true },
+		])(
+			"converts domain traffic settings $production/$previews",
+			(traffic, { expect }) => {
+				const result = convertToWranglerConfig({
+					worker: {
+						...baseWorker,
+						domains: [{ hostname: "app.example.com", ...traffic }],
+					},
+					containers: [],
+				});
+				expect(result.routes).toEqual([
+					{
+						pattern: "app.example.com",
+						custom_domain: true,
+						enabled: traffic.production,
+						previews_enabled: traffic.previews,
+					},
+				]);
+			}
+		);
+
+		it("mixes string domains and Preview domain objects", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					domains: [
+						"example.com",
+						{
+							hostname: "previews.example.com",
+							production: false,
+							previews: true,
+						},
+					],
+				},
+				containers: [],
+			});
+			expect(result.routes).toEqual([
+				{ pattern: "example.com", custom_domain: true },
+				{
+					pattern: "previews.example.com",
+					custom_domain: true,
+					enabled: false,
+					previews_enabled: true,
+				},
+			]);
+		});
+
 		it("converts each domain to a custom_domain route", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

@@ -785,6 +785,19 @@ const UnsafeSchema = z.strictObject({
 		.optional(),
 });
 
+const DomainSchema = z.union([
+	z.string(),
+	z
+		.strictObject({
+			hostname: z.string(),
+			production: z.boolean(),
+			previews: z.boolean(),
+		})
+		.refine((domain) => domain.production || domain.previews, {
+			message: "At least one of production or previews must be enabled.",
+		}),
+]);
+
 /**
  * Base Worker schema — the set of fields shared between the input
  * (user-authored) and output (on-disk) Worker configs.
@@ -794,7 +807,7 @@ const BaseWorkerSchema = z.strictObject({
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	assets: AssetsSchema.optional(),
-	domains: z.array(z.string()).optional(),
+	domains: z.array(DomainSchema).optional(),
 	triggers: z.array(TriggerSchema).optional(),
 	tailConsumers: z.array(TailConsumerSchema).optional(),
 	cache: CacheSchema.optional(),

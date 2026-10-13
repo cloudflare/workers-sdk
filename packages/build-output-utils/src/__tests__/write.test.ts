@@ -121,6 +121,34 @@ describe("writeRootConfig", () => {
 describe("writeWorkerConfig", () => {
 	runInTempDir();
 
+	it.for([false, true])(
+		"writes parent domains only for production builds (isPreview: %s)",
+		async (isPreview, { expect }) => {
+			const root = process.cwd();
+			const domains = [
+				"example.com",
+				{ hostname: "previews.example.com", production: false, previews: true },
+			];
+			const config = InputWorkerSchema.parse({
+				...parsedWorkerConfig,
+				domains,
+			});
+
+			await writeWorkerConfig({ root, config, isPreview });
+
+			const contents = JSON.parse(
+				fs.readFileSync(getWorkerConfigPath(root), "utf-8")
+			);
+			if (isPreview) {
+				expect(contents).not.toHaveProperty("domains");
+			} else {
+				expect(contents.domains).toEqual(domains);
+			}
+			expect(config.domains).toEqual(domains);
+			expect(OutputWorkerSchema.parse(contents)).toEqual(contents);
+		}
+	);
+
 	it("writes worker.config.json under default, stripping entrypoint and keeping the manifest", async ({
 		expect,
 	}) => {

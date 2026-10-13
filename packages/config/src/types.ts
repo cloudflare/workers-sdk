@@ -65,6 +65,16 @@ import type {
 	ScheduledTrigger,
 } from "./triggers";
 
+/** Traffic served by a custom domain on the parent Worker. */
+export interface CustomDomain {
+	/** Parent hostname for production and generated Preview subdomains. */
+	hostname: string;
+	/** Serve production traffic on this hostname. */
+	production: boolean;
+	/** Serve Previews on subdomains of this hostname. */
+	previews: boolean;
+}
+
 /** Account-level values shared by the resources in a configuration. */
 export interface Settings {
 	/**
@@ -442,10 +452,14 @@ export interface WorkerConfig {
 
 	/**
 	 * Custom domains that your Worker should be published to.
+	 * Strings serve production traffic only. Objects select production,
+	 * Preview traffic, or both; at least one must be enabled.
+	 * Domain settings are applied when deploying the parent Worker.
+	 * Preview builds omit domain settings from Build Output.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
 	 */
-	domains?: string[];
+	domains?: Array<string | CustomDomain>;
 
 	/**
 	 * Event triggers — fetch routes, queue consumers, cron schedules, Email

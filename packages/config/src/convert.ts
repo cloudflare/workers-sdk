@@ -1088,7 +1088,16 @@ function convertDomains(
 		? [...result.routes]
 		: [];
 	for (const domain of config.domains) {
-		routes.push({ pattern: domain, custom_domain: true });
+		routes.push(
+			typeof domain === "string"
+				? { pattern: domain, custom_domain: true }
+				: {
+						pattern: domain.hostname,
+						custom_domain: true,
+						enabled: domain.production,
+						previews_enabled: domain.previews,
+					}
+		);
 	}
 	result.routes = routes;
 }

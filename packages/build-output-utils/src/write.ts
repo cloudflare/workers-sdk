@@ -77,6 +77,8 @@ export interface WriteWorkerConfigOptions {
 	config: ParsedInputWorkerConfig;
 	manifest?: ParsedOutputWorkerConfig["manifest"];
 	directoryName?: string;
+	/** Whether to emit configuration for a Preview build. */
+	isPreview?: boolean;
 }
 
 /**
@@ -91,14 +93,26 @@ export async function writeWorkerConfig({
 	config,
 	manifest,
 	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
+	isPreview = false,
 }: WriteWorkerConfigOptions): Promise<void> {
 	const { entrypoint: _entrypoint, ...rest } = config;
-	const outputConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
+	const workerConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
+	const outputConfig = isPreview
+		? transformForPreviews(workerConfig)
+		: workerConfig;
 	await fsp.mkdir(getWorkerDir(root, directoryName), { recursive: true });
 	await fsp.writeFile(
 		getWorkerConfigPath(root, directoryName),
 		JSON.stringify(outputConfig)
 	);
+}
+
+function transformForPreviews(
+	config: ParsedOutputWorkerConfig
+): ParsedOutputWorkerConfig {
+	// Domains configure parent hosting rather than individual Preview deployments.
+	const { domains: _domains, ...previewConfig } = config;
+	return previewConfig;
 }
 
 export interface WriteContainerConfigOptions {
