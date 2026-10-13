@@ -143,7 +143,8 @@ export const sharedDeployVersionsArgs = {
 		type: "boolean",
 	},
 	"upload-source-maps": {
-		describe: "Include source maps when uploading this Worker",
+		describe:
+			"Include source maps when uploading this Worker (defaults to true)",
 		type: "boolean",
 	},
 	"node-compat": {

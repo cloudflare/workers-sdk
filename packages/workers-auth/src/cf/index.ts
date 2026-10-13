@@ -70,6 +70,7 @@ export const CF_CLI: CliDescriptor = {
 	displayName: CF_DISPLAY_NAME,
 	commands: {
 		login: "cf auth login",
+		logout: "cf auth logout",
 		whoami: "cf auth whoami",
 		createProfile: "cf auth create",
 		deviceLogin: "cf auth login",

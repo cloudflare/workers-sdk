@@ -11,6 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import {
+	cliPresentation,
 	fetchListResult,
 	fetchPagedListResult,
 	fetchResult,
@@ -119,6 +120,13 @@ abstract class ProvisionResourceHandler<
 	connect(id: string): void {
 		// @ts-expect-error idField is a key of this.binding
 		this.binding[this.idField] = id;
+	}
+	/** Returns the resource identifier, or undefined if it is empty or inherited. */
+	getResolvedIdentifier(): string | undefined {
+		const identifier = this.binding[this.idField];
+		return typeof identifier === "string" && identifier.length > 0
+			? identifier
+			: undefined;
 	}
 
 	hasConfiguredResourceIdentifier(): boolean {
@@ -903,8 +911,10 @@ const HANDLERS = {
 	},
 };
 
+type RawConfigEnvironment = NonNullable<RawConfig["env"]>[string];
+
 function getRawConfigBindings(
-	config: RawConfig,
+	config: RawConfigEnvironment,
 	resourceType: keyof typeof HANDLERS
 ): Array<{ binding: string }> {
 	if (resourceType === "queue") {
@@ -918,26 +928,20 @@ function getRawConfigBindings(
 function addBindingToPatch(
 	patch: RawConfig,
 	resourceType: ProvisionableBinding["type"],
-	binding: ReturnType<typeof toConfigBinding>
+	binding: Record<string, string>,
+	index: number
 ): void {
-	const serialisableBinding = Object.fromEntries(
-		Object.entries(binding).filter(
-			([_, value]) => value !== undefined && typeof value !== "symbol"
-		)
-	);
-
 	if (resourceType === "queue") {
 		patch.queues ??= {};
 		patch.queues.producers ??= [];
-		patch.queues.producers.push(serialisableBinding as QueueProducer);
+		patch.queues.producers[index] = binding as unknown as QueueProducer;
 		return;
 	}
 
 	const configField = HANDLERS[resourceType].configField;
 	patch[configField] ??= [];
-	(patch[configField] as unknown as Array<Record<string, unknown>>).push(
-		serialisableBinding
-	);
+	const patchBindings = patch[configField] as Array<Record<string, unknown>>;
+	patchBindings[index] = binding;
 }
 
 type PendingResource = {
@@ -961,6 +965,72 @@ type PendingResource = {
 		| DispatchNamespaceHandler
 		| FlagshipHandler;
 };
+
+function writeProvisionedIdsToConfig(
+	configPath: string,
+	resources: PendingResource[],
+	targetEnvironment?: string
+): void {
+	const { rawConfig } = experimental_readRawConfig(
+		{ config: configPath },
+		{ useRedirectIfAvailable: false }
+	);
+	const environment =
+		targetEnvironment && rawConfig.env?.[targetEnvironment] !== undefined
+			? targetEnvironment
+			: undefined;
+	const configEnvironment = environment
+		? rawConfig.env?.[environment]
+		: rawConfig;
+	const patchEnvironment: RawConfigEnvironment = {};
+	const patch: RawConfig = environment
+		? { env: { [environment]: patchEnvironment } }
+		: patchEnvironment;
+	let hasChanges = false;
+
+	for (const resource of resources) {
+		const configBindings = getRawConfigBindings(
+			configEnvironment ?? {},
+			resource.resourceType
+		);
+		const index = configBindings.findIndex(
+			(binding) => binding.binding === resource.binding
+		);
+		if (index === -1) {
+			continue;
+		}
+
+		const identifier = resource.handler.getResolvedIdentifier();
+		if (identifier === undefined) {
+			continue;
+		}
+		const { binding: _, ...configBinding } = toConfigBinding(resource.binding, {
+			type: resource.resourceType,
+			[resource.handler.idField]: identifier,
+		} as ProvisionableBinding);
+		const identifierPatch: Record<string, string> = {};
+		const existingBinding = configBindings[index] as Record<string, unknown>;
+		for (const [field, value] of Object.entries(configBinding)) {
+			if (typeof value === "string" && value !== existingBinding[field]) {
+				identifierPatch[field] = value;
+			}
+		}
+		if (Object.keys(identifierPatch).length === 0) {
+			continue;
+		}
+		addBindingToPatch(
+			patchEnvironment,
+			resource.resourceType,
+			identifierPatch,
+			index
+		);
+		hasChanges = true;
+	}
+
+	if (hasChanges) {
+		experimental_patchConfig(configPath, patch, false);
+	}
+}
 
 export type ProvisionBindingsResult = {
 	warnOnSkippedProvisioning: () => void;
@@ -1137,6 +1207,7 @@ async function collectPendingResources(
 	bindings: StartDevWorkerInput["bindings"]
 ): Promise<{
 	pendingResources: PendingResource[];
+	resolvedResources: PendingResource[];
 	skippedProvisioning: Map<keyof typeof HANDLERS, Set<string>>;
 }> {
 	let settings: Settings | undefined;
@@ -1148,6 +1219,7 @@ async function collectPendingResources(
 	}
 
 	const pendingResources: PendingResource[] = [];
+	const resolvedResources: PendingResource[] = [];
 	const skippedProvisioning = new Map<keyof typeof HANDLERS, Set<string>>();
 
 	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
@@ -1161,6 +1233,12 @@ async function collectPendingResources(
 			complianceConfig,
 			accountId
 		);
+		const resource: PendingResource = {
+			binding: bindingName,
+			resourceType: binding.type,
+			handler,
+		};
+		const configuredIdentifier = handler.getResolvedIdentifier();
 
 		let shouldProvision;
 		try {
@@ -1176,15 +1254,17 @@ async function collectPendingResources(
 		}
 
 		if (shouldProvision) {
-			pendingResources.push({
-				binding: bindingName,
-				resourceType: binding.type,
-				handler,
-			});
+			pendingResources.push(resource);
+		} else if (
+			configuredIdentifier === undefined &&
+			handler.getResolvedIdentifier() !== undefined
+		) {
+			resolvedResources.push(resource);
 		}
 	}
 
 	return {
+		resolvedResources,
 		pendingResources: pendingResources.sort(
 			(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
 		),
@@ -1203,7 +1283,7 @@ export async function provisionBindings(
 	}
 ): Promise<ProvisionBindingsResult> {
 	const configPath = config.userConfigPath ?? config.configPath;
-	const { pendingResources, skippedProvisioning } =
+	const { pendingResources, resolvedResources, skippedProvisioning } =
 		await collectPendingResources(config, accountId, scriptName, bindings);
 
 	if (pendingResources.length > 0) {
@@ -1258,6 +1338,7 @@ export async function provisionBindings(
 				scriptName,
 				autoCreate
 			);
+			resolvedResources.push(resource);
 		}
 
 		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
@@ -1271,52 +1352,6 @@ export async function provisionBindings(
 			}
 		}
 
-		const patch: RawConfig = {};
-
-		const existingBindingNames = new Map<keyof typeof HANDLERS, Set<string>>();
-
-		const isUsingRedirectedConfig =
-			config.userConfigPath && config.userConfigPath !== config.configPath;
-
-		// If we're using a redirected config, then the redirected config potentially has injected
-		// bindings that weren't originally in the user config. These can be provisioned, but we
-		// should not write the IDs back to the user config file (because the bindings weren't there in the first place).
-		if (isUsingRedirectedConfig) {
-			const { rawConfig: unredirectedConfig } =
-				await experimental_readRawConfig(
-					{ config: config.userConfigPath },
-					{ useRedirectIfAvailable: false }
-				);
-			for (const resourceType of Object.keys(
-				HANDLERS
-			) as (keyof typeof HANDLERS)[]) {
-				const bindingNames = new Set<string>();
-				for (const binding of getRawConfigBindings(
-					unredirectedConfig,
-					resourceType
-				)) {
-					bindingNames.add(binding.binding);
-				}
-				existingBindingNames.set(resourceType, bindingNames);
-			}
-		}
-
-		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
-			if (!isProvisionableBinding(binding)) {
-				continue;
-			}
-
-			// See above for why we skip writing back some bindings to the config file.
-			if (
-				isUsingRedirectedConfig &&
-				!existingBindingNames.get(binding.type)?.has(bindingName)
-			) {
-				continue;
-			}
-			const bindingToWrite = toConfigBinding(bindingName, binding);
-			addBindingToPatch(patch, binding.type, bindingToWrite);
-		}
-
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
 		// This is not necessary, as future deploys can use inherited resources, but it can help with
 		// portability of the config file, and adds robustness to bindings being renamed.
@@ -1326,7 +1361,11 @@ export async function provisionBindings(
 			);
 		} else if (!isNonInteractiveOrCI()) {
 			try {
-				await experimental_patchConfig(configPath, patch, false);
+				writeProvisionedIdsToConfig(
+					configPath,
+					resolvedResources,
+					config.targetEnvironment
+				);
 				logger.log(
 					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
 				);
@@ -1334,6 +1373,19 @@ export async function provisionBindings(
 				// no-op — if the user is using TOML config we can't update it.
 				if (!(e instanceof PatchConfigError)) {
 					throw e;
+				}
+			}
+			if (
+				config.userConfigPath &&
+				config.userConfigPath !== config.configPath
+			) {
+				assert(config.configPath);
+				try {
+					writeProvisionedIdsToConfig(config.configPath, resolvedResources);
+				} catch (error) {
+					if (!(error instanceof PatchConfigError)) {
+						logger.warn(`Could not update the generated config: ${error}`);
+					}
 				}
 			}
 		}
@@ -1573,26 +1625,35 @@ async function createD1Database(
 		}
 
 		if (errorCode === 7406) {
-			throw new UserError(
-				dedent`
-					You have reached the maximum number of D1 databases for your account.
-
-					On the Workers Free plan? Upgrade to create more:
-					https://dash.cloudflare.com/${accountId}/workers/plans
-
-					Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
-					https://developers.cloudflare.com/d1/
-
-					Or free up space:
-					To list your existing databases, run: wrangler d1 list
-					To delete a database, run: wrangler d1 delete <database-name>
-				`,
-				{ telemetryMessage: "d1 create database limit reached" }
-			);
+			throw new UserError(renderD1DatabaseLimitError(accountId), {
+				telemetryMessage: "d1 create database limit reached",
+			});
 		}
 
 		throw e;
 	}
+}
+
+/**
+ * Renders actionable guidance after D1 rejects creation at the account limit.
+ *
+ * @param accountId Account identifier used to construct the upgrade URL.
+ * @returns Consumer-specific database listing and deletion guidance.
+ */
+export function renderD1DatabaseLimitError(accountId: string): string {
+	return dedent`
+		You have reached the maximum number of D1 databases for your account.
+
+		On the Workers Free plan? Upgrade to create more:
+		https://dash.cloudflare.com/${accountId}/workers/plans
+
+		Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
+		https://developers.cloudflare.com/d1/
+
+		Or free up space:
+		To list your existing databases, run: ${cliPresentation.commands.d1List}
+		To delete a database, run: ${cliPresentation.commands.d1Delete} <database-name>
+	`;
 }
 
 async function listDatabases(

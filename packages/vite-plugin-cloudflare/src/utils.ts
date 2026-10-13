@@ -3,6 +3,7 @@ import * as util from "node:util";
 import { createHeaders, sendResponse } from "@remix-run/node-fetch-server";
 import {
 	CoreHeaders,
+	parseForwardedProto,
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
@@ -267,15 +268,7 @@ export function getForwardedProto(req: {
 	headers: http.IncomingHttpHeaders;
 }): "http:" | "https:" | undefined {
 	const raw = req.headers["x-forwarded-proto"];
-	const value = Array.isArray(raw) ? raw[0] : raw;
-	if (!value) {
-		return undefined;
-	}
-	const first = value.split(",")[0]?.trim().toLowerCase();
-	if (first === "http" || first === "https") {
-		return `${first}:`;
-	}
-	return undefined;
+	return parseForwardedProto(Array.isArray(raw) ? raw[0] : raw);
 }
 
 /**

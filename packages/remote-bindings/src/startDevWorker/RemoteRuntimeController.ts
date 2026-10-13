@@ -61,6 +61,7 @@ export class RemoteRuntimeController {
 		props: CfAccount & {
 			complianceConfig: ComplianceConfig;
 			name: string;
+			cliDisplayName: string;
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
@@ -70,7 +71,8 @@ export class RemoteRuntimeController {
 						props.complianceConfig,
 						props,
 						this.#abortController.signal,
-						props.name
+						props.name,
+						props.cliDisplayName
 					),
 				logger,
 				undefined,
@@ -92,6 +94,7 @@ export class RemoteRuntimeController {
 		props: CreateRemoteWorkerInitProps &
 			CfAccount & {
 				complianceConfig: ComplianceConfig;
+				cliDisplayName: string;
 				bundleId: number;
 			}
 	): Promise<CfPreviewToken | undefined> {
@@ -193,6 +196,7 @@ export class RemoteRuntimeController {
 			accountId: auth.accountId,
 			apiToken: auth.apiToken,
 			name: config.name,
+			cliDisplayName: config.cliDisplayName,
 		});
 	}
 
@@ -217,6 +221,7 @@ export class RemoteRuntimeController {
 			bindings: config.bindings,
 			compatibilityDate: config.compatibilityDate,
 			compatibilityFlags: config.compatibilityFlags,
+			cliDisplayName: config.cliDisplayName,
 			bundleId,
 		});
 		// If we received a new `bundleComplete` event before we were able to
@@ -228,6 +233,7 @@ export class RemoteRuntimeController {
 
 		const accessHeaders = await getAccessHeaders(token.host, {
 			logger,
+			cliDisplayName: config.cliDisplayName,
 			previewToken: token.value,
 		});
 

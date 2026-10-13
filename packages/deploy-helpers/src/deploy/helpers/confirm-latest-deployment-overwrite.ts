@@ -2,6 +2,7 @@ import * as cli from "@cloudflare/cli-shared-helpers";
 import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
 import { inputPrompt, leftT } from "@cloudflare/cli-shared-helpers/interactive";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { cliPresentation } from "../../shared/context";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "./versions-api";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
@@ -45,7 +46,7 @@ export async function confirmLatestDeploymentOverwriteAndGetLatest(
 			const versionCache: VersionCache = new Map();
 
 			cli.warn(
-				`Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.`,
+				`Your last deployment has multiple versions. To progress that deployment use "${cliPresentation.commands.versionsDeploy}" instead.`,
 				{ shape: cli.shapes.corners.tl, newlineBefore: false }
 			);
 			cli.newline();
@@ -60,7 +61,7 @@ export async function confirmLatestDeploymentOverwriteAndGetLatest(
 
 			const confirmed = await inputPrompt<boolean>({
 				type: "confirm",
-				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
+				question: `"${cliPresentation.commands.deploy}" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
 				label: "",
 				defaultValue: isNonInteractiveOrCI(),
 				acceptDefault: isNonInteractiveOrCI(),

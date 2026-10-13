@@ -22,7 +22,12 @@ import {
 	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
+import {
+	cliPresentation,
+	fetchPagedListResult,
+	fetchResult,
+	logger,
+} from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
 import {
 	buildAssetManifest,
@@ -720,7 +725,7 @@ async function deployWorker(
 					"binding DB of type d1 must have a valid `id` specified [code: 10021]"
 				) {
 					throw new UserError(
-						"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
+						`You must use a real database in the database_id configuration. You can find your databases using '${cliPresentation.commands.d1List}', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development`,
 						{ telemetryMessage: "deploy d1 database binding invalid id" }
 					);
 				}
@@ -775,7 +780,12 @@ async function deployWorker(
 
 	if (shouldDeployContainers) {
 		assert(versionId && accountId);
-		initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
+		initContainersSharedContext({
+			cliPresentation,
+			logger,
+			fetchPagedListResult,
+			fetchResult,
+		});
 		const containerDeployments: ResolvedContainerDeployment[] = [];
 		for (const container of normalisedContainerConfig) {
 			if ("dockerfile" in container) {
@@ -829,7 +839,7 @@ async function deployWorker(
 			);
 		} catch (error) {
 			throw new UserError(
-				"The Worker version was deployed, but Wrangler could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command to retry and finish deployment.",
+				`The Worker version was deployed, but ${cliPresentation.displayName} could not finish applying its Durable Object-managed Container application settings. Re-run the same \`${cliPresentation.commands.deploy}\` command to retry and finish deployment.`,
 				{
 					telemetryMessage:
 						"deploy durable object container application creation failed after deployment",

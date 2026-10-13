@@ -16,7 +16,7 @@ import { BundlerController } from "../../../api/startDevWorker/BundlerController
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
-import type { FSWatcher } from "chokidar";
+import type { FSWatcher, Matcher } from "chokidar";
 
 // Mock chokidar so we can drive watcher events and errors directly, without
 // depending on the filesystem delivering them.
@@ -60,6 +60,23 @@ function assetsConfig() {
 	});
 }
 
+function assetsAt(
+	directory: string,
+	persist: string = path.join(path.resolve("."), ".wrangler/state")
+): StartDevWorkerOptions {
+	const config = configDefaults({
+		projectRoot: path.resolve("."),
+		assets: {
+			directory,
+			binding: undefined,
+			routerConfig: { has_user_worker: true },
+			assetConfig: {},
+		},
+	});
+	config.dev.persist = persist;
+	return config;
+}
+
 /**
  * A config that makes the controller create two watchers: one for the custom
  * build's watched paths and one for the assets directory.
@@ -81,11 +98,14 @@ type FakeWatcher = EventEmitter & { close: ReturnType<typeof vi.fn> };
 
 /**
  * Make `watch()` hand the controller watchers whose events we drive ourselves,
- * recording every one so that tests can assert they all get closed.
+ * recording every call so that tests can close them and read the options for
+ * a call they name.
  */
 function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 	const created: FakeWatcher[] = [];
-	vi.mocked(watch).mockImplementation(() => {
+	const calls: Array<Parameters<typeof watch>[1]> = [];
+	vi.mocked(watch).mockImplementation((_paths, options) => {
+		calls.push(options);
 		const fakeWatcher = new EventEmitter() as FakeWatcher;
 		let closing: Promise<void> | undefined;
 		// Repeated `close()` calls return the same promise, as chokidar's do.
@@ -101,6 +121,10 @@ function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 			const watcher = created[index];
 			assert(watcher);
 			return watcher;
+		},
+		ignoredDirs(index: number): (Matcher | undefined)[] {
+			const ignored = calls[index]?.ignored;
+			return Array.isArray(ignored) ? ignored : [ignored];
 		},
 	};
 }
@@ -240,6 +264,84 @@ describe("BundlerController — assets watcher", () => {
 			expect(fakeWatcher.close).toHaveBeenCalled();
 		}
 	);
+
+	test("ignores the dev session write directories", async ({ expect }) => {
+		const watchers = mockWatchers(expect);
+
+		const projectRoot = path.resolve(".");
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsAt(projectRoot),
+		});
+		await firstBundle;
+		await watchers.at(0);
+
+		expect(watchers.ignoredDirs(0)).toEqual([
+			path.join(projectRoot, ".wrangler"),
+			path.join(projectRoot, ".wrangler/state"),
+		]);
+	});
+
+	test("ignores a persist directory inside the assets tree", async ({
+		expect,
+	}) => {
+		const watchers = mockWatchers(expect);
+
+		const projectRoot = path.resolve(".");
+		const persist = path.join(projectRoot, "persist-state");
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsAt(projectRoot, persist),
+		});
+		await firstBundle;
+		await watchers.at(0);
+
+		expect(watchers.ignoredDirs(0)).toEqual([
+			path.join(projectRoot, ".wrangler"),
+			persist,
+		]);
+	});
+
+	test("watches assets that live under node_modules", async ({ expect }) => {
+		const watchers = mockWatchers(expect);
+
+		const projectRoot = path.resolve(".");
+		const assetsDir = path.resolve("node_modules/example/public");
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsAt(assetsDir),
+		});
+		await firstBundle;
+		await watchers.at(0);
+
+		expect(watchers.ignoredDirs(0)).toEqual([
+			path.join(projectRoot, ".wrangler"),
+			path.join(projectRoot, ".wrangler/state"),
+		]);
+	});
+
+	test("keeps watching when the persist path is the assets directory", async ({
+		expect,
+	}) => {
+		const watchers = mockWatchers(expect);
+
+		const projectRoot = path.resolve(".");
+		const assetsDir = path.resolve("public");
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsAt(assetsDir, assetsDir),
+		});
+		await firstBundle;
+		await watchers.at(0);
+
+		expect(watchers.ignoredDirs(0)).toEqual([
+			path.join(projectRoot, ".wrangler"),
+		]);
+	});
 
 	test("no watchers are created by a config reload that outlives teardown", async ({
 		expect,
