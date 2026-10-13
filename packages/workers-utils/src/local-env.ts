@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseDotEnv } from "dotenv";
+import { parse as parseDotEnvContent } from "dotenv";
 import { expand } from "dotenv-expand";
 
 export type LocalEnvValueSource =
@@ -18,26 +18,92 @@ interface ParsedFile {
 }
 
 /**
- * Expands parsed dotenv values against an environment without changing either
- * input. Environment values take precedence for keys declared in the dotenv
- * input, including values that are explicitly empty.
+ * Parses and expands dotenv content without changing the process environment.
+ * Environment values take precedence for keys declared in the dotenv content,
+ * including values that are explicitly empty.
  *
- * @param parsed The parsed dotenv values to expand.
+ * @param contents The dotenv content to parse and expand.
  * @param processEnv The environment used to resolve and override values.
  * @returns A new record containing only the expanded dotenv values.
  */
-export function expandDotEnv(
-	parsed: Record<string, string>,
+export function parseDotEnv(
+	contents: string,
 	processEnv: NodeJS.ProcessEnv = process.env
+): Record<string, string> {
+	return expandDotEnv(parseDotEnvContent(contents), processEnv);
+}
+
+/**
+ * Creates an environment object with Windows-compatible key lookup.
+ *
+ * @returns An empty record that treats string keys case-insensitively.
+ */
+export function caseInsensitiveEnv(): Record<string, string> {
+	const tracked = new Map<string | symbol, string | symbol>();
+	const target = {} as Record<string, string>;
+	const canonical = (property: string | symbol) =>
+		typeof property === "string" ? property.toLowerCase() : property;
+
+	return new Proxy(target, {
+		get(object, property, receiver) {
+			const actualProperty = tracked.get(canonical(property));
+			return actualProperty === undefined
+				? undefined
+				: Reflect.get(object, actualProperty, receiver);
+		},
+		set(object, property, value, receiver) {
+			const key = canonical(property);
+			const previous = tracked.get(key);
+			if (previous !== undefined && previous !== property) {
+				Reflect.deleteProperty(object, previous);
+			}
+			tracked.set(key, property);
+			return Reflect.set(object, property, value, receiver);
+		},
+		has(object, property) {
+			const actualProperty = tracked.get(canonical(property));
+			return actualProperty === undefined
+				? false
+				: Reflect.has(object, actualProperty);
+		},
+		getOwnPropertyDescriptor(object, property) {
+			const actualProperty = tracked.get(canonical(property));
+			return actualProperty === undefined
+				? undefined
+				: Reflect.getOwnPropertyDescriptor(object, actualProperty);
+		},
+		defineProperty(object, property, descriptor) {
+			const key = canonical(property);
+			const previous = tracked.get(key);
+			if (previous !== undefined && previous !== property) {
+				Reflect.deleteProperty(object, previous);
+			}
+			tracked.set(key, property);
+			return Reflect.defineProperty(object, property, descriptor);
+		},
+		deleteProperty(object, property) {
+			const key = canonical(property);
+			const actualProperty = tracked.get(key);
+			tracked.delete(key);
+			return actualProperty === undefined
+				? Reflect.deleteProperty(object, property)
+				: Reflect.deleteProperty(object, actualProperty);
+		},
+	});
+}
+
+function expandDotEnv(
+	parsed: Record<string, string>,
+	processEnv: NodeJS.ProcessEnv
 ): Record<string, string> {
 	const expanded = { ...parsed };
 	const expandedKeys = Object.keys(expanded);
-	const copiedProcessEnv = copyProcessEnv(processEnv);
-	expand({ parsed: expanded, processEnv: { ...copiedProcessEnv } });
+	const processEnvOverrides = copyProcessEnv(processEnv);
+	expand({ parsed: expanded, processEnv: copyProcessEnv(processEnv) });
 
 	for (const key of expandedKeys) {
-		if (Object.hasOwn(copiedProcessEnv, key)) {
-			expanded[key] = copiedProcessEnv[key];
+		if (Object.hasOwn(processEnvOverrides, key)) {
+			expanded[key] = processEnvOverrides[key];
 		}
 	}
 
@@ -115,7 +181,7 @@ export async function loadEnv(
 	const parsedSources: Record<string, LocalEnvValueSource> = {};
 
 	for (const candidate of candidateFiles) {
-		const loaded = await tryParseFile(candidate, parseDotEnv);
+		const loaded = await tryParseFile(candidate, parseDotEnvContent);
 		if (loaded === undefined) {
 			continue;
 		}
@@ -153,7 +219,7 @@ export async function loadDevVars(
 ): Promise<Record<string, string> | undefined> {
 	const candidateFiles = getDevVarsCandidatePaths(envDir, mode);
 	for (const candidate of candidateFiles) {
-		const loaded = await tryParseFile(candidate, parseDotEnv);
+		const loaded = await tryParseFile(candidate, parseDotEnvContent);
 		if (loaded === undefined) {
 			continue;
 		}
@@ -192,9 +258,11 @@ function isMissingFileError(error: unknown): boolean {
 }
 
 function copyProcessEnv(processEnv: NodeJS.ProcessEnv): Record<string, string> {
-	return Object.fromEntries(
-		Object.entries(processEnv).filter(
-			(entry): entry is [string, string] => entry[1] !== undefined
-		)
-	);
+	const copied = process.platform === "win32" ? caseInsensitiveEnv() : {};
+	for (const [key, value] of Object.entries(processEnv)) {
+		if (value !== undefined) {
+			copied[key] = value;
+		}
+	}
+	return copied;
 }
