@@ -53,7 +53,7 @@ const FIELD_CASES = {
 	],
 	data_blobs: { DATA: "data.bin" },
 	define: { FEATURE: "true" },
-	dependencies_instrumentation: { enabled: true },
+	dependencies_instrumentation: { enabled: false },
 	dev: { port: 8788 },
 	dispatch_namespaces: [{ binding: "DISPATCH", namespace: "namespace" }],
 	durable_objects: {

@@ -28,6 +28,63 @@ import type {
 	OutputValue,
 } from "./types";
 
+const DEPENDENCIES_INSTRUMENTATION_ENV_VAR =
+	"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION";
+
+function createDependenciesInstrumentationFollowUp(
+	source: UnknownRecord,
+	sourcePrefix: string
+): MigrationFollowUp | undefined {
+	if (!hasOwn(source, "dependencies_instrumentation")) {
+		return;
+	}
+
+	const sourcePath = `${sourcePrefix ? `${sourcePrefix}.` : ""}dependencies_instrumentation`;
+	const instrumentation = source.dependencies_instrumentation;
+	if (!isRecord(instrumentation)) {
+		return createFollowUp(
+			"unsupported-field",
+			"The dependency instrumentation configuration is invalid and was not migrated.",
+			{ sourcePath }
+		);
+	}
+
+	const excludedPackages = instrumentation.exclude_packages;
+	const hasExcludedPackages =
+		Array.isArray(excludedPackages) && excludedPackages.length > 0;
+
+	if (instrumentation.enabled === false) {
+		return createFollowUp(
+			"dependencies-instrumentation-opt-out",
+			`Set ${DEPENDENCIES_INSTRUMENTATION_ENV_VAR}=false before deploying to keep package dependency metadata disabled.${hasExcludedPackages ? " The package exclusion list was not migrated; if dependency metadata is later enabled, those packages will be included." : ""}`,
+			{ sourcePath }
+		);
+	}
+
+	if (hasExcludedPackages) {
+		return createFollowUp(
+			"dependencies-instrumentation-exclusions",
+			`Package dependency exclusions cannot be migrated. ${DEPENDENCIES_INSTRUMENTATION_ENV_VAR} only enables or disables dependency metadata as a whole.`,
+			{ sourcePath }
+		);
+	}
+
+	if (
+		(instrumentation.enabled === undefined ||
+			instrumentation.enabled === true) &&
+		(excludedPackages === undefined ||
+			(Array.isArray(excludedPackages) && excludedPackages.length === 0))
+	) {
+		return;
+	}
+
+	return createFollowUp(
+		"unsupported-field",
+		"The dependency instrumentation configuration is invalid and was not migrated.",
+		{ sourcePath }
+	);
+}
+
 export function convertWorkerConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
@@ -268,10 +325,14 @@ export function convertWorkerConfig(
 			)
 		);
 	}
+	const dependenciesInstrumentationFollowUp =
+		createDependenciesInstrumentationFollowUp(source, sourcePrefix);
+	if (dependenciesInstrumentationFollowUp) {
+		report(dependenciesInstrumentationFollowUp);
+	}
 
 	const unsupportedFields: Array<[string, string]> = [
 		["cloudchamber", "Cloudchamber configuration"],
-		["dependencies_instrumentation", "dependency instrumentation"],
 		["keep_vars", "keep_vars"],
 		["pages_build_output_dir", "Pages configuration"],
 		["site", "Workers Sites configuration"],
