@@ -277,6 +277,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 							}
 							return "";
 						}
+						if (command === "__vitest_stopV8Coverage") {
+							await this.stopV8CoverageSession();
+							return "";
+						}
 						if (command === "__vitest_takeV8Coverage") {
 							assert(this.v8CoverageSession);
 							const { result } = await this.v8CoverageSession.post(
