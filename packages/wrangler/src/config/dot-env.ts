@@ -1,8 +1,8 @@
 import path from "node:path";
+import { caseInsensitiveEnv } from "@cloudflare/workers-utils/local-env";
 import dotenv from "dotenv";
 import dotenvExpand from "dotenv-expand";
 import { logger } from "../logger";
-import { caseInsensitiveEnv } from "./case-insensitive-env";
 
 const isWindows = process.platform === "win32";
 

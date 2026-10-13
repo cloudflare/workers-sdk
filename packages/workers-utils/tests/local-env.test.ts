@@ -4,11 +4,68 @@ import * as path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import {
+	caseInsensitiveEnv,
 	getDevVarsCandidatePaths,
 	getEnvPaths,
 	loadDevVars,
 	loadEnv,
+	parseDotEnv,
 } from "../src/local-env";
+
+describe("parseDotEnv", () => {
+	it("parses and expands dotenv values", ({ expect }) => {
+		expect(
+			parseDotEnv(
+				"API_VERSION=v1\nAPI_URL=https://api.example.com/$API_VERSION"
+			)
+		).toEqual({
+			API_VERSION: "v1",
+			API_URL: "https://api.example.com/v1",
+		});
+	});
+
+	it("preserves an empty process override", ({ expect }) => {
+		const processEnv = { TOKEN: "" };
+
+		expect(parseDotEnv("TOKEN=file-token", processEnv)).toEqual({ TOKEN: "" });
+		expect(processEnv).toEqual({ TOKEN: "" });
+	});
+
+	it.runIf(process.platform === "win32")(
+		"matches process keys case-insensitively on Windows",
+		({ expect }) => {
+			expect(
+				parseDotEnv("token=file-token", { TOKEN: "process-token" })
+			).toEqual({ token: "process-token" });
+		}
+	);
+});
+
+describe("caseInsensitiveEnv", () => {
+	it("resolves get, has, and delete case-insensitively", ({ expect }) => {
+		const env = caseInsensitiveEnv();
+		env.PATH = "1";
+
+		expect(env.PATH).toBe("1");
+		expect(env.Path).toBe("1");
+		expect(env.path).toBe("1");
+		expect("path" in env).toBe(true);
+
+		delete env.path;
+		expect("PATH" in env).toBe(false);
+	});
+
+	it("keeps only the most recent casing", ({ expect }) => {
+		const env = caseInsensitiveEnv();
+		env.PATH = "1";
+		env.Path = "2";
+
+		expect(Object.keys(env)).toEqual(["Path"]);
+		expect(JSON.stringify(env)).toBe('{"Path":"2"}');
+		expect({ ...env }).toEqual({ Path: "2" });
+		expect(env.PATH).toBe("2");
+	});
+});
 
 describe("loadEnv", () => {
 	runInTempDir();

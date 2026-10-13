@@ -19,7 +19,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	"blake3-wasm",
 	"chalk",
 	"command-exists",
-	"dotenv",
 	"p-queue",
 	"pretty-bytes",
 	"undici",
