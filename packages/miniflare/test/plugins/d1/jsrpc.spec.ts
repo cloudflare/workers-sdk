@@ -65,6 +65,38 @@ test.for([
 	{ transport: "RPC", compatibilityFlags: ["d1_binding_jsrpc"] },
 	{ transport: "HTTP", compatibilityFlags: [] },
 ])(
+	"$transport local exports can restore schema and data into another database",
+	async ({ compatibilityFlags }, { expect }) => {
+		const mf = createD1Worker(
+			`
+		await env.DB.exec("CREATE TABLE answers (id INTEGER PRIMARY KEY, answer TEXT)");
+		await env.DB.batch([
+			env.DB.prepare("INSERT INTO answers VALUES (?, ?)").bind(1, "first"),
+			env.DB.prepare("INSERT INTO answers VALUES (?, ?)").bind(2, "second"),
+		]);
+		const [dumpStatements] = await env.DB
+			.prepare("PRAGMA miniflare_d1_export(?,?,?);")
+			.bind(0, 0)
+			.raw();
+		await env.OTHER_DB.exec(dumpStatements.join("\\n"));
+		const restored = await env.OTHER_DB.prepare("SELECT * FROM answers ORDER BY id").all();
+		return Response.json(restored.results);
+	`,
+			compatibilityFlags
+		);
+		const response = await mf.dispatchFetch("http://localhost");
+		expect(await response.json()).toEqual([
+			{ id: 1, answer: "first" },
+			{ id: 2, answer: "second" },
+		]);
+		expect(response.status).toBe(200);
+	}
+);
+
+test.for([
+	{ transport: "RPC", compatibilityFlags: ["d1_binding_jsrpc"] },
+	{ transport: "HTTP", compatibilityFlags: [] },
+])(
 	"$transport queries report local primary, attempt, and SQL timing metadata",
 	async ({ transport, compatibilityFlags }, { expect }) => {
 		const mf = createD1Worker(

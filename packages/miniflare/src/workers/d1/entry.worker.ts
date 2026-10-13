@@ -1,10 +1,12 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { SharedBindings, SharedHeaders } from "../shared/constants";
+import { isD1ExportPragma, parseD1RpcExportResponse } from "./export";
 import {
 	D1RowsAndColumnsResponseSchema,
 	D1RpcRequestSchema,
 	D1_SESSION_COMMIT_TOKEN_HTTP_HEADER,
 } from "./schemas";
+import type { D1RpcExportResponse } from "./export";
 import type { D1RpcRequest, D1RpcResponse } from "./schemas";
 
 interface D1EntryProps {
@@ -48,7 +50,9 @@ export default class D1Entry extends WorkerEntrypoint<
 	}
 
 	/** Returns raw transactional results; query failures are thrown over RPC. */
-	async query(request: D1RpcRequest): Promise<D1RpcResponse> {
+	async query(
+		request: D1RpcRequest
+	): Promise<D1RpcResponse | D1RpcExportResponse> {
 		const { queries, bookmark } = D1RpcRequestSchema.parse(request);
 		const headers = new Headers({ "Content-Type": "application/json" });
 		if (bookmark) {
@@ -64,7 +68,12 @@ export default class D1Entry extends WorkerEntrypoint<
 				body: JSON.stringify(queries),
 			})
 		);
-		const body = D1RowsAndColumnsResponseSchema.parse(await response.json());
+		const responseBody: unknown = await response.json();
+		if (isD1ExportPragma(queries)) {
+			return parseD1RpcExportResponse(responseBody);
+		}
+
+		const body = D1RowsAndColumnsResponseSchema.parse(responseBody);
 		if (!Array.isArray(body)) {
 			const error = new Error(body.error);
 			error.name = "D1_ERROR";

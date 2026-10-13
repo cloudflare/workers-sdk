@@ -66,10 +66,16 @@ const D1RowsAndColumnsSuccessSchema = z.object({
 	meta: D1MetaSchema,
 });
 
+/** A backend failure contains no successful query or export results. */
+export const D1FailureResponseSchema = z.object({
+	success: z.literal(false),
+	error: z.string(),
+});
+
 /** A query failure is returned instead of any successful HTTP batch results. */
 export const D1RowsAndColumnsResponseSchema = z.union([
 	z.array(D1RowsAndColumnsSuccessSchema),
-	z.object({ success: z.literal(false), error: z.string() }),
+	D1FailureResponseSchema,
 ]);
 
 /** The RPC discriminator identifies the rows-and-columns payload to workerd. */

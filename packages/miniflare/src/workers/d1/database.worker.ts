@@ -8,10 +8,12 @@ import {
 } from "miniflare:shared";
 import { z } from "miniflare:zod";
 import { dumpSql } from "./dumpSql";
+import { isD1ExportPragma } from "./export";
 import {
 	D1QueriesSchema,
 	D1_SESSION_COMMIT_TOKEN_HTTP_HEADER,
 } from "./schemas";
+import type { D1ExportPragma } from "./export";
 import type { D1Meta, D1Query, D1RowsAndColumns, D1Value } from "./schemas";
 import type {
 	MiniflareDurableObjectEnv,
@@ -19,11 +21,6 @@ import type {
 	TypedSqlStorage,
 	TypedValue,
 } from "miniflare:shared";
-
-const D1_EXPORT_PRAGMA = `PRAGMA miniflare_d1_export(?,?,?);`;
-type D1ExportPragma = [
-	{ sql: typeof D1_EXPORT_PRAGMA; params: [number, number, ...string[]] },
-];
 
 const D1ResultsFormatSchema = z
 	.enum(["ARRAY_OF_OBJECTS", "ROWS_AND_COLUMNS", "NONE"])
@@ -210,7 +207,7 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		}
 
 		// Special local-mode-only handlers
-		if (this.#isExportPragma(queries)) {
+		if (isD1ExportPragma(queries)) {
 			return this.#doExportData(queries);
 		}
 
@@ -226,19 +223,7 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		});
 	};
 
-	#isExportPragma(queries: D1Query[]): queries is D1ExportPragma {
-		return (
-			queries.length === 1 &&
-			queries[0].sql === D1_EXPORT_PRAGMA &&
-			(queries[0].params?.length || 0) >= 2
-		);
-	}
-
-	#doExportData(
-		queries: [
-			{ sql: typeof D1_EXPORT_PRAGMA; params: [number, number, ...string[]] },
-		]
-	) {
+	#doExportData(queries: D1ExportPragma) {
 		const [noSchema, noData, ...tables] = queries[0].params;
 		const options = {
 			noSchema: Boolean(noSchema),
