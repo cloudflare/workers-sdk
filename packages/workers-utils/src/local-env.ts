@@ -18,6 +18,33 @@ interface ParsedFile {
 }
 
 /**
+ * Expands parsed dotenv values against an environment without changing either
+ * input. Environment values take precedence for keys declared in the dotenv
+ * input, including values that are explicitly empty.
+ *
+ * @param parsed The parsed dotenv values to expand.
+ * @param processEnv The environment used to resolve and override values.
+ * @returns A new record containing only the expanded dotenv values.
+ */
+export function expandDotEnv(
+	parsed: Record<string, string>,
+	processEnv: NodeJS.ProcessEnv = process.env
+): Record<string, string> {
+	const expanded = { ...parsed };
+	const expandedKeys = Object.keys(expanded);
+	const copiedProcessEnv = copyProcessEnv(processEnv);
+	expand({ parsed: expanded, processEnv: { ...copiedProcessEnv } });
+
+	for (const key of expandedKeys) {
+		if (Object.hasOwn(copiedProcessEnv, key)) {
+			expanded[key] = copiedProcessEnv[key];
+		}
+	}
+
+	return expanded;
+}
+
+/**
  * Returns the local `.env` candidates in increasing precedence order.
  *
  * @param envDir The resolved environment directory. `false` disables file
@@ -99,10 +126,8 @@ export async function loadEnv(
 		}
 	}
 
-	const processEnv = copyProcessEnv();
-	expand({ parsed, processEnv: { ...processEnv } });
-
-	const values = { ...parsed };
+	const processEnv = copyProcessEnv(process.env);
+	const values = expandDotEnv(parsed, processEnv);
 	const sources = { ...parsedSources };
 
 	for (const [key, value] of Object.entries(processEnv)) {
@@ -166,9 +191,9 @@ function isMissingFileError(error: unknown): boolean {
 	);
 }
 
-function copyProcessEnv(): Record<string, string> {
+function copyProcessEnv(processEnv: NodeJS.ProcessEnv): Record<string, string> {
 	return Object.fromEntries(
-		Object.entries(process.env).filter(
+		Object.entries(processEnv).filter(
 			(entry): entry is [string, string] => entry[1] !== undefined
 		)
 	);
