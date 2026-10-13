@@ -21,3 +21,5 @@ export default defineConfig({
 	},
 });
 ```
+
+This is a breaking change for direct Miniflare v5 users: move `workers[].dev.access` to `workers[].config.access.dev`. Miniflare v5 is currently in beta.
