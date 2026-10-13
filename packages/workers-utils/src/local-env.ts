@@ -30,7 +30,7 @@ export function parseDotEnv(
 	contents: string,
 	processEnv: NodeJS.ProcessEnv = process.env
 ): Record<string, string> {
-	return expandDotEnv(parseDotEnvContent(contents), processEnv);
+	return expandParsedDotEnv(parseDotEnvContent(contents), processEnv);
 }
 
 /**
@@ -92,7 +92,7 @@ export function caseInsensitiveEnv(): Record<string, string> {
 	});
 }
 
-function expandDotEnv(
+function expandParsedDotEnv(
 	parsed: Record<string, string>,
 	processEnv: NodeJS.ProcessEnv
 ): Record<string, string> {
@@ -193,7 +193,7 @@ export async function loadEnv(
 	}
 
 	const processEnv = copyProcessEnv(process.env);
-	const values = expandDotEnv(parsed, processEnv);
+	const values = expandParsedDotEnv(parsed, processEnv);
 	const sources = { ...parsedSources };
 
 	for (const [key, value] of Object.entries(processEnv)) {
