@@ -6,6 +6,7 @@ import type { StartDevWorkerOptions } from "./types";
 
 const config: StartDevWorkerOptions = {
 	name: "remote-bindings-proxy",
+	cliDisplayName: "Test CLI",
 	entrypointSource: "export default {};",
 	bindings: {},
 	compatibilityDate: "2026-07-17",

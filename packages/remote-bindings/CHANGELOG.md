@@ -1,5 +1,16 @@
 # @cloudflare/remote-bindings
 
+## 0.0.46
+
+### Patch Changes
+
+- Updated dependencies [[`6c4153e`](https://github.com/cloudflare/workers-sdk/commit/6c4153e2f1b7a55ec6b31afe54fd14fff4990751), [`fcf625d`](https://github.com/cloudflare/workers-sdk/commit/fcf625da014474f656a962b9313dec54563f3573), [`5152bf8`](https://github.com/cloudflare/workers-sdk/commit/5152bf8c3591863243da275debf02ecbf66f560e), [`9f87de8`](https://github.com/cloudflare/workers-sdk/commit/9f87de8cd6e8ff5afedb5430acd8776cb239844e), [`9be5ec7`](https://github.com/cloudflare/workers-sdk/commit/9be5ec7cf2c3988d0a446a5207d0d23def541cf5), [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9), [`cafd3f9`](https://github.com/cloudflare/workers-sdk/commit/cafd3f94207bd2c886e6ab20de17e45e0eb50f1e), [`ea64ec4`](https://github.com/cloudflare/workers-sdk/commit/ea64ec4e681f9e43bd0ded93e490c0027018f80e), [`d232454`](https://github.com/cloudflare/workers-sdk/commit/d232454ca9059b7722a013ab128354d7e44a2031)]:
+  - @cloudflare/workers-auth@0.14.0
+  - @cloudflare/deploy-helpers@0.20.2
+  - miniflare@5.20261006.2-beta
+  - @cloudflare/workers-utils@0.47.2
+  - @cloudflare/cli-shared-helpers@0.2.6
+
 ## 0.0.45
 
 ### Patch Changes

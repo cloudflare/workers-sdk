@@ -1,5 +1,26 @@
 import { afterEach, describe, it, vi } from "vitest";
-import { isPreviewBuild, PREVIEW_BUILD_ENV_VAR } from "../build-output-env";
+import {
+	CLI_DISPLAY_NAME_ENV_VAR,
+	getCliDisplayName,
+	isPreviewBuild,
+	PREVIEW_BUILD_ENV_VAR,
+} from "../build-output-env";
+
+describe("getCliDisplayName", () => {
+	afterEach(() => vi.unstubAllEnvs());
+
+	it("defaults to Wrangler", ({ expect }) => {
+		vi.stubEnv(CLI_DISPLAY_NAME_ENV_VAR, undefined);
+
+		expect(getCliDisplayName()).toBe("Wrangler");
+	});
+
+	it("uses the caller set by cf-vite", ({ expect }) => {
+		vi.stubEnv(CLI_DISPLAY_NAME_ENV_VAR, "cf");
+
+		expect(getCliDisplayName()).toBe("cf");
+	});
+});
 
 describe("isPreviewBuild", () => {
 	afterEach(() => vi.unstubAllEnvs());

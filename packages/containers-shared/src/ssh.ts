@@ -5,7 +5,7 @@ import { showCursor } from "@cloudflare/cli-shared-helpers";
 import { bold } from "@cloudflare/cli-shared-helpers/colors";
 import { WebSocket } from "ws";
 import { ApiError, DeploymentsService } from "./client";
-import { logger } from "./context";
+import { cliPresentation, logger } from "./context";
 import { promiseSpinner } from "./spinner";
 import type { WranglerSSHResponse } from "./client";
 import type { Server, Socket } from "node:net";
@@ -143,7 +143,7 @@ export async function sshCommand(sshArgs: ContainerSshArgs) {
 	const ws = new WebSocket(sshResponse.url, {
 		headers: {
 			authorization: `Bearer ${sshResponse.token}`,
-			"user-agent": "wrangler",
+			"user-agent": cliPresentation.cliName,
 		},
 	});
 

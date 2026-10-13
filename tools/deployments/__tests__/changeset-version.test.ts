@@ -1,8 +1,22 @@
 import { it } from "vitest";
 import {
+	getNpmPrereleaseConfig,
 	getNextMiniflarePrereleaseVersion,
 	getNextMiniflareVersion,
-} from "../../../.github/changeset-version";
+	getNextNpmPrereleaseVersion,
+} from "../changeset-version";
+
+it("rejects latest as an npm prerelease tag", ({ expect }) => {
+	expect(() =>
+		getNpmPrereleaseConfig({
+			name: "package-a",
+			version: "1.0.0",
+			"workers-sdk": {
+				npmPrerelease: { tag: "latest", numbered: true },
+			},
+		})
+	).toThrow("Invalid package-a npmPrerelease tag");
+});
 
 // prettier-ignore
 const miniflareVersionTestCases = [
@@ -39,7 +53,7 @@ for (const [
 
 // prettier-ignore
 const prereleaseVersionTestCases = [
-	// workerd,       previous,             bump        changesets,          identifier, corrected
+	// workerd,       previous,             bump        after changesets,    identifier, corrected
 	["1.20260723.0", "4.20260722.0",     /* major */ "5.0.0",             "alpha",    "5.20260723.0-alpha"],
 	["1.20260723.0", "5.20260723.0-alpha", /* patch */ "5.20260723.0",      "alpha",    "5.20260723.1-alpha"],
 	["1.20260723.0", "5.20260723.1-alpha", /* minor */ "5.20260724.0",      "alpha",    "5.20260723.2-alpha"],
@@ -56,30 +70,71 @@ const prereleaseVersionTestCases = [
 for (const [
 	workerdVersion,
 	previousVersion,
-	changesetsVersion,
+	versionAfterChangesets,
 	prereleaseIdentifier,
 	correctVersion,
 ] of prereleaseVersionTestCases) {
-	it(`changeset prerelease ${workerdVersion} ${previousVersion} -> ${changesetsVersion} (${prereleaseIdentifier}) = ${correctVersion}`, ({
+	it(`changeset prerelease ${workerdVersion} ${previousVersion} -> ${versionAfterChangesets} (${prereleaseIdentifier}) = ${correctVersion}`, ({
 		expect,
 	}) => {
-		const actual = getNextMiniflarePrereleaseVersion(
+		const actual = getNextMiniflarePrereleaseVersion({
 			workerdVersion,
 			previousVersion,
-			changesetsVersion,
-			prereleaseIdentifier
-		);
+			versionAfterChangesets,
+			config: { tag: prereleaseIdentifier, numbered: false },
+		});
 		expect(actual).toEqual(correctVersion);
 	});
 }
 
-it("requires a major bump to start a prerelease", ({ expect }) => {
+it("applies the major-bump requirement to Miniflare prereleases", ({
+	expect,
+}) => {
 	expect(() =>
-		getNextMiniflarePrereleaseVersion(
-			"1.20260723.0",
-			"4.20260722.0",
-			"4.20260722.1",
-			"alpha"
-		)
+		getNextMiniflarePrereleaseVersion({
+			workerdVersion: "1.20260723.0",
+			previousVersion: "4.20260722.0",
+			versionAfterChangesets: "4.20260722.1",
+			config: { tag: "alpha", numbered: false },
+		})
 	).toThrow("Starting a prerelease requires a major bump");
 });
+
+it("requires a major bump to start an npm prerelease", ({ expect }) => {
+	expect(() =>
+		getNextNpmPrereleaseVersion({
+			previousVersion: "1.0.0",
+			versionAfterChangesets: "1.1.0",
+			config: { tag: "beta", numbered: true },
+		})
+	).toThrow("Starting a prerelease requires a major bump");
+});
+
+it.for(
+	// prettier-ignore
+	[
+		// previous,           after changesets,        identifier, corrected
+		["1.63.1",             "2.0.0",                 "beta",     "2.0.0-beta.0"],
+		["2.0.0-beta.0",      "2.0.0",                 "beta",     "2.0.0-beta.1"],
+		["2.0.0-beta.3",      "2.0.0",                 "rc",       "2.0.0-rc.0"],
+		["2.0.0-beta.3",      "2.0.0-beta.3",          "beta",     "2.0.0-beta.3"],
+	] as const
+)(
+	"changeset numbered prerelease %s -> %s (%s) = %s",
+	(
+		[
+			previousVersion,
+			versionAfterChangesets,
+			prereleaseIdentifier,
+			correctVersion,
+		],
+		{ expect }
+	) => {
+		const actual = getNextNpmPrereleaseVersion({
+			previousVersion,
+			versionAfterChangesets,
+			config: { tag: prereleaseIdentifier, numbered: true },
+		});
+		expect(actual).toEqual(correctVersion);
+	}
+);

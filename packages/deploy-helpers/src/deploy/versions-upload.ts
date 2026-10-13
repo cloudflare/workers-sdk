@@ -15,7 +15,7 @@ import {
 	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { fetchResult, logger } from "../shared/context";
+import { cliPresentation, fetchResult, logger } from "../shared/context";
 import { getWorkerSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
@@ -179,7 +179,7 @@ async function uploadWorkerVersion(
 	});
 	if (migrations !== undefined) {
 		throw new UserError(
-			"This Worker has a pending Durable Object migration, which cannot be applied by `wrangler versions upload`. Durable Object migrations must be applied with `wrangler deploy`. Run `wrangler deploy` to apply the migration, then retry `wrangler versions upload`.",
+			`This Worker has a pending Durable Object migration, which cannot be applied by \`${cliPresentation.commands.versionsUpload}\`. Durable Object migrations must be applied with \`${cliPresentation.commands.deploy}\`. Run \`${cliPresentation.commands.deploy}\` to apply the migration, then retry \`${cliPresentation.commands.versionsUpload}\`.`,
 			{ telemetryMessage: "versions upload pending durable object migration" }
 		);
 	}
@@ -519,8 +519,8 @@ async function uploadWorkerVersion(
 		}
 	}
 
-	const cmdVersionsDeploy = blue("wrangler versions deploy");
-	const cmdTriggersDeploy = blue("wrangler triggers deploy");
+	const cmdVersionsDeploy = blue(cliPresentation.commands.versionsDeploy);
+	const cmdTriggersDeploy = blue(cliPresentation.commands.triggersDeploy);
 	logger.info(
 		gray(`
 To deploy this version to production traffic use the command ${cmdVersionsDeploy}

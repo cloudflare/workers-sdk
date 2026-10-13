@@ -20,6 +20,7 @@ import {
 	UserError,
 	validateDurableObjectContainerApplications,
 } from "@cloudflare/workers-utils";
+import { cliPresentation } from "../../shared/context";
 import type {
 	BuiltDurableObjectContainerImage,
 	ContainerlessConfig,
@@ -340,7 +341,7 @@ export async function validateImageLessContainerApplicationsForUpload(
 		}
 		if (namespace === undefined || existing === undefined) {
 			throw new UserError(
-				`Container "${container.name}" has no named images and has not been provisioned. Run \`wrangler deploy\` to create its Durable Object-managed application before using \`wrangler versions upload\`, or configure at least one named image.`,
+				`Container "${container.name}" has no named images and has not been provisioned. Run \`${cliPresentation.commands.deploy}\` to create its Durable Object-managed application before using \`${cliPresentation.commands.versionsUpload}\`, or configure at least one named image.`,
 				{
 					telemetryMessage:
 						"versions upload image less container application missing",
@@ -595,7 +596,8 @@ export async function prepareDurableObjectContainerApplications(
 ): Promise<PreparedContainerImages> {
 	validateDurableObjectContainerApplications(
 		config,
-		durableObjectContainerConfig
+		durableObjectContainerConfig,
+		cliPresentation.displayConfigFileName
 	);
 	const managedContainers = getResolvedDurableObjectContainerApps(
 		durableObjectContainerConfig,
