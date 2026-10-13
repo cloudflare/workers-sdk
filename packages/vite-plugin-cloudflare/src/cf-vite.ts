@@ -30,6 +30,7 @@
 
 import { parseArgs as nodeParseArgs } from "node:util";
 import { createBuilder, createServer } from "vite";
+import { CLI_DISPLAY_NAME_ENV_VAR } from "./build-output-env";
 import type { InlineConfig, ServerOptions } from "vite";
 
 interface DevArgs {
@@ -119,6 +120,8 @@ function parseBuildArgs(argv: string[]): BuildArgs {
 }
 
 async function main(): Promise<number> {
+	process.env[CLI_DISPLAY_NAME_ENV_VAR] = "cf";
+
 	// argv: [0] node [1] cf-vite.mjs [2] verb [3+] forwarded flags.
 	const verb = process.argv[2];
 	const userArgv = process.argv.slice(3);

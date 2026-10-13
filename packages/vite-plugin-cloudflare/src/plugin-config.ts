@@ -24,7 +24,7 @@ import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { defu } from "defu";
 import * as vite from "vite";
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
-import { isPreviewBuild } from "./build-output-env";
+import { getCliDisplayName, isPreviewBuild } from "./build-output-env";
 import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
@@ -327,11 +327,7 @@ export async function resolvePluginConfig(
 	);
 	const types = normalizeTypes(pluginConfig.types);
 	const shared = {
-		// Note: `cf-vite` currently sets this flag for every invocation, so it is
-		//       hopefully a sufficient signal for us to know that `cf` is the CLI in use.
-		//       We might need to revisit this or add a dedicated env variable if this
-		//       assumption turns out to be wrong.
-		cliDisplayName: isForcedBuildOutput() ? "cf" : "Wrangler",
+		cliDisplayName: getCliDisplayName(),
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
 		types,

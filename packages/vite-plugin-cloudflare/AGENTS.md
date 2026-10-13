@@ -53,6 +53,11 @@ contract so the parent can drive either impl interchangeably.
   reads Workers and Containers exclusively from that output. The v2 plugin
   always installs its build-output plugin, so `cf-vite` does not need the
   internal force-build-output flag used by v1.
+- **Caller identity.** `main()` sets `CLOUDFLARE_VITE_CLI_DISPLAY_NAME=cf`
+  before Vite loads the user's config. `resolvePluginConfig` reads this through
+  `getCliDisplayName()` so shared services can use `cf` in actionable messages;
+  direct Vite plugin use defaults to `Wrangler`. This is an internal bridge,
+  not a `.env`-file knob.
 - **`dev`** `cf-vite dev` boots Vite via `createServer()`
   against the user's own `vite.config.ts` (which must include
   `cloudflare()`). Plugin-owned flags are bridged via env vars the plugin
