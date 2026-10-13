@@ -110,6 +110,44 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts Cloudflare Access local development configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				access: {
+					dev: {
+						aud: "my-app-aud-tag",
+						identity: { email: "user@example.com" },
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("does not require an identity in Cloudflare Access local development configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				access: { dev: { aud: "my-app-aud-tag" } },
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("requires an audience in Cloudflare Access local development configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				access: { dev: { identity: { email: "user@example.com" } } },
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it("rejects remote at the binding root", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,

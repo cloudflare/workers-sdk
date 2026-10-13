@@ -104,6 +104,30 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("passes Cloudflare Access local development configuration through", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					access: {
+						dev: {
+							aud: "my-app-aud-tag",
+							identity: { email: "user@example.com" },
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect(result.access).toEqual({
+				dev: {
+					aud: "my-app-aud-tag",
+					identity: { email: "user@example.com" },
+				},
+			});
+		});
+
 		it("passes cache through unchanged", ({ expect }) => {
 			expect(
 				convertToWranglerConfig({
