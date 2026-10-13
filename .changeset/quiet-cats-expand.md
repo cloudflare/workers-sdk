@@ -1,5 +1,6 @@
 ---
 "@cloudflare/deploy-helpers": patch
+"@cloudflare/workers-utils": patch
 "wrangler": patch
 ---
 
