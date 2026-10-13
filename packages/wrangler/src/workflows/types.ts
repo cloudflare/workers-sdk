@@ -127,3 +127,14 @@ export type InstanceStatusAndLogs = {
 	success: boolean | null;
 	error: { name: string; message: string } | null;
 };
+
+export type ConcurrencyKey = {
+	id: string;
+	name: string;
+	limit: number;
+	created_on: string;
+};
+
+export type ConcurrencyKeyDetail = ConcurrencyKey & {
+	referencing_workflows: { workflow_name: string; version_id: string }[];
+};

@@ -197,6 +197,7 @@ describe("wrangler workflows", () => {
 				  wrangler workflows delete <name>            Delete workflow - when deleting a workflow, it will also delete it's own instances
 				  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance
 				  wrangler workflows instances                Manage Workflow instances
+				  wrangler workflows concurrency              Manage Workflow step concurrency keys [open beta]
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]

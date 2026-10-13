@@ -16,3 +16,11 @@ export const workflowsInstanceNamespace = createNamespace({
 		status: "stable",
 	},
 });
+
+export const workflowsConcurrencyNamespace = createNamespace({
+	metadata: {
+		description: "Manage Workflow step concurrency keys",
+		owner: "Product: Workflows",
+		status: "open beta",
+	},
+});
