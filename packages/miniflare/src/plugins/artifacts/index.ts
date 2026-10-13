@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import SCRIPT from "worker:artifacts/binding";
-import { getArtifactsEventProducerServiceName } from "../../workers/queues/constants";
+import { ARTIFACTS_EVENT_SERVICE_NAME } from "../../workers/queues/constants";
 import {
 	buildRemoteProxyProps,
 	getEnvBindingsOfType,
@@ -185,7 +185,7 @@ async function createLocalNamespaceRuntime(
 				{
 					name: "QUEUE_WORKER",
 					service: {
-						name: getArtifactsEventProducerServiceName(namespace),
+						name: ARTIFACTS_EVENT_SERVICE_NAME,
 						entrypoint: "ArtifactsEventProducer",
 					},
 				},

@@ -1,7 +1,4 @@
-/*
- * Canonical Artifacts events. The versioned payload shapes and event names
- * follow the Artifacts event contract; Workflow/Queue projections are separate.
- */
+/** Local Artifacts repository snapshot used in canonical lifecycle events. */
 export interface RepoSnapshot {
 	id: string;
 	namespace: string;
@@ -15,54 +12,30 @@ export interface RepoSnapshot {
 	lastPushAt: string | null;
 }
 
+type NamespaceSnapshot = {
+	name: string;
+	jurisdiction: "unrestricted";
+	createdAt: string;
+	updatedAt: string;
+};
 type RepoLocality = { namespace: string; name: string };
-type TokenDetails = { id: string; scope: string; expiresAt: string };
-
-type Payloads = {
-	"namespace.created.v1": {
-		namespace: {
-			name: string;
-			jurisdiction: "unrestricted";
-			createdAt: string;
-			updatedAt: string;
-		};
-	};
-	"namespace.deleted.v1": Payloads["namespace.created.v1"];
-	"repo.created.v1": { repo: RepoSnapshot };
-	"repo.deleted.v1": { repo: RepoSnapshot };
-	"repo.forked.v1": { repo: RepoSnapshot; forkedFrom: RepoLocality };
-	"repo.imported.v1": {
-		repo: RepoSnapshot;
-		importedFrom: { url: string; branch: string | null };
-	};
-	"repo.pushed.v1": {
-		repo: RepoLocality;
-		push: {
-			ref: string;
-			before: string;
-			after: string;
-			commits: {
-				id: string;
-				message: string;
-				messageTruncated: boolean;
-				timestamp: string;
-				author: { name: string; email: string };
-				committer: { name: string; email: string };
-				parents: string[];
-			}[];
-			totalCommitsCount: number;
-			commitsTruncated: boolean;
-		};
-	};
-	"repo.size_observed.v1": {
-		repo: RepoLocality;
-		sequence: number;
-		gitServerSizeBytes: number;
-	};
-	"repo.cloned.v1": { repo: RepoLocality };
-	"repo.fetched.v1": { repo: RepoLocality };
-	"token.created.v1": { repo: RepoLocality; token: TokenDetails };
-	"token.revoked.v1": { repo: RepoLocality; token: { id: string } };
+type GitIdentity = { name: string; email: string };
+type PushCommit = {
+	id: string;
+	message: string;
+	messageTruncated: boolean;
+	timestamp: string;
+	author: GitIdentity;
+	committer: GitIdentity;
+	parents: string[];
+};
+type Push = {
+	ref: string;
+	before: string;
+	after: string;
+	commits: PushCommit[];
+	totalCommitsCount: number;
+	commitsTruncated: boolean;
 };
 
 type TransportEventType =
@@ -71,7 +44,7 @@ type TransportEventType =
 	| "repo.fetched.v1"
 	| "repo.size_observed.v1";
 
-type Event<Type extends keyof Payloads> = {
+type Event<Type extends string, Payload> = {
 	envelopeVersion: 1;
 	eventId: string;
 	type: Type;
@@ -82,90 +55,128 @@ type Event<Type extends keyof Payloads> = {
 	} & (Type extends TransportEventType
 		? { user?: never }
 		: { user?: { id: string; email: string } });
-	payload: Payloads[Type];
+	payload: Payload;
 };
 
-/** Local equivalent of the production canonical event, not a Workflow event. */
-export type ArtifactsEvent = {
-	[Type in keyof Payloads]: Event<Type>;
-}[keyof Payloads];
+/** Namespace creation event. */
+export type NamespaceCreatedV1 = Event<
+	"namespace.created.v1",
+	{ namespace: NamespaceSnapshot }
+>;
+/** Namespace deletion event. */
+export type NamespaceDeletedV1 = Event<
+	"namespace.deleted.v1",
+	{ namespace: NamespaceSnapshot }
+>;
+/** Repository creation event. */
+export type RepoCreatedV1 = Event<"repo.created.v1", { repo: RepoSnapshot }>;
+/** Repository deletion event. */
+export type RepoDeletedV1 = Event<"repo.deleted.v1", { repo: RepoSnapshot }>;
+/** Repository fork event. */
+export type RepoForkedV1 = Event<
+	"repo.forked.v1",
+	{ repo: RepoSnapshot; forkedFrom: RepoLocality }
+>;
+/** Repository import event. */
+export type RepoImportedV1 = Event<
+	"repo.imported.v1",
+	{ repo: RepoSnapshot; importedFrom: { url: string; branch: string | null } }
+>;
+/** One successful Git ref update. */
+export type RepoPushedV1 = Event<
+	"repo.pushed.v1",
+	{ repo: RepoLocality; push: Push }
+>;
+/** Git storage-size observation. */
+export type RepoSizeObservedV1 = Event<
+	"repo.size_observed.v1",
+	{ repo: RepoLocality; sequence: number; gitServerSizeBytes: number }
+>;
+/** Repository clone event. */
+export type RepoClonedV1 = Event<"repo.cloned.v1", { repo: RepoLocality }>;
+/** Repository incremental fetch event. */
+export type RepoFetchedV1 = Event<"repo.fetched.v1", { repo: RepoLocality }>;
+/** Repository access-token creation event. */
+export type TokenCreatedV1 = Event<
+	"token.created.v1",
+	{
+		repo: RepoLocality;
+		token: { id: string; scope: string; expiresAt: string };
+	}
+>;
+/** Repository access-token revocation event. */
+export type TokenRevokedV1 = Event<
+	"token.revoked.v1",
+	{ repo: RepoLocality; token: { id: string } }
+>;
 
-function make<Type extends keyof Payloads>(
+/** Canonical local events; consumer-facing projections are separate. */
+export type ArtifactsEvent =
+	| NamespaceCreatedV1
+	| NamespaceDeletedV1
+	| RepoCreatedV1
+	| RepoDeletedV1
+	| RepoForkedV1
+	| RepoImportedV1
+	| RepoPushedV1
+	| RepoSizeObservedV1
+	| RepoClonedV1
+	| RepoFetchedV1
+	| TokenCreatedV1
+	| TokenRevokedV1;
+
+function make<Type extends string, Payload>(
 	type: Type,
-	payload: Payloads[Type]
-): Event<Type> {
+	payload: Payload
+): Event<Type, Payload> {
 	return {
 		envelopeVersion: 1,
 		eventId: crypto.randomUUID(),
 		type,
 		timestamp: Date.now(),
 		source: "artifacts",
-		// A local simulator has no authenticated account or user identity.
+		// Local development has no authenticated account or user.
 		actor: { account: { tag: "local", internalId: "local" } },
 		payload,
 	};
 }
 
-/** Strongly typed constructors for every version-one canonical Artifacts event. */
+/** Constructors for version-one canonical Artifacts events. */
 export const V1 = {
-	/** Construct a namespace creation event. */
-	namespaceCreated(
-		payload: Payloads["namespace.created.v1"]
-	): Event<"namespace.created.v1"> {
+	namespaceCreated(payload: NamespaceCreatedV1["payload"]): NamespaceCreatedV1 {
 		return make("namespace.created.v1", payload);
 	},
-	/** Construct a namespace deletion event. */
-	namespaceDeleted(
-		payload: Payloads["namespace.deleted.v1"]
-	): Event<"namespace.deleted.v1"> {
+	namespaceDeleted(payload: NamespaceDeletedV1["payload"]): NamespaceDeletedV1 {
 		return make("namespace.deleted.v1", payload);
 	},
-	/** Construct a repository creation event. */
-	repoCreated(payload: Payloads["repo.created.v1"]): Event<"repo.created.v1"> {
+	repoCreated(payload: RepoCreatedV1["payload"]): RepoCreatedV1 {
 		return make("repo.created.v1", payload);
 	},
-	/** Construct a repository deletion event. */
-	repoDeleted(payload: Payloads["repo.deleted.v1"]): Event<"repo.deleted.v1"> {
+	repoDeleted(payload: RepoDeletedV1["payload"]): RepoDeletedV1 {
 		return make("repo.deleted.v1", payload);
 	},
-	/** Construct a repository fork event. */
-	repoForked(payload: Payloads["repo.forked.v1"]): Event<"repo.forked.v1"> {
+	repoForked(payload: RepoForkedV1["payload"]): RepoForkedV1 {
 		return make("repo.forked.v1", payload);
 	},
-	/** Construct a repository import event. */
-	repoImported(
-		payload: Payloads["repo.imported.v1"]
-	): Event<"repo.imported.v1"> {
+	repoImported(payload: RepoImportedV1["payload"]): RepoImportedV1 {
 		return make("repo.imported.v1", payload);
 	},
-	/** Construct a successful ref-update event. */
-	repoPushed(payload: Payloads["repo.pushed.v1"]): Event<"repo.pushed.v1"> {
+	repoPushed(payload: RepoPushedV1["payload"]): RepoPushedV1 {
 		return make("repo.pushed.v1", payload);
 	},
-	/** Construct a Git storage-size observation event. */
-	repoSizeObserved(
-		payload: Payloads["repo.size_observed.v1"]
-	): Event<"repo.size_observed.v1"> {
+	repoSizeObserved(payload: RepoSizeObservedV1["payload"]): RepoSizeObservedV1 {
 		return make("repo.size_observed.v1", payload);
 	},
-	/** Construct a clone event. */
-	repoCloned(payload: Payloads["repo.cloned.v1"]): Event<"repo.cloned.v1"> {
+	repoCloned(payload: RepoClonedV1["payload"]): RepoClonedV1 {
 		return make("repo.cloned.v1", payload);
 	},
-	/** Construct an incremental fetch event. */
-	repoFetched(payload: Payloads["repo.fetched.v1"]): Event<"repo.fetched.v1"> {
+	repoFetched(payload: RepoFetchedV1["payload"]): RepoFetchedV1 {
 		return make("repo.fetched.v1", payload);
 	},
-	/** Construct a repository access-token creation event. */
-	tokenCreated(
-		payload: Payloads["token.created.v1"]
-	): Event<"token.created.v1"> {
+	tokenCreated(payload: TokenCreatedV1["payload"]): TokenCreatedV1 {
 		return make("token.created.v1", payload);
 	},
-	/** Construct a repository access-token revocation event. */
-	tokenRevoked(
-		payload: Payloads["token.revoked.v1"]
-	): Event<"token.revoked.v1"> {
+	tokenRevoked(payload: TokenRevokedV1["payload"]): TokenRevokedV1 {
 		return make("token.revoked.v1", payload);
 	},
 };
