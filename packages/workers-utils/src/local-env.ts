@@ -2,6 +2,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseDotEnvContent } from "dotenv";
 import { expand } from "dotenv-expand";
+import { caseInsensitiveEnv } from "./case-insensitive-env";
+
+export { caseInsensitiveEnv } from "./case-insensitive-env";
 
 export type LocalEnvValueSource =
 	| { type: "file"; path: string }
@@ -31,65 +34,6 @@ export function parseDotEnv(
 	processEnv: NodeJS.ProcessEnv = process.env
 ): Record<string, string> {
 	return expandParsedDotEnv(parseDotEnvContent(contents), processEnv);
-}
-
-/**
- * Creates an environment object with Windows-compatible key lookup.
- *
- * @returns An empty record that treats string keys case-insensitively.
- */
-export function caseInsensitiveEnv(): Record<string, string> {
-	const tracked = new Map<string | symbol, string | symbol>();
-	const target = {} as Record<string, string>;
-	const canonical = (property: string | symbol) =>
-		typeof property === "string" ? property.toLowerCase() : property;
-
-	return new Proxy(target, {
-		get(object, property, receiver) {
-			const actualProperty = tracked.get(canonical(property));
-			return actualProperty === undefined
-				? undefined
-				: Reflect.get(object, actualProperty, receiver);
-		},
-		set(object, property, value, receiver) {
-			const key = canonical(property);
-			const previous = tracked.get(key);
-			if (previous !== undefined && previous !== property) {
-				Reflect.deleteProperty(object, previous);
-			}
-			tracked.set(key, property);
-			return Reflect.set(object, property, value, receiver);
-		},
-		has(object, property) {
-			const actualProperty = tracked.get(canonical(property));
-			return actualProperty === undefined
-				? false
-				: Reflect.has(object, actualProperty);
-		},
-		getOwnPropertyDescriptor(object, property) {
-			const actualProperty = tracked.get(canonical(property));
-			return actualProperty === undefined
-				? undefined
-				: Reflect.getOwnPropertyDescriptor(object, actualProperty);
-		},
-		defineProperty(object, property, descriptor) {
-			const key = canonical(property);
-			const previous = tracked.get(key);
-			if (previous !== undefined && previous !== property) {
-				Reflect.deleteProperty(object, previous);
-			}
-			tracked.set(key, property);
-			return Reflect.defineProperty(object, property, descriptor);
-		},
-		deleteProperty(object, property) {
-			const key = canonical(property);
-			const actualProperty = tracked.get(key);
-			tracked.delete(key);
-			return actualProperty === undefined
-				? Reflect.deleteProperty(object, property)
-				: Reflect.deleteProperty(object, actualProperty);
-		},
-	});
 }
 
 function expandParsedDotEnv(
