@@ -1,10 +1,10 @@
 import { http, HttpResponse } from "msw";
-import { describe, test } from "vitest";
+import { afterEach, describe, test } from "vitest";
 import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/rollback";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -18,6 +18,10 @@ describe("rollback", () => {
 	const { setIsTTY } = useMockIsTTY();
 	mockAccountId();
 	mockApiToken();
+
+	afterEach(() => {
+		clearDialogs();
+	});
 
 	function mockGetDeployments(expect: ExpectStatic, multiVersion = false) {
 		const versions = multiVersion
@@ -128,6 +132,7 @@ describe("rollback", () => {
 	}
 
 	test("can rollback to an earlier version", async ({ expect }) => {
+		setIsTTY(true);
 		mockGetDeployments(expect);
 		mockGetVersion(expect, "version-id-1");
 		mockGetVersion(expect, "rollback-version");
@@ -154,9 +159,15 @@ describe("rollback", () => {
 	test("rolling back with changed secrets prompts confirmation", async ({
 		expect,
 	}) => {
+		setIsTTY(true);
 		mockGetDeployments(expect);
 		mockGetVersion(expect, "version-id-1");
 		mockGetVersion(expect, "rollback-version");
+
+		// The forced retry succeeds. msw ignores query strings when matching and
+		// checks the most recently registered handler first, so this must be
+		// registered before the failing handler below.
+		mockPostDeployment(expect, true);
 
 		// Deployment will fail due to changed secret
 		msw.use(
@@ -180,9 +191,6 @@ describe("rollback", () => {
 				{ once: true }
 			)
 		);
-
-		// Now deploy again with force and succeed
-		mockPostDeployment(expect, true);
 
 		mockPrompt({
 			text: "Please provide an optional message for this rollback (120 characters max)",
@@ -210,6 +218,62 @@ describe("rollback", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
+	test("declining the changed secrets confirmation aborts the rollback", async ({
+		expect,
+	}) => {
+		setIsTTY(true);
+		mockGetDeployments(expect);
+		mockGetVersion(expect, "version-id-1");
+		mockGetVersion(expect, "rollback-version");
+
+		let deploymentRequests = 0;
+		msw.use(
+			http.post(
+				`*/accounts/:accountId/workers/scripts/:scriptName/deployments`,
+				async () => {
+					deploymentRequests++;
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE,
+								message:
+									"A secret has changed since this version was active. If you are sure this is ok, add a ?force=true query parameter to allow the rollback. The following secrets have changed: SECRET, SECRET_TWO",
+							},
+						]),
+						{ status: 400 }
+					);
+				}
+			)
+		);
+
+		mockPrompt({
+			text: "Please provide an optional message for this rollback (120 characters max)",
+			result: "Test rollback",
+		});
+
+		mockConfirm({
+			text: "Are you sure you want to deploy this Worker Version to 100% of traffic?",
+			result: true,
+		});
+
+		mockConfirm({
+			text:
+				`The following secrets have changed since version rollback-version was deployed. Please confirm you wish to continue with the rollback` +
+				"\n  * SECRET\n  * SECRET_TWO",
+			result: false,
+		});
+
+		await runWrangler(
+			"rollback --name script-name --version-id rollback-version"
+		);
+
+		expect(deploymentRequests).toBe(1);
+		expect(std.out).toContain("Aborting rollback...");
+		expect(std.out).not.toContain("has been deployed to 100% of traffic");
+		expect(std.out).not.toContain("Current Version ID");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	test("rolling back with changed secrets (non-interactive)", async ({
 		expect,
 	}) => {
@@ -217,6 +281,11 @@ describe("rollback", () => {
 		mockGetDeployments(expect);
 		mockGetVersion(expect, "version-id-1");
 		mockGetVersion(expect, "rollback-version");
+
+		// The forced retry succeeds. msw ignores query strings when matching and
+		// checks the most recently registered handler first, so this must be
+		// registered before the failing handler below.
+		mockPostDeployment(expect, true);
 
 		// Deployment will fail due to changed secret
 		msw.use(
@@ -240,9 +309,6 @@ describe("rollback", () => {
 				{ once: true }
 			)
 		);
-
-		// Now deploy again with force and succeed
-		mockPostDeployment(expect, true);
 
 		await runWrangler(
 			"rollback --name script-name --version-id rollback-version"
