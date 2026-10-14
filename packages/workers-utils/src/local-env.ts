@@ -20,16 +20,7 @@ interface ParsedFile {
 	values: Record<string, string>;
 }
 
-/**
- * Parses and expands dotenv content without changing the process environment.
- * Environment values take precedence for keys declared in the dotenv content,
- * including values that are explicitly empty.
- *
- * @param contents The dotenv content to parse and expand.
- * @param processEnv The environment used to resolve and override values.
- * @returns A new record containing only the expanded dotenv values.
- */
-export function parseDotEnv(
+export function parseAndExpandDotEnv(
 	contents: string,
 	processEnv: NodeJS.ProcessEnv = process.env
 ): Record<string, string> {

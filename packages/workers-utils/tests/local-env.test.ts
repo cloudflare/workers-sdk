@@ -8,13 +8,13 @@ import {
 	getEnvPaths,
 	loadDevVars,
 	loadEnv,
-	parseDotEnv,
+	parseAndExpandDotEnv,
 } from "../src/local-env";
 
-describe("parseDotEnv", () => {
+describe("parseAndExpandDotEnv", () => {
 	it("parses and expands dotenv values", ({ expect }) => {
 		expect(
-			parseDotEnv(
+			parseAndExpandDotEnv(
 				"API_VERSION=v1\nAPI_URL=https://api.example.com/$API_VERSION"
 			)
 		).toEqual({
@@ -26,7 +26,9 @@ describe("parseDotEnv", () => {
 	it("preserves an empty process override", ({ expect }) => {
 		const processEnv = { TOKEN: "" };
 
-		expect(parseDotEnv("TOKEN=file-token", processEnv)).toEqual({ TOKEN: "" });
+		expect(parseAndExpandDotEnv("TOKEN=file-token", processEnv)).toEqual({
+			TOKEN: "",
+		});
 		expect(processEnv).toEqual({ TOKEN: "" });
 	});
 
@@ -34,8 +36,10 @@ describe("parseDotEnv", () => {
 		"matches process keys case-insensitively on Windows",
 		({ expect }) => {
 			expect(
-				parseDotEnv("token=file-token", { TOKEN: "process-token" })
-			).toEqual({ token: "process-token" });
+				parseAndExpandDotEnv("token=file-token", { TOKEN: "process-token" })
+			).toEqual({
+				token: "process-token",
+			});
 		}
 	);
 });

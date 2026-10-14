@@ -6,7 +6,7 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { parseDotEnv } from "@cloudflare/workers-utils/local-env";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 
 export function validateFileSecrets(
 	content: unknown,
@@ -80,9 +80,9 @@ export async function parseBulkInputToObject(
 			content = parseJSON(fileContent) as Record<string, string | null>;
 			secretFormat = "json";
 		} catch {
-			content = parseDotEnv(fileContent);
+			content = parseAndExpandDotEnv(fileContent);
 			secretFormat = "dotenv";
-			// parseDotEnv does not error for invalid content, so no keys means an error.
+			// Dotenv parsing does not error for invalid content, so no keys means an error.
 			if (Object.keys(content).length === 0) {
 				throw new UserError(`The contents of "${input}" is not valid.`, {
 					telemetryMessage: "secret bulk invalid input",
@@ -102,9 +102,9 @@ export async function parseBulkInputToObject(
 				content = parseJSON(pipedInput) as Record<string, string | null>;
 				secretFormat = "json";
 			} catch (e) {
-				content = parseDotEnv(pipedInput);
+				content = parseAndExpandDotEnv(pipedInput);
 				secretFormat = "dotenv";
-				// parseDotEnv does not error for invalid content, so no keys means an error.
+				// Dotenv parsing does not error for invalid content, so no keys means an error.
 				if (Object.keys(content).length === 0) {
 					throw e;
 				}
