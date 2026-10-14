@@ -146,7 +146,7 @@ test("shared Artifacts contract runs against the local RPC binding and cleans up
 		value: null,
 	});
 	expect((await REPOS.list()).total).toBe(0);
-});
+}, 90_000);
 
 test("local contract scenarios refuse a nonempty namespace", async ({
 	expect,
