@@ -14,6 +14,62 @@ const cacheConfig =
 		? { experimental: fsModuleCacheOptions }
 		: fsModuleCacheOptions;
 
+test(
+	"preserves cache-shaped data in unrelated RPC replies",
+	{ timeout: 90_000 },
+	async ({ expect, seed, tmpPath, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig(
+				{},
+				{
+					...cacheConfig,
+					provide: {
+						artifactCachePath: path.join(tmpPath, "artifact-cache.txt"),
+						missingCachePath: path.join(tmpPath, "missing-cache.txt"),
+					},
+				}
+			),
+			"artifact-cache.txt": "This is artifact data, not a transformed module.",
+			"index.test.ts": dedent`
+				import { inject, it, recordArtifact } from "vitest";
+				import type { TestArtifactBase } from "vitest";
+
+				interface CacheReport extends TestArtifactBase {
+					type: "workers-sdk:cache-report";
+					cached?: true;
+					tmp?: string;
+					metadata?: { cached: true; tmp: string };
+					missingMetadata?: { cached: true; tmp: string };
+				}
+
+				declare module "vitest" {
+					interface TestArtifactRegistry {
+						cacheReport: CacheReport;
+					}
+				}
+
+				it("returns artifact data unchanged", async ({ expect, task }) => {
+					const cachePath = inject("artifactCachePath");
+					const missingPath = inject("missingCachePath");
+					const artifacts: CacheReport[] = [
+						{ type: "workers-sdk:cache-report", cached: true, tmp: cachePath },
+						{
+							type: "workers-sdk:cache-report",
+							metadata: { cached: true, tmp: cachePath },
+							missingMetadata: { cached: true, tmp: missingPath },
+						},
+					];
+					const recorded = await Promise.all(artifacts.map(artifact => recordArtifact(task, artifact)));
+					expect(recorded).toEqual(artifacts);
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr + result.stdout).toBe(0);
+	}
+);
+
 for (const moduleRegistry of [
 	"legacy_module_registry",
 	"new_module_registry",
