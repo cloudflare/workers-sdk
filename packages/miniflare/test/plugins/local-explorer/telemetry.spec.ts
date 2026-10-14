@@ -52,6 +52,17 @@ describe("getRouteName", () => {
 				`/cdn-cgi/local/explorer/api/local/email/routing/resend/draft`
 			)
 		).toBe("email.routing.resend.draft");
+		expect(
+			getRouteName(`/cdn-cgi/local/explorer/api/workflows/concurrency`)
+		).toBe("workflows.concurrency.keys");
+		expect(
+			getRouteName(`/cdn-cgi/local/explorer/api/workflows/concurrency/k1`)
+		).toBe("workflows.concurrency.key");
+		expect(
+			getRouteName(
+				`/cdn-cgi/local/explorer/api/workflows/concurrency/k1/waiters`
+			)
+		).toBe("workflows.concurrency.waiters");
 	});
 
 	test.for(["folder/file.txt", "folder/nested/file.txt", "folder%2Ffile.txt"])(

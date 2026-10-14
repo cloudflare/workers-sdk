@@ -1,5 +1,6 @@
 import { Miniflare } from "miniflare";
-import { test } from "vitest";
+import { describe, test, vi } from "vitest";
+import { CorePaths } from "../../../src/workers/core/constants";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
@@ -201,4 +202,189 @@ test("limits keyed steps of Workflows on ctx.exports", async ({ expect }) => {
 
 	const res = await mf.dispatchFetch("http://localhost/");
 	expect(await res.json()).toBe("done");
+});
+
+const EXPLORER_SCRIPT = `${KEYED_WORKFLOW}
+export default {
+	async fetch(request, env) {
+		const admin = await env.WORKFLOW_A.unsafeGetConcurrencyKeysAdmin();
+		if (new URL(request.url).pathname === "/fill") {
+			await admin.hold("shared");
+			await env.WORKFLOW_A.create({ id: "waiting" });
+			await admin.waitForWaiters("shared", 1);
+		}
+		return new Response("ok");
+	},
+};`;
+
+describe("Local Explorer concurrency key endpoints", () => {
+	async function explorer(
+		mf: Miniflare,
+		path: string,
+		init?: { method: string; body?: unknown }
+	) {
+		const res = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EXPLORER}/api/workflows/concurrency${path}`,
+			init === undefined
+				? undefined
+				: {
+						method: init.method,
+						headers: { "Content-Type": "application/json" },
+						body:
+							init.body === undefined ? undefined : JSON.stringify(init.body),
+					}
+		);
+		return { status: res.status, body: (await res.json()) as any };
+	}
+
+	function explorerMiniflare(persistPath: string) {
+		return new Miniflare({
+			resourcePersistencePath: persistPath,
+			unsafeLocalExplorer: true,
+			workers: [
+				{
+					config: {
+						name: "worker-a",
+						compatibilityDate: "2024-11-20",
+						manifest: singleModuleManifest(EXPLORER_SCRIPT),
+						env: {
+							WORKFLOW_A: {
+								type: "workflow",
+								name: "workflow-a",
+								worker: "worker-a",
+								exportName: "KeyedWorkflow",
+							},
+						},
+					},
+				},
+			],
+		});
+	}
+
+	test("creates, reads, updates and deletes keys", async ({ expect }) => {
+		const mf = explorerMiniflare(await useTmp());
+		useDispose(mf);
+
+		const created = await explorer(mf, "", {
+			method: "POST",
+			body: { name: "shared", limit: 1 },
+		});
+		expect(created).toMatchObject({
+			status: 200,
+			body: {
+				success: true,
+				result: { name: "shared", limit: 1, usage: { holding: 0, waiting: 0 } },
+			},
+		});
+		const id = created.body.result.id;
+
+		expect(
+			await explorer(mf, "", {
+				method: "POST",
+				body: { name: "shared", limit: 2 },
+			})
+		).toMatchObject({ status: 409, body: { errors: [{ code: 10701 }] } });
+		expect(
+			await explorer(mf, "", {
+				method: "POST",
+				body: { name: "bad", limit: 0 },
+			})
+		).toMatchObject({ status: 400 });
+
+		expect(await explorer(mf, "")).toMatchObject({
+			body: {
+				result: [{ id, name: "shared" }],
+				result_info: { count: 1, total_count: 1 },
+			},
+		});
+		expect(await explorer(mf, "/shared")).toMatchObject({
+			body: { result: { id, referencing_workflows: [] } },
+		});
+
+		expect(
+			await explorer(mf, `/${id}`, { method: "PATCH", body: { limit: 3 } })
+		).toMatchObject({ status: 200, body: { result: { limit: 3 } } });
+
+		expect(await explorer(mf, `/${id}`, { method: "DELETE" })).toMatchObject({
+			status: 200,
+			body: { result: { status: "ok" } },
+		});
+		expect(await explorer(mf, `/${id}`)).toMatchObject({
+			status: 404,
+			body: { errors: [{ code: 10700 }] },
+		});
+	});
+
+	test("reports the steps holding and waiting for a key", async ({
+		expect,
+	}) => {
+		const mf = explorerMiniflare(await useTmp());
+		useDispose(mf);
+		await explorer(mf, "", {
+			method: "POST",
+			body: { name: "shared", limit: 1 },
+		});
+		await (await mf.dispatchFetch("http://localhost/fill")).text();
+
+		expect(await explorer(mf, "/shared/holders")).toMatchObject({
+			body: { result: [{ workflow_name: null, step: null }] },
+		});
+		expect(await explorer(mf, "/shared/waiters")).toMatchObject({
+			body: {
+				result: [
+					{
+						workflow_name: "workflow-a",
+						instance_id: "waiting",
+						step: "work-1",
+						blocked_on: "shared",
+						keys: ["shared"],
+					},
+				],
+			},
+		});
+
+		const instance = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EXPLORER}/api/workflows/workflow-a/instances/waiting`
+		);
+		expect(await instance.json()).toMatchObject({
+			result: {
+				status: "running",
+				waiting_for: [
+					{
+						type: "concurrency_key",
+						step: "work-1",
+						key: "shared",
+						keys: ["shared"],
+					},
+				],
+				steps: [
+					{
+						name: "work-1",
+						type: "step",
+						success: null,
+						concurrency: { keys: ["shared"], acquired_at: null },
+					},
+				],
+			},
+		});
+
+		await explorer(mf, "/shared", { method: "PATCH", body: { limit: 2 } });
+		await vi.waitFor(async () => {
+			const res = await mf.dispatchFetch(
+				`http://localhost${CorePaths.EXPLORER}/api/workflows/workflow-a/instances/waiting`
+			);
+			const body = (await res.json()) as any;
+			expect(body.result).toMatchObject({
+				status: "complete",
+				waiting_for: [],
+				steps: [
+					{
+						name: "work-1",
+						success: true,
+						concurrency: { keys: ["shared"], acquired_at: expect.any(String) },
+					},
+				],
+			});
+		});
+	});
 });

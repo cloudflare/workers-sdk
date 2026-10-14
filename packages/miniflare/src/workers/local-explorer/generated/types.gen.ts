@@ -967,6 +967,84 @@ export type WorkflowsInstanceDetails = {
 		name?: string;
 		message?: string;
 	};
+	/**
+	 * Steps of the instance waiting for a concurrency key slot.
+	 */
+	waiting_for?: Array<{
+		type: "concurrency_key";
+		step: string;
+		key: string;
+		keys: Array<string>;
+		since: string;
+	}>;
+};
+
+/**
+ * ID or name of a concurrency key.
+ */
+export type WorkflowsConcurrencyKeyId = string;
+
+export type WorkflowsConcurrencyKey = {
+	/**
+	 * ID of the concurrency key.
+	 */
+	id: string;
+	/**
+	 * Name of the key, referenced by steps.
+	 */
+	name: string;
+	/**
+	 * Maximum number of steps that may hold the key at once.
+	 */
+	limit: number;
+	/**
+	 * ISO 8601 timestamp of when the key was created.
+	 */
+	created_on: string;
+	usage: {
+		/**
+		 * Steps holding a slot of the key.
+		 */
+		holding: number;
+		/**
+		 * Steps waiting for a slot of the key.
+		 */
+		waiting: number;
+	};
+};
+
+export type WorkflowsConcurrencyKeyDetails = WorkflowsConcurrencyKey & {
+	/**
+	 * Always empty locally: local Workflows do not declare the keys they use.
+	 */
+	referencing_workflows: Array<{
+		workflow_name?: string;
+		version_id?: string;
+	}>;
+};
+
+export type WorkflowsConcurrencyKeyHolder = {
+	/**
+	 * Workflow of the step, or null for a test hold.
+	 */
+	workflow_name: string | null;
+	instance_id: string | null;
+	step: string | null;
+	/**
+	 * ISO 8601 timestamp of when the slot was taken.
+	 */
+	since: string;
+};
+
+export type WorkflowsConcurrencyKeyWaiter = WorkflowsConcurrencyKeyHolder & {
+	/**
+	 * The full key the step is waiting for.
+	 */
+	blocked_on: string;
+	/**
+	 * Every key the step needs.
+	 */
+	keys: Array<string>;
 };
 
 /**
@@ -2836,6 +2914,251 @@ export type WorkflowsSendInstanceEventResponses = {
 
 export type WorkflowsSendInstanceEventResponse =
 	WorkflowsSendInstanceEventResponses[keyof WorkflowsSendInstanceEventResponses];
+
+export type WorkflowsListConcurrencyKeysData = {
+	body?: never;
+	path?: never;
+	query?: {
+		/**
+		 * Page number (1-indexed).
+		 */
+		page?: number;
+		/**
+		 * Number of keys per page.
+		 */
+		per_page?: number;
+	};
+	url: "/workflows/concurrency";
+};
+
+export type WorkflowsListConcurrencyKeysErrors = {
+	/**
+	 * List Concurrency Keys response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsListConcurrencyKeysError =
+	WorkflowsListConcurrencyKeysErrors[keyof WorkflowsListConcurrencyKeysErrors];
+
+export type WorkflowsListConcurrencyKeysResponses = {
+	/**
+	 * List Concurrency Keys response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<WorkflowsConcurrencyKey>;
+		result_info?: {
+			count?: number;
+			page?: number;
+			per_page?: number;
+			total_count?: number;
+			total_pages?: number;
+		};
+	};
+};
+
+export type WorkflowsListConcurrencyKeysResponse =
+	WorkflowsListConcurrencyKeysResponses[keyof WorkflowsListConcurrencyKeysResponses];
+
+export type WorkflowsCreateConcurrencyKeyData = {
+	body: {
+		/**
+		 * Name of the key, referenced by steps through `concurrency`.
+		 */
+		name: string;
+		/**
+		 * Maximum number of steps that may hold the key at once.
+		 */
+		limit: number;
+	};
+	path?: never;
+	query?: never;
+	url: "/workflows/concurrency";
+};
+
+export type WorkflowsCreateConcurrencyKeyErrors = {
+	/**
+	 * Create Concurrency Key response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsCreateConcurrencyKeyError =
+	WorkflowsCreateConcurrencyKeyErrors[keyof WorkflowsCreateConcurrencyKeyErrors];
+
+export type WorkflowsCreateConcurrencyKeyResponses = {
+	/**
+	 * Create Concurrency Key response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: WorkflowsConcurrencyKey;
+	};
+};
+
+export type WorkflowsCreateConcurrencyKeyResponse =
+	WorkflowsCreateConcurrencyKeyResponses[keyof WorkflowsCreateConcurrencyKeyResponses];
+
+export type WorkflowsDeleteConcurrencyKeyData = {
+	body?: never;
+	path: {
+		key_id: WorkflowsConcurrencyKeyId;
+	};
+	query?: never;
+	url: "/workflows/concurrency/{key_id}";
+};
+
+export type WorkflowsDeleteConcurrencyKeyErrors = {
+	/**
+	 * Delete Concurrency Key response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsDeleteConcurrencyKeyError =
+	WorkflowsDeleteConcurrencyKeyErrors[keyof WorkflowsDeleteConcurrencyKeyErrors];
+
+export type WorkflowsDeleteConcurrencyKeyResponses = {
+	/**
+	 * Delete Concurrency Key response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			status?: string;
+		};
+	};
+};
+
+export type WorkflowsDeleteConcurrencyKeyResponse =
+	WorkflowsDeleteConcurrencyKeyResponses[keyof WorkflowsDeleteConcurrencyKeyResponses];
+
+export type WorkflowsGetConcurrencyKeyData = {
+	body?: never;
+	path: {
+		key_id: WorkflowsConcurrencyKeyId;
+	};
+	query?: never;
+	url: "/workflows/concurrency/{key_id}";
+};
+
+export type WorkflowsGetConcurrencyKeyErrors = {
+	/**
+	 * Get Concurrency Key response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsGetConcurrencyKeyError =
+	WorkflowsGetConcurrencyKeyErrors[keyof WorkflowsGetConcurrencyKeyErrors];
+
+export type WorkflowsGetConcurrencyKeyResponses = {
+	/**
+	 * Get Concurrency Key response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: WorkflowsConcurrencyKeyDetails;
+	};
+};
+
+export type WorkflowsGetConcurrencyKeyResponse =
+	WorkflowsGetConcurrencyKeyResponses[keyof WorkflowsGetConcurrencyKeyResponses];
+
+export type WorkflowsUpdateConcurrencyKeyData = {
+	body: {
+		/**
+		 * Maximum number of steps that may hold the key at once.
+		 */
+		limit: number;
+	};
+	path: {
+		key_id: WorkflowsConcurrencyKeyId;
+	};
+	query?: never;
+	url: "/workflows/concurrency/{key_id}";
+};
+
+export type WorkflowsUpdateConcurrencyKeyErrors = {
+	/**
+	 * Update Concurrency Key response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsUpdateConcurrencyKeyError =
+	WorkflowsUpdateConcurrencyKeyErrors[keyof WorkflowsUpdateConcurrencyKeyErrors];
+
+export type WorkflowsUpdateConcurrencyKeyResponses = {
+	/**
+	 * Update Concurrency Key response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: WorkflowsConcurrencyKey;
+	};
+};
+
+export type WorkflowsUpdateConcurrencyKeyResponse =
+	WorkflowsUpdateConcurrencyKeyResponses[keyof WorkflowsUpdateConcurrencyKeyResponses];
+
+export type WorkflowsListConcurrencyKeyHoldersData = {
+	body?: never;
+	path: {
+		key_id: WorkflowsConcurrencyKeyId;
+	};
+	query?: never;
+	url: "/workflows/concurrency/{key_id}/holders";
+};
+
+export type WorkflowsListConcurrencyKeyHoldersErrors = {
+	/**
+	 * List Concurrency Key Holders response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsListConcurrencyKeyHoldersError =
+	WorkflowsListConcurrencyKeyHoldersErrors[keyof WorkflowsListConcurrencyKeyHoldersErrors];
+
+export type WorkflowsListConcurrencyKeyHoldersResponses = {
+	/**
+	 * List Concurrency Key Holders response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<WorkflowsConcurrencyKeyHolder>;
+	};
+};
+
+export type WorkflowsListConcurrencyKeyHoldersResponse =
+	WorkflowsListConcurrencyKeyHoldersResponses[keyof WorkflowsListConcurrencyKeyHoldersResponses];
+
+export type WorkflowsListConcurrencyKeyWaitersData = {
+	body?: never;
+	path: {
+		key_id: WorkflowsConcurrencyKeyId;
+	};
+	query?: never;
+	url: "/workflows/concurrency/{key_id}/waiters";
+};
+
+export type WorkflowsListConcurrencyKeyWaitersErrors = {
+	/**
+	 * List Concurrency Key Waiters response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsListConcurrencyKeyWaitersError =
+	WorkflowsListConcurrencyKeyWaitersErrors[keyof WorkflowsListConcurrencyKeyWaitersErrors];
+
+export type WorkflowsListConcurrencyKeyWaitersResponses = {
+	/**
+	 * List Concurrency Key Waiters response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<WorkflowsConcurrencyKeyWaiter>;
+	};
+};
+
+export type WorkflowsListConcurrencyKeyWaitersResponse =
+	WorkflowsListConcurrencyKeyWaitersResponses[keyof WorkflowsListConcurrencyKeyWaitersResponses];
 
 export type ObservabilityQueryData = {
 	body: {
