@@ -2,6 +2,33 @@ import { describe, test } from "vitest";
 import { getRemoteBindings } from "../remote-bindings";
 
 describe("getRemoteBindings", () => {
+	test("maps bindings that always use remote resources", ({ expect }) => {
+		expect(
+			getRemoteBindings({
+				env: {
+					ANALYTICS: {
+						type: "analytics",
+						dev: { remote: true },
+					},
+					K2: {
+						type: "k2",
+						stream: "stream-id",
+					},
+				},
+			})
+		).toEqual({
+			ANALYTICS: {
+				type: "analytics",
+				remote: true,
+			},
+			K2: {
+				type: "k2",
+				stream: "stream-id",
+				remote: undefined,
+			},
+		});
+	});
+
 	test("maps send-email bindings", ({ expect }) => {
 		expect(
 			getRemoteBindings({
