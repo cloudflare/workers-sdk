@@ -440,7 +440,7 @@ async function parseCustomPoolOptions(
 					},
 					preExistingRemoteProxySessionData ?? null,
 					undefined,
-					{ logger: remoteBindingsLogger }
+					{ cliDisplayName: "Wrangler", logger: remoteBindingsLogger }
 				)
 			: null;
 

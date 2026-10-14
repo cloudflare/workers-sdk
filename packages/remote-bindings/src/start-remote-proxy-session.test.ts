@@ -108,6 +108,7 @@ describe("session-owned Hyperdrive keepalive", () => {
 		};
 		mockDevEnv.teardown.mockClear();
 		const session = await startRemoteProxySession(initial, {
+			cliDisplayName: "Test CLI",
 			logger: createTestLogger(),
 		});
 		expect(vi.getTimerCount()).toBe(0);
@@ -146,7 +147,10 @@ describe("session-owned Hyperdrive keepalive", () => {
 		const initial = {
 			HD: { type: "hyperdrive" as const, id: "initial", remote: true },
 		};
-		const session = await startRemoteProxySession(initial, { logger });
+		const session = await startRemoteProxySession(initial, {
+			cliDisplayName: "Test CLI",
+			logger,
+		});
 		session.updateHyperdriveKeepalive(initial);
 		mockDevEnv.reloadError = new Error("reload failed");
 		await expect(session.updateBindings({})).rejects.toThrow("reload failed");
@@ -183,7 +187,10 @@ describe("startRemoteProxySession error handling", () => {
 			}
 			mockDevEnv.teardown.mockRejectedValueOnce(new Error("cleanup failure"));
 			await expect(
-				startRemoteProxySession({}, { logger: createTestLogger() })
+				startRemoteProxySession(
+					{},
+					{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+				)
 			).rejects.toBe(original);
 			expect(mockDevEnv.teardown).toHaveBeenCalledOnce();
 		}
@@ -202,7 +209,10 @@ describe("startRemoteProxySession error handling", () => {
 		mockDevEnv.error = userError;
 
 		await expect(
-			startRemoteProxySession({}, { logger: createTestLogger() })
+			startRemoteProxySession(
+				{},
+				{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+			)
 		).rejects.toBe(userError);
 	});
 
@@ -214,7 +224,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ logger: createTestLogger() }
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).toBe(authError);
@@ -228,7 +238,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ logger: createTestLogger() }
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).toBeInstanceOf(Error);
@@ -256,7 +266,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ logger: createTestLogger() }
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).not.toBeInstanceOf(APIError);

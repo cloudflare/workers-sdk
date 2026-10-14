@@ -446,6 +446,38 @@ test("Miniflare: replaces loopback startup error handler with persistent error l
 	expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe("ok");
 });
 
+test("Miniflare: rejects ready with ERR_ADDRESS_IN_USE when the port is taken", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const taken = net.createServer();
+	await new Promise<void>((resolve) => taken.listen(0, "127.0.0.1", resolve));
+	onTestFinished(() => void taken.close());
+	const { port } = taken.address() as AddressInfo;
+
+	const mf = new Miniflare({
+		host: "127.0.0.1",
+		port,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2026-09-04",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose().catch(() => {}));
+
+	// Whether the message names the address depends on the workerd version.
+	await expect(mf.ready).rejects.toMatchObject({
+		code: "ERR_ADDRESS_IN_USE",
+	});
+});
+
 test("Miniflare: rejects ready when loopback server cannot bind", async ({
 	expect,
 	onTestFinished,
@@ -5342,4 +5374,35 @@ test("Miniflare: dispatchFetch() preserves request body length", async ({
 		new Request("http://localhost/", { method: "PUT", body: "request" })
 	);
 	expect(await res.json()).toEqual({ contentLength: "7", body: "request" });
+});
+
+test("Miniflare: dispatchFetch() replays a known-length body after HTTP 421", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
+			async fetch(request) {
+				const body = await request.text();
+				return new Response("body=" + body, { status: 421 });
+			}
+		}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("https://alias.test/", {
+		method: "POST",
+		body: "{}",
+		redirect: "manual",
+	});
+	expect(res.status).toBe(421);
+	expect(res.headers.get("location")).toBeNull();
+	expect(await res.text()).toBe("body={}");
 });

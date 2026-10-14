@@ -4,7 +4,7 @@ import { test } from "vitest";
 import { isBuild, rootDir } from "../../../__test-utils__";
 
 test.runIf(isBuild)(
-	"sets `upload_source_maps` to `true` when `build.sourcemap` is enabled",
+	"does not set `upload_source_maps` when `build.sourcemap` is disabled",
 	({ expect }) => {
 		const wranglerConfig = JSON.parse(
 			fs.readFileSync(
@@ -12,6 +12,6 @@ test.runIf(isBuild)(
 				"utf-8"
 			)
 		);
-		expect(wranglerConfig.upload_source_maps).toBe(true);
+		expect(wranglerConfig.upload_source_maps).toBeUndefined();
 	}
 );

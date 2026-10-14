@@ -2,6 +2,7 @@
 import { spawn } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { prerelease, valid } from "semver";
 
 /**
  * Publishes the monorepo's npm packages in dependency-tier order, waiting for
@@ -23,6 +24,9 @@ import { resolve } from "node:path";
  * previous tier resolves, closes that window.
  *
  * ## Tagging
+ *
+ * Each package's npm dist-tag is derived from its version, so stable and
+ * prerelease packages can be published together in the same tier.
  *
  * Publishing here is deliberately split from tagging. Once every tier has been
  * published we hand off to `changeset tag`, which creates the git tags and — via
@@ -418,6 +422,33 @@ export async function waitForPropagation(
 export type PublishRunner = (pkg: WorkspacePackage) => Promise<PublishResult>;
 
 /**
+ * Gets the npm dist-tag for a package version. Stable versions use `latest`;
+ * prereleases use their first prerelease identifier.
+ */
+export function getDistTag(version: string): string {
+	if (valid(version) === null) {
+		throw new Error(
+			`Cannot derive an npm dist-tag from invalid version ${version}`
+		);
+	}
+	const identifiers = prerelease(version);
+	if (identifiers === null) {
+		return "latest";
+	}
+	const tag = identifiers[0];
+	if (
+		typeof tag !== "string" ||
+		tag === "latest" ||
+		!/^[A-Za-z][0-9A-Za-z-]*$/.test(tag)
+	) {
+		throw new Error(
+			`Cannot use prerelease identifier ${tag} as an npm dist-tag`
+		);
+	}
+	return tag;
+}
+
+/**
  * Runs `pnpm publish` for a single package.
  *
  * The flags and the `npm_config_registry` override intentionally mirror exactly
@@ -427,7 +458,6 @@ export type PublishRunner = (pkg: WorkspacePackage) => Promise<PublishResult>;
  */
 export function createPublishRunner(options: {
 	registry: string;
-	distTag: string;
 }): PublishRunner {
 	return function publishPackage(pkg) {
 		return new Promise<PublishResult>((promiseResolve) => {
@@ -437,7 +467,7 @@ export function createPublishRunner(options: {
 				"--access",
 				pkg.access,
 				"--tag",
-				options.distTag,
+				getDistTag(pkg.version),
 				"--no-git-checks",
 			];
 			const child = spawn("pnpm", args, {
@@ -530,7 +560,6 @@ export type MainOptions = {
 	packagesDir: string;
 	dryRun: boolean;
 	registry: string;
-	distTag: string;
 	concurrency: number;
 	propagation: Omit<
 		PropagationOptions,
@@ -673,14 +702,12 @@ if (require.main === module) {
 		process.env.PUBLISH_REGISTRY ??
 		process.env.npm_config_registry ??
 		DEFAULT_REGISTRY;
-	const distTag = process.env.PUBLISH_DIST_TAG ?? "latest";
 	const log = (message: string) => console.log(message);
 
 	void publishAllPackages({
 		packagesDir: resolve(__dirname, "../../packages"),
 		dryRun: process.argv.includes("--dry-run"),
 		registry,
-		distTag,
 		concurrency: readIntEnv("PUBLISH_CONCURRENCY", 4),
 		propagation: {
 			skip: process.env.PUBLISH_SKIP_PROPAGATION_WAIT === "true",
@@ -693,7 +720,7 @@ if (require.main === module) {
 			delaySeconds: readIntEnv("PUBLISH_READ_RETRY_DELAY_SECONDS", 2),
 		},
 		fetchImpl: fetch,
-		publish: createPublishRunner({ registry, distTag }),
+		publish: createPublishRunner({ registry }),
 		runChangesetTag,
 		sleep,
 		now: () => Date.now(),

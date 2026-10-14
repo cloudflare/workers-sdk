@@ -9,7 +9,9 @@
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tools/test/vitest-shard.cjs"],
 			"env": [
+				"CI_TEST_SHARD",
 				"MINIFLARE_WORKERD_PATH",
 				"MINIFLARE_WORKERD_CONFIG_DEBUG",
 				"SOURCEMAPS"

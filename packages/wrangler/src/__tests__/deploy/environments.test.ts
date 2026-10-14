@@ -844,7 +844,7 @@ describe("deploy", () => {
 			).resolves.toHaveProperty("tags", ["some-tag"]);
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in your Wrangler config file. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
 
 				"
 			`);

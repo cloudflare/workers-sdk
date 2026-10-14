@@ -274,6 +274,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		)) as WorkersResolvedConfig;
 
 		expect(result.type).toBe("workers");
+		expect(result.cliDisplayName).toBe("Wrangler");
 		expect(result.experimental.newConfig).toEqual({
 			types: { generate: true, includeRuntime: true },
 			cfBuildOutput: false,
@@ -670,6 +671,7 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		)) as WorkersResolvedConfig;
 
 		expect(result.type).toBe("workers");
+		expect(result.cliDisplayName).toBe("cf");
 		expect(result.experimental.newConfig).toEqual({
 			types: { generate: true, includeRuntime: true },
 			cfBuildOutput: true,

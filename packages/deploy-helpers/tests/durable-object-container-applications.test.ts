@@ -24,7 +24,10 @@ import type {
 	DurableObjectContainerApp,
 } from "@cloudflare/workers-utils";
 
-vi.mock("../src/shared/context", () => ({ logger: { log: vi.fn() } }));
+vi.mock("../src/shared/context", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/shared/context")>()),
+	logger: { log: vi.fn() },
+}));
 vi.mock("node:timers/promises", () => ({ setTimeout: vi.fn() }));
 vi.mock("@cloudflare/cli-shared-helpers", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/cli-shared-helpers")>()),

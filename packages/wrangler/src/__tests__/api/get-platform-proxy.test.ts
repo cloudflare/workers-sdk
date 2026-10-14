@@ -131,7 +131,7 @@ describe("getPlatformProxy startup ownership", () => {
 				{ bindings: { HD: { type: "hyperdrive", id: "id", remote: true } } },
 				undefined,
 				undefined,
-				{ logger },
+				{ cliDisplayName: "Test CLI", logger },
 				vi.fn().mockResolvedValue(sessionData().session)
 			)
 		);

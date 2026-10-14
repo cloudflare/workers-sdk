@@ -252,7 +252,7 @@ export function createCloudflareAuth(
 		purgeOnLoginOrLogout: configCache.purgeConfigCaches,
 		clientId: descriptor.clientId,
 		consent: descriptor.consent,
-		displayName: descriptor.displayName,
+		cliDisplayName: descriptor.displayName,
 		deviceLoginCommand: descriptor.commands.deviceLogin,
 		redirectUri: descriptor.redirectUri,
 		storageFactory: credentialStorage.storageFactory,
@@ -265,6 +265,8 @@ export function createCloudflareAuth(
 				descriptor.fileFormat,
 				descriptor.getTemporaryAccountConfigPath
 			),
+			cliDisplayName: descriptor.displayName,
+			logoutCommand: descriptor.commands.logout,
 			prompt: createTemporaryTermsPrompt({
 				temporaryAccountLogger,
 				prompt: ctx.prompt,

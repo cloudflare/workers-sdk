@@ -259,6 +259,9 @@ function convertTopLevel(
 	if (config.observability !== undefined) {
 		result.observability = convertObservability(config.observability);
 	}
+	if (config.access !== undefined) {
+		result.access = config.access;
+	}
 	if (config.cache !== undefined) {
 		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
 		const cache: RawCacheConfig = {

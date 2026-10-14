@@ -15,7 +15,12 @@ import {
 	isWorkflowDefinedInThisScript,
 	validateOwnedWorkflowDeclarations,
 } from "../deploy/helpers/owned-workflows";
-import { fetchListResult, fetchResult, logger } from "../shared/context";
+import {
+	cliPresentation,
+	fetchListResult,
+	fetchResult,
+	logger,
+} from "../shared/context";
 import { applyEmailRoutingAddresses } from "./email-routing";
 import {
 	publishCustomDomains,
@@ -636,6 +641,34 @@ export function getSubdomainValuesAPIMock(
 	};
 }
 
+/**
+ * Renders the warning shown when the configured workers.dev state differs from
+ * the remotely configured state.
+ *
+ * @param beforeEnabled Whether workers.dev was enabled before the deployment.
+ * @param afterEnabled Whether workers.dev is enabled for the deployment.
+ * @returns Consumer-specific guidance for making the setting explicit.
+ */
+export function renderWorkersDevDefaultWarning(
+	beforeEnabled: boolean,
+	afterEnabled: boolean
+): string {
+	const workersDevField = cliPresentation.configFields.workersDev;
+	const workersDevAssignment = `${workersDevField}${cliPresentation.configFieldAssignmentSeparator}${beforeEnabled}`;
+	const status = (enabled: boolean, past: boolean) => {
+		if (past) {
+			return enabled ? "enabled" : "disabled";
+		} else {
+			return enabled ? "enable" : "disable";
+		}
+	};
+
+	return [
+		`Because '${workersDevField}' is not in your ${cliPresentation.displayConfigFileName}, it will be ${status(afterEnabled, true)} for this deployment by default.`,
+		`To override this setting, you can ${status(beforeEnabled, false)} workers.dev by explicitly setting '${workersDevAssignment}' in your ${cliPresentation.displayConfigFileName}.`,
+	].join("\n");
+}
+
 async function validateSubdomainMixedState(
 	scriptName: string,
 	before: { workers_dev: boolean; preview_urls: boolean },
@@ -687,7 +720,7 @@ async function validateSubdomainMixedState(
 				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
 				`  ${previewUrl}`,
 				"",
-				"To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs as well by setting `preview_urls = false` in your Wrangler config file.",
+				`To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs as well by setting \`preview_urls = false\` in your ${cliPresentation.displayConfigFileName}.`,
 			].join("\n")
 		);
 	}
@@ -700,7 +733,7 @@ async function validateSubdomainMixedState(
 				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
 				`  ${previewUrl}`,
 				"",
-				"You may want to enable the Preview URLs as well by setting `preview_urls = true` in your Wrangler config file.",
+				`You may want to enable the Preview URLs as well by setting \`preview_urls = true\` in your ${cliPresentation.displayConfigFileName}.`,
 			].join("\n")
 		);
 	}
@@ -767,19 +800,7 @@ async function subdomainDeploy(
 		config.workers_dev == undefined &&
 		after.enabled !== before.enabled
 	) {
-		const status = (enabled: boolean, past: boolean) => {
-			if (past) {
-				return enabled ? "enabled" : "disabled";
-			} else {
-				return enabled ? "enable" : "disable";
-			}
-		};
-		logger.warn(
-			[
-				`Because 'workers_dev' is not in your Wrangler file, it will be ${status(after.enabled, true)} for this deployment by default.`,
-				`To override this setting, you can ${status(before.enabled, false)} workers.dev by explicitly setting 'workers_dev = ${before.enabled}' in your Wrangler file.`,
-			].join("\n")
-		);
+		logger.warn(renderWorkersDevDefaultWarning(before.enabled, after.enabled));
 	}
 
 	if (
@@ -796,8 +817,8 @@ async function subdomainDeploy(
 		};
 		logger.warn(
 			[
-				`Because your 'workers.dev' route is ${status(after.enabled, true)} and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be ${status(after.previews_enabled, true)} for this deployment by default.`,
-				`To override this setting, you can ${status(before.previews_enabled, false)} Preview URLs by explicitly setting 'preview_urls = ${before.previews_enabled}' in your Wrangler file.`,
+				`Because your 'workers.dev' route is ${status(after.enabled, true)} and your 'preview_urls' setting is not in your ${cliPresentation.displayConfigFileName}, Preview URLs will be ${status(after.previews_enabled, true)} for this deployment by default.`,
+				`To override this setting, you can ${status(before.previews_enabled, false)} Preview URLs by explicitly setting 'preview_urls = ${before.previews_enabled}' in your ${cliPresentation.displayConfigFileName}.`,
 			].join("\n")
 		);
 	}

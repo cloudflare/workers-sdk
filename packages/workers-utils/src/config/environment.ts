@@ -830,6 +830,11 @@ interface EnvironmentInheritable {
 	/**
 	 * Include source maps when uploading this worker.
 	 *
+	 * Defaults to `true` for `wrangler deploy`, `wrangler versions upload`,
+	 * `wrangler preview` and `wrangler build --experimental-cf-build-output`,
+	 * where source maps that can't be resolved are skipped rather than failing
+	 * the upload.
+	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#source-maps
 	 *
 	 * @inheritable

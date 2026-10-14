@@ -74,7 +74,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			{ bindings: {} },
 			existing,
 			undefined,
-			{ logger: createTestLogger() },
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() },
 			startSession
 		);
 		expect(result?.session).toBe(session);
@@ -91,7 +91,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				{ bindings: {} },
 				undefined,
 				undefined,
-				{ logger: createTestLogger() },
+				{ cliDisplayName: "Test CLI", logger: createTestLogger() },
 				startSession
 			)
 		).toBeNull();
@@ -119,7 +119,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				{ bindings },
 				reused ? existing : undefined,
 				undefined,
-				{ logger },
+				{ cliDisplayName: "Test CLI", logger },
 				startSession
 			);
 			expect(result?.session).toBe(session);
@@ -134,7 +134,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				{ bindings },
 				result,
 				undefined,
-				{ logger },
+				{ cliDisplayName: "Test CLI", logger },
 				startSession
 			);
 			expect(recovered?.session).toBe(session);
@@ -159,7 +159,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			{ bindings: hyperdriveBindings() },
 			undefined,
 			undefined,
-			{ logger: createTestLogger() },
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() },
 			startSession
 		);
 		session.updateHyperdriveKeepalive.mockClear();
@@ -169,7 +169,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				{ bindings: {} },
 				first,
 				undefined,
-				{ logger: createTestLogger() },
+				{ cliDisplayName: "Test CLI", logger: createTestLogger() },
 				startSession
 			)
 		).rejects.toThrow("reload failed");
@@ -192,7 +192,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				{ bindings: hyperdriveBindings() },
 				undefined,
 				undefined,
-				{ logger: createTestLogger() },
+				{ cliDisplayName: "Test CLI", logger: createTestLogger() },
 				startSession
 			)
 		).rejects.toBe(error);
