@@ -440,7 +440,7 @@ async function parseCustomPoolOptions(
 					},
 					preExistingRemoteProxySessionData ?? null,
 					undefined,
-					{ logger: remoteBindingsLogger }
+					{ cliDisplayName: "Wrangler", logger: remoteBindingsLogger }
 				)
 			: null;
 
@@ -555,7 +555,7 @@ export async function parseProjectOptions(
 		}
 		let formatted: string;
 		try {
-			formatted = formatZodError(e, poolOptions);
+			formatted = formatZodError(e);
 		} catch {
 			throw e;
 		}

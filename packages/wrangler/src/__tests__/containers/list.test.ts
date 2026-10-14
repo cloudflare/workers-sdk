@@ -163,9 +163,9 @@ describe("containers list", () => {
 			├─┼─┼─┼─┼─┤
 			│ aaaaaaaa-1111-1111-1111-111111111111 │ my-active-app │ active │ 2 │ 2025-06-10T12:00:00Z │
 			├─┼─┼─┼─┼─┤
-			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 3 │ 2025-06-11T09:30:00Z │
+			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 1 │ 2025-06-11T09:30:00Z │
 			├─┼─┼─┼─┼─┤
-			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 4 │ 2025-06-12T16:45:00Z │
+			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 0 │ 2025-06-12T16:45:00Z │
 			├─┼─┼─┼─┼─┤
 			│ dddddddd-4444-4444-4444-444444444444 │ my-ready-app │ ready │ 0 │ 2025-06-13T07:15:00Z │
 			└─┴─┴─┴─┴─┘"
@@ -217,9 +217,9 @@ describe("containers list", () => {
 			├─┼─┼─┼─┼─┤
 			│ aaaaaaaa-1111-1111-1111-111111111111 │ my-active-app │ active │ 2 │ 2025-06-10T12:00:00Z │
 			├─┼─┼─┼─┼─┤
-			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 3 │ 2025-06-11T09:30:00Z │
+			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 1 │ 2025-06-11T09:30:00Z │
 			├─┼─┼─┼─┼─┤
-			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 4 │ 2025-06-12T16:45:00Z │
+			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 0 │ 2025-06-12T16:45:00Z │
 			├─┼─┼─┼─┼─┤
 			│ dddddddd-4444-4444-4444-444444444444 │ my-ready-app │ ready │ 0 │ 2025-06-13T07:15:00Z │
 			└─┴─┴─┴─┴─┘"
@@ -387,6 +387,10 @@ describe("containers list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			const output = JSON.parse(std.out);
 			expect(output).toHaveLength(4);
+			const configuredInstances = output.map(
+				(entry: { instances: number }) => entry.instances
+			);
+			expect(configuredInstances).toEqual([2, 3, 4, 0]);
 			for (const entry of output) {
 				expect(entry).toEqual({
 					id: expect.any(String),

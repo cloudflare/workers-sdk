@@ -41,6 +41,17 @@ export class ErrorUnknown extends ErrorOAuth2 {
 	}
 }
 
+/**
+ * The token endpoint could not be reached at all (DNS failure, connection
+ * timeout, TLS error, ...). Nothing was learned about the stored credentials,
+ * so callers must not treat this as an expired or revoked token.
+ */
+export class ErrorAuthServerUnreachable extends ErrorOAuth2 {
+	toString(): string {
+		return "ErrorAuthServerUnreachable";
+	}
+}
+
 // Some generic, internal errors that can happen.
 export class ErrorNoAuthCode extends ErrorOAuth2 {
 	toString(): string {

@@ -7,6 +7,7 @@ import {
 	getLocalObservabilityEnabledFromEnv,
 	getWranglerHiddenDirPath,
 	isUnsafeBindingType,
+	partitionExports,
 	UserError,
 	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
@@ -27,6 +28,7 @@ import type {
 	Binding,
 	CfD1Database,
 	CfDispatchNamespace,
+	CfFlagship,
 	CfHyperdrive,
 	CfKvNamespace,
 	CfPipeline,
@@ -34,6 +36,7 @@ import type {
 	CfR2Bucket,
 	CfScriptFormat,
 	CfWorkflow,
+	ConnectHandler,
 	Config,
 	ContainerEngine,
 	LegacyAssetPaths,
@@ -89,7 +92,7 @@ export interface ConfigBundle {
 	crons: Config["triggers"]["crons"];
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
-	connectHandlers: Config["connect"];
+	connectHandlers: ConnectHandler[];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
@@ -238,6 +241,20 @@ function kvNamespaceEntry(
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
+function flagshipEntry(
+	{ binding, app_id, remote }: CfFlagship,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+): [
+	string,
+	{ app_id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+] {
+	const id = getRemoteId(app_id) ?? binding;
+	if (!remoteProxyConnectionString || !remote) {
+		return [binding, { app_id: id }];
+	}
+	return [binding, { app_id: id, remoteProxyConnectionString }];
+}
+
 function r2BucketEntry(
 	{ binding, bucket_name, remote, local_dev }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
@@ -433,6 +450,7 @@ type WorkerOptionsBindings = Pick<
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
 	| "agentMemory"
+	| "analyticsSql"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -442,11 +460,13 @@ type WorkerOptionsBindings = Pick<
 	| "queueProducers"
 	| "queueConsumers"
 	| "pipelines"
+	| "k2"
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
 	| "ratelimits"
 	| "workflows"
+	| "workflowExports"
 	| "secretsStoreSecrets"
 	| "images"
 	| "email"
@@ -509,6 +529,7 @@ export function buildMiniflareBindingOptions(
 	const d1Databases = extractBindingsOfType("d1", bindings);
 	const queues = extractBindingsOfType("queue", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const hyperdrives = extractBindingsOfType("hyperdrive", bindings);
 	const workflows = extractBindingsOfType("workflow", bindings);
 	const durableObjects = extractBindingsOfType(
@@ -553,6 +574,7 @@ export function buildMiniflareBindingOptions(
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
 	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
+	const analyticsSqlBindings = extractBindingsOfType("analytics", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
@@ -690,6 +712,10 @@ export function buildMiniflareBindingOptions(
 		validateBindingRemoteSetting("agent_memory", memory.remote, logger.warn);
 	}
 
+	for (const analytics of analyticsSqlBindings) {
+		validateBindingRemoteSetting("analytics", analytics.remote, logger.warn);
+	}
+
 	for (const media of mediaBindings) {
 		validateBindingRemoteSetting("media", media.remote, logger.warn);
 	}
@@ -770,6 +796,24 @@ export function buildMiniflareBindingOptions(
 		vars[binding.binding] = binding.value as Json;
 	}
 
+	// Workflows declared under `exports` (accessible via `ctx.exports`) are
+	// carried to Miniflare separately from `workflows[]` env bindings, keyed by
+	// the exported class name.
+	const workflowExports: NonNullable<WorkerOptionsBindings["workflowExports"]> =
+		Object.fromEntries(
+			Object.entries(partitionExports(config.exports).workflow).map(
+				([className, workflow]) => [
+					className,
+					{
+						name: workflow.name,
+						...(workflow.limits?.steps !== undefined && {
+							stepLimit: workflow.limits.steps,
+						}),
+					},
+				]
+			)
+		);
+
 	const bindingOptions: WorkerOptionsBindings = {
 		bindings: vars,
 		versionMetadata: versionMetadataBindings[0]?.binding,
@@ -816,6 +860,14 @@ export function buildMiniflareBindingOptions(
 			])
 		),
 
+		analyticsSql:
+			analyticsSqlBindings.length > 0
+				? {
+						binding: analyticsSqlBindings[0].binding,
+						remoteProxyConnectionString,
+					}
+				: undefined,
+
 		kvNamespaces: Object.fromEntries(
 			kvNamespaces.map((kv) =>
 				kvNamespaceEntry(kv, remoteProxyConnectionString)
@@ -840,6 +892,18 @@ export function buildMiniflareBindingOptions(
 			pipelines.map((pipeline) =>
 				pipelineEntry(pipeline, remoteProxyConnectionString)
 			)
+		),
+		k2: Object.fromEntries(
+			k2.map(({ binding, stream, remote }) => {
+				validateBindingRemoteSetting("k2", remote, logger.warn);
+				return [
+					binding,
+					{
+						stream,
+						...(remoteProxyConnectionString && { remoteProxyConnectionString }),
+					},
+				];
+			})
 		),
 		hyperdrives: Object.fromEntries(hyperdrives.map(hyperdriveEntry)),
 		analyticsEngineDatasets: Object.fromEntries(
@@ -879,6 +943,7 @@ export function buildMiniflareBindingOptions(
 				return workflowEntry(workflow);
 			})
 		),
+		workflowExports,
 		secretsStoreSecrets: Object.fromEntries(
 			secretsStoreSecrets.map((binding) => [binding.binding, binding])
 		),
@@ -886,13 +951,9 @@ export function buildMiniflareBindingOptions(
 			helloWorldBindings.map((binding) => [binding.binding, binding])
 		),
 		flagship: Object.fromEntries(
-			flagshipBindings.map((binding) => [
-				binding.binding,
-				{
-					app_id: getRemoteId(binding.app_id) ?? binding.binding,
-					remoteProxyConnectionString,
-				},
-			])
+			flagshipBindings.map((binding) =>
+				flagshipEntry(binding, remoteProxyConnectionString)
+			)
 		),
 		artifacts: Object.fromEntries(
 			artifactsBindings.map((binding) => [
@@ -1175,6 +1236,7 @@ export async function buildMiniflareOptions(
 				...sitesOptions,
 				...assetOptions,
 				routes: config.routes,
+				cronTriggers: config.crons,
 				outboundService: config.outboundService,
 				zone: config.zone,
 				access: config.access?.dev,

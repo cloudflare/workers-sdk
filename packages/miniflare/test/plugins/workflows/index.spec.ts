@@ -18,7 +18,17 @@ export class MyWorkflow extends WorkflowEntrypoint {
   }
   export default {
 	async fetch(request, env, ctx) {
-		const workflow = await env.MY_WORKFLOW.create({id: "an-id"})
+		// Deterministic ids are unique: create() throws once the instance
+		// exists, so later requests read the existing instance instead.
+		let workflow;
+		try {
+			workflow = await env.MY_WORKFLOW.create({id: "an-id"})
+		} catch (e) {
+			if (!String(e).includes("instance.already_exists")) {
+				throw e;
+			}
+			workflow = await env.MY_WORKFLOW.get("an-id")
+		}
 
 		return new Response(JSON.stringify(await workflow.status()))
 	},
@@ -33,7 +43,6 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-compatibility-flags-worker",
 					compatibilityDate: "2024-11-20",
 					compatibilityFlags: [
@@ -71,7 +80,6 @@ test("subscribes to Workflow instance events through an RPC target", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-subscription-worker",
 					compatibilityDate: "2026-08-28",
 					manifest: singleModuleManifest(`
@@ -157,7 +165,6 @@ test("subscribes to structured and streamed step outputs", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "workflow-step-output-subscription-worker",
 					compatibilityDate: "2026-08-28",
 					manifest: singleModuleManifest(`
@@ -238,7 +245,6 @@ test("persists Workflow data on file-system between runs", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2024-11-20",
 					manifest: singleModuleManifest(WORKFLOW_SCRIPT()),
@@ -296,6 +302,107 @@ test("persists Workflow data on file-system between runs", async ({
 	expect(await res.text()).toBe(
 		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
 	);
+});
+
+const BATCH_WORKFLOW_SCRIPT = () => `
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class BatchWorkflow extends WorkflowEntrypoint {
+	async run(event) {
+		return event.payload;
+	}
+}
+export default {
+	async fetch(_request, env) {
+		const existing = await env.BATCH_WORKFLOW.create({ id: "existing" });
+		await existing.status();
+
+		const explicit = await env.BATCH_WORKFLOW.createBatch({
+			instances: [
+				{ id: "fresh", params: "fresh-output" },
+				{ id: "existing" },
+				{ id: "fresh" },
+			],
+		});
+		const counted = await env.BATCH_WORKFLOW.createBatch({
+			count: 2,
+			params: "count-output",
+		});
+
+		return Response.json({
+			explicit: {
+				created: await Promise.all(
+					explicit.created.map(async (instance) => ({
+						id: instance.id,
+						status: (await instance.status()).status,
+					}))
+				),
+				errors: explicit.errors,
+			},
+			counted: await Promise.all(
+				counted.created.map(async (instance) => ({
+					id: instance.id,
+					status: (await instance.status()).status,
+				}))
+			),
+		});
+	},
+};`;
+
+test("supports object-form Workflow batches", async ({ expect }) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					name: "batch-worker",
+					compatibilityDate: "2024-11-20",
+					manifest: singleModuleManifest(BATCH_WORKFLOW_SCRIPT()),
+					env: {
+						BATCH_WORKFLOW: {
+							type: "workflow",
+							name: "BATCH_WORKFLOW",
+							worker: "batch-worker",
+							exportName: "BatchWorkflow",
+						},
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const result = (await response.json()) as {
+		explicit: {
+			created: { id: string; status: string }[];
+			errors: { index: number; id?: string; code: number; message: string }[];
+		};
+		counted: { id: string; status: string }[];
+	};
+
+	expect(result.explicit).toEqual({
+		created: [{ id: "fresh", status: expect.any(String) }],
+		errors: [
+			{
+				index: 1,
+				id: "existing",
+				code: 10405,
+				message: "workflows.api.error.instance.already_exists",
+			},
+			{
+				index: 2,
+				id: "fresh",
+				code: 10415,
+				message: "workflows.api.error.instance.duplicate_in_batch",
+			},
+		],
+	});
+	expect(result.counted).toEqual([
+		{ id: expect.any(String), status: expect.any(String) },
+		{ id: expect.any(String), status: expect.any(String) },
+	]);
+	expect(result.counted[0].id).not.toBe(result.counted[1].id);
 });
 
 const LIFECYCLE_WORKFLOW_SCRIPT = () => `
@@ -395,7 +502,6 @@ function lifecycleMiniflareOpts(tmp: string): MiniflareOptions {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "lifecycle-worker",
 					compatibilityDate: "2026-03-09",
 					manifest: singleModuleManifest(LIFECYCLE_WORKFLOW_SCRIPT()),

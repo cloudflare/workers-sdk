@@ -15,7 +15,10 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	DurableObjectCodeUpdateStrategy,
+} from "@cloudflare/workers-utils";
 
 export type { NonVersionedScriptSettings } from "@cloudflare/deploy-helpers";
 
@@ -103,7 +106,8 @@ export async function createDeployment(
 	workerName: string,
 	versionTraffic: Map<VersionId, Percentage>,
 	message: string | undefined,
-	force?: boolean
+	force?: boolean,
+	codeUpdateStrategy?: DurableObjectCodeUpdateStrategy
 ) {
 	return createDeploymentBase(
 		complianceConfig,
@@ -111,7 +115,8 @@ export async function createDeployment(
 		workerName,
 		versionTraffic,
 		message,
-		force
+		force,
+		codeUpdateStrategy
 	);
 }
 

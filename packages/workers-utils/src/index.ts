@@ -12,9 +12,10 @@ export type { ExportType, PartitionedExports } from "./config/exports";
 export {
 	getDurableObjectExports,
 	hasDurableObjectExports,
+	isLiveDurableObjectExport,
 } from "./config/durable-object-exports";
+export type { LiveDurableObjectExport } from "./config/durable-object-exports";
 export {
-	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
 	getDurableObjectClassNameToUseSQLiteMap,
@@ -170,6 +171,7 @@ export type { Counter } from "./prometheus-metrics";
 export type { Tunnel, TunnelOptions } from "./tunnel";
 export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
+export * from "./cli-presentation";
 
 export * from "./cfetch";
 
@@ -208,7 +210,17 @@ export {
 	getWorkerNameFromProject,
 } from "./worker-name";
 
-export { _forceColour, formatZodError } from "./zod-format";
+export { formatZodError } from "./zod-format";
 
 export { toUrlPath } from "./url-path";
 export type { UrlPath } from "./url-path";
+
+export {
+	compareMigrationPaths,
+	getD1MigrationFiles,
+	normalizeRelativePath,
+} from "./d1-migrations";
+export type {
+	D1MigrationFile,
+	GetD1MigrationFilesOptions,
+} from "./d1-migrations";

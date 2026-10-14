@@ -83,12 +83,12 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	await fs.mkdir(pnpmConfigDir, { recursive: true });
 	const minimumReleaseAgeExclude = [
 		...pkgs.keys(),
-		// workerd and @cloudflare/workers-types are pulled in transitively (e.g.
-		// via miniflare) and may have been bumped same-day. Keep this list in sync
-		// with `minimumReleaseAgeExclude` in the root pnpm-workspace.yaml.
+		// First-party packages pulled from npm may have been bumped same-day. Keep
+		// this list in sync with `minimumReleaseAgeExclude` in the root
+		// pnpm-workspace.yaml.
+		"@cloudflare/*",
+		"cf",
 		"workerd",
-		"@cloudflare/workerd-*",
-		"@cloudflare/workers-types",
 	];
 	// pnpm 10 reads this from the npmrc/INI-format global `rc` file.
 	await writeFile(

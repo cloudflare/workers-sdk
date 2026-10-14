@@ -48,7 +48,7 @@ import {
 } from "./utils";
 import type { Bundle } from "./build-output-preview";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
-import type { ContainerTagToOptionsMap } from "./containers";
+import type { ContainerOptionsByWorker } from "./containers";
 import type {
 	AssetsOnlyPluginContext,
 	PreviewPluginContext,
@@ -146,7 +146,7 @@ export async function getDevMiniflareOptions(
 	viteDevServer: vite.ViteDevServer
 ): Promise<{
 	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
-	containerTagToOptionsMap: ContainerTagToOptionsMap;
+	containerOptionsByWorker: ContainerOptionsByWorker;
 }> {
 	const inputInspectorPort = await getInputInspectorPort(ctx, viteDevServer);
 	const { resolvedPluginConfig, resolvedViteConfig, entryWorkerConfig } = ctx;
@@ -339,7 +339,7 @@ export async function getDevMiniflareOptions(
 		},
 	];
 
-	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
+	const containerOptionsByWorker: ContainerOptionsByWorker = new Map();
 	let containerEngine: string | undefined;
 
 	const workersFromConfig =
@@ -371,6 +371,7 @@ export async function getDevMiniflareOptions(
 											preExistingRemoteProxySession ?? null,
 											undefined,
 											{
+												cliDisplayName: resolvedPluginConfig.cliDisplayName,
 												logger: createRemoteBindingsLogger(
 													viteDevServer.config.logger
 												),
@@ -392,16 +393,16 @@ export async function getDevMiniflareOptions(
 								const dockerPath = getDockerPath();
 								containerEngine = resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
-							}
-							const containerPlan = worker.config.dev.enable_containers
-								? createContainerDevPlan({
+								containerOptionsByWorker.set(
+									worker.config,
+									createContainerDevPlan({
 										containers: worker.config.containers,
 										exports: worker.config.exports,
 										containerBuildId,
 										configPath: worker.config.configPath,
-									})
-								: undefined;
-
+									})?.containerOptions ?? []
+								);
+							}
 							const miniflareWorkerOptions =
 								wrangler.unstable_getMiniflareWorkerOptions(
 									{
@@ -417,12 +418,6 @@ export async function getDevMiniflareOptions(
 										containerBuildId,
 									}
 								);
-							for (const option of containerPlan?.containerOptions ?? []) {
-								containerTagToOptionsMap.set(option.image_tag, {
-									containerOptions: option,
-									workerConfig: worker.config,
-								});
-							}
 
 							const { externalWorkers } = miniflareWorkerOptions;
 							const workerOptions =
@@ -658,7 +653,7 @@ export async function getDevMiniflareOptions(
 			MiniflareOptions,
 			{ workers: WorkerOptions[] }
 		>,
-		containerTagToOptionsMap,
+		containerOptionsByWorker,
 	};
 }
 
@@ -760,14 +755,14 @@ export async function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer
 ): Promise<{
 	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
-	containerTagToOptionsMap: ContainerTagToOptionsMap;
+	containerOptionsByWorker: ContainerOptionsByWorker;
 }> {
 	const inputInspectorPort = await getInputInspectorPort(
 		ctx,
 		vitePreviewServer
 	);
 	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
-	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
+	const containerOptionsByWorker: ContainerOptionsByWorker = new Map();
 	let containerEngine: string | undefined;
 
 	const workers: Array<V4WorkerOptions> = (
@@ -797,6 +792,7 @@ export async function getPreviewMiniflareOptions(
 							preExistingRemoteProxySessionData ?? null,
 							undefined,
 							{
+								cliDisplayName: resolvedPluginConfig.cliDisplayName,
 								logger: createRemoteBindingsLogger(
 									vitePreviewServer.config.logger
 								),
@@ -818,16 +814,16 @@ export async function getPreviewMiniflareOptions(
 					const dockerPath = getDockerPath();
 					containerEngine = resolveDockerHost(dockerPath);
 					containerBuildId = generateContainerBuildId();
-				}
-				const containerPlan = workerConfig.dev.enable_containers
-					? createContainerDevPlan({
+					containerOptionsByWorker.set(
+						workerConfig,
+						createContainerDevPlan({
 							containers: workerConfig.containers,
 							exports: workerConfig.exports,
 							containerBuildId,
 							configPath: workerConfig.configPath,
-						})
-					: undefined;
-
+						})?.containerOptions ?? []
+					);
+				}
 				const miniflareWorkerOptions =
 					wrangler.unstable_getMiniflareWorkerOptions(workerConfig, undefined, {
 						remoteProxyConnectionString:
@@ -835,12 +831,6 @@ export async function getPreviewMiniflareOptions(
 
 						containerBuildId,
 					});
-				for (const option of containerPlan?.containerOptions ?? []) {
-					containerTagToOptionsMap.set(option.image_tag, {
-						containerOptions: option,
-						workerConfig,
-					});
-				}
 
 				const { externalWorkers } = miniflareWorkerOptions;
 
@@ -911,7 +901,7 @@ export async function getPreviewMiniflareOptions(
 			MiniflareOptions,
 			{ workers: WorkerOptions[] }
 		>,
-		containerTagToOptionsMap,
+		containerOptionsByWorker,
 	};
 }
 

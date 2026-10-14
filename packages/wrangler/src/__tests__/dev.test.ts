@@ -3170,6 +3170,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: true,
 				name: undefined,
+				allowedMail: undefined,
 			});
 		});
 
@@ -3187,6 +3188,37 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: true,
 				name: "my-tunnel",
+				allowedMail: undefined,
+			});
+		});
+
+		it("should reject --tunnel-allowed-mail with --tunnel-name", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"dev --tunnel --tunnel-name=my-tunnel --tunnel-allowed-mail=alice@example.com"
+				)
+			).rejects.toThrow(
+				"--tunnel-allowed-mail is only supported for Quick Tunnels"
+			);
+		});
+
+		it("should allow --tunnel-allowed-mail without enabling tunnel", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --tunnel-allowed-mail=alice@example.com"
+			);
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: undefined,
+				allowedMail: ["alice@example.com"],
 			});
 		});
 
@@ -3204,6 +3236,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: "my-tunnel",
+				allowedMail: undefined,
 			});
 		});
 
@@ -3219,6 +3252,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: undefined,
+				allowedMail: undefined,
 			});
 		});
 

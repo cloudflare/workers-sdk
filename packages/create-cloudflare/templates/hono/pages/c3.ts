@@ -31,6 +31,7 @@ const config: TemplateConfig = {
 	},
 	path: "templates/hono/pages",
 	platform: "pages",
+	languages: ["ts"],
 	hidden: true,
 	generate,
 	transformPackageJson: async () => ({

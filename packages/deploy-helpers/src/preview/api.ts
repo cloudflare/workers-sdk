@@ -30,6 +30,8 @@ export interface Binding {
 	id?: string;
 	service?: string;
 	environment?: string;
+	// Props supplied to a Worker service binding.
+	props?: Record<string, unknown>;
 	cross_account_grant?: string;
 	dataset?: string;
 	namespace?: string;
@@ -50,6 +52,9 @@ export interface Binding {
 		period: 10 | 60;
 	};
 	service_id?: string;
+	tunnel_id?: string;
+	network_id?: string;
+	destination?: string;
 	staging?: boolean;
 	enable_timer?: boolean;
 	app_id?: string;
@@ -65,7 +70,6 @@ export interface PreviewResource {
 	name: string;
 	slug: string;
 	urls?: string[];
-	worker_name: string;
 	tags?: string[];
 	observability?: Observability;
 	logpush?: boolean;
@@ -112,6 +116,7 @@ export type CreatePreviewDeploymentRequestParams = {
 		config: {
 			html_handling?: string;
 			not_found_handling?: string;
+			base_path?: string;
 			run_worker_first?: string[] | boolean;
 		};
 	};

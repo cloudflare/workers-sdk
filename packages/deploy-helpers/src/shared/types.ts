@@ -18,13 +18,14 @@ import type {
 	Route,
 	Entry,
 	ContainerApp,
+	DurableObjectCodeUpdateStrategy,
+	CliPresentationOverrides,
 } from "@cloudflare/workers-utils";
 
-/**
- * client needs to handle logger and fetch/auth implementation
- * these are passed into this package to handle any API requests/logs
- */
+/** API, logging, and prompt implementations supplied by the consumer. */
 export type DeployHelpersContext = {
+	/** Consumer-specific names and commands used in user-facing output. */
+	cliPresentation?: CliPresentationOverrides;
 	fetchResult: FetchResultFetcher;
 	fetchListResult: FetchListResultFetcher;
 	fetchPagedListResult: FetchPagedListResultFetcher;
@@ -157,6 +158,8 @@ export type DeployProps = SharedDeployVersionsProps & {
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/** Controls how Durable Object code updates are applied. */
+	durableObjectsCodeUpdateStrategy?: DurableObjectCodeUpdateStrategy;
 	/**
 	 * When true, an existing Worker with the same name aborts the deploy instead
 	 * of updating it, because this run cannot confirm the local project owns the

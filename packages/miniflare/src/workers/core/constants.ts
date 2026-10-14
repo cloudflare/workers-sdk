@@ -38,6 +38,8 @@ export const CoreHeaders = {
 	 */
 	ORIGINAL_HOSTNAME: "MF-Original-Hostname",
 	PROXY_SHARED_SECRET: "MF-Proxy-Shared-Secret",
+	DEV_REGISTRY_SECRET: "MF-Dev-Registry-Secret",
+	LOOPBACK_SECRET: "MF-Loopback-Secret",
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
 	/**
@@ -60,6 +62,7 @@ export const CoreHeaders = {
 	OP_KEY: "MF-Op-Key",
 	OP_SYNC: "MF-Op-Sync",
 	OP_STRINGIFIED_SIZE: "MF-Op-Stringified-Size",
+	OP_STREAM_SIZE: "MF-Op-Stream-Size",
 	OP_RESULT_TYPE: "MF-Op-Result-Type",
 	OP_ORIGINAL_URL: "MF-Op-Original-URL",
 } as const;
@@ -80,6 +83,7 @@ export const CoreBindings = {
 	DURABLE_OBJECT_NAMESPACE_PROXY: "MINIFLARE_PROXY",
 	DATA_PROXY_SECRET: "MINIFLARE_PROXY_SECRET",
 	DATA_PROXY_SHARED_SECRET: "MINIFLARE_PROXY_SHARED_SECRET",
+	DATA_DEV_REGISTRY_SECRET: "MINIFLARE_DEV_REGISTRY_SECRET",
 	TRIGGER_HANDLERS: "TRIGGER_HANDLERS",
 	LOG_REQUESTS: "LOG_REQUESTS",
 	STRIP_DISABLE_PRETTY_ERROR: "STRIP_DISABLE_PRETTY_ERROR",

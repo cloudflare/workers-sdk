@@ -22,7 +22,12 @@ import {
 	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
+import {
+	cliPresentation,
+	fetchPagedListResult,
+	fetchResult,
+	logger,
+} from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
 import {
 	buildAssetManifest,
@@ -35,10 +40,6 @@ import {
 	type BundleSize,
 } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwriteAndGetLatest } from "./helpers/confirm-latest-deployment-overwrite";
-import {
-	addContainerImagesBinding,
-	clearRemovedContainerImagesBindings,
-} from "./helpers/container-image-bindings";
 import {
 	getContainerMetadata,
 	getContainerMetadataForRolloutSkip,
@@ -343,26 +344,6 @@ async function deployWorker(
 		type: "deploy",
 		workerExists,
 	});
-	if (!skipContainerChanges && keepVars && !isDryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(
-			config,
-			durableObjectContainerConfig,
-			bindings,
-			workerUrl
-		);
-	}
-	addContainerImagesBinding(
-		durableObjectContainerConfig,
-		bindings,
-		preparedContainerImages ?? {},
-		{
-			preserveExisting: skipContainerChanges,
-			exports: config.exports,
-			workerExists,
-			hasExistingBinding:
-				rolloutSkipContainerState?.hasExistingContainerImagesBinding,
-		}
-	);
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
@@ -393,7 +374,9 @@ async function deployWorker(
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
-		keepSecrets: keepVars || !!props.secretsFile,
+		// Never delete secret bindings when deploying. Inherit unchanged secrets
+		// from the previous Worker Version, including secrets absent from config.
+		keepSecrets: true,
 		logpush: props.logpush,
 		placement,
 		tail_consumers: config.tail_consumers,
@@ -454,6 +437,9 @@ async function deployWorker(
 		props.containers.source === undefined &&
 		// Rollout skip can recover Container metadata absent from local config.
 		containerMetadata === undefined;
+	if (!canUseNewVersionsDeploymentsApi) {
+		worker.code_update_strategy = props.durableObjectsCodeUpdateStrategy;
+	}
 
 	let workerBundle: FormData;
 	const dockerPath = getDockerPath();
@@ -551,13 +537,20 @@ async function deployWorker(
 				// Deploy new version to 100%
 				const versionMap = new Map<VersionId, Percentage>();
 				versionMap.set(versionResult.id, 100);
+				const unsafeMetadata = config.unsafe?.metadata;
+				const codeUpdateStrategy =
+					unsafeMetadata !== undefined &&
+					"code_update_strategy" in unsafeMetadata
+						? unsafeMetadata.code_update_strategy
+						: props.durableObjectsCodeUpdateStrategy;
 				await createDeployment(
 					config,
 					accountId,
 					scriptName,
 					versionMap,
 					props.message,
-					undefined
+					undefined,
+					codeUpdateStrategy
 				);
 
 				// Update service and environment tags when using environments
@@ -732,7 +725,7 @@ async function deployWorker(
 					"binding DB of type d1 must have a valid `id` specified [code: 10021]"
 				) {
 					throw new UserError(
-						"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
+						`You must use a real database in the database_id configuration. You can find your databases using '${cliPresentation.commands.d1List}', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development`,
 						{ telemetryMessage: "deploy d1 database binding invalid id" }
 					);
 				}
@@ -787,7 +780,12 @@ async function deployWorker(
 
 	if (shouldDeployContainers) {
 		assert(versionId && accountId);
-		initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
+		initContainersSharedContext({
+			cliPresentation,
+			logger,
+			fetchPagedListResult,
+			fetchResult,
+		});
 		const containerDeployments: ResolvedContainerDeployment[] = [];
 		for (const container of normalisedContainerConfig) {
 			if ("dockerfile" in container) {
@@ -815,12 +813,16 @@ async function deployWorker(
 				});
 			}
 		}
-		await deployContainers(config, containerDeployments, {
-			versionId,
-			accountId,
-			scriptName,
-			dispatchNamespace: props.dispatchNamespace,
-		});
+		await deployContainers(
+			{ ...config, containers: props.containers.source },
+			containerDeployments,
+			{
+				versionId,
+				accountId,
+				scriptName,
+				dispatchNamespace: props.dispatchNamespace,
+			}
+		);
 	}
 	if (!skipContainerChanges && durableObjectContainerConfig.length > 0) {
 		assert(versionId && accountId);
@@ -837,7 +839,7 @@ async function deployWorker(
 			);
 		} catch (error) {
 			throw new UserError(
-				"The Worker version was deployed, but Wrangler could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command to retry and finish deployment.",
+				`The Worker version was deployed, but ${cliPresentation.displayName} could not finish applying its Durable Object-managed Container application settings. Re-run the same \`${cliPresentation.commands.deploy}\` command to retry and finish deployment.`,
 				{
 					telemetryMessage:
 						"deploy durable object container application creation failed after deployment",

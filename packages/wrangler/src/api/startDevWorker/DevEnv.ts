@@ -26,7 +26,7 @@ import type {
 	ControllerEvent,
 	RuntimeController,
 } from "./BaseController";
-import type { ErrorEvent, SerializedError } from "./events";
+import type { ErrorEvent } from "./events";
 import type { Worker, WranglerStartDevWorkerInput } from "./types";
 
 type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
@@ -198,15 +198,12 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			event.source === "ProxyController" &&
 			event.reason.startsWith("Error inside ProxyWorker")
 		) {
-			// the ProxyWorker's report reaches us as JSON, so `castErrorCause` has
-			// wrapped it in a message-less Error carrying the detail on `.cause`
-			const detail =
-				event.cause.message ||
-				(event.cause.cause as SerializedError | undefined)?.message ||
-				"unknown error";
 			logger.error(
-				`${event.reason} (the affected request failed; the dev server continues): ${detail}`
+				`${event.reason} (the affected request failed; the dev server continues): ${event.cause.message || "unknown error"}`
 			);
+			// The stack and cause chain explain why the connection failed, but are
+			// too noisy for every failed request, so keep them at debug level.
+			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			logger.debug("=> Error contextual data:", event.data);
 		}
 		// Parse errors are recoverable by changing your Wrangler configuration file and saving

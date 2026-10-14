@@ -44,7 +44,6 @@ function makeRemoteServiceMiniflare(script: string, proxyUrl: URL): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-01-01",
 					manifest: singleModuleManifest(script),

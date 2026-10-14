@@ -1,8 +1,9 @@
-import { preview } from "@cloudflare/deploy-helpers";
+import { preview, resolveWorkerName } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { createCommand } from "../core/create-command";
+import { assertNoCloudflareBuildOutput } from "../deployment-bundle/cf-build-output-guard";
 import { getEntry } from "../deployment-bundle/entry";
 import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import { cleanupDestination } from "../deployment-bundle/merge-config-args";
@@ -78,6 +79,17 @@ export const previewCommand = createCommand({
 		suggestSkillsAfterHandler: (args) => args.json !== true,
 	},
 	handler: async function previewHandler(args, { config }) {
+		// Runs before authentication and any upload. `preview` has no `--dry-run`,
+		// so every invocation creates a Preview deployment.
+		assertNoCloudflareBuildOutput(
+			{
+				config,
+				explicitConfigPath: args.config,
+				scriptPath: args.script,
+			},
+			"preview"
+		);
+
 		const accountId = await requireAuth(config);
 		const productionBindingsExpectedInPreview =
 			getProductionBindingsExpectedInPreview(config);
@@ -135,7 +147,7 @@ export const previewCommand = createCommand({
 		writeOutput({
 			type: "preview",
 			version: 1,
-			worker_name: previewResource.worker_name,
+			worker_name: resolveWorkerName(args, previewConfig),
 			preview_id: previewResource.id,
 			preview_name: previewResource.name,
 			preview_slug: previewResource.slug,

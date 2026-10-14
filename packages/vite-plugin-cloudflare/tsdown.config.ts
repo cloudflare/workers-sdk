@@ -2,6 +2,7 @@ import { defineConfig } from "tsdown";
 import type { UserConfig } from "tsdown";
 
 const ignoreWatch = ["dist", "playground", "e2e"];
+const sourcemap = process.env.SOURCEMAPS !== "false";
 
 export default defineConfig([
 	{
@@ -9,9 +10,11 @@ export default defineConfig([
 			index: "src/index.ts",
 		},
 		platform: "node",
+		sourcemap,
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",
 		dts: {
+			sourcemap,
 			compilerOptions: {
 				// workaround for https://github.com/rolldown/tsdown/issues/345
 				paths: {
@@ -32,22 +35,10 @@ export default defineConfig([
 		// (see `src/cf-vite.ts` for the protocol).
 		entry: "src/cf-vite.ts",
 		platform: "node",
+		sourcemap,
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",
 		dts: false,
-		ignoreWatch,
-	},
-	// TODO: move into main build as an additional entry once tsdown has been upgraded
-	{
-		entry: {
-			"experimental-config": "src/experimental-config.ts",
-		},
-		platform: "node",
-		outDir: "dist",
-		tsconfig: "tsconfig.plugin.json",
-		dts: {
-			resolve: ["@cloudflare/config"],
-		},
 		ignoreWatch,
 	},
 	worker("asset-worker"),
@@ -71,6 +62,7 @@ function worker(name: string, options: UserConfig = {}): UserConfig {
 		entry: { index: `src/workers/${name}/index.ts` },
 		outDir: `dist/workers/${name}`,
 		platform: "neutral",
+		sourcemap,
 		inputOptions: {
 			resolve: {
 				mainFields: ["module", "main"],

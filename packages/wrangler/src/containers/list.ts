@@ -83,7 +83,7 @@ function renderContainerTable(apps: DashApplication[]) {
 				ID: app.id,
 				NAME: app.name,
 				STATE: colorState(state),
-				"LIVE INSTANCES": String(app.instances),
+				"LIVE INSTANCES": String(app.health.instances.active),
 				"LAST MODIFIED": app.updated_at,
 			};
 		})
@@ -230,6 +230,7 @@ export const containersListCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: listArgs,

@@ -55,7 +55,6 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(SCRIPT),
@@ -117,7 +116,6 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(SCRIPT),
@@ -176,7 +174,6 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(SCRIPT),
@@ -226,7 +223,6 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(SCRIPT),

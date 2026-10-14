@@ -9,7 +9,6 @@ test("version-metadata: provides id, tag, and timestamp", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2026-01-01",
 					env: { CF_VERSION_METADATA: { type: "version-metadata" } },
@@ -47,7 +46,6 @@ test("version-metadata: works with custom binding name", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2026-01-01",
 					env: { MY_VERSION: { type: "version-metadata" } },
@@ -85,7 +83,6 @@ test("version-metadata: timestamp is valid ISO date", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2026-01-01",
 					env: { CF_VERSION_METADATA: { type: "version-metadata" } },

@@ -1,9 +1,10 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import {
-	writeSettingsConfig,
+	writeRootConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
+import { isPreviewBuild } from "../build-output-env";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
@@ -23,18 +24,17 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				ctx.resolvedPluginConfig.type === "assets-only" &&
 				this.environment.name === "client"
 			) {
-				const defaultExport = ctx.resolvedPluginConfig.parsedNewConfig?.default;
 				const workerNewConfig =
-					defaultExport?.type === "worker" ? defaultExport : undefined;
+					ctx.resolvedPluginConfig.parsedNewConfig?.worker;
 				assert(
 					workerNewConfig,
-					"Expected a default worker export on assets-only resolved config"
+					"Expected a Worker on assets-only resolved config"
 				);
 				await writeWorkerConfig({
 					root: ctx.resolvedViteConfig.root,
 					config: workerNewConfig,
 				});
-				await writeSettings();
+				await writeRoot();
 				return;
 			}
 
@@ -95,30 +95,31 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					modules,
 				},
 			});
-			await writeSettings();
+			await writeRoot();
 		},
 	};
 
 	/**
-	 * Write the top-level `config.json`, recording the settings shared by every
+	 * Write the root `config.json`, recording the settings shared by every
 	 * Worker, including the Vite mode the build ran in.
 	 *
-	 * Written even when there is no `settings` export, so the mode is always
-	 * captured.
+	 * Written even when there are no account settings, so the build context is
+	 * always captured.
 	 */
-	async function writeSettings(): Promise<void> {
+	async function writeRoot(): Promise<void> {
 		if (ctx.resolvedPluginConfig.type === "preview") {
 			return;
 		}
-		const settingsExport = ctx.resolvedPluginConfig.parsedNewConfig?.settings;
-		const settings =
-			settingsExport?.type === "settings" ? settingsExport : undefined;
+		const config = ctx.resolvedPluginConfig.parsedNewConfig;
+		const settings = config && {
+			accountId: config.accountId,
+			complianceRegion: config.complianceRegion,
+		};
 
-		await writeSettingsConfig(
-			ctx.resolvedViteConfig.root,
-			settings,
-			ctx.resolvedViteConfig.mode
-		);
+		await writeRootConfig(ctx.resolvedViteConfig.root, settings, {
+			isPreview: isPreviewBuild(),
+			mode: ctx.resolvedViteConfig.mode,
+		});
 	}
 });
 

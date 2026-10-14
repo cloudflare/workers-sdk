@@ -35,9 +35,9 @@ type WorkerResponse = { id: number } & (
 
 const WORKER_SCRIPT = /* javascript */ `
 const { createRequire } = require("module");
-const { workerData } = require("worker_threads");
+const { parentPort, workerData } = require("worker_threads");
 
-// Not using parentPort here so we can call receiveMessageOnPort() in host
+// Requests use their own port so we can call receiveMessageOnPort() in host
 const { notifyHandle, port, filename } = workerData;
 
 // When running Miniflare from Jest, regular 'require("undici")' will fail here
@@ -45,6 +45,9 @@ const { notifyHandle, port, filename } = workerData;
 // 'require' using the '__filename' of the host... :(
 const actualRequire = createRequire(filename);
 const { Pool, fetch } = actualRequire("undici");
+
+// Lets SynchronousFetcher#warm() know requests can now be served
+parentPort.postMessage("ready");
 
 let dispatcherUrl;
 let dispatcher;
@@ -149,6 +152,7 @@ export class SynchronousFetcher {
 	readonly #channel: MessageChannel;
 	readonly #notifyHandle: Int32Array;
 	#worker?: Worker;
+	#ready?: Promise<void>;
 	#nextId = 0;
 
 	constructor() {
@@ -156,11 +160,21 @@ export class SynchronousFetcher {
 		this.#notifyHandle = new Int32Array(new SharedArrayBuffer(4));
 	}
 
+	/**
+	 * Starts the worker and resolves once it can serve requests, so the first
+	 * `fetch()` doesn't block the main thread while the worker boots.
+	 */
+	warm(): Promise<void> {
+		this.#ensureWorker();
+		assert(this.#ready !== undefined);
+		return this.#ready;
+	}
+
 	#ensureWorker() {
 		if (this.#worker !== undefined) {
 			return;
 		}
-		this.#worker = new Worker(WORKER_SCRIPT, {
+		const worker = new Worker(WORKER_SCRIPT, {
 			eval: true,
 			workerData: {
 				notifyHandle: this.#notifyHandle,
@@ -168,6 +182,18 @@ export class SynchronousFetcher {
 				filename: __filename,
 			},
 			transferList: [this.#channel.port2],
+		});
+		this.#worker = worker;
+		// Also settles if the worker exits first (e.g. dispose() during startup).
+		// No "error" listener, so a startup failure still surfaces as before.
+		this.#ready = new Promise((resolve) => {
+			const settle = () => {
+				worker.off("message", settle);
+				worker.off("exit", settle);
+				resolve();
+			};
+			worker.on("message", settle);
+			worker.on("exit", settle);
 		});
 	}
 

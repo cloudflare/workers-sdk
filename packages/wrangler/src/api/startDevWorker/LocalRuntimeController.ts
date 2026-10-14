@@ -234,6 +234,7 @@ export async function convertToConfigBundle(
 export type ContainerImagePreparationState = {
 	dockerPath: string;
 	complianceRegion: StartDevWorkerOptions["complianceRegion"];
+	hasContainers: boolean;
 	containerOptions: ContainerDevOptions[];
 };
 
@@ -311,6 +312,10 @@ export class LocalRuntimeController extends RuntimeController {
 		const nextState: ContainerImagePreparationState = {
 			dockerPath: data.config.dev.dockerPath ?? getDockerPath(),
 			complianceRegion: data.config.complianceRegion,
+			hasContainers: Boolean(
+				data.config.dev.enableContainers &&
+				data.config.containerDevPlan !== undefined
+			),
 			containerOptions: data.config.dev.enableContainers
 				? (data.config.containerDevPlan?.containerOptions ?? [])
 				: [],
@@ -318,15 +323,11 @@ export class LocalRuntimeController extends RuntimeController {
 
 		if (
 			isDeepStrictEqual(previousState, nextState) ||
-			nextState.containerOptions.length === 0
+			!nextState.hasContainers
 		) {
 			return nextState;
 		}
 
-		assert(
-			data.config.dev.containerBuildId,
-			"Build ID should be set when Container images require preparation"
-		);
 		this.dockerPath = nextState.dockerPath;
 		for (const { image_tag } of nextState.containerOptions) {
 			this.containerImageTagsSeen.add(image_tag);

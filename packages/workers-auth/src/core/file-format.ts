@@ -1,5 +1,5 @@
 import { parseTOML } from "@cloudflare/workers-utils";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 
 /**
  * On-disk serialization format for a CLI's config/credential files.

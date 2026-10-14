@@ -29,7 +29,6 @@ describe("D1 API", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(

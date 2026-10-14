@@ -57,22 +57,24 @@ const BINDING_LOCAL_SUPPORT: Record<
 	service: "local-and-remote",
 	// TODO: Miniflare currently ignores `remote: true` on queues, tracked in #13727.
 	queue: "local-and-remote",
+	flagship: "local-and-remote",
 
 	vectorize: "remote",
 	mtls_certificate: "remote",
 	dispatch_namespace: "remote",
 
 	// Reach out to the @cloudflare/wrangler team before adding anything here
+	k2: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	ai: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	ai_search: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	ai_search_namespace:
 		"DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	media: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	artifacts: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
-	flagship: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_service: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_network: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	agent_memory: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
+	analytics: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 };
 
 export function getBindingLocalSupport(

@@ -84,7 +84,8 @@ describe("containers ssh", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			      --stdio  Proxy SSH traffic over stdin/stdout  [boolean]"
+			      --stdio  Proxy SSH traffic over stdin/stdout  [boolean]
+			  -t, --tty    Force pseudo-terminal allocation, e.g. for interactive commands like \`-- bash\`  [boolean]"
 		`);
 	});
 

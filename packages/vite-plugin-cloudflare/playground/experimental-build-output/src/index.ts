@@ -1,4 +1,6 @@
-import { env } from "cloudflare:workers";
+import { DurableObject, env } from "cloudflare:workers";
+
+export class ApiContainer extends DurableObject {}
 
 export default {
 	fetch(request) {

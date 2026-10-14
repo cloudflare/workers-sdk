@@ -1,4 +1,5 @@
-import TOML from "smol-toml";
+import path from "node:path";
+import * as TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import type { Config, RawConfig } from "./config";
@@ -33,6 +34,7 @@ export type {
 	CacheOptions,
 	ConfiguredExport,
 	ConfigModuleRuleType,
+	DurableObjectCodeUpdateStrategy,
 	Environment,
 	PreviewsConfig,
 	RawEnvironment,
@@ -41,7 +43,6 @@ export type {
 export { partitionExports } from "./exports";
 export type { ExportType, PartitionedExports } from "./exports";
 export {
-	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
 	getDurableObjectClassNameToUseSQLiteMap,
@@ -71,7 +72,23 @@ export function configFormat(
 	return "none";
 }
 
-export function configFileName(configPath: string | undefined) {
+/**
+ * Returns the user-facing configuration filename.
+ *
+ * Redirected and generated configurations should pass `userConfigPath` so
+ * diagnostics refer to the file the user can actually edit.
+ *
+ * @param configPath Resolved configuration path used internally.
+ * @param userConfigPath Original user-authored configuration path.
+ * @returns The configuration filename to display.
+ */
+export function configFileName(
+	configPath: string | undefined,
+	userConfigPath?: string
+) {
+	if (userConfigPath !== undefined) {
+		return path.basename(userConfigPath);
+	}
 	const format = configFormat(configPath);
 	switch (format) {
 		case "toml":

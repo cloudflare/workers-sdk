@@ -10,7 +10,9 @@ import {
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
+import { buildOutputContainers } from "../build-output-containers";
 import {
+	applyWorkerEsbuildSupported,
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
@@ -103,6 +105,17 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				ctx.resolvedPluginConfig,
 				ctx.resolvedViteConfig
 			);
+
+			// Assets-only configs can still hold Worker environments (a prerender
+			// Worker), so this covers both resolved config types.
+			const {
+				environmentNameToWorkerMap,
+				environmentNameToChildEnvironmentNamesMap,
+			} = ctx.resolvedPluginConfig;
+			applyWorkerEsbuildSupported(resolvedViteConfig, [
+				...environmentNameToWorkerMap.keys(),
+				...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
+			]);
 
 			if (ctx.resolvedPluginConfig.experimental.newConfig?.cfBuildOutput) {
 				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
@@ -271,6 +284,11 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						);
 					}
 				}
+
+				await buildOutputContainers(
+					ctx.resolvedPluginConfig,
+					builder.config.root
+				);
 			},
 		},
 	};

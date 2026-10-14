@@ -6,9 +6,9 @@ import { Astro } from "../src/frameworks/astro";
 import { Static } from "../src/frameworks/static";
 import { buildOperationsSummary } from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
-import type { WorkerConfigInput } from "@cloudflare/config";
+import type { WorkerConfig } from "@cloudflare/config";
 
-const testWorkerConfig: WorkerConfigInput = {
+const testWorkerConfig: WorkerConfig = {
 	name: "worker-name",
 	compatibilityDate: "2026-08-04",
 	observability: {
@@ -241,13 +241,41 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				 - wrangler (devDependency)
 				`
 			);
-			expect(std.out).toContain('  import { defineWorker } from "cf/config";');
-			expect(std.out).toContain("  export default defineWorker({");
+			expect(std.out).toContain('  import { defineConfig } from "cf/config";');
+			expect(std.out).toContain("  export default defineConfig({");
 			expect(std.out).toContain(
 				'  import { defineWranglerConfig } from "wrangler/experimental-config";'
 			);
 			expect(std.out).toContain("  export default defineWranglerConfig({");
 		});
+
+		test.for([
+			{ target: "cf", plugin: "@cloudflare/vite-plugin@beta" },
+			{ target: "wrangler", plugin: "@cloudflare/vite-plugin" },
+		] as const)(
+			"shows that $plugin will be installed for $target",
+			async ({ target, plugin }, { expect }) => {
+				await buildOperationsSummary(
+					{
+						workerName: "worker-name",
+						projectPath: "<PROJECT_PATH>",
+						packageJson: { name: "my-project" },
+						configured: false,
+						outputDir: "dist",
+						framework: new Static({ id: "static", name: "Static" }),
+						packageManager: NpmPackageManager,
+					},
+					testWorkerConfig,
+					{ buildTool: "vite", workerConfig: testWorkerConfig },
+					{ build: "npm run build", deploy: `${target} deploy` },
+					false,
+					target,
+					context
+				);
+
+				expect(std.out).toContain(` - ${plugin} (devDependency)`);
+			}
+		);
 
 		test("shows that when needed a framework specific configuration will be run", async ({
 			expect,

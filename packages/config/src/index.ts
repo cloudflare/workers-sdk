@@ -1,6 +1,7 @@
 export * from "./public";
 export {
 	AnalyticsEngineDatasetBindingSchema,
+	AnalyticsSQLBindingSchema,
 	AssetsSchema,
 	BindingSchema,
 	BrowserBindingSchema,
@@ -11,13 +12,14 @@ export {
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
 	ExportSchema,
+	InputConfigSchema,
 	InputContainerSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
 	KnownBindingSchema,
 	KVBindingSchema,
 	OutputContainerSchema,
-	OutputSettingsSchema,
+	OutputRootConfigSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
 	QueueBindingSchema,
@@ -29,26 +31,33 @@ export {
 	validateSingletonBindings,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowBindingSchema,
+	WorkflowExportSchema,
 } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
 export {
-	loadAndValidateConfig,
-	resolveAndValidateConfigExports,
+	loadAndParseConfig,
+	loadAndParseConfigSettings,
+	resolveAndParseConfig,
+	resolveAndParseConfigSettings,
 } from "./config-loader";
 export type { LoadConfigResult } from "./load";
 export type {
 	ConfigParseResult,
-	LoadAndValidateConfigResult,
-	ParsedConfigExports,
+	ConfigSettingsParseResult,
+	LoadAndParseConfigSettingsResult,
+	LoadAndParseConfigResult,
 } from "./config-loader";
 export type {
+	InputWorkerConfig,
+	ParsedInputConfig,
 	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputContainerConfig,
-	ParsedOutputSettingsConfig,
+	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 	ModuleType,
 } from "./schema";

@@ -8,8 +8,6 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { release } from "node:os";
 import { UserError } from "@cloudflare/workers-utils/errors";
-import { dockerImageInspect } from "./inspect";
-import type { ContainerDevOptions } from "./types";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -88,7 +86,12 @@ export const runDockerCmd = (
 
 export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 	try {
-		const stdout = execFileSync(dockerPath, args, { encoding: "utf8" });
+		const stdout = execFileSync(dockerPath, args, {
+			encoding: "utf8",
+			// Without an explicit `stdio`, Node echoes the child's stderr to ours.
+			// A failure still carries that stderr in the thrown error message.
+			stdio: "pipe",
+		});
 		return stdout.trim();
 	} catch (error) {
 		throw new UserError(
@@ -352,35 +355,6 @@ export const getContainerIdsFromImage = (
 	]);
 	return output.split("\n").filter((line) => line.trim());
 };
-
-/**
- * While all ports are exposed in prod, a limitation of local dev with docker is that
- * users will have to manually expose ports in their Dockerfile.
- * We want to fail early and clearly if a user tries to develop with a container
- * that has no ports exposed and is definitely not accessible.
- *
- * (A user could still use `getTCPPort()` on a port that is not exposed, but we leave that error for runtime.)
- */
-export async function checkExposedPorts(
-	dockerPath: string,
-	options: ContainerDevOptions
-) {
-	const output = await dockerImageInspect(dockerPath, {
-		imageTag: options.image_tag,
-		formatString: "{{ len .Config.ExposedPorts }}",
-	});
-	if (output === "0") {
-		const containerName =
-			options.image_name === undefined
-				? options.class_name
-				: `${options.class_name}.${options.image_name}`;
-		throw new UserError(
-			`The container "${containerName}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
-				"For additional information please see: https://developers.cloudflare.com/containers/local-dev/#exposing-ports.\n",
-			{ telemetryMessage: false }
-		);
-	}
-}
 
 /**
  * Generates a random container build id

@@ -12,7 +12,7 @@
 // wrangler boundary.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import type { ContainerConfigExport } from "./container-definition";
+import type { ContainerDefinition } from "./definition";
 
 /**
  * Storage backend for the Durable Object.
@@ -21,8 +21,8 @@ import type { ContainerConfigExport } from "./container-definition";
  * only offered alongside `storage: "sqlite"`.
  */
 export type DurableObjectStorageOptions<
-	TContainer extends ContainerConfigExport | undefined =
-		| ContainerConfigExport
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
 		| undefined,
 > =
 	| {
@@ -50,8 +50,8 @@ export type DurableObjectStorageOptions<
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
 export type DurableObjectCreatedExportOptions<
-	TContainer extends ContainerConfigExport | undefined =
-		| ContainerConfigExport
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
 		| undefined,
 > = {
 	state?: "created";
@@ -100,8 +100,8 @@ export interface DurableObjectTransferredExportOptions {
  * Once the source Worker's `transferred` export is deployed, this entry becomes a normal live `durable-object` export.
  */
 export type DurableObjectExpectingTransferExportOptions<
-	TContainer extends ContainerConfigExport | undefined =
-		| ContainerConfigExport
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
 		| undefined,
 > = {
 	state: "expecting-transfer";
@@ -114,8 +114,8 @@ export type DurableObjectExpectingTransferExportOptions<
 // A type intersection rather than an `interface ... extends`, because the
 // options are a union over `storage` and an interface cannot extend a union.
 export type DurableObjectCreatedExport<
-	TContainer extends ContainerConfigExport | undefined =
-		| ContainerConfigExport
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
 		| undefined,
 > = DurableObjectCreatedExportOptions<TContainer> & { type: "durable-object" };
 export interface DurableObjectDeletedExport extends DurableObjectDeletedExportOptions {
@@ -129,8 +129,8 @@ export interface DurableObjectTransferredExport extends DurableObjectTransferred
 }
 
 export type DurableObjectExpectingTransferExport<
-	TContainer extends ContainerConfigExport | undefined =
-		| ContainerConfigExport
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
 		| undefined,
 > = DurableObjectExpectingTransferExportOptions<TContainer> & {
 	type: "durable-object";
@@ -161,6 +161,39 @@ export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 	type: "worker";
 }
 
+export interface WorkflowExportOptions {
+	/**
+	 * The name of the Workflow. It identifies the Workflow's instances and must
+	 * be unique within the account.
+	 */
+	name: string;
+	limits?: {
+		/** Maximum number of steps a single Workflow instance may run. */
+		steps?: number;
+	};
+	concurrency?: {
+		/** Maximum number of Workflow instances that can run concurrently. */
+		limit?: number;
+	};
+	/** Cron schedule(s) that automatically trigger Workflow instances. */
+	schedules?: string | string[];
+	/**
+	 * Default retention for instances of this Workflow, applied when an instance
+	 * does not set its own retention. Accepts milliseconds or a duration string
+	 * such as `"3 days"`.
+	 */
+	defaultRetention?: {
+		/** How long to retain instances that completed successfully or were terminated. */
+		successRetention?: number | string;
+		/** How long to retain errored instances. */
+		errorRetention?: number | string;
+	};
+}
+
+export interface WorkflowExport extends WorkflowExportOptions {
+	type: "workflow";
+}
+
 /**
  * Configuration for named exports declared by the Worker. Each entry's
  * key is the exported class name; the value configures the export.
@@ -174,9 +207,7 @@ export interface Exports {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
-	durableObject<
-		TContainer extends ContainerConfigExport | undefined = undefined,
-	>(
+	durableObject<TContainer extends ContainerDefinition | undefined = undefined>(
 		options: DurableObjectCreatedExportOptions<TContainer>
 	): DurableObjectCreatedExport<TContainer>;
 	/**
@@ -201,9 +232,7 @@ export interface Exports {
 	 * Prepare to receive cross-Worker Durable Object transfer.
 	 * The source Worker must follow up with a deployment containing a `transferred` export to commit the transfer.
 	 */
-	durableObject<
-		TContainer extends ContainerConfigExport | undefined = undefined,
-	>(
+	durableObject<TContainer extends ContainerDefinition | undefined = undefined>(
 		options: DurableObjectExpectingTransferExportOptions<TContainer>
 	): DurableObjectExpectingTransferExport<TContainer>;
 	// Fallback overload. TypeScript only reaches this when none of the precise
@@ -219,10 +248,19 @@ export interface Exports {
 
 	/** Declares a WorkerEntrypoint export defined by this Worker. */
 	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
+
+	/**
+	 * Declares a Workflow defined by this Worker. The export's key must name a
+	 * class that extends `WorkflowEntrypoint`.
+	 *
+	 * For more information about Workflows, see the documentation at
+	 * https://developers.cloudflare.com/workflows/
+	 */
+	workflow(options: WorkflowExportOptions): WorkflowExport;
 }
 
 function durableObject<
-	TContainer extends ContainerConfigExport | undefined = undefined,
+	TContainer extends ContainerDefinition | undefined = undefined,
 >(
 	options: DurableObjectCreatedExportOptions<TContainer>
 ): DurableObjectCreatedExport<TContainer>;
@@ -236,7 +274,7 @@ function durableObject(
 	options: DurableObjectTransferredExportOptions
 ): DurableObjectTransferredExport;
 function durableObject<
-	TContainer extends ContainerConfigExport | undefined = undefined,
+	TContainer extends ContainerDefinition | undefined = undefined,
 >(
 	options: DurableObjectExpectingTransferExportOptions<TContainer>
 ): DurableObjectExpectingTransferExport<TContainer>;
@@ -257,19 +295,23 @@ function worker(
 	return { type: "worker", ...options };
 }
 
+function workflow(options: WorkflowExportOptions): WorkflowExport {
+	return { type: "workflow", ...options };
+}
+
 /**
  * Exports builder for configuring Worker exports.
  *
  * @example
  * ```typescript
- * import { defineContainer, defineWorker, exports } from "@cloudflare/config";
+ * import { defineConfig, defineContainer, defineWorker, exports } from "@cloudflare/config";
  *
  * const myContainer = defineContainer({
  *   name: "my-container",
  *   image: { dockerfile: "./Dockerfile" },
  * });
  *
- * export default defineWorker({
+ * const worker = defineWorker({
  *   exports: {
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
  *     MyContainerDO:   exports.durableObject({ storage: "sqlite", container: myContainer }),
@@ -277,11 +319,15 @@ function worker(
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
  *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),
  *     Incoming:        exports.durableObject({ state: "expecting-transfer", storage: "sqlite", transferFrom: "source-worker" }),
+ *     MyWorkflow:      exports.workflow({ name: "my-workflow", limits: { steps: 100 }, schedules: "0 * * * *" }),
  *   },
  * });
+ *
+ * export default defineConfig({ worker, containers: [myContainer] });
  * ```
  */
 export const exports: Exports = {
 	durableObject,
 	worker,
+	workflow,
 };

@@ -15,20 +15,22 @@ import type {
 export const REPLACE_ME = "<REPLACE_ME>";
 
 export type PreviewTopLevelSettings = {
-	[K in keyof Pick<
-		Environment,
-		| "define"
-		| "observability"
-		| "logpush"
-		| "limits"
-		| "placement"
-		| "cache"
-		| "containers"
-		| "tail_consumers"
-		| "streaming_tail_consumers"
-		| "queues"
-		| "triggers"
-	>]: Environment[K] | undefined;
+	[
+		K in keyof Pick<
+			Environment,
+			| "define"
+			| "observability"
+			| "logpush"
+			| "limits"
+			| "placement"
+			| "cache"
+			| "containers"
+			| "tail_consumers"
+			| "streaming_tail_consumers"
+			| "queues"
+			| "triggers"
+		>
+	]: Environment[K] | undefined;
 };
 
 export type PreviewSettingConversion =
@@ -427,6 +429,9 @@ export function convertBinding(
 		case "browser":
 			config = { browser: { binding: name } };
 			break;
+		case "analytics":
+			config = { analytics: { binding: name } };
+			break;
 		case "ai":
 			config = {
 				ai: {
@@ -668,6 +673,19 @@ export function convertBinding(
 						...(binding.pipeline !== undefined && {
 							pipeline: usePlaceholderValue ? REPLACE_ME : binding.pipeline,
 						}),
+					},
+				],
+			};
+			break;
+		case "k2":
+			if (binding.stream === undefined) {
+				break;
+			}
+			config = {
+				k2: [
+					{
+						binding: name,
+						stream: usePlaceholderValue ? REPLACE_ME : binding.stream,
 					},
 				],
 			};

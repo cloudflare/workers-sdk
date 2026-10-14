@@ -72,7 +72,6 @@ describe("Durable Object Wrapper", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "",
 							compatibilityDate: "2024-04-03",
 							compatibilityFlags: ["nodejs_compat"],

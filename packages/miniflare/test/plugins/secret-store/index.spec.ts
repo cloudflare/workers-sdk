@@ -7,7 +7,6 @@ test("single secret-store", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-01-01",
 					env: {
@@ -55,7 +54,6 @@ test("multiple secret-store", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-01-01",
 					env: {

@@ -34,6 +34,27 @@ export type BuiltContainerImage = BuiltImage & {
 	container: DockerfileContainerConfig;
 };
 
+const MAX_DOCKER_REPOSITORY_NAME_LENGTH = 255;
+
+export function normalizeContainerImageRepositoryName(value: string): string {
+	return (
+		value
+			.toLowerCase()
+			.replace(/[^a-z0-9._-]+/g, "-")
+			.replace(/[._-]+/g, (separators) =>
+				separators === "." ||
+				separators === "_" ||
+				separators === "__" ||
+				/^-+$/.test(separators)
+					? separators
+					: "-"
+			)
+			.replace(/^[._-]+|[._-]+$/g, "")
+			.slice(0, MAX_DOCKER_REPOSITORY_NAME_LENGTH)
+			.replace(/[._-]+$/g, "") || "container"
+	);
+}
+
 export function isDockerfileContainerConfig(
 	container: ContainerNormalizedConfig
 ): container is DockerfileContainerConfig {
@@ -261,7 +282,7 @@ export async function pushImageIfChanged({
 	pathToDocker: string;
 	sourceTag: string;
 	targetTag: string;
-	containerConfig?: DockerfileContainerConfig;
+	containerConfig?: ContainerNormalizedConfig;
 	accountId?: string;
 	complianceConfig?: ComplianceConfig;
 	cleanupSourceTag?: boolean;
@@ -332,11 +353,12 @@ export async function pushImageIfChanged({
 
 		if (parsedRemoteManifest.Descriptor.digest === hash) {
 			logger.log("Image already exists remotely, skipping push");
-			logger.debug(
-				`Untagging built image: ${sourceTag} since there was no change.`
-			);
-
-			await runDockerCmd(pathToDocker, ["image", "rm", sourceTag]);
+			if (cleanupSourceTag !== false) {
+				logger.debug(
+					`Untagging built image: ${sourceTag} since there was no change.`
+				);
+				await runDockerCmd(pathToDocker, ["image", "rm", sourceTag]);
+			}
 
 			return { remoteDigest };
 		}

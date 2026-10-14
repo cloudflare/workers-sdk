@@ -12,6 +12,7 @@ import type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
+	AnalyticsSQLBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,
@@ -22,6 +23,7 @@ import type {
 	HyperdriveBinding,
 	ImagesBinding,
 	JsonBinding,
+	K2Binding,
 	KvBinding,
 	LogfwdrBinding,
 	MediaBinding,
@@ -42,9 +44,9 @@ import type {
 	VpcServiceBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
-	// TODO: re-enable when workflow bindings return.
-	// WorkflowBinding,
+	WorkflowBinding,
 } from "./bindings";
+import type { ConfigInput } from "./definition";
 import type {
 	DurableObjectDeletedExport,
 	DurableObjectExpectingTransferExport,
@@ -52,6 +54,7 @@ import type {
 	DurableObjectRenamedExport,
 	DurableObjectTransferredExport,
 	WorkerEntrypointExport,
+	WorkflowExport,
 } from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
@@ -62,6 +65,28 @@ import type {
 	ScheduledTrigger,
 } from "./triggers";
 
+/** Account-level values shared by the resources in a configuration. */
+export interface Settings {
+	/**
+	 * This is the ID of the account associated with your zone. It can also be
+	 * specified through the `CLOUDFLARE_ACCOUNT_ID` environment variable.
+	 */
+	accountId?: string;
+	/**
+	 * The compliance boundary in which commands should operate. When omitted,
+	 * this can be supplied through `CLOUDFLARE_COMPLIANCE_REGION`.
+	 */
+	complianceRegion?: "public" | "fedramp-high";
+}
+
+/** The authored shape of `cloudflare.config.ts`'s default export. */
+export interface CloudflareConfig extends Settings {
+	/** The Worker defined by this configuration. */
+	worker?: ConfigInput<WorkerConfig>;
+	/** Container applications defined by this configuration. */
+	containers?: ConfigInput<ContainerConfig>[];
+}
+
 /**
  * Union of all binding definitions accepted in `env`.
  */
@@ -71,6 +96,7 @@ type Binding =
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
 	| AnalyticsEngineDatasetBinding
+	| AnalyticsSQLBinding
 	| ArtifactsBinding
 	| AssetsBinding
 	| BrowserBinding
@@ -81,6 +107,7 @@ type Binding =
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding
+	| K2Binding
 	| KvBinding
 	| LogfwdrBinding
 	| MediaBinding
@@ -100,9 +127,8 @@ type Binding =
 	| VpcNetworkBinding
 	| VpcServiceBinding
 	| WorkerBinding
-	| WorkerLoaderBinding;
-// TODO: re-enable when workflow bindings return.
-// | WorkflowBinding;
+	| WorkerLoaderBinding
+	| WorkflowBinding;
 
 /**
  * Union of all trigger definitions accepted in `triggers`.
@@ -117,7 +143,8 @@ type Trigger =
 /**
  * Union of all export definitions accepted in `exports`. Worker entries
  * configure WorkerEntrypoint exports. Durable Object entries configure live
- * classes and tombstone lifecycle operations.
+ * classes and tombstone lifecycle operations. Workflow entries declare the
+ * Workflows defined by the Worker.
  */
 type Export =
 	| DurableObjectCreatedExport
@@ -125,8 +152,8 @@ type Export =
 	| DurableObjectRenamedExport
 	| DurableObjectTransferredExport
 	| DurableObjectExpectingTransferExport
-	| WorkerEntrypointExport;
-// TODO: support Workflows
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /** An image source accepted in an authored Container configuration. */
 type ContainerImage =
@@ -152,33 +179,19 @@ type ContainerImage =
 			reference: string;
 	  };
 
-/** Fields shared by all Container application configurations. */
-interface BaseContainerConfig {
-	/**
-	 * Discriminates this config as a Container config.
-	 *
-	 * Injected automatically by `defineContainer`; only needs to be written by
-	 * hand when authoring a raw config object without the helper.
-	 */
-	type: "container";
-
-	/**
-	 * Name of the application.
-	 *
-	 * This is also the identifier used to reference the Container from a Durable
-	 * Object's `exports` entry via its `container` field.
-	 */
-	name: string;
-
-	/** Configures observability for Container instances. */
-	observability?: {
-		/** Whether observability is enabled. */
+/** Application-wide observability settings shared by all Containers. */
+export interface ContainerObservabilityConfig {
+	/** Whether observability is enabled. */
+	enabled?: boolean;
+	logs?: {
+		/** Whether log collection is enabled. */
 		enabled?: boolean;
-		logs?: {
-			/** Whether log collection is enabled. */
-			enabled?: boolean;
-		};
-	} & (
+	};
+}
+
+/** Observability settings for a standard Container application. */
+type StandardContainerObservabilityConfig = ContainerObservabilityConfig &
+	(
 		| {
 				/** Percentage of Container instances targeted for observability. */
 				targetInstancePercentage?: number;
@@ -191,16 +204,48 @@ interface BaseContainerConfig {
 		  }
 	);
 
+/** Fields shared by all Container application configurations. */
+interface BaseContainerConfig {
+	/**
+	 * Name of the application.
+	 *
+	 * This is also the identifier used to reference the Container from a Durable
+	 * Object's `exports` entry via its `container` field.
+	 */
+	name: string;
+
 	/**
 	 * Passed through without client-side validation or transformation.
 	 *
 	 * @hidden
 	 */
 	unsafe?: Record<string, unknown>;
+
+	ssh?: {
+		/**
+		 * If enabled, users with write access to the Container application can
+		 * connect to it over SSH.
+		 *
+		 * @default true
+		 */
+		enabled: boolean;
+		/**
+		 * Port that the SSH service is running on.
+		 *
+		 * @default 22
+		 */
+		port?: number;
+	};
+
+	/** SSH public keys to put in the Container's authorized_keys file. */
+	authorizedKeys?: Array<{ name: string; publicKey: string }>;
 }
 
 /** A Container application managed with a standard scheduling policy. */
-interface StandardContainerConfig extends BaseContainerConfig {
+export interface StandardContainerConfig extends BaseContainerConfig {
+	/** Configures observability and optional targeting for Container instances. */
+	observability?: StandardContainerObservabilityConfig;
+
 	/** The image to build or deploy. */
 	image: ContainerImage;
 
@@ -250,25 +295,6 @@ interface StandardContainerConfig extends BaseContainerConfig {
 	 */
 	schedulingPolicy?: "default" | "regional";
 
-	ssh?: {
-		/**
-		 * If enabled, users with write access to the Container application can
-		 * connect to it over SSH.
-		 *
-		 * @default false
-		 */
-		enabled: boolean;
-		/**
-		 * Port that the SSH service is running on.
-		 *
-		 * @default 22
-		 */
-		port?: number;
-	};
-
-	/** SSH public keys to put in the Container's authorized_keys file. */
-	authorizedKeys?: Array<{ name: string; publicKey: string }>;
-
 	/** Scheduling constraints for Container placement. */
 	constraints?: {
 		/** Limit Container placement to specific geographic regions. */
@@ -276,7 +302,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 			"ENAM" | "WNAM" | "EEUR" | "WEUR" | "APAC" | "SAM" | "ME" | "OC" | "AFR"
 		>;
 		/** Restrict Containers to compliance boundaries. */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 	};
 
 	rollout?: {
@@ -317,15 +343,20 @@ interface StandardContainerConfig extends BaseContainerConfig {
 }
 
 /** A Container application managed by a Durable Object. */
-interface DurableObjectContainerConfig extends BaseContainerConfig {
+export interface DurableObjectContainerConfig extends BaseContainerConfig {
 	schedulingPolicy: "durable-object";
+	/**
+	 * Configures application-wide observability. Instance targeting is not
+	 * supported for Durable Object-managed Containers.
+	 */
+	observability?: ContainerObservabilityConfig;
 	/** Named images that the Durable Object can start. */
 	images?: Record<string, ContainerImage>;
 }
 
 /**
  * Container application configuration. This is the input shape passed to
- * `defineContainer` and is validated at runtime by `InputContainerSchema`.
+ * `defineContainer` and parsed at runtime by `InputContainerSchema`.
  */
 export type ContainerConfig =
 	| DurableObjectContainerConfig
@@ -335,18 +366,10 @@ export type ContainerConfig =
  * Worker configuration. This is the input shape passed to
  * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *
- * Fields are validated at runtime by `InputWorkerSchema` and normalised before
+ * Fields are parsed and normalised at runtime by `InputWorkerSchema` before
  * being passed to downstream tooling.
  */
 export interface WorkerConfig {
-	/**
-	 * Discriminates this config as a Worker config.
-	 *
-	 * Injected automatically by `defineWorker`; only needs to be written by
-	 * hand when authoring a raw config object without the helper.
-	 */
-	type: "worker";
-
 	/**
 	 * The name of your Worker.
 	 */
@@ -378,8 +401,10 @@ export interface WorkerConfig {
 	 *
 	 * @example
 	 * ```ts
+	 * import { defineConfig, defineWorker } from "@cloudflare/config";
 	 * import * as entrypoint from "./src" with { type: "cf-worker" };
-	 * export default defineWorker({ entrypoint });
+	 * const worker = defineWorker({ entrypoint });
+	 * export default defineConfig({ worker });
 	 * ```
 	 */
 	entrypoint?: string | WorkerModule;
@@ -401,6 +426,11 @@ export interface WorkerConfig {
 
 		/** How to handle requests that do not match an asset. */
 		notFoundHandling?: "single-page-application" | "404-page" | "none";
+
+		/**
+		 * The public URL prefix under which the application is served.
+		 */
+		basePath?: string;
 
 		/**
 		 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
@@ -547,6 +577,19 @@ export interface WorkerConfig {
 	};
 
 	/**
+	 * Cloudflare Access configuration for this Worker.
+	 */
+	access?: {
+		/** Local development simulation of Cloudflare Access authentication. */
+		dev?: {
+			/** The Access application audience tag (`aud`). */
+			aud: string;
+			/** Mock identity returned by `ctx.access.getIdentity()`. */
+			identity?: Record<string, unknown>;
+		};
+	};
+
+	/**
 	 * Whether we use `<name>.<subdomain>.workers.dev` to
 	 * test and deploy your Worker.
 	 *
@@ -602,53 +645,26 @@ export interface WorkerConfig {
 
 	/**
 	 * Bindings exposed on the Worker's `env` object. Construct entries with
-	 * `bindings.kv(...)`, `bindings.r2(...)`, etc.
+	 * `bindings.kv(...)`, `bindings.r2(...)`, etc. Entries set to `false`,
+	 * `null`, or `undefined` are omitted, which allows bindings to be included
+	 * conditionally.
 	 */
-	env?: Record<string, Binding>;
+	env?: Record<string, Binding | false | null | undefined>;
 
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's
 	 * key is the exported class name; the value configures the export.
-	 *
-	 * Only one export kind is currently supported:
 	 *
 	 * - Construct entries with `exports.durableObject(...)`.
 	 * - Declares Durable Object classes exported from this Worker.
 	 *   For more information about Durable Objects, see the documentation at
 	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects.
 	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
+	 *
+	 * - Construct entries with `exports.workflow(...)`.
+	 * - Declares Workflows defined by this Worker.
+	 *   For more information about Workflows, see the documentation at
+	 *   https://developers.cloudflare.com/workflows/.
 	 */
 	exports?: Record<string, Export>;
-}
-
-/**
- * Settings shared by the other exports.
- * Authored as a named `settings` export via
- * `defineSettings`.
- */
-export interface SettingsConfig {
-	/**
-	 * Discriminates this config as a settings config.
-	 *
-	 * Injected automatically by `defineSettings`; only needs to be written by
-	 * hand when authoring a raw config object without the helper.
-	 */
-	type: "settings";
-
-	/**
-	 * This is the ID of the account associated with your zone.
-	 * You might have more than one account, so make sure to use
-	 * the ID of the account associated with the zone/route you
-	 * provide, if you provide one. It can also be specified through
-	 * the CLOUDFLARE_ACCOUNT_ID environment variable.
-	 */
-	accountId?: string;
-
-	/**
-	 * Specify the compliance region mode of the Worker.
-	 *
-	 * Although if the user does not specify a compliance region, the default is `public`,
-	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
-	 */
-	complianceRegion?: "public" | "fedramp-high";
 }

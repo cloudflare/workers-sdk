@@ -43,6 +43,7 @@ ${runtimeTypes}`
 		await writeFile(
 			testSourcePath,
 			`import {
+	adminSecretsStore,
 	createExecutionContext,
 	createMessageBatch,
 	createPagesEventContext,
@@ -114,6 +115,12 @@ void createPagesEventContext<Handler>({
 	params: { id: "test" },
 	data: { value: "test" },
 });
+
+declare const secret: { get(): Promise<string> };
+{
+	using admin = adminSecretsStore(secret);
+	void admin.list();
+}
 `
 		);
 

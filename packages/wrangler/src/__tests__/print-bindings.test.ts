@@ -4,10 +4,14 @@ import { describe, it } from "vitest";
 import { printBindings } from "../utils/print-bindings";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 
-function callPrintBindings(bindings: StartDevWorkerInput["bindings"]) {
+function callPrintBindings(
+	bindings: StartDevWorkerInput["bindings"],
+	local = false
+) {
 	const lines: string[] = [];
 	printBindings(bindings, {
 		log: (msg: string) => lines.push(msg),
+		local,
 	});
 	return lines.map((l) => stripVTControlCharacters(l)).join("\n");
 }
@@ -141,6 +145,33 @@ describe("printBindings — AI Search bindings", () => {
 		expect(output).toContain("MEMORY");
 		expect(output).toContain("(inherited)");
 		expect(output).not.toContain("Symbol(inherit_binding)");
+	});
+});
+
+describe("printBindings -- Flagship bindings", () => {
+	it("shows Flagship bindings as local by default", ({ expect }) => {
+		const output = callPrintBindings(
+			{ FLAGS: { type: "flagship", app_id: "my-app" } },
+			true
+		);
+
+		expect(output).toContain("FLAGS");
+		expect(output).toContain("Flagship");
+		expect(output).toContain("my-app");
+		expect(output).toContain("local");
+		expect(output).not.toContain("remote");
+	});
+
+	it("shows Flagship bindings as remote when `remote: true` is set", ({
+		expect,
+	}) => {
+		const output = callPrintBindings(
+			{ FLAGS: { type: "flagship", app_id: "my-app", remote: true } },
+			true
+		);
+
+		expect(output).toContain("remote");
+		expect(output).not.toContain("local");
 	});
 });
 

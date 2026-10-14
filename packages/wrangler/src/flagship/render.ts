@@ -5,6 +5,7 @@ import {
 	dim,
 	gray,
 	green,
+	red,
 	white,
 } from "@cloudflare/cli-shared-helpers/colors";
 import type { App, ChangelogEntry, Condition, Flag, Rule } from "./client";
@@ -117,9 +118,13 @@ export function renderChangelogEntry(entry: ChangelogEntry): string {
 }
 
 export function renderEvaluation(result: EvaluationResult): string {
-	const reason = result.reason
-		? (result.reason === "DISABLED" ? gray : brandColor)(result.reason)
-		: dim("(unknown)");
+	const reasonColor =
+		result.reason === "DISABLED"
+			? gray
+			: result.reason === "ERROR"
+				? red
+				: brandColor;
+	const reason = result.reason ? reasonColor(result.reason) : dim("(unknown)");
 	return [
 		`🚩 ${bold(white(result.flagKey))}  ${brandColor("evaluated")}`,
 		`${INDENT}${gray("Value")}    ${formatValue(result.value)}`,

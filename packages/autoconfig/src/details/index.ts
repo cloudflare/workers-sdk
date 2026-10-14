@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, statSync, type Stats } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
@@ -41,15 +41,43 @@ export function assertNonConfigured(
 	);
 }
 
-async function hasIndexHtml(dir: string): Promise<boolean> {
-	const children = await readdir(dir);
-	for (const child of children) {
-		const stats = await stat(join(dir, child));
-		if (stats.isFile() && child === "index.html") {
-			return true;
+function isExpectedFileSystemError(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error.code === "ENOENT" ||
+			error.code === "ENOTDIR" ||
+			error.code === "EACCES" ||
+			error.code === "EPERM")
+	);
+}
+
+async function getPathStats(path: string): Promise<Stats | undefined> {
+	try {
+		return await stat(path);
+	} catch (error) {
+		if (isExpectedFileSystemError(error)) {
+			return undefined;
 		}
+		throw error;
 	}
-	return false;
+}
+
+async function hasIndexHtml(dir: string): Promise<boolean> {
+	const stats = await getPathStats(join(dir, "index.html"));
+	if (!stats?.isFile()) {
+		return false;
+	}
+
+	try {
+		return (await readdir(dir)).includes("index.html");
+	} catch (error) {
+		if (isExpectedFileSystemError(error)) {
+			return false;
+		}
+		throw error;
+	}
 }
 
 /**
@@ -64,8 +92,8 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 	const children = await readdir(from);
 	for (const child of children) {
 		const path = join(from, child);
-		const stats = await stat(path);
-		if (stats.isDirectory() && (await hasIndexHtml(path))) {
+		const stats = await getPathStats(path);
+		if (stats?.isDirectory() && (await hasIndexHtml(path))) {
 			return relative(from, path);
 		}
 	}
