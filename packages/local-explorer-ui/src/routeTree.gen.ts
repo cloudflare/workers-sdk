@@ -14,6 +14,7 @@ import { Route as CronTriggersRouteImport } from './routes/cron-triggers'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ObservabilityIndexRouteImport } from './routes/observability/index'
 import { Route as CronTriggersIndexRouteImport } from './routes/cron-triggers/index'
+import { Route as WorkflowsConcurrencyRouteImport } from './routes/workflows/concurrency'
 import { Route as WorkflowsWorkflowNameRouteImport } from './routes/workflows/$workflowName'
 import { Route as R2BucketNameRouteImport } from './routes/r2/$bucketName'
 import { Route as ObservabilityEventsRouteImport } from './routes/observability/events'
@@ -58,6 +59,11 @@ const CronTriggersIndexRoute = CronTriggersIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CronTriggersRoute,
+} as any)
+const WorkflowsConcurrencyRoute = WorkflowsConcurrencyRouteImport.update({
+  id: '/workflows/concurrency',
+  path: '/workflows/concurrency',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const WorkflowsWorkflowNameRoute = WorkflowsWorkflowNameRouteImport.update({
   id: '/workflows/$workflowName',
@@ -172,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/observability/events': typeof ObservabilityEventsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
   '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
+  '/workflows/concurrency': typeof WorkflowsConcurrencyRoute
   '/cron-triggers/': typeof CronTriggersIndexRoute
   '/observability/': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/flagship/$appId': typeof FlagshipAppIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/observability/events': typeof ObservabilityEventsRoute
+  '/workflows/concurrency': typeof WorkflowsConcurrencyRoute
   '/cron-triggers': typeof CronTriggersIndexRoute
   '/observability': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/observability/events': typeof ObservabilityEventsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
   '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
+  '/workflows/concurrency': typeof WorkflowsConcurrencyRoute
   '/cron-triggers/': typeof CronTriggersIndexRoute
   '/observability/': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/observability/events'
     | '/r2/$bucketName'
     | '/workflows/$workflowName'
+    | '/workflows/concurrency'
     | '/cron-triggers/'
     | '/observability/'
     | '/do/$className/$objectId'
@@ -269,6 +279,7 @@ export interface FileRouteTypes {
     | '/flagship/$appId'
     | '/kv/$namespaceId'
     | '/observability/events'
+    | '/workflows/concurrency'
     | '/cron-triggers'
     | '/observability'
     | '/do/$className/$objectId'
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/observability/events'
     | '/r2/$bucketName'
     | '/workflows/$workflowName'
+    | '/workflows/concurrency'
     | '/cron-triggers/'
     | '/observability/'
     | '/do/$className/$objectId'
@@ -318,6 +330,7 @@ export interface RootRouteChildren {
   ObservabilityEventsRoute: typeof ObservabilityEventsRoute
   R2BucketNameRoute: typeof R2BucketNameRouteWithChildren
   WorkflowsWorkflowNameRoute: typeof WorkflowsWorkflowNameRouteWithChildren
+  WorkflowsConcurrencyRoute: typeof WorkflowsConcurrencyRoute
   ObservabilityIndexRoute: typeof ObservabilityIndexRoute
 }
 
@@ -357,6 +370,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cron-triggers/'
       preLoaderRoute: typeof CronTriggersIndexRouteImport
       parentRoute: typeof CronTriggersRoute
+    }
+    '/workflows/concurrency': {
+      id: '/workflows/concurrency'
+      path: '/workflows/concurrency'
+      fullPath: '/workflows/concurrency'
+      preLoaderRoute: typeof WorkflowsConcurrencyRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/workflows/$workflowName': {
       id: '/workflows/$workflowName'
@@ -590,6 +610,7 @@ const rootRouteChildren: RootRouteChildren = {
   ObservabilityEventsRoute: ObservabilityEventsRoute,
   R2BucketNameRoute: R2BucketNameRouteWithChildren,
   WorkflowsWorkflowNameRoute: WorkflowsWorkflowNameRouteWithChildren,
+  WorkflowsConcurrencyRoute: WorkflowsConcurrencyRoute,
   ObservabilityIndexRoute: ObservabilityIndexRoute,
 }
 export const routeTree = rootRouteImport

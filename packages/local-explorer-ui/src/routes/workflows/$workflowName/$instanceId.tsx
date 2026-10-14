@@ -4,6 +4,7 @@ import {
 	BellIcon,
 	CaretDownIcon,
 	CodeIcon,
+	KeyIcon,
 	ListBulletsIcon,
 	MagnifyingGlassIcon,
 	MoonIcon,
@@ -47,6 +48,7 @@ import {
 	getAvailableActions,
 	getRestartFromStepParam,
 	isTerminalStatus,
+	isWaitingForConcurrency,
 } from "../../../components/workflows/types";
 import type {
 	Action,
@@ -360,7 +362,11 @@ const StepHistory = memo(function StepHistory({
 									step={step}
 									isExpanded={expandedStepKeys.has(key)}
 									onToggleExpanded={() => toggleStepExpanded(key)}
-									onRestartFromStep={onRestartFromStep}
+									onRestartFromStep={
+										isWaitingForConcurrency(step)
+											? undefined
+											: onRestartFromStep
+									}
 								/>
 							);
 						})
@@ -836,6 +842,29 @@ function InstanceDetailView() {
 					<ParamsOutput params={details.params} output={details.output} />
 
 					{details.error && <ErrorCard error={details.error} />}
+
+					{(details.waiting_for ?? []).map((wait) => (
+						<div
+							className="flex items-center gap-2 rounded-lg border border-kumo-badge-orange/20 bg-kumo-badge-orange/8 p-4 text-sm text-kumo-default"
+							key={wait.step}
+						>
+							<KeyIcon className="shrink-0 text-kumo-badge-orange" size={16} />
+							<span>
+								Step{" "}
+								<span className="font-medium">
+									{wait.step.replace(/-\d+$/, "")}
+								</span>{" "}
+								is waiting for a free slot of{" "}
+								<Link
+									className="font-mono underline"
+									to="/workflows/concurrency"
+								>
+									{wait.key}
+								</Link>
+								.
+							</span>
+						</div>
+					))}
 
 					<StepHistory
 						steps={details.steps}

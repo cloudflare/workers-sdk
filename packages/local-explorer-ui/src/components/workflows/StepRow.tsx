@@ -1,10 +1,16 @@
 import { Loader, Tooltip } from "@cloudflare/kumo";
-import { ArrowClockwiseIcon, CheckIcon, PlusIcon } from "@phosphor-icons/react";
+import {
+	ArrowClockwiseIcon,
+	CheckIcon,
+	KeyIcon,
+	PlusIcon,
+} from "@phosphor-icons/react";
 import { memo, type JSX } from "react";
 import { CopyButton } from "./CopyButton";
 import { formatDuration, formatJson } from "./helpers";
 import { ScrollableCodeBlock } from "./ScrollableCodeBlock";
 import { Timestamp } from "./Timestamp";
+import { isWaitingForConcurrency } from "./types";
 import type { StepData } from "./types";
 
 function StepStatusIcon({
@@ -108,6 +114,7 @@ export const StepRow = memo(function StepRow({
 					<span className="truncate text-sm text-kumo-default">
 						{getStepDisplayName(step.name)}
 					</span>
+					{step.concurrency && <ConcurrencyBadge step={step} />}
 				</div>
 
 				<Timestamp value={step.start} />
@@ -162,6 +169,28 @@ export const StepRow = memo(function StepRow({
 	);
 });
 
+function ConcurrencyBadge({ step }: { step: StepData }): JSX.Element {
+	const waiting = isWaitingForConcurrency(step);
+	const keys = step.concurrency?.keys.join(", ") ?? "";
+	return (
+		<Tooltip
+			content={
+				waiting
+					? `Waiting for a free slot of ${keys}`
+					: `Holds a slot of ${keys} while it runs`
+			}
+			asChild
+		>
+			<span
+				className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs ${waiting ? "bg-kumo-badge-orange/10 text-kumo-badge-orange" : "bg-kumo-tint text-kumo-subtle"}`}
+			>
+				<KeyIcon size={12} />
+				{waiting ? `waiting for ${keys}` : keys}
+			</span>
+		</Tooltip>
+	);
+}
+
 function StepCodeCard({
 	label,
 	content,
@@ -212,6 +241,34 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 					<StepCodeCard label="Config" content={configContent} />
 				)}
 			</div>
+
+			{step.concurrency && (
+				<div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+					<span className="text-kumo-subtle">
+						Concurrency keys{" "}
+						<span className="font-mono text-kumo-default">
+							{step.concurrency.keys.join(", ")}
+						</span>
+					</span>
+					{step.concurrency.waiting_since && (
+						<span className="text-kumo-subtle">
+							Waited{" "}
+							<span className="text-kumo-default">
+								{step.concurrency.acquired_at
+									? formatDuration(
+											step.concurrency.waiting_since,
+											step.concurrency.acquired_at
+										)
+									: "since " +
+										new Date(
+											step.concurrency.waiting_since
+										).toLocaleTimeString()}
+							</span>{" "}
+							for a free slot
+						</span>
+					)}
+				</div>
+			)}
 
 			{/* Attempts */}
 			{step.attempts && step.attempts.length > 0 && (
