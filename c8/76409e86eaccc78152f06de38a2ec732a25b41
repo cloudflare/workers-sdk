@@ -1,0 +1,49 @@
+.changeset/temporary-notices-stderr.md
+  s_d4f3a4c84a0158::t_8b0d7ee3ef7fef 1-9
+.changeset/workers-auth-status-logger.md
+  s_d4f3a4c84a0158::t_e45a331bf9cbaa 1-7
+packages/workers-auth/AGENTS.md
+  s_d4f3a4c84a0158::t_8fe6ba4321bfd9 107-109,160-162
+packages/workers-auth/src/context.ts
+  s_d4f3a4c84a0158::t_b3d609fb5cc553 22-26,52-58
+packages/workers-auth/src/core/factory.ts
+  s_d4f3a4c84a0158::t_97ea3a5f579fb1 40,168,195,265-269,610
+packages/workers-auth/src/core/temporary-terms.ts
+  s_d4f3a4c84a0158::t_4274aaabe91429 2,14
+packages/workers-auth/src/core/types.ts
+  s_d4f3a4c84a0158::t_3dce49e05ad3e0 1-5,26-33
+packages/workers-auth/src/flow.ts
+  s_d4f3a4c84a0158::t_3782200601f618 560
+packages/workers-auth/src/index.ts
+  s_d4f3a4c84a0158::t_ab24570aa62ab0 28
+packages/workers-auth/src/temporary.ts
+  s_d4f3a4c84a0158::t_01241be66773be 13,205,270,366
+packages/workers-auth/tests/core/factory.test.ts
+  s_d4f3a4c84a0158::t_4e10f4ede2b5b3 5,11,14-15,128-185
+packages/wrangler/src/__tests__/d1/migrate.test.ts
+  s_d4f3a4c84a0158::t_90a8c123257aa2 635-636
+packages/wrangler/src/__tests__/deploy/core.test.ts
+  s_d4f3a4c84a0158::t_5706898ddba2a3 859,1100,1187,1189-1192,1244,1320-1322,1417-1418,1492
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_d4f3a4c84a0158::t_cece71aee45d1c 284-286
+packages/wrangler/src/user/user.ts
+  s_d4f3a4c84a0158::t_4b76791a91b565 53,60-65
+packages/wrangler/src/__tests__/temporary-output.test.ts
+  s_d4f3a4c84a0158::t_92e7208d2ba393 1-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c876409e86eaccc78152f06de38a2ec732a25b41",
+  "prompts": {},
+  "sessions": {
+    "s_d4f3a4c84a0158": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7ffe5ff4-f058-49a3-bf89-76794e153bd2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "André Cruz <acruz@cloudflare.com>"
+    }
+  }
+}
