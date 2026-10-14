@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { createConnection } from "mysql2/promise";
 import dedent from "ts-dedent";
 import { afterAll, assert, beforeAll, describe, it } from "vitest";
+import WebSocket, { createWebSocketStream } from "ws";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
@@ -68,7 +70,7 @@ interface TestConfig {
 		bindings: StartDevWorkerInput["bindings"];
 	};
 	/**
-	 * The Miniflare config (mostly bindings) for this test case. This will be merged with all other test cases to create a single Miniflare instance for all tests.
+	 * The Miniflare bindings installed while this test case is active.
 	 * @param connection The URL to the remote proxy session
 	 */
 	miniflareConfig(
@@ -205,6 +207,41 @@ const testCases: TestCase[] = [
 					rpc: 3,
 				})
 			),
+		],
+	},
+	{
+		name: "Hyperdrive",
+		scriptPath: "hyperdrive.js",
+		setup: async (helper) => {
+			const { id } = await helper.hyperdrive(false, "mysql");
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						HYPERDRIVE_BINDING: {
+							type: "hyperdrive",
+							id,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					HYPERDRIVE_BINDING: {
+						type: "hyperdrive",
+						id,
+						dev: {
+							remote: remote(connection),
+							...(!connection && {
+								connectionString:
+									"mysql://user:password@127.0.0.1:3306/database",
+							}),
+						},
+					},
+				}),
+			};
+		},
+		getExpectFetchToMatch: (expect) => [
+			// Hyperdrive's proxy speaks the MySQL protocol, so a well-formed
+			// handshake (protocol version 10) means the tunnel carried real bytes.
+			expect.stringMatching(/"protocolVersion":10/),
 		],
 	},
 	{
@@ -674,6 +711,29 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 		const testConfigByTestCase = new Map<TestCase, TestConfig>();
 		const onTeardown = useTeardown({ timeout: testCases.length * 15_000 });
 		const activeTestCases = testCases.filter((testCase) => !testCase.skip);
+		function getMiniflareOptions(testConfig: TestConfig): MiniflareOptions {
+			return {
+				workers: [
+					{
+						config: {
+							name: "",
+							compatibilityDate: "2025-09-06",
+							manifest: createManifest(helper.tmpPath, [
+								"index.js",
+								...activeTestCases.map((testCase) => testCase.scriptPath),
+							]),
+							env: testConfig.miniflareConfig(
+								remoteProxySession.remoteProxyConnectionString
+							),
+						},
+						dev: {
+							remoteProxyConnectionString:
+								remoteProxySession.remoteProxyConnectionString,
+						},
+					},
+				],
+			};
+		}
 
 		beforeAll(async () => {
 			helper = new WranglerE2ETestHelper(onTeardown);
@@ -691,36 +751,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				testConfigs[0].remoteProxySessionConfig.bindings
 			);
 
-			// The proxy connection string is stable across `updateBindings` calls,
-			// so we can build the Miniflare instance once with all bindings merged.
-			// Each test script only touches its own binding (selected via the
-			// `x-test-module` header), so unused entries are dormant.
-			const env = Object.assign(
-				{},
-				...testConfigs.map((config) =>
-					config.miniflareConfig(remoteProxySession.remoteProxyConnectionString)
-				)
-			);
-			const miniflareConfig: MiniflareOptions = {
-				workers: [
-					{
-						config: {
-							name: "",
-							compatibilityDate: "2025-09-06",
-							manifest: createManifest(helper.tmpPath, [
-								"index.js",
-								...activeTestCases.map((testCase) => testCase.scriptPath),
-							]),
-							env,
-						},
-						dev: {
-							remoteProxyConnectionString:
-								remoteProxySession.remoteProxyConnectionString,
-						},
-					},
-				],
-			};
-			mf = new Miniflare(miniflareConfig);
+			mf = new Miniflare(getMiniflareOptions(testConfigs[0]));
 		}, activeTestCases.length * 15_000);
 
 		for (const testCase of activeTestCases) {
@@ -732,6 +763,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					await remoteProxySession.updateBindings(
 						testConfig.remoteProxySessionConfig.bindings
 					);
+					await mf.setOptions(getMiniflareOptions(testConfig));
 					const resp = await mf.dispatchFetch("http://example.com/", {
 						headers: { "x-test-module": testCase.scriptPath },
 					});
@@ -743,6 +775,167 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				45_000
 			);
 		}
+
+		it.for(["same-socket control", "session bridge"])(
+			"authenticates and queries through remote Hyperdrive (%s)",
+			async (mode, { expect }) => {
+				const hyperdriveCase = activeTestCases.find(
+					(testCase) => testCase.name === "Hyperdrive"
+				);
+				assert(hyperdriveCase);
+				const config = testConfigByTestCase.get(hyperdriveCase);
+				assert(config);
+				const session = await startRemoteProxySession(
+					config.remoteProxySessionConfig.bindings
+				);
+				try {
+					const hyperdriveBinding =
+						config.remoteProxySessionConfig.bindings?.HYPERDRIVE_BINDING;
+					assert(hyperdriveBinding?.type === "hyperdrive");
+					if (mode === "same-socket control") {
+						const wsUrl = new URL(String(session.remoteProxyConnectionString));
+						wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+						const ws = new WebSocket(wsUrl.href, {
+							headers: {
+								"MF-Binding": "HYPERDRIVE_BINDING",
+								"MF-Connect-Address": "hyperdrive.local:0",
+							},
+						});
+						const stream = createWebSocketStream(ws);
+						try {
+							const connectionString = await new Promise<string>(
+								(resolve, reject) => {
+									ws.once("upgrade", (response) => {
+										const value = response.headers["mf-hd-connection-string"];
+										if (typeof value === "string") {
+											resolve(value);
+										} else {
+											reject(
+												new Error("Missing Hyperdrive upgrade credentials")
+											);
+										}
+									});
+									ws.once("error", reject);
+								}
+							);
+							const url = new URL(connectionString);
+							const directConnection = await createConnection({
+								stream,
+								user: decodeURIComponent(url.username),
+								password: decodeURIComponent(url.password),
+								database: decodeURIComponent(url.pathname.slice(1)),
+							});
+							try {
+								const [rows] = await directConnection.query(
+									"SELECT 1 AS direct_hyperdrive_probe"
+								);
+								expect(rows).toEqual([{ direct_hyperdrive_probe: 1 }]);
+							} finally {
+								await directConnection.end();
+							}
+						} finally {
+							stream.destroy();
+							ws.terminate();
+						}
+						return;
+					}
+					await helper.seed({
+						"hyperdrive-query.jsonc": JSON.stringify({
+							name: "hyperdrive-query",
+							compatibility_date: "2026-09-01",
+							compatibility_flags: ["nodejs_compat"],
+							alias: {
+								"mysql2/promise": require.resolve("mysql2/promise"),
+							},
+						}),
+					});
+					await helper.run(
+						"wrangler deploy hyperdrive-query.js --config hyperdrive-query.jsonc --dry-run --outdir hyperdrive-query-output"
+					);
+					const queryOptions: MiniflareOptions = {
+						workers: [
+							{
+								config: {
+									name: "hyperdrive-query",
+									compatibilityDate: "2026-09-01",
+									compatibilityFlags: ["nodejs_compat"],
+									manifest: createManifest(helper.tmpPath, [
+										"hyperdrive-query-output/hyperdrive-query.js",
+									]),
+									env: config.miniflareConfig(
+										session.remoteProxyConnectionString
+									),
+								},
+								dev: {
+									remoteProxyConnectionString:
+										session.remoteProxyConnectionString,
+								},
+							},
+						],
+					};
+					const queryMf = new Miniflare(queryOptions);
+					try {
+						async function queryThroughBridge() {
+							const { HYPERDRIVE_BINDING } = await queryMf.getBindings<{
+								HYPERDRIVE_BINDING: {
+									host: string;
+									port: number;
+									user: string;
+									password: string;
+									database: string;
+								};
+							}>();
+							const connection = await createConnection({
+								host: HYPERDRIVE_BINDING.host,
+								port: HYPERDRIVE_BINDING.port,
+								user: HYPERDRIVE_BINDING.user,
+								password: HYPERDRIVE_BINDING.password,
+								database: HYPERDRIVE_BINDING.database,
+							});
+							try {
+								const [rows] = await connection.query(
+									"SELECT 1 AS remote_hyperdrive_probe"
+								);
+								expect(rows).toEqual([{ remote_hyperdrive_probe: 1 }]);
+							} finally {
+								await connection.end();
+							}
+						}
+						async function queryThroughWorker() {
+							const response = await queryMf.dispatchFetch("http://localhost/");
+							expect(response.status).toBe(200);
+							expect(await response.json()).toEqual([
+								{ remote_hyperdrive_probe: 1 },
+							]);
+						}
+						await Promise.all([
+							...Array.from({ length: 3 }, queryThroughBridge),
+							...Array.from({ length: 3 }, queryThroughWorker),
+						]);
+						await queryMf.setOptions(queryOptions);
+						await Promise.all([
+							...Array.from({ length: 3 }, queryThroughBridge),
+							...Array.from({ length: 3 }, queryThroughWorker),
+						]);
+					} finally {
+						await queryMf.dispose();
+					}
+				} catch (error) {
+					if (
+						error instanceof Error &&
+						"code" in error &&
+						error.code === "ER_ACCESS_DENIED_ERROR"
+					) {
+						throw new Error(
+							`Remote Hyperdrive authentication failed (${mode})`
+						);
+					}
+					throw error;
+				} finally {
+					await session.dispose();
+				}
+			}
+		);
 	});
 
 	// Separate describe block for mTLS because it needs a custom remote-binding

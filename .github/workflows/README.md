@@ -70,6 +70,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - PRs in the merge queue.
 - Actions
   - Runs the E2E tests for Wrangler.
+  - On Linux, Docker checks Google's `mirror.gcr.io` cache before Docker Hub to reduce anonymous pull-rate failures. Existing daemon settings and test images are preserved; uncached images still fall back to Docker Hub.
   - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `ci:run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
 
 ### Vite Plugin E2E tests (e2e-vite.yml)

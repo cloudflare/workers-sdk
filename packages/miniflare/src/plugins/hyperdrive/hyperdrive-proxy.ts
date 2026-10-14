@@ -1,7 +1,17 @@
 import fs from "node:fs";
 import net from "node:net";
+import { Readable, Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { setTimeout as delay } from "node:timers/promises";
 import tls from "node:tls";
+import { newWebSocketRpcSession } from "capnweb";
+import WebSocket from "ws";
 import type { Log } from "../../shared";
+import type { RpcStub } from "capnweb";
+
+const REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS = 3;
+const REMOTE_HYPERDRIVE_CONNECTION_TIMEOUT_MS = 10_000;
+const REMOTE_HYPERDRIVE_RETRY_BACKOFF_MS = 500;
 
 export interface HyperdriveProxyConfig {
 	// Name of the Hyperdrive binding
@@ -33,6 +43,14 @@ interface TlsConfig {
 	rejectUnauthorized: boolean;
 	ca?: Buffer<ArrayBuffer>;
 	checkServerIdentity?: () => undefined;
+}
+
+interface RemoteHyperdrive {
+	getConnectionString(): string;
+	connect(): {
+		readable: ReadableStream<Uint8Array>;
+		writable: WritableStream<Uint8Array>;
+	};
 }
 
 /**
@@ -114,9 +132,114 @@ export class HyperdriveProxyController {
 	// Map a binding and target to the listening proxy server and port
 	#servers = new Map<string, { server: net.Server; port: number }>();
 	#starting = new Map<string, Promise<number>>();
-	#update?: { created: Set<string> };
+	#abortController = new AbortController();
+	#signal: AbortSignal;
+	#update?: {
+		created: Set<string>;
+		remoteBridgePorts: Map<string, number>;
+		abortController: AbortController;
+	};
 	#disposed = false;
+	// Sockets currently accepted by each server, keyed the same way as
+	// `#servers`. Retiring a listener deliberately leaves its live connections
+	// to finish on their own, but `dispose()` must not: `net.Server#close()`
+	// alone would let a pooled database connection keep the process alive.
+	// Tracked here so disposal can destroy them.
+	#connections = new Map<string, Set<net.Socket>>();
+	#retiredConnections = new Map<
+		Set<net.Socket>,
+		RpcStub<RemoteHyperdrive> | undefined
+	>();
+	// Port of the local TCP bridge standing in for each remote binding, so that
+	// Node-side bindings can expose an address Node can actually dial (the
+	// `*.hyperdrive.local` host in the connection string only resolves inside
+	// workerd).
+	#remoteBridgePorts = new Map<string, number>();
+	#remoteSessions = new Map<
+		string,
+		{ stub: RpcStub<RemoteHyperdrive>; connectionString: string }
+	>();
 	log?: Log;
+
+	constructor(signal?: AbortSignal) {
+		this.#signal = signal
+			? AbortSignal.any([this.#abortController.signal, signal])
+			: this.#abortController.signal;
+	}
+
+	/**
+	 * Tracks a server's accepted socket so it can be forced closed on
+	 * teardown, and stops tracking it once the socket ends on its own.
+	 */
+	#trackConnection(key: string, socket: net.Socket): void {
+		let sockets = this.#connections.get(key);
+		if (!sockets) {
+			sockets = new Set();
+			this.#connections.set(key, sockets);
+		}
+		sockets.add(socket);
+		socket.once("close", () => {
+			sockets.delete(socket);
+			if (sockets.size !== 0) {
+				return;
+			}
+			this.#retiredConnections.get(sockets)?.[Symbol.dispose]();
+			this.#retiredConnections.delete(sockets);
+			if (this.#connections.get(key) === sockets && !this.#servers.has(key)) {
+				this.#remoteSessions.get(key)?.stub[Symbol.dispose]();
+				this.#remoteSessions.delete(key);
+				this.#connections.delete(key);
+			}
+		});
+	}
+
+	/**
+	 * Stops a listener accepting new connections and forgets it, leaving any
+	 * connection it already accepted to finish on its own. Used when a reload
+	 * stops using a listener; a query mid-flight should not fail because the
+	 * config around it changed.
+	 */
+	#retireServer(key: string): void {
+		const entry = this.#servers.get(key);
+		if (entry === undefined) {
+			return;
+		}
+		entry.server.close();
+		this.#servers.delete(key);
+		const sockets = this.#connections.get(key);
+		const session = this.#remoteSessions.get(key);
+		this.#connections.delete(key);
+		this.#remoteSessions.delete(key);
+		if (sockets?.size) {
+			this.#retiredConnections.set(sockets, session?.stub);
+		} else {
+			session?.stub[Symbol.dispose]();
+		}
+		for (const [name, port] of this.#remoteBridgePorts) {
+			if (port === entry.port) {
+				this.#remoteBridgePorts.delete(name);
+			}
+		}
+	}
+
+	/**
+	 * Stops a server from accepting new connections and destroys every
+	 * connection it already accepted. Only for `dispose()`, where nothing may
+	 * outlive the controller. Safe to call for a key with no server registered.
+	 */
+	#teardownServer(key: string): void {
+		this.#remoteSessions.get(key)?.stub[Symbol.dispose]();
+		this.#remoteSessions.delete(key);
+		this.#servers.get(key)?.server.close();
+		this.#servers.delete(key);
+		const sockets = this.#connections.get(key);
+		if (sockets) {
+			for (const socket of sockets) {
+				socket.destroy();
+			}
+			this.#connections.delete(key);
+		}
+	}
 
 	/**
 	 * Creates a proxy server for a Hyperdrive binding.
@@ -165,6 +288,7 @@ export class HyperdriveProxyController {
 			config;
 		const server = net.createServer((clientSocket) => {
 			clientSocket.setNoDelay(true);
+			this.#trackConnection(key, clientSocket);
 			this.#handleConnection(
 				clientSocket,
 				targetHost,
@@ -174,10 +298,20 @@ export class HyperdriveProxyController {
 				sslrootcert
 			);
 		});
+		return this.#startServer(key, server, "proxy server", name, update);
+	}
+
+	async #startServer(
+		key: string,
+		server: net.Server,
+		description: string,
+		name: string,
+		update?: { created: Set<string> }
+	): Promise<number> {
 		server.on("error", (err) => {
 			this.log?.error(
 				new Error(
-					`Hyperdrive proxy server error for binding "${name}": ${err.message}`
+					`Hyperdrive ${description} error for binding "${name}": ${err.message}`
 				)
 			);
 		});
@@ -200,6 +334,21 @@ export class HyperdriveProxyController {
 		this.#servers.set(key, { server, port });
 		update?.created.add(key);
 		return port;
+	}
+
+	/** Port of the local TCP bridge for a remote binding, if one is running. */
+	getRemoteBridgePort(name: string): number | undefined {
+		return this.#remoteBridgePorts.get(name);
+	}
+
+	/** Returns credentials from the session that opens this binding's sockets. */
+	getRemoteConnectionString(name: string): string | undefined {
+		const port = this.#remoteBridgePorts.get(name);
+		for (const [key, entry] of this.#servers) {
+			if (entry.port === port) {
+				return this.#remoteSessions.get(key)?.connectionString;
+			}
+		}
 	}
 
 	/**
@@ -271,12 +420,232 @@ export class HyperdriveProxyController {
 		dbSocket.pipe(clientSocket);
 	}
 
+	/**
+	 * Creates a local TCP bridge for a *remote* Hyperdrive binding.
+	 *
+	 * The bridge is a plain `net.Server` on `127.0.0.1:<port>`; the binding's
+	 * `external.tcp` designator points at it, so workerd stays unmodified —
+	 * pointing a Hyperdrive designator at a Worker service crashes workerd
+	 * (SIGSEGV). Each inbound TCP connection is relayed, byte-for-byte, over a
+	 * shared RPC session that owns both the credentials and the edge binding.
+	 * Each client gets its own socket without moving to another Worker instance.
+	 *
+	 * Bridges share `createProxyServer`'s lifecycle: one is reused across
+	 * reloads while its target is unchanged, and `commitUpdate()` retires it
+	 * once a reload stops using it — including when the binding is removed or
+	 * switched to local.
+	 *
+	 * @returns the local bridge port the designator should target.
+	 */
+	async createRemoteTcpBridge(config: {
+		// Unique per-worker key for this bridge (see `getHyperdriveServiceName`),
+		// used to track the listener across reloads.
+		name: string;
+		// The binding name as the Worker declares it. This is what the edge relay
+		// dispatches on, so it must stay unqualified.
+		bindingName: string;
+		bindingId: string;
+		// The remote proxy connection string (a local URL that upgrades to a
+		// WebSocket relaying to the edge Hyperdrive binding).
+		remoteProxyConnectionString: URL;
+	}): Promise<number> {
+		if (this.#disposed) {
+			throw new Error("Hyperdrive proxy controller has been disposed");
+		}
+		const { name, bindingName, bindingId, remoteProxyConnectionString } =
+			config;
+		const wsUrl = new URL(remoteProxyConnectionString.href);
+		wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+		wsUrl.searchParams.set("MF-Binding", bindingName);
+		wsUrl.searchParams.set("MF-Hyperdrive", "true");
+		const wsHref = wsUrl.href;
+		const key = JSON.stringify([
+			"remote",
+			name,
+			bindingName,
+			bindingId,
+			wsHref,
+		]);
+		const update = this.#update;
+		const existing = this.#servers.get(key);
+		if (existing !== undefined && this.#remoteSessions.has(key)) {
+			this.#remoteBridgePorts.set(name, existing.port);
+			return existing.port;
+		}
+		if (existing !== undefined) {
+			this.#retireServer(key);
+		}
+		const starting = this.#starting.get(key);
+		if (starting !== undefined) {
+			return starting;
+		}
+		const promise = this.#startRemoteTcpBridge(
+			key,
+			name,
+			bindingName,
+			wsHref,
+			update
+		);
+		this.#starting.set(key, promise);
+		try {
+			const port = await promise;
+			this.#remoteBridgePorts.set(name, port);
+			return port;
+		} finally {
+			this.#starting.delete(key);
+		}
+	}
+
+	async #startRemoteTcpBridge(
+		key: string,
+		name: string,
+		bindingName: string,
+		wsHref: string,
+		update?: { created: Set<string>; abortController: AbortController }
+	): Promise<number> {
+		const signal = update
+			? AbortSignal.any([this.#signal, update.abortController.signal])
+			: this.#signal;
+		const session = await this.#connectRemoteHyperdrive(
+			wsHref,
+			bindingName,
+			signal
+		);
+		const server = net.createServer((clientSocket) => {
+			clientSocket.setNoDelay(true);
+			this.#trackConnection(key, clientSocket);
+			if (session) {
+				void this.#handleRemoteBridgeConnection(clientSocket, session.stub);
+			} else {
+				clientSocket.destroy();
+			}
+		});
+		const port = await this.#startServer(
+			key,
+			server,
+			"remote bridge",
+			name,
+			update
+		).catch((error: unknown) => {
+			session?.stub[Symbol.dispose]();
+			throw error;
+		});
+		if (session) {
+			this.#remoteSessions.set(key, session);
+		}
+		session?.stub.onRpcBroken(() => {
+			if (
+				!this.#disposed &&
+				this.#remoteSessions.get(key)?.stub === session.stub
+			) {
+				this.#retireServer(key);
+				this.log?.warn(
+					`Remote Hyperdrive connection for binding "${bindingName}" was lost. Reload local development to reconnect.`
+				);
+			}
+		});
+		return port;
+	}
+
+	async #connectRemoteHyperdrive(
+		wsHref: string,
+		bindingName: string,
+		signal: AbortSignal
+	) {
+		for (
+			let attempt = 1;
+			attempt <= REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS;
+			attempt++
+		) {
+			signal.throwIfAborted();
+			const websocket = new WebSocket(wsHref, {
+				headers: process.env.CF_TRACE_ID
+					? { "cf-trace-id": process.env.CF_TRACE_ID }
+					: undefined,
+			});
+			const stub = newWebSocketRpcSession<RemoteHyperdrive>(
+				websocket as unknown as globalThis.WebSocket
+			);
+			function abortConnection() {
+				stub[Symbol.dispose]();
+				websocket.terminate();
+			}
+			signal.addEventListener("abort", abortConnection, { once: true });
+			const timeout = setTimeout(
+				() => websocket.terminate(),
+				REMOTE_HYPERDRIVE_CONNECTION_TIMEOUT_MS
+			);
+			try {
+				const connectionString = await stub.getConnectionString();
+				signal.throwIfAborted();
+				if (typeof connectionString !== "string") {
+					throw new Error("Missing Hyperdrive connection string");
+				}
+				return { stub, connectionString };
+			} catch {
+				stub[Symbol.dispose]();
+				signal.throwIfAborted();
+			} finally {
+				clearTimeout(timeout);
+				signal.removeEventListener("abort", abortConnection);
+			}
+			if (attempt < REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS) {
+				await delay(REMOTE_HYPERDRIVE_RETRY_BACKOFF_MS * attempt, undefined, {
+					signal,
+				});
+			}
+		}
+		this.log?.warn(
+			`Unable to connect remote Hyperdrive binding "${bindingName}". Other bindings are still available. Restart local development to retry.`
+		);
+	}
+
+	/**
+	 * Relays an independent TCP stream through the credential-owning RPC session.
+	 */
+	async #handleRemoteBridgeConnection(
+		clientSocket: net.Socket,
+		stub: RpcStub<RemoteHyperdrive>
+	): Promise<void> {
+		clientSocket.pause();
+		function destroyClient() {
+			clientSocket.destroy();
+		}
+		clientSocket.on("error", destroyClient);
+		try {
+			const socket = await stub.connect();
+			try {
+				if (clientSocket.destroyed) {
+					await Promise.allSettled([
+						socket.readable.cancel(),
+						socket.writable.abort(),
+					]);
+					return;
+				}
+				await Promise.all([
+					pipeline(clientSocket, Writable.fromWeb(socket.writable)),
+					pipeline(Readable.fromWeb(socket.readable), clientSocket),
+				]);
+			} finally {
+				socket[Symbol.dispose]();
+			}
+		} catch {
+			clientSocket.destroy();
+		} finally {
+			clientSocket.off("error", destroyClient);
+		}
+	}
+
 	/** Begins tracking proxy servers created for the next runtime config. */
 	beginUpdate(): void {
 		if (this.#update !== undefined) {
 			throw new Error("Hyperdrive proxy configuration update already started");
 		}
-		this.#update = { created: new Set() };
+		this.#update = {
+			created: new Set(),
+			remoteBridgePorts: new Map(this.#remoteBridgePorts),
+			abortController: new AbortController(),
+		};
 	}
 
 	/** Stops listeners omitted by the successfully installed runtime config. */
@@ -286,40 +655,61 @@ export class HyperdriveProxyController {
 			return;
 		}
 		this.#update = undefined;
-		for (const [key, { server, port }] of this.#servers) {
+		for (const [key, { port }] of this.#servers) {
 			if (!activeAddresses.has(`127.0.0.1:${port}`)) {
-				server.close();
-				this.#servers.delete(key);
+				this.#retireServer(key);
 			}
 		}
 	}
 
-	/** Discards new listeners when the runtime config could not be installed. */
+	/** Discards new listeners and restores addresses after a failed config update. */
 	abortUpdate(): void {
 		const update = this.#update;
 		if (update === undefined) {
 			return;
 		}
 		this.#update = undefined;
+		update.abortController.abort();
 		for (const key of update.created) {
-			const entry = this.#servers.get(key);
-			entry?.server.close();
-			this.#servers.delete(key);
+			this.#retireServer(key);
 		}
+		const activePorts = new Set(
+			Array.from(this.#servers.values(), ({ port }) => port)
+		);
+		this.#remoteBridgePorts = new Map(
+			Array.from(update.remoteBridgePorts).filter(([, port]) =>
+				activePorts.has(port)
+			)
+		);
 	}
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
 	dispose(): void {
 		this.#disposed = true;
+		this.#abortController.abort();
 		this.#update = undefined;
-		// Stop accepting new connections on each proxy server. We don't await
-		// server.close() because net.Server waits for all existing connections
-		// to end before calling the callback, and lingering TCP sockets (e.g.
-		// from in-progress TLS negotiation) could block dispose indefinitely.
-		for (const { server } of this.#servers.values()) {
-			server.close();
+		// Destroying every tracked connection (rather than only closing the
+		// listener) is what makes this safe to call synchronously: a
+		// `server.close()` alone waits for existing connections to end before
+		// its callback fires, and a lingering one (e.g. from in-progress TLS
+		// negotiation, or a live DB connection) could block dispose forever.
+		// Snapshot the keys before iterating: `#teardownServer` deletes from
+		// `#servers` as it goes.
+		for (const key of new Set([
+			...this.#servers.keys(),
+			...this.#connections.keys(),
+			...this.#remoteSessions.keys(),
+		])) {
+			this.#teardownServer(key);
 		}
-		this.#servers.clear();
+		for (const [sockets, stub] of this.#retiredConnections) {
+			stub?.[Symbol.dispose]();
+			for (const socket of sockets) {
+				socket.destroy();
+			}
+		}
+		this.#retiredConnections.clear();
+		this.#remoteBridgePorts.clear();
 	}
 }
 

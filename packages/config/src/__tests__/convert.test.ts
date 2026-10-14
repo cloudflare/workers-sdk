@@ -371,7 +371,7 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps hyperdrive dev.connectionString", ({ expect }) => {
+		it("maps hyperdrive dev.remote and dev.connectionString", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
@@ -379,7 +379,7 @@ describe("convertToWranglerConfig", () => {
 						HD: {
 							type: "hyperdrive",
 							id: "h-1",
-							dev: { connectionString: "postgres://..." },
+							dev: { remote: true, connectionString: "postgres://..." },
 						},
 					},
 				},
@@ -389,8 +389,26 @@ describe("convertToWranglerConfig", () => {
 				{
 					binding: "HD",
 					id: "h-1",
+					remote: true,
 					localConnectionString: "postgres://...",
 				},
+			]);
+		});
+
+		it("maps remote Hyperdrive without a local connection string", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						HD: { type: "hyperdrive", id: "h-1", dev: { remote: true } },
+					},
+				},
+				containers: [],
+			});
+			expect(result.hyperdrive).toEqual([
+				{ binding: "HD", id: "h-1", remote: true },
 			]);
 		});
 

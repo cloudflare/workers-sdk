@@ -878,7 +878,7 @@ export class Miniflare {
 	readonly #initPromise: Promise<void>;
 
 	// Aborted when dispose() is called
-	readonly #disposeController: AbortController;
+	readonly #disposeController = new AbortController();
 	#loopbackServer?: StoppableServer;
 	#loopbackHost?: string;
 	readonly #webSocketServer: WebSocketServer;
@@ -890,7 +890,7 @@ export class Miniflare {
 
 	#containerPrivilegesCache = new ContainerPrivilegesCache();
 	#hyperdriveProxyController: HyperdriveProxyController =
-		new HyperdriveProxyController();
+		new HyperdriveProxyController(this.#disposeController.signal);
 
 	// Set the first time the remote-bindings proxy CLIENT worker reports a
 	// Cloudflare Access 403 block on a request to the remote-bindings proxy
@@ -1027,7 +1027,6 @@ export class Miniflare {
 			this.#devRegistry.dispose();
 		});
 
-		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
 		this.#initPromise = this.#runtimeMutex
 			.runWith(async () => {
@@ -2674,6 +2673,14 @@ export class Miniflare {
 		this.#hyperdriveProxyController.beginUpdate();
 		try {
 			await this.#assembleAndUpdateConfigInternal(reusePorts);
+		} catch (error) {
+			if (
+				!this.#disposeController.signal.aborted ||
+				!(error instanceof Error) ||
+				error.name !== "AbortError"
+			) {
+				throw error;
+			}
 		} finally {
 			// If assembly or runtime startup failed, keep the old listeners and
 			// close only the new candidates. A successful update already committed.
@@ -3459,7 +3466,10 @@ export class Miniflare {
 
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
-			const pluginBindings = await plugin.getNodeBindings(workerOpts);
+			const pluginBindings = await plugin.getNodeBindings(workerOpts, {
+				hyperdriveProxyController: this.#hyperdriveProxyController,
+				workerIndex,
+			});
 			for (const [name, binding] of Object.entries(pluginBindings)) {
 				if (binding instanceof ProxyNodeBinding) {
 					const proxyBindingName = getProxyBindingName(key, workerName, name);
@@ -3981,8 +3991,7 @@ export class Miniflare {
 		// Unregister workers from dev registry and stop the file watcher
 		await this.#devRegistry.dispose();
 
-		// shutdown hyperdrive proxies if any exist
-		await this.#hyperdriveProxyController.dispose();
+		this.#hyperdriveProxyController.dispose();
 
 		// Remove from instance registry as last step in disposal, preserving the
 		// existing behavior when an earlier cleanup operation fails.

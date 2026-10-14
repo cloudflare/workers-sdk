@@ -47,6 +47,16 @@ jobs:
         id: check-remote
         uses: ./.github/actions/check-remote-tests
 
+      - name: Configure Docker Hub cache
+        if: steps.changes.outputs.everything_but_markdown == 'true' && runner.os == 'Linux'
+        run: |
+          docker_config='{}'
+          if [ -f /etc/docker/daemon.json ]; then
+            docker_config="$(sudo cat /etc/docker/daemon.json)"
+          fi
+          printf '%s\n' "$docker_config" | jq '.["registry-mirrors"] = (["https://mirror.gcr.io"] + (.["registry-mirrors"] // []) | unique)' | sudo tee /etc/docker/daemon.json > /dev/null
+          sudo systemctl restart docker
+
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies

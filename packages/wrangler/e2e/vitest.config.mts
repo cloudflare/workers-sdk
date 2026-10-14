@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		env: { WRANGLER_SEND_METRICS: "false" },
 		testTimeout: 90_000,
 		pool: "threads",
 		maxWorkers: 1,
