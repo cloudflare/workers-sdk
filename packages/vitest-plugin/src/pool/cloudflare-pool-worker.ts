@@ -270,7 +270,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 		// in on("message"): unrelated RPC results can look like cached modules.
 		// Consume the ID even for failed replies (`e` without a result) so
 		// finished requests do not leave stale state.
-		// https://github.com/antfu-collective/birpc/blob/f5bb5a45bdaf7147fc616e78f335d437dce27a18/src/index.ts#L202-L246
+		// https://github.com/antfu-collective/birpc/blob/f5bb5a45b/src/index.ts#L202-L246
 		const rpcResponse = message as { t?: string; i?: string; r?: unknown };
 		if (
 			rpcResponse.t === "s" &&
