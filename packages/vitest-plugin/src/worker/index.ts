@@ -307,12 +307,14 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 								}
 							);
 						}
-						assert.strictEqual(command, "__vitest_writeCoverageFile");
-						assert.strictEqual(args.length, 1);
-						return writeCoverageFile(
-							doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE,
-							args[0]
-						);
+						if (command === "__vitest_writeCoverageFile") {
+							assert.strictEqual(args.length, 1);
+							return writeCoverageFile(
+								doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE,
+								args[0]
+							);
+						}
+						throw new Error(`Unsupported Vitest command: ${command}`);
 					},
 				},
 			};
