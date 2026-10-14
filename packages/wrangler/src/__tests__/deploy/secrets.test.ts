@@ -145,23 +145,16 @@ describe("deploy secrets", () => {
 			`);
 		});
 
-		it("should expand dotenv secrets like Wrangler's .env loader", async ({
+		it("should upload secrets from a .env file alongside the worker", async ({
 			expect,
 		}) => {
-			vi.stubEnv("CI", "expanded-value");
-			vi.stubEnv("EMPTY_SECRET", "");
 			const secretsFile = ".env.production";
 			fs.writeFileSync(
 				secretsFile,
-				[
-					"SECRET1=${CI}",
-					"SECRET2=value2",
-					"# Comment line",
-					"SECRET3=${SECRET2}",
-					"ESCAPED_SECRET=\\${CI}",
-					"CI=file-value",
-					"EMPTY_SECRET=file-value",
-				].join("\n")
+				`SECRET1=value1
+SECRET2=value2
+# Comment line
+SECRET3=value3`
 			);
 
 			mockServiceScriptData({
@@ -174,7 +167,7 @@ describe("deploy secrets", () => {
 					{
 						type: "secret_text",
 						name: "SECRET1",
-						text: "expanded-value",
+						text: "value1",
 					},
 					{
 						type: "secret_text",
@@ -184,22 +177,7 @@ describe("deploy secrets", () => {
 					{
 						type: "secret_text",
 						name: "SECRET3",
-						text: "value2",
-					},
-					{
-						type: "secret_text",
-						name: "ESCAPED_SECRET",
-						text: "${CI}",
-					},
-					{
-						type: "secret_text",
-						name: "CI",
-						text: "expanded-value",
-					},
-					{
-						type: "secret_text",
-						name: "EMPTY_SECRET",
-						text: "",
+						text: "value3",
 					},
 				],
 				expectedCompatibilityDate: "2022-01-12",
@@ -216,19 +194,70 @@ describe("deploy secrets", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
-				Binding                              Resource
-				env.SECRET1 ("(hidden)")             Environment Variable
-				env.SECRET2 ("(hidden)")             Environment Variable
-				env.SECRET3 ("(hidden)")             Environment Variable
-				env.ESCAPED_SECRET ("(hidden)")      Environment Variable
-				env.CI ("(hidden)")                  Environment Variable
-				env.EMPTY_SECRET ("(hidden)")        Environment Variable
+				Binding                       Resource
+				env.SECRET1 ("(hidden)")      Environment Variable
+				env.SECRET2 ("(hidden)")      Environment Variable
+				env.SECRET3 ("(hidden)")      Environment Variable
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+
+		it("should expand the specified secrets file with Wrangler's environment", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "process-token");
+			fs.writeFileSync(
+				".env",
+				"DEFAULT_ONLY=not-uploaded\nWRANGLER_ENV=from-dot-env"
+			);
+			fs.writeFileSync(
+				".env.production",
+				[
+					"CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN",
+					"VERSION=v1",
+					"API_URL=https://api.example.com/$VERSION",
+					"FROM_WRANGLER_ENV=$WRANGLER_ENV",
+				].join("\n")
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "CLOUDFLARE_API_TOKEN",
+						text: "process-token",
+					},
+					{
+						type: "secret_text",
+						name: "VERSION",
+						text: "v1",
+					},
+					{
+						type: "secret_text",
+						name: "API_URL",
+						text: "https://api.example.com/v1",
+					},
+					{
+						type: "secret_text",
+						name: "FROM_WRANGLER_ENV",
+						text: "from-dot-env",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: true,
+			});
+
+			await runWrangler("deploy --secrets-file .env.production");
 		});
 
 		it("should set keepSecrets to inherit non-provided secrets when providing secrets file", async ({
