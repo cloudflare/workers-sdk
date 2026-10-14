@@ -253,7 +253,7 @@ export async function mergeBuildOutputProps(config: Config): Promise<{
 		name: config.name,
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
-		uploadSourceMaps: config.upload_source_maps ?? false,
+		uploadSourceMaps: config.upload_source_maps,
 		jsxFactory: config.jsx_factory,
 		jsxFragment: config.jsx_fragment,
 		tsconfig: config.tsconfig,

@@ -1,5 +1,22 @@
 # wrangler
 
+## 4.151.0
+
+### Minor Changes
+
+- [#16245](https://github.com/cloudflare/workers-sdk/pull/16245) [`d6b1c82`](https://github.com/cloudflare/workers-sdk/commit/d6b1c823268226754441ac79084be2cec4abcea3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Include source maps by default in `wrangler build --experimental-cf-build-output`
+
+  Build Output now matches `wrangler deploy` and `wrangler versions upload`, which upload source maps by default, so Workers built for tools like `cf` get stack traces that point at the original source. Source maps that can't be resolved are skipped rather than failing the build. Set `upload_source_maps = false` to opt out.
+
+### Patch Changes
+
+- [#16220](https://github.com/cloudflare/workers-sdk/pull/16220) [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Support local D1 queries through the experimental `d1_binding_jsrpc` compatibility flag
+
+  Local D1 bindings now implement the RPC query backend used by `D1Database.query()` and prepared-statement methods when the flag is enabled. Queries reuse local SQLite execution, including transactional batches, execution metadata, and session bookmarks, while bindings without the flag continue to use HTTP. Update the bundled workerd runtime to `1.20261012.1` and align the default compatibility date with that release.
+
+- Updated dependencies [[`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`acd2822`](https://github.com/cloudflare/workers-sdk/commit/acd2822046a1bf201d9143ee40969f3dc3eb9650)]:
+  - miniflare@5.20261012.0-beta
+
 ## 4.150.0
 
 ### Minor Changes

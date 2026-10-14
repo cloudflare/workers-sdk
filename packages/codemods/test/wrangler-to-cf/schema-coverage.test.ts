@@ -17,7 +17,12 @@ const BASE_CONFIG = {
 } satisfies RawConfig;
 
 const FIELD_CASES = {
-	access: {},
+	access: {
+		dev: {
+			aud: "my-app-aud-tag",
+			identity: { email: "user@example.com" },
+		},
+	},
 	account_id: "account-id",
 	addresses: ["worker@example.com"],
 	agent_memory: [{ binding: "MEMORY", namespace: "memory" }],
