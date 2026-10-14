@@ -1,0 +1,25 @@
+.changeset/tidy-workers-deploy-retries.md
+  s_743b4330674f1a::t_bbc694ebd9117c 1-8
+docs/adr/2026-10-14-reconcile-worker-publication-before-retry.md
+  s_743b4330674f1a::t_05b03c16310fd9 1-27
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_743b4330674f1a::t_65112874d0e370 83,546,552
+packages/deploy-helpers/src/deploy/helpers/versions-api.ts
+  s_743b4330674f1a::t_9246587f15e146 1-2,62-63,65-78,86-87,92-93,152-153,174-238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2d32d935586dd23a468b8429bc99ff3a64f17656",
+  "prompts": {},
+  "sessions": {
+    "s_743b4330674f1a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13b23-fffd-7910-a944-7afcafc92ad9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}
