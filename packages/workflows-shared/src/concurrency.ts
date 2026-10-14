@@ -1,5 +1,6 @@
 import { DurableObject, RpcTarget } from "cloudflare:workers";
 import { createWorkflowError } from "./lib/errors";
+import type { ConcurrencyKey, ConcurrencyKeyWithUsage } from "./types";
 
 export const CONCURRENCY_KEYS_OBJECT_NAME = "concurrency-keys";
 
@@ -14,18 +15,13 @@ const WAITER_TTL_MS = 5_000;
 const KEY_ID_PATTERN =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type ConcurrencyKey = {
-	id: string;
-	name: string;
-	limit: number;
-	created_on: string;
-};
-
-export type ConcurrencyKeyUsage = { holding: number; waiting: number };
-
-export type ConcurrencyKeyWithUsage = ConcurrencyKey & {
-	usage: ConcurrencyKeyUsage;
-};
+// Node-side packages such as wrangler import `./types`, so the key shapes live there and
+// this module, which needs the Workers runtime, stays out of their type checks.
+export type {
+	ConcurrencyKey,
+	ConcurrencyKeyUsage,
+	ConcurrencyKeyWithUsage,
+} from "./types";
 
 // Test holds from the admin API belong to no Workflow, so their workflow, instance and
 // step fields are null.

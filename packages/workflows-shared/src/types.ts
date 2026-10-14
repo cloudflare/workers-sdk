@@ -65,6 +65,7 @@ export type WorkflowBinding = {
 	): Promise<void>;
 	unsafeStopIntrospection(sessionId: string): Promise<void>;
 	unsafeGetIntrospectionInstances(sessionId: string): Promise<string[]>;
+	unsafeGetConcurrencyKeysAdmin(): Promise<unknown>;
 };
 
 export type ModifierCallback = (
@@ -86,4 +87,36 @@ export interface WorkflowIntrospector {
 	get(): Promise<WorkflowInstanceIntrospector[]>;
 	dispose(): Promise<void>;
 	[Symbol.asyncDispose](): Promise<void>;
+}
+
+export type ConcurrencyKey = {
+	id: string;
+	name: string;
+	limit: number;
+	created_on: string;
+};
+
+export type ConcurrencyKeyUsage = { holding: number; waiting: number };
+
+export type ConcurrencyKeyWithUsage = ConcurrencyKey & {
+	usage: ConcurrencyKeyUsage;
+};
+
+export interface WorkflowConcurrencyKeyHold {
+	release(): Promise<void>;
+}
+
+export interface WorkflowConcurrencyKeysAdmin {
+	list(): Promise<ConcurrencyKeyWithUsage[]>;
+	get(name: string): Promise<ConcurrencyKeyWithUsage | null>;
+	set(name: string, limit: number): Promise<ConcurrencyKeyWithUsage>;
+	delete(name: string): Promise<void>;
+	hold(name: string, count?: number): Promise<WorkflowConcurrencyKeyHold>;
+	waitForWaiters(
+		name: string,
+		count?: number,
+		options?: { timeout?: number }
+	): Promise<void>;
+	reset(): Promise<void>;
+	[Symbol.dispose](): void;
 }

@@ -44,6 +44,7 @@ ${runtimeTypes}`
 			testSourcePath,
 			`import {
 	adminSecretsStore,
+	adminWorkflowConcurrencyKeys,
 	createExecutionContext,
 	createMessageBatch,
 	createPagesEventContext,
@@ -120,6 +121,16 @@ declare const secret: { get(): Promise<string> };
 {
 	using admin = adminSecretsStore(secret);
 	void admin.list();
+}
+
+declare const workflow: Workflow;
+{
+	using keys = adminWorkflowConcurrencyKeys(workflow);
+	const holding: Promise<number> = keys
+		.set("payments-api", 1)
+		.then((key) => key.usage.holding);
+	void holding;
+	void keys.hold("payments-api").then((hold) => hold.release());
 }
 `
 		);
