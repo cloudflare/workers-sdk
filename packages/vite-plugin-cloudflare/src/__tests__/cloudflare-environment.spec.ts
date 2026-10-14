@@ -95,6 +95,14 @@ test.for([
 		userConfig: { build: { sourcemap: "hidden" as const } },
 		expected: "hidden",
 	},
+	{
+		label: "prefers the environment's `build.sourcemap` over the top level",
+		userConfig: {
+			build: { sourcemap: true },
+			environments: { worker: { build: { sourcemap: false } } },
+		},
+		expected: false,
+	},
 ])(
 	"resolves the Worker environment's `build.sourcemap` $label",
 	({ userConfig, expected }, { expect }) => {
