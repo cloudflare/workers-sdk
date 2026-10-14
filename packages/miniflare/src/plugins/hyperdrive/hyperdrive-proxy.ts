@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import net from "node:net";
 import tls from "node:tls";
+import WebSocket from "ws";
 import type { Log } from "../../shared";
 
 export interface HyperdriveProxyConfig {
@@ -28,6 +29,38 @@ const schemes = {
 export const POSTGRES_SSL_REQUEST_PACKET = Buffer.from([
 	0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f,
 ]);
+
+interface ProxyUpdate {
+	created: Set<string>;
+	remoteBridgePorts: Map<string, number>;
+}
+
+interface ConnectionOwner {
+	track<T extends net.Socket>(socket: T): T;
+	assertOpen(): void;
+	close(): void;
+}
+
+/** Reads only the credential fields workerd exposes to database clients. */
+function getCredentials(connectionString: string | URL): string[] {
+	const url = new URL(connectionString);
+	const protocol = url.protocol === "postgres:" ? "postgresql:" : url.protocol;
+	if (
+		(protocol !== "postgresql:" && protocol !== "mysql:") ||
+		!url.host ||
+		!url.pathname ||
+		!url.username ||
+		!url.password
+	) {
+		throw new Error("Invalid Hyperdrive credentials");
+	}
+	return [
+		protocol,
+		decodeURIComponent(url.username),
+		decodeURIComponent(url.password),
+		decodeURIComponent(url.pathname.replace("/", "")),
+	];
+}
 
 interface TlsConfig {
 	rejectUnauthorized: boolean;
@@ -105,6 +138,13 @@ function buildTlsConnectionOptions(
 }
 
 /**
+ * How long to wait for the edge to close a bridged tunnel after the local
+ * database client has gone away, before forcing it down. See `clientGone` in
+ * `#handleRemoteBridgeConnection`.
+ */
+const EDGE_CLOSE_GRACE_MS = 1_000;
+
+/**
  * HyperdriveProxyController establishes TLS-enabled connections between workerd
  * and external Postgres/MySQL databases. Supports PostgreSQL sslmode options
  * ('require', 'prefer', 'disable', 'verify-full', 'verify-ca') by proxying
@@ -114,9 +154,128 @@ export class HyperdriveProxyController {
 	// Map a binding and target to the listening proxy server and port
 	#servers = new Map<string, { server: net.Server; port: number }>();
 	#starting = new Map<string, Promise<number>>();
-	#update?: { created: Set<string> };
+	#update?: ProxyUpdate;
+	#cleanups = new Map<string, Set<() => void>>();
 	#disposed = false;
+	// Sockets currently accepted by each server, keyed the same way as
+	// `#servers`. Retiring a listener deliberately leaves its live connections
+	// to finish on their own, but `dispose()` must not: `net.Server#close()`
+	// alone would let a pooled database connection keep the process alive.
+	// Tracked here so disposal can destroy them.
+	#connections = new Map<string, Set<net.Socket>>();
+	// Port of the local TCP bridge standing in for each remote binding, so that
+	// Node-side bindings can expose an address Node can actually dial (the
+	// `*.hyperdrive.local` host in the connection string only resolves inside
+	// workerd).
+	#remoteBridgePorts = new Map<string, number>();
 	log?: Log;
+
+	/**
+	 * Tracks a server's accepted socket so it can be forced closed on
+	 * teardown, and stops tracking it once the socket ends on its own.
+	 */
+	#trackConnection(key: string, socket: net.Socket): void {
+		let sockets = this.#connections.get(key);
+		if (!sockets) {
+			sockets = new Set();
+			this.#connections.set(key, sockets);
+		}
+		sockets.add(socket);
+		socket.once("close", () => sockets.delete(socket));
+	}
+
+	#registerCleanup(key: string, cleanup: () => void): void {
+		let cleanups = this.#cleanups.get(key);
+		if (!cleanups) {
+			cleanups = new Set();
+			this.#cleanups.set(key, cleanups);
+		}
+		cleanups.add(cleanup);
+	}
+
+	#cleanupKey(key: string): void {
+		const cleanups = this.#cleanups.get(key);
+		if (!cleanups) {
+			return;
+		}
+		this.#cleanups.delete(key);
+		for (const cleanup of cleanups) {
+			cleanup();
+		}
+	}
+
+	#createOwner(key: string, clientSocket: net.Socket): ConnectionOwner {
+		const removeCleanup = (cleanup: () => void) =>
+			this.#cleanups.get(key)?.delete(cleanup);
+		const sockets = new Set<net.Socket>();
+		let closed = false;
+		const owner: ConnectionOwner = {
+			track(socket) {
+				if (closed) {
+					socket.destroy();
+					return socket;
+				}
+				sockets.add(socket);
+				socket.once("close", () => sockets.delete(socket));
+				return socket;
+			},
+			assertOpen() {
+				if (closed || clientSocket.destroyed || clientSocket.readableEnded) {
+					throw new Error("Hyperdrive connection closed");
+				}
+			},
+			close() {
+				if (closed) {
+					return;
+				}
+				closed = true;
+				removeCleanup(owner.close);
+				for (const socket of sockets) {
+					socket.destroy();
+				}
+			},
+		};
+		this.#registerCleanup(key, owner.close);
+		return owner;
+	}
+
+	/**
+	 * Stops a listener accepting new connections and forgets it, leaving any
+	 * connection it already accepted to finish on its own. Used when a reload
+	 * stops using a listener; a query mid-flight should not fail because the
+	 * config around it changed.
+	 */
+	#retireServer(key: string): void {
+		const entry = this.#servers.get(key);
+		if (entry === undefined) {
+			return;
+		}
+		entry.server.close();
+		this.#servers.delete(key);
+		for (const [name, port] of this.#remoteBridgePorts) {
+			if (port === entry.port) {
+				this.#remoteBridgePorts.delete(name);
+			}
+		}
+	}
+
+	/**
+	 * Stops a server from accepting new connections and destroys every
+	 * connection it already accepted. Only for `dispose()`, where nothing may
+	 * outlive the controller. Safe to call for a key with no server registered.
+	 */
+	#teardownServer(key: string): void {
+		this.#servers.get(key)?.server.close();
+		this.#servers.delete(key);
+		this.#cleanupKey(key);
+		const sockets = this.#connections.get(key);
+		if (sockets) {
+			for (const socket of sockets) {
+				socket.destroy();
+			}
+			this.#connections.delete(key);
+		}
+	}
 
 	/**
 	 * Creates a proxy server for a Hyperdrive binding.
@@ -159,20 +318,27 @@ export class HyperdriveProxyController {
 	async #startProxyServer(
 		config: HyperdriveProxyConfig,
 		key: string,
-		update?: { created: Set<string> }
+		update?: ProxyUpdate
 	): Promise<number> {
 		const { name, targetHost, targetPort, scheme, sslmode, sslrootcert } =
 			config;
 		const server = net.createServer((clientSocket) => {
 			clientSocket.setNoDelay(true);
-			this.#handleConnection(
+			this.#trackConnection(key, clientSocket);
+			const owner = this.#createOwner(key, clientSocket);
+			owner.track(clientSocket);
+			clientSocket.once("close", owner.close);
+			clientSocket.once("end", owner.close);
+			clientSocket.once("error", owner.close);
+			void this.#handleConnection(
 				clientSocket,
 				targetHost,
 				Number.parseInt(targetPort),
 				scheme,
 				sslmode,
+				owner,
 				sslrootcert
-			);
+			).catch(() => owner.close());
 		});
 		server.on("error", (err) => {
 			this.log?.error(
@@ -193,13 +359,18 @@ export class HyperdriveProxyController {
 				}
 			});
 		});
-		if (this.#disposed || (update !== undefined && this.#update !== update)) {
+		if (this.#disposed || this.#update !== update) {
 			server.close();
 			throw new Error("Hyperdrive proxy configuration update was interrupted");
 		}
 		this.#servers.set(key, { server, port });
 		update?.created.add(key);
 		return port;
+	}
+
+	/** Port of the local TCP bridge for a remote binding, if one is running. */
+	getRemoteBridgePort(name: string): number | undefined {
+		return this.#remoteBridgePorts.get(name);
 	}
 
 	/**
@@ -218,10 +389,14 @@ export class HyperdriveProxyController {
 		targetPort: number,
 		scheme: string,
 		sslmode: string,
+		owner: ConnectionOwner,
 		sslrootcert?: string
 	) {
-		// Connect to real database
-		const dbSocket = net.connect({ host: targetHost, port: targetPort });
+		// Track outbound sockets before any connect or TLS wait can yield.
+		const dbSocket = owner.track(
+			net.connect({ host: targetHost, port: targetPort })
+		);
+		dbSocket.on("error", () => {});
 		dbSocket.setNoDelay(true);
 		const sslmodeRequire = sslmode === "require";
 		const sslmodePrefer = sslmode === "prefer";
@@ -244,7 +419,8 @@ export class HyperdriveProxyController {
 						targetHost,
 						targetPort,
 						sslmodeRequire || sslmodeStrict,
-						tlsConfig
+						tlsConfig,
+						owner
 					);
 				} else if (scheme === schemes.mysql) {
 					return await handleMySQLTlsConnection(
@@ -253,22 +429,276 @@ export class HyperdriveProxyController {
 						targetHost,
 						targetPort,
 						sslmodeRequire || sslmodeStrict,
-						tlsConfig
+						tlsConfig,
+						owner
 					);
 				}
 			} catch (e) {
-				if (sslmodeRequire || sslmodeStrict) {
-					// Write error to client so worker can read it
+				if (!clientSocket.destroyed) {
 					clientSocket.write(`${e}\n`);
 					clientSocket.end();
-					dbSocket.destroy();
-					return;
 				}
+				dbSocket.destroy();
+				return;
 			}
 		}
-		// Pipe plain tcp sockets
-		clientSocket.pipe(dbSocket);
-		dbSocket.pipe(clientSocket);
+		setupTLSConnection(clientSocket, dbSocket);
+	}
+
+	/**
+	 * Creates a local TCP bridge for a *remote* Hyperdrive binding.
+	 *
+	 * The bridge is a plain `net.Server` on `127.0.0.1:<port>`; the binding's
+	 * `external.tcp` designator points at it, so workerd stays unmodified —
+	 * pointing a Hyperdrive designator at a Worker service crashes workerd
+	 * (SIGSEGV). Each inbound TCP connection is relayed, byte-for-byte, over a
+	 * WebSocket to the remote proxy's `connect` handler (which calls
+	 * `env[binding].connect()` at the edge and pipes the Hyperdrive proxy socket
+	 * back). Mirrors the raw-TCP relay in ProxyServerWorker's `handleConnect`,
+	 * but runs in the Miniflare Node process instead of inside workerd.
+	 *
+	 * Bridges share `createProxyServer`'s lifecycle: one is reused across
+	 * reloads while its target is unchanged, and `commitUpdate()` retires it
+	 * once a reload stops using it — including when the binding is removed or
+	 * switched to local.
+	 *
+	 * @returns the local bridge port the designator should target.
+	 */
+	async createRemoteTcpBridge(config: {
+		// Unique per-worker key for this bridge (see `getHyperdriveServiceName`),
+		// used to track the listener across reloads.
+		name: string;
+		// The binding name as the Worker declares it. This is what the edge relay
+		// dispatches on, so it must stay unqualified.
+		bindingName: string;
+		// The remote proxy connection string (a local URL that upgrades to a
+		// WebSocket relaying to the edge Hyperdrive binding).
+		remoteProxyConnectionString: URL;
+		// Credentials exposed to the consumer, captured before the listener starts.
+		expectedConnectionString: URL;
+	}): Promise<number> {
+		if (this.#disposed) {
+			throw new Error("Hyperdrive proxy controller has been disposed");
+		}
+		const { name, bindingName, remoteProxyConnectionString } = config;
+		let credentials: string[];
+		try {
+			credentials = getCredentials(config.expectedConnectionString);
+		} catch {
+			throw new Error(
+				`Remote Hyperdrive binding "${bindingName}" has invalid prepared credentials. Reconnect the remote proxy session and retry.`
+			);
+		}
+		const wsUrl = new URL(remoteProxyConnectionString.href);
+		wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+		const wsHref = wsUrl.href;
+		const key = JSON.stringify([
+			"remote",
+			name,
+			bindingName,
+			wsHref,
+			credentials,
+		]);
+		const update = this.#update;
+		const existing = this.#servers.get(key);
+		if (existing !== undefined) {
+			this.#remoteBridgePorts.set(name, existing.port);
+			return existing.port;
+		}
+		const starting = this.#starting.get(key);
+		if (starting !== undefined) {
+			return starting;
+		}
+		const promise = this.#startRemoteTcpBridge(
+			key,
+			name,
+			bindingName,
+			wsHref,
+			credentials,
+			update
+		);
+		this.#starting.set(key, promise);
+		try {
+			return await promise;
+		} finally {
+			this.#starting.delete(key);
+		}
+	}
+
+	async #startRemoteTcpBridge(
+		key: string,
+		name: string,
+		bindingName: string,
+		wsHref: string,
+		credentials: string[],
+		update?: ProxyUpdate
+	): Promise<number> {
+		const server = net.createServer((clientSocket) => {
+			clientSocket.setNoDelay(true);
+			this.#trackConnection(key, clientSocket);
+			this.#handleRemoteBridgeConnection(
+				key,
+				clientSocket,
+				wsHref,
+				bindingName,
+				credentials
+			);
+		});
+		server.on("error", (err) => {
+			this.log?.error(
+				new Error(
+					`Hyperdrive remote bridge error for binding "${name}": ${err.message}`
+				)
+			);
+		});
+		const port = await new Promise<number>((resolve, reject) => {
+			server.once("error", reject);
+			server.listen(0, "127.0.0.1", () => {
+				server.off("error", reject);
+				const address = server.address();
+				if (address !== null && typeof address !== "string") {
+					resolve(address.port);
+				} else {
+					reject(new Error("Invalid port"));
+				}
+			});
+		});
+		if (this.#disposed || this.#update !== update) {
+			server.close();
+			throw new Error("Hyperdrive proxy configuration update was interrupted");
+		}
+		this.#servers.set(key, { server, port });
+		update?.created.add(key);
+		this.#remoteBridgePorts.set(name, port);
+		return port;
+	}
+
+	/**
+	 * Relays one bridged TCP connection to the edge over a WebSocket. The socket
+	 * is paused until the WebSocket opens so no client bytes (the MySQL/Postgres
+	 * handshake) are dropped; both directions are torn down together on any
+	 * close/error.
+	 */
+	#handleRemoteBridgeConnection(
+		key: string,
+		clientSocket: net.Socket,
+		wsHref: string,
+		bindingName: string,
+		expectedCredentials: string[]
+	): void {
+		clientSocket.pause();
+		const ws = new WebSocket(wsHref, {
+			headers: {
+				"MF-Binding": bindingName,
+				// Hyperdrive's edge `connect()` ignores the address, but the raw-TCP
+				// relay path requires the header to be present.
+				"MF-Connect-Address": "hyperdrive.local:0",
+				...(process.env.CF_TRACE_ID
+					? { "cf-trace-id": process.env.CF_TRACE_ID }
+					: {}),
+			},
+		});
+
+		let closed = false;
+		let verified = false;
+		let forceCloseTimer: NodeJS.Timeout | undefined;
+		const teardown = () => {
+			if (closed) {
+				return;
+			}
+			closed = true;
+			this.#cleanups.get(key)?.delete(teardown);
+			if (forceCloseTimer !== undefined) {
+				clearTimeout(forceCloseTimer);
+				forceCloseTimer = undefined;
+			}
+			try {
+				clientSocket.destroy();
+			} catch {
+				// ignore
+			}
+			try {
+				ws.terminate();
+			} catch {
+				// ignore
+			}
+		};
+
+		// A database client disconnects at the protocol level (Postgres
+		// `Terminate`, MySQL `COM_QUIT`) before dropping its TCP connection, and
+		// that message has already been relayed, so the edge closes the tunnel
+		// itself within a few milliseconds. Closing the WebSocket from here races
+		// that: when this side wins, the runtime severs the edge relay mid-flight
+		// and reports it as a request that hung. So give the edge a moment to
+		// close, and only force the tunnel down if it does not — which is what
+		// happens when a client dies without disconnecting cleanly.
+		const clientGone = () => {
+			if (closed || forceCloseTimer !== undefined) {
+				return;
+			}
+			try {
+				clientSocket.destroy();
+			} catch {
+				// ignore
+			}
+			forceCloseTimer = setTimeout(teardown, EDGE_CLOSE_GRACE_MS);
+			// Never let a lingering tunnel keep the dev process alive.
+			forceCloseTimer.unref();
+		};
+
+		this.#registerCleanup(key, teardown);
+		ws.on("upgrade", (response) => {
+			const header = response.headers["mf-hd-connection-string"];
+			let reason = "missing connection credentials";
+			if (typeof header === "string") {
+				try {
+					const actual = getCredentials(header);
+					verified = actual.every(
+						(value, index) => value === expectedCredentials[index]
+					);
+					reason = "connection credentials do not match";
+				} catch {
+					reason = "invalid connection credentials";
+				}
+			}
+			if (!verified) {
+				this.log?.error(
+					new Error(
+						`Remote Hyperdrive binding "${bindingName}": ${reason}. Reconnect the remote proxy session and retry.`
+					)
+				);
+				teardown();
+			}
+		});
+		ws.on("open", () => {
+			if (closed || !verified || clientSocket.destroyed) {
+				teardown();
+				return;
+			}
+			clientSocket.on("data", (chunk: Buffer) => {
+				try {
+					ws.send(chunk);
+				} catch {
+					teardown();
+				}
+			});
+			clientSocket.resume();
+		});
+		ws.on("message", (data: WebSocket.RawData) => {
+			if (closed || !verified || clientSocket.destroyed) {
+				return;
+			}
+			const buf = Array.isArray(data)
+				? Buffer.concat(data)
+				: Buffer.isBuffer(data)
+					? data
+					: Buffer.from(data as ArrayBuffer);
+			clientSocket.write(buf);
+		});
+		ws.on("close", teardown);
+		ws.on("error", teardown);
+		clientSocket.on("close", clientGone);
+		clientSocket.on("error", clientGone);
 	}
 
 	/** Begins tracking proxy servers created for the next runtime config. */
@@ -276,7 +706,13 @@ export class HyperdriveProxyController {
 		if (this.#update !== undefined) {
 			throw new Error("Hyperdrive proxy configuration update already started");
 		}
-		this.#update = { created: new Set() };
+		if (this.#disposed) {
+			throw new Error("Hyperdrive proxy controller has been disposed");
+		}
+		this.#update = {
+			created: new Set(),
+			remoteBridgePorts: new Map(this.#remoteBridgePorts),
+		};
 	}
 
 	/** Stops listeners omitted by the successfully installed runtime config. */
@@ -286,10 +722,9 @@ export class HyperdriveProxyController {
 			return;
 		}
 		this.#update = undefined;
-		for (const [key, { server, port }] of this.#servers) {
+		for (const [key, { port }] of this.#servers) {
 			if (!activeAddresses.has(`127.0.0.1:${port}`)) {
-				server.close();
-				this.#servers.delete(key);
+				this.#retireServer(key);
 			}
 		}
 	}
@@ -302,24 +737,30 @@ export class HyperdriveProxyController {
 		}
 		this.#update = undefined;
 		for (const key of update.created) {
-			const entry = this.#servers.get(key);
-			entry?.server.close();
-			this.#servers.delete(key);
+			this.#retireServer(key);
 		}
+		this.#remoteBridgePorts = update.remoteBridgePorts;
 	}
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
 	dispose(): void {
 		this.#disposed = true;
 		this.#update = undefined;
-		// Stop accepting new connections on each proxy server. We don't await
-		// server.close() because net.Server waits for all existing connections
-		// to end before calling the callback, and lingering TCP sockets (e.g.
-		// from in-progress TLS negotiation) could block dispose indefinitely.
-		for (const { server } of this.#servers.values()) {
-			server.close();
+		// Destroying every tracked connection (rather than only closing the
+		// listener) is what makes this safe to call synchronously: a
+		// `server.close()` alone waits for existing connections to end before
+		// its callback fires, and a lingering one (e.g. from in-progress TLS
+		// negotiation, or a live DB connection) could block dispose forever.
+		// Snapshot the keys before iterating: `#teardownServer` deletes from
+		// `#servers` as it goes.
+		for (const key of new Set([
+			...this.#servers.keys(),
+			...this.#connections.keys(),
+			...this.#cleanups.keys(),
+		])) {
+			this.#teardownServer(key);
 		}
-		this.#servers.clear();
+		this.#remoteBridgePorts.clear();
 	}
 }
 
@@ -330,45 +771,74 @@ async function handlePostgresTlsConnection(
 	targetHost: string,
 	targetPort: number,
 	sslmodeRequire: boolean,
-	tlsConfig: TlsConfig
+	tlsConfig: TlsConfig,
+	owner: ConnectionOwner
 ) {
-	// Send Postgres sslrequest bytes
-	await writeAsync(dbSocket, POSTGRES_SSL_REQUEST_PACKET);
-
-	const response = await readAsync(dbSocket);
-	// Read first byte ssl flag
-	const sslResponseFlag = response.toString("utf8", 0, 1);
-	if (sslResponseFlag === "S") {
-		const tlsOptions = buildTlsConnectionOptions(
-			dbSocket,
-			targetHost,
-			tlsConfig
-		);
-		try {
-			const tlsSocket = await tlsConnect(tlsOptions);
-			setupTLSConnection(clientSocket, tlsSocket);
+	// Consume pending startup bytes so EOF can cancel negotiation. Bound this
+	// buffer rather than allowing a stalled database to accumulate client input.
+	const startupChunks: Buffer[] = [];
+	let startupLength = 0;
+	const collectStartup = (chunk: Buffer) => {
+		startupLength += chunk.length;
+		if (startupLength > 64 * 1024) {
+			owner.close();
 			return;
-		} catch (e) {
-			if (sslmodeRequire) {
-				throw e;
-			}
-			// Fallback to plain TCP connection
 		}
+		startupChunks.push(chunk);
+	};
+	const releaseStartup = () => {
+		clientSocket.pause();
+		clientSocket.off("data", collectStartup);
+		owner.assertOpen();
+		if (startupLength > 0) {
+			clientSocket.unshift(Buffer.concat(startupChunks));
+		}
+	};
+	clientSocket.on("data", collectStartup);
+	clientSocket.resume();
+	try {
+		// Send Postgres sslrequest bytes
+		await writeAsync(dbSocket, POSTGRES_SSL_REQUEST_PACKET);
+
+		const response = await readAsync(dbSocket);
+		// Read first byte ssl flag
+		const sslResponseFlag = response.toString("utf8", 0, 1);
+		if (sslResponseFlag === "S") {
+			const tlsOptions = buildTlsConnectionOptions(
+				dbSocket,
+				targetHost,
+				tlsConfig
+			);
+			try {
+				const tlsSocket = await tlsConnect(tlsOptions, owner);
+				releaseStartup();
+				setupTLSConnection(clientSocket, tlsSocket);
+				return;
+			} catch (e) {
+				if (sslmodeRequire) {
+					throw e;
+				}
+				// Fallback to plain TCP connection
+			}
+		}
+		// Server doesn't support SSL but client requires it
+		if (sslmodeRequire) {
+			throw Error("Server does not support SSL, but client requires SSL.");
+		}
+		// fallback to plain TCP
+		dbSocket.destroy();
+		const newDbSocket = await createPlainTCPConnection(
+			targetHost,
+			targetPort,
+			clientSocket,
+			owner
+		);
+		releaseStartup();
+		// Pipe plain TCP sockets
+		setupTLSConnection(clientSocket, newDbSocket);
+	} finally {
+		clientSocket.off("data", collectStartup);
 	}
-	// Server doesn't support SSL but client requires it
-	if (sslmodeRequire) {
-		throw Error("Server does not support SSL, but client requires SSL.");
-	}
-	// fallback to plain TCP
-	dbSocket.destroy();
-	const newDbSocket = await createPlainTCPConnection(
-		targetHost,
-		targetPort,
-		clientSocket
-	);
-	// Pipe plain TCP sockets
-	clientSocket.pipe(newDbSocket);
-	newDbSocket.pipe(clientSocket);
 }
 
 /** Handles MySQL TLS connection */
@@ -378,7 +848,8 @@ async function handleMySQLTlsConnection(
 	targetHost: string,
 	targetPort: number,
 	sslmodeRequire: boolean,
-	tlsConfig: TlsConfig
+	tlsConfig: TlsConfig,
+	owner: ConnectionOwner
 ) {
 	const initPacketChunk = await readAsync(dbSocket);
 	// Little-endian parse payload header length
@@ -437,7 +908,7 @@ async function handleMySQLTlsConnection(
 		);
 
 		try {
-			const tlsSocket = await tlsConnect(tlsOptions);
+			const tlsSocket = await tlsConnect(tlsOptions, owner);
 
 			// Send original init packet to client (with SSL capability)
 			const fullInitPacket = Buffer.concat([
@@ -476,52 +947,37 @@ async function handleMySQLTlsConnection(
 	const newDbSocket = await createPlainTCPConnection(
 		targetHost,
 		targetPort,
-		clientSocket
+		clientSocket,
+		owner
 	);
 
 	// Pipe plain TCP sockets
-	clientSocket.pipe(newDbSocket);
-	newDbSocket.pipe(clientSocket);
+	setupTLSConnection(clientSocket, newDbSocket);
 	return;
 }
 
-/** Create and wait for plain TCP connection */
+/** Creates a fallback socket only while the client still owns the connection. */
 async function createPlainTCPConnection(
 	targetHost: string,
 	targetPort: number,
-	clientSocket: net.Socket
+	clientSocket: net.Socket,
+	owner: ConnectionOwner
 ): Promise<net.Socket> {
-	const dbSocket = net.connect({ host: targetHost, port: targetPort });
+	owner.assertOpen();
+	const dbSocket = owner.track(
+		net.connect({ host: targetHost, port: targetPort })
+	);
 	dbSocket.setNoDelay(true);
-
-	// Wait for connection to be established
-	await new Promise<void>((resolve, reject) => {
-		const handleConnect = () => {
-			dbSocket.off("error", handleError);
-			resolve();
-		};
-
-		const handleError = (err: Error) => {
-			dbSocket.off("data", handleConnect);
-			reject(err);
-		};
-
-		dbSocket.once("connect", handleConnect);
-		dbSocket.once("error", handleError);
-	});
-
-	// Set up error handler
-	dbSocket.on("error", () => {
-		clientSocket.destroy();
-	});
-
+	dbSocket.on("error", () => clientSocket.destroy());
+	await waitForSocket(dbSocket, "connect");
+	owner.assertOpen();
 	return dbSocket;
 }
 
 /** Set up TLS connection with pipes and error handlers */
 function setupTLSConnection(
 	clientSocket: net.Socket,
-	tlsSocket: tls.TLSSocket
+	tlsSocket: net.Socket
 ): void {
 	// Set up error handler for runtime TLS errors
 	tlsSocket.on("error", () => {
@@ -529,6 +985,7 @@ function setupTLSConnection(
 		tlsSocket.destroy();
 	});
 
+	tlsSocket.once("close", () => clientSocket.destroy());
 	// Pipe sockets
 	clientSocket.pipe(tlsSocket);
 	tlsSocket.pipe(clientSocket);
@@ -545,41 +1002,79 @@ function writeAsync(
 	});
 }
 
-/** Ready buffer from socket and return as a promise helper function  */
+/** Reads the next chunk, rejecting when the peer closes before sending it. */
 function readAsync(socket: net.Socket): Promise<Buffer<ArrayBufferLike>> {
 	return new Promise((resolve, reject) => {
-		const handleData = (data: Buffer) => {
+		const cleanup = () => {
+			socket.off("data", handleData);
 			socket.off("error", handleError);
+			socket.off("close", handleClose);
+			socket.off("end", handleClose);
+		};
+		const handleData = (data: Buffer) => {
+			cleanup();
 			resolve(data);
 		};
-
 		const handleError = (err: Error) => {
-			socket.off("data", handleData);
+			cleanup();
 			reject(err);
 		};
-
+		const handleClose = () =>
+			handleError(new Error("Hyperdrive connection closed"));
+		if (socket.destroyed || socket.readableEnded) {
+			handleClose();
+			return;
+		}
 		socket.once("data", handleData);
 		socket.once("error", handleError);
+		socket.once("close", handleClose);
+		socket.once("end", handleClose);
 	});
 }
 
-function tlsConnect(options: tls.ConnectionOptions): Promise<tls.TLSSocket> {
+/** Waits for TCP/TLS readiness without retaining listeners after settlement. */
+function waitForSocket(
+	socket: net.Socket,
+	event: "connect" | "secureConnect"
+): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const socket = tls.connect(options);
-
-		const handleSecureConnect = () => {
+		const cleanup = () => {
+			socket.off(event, handleReady);
 			socket.off("error", handleError);
-			resolve(socket);
+			socket.off("close", handleClose);
+			socket.off("end", handleClose);
 		};
-
-		const handleError = (err: Error) => {
-			socket.off("secureConnect", handleSecureConnect);
-			reject(err);
+		const handleReady = () => {
+			cleanup();
+			resolve();
 		};
-
-		socket.once("secureConnect", handleSecureConnect);
+		const handleError = (error: Error) => {
+			cleanup();
+			reject(error);
+		};
+		const handleClose = () =>
+			handleError(new Error("Hyperdrive connection closed"));
+		if (socket.destroyed || socket.readableEnded) {
+			handleClose();
+			return;
+		}
+		socket.once(event, handleReady);
 		socket.once("error", handleError);
+		socket.once("close", handleClose);
+		socket.once("end", handleClose);
 	});
+}
+
+async function tlsConnect(
+	options: tls.ConnectionOptions,
+	owner: ConnectionOwner
+): Promise<tls.TLSSocket> {
+	owner.assertOpen();
+	const socket = owner.track(tls.connect(options));
+	socket.on("error", () => {});
+	await waitForSocket(socket, "secureConnect");
+	owner.assertOpen();
+	return socket;
 }
 
 /** MySQL helper that skips through reading the init packet

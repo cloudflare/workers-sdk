@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { getBindingLocalSupport } from "@cloudflare/workers-utils";
 import { getRemoteBindingsAuthHook } from "./auth";
+import { seedRemoteHyperdriveBindings } from "./seed-hyperdrive-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { RemoteBindingsLogger } from "./logger";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
@@ -11,6 +12,8 @@ import type {
 	Config,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
+
+export { HYPERDRIVE_KEEPALIVE_INTERVAL_MS } from "./start-remote-proxy-session";
 
 export function pickRemoteBindings(
 	bindings: Record<string, Binding>
@@ -45,6 +48,8 @@ export type RemoteProxySessionData = {
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
 	auth?: AsyncHook<CfAccount>;
+	/** Edge credentials for option assembly, refreshed on every helper call. */
+	hyperdriveConnectionStrings: Map<string, string>;
 };
 
 export type RemoteBindingsContext = {
@@ -74,10 +79,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
 	if (!authSameAsBefore) {
-		if (preExistingRemoteProxySessionData?.session) {
-			await preExistingRemoteProxySessionData.session.dispose();
-		}
-
+		await remoteProxySession?.dispose();
 		remoteProxySession = await startSession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
@@ -90,42 +92,61 @@ export async function maybeStartOrUpdateRemoteProxySession(
 			),
 			logger: context.logger,
 		});
-	} else {
-		const remoteBindingsAreSameAsBefore = deepStrictEqual(
+	} else if (
+		!deepStrictEqual(
 			remoteBindings,
 			preExistingRemoteProxySessionData?.remoteBindings
-		);
-
-		if (!remoteBindingsAreSameAsBefore) {
-			if (!remoteProxySession) {
-				if (Object.keys(remoteBindings).length > 0) {
-					remoteProxySession = await startSession(remoteBindings, {
-						workerName: workerConfigObject.name,
-						complianceRegion: workerConfigObject.complianceRegion,
-						cliDisplayName: context.cliDisplayName,
-						auth: getRemoteBindingsAuthHook(
-							auth,
-							workerConfigObject.account_id,
-							workerConfigObject.profileDir,
-							context.logger
-						),
-						logger: context.logger,
-					});
-				}
-			} else {
-				await remoteProxySession.updateBindings(remoteBindings);
-			}
+		)
+	) {
+		if (!remoteProxySession) {
+			remoteProxySession = await startSession(remoteBindings, {
+				workerName: workerConfigObject.name,
+				complianceRegion: workerConfigObject.complianceRegion,
+				cliDisplayName: context.cliDisplayName,
+				auth: getRemoteBindingsAuthHook(
+					auth,
+					workerConfigObject.account_id,
+					workerConfigObject.profileDir,
+					context.logger
+				),
+				logger: context.logger,
+			});
+		} else {
+			await remoteProxySession.updateBindings(remoteBindings);
 		}
 	}
 
-	await remoteProxySession?.ready;
 	if (!remoteProxySession) {
 		return null;
+	}
+	try {
+		await remoteProxySession.ready;
+	} catch (error) {
+		if (remoteProxySession !== preExistingRemoteProxySessionData?.session) {
+			await remoteProxySession.dispose().catch(() => {});
+		}
+		throw error;
+	}
+	remoteProxySession.updateHyperdriveKeepalive(workerConfigObject.bindings);
+	let hyperdriveConnectionStrings: Map<string, string>;
+	try {
+		hyperdriveConnectionStrings = await seedRemoteHyperdriveBindings(
+			workerConfigObject.bindings,
+			remoteProxySession.remoteProxyConnectionString
+		);
+	} catch {
+		// Return the handle even on seed failure: the caller owns this session,
+		// and a reused session may also serve unrelated KV, R2, or service bindings.
+		context.logger.warn(
+			"Failed to fetch edge credentials for remote Hyperdrive bindings. Check your authentication and internet connection, then retry."
+		);
+		hyperdriveConnectionStrings = new Map();
 	}
 	return {
 		session: remoteProxySession,
 		remoteBindings,
 		auth,
+		hyperdriveConnectionStrings,
 	};
 }
 
