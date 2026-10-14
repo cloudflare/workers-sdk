@@ -49,11 +49,11 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/build-output-utils": "0.9.2",
-		"@cloudflare/config": "0.26.0",
-		"@cloudflare/runtime-types": "0.1.11",
-		"@cloudflare/unenv-preset": "2.16.2",
-		"miniflare": "5.20261012.0-beta",
+		"@cloudflare/build-output-utils": "workspace:*",
+		"@cloudflare/config": "workspace:*",
+		"@cloudflare/runtime-types": "workspace:*",
+		"@cloudflare/unenv-preset": "workspace:*",
+		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
 		"ws": "catalog:default"
 	},

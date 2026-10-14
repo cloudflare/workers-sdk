@@ -43,7 +43,7 @@
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/shared-ast-primitives": "workspace:*",
-		"@cloudflare/vite-plugin": "npm:@cloudflare/vite-plugin@1.56.0",
+		"@cloudflare/vite-plugin": "npm:@cloudflare/vite-plugin@1.63.2",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",

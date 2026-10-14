@@ -272,7 +272,6 @@ describe("the real workspace", () => {
 			    "@cloudflare/kv-asset-handler",
 			    "@cloudflare/pages-functions",
 			    "@cloudflare/unenv-preset",
-			    "@cloudflare/vite-plugin",
 			    "@cloudflare/workers-editor-shared",
 			    "@cloudflare/workers-utils",
 			    "create-cloudflare",
@@ -290,6 +289,7 @@ describe("the real workspace", () => {
 			  [
 			    "@cloudflare/autoconfig",
 			    "@cloudflare/containers-shared",
+			    "@cloudflare/vite-plugin",
 			    "@cloudflare/vitest-plugin",
 			  ],
 			  [
