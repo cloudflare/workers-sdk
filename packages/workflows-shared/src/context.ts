@@ -39,6 +39,7 @@ import {
 	writeStreamOutput,
 } from "./lib/streams";
 import {
+	findDuplicateConcurrencyKey,
 	isValidStepConfig,
 	isValidStepName,
 	MAX_STEP_NAME_LENGTH,
@@ -49,6 +50,7 @@ import type { Engine } from "./engine";
 import type { InstanceMetadata } from "./instance";
 import type { RollbackFn, WorkflowStepRollbackOptions } from "./lib/rollback";
 import type { StreamOutputMeta } from "./lib/streams";
+import type { StepConcurrencyConfig } from "./lib/validators";
 import type {
 	WorkflowBackoff,
 	WorkflowDelayDuration,
@@ -83,6 +85,7 @@ export type ResolvedStepConfig = {
 	};
 	timeout: WorkflowTimeoutDuration;
 	sensitive?: WorkflowStepSensitivity;
+	concurrency?: StepConcurrencyConfig;
 };
 
 // The user-facing config (passed to step callbacks). The dynamic-delay marker is
@@ -95,7 +98,12 @@ export type EngineStepConfig = {
 	};
 	timeout: WorkflowTimeoutDuration;
 	sensitive?: WorkflowStepSensitivity;
+	concurrency?: StepConcurrencyConfig;
 };
+
+// Released workers-types predate step concurrency, so the engine widens the user's config
+// itself instead of waiting for the `WorkflowStepConfig` type to catch up.
+type StepConfig = WorkflowStepConfig & { concurrency?: StepConcurrencyConfig };
 
 export function toEngineStepConfig(
 	config: ResolvedStepConfig
@@ -230,7 +238,7 @@ export class Context extends RpcTarget {
 		...rest: unknown[]
 	): Promise<unknown | void | undefined> {
 		let closure: (ctx: WorkflowStepContext) => Promise<T>;
-		let stepConfig: WorkflowStepConfig;
+		let stepConfig: StepConfig;
 		let rollbackOptions: WorkflowStepRollbackOptions | undefined;
 
 		const first = rest[0];
@@ -239,7 +247,7 @@ export class Context extends RpcTarget {
 			stepConfig = {};
 			rollbackOptions = parseRollbackOptions(name, rest[1]);
 		} else {
-			stepConfig = (first ?? {}) as WorkflowStepConfig;
+			stepConfig = (first ?? {}) as StepConfig;
 			closure = rest[1] as (ctx: WorkflowStepContext) => Promise<T>;
 			if (typeof closure !== "function") {
 				const error = new WorkflowFatalError(
@@ -303,6 +311,15 @@ export class Context extends RpcTarget {
 		if (!isValidStepConfig(stepConfig)) {
 			const error = new WorkflowFatalError(
 				`Step config for "${name}" is in a invalid format. See https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/`
+			) as Error & UserErrorField;
+			error.isUserError = true;
+			throw error;
+		}
+
+		const duplicateKey = findDuplicateConcurrencyKey(stepConfig.concurrency);
+		if (duplicateKey !== undefined) {
+			const error = new WorkflowFatalError(
+				`Step config for "${name}" references concurrency key "${duplicateKey}" more than once`
 			) as Error & UserErrorField;
 			error.isUserError = true;
 			throw error;
