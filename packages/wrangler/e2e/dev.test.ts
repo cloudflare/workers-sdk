@@ -72,7 +72,7 @@ describe.each([
 	...(CLOUDFLARE_ACCOUNT_ID
 		? [{ cmd: "wrangler dev --remote --port=0 --inspector-port=0" }]
 		: []),
-])("basic js dev: $cmd", ({ cmd }) => {
+])("basic js dev: '$cmd'", ({ cmd }) => {
 	it(`can modify Worker during ${cmd}`, async ({ expect }) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
