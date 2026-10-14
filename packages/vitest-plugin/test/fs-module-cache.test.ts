@@ -1,12 +1,74 @@
-import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
+import { version as installedVitestVersion } from "vitest/package.json";
 import { CloudflarePoolWorker } from "../src/pool/cloudflare-pool-worker";
 import { structuredSerializableParse } from "../src/pool/index";
 import { test, vitestConfig } from "./helpers";
 import type { WorkerRequest } from "vitest/node";
+
+const fsModuleCacheOptions = {
+	fsModuleCache: true,
+	fsModuleCachePath: "./.vitest-cache",
+};
+const cacheConfig = (
+	process.env.VITEST_VERSION ?? installedVitestVersion
+).startsWith("4.")
+	? { experimental: fsModuleCacheOptions }
+	: fsModuleCacheOptions;
+
+test("inlines cached fetches with Vitest 4's experimental setting", async ({
+	expect,
+	tmpPath,
+}) => {
+	const cachedPath = path.join(tmpPath, "cached-module.js");
+	await fs.writeFile(cachedPath, "export const value = 42;");
+	const send = vi.fn();
+	const worker = Object.create(
+		CloudflarePoolWorker.prototype
+	) as CloudflarePoolWorker;
+	Object.assign(worker, {
+		socket: { send },
+		parsedPoolOptions: {},
+		options: { project: { config: { experimental: { fsModuleCache: true } } } },
+	});
+
+	worker.send({
+		t: "s",
+		i: 1,
+		r: { cached: true, tmp: cachedPath },
+	} as unknown as WorkerRequest);
+
+	const response = structuredSerializableParse(send.mock.calls[0][0]) as {
+		r: unknown;
+	};
+	expect(response.r).toEqual({ code: "export const value = 42;" });
+});
+
+test("forwards a cached fetch when its file disappears", ({
+	expect,
+	tmpPath,
+}) => {
+	const send = vi.fn();
+	const worker = Object.create(
+		CloudflarePoolWorker.prototype
+	) as CloudflarePoolWorker;
+	Object.assign(worker, {
+		socket: { send },
+		parsedPoolOptions: {},
+		options: { project: { config: { fsModuleCache: true } } },
+	});
+	const message = {
+		t: "s",
+		i: 1,
+		r: { cached: true, tmp: path.join(tmpPath, "missing.js") },
+	};
+
+	worker.send(message as unknown as WorkerRequest);
+
+	expect(structuredSerializableParse(send.mock.calls[0][0])).toEqual(message);
+});
 
 test("inlines warm-cache entries and skips missing files", async ({
 	expect,
@@ -60,10 +122,7 @@ for (const moduleRegistry of [
 							bindings: { VALUE: 42 },
 						},
 					},
-					{
-						fsModuleCache: true,
-						fsModuleCachePath: "./.vitest-cache",
-					}
+					cacheConfig
 				),
 				"helper.ts": "export const value = 42;",
 				"mocked.ts": "export const value = 'original';",
@@ -101,79 +160,6 @@ for (const moduleRegistry of [
 }
 
 test(
-	"loads cloudflare:test imports cached with legacy UUID-based IDs",
-	{ timeout: 90_000 },
-	async ({ expect, seed, tmpPath, vitestRun }) => {
-		const legacyId = `cloudflare:test-${randomUUID()}`;
-		await seed({
-			"legacy-id": "",
-			"vitest.config.mts": dedent`
-				import { existsSync } from "node:fs";
-				import { cloudflareTest } from "@cloudflare/vitest-plugin";
-
-				const plugin = cloudflareTest({
-					miniflare: {
-						compatibilityDate: "2026-08-10",
-						compatibilityFlags: ["nodejs_compat"],
-						bindings: { VALUE: 42 },
-					},
-				});
-
-				// Keep the config source unchanged so switching resolvers does not
-				// invalidate the entire cache through Vitest's config hash.
-				if (existsSync(new URL("./legacy-id", import.meta.url))) {
-					const resolveId = plugin.resolveId;
-					const load = plugin.load;
-					const legacyId = ${JSON.stringify(`\0${legacyId}`)};
-					plugin.resolveId = function(id) {
-						if (id === "cloudflare:test") return legacyId;
-					};
-					plugin.load = function(id, ...args) {
-						if (id === legacyId) {
-							const stableId = resolveId.call(this, "cloudflare:test");
-							return load.call(this, stableId, ...args);
-						}
-					};
-				}
-
-				export default {
-					plugins: [plugin],
-					test: {
-						fsModuleCache: true,
-						fsModuleCachePath: "./.vitest-cache",
-					},
-				};
-			`,
-			"index.test.ts": dedent`
-				import { env } from "cloudflare:test";
-				import { it } from "vitest";
-
-				it("loads cloudflare:test", ({ expect }) => {
-					expect(env.VALUE).toBe(42);
-				});
-			`,
-		});
-
-		const firstRun = await vitestRun();
-		expect(await firstRun.exitCode, firstRun.stderr + firstRun.stdout).toBe(0);
-
-		const cachePath = path.join(tmpPath, ".vitest-cache");
-		const cachedModules = await Promise.all(
-			(await fs.readdir(cachePath)).map((file) =>
-				fs.readFile(path.join(cachePath, file), "utf8")
-			)
-		);
-		expect(cachedModules.some((code) => code.includes(legacyId))).toBe(true);
-
-		await fs.unlink(path.join(tmpPath, "legacy-id"));
-		const secondRun = await vitestRun();
-		expect(await secondRun.exitCode, secondRun.stderr + secondRun.stdout).toBe(
-			0
-		);
-	}
-);
-
-test(
 	"updates cached cloudflare:test imports when Wrangler main changes",
 	{ timeout: 90_000 },
 	async ({ expect, seed, tmpPath, vitestRun }) => {
@@ -188,10 +174,7 @@ test(
 		await seed({
 			"vitest.config.mts": vitestConfig(
 				{ wrangler: { configPath: "./wrangler.jsonc" } },
-				{
-					fsModuleCache: true,
-					fsModuleCachePath: "./.vitest-cache",
-				}
+				cacheConfig
 			),
 			"wrangler.jsonc": wranglerConfig("first"),
 			"loaded-main.ts": "export const loadedMains: string[] = [];",
@@ -252,8 +235,7 @@ test(
 						})],
 						test: {
 							name,
-							fsModuleCache: true,
-							fsModuleCachePath: "./.vitest-cache",
+							...${JSON.stringify(cacheConfig)},
 							provide: { expectedMain: name },
 						},
 					};

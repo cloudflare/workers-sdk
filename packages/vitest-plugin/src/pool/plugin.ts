@@ -125,8 +125,8 @@ export function cloudflareTest(
 		},
 		resolveId(id) {
 			if (id === "cloudflare:test" || id.startsWith("\0cloudflare:test-")) {
-				// Remap IDs from caches populated before IDs were stable. Vitest then
-				// invalidates the cached importer when its resolved dependency changes.
+				// Remap IDs from other projects sharing the cache or older sessions.
+				// Vitest invalidates cached importers when resolved dependencies change.
 				return cloudflareTestId;
 			}
 		},

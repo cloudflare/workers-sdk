@@ -61,7 +61,12 @@ function inlineCachedModule(
 
 function inlineCachedModules(response: unknown): unknown {
 	const cacheContents = new Map<string, string>();
-	const inlined = inlineCachedModule(response, cacheContents);
+	let inlined: unknown;
+	try {
+		inlined = inlineCachedModule(response, cacheContents);
+	} catch {
+		return response;
+	}
 	if (
 		inlined !== response ||
 		response === null ||
@@ -245,11 +250,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 			};
 		}
 		const rpcResponse = message as { t?: string; r?: unknown };
-		if (
-			this.options.project.config.fsModuleCache &&
-			rpcResponse.t === "s" &&
-			rpcResponse.r !== undefined
-		) {
+		if (rpcResponse.t === "s" && rpcResponse.r !== undefined) {
 			const inlined = inlineCachedModules(rpcResponse.r);
 			if (inlined !== rpcResponse.r) {
 				toSend = { ...message, r: inlined };
