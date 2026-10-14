@@ -49,6 +49,7 @@ if (process.platform === "win32") {
 	function getDefaultPtyEnv(): Record<string, string> {
 		const env = { ...process.env } as Record<string, string>;
 		delete env.TURBO_HASH;
+		delete env.TURBO_IS_TUI;
 		return env;
 	}
 	const ptyOptions: pty.IPtyForkOptions = {
@@ -287,18 +288,36 @@ if (process.platform === "win32") {
 				expect(wrangler.stdout).not.toContain("rebuild container");
 				expect(wrangler.stdout).not.toContain("open local explorer");
 			});
-			it("should not show hotkeys under turborepo", async () => {
+			it.each(["", "false"])(
+				"should not show hotkeys under Turborepo stream output (TURBO_IS_TUI=%j)",
+				async (turboIsTui) => {
+					const wrangler = await startWranglerDev(args, false, {
+						...getDefaultPtyEnv(),
+						TURBO_HASH: "test-hash",
+						TURBO_IS_TUI: turboIsTui,
+					});
+					wrangler.pty.kill();
+					expect(wrangler.stdout).not.toContain("open a browser");
+					expect(wrangler.stdout).not.toContain("open devtools");
+					expect(wrangler.stdout).not.toContain("clear console");
+					expect(wrangler.stdout).not.toContain("to exit");
+					expect(wrangler.stdout).not.toContain("rebuild container");
+					expect(wrangler.stdout).not.toContain("open local explorer");
+				}
+			);
+			it("should keep working hotkeys under Turborepo's terminal UI", async () => {
 				const wrangler = await startWranglerDev(args, false, {
 					...getDefaultPtyEnv(),
 					TURBO_HASH: "test-hash",
+					TURBO_IS_TUI: "true",
 				});
-				wrangler.pty.kill();
-				expect(wrangler.stdout).not.toContain("open a browser");
-				expect(wrangler.stdout).not.toContain("open devtools");
-				expect(wrangler.stdout).not.toContain("clear console");
-				expect(wrangler.stdout).not.toContain("to exit");
-				expect(wrangler.stdout).not.toContain("rebuild container");
-				expect(wrangler.stdout).not.toContain("open local explorer");
+				expect(wrangler.stdout).toContain("open a browser");
+				expect(wrangler.stdout).toContain("open devtools");
+				expect(wrangler.stdout).toContain("clear console");
+				expect(wrangler.stdout).toContain("to exit");
+				expect(wrangler.stdout).toContain("open local explorer");
+				wrangler.pty.write("x");
+				expect(await wrangler.exitPromise).toBe(0);
 			});
 		});
 	});
