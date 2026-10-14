@@ -1,5 +1,6 @@
 import { RpcTarget } from "cloudflare:workers";
 import { ms } from "itty-time";
+import { CONCURRENCY_WAIT_POLL_MS } from "./concurrency";
 import { INSTANCE_METADATA, InstanceEvent, InstanceStatus } from "./instance";
 import { computeHash } from "./lib/cache";
 import {
@@ -40,6 +41,7 @@ import {
 } from "./lib/streams";
 import {
 	findDuplicateConcurrencyKey,
+	normalizeConcurrencyKeys,
 	isValidStepConfig,
 	isValidStepName,
 	MAX_STEP_NAME_LENGTH,
@@ -145,6 +147,8 @@ export type WorkflowStepContext = {
 };
 
 const PAUSE_DATETIME = "PAUSE_DATETIME";
+
+type ConcurrencyHold = { holderId: string; heldKeys: string[] };
 
 export class Context extends RpcTarget {
 	#engine: Engine;
@@ -1179,7 +1183,33 @@ export class Context extends RpcTarget {
 			return result;
 		};
 
-		const result = await doWrapper(closure);
+		// Keys are held across every attempt and retry delay, and released once the step
+		// settles. Rollback steps never acquire them, matching production.
+		const concurrencyKeys = isRollback
+			? []
+			: normalizeConcurrencyKeys(stepConfig.concurrency);
+		const concurrencyHold =
+			concurrencyKeys.length === 0
+				? undefined
+				: await this.#acquireConcurrencyKeys({
+						keys: concurrencyKeys,
+						cacheKey,
+						stepName: name,
+						stepNameWithCounter,
+					});
+
+		let result: unknown;
+		try {
+			result = await doWrapper(closure);
+		} finally {
+			if (concurrencyHold !== undefined) {
+				await this.#releaseConcurrencyKeys(
+					concurrencyHold,
+					cacheKey,
+					stepNameWithCounter
+				);
+			}
+		}
 
 		// Check if a pause was requested while this step was running.
 		// Rollback steps may run while the instance is paused; don't let stale pause
@@ -1189,6 +1219,111 @@ export class Context extends RpcTarget {
 		}
 
 		return result;
+	}
+
+	// Waits outside the step semaphore like a sleep, so other branches keep starting steps and
+	// pause is not blocked. Workflow status is left alone, matching local sleeps.
+	async #acquireConcurrencyKeys(options: {
+		keys: readonly string[];
+		cacheKey: string;
+		stepName: string;
+		stepNameWithCounter: string;
+	}): Promise<ConcurrencyHold | undefined> {
+		const stub = this.#engine.getConcurrencyKeys();
+		if (stub === undefined) {
+			return undefined;
+		}
+		const { keys, cacheKey, stepName, stepNameWithCounter } = options;
+		const metadata =
+			await this.#state.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+		if (!metadata) {
+			throw new Error("instanceMetadata is undefined");
+		}
+		const workflow = this.#engine.getConcurrencyWorkflowName();
+		const instanceId = metadata.instance.id;
+		const holderId = `${workflow}/${instanceId}/${cacheKey}`;
+		await this.#engine.markConcurrencyKeysUsed();
+
+		const pauseSignal = this.#engine.pauseController.signal;
+		const abortSignal = this.#engine.engineAbortController.signal;
+		const stopSignal = AbortSignal.any([pauseSignal, abortSignal]);
+		let waitLogged = false;
+		try {
+			for (;;) {
+				if (pauseSignal.aborted) {
+					throw new Error(ABORT_REASONS.USER_PAUSE);
+				}
+				if (abortSignal.aborted) {
+					throw abortSignal.reason;
+				}
+				const status = await this.#engine.getStatus();
+				const pausing =
+					status === InstanceStatus.WaitingForPause ||
+					status === InstanceStatus.Paused;
+				if (!pausing) {
+					const result = await stub.acquire({
+						holderId,
+						workflow,
+						instanceId,
+						step: stepNameWithCounter,
+						keys: [...keys],
+					});
+					if (result.granted) {
+						for (const keyName of result.unknownKeys) {
+							console.warn(
+								`Concurrency key "${keyName}" does not exist in local development, so step "${stepName}" runs without its limit. Create it with \`wrangler workflows concurrency create ${keyName} --limit <n> --local\`.`
+							);
+						}
+						for (const keyName of result.heldKeys) {
+							this.#engine.writeLog(
+								InstanceEvent.TICKET_CLAIMED,
+								cacheKey,
+								stepNameWithCounter,
+								{ keyName, acquisitionId: holderId }
+							);
+						}
+						return { holderId, heldKeys: result.heldKeys };
+					}
+					if (!waitLogged) {
+						this.#engine.writeLog(
+							InstanceEvent.WAITING_FOR_STEP_CONCURRENCY,
+							cacheKey,
+							stepNameWithCounter,
+							{ keyName: result.blockedOn, keys: [...keys] }
+						);
+						waitLogged = true;
+					}
+				}
+				await raceAgainstAbort(
+					stub.waitForChange(CONCURRENCY_WAIT_POLL_MS),
+					stopSignal
+				);
+			}
+		} catch (error) {
+			await stub.cancelWait(holderId).catch(() => {});
+			throw error;
+		}
+	}
+
+	async #releaseConcurrencyKeys(
+		hold: ConcurrencyHold,
+		cacheKey: string,
+		stepNameWithCounter: string
+	): Promise<void> {
+		try {
+			await this.#engine.getConcurrencyKeys()?.release(hold.holderId);
+		} catch (error) {
+			console.debug("Failed to release concurrency keys:", error);
+			return;
+		}
+		for (const keyName of hold.heldKeys) {
+			this.#engine.writeLog(
+				InstanceEvent.TICKET_RELEASED,
+				cacheKey,
+				stepNameWithCounter,
+				{ keyName, acquisitionId: hold.holderId }
+			);
+		}
 	}
 
 	async sleep(name: string, duration: WorkflowSleepDuration): Promise<void> {

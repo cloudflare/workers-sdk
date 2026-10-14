@@ -4,9 +4,14 @@
 	"compatibility_date": "2025-02-04",
 	"compatibility_flags": ["enable_ctx_exports"],
 	"durable_objects": {
-		"bindings": [{ "name": "ENGINE", "class_name": "Engine" }],
+		"bindings": [
+			{ "name": "ENGINE", "class_name": "Engine" },
+			{ "name": "CONCURRENCY_KEYS", "class_name": "ConcurrencyKeys" },
+		],
 	},
-	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["Engine"] }],
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["Engine", "ConcurrencyKeys"] },
+	],
 	"services": [
 		{
 			"binding": "USER_WORKFLOW",
