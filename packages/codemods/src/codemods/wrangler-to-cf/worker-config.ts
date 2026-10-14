@@ -31,6 +31,26 @@ import type {
 const DEPENDENCIES_INSTRUMENTATION_ENV_VAR =
 	"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION";
 
+function isDependenciesInstrumentationConfig(
+	value: unknown
+): value is { enabled?: boolean; exclude_packages?: string[] } {
+	if (!isRecord(value)) {
+		return false;
+	}
+
+	return (
+		(value.enabled === undefined || typeof value.enabled === "boolean") &&
+		(value.exclude_packages === undefined ||
+			(Array.isArray(value.exclude_packages) &&
+				value.exclude_packages.every(
+					(packageName) => typeof packageName === "string"
+				))) &&
+		Object.keys(value).every(
+			(key) => key === "enabled" || key === "exclude_packages"
+		)
+	);
+}
+
 function createDependenciesInstrumentationFollowUp(
 	source: UnknownRecord,
 	sourcePrefix: string
@@ -41,7 +61,7 @@ function createDependenciesInstrumentationFollowUp(
 
 	const sourcePath = `${sourcePrefix ? `${sourcePrefix}.` : ""}dependencies_instrumentation`;
 	const instrumentation = source.dependencies_instrumentation;
-	if (!isRecord(instrumentation)) {
+	if (!isDependenciesInstrumentationConfig(instrumentation)) {
 		return createFollowUp(
 			"unsupported-field",
 			"The dependency instrumentation configuration is invalid and was not migrated.",
@@ -49,9 +69,8 @@ function createDependenciesInstrumentationFollowUp(
 		);
 	}
 
-	const excludedPackages = instrumentation.exclude_packages;
 	const hasExcludedPackages =
-		Array.isArray(excludedPackages) && excludedPackages.length > 0;
+		(instrumentation.exclude_packages?.length ?? 0) > 0;
 
 	if (instrumentation.enabled === false) {
 		return createFollowUp(
@@ -69,20 +88,7 @@ function createDependenciesInstrumentationFollowUp(
 		);
 	}
 
-	if (
-		(instrumentation.enabled === undefined ||
-			instrumentation.enabled === true) &&
-		(excludedPackages === undefined ||
-			(Array.isArray(excludedPackages) && excludedPackages.length === 0))
-	) {
-		return;
-	}
-
-	return createFollowUp(
-		"unsupported-field",
-		"The dependency instrumentation configuration is invalid and was not migrated.",
-		{ sourcePath }
-	);
+	return;
 }
 
 export function convertWorkerConfig(

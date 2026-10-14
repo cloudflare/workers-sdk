@@ -108,6 +108,33 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("reports invalid dependency instrumentation configuration", ({
+		expect,
+	}) => {
+		for (const dependenciesInstrumentation of [
+			{ enabled: "false" },
+			{ enabled: true, exclude_packages: "@internal/*" },
+			{ enabled: true, exclude_packages: [123] },
+			{ enabled: true, unknown_field: true },
+		]) {
+			const result = convert({
+				compatibility_date: "2026-09-23",
+				dependencies_instrumentation: dependenciesInstrumentation,
+				name: "example-worker",
+			});
+
+			expect(result.followUps).toEqual([
+				expect.objectContaining({
+					blocking: true,
+					code: "unsupported-field",
+					message:
+						"The dependency instrumentation configuration is invalid and was not migrated.",
+					sourcePath: "dependencies_instrumentation",
+				}),
+			]);
+		}
+	});
+
 	it("reports how to preserve disabled dependency instrumentation", ({
 		expect,
 	}) => {
