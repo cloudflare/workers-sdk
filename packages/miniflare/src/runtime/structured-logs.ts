@@ -62,6 +62,44 @@ export function handleStructuredLogsFromStream(
 	});
 }
 
+/**
+ * What an address-in-use failure names, where workerd says: the address, as
+ * its C++ server printed it, or the socket, as its Rust server does.
+ */
+export interface AddressInUse {
+	address?: string;
+	socket?: string;
+}
+
+// `EADDRINUSE` on macOS and Linux; `WSAEADDRINUSE` on Windows, and
+// `WSAEACCES`, which is what workerd's bind (with `SO_REUSEADDR`) gets when the
+// port's holder has `SO_EXCLUSIVEADDRUSE`, as Node's servers do on Windows.
+const ADDRESS_IN_USE_OS_ERRORS = ["48", "98", "10013", "10048"];
+
+/**
+ * Parses an address-in-use failure out of a chunk of workerd's output, or
+ * returns `undefined` if the chunk has none. workerd has reported one in three
+ * forms:
+ *  - `Socket "<name>": bind(): <reason> (os error <n>)`: the Rust server
+ *    (with escaped quotes inside a structured log line);
+ *  - `bind(): <reason> (os error <n>)` in a fatal uncaught exception: the C++
+ *    server over tokio-backed sockets, which names neither;
+ *  - `Address already in use; toString() = <address>`: the C++ server over
+ *    kj's own sockets.
+ */
+export function parseAddressInUse(chunk: string): AddressInUse | undefined {
+	const bind =
+		/(?:Socket \\?"(.+?)\\?": )?bind\(\): [^\n]*\(os error (\d+)\)/.exec(chunk);
+	if (bind !== null && ADDRESS_IN_USE_OS_ERRORS.includes(bind[2])) {
+		return bind[1] === undefined ? {} : { socket: bind[1] };
+	}
+	const kj = /Address already in use; toString\(\) = ([^;\s]+)/.exec(chunk);
+	if (kj !== null) {
+		return { address: kj[1] };
+	}
+	return undefined;
+}
+
 const messageClassifiers = {
 	// Is this chunk an internal message from workerd that we want to hijack to cleanup/ignore?
 	isInternal(chunk: string) {
@@ -97,7 +135,7 @@ const messageClassifiers = {
 	},
 	// Is this chunk an Address In Use error?
 	isAddressInUse(chunk: string) {
-		return chunk.includes("Address already in use; toString() = ");
+		return parseAddressInUse(chunk) !== undefined;
 	},
 	isCodeMovedWarning(chunk: string) {
 		return /CODE_MOVED for unknown code block/.test(chunk);
@@ -125,6 +163,13 @@ function wrapStructuredLogsHandler(
 	let reportingFatalCrash = false;
 
 	return (structuredLog: WorkerdStructuredLog) => {
+		// Miniflare handles startup failures that result in an address in use message
+		// and will turn them into thrown MiniflareCoreErrors. As such, don't show the log to
+		// the user, or they'd see it twice. This comes first: one form of it is a fatal crash.
+		if (messageClassifiers.isAddressInUse(structuredLog.message)) {
+			return;
+		}
+
 		if (messageClassifiers.isFatalCrash(structuredLog.message)) {
 			reportingFatalCrash = true;
 			return structuredLogsHandler({
@@ -141,14 +186,6 @@ function wrapStructuredLogsHandler(
 			// this is an internal message from workerd that we want to hijack to cleanup/ignore
 
 			// CLEANABLE:
-			// known case to cleanup: Address in use errors
-			if (messageClassifiers.isAddressInUse(structuredLog.message)) {
-				// Miniflare handles startup failures that result in an address in use message
-				// and will turn them into thrown MiniflareCoreErrors. As such, don't show the log to
-				// the user, or they'd see it twice
-				return;
-			}
-
 			// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
 			// version of the Windows OS or the Microsoft Visual C++ Redistributable.
 			// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918

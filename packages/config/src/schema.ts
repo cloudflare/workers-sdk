@@ -691,6 +691,15 @@ const ObservabilitySchema = z.strictObject({
 		.optional(),
 });
 
+const AccessSchema = z.strictObject({
+	dev: z
+		.strictObject({
+			aud: z.string(),
+			identity: z.record(z.string(), z.unknown()).optional(),
+		})
+		.optional(),
+});
+
 const PlacementSchema = z.union([
 	z.strictObject({
 		mode: z.enum(["off", "smart"]),
@@ -793,6 +802,7 @@ const BaseWorkerSchema = z.strictObject({
 	limits: LimitsSchema.optional(),
 	logpush: z.boolean().optional(),
 	observability: ObservabilitySchema.optional(),
+	access: AccessSchema.optional(),
 	workersDev: z.boolean().optional(),
 	previewUrls: z.boolean().optional(),
 	firstPartyWorker: z.boolean().optional(),

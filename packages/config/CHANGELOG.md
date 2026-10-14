@@ -1,5 +1,54 @@
 # @cloudflare/config
 
+## 0.26.0
+
+### Minor Changes
+
+- [#16239](https://github.com/cloudflare/workers-sdk/pull/16239) [`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support Cloudflare Access local development configuration in `cloudflare.config.ts`
+
+  Workers can now configure an Access audience and mock identity under `access.dev`, and `cf migrate` preserves this setting when converting a Wrangler configuration. Miniflare v5 now reads the setting from `config.access.dev`, aligning its Worker configuration with `@cloudflare/config`; the Miniflare v4 compatibility adapter continues to accept its existing `access` option.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      name: "api",
+      access: {
+        dev: {
+          aud: "my-access-audience",
+          identity: { email: "developer@example.com" },
+        },
+      },
+    },
+  });
+  ```
+
+  This is a breaking change for direct Miniflare v5 users: move `workers[].dev.access` to `workers[].config.access.dev`. Miniflare v5 is currently in beta.
+
+## 0.25.0
+
+### Minor Changes
+
+- [#16175](https://github.com/cloudflare/workers-sdk/pull/16175) [`d8b1fca`](https://github.com/cloudflare/workers-sdk/commit/d8b1fca2ba2fec3d3945fa6ec719b8f6766ad610) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Allow Worker bindings to be included conditionally
+
+  Binding entries set to `false`, `null`, or `undefined` are now omitted from `env`. Generated environment types make conditionally included bindings optional.
+
+  ```ts
+  export default defineConfig(({ mode }) => ({
+    worker: {
+      name: "my-worker",
+      compatibilityDate: "2026-10-09",
+      env: {
+        PRODUCTION_KV:
+          mode === "production" && bindings.kv({ id: "production-kv-id" }),
+        STAGING_API_ORIGIN:
+          mode === "staging"
+            ? bindings.text("https://staging.example.com")
+            : undefined,
+      },
+    },
+  }));
+  ```
+
 ## 0.24.1
 
 ### Patch Changes

@@ -3,13 +3,6 @@ import { defineConfig } from "vite";
 import { satisfiesMinimumViteVersion } from "../__test-utils__/vite-version";
 
 const config = {
-	environments: {
-		build_output_worker: {
-			build: {
-				sourcemap: true,
-			},
-		},
-	},
 	plugins: [
 		cloudflare({
 			inspectorPort: false,

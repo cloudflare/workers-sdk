@@ -1,5 +1,67 @@
 # wrangler
 
+## 4.151.0
+
+### Minor Changes
+
+- [#16245](https://github.com/cloudflare/workers-sdk/pull/16245) [`d6b1c82`](https://github.com/cloudflare/workers-sdk/commit/d6b1c823268226754441ac79084be2cec4abcea3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Include source maps by default in `wrangler build --experimental-cf-build-output`
+
+  Build Output now matches `wrangler deploy` and `wrangler versions upload`, which upload source maps by default, so Workers built for tools like `cf` get stack traces that point at the original source. Source maps that can't be resolved are skipped rather than failing the build. Set `upload_source_maps = false` to opt out.
+
+### Patch Changes
+
+- [#16220](https://github.com/cloudflare/workers-sdk/pull/16220) [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Support local D1 queries through the experimental `d1_binding_jsrpc` compatibility flag
+
+  Local D1 bindings now implement the RPC query backend used by `D1Database.query()` and prepared-statement methods when the flag is enabled. Queries reuse local SQLite execution, including transactional batches, execution metadata, and session bookmarks, while bindings without the flag continue to use HTTP. Update the bundled workerd runtime to `1.20261012.1` and align the default compatibility date with that release.
+
+- Updated dependencies [[`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`acd2822`](https://github.com/cloudflare/workers-sdk/commit/acd2822046a1bf201d9143ee40969f3dc3eb9650)]:
+  - miniflare@5.20261012.0-beta
+
+## 4.150.0
+
+### Minor Changes
+
+- [#16231](https://github.com/cloudflare/workers-sdk/pull/16231) [`091e5ec`](https://github.com/cloudflare/workers-sdk/commit/091e5ec2ac3f4ba26c048d12546b5b83ca8eaab1) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Upload source maps by default for `wrangler deploy`, `wrangler versions upload` and `wrangler preview`
+
+  When `upload_source_maps` isn't set in config or via `--upload-source-maps`, Wrangler now generates and uploads source maps so stack traces in logs and `wrangler tail` point at your original source without extra setup. In this default mode, source maps that can't be resolved (for example inline `data:` maps or missing `.map` files from a custom build) are skipped rather than failing the upload. Setting `upload_source_maps = true` keeps the existing strict behaviour, and `upload_source_maps = false` (or `--no-upload-source-maps` for deploy and versions upload) opts out.
+
+  `wrangler build --experimental-cf-build-output` is unchanged and still only includes source maps when `upload_source_maps = true`.
+
+- [#16128](https://github.com/cloudflare/workers-sdk/pull/16128) [`daae435`](https://github.com/cloudflare/workers-sdk/commit/daae4351fb517f8a93106a00c6a2a5b31600242a) Thanks [@redsteadz](https://github.com/redsteadz)! - Stop `wrangler deploy`, `wrangler versions upload` and `wrangler preview` in projects that build for the Cloudflare CLI (`cf`)
+
+  If your project builds through `cf`, deploying it with Wrangler reads a different configuration, so it could update the wrong Worker or fail without explaining why. These commands now stop before uploading anything, name the `.cloudflare/output` directory they found, and tell you to run `cf deploy` instead. If that directory is just left over from an earlier build, deleting it restores the Wrangler workflow.
+
+  Ordinary Wrangler projects are unaffected, and `--dry-run` still works on `deploy` and `versions upload`. This is a new guard for the experimental Build Output Specification rather than a fix, and it gives three stable commands a failure mode they did not have before, so it is a minor.
+
+### Patch Changes
+
+- [#16161](https://github.com/cloudflare/workers-sdk/pull/16161) [`fcf625d`](https://github.com/cloudflare/workers-sdk/commit/fcf625da014474f656a962b9313dec54563f3573) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Clarify the Worker not found error during CI deploy validation
+
+  Wrangler now reports that the configured Worker could not be found in the account instead of incorrectly describing the failure as a name mismatch.
+
+- [#16156](https://github.com/cloudflare/workers-sdk/pull/16156) [`18f061c`](https://github.com/cloudflare/workers-sdk/commit/18f061c3cf604479d9f9d2883cc49786a46eb07a) Thanks [@armancharan](https://github.com/armancharan)! - Ignore `.wrangler` writes in the dev assets watcher
+
+  `wrangler dev` reloaded in a loop when `assets.directory` was the project root, because the assets watcher treated wrangler's own writes under `.wrangler` as asset changes and dropped in-flight requests. The watcher now ignores the project's `.wrangler` directory and `dev.persist`, except when that path is the assets directory.
+
+- [#16025](https://github.com/cloudflare/workers-sdk/pull/16025) [`61e07fd`](https://github.com/cloudflare/workers-sdk/commit/61e07fd59d2ae474c2ddf4e5b3805319b7541fe3) Thanks [@kohjunhao](https://github.com/kohjunhao)! - Fix optional Docker lookups printing Docker CLI errors during successful builds
+
+  `cf build` looks for Container images left behind by earlier builds so it can remove them. This lookup is best effort, but when Docker could not be reached it still printed errors such as `Cannot connect to the Docker daemon`, even when the build succeeded and no image needed Docker. Docker commands whose output Wrangler reads no longer forward the Docker CLI's error output to the terminal. If one of these commands fails in a way that stops the command, the error message still includes the Docker CLI's output.
+
+- [#16151](https://github.com/cloudflare/workers-sdk/pull/16151) [`cafd3f9`](https://github.com/cloudflare/workers-sdk/commit/cafd3f94207bd2c886e6ab20de17e45e0eb50f1e) Thanks [@DevVettel](https://github.com/DevVettel)! - Time out the OAuth token request instead of waiting indefinitely
+
+  The request that exchanges an authorization code or refresh token for an access token had no timeout, so a stalled connection (for example behind an HTTP proxy) could leave `wrangler login` hanging silently for many minutes after the browser step had succeeded. The request now gives up after 30 seconds and reports that the Cloudflare auth server could not be reached.
+
+- [#15517](https://github.com/cloudflare/workers-sdk/pull/15517) [`ea64ec4`](https://github.com/cloudflare/workers-sdk/commit/ea64ec4e681f9e43bd0ded93e490c0027018f80e) Thanks [@xgame92](https://github.com/xgame92)! - Preserve binding options when provisioning resources through a redirected config
+
+  Wrangler now writes provisioned resource identifiers to both the redirected and original config files without copying other binding options between them. This prevents generated relative paths such as D1 `migrations_dir` from replacing user-authored paths during Vite deployments.
+
+- [#16219](https://github.com/cloudflare/workers-sdk/pull/16219) [`d232454`](https://github.com/cloudflare/workers-sdk/commit/d232454ca9059b7722a013ab128354d7e44a2031) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Honor `X-Forwarded-Proto` for incoming development requests behind TLS-terminating proxies
+
+  Miniflare now uses the original client protocol when constructing URLs for network requests. This also prevents Wrangler from downgrading HTTPS URLs in response headers such as `Location` and `WWW-Authenticate` when a tunnel forwards requests over HTTP. Explicit programmatic request URLs and configured upstream origins remain authoritative.
+
+- Updated dependencies [[`5152bf8`](https://github.com/cloudflare/workers-sdk/commit/5152bf8c3591863243da275debf02ecbf66f560e), [`9f87de8`](https://github.com/cloudflare/workers-sdk/commit/9f87de8cd6e8ff5afedb5430acd8776cb239844e), [`9be5ec7`](https://github.com/cloudflare/workers-sdk/commit/9be5ec7cf2c3988d0a446a5207d0d23def541cf5), [`d232454`](https://github.com/cloudflare/workers-sdk/commit/d232454ca9059b7722a013ab128354d7e44a2031)]:
+  - miniflare@5.20261006.2-beta
+
 ## 4.149.0
 
 ### Minor Changes

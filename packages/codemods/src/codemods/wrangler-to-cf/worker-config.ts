@@ -99,6 +99,7 @@ export function convertWorkerConfig(
 	addProperty(properties, source, "observability", "observability", (value) =>
 		isRecord(value) ? camelObject(value) : undefined
 	);
+	addProperty(properties, source, "access");
 
 	const assets = getRecord(source, "assets");
 	if (assets) {
@@ -269,7 +270,6 @@ export function convertWorkerConfig(
 	}
 
 	const unsupportedFields: Array<[string, string]> = [
-		["access", "Cloudflare Access configuration"],
 		["cloudchamber", "Cloudchamber configuration"],
 		["dependencies_instrumentation", "dependency instrumentation"],
 		["keep_vars", "keep_vars"],

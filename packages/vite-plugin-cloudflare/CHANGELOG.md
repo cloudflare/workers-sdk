@@ -1,5 +1,35 @@
 # @cloudflare/vite-plugin
 
+## 1.64.0
+
+### Minor Changes
+
+- [#16245](https://github.com/cloudflare/workers-sdk/pull/16245) [`d6b1c82`](https://github.com/cloudflare/workers-sdk/commit/d6b1c823268226754441ac79084be2cec4abcea3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Generate source maps for Worker environments by default
+
+  Worker builds now emit source maps unless Vite's `build.sourcemap` or the Worker's `upload_source_maps` is set, so deployed Workers get stack traces that point at the original source. The source maps are written next to the Worker bundle and included in Build Output; the client environment is unchanged, so no source maps are added to public assets. Set `build.sourcemap: false` for the Worker environment, or `upload_source_maps: false` in the Worker config, to opt out.
+
+### Patch Changes
+
+- Updated dependencies [[`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be), [`d6b1c82`](https://github.com/cloudflare/workers-sdk/commit/d6b1c823268226754441ac79084be2cec4abcea3), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`acd2822`](https://github.com/cloudflare/workers-sdk/commit/acd2822046a1bf201d9143ee40969f3dc3eb9650)]:
+  - miniflare@5.20261012.0-beta
+  - wrangler@4.151.0
+
+## 1.63.2
+
+### Patch Changes
+
+- [#16025](https://github.com/cloudflare/workers-sdk/pull/16025) [`61e07fd`](https://github.com/cloudflare/workers-sdk/commit/61e07fd59d2ae474c2ddf4e5b3805319b7541fe3) Thanks [@kohjunhao](https://github.com/kohjunhao)! - Fix optional Docker lookups printing Docker CLI errors during successful builds
+
+  `cf build` looks for Container images left behind by earlier builds so it can remove them. This lookup is best effort, but when Docker could not be reached it still printed errors such as `Cannot connect to the Docker daemon`, even when the build succeeded and no image needed Docker. Docker commands whose output Wrangler reads no longer forward the Docker CLI's error output to the terminal. If one of these commands fails in a way that stops the command, the error message still includes the Docker CLI's output.
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+- Updated dependencies [[`fcf625d`](https://github.com/cloudflare/workers-sdk/commit/fcf625da014474f656a962b9313dec54563f3573), [`091e5ec`](https://github.com/cloudflare/workers-sdk/commit/091e5ec2ac3f4ba26c048d12546b5b83ca8eaab1), [`5152bf8`](https://github.com/cloudflare/workers-sdk/commit/5152bf8c3591863243da275debf02ecbf66f560e), [`9f87de8`](https://github.com/cloudflare/workers-sdk/commit/9f87de8cd6e8ff5afedb5430acd8776cb239844e), [`daae435`](https://github.com/cloudflare/workers-sdk/commit/daae4351fb517f8a93106a00c6a2a5b31600242a), [`18f061c`](https://github.com/cloudflare/workers-sdk/commit/18f061c3cf604479d9f9d2883cc49786a46eb07a), [`9be5ec7`](https://github.com/cloudflare/workers-sdk/commit/9be5ec7cf2c3988d0a446a5207d0d23def541cf5), [`61e07fd`](https://github.com/cloudflare/workers-sdk/commit/61e07fd59d2ae474c2ddf4e5b3805319b7541fe3), [`cafd3f9`](https://github.com/cloudflare/workers-sdk/commit/cafd3f94207bd2c886e6ab20de17e45e0eb50f1e), [`ea64ec4`](https://github.com/cloudflare/workers-sdk/commit/ea64ec4e681f9e43bd0ded93e490c0027018f80e), [`d232454`](https://github.com/cloudflare/workers-sdk/commit/d232454ca9059b7722a013ab128354d7e44a2031)]:
+  - wrangler@4.150.0
+  - miniflare@5.20261006.2-beta
+
 ## 1.63.1
 
 ### Patch Changes
