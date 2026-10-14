@@ -16,6 +16,7 @@ import {
 	GitClient,
 	gitArgumentsWithoutHooks,
 	gitEnvironment,
+	LocalRepositoryStorageError,
 	stopGitProcess,
 	withRepositoryCreationLock,
 } from "./git-client";
@@ -89,19 +90,25 @@ const AdminRequestSchema = z.discriminatedUnion("action", [
 		branch: z.string().optional(),
 		depth: z.number().optional(),
 	}),
-	adminBase.extend({ action: z.literal("refs") }),
-	adminBase.extend({ action: z.literal("readBlob"), hash: z.string().min(1) }),
-	adminBase.extend({ action: z.literal("readTree"), hash: z.string().min(1) }),
-	adminBase.extend({
+	generatedRepo.extend({ action: z.literal("refs") }),
+	generatedRepo.extend({
+		action: z.literal("readBlob"),
+		hash: z.string().min(1),
+	}),
+	generatedRepo.extend({
+		action: z.literal("readTree"),
+		hash: z.string().min(1),
+	}),
+	generatedRepo.extend({
 		action: z.literal("readCommit"),
 		hash: z.string().min(1),
 	}),
-	adminBase.extend({
+	generatedRepo.extend({
 		action: z.literal("file"),
 		ref: z.string().min(1),
 		path: z.string().min(1),
 	}),
-	adminBase.extend({
+	generatedRepo.extend({
 		action: z.literal("log"),
 		ref: z.string().optional(),
 		limit: z.number().optional(),
@@ -149,7 +156,13 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 			if (response.headersSent) {
 				response.destroy(error instanceof Error ? error : undefined);
 			} else {
-				response.writeHead(500, { "Content-Type": "text/plain" });
+				const storageError = error instanceof LocalRepositoryStorageError;
+				response.writeHead(storageError ? 409 : 500, {
+					"Content-Type": "text/plain",
+					...(storageError
+						? { "X-Local-Artifacts-Storage-Error": error.kind }
+						: {}),
+				});
 				response.end(
 					error instanceof Error ? error.message : "Native Git backend failed"
 				);
@@ -310,6 +323,17 @@ async function handleAction(
 	body: GitAction,
 	git: GitClient
 ): Promise<unknown> {
+	// This check runs under the repository lock: a delayed read must not see
+	// a different generation after the Worker checked its handle ID.
+	if (
+		body.action !== "create" &&
+		body.action !== "delete" &&
+		body.action !== "fork" &&
+		body.action !== "import" &&
+		(await git.generation()) !== body.generation
+	) {
+		throw new Error("Repository generation changed");
+	}
 	switch (body.action) {
 		case "create":
 			return handleCreate(root, body, git);
@@ -386,7 +410,10 @@ async function withNewRepository(
 			// committed metadata before the process stopped removing Git data.
 			// Never remove a directory that was not created by this simulator.
 			if ((await git.generation()) === null) {
-				throw new Error(`Repository "${body.name}" already exists on disk`);
+				throw new LocalRepositoryStorageError(
+					"on-disk-conflict",
+					`Repository "${body.name}" already exists on disk`
+				);
 			}
 			await retireRepository(git.repository);
 		}
@@ -402,7 +429,10 @@ async function withNewRepository(
 			await staged.configure(body.generation);
 			const state = await staged.state();
 			if (await exists(git.repository)) {
-				throw new Error(`Repository "${body.name}" already exists on disk`);
+				throw new LocalRepositoryStorageError(
+					"on-disk-conflict",
+					`Repository "${body.name}" already exists on disk`
+				);
 			}
 			await rename(staged.repository, git.repository);
 			return state;
@@ -489,6 +519,9 @@ async function runGitHttpBackend(
 				REQUEST_METHOD: request.method ?? "GET",
 				CONTENT_TYPE: request.headers["content-type"] ?? "",
 				CONTENT_LENGTH: request.headers["content-length"] ?? "",
+				HTTP_CONTENT_ENCODING: String(
+					request.headers["content-encoding"] ?? ""
+				),
 				HTTP_GIT_PROTOCOL: String(request.headers["git-protocol"] ?? ""),
 				REMOTE_USER: "local-artifacts",
 				REMOTE_ADDR: request.socket.remoteAddress ?? "127.0.0.1",

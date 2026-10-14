@@ -605,6 +605,20 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		);
 		if (!response.ok) {
 			const message = await response.text();
+			const storageError = response.headers.get(
+				"X-Local-Artifacts-Storage-Error"
+			);
+			if (
+				response.status === 409 &&
+				(storageError === "creation-lock" ||
+					storageError === "on-disk-conflict") &&
+				(request.action === "create" ||
+					request.action === "fork" ||
+					request.action === "import")
+			) {
+				// Only the sidecar's typed local-storage failures carry safe diagnostics.
+				throw new ArtifactsError("INTERNAL_ERROR", message);
+			}
 			if (request.action === "import") {
 				throw classifyImportError(message);
 			}
