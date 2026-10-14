@@ -303,6 +303,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 								}
 							);
 						}
+						if (command === "__vitest_stopV8Coverage") {
+							await this.stopV8CoverageSession();
+							return "";
+						}
 						assert.strictEqual(command, "__vitest_writeCoverageFile");
 						assert.strictEqual(args.length, 1);
 						return writeCoverageFile(

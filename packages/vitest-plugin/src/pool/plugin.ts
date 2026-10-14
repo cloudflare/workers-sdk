@@ -93,6 +93,8 @@ export function cloudflareTest(
 			config.ssr ??= {};
 
 			config.test ??= {};
+			// Workerd cannot read transformed modules from the host filesystem cache.
+			config.test.fsModuleCache = false;
 			config.test.server ??= {};
 			config.test.server.deps ??= {};
 
