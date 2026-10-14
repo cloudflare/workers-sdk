@@ -1,24 +1,28 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
-export default defineConfig({
-	environments: {
-		ssr: {
-			build: {
-				rollupOptions: {
-					output: {
-						entryFileNames: "chunks/[name]-[hash].mjs",
+export function createConfig(sourcemap: boolean | undefined) {
+	return {
+		environments: {
+			ssr: {
+				build: {
+					rollupOptions: {
+						output: {
+							entryFileNames: "chunks/[name]-[hash].mjs",
+						},
 					},
+					sourcemap,
 				},
-				sourcemap: true,
 			},
 		},
-	},
-	plugins: [
-		cloudflare({
-			inspectorPort: false,
-			persistState: false,
-			types: { includeRuntime: false },
-		}),
-	],
-});
+		plugins: [
+			cloudflare({
+				inspectorPort: false,
+				persistState: false,
+				types: { includeRuntime: false },
+			}),
+		],
+	};
+}
+
+export default defineConfig(createConfig(undefined));
