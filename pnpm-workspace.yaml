@@ -43,10 +43,6 @@ minimumReleaseAgeExclude:
   # cf is developed in a separate repository and may need to be tested here on
   # the day it is published.
   - "cf"
-  # TEMPORARY: vite-plugin-cloudflare + vitest-plugin are pinned to the
-  # published miniflare while the workspace miniflare is mid-migration. Revert
-  # with the repoint.
-  - "miniflare"
   - "workerd"
   # The below is to install the rosie-skills package and remove the problematic
   # wasm module it brings as soon as possible
