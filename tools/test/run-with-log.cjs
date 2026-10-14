@@ -2,6 +2,7 @@ const { spawn } = require("node:child_process");
 const { createWriteStream, mkdirSync } = require("node:fs");
 const path = require("node:path");
 const { constants } = require("node:os");
+const { getPnpmCommand } = require("./pnpm-command.cjs");
 
 const [logPath, ...args] = process.argv.slice(2);
 const pnpmCli = process.env.npm_execpath;
@@ -12,7 +13,8 @@ if (!logPath || !pnpmCli || args.length === 0) {
 }
 mkdirSync(path.dirname(logPath), { recursive: true });
 const log = createWriteStream(logPath);
-const child = spawn(process.execPath, [pnpmCli, ...args], {
+const [command, ...commandArgs] = getPnpmCommand(pnpmCli, args);
+const child = spawn(command, commandArgs, {
 	stdio: ["inherit", "pipe", "pipe"],
 });
 child.stdout.on("data", (chunk) => {

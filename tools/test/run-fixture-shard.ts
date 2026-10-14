@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { getPnpmCommand } from "./pnpm-command.cjs";
 import { parseTestShard } from "./vitest-shard.cjs";
 
 // The longest fixtures on the macOS critical path in uncached CI run
@@ -95,23 +96,18 @@ if (require.main === module) {
 	console.log(
 		`Fixture group ${group}, shard ${values.shard}:\n${fixtures.join("\n")}`
 	);
-	// Use pnpm's Node entry point rather than a shell or Windows .cmd shim.
-	// eslint-disable-next-line turbo/no-undeclared-env-vars -- pnpm provides this entry point to the root script, which runs outside Turbo
+	// eslint-disable-next-line turbo/no-undeclared-env-vars -- pnpm provides its executable to the root script, which runs outside Turbo
 	const pnpmPath = process.env.npm_execpath;
 	assert(pnpmPath, "Run this script with pnpm run test:ci:fixtures");
-	const result = spawnSync(
-		process.execPath,
-		[
-			pnpmPath,
-			"run",
-			"test:ci",
-			"--summarize",
-			"--concurrency=2",
-			"--log-order=stream",
-			...fixtures.map((fixture) => `--filter=${fixture}`),
-		],
-		{ cwd: root, stdio: "inherit" }
-	);
+	const [command, ...args] = getPnpmCommand(pnpmPath, [
+		"run",
+		"test:ci",
+		"--summarize",
+		"--concurrency=2",
+		"--log-order=stream",
+		...fixtures.map((fixture) => `--filter=${fixture}`),
+	]);
+	const result = spawnSync(command, args, { cwd: root, stdio: "inherit" });
 	if (result.error) {
 		throw result.error;
 	}

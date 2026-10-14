@@ -73,3 +73,35 @@ process.exitCode = ${exitCode};`
 		}
 	}
 );
+
+it.for([0, 7])(
+	"runs a native package manager and preserves exit code %i",
+	(exitCode, { expect }) => {
+		const log = path.join(root, "logs/native.log");
+		const args = ["argument with spaces", "literal&value"];
+		const result = spawnSync(
+			process.execPath,
+			[
+				wrapper,
+				log,
+				"-e",
+				`process.stdout.write(JSON.stringify(process.argv.slice(1)));
+process.stderr.write('native stderr\\n');
+process.exitCode = ${exitCode};`,
+				"--",
+				...args,
+			],
+			{
+				encoding: "utf8",
+				env: { ...process.env, npm_execpath: process.execPath },
+			}
+		);
+		expect(result.error).toBeUndefined();
+		expect(result.status, result.stderr).toBe(exitCode);
+		expect(JSON.parse(result.stdout)).toEqual(args);
+		expect(result.stderr).toBe("native stderr\n");
+		const captured = readFileSync(log, "utf8");
+		expect(captured.replace(result.stderr, "")).toBe(result.stdout);
+		expect(captured).toContain(result.stderr);
+	}
+);
