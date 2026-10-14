@@ -191,6 +191,8 @@ describe.sequential("wrangler dev", () => {
 
 	describe("Local Explorer agent hint", () => {
 		beforeEach(() => {
+			vi.stubEnv("TURBO_HASH", "");
+			vi.stubEnv("TURBO_IS_TUI", "");
 			writeWranglerConfig({
 				name: "test-worker",
 				main: "index.js",

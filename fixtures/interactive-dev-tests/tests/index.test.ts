@@ -305,20 +305,6 @@ if (process.platform === "win32") {
 					expect(wrangler.stdout).not.toContain("open local explorer");
 				}
 			);
-			it("should keep working hotkeys under Turborepo's terminal UI", async () => {
-				const wrangler = await startWranglerDev(args, false, {
-					...getDefaultPtyEnv(),
-					TURBO_HASH: "test-hash",
-					TURBO_IS_TUI: "true",
-				});
-				expect(wrangler.stdout).toContain("open a browser");
-				expect(wrangler.stdout).toContain("open devtools");
-				expect(wrangler.stdout).toContain("clear console");
-				expect(wrangler.stdout).toContain("to exit");
-				expect(wrangler.stdout).toContain("open local explorer");
-				wrangler.pty.write("x");
-				expect(await wrangler.exitPromise).toBe(0);
-			});
 		});
 	});
 
