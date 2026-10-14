@@ -1,15 +1,12 @@
-import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
-import { requireAuth } from "../../../user";
 import { jsonWorkflowArgs } from "../../utils";
 import {
 	concurrencyKeyArg,
 	concurrencyKeyMetadata,
-	concurrencyKeysPath,
-	resolveConcurrencyKeyId,
+	concurrencyLocalArgs,
+	getConcurrencyKeysClient,
 } from "./shared";
-import type { ConcurrencyKey } from "../../types";
 
 export const workflowsConcurrencyUpdateCommand = createCommand({
 	metadata: {
@@ -17,6 +14,7 @@ export const workflowsConcurrencyUpdateCommand = createCommand({
 		description: "Change the limit of a concurrency key",
 	},
 	args: {
+		...concurrencyLocalArgs,
 		...jsonWorkflowArgs,
 		key: concurrencyKeyArg,
 		limit: {
@@ -30,16 +28,10 @@ export const workflowsConcurrencyUpdateCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-		const keyId = await resolveConcurrencyKeyId(config, accountId, args.key);
-		const key = await fetchResult<ConcurrencyKey>(
-			config,
-			concurrencyKeysPath(accountId, keyId),
-			{
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ limit: args.limit }),
-			}
+		const client = await getConcurrencyKeysClient(config, args);
+		const key = await client.update(
+			await client.resolveId(args.key),
+			args.limit
 		);
 
 		if (args.json) {

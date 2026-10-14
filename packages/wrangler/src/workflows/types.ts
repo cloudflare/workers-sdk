@@ -133,6 +133,7 @@ export type ConcurrencyKey = {
 	name: string;
 	limit: number;
 	created_on: string;
+	usage?: { holding: number; waiting: number }; // only local dev sessions report usage
 };
 
 export type ConcurrencyKeyDetail = ConcurrencyKey & {

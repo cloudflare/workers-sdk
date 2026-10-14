@@ -274,4 +274,153 @@ describe("wrangler workflows concurrency", () => {
 			);
 		});
 	});
+
+	describe("--local", () => {
+		const LOCAL_KEYS =
+			"http://localhost:8787/cdn-cgi/local/explorer/api/workflows/concurrency";
+		const LOCAL_KEY = {
+			...KEY,
+			usage: { holding: 1, waiting: 3 },
+		};
+
+		function mockLocal() {
+			const requests: Array<{ method: string; url: URL; body?: unknown }> = [];
+			const record = async (request: Request) => {
+				const text = await request.text();
+				requests.push({
+					method: request.method,
+					url: new URL(request.url),
+					...(text ? { body: JSON.parse(text) } : {}),
+				});
+			};
+			msw.use(
+				http.get(LOCAL_KEYS, async ({ request }) => {
+					await record(request);
+					return HttpResponse.json(createFetchResult([LOCAL_KEY]));
+				}),
+				http.post(LOCAL_KEYS, async ({ request }) => {
+					await record(request);
+					return HttpResponse.json(createFetchResult(LOCAL_KEY));
+				}),
+				http.get(`${LOCAL_KEYS}/:keyId`, async ({ request, params }) => {
+					await record(request);
+					return params.keyId === KEY.name || params.keyId === KEY.id
+						? HttpResponse.json(
+								createFetchResult({ ...LOCAL_KEY, referencing_workflows: [] })
+							)
+						: HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 10700,
+										message: `concurrency key '${params.keyId}' does not exist`,
+									},
+								]),
+								{ status: 404 }
+							);
+				}),
+				http.patch(`${LOCAL_KEYS}/:keyId`, async ({ request }) => {
+					await record(request);
+					return HttpResponse.json(
+						createFetchResult({ ...LOCAL_KEY, limit: 5 })
+					);
+				}),
+				http.delete(`${LOCAL_KEYS}/:keyId`, async ({ request }) => {
+					await record(request);
+					return HttpResponse.json(createFetchResult({ status: "ok" }));
+				})
+			);
+			return requests;
+		}
+
+		it("lists the local keys with their usage", async ({ expect }) => {
+			const requests = mockLocal();
+
+			await runWrangler("workflows concurrency list --local");
+
+			expect(requests[0]?.url.searchParams.get("page")).toBe("1");
+			expect(std.out).toContain("Holding");
+			expect(std.out).toContain("Waiting");
+			expect(std.out).toContain(KEY.name);
+		});
+
+		it("creates a key in the local dev session", async ({ expect }) => {
+			const requests = mockLocal();
+
+			await runWrangler(
+				`workflows concurrency create ${KEY.name} --limit 2 --local`
+			);
+
+			expect(requests).toMatchObject([
+				{ method: "POST", body: { name: KEY.name, limit: 2 } },
+			]);
+			expect(std.out).toContain("in the local dev session");
+		});
+
+		it("addresses a key by name without listing the keys", async ({
+			expect,
+		}) => {
+			const requests = mockLocal();
+
+			await runWrangler(`workflows concurrency get ${KEY.name} --local`);
+
+			expect(
+				requests.map(({ method, url }) => `${method} ${url.pathname}`)
+			).toEqual([
+				`GET /cdn-cgi/local/explorer/api/workflows/concurrency/${KEY.name}`,
+			]);
+			expect(std.out).toContain("Waiting:");
+			expect(std.out).not.toContain("No Workflow declares this key.");
+		});
+
+		it("updates and deletes local keys", async ({ expect }) => {
+			const requests = mockLocal();
+
+			await runWrangler(
+				`workflows concurrency update ${KEY.name} --limit 5 --local`
+			);
+			await runWrangler(
+				`workflows concurrency delete ${KEY.name} --force --local`
+			);
+
+			expect(requests.map(({ method }) => method)).toEqual([
+				"PATCH",
+				"GET",
+				"DELETE",
+			]);
+			expect(requests[0]?.body).toEqual({ limit: 5 });
+			expect(requests[2]?.url.pathname).toBe(
+				`/cdn-cgi/local/explorer/api/workflows/concurrency/${KEY.id}`
+			);
+		});
+
+		it("reports a missing local key", async ({ expect }) => {
+			mockLocal();
+
+			await expect(
+				runWrangler("workflows concurrency get missing --local")
+			).rejects.toThrow(
+				"Local API error: concurrency key 'missing' does not exist"
+			);
+		});
+
+		it("reaches the dev session on --port", async ({ expect }) => {
+			const requests: URL[] = [];
+			msw.use(
+				http.get(
+					"http://localhost:8790/cdn-cgi/local/explorer/api/workflows/concurrency",
+					({ request }) => {
+						requests.push(new URL(request.url));
+						return HttpResponse.json(createFetchResult([]));
+					}
+				)
+			);
+
+			await runWrangler("workflows concurrency list --local --port 8790");
+
+			expect(requests).toHaveLength(1);
+			expect(std.warn).toContain(
+				"There are no concurrency keys in the local dev session"
+			);
+		});
+	});
 });

@@ -1,10 +1,11 @@
-import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
-import { requireAuth } from "../../../user";
 import { jsonWorkflowArgs } from "../../utils";
-import { concurrencyKeyMetadata, concurrencyKeysPath } from "./shared";
-import type { ConcurrencyKey } from "../../types";
+import {
+	concurrencyKeyMetadata,
+	concurrencyLocalArgs,
+	getConcurrencyKeysClient,
+} from "./shared";
 
 export const workflowsConcurrencyCreateCommand = createCommand({
 	metadata: {
@@ -13,6 +14,7 @@ export const workflowsConcurrencyCreateCommand = createCommand({
 			"Create a concurrency key that limits how many steps can hold it at once",
 	},
 	args: {
+		...concurrencyLocalArgs,
 		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the key, referenced by steps via `concurrency`",
@@ -30,23 +32,15 @@ export const workflowsConcurrencyCreateCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-		const key = await fetchResult<ConcurrencyKey>(
-			config,
-			concurrencyKeysPath(accountId),
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ name: args.name, limit: args.limit }),
-			}
-		);
+		const client = await getConcurrencyKeysClient(config, args);
+		const key = await client.create(args.name, args.limit);
 
 		if (args.json) {
 			logger.json(key);
 			return;
 		}
 		logger.log(
-			`✅ Created concurrency key "${key.name}" (${key.id}) with a limit of ${key.limit}.`
+			`✅ Created concurrency key "${key.name}" (${key.id}) with a limit of ${key.limit}${client.local ? " in the local dev session" : ""}.`
 		);
 	},
 });

@@ -1,16 +1,13 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { confirm } from "../../../dialogs";
 import { logger } from "../../../logger";
-import { requireAuth } from "../../../user";
 import { jsonWorkflowArgs } from "../../utils";
 import {
 	concurrencyKeyArg,
 	concurrencyKeyMetadata,
-	concurrencyKeysPath,
-	getConcurrencyKey,
-	resolveConcurrencyKeyId,
+	concurrencyLocalArgs,
+	getConcurrencyKeysClient,
 } from "./shared";
 
 export const workflowsConcurrencyDeleteCommand = createCommand({
@@ -20,6 +17,7 @@ export const workflowsConcurrencyDeleteCommand = createCommand({
 			"Delete a concurrency key; steps that reference it then run without its limit",
 	},
 	args: {
+		...concurrencyLocalArgs,
 		...jsonWorkflowArgs,
 		key: concurrencyKeyArg,
 		force: {
@@ -42,9 +40,8 @@ export const workflowsConcurrencyDeleteCommand = createCommand({
 		}
 	},
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-		const keyId = await resolveConcurrencyKeyId(config, accountId, args.key);
-		const key = await getConcurrencyKey(config, accountId, keyId);
+		const client = await getConcurrencyKeysClient(config, args);
+		const key = await client.get(await client.resolveId(args.key));
 		if (
 			!args.force &&
 			!(await confirm(
@@ -55,9 +52,7 @@ export const workflowsConcurrencyDeleteCommand = createCommand({
 			logger.log("Delete cancelled.");
 			return;
 		}
-		await fetchResult(config, concurrencyKeysPath(accountId, keyId), {
-			method: "DELETE",
-		});
+		await client.delete(key.id);
 
 		if (args.json) {
 			logger.json({ id: key.id, name: key.name, deleted: true });

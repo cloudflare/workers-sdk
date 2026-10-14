@@ -1,15 +1,13 @@
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
-import { requireAuth } from "../../../user";
 import formatLabelledValues from "../../../utils/render-labelled-values";
 import { jsonWorkflowArgs } from "../../utils";
 import {
 	concurrencyKeyArg,
 	concurrencyKeyMetadata,
-	getConcurrencyKey,
-	resolveConcurrencyKeyId,
+	concurrencyLocalArgs,
+	getConcurrencyKeysClient,
 } from "./shared";
-import type { ConcurrencyKeyDetail } from "../../types";
 
 export const workflowsConcurrencyGetCommand = createCommand({
 	metadata: {
@@ -18,6 +16,7 @@ export const workflowsConcurrencyGetCommand = createCommand({
 			"Show a concurrency key and the Workflows whose latest version declares it",
 	},
 	args: {
+		...concurrencyLocalArgs,
 		...jsonWorkflowArgs,
 		key: concurrencyKeyArg,
 	},
@@ -26,13 +25,8 @@ export const workflowsConcurrencyGetCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-		const keyId = await resolveConcurrencyKeyId(config, accountId, args.key);
-		const key = await getConcurrencyKey<ConcurrencyKeyDetail>(
-			config,
-			accountId,
-			keyId
-		);
+		const client = await getConcurrencyKeysClient(config, args);
+		const key = await client.get(await client.resolveId(args.key));
 
 		if (args.json) {
 			logger.json(key);
@@ -43,9 +37,20 @@ export const workflowsConcurrencyGetCommand = createCommand({
 				Name: key.name,
 				ID: key.id,
 				Limit: String(key.limit),
+				...(key.usage === undefined
+					? {}
+					: {
+							Holding: String(key.usage.holding),
+							Waiting: String(key.usage.waiting),
+						}),
 				Created: new Date(key.created_on).toLocaleString(),
 			})
 		);
+		// Local Workflows cannot declare the keys they use, so there is nothing to list.
+		// Showing "No Workflow declares this key" there would read as a problem to fix.
+		if (client.local) {
+			return;
+		}
 		if (key.referencing_workflows.length === 0) {
 			logger.log("\nNo Workflow declares this key.");
 			return;

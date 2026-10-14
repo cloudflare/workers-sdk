@@ -1,9 +1,11 @@
-import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
-import { requireAuth } from "../../../user";
 import { jsonWorkflowArgs } from "../../utils";
-import { concurrencyKeyMetadata, concurrencyKeysPath } from "./shared";
+import {
+	concurrencyKeyMetadata,
+	concurrencyLocalArgs,
+	getConcurrencyKeysClient,
+} from "./shared";
 import type { ConcurrencyKey } from "../../types";
 
 export const workflowsConcurrencyListCommand = createCommand({
@@ -12,6 +14,7 @@ export const workflowsConcurrencyListCommand = createCommand({
 		description: "List the concurrency keys in the account",
 	},
 	args: {
+		...concurrencyLocalArgs,
 		...jsonWorkflowArgs,
 		page: {
 			describe: "Page of keys to show",
@@ -27,27 +30,34 @@ export const workflowsConcurrencyListCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-		const params = new URLSearchParams({ page: String(args.page) });
-		if (args.perPage !== undefined) {
-			params.set("per_page", String(args.perPage));
-		}
-		const keys = await fetchResult<ConcurrencyKey[]>(
-			config,
-			concurrencyKeysPath(accountId),
-			undefined,
-			params
-		);
+		const client = await getConcurrencyKeysClient(config, args);
+		const keys = await client.list(args.page, args.perPage);
 
 		if (args.json) {
 			logger.json(keys);
 			return;
 		}
+		const scope = client.local ? "the local dev session" : "this account";
 		if (keys.length === 0) {
 			logger.warn(
 				args.page === 1
-					? "There are no concurrency keys in this account"
+					? `There are no concurrency keys in ${scope}`
 					: `No concurrency keys found on page ${args.page}.`
+			);
+			return;
+		}
+		const created = (key: ConcurrencyKey) =>
+			new Date(key.created_on).toLocaleString();
+		if (client.local) {
+			logger.table(
+				keys.map((key) => ({
+					Name: key.name,
+					Limit: String(key.limit),
+					Holding: String(key.usage?.holding ?? 0),
+					Waiting: String(key.usage?.waiting ?? 0),
+					ID: key.id,
+					Created: created(key),
+				}))
 			);
 			return;
 		}
@@ -56,7 +66,7 @@ export const workflowsConcurrencyListCommand = createCommand({
 				Name: key.name,
 				Limit: String(key.limit),
 				ID: key.id,
-				Created: new Date(key.created_on).toLocaleString(),
+				Created: created(key),
 			}))
 		);
 	},
