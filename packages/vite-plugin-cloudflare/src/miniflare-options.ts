@@ -275,6 +275,9 @@ export async function getDevMiniflareOptions(
 		{
 			config: {
 				name: ROUTER_WORKER_NAME,
+				// TODO: Move this handling into Miniflare so Access is applied to the
+				// user Worker invocation without propagating through Worker boundaries.
+				access: entryWorkerConfig?.access,
 				compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 				compatibilityFlags: ["enable_ctx_exports"],
 				manifest: routerWorkerManifest,

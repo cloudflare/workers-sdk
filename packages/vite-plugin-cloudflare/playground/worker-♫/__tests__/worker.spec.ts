@@ -17,8 +17,7 @@ test("basic hello-world functionality", async ({ expect }) => {
 	);
 });
 
-// TODO: Reinstate when the new config format supports local Access identities.
-test.skip("provides the configured Access identity", async ({ expect }) => {
+test("provides the configured Access identity", async ({ expect }) => {
 	expect(await getTextResponse("/access")).toBe(
 		JSON.stringify({
 			aud: "vite-plugin-test-audience",
