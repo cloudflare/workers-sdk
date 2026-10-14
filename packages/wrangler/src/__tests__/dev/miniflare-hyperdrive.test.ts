@@ -71,32 +71,25 @@ describe("hyperdrive bindings in local dev", () => {
 		expect(std.warn).toBe("");
 	});
 
-	it("warns when a remote binding is given no edge credentials", ({
-		expect,
-	}) => {
-		// Credentials come from the remote proxy session; reaching this means the
-		// caller did not pass them on. Without the warning the binding would
-		// silently fall back to placeholder credentials and fail to authenticate
-		// at the edge.
-		expect(
-			buildHyperdriveOptions(
-				{
-					type: "hyperdrive",
-					id: "hyperdrive-id",
-					remote: true,
-				},
-				remoteProxyConnectionString
-			)
-		).toEqual({
-			HYPERDRIVE: {
-				localConnectionString: undefined,
-				remoteProxyConnectionString,
-			},
-		});
-		expect(std.warn).toContain(
-			`The Hyperdrive binding "HYPERDRIVE" is configured with "remote": true, but no edge credentials were provided for it`
-		);
-	});
+	it.for([undefined, "postgres://local-user:local-secret@localhost:5432/db"])(
+		"rejects missing edge credentials even with localConnectionString=%s",
+		(localConnectionString, { expect }) => {
+			expect(() =>
+				buildHyperdriveOptions(
+					{
+						type: "hyperdrive",
+						id: "hyperdrive-id",
+						remote: true,
+						localConnectionString,
+					},
+					remoteProxyConnectionString
+				)
+			).toThrow(
+				'The remote Hyperdrive binding "HYPERDRIVE" has no edge credentials. Check your authentication and internet connection, then retry.'
+			);
+			expect(std.warn).toBe("");
+		}
+	);
 
 	it("explains how to fix a remote binding that has neither a session nor a local database", ({
 		expect,

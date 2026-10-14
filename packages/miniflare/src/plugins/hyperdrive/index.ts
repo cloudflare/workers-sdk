@@ -26,24 +26,7 @@ export function getHyperdriveServiceName(
 	return `${HYPERDRIVE_PLUGIN_NAME}:${workerIndex}:${bindingName}`;
 }
 
-// Placeholder connection string used to synthesise the local Hyperdrive binding
-// when a remote binding has no local connection string. workerd still needs a
-// scheme/database/user/password to build the magic `connectionString` it exposes
-// to the Worker; the real origin lives at the edge. In normal `wrangler dev`
-// usage the caller seeds `dev.connectionString` with the edge session's
-// credentials before this runs (so a database client authenticates through the
-// proxy), and this placeholder is only reached when no seeding has occurred.
-const REMOTE_PLACEHOLDER_URL = new URL(
-	"mysql://user:password@hyperdrive.local:3306/database"
-);
-
-/**
- * Resolves `hyperdrive` env bindings, parsing each connection string.
- *
- * A binding with `dev.remote: true` (and a remote proxy session) is reached
- * through a local TCP bridge relaying to the edge, so it may omit
- * `dev.connectionString` — the placeholder above stands in when it does.
- */
+/** Resolves Hyperdrive bindings using credentials prepared by the caller. */
 function getHyperdrives(
 	config: ParsedMiniflareWorkerConfig,
 	dev: ParsedDevConfig | undefined
@@ -57,10 +40,34 @@ function getHyperdrives(
 			binding,
 			dev
 		);
-		const url =
-			remoteProxyConnectionString && binding.dev.connectionString === undefined
-				? REMOTE_PLACEHOLDER_URL
-				: HyperdriveSchema.parse(binding.dev.connectionString);
+		if (
+			remoteProxyConnectionString &&
+			binding.dev.connectionString === undefined
+		) {
+			throw new Error(
+				`Remote Hyperdrive binding "${name}" has no prepared credentials. Reconnect the remote proxy session and retry with its connection string.`
+			);
+		}
+		const parsed = HyperdriveSchema.safeParse(binding.dev.connectionString);
+		if (!parsed.success && remoteProxyConnectionString) {
+			throw new Error(
+				`Remote Hyperdrive binding "${name}" has invalid prepared credentials. Reconnect the remote proxy session and retry.`
+			);
+		}
+		const url = parsed.success
+			? parsed.data
+			: HyperdriveSchema.parse(binding.dev.connectionString);
+		if (remoteProxyConnectionString) {
+			try {
+				decodeURIComponent(url.username);
+				decodeURIComponent(url.password);
+				decodeURIComponent(url.pathname.replace("/", ""));
+			} catch {
+				throw new Error(
+					`Remote Hyperdrive binding "${name}" has invalid prepared credentials. Reconnect the remote proxy session and retry.`
+				);
+			}
+		}
 		return [name, url, remoteProxyConnectionString];
 	});
 }
@@ -225,6 +232,7 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 						name: getHyperdriveServiceName(workerIndex, name),
 						bindingName: name,
 						remoteProxyConnectionString,
+						expectedConnectionString: url,
 					});
 				services.push({
 					name: getHyperdriveServiceName(workerIndex, name),

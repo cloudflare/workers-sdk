@@ -194,32 +194,48 @@ export async function getPlatformProxy<
 	const remoteProxySession: RemoteProxySession | undefined =
 		remoteProxySessionData?.session;
 
-	const miniflareOptions = await getMiniflareOptionsFromConfig({
-		config,
-		options,
-		remoteProxyConnectionString:
-			remoteProxySession?.remoteProxyConnectionString,
-		hyperdriveConnectionStrings:
-			remoteProxySessionData?.hyperdriveConnectionStrings,
-	});
-
-	const mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
-
-	const bindings: Env = await mf.getBindings();
-
-	const cf = await mf.getCf();
-	deepFreeze(cf);
-
-	return {
-		env: bindings,
-		cf: cf as CfProperties,
-		ctx: new ExecutionContext(),
-		caches: new CacheStorage(),
-		dispose: async () => {
-			await remoteProxySession?.dispose();
-			await mf.dispose();
-		},
-	};
+	let mf: Miniflare | undefined;
+	try {
+		const miniflareOptions = await getMiniflareOptionsFromConfig({
+			config,
+			options,
+			remoteProxyConnectionString:
+				remoteProxySession?.remoteProxyConnectionString,
+			hyperdriveConnectionStrings:
+				remoteProxySessionData?.hyperdriveConnectionStrings,
+		});
+		mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
+		const bindings: Env = await mf.getBindings();
+		const cf = await mf.getCf();
+		deepFreeze(cf);
+		const consumer = mf;
+		return {
+			env: bindings,
+			cf: cf as CfProperties,
+			ctx: new ExecutionContext(),
+			caches: new CacheStorage(),
+			dispose: async () => {
+				// Start both cleanups even if one resource cannot be disposed.
+				const results = await Promise.allSettled([
+					Promise.resolve().then(() => remoteProxySession?.dispose()),
+					Promise.resolve().then(() => consumer.dispose()),
+				]);
+				for (const result of results) {
+					if (result.status === "rejected") {
+						throw result.reason;
+					}
+				}
+			},
+		};
+	} catch (error) {
+		// This call owns the new session. Preserve the original startup error,
+		// including when either cleanup itself fails.
+		await Promise.allSettled([
+			Promise.resolve().then(() => remoteProxySession?.dispose()),
+			Promise.resolve().then(() => mf?.dispose()),
+		]);
+		throw error;
+	}
 }
 
 /**

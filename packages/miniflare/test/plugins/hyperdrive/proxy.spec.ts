@@ -1,4 +1,5 @@
 import childProcess from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
@@ -7,10 +8,12 @@ import tls from "node:tls";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import { WebSocketServer } from "ws";
 import {
 	HyperdriveProxyController,
 	POSTGRES_SSL_REQUEST_PACKET,
 } from "../../../src/plugins/hyperdrive/hyperdrive-proxy";
+import { TestLog } from "../../test-shared";
 import { singleModuleManifest, useDispose } from "../../test-shared";
 
 // -- Certificate generation helpers --
@@ -903,6 +906,361 @@ test("retiring a proxy stops new connections but preserves an active one", async
 	}
 });
 
+test.for([
+	{ scheme: "postgres", stage: "SSL response" },
+	{ scheme: "postgres", stage: "TLS handshake" },
+	{ scheme: "mysql", stage: "greeting" },
+])(
+	"dispose closes local outbound sockets during $scheme $stage",
+	async ({ scheme, stage }, { expect }) => {
+		let accepted: net.Socket | undefined;
+		let signal: () => void = () => {};
+		const waiting = new Promise<void>((resolve) => {
+			signal = resolve;
+		});
+		const database = net.createServer((socket) => {
+			accepted = socket;
+			socket.on("error", () => {});
+			if (scheme === "mysql") {
+				signal();
+				return;
+			}
+			socket.once("data", () => {
+				if (stage === "TLS handshake") {
+					socket.write("S");
+					socket.once("data", signal);
+				} else {
+					signal();
+				}
+			});
+		});
+		await new Promise<void>((resolve) =>
+			database.listen(0, "127.0.0.1", resolve)
+		);
+		const address = database.address();
+		if (address === null || typeof address === "string") {
+			throw new Error("Expected TCP port");
+		}
+		const controller = new HyperdriveProxyController();
+		let client: net.Socket | undefined;
+		try {
+			const port = await controller.createProxyServer({
+				name: "pending",
+				targetHost: "127.0.0.1",
+				targetPort: String(address.port),
+				scheme,
+				sslmode: "require",
+			});
+			client = net.connect(port, "127.0.0.1");
+			client.on("error", () => {});
+			await waiting;
+			if (!accepted) {
+				throw new Error("Expected database connection");
+			}
+			const clientClosed = once(client, "close");
+			const dbClosed = once(accepted, "close");
+			controller.beginUpdate();
+			controller.commitUpdate(new Set());
+			controller.dispose();
+			controller.dispose();
+			await Promise.all([clientClosed, dbClosed]);
+			expect(client.destroyed).toBe(true);
+			expect(accepted.destroyed).toBe(true);
+		} finally {
+			client?.destroy();
+			accepted?.destroy();
+			controller.dispose();
+			database.close();
+		}
+	}
+);
+
+test("client close cancels PostgreSQL negotiation without starting a fallback", async ({
+	expect,
+}) => {
+	let count = 0;
+	let accepted: net.Socket | undefined;
+	let signal: () => void = () => {};
+	const waiting = new Promise<void>((resolve) => {
+		signal = resolve;
+	});
+	const database = net.createServer((socket) => {
+		count++;
+		accepted = socket;
+		socket.on("error", () => {});
+		socket.once("data", signal);
+	});
+	await new Promise<void>((resolve) =>
+		database.listen(0, "127.0.0.1", resolve)
+	);
+	const address = database.address();
+	if (address === null || typeof address === "string") {
+		throw new Error("Expected TCP port");
+	}
+	const controller = new HyperdriveProxyController();
+	let client: net.Socket | undefined;
+	try {
+		const port = await controller.createProxyServer({
+			name: "pending-prefer",
+			targetHost: "127.0.0.1",
+			targetPort: String(address.port),
+			scheme: "postgres",
+			sslmode: "prefer",
+		});
+		client = net.connect(port, "127.0.0.1");
+		client.on("error", () => {});
+		await waiting;
+		if (!accepted) {
+			throw new Error("Expected database connection");
+		}
+		const dbClosed = once(accepted, "close");
+		client.destroy();
+		await dbClosed;
+		expect(count).toBe(1);
+	} finally {
+		client?.destroy();
+		accepted?.destroy();
+		controller.dispose();
+		database.close();
+	}
+});
+
+test.for(["CLIENT STARTUP", "x".repeat(64 * 1024 + 1)])(
+	"PostgreSQL pending SSL closes on buffered FIN or oversized startup (%#)",
+	async (input, { expect }) => {
+		const connections: net.Socket[] = [];
+		let accepted: net.Socket | undefined;
+		let signal: () => void = () => {};
+		const waiting = new Promise<void>((resolve) => {
+			signal = resolve;
+		});
+		const database = net.createServer((socket) => {
+			connections.push(socket);
+			accepted = socket;
+			socket.on("error", () => {});
+			socket.once("data", signal);
+		});
+		await new Promise<void>((resolve) =>
+			database.listen(0, "127.0.0.1", resolve)
+		);
+		const address = database.address();
+		if (!address || typeof address === "string") {
+			throw new Error("Expected TCP port");
+		}
+		const controller = new HyperdriveProxyController();
+		let client: net.Socket | undefined;
+		try {
+			const port = await controller.createProxyServer({
+				name: "buffered-fin",
+				targetHost: "127.0.0.1",
+				targetPort: String(address.port),
+				scheme: "postgres",
+				sslmode: "prefer",
+			});
+			client = net.connect(port, "127.0.0.1");
+			client.on("error", () => {});
+			await once(client, "connect");
+			await waiting;
+			if (!accepted) {
+				throw new Error("Expected database socket");
+			}
+			const dbClosed = new Promise<void>((resolve) =>
+				accepted?.once("close", () => resolve())
+			);
+			const clientClosed = new Promise<void>((resolve) =>
+				client?.once("close", () => resolve())
+			);
+			if (input.length > 64 * 1024) {
+				client.write(input);
+			} else {
+				client.end(input);
+			}
+			await Promise.all([dbClosed, clientClosed]);
+			expect(connections).toHaveLength(1);
+			expect(accepted.destroyed).toBe(true);
+		} finally {
+			client?.destroy();
+			controller.dispose();
+			for (const socket of connections) {
+				socket.destroy();
+			}
+			database.close();
+		}
+	}
+);
+
+test.for(["S", "N"] as const)(
+	"PostgreSQL replays startup bytes sent before a delayed %s response in order",
+	async (sslResponse, { expect }) => {
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hyperdrive-replay-"));
+		const certs = generateCerts(tmpDir);
+		const connections: net.Socket[] = [];
+		let releaseResponse: () => void = () => {};
+		const responseGate = new Promise<void>((resolve) => {
+			releaseResponse = resolve;
+		});
+		let sslRequested: () => void = () => {};
+		const sslRequestSeen = new Promise<void>((resolve) => {
+			sslRequested = resolve;
+		});
+		// Bytes the database receives on the connection that carries the traffic:
+		// the TLS stream for "S", or the second plain connection for "N".
+		let carried = "";
+		const database = net.createServer((socket) => {
+			connections.push(socket);
+			socket.on("error", () => {});
+			if (connections.length > 1) {
+				socket.on("data", (data) => {
+					carried += data.toString();
+				});
+				return;
+			}
+			socket.once("readable", () => {
+				// Consume only the 8-byte SSLRequest and hold the answer back.
+				socket.read(POSTGRES_SSL_REQUEST_PACKET.length);
+				sslRequested();
+				void responseGate.then(() => {
+					socket.write(sslResponse);
+					if (sslResponse === "S") {
+						const secure = new tls.TLSSocket(socket, {
+							isServer: true,
+							key: certs.localhost.key,
+							cert: certs.localhost.cert,
+						});
+						secure.on("error", () => {});
+						secure.on("data", (data) => {
+							carried += data.toString();
+						});
+					}
+				});
+			});
+		});
+		await new Promise<void>((resolve) =>
+			database.listen(0, "127.0.0.1", resolve)
+		);
+		const address = database.address();
+		if (address === null || typeof address === "string") {
+			throw new Error("Expected TCP port");
+		}
+		const controller = new HyperdriveProxyController();
+		let client: net.Socket | undefined;
+		try {
+			const port = await controller.createProxyServer({
+				name: `replay-${sslResponse}`,
+				targetHost: "127.0.0.1",
+				targetPort: String(address.port),
+				scheme: "postgres",
+				sslmode: "prefer",
+			});
+			client = net.connect(port, "127.0.0.1");
+			client.on("error", () => {});
+			await once(client, "connect");
+			await sslRequestSeen;
+			// Sent while the SSL answer is still pending, so the proxy has to
+			// hold these bytes and replay them once the upstream is ready.
+			client.write("STARTUP-1|");
+			client.write("STARTUP-2|");
+			await vi.waitFor(() => expect(connections).toHaveLength(1));
+			releaseResponse();
+			await vi.waitFor(() => expect(carried).toBe("STARTUP-1|STARTUP-2|"));
+			client.write("AFTER|");
+			await vi.waitFor(() =>
+				expect(carried).toBe("STARTUP-1|STARTUP-2|AFTER|")
+			);
+			// TLS keeps the single upstream; "N" falls back to exactly one new one.
+			expect(connections).toHaveLength(sslResponse === "S" ? 1 : 2);
+		} finally {
+			client?.destroy();
+			controller.dispose();
+			for (const socket of connections) {
+				socket.destroy();
+			}
+			database.close();
+			removeDirSync(tmpDir);
+		}
+	}
+);
+
+test("MySQL auth half-close cancels TLS without opening a prefer fallback", async ({
+	expect,
+}) => {
+	const tmpDir = fs.mkdtempSync(
+		path.join(os.tmpdir(), "hyperdrive-auth-close-")
+	);
+	const certs = generateCerts(tmpDir);
+	const dbSockets = new Set<net.Socket>();
+	let acceptedCount = 0;
+	const payload = Buffer.concat([
+		Buffer.from([10]),
+		Buffer.from("test\0"),
+		Buffer.alloc(4),
+		Buffer.alloc(8),
+		Buffer.from([0, 0, 8]),
+	]);
+	const greeting = Buffer.concat([
+		Buffer.from([payload.length, 0, 0, 0]),
+		payload,
+	]);
+	const database = net.createServer((socket) => {
+		acceptedCount++;
+		dbSockets.add(socket);
+		socket.on("error", () => {});
+		socket.write(greeting);
+		socket.once("readable", () => {
+			// Consume only the SSLRequest; ClientHello may arrive in the same chunk.
+			socket.read(36);
+			const secure = new tls.TLSSocket(socket, {
+				isServer: true,
+				key: certs.localhost.key,
+				cert: certs.localhost.cert,
+			});
+			dbSockets.delete(socket);
+			dbSockets.add(secure);
+			secure.on("error", () => {});
+			secure.on("data", () => {});
+		});
+	});
+	await new Promise<void>((resolve) =>
+		database.listen(0, "127.0.0.1", resolve)
+	);
+	const address = database.address();
+	if (address === null || typeof address === "string") {
+		throw new Error("Expected TCP port");
+	}
+	const controller = new HyperdriveProxyController();
+	let client: net.Socket | undefined;
+	try {
+		const port = await controller.createProxyServer({
+			name: "mysql-auth-close",
+			targetHost: "127.0.0.1",
+			targetPort: String(address.port),
+			scheme: "mysql",
+			sslmode: "prefer",
+		});
+		client = net.connect(port, "127.0.0.1");
+		client.on("error", () => {});
+		await once(client, "data");
+		const dbClosed = Promise.all(
+			[...dbSockets].map(
+				(socket) =>
+					new Promise<void>((resolve) => socket.once("close", () => resolve()))
+			)
+		);
+		const clientClosed = once(client, "close");
+		client.end();
+		await Promise.all([dbClosed, clientClosed]);
+		expect(acceptedCount).toBe(1);
+	} finally {
+		client?.destroy();
+		controller.dispose();
+		for (const socket of dbSockets) {
+			socket.destroy();
+		}
+		database.close();
+		removeDirSync(tmpDir);
+	}
+});
+
 test("reuses a remote Hyperdrive bridge for an unchanged target", async ({
 	expect,
 }) => {
@@ -911,6 +1269,9 @@ test("reuses a remote Hyperdrive bridge for an unchanged target", async ({
 		name: "hyperdrive:0:DB",
 		bindingName: "DB",
 		remoteProxyConnectionString: new URL("http://127.0.0.1:1/"),
+		expectedConnectionString: new URL(
+			"postgres://user:password@origin/database"
+		),
 	};
 	try {
 		const firstPort = await controller.createRemoteTcpBridge(config);
@@ -919,6 +1280,331 @@ test("reuses a remote Hyperdrive bridge for an unchanged target", async ({
 		expect(controller.getRemoteBridgePort(config.name)).toBe(firstPort);
 	} finally {
 		controller.dispose();
+	}
+});
+
+test("remote bridge deduplicates concurrent starts and restores its port on abort", async ({
+	expect,
+}) => {
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "hyperdrive:0:DB",
+		bindingName: "DB",
+		remoteProxyConnectionString: new URL("http://127.0.0.1:1/"),
+		expectedConnectionString: new URL(
+			"postgres://user:password@origin/database"
+		),
+	};
+	try {
+		const [oldPort, duplicate] = await Promise.all([
+			controller.createRemoteTcpBridge(config),
+			controller.createRemoteTcpBridge(config),
+		]);
+		expect(duplicate).toBe(oldPort);
+		controller.beginUpdate();
+		const candidate = await controller.createRemoteTcpBridge({
+			...config,
+			expectedConnectionString: new URL(
+				"postgres://user:changed@origin/database"
+			),
+		});
+		expect(candidate).not.toBe(oldPort);
+		expect(controller.getRemoteBridgePort(config.name)).toBe(candidate);
+		controller.abortUpdate();
+		expect(controller.getRemoteBridgePort(config.name)).toBe(oldPort);
+		await expect(connectThroughProxy(candidate, "hello")).rejects.toMatchObject(
+			{ code: "ECONNREFUSED" }
+		);
+		controller.beginUpdate();
+		const next = await controller.createRemoteTcpBridge({
+			...config,
+			expectedConnectionString: new URL(
+				"postgres://user:changed@origin/database"
+			),
+		});
+		controller.commitUpdate(new Set([`127.0.0.1:${next}`]));
+		expect(controller.getRemoteBridgePort(config.name)).toBe(next);
+	} finally {
+		controller.dispose();
+	}
+});
+
+test.for(["abort", "dispose"] as const)(
+	"remote bridge cannot publish after %s interrupts startup",
+	async (action, { expect }) => {
+		const controller = new HyperdriveProxyController();
+		controller.beginUpdate();
+		const pending = controller.createRemoteTcpBridge({
+			name: "hyperdrive:0:DB",
+			bindingName: "DB",
+			remoteProxyConnectionString: new URL("http://127.0.0.1:1/"),
+			expectedConnectionString: new URL(
+				"mysql://user:password@origin/database"
+			),
+		});
+		if (action === "abort") {
+			controller.abortUpdate();
+		} else {
+			controller.dispose();
+		}
+		try {
+			await expect(pending).rejects.toThrow("interrupted");
+			expect(controller.getRemoteBridgePort("hyperdrive:0:DB")).toBeUndefined();
+		} finally {
+			controller.dispose();
+		}
+	}
+);
+
+function createRemoteEchoServer(connectionString?: string) {
+	const server = new WebSocketServer({ port: 0, host: "127.0.0.1" });
+	if (connectionString !== undefined) {
+		server.on("headers", (headers) =>
+			headers.push(`MF-HD-Connection-String: ${connectionString}`)
+		);
+	}
+	let receivedBytes = 0;
+	server.on("connection", (ws) => {
+		ws.on("error", () => {});
+		ws.send("GREETING");
+		ws.on("message", (data) => {
+			receivedBytes += Buffer.byteLength(data.toString());
+			ws.send(data);
+		});
+	});
+	return {
+		server,
+		get receivedBytes() {
+			return receivedBytes;
+		},
+	};
+}
+
+test("remote bridge keeps credential snapshots separate across reloads and workers", async ({
+	expect,
+}) => {
+	const oldEdge = createRemoteEchoServer("postgres://user:old@edge/db");
+	const newEdge = createRemoteEchoServer("postgres://user:new@edge/db");
+	await Promise.all([
+		once(oldEdge.server, "listening"),
+		once(newEdge.server, "listening"),
+	]);
+	const oldAddress = oldEdge.server.address();
+	const newAddress = newEdge.server.address();
+	if (typeof oldAddress === "string" || typeof newAddress === "string") {
+		throw new Error("Expected TCP port");
+	}
+	const controller = new HyperdriveProxyController();
+	const config = {
+		name: "hyperdrive:0:DB",
+		bindingName: "DB",
+		remoteProxyConnectionString: new URL(`http://127.0.0.1:${oldAddress.port}`),
+		expectedConnectionString: new URL("postgres://user:old@consumer/db"),
+	};
+	const clients: net.Socket[] = [];
+	async function exchange(port: number, message: string) {
+		const client = net.connect(port, "127.0.0.1");
+		clients.push(client);
+		client.on("error", () => {});
+		await once(client, "data");
+		const reply = once(client, "data");
+		client.write(message);
+		return (await reply)[0].toString();
+	}
+	try {
+		const oldPort = await controller.createRemoteTcpBridge(config);
+		expect(await exchange(oldPort, "old")).toBe("old");
+		controller.beginUpdate();
+		const updated = {
+			...config,
+			remoteProxyConnectionString: new URL(
+				`http://127.0.0.1:${newAddress.port}`
+			),
+			expectedConnectionString: new URL("postgres://user:new@consumer/db"),
+		};
+		const newPort = await controller.createRemoteTcpBridge(updated);
+		const otherWorker = await controller.createRemoteTcpBridge({
+			...config,
+			name: "hyperdrive:1:DB",
+		});
+		expect(otherWorker).not.toBe(oldPort);
+		expect(await exchange(newPort, "new")).toBe("new");
+		expect(await exchange(otherWorker, "other")).toBe("other");
+		expect(await exchange(oldPort, "still-old")).toBe("still-old");
+		controller.commitUpdate(
+			new Set([`127.0.0.1:${newPort}`, `127.0.0.1:${otherWorker}`])
+		);
+		const oldClient = clients[0];
+		const reply = once(oldClient, "data");
+		oldClient.write("retired");
+		expect((await reply)[0].toString()).toBe("retired");
+		expect(controller.getRemoteBridgePort(config.name)).toBe(newPort);
+		expect(controller.getRemoteBridgePort("hyperdrive:1:DB")).toBe(otherWorker);
+	} finally {
+		controller.dispose();
+		for (const client of clients) {
+			client.destroy();
+		}
+		for (const edge of [oldEdge, newEdge]) {
+			for (const ws of edge.server.clients) {
+				ws.terminate();
+			}
+			await new Promise<void>((resolve) => edge.server.close(() => resolve()));
+		}
+	}
+});
+
+test.for([
+	undefined,
+	"not-a-url",
+	"mysql://user:password@origin/database",
+	"postgres://other:password@origin/database",
+	"postgres://user:other@origin/database",
+	"postgres://user:password@origin/other",
+	"postgres://user:%zz@origin/database",
+])(
+	"remote bridge blocks both directions when upgrade credentials are invalid (%#)",
+	async (header, { expect }) => {
+		const edge = createRemoteEchoServer(header);
+		await once(edge.server, "listening");
+		const address = edge.server.address();
+		if (typeof address === "string") {
+			throw new Error("Expected TCP port");
+		}
+		const controller = new HyperdriveProxyController();
+		controller.log = new TestLog();
+		const logError = vi
+			.spyOn(controller.log, "error")
+			.mockImplementation(() => {});
+		let socket: net.Socket | undefined;
+		try {
+			const port = await controller.createRemoteTcpBridge({
+				name: "hyperdrive:0:DB",
+				bindingName: "DB",
+				remoteProxyConnectionString: new URL(
+					`http://127.0.0.1:${address.port}`
+				),
+				expectedConnectionString: new URL(
+					"postgres://user:password@origin/database"
+				),
+			});
+			socket = net.connect(port, "127.0.0.1");
+			socket.on("error", () => {});
+			let receivedBytes = 0;
+			socket.on("data", (data) => {
+				receivedBytes += data.length;
+			});
+			const closed = new Promise<void>((resolve) =>
+				socket?.once("close", () => resolve())
+			);
+			await once(socket, "connect");
+			socket.write("CLIENT AUTH");
+			await closed;
+			expect(receivedBytes).toBe(0);
+			expect(edge.receivedBytes).toBe(0);
+			expect(logError).toHaveBeenCalledOnce();
+			expect(logError.mock.calls[0][0].message.includes("password")).toBe(
+				false
+			);
+		} finally {
+			socket?.destroy();
+			controller.dispose();
+			for (const ws of edge.server.clients) {
+				ws.terminate();
+			}
+			await new Promise<void>((resolve) => edge.server.close(() => resolve()));
+		}
+	}
+);
+
+test.for(["postgresql", "mysql"])(
+	"remote bridge accepts decoded %s credentials and ignores host and port",
+	async (scheme, { expect }) => {
+		const edge = createRemoteEchoServer(
+			`${scheme}://us%65r:pa%73s@edge:1234/db%2Fname`
+		);
+		await once(edge.server, "listening");
+		const address = edge.server.address();
+		if (typeof address === "string") {
+			throw new Error("Expected TCP port");
+		}
+		const controller = new HyperdriveProxyController();
+		let socket: net.Socket | undefined;
+		try {
+			const port = await controller.createRemoteTcpBridge({
+				name: "hyperdrive:0:DB",
+				bindingName: "DB",
+				remoteProxyConnectionString: new URL(
+					`http://127.0.0.1:${address.port}`
+				),
+				expectedConnectionString: new URL(
+					`${scheme === "mysql" ? "mysql" : "postgres"}://user:pass@consumer:5432/db%2fname`
+				),
+			});
+			socket = net.connect(port, "127.0.0.1");
+			socket.on("error", () => {});
+			let received = "";
+			socket.on("data", (data) => {
+				received += data.toString();
+			});
+			await once(socket, "connect");
+			socket.write("hello");
+			await vi.waitFor(() => expect(received).toContain("GREETINGhello"));
+			expect(edge.receivedBytes).toBe(5);
+			controller.beginUpdate();
+			controller.commitUpdate(new Set());
+			socket.write("after");
+			await vi.waitFor(() => expect(received).toContain("helloafter"));
+			const ws = [...edge.server.clients][0];
+			const wsClosed = once(ws, "close");
+			const clientClosed = once(socket, "close");
+			controller.dispose();
+			controller.dispose();
+			await Promise.all([wsClosed, clientClosed]);
+		} finally {
+			socket?.destroy();
+			controller.dispose();
+			for (const ws of edge.server.clients) {
+				ws.terminate();
+			}
+			await new Promise<void>((resolve) => edge.server.close(() => resolve()));
+		}
+	}
+);
+
+test("dispose closes a remote WebSocket still in client-close grace", async ({
+	expect,
+}) => {
+	const edge = createRemoteEchoServer("postgres://user:pass@edge/db");
+	await once(edge.server, "listening");
+	const address = edge.server.address();
+	if (typeof address === "string") {
+		throw new Error("Expected TCP port");
+	}
+	const controller = new HyperdriveProxyController();
+	try {
+		const port = await controller.createRemoteTcpBridge({
+			name: "hyperdrive:0:DB",
+			bindingName: "DB",
+			remoteProxyConnectionString: new URL(`http://127.0.0.1:${address.port}`),
+			expectedConnectionString: new URL("postgres://user:pass@origin/db"),
+		});
+		const { socket } = await connectThroughProxy(port, "hello");
+		const ws = [...edge.server.clients][0];
+		const closed = once(ws, "close");
+		socket.destroy();
+		await once(socket, "close");
+		controller.beginUpdate();
+		controller.commitUpdate(new Set());
+		controller.dispose();
+		await closed;
+		expect(edge.server.clients.size).toBe(0);
+	} finally {
+		controller.dispose();
+		for (const ws of edge.server.clients) {
+			ws.terminate();
+		}
+		await new Promise<void>((resolve) => edge.server.close(() => resolve()));
 	}
 });
 
@@ -933,6 +1619,9 @@ test("retires a remote Hyperdrive bridge a reload stops using", async ({
 		name: "hyperdrive:0:DB",
 		bindingName: "DB",
 		remoteProxyConnectionString: new URL("http://127.0.0.1:1/"),
+		expectedConnectionString: new URL(
+			"postgres://user:password@origin/database"
+		),
 	};
 	try {
 		controller.beginUpdate();

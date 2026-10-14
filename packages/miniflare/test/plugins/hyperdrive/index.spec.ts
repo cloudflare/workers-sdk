@@ -2,7 +2,7 @@ import { HYPERDRIVE_PLUGIN, Miniflare } from "miniflare";
 import { describe, test, vi } from "vitest";
 import { singleModuleManifest, useDispose } from "../../test-shared";
 import type { Hyperdrive } from "@cloudflare/workers-types/experimental";
-import type { MiniflareOptions } from "miniflare";
+import type { MiniflareOptions, RemoteProxyConnectionString } from "miniflare";
 
 test("fields match expected", async ({ expect }) => {
 	const connectionString = `postgresql://user:password@localhost:5432/database`;
@@ -211,6 +211,49 @@ test("sets default port based on protocol", async ({ expect }) => {
 	res = await mf.dispatchFetch("http://localhost/");
 	expect(await res.text()).toBe("5432");
 });
+
+test.for([undefined, "not-a-url", "postgres://user:pass@origin/db%zz"])(
+	"remote Hyperdrive rejects unprepared credentials without exposing input (%#)",
+	async (connectionString, { expect }) => {
+		const options = {
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest("export default { fetch() {} }"),
+						env: {
+							DB: {
+								type: "hyperdrive",
+								id: "remote-db",
+								dev: { remote: true, connectionString },
+							},
+						},
+					},
+					dev: {
+						remoteProxyConnectionString: new URL(
+							"http://127.0.0.1:1/"
+						) as RemoteProxyConnectionString,
+					},
+				},
+			],
+		} as MiniflareOptions;
+		const mf = new Miniflare(options);
+		const failure = await mf.ready.then(
+			() => undefined,
+			(error: Error) => error
+		);
+		try {
+			expect(failure).toBeInstanceOf(Error);
+			expect(failure?.message).toContain('Remote Hyperdrive binding "DB"');
+			expect(failure?.message).toContain("Reconnect");
+			expect(failure?.message.includes("pass@")).toBe(false);
+		} finally {
+			// Disposal awaits startup and rethrows the same initialization failure.
+			await expect(mf.dispose()).rejects.toBe(failure);
+		}
+	}
+);
 
 describe("proxy server creation", () => {
 	type GetServicesOptions = Parameters<typeof HYPERDRIVE_PLUGIN.getServices>[0];

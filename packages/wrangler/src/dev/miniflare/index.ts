@@ -380,22 +380,15 @@ function hyperdriveEntry(
 			hyperdrive.binding
 		);
 		if (seededConnectionString === undefined) {
-			// The edge session's credentials are what let a database client
-			// authenticate through the proxy; without them miniflare falls back to
-			// placeholder credentials (and a `mysql` scheme even for Postgres) and
-			// the login is rejected. They are prepared by
-			// `maybeStartOrUpdateRemoteProxySession`, so reaching this means the
-			// caller did not pass them on. Warn rather than throw so the session
-			// stays usable and fails visibly instead of silently.
-			logger.once.warn(
-				`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no edge credentials were provided for it, so connections through it will likely fail to authenticate.`
+			throw new UserError(
+				`The remote Hyperdrive binding "${hyperdrive.binding}" has no edge credentials. Check your authentication and internet connection, then retry.`,
+				{ telemetryMessage: "remote hyperdrive edge credentials missing" }
 			);
 		}
 		return [
 			hyperdrive.binding,
 			{
-				localConnectionString:
-					seededConnectionString ?? hyperdrive.localConnectionString,
+				localConnectionString: seededConnectionString,
 				remoteProxyConnectionString,
 			},
 		];

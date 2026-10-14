@@ -6,6 +6,7 @@ import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker";
 import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
+import { seedRemoteHyperdriveBindings } from "./seed-hyperdrive-bindings";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
@@ -126,7 +127,9 @@ export async function startRemoteProxySession(
 		devEnv = new DevEnv(workerConfig);
 		devEnv.start();
 	} catch (startWorkerError: unknown) {
-		await devEnv?.teardown();
+		await Promise.resolve()
+			.then(() => devEnv?.teardown())
+			.catch(() => {});
 		if (startWorkerError instanceof UserError) {
 			throw startWorkerError;
 		}
@@ -180,11 +183,49 @@ export async function startRemoteProxySession(
 		remoteProxyConnectionString = (await devEnv.proxy.ready.promise)
 			.url as RemoteProxyConnectionString;
 	} catch (error) {
-		await devEnv.teardown();
+		await Promise.resolve()
+			.then(() => devEnv.teardown())
+			.catch(() => {});
 		throw error;
 	} finally {
 		devEnv.removeListener("error", onStartupError);
 	}
+	let currentBindings = bindings;
+	let keepaliveTimer: ReturnType<typeof setInterval> | undefined;
+	let keepaliveStarted = false;
+	let disposed = false;
+	let disposePromise: Promise<void> | undefined;
+
+	const updateHyperdriveKeepalive = (
+		newBindings: StartDevWorkerInput["bindings"]
+	) => {
+		if (disposed) {
+			return;
+		}
+		keepaliveStarted = true;
+		currentBindings = newBindings;
+		const wanted = Object.values(currentBindings ?? {}).some(
+			(binding) => binding.type === "hyperdrive" && binding.remote
+		);
+		if (!wanted) {
+			clearInterval(keepaliveTimer);
+			keepaliveTimer = undefined;
+		} else if (keepaliveTimer === undefined) {
+			keepaliveTimer = setInterval(() => {
+				// Refreshing does not rotate a consumer's credentials or guarantee
+				// affinity with the edge instance handling its next connection.
+				void seedRemoteHyperdriveBindings(
+					currentBindings,
+					remoteProxyConnectionString
+				).catch(() => {
+					options.logger.debug(
+						"Failed to refresh remote Hyperdrive credentials; will retry on the next interval."
+					);
+				});
+			}, HYPERDRIVE_KEEPALIVE_INTERVAL_MS);
+			keepaliveTimer.unref();
+		}
+	};
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
@@ -206,20 +247,36 @@ export async function startRemoteProxySession(
 					);
 		}
 		await devEnv.proxy.runtimeMessageMutex.drained();
+		currentBindings = newBindings;
+		if (keepaliveStarted) {
+			updateHyperdriveKeepalive(currentBindings);
+		}
 	};
 
 	return {
 		ready: Promise.resolve(),
 		remoteProxyConnectionString,
 		updateBindings,
-		dispose: () => devEnv.teardown(),
+		updateHyperdriveKeepalive,
+		dispose: () => {
+			disposed = true;
+			clearInterval(keepaliveTimer);
+			keepaliveTimer = undefined;
+			disposePromise ??= Promise.resolve().then(() => devEnv.teardown());
+			return disposePromise;
+		},
 	};
 }
+
+/** Interval for best-effort edge refreshes; not a credential rotation guarantee. */
+export const HYPERDRIVE_KEEPALIVE_INTERVAL_MS = 20 * 60 * 1000;
 
 export type RemoteProxySession = {
 	ready: Promise<void>;
 	dispose(): Promise<void>;
 	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
+	/** Starts or retargets refreshes after the session is ready. */
+	updateHyperdriveKeepalive(bindings: StartDevWorkerInput["bindings"]): void;
 	remoteProxyConnectionString: RemoteProxyConnectionString;
 };
 

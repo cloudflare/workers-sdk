@@ -73,6 +73,7 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 				ready: Promise.resolve(),
 				async dispose() {},
 				async updateBindings() {},
+				updateHyperdriveKeepalive() {},
 				remoteProxyConnectionString,
 			};
 		},

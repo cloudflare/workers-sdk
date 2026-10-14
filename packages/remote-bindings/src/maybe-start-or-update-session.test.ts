@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import {
-	HYPERDRIVE_KEEPALIVE_INTERVAL_MS,
 	maybeStartOrUpdateRemoteProxySession,
 	pickRemoteBindings,
 } from "./maybe-start-or-update-session";
@@ -22,7 +21,29 @@ function createTestLogger(): RemoteBindingsLogger {
 	};
 }
 
+function createSession() {
+	return {
+		ready: Promise.resolve(),
+		dispose: vi.fn(async () => {}),
+		updateBindings: vi.fn(async () => {}),
+		updateHyperdriveKeepalive: vi.fn(),
+		remoteProxyConnectionString: new URL(
+			"http://localhost:8787"
+		) as RemoteProxyConnectionString,
+	};
+}
+
+function hyperdriveBindings() {
+	return {
+		HYPERDRIVE: { type: "hyperdrive" as const, id: "some-id", remote: true },
+		KV: { type: "kv_namespace" as const, id: "kv-id", remote: true },
+		R2: { type: "r2_bucket" as const, bucket_name: "bucket", remote: true },
+	};
+}
+
 describe("maybeStartOrUpdateRemoteProxySession", () => {
+	afterEach(() => vi.restoreAllMocks());
+
 	it.for([undefined, true])(
 		"selects K2 bindings for remote development with remote=%s",
 		(remote, { expect }) => {
@@ -40,350 +61,142 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 	it("updates an existing session when all remote bindings are removed", async ({
 		expect,
 	}) => {
-		const dispose = vi.fn();
-		const updateBindings = vi.fn();
-		const startSession = vi.fn<typeof startRemoteProxySession>();
-		const existingSession: RemoteProxySessionData = {
-			session: {
-				ready: Promise.resolve(),
-				dispose,
-				updateBindings,
-				remoteProxyConnectionString: new URL(
-					"http://localhost:8787"
-				) as RemoteProxyConnectionString,
-			},
+		const session = createSession();
+		const existing: RemoteProxySessionData = {
+			session,
 			remoteBindings: {
-				SERVICE: {
-					type: "service",
-					service: "worker",
-					remote: true,
-				},
+				SERVICE: { type: "service", service: "worker", remote: true },
 			},
 			hyperdriveConnectionStrings: new Map(),
 		};
-
+		const startSession = vi.fn<typeof startRemoteProxySession>();
 		const result = await maybeStartOrUpdateRemoteProxySession(
 			{ bindings: {} },
-			existingSession,
+			existing,
 			undefined,
 			{ logger: createTestLogger() },
 			startSession
 		);
-
-		expect(result?.session).toBe(existingSession.session);
-		expect(updateBindings).toHaveBeenCalledWith({});
-		expect(dispose).not.toHaveBeenCalled();
+		expect(result?.session).toBe(session);
+		expect(session.updateBindings).toHaveBeenCalledWith({});
+		expect(session.updateHyperdriveKeepalive).toHaveBeenCalledWith({});
+		expect(session.dispose).not.toHaveBeenCalled();
 		expect(startSession).not.toHaveBeenCalled();
 	});
 
 	it("does not start a session without remote bindings", async ({ expect }) => {
 		const startSession = vi.fn<typeof startRemoteProxySession>();
-
-		const result = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: {} },
-			undefined,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-
-		expect(result).toBeNull();
+		expect(
+			await maybeStartOrUpdateRemoteProxySession(
+				{ bindings: {} },
+				undefined,
+				undefined,
+				{ logger: createTestLogger() },
+				startSession
+			)
+		).toBeNull();
 		expect(startSession).not.toHaveBeenCalled();
 	});
-});
 
-describe("Hyperdrive credential keepalive", () => {
-	beforeEach(() => {
-		vi.useFakeTimers();
-	});
+	it.for([false, true])(
+		"preserves caller ownership on seed failure with reused=%s",
+		async (reused, { expect }) => {
+			const seedSpy = vi
+				.spyOn(seedHyperdriveBindings, "seedRemoteHyperdriveBindings")
+				.mockRejectedValue(new Error("private-test-secret"));
+			const session = createSession();
+			const bindings = hyperdriveBindings();
+			const existing: RemoteProxySessionData = {
+				session,
+				remoteBindings: bindings,
+				hyperdriveConnectionStrings: new Map(),
+			};
+			const logger = createTestLogger();
+			const startSession = vi
+				.fn<typeof startRemoteProxySession>()
+				.mockResolvedValue(session);
+			const result = await maybeStartOrUpdateRemoteProxySession(
+				{ bindings },
+				reused ? existing : undefined,
+				undefined,
+				{ logger },
+				startSession
+			);
+			expect(result?.session).toBe(session);
+			expect(result?.hyperdriveConnectionStrings.size).toBe(0);
+			expect(result?.remoteBindings).toEqual(bindings);
+			expect(session.dispose).not.toHaveBeenCalled();
+			expect(JSON.stringify(vi.mocked(logger.warn).mock.calls)).not.toContain(
+				"private-test-secret"
+			);
+			seedSpy.mockResolvedValue(new Map([["HYPERDRIVE", "seeded"]]));
+			const recovered = await maybeStartOrUpdateRemoteProxySession(
+				{ bindings },
+				result,
+				undefined,
+				{ logger },
+				startSession
+			);
+			expect(recovered?.session).toBe(session);
+			expect(recovered?.hyperdriveConnectionStrings.get("HYPERDRIVE")).toBe(
+				"seeded"
+			);
+		}
+	);
 
-	afterEach(() => {
-		vi.useRealTimers();
-		vi.restoreAllMocks();
-	});
-
-	function hyperdriveBindings() {
-		return {
-			HYPERDRIVE: {
-				type: "hyperdrive" as const,
-				id: "some-id",
-				remote: true,
-			},
-		};
-	}
-
-	it("re-seeds credentials on an interval for a session with remote Hyperdrive bindings", async ({
+	it("retargets the keepalive only after a successful update", async ({
 		expect,
 	}) => {
-		const seedSpy = vi
-			.spyOn(seedHyperdriveBindings, "seedRemoteHyperdriveBindings")
-			.mockResolvedValue(new Map());
-		const startSession = vi
-			.fn<typeof startRemoteProxySession>()
-			.mockResolvedValue({
-				ready: Promise.resolve(),
-				dispose: vi.fn(),
-				updateBindings: vi.fn(),
-				remoteProxyConnectionString: new URL(
-					"http://localhost:8787"
-				) as RemoteProxyConnectionString,
-			});
-
-		await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: hyperdriveBindings() },
-			undefined,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-
-		// One call from the initial seed in `maybeStartOrUpdateRemoteProxySession` itself.
-		expect(seedSpy).toHaveBeenCalledTimes(1);
-
-		await vi.advanceTimersByTimeAsync(HYPERDRIVE_KEEPALIVE_INTERVAL_MS);
-		expect(seedSpy).toHaveBeenCalledTimes(2);
-
-		await vi.advanceTimersByTimeAsync(HYPERDRIVE_KEEPALIVE_INTERVAL_MS);
-		expect(seedSpy).toHaveBeenCalledTimes(3);
-	});
-
-	it("stops re-seeding once the session is disposed", async ({ expect }) => {
-		const seedSpy = vi
-			.spyOn(seedHyperdriveBindings, "seedRemoteHyperdriveBindings")
-			.mockResolvedValue(new Map());
-		const dispose = vi.fn().mockResolvedValue(undefined);
-		const startSession = vi
-			.fn<typeof startRemoteProxySession>()
-			.mockResolvedValue({
-				ready: Promise.resolve(),
-				dispose,
-				updateBindings: vi.fn(),
-				remoteProxyConnectionString: new URL(
-					"http://localhost:8787"
-				) as RemoteProxyConnectionString,
-			});
-
-		const result = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: hyperdriveBindings() },
-			undefined,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-		expect(seedSpy).toHaveBeenCalledTimes(1);
-
-		await result?.session.dispose();
-		expect(dispose).toHaveBeenCalledTimes(1);
-
-		await vi.advanceTimersByTimeAsync(HYPERDRIVE_KEEPALIVE_INTERVAL_MS * 3);
-		expect(seedSpy).toHaveBeenCalledTimes(1);
-	});
-
-	it("does not install a second keepalive when the same session is reused", async ({
-		expect,
-	}) => {
-		const seedSpy = vi
-			.spyOn(seedHyperdriveBindings, "seedRemoteHyperdriveBindings")
-			.mockResolvedValue(new Map());
-		const startSession = vi
-			.fn<typeof startRemoteProxySession>()
-			.mockResolvedValue({
-				ready: Promise.resolve(),
-				dispose: vi.fn(),
-				updateBindings: vi.fn(),
-				remoteProxyConnectionString: new URL(
-					"http://localhost:8787"
-				) as RemoteProxyConnectionString,
-			});
-
-		const first = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: hyperdriveBindings() },
-			undefined,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-		const second = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: hyperdriveBindings() },
-			first,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-		expect(second?.session).toBe(first?.session);
-
-		await vi.advanceTimersByTimeAsync(HYPERDRIVE_KEEPALIVE_INTERVAL_MS);
-		// 2 initial seeds (one per call above) + 1 keepalive tick, not 2.
-		expect(seedSpy).toHaveBeenCalledTimes(3);
-	});
-
-	it("returns the session, degraded, when seeding fails", async ({
-		expect,
-	}) => {
-		// A seed failure must not strand the session: it is shared with every
-		// other remote binding, and a caller that never receives the handle can
-		// neither use nor dispose it.
 		vi.spyOn(
 			seedHyperdriveBindings,
 			"seedRemoteHyperdriveBindings"
-		).mockRejectedValue(new Error("the remote proxy did not respond in time."));
-		const dispose = vi.fn().mockResolvedValue(undefined);
-		const session = {
-			ready: Promise.resolve(),
-			dispose,
-			updateBindings: vi.fn(),
-			remoteProxyConnectionString: new URL(
-				"http://localhost:8787"
-			) as RemoteProxyConnectionString,
-		};
+		).mockResolvedValue(new Map());
+		const session = createSession();
 		const startSession = vi
 			.fn<typeof startRemoteProxySession>()
 			.mockResolvedValue(session);
-		const logger = createTestLogger();
-
-		const result = await maybeStartOrUpdateRemoteProxySession(
+		const first = await maybeStartOrUpdateRemoteProxySession(
 			{ bindings: hyperdriveBindings() },
 			undefined,
 			undefined,
-			{ logger },
+			{ logger: createTestLogger() },
 			startSession
 		);
-
-		expect(result?.session).toBe(session);
-		expect(result?.hyperdriveConnectionStrings.size).toBe(0);
-		expect(dispose).not.toHaveBeenCalled();
-		expect(logger.warn).toHaveBeenCalledWith(
-			expect.stringContaining(
-				"Failed to fetch edge credentials for remote Hyperdrive bindings"
+		session.updateHyperdriveKeepalive.mockClear();
+		session.updateBindings.mockRejectedValueOnce(new Error("reload failed"));
+		await expect(
+			maybeStartOrUpdateRemoteProxySession(
+				{ bindings: {} },
+				first,
+				undefined,
+				{ logger: createTestLogger() },
+				startSession
 			)
-		);
+		).rejects.toThrow("reload failed");
+		expect(session.updateHyperdriveKeepalive).not.toHaveBeenCalled();
+		expect(session.dispose).not.toHaveBeenCalled();
 	});
 
-	it("re-seeds the current bindings after a reused session changes them", async ({
+	it("waits for ready before starting keepalive and cleans a newly owned failed session", async ({
 		expect,
 	}) => {
-		// The session outlives the reloads that reuse it. A timer closed over the
-		// bindings from its first installation would keep refreshing a binding
-		// that no longer exists and never refresh the one that replaced it.
-		const seedSpy = vi
-			.spyOn(seedHyperdriveBindings, "seedRemoteHyperdriveBindings")
-			.mockResolvedValue(new Map());
-		const session = {
-			ready: Promise.resolve(),
-			dispose: vi.fn(),
-			updateBindings: vi.fn(),
-			remoteProxyConnectionString: new URL(
-				"http://localhost:8787"
-			) as RemoteProxyConnectionString,
-		};
+		const session = createSession();
+		const error = new Error("not ready");
+		session.ready = Promise.reject(error);
+		session.dispose.mockRejectedValueOnce(new Error("cleanup failed"));
 		const startSession = vi
 			.fn<typeof startRemoteProxySession>()
 			.mockResolvedValue(session);
-
-		const first = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: hyperdriveBindings() },
-			undefined,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-		const renamed = {
-			RENAMED_HYPERDRIVE: {
-				type: "hyperdrive" as const,
-				id: "some-id",
-				remote: true,
-			},
-		};
-		await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: renamed },
-			first,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-
-		seedSpy.mockClear();
-		await vi.advanceTimersByTimeAsync(HYPERDRIVE_KEEPALIVE_INTERVAL_MS);
-
-		expect(seedSpy).toHaveBeenCalledTimes(1);
-		expect(seedSpy).toHaveBeenCalledWith(renamed, expect.anything());
-	});
-
-	it("stops re-seeding once every remote Hyperdrive binding is removed", async ({
-		expect,
-	}) => {
-		const seedSpy = vi
-			.spyOn(seedHyperdriveBindings, "seedRemoteHyperdriveBindings")
-			.mockResolvedValue(new Map());
-		const session = {
-			ready: Promise.resolve(),
-			dispose: vi.fn(),
-			updateBindings: vi.fn(),
-			remoteProxyConnectionString: new URL(
-				"http://localhost:8787"
-			) as RemoteProxyConnectionString,
-		};
-		const startSession = vi
-			.fn<typeof startRemoteProxySession>()
-			.mockResolvedValue(session);
-
-		const first = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: hyperdriveBindings() },
-			undefined,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-		await maybeStartOrUpdateRemoteProxySession(
-			{
-				bindings: {
-					SERVICE: { type: "service", service: "worker", remote: true },
-				},
-			},
-			first,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-
-		seedSpy.mockClear();
-		await vi.advanceTimersByTimeAsync(HYPERDRIVE_KEEPALIVE_INTERVAL_MS * 3);
-
-		expect(seedSpy).not.toHaveBeenCalled();
-	});
-
-	it("does not install a keepalive for sessions without remote Hyperdrive bindings", async ({
-		expect,
-	}) => {
-		const seedSpy = vi
-			.spyOn(seedHyperdriveBindings, "seedRemoteHyperdriveBindings")
-			.mockResolvedValue(new Map());
-		const startSession = vi
-			.fn<typeof startRemoteProxySession>()
-			.mockResolvedValue({
-				ready: Promise.resolve(),
-				dispose: vi.fn(),
-				updateBindings: vi.fn(),
-				remoteProxyConnectionString: new URL(
-					"http://localhost:8787"
-				) as RemoteProxyConnectionString,
-			});
-
-		await maybeStartOrUpdateRemoteProxySession(
-			{
-				bindings: {
-					SERVICE: { type: "service", service: "worker", remote: true },
-				},
-			},
-			undefined,
-			undefined,
-			{ logger: createTestLogger() },
-			startSession
-		);
-		expect(seedSpy).toHaveBeenCalledTimes(1);
-
-		await vi.advanceTimersByTimeAsync(HYPERDRIVE_KEEPALIVE_INTERVAL_MS * 3);
-		// No further calls: only the initial seed, no keepalive was installed.
-		expect(seedSpy).toHaveBeenCalledTimes(1);
+		await expect(
+			maybeStartOrUpdateRemoteProxySession(
+				{ bindings: hyperdriveBindings() },
+				undefined,
+				undefined,
+				{ logger: createTestLogger() },
+				startSession
+			)
+		).rejects.toBe(error);
+		expect(session.updateHyperdriveKeepalive).not.toHaveBeenCalled();
+		expect(session.dispose).toHaveBeenCalledOnce();
 	});
 });

@@ -828,8 +828,18 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 						compatibilityDate: COMPAT_DATE,
 						compatibilityFlags: ["experimental"],
 						manifest: {
-							mainModule: "ProxyServerWorker.js",
+							mainModule: "fixture.js",
 							modules: {
+								"fixture.js": {
+									type: "esm",
+									contents: `import proxy from "./ProxyServerWorker.js";
+										export default { fetch(request, env, ctx) {
+											return proxy.fetch(request, { ...env, HYPERDRIVE: {
+												connectionString: "postgres://user:pass@edge/database",
+												connect: (address) => env.HYPERDRIVE.connect(address),
+											}}, ctx);
+										}};`,
+								},
 								"ProxyServerWorker.js": {
 									type: "esm",
 									contents: proxyServerBundle,
@@ -858,6 +868,9 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 				name: "hyperdrive:0:HYPERDRIVE",
 				bindingName: "HYPERDRIVE",
 				remoteProxyConnectionString: edgeUrl,
+				expectedConnectionString: new URL(
+					"postgresql://user:pass@consumer/database"
+				),
 			});
 
 			const socket = net.connect(bridgePort, "127.0.0.1");
