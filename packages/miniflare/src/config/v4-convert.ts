@@ -194,7 +194,9 @@ function convertWorkerOptions(
 	dev.unsafeEphemeralDurableObjects = worker.unsafeEphemeralDurableObjects;
 	dev.stripCfConnectingIp = worker.stripCfConnectingIp;
 	dev.zone = worker.zone;
-	dev.access = worker.access;
+	if (worker.access !== undefined) {
+		config.access = { dev: worker.access };
+	}
 
 	const options: WorkerOptions = { config };
 	if (Object.values(legacy).some((value) => value !== undefined)) {

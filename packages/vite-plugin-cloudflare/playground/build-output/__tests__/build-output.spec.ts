@@ -108,10 +108,18 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(config.manifest.modules).not.toHaveProperty(
 			config.manifest.mainModule
 		);
+		expect(config.manifest.modules).not.toHaveProperty(
+			`${config.manifest.mainModule}.map`
+		);
 		expect(Object.keys(config.manifest.modules)).toHaveLength(1);
+	});
 
+	test("emits source maps by default", ({ expect }) => {
+		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
+		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
+			manifest: { mainModule: string };
+		};
 		const sourceMapName = `${config.manifest.mainModule}.map`;
-		expect(config.manifest.modules).not.toHaveProperty(sourceMapName);
 		const sourceMapPath = path.join(
 			getBuildOutputDir(),
 			"bundle",

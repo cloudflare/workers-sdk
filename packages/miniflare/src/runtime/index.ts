@@ -10,9 +10,12 @@ import workerdPath from "workerd";
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
-import { handleStructuredLogsFromStream } from "./structured-logs";
+import {
+	handleStructuredLogsFromStream,
+	parseAddressInUse,
+} from "./structured-logs";
 import type { Awaitable } from "../workers";
-import type { StructuredLogsHandler } from "./structured-logs";
+import type { AddressInUse, StructuredLogsHandler } from "./structured-logs";
 import type { Abortable } from "node:events";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
@@ -209,18 +212,30 @@ class StartupLogBuffer {
 		this.buffering = false;
 	}
 
-	handleStartupFailure() {
-		const addressInUseLog = this.stderrBuffer.find((chunk) =>
-			chunk.includes("Address already in use; toString() = ")
-		);
-		if (addressInUseLog) {
-			const match = addressInUseLog.match(
-				/Address already in use; toString\(\) = (.+):(.+)/
-			) ?? ["", "unknown", "unknown"];
-
+	/**
+	 * @param socketAddresses The address of each socket given on the command
+	 * line, by socket name, to name the address of a socket workerd reports as
+	 * in use.
+	 */
+	handleStartupFailure(socketAddresses: Record<string, string>) {
+		let addressInUse: AddressInUse | undefined;
+		for (const chunk of this.stderrBuffer) {
+			addressInUse = parseAddressInUse(chunk);
+			if (addressInUse !== undefined) {
+				break;
+			}
+		}
+		if (addressInUse !== undefined) {
+			const { socket } = addressInUse;
+			const address =
+				addressInUse.address ??
+				(socket === undefined
+					? undefined
+					: (socketAddresses[socket] ?? `socket "${socket}"`));
+			const where = address === undefined ? "" : ` (${address})`;
 			throw new MiniflareCoreError(
 				"ERR_ADDRESS_IN_USE",
-				`Address already in use (${match[1]}:${match[2]}). Please check that you are not already running a server on this address or specify a different port with --port.`
+				`Address already in use${where}. Please check that you are not already running a server on this address or specify a different port with --port.`
 			);
 		}
 
@@ -350,7 +365,9 @@ export class Runtime {
 		startupLogBuffer.stopBuffering();
 
 		if (ports === undefined && !abortSignal.aborted) {
-			startupLogBuffer.handleStartupFailure();
+			startupLogBuffer.handleStartupFailure({
+				[SOCKET_ENTRY]: options.entryAddress,
+			});
 		} else {
 			// workerd is now listening. Watch for unexpected exits so we can
 			// restart.

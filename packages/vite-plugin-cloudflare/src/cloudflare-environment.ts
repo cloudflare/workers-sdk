@@ -227,6 +227,22 @@ const resolveExtensions = [
 	".ctx",
 ];
 
+/**
+ * Worker source maps are written to the Worker's build output rather than its
+ * public assets, so emit them by default for readable stack traces. Users can
+ * opt out with Vite's `build.sourcemap`.
+ */
+function getWorkerSourcemap(
+	userConfig: vite.UserConfig,
+	environmentName: string
+): vite.BuildEnvironmentOptions["sourcemap"] {
+	return (
+		userConfig.environments?.[environmentName]?.build?.sourcemap ??
+		userConfig.build?.sourcemap ??
+		true
+	);
+}
+
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
 	userConfig,
@@ -291,6 +307,7 @@ export function createCloudflareEnvironmentOptions({
 			emitAssets: true,
 			manifest: isParentEnvironment,
 			outDir: getOutputDirectory(userConfig, environmentName),
+			sourcemap: getWorkerSourcemap(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
 			...(isRolldown

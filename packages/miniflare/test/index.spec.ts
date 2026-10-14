@@ -446,6 +446,38 @@ test("Miniflare: replaces loopback startup error handler with persistent error l
 	expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe("ok");
 });
 
+test("Miniflare: rejects ready with ERR_ADDRESS_IN_USE when the port is taken", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const taken = net.createServer();
+	await new Promise<void>((resolve) => taken.listen(0, "127.0.0.1", resolve));
+	onTestFinished(() => void taken.close());
+	const { port } = taken.address() as AddressInfo;
+
+	const mf = new Miniflare({
+		host: "127.0.0.1",
+		port,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2026-09-04",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose().catch(() => {}));
+
+	// Whether the message names the address depends on the workerd version.
+	await expect(mf.ready).rejects.toMatchObject({
+		code: "ERR_ADDRESS_IN_USE",
+	});
+});
+
 test("Miniflare: rejects ready when loopback server cannot bind", async ({
 	expect,
 	onTestFinished,
