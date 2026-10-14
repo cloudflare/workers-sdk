@@ -45,9 +45,9 @@ export function mockFileChange(
 			return false;
 		}
 
-		restored = true;
 		console.log("Restoring file change for", filePath);
 		fs.writeFileSync(filePath, originalContent);
+		restored = true;
 		return true;
 	};
 
