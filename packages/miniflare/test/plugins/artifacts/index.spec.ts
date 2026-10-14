@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
 	chmod,
 	mkdir,
@@ -16,6 +17,7 @@ import { test } from "vitest";
 import {
 	GitClient,
 	gitEnvironment,
+	withRepositoryCreationLock,
 } from "../../../src/plugins/artifacts/git-client";
 import {
 	startGitSidecar,
@@ -216,7 +218,7 @@ test("artifacts: sidecar parses admin actions before modifying repositories", as
 		});
 		expect(created.status).toBe(200);
 		await created.body?.cancel();
-		const refs = await admin({ ...common, action: "refs" });
+		const refs = await admin({ ...common, action: "refs", generation: "gen" });
 		expect(refs.status).toBe(200);
 		expect(await refs.json()).toMatchObject({ refs: {} });
 	} finally {
@@ -281,6 +283,113 @@ test("artifacts: restart finishes cleanup after an interrupted Git deletion", as
 	} finally {
 		await restarted.close();
 	}
+});
+
+test("artifacts: stale sidecar reads cannot observe a replacement generation", async ({
+	expect,
+}) => {
+	const workspace = await useTmp();
+	const root = path.join(workspace, "repos");
+	const sidecar = await startGitSidecar(root);
+	try {
+		await createSidecarRepository(sidecar, "original");
+		const source = path.join(workspace, "source");
+		await git(["init", "--initial-branch=main", source]);
+		await writeFile(
+			path.join(source, "secret.txt"),
+			"replacement private contents\n"
+		);
+		await git(["add", "secret.txt"], source);
+		await git(["commit", "-m", "replacement"], source);
+		const admin = (action: Record<string, unknown>) =>
+			fetch(`http://${sidecar.address}/__local_artifacts__`, {
+				method: "POST",
+				headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+				body: JSON.stringify({ namespace: "test", name: "repo", ...action }),
+			});
+		const deleted = await admin({ action: "delete", generation: "original" });
+		expect(deleted.status).toBe(200);
+		await deleted.body?.cancel();
+		await createSidecarRepository(sidecar, "replacement");
+		await git(["push", repositoryPath(root, "test", "repo"), "main"], source);
+
+		// Simulate an old handle's read reaching the sidecar after
+		// delete/recreate. Its generation must be checked under the lock.
+		const oldRead = await admin({
+			action: "file",
+			generation: "original",
+			ref: "main",
+			path: "secret.txt",
+		});
+		expect(oldRead.status).not.toBe(200);
+		expect(await oldRead.text()).not.toContain("replacement private contents");
+		for (const action of [
+			{ action: "refs" },
+			{ action: "readBlob", hash: "HEAD" },
+			{ action: "readTree", hash: "HEAD" },
+			{ action: "readCommit", hash: "HEAD" },
+			{ action: "log", ref: "main" },
+		]) {
+			const stale = await admin({ ...action, generation: "original" });
+			expect(stale.status).not.toBe(200);
+			await stale.body?.cancel();
+			const unpinned = await admin(action);
+			expect(unpinned.status).toBe(500);
+			await unpinned.body?.cancel();
+		}
+		const currentRead = await admin({
+			action: "file",
+			generation: "replacement",
+			ref: "main",
+			path: "secret.txt",
+		});
+		expect(currentRead.status).toBe(200);
+		const currentBlob = (await currentRead.json()) as { data: string };
+		expect(Buffer.from(currentBlob.data, "base64").toString()).toBe(
+			"replacement private contents\n"
+		);
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test("artifacts: local storage conflicts expose safe recovery guidance", async ({
+	expect,
+}) => {
+	const persistence = await useTmp();
+	const mf = new Miniflare({
+		...options(),
+		resourcePersistencePath: persistence,
+	});
+	useDispose(mf);
+	await mf.ready;
+	const namespaceId = createHash("sha256")
+		.update("test")
+		.digest("hex")
+		.slice(0, 32);
+	const root = path.join(persistence, "artifacts", namespaceId, "git");
+	const locked = repositoryPath(root, "test", "locked");
+	await withRepositoryCreationLock(locked, async () => {
+		const created = await rpcFailure(mf, "create", ["locked"]);
+		expect(created.code).toBe("INTERNAL_ERROR");
+		expect(created.error).toContain("Another local process is creating");
+		expect(created.error).toContain(".artifacts-create-");
+		const imported = await rpcFailure(mf, "import", [
+			{
+				source: { url: "https://example.invalid/repo.git" },
+				target: { name: "locked" },
+			},
+		]);
+		expect(imported.code).toBe("INTERNAL_ERROR");
+		expect(imported.error).toContain("Another local process is creating");
+	});
+	const foreign = repositoryPath(root, "test", "foreign");
+	await mkdir(foreign, { recursive: true });
+	const created = await rpcFailure(mf, "create", ["foreign"]);
+	expect(created.code).toBe("INTERNAL_ERROR");
+	expect(created.error).toContain(
+		'Repository "foreign" already exists on disk'
+	);
 });
 
 test("artifacts: config update closes retired sidecars but abort preserves active ones", async ({
@@ -1390,6 +1499,48 @@ test("artifacts: shallow imports stay shallow when cloned with Git protocol v2",
 		await sidecar.close();
 	}
 });
+
+test("artifacts: multi-branch clones support compressed negotiation", async ({
+	expect,
+}) => {
+	const workspace = await useTmp();
+	const source = path.join(workspace, "source");
+	await git(["init", "--initial-branch=main", source]);
+	for (let index = 0; index < 40; index++) {
+		await git(["switch", "--orphan", `branch-${index}`], source);
+		await writeFile(path.join(source, "fixture.txt"), `branch ${index}\n`);
+		await git(["add", "fixture.txt"], source);
+		await git(["commit", "-m", `branch ${index}`], source);
+	}
+	const sidecar = await startGitSidecar(path.join(workspace, "repos"));
+	try {
+		await createSidecarRepository(sidecar, "many-branches");
+		const headers = {
+			GIT_CONFIG_COUNT: "3",
+			GIT_CONFIG_KEY_1: "http.extraHeader",
+			GIT_CONFIG_VALUE_1: `X-Local-Artifacts-Backend: ${sidecar.secret}`,
+			GIT_CONFIG_KEY_2: "http.extraHeader",
+			GIT_CONFIG_VALUE_2: "X-Local-Artifacts-Generation: many-branches",
+		};
+		const remote = `http://${sidecar.address}/git/test/repo.git`;
+		await git(["push", "--all", remote], source, headers);
+		for (const protocol of ["0", "2"]) {
+			const clone = path.join(workspace, `clone-${protocol}`);
+			await git(
+				["-c", `protocol.version=${protocol}`, "clone", remote, clone],
+				undefined,
+				headers
+			);
+			const refs = await git(
+				["for-each-ref", "--format=%(refname)", "refs/remotes/origin"],
+				clone
+			);
+			expect(refs.stdout.trim().split("\n")).toHaveLength(40);
+		}
+	} finally {
+		await sidecar.close();
+	}
+}, 60_000);
 
 test("artifacts: disposing the sidecar closes its private listener", async ({
 	expect,

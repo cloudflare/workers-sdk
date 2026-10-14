@@ -232,6 +232,15 @@ export interface GitTreeEntry {
 
 type GitObjectType = "blob" | "tree" | "commit" | "tag";
 
+export class LocalRepositoryStorageError extends Error {
+	constructor(
+		readonly kind: "creation-lock" | "on-disk-conflict",
+		message: string
+	) {
+		super(message);
+	}
+}
+
 /** Only one host process may publish a repository at this path at a time. */
 export async function withRepositoryCreationLock<T>(
 	repository: string,
@@ -250,7 +259,8 @@ export async function withRepositoryCreationLock<T>(
 		lock = await open(lockPath, "wx", 0o600);
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-			throw new Error(
+			throw new LocalRepositoryStorageError(
+				"creation-lock",
 				`Another local process is creating this Git repository. Stop it and retry; if it crashed, remove "${lockPath}" only after confirming no process uses this storage path.`
 			);
 		}
