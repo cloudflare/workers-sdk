@@ -35,6 +35,7 @@ vi.mock("@cloudflare/workers-auth", () => ({
 const { RemoteRuntimeController } = await import("./RemoteRuntimeController");
 
 const config: StartDevWorkerOptions = {
+	cliDisplayName: "Test CLI",
 	name: "remote-bindings-proxy",
 	entrypointSource: "export default {};",
 	bindings: {},
