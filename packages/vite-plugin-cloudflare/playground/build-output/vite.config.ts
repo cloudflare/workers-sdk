@@ -10,7 +10,6 @@ export default defineConfig({
 						entryFileNames: "chunks/[name]-[hash].mjs",
 					},
 				},
-				sourcemap: true,
 			},
 		},
 	},

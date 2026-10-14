@@ -577,6 +577,19 @@ export interface WorkerConfig {
 	};
 
 	/**
+	 * Cloudflare Access configuration for this Worker.
+	 */
+	access?: {
+		/** Local development simulation of Cloudflare Access authentication. */
+		dev?: {
+			/** The Access application audience tag (`aud`). */
+			aud: string;
+			/** Mock identity returned by `ctx.access.getIdentity()`. */
+			identity?: Record<string, unknown>;
+		};
+	};
+
+	/**
 	 * Whether we use `<name>.<subdomain>.workers.dev` to
 	 * test and deploy your Worker.
 	 *

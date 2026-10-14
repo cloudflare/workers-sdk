@@ -115,6 +115,27 @@ describe("convertV4MiniflareOptions", () => {
 		});
 	});
 
+	test("nests Access local development configuration in the Worker config", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			access: {
+				aud: "my-app-aud-tag",
+				identity: { email: "user@example.com" },
+			},
+		});
+
+		expect(converted.workers[0].config.access).toEqual({
+			dev: {
+				aud: "my-app-aud-tag",
+				identity: { email: "user@example.com" },
+			},
+		});
+		expect(converted.workers[0].dev).not.toHaveProperty("access");
+	});
+
 	test("converts module source and representative bindings", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			rootPath: __dirname,

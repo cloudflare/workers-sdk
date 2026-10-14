@@ -118,3 +118,21 @@ test.runIf(!isBuild)(
 		}, WAIT_FOR_OPTIONS);
 	}
 );
+
+test.runIf(isBuild)(
+	"emits source maps in Build Output by default",
+	({ expect }) => {
+		const outputDir = path.join(
+			rootDir,
+			".cloudflare/output/v0/workers/default"
+		);
+		const config = JSON.parse(
+			fs.readFileSync(path.join(outputDir, "worker.config.json"), "utf-8")
+		) as { manifest: { mainModule: string } };
+		expect(
+			fs.existsSync(
+				path.join(outputDir, "bundle", `${config.manifest.mainModule}.map`)
+			)
+		).toBe(true);
+	}
+);
