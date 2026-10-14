@@ -35,6 +35,8 @@ import type {
 	WorkerResponse,
 } from "vitest/node";
 
+// Cached transforms live on the host filesystem, which workerd cannot read.
+// Send their source instead of Vitest's temporary-file reference.
 function inlineCachedModule(
 	module: unknown,
 	cacheContents: Map<string, string>
@@ -59,6 +61,8 @@ function inlineCachedModule(
 	return { ...result, code };
 }
 
+// Vitest sends both individual fetch results and a warm-cache snapshot of modules.
+// Inline either shape, reusing reads when snapshot entries share the same file.
 function inlineCachedModules(response: unknown): unknown {
 	const cacheContents = new Map<string, string>();
 	let inlined: unknown;
@@ -202,7 +206,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 		);
 
 		// Avoid mutating Vitest's message objects — shallow-copy the parts we modify
-		let toSend: unknown = message;
+		let toSend: WorkerRequest = message;
 		if (message.type === "start") {
 			// Users can write `vitest --inspect` to start an inspector connection for their tests
 			// We intercept that option and use it to enable inspection of the Workers running in workerd
@@ -249,11 +253,14 @@ export class CloudflarePoolWorker implements PoolWorker {
 				},
 			};
 		}
+		// This channel also carries BiRPC responses: `t: "s"` and `r` is the result.
+		// https://github.com/antfu-collective/birpc/blob/f5bb5a45bdaf7147fc616e78f335d437dce27a18/src/index.ts#L202-L246
 		const rpcResponse = message as { t?: string; r?: unknown };
 		if (rpcResponse.t === "s" && rpcResponse.r !== undefined) {
 			const inlined = inlineCachedModules(rpcResponse.r);
 			if (inlined !== rpcResponse.r) {
-				toSend = { ...message, r: inlined };
+				const inlinedResponse = { ...message, r: inlined };
+				toSend = inlinedResponse;
 			}
 		}
 		this.socket.send(structuredSerializableStringify(toSend));

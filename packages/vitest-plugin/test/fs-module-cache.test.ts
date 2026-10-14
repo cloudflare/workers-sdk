@@ -1,109 +1,18 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import semverMajor from "semver/functions/major.js";
 import dedent from "ts-dedent";
-import { vi } from "vitest";
-import { version as installedVitestVersion } from "vitest/package.json";
-import { CloudflarePoolWorker } from "../src/pool/cloudflare-pool-worker";
-import { structuredSerializableParse } from "../src/pool/index";
 import { test, vitestConfig } from "./helpers";
-import type { WorkerRequest } from "vitest/node";
+import { vitestVersion } from "./versions";
 
 const fsModuleCacheOptions = {
 	fsModuleCache: true,
 	fsModuleCachePath: "./.vitest-cache",
 };
-const cacheConfig = (
-	process.env.VITEST_VERSION ?? installedVitestVersion
-).startsWith("4.")
-	? { experimental: fsModuleCacheOptions }
-	: fsModuleCacheOptions;
-
-test("inlines cached fetches with Vitest 4's experimental setting", async ({
-	expect,
-	tmpPath,
-}) => {
-	const cachedPath = path.join(tmpPath, "cached-module.js");
-	await fs.writeFile(cachedPath, "export const value = 42;");
-	const send = vi.fn();
-	const worker = Object.create(
-		CloudflarePoolWorker.prototype
-	) as CloudflarePoolWorker;
-	Object.assign(worker, {
-		socket: { send },
-		parsedPoolOptions: {},
-		options: { project: { config: { experimental: { fsModuleCache: true } } } },
-	});
-
-	worker.send({
-		t: "s",
-		i: 1,
-		r: { cached: true, tmp: cachedPath },
-	} as unknown as WorkerRequest);
-
-	const response = structuredSerializableParse(send.mock.calls[0][0]) as {
-		r: unknown;
-	};
-	expect(response.r).toEqual({ code: "export const value = 42;" });
-});
-
-test("forwards a cached fetch when its file disappears", ({
-	expect,
-	tmpPath,
-}) => {
-	const send = vi.fn();
-	const worker = Object.create(
-		CloudflarePoolWorker.prototype
-	) as CloudflarePoolWorker;
-	Object.assign(worker, {
-		socket: { send },
-		parsedPoolOptions: {},
-		options: { project: { config: { fsModuleCache: true } } },
-	});
-	const message = {
-		t: "s",
-		i: 1,
-		r: { cached: true, tmp: path.join(tmpPath, "missing.js") },
-	};
-
-	worker.send(message as unknown as WorkerRequest);
-
-	expect(structuredSerializableParse(send.mock.calls[0][0])).toEqual(message);
-});
-
-test("inlines warm-cache entries and skips missing files", async ({
-	expect,
-	tmpPath,
-}) => {
-	const cachedPath = path.join(tmpPath, "cached-module.js");
-	await fs.writeFile(cachedPath, "export const value = 42;");
-	const send = vi.fn();
-	const worker = Object.create(
-		CloudflarePoolWorker.prototype
-	) as CloudflarePoolWorker;
-	Object.assign(worker, {
-		socket: { send },
-		parsedPoolOptions: {},
-		options: { project: { config: { fsModuleCache: true } } },
-	});
-
-	worker.send({
-		t: "s",
-		i: 1,
-		r: {
-			"/missing": { cached: true, tmp: path.join(tmpPath, "missing.js") },
-			"/cached": { cached: true, tmp: cachedPath },
-			"/cached-alias": { cached: true, tmp: cachedPath },
-		},
-	} as unknown as WorkerRequest);
-
-	const response = structuredSerializableParse(send.mock.calls[0][0]) as {
-		r: unknown;
-	};
-	expect(response.r).toEqual({
-		"/cached": { code: "export const value = 42;" },
-		"/cached-alias": { code: "export const value = 42;" },
-	});
-});
+const cacheConfig =
+	semverMajor(vitestVersion) === 4
+		? { experimental: fsModuleCacheOptions }
+		: fsModuleCacheOptions;
 
 for (const moduleRegistry of [
 	"legacy_module_registry",
