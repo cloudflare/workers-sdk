@@ -1,3 +1,5 @@
+import assert from "node:assert";
+import { gt } from "semver";
 import { it } from "vitest";
 import {
 	getNpmPrereleaseConfig,
@@ -138,3 +140,29 @@ it.for(
 		expect(actual).toEqual(correctVersion);
 	}
 );
+
+it("versions Vite plugin v2 betas after its SHA prereleases", ({ expect }) => {
+	const config = getNpmPrereleaseConfig({
+		name: "@cloudflare/vite-plugin",
+		version: "1.63.1",
+		"workers-sdk": {
+			npmPrerelease: { tag: "beta", numbered: true },
+		},
+	});
+	assert(config !== undefined);
+
+	const firstVersion = getNextNpmPrereleaseVersion({
+		previousVersion: "1.63.1",
+		versionAfterChangesets: "2.0.0",
+		config,
+	});
+	expect(firstVersion).toBe("2.0.0-beta.v.0");
+	expect(gt(firstVersion, "2.0.0-beta.sha-fffffffff")).toBe(true);
+	expect(
+		getNextNpmPrereleaseVersion({
+			previousVersion: firstVersion,
+			versionAfterChangesets: "2.0.0",
+			config,
+		})
+	).toBe("2.0.0-beta.v.1");
+});
