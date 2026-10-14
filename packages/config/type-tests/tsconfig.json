@@ -1,0 +1,14 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/base.json",
+	"compilerOptions": {
+		// Imports resolve through package.json `exports` to the built `dist`, like
+		// an installed consumer. `declaration` reports emit errors (e.g. TS4023)
+		// even under `noEmit`; `skipLibCheck: false` also checks the `.d.mts`.
+		"declaration": true,
+		"skipLibCheck": false,
+		"types": ["@cloudflare/workers-types/experimental"],
+		"paths": {
+			"cf/config": ["./cf-config.d.mts"]
+		}
+	}
+}
