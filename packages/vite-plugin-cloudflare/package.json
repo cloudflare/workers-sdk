@@ -92,6 +92,10 @@
 		"vite": "^7.0.0 || ^8.0.0"
 	},
 	"workers-sdk": {
-		"prerelease": true
+		"prerelease": true,
+		"npmPrerelease": {
+			"tag": "beta",
+			"numbered": true
+		}
 	}
 }
