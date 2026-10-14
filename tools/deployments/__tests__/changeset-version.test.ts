@@ -156,7 +156,7 @@ it("versions Vite plugin v2 betas after its SHA prereleases", ({ expect }) => {
 		versionAfterChangesets: "2.0.0",
 		config,
 	});
-	expect(firstVersion).toBe("2.0.0-beta.x.0");
+	expect(firstVersion).toBe("2.0.0-beta.v.0");
 	expect(gt(firstVersion, "2.0.0-beta.sha-fffffffff")).toBe(true);
 	expect(
 		getNextNpmPrereleaseVersion({
@@ -164,5 +164,5 @@ it("versions Vite plugin v2 betas after its SHA prereleases", ({ expect }) => {
 			versionAfterChangesets: "2.0.0",
 			config,
 		})
-	).toBe("2.0.0-beta.x.1");
+	).toBe("2.0.0-beta.v.1");
 });
