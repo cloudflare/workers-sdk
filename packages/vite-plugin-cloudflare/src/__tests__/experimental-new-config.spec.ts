@@ -288,6 +288,48 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(worker?.config.main).toBe(path.join(tempDir, "src/index.ts"));
 	});
 
+	test.for([
+		{ production: true, previews: false },
+		{ production: false, previews: true },
+		{ production: true, previews: true },
+	])(
+		"converts custom domain traffic settings $production/$previews through the v1 configuration path",
+		async (traffic, { expect }) => {
+			seedWorkerSource();
+			writeWorkerConfig(
+				[
+					"import { defineConfig } from '@cloudflare/config';",
+					"export default defineConfig({ worker: {",
+					"  name: 'experimental-config-worker',",
+					"  entrypoint: './src/index.ts',",
+					"  compatibilityDate: '2024-12-30',",
+					`  domains: ['example.com', ${JSON.stringify({ hostname: "previews.example.com", ...traffic })}],`,
+					"} });",
+				].join("\n")
+			);
+
+			for (const env of [viteEnv, viteBuildEnv]) {
+				const result = (await resolvePluginConfig(
+					{ experimental: { newConfig: true } },
+					{ root: tempDir },
+					env
+				)) as WorkersResolvedConfig;
+				const worker = result.environmentNameToWorkerMap.get(
+					"experimental_config_worker"
+				);
+				expect(worker?.config.routes).toEqual([
+					{ pattern: "example.com", custom_domain: true },
+					{
+						pattern: "previews.example.com",
+						custom_domain: true,
+						enabled: traffic.production,
+						previews_enabled: traffic.previews,
+					},
+				]);
+			}
+		}
+	);
+
 	test("evaluates a function config and passes the Vite mode", async ({
 		expect,
 	}) => {
