@@ -33,10 +33,28 @@ export function mockFileChange(
 	mutateFn: (originalContent: string) => string
 ) {
 	const originalContent = fs.readFileSync(filePath, "utf-8");
-	onTestFinished(() => {
+	let restored = false;
+
+	const update = (mutate: (currentContent: string) => string) => {
+		console.log("Mocking file change for", filePath);
+		const currentContent = fs.readFileSync(filePath, "utf-8");
+		fs.writeFileSync(filePath, mutate(currentContent));
+	};
+	const restore = () => {
+		if (restored) {
+			return false;
+		}
+
 		console.log("Restoring file change for", filePath);
 		fs.writeFileSync(filePath, originalContent);
+		restored = true;
+		return true;
+	};
+
+	onTestFinished(() => {
+		restore();
 	});
-	console.log("Mocking file change for", filePath);
-	fs.writeFileSync(filePath, mutateFn(originalContent));
+	update(mutateFn);
+
+	return { update, restore };
 }

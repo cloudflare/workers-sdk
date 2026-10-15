@@ -49,20 +49,20 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
+		"@cloudflare/build-output-utils": "workspace:*",
+		"@cloudflare/config": "workspace:*",
+		"@cloudflare/runtime-types": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "catalog:default",
-		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
-		"@cloudflare/build-output-utils": "workspace:*",
-		"@cloudflare/config": "workspace:*",
+		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
-		"@cloudflare/runtime-types": "workspace:*",
+		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
@@ -89,10 +89,13 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
-		"wrangler": "workspace:^"
+		"vite": "^7.0.0 || ^8.0.0"
 	},
 	"workers-sdk": {
-		"prerelease": true
+		"prerelease": true,
+		"npmPrerelease": {
+			"tag": "beta",
+			"numbered": true
+		}
 	}
 }

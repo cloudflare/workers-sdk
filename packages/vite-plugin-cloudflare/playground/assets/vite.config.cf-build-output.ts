@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	environments: {
-		worker: {
+		ssr: {
 			build: {
 				assetsInlineLimit: 0,
 			},
@@ -13,12 +13,7 @@ export default defineConfig({
 		cloudflare({
 			inspectorPort: false,
 			persistState: false,
-			experimental: {
-				newConfig: {
-					cfBuildOutput: true,
-					types: { generate: false },
-				},
-			},
+			types: { includeRuntime: false, generate: false },
 		}),
 	],
 });

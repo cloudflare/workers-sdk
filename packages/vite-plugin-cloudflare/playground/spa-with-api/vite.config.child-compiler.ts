@@ -29,7 +29,7 @@ function childCompilerPlugin(): Plugin {
 			// or module pruning calls hot.send() on the worker environment, but
 			// the WebSocket was never initialized because configureServer (which
 			// calls initRunner) was stripped.
-			const workerEnvironment = childServer.environments.worker;
+			const workerEnvironment = childServer.environments.ssr;
 			if (workerEnvironment) {
 				workerEnvironment.hot.send({ type: "full-reload", path: "*" });
 			}
@@ -42,7 +42,11 @@ function childCompilerPlugin(): Plugin {
 export default defineConfig({
 	plugins: [
 		react(),
-		cloudflare({ inspectorPort: false, persistState: false }),
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
 		childCompilerPlugin(),
 	],
 });

@@ -117,17 +117,3 @@ test.runIf(!isBuild)(
 		}, WAIT_FOR_OPTIONS);
 	}
 );
-
-test.runIf(isBuild)(
-	"emits source maps and sets `upload_source_maps` to `true` by default",
-	({ expect }) => {
-		const outputDir = path.join(rootDir, "dist", "worker");
-		const wranglerConfig = JSON.parse(
-			fs.readFileSync(path.join(outputDir, "wrangler.json"), "utf-8")
-		);
-		expect(wranglerConfig.upload_source_maps).toBe(true);
-		expect(
-			fs.existsSync(path.join(outputDir, `${wranglerConfig.main}.map`))
-		).toBe(true);
-	}
-);
