@@ -5,6 +5,7 @@ import {
 	getAndValidateRegistryType,
 	getEgressInterceptorPlatform,
 	isCloudflareRegistryImage,
+	pullImage,
 	pullEgressInterceptorImage,
 	prepareContainerImagesForDev,
 	validateAndEncodeGarKey,
@@ -12,6 +13,10 @@ import {
 import { runDockerCmd, verifyDockerInstalled } from "../src/utils";
 
 vi.mock("../src/build", () => ({ startContainerBuild: vi.fn() }));
+
+vi.mock("../src/login", () => ({
+	dockerLoginImageRegistry: vi.fn(),
+}));
 
 vi.mock("../src/utils", () => ({
 	verifyDockerInstalled: vi.fn(),
@@ -85,6 +90,33 @@ describe("pullEgressInterceptorImage", () => {
 			"proxy-everything:test",
 			"--platform",
 			"linux/arm64",
+		]);
+	});
+});
+
+describe("pullImage", () => {
+	it("does not retag a Build Output reference pulled under its final name", async ({
+		expect,
+	}) => {
+		vi.mocked(runDockerCmd).mockClear();
+		const image = "registry.example.com/project/image@sha256:abc";
+
+		const pull = await pullImage(
+			"docker",
+			{
+				class_name: "Container",
+				image_uri: image,
+				image_tag: image,
+			},
+			{ info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+		);
+		await pull.ready;
+
+		expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("docker", [
+			"pull",
+			image,
+			"--platform",
+			"linux/amd64",
 		]);
 	});
 });

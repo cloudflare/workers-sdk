@@ -7,7 +7,8 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./wrangler.new-module-registry.jsonc",
+			types: { includeRuntime: false },
+			config: { compatibilityFlags: ["new_module_registry"] },
 			inspectorPort: false,
 			persistState: false,
 		}),

@@ -6,6 +6,7 @@ export default defineConfig({
 	plugins: [
 		react(),
 		cloudflare({
+			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
 			experimental: { headersAndRedirectsDevModeSupport: true },
