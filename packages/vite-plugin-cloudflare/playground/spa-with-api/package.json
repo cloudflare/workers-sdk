@@ -14,6 +14,7 @@
 		"dev:client-bundled-dev": "vite dev -c ./vite.config.client-bundled-dev.ts",
 		"dev:https": "vite dev -c ./vite.config.https.ts",
 		"dev:run-worker-first": "vite dev -c ./vite.config.run-worker-first.ts",
+		"dev:run-worker-first-base": "vite dev -c ./vite.config.run-worker-first-base.ts",
 		"dev:static-routing": "vite dev -c ./vite.config.static-routing.ts",
 		"preview": "vite preview"
 	},
