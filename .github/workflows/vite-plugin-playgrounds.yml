@@ -20,7 +20,7 @@ env:
 
 jobs:
   test:
-    name: Playgrounds (${{ matrix.os }}, Vite ${{ matrix.vite }})
+    name: Vite Plugin Playground (${{ matrix.os }}, vite-${{ matrix.vite }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:

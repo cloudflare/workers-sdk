@@ -32,13 +32,21 @@ jobs:
         env:
           NODE_OPTIONS: --max_old_space_size=8192
   test:
-    name: Unit and fixture tests (${{ matrix.os }})
+    name: Tests (${{ matrix.description }}, ${{ matrix.suite }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        suite: [packages-and-tools, fixtures]
+        include:
+          - os: ubuntu-latest
+            description: Linux
+          - os: macos-latest
+            description: macOS
+          - os: windows-latest
+            description: Windows
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -46,5 +54,8 @@ jobs:
       - uses: ./.github/actions/install-dependencies
       - run: pnpm build
       - run: pnpm test:ci
+        if: matrix.suite == 'packages-and-tools'
       - run: pnpm --filter @fixture/create-test-harness-example playwright:install
+        if: matrix.suite == 'fixtures'
       - run: pnpm test:fixtures
+        if: matrix.suite == 'fixtures'
