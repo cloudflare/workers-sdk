@@ -10,6 +10,7 @@ import {
 	ReactRouter,
 } from "../../src/frameworks/react-router";
 import * as packagesUtils from "../../src/frameworks/utils/packages";
+import { installCloudflareVitePlugin } from "../../src/frameworks/utils/vite-plugin";
 import { createMockContext } from "../helpers/mock-context";
 
 function fixture(name: string): string {
@@ -459,10 +460,18 @@ describe("React Router framework configure()", () => {
 			);
 		});
 
-		it("installs isbot as a dev dependency", async ({ expect }) => {
+		it("installs the Vite plugin and isbot as dev dependencies", async ({
+			expect,
+		}) => {
 			const framework = createFramework("7.16.0");
 			await framework.configure(getBaseOptions());
 
+			expect(installCloudflareVitePlugin).toHaveBeenCalledWith(
+				expect.objectContaining({
+					packageManager: NpmPackageManager.type,
+					version: "^2.0.0-beta.v.0",
+				})
+			);
 			expect(cliPackages.installPackages).toHaveBeenCalledWith(
 				NpmPackageManager.type,
 				["isbot"],
