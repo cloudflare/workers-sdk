@@ -292,7 +292,7 @@ async function deployWorker(
 					accountId,
 					assetsOptions.directory,
 					scriptName,
-					props.dispatchNamespace
+					{ dispatchNamespace: props.dispatchNamespace }
 				)
 			: undefined;
 	const assetsJwt = assetsUploadResult?.jwt;
