@@ -1,5 +1,20 @@
 # @cloudflare/deploy-helpers
 
+## 0.21.0
+
+### Minor Changes
+
+- [#16266](https://github.com/cloudflare/workers-sdk/pull/16266) [`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add custom domain traffic settings to experimental programmatic Worker configuration
+
+  Domain objects accept `hostname`, `production`, and `previews` to serve production traffic, Preview traffic, or both. String domains continue to serve production traffic only. Apply hosting settings with a parent Worker or trigger deployment.
+
+### Patch Changes
+
+- Updated dependencies [[`e1d1b77`](https://github.com/cloudflare/workers-sdk/commit/e1d1b7765829ef9538e7d7882fe74ad8ca2a38d4), [`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c)]:
+  - miniflare@5.20261012.1-beta
+  - @cloudflare/config@0.27.0
+  - @cloudflare/containers-shared@0.22.1
+
 ## 0.20.4
 
 ### Patch Changes

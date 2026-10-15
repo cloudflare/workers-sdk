@@ -1,5 +1,22 @@
 # wrangler
 
+## 4.151.1
+
+### Patch Changes
+
+- [#15541](https://github.com/cloudflare/workers-sdk/pull/15541) [`e13d5cc`](https://github.com/cloudflare/workers-sdk/commit/e13d5ccf0555e4b2af29255165237bbb17825b39) Thanks [@mack-erel](https://github.com/mack-erel)! - Keep remote dev sessions alive through transient network failures
+
+  `wrangler dev --remote` and `getPlatformProxy()` refresh their preview token before it expires, but a single failed refresh — for example while the network was briefly down — stopped refreshing for good, leaving the session broken until restart. A failed refresh now retries every minute until it succeeds. Rebuilds also no longer push the refresh past the session's expiry.
+
+- [#16284](https://github.com/cloudflare/workers-sdk/pull/16284) [`42c6912`](https://github.com/cloudflare/workers-sdk/commit/42c69124d9021d8a12cb5ad1a3bc541f6a602236) Thanks [@karloper](https://github.com/karloper)! - Fix `wrangler rollback` reporting success after the changed secrets confirmation is declined
+
+  Previously, declining the "The following secrets have changed…" confirmation printed "Aborting rollback..." and then also printed a success message and the target version as the "Current Version ID", even though no deployment was made and the original version was still live. Wrangler now stops after aborting, so the output matches what is actually deployed.
+
+- [#13742](https://github.com/cloudflare/workers-sdk/pull/13742) [`4a5377f`](https://github.com/cloudflare/workers-sdk/commit/4a5377fc228dd94aa5df7545c8185cdd98be733e) Thanks [@edmundhung](https://github.com/edmundhung)! - Hide the `wrangler dev` hotkey bar when Turborepo does not forward input
+
+- Updated dependencies [[`e1d1b77`](https://github.com/cloudflare/workers-sdk/commit/e1d1b7765829ef9538e7d7882fe74ad8ca2a38d4)]:
+  - miniflare@5.20261012.1-beta
+
 ## 4.151.0
 
 ### Minor Changes
