@@ -5,8 +5,9 @@
 # Directories to ignore (no ownership checks, reduces review noise)
 ignore = []
 
-# Show detailed file-to-owner mapping in PR comments
-detailed_reviewers = true
+# Keep review comments below GitHub's 65,536-character limit for large backports.
+# Team approval requirements are still listed and enforced.
+detailed_reviewers = false
 
 # Don't dismiss stale reviews when new changes are pushed
 disable_smart_dismissal = true
