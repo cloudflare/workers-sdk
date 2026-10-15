@@ -50,7 +50,9 @@ jobs:
         env:
           VITE_VERSION: vite-${{ matrix.vite }}
           NODE_OPTIONS: --max_old_space_size=8192
+          NODE_DEBUG: "@cloudflare:vite-plugin"
       - run: pnpm --filter @vite-plugin-cloudflare/playground test:ci:build
         env:
           VITE_VERSION: vite-${{ matrix.vite }}
           NODE_OPTIONS: --max_old_space_size=8192
+          NODE_DEBUG: "@cloudflare:vite-plugin"
