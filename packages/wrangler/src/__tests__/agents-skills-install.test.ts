@@ -79,6 +79,90 @@ const DEFAULT_INSTALL_RESULT = {
 	installedInstruction: null,
 };
 
+describe("Autohand Code skills installation", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+
+	afterEach(() => {
+		clearDialogs();
+	});
+
+	test("detects Autohand with the real Rosie registry and installs and updates its skills", async ({
+		expect,
+	}) => {
+		const rosie =
+			await vi.importActual<typeof import("rosie-skills")>("rosie-skills");
+		createAgentDir(".autohand");
+		const skillsPath = path.join(os.homedir(), ".autohand", "skills");
+		mockRosieAgents.mockImplementation(rosie.agents);
+		mockRosieInstall.mockResolvedValue({
+			...DEFAULT_INSTALL_RESULT,
+			skills: [
+				{
+					...DEFAULT_INSTALL_RESULT.skills[0],
+					installedAgents: ["autohand-code"],
+				},
+			],
+			installedAgents: ["autohand-code"],
+		});
+		mockGitHubSkillsApi(["cloudflare"], "old-sha");
+		setIsTTY(true);
+
+		const runSkillsInstallFlow = await freshImport();
+		await runSkillsInstallFlow({ force: true });
+
+		expect(mockRosieInstall).toHaveBeenCalledWith(
+			"cloudflare/skills",
+			expect.objectContaining({ agent: ["autohand-code"], global: true })
+		);
+		expect(std.out).toContain(
+			"Successfully installed Cloudflare skills for: Autohand Code CLI"
+		);
+		expect(readMetadataFile()).toMatchObject({
+			accepted: true,
+			installFailed: false,
+			detectedAgents: [
+				{
+					name: "Autohand Code CLI",
+					rosie: { id: "autohand-code", globalPath: skillsPath },
+				},
+			],
+		});
+
+		mkdirSync(path.join(skillsPath, "cloudflare"), { recursive: true });
+		// An update is only offered after the installation cooldown and cache expire.
+		writeMetadataFile({
+			...readMetadataFile(),
+			date: "2025-01-01T00:00:00Z",
+		});
+		writeFileSync(
+			path.join(getGlobalConfigPath(), "cloudflare-skills-repo-cache.json"),
+			JSON.stringify({ lastUpdate: 0, skillNames: ["cloudflare"] })
+		);
+		mockGitHubSkillsApi(["cloudflare"], "new-sha");
+		mockConfirm({
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
+			result: true,
+		});
+		const runSkillsUpdateFlow = await freshUpdateImport();
+		await runSkillsUpdateFlow({ command: "deploy" });
+
+		expect(mockRosieInstall).toHaveBeenCalledTimes(2);
+		expect(mockRosieInstall).toHaveBeenLastCalledWith(
+			"cloudflare/skills",
+			expect.objectContaining({ agent: ["autohand-code"], global: true })
+		);
+		expect(std.out).toContain(
+			"Successfully updated Cloudflare skills for: Autohand Code CLI"
+		);
+		expect(readMetadataFile()).toMatchObject({
+			installedTreeSha: "new-sha",
+			installFailed: false,
+		});
+	});
+});
+
 /** Writes the skills-install metadata file to the global wrangler config path. */
 function writeMetadataFile(content: Record<string, unknown>): void {
 	const configDir = getGlobalConfigPath();

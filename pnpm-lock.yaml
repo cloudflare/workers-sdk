@@ -4855,8 +4855,8 @@ importers:
         specifier: ^1.22.8
         version: 1.22.8
       rosie-skills:
-        specifier: ^0.8.1
-        version: 0.8.1
+        specifier: ^0.8.5
+        version: 0.8.5
       semiver:
         specifier: ^1.1.0
         version: 1.1.0
@@ -14760,8 +14760,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  rosie-skills@0.8.1:
-    resolution: {integrity: sha512-byhpM6YcmlQfjPiOBL+6TGW9Wur3DHH4OcVFcGyRhjxeLLRfZg7dEfI2fFKmc6al/eNEPLQ7pSe+JNETk55Fzw==}
+  rosie-skills@0.8.5:
+    resolution: {integrity: sha512-Ho/mkbnaSr8VFSJdfoExrka9/lE+1vHZjBou5gEEebcDWpWEsDAKAy/hxZ1ayDPaacCIyFiTp5L6bZp82haabQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -26509,7 +26509,7 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.57.1
       fsevents: 2.3.3
 
-  rosie-skills@0.8.1:
+  rosie-skills@0.8.5:
     dependencies:
       modern-tar: 0.7.6
 
