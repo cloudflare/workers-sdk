@@ -218,9 +218,11 @@ class StartupLogBuffer {
 	 * in use.
 	 */
 	handleStartupFailure(socketAddresses: Record<string, string>) {
+		// Stream chunks can split a log message anywhere, including within an address.
+		const stderr = this.stderrBuffer.join("").trim();
 		let addressInUse: AddressInUse | undefined;
-		for (const chunk of this.stderrBuffer) {
-			addressInUse = parseAddressInUse(chunk);
+		for (const line of stderr.split("\n")) {
+			addressInUse = parseAddressInUse(line);
 			if (addressInUse !== undefined) {
 				break;
 			}
@@ -242,7 +244,6 @@ class StartupLogBuffer {
 		// If stderr contains any output, surface it so the user can diagnose
 		// the failure (e.g. bind errors on IPv6 addresses, permission denied,
 		// missing libraries, etc.)
-		const stderr = this.stderrBuffer.join("").trim();
 		if (stderr.length > 0) {
 			throw new MiniflareCoreError(
 				"ERR_RUNTIME_FAILURE",
