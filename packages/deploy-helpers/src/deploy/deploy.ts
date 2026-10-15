@@ -10,7 +10,6 @@ import {
 } from "@cloudflare/containers-shared";
 import {
 	APIError,
-	configFileName,
 	formatTime,
 	getBindings,
 	getDockerPath,
@@ -117,6 +116,7 @@ export type DeployOptions = {
 	workersDevConfigAssignment: (value: boolean) => string;
 	previewUrlsConfigFieldName: string;
 	previewUrlsConfigAssignment: (value: boolean) => string;
+	configFileName: string;
 	observabilityTargetPercentageField: string;
 	observabilityTargetCountField: string;
 	syncWorkersSite:
@@ -835,10 +835,7 @@ async function deployWorker(
 				accountId,
 				scriptName,
 				dispatchNamespace: props.dispatchNamespace,
-				configFileName: configFileName(
-					config.configPath,
-					config.userConfigPath
-				),
+				configFileName: options.configFileName,
 				observabilityTargetPercentageField:
 					options.observabilityTargetPercentageField,
 				observabilityTargetCountField: options.observabilityTargetCountField,

@@ -203,6 +203,7 @@ describe("deploy container source", () => {
 			workersDevConfigAssignment: (value) => `workersDev: ${value}`,
 			previewUrlsConfigFieldName: "previewUrls",
 			previewUrlsConfigAssignment: (value) => `previewUrls: ${value}`,
+			configFileName: "test config",
 			observabilityTargetPercentageField: "targetInstancePercentage",
 			observabilityTargetCountField: "targetInstanceCount",
 			syncWorkersSite: undefined,
@@ -221,7 +222,7 @@ describe("deploy container source", () => {
 				dispatchNamespace: undefined,
 				scriptName: "worker",
 				versionId: "00000000-0000-0000-0000-000000000001",
-				configFileName: "Wrangler configuration",
+				configFileName: "test config",
 				observabilityTargetPercentageField: "targetInstancePercentage",
 				observabilityTargetCountField: "targetInstanceCount",
 			}

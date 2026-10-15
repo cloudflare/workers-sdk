@@ -255,6 +255,7 @@ describe("prepareContainerImagesForVite", () => {
 
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 			expect.objectContaining({
+				configFileName: "Wrangler config",
 				registryConfigureCommand: "wrangler containers registries configure",
 			})
 		);
@@ -273,6 +274,7 @@ describe("prepareContainerImagesForVite", () => {
 
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 			expect.objectContaining({
+				configFileName: "cf config",
 				registryConfigureCommand: "cf containers registries create",
 			})
 		);

@@ -195,7 +195,7 @@ async function applyPreviewContainers(
 			{
 				imageRef,
 				durable_object_namespace_id: namespaceId,
-				configFileName: "Wrangler config file",
+				configFileName: "Wrangler config",
 				observabilityTargetPercentageField: "target_instance_percentage",
 				observabilityTargetCountField: "target_instance_count",
 			},

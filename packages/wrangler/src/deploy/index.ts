@@ -260,6 +260,7 @@ export async function runDeployCommandHandler(
 				workersDevConfigAssignment: (value) => `workers_dev = ${value}`,
 				previewUrlsConfigFieldName: "preview_urls",
 				previewUrlsConfigAssignment: (value) => `preview_urls = ${value}`,
+				configFileName: "Wrangler config",
 				observabilityTargetPercentageField: "target_instance_percentage",
 				observabilityTargetCountField: "target_instance_count",
 				syncWorkersSite,
