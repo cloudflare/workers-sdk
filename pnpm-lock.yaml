@@ -2049,6 +2049,9 @@ importers:
       devtools-protocol:
         specifier: 0.0.1182435
         version: 0.0.1182435
+      dotenv:
+        specifier: catalog:default
+        version: 16.3.1
       miniflare:
         specifier: workspace:*
         version: link:../miniflare

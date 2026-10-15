@@ -1,10 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseDotEnvContent } from "dotenv";
+import { parse as parseDotEnv } from "dotenv";
 import { expand } from "dotenv-expand";
-import { caseInsensitiveEnv } from "./case-insensitive-env";
-
-export { caseInsensitiveEnv } from "./case-insensitive-env";
 
 export type LocalEnvValueSource =
 	| { type: "file"; path: string }
@@ -18,31 +15,6 @@ export interface LoadedEnv {
 interface ParsedFile {
 	path: string;
 	values: Record<string, string>;
-}
-
-export function parseAndExpandDotEnv(
-	contents: string,
-	processEnv: NodeJS.ProcessEnv = process.env
-): Record<string, string> {
-	return expandParsedDotEnv(parseDotEnvContent(contents), processEnv);
-}
-
-function expandParsedDotEnv(
-	parsed: Record<string, string>,
-	processEnv: NodeJS.ProcessEnv
-): Record<string, string> {
-	const expanded = { ...parsed };
-	const expandedKeys = Object.keys(expanded);
-	const processEnvOverrides = copyProcessEnv(processEnv);
-	expand({ parsed: expanded, processEnv: copyProcessEnv(processEnv) });
-
-	for (const key of expandedKeys) {
-		if (Object.hasOwn(processEnvOverrides, key)) {
-			expanded[key] = processEnvOverrides[key];
-		}
-	}
-
-	return expanded;
 }
 
 /**
@@ -116,7 +88,7 @@ export async function loadEnv(
 	const parsedSources: Record<string, LocalEnvValueSource> = {};
 
 	for (const candidate of candidateFiles) {
-		const loaded = await tryParseFile(candidate, parseDotEnvContent);
+		const loaded = await tryParseFile(candidate, parseDotEnv);
 		if (loaded === undefined) {
 			continue;
 		}
@@ -127,8 +99,10 @@ export async function loadEnv(
 		}
 	}
 
-	const processEnv = copyProcessEnv(process.env);
-	const values = expandParsedDotEnv(parsed, processEnv);
+	const processEnv = copyProcessEnv();
+	expand({ parsed, processEnv: { ...processEnv } });
+
+	const values = { ...parsed };
 	const sources = { ...parsedSources };
 
 	for (const [key, value] of Object.entries(processEnv)) {
@@ -154,7 +128,7 @@ export async function loadDevVars(
 ): Promise<Record<string, string> | undefined> {
 	const candidateFiles = getDevVarsCandidatePaths(envDir, mode);
 	for (const candidate of candidateFiles) {
-		const loaded = await tryParseFile(candidate, parseDotEnvContent);
+		const loaded = await tryParseFile(candidate, parseDotEnv);
 		if (loaded === undefined) {
 			continue;
 		}
@@ -192,12 +166,10 @@ function isMissingFileError(error: unknown): boolean {
 	);
 }
 
-function copyProcessEnv(processEnv: NodeJS.ProcessEnv): Record<string, string> {
-	const copied = process.platform === "win32" ? caseInsensitiveEnv() : {};
-	for (const [key, value] of Object.entries(processEnv)) {
-		if (value !== undefined) {
-			copied[key] = value;
-		}
-	}
-	return copied;
+function copyProcessEnv(): Record<string, string> {
+	return Object.fromEntries(
+		Object.entries(process.env).filter(
+			(entry): entry is [string, string] => entry[1] !== undefined
+		)
+	);
 }
