@@ -1,5 +1,43 @@
 # miniflare
 
+## 5.20261012.0-beta
+
+### Minor Changes
+
+- [#16239](https://github.com/cloudflare/workers-sdk/pull/16239) [`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support Cloudflare Access local development configuration in `cloudflare.config.ts`
+
+  Workers can now configure an Access audience and mock identity under `access.dev`, and `cf migrate` preserves this setting when converting a Wrangler configuration. Miniflare v5 now reads the setting from `config.access.dev`, aligning its Worker configuration with `@cloudflare/config`; the Miniflare v4 compatibility adapter continues to accept its existing `access` option.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      name: "api",
+      access: {
+        dev: {
+          aud: "my-access-audience",
+          identity: { email: "developer@example.com" },
+        },
+      },
+    },
+  });
+  ```
+
+  This is a breaking change for direct Miniflare v5 users: move `workers[].dev.access` to `workers[].config.access.dev`. Miniflare v5 is currently in beta.
+
+- [#16220](https://github.com/cloudflare/workers-sdk/pull/16220) [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Support local D1 queries through the experimental `d1_binding_jsrpc` compatibility flag
+
+  Local D1 bindings now implement the RPC query backend used by `D1Database.query()` and prepared-statement methods when the flag is enabled. Queries reuse local SQLite execution, including transactional batches, execution metadata, and session bookmarks, while bindings without the flag continue to use HTTP. Update the bundled workerd runtime to `1.20261012.1` and align the default compatibility date with that release.
+
+### Patch Changes
+
+- [#16220](https://github.com/cloudflare/workers-sdk/pull/16220) [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Align local D1 query metadata with production D1
+
+  Local D1 queries now report `served_by_primary: true`, `total_attempts: 1`, and `timings.sql_duration_ms` through both HTTP and RPC bindings. `duration` measures SQL execution rather than result conversion and metadata bookkeeping. Region and colo fields remain absent because local databases do not run in a Cloudflare colo.
+
+- [#16236](https://github.com/cloudflare/workers-sdk/pull/16236) [`acd2822`](https://github.com/cloudflare/workers-sdk/commit/acd2822046a1bf201d9143ee40969f3dc3eb9650) Thanks [@danlapid](https://github.com/danlapid)! - Throw `ERR_ADDRESS_IN_USE` again when a port is already taken
+
+  Recent workerd versions no longer print `Address already in use; toString() = <address>`, so a taken port surfaced as `ERR_RUNTIME_FAILURE` with workerd's raw log. Miniflare now also recognises workerd's newer forms, `bind(): Address already in use (os error <n>)` and `Socket "<name>": bind(): ...` (on Windows also the access-denied error a port held with `SO_EXCLUSIVEADDRUSE` gives), throws `ERR_ADDRESS_IN_USE` (naming the address when workerd says which socket failed), and no longer shows the raw log line on top of that error.
+
 ## 5.20261006.2-beta
 
 ### Patch Changes

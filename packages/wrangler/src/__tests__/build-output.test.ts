@@ -88,8 +88,10 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect(manifest.type).toBe("complete");
 		expect(manifest.mainModule).toBe("index.js");
 		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
+		expect(manifest.modules["index.js.map"]).toEqual({ type: "sourcemap" });
 
 		expect(fs.existsSync(bundlePath("index.js"))).toBe(true);
+		expect(fs.existsSync(bundlePath("index.js.map"))).toBe(true);
 		const generatedTypes = fs.readFileSync(
 			path.resolve(".cloudflare/types/index.d.ts"),
 			"utf8"
@@ -269,7 +271,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		);
 	});
 
-	it("writes source maps when `uploadSourceMaps` is enabled", async ({
+	it("skips unresolvable source maps by default rather than failing", async ({
 		expect,
 	}) => {
 		await seed({
@@ -279,10 +281,39 @@ describe("wrangler build --experimental-cf-build-output", () => {
 				entrypoint: "./src/index.js",
 			} };`,
 			"wrangler.config.ts": `export default {
-				uploadSourceMaps: true,
+				noBundle: true,
 			};`,
 			"src/index.js": `export default {
-				async fetch() { return new Response("mapped"); }
+				async fetch() { return new Response("unmapped"); }
+			};
+			//# sourceMappingURL=missing.js.map`,
+		});
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		const manifest = readOutputConfig().manifest as {
+			modules: Record<string, { type: string }>;
+		};
+		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
+		expect(manifest.modules["index.js.map"]).toBeUndefined();
+	});
+
+	it("does not write source maps when `uploadSourceMaps` is disabled", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": `export default { worker: {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./src/index.js",
+			} };`,
+			"wrangler.config.ts": `export default {
+				uploadSourceMaps: false,
+			};`,
+			"src/index.js": `export default {
+				async fetch() { return new Response("unmapped"); }
 			};`,
 		});
 
@@ -293,8 +324,8 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		const manifest = readOutputConfig().manifest as {
 			modules: Record<string, { type: string }>;
 		};
-		expect(manifest.modules["index.js.map"]).toEqual({ type: "sourcemap" });
-		expect(fs.existsSync(bundlePath("index.js.map"))).toBe(true);
+		expect(manifest.modules["index.js.map"]).toBeUndefined();
+		expect(fs.existsSync(bundlePath("index.js.map"))).toBe(false);
 	});
 
 	it("errors when --experimental-cf-build-output is used without --experimental-new-config", async ({
