@@ -26,15 +26,18 @@ import type * as http from "node:http";
 import type * as vite from "vite";
 
 /**
- * Vite's internal middlewares that serve module URLs (`/@vite/client`,
- * `/@id/*`, source files), `/@fs/*` paths, and files under the project root.
- * `viteServePublicMiddleware` is deliberately excluded so that public files
- * still respect `run_worker_first`, as they do in production.
+ * Vite's internal middlewares that serve module requests (`/@vite/client`,
+ * `/@id/*`, JS and CSS source files) and `/@fs/*` paths.
+ *
+ * Two middlewares are deliberately excluded so that their files still respect
+ * `run_worker_first`:
+ * - `viteServePublicMiddleware`, so that public files match production.
+ * - `viteServeStaticMiddleware`, because a Worker route can share its path with
+ *   a file in the project root (e.g. Worker code in `api/` serving `/api/*`).
  */
 const VITE_MODULE_MIDDLEWARE_NAMES = new Set([
 	"viteTransformMiddleware",
 	"viteServeRawFsMiddleware",
-	"viteServeStaticMiddleware",
 ]);
 
 /**
