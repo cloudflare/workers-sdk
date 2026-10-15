@@ -255,7 +255,7 @@ describe("prepareContainerImagesForVite", () => {
 
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 			expect.objectContaining({
-				configFileName: "Wrangler config",
+				configFileName: "cloudflare.config.ts",
 				registryConfigureCommand: "wrangler containers registries configure",
 			})
 		);
@@ -274,7 +274,7 @@ describe("prepareContainerImagesForVite", () => {
 
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 			expect.objectContaining({
-				configFileName: "cf config",
+				configFileName: "cloudflare.config.ts",
 				registryConfigureCommand: "cf containers registries create",
 			})
 		);

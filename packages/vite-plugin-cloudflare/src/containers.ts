@@ -125,8 +125,7 @@ export async function prepareContainerImagesForVite(options: {
 		onContainerImagePreparationEnd: () => {},
 		logger: options.logger,
 		complianceConfig,
-		configFileName:
-			options.cliDisplayName === "cf" ? "cf config" : "Wrangler config",
+		configFileName: "cloudflare.config.ts",
 		// TODO: The Vite plugin should not own this `cf` command. Remove the
 		// hardcoded value once `cf` can provide it directly.
 		registryConfigureCommand:
