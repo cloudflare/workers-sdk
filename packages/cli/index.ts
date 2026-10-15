@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { exit } from "node:process";
 import {
 	bgBlue,
@@ -66,13 +67,26 @@ export type LoggerLevel = keyof typeof LOGGER_LEVELS;
 
 // Global log level that can be set by consuming packages
 let currentLogLevel: LoggerLevel = "log";
+const scopedLogLevel = new AsyncLocalStorage<LoggerLevel>();
 
 export function setLogLevel(level: LoggerLevel) {
 	currentLogLevel = level;
 }
 
 export function getLogLevel(): LoggerLevel {
-	return currentLogLevel;
+	return scopedLogLevel.getStore() ?? currentLogLevel;
+}
+
+/**
+ * Run a callback with a log level scoped to its asynchronous work.
+ * Concurrent calls retain their own level or the configured global default.
+ *
+ * @param level Log level for the callback and its asynchronous continuations.
+ * @param callback Work to run with the scoped log level.
+ * @returns The callback's return value, including promises.
+ */
+export function runWithLogLevel<T>(level: LoggerLevel, callback: () => T): T {
+	return scopedLogLevel.run(level, callback);
 }
 
 // Primitive for printing to stdout. Use this instead of

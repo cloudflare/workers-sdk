@@ -1,12 +1,16 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import {
+	mockConsoleMethods,
+	runInTempDir,
+} from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { previewBuildOutput } from "../src/preview/preview";
 import type {
 	PreviewBuildOutput,
 	PreviewCallbacks,
+	PreviewArgs,
 } from "../src/preview/preview";
 import type {
 	ParsedOutputRootConfig,
@@ -19,7 +23,10 @@ const mocks = vi.hoisted(() => ({
 	createPreviewParentWorker: vi.fn(),
 	editPreview: vi.fn(),
 	getPreview: vi.fn(),
+	getPreviewBaseConfig: vi.fn(),
+	confirm: vi.fn(),
 	getPreviewDeployment: vi.fn(),
+	getPullRequestMetadata: vi.fn(),
 	syncAssets: vi.fn(),
 }));
 
@@ -30,11 +37,17 @@ vi.mock("../src/preview/api", async (importOriginal) => ({
 	createPreviewParentWorker: mocks.createPreviewParentWorker,
 	editPreview: mocks.editPreview,
 	getPreview: mocks.getPreview,
+	getPreviewBaseConfig: mocks.getPreviewBaseConfig,
 	getPreviewDeployment: mocks.getPreviewDeployment,
 }));
 
 vi.mock("../src/deploy/helpers/assets", () => ({
 	syncAssets: mocks.syncAssets,
+}));
+
+vi.mock("../src/preview/shared", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/preview/shared")>()),
+	getPullRequestMetadata: mocks.getPullRequestMetadata,
 }));
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
@@ -44,10 +57,8 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 
 vi.mock("../src/shared/context", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../src/shared/context")>()),
-	logger: {
-		log: vi.fn(),
-		warn: vi.fn(),
-	},
+	logger: console,
+	confirm: mocks.confirm,
 }));
 
 const previewResource = {
@@ -89,27 +100,239 @@ function buildOutputConfig(
 
 function uploadPreview(
 	config: ParsedOutputWorkerConfig,
-	assets?: PreviewBuildOutput["assets"]
+	assets?: PreviewBuildOutput["assets"],
+	args: Pick<PreviewArgs, "json" | "log"> = { json: true }
 ) {
 	return previewBuildOutput(
 		"account-id",
-		{ name: "feature", json: true },
+		{ name: "feature", ...args },
 		{ workerConfig: config, rootConfig: validRootConfig, buildResult, assets }
 	);
 }
 
 describe("previewBuildOutput", () => {
 	runInTempDir();
+	const std = mockConsoleMethods();
 
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getPreview.mockResolvedValue(previewResource);
+		mocks.getPreviewBaseConfig.mockResolvedValue({});
+		mocks.confirm.mockResolvedValue(true);
 		mocks.getPreviewDeployment.mockResolvedValue(deploymentResource);
+		mocks.getPullRequestMetadata.mockReturnValue(undefined);
 		mocks.editPreview.mockResolvedValue(previewResource);
 		mocks.createPreview.mockResolvedValue(previewResource);
 		mocks.createPreviewParentWorker.mockResolvedValue(undefined);
 		mocks.createPreviewDeployment.mockResolvedValue(deploymentResource);
 		mocks.syncAssets.mockResolvedValue({ jwt: "asset-token" });
+	});
+
+	it("logs the deployment summary by default", async ({ expect }) => {
+		const result = await uploadPreview(buildOutputConfig(), undefined, {});
+		expect(std.out).toContain("Preview: feature (updated)");
+		expect(result).toEqual({
+			preview: previewResource,
+			deployment: deploymentResource,
+			isNewPreview: false,
+		});
+	});
+
+	it("preserves JSON output by default", async ({ expect }) => {
+		await uploadPreview(buildOutputConfig());
+		expect(JSON.parse(std.out)).toEqual({
+			preview: previewResource,
+			deployment: deploymentResource,
+		});
+	});
+
+	it.for([false, true])(
+		"returns the complete result without output when log is false (json=%s)",
+		async (json, { expect }) => {
+			const result = await uploadPreview(buildOutputConfig(), undefined, {
+				log: false,
+				json,
+			});
+			expect(std.out).toBe("");
+			expect(result).toEqual({
+				preview: previewResource,
+				deployment: deploymentResource,
+				isNewPreview: false,
+			});
+		}
+	);
+
+	it("suppresses parent Worker creation and asset upload progress", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValueOnce({ code: 10007 });
+		const result = await uploadPreview(
+			buildOutputConfig({ assets: {} }),
+			{ directory: "/tmp/assets" },
+			{ log: false }
+		);
+		expect(std.out).toBe("");
+		expect(mocks.confirm).toHaveBeenCalledWith(
+			'Worker "preview-worker" does not exist yet. Would you like to create it for this Preview?',
+			{ defaultValue: true, fallbackValue: true }
+		);
+		expect(mocks.createPreviewParentWorker).toHaveBeenCalledOnce();
+		expect(mocks.syncAssets).toHaveBeenCalledWith(
+			expect.anything(),
+			"account-id",
+			"/tmp/assets",
+			"preview-worker",
+			undefined,
+			{ quiet: true }
+		);
+		expect(result.isNewPreview).toBe(true);
+	});
+
+	it("does not create a parent Worker when a quiet caller declines", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValueOnce({ code: 10007 });
+		mocks.confirm.mockResolvedValueOnce(false);
+		await expect(
+			uploadPreview(buildOutputConfig(), undefined, { log: false })
+		).rejects.toThrow("Cannot create a Preview");
+		expect(mocks.confirm).toHaveBeenCalledOnce();
+		expect(mocks.createPreviewParentWorker).not.toHaveBeenCalled();
+		expect(mocks.createPreview).not.toHaveBeenCalled();
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+		expect(std.out).toBe("");
+	});
+
+	it("keeps JSON parent creation non-interactive when logging is disabled", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValueOnce({ code: 10007 });
+		await uploadPreview(buildOutputConfig(), undefined, {
+			log: false,
+			json: true,
+		});
+		expect(mocks.confirm).not.toHaveBeenCalled();
+		expect(mocks.createPreviewParentWorker).toHaveBeenCalledOnce();
+		expect(std.out).toBe("");
+	});
+
+	it.for([false, true])(
+		"keeps warnings when log is false (json=%s)",
+		async (json, { expect }) => {
+			await previewBuildOutput(
+				"account-id",
+				{ name: "feature", log: false, json },
+				{
+					workerConfig: buildOutputConfig(),
+					rootConfig: validRootConfig,
+					buildResult,
+				},
+				{
+					productionBindingsExpectedInPreview: { KV: { type: "kv_namespace" } },
+					getNormalizedContainerOptions: undefined,
+					deployPreviewContainers: undefined,
+				}
+			);
+			expect(std.out).toBe("");
+			expect(std.warn).toContain(
+				"These bindings are configured for your production Worker but not for Previews"
+			);
+		}
+	);
+
+	it("propagates deployment failures without printing a summary", async ({
+		expect,
+	}) => {
+		const error = new Error("Preview deployment failed");
+		mocks.createPreviewDeployment.mockRejectedValueOnce(error);
+		await expect(
+			uploadPreview(buildOutputConfig(), undefined, { log: false })
+		).rejects.toBe(error);
+		expect(std.out).toBe("");
+	});
+
+	it.for([false, true])(
+		"returns a successful deployment when the warning lookup fails (json=%s)",
+		async (json, { expect }) => {
+			mocks.getPreviewBaseConfig.mockRejectedValueOnce(
+				new Error("Base config request failed")
+			);
+			const result = await previewBuildOutput(
+				"account-id",
+				{ name: "feature", log: false, json },
+				{
+					workerConfig: buildOutputConfig(),
+					rootConfig: validRootConfig,
+					buildResult,
+				},
+				{
+					productionBindingsExpectedInPreview: { KV: { type: "kv_namespace" } },
+					getNormalizedContainerOptions: undefined,
+					deployPreviewContainers: undefined,
+				}
+			);
+			expect(result.deployment).toEqual(deploymentResource);
+			expect(mocks.createPreviewDeployment).toHaveBeenCalledOnce();
+			expect(mocks.getPreviewBaseConfig).toHaveBeenCalledOnce();
+			expect(std.out).toBe("");
+			expect(std.warn).toContain(
+				"The Preview was deployed, but its missing bindings could not be checked"
+			);
+		}
+	);
+
+	it.for([{}, { log: false, json: true }])(
+		"returns the PR metadata used by the summary when annotations are missing %j",
+		async (args, { expect }) => {
+			const pullRequest = {
+				url: "https://github.com/example/project/pull/17",
+				number: "17",
+			};
+			mocks.getPullRequestMetadata.mockReturnValueOnce(pullRequest);
+			const result = await uploadPreview(buildOutputConfig(), undefined, args);
+			expect(result).toMatchObject({
+				preview: previewResource,
+				deployment: deploymentResource,
+				isNewPreview: false,
+				pullRequest,
+			});
+			if (args.log === false) {
+				expect(std.out).toBe("");
+			} else {
+				expect(std.out).toContain(`Pull Request: ${pullRequest.url}`);
+			}
+		}
+	);
+
+	it("prefers deployment PR annotations while falling back to CI for missing fields", async ({
+		expect,
+	}) => {
+		mocks.getPullRequestMetadata.mockReturnValueOnce({
+			url: "https://github.com/example/project/pull/17",
+			number: "17",
+		});
+		mocks.createPreviewDeployment.mockResolvedValueOnce({
+			...deploymentResource,
+			annotations: { "workers/pull_request_url": "https://example.com/pr/42" },
+		});
+		const result = await uploadPreview(buildOutputConfig(), undefined, {});
+		expect(result.pullRequest).toEqual({
+			url: "https://example.com/pr/42",
+			number: "17",
+		});
+		expect(std.out).toContain("Pull Request: https://example.com/pr/42");
+	});
+
+	it("returns the resolved PR number when no URL is available", async ({
+		expect,
+	}) => {
+		mocks.createPreviewDeployment.mockResolvedValueOnce({
+			...deploymentResource,
+			annotations: { "workers/pull_request_number": "42" },
+		});
+		const result = await uploadPreview(buildOutputConfig(), undefined, {});
+		expect(result.pullRequest).toEqual({ number: "42" });
+		expect(std.out).toContain("Pull Request: #42");
 	});
 
 	it("uploads only bindings and settings from resolved Build Output", async ({
@@ -197,9 +420,8 @@ describe("previewBuildOutput", () => {
 		expect(request).not.toHaveProperty("migrations");
 	});
 
-	it("deploys Build Output Containers through the caller callbacks", async ({
-		expect,
-	}) => {
+	const quietModes = [{ json: true }, { log: false }];
+	it.for(quietModes)("deploys Containers %j", async (args, { expect }) => {
 		const normalisedContainerConfig = [
 			{
 				name: "preview-worker_feature_ContainerDO",
@@ -217,7 +439,7 @@ describe("previewBuildOutput", () => {
 
 		await previewBuildOutput(
 			"account-id",
-			{ name: "feature", json: true },
+			{ name: "feature", ...args },
 			{
 				workerConfig: buildOutputConfig({
 					exports: {
