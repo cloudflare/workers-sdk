@@ -455,7 +455,7 @@ export interface WorkerConfig {
 	 * Strings serve production traffic only. Objects select production,
 	 * Preview traffic, or both; at least one must be enabled.
 	 * Domain settings are applied when deploying the parent Worker.
-	 * Preview builds omit domain settings from Build Output.
+	 * Preview uploads use the parent's existing hosting without applying domains.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
 	 */

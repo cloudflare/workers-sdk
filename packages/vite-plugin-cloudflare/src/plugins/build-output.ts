@@ -31,7 +31,6 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					await writeBuildOutputWorkerConfig({
 						root: builder.config.root,
 						config: ctx.resolvedPluginConfig.config,
-						isPreview: isPreviewBuild(),
 					});
 				}
 
@@ -115,7 +114,6 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			await writeBuildOutputWorkerConfig({
 				root: builder.config.root,
 				config: workerConfig,
-				isPreview: isPreviewBuild(),
 				directoryName: workerDirectoryName,
 			});
 			return;
@@ -133,7 +131,6 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 		await writeBuildOutputWorkerConfig({
 			root: builder.config.root,
 			config: workerConfig,
-			isPreview: isPreviewBuild(),
 			manifest: {
 				type: "partial",
 				mainModule: entryChunk.file,

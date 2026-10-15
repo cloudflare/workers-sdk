@@ -1319,15 +1319,6 @@ export async function previewBuildOutput(
 ): Promise<PreviewResult> {
 	const { workerConfig, rootConfig, buildResult, assets } = buildOutput;
 	assertPreviewBuildOutputRootConfig(rootConfig);
-	// Domains configure parent hosting and must be omitted from Preview Build Output.
-	if (workerConfig.domains?.length) {
-		throw new UserError(
-			"Preview uploads from Build Output don't support the `domains` field.",
-			{
-				telemetryMessage: "preview build output custom domains not supported",
-			}
-		);
-	}
 	// TODO: Upload triggers when Preview deployments support them.
 	if (workerConfig.triggers?.length) {
 		throw new UserError(

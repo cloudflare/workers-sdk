@@ -61,7 +61,6 @@ export async function writeBuildOutput({
 			workerConfig: parsedConfig.worker,
 			buildResult,
 			assetsOptions,
-			isPreview,
 		});
 
 		initContainersSharedContext({ logger, fetchResult });

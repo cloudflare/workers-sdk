@@ -19,7 +19,6 @@ interface WriteWorkerOutputArgs {
 	workerConfig: ParsedInputWorkerConfig;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
-	isPreview?: boolean;
 }
 
 /**
@@ -31,7 +30,6 @@ export async function writeWorkerOutput({
 	workerConfig,
 	buildResult,
 	assetsOptions,
-	isPreview = false,
 }: WriteWorkerOutputArgs): Promise<void> {
 	if (buildResult === undefined && assetsOptions === undefined) {
 		throw new UserError(
@@ -49,7 +47,7 @@ export async function writeWorkerOutput({
 			: Promise.resolve(),
 	]);
 
-	await writeWorkerConfig({ root, config: workerConfig, manifest, isPreview });
+	await writeWorkerConfig({ root, config: workerConfig, manifest });
 }
 
 async function writeBundle({
