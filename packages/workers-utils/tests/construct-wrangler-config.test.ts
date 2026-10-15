@@ -1,5 +1,6 @@
-import { describe, it } from "vitest";
+import { describe, expectTypeOf, it } from "vitest";
 import { constructWranglerConfig } from "../src/construct-wrangler-config";
+import type { Cloudflare } from "cloudflare";
 
 type APIWorkerConfig = Parameters<typeof constructWranglerConfig>[0];
 
@@ -34,6 +35,21 @@ function makeWorkerConfig(
 }
 
 describe("constructWranglerConfig", () => {
+	it("preserves the SDK response types without exposing the SDK", () => {
+		expectTypeOf<APIWorkerConfig["domains"]>().toEqualTypeOf<
+			Cloudflare.Workers.Domain[]
+		>();
+		expectTypeOf<APIWorkerConfig["schedules"]>().toEqualTypeOf<
+			Cloudflare.Workers.Scripts.Schedules.ScheduleGetResponse.Schedule[]
+		>();
+		expectTypeOf<APIWorkerConfig["observability"]>().toEqualTypeOf<
+			Cloudflare.Workers.Beta.Worker.Observability | undefined
+		>();
+		expectTypeOf<APIWorkerConfig["placement"]>().toEqualTypeOf<
+			Cloudflare.Workers.Beta.Workers.Version.Placement | undefined
+		>();
+	});
+
 	describe("basic field mapping", () => {
 		it("maps core fields correctly", ({ expect }) => {
 			const config = makeWorkerConfig({
