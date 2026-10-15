@@ -61,6 +61,12 @@ function runViteModuleMiddlewares(
 	next: vite.Connect.NextFunction,
 	onUnhandled: () => void
 ): void {
+	// With a non-root `base`, Vite's base middleware strips the prefix before the
+	// module middlewares see the URL. It is only included for requests under the
+	// base because it responds with a 404 or redirect to any other request. If
+	// the request then falls through, the Worker still receives the full URL
+	// because `createRequestHandler` restores `req.originalUrl`.
+	const isUnderBase = req.url?.startsWith(viteDevServer.config.base) ?? false;
 	// Read the stack per request because Vite adds its internal middlewares
 	// after the plugins' `configureServer` hooks have run.
 	const handles = viteDevServer.middlewares.stack
@@ -68,7 +74,8 @@ function runViteModuleMiddlewares(
 		.filter(
 			(handle): handle is vite.Connect.NextHandleFunction =>
 				typeof handle === "function" &&
-				VITE_MODULE_MIDDLEWARE_NAMES.has(handle.name)
+				(VITE_MODULE_MIDDLEWARE_NAMES.has(handle.name) ||
+					(isUnderBase && handle.name === "viteBaseMiddleware"))
 		);
 	let index = 0;
 

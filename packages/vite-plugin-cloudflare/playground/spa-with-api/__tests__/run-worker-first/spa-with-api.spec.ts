@@ -64,3 +64,15 @@ test.skipIf(isBuild)(
 		expect(json).toEqual({ name: "Cloudflare" });
 	}
 );
+
+test.skipIf(isBuild)(
+	"serves Vite's module URLs before the Worker in dev",
+	async ({ expect }) => {
+		for (const pathname of ["/@vite/client", "/src/main.tsx"]) {
+			const response = await fetch(`${viteTestUrl}${pathname}`);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("content-type")).toContain("text/javascript");
+			expect(response.headers.get("is-worker-response")).toBeNull();
+		}
+	}
+);

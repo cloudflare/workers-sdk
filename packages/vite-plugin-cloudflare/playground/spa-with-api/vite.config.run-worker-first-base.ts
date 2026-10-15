@@ -1,0 +1,16 @@
+import { cloudflare } from "@cloudflare/vite-plugin";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+	base: "/custom-mount",
+	plugins: [
+		react(),
+		cloudflare({
+			types: { includeRuntime: false },
+			config: { assets: { runWorkerFirst: true } },
+			inspectorPort: false,
+			persistState: false,
+		}),
+	],
+});
