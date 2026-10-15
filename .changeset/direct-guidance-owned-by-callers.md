@@ -1,6 +1,6 @@
 ---
-"@cloudflare/containers-shared": patch
-"@cloudflare/deploy-helpers": patch
+"@cloudflare/containers-shared": minor
+"@cloudflare/deploy-helpers": minor
 "@cloudflare/vite-plugin": patch
 ---
 
