@@ -39,6 +39,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
       - uses: ./.github/actions/check-remote-tests
         id: remote
       - run: pnpm test:e2e

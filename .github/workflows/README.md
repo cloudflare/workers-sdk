@@ -6,7 +6,10 @@
 - prerelease.yml builds and preview-publishes only the plugin through pkg.pr.new.
 - changesets.yml versions and releases only the plugin from vite-plugin-v1, using npm's v1 dist-tag.
 - codeowners.yml and the rerun-codeowners workflow pair preserve required ownership approvals and re-evaluate them after reviews. Changeset release branches are skipped.
+- bonk-pr-review.yml reviews new same-repository PRs from Cloudflare org members, excluding changeset release PRs.
 - validate-pr-description.yml keeps PR test, changeset, and documentation declarations consistent.
+
+CI, playground, and E2E jobs use the signed Turbo remote cache. Cache keys include the target base branch, operating system, and Node version. PRs, branch pushes, and merge-queue runs normalize the base branch to the same name. Playground keys also include the selected Vite major, the plugin build hash captured before compatibility downgrades, and shared test configuration/helpers. Checks run lint, types, and formatting through Turbo.
 
 Dependency installation uses a frozen lockfile. Release builds skip shared caches and omit package source maps. Every external GitHub Action remains pinned to a full commit SHA.
 

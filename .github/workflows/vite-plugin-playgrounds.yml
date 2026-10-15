@@ -38,7 +38,28 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
       - run: pnpm build
+      # --only avoids rebuilding the plugin after selecting Vite 6 or 7, but
+      # also removes its dependency hashes from the test cache key. Capture the
+      # actual build hash before the downgrade to restore that invalidation.
+      - name: Export plugin build hash for the playground cache key
+        shell: bash
+        run: |
+          pnpm dotenv -- turbo build --filter @cloudflare/vite-plugin --dry=json |
+            node --input-type=module -e '
+              import { readFileSync } from "node:fs";
+              const { tasks } = JSON.parse(readFileSync(0, "utf8"));
+              const task = tasks.find((t) => t.taskId === "@cloudflare/vite-plugin#build");
+              if (!task) {
+                throw new Error("No @cloudflare/vite-plugin#build task in the turbo summary");
+              }
+              console.log(`VITE_PLUGIN_BUILD_HASH=${task.hash}`);
+            ' >> "$GITHUB_ENV"
       - name: Select compatibility Vite version
         if: matrix.vite != 8
         env:
@@ -46,12 +67,12 @@ jobs:
         shell: bash
         run: pnpm --config.allow-unused-patches=true update -r --no-save "vite@^${VITE_MAJOR}.0.0"
       - run: pnpm --filter @vite-plugin-cloudflare/playground playwright:install
-      - run: pnpm --filter @vite-plugin-cloudflare/playground test:ci:serve
+      - run: pnpm dotenv -- turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only --summarize
         env:
           VITE_VERSION: vite-${{ matrix.vite }}
           NODE_OPTIONS: --max_old_space_size=8192
           NODE_DEBUG: "@cloudflare:vite-plugin"
-      - run: pnpm --filter @vite-plugin-cloudflare/playground test:ci:build
+      - run: pnpm dotenv -- turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only --summarize
         env:
           VITE_VERSION: vite-${{ matrix.vite }}
           NODE_OPTIONS: --max_old_space_size=8192
