@@ -1,6 +1,7 @@
 ---
 "@cloudflare/config": minor
 "@cloudflare/deploy-helpers": minor
+"@cloudflare/vite-plugin": minor
 ---
 
 Add custom domain traffic settings to experimental programmatic Worker configuration
