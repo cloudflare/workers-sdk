@@ -44,10 +44,7 @@ function isDependenciesInstrumentationConfig(
 			(Array.isArray(value.exclude_packages) &&
 				value.exclude_packages.every(
 					(packageName) => typeof packageName === "string"
-				))) &&
-		Object.keys(value).every(
-			(key) => key === "enabled" || key === "exclude_packages"
-		)
+				)))
 	);
 }
 

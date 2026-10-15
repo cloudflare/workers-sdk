@@ -115,7 +115,6 @@ describe("Wrangler Worker configuration conversion", () => {
 			{ enabled: "false" },
 			{ enabled: true, exclude_packages: "@internal/*" },
 			{ enabled: true, exclude_packages: [123] },
-			{ enabled: true, unknown_field: true },
 		]) {
 			const result = convert({
 				compatibility_date: "2026-09-23",
@@ -133,6 +132,29 @@ describe("Wrangler Worker configuration conversion", () => {
 				}),
 			]);
 		}
+	});
+
+	it("preserves recognized guidance when unknown fields are present", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: false,
+				unknown_field: true,
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				code: "dependencies-instrumentation-opt-out",
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false"
+		);
 	});
 
 	it("reports how to preserve disabled dependency instrumentation", ({
