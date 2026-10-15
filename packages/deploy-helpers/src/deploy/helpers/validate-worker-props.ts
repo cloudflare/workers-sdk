@@ -176,6 +176,7 @@ export async function preUploadApiChecks(
 
 	const deployConfirm = getDeployConfirmFunction({
 		strictMode: props.strict,
+		strictModeAbortMessage: props.strictModeAbortMessage,
 	});
 
 	// TODO: warn if git/hg has uncommitted changes
