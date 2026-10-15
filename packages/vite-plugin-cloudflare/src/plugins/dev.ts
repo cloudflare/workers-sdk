@@ -22,6 +22,78 @@ import { UNKNOWN_HOST } from "../shared";
 import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
+import type * as http from "node:http";
+import type * as vite from "vite";
+
+/**
+ * Vite's internal middlewares that serve module URLs (`/@vite/client`,
+ * `/@id/*`, source files), `/@fs/*` paths, and files under the project root.
+ * `viteServePublicMiddleware` is deliberately excluded so that public files
+ * still respect `run_worker_first`, as they do in production.
+ */
+const VITE_MODULE_MIDDLEWARE_NAMES = new Set([
+	"viteTransformMiddleware",
+	"viteServeRawFsMiddleware",
+	"viteServeStaticMiddleware",
+]);
+
+/**
+ * Gives Vite's module-serving middlewares the first chance to handle a request
+ * that matches `run_worker_first`. Vite decides which requests it serves, so
+ * page navigations, non-GET requests, and unknown paths fall through.
+ *
+ * If Vite renames these middlewares, none are found and every matching request
+ * goes straight to the Worker, which was the previous behavior.
+ *
+ * @param viteDevServer - The Vite dev server whose middleware stack is searched
+ * @param req - The incoming request
+ * @param res - The outgoing response
+ * @param next - The Connect `next` function, used to forward errors
+ * @param onUnhandled - Called when none of the middlewares handle the request
+ */
+function runViteModuleMiddlewares(
+	viteDevServer: vite.ViteDevServer,
+	req: vite.Connect.IncomingMessage,
+	res: http.ServerResponse,
+	next: vite.Connect.NextFunction,
+	onUnhandled: () => void
+): void {
+	// Read the stack per request because Vite adds its internal middlewares
+	// after the plugins' `configureServer` hooks have run.
+	const handles = viteDevServer.middlewares.stack
+		.map((layer) => layer.handle)
+		.filter(
+			(handle): handle is vite.Connect.NextHandleFunction =>
+				typeof handle === "function" &&
+				VITE_MODULE_MIDDLEWARE_NAMES.has(handle.name)
+		);
+	let index = 0;
+
+	const tryNext = (error?: unknown): void => {
+		if (error) {
+			next(error);
+			return;
+		}
+
+		const handle = handles[index++];
+		if (!handle) {
+			onUnhandled();
+			return;
+		}
+
+		try {
+			// Some of Vite's middlewares are async
+			const result: unknown = handle(req, res, tryNext);
+			if (result instanceof Promise) {
+				result.catch(next);
+			}
+		} catch (e) {
+			next(e);
+		}
+	};
+
+	tryNext();
+}
 
 /**
  * Plugin to provide core development functionality
@@ -194,7 +266,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 								req[kRequestType] = "asset";
 								next();
 							} else if (includeRulesMatcher({ request })) {
-								void userWorkerHandler(req, res, next);
+								// Vite's module URLs have no production equivalent, so Vite
+								// serves them before `run_worker_first` applies.
+								runViteModuleMiddlewares(viteDevServer, req, res, next, () => {
+									void userWorkerHandler(req, res, next);
+								});
 							} else {
 								next();
 							}
