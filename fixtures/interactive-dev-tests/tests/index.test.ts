@@ -46,10 +46,8 @@ if (process.platform === "win32") {
 	}
 
 	const pkgRoot = path.resolve(__dirname, "..");
-	function getDefaultPtyEnv(): Record<string, string> {
-		const env = { ...process.env } as Record<string, string>;
-		delete env.TURBO_HASH;
-		delete env.TURBO_IS_TUI;
+	function getDefaultPtyEnv(): NodeJS.ProcessEnv {
+		const { TURBO_HASH: _, TURBO_IS_TUI: __, ...env } = process.env;
 		return env;
 	}
 	const ptyOptions: pty.IPtyForkOptions = {
