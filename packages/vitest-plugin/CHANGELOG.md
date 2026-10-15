@@ -1,5 +1,17 @@
 # @cloudflare/vitest-plugin
 
+## 1.4.3
+
+### Patch Changes
+
+- [#16248](https://github.com/cloudflare/workers-sdk/pull/16248) [`ad01099`](https://github.com/cloudflare/workers-sdk/commit/ad01099fef3baa6af4bcc1bd6325257831f4b911) Thanks [@mattjohnsonpint](https://github.com/mattjohnsonpint)! - Fix V8 coverage failing with Vitest 5.0.4
+
+  Tests using V8 coverage with Vitest 5.0.4 no longer fail with an assertion error during teardown.
+
+- [#16163](https://github.com/cloudflare/workers-sdk/pull/16163) [`5f12934`](https://github.com/cloudflare/workers-sdk/commit/5f1293480f58c59bb4a9e74e76e5fba0f72e90cc) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix Workers tests failing with Vitest's filesystem module cache
+
+  This supports Vitest 4.1's `test.experimental.fsModuleCache` and Vitest 5's `test.fsModuleCache`.
+
 ## 1.4.2
 
 ### Patch Changes
