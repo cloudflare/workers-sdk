@@ -10,6 +10,6 @@ The plugin now loads Worker configuration from `cloudflare.config.ts` and no lon
 
 Projects using a Wrangler configuration file must move their Worker configuration to `cloudflare.config.ts`.
 
-Builds now always emit a structured Build Output in `.cloudflare/output`. `vite preview` reads that output and reuses its pre-built Container images rather than rebuilding Dockerfile-backed images.
+Builds now always emit a structured Build Output in `.cloudflare/output`. When Containers are configured, `vite build` builds any Dockerfile-backed Container images and records them in the output. `vite preview` then reuses those images rather than rebuilding them when the preview server starts.
 
 Wrangler is no longer a runtime or peer dependency of the plugin.

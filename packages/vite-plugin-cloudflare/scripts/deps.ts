@@ -5,14 +5,6 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
-	// These packages are shared with `cf`, so they must remain external rather
-	// than being bundled into the Vite plugin.
-	"@cloudflare/build-output-utils",
-	"@cloudflare/config",
-	"@cloudflare/runtime-types",
-	"@cloudflare/unenv-preset",
-	"miniflare",
-
 	// Must be external - resolved at runtime when bundling user's worker code
 	// to provide Node.js compatibility polyfills
 	"unenv",

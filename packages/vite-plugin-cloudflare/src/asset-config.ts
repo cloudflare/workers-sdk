@@ -73,6 +73,9 @@ export function getAssetsConfig(
 		...(assetsConfig?.notFoundHandling
 			? { not_found_handling: assetsConfig.notFoundHandling }
 			: {}),
+		...(assetsConfig?.basePath !== undefined
+			? { base_path: assetsConfig.basePath }
+			: {}),
 		has_static_routing:
 			resolvedPluginConfig.type === "workers" &&
 			resolvedPluginConfig.staticRouting

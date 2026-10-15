@@ -5,11 +5,5 @@
 		"declarationMap": true
 	},
 	"include": ["src"],
-	"exclude": [
-		"src/workers",
-		"src/__tests__/fixtures",
-		// TODO: Remove this exclusion when Containers are supported by
-		// cloudflare.config.ts.
-		"src/containers.ts"
-	]
+	"exclude": ["src/workers", "src/__tests__/fixtures"]
 }

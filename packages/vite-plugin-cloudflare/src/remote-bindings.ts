@@ -27,6 +27,12 @@ export function getRemoteBindings(
 			case "ai":
 				bindings[name] = { type: "ai", remote: binding.dev?.remote };
 				break;
+			case "analytics":
+				bindings[name] = {
+					type: "analytics",
+					remote: binding.dev?.remote,
+				};
+				break;
 			case "ai-search":
 				bindings[name] = {
 					type: "ai_search",
@@ -103,6 +109,13 @@ export function getRemoteBindings(
 				bindings[name] = {
 					type: "pipeline",
 					stream: binding.name,
+					remote: binding.dev?.remote,
+				};
+				break;
+			case "k2":
+				bindings[name] = {
+					type: "k2",
+					stream: binding.stream,
 					remote: binding.dev?.remote,
 				};
 				break;
