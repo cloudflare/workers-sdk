@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.22.0
+
+### Minor Changes
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Export Container planning helpers for native Cloudflare configuration
+
+  Internal consumers can now create local-development and preview Container plans directly from parsed `cloudflare.config.ts` and Build Output configuration using `createContainerDevPlanForCfConfig` and `createContainerPreviewPlanForCfConfig`. The shared image handling also resolves Dockerfile paths consistently and avoids retagging an image to itself when a preview uses its existing reference.
+
 ## 0.21.7
 
 ### Patch Changes
