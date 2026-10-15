@@ -108,7 +108,9 @@ describe("pullImage", () => {
 				image_uri: image,
 				image_tag: image,
 			},
-			{ info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+			{ info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			undefined,
+			"test registry configure"
 		);
 		await pull.ready;
 
