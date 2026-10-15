@@ -25,7 +25,6 @@ test(
 						}),
 					],
 					test: {
-						fsModuleCache: true,
 						fileParallelism: false,
 						isolate: true,
 						coverage: {
@@ -141,7 +140,6 @@ test(
 						})
 					],
 					test: {
-						fsModuleCache: true,
 						sequence: { sequencer: DeterministicSequencer },
 						testTimeout: 90_000,
 						coverage: {
