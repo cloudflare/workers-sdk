@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
+	configFileName,
 	getDockerPath,
 	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
@@ -260,7 +261,10 @@ export async function runDeployCommandHandler(
 				workersDevConfigAssignment: (value) => `workers_dev = ${value}`,
 				previewUrlsConfigFieldName: "preview_urls",
 				previewUrlsConfigAssignment: (value) => `preview_urls = ${value}`,
-				configFileName: "Wrangler config",
+				configFileName: configFileName(
+					config.configPath,
+					config.userConfigPath
+				),
 				observabilityTargetPercentageField: "target_instance_percentage",
 				observabilityTargetCountField: "target_instance_count",
 				syncWorkersSite,
