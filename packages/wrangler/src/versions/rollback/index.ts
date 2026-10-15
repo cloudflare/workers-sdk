@@ -16,6 +16,9 @@ import type { Config } from "@cloudflare/workers-utils";
 
 export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
 
+const ROLLBACK_CANCELLED_MESSAGE =
+	"Rollback cancelled. Your current deployment has not been changed.";
+
 export const versionsRollbackCommand = createCommand({
 	args: {
 		...durableObjectsCodeUpdateModeArg,
@@ -98,8 +101,9 @@ export const versionsRollbackCommand = createCommand({
 			{ defaultValue: true }
 		);
 		if (!confirmed) {
-			cli.cancel("Aborting rollback...");
-			return;
+			throw new UserError(ROLLBACK_CANCELLED_MESSAGE, {
+				telemetryMessage: "versions rollback cancelled",
+			});
 		}
 
 		logger.log("Performing rollback...");
@@ -137,22 +141,24 @@ export const versionsRollbackCommand = createCommand({
 						changedSecrets.map((secret) => `  * ${secret}`).join("\n")
 				);
 
-				if (secretConfirmation) {
-					await createDeployment(
-						config,
-						accountId,
-						workerName,
-						rollbackTraffic,
-						message,
-						true,
-						resolveDurableObjectsCodeUpdateStrategy(
-							args.durableObjectsCodeUpdateMode,
-							config.durable_objects.code_update_strategy
-						)
-					);
-				} else {
-					cli.cancel("Aborting rollback...");
+				if (!secretConfirmation) {
+					throw new UserError(ROLLBACK_CANCELLED_MESSAGE, {
+						telemetryMessage: "versions rollback changed secrets cancelled",
+					});
 				}
+
+				await createDeployment(
+					config,
+					accountId,
+					workerName,
+					rollbackTraffic,
+					message,
+					true,
+					resolveDurableObjectsCodeUpdateStrategy(
+						args.durableObjectsCodeUpdateMode,
+						config.durable_objects.code_update_strategy
+					)
+				);
 			} else {
 				throw e;
 			}
