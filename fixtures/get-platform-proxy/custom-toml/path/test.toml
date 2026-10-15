@@ -1,7 +1,0 @@
-name = "get-bindings-proxy-fixture"
-main = "src/index.ts"
-compatibility_date = "2023-11-21"
-
-[vars]
-MY_VAR = "my-var-value-from-a-custom-toml"
-MY_JSON_VAR = { test = true, customToml = true }

@@ -1,5 +1,0 @@
-{
-	"version": 1,
-	"include": ["/celebrate"],
-	"exclude": ["/holiday"]
-}

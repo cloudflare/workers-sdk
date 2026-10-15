@@ -3,11 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check:types": "tsc --build",
 		"test": "vitest",
 		"test:ci": "vitest run",
 		"vite": "vite dev",
-		"wrangler": "wrangler dev"
+		"wrangler": "wrangler dev",
+		"check:type": "tsc --build"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
@@ -16,6 +16,6 @@
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
+		"wrangler": "4.151.0"
 	}
 }

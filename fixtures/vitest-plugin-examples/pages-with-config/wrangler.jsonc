@@ -1,5 +1,0 @@
-{
-	"name": "pages-with-config",
-	// don't provide compatibility_date so that vitest will infer the latest one
-	"pages_build_output_dir": "public",
-}

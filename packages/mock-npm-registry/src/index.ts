@@ -88,6 +88,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		// pnpm-workspace.yaml.
 		"@cloudflare/*",
 		"cf",
+		"miniflare",
 		"workerd",
 	];
 	// pnpm 10 reads this from the npmrc/INI-format global `rc` file.
@@ -292,7 +293,10 @@ async function writeVerdaccioConfig(
 async function startVerdaccioServer(configPath: string) {
 	return new Promise<() => Promise<void>>((resolve, reject) => {
 		const server = childProcess.fork(
-			require.resolve("verdaccio/bin/verdaccio"),
+			path.resolve(
+				path.dirname(require.resolve("verdaccio/package.json")),
+				"bin/verdaccio"
+			),
 			["-c", configPath]
 		);
 

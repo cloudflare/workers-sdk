@@ -1,6 +1,11 @@
 {
 	"compilerOptions": {
-		"types": ["@cloudflare/workers-types/experimental"]
+		"types": ["@cloudflare/workers-types/experimental"],
+		"target": "ES2022",
+		"module": "Preserve",
+		"lib": ["ES2022"],
+		"noEmit": true,
+		"skipLibCheck": true
 	},
 	"include": ["workers"]
 }

@@ -28,12 +28,14 @@ function getPackages() {
 }
 
 export function getPackagesForPrerelease() {
-	return getPackages().filter((pkg) => pkg.json["workers-sdk"]?.prerelease);
+	return getPackages().filter(
+		(pkg) => !pkg.json.private && pkg.json["workers-sdk"]?.prerelease
+	);
 }
 
 const pkgs = getPackagesForPrerelease();
 
-spawnSync(
+const result = spawnSync(
 	"pnpm",
 	[
 		"dlx",
@@ -48,3 +50,6 @@ spawnSync(
 		stdio: "inherit",
 	}
 );
+
+if (result.error) throw result.error;
+process.exitCode = result.status ?? 1;

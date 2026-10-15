@@ -5,6 +5,15 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
+	// The preset resolves its runtime polyfill files from the installed package.
+	"@cloudflare/unenv-preset",
+
+	// Miniflare loads runtime Workers and native dependencies from its package.
+	"miniflare",
+
+	// Wrangler resolves its runtime resources from its installed package and is a peer.
+	"wrangler",
+
 	// Must be external - resolved at runtime when bundling user's worker code
 	// to provide Node.js compatibility polyfills
 	"unenv",

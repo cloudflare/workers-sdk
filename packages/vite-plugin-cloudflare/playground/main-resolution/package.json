@@ -21,6 +21,6 @@
 		"@playground/main-resolution-package": "file:./package",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
-		"wrangler": "workspace:*"
+		"wrangler": "4.151.0"
 	}
 }

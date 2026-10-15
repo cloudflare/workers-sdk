@@ -1,5 +1,4 @@
 export default [
-	"packages/*/vitest.config.mts",
+	"packages/vite-plugin-cloudflare/vitest.config.ts",
 	"fixtures/*/vitest.config.mts",
-	"tools/vitest.config.mts",
 ];

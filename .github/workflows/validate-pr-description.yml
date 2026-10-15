@@ -3,6 +3,7 @@ name: Validate PR Description
 on:
   merge_group:
   pull_request:
+    branches: [vite-plugin-v1]
     types:
       [
         opened,
@@ -21,10 +22,10 @@ permissions:
 jobs:
   check:
     # Don't check the Version Packages PR or merge queue jobs
-    if: github.event_name != 'merge_group' && github.head_ref != 'changeset-release/main'
+    if: github.event_name != 'merge_group' && !startsWith(github.head_ref, 'changeset-release/')
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
-      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
+      cancel-in-progress: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     timeout-minutes: 30
     name: Check
     runs-on: ubuntu-slim
@@ -45,11 +46,6 @@ jobs:
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
-        with:
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: List changed files
         if: steps.changes.outputs.everything_but_markdown == 'true'

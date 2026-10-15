@@ -1,6 +1,0 @@
-/*
-	A-Header: Some-Value
-
-/header-test
-	! A-Header
-	A-Header: New-Value
