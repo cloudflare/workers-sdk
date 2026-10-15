@@ -1,5 +1,13 @@
 # @cloudflare/remote-bindings
 
+## 0.0.48
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @cloudflare/deploy-helpers@0.20.4
+  - miniflare@5.20261012.0-beta
+
 ## 0.0.47
 
 ### Patch Changes
