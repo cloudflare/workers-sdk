@@ -52,20 +52,29 @@ const ctx = miniflareTest<{ BUCKET: R2Bucket }, MiniflareTestContext>(
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
-						BUCKET: { type: "r2", name: "bucket", s3Credentials: CREDENTIALS },
+						BUCKET: {
+							type: "r2",
+							name: "bucket",
+							dev: {
+								experimentalS3Credentials: CREDENTIALS,
+							},
+						},
 						OTHER: {
 							type: "r2",
 							name: "other-bucket",
-							s3Credentials: CREDENTIALS,
+							dev: {
+								experimentalS3Credentials: CREDENTIALS,
+							},
 						},
 						THIRD: {
 							type: "r2",
 							name: "third-bucket",
-							s3Credentials: THIRD_CREDENTIALS,
+							dev: {
+								experimentalS3Credentials: THIRD_CREDENTIALS,
+							},
 						},
 					},
 				},
@@ -501,6 +510,7 @@ test("PutObject stores body, metadata, and returns the ETag", async ({
 	expect,
 }) => {
 	const client = s3();
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
 	const put = await client.send(
 		new PutObjectCommand({
 			Bucket: "bucket",
@@ -508,7 +518,7 @@ test("PutObject stores body, metadata, and returns the ETag", async ({
 			Body: "0123456789",
 			ContentType: "text/markdown",
 			CacheControl: "max-age=60",
-			Metadata: { hello: "world" },
+			Metadata: customMetadata,
 		})
 	);
 	expect(put.ETag).toBe(
@@ -522,8 +532,22 @@ test("PutObject stores body, metadata, and returns the ETag", async ({
 	expect(await get.Body.transformToString()).toBe("0123456789");
 	expect(get.ContentType).toBe("text/markdown");
 	expect(get.CacheControl).toBe("max-age=60");
-	expect(get.Metadata).toEqual({ hello: "world" });
+	expect(get.Metadata).toEqual(customMetadata);
 	expect(get.AcceptRanges).toBe("bytes");
+
+	await expectSdkError(
+		client.send(
+			new PutObjectCommand({
+				Bucket: "bucket",
+				Key: "put.txt",
+				Body: "oversized metadata",
+				Metadata: { ...customMetadata, a: "" },
+			})
+		),
+		400,
+		"MetadataTooLarge",
+		expect
+	);
 });
 
 test("round-trips special-character keys", async ({ expect }) => {
@@ -1204,6 +1228,7 @@ test("CopyObject REPLACE directive uses request metadata", async ({
 	expect,
 }) => {
 	const r2 = await bucket();
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
 	await r2.put("copy/src2.txt", "data", {
 		httpMetadata: { contentType: "text/csv" },
 	});
@@ -1215,14 +1240,29 @@ test("CopyObject REPLACE directive uses request metadata", async ({
 			CopySource: "/bucket/copy/src2.txt",
 			MetadataDirective: "REPLACE",
 			ContentType: "application/json",
-			Metadata: { new: "1" },
+			Metadata: customMetadata,
 		})
 	);
 	const get = await client.send(
 		new GetObjectCommand({ Bucket: "bucket", Key: "copy/dst2.txt" })
 	);
 	expect(get.ContentType).toBe("application/json");
-	expect(get.Metadata).toEqual({ new: "1" });
+	expect(get.Metadata).toEqual(customMetadata);
+
+	await expectSdkError(
+		client.send(
+			new CopyObjectCommand({
+				Bucket: "bucket",
+				Key: "copy/dst2.txt",
+				CopySource: "/bucket/copy/src2.txt",
+				MetadataDirective: "REPLACE",
+				Metadata: { ...customMetadata, a: "" },
+			})
+		),
+		400,
+		"MetadataTooLarge",
+		expect
+	);
 });
 
 test("CopyObject works across buckets", async ({ expect }) => {
@@ -1349,12 +1389,25 @@ test("CopyObject decodes the copy source and allows self-copies", async ({
 
 test("multipart upload lifecycle", async ({ expect }) => {
 	const client = s3();
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
+	await expectSdkError(
+		client.send(
+			new CreateMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/obj.bin",
+				Metadata: { ...customMetadata, a: "" },
+			})
+		),
+		400,
+		"MetadataTooLarge",
+		expect
+	);
 	const create = await client.send(
 		new CreateMultipartUploadCommand({
 			Bucket: "bucket",
 			Key: "mp/obj.bin",
 			ContentType: "application/x-thing",
-			Metadata: { mp: "1" },
+			Metadata: customMetadata,
 		})
 	);
 	expect(create.Bucket).toBe("bucket");
@@ -1391,7 +1444,7 @@ test("multipart upload lifecycle", async ({ expect }) => {
 	assert(get.Body !== undefined);
 	expect(await get.Body.transformToString()).toBe("part-one-data");
 	expect(get.ContentType).toBe("application/x-thing");
-	expect(get.Metadata).toEqual({ mp: "1" });
+	expect(get.Metadata).toEqual(customMetadata);
 
 	// The upload is gone after completion
 	await expectSdkError(
@@ -2110,25 +2163,29 @@ test("sets CORS headers on cross-origin responses", async ({ expect }) => {
 	expect(res.headers.get("Access-Control-Expose-Headers")).toBe("*");
 });
 
-test("rejects different s3Credentials for the same bucket", async ({
+test("rejects different S3 credentials for the same bucket", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest("export default {};"),
 					env: {
-						BUCKET: { type: "r2", name: "shared", s3Credentials: CREDENTIALS },
+						BUCKET: {
+							type: "r2",
+							name: "shared",
+							dev: {
+								experimentalS3Credentials: CREDENTIALS,
+							},
+						},
 					},
 				},
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest("export default {};"),
@@ -2136,9 +2193,11 @@ test("rejects different s3Credentials for the same bucket", async ({
 						BUCKET: {
 							type: "r2",
 							name: "shared",
-							s3Credentials: {
-								accessKeyId: "B".repeat(32),
-								secretAccessKey: "other-secret",
+							dev: {
+								experimentalS3Credentials: {
+									accessKeyId: "B".repeat(32),
+									secretAccessKey: "other-secret",
+								},
 							},
 						},
 					},
@@ -2164,14 +2223,19 @@ test("verifies signatures against the original host when `upstream` is set", asy
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
 						"export default { fetch: () => new Response(null, { status: 404 }) };"
 					),
 					env: {
-						BUCKET: { type: "r2", name: "bucket", s3Credentials: CREDENTIALS },
+						BUCKET: {
+							type: "r2",
+							name: "bucket",
+							dev: {
+								experimentalS3Credentials: CREDENTIALS,
+							},
+						},
 					},
 				},
 			},

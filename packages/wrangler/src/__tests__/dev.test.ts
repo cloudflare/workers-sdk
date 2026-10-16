@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	DEFAULT_COMPAT_DATE,
 	FatalError,
-	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
@@ -191,6 +191,8 @@ describe.sequential("wrangler dev", () => {
 
 	describe("Local Explorer agent hint", () => {
 		beforeEach(() => {
+			vi.stubEnv("TURBO_HASH", "");
+			vi.stubEnv("TURBO_IS_TUI", "");
 			writeWranglerConfig({
 				name: "test-worker",
 				main: "index.js",
@@ -362,14 +364,12 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev");
 
-			const currentDate = getTodaysCompatDate();
-
-			expect(std.warn.replaceAll(currentDate, "<current-date>"))
+			expect(std.warn.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 				.toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the default compatibility date: <default-date>.[0m
 
-					  ❯❯ Add one to your wrangler.toml file: compatibility_date = "<current-date>", or
-					  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<current-date>
+					  ❯❯ Add one to your wrangler.toml file: compatibility_date = "<default-date>", or
+					  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<default-date>
 
 					  See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
 
@@ -1842,6 +1842,45 @@ describe.sequential("wrangler dev", () => {
 				const config = await runWranglerUntilConfig("dev");
 				expect(config.name).toBe("test-do-exports-dev");
 			});
+
+			it("resolves a container referenced from a durable object export", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					name: "test-container-exports-dev",
+					main: "index.js",
+					containers: [
+						{
+							name: "my-container",
+							max_instances: 1,
+							image: "registry.cloudflare.com/hello:world",
+						},
+					],
+					exports: {
+						MyContainerDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "my-container",
+						},
+					},
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+
+				const config = await runWranglerUntilConfig("dev");
+				expect(config.containers).toEqual([
+					expect.objectContaining({
+						name: "my-container",
+						class_name: "MyContainerDO",
+					}),
+				]);
+				expect(config.containerDevPlan?.containerOptions).toEqual([
+					{
+						image_uri: "registry.cloudflare.com/some-account-id/hello:world",
+						class_name: "MyContainerDO",
+						image_tag: expect.stringMatching(/^cloudflare-dev\/mycontainerdo:/),
+					},
+				]);
+			});
 		});
 	});
 
@@ -2798,6 +2837,32 @@ describe.sequential("wrangler dev", () => {
 			`);
 		});
 
+		it("should warn in remote mode with named-image containers", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				...containerConfig,
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ContainerClass",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+			});
+			fs.writeFileSync("Dockerfile", `FROM ubuntu`);
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await expect(
+				runWrangler("dev --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Bailing early in tests]`
+			);
+
+			expect(std.warn).toContain("Containers are only supported in local mode");
+		});
+
 		it("should not warn when run in remote mode with disabled containers", async ({
 			expect,
 		}) => {
@@ -3107,6 +3172,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: true,
 				name: undefined,
+				allowedMail: undefined,
 			});
 		});
 
@@ -3124,6 +3190,37 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: true,
 				name: "my-tunnel",
+				allowedMail: undefined,
+			});
+		});
+
+		it("should reject --tunnel-allowed-mail with --tunnel-name", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"dev --tunnel --tunnel-name=my-tunnel --tunnel-allowed-mail=alice@example.com"
+				)
+			).rejects.toThrow(
+				"--tunnel-allowed-mail is only supported for Quick Tunnels"
+			);
+		});
+
+		it("should allow --tunnel-allowed-mail without enabling tunnel", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --tunnel-allowed-mail=alice@example.com"
+			);
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: undefined,
+				allowedMail: ["alice@example.com"],
 			});
 		});
 
@@ -3141,6 +3238,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: "my-tunnel",
+				allowedMail: undefined,
 			});
 		});
 
@@ -3156,6 +3254,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: undefined,
+				allowedMail: undefined,
 			});
 		});
 

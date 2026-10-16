@@ -7,15 +7,21 @@ export default defineConfig({
 		client: {
 			build: {
 				rollupOptions: {
-					input: path.resolve(__dirname, "html-page.html"),
+					input: path.resolve(import.meta.dirname, "html-page.html"),
 				},
 			},
 		},
-		worker: {
+		ssr: {
 			build: {
 				assetsInlineLimit: 0,
 			},
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
+	],
 });

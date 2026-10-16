@@ -2,6 +2,7 @@ import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { white } from "@cloudflare/cli-shared-helpers/colors";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import {
@@ -9,6 +10,7 @@ import {
 	localWorkflowArgs,
 	type LocalWorkflowDetails,
 } from "../local";
+import { jsonWorkflowArgs } from "../utils";
 import type { Version, Workflow } from "../types";
 
 export const workflowsDescribeCommand = createCommand({
@@ -19,6 +21,7 @@ export const workflowsDescribeCommand = createCommand({
 	},
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -26,12 +29,25 @@ export const workflowsDescribeCommand = createCommand({
 		},
 	},
 	positionalArgs: ["name"],
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 	async handler(args, { config }) {
 		if (args.local) {
 			const workflow = await fetchLocalResult<LocalWorkflowDetails>(
 				args.port,
 				`/workflows/${encodeURIComponent(args.name)}`
 			);
+
+			if (args.json) {
+				logger.json({
+					name: workflow.name,
+					script_name: workflow.script_name,
+					class_name: workflow.class_name,
+					instances: workflow.instances,
+				});
+				return;
+			}
 
 			logRaw(
 				formatLabelledValues({
@@ -69,6 +85,11 @@ export const workflowsDescribeCommand = createCommand({
 			);
 
 			const latestVersion = versions[0];
+
+			if (args.json) {
+				logger.json({ ...workflow, latest_version: latestVersion ?? null });
+				return;
+			}
 
 			logRaw(
 				formatLabelledValues({

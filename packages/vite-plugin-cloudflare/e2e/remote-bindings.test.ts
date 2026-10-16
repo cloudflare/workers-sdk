@@ -153,7 +153,7 @@ if (isWindows) {
 			pm: "pnpm",
 		});
 
-		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
+		test("for connection to remote bindings during dev the accountId in cloudflare.config.ts is used", async ({
 			expect,
 		}) => {
 			const proc = await runLongLived("pnpm", "dev", projectPath);

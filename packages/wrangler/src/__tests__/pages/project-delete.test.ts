@@ -1,6 +1,8 @@
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -8,6 +10,7 @@ import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
+import type { PagesConfigCache } from "../../pages/types";
 
 describe("pages project delete", () => {
 	const std = mockConsoleMethods();
@@ -151,11 +154,9 @@ describe("pages project delete", () => {
 			text: `Are you sure you want to delete "an-existing-project"? This action cannot be undone.`,
 			result: true,
 		});
-		vi.mock("getConfigCache", () => {
-			return {
-				account_id: "original-account-id",
-				project_name: "an-existing-project",
-			};
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "original-account-id",
+			project_name: "an-existing-project",
 		});
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
 		await runWrangler("pages project delete an-existing-project");

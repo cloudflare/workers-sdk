@@ -2,7 +2,12 @@ import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { DEFAULT_NAMESPACE, searchInstance } from "./client";
 import { parseFilters } from "./utils";
-import type { AiSearchMessage } from "./types";
+import type {
+	AiSearchMessage,
+	AiSearchSearchOptions,
+	AiSearchSearchRequest,
+	AiSearchSearchRetrievalOptions,
+} from "./types";
 
 export const aiSearchSearchCommand = createCommand({
 	metadata: {
@@ -62,21 +67,28 @@ export const aiSearchSearchCommand = createCommand({
 		const filterStrings = args.filter?.map(String);
 		const filters = parseFilters(filterStrings);
 
-		const body: {
-			messages: AiSearchMessage[];
-			filters?: Record<string, string>;
-			max_num_results?: number;
-			score_threshold?: number;
-			reranking?: boolean;
-		} = { messages, filters };
+		const retrieval: AiSearchSearchRetrievalOptions = {};
+		if (filters !== undefined) {
+			retrieval.filters = filters;
+		}
 		if (args.maxNumResults !== undefined) {
-			body.max_num_results = args.maxNumResults;
+			retrieval.max_num_results = args.maxNumResults;
 		}
 		if (args.scoreThreshold !== undefined) {
-			body.score_threshold = args.scoreThreshold;
+			retrieval.match_threshold = args.scoreThreshold;
+		}
+
+		const aiSearchOptions: AiSearchSearchOptions = {};
+		if (Object.keys(retrieval).length > 0) {
+			aiSearchOptions.retrieval = retrieval;
 		}
 		if (args.reranking !== undefined) {
-			body.reranking = args.reranking;
+			aiSearchOptions.reranking = { enabled: args.reranking };
+		}
+
+		const body: AiSearchSearchRequest = { messages };
+		if (Object.keys(aiSearchOptions).length > 0) {
+			body.ai_search_options = aiSearchOptions;
 		}
 		const result = await searchInstance(
 			config,

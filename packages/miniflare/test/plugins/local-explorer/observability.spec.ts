@@ -77,14 +77,13 @@ describe("Observability API", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "user",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(SEED_WORKER),
 						env: {
 							TRACE_STORE: {
 								type: "durable-object",
-								workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+								worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 								exportName: "TraceStore",
 							},
 						},
@@ -227,7 +226,6 @@ describe("Observability API (observability disabled)", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(

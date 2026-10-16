@@ -1,8 +1,15 @@
-import { readBuildOutput } from "@cloudflare/build-output-utils";
-import { convertToWranglerConfig } from "@cloudflare/config";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
-import type { ModuleType } from "@cloudflare/config";
-import type { Unstable_Config } from "wrangler";
+import {
+	DEFAULT_WORKER_DIRECTORY_NAME,
+	readBuildOutput,
+} from "@cloudflare/build-output-utils";
+import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
+import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
+import type {
+	ModuleType,
+	ParsedOutputContainerConfig,
+	ParsedOutputRootConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
 
 export interface Bundle {
 	rootPath: string;
@@ -11,56 +18,54 @@ export interface Bundle {
 }
 
 export interface BuildOutputPreviewWorker {
-	source: "build-output";
-	config: Unstable_Config;
+	config: ParsedOutputWorkerConfig;
+	assetsDir: string | undefined;
 	bundle: Bundle | undefined;
 }
 
+export interface BuildOutputPreview {
+	rootConfig: ParsedOutputRootConfig;
+	containers: ParsedOutputContainerConfig[];
+	workers: BuildOutputPreviewWorker[];
+}
+
 /**
- * Read the Build Output Specification at
- * `<root>/.cloudflare/output/v0/workers/default/` and reconstruct a
- * `BuildOutputPreviewWorker`.
- *
- * The spec currently holds a single Worker, so this returns a single-element
- * array.
+ * Read the Build Output Specification and select the Workers used for preview.
+ * Every auxiliary Worker is always included. During prerendering, the
+ * `prerender` Worker replaces the `default` entry Worker when present.
  */
-export async function readBuildOutputWorkers(
-	root: string
-): Promise<BuildOutputPreviewWorker[]> {
-	// `settings` comes from the optional top-level `config.json` holding
-	// project-level settings (`account_id`, `compliance_region`) shared by
-	// every Worker.
-	const { workers, settings } = await readBuildOutput(root);
-	const [worker] = workers;
+export async function readBuildOutputPreview(
+	root: string,
+	isPrerender: boolean
+): Promise<BuildOutputPreview> {
+	// `rootConfig` comes from the top-level `config.json` holding project-level
+	// settings and build context shared by every Worker.
+	const { workers, rootConfig, containers } = await readBuildOutput(root);
+	const defaultWorker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
+	const entryWorker = isPrerender
+		? (workers[PRERENDER_WORKER_DIRECTORY_NAME] ?? defaultWorker)
+		: defaultWorker;
+	const auxiliaryWorkers = Object.entries(workers)
+		.filter(([directoryName]) => {
+			return (
+				directoryName !== DEFAULT_WORKER_DIRECTORY_NAME &&
+				directoryName !== PRERENDER_WORKER_DIRECTORY_NAME
+			);
+		})
+		.map(([_, worker]) => worker);
+	const selectedWorkers = [entryWorker, ...auxiliaryWorkers];
 
-	const { manifest, ...inputShape } = worker.config;
-	const rawConfig = convertToWranglerConfig(inputShape, settings);
+	return {
+		rootConfig,
+		containers: containers.map(({ config }) => config),
+		workers: selectedWorkers.map(toPreviewWorker),
+	};
+}
 
-	const { config, diagnostics } = normalizeAndValidateConfig(
-		rawConfig,
-		undefined,
-		undefined,
-		{},
-		true
-	);
-
-	if (diagnostics.hasWarnings()) {
-		console.warn(diagnostics.renderWarnings());
-	}
-	if (diagnostics.hasErrors()) {
-		throw new Error(diagnostics.renderErrors());
-	}
-
-	if (worker.assetsDir) {
-		config.assets = {
-			...(config.assets ?? {}),
-			directory: worker.assetsDir,
-		};
-	}
-
+function toPreviewWorker(worker: BuildOutputWorker): BuildOutputPreviewWorker {
+	const { manifest } = worker.config;
 	let bundle: Bundle | undefined;
 	if (manifest && worker.bundleDir) {
-		config.main = manifest.mainModule;
 		bundle = {
 			rootPath: worker.bundleDir,
 			mainModule: manifest.mainModule,
@@ -68,5 +73,9 @@ export async function readBuildOutputWorkers(
 		};
 	}
 
-	return [{ source: "build-output", config, bundle }];
+	return {
+		config: worker.config,
+		assetsDir: worker.assetsDir,
+		bundle,
+	};
 }

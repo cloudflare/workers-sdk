@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { statSync } from "node:fs";
+import { existsSync, statSync, type Stats } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
@@ -17,13 +17,15 @@ import {
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
-import type { AutoConfigContext } from "../context";
+import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
 } from "../types";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
+
+const CLOUDFLARE_CONFIG_FILE = "cloudflare.config.ts";
 
 /**
  * Asserts that the current project being targeted for autoconfig is not already configured.
@@ -39,15 +41,43 @@ export function assertNonConfigured(
 	);
 }
 
-async function hasIndexHtml(dir: string): Promise<boolean> {
-	const children = await readdir(dir);
-	for (const child of children) {
-		const stats = await stat(join(dir, child));
-		if (stats.isFile() && child === "index.html") {
-			return true;
+function isExpectedFileSystemError(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error.code === "ENOENT" ||
+			error.code === "ENOTDIR" ||
+			error.code === "EACCES" ||
+			error.code === "EPERM")
+	);
+}
+
+async function getPathStats(path: string): Promise<Stats | undefined> {
+	try {
+		return await stat(path);
+	} catch (error) {
+		if (isExpectedFileSystemError(error)) {
+			return undefined;
 		}
+		throw error;
 	}
-	return false;
+}
+
+async function hasIndexHtml(dir: string): Promise<boolean> {
+	const stats = await getPathStats(join(dir, "index.html"));
+	if (!stats?.isFile()) {
+		return false;
+	}
+
+	try {
+		return (await readdir(dir)).includes("index.html");
+	} catch (error) {
+		if (isExpectedFileSystemError(error)) {
+			return false;
+		}
+		throw error;
+	}
 }
 
 /**
@@ -62,26 +92,20 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 	const children = await readdir(from);
 	for (const child of children) {
 		const path = join(from, child);
-		const stats = await stat(path);
-		if (stats.isDirectory() && (await hasIndexHtml(path))) {
+		const stats = await getPathStats(path);
+		if (stats?.isDirectory() && (await hasIndexHtml(path))) {
 			return relative(from, path);
 		}
 	}
 	return undefined;
 }
 
-type DetectedFramework = {
-	framework: {
-		name: string;
-		id: string;
-	};
-	buildCommand?: string | undefined;
-	dist?: string;
-};
-
 /**
  * Detects project details needed for autoconfig: framework, package manager,
- * output directory, worker name, and whether the project is already configured.
+ * output directory, worker name, commands, and whether the project is already configured.
+ * By default, the project is considered configured when `cloudflare.config.ts`
+ * exists. Passing `target: "wrangler"` opts into Wrangler configuration
+ * detection instead.
  *
  * @param options - Detection options including project path, wrangler config, and context.
  * @returns The detected project details.
@@ -89,12 +113,15 @@ type DetectedFramework = {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
+	target = "cf",
 	context,
 }: {
 	/** The path to the project, defaults to cwd. */
 	projectPath?: string;
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
+	/** The configuration target, defaults to cf. */
+	target?: AutoConfigTarget;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
@@ -102,7 +129,11 @@ export async function getDetailsForAutoConfig({
 
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
+	const hasCloudflareConfig =
+		target === "cf" && existsSync(resolve(projectPath, CLOUDFLARE_CONFIG_FILE));
+
 	if (
+		target === "wrangler" &&
 		// If a real Wrangler config has been found the project is already configured for Workers
 		wranglerConfig?.configPath &&
 		// Unless `pages_build_output_dir` is set, since that indicates that the project is a Pages one instead
@@ -118,7 +149,7 @@ export async function getDetailsForAutoConfig({
 	}
 
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
-		await detectFramework(projectPath, context, wranglerConfig);
+		await detectFramework(projectPath, context, { wranglerConfig, target });
 
 	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -134,7 +165,8 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const configured = framework.isConfigured(projectPath) ?? false;
+	const configured =
+		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
 
 	const outputDir =
 		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
@@ -144,14 +176,12 @@ export async function getDetailsForAutoConfig({
 		framework,
 		packageJson,
 		packageManager,
-		...(detectedFramework
-			? {
-					buildCommand: getProjectBuildCommand(
-						detectedFramework,
-						packageManager
-					),
-				}
-			: {}),
+		devCommand: getProjectCommand(detectedFramework.devCommand, packageManager),
+		buildCommand: getProjectCommand(
+			detectedFramework.buildCommand,
+			packageManager
+		),
+		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
 
@@ -185,34 +215,33 @@ export async function getDetailsForAutoConfig({
 }
 
 /**
- * Given a detected framework this function gets a `build` command for the target project that can be run in the terminal
- * (such as `npm run build` or `npx astro build`). If no build command is detected `undefined` is returned instead.
+ * Converts a detected project command into one that can be run in the terminal
+ * (such as `npm run build` or `npx astro dev`). If no command is detected
+ * `undefined` is returned instead.
  *
- * @param detectedFramework The detected framework (or settings) for the project
+ * @param command The detected project command
  * @param packageManager The package manager to use for command prefixes
- * @returns A runnable command for the build process if detected, undefined otherwise
+ * @returns A runnable project command if detected, undefined otherwise
  */
-function getProjectBuildCommand(
-	detectedFramework: DetectedFramework,
+function getProjectCommand(
+	command: string | undefined,
 	packageManager: PackageManager
 ): string | undefined {
-	if (!detectedFramework.buildCommand) {
+	if (!command) {
 		return undefined;
 	}
 
 	const { type, dlx, npx } = packageManager;
 
 	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
-		if (
-			detectedFramework.buildCommand.startsWith(packageManagerCommandPrefix)
-		) {
-			// The build command already is something like `npm run build` or similar
-			return detectedFramework.buildCommand;
+		if (command.startsWith(packageManagerCommandPrefix)) {
+			// The command already includes a package-manager prefix.
+			return command;
 		}
 	}
 
-	// The command is something like `astro build` so we need to prefix it with `npx` and equivalents
-	return `${npx} ${detectedFramework.buildCommand}`;
+	// Framework executables such as `astro build` need the appropriate package-manager prefix.
+	return `${npx} ${command}`;
 }
 
 /**

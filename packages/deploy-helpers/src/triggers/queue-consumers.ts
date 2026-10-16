@@ -1,10 +1,18 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
+import {
+	cliPresentation,
+	fetchPagedListResult,
+	fetchResult,
+	logger,
+} from "../shared/context";
 import type { TriggerDeployment } from "../shared/types";
 import type { Config, ComplianceConfig } from "@cloudflare/workers-utils";
 
+export type QueueJurisdiction = "eu" | "us" | "fedramp";
+
 export interface PostQueueBody {
 	queue_name: string;
+	jurisdiction?: QueueJurisdiction;
 	settings?: QueueSettings;
 }
 
@@ -25,6 +33,7 @@ export interface PostQueueResponse {
 export interface QueueResponse {
 	queue_id: string;
 	queue_name: string;
+	jurisdiction?: QueueJurisdiction;
 	created_on: string;
 	modified_on: string;
 	producers: Producer[];
@@ -114,7 +123,7 @@ export async function getQueue(
 	const queues = await listQueues(complianceConfig, accountId, 1, queueName);
 	if (queues.length === 0) {
 		throw new UserError(
-			`Queue "${queueName}" does not exist. To create it, run: wrangler queues create ${queueName}`,
+			`Queue "${queueName}" does not exist. To create it, run: ${cliPresentation.commands.queuesCreate} ${queueName}`,
 			{ telemetryMessage: "queues lookup missing queue" }
 		);
 	}
@@ -450,7 +459,7 @@ export async function ensureQueuesExistByConfig(
 			for (const queue of queueNames) {
 				if (!queueSet.has(queue)) {
 					throw new UserError(
-						`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`,
+						`Queue "${queue}" does not exist. To create it, run: ${cliPresentation.commands.queuesCreate} ${queue}`,
 						{ telemetryMessage: "queues config missing queue" }
 					);
 				}

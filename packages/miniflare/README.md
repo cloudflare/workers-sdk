@@ -460,7 +460,7 @@ parameter in module format Workers.
 - `binding?: string`
   Binding name to inject as a `Fetcher` binding to allow access to static assets from within the Worker.
 
-- `assetOptions?: { html_handling?: HTMLHandlingOptions, not_found_handling?: NotFoundHandlingOptions}`
+- `assetConfig?: { html_handling?: HTMLHandlingOptions, not_found_handling?: NotFoundHandlingOptions, base_path?: string }`
   Configuration for file-based asset routing - see [docs](https://developers.cloudflare.com/workers/static-assets/routing/#routing-configuration) for options
 
 #### Pipelines
@@ -689,6 +689,17 @@ defined at the top-level.
   Note that this implicitly waits for the `ready` `Promise` to resolve, there's
   no need to do that yourself first. Additionally, the host of the request's URL
   is always ignored and replaced with the `workerd` server's.
+
+- `dispatchConnect(options?: { protocol?: "tcp"; workerName?: string; port?: number }): Promise<net.Socket>`
+- `dispatchConnect(options: { protocol: "udp"; workerName?: string; port?: number }): Promise<dgram.Socket>`
+
+  Opens a connection to a Worker's `connect()` trigger and returns a Node.js
+  `net.Socket` for TCP or `dgram.Socket` for UDP. TCP is used when `protocol` is
+  omitted. This implicitly waits for the runtime to start and connects to the
+  trigger's allocated port when its configured port is `0`. If `workerName` is
+  omitted, the entrypoint Worker is selected. If `port` is omitted, the selected
+  Worker must have exactly one trigger for the selected protocol. Calling
+  `dispose()` closes any sockets opened by this method.
 
 - `getBindings<Env extends Record<string, unknown> = Record<string, unknown>>(workerName?: string): Promise<Env>`
 

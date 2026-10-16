@@ -12,6 +12,35 @@
 // wrangler boundary.
 // ═══════════════════════════════════════════════════════════════════════════
 
+import type { ContainerDefinition } from "./definition";
+
+/**
+ * Storage backend for the Durable Object.
+ *
+ * Containers are only supported on the SQLite storage engine, so `container` is
+ * only offered alongside `storage: "sqlite"`.
+ */
+export type DurableObjectStorageOptions<
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
+		| undefined,
+> =
+	| {
+			/**
+			 * Selects the SQLite-backed storage engine (recommended for new
+			 * classes).
+			 */
+			storage: "sqlite";
+			/**
+			 * Attach a Container application to this Durable Object by config reference.
+			 */
+			container?: TContainer;
+	  }
+	| {
+			/** Selects the legacy key-value storage engine. */
+			storage: "legacy-kv";
+	  };
+
 /**
  * Declares a provisioned Durable Object class exported from this Worker.
  *
@@ -20,17 +49,13 @@
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
-export interface DurableObjectCreatedExportOptions {
+export type DurableObjectCreatedExportOptions<
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
+		| undefined,
+> = {
 	state?: "created";
-	/**
-	 * Storage backend for the Durable Object.
-	 *
-	 * - `"sqlite"`: selects the SQLite-backed storage engine
-	 *   (recommended for new classes).
-	 * - `"legacy-kv"`: selects the legacy key-value storage engine.
-	 */
-	storage: "sqlite" | "legacy-kv";
-}
+} & DurableObjectStorageOptions<TContainer>;
 
 /**
  * Retire a provisioned Durable Object namespace whose class has
@@ -74,18 +99,25 @@ export interface DurableObjectTransferredExportOptions {
  * Prepare to receive cross-Worker Durable Object transfer.
  * Once the source Worker's `transferred` export is deployed, this entry becomes a normal live `durable-object` export.
  */
-export interface DurableObjectExpectingTransferExportOptions {
+export type DurableObjectExpectingTransferExportOptions<
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
+		| undefined,
+> = {
 	state: "expecting-transfer";
-	storage: "sqlite" | "legacy-kv";
 	/**
 	 * The source Worker for the two-phase cross-Worker transfer.
 	 */
 	transferFrom: string;
-}
+} & DurableObjectStorageOptions<TContainer>;
 
-export interface DurableObjectCreatedExport extends DurableObjectCreatedExportOptions {
-	type: "durable-object";
-}
+// A type intersection rather than an `interface ... extends`, because the
+// options are a union over `storage` and an interface cannot extend a union.
+export type DurableObjectCreatedExport<
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
+		| undefined,
+> = DurableObjectCreatedExportOptions<TContainer> & { type: "durable-object" };
 export interface DurableObjectDeletedExport extends DurableObjectDeletedExportOptions {
 	type: "durable-object";
 }
@@ -96,9 +128,13 @@ export interface DurableObjectTransferredExport extends DurableObjectTransferred
 	type: "durable-object";
 }
 
-export interface DurableObjectExpectingTransferExport extends DurableObjectExpectingTransferExportOptions {
+export type DurableObjectExpectingTransferExport<
+	TContainer extends ContainerDefinition | undefined =
+		| ContainerDefinition
+		| undefined,
+> = DurableObjectExpectingTransferExportOptions<TContainer> & {
 	type: "durable-object";
-}
+};
 
 export type DurableObjectExportOptions =
 	| DurableObjectCreatedExportOptions
@@ -125,6 +161,39 @@ export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 	type: "worker";
 }
 
+export interface WorkflowExportOptions {
+	/**
+	 * The name of the Workflow. It identifies the Workflow's instances and must
+	 * be unique within the account.
+	 */
+	name: string;
+	limits?: {
+		/** Maximum number of steps a single Workflow instance may run. */
+		steps?: number;
+	};
+	concurrency?: {
+		/** Maximum number of Workflow instances that can run concurrently. */
+		limit?: number;
+	};
+	/** Cron schedule(s) that automatically trigger Workflow instances. */
+	schedules?: string | string[];
+	/**
+	 * Default retention for instances of this Workflow, applied when an instance
+	 * does not set its own retention. Accepts milliseconds or a duration string
+	 * such as `"3 days"`.
+	 */
+	defaultRetention?: {
+		/** How long to retain instances that completed successfully or were terminated. */
+		successRetention?: number | string;
+		/** How long to retain errored instances. */
+		errorRetention?: number | string;
+	};
+}
+
+export interface WorkflowExport extends WorkflowExportOptions {
+	type: "workflow";
+}
+
 /**
  * Configuration for named exports declared by the Worker. Each entry's
  * key is the exported class name; the value configures the export.
@@ -138,9 +207,9 @@ export interface Exports {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
-	durableObject(
-		options: DurableObjectCreatedExportOptions
-	): DurableObjectCreatedExport;
+	durableObject<TContainer extends ContainerDefinition | undefined = undefined>(
+		options: DurableObjectCreatedExportOptions<TContainer>
+	): DurableObjectCreatedExport<TContainer>;
 	/**
 	 * Retire a provisioned Durable Object namespace whose class has been removed from code.
 	 */
@@ -163,9 +232,9 @@ export interface Exports {
 	 * Prepare to receive cross-Worker Durable Object transfer.
 	 * The source Worker must follow up with a deployment containing a `transferred` export to commit the transfer.
 	 */
-	durableObject(
-		options: DurableObjectExpectingTransferExportOptions
-	): DurableObjectExpectingTransferExport;
+	durableObject<TContainer extends ContainerDefinition | undefined = undefined>(
+		options: DurableObjectExpectingTransferExportOptions<TContainer>
+	): DurableObjectExpectingTransferExport<TContainer>;
 	// Fallback overload. TypeScript only reaches this when none of the precise
 	// overloads above match, and it reports the last overload's error. Typing the
 	// parameter as the full discriminated union means the reported error keys off
@@ -179,11 +248,22 @@ export interface Exports {
 
 	/** Declares a WorkerEntrypoint export defined by this Worker. */
 	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
+
+	/**
+	 * Declares a Workflow defined by this Worker. The export's key must name a
+	 * class that extends `WorkflowEntrypoint`.
+	 *
+	 * For more information about Workflows, see the documentation at
+	 * https://developers.cloudflare.com/workflows/
+	 */
+	workflow(options: WorkflowExportOptions): WorkflowExport;
 }
 
-function durableObject(
-	options: DurableObjectCreatedExportOptions
-): DurableObjectCreatedExport;
+function durableObject<
+	TContainer extends ContainerDefinition | undefined = undefined,
+>(
+	options: DurableObjectCreatedExportOptions<TContainer>
+): DurableObjectCreatedExport<TContainer>;
 function durableObject(
 	options: DurableObjectDeletedExportOptions
 ): DurableObjectDeletedExport;
@@ -193,9 +273,11 @@ function durableObject(
 function durableObject(
 	options: DurableObjectTransferredExportOptions
 ): DurableObjectTransferredExport;
-function durableObject(
-	options: DurableObjectExpectingTransferExportOptions
-): DurableObjectExpectingTransferExport;
+function durableObject<
+	TContainer extends ContainerDefinition | undefined = undefined,
+>(
+	options: DurableObjectExpectingTransferExportOptions<TContainer>
+): DurableObjectExpectingTransferExport<TContainer>;
 // Fallback overload; see the matching comment in the `Exports` interface for why
 // this union-typed signature exists.
 function durableObject(
@@ -213,25 +295,39 @@ function worker(
 	return { type: "worker", ...options };
 }
 
+function workflow(options: WorkflowExportOptions): WorkflowExport {
+	return { type: "workflow", ...options };
+}
+
 /**
  * Exports builder for configuring Worker exports.
  *
  * @example
  * ```typescript
- * import { defineWorker, exports } from "@cloudflare/config";
+ * import { defineConfig, defineContainer, defineWorker, exports } from "@cloudflare/config";
  *
- * export default defineWorker({
+ * const myContainer = defineContainer({
+ *   name: "my-container",
+ *   image: { dockerfile: "./Dockerfile" },
+ * });
+ *
+ * const worker = defineWorker({
  *   exports: {
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
+ *     MyContainerDO:   exports.durableObject({ storage: "sqlite", container: myContainer }),
  *     OldClass:        exports.durableObject({ state: "deleted" }),
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
  *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),
  *     Incoming:        exports.durableObject({ state: "expecting-transfer", storage: "sqlite", transferFrom: "source-worker" }),
+ *     MyWorkflow:      exports.workflow({ name: "my-workflow", limits: { steps: 100 }, schedules: "0 * * * *" }),
  *   },
  * });
+ *
+ * export default defineConfig({ worker, containers: [myContainer] });
  * ```
  */
 export const exports: Exports = {
 	durableObject,
 	worker,
+	workflow,
 };

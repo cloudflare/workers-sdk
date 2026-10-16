@@ -13,9 +13,9 @@ import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import chalk from "chalk";
 import dedent from "ts-dedent";
-import { isKnownFramework } from "../frameworks";
+import { isFrameworkSupported, isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
-import type { AutoConfigContext } from "../context";
+import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { Config, TelemetryMessage } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
@@ -30,10 +30,11 @@ import type { Settings } from "@netlify/build-info";
  * returns early with a synthetic "Cloudflare Pages" framework entry.
  *
  * @param projectPath Path to the project root
- * @param wranglerConfig Optional parsed wrangler config for the project
+ * @param context Autoconfig context used for logging and user interaction
+ * @param options Detection options
  * @returns An object containing:
- *   - `detectedFramework`: The matched framework together with its build
- *     command and output directory.
+ *   - `detectedFramework`: The matched framework, its build and development
+ *     commands, and its output directory.
  *   - `packageManager`: The package manager detected in the project.
  *   - `isWorkspaceRoot`: `true` when the project path is the root of a
  *     monorepo workspace (only present when relevant).
@@ -46,7 +47,13 @@ import type { Settings } from "@netlify/build-info";
 export async function detectFramework(
 	projectPath: string,
 	context: AutoConfigContext,
-	wranglerConfig?: Config
+	{
+		wranglerConfig,
+		target = "cf",
+	}: {
+		wranglerConfig?: Config;
+		target?: AutoConfigTarget;
+	} = {}
 ): Promise<{
 	detectedFramework: DetectedFramework;
 	packageManager: PackageManager;
@@ -96,6 +103,24 @@ export async function detectFramework(
 		buildSettings,
 		context
 	);
+	if (maybeDetectedFramework && target === "cf") {
+		const frameworkId = maybeDetectedFramework.framework.id;
+		const frameworkIsSupported =
+			isKnownFramework(frameworkId) && isFrameworkSupported(frameworkId);
+
+		// @netlify/build-info prefers package.json scripts over the framework's
+		// built-in commands. cf needs direct commands for supported frameworks, but
+		// delegates unsupported frameworks to an installed Cloudflare dev server and
+		// must not execute their generic package scripts.
+		const detectedFrameworkSettings = frameworkIsSupported
+			? project.frameworks
+					.get(maybeDetectedFramework.baseDirectory ?? "")
+					?.find(({ id }) => id === frameworkId)
+			: undefined;
+		maybeDetectedFramework.devCommand = detectedFrameworkSettings?.dev?.command;
+		maybeDetectedFramework.buildCommand =
+			detectedFrameworkSettings?.build?.command;
+	}
 
 	if (
 		await isPagesProject(
@@ -216,10 +241,12 @@ function throwMultipleFrameworksNonInteractiveError(
 }
 
 type DetectedFramework = {
+	baseDirectory?: string;
 	framework: {
 		name: string;
 		id: string;
 	};
+	devCommand?: string | undefined;
 	buildCommand?: string | undefined;
 	dist?: string;
 };

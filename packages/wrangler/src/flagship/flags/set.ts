@@ -1,8 +1,9 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { getFlag, toFlagInput, updateFlag } from "../client";
+import { toFlagInput } from "../client";
 import { renderFlag } from "../render";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 
 export const flagshipFlagsSetCommand = createCommand({
 	metadata: {
@@ -40,21 +41,24 @@ export const flagshipFlagsSetCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config }) {
 		const { appId, key } = args;
-		const current = await getFlag(config, appId, key);
-		if (!(args.variation in current.variations)) {
-			throw new UserError(
-				`Unknown variation "${args.variation}". Available variations: ${Object.keys(current.variations).join(", ")}`,
-				{ telemetryMessage: "flagship set unknown variation" }
-			);
-		}
-		const flag = await updateFlag(config, appId, key, {
-			...toFlagInput(current),
-			default_variation: args.variation,
-			rules: args.clearRules ? [] : current.rules,
+		const flag = await withFlagStore(args, config, appId, async (store) => {
+			const current = await store.getFlag(key);
+			if (!(args.variation in current.variations)) {
+				throw new UserError(
+					`Unknown variation "${args.variation}". Available variations: ${Object.keys(current.variations).join(", ")}`,
+					{ telemetryMessage: "flagship set unknown variation" }
+				);
+			}
+			return store.updateFlag(key, {
+				...toFlagInput(current),
+				default_variation: args.variation,
+				rules: args.clearRules ? [] : current.rules,
+			});
 		});
 		if (args.json) {
 			logger.json(flag);

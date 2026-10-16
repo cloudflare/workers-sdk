@@ -4,6 +4,30 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
+		expect,
+	}) => {
+		const stream = "stream-v2:orders";
+		const remoteProxyConnectionString = new URL(
+			"http://127.0.0.1:8787"
+		) as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			name: "producer",
+			script: "export default {};",
+			modules: true,
+			k2: { ORDERS: { stream, remoteProxyConnectionString } },
+		});
+
+		expect(converted.workers[0].config.env?.ORDERS).toEqual({
+			type: "k2",
+			stream,
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
+			remoteProxyConnectionString
+		);
+	});
+
 	test("converts local, external, and unbound durable objects", ({
 		expect,
 	}) => {
@@ -35,17 +59,17 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.env).toMatchObject({
 			LOCAL: {
 				type: "durable-object",
-				workerName: "worker",
+				worker: "worker",
 				exportName: "LocalObject",
 			},
 			EXTERNAL: {
 				type: "durable-object",
-				workerName: "external-worker",
+				worker: "external-worker",
 				exportName: "ExternalObject",
 			},
 			SELF_EXPLICIT: {
 				type: "durable-object",
-				workerName: "worker",
+				worker: "worker",
 				exportName: "SelfExplicitObject",
 			},
 		});
@@ -68,6 +92,48 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.exports).not.toHaveProperty(
 			"ExternalObject"
 		);
+	});
+
+	test("converts workflow exports to config exports", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			compatibilityDate: "2026-01-01",
+			script: "export default {};",
+			workflowExports: {
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
+			},
+		});
+
+		expect(converted.workers[0].config.exports).toMatchObject({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: {
+				type: "workflow",
+				name: "batch",
+				limits: { steps: 10 },
+			},
+		});
+	});
+
+	test("nests Access local development configuration in the Worker config", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			access: {
+				aud: "my-app-aud-tag",
+				identity: { email: "user@example.com" },
+			},
+		});
+
+		expect(converted.workers[0].config.access).toEqual({
+			dev: {
+				aud: "my-app-aud-tag",
+				identity: { email: "user@example.com" },
+			},
+		});
+		expect(converted.workers[0].dev).not.toHaveProperty("access");
 	});
 
 	test("converts module source and representative bindings", ({ expect }) => {
@@ -93,6 +159,7 @@ describe("convertV4MiniflareOptions", () => {
 			serviceBindings: { SERVICE: "other-worker" },
 			assets: { directory: "./public", binding: "ASSETS" },
 			browserRendering: { binding: "BROWSER", headful: true },
+			analyticsSql: { binding: "ANALYTICS" },
 			workflows: {
 				WORKFLOW: {
 					name: "workflow",
@@ -108,7 +175,6 @@ describe("convertV4MiniflareOptions", () => {
 		});
 
 		expect(converted.workers[0].config).toMatchObject({
-			type: "worker",
 			name: "worker",
 			compatibilityDate: "2000-01-01",
 			manifest: {
@@ -129,31 +195,55 @@ describe("convertV4MiniflareOptions", () => {
 				R2: {
 					type: "r2",
 					name: "bucket",
-					s3Credentials: {
-						accessKeyId: "access-key",
-						secretAccessKey: "secret-key",
+					dev: {
+						experimentalS3Credentials: {
+							accessKeyId: "access-key",
+							secretAccessKey: "secret-key",
+						},
 					},
 				},
 				QUEUE: { type: "queue", name: "queue" },
-				SERVICE: { type: "worker", workerName: "other-worker" },
+				SERVICE: { type: "worker", worker: "other-worker" },
+				ANALYTICS: { type: "analytics", dev: { remote: false } },
 				ASSETS: { type: "assets" },
 				BROWSER: { type: "browser", headful: true },
 				WORKFLOW: {
 					type: "workflow",
 					name: "workflow",
-					workerName: "worker",
+					worker: "worker",
 					exportName: "Workflow",
 					limits: { steps: 5 },
 				},
 				SELF_EXPLICIT_WORKFLOW: {
 					type: "workflow",
 					name: "self-explicit-workflow",
-					workerName: "worker",
+					worker: "worker",
 					exportName: "SelfExplicitWorkflow",
 				},
 			},
 			triggers: [{ type: "queue", name: "queue", maxBatchSize: 10 }],
 		});
+	});
+
+	test("nests remote binding configuration under dev", ({ expect }) => {
+		const remoteProxyConnectionString = new URL(
+			"http://localhost:1234"
+		) as unknown as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			kvNamespaces: {
+				KV: { id: "namespace", remoteProxyConnectionString },
+			},
+		});
+
+		expect(converted.workers[0].config.env?.KV).toEqual({
+			type: "kv",
+			id: "namespace",
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toBe(
+			remoteProxyConnectionString
+		);
 	});
 
 	test("treats empty versionMetadata binding as absent", ({ expect }) => {
@@ -182,6 +272,33 @@ describe("convertV4MiniflareOptions", () => {
 			"addEventListener('fetch', () => {});"
 		);
 	});
+
+	test("converts cron triggers in exact input order", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			cronTriggers: ["*/5 * * * *", " 0 17 * * SUN "],
+		});
+
+		expect(converted.workers[0].config.triggers).toEqual([
+			{ type: "scheduled", schedule: "*/5 * * * *" },
+			{ type: "scheduled", schedule: " 0 17 * * SUN " },
+		]);
+	});
+
+	test.for([
+		{ label: "missing", cronTriggers: undefined },
+		{ label: "empty", cronTriggers: [] as string[] },
+	])(
+		"converts $label cron triggers to no scheduled entries",
+		({ cronTriggers }, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				cronTriggers,
+			});
+
+			expect(converted.workers[0].config.triggers).toBeUndefined();
+		}
+	);
 
 	test("resolves worker rootPath relative to shared rootPath", ({ expect }) => {
 		const sharedRootPath = path.join(__dirname, "project");
@@ -474,6 +591,7 @@ describe("convertV4MiniflareOptions", () => {
 				assetConfig: {
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
+					base_path: "/subpath",
 				},
 			},
 		});
@@ -481,6 +599,7 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.assets).toEqual({
 			directory: "./public",
 			hasUserWorker: true,
+			basePath: "/subpath",
 			htmlHandling: "auto-trailing-slash",
 			notFoundHandling: "single-page-application",
 			runWorkerFirst: true,

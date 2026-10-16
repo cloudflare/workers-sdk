@@ -5,7 +5,7 @@ import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import {
-	NO_ACTIVE_PREVIEW_URLS_MESSAGE,
+	formatNoActivePreviewUrlsMessage,
 	patchPreviewDeploymentSecrets,
 	resolvePreviewName,
 } from "./index";
@@ -16,7 +16,7 @@ export const previewSecretDeleteCommand = createCommand({
 			"Delete a secret variable from a Worker Preview and create a new deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	positionalArgs: ["key"],
 	args: {
@@ -94,7 +94,7 @@ export const previewSecretDeleteCommand = createCommand({
 						? `\n➡️  Your Preview "${previewName}" is now live at ${liveUrls
 								.map((url) => chalk.bold.underline(url))
 								.join(", ")}`
-						: `\n${NO_ACTIVE_PREVIEW_URLS_MESSAGE}`)
+						: `\n${formatNoActivePreviewUrlsMessage(config)}`)
 			);
 		}
 	},

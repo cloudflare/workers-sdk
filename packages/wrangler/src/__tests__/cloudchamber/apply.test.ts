@@ -809,7 +809,16 @@ describe("cloudchamber apply", () => {
 		};
 		writeWranglerConfig({
 			name: "my-container",
-			containers: [app, { ...app, name: "my-container-app-2" }],
+			// Each container needs its own Durable Object class; a Durable Object can
+			// only have one container attached to it.
+			containers: [
+				app,
+				{
+					...app,
+					name: "my-container-app-2",
+					class_name: "DurableObjectClass2",
+				},
+			],
 		});
 
 		const completeApp = {
@@ -865,7 +874,13 @@ describe("cloudchamber apply", () => {
 
 		mockGetApplications([
 			{ ...completeApp, version: 1 },
-			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
+			{
+				...completeApp,
+				version: 1,
+				name: "my-container-app-2",
+				id: "abc2",
+				class_name: "DurableObjectClass2",
+			},
 		]);
 		await runWrangler("cloudchamber apply");
 		expect(std.stdout).toMatchInlineSnapshot(`

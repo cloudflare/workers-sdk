@@ -73,7 +73,6 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
         workers: [
           {
             config: {
-              type: "worker",
               name: "",
               compatibilityDate: "2025-05-01",
               manifest: ${JSON.stringify(manifest)},

@@ -71,7 +71,10 @@ describe("startRemoteProxySession error handling", () => {
 		mockDevEnv.error = userError;
 
 		await expect(
-			startRemoteProxySession({}, { logger: createTestLogger() })
+			startRemoteProxySession(
+				{},
+				{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+			)
 		).rejects.toBe(userError);
 	});
 
@@ -83,7 +86,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ logger: createTestLogger() }
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).toBe(authError);
@@ -97,7 +100,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ logger: createTestLogger() }
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).toBeInstanceOf(Error);
@@ -125,7 +128,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ logger: createTestLogger() }
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).not.toBeInstanceOf(APIError);

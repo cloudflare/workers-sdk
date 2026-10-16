@@ -1,12 +1,14 @@
 import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import {
+	readWranglerConfig,
 	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
+import { mockServiceScriptData } from "./deploy/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
@@ -182,6 +184,256 @@ describe("resource provisioning", () => {
 		await runWrangler("deploy");
 
 		expect(std.err).toBe("");
+	});
+
+	it("skips provisioning a resource type when Wrangler cannot check whether it exists", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			kv_namespaces: [{ binding: "KV" }],
+			r2_buckets: [{ binding: "R2" }],
+		});
+		mockGetSettings();
+		mockListKVNamespacesRequest(expect);
+		mockCreateKVNamespace(expect, {
+			resultId: "new-kv-id",
+			assertTitle: "test-name-kv",
+		});
+
+		let r2BucketCreated = false;
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			),
+			http.post("*/accounts/:accountId/r2/buckets", () => {
+				r2BucketCreated = true;
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "KV", type: "kv_namespace", namespace_id: "new-kv-id" },
+				{ name: "R2", type: "inherit" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(r2BucketCreated).toBe(false);
+		expect(std.out).toContain("Uploaded test-name");
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for the following bindings"
+		);
+		expect(std.warn).toContain("R2 - R2");
+		expect(std.err).toBe("");
+	});
+
+	it("fails provisioning when a resource check fails with a non-permission error", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			r2_buckets: [{ binding: "R2" }],
+		});
+		mockGetSettings();
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Internal Server Error" },
+					]),
+					{ status: 500 }
+				)
+			)
+		);
+
+		await expect(runWrangler("deploy")).rejects.toThrow(
+			"A request to the Cloudflare API"
+		);
+	});
+
+	it("warns after a successful deploy when every provisionable binding skipped provisioning", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			r2_buckets: [{ binding: "R2", bucket_name: "existing-bucket" }],
+		});
+		mockGetSettings();
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/existing-bucket", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			)
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "R2", type: "r2_bucket", bucket_name: "existing-bucket" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(std.out).toContain("Uploaded test-name");
+		expect(std.out).not.toContain(
+			"The following bindings need to be provisioned"
+		);
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for the following bindings"
+		);
+		expect(std.warn).toContain("R2 - R2");
+	});
+
+	it("does not inherit from an existing D1 binding when a permission error prevents checking the configured database name", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			d1_databases: [{ binding: "D1", database_name: "new-d1-name" }],
+		});
+		mockGetSettings({
+			result: {
+				bindings: [{ type: "d1", name: "D1", id: "old-d1-id" }],
+			},
+		});
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/d1/database/:databaseId",
+				({ params }) => {
+					expect(params.databaseId).toBe("old-d1-id");
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10000, message: "Authentication error" },
+						]),
+						{ status: 403 }
+					);
+				}
+			)
+		);
+
+		await expect(runWrangler("deploy")).rejects.toThrow(
+			'D1 bindings must have a "database_id" field'
+		);
+		expect(std.warn).toBe("");
+	});
+
+	it("preserves an explicitly configured resource name when the provisioning picker cannot load resources", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			r2_buckets: [{ binding: "R2", bucket_name: "existing-bucket" }],
+		});
+		mockGetSettings();
+		mockGetR2Bucket(expect, "existing-bucket", true);
+
+		let r2BucketCreated = false;
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			),
+			http.post("*/accounts/:accountId/r2/buckets", () => {
+				r2BucketCreated = true;
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "R2", type: "r2_bucket", bucket_name: "existing-bucket" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(r2BucketCreated).toBe(false);
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for the following bindings"
+		);
+		expect(std.warn).toContain("R2 - R2");
+	});
+
+	it("preserves skipped binding array positions when a later binding of the same type provisions successfully", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			r2_buckets: [
+				{ binding: "R2_ONE", bucket_name: "first-bucket" },
+				{ binding: "R2_TWO" },
+			],
+		});
+		mockGetSettings();
+
+		let firstBucketCreated = false;
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/first-bucket", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			),
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(createFetchResult({ buckets: [] }))
+			),
+			http.post("*/accounts/:accountId/r2/buckets", async ({ request }) => {
+				const requestBody = await request.json();
+				if (
+					typeof requestBody === "object" &&
+					requestBody !== null &&
+					"name" in requestBody &&
+					requestBody.name === "first-bucket"
+				) {
+					firstBucketCreated = true;
+				}
+				expect(requestBody).toMatchObject({ name: "test-name-r2-two" });
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "R2_ONE", type: "r2_bucket", bucket_name: "first-bucket" },
+				{ name: "R2_TWO", type: "r2_bucket", bucket_name: "test-name-r2-two" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(firstBucketCreated).toBe(false);
+		expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
+			"compatibility_date = "2022-01-12"
+			name = "test-name"
+			main = "index.js"
+
+			[[r2_buckets]]
+			binding = "R2_ONE"
+			bucket_name = "first-bucket"
+
+			[[r2_buckets]]
+			binding = "R2_TWO"
+			bucket_name = "test-name-r2-two"
+			"
+		`);
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for the following bindings"
+		);
+		expect(std.warn).toContain("R2 - R2_ONE");
 	});
 
 	it("provisions a Queue used by both a producer and consumer", async ({
@@ -529,7 +781,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -652,7 +904,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -788,7 +1040,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -951,7 +1203,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -990,6 +1242,293 @@ describe("resource provisioning", () => {
 
 			rmSync(".wrangler/deploy/config.json");
 		});
+
+		it("preserves original D1 fields and order when writing a provisioned ID", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					main: "index.js",
+					d1_databases: [
+						{
+							binding: "EXISTING",
+							database_id: "original-id",
+							migrations_dir: "other-migrations",
+						},
+						{
+							binding: "NEW",
+							database_id: "original-stale-id",
+							migrations_dir: "migrations",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+			writeRedirectedWranglerConfig(
+				{
+					main: "../../index.js",
+					d1_databases: [
+						{ binding: "NEW", migrations_dir: "../../migrations" },
+						{
+							binding: "EXISTING",
+							database_id: "generated-id",
+							migrations_dir: "../../other-migrations",
+						},
+					],
+				},
+				"./dist/my-app/wrangler.json"
+			);
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-new",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{ name: "NEW", type: "d1", id: "new-d1-id" },
+					{ name: "EXISTING", type: "d1", id: "generated-id" },
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(
+				readWranglerConfig("./dist/my-app/wrangler.json").d1_databases
+			).toEqual([
+				{
+					binding: "NEW",
+					database_id: "new-d1-id",
+					migrations_dir: "../../migrations",
+				},
+				{
+					binding: "EXISTING",
+					database_id: "generated-id",
+					migrations_dir: "../../other-migrations",
+				},
+			]);
+			expect(readWranglerConfig("./wrangler.jsonc")).toEqual({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "EXISTING",
+						database_id: "original-id",
+						migrations_dir: "other-migrations",
+					},
+					{
+						binding: "NEW",
+						database_id: "new-d1-id",
+						migrations_dir: "migrations",
+					},
+				],
+			});
+
+			rmSync(".wrangler/deploy/config.json");
+		});
+
+		it("writes provisioned IDs to the original named environment", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "DEFAULT_D1",
+						migrations_dir: "default-migrations",
+					},
+				],
+				env: {
+					production: {
+						d1_databases: [
+							{
+								binding: "D1",
+								migrations_dir: "migrations",
+							},
+						],
+					},
+				},
+			});
+			writeRedirectedWranglerConfig({
+				name: "test-name-production",
+				main: "../index.js",
+				userConfigPath: "./wrangler.toml",
+				topLevelName: "test-name",
+				targetEnvironment: "production",
+				definedEnvironments: ["production"],
+				d1_databases: [
+					{
+						binding: "D1",
+						migrations_dir: "../../migrations",
+					},
+				],
+			});
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-production-d1",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedScriptName: "test-name-production",
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "d1",
+						id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(readWranglerConfig()).toEqual({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "DEFAULT_D1",
+						migrations_dir: "default-migrations",
+					},
+				],
+				env: {
+					production: {
+						d1_databases: [
+							{
+								binding: "D1",
+								database_id: "new-d1-id",
+								migrations_dir: "migrations",
+							},
+						],
+					},
+				},
+			});
+
+			rmSync(".wrangler/deploy/config.json");
+		});
+
+		it("writes provisioned IDs to the root config when no environment section exists", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", migrations_dir: "migrations" }],
+			});
+			writeRedirectedWranglerConfig({
+				name: "test-name-legacy",
+				main: "../index.js",
+				userConfigPath: "./wrangler.toml",
+				topLevelName: "test-name",
+				targetEnvironment: "legacy",
+				definedEnvironments: [],
+				d1_databases: [{ binding: "D1", migrations_dir: "../../migrations" }],
+			});
+			mockGetSettings();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockServiceScriptData({});
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-legacy-d1",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedScriptName: "test-name-legacy",
+				useOldUploadApi: true,
+			});
+
+			await runWrangler("deploy");
+
+			expect(readWranglerConfig().d1_databases).toEqual([
+				{
+					binding: "D1",
+					database_id: "new-d1-id",
+					migrations_dir: "migrations",
+				},
+			]);
+
+			rmSync(".wrangler/deploy/config.json");
+		});
+
+		it.for([undefined, ""])(
+			"writes a D1 ID resolved by name when another binding is provisioned (database_id: %s)",
+			async (databaseId, { expect }) => {
+				writeWranglerConfig({
+					main: "index.js",
+					kv_namespaces: [{ binding: "KV" }],
+					d1_databases: [
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: "stale-d1-id",
+							migrations_dir: "migrations",
+						},
+					],
+				});
+				writeRedirectedWranglerConfig({
+					main: "../index.js",
+					kv_namespaces: [{ binding: "KV" }],
+					d1_databases: [
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: databaseId,
+							migrations_dir: "../migrations",
+						},
+					],
+				});
+				mockGetSettings();
+				mockGetD1Database(expect, "existing-db-name", {
+					name: "existing-db-name",
+					uuid: "existing-d1-id",
+				});
+				mockListKVNamespacesRequest(expect);
+				mockCreateKVNamespace(expect, { resultId: "new-kv-id" });
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{ name: "KV", type: "kv_namespace", namespace_id: "new-kv-id" },
+						{ name: "D1", type: "d1", id: "existing-d1-id" },
+					],
+				});
+
+				await runWrangler("deploy");
+
+				expect(readWranglerConfig().d1_databases).toEqual([
+					{
+						binding: "D1",
+						database_name: "existing-db-name",
+						database_id: "existing-d1-id",
+						migrations_dir: "migrations",
+					},
+				]);
+				expect(readWranglerConfig().kv_namespaces).toEqual([
+					{ binding: "KV", id: "new-kv-id" },
+				]);
+				expect(readWranglerConfig("./dist/wrangler.json").d1_databases).toEqual(
+					[
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: "existing-d1-id",
+							migrations_dir: "../migrations",
+						},
+					]
+				);
+			}
+		);
 
 		it("can inject additional bindings in redirected config that aren't written back to disk", async ({
 			expect,
@@ -1106,7 +1645,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1251,7 +1790,7 @@ describe("resource provisioning", () => {
 				✨ D1 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1384,7 +1923,7 @@ describe("resource provisioning", () => {
 				✨ D1 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1465,7 +2004,7 @@ describe("resource provisioning", () => {
 				✨ BUCKET provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1665,7 +2204,7 @@ describe("resource provisioning", () => {
 				✨ BUCKET provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:

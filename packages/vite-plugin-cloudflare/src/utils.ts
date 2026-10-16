@@ -1,8 +1,9 @@
 import * as nodePath from "node:path";
 import * as util from "node:util";
-import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
+import { createHeaders, sendResponse } from "@remix-run/node-fetch-server";
 import {
 	CoreHeaders,
+	parseForwardedProto,
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
@@ -12,6 +13,8 @@ import * as vite from "vite";
 import { PROXY_SHARED_SECRET } from "./constants";
 import { warnIfQuickTunnelSseResponse } from "./plugins/tunnel";
 import type { PluginContext } from "./context";
+import type { ParsedInputSettingsConfig } from "@cloudflare/config";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type * as http from "node:http";
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
@@ -56,6 +59,12 @@ export type MaybePromise<T> = Promise<T> | T;
 
 export type Defined<T> = Exclude<T, undefined>;
 
+export function toApiComplianceRegion(
+	region: ParsedInputSettingsConfig["complianceRegion"]
+): ComplianceConfig["compliance_region"] {
+	return region === "fedramp-high" ? "fedramp_high" : region;
+}
+
 export function withTrailingSlash(path: string): string {
 	return path.endsWith("/") ? path : `${path}/`;
 }
@@ -97,7 +106,11 @@ export function createRequestHandler(
 			// If the header is absent or invalid, `createRequest` falls back to the
 			// connection protocol (`req.socket.encrypted`).
 			const protocol = getForwardedProto(req);
-			request = createRequest(req, res, protocol ? { protocol } : undefined);
+			request = createRequestForIncomingMessage(
+				req,
+				res,
+				protocol ? { protocol } : undefined
+			);
 
 			let response = await handler(toMiniflareRequest(request), req);
 
@@ -126,8 +139,95 @@ export function satisfiesMinimumViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 
-function toMiniflareRequest(request: Request): MiniflareRequest {
-	const host = request.headers.get("Host");
+export function createRequestForIncomingMessage(
+	req: vite.Connect.IncomingMessage,
+	res: http.ServerResponse,
+	options?: { protocol?: "http:" | "https:"; host?: string }
+): Request {
+	const controller = new AbortController();
+	res.on("close", () => {
+		controller.abort();
+	});
+
+	const method = req.method ?? "GET";
+	const headers = createHeaders(req);
+	const protocol =
+		options?.protocol ??
+		getScheme(req) ??
+		("encrypted" in req.socket && req.socket.encrypted ? "https:" : "http:");
+	const host =
+		options?.host ?? getAuthority(req) ?? headers.get("Host") ?? "localhost";
+	if (headers.get("Host") !== host) {
+		headers.set("Host", host);
+	}
+	const url = new URL(req.url ?? "/", `${protocol}//${host}`);
+	const init: RequestInit & { duplex?: "half" } = {
+		method,
+		headers,
+		signal: controller.signal,
+	};
+
+	if (method !== "GET" && method !== "HEAD") {
+		init.body = createCancellableRequestBody(req);
+		init.duplex = "half";
+	}
+
+	return new Request(url, init);
+}
+
+function createCancellableRequestBody(
+	req: vite.Connect.IncomingMessage
+): ReadableStream<Uint8Array> {
+	let cleanup: (() => void) | undefined;
+
+	return new ReadableStream<Uint8Array>({
+		start(controller) {
+			const onData = (chunk: Buffer) => {
+				try {
+					controller.enqueue(
+						new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength)
+					);
+				} catch (error) {
+					if (
+						error instanceof TypeError &&
+						error.message.includes("Controller is already closed")
+					) {
+						cleanup?.();
+						req.resume();
+						return;
+					}
+					throw error;
+				}
+			};
+			const onEnd = () => {
+				cleanup?.();
+				controller.close();
+			};
+			const onError = (error: Error) => {
+				cleanup?.();
+				controller.error(error);
+			};
+
+			cleanup = () => {
+				req.off("data", onData);
+				req.off("end", onEnd);
+				req.off("error", onError);
+				cleanup = undefined;
+			};
+
+			req.on("data", onData);
+			req.on("end", onEnd);
+			req.on("error", onError);
+		},
+		cancel() {
+			cleanup?.();
+			req.resume();
+		},
+	});
+}
+
+export function toMiniflareRequest(request: Request): MiniflareRequest {
+	const host = request.headers.get("Host") ?? new URL(request.url).host;
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
 
 	if (host && !xForwardedHost) {
@@ -168,13 +268,61 @@ export function getForwardedProto(req: {
 	headers: http.IncomingHttpHeaders;
 }): "http:" | "https:" | undefined {
 	const raw = req.headers["x-forwarded-proto"];
+	return parseForwardedProto(Array.isArray(raw) ? raw[0] : raw);
+}
+
+/**
+ * Extracts the authority (host and port) from an incoming Node.js request.
+ *
+ * In HTTP/2, browsers pass the host and port in the `:authority` pseudo-header
+ * rather than the HTTP/1.1 `Host` header. This helper inspects `:authority`
+ * (or the `authority` property on `http2.Http2ServerRequest`) so that ports
+ * are preserved when converting Node requests to standard Fetch requests.
+ *
+ * @param req Incoming request containing HTTP headers and optional authority property
+ * @returns The authority string (e.g. "localhost:5173"), or undefined if not present
+ */
+export function getAuthority(req: {
+	headers: http.IncomingHttpHeaders;
+	authority?: string;
+}): string | undefined {
+	const raw = req.headers[":authority"];
 	const value = Array.isArray(raw) ? raw[0] : raw;
-	if (!value) {
-		return undefined;
+	if (value) {
+		return value;
 	}
-	const first = value.split(",")[0]?.trim().toLowerCase();
-	if (first === "http" || first === "https") {
-		return `${first}:`;
+	if (typeof req.authority === "string" && req.authority) {
+		return req.authority;
+	}
+	return undefined;
+}
+
+/**
+ * Extracts the scheme from an incoming Node.js request.
+ *
+ * Checks the `:scheme` pseudo-header in HTTP/2 requests or the `scheme`
+ * property on `http2.Http2ServerRequest`.
+ *
+ * @param req Incoming request containing HTTP headers and optional scheme property
+ * @returns The normalized scheme ("http:" or "https:"), or undefined if not present or unsupported
+ */
+export function getScheme(req: {
+	headers: http.IncomingHttpHeaders;
+	scheme?: string;
+}): "http:" | "https:" | undefined {
+	const raw = req.headers[":scheme"];
+	const value = Array.isArray(raw) ? raw[0] : raw;
+	if (value) {
+		const lower = value.toLowerCase();
+		if (lower === "http" || lower === "https") {
+			return `${lower}:`;
+		}
+	}
+	if (typeof req.scheme === "string" && req.scheme) {
+		const lower = req.scheme.toLowerCase();
+		if (lower === "http" || lower === "https") {
+			return `${lower}:`;
+		}
 	}
 	return undefined;
 }

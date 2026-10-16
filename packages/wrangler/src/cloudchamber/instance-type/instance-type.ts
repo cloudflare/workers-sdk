@@ -1,85 +1,71 @@
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
-import { InstanceType } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
-import type {
-	CreateApplicationRequest,
-	UserDeploymentConfiguration,
+import {
+	cleanForInstanceType as cleanForInstanceTypeFromShared,
+	getInstanceTypeUsage as getInstanceTypeUsageFromShared,
+	inferInstanceType as inferInstanceTypeFromShared,
+	InstanceType,
 } from "@cloudflare/containers-shared";
-import type {
-	CloudchamberConfig,
-	ContainerApp,
-} from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import type { CloudchamberConfig } from "@cloudflare/workers-utils";
 
-const instanceTypes = {
-	// lite is the default instance type when REQUIRE_INSTANCE_TYPE is set
-	lite: {
-		vcpu: 0.0625,
-		memory_mib: 256,
-		disk_mb: 2000,
-	},
-	dev: {
-		vcpu: 0.0625,
-		memory_mib: 256,
-		disk_mb: 2000,
-	},
-	basic: {
-		vcpu: 0.25,
-		memory_mib: 1024,
-		disk_mb: 4000,
-	},
-	standard: {
-		vcpu: 0.5,
-		memory_mib: 4096,
-		disk_mb: 8000,
-	},
-	"standard-1": {
-		vcpu: 0.5,
-		memory_mib: 4096,
-		disk_mb: 8000,
-	},
-	"standard-2": {
-		vcpu: 1,
-		memory_mib: 6144,
-		disk_mb: 12000,
-	},
-	"standard-3": {
-		vcpu: 2,
-		memory_mib: 8192,
-		disk_mb: 16000,
-	},
-	"standard-4": {
-		vcpu: 4,
-		memory_mib: 12_288,
-		disk_mb: 20000,
-	},
-} as const;
+export {
+	cleanForInstanceTypeFromShared as cleanForInstanceType,
+	getInstanceTypeUsageFromShared as getInstanceTypeUsage,
+	inferInstanceTypeFromShared as inferInstanceType,
+};
 
-const instanceTypeNames = Object.keys(instanceTypes);
+const instanceTypeNames: string[] = Object.values(InstanceType);
+const promptInstanceTypes = [
+	InstanceType.LITE,
+	InstanceType.BASIC,
+	InstanceType.STANDARD_1,
+	InstanceType.STANDARD_2,
+	InstanceType.STANDARD_3,
+	InstanceType.STANDARD_4,
+] as const;
+
+type InstanceTypeOption = {
+	label: string;
+	value: string;
+};
+
+function formatVcpu(vcpu: number): string {
+	if (vcpu === 0.0625) {
+		return "1/16";
+	}
+	if (vcpu === 0.25) {
+		return "1/4";
+	}
+	if (vcpu === 0.5) {
+		return "1/2";
+	}
+	return `${vcpu}`;
+}
+
+function formatMemory(memoryMib: number): string {
+	if (memoryMib < 1024) {
+		return `${memoryMib} MiB`;
+	}
+	return `${memoryMib / 1024} GiB`;
+}
+
+function formatDisk(diskMb: number): string {
+	return `${diskMb / 1000} GB`;
+}
 
 // prompts for instance type
 export async function promptForInstanceType(
 	allowSkipping: boolean
 ): Promise<InstanceType | undefined> {
-	let options = [
-		{ label: "lite: 1/16 vCPU, 256 MiB memory, 2 GB disk", value: "lite" },
-		{ label: "basic: 1/4 vCPU, 1 GiB memory, 4 GB disk", value: "basic" },
-		{
-			label: "standard-1: 1/2 vCPU, 4 GiB memory, 8 GB disk",
-			value: "standard-1",
-		},
-		{
-			label: "standard-2: 1/2 vCPU, 4 GiB memory, 12 GB disk",
-			value: "standard-2",
-		},
-		{
-			label: "standard-3: 1/2 vCPU, 4 GiB memory, 16 GB disk",
-			value: "standard-3",
-		},
-		{
-			label: "standard-4: 4 vCPU, 4 GiB memory, 20 GB disk",
-			value: "standard-4",
-		},
-	];
+	let options: InstanceTypeOption[] = promptInstanceTypes.map(
+		(instanceType) => {
+			const usage = getInstanceTypeUsageFromShared(instanceType);
+			return {
+				label: `${instanceType}: ${formatVcpu(usage.vcpu)} vCPU, ${formatMemory(usage.memory_mib)} memory, ${formatDisk(usage.disk_mb)} disk`,
+				value: instanceType,
+			};
+		}
+	);
 	if (allowSkipping) {
 		options = [{ label: "Do not set", value: "skip" }].concat(options);
 	}
@@ -133,68 +119,4 @@ export function checkInstanceType(
 			{ telemetryMessage: "cloudchamber instance type invalid value" }
 		);
 	}
-}
-
-// get the usage for the provided instance type
-export function getInstanceTypeUsage(instanceType: InstanceType): {
-	vcpu: number;
-	memory_mib: number;
-	disk_mb: number;
-} {
-	return instanceTypes[instanceType];
-}
-
-// Legacy alias → canonical name mapping.
-// The API may return the legacy alias (e.g. "standard") for an instance
-// type configured as the canonical name ("standard-1"). Normalizing ensures
-// the deploy diff doesn't show a phantom EDIT for instance_type.
-const LEGACY_TO_CANONICAL: Record<"dev" | "standard", InstanceType> = {
-	dev: InstanceType.LITE,
-	standard: InstanceType.STANDARD_1,
-};
-
-// infers the instance type from a given configuration
-export function inferInstanceType(
-	config: UserDeploymentConfiguration
-): InstanceType | undefined {
-	for (const [instanceType, configuration] of Object.entries(instanceTypes)) {
-		if (
-			config.vcpu === configuration.vcpu &&
-			config.memory_mib === configuration.memory_mib &&
-			config.disk?.size_mb === configuration.disk_mb
-		) {
-			const canonical =
-				instanceType in LEGACY_TO_CANONICAL
-					? LEGACY_TO_CANONICAL[
-							instanceType as keyof typeof LEGACY_TO_CANONICAL
-						]
-					: undefined;
-			return (canonical ?? instanceType) as InstanceType;
-		}
-	}
-}
-
-/**
- * THIS IS ONLY USED FOR CLOUDCHAMBER APPLY
- * removes any disk, memory, or vcpu that have been set in an objects configuration. Used for rendering diffs.
- */
-export function cleanForInstanceType(
-	app: CreateApplicationRequest
-): ContainerApp {
-	if (!("configuration" in app)) {
-		return app as ContainerApp;
-	}
-
-	const instance_type = inferInstanceType(app.configuration);
-	if (instance_type !== undefined) {
-		app.configuration.instance_type = instance_type;
-	}
-
-	delete app.configuration.disk;
-	// eslint-disable-next-line @typescript-eslint/no-deprecated -- intentionally cleaning up deprecated `memory` field
-	delete app.configuration.memory;
-	delete app.configuration.memory_mib;
-	delete app.configuration.vcpu;
-
-	return app as ContainerApp;
 }

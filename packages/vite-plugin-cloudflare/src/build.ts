@@ -4,13 +4,11 @@ import * as path from "node:path";
 import colors from "picocolors";
 import { resolveDevOnly } from "./plugin-config";
 import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
-import { satisfiesMinimumViteVersion } from "./utils";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 const CLIENT_FALLBACK_ENTRY_NAME = "__cloudflare_fallback_entry__";
 
@@ -23,7 +21,7 @@ export function createBuildApp(
 		const defaultHtmlPath = path.resolve(builder.config.root, "index.html");
 		const hasClientEntry =
 			/* eslint-disable-next-line @typescript-eslint/no-deprecated --
-				We use `rollupOptions` for backward compatibility with Vite 6 and 7, where `rolldownOptions` does not exist.
+				We use `rollupOptions` for backward compatibility with Vite 7, where `rolldownOptions` does not exist.
 				In Vite 8, `rollupOptions` is aliased to `rolldownOptions` so this works across all supported versions. */
 			clientEnvironment.config.build.rollupOptions.input ||
 			fs.existsSync(defaultHtmlPath);
@@ -86,12 +84,6 @@ export function createBuildApp(
 		) {
 			await fallbackBuild(builder, clientEnvironment);
 		} else {
-			const cfBuildOutput =
-				resolvedPluginConfig.experimental.newConfig?.cfBuildOutput === true;
-			// In Vite 7 and above we do this in the `buildApp` hook.
-			if (!satisfiesMinimumViteVersion("7.0.0") && !cfBuildOutput) {
-				removeAssetsField(entryWorkerBuildDirectory);
-			}
 			// Return early as there is no client build
 			return;
 		}
@@ -159,7 +151,7 @@ async function fallbackBuild(
 	environment: vite.BuildEnvironment
 ): Promise<void> {
 	/* eslint-disable-next-line @typescript-eslint/no-deprecated --
-		We use `rollupOptions` for backward compatibility with Vite 6 and 7, where `rolldownOptions` does not exist.
+		We use `rollupOptions` for backward compatibility with Vite 7, where `rolldownOptions` does not exist.
 		In Vite 8, `rollupOptions` is aliased to `rolldownOptions` so this works across all supported versions. */
 	environment.config.build.rollupOptions = {
 		input: VIRTUAL_CLIENT_FALLBACK_ENTRY,
@@ -180,7 +172,8 @@ async function fallbackBuild(
 	fs.unlinkSync(fallbackEntryPath);
 }
 
-function loadViteManifest(directory: string) {
+/** Read the Vite manifest emitted for a completed environment build. */
+export function loadViteManifest(directory: string): vite.Manifest {
 	const contents = fs.readFileSync(
 		path.resolve(directory, ".vite", "manifest.json"),
 		"utf-8"
@@ -195,21 +188,4 @@ function getImportedAssetPaths(viteManifest: vite.Manifest): Set<string> {
 	);
 
 	return new Set(assetPaths);
-}
-
-/**
- * Used to remove the `assets` field from the entry Worker config if there are no assets
- */
-export function removeAssetsField(entryWorkerBuildDirectory: string): void {
-	const entryWorkerConfigPath = path.join(
-		entryWorkerBuildDirectory,
-		"wrangler.json"
-	);
-	const workerConfig = JSON.parse(
-		fs.readFileSync(entryWorkerConfigPath, "utf-8")
-	) as Unstable_Config;
-
-	workerConfig.assets = undefined;
-
-	fs.writeFileSync(entryWorkerConfigPath, JSON.stringify(workerConfig));
 }

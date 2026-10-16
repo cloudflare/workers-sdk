@@ -57,7 +57,6 @@ describe("Durable Objects API", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "my-worker",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(`
@@ -74,12 +73,12 @@ describe("Durable Objects API", () => {
 						env: {
 							TEST_DO: {
 								type: "durable-object",
-								workerName: "my-worker",
+								worker: "my-worker",
 								exportName: "TestDO",
 							},
 							ANOTHER_DO: {
 								type: "durable-object",
-								workerName: "my-worker",
+								worker: "my-worker",
 								exportName: "AnotherDO",
 							},
 							// check that we're not including internal DOs used to implement other bindings
@@ -167,7 +166,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker-with-do",
 							compatibilityDate: "2026-01-01",
 							compatibilityFlags: ["nodejs_compat"],
@@ -215,7 +213,7 @@ describe("Durable Objects API", () => {
 							env: {
 								TEST_DO: {
 									type: "durable-object",
-									workerName: "worker-with-do",
+									worker: "worker-with-do",
 									exportName: "TestDO",
 								},
 							},
@@ -321,7 +319,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "my-worker",
 							compatibilityDate: "2026-01-01",
 							manifest: singleModuleManifest(`
@@ -331,13 +328,13 @@ describe("Durable Objects API", () => {
 							env: {
 								LOCAL_DO: {
 									type: "durable-object",
-									workerName: "my-worker",
+									worker: "my-worker",
 									exportName: "LocalDO",
 								},
 								// This DO references a worker not in this miniflare instance
 								EXTERNAL_DO: {
 									type: "durable-object",
-									workerName: "remote-worker",
+									worker: "remote-worker",
 									exportName: "ExternalDO",
 								},
 							},
@@ -385,7 +382,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker-a",
 							compatibilityDate: "2026-01-01",
 							manifest: singleModuleManifest(`
@@ -395,7 +391,7 @@ describe("Durable Objects API", () => {
 							env: {
 								MY_DO: {
 									type: "durable-object",
-									workerName: "worker-a",
+									worker: "worker-a",
 									exportName: "SharedDO",
 								},
 							},
@@ -406,7 +402,6 @@ describe("Durable Objects API", () => {
 					},
 					{
 						config: {
-							type: "worker",
 							name: "worker-b",
 							compatibilityDate: "2026-01-01",
 							manifest: singleModuleManifest(`
@@ -416,7 +411,7 @@ describe("Durable Objects API", () => {
 								// References the DO in worker-a
 								MY_DO: {
 									type: "durable-object",
-									workerName: "worker-a",
+									worker: "worker-a",
 									exportName: "SharedDO",
 								},
 							},
@@ -455,7 +450,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "my-worker",
 							compatibilityDate: "2026-01-01",
 							manifest: singleModuleManifest(`
@@ -467,7 +461,7 @@ describe("Durable Objects API", () => {
 							env: {
 								BOUND_DO: {
 									type: "durable-object",
-									workerName: "my-worker",
+									worker: "my-worker",
 									exportName: "BoundDO",
 								},
 							},
@@ -527,7 +521,6 @@ describe("Durable Objects API", () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "query-worker",
 							compatibilityDate: "2026-01-01",
 							compatibilityFlags: ["nodejs_compat"],
@@ -592,12 +585,12 @@ describe("Durable Objects API", () => {
 							env: {
 								SQLITE_DO: {
 									type: "durable-object",
-									workerName: "query-worker",
+									worker: "query-worker",
 									exportName: "SqliteDO",
 								},
 								NON_SQLITE_DO: {
 									type: "durable-object",
-									workerName: "query-worker",
+									worker: "query-worker",
 									exportName: "NonSqliteDO",
 								},
 							},

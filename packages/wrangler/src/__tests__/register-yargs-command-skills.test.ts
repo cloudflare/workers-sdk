@@ -30,14 +30,15 @@ describe("register-yargs-command skills integration", () => {
 		});
 	});
 
-	test("does not call runSkillsInstallFlow for commands without suggestSkillsAfterHandler", async ({
+	test("does not check skills for commands without suggestSkillsAfterHandler", async ({
 		expect,
 	}) => {
-		// `wrangler complete` intentionally does not suggest skills because
+		// `wrangler complete` intentionally does not check skills because
 		// its stdout is captured by shell eval.
 		await runWrangler("complete zsh");
 
 		expect(runSkillsInstallFlow).not.toHaveBeenCalled();
+		expect(runSkillsUpdateFlow).not.toHaveBeenCalled();
 	});
 
 	test("calls runSkillsInstallFlow with force: true and command when --install-skills is passed", async ({
@@ -53,30 +54,28 @@ describe("register-yargs-command skills integration", () => {
 		});
 	});
 
-	test("calls runSkillsInstallFlow after commands with suggestSkillsAfterHandler: true", async ({
+	test("calls runSkillsUpdateFlow after commands with suggestSkillsAfterHandler: true", async ({
 		expect,
 	}) => {
 		await runWrangler("setup");
 
-		expect(runSkillsInstallFlow).toHaveBeenCalledWith({
-			force: false,
+		expect(runSkillsInstallFlow).not.toHaveBeenCalled();
+		expect(runSkillsUpdateFlow).toHaveBeenCalledWith({
 			command: "setup",
-			promptMessage: expect.any(Function),
 		});
 	});
 
-	test("calls runSkillsInstallFlow after `wrangler whoami` (non-JSON)", async ({
+	test("calls runSkillsUpdateFlow after `wrangler whoami` (non-JSON)", async ({
 		expect,
 	}) => {
 		// whoami in non-JSON mode completes successfully even without auth
-		// (it just prints "You are not authenticated") — the suggest-skills
+		// (it just prints "You are not authenticated") — the skills update
 		// hook should still fire afterwards.
 		await runWrangler("whoami");
 
-		expect(runSkillsInstallFlow).toHaveBeenCalledWith({
-			force: false,
+		expect(runSkillsInstallFlow).not.toHaveBeenCalled();
+		expect(runSkillsUpdateFlow).toHaveBeenCalledWith({
 			command: "whoami",
-			promptMessage: expect.any(Function),
 		});
 	});
 
@@ -97,7 +96,7 @@ describe("register-yargs-command skills integration", () => {
 		expect(call.command).not.toContain("install-skills");
 	});
 
-	test("does not call runSkillsInstallFlow after `wrangler whoami --json`", async ({
+	test("does not check skills after `wrangler whoami --json`", async ({
 		expect,
 	}) => {
 		// whoami --json without auth throws (non-zero exit), so we catch it.
@@ -106,67 +105,35 @@ describe("register-yargs-command skills integration", () => {
 		await expect(runWrangler("whoami --json")).rejects.toThrow();
 
 		expect(runSkillsInstallFlow).not.toHaveBeenCalled();
-	});
-
-	test("does not fail the command when runSkillsInstallFlow throws", async ({
-		expect,
-	}) => {
-		// If the post-handler skills suggestion fails (e.g. EACCES writing
-		// the metadata file, or an I/O error from the confirm prompt), the
-		// command itself should still succeed — the error is swallowed and
-		// logged at debug level.
-		vi.mocked(runSkillsInstallFlow).mockRejectedValueOnce(
-			new Error("EACCES: permission denied")
-		);
-
-		// `setup` has suggestSkillsAfterHandler: true, so it triggers the flow.
-		// This should resolve successfully despite the skills flow throwing.
-		await runWrangler("setup");
-
-		expect(runSkillsInstallFlow).toHaveBeenCalled();
-	});
-
-	test("does not call runSkillsUpdateFlow when runSkillsInstallFlow just installed skills", async ({
-		expect,
-	}) => {
-		// When the install flow returns true it means it just performed a
-		// fresh install, so the update flow should be skipped — the newly
-		// installed skills are already the latest version.
-		vi.mocked(runSkillsInstallFlow).mockResolvedValueOnce(true);
-
-		await runWrangler("setup");
-
-		expect(runSkillsInstallFlow).toHaveBeenCalled();
 		expect(runSkillsUpdateFlow).not.toHaveBeenCalled();
 	});
 
-	test("calls runSkillsUpdateFlow when runSkillsInstallFlow did not install", async ({
+	test("does not fail the command when runSkillsUpdateFlow throws", async ({
 		expect,
 	}) => {
-		// When the install flow returns false (skills already installed or
-		// user was not prompted), the update flow should run to check
-		// whether the existing skills are out of date.
-		vi.mocked(runSkillsInstallFlow).mockResolvedValueOnce(false);
+		// If the post-handler skills update check fails (e.g. EACCES writing
+		// the metadata file, or an I/O error from the confirm prompt), the
+		// command itself should still succeed — the error is swallowed and
+		// logged at debug level.
+		vi.mocked(runSkillsUpdateFlow).mockRejectedValueOnce(
+			new Error("EACCES: permission denied")
+		);
 
+		// `setup` has suggestSkillsAfterHandler: true, so it triggers the check.
+		// This should resolve successfully despite the skills update check throwing.
 		await runWrangler("setup");
 
-		expect(runSkillsInstallFlow).toHaveBeenCalled();
-		expect(runSkillsUpdateFlow).toHaveBeenCalledWith(
-			expect.objectContaining({
-				command: "setup",
-			})
-		);
+		expect(runSkillsUpdateFlow).toHaveBeenCalled();
 	});
 
 	test("does not call runSkillsUpdateFlow when WRANGLER_NO_SKILLS_UPDATE_PROMPTS env var is set", async ({
 		expect,
 	}) => {
-		vi.mocked(runSkillsInstallFlow).mockResolvedValueOnce(false);
 		vi.stubEnv("WRANGLER_NO_SKILLS_UPDATE_PROMPTS", "true");
 
 		await runWrangler("setup");
 
-		expect(runSkillsInstallFlow).toHaveBeenCalled();
+		expect(runSkillsInstallFlow).not.toHaveBeenCalled();
 		expect(runSkillsUpdateFlow).not.toHaveBeenCalled();
 	});
 });

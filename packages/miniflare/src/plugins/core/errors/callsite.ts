@@ -53,7 +53,9 @@ function parseCallSite(line: string): CallSite | undefined {
 	if (lineMatch[1]) {
 		functionName = lineMatch[1];
 		let methodStart = functionName.lastIndexOf(".");
-		if (functionName[methodStart - 1] == ".") methodStart--;
+		if (functionName[methodStart - 1] == ".") {
+			methodStart--;
+		}
 		if (methodStart > 0) {
 			object = functionName.substring(0, methodStart);
 			method = functionName.substring(methodStart + 1);

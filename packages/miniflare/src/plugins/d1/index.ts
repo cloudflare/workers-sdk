@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
+import SCRIPT_D1_ENTRY from "worker:d1/entry";
 import { SharedBindings } from "../../workers";
+import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
@@ -8,6 +10,7 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getRemoteProxyConnectionString,
+	getStorageService,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -23,9 +26,6 @@ import type { Plugin } from "../shared";
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
-// A single entry service shared by every *local* database. Each database's id is
-// supplied per-binding via `ctx.props`, so one service serves all of them.
-const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
 // One shared remote-proxy service for all remote D1 databases (config via props).
 const D1_REMOTE_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:remote`;
 const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
@@ -36,7 +36,7 @@ const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 
 export const D1_PLUGIN: Plugin = {
 	bindingTypeDescription: "D1 database",
-	getBindings(options) {
+	getBindings(options, sharedOptions) {
 		return getEnvBindingsOfType(options.config, "d1").map<Worker_Binding>(
 			([name, binding]) => {
 				const id = binding.id;
@@ -52,10 +52,11 @@ export const D1_PLUGIN: Plugin = {
 							name: D1_REMOTE_SERVICE_NAME,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 						}
-					: {
-							name: D1_LOCAL_ENTRY_SERVICE_NAME,
-							props: buildObjectEntryProps(id),
-						};
+					: getStorageService(
+							D1_LOCAL_ENTRY_SERVICE_NAME,
+							buildObjectEntryProps(id),
+							sharedOptions
+						);
 
 				return {
 					name,
@@ -86,13 +87,25 @@ export const D1_PLUGIN: Plugin = {
 		const services: Service[] = [];
 
 		// One shared entry service for all local databases (id supplied via props).
-		const hasLocal = databases.some(
-			([, db]) => getRemoteProxyConnectionString(db, options.dev) === undefined
-		);
+		const hasLocal =
+			databases.some(
+				([, db]) =>
+					getRemoteProxyConnectionString(db, options.dev) === undefined
+			) ||
+			sharedOptions.unsafeEnableSharedStorage ||
+			sharedOptions.unsafeLocalExplorer;
 		if (hasLocal) {
 			services.push({
 				name: D1_LOCAL_ENTRY_SERVICE_NAME,
-				worker: objectEntryWorker(D1_DATABASE_OBJECT),
+				worker: {
+					...objectEntryWorker(D1_DATABASE_OBJECT),
+					// Preserve D1 error names across RPC without changing the helper's
+					// compatibility date (internal workers don't inherit the user's date).
+					compatibilityFlags: ["enhanced_error_serialization"],
+					// Reuse the DO binding configuration, but replace the HTTP-only router
+					// with D1's entrypoint, which also implements the query RPC method.
+					modules: [{ name: "entry.worker.js", esModule: SCRIPT_D1_ENTRY() }],
+				},
 			});
 		}
 
@@ -155,7 +168,6 @@ export const D1_PLUGIN: Plugin = {
 			};
 			services.push(storageService, objectService);
 		}
-
 		return services;
 	},
 };

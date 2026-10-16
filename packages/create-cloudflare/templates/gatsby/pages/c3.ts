@@ -34,6 +34,7 @@ const config: TemplateConfig = {
 	id: "gatsby",
 	frameworkCli: "gatsby",
 	platform: "pages",
+	languages: ["js", "ts"],
 	hidden: true,
 	displayName: "Gatsby",
 	path: "templates/gatsby/pages",

@@ -1,6 +1,6 @@
-import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { red, white } from "@cloudflare/cli-shared-helpers/colors";
+import { retryOnAPIFailure } from "@cloudflare/workers-utils";
 import {
 	addMilliseconds,
 	formatDistanceStrict,
@@ -22,6 +22,8 @@ import {
 	emojifyInstanceTriggerName,
 	emojifyStepType,
 	getInstanceIdFromArgs,
+	getJsonAwareRetryLogger,
+	jsonWorkflowArgs,
 } from "../../utils";
 import type {
 	InstanceSleepLog,
@@ -41,6 +43,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 	positionalArgs: ["name", "id"],
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -65,13 +68,18 @@ export const workflowsInstancesDescribeCommand = createCommand({
 			default: 5000,
 		},
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 
 	async handler(args, { config }) {
 		let id: string;
 		let instance: InstanceStatusAndLogs;
 
 		if (args.local) {
-			id = await getLocalInstanceIdFromArgs(args.port, args);
+			id = await getLocalInstanceIdFromArgs(args.port, args, {
+				quiet: args.json,
+			});
 			instance = await fetchLocalResult<InstanceStatusAndLogs>(
 				args.port,
 				`/workflows/${encodeURIComponent(args.name)}/instances/${encodeURIComponent(id)}`
@@ -79,10 +87,23 @@ export const workflowsInstancesDescribeCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			instance = await fetchResult<InstanceStatusAndLogs>(
-				config,
-				`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
+			instance = await retryOnAPIFailure(
+				() =>
+					fetchResult<InstanceStatusAndLogs>(
+						config,
+						`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
+					),
+				getJsonAwareRetryLogger(args.json)
 			);
+		}
+
+		if (args.json) {
+			// The API payload omits `id`, leaving `--id latest` callers no way to
+			// learn which instance was resolved. `--step-output` and
+			// `--truncate-output-limit` are ignored here because truncating would
+			// hand invalid step output to a machine-readable consumer.
+			logger.json({ id, ...instance });
+			return;
 		}
 
 		renderInstanceDetails(args, id, instance);
@@ -130,10 +151,9 @@ function renderInstanceDetails(
 			new Date(instance.start)
 		);
 	} else if (instance.start != null) {
-		// Convert current date to UTC
 		formattedInstance.Duration = formatDistanceStrict(
 			new Date(instance.start),
-			new Date(new Date().toUTCString().slice(0, -4))
+			new Date()
 		);
 	}
 
@@ -190,10 +210,9 @@ function logStep(
 				new Date(step.start)
 			);
 		} else if (step.start != null) {
-			// Convert current date to UTC
 			formattedStep.Duration = formatDistanceStrict(
 				new Date(step.start),
-				new Date(new Date().toUTCString().slice(0, -4))
+				new Date()
 			);
 		}
 	} else if (step.type == "termination") {
@@ -210,19 +229,22 @@ function logStep(
 
 		if (step.success === null) {
 			const latestAttempt = step.attempts.at(-1);
-			let delay = step.config.retries.delay;
 			if (latestAttempt !== undefined && latestAttempt.success === false) {
-				assert(
-					latestAttempt.end,
-					"end date always exists in the API for completed attempts"
-				);
-				const endDate = new Date(latestAttempt.end);
-				if (typeof delay === "string") {
-					delay = ms(delay);
+				const retryDelayMs = parseRetryDelayMs(step.config.retries.delay);
+				if (latestAttempt.end == null) {
+					formattedStep["Retries At"] = "unknown";
+				} else if (retryDelayMs == null) {
+					formattedStep["Retries At"] = "unknown (dynamic delay)";
+				} else {
+					const retryDate = addMilliseconds(
+						new Date(latestAttempt.end),
+						retryDelayMs
+					);
+					if (!Number.isNaN(retryDate.getTime())) {
+						formattedStep["Retries At"] =
+							`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
+					}
 				}
-				const retryDate = addMilliseconds(endDate, delay);
-				formattedStep["Retries At"] =
-					`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
 			}
 		}
 	}
@@ -258,10 +280,9 @@ function logStep(
 					new Date(val.start)
 				);
 			} else if (val.start != null) {
-				// Converting datetimes into UTC is very cool in JS
 				attempt.Duration = formatDistanceStrict(
 					new Date(val.start),
-					new Date(new Date().toUTCString().slice(0, -4))
+					new Date()
 				);
 			}
 
@@ -282,6 +303,27 @@ function logStep(
 
 		logger.table(prettyAttempts);
 	}
+}
+
+const DYNAMIC_RETRY_DELAY = "[dynamic]";
+
+function parseRetryDelayMs(delay: unknown): number | null {
+	if (delay === DYNAMIC_RETRY_DELAY) {
+		return null;
+	}
+
+	if (typeof delay === "number") {
+		return Number.isFinite(delay) ? delay : null;
+	}
+
+	if (typeof delay === "string") {
+		const parsed = ms(delay);
+		return typeof parsed === "number" && Number.isFinite(parsed)
+			? parsed
+			: null;
+	}
+
+	return null;
 }
 
 function getLastSuccessfulStep(logs: InstanceStatusAndLogs): string | null {

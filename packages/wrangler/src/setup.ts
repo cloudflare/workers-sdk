@@ -93,7 +93,7 @@ export const setupCommand = createCommand({
 					runBuild: args.build,
 					skipConfirmations: args.yes,
 					dryRun: !!args.dryRun,
-					enableWranglerInstallation: args.installWrangler,
+					enableTargetCliInstallation: args.installWrangler,
 				});
 			} catch (error) {
 				sendAutoConfigProcessEndedMetricsEvent({

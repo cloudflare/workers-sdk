@@ -8,13 +8,26 @@ import {
 	transformViteConfig,
 } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import type { AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
 
 export class Vite extends Framework {
-	isConfigured(projectPath: string): boolean {
+	override readonly supportsMode = true;
+
+	readonly env = {
+		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+	} as const;
+
+	isConfigured(
+		projectPath: string,
+		{ target = "cf" }: { target?: AutoConfigTarget } = {}
+	): boolean {
+		if (target !== "wrangler") {
+			return false;
+		}
 		if (!hasViteConfig(projectPath)) {
 			return false;
 		}
@@ -26,12 +39,14 @@ export class Vite extends Framework {
 		projectPath,
 		packageManager,
 		isWorkspaceRoot,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
 				isWorkspaceRoot,
 				projectPath,
+				version: target === "cf" ? "beta" : undefined,
 			});
 
 			if (hasViteConfig(projectPath)) {
@@ -42,9 +57,10 @@ export class Vite extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
+			buildTool: "vite",
+			workerConfig: {
 				assets: {
-					not_found_handling: "single-page-application",
+					notFoundHandling: "single-page-application",
 				},
 			},
 		};

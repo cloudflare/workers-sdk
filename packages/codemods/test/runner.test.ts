@@ -1,0 +1,741 @@
+import { execFile } from "node:child_process";
+import {
+	mkdir,
+	mkdtemp,
+	readFile,
+	readdir,
+	rmdir,
+	symlink,
+	unlink,
+	writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
+import { afterEach, describe, it, vi } from "vitest";
+import { transformFiles } from "../src/files";
+import { availableCodemods, runCodemod } from "../src/runner";
+
+const temporaryDirectories: string[] = [];
+const execFileAsync = promisify(execFile);
+
+async function createProject(files: Record<string, string>): Promise<string> {
+	const directory = await mkdtemp(path.join(tmpdir(), "cloudflare-codemods-"));
+	temporaryDirectories.push(directory);
+	for (const [filePath, contents] of Object.entries(files)) {
+		const absolutePath = path.join(directory, filePath);
+		await mkdir(path.dirname(absolutePath), { recursive: true });
+		await writeFile(absolutePath, contents);
+	}
+	return directory;
+}
+
+async function commitProject(cwd: string): Promise<void> {
+	await execFileAsync("git", ["init", "--quiet"], { cwd });
+	await execFileAsync("git", ["add", "."], { cwd });
+	await execFileAsync(
+		"git",
+		[
+			"-c",
+			"user.email=codemods@example.com",
+			"-c",
+			"user.name=Codemods Test",
+			"commit",
+			"--quiet",
+			"--message=Initial commit",
+		],
+		{ cwd }
+	);
+}
+
+async function removeDirectory(directory: string): Promise<void> {
+	for (const entry of await readdir(directory, { withFileTypes: true })) {
+		const entryPath = path.join(directory, entry.name);
+		if (entry.isDirectory()) {
+			await removeDirectory(entryPath);
+			continue;
+		}
+		await unlink(entryPath);
+	}
+	await rmdir(directory);
+}
+
+afterEach(async () => {
+	for (const directory of temporaryDirectories.splice(0)) {
+		await removeDirectory(directory);
+	}
+});
+
+describe("codemod runner", () => {
+	it("runs the Wrangler-to-cf migration", async ({ expect }) => {
+		const cwd = await createProject({
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				main: "src/index.ts",
+				name: "runner-test",
+			}),
+		});
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+		});
+
+		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
+		expect(await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8"))
+			.toMatchInlineSnapshot(`
+			"import { defineConfig } from "cf/config";
+
+			/**
+			 * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
+			 */
+			/**
+			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` and \`@cloudflare/vite-plugin@beta\` as dev dependencies before using the generated configuration.
+			 */
+			throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
+
+			export default defineConfig({
+				worker: {
+					name: "runner-test",
+					compatibilityDate: "2026-09-24",
+					entrypoint: "src/index.ts",
+				},
+			});
+			"
+		`);
+	});
+
+	it("applies file restrictions to the selected Wrangler config", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "restricted-test",
+			}),
+		});
+
+		const excludedResult = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["unrelated/**"],
+		});
+		expect(excludedResult).toMatchObject({
+			changedFiles: [],
+			message: "wrangler.jsonc does not match any --files pattern.",
+			status: "skipped",
+		});
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
+
+		const includedResult = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["wrangler.jsonc"],
+		});
+		expect(includedResult.changedFiles).toEqual(["cloudflare.config.ts"]);
+	});
+
+	it("skips an excluded Wrangler config in a dirty worktree", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"README.md": "before",
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "restricted-test",
+			}),
+		});
+		await commitProject(cwd);
+		await writeFile(path.join(cwd, "README.md"), "after");
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			files: ["unrelated/**"],
+		});
+
+		expect(result).toMatchObject({
+			changedFiles: [],
+			message: "wrangler.jsonc does not match any --files pattern.",
+			status: "skipped",
+		});
+		await expect(
+			runCodemod("wrangler-to-cf", {
+				cwd,
+				dryRun: false,
+				files: ["wrangler.jsonc"],
+			})
+		).rejects.toThrow("Git worktree is not clean");
+	});
+
+	it("accepts an exact Wrangler config and bundler", async ({ expect }) => {
+		const cwd = await createProject({
+			"node_modules/wrangler/package.json": JSON.stringify({
+				name: "wrangler",
+				version: "4.136.0",
+			}),
+			"worker/custom.json": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				main: "src/index.ts",
+				name: "custom-config",
+				no_bundle: true,
+			}),
+		});
+
+		const result = await runCodemod("wrangler-to-cf", {
+			bundler: "wrangler",
+			configPath: "worker/custom.json",
+			cwd,
+			dryRun: false,
+		});
+
+		expect(result.changedFiles).toEqual([
+			"worker/cloudflare.config.ts",
+			"worker/wrangler.config.ts",
+		]);
+		expect(await readFile(path.join(cwd, "worker/wrangler.config.ts"), "utf8"))
+			.toMatchInlineSnapshot(`
+				"import { defineWranglerConfig } from "wrangler/experimental-config";
+
+				export default defineWranglerConfig({
+					noBundle: true,
+				});
+				"
+			`);
+	});
+
+	it("requires an exact config when discovery is ambiguous", async ({
+		expect,
+	}) => {
+		const config = JSON.stringify({
+			compatibility_date: "2026-09-24",
+			main: "src/index.ts",
+			name: "ambiguous-config",
+		});
+		const cwd = await createProject({
+			"wrangler.json": config,
+			"wrangler.toml": config,
+		});
+
+		await expect(
+			runCodemod("wrangler-to-cf", { cwd, dryRun: false })
+		).rejects.toThrow("Multiple Wrangler configs found");
+	});
+
+	it("runs the Vitest migrations manually, in sequence", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": `${JSON.stringify(
+				{
+					devDependencies: {
+						"@cloudflare/vitest-pool-workers": "^0.13.0",
+					},
+				},
+				null,
+				2
+			)}\n`,
+			"vitest.config.ts": `
+import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+export default defineWorkersProject({
+	test: { poolOptions: { workers: { wrangler: { configPath: "./wrangler.jsonc" } } } },
+});`,
+			"tsconfig.json": JSON.stringify({
+				compilerOptions: {
+					types: ["@cloudflare/vitest-pool-workers/types"],
+				},
+			}),
+		});
+
+		await runCodemod("vitest:v3-to-v4", { cwd, dryRun: false });
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const packageJson = JSON.parse(
+			await readFile(path.join(cwd, "package.json"), "utf8")
+		) as { devDependencies: Record<string, string> };
+		const config = await readFile(path.join(cwd, "vitest.config.ts"), "utf8");
+		const tsconfig = await readFile(path.join(cwd, "tsconfig.json"), "utf8");
+
+		expect(packageJson.devDependencies).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(config).toContain('from "@cloudflare/vitest-plugin"');
+		expect(config).toContain("cloudflareTest");
+		expect(config).not.toContain("defineWorkersProject");
+		expect(tsconfig).toContain("@cloudflare/vitest-plugin/types");
+	});
+
+	it("runs a codemod by its human-readable alias", async ({ expect }) => {
+		const cwd = await createProject({
+			"vitest.config.ts":
+				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
+		});
+
+		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+		expect(
+			await readFile(path.join(cwd, "vitest.config.ts"), "utf8")
+		).toContain('from "@cloudflare/vitest-plugin"');
+	});
+
+	it("runs a codemod in a clean Git worktree", async ({ expect }) => {
+		const cwd = await createProject({
+			"vitest.config.ts":
+				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
+		});
+		await commitProject(cwd);
+
+		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+	});
+
+	it("runs outside a Git worktree when Git is unavailable", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"vitest.config.ts":
+				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
+		});
+		vi.stubEnv("PATH", "");
+
+		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+	});
+
+	it("rejects a Git worktree when Git is unavailable", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await commitProject(cwd);
+		vi.stubEnv("PATH", "");
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Unable to verify that the Git worktree is clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("rejects a symlinked Git worktree when Git is unavailable", async ({
+		expect,
+	}) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const repository = await createProject({});
+		const cwd = path.join(repository, "packages", "app");
+		await mkdir(cwd, { recursive: true });
+		await writeFile(path.join(cwd, "vitest.config.ts"), source);
+		await commitProject(repository);
+		const aliasParent = await createProject({});
+		const alias = path.join(aliasParent, "alias");
+		await symlink(cwd, alias, "dir");
+		vi.stubEnv("PATH", "");
+
+		await expect(
+			runCodemod("vitest v1", { cwd: alias, dryRun: false })
+		).rejects.toThrow("Unable to verify that the Git worktree is clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("rejects staged changes", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await execFileAsync("git", ["init", "--quiet"], { cwd });
+		await execFileAsync("git", ["add", "vitest.config.ts"], { cwd });
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Git worktree is not clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("rejects unstaged changes", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await commitProject(cwd);
+		await writeFile(path.join(cwd, "vitest.config.ts"), `${source}\n`);
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Git worktree is not clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			`${source}\n`
+		);
+	});
+
+	it("rejects untracked changes", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+		await execFileAsync("git", ["init", "--quiet"], { cwd });
+
+		await expect(
+			runCodemod("vitest v1", { cwd, dryRun: false })
+		).rejects.toThrow("Git worktree is not clean");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("allows changes when forced", async ({ expect }) => {
+		const cwd = await createProject({
+			"vitest.config.ts":
+				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
+		});
+		await execFileAsync("git", ["init", "--quiet"], { cwd });
+
+		const result = await runCodemod("vitest v1", {
+			cwd,
+			dryRun: false,
+			force: true,
+		});
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+		expect(
+			await readFile(path.join(cwd, "vitest.config.ts"), "utf8")
+		).toMatchInlineSnapshot(
+			`"import { cloudflareTest } from "@cloudflare/vitest-plugin";"`
+		);
+	});
+
+	it("renames the package in package.json outside dependency groups", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": `${JSON.stringify(
+				{
+					scripts: {
+						test: "vitest && echo @cloudflare/vitest-pool-workers",
+					},
+					devDependencies: {
+						"@cloudflare/vitest-pool-workers": "^0.13.0",
+					},
+					pnpm: {
+						overrides: {
+							"@cloudflare/vitest-pool-workers": "^0.13.0",
+						},
+					},
+				},
+				null,
+				2
+			)}\n`,
+		});
+
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const output = await readFile(path.join(cwd, "package.json"), "utf8");
+		expect(output).not.toContain("@cloudflare/vitest-pool-workers");
+		const packageJson = JSON.parse(output) as {
+			scripts: Record<string, string>;
+			devDependencies: Record<string, string>;
+			pnpm: { overrides: Record<string, string> };
+		};
+		expect(packageJson.devDependencies).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(packageJson.scripts.test).toContain("@cloudflare/vitest-plugin");
+		expect(packageJson.pnpm.overrides).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+	});
+
+	it("updates package versions in override maps", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				overrides: {
+					"@cloudflare/vitest-pool-workers": { ".": "^0.13.0" },
+				},
+				resolutions: {
+					"**/@cloudflare/vitest-pool-workers": "~0.18.0",
+				},
+				pnpm: {
+					overrides: {
+						"@cloudflare/vitest-pool-workers": "^0.20.0",
+					},
+					packageExtensions: {
+						"@cloudflare/vitest-pool-workers@^0.18.0": {
+							dependencies: {
+								"@cloudflare/vitest-pool-workers": "^0.18.0",
+							},
+						},
+					},
+				},
+			}),
+		});
+
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const packageJson = JSON.parse(
+			await readFile(path.join(cwd, "package.json"), "utf8")
+		) as {
+			overrides: Record<string, { ".": string }>;
+			resolutions: Record<string, string>;
+			pnpm: {
+				overrides: Record<string, string>;
+				packageExtensions: Record<
+					string,
+					{ dependencies: Record<string, string> }
+				>;
+			};
+		};
+		expect(packageJson.overrides).toEqual({
+			"@cloudflare/vitest-plugin": { ".": "^1.0.0" },
+		});
+		expect(packageJson.resolutions).toEqual({
+			"**/@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(packageJson.pnpm.overrides).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(packageJson.pnpm.packageExtensions).toEqual({
+			"@cloudflare/vitest-plugin@^1.0.0": {
+				dependencies: {
+					"@cloudflare/vitest-plugin": "^1.0.0",
+				},
+			},
+		});
+	});
+
+	it("renames the package in multiple dependency groups", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: {
+					"@cloudflare/vitest-pool-workers": "^0.13.0",
+				},
+				peerDependencies: {
+					"@cloudflare/vitest-pool-workers": "^0.18.0",
+				},
+			}),
+		});
+
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const packageJson = JSON.parse(
+			await readFile(path.join(cwd, "package.json"), "utf8")
+		) as {
+			devDependencies: Record<string, string>;
+			peerDependencies: Record<string, string>;
+		};
+		expect(packageJson.devDependencies).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(packageJson.peerDependencies).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+	});
+
+	it("preserves protocol-based dependency specifiers", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				dependencies: {
+					"@cloudflare/vitest-pool-workers": "workspace:*",
+				},
+				devDependencies: {
+					"@cloudflare/vitest-pool-workers": "catalog:default",
+				},
+				peerDependencies: {
+					"@cloudflare/vitest-pool-workers": "link:../vitest-plugin",
+				},
+				optionalDependencies: {
+					"@cloudflare/vitest-pool-workers": "file:../vitest-plugin",
+				},
+			}),
+		});
+
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const packageJson = JSON.parse(
+			await readFile(path.join(cwd, "package.json"), "utf8")
+		) as Record<string, Record<string, string>>;
+		expect(packageJson.dependencies?.["@cloudflare/vitest-plugin"]).toBe(
+			"workspace:*"
+		);
+		expect(packageJson.devDependencies?.["@cloudflare/vitest-plugin"]).toBe(
+			"catalog:default"
+		);
+		expect(packageJson.peerDependencies?.["@cloudflare/vitest-plugin"]).toBe(
+			"link:../vitest-plugin"
+		);
+		expect(
+			packageJson.optionalDependencies?.["@cloudflare/vitest-plugin"]
+		).toBe("file:../vitest-plugin");
+	});
+
+	it("throws for an unknown codemod", async ({ expect }) => {
+		const cwd = await createProject({});
+		await expect(
+			runCodemod("does-not-exist", { cwd, dryRun: false })
+		).rejects.toThrow("Unknown codemod");
+	});
+
+	it("does not write files in dry-run mode", async ({ expect }) => {
+		const source =
+			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
+		const cwd = await createProject({ "vitest.config.ts": source });
+
+		const result = await runCodemod("vitest v1", { cwd, dryRun: true });
+
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			source
+		);
+	});
+
+	it("previews a Wrangler migration in a dirty worktree", async ({
+		expect,
+	}) => {
+		const configPath = "wrangler.json";
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: {
+					"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
+					cf: "1.0.0",
+				},
+				name: "dry-run-test",
+			}),
+			[configPath]: JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "dry-run-test",
+			}),
+		});
+		await commitProject(cwd);
+		await writeFile(
+			path.join(cwd, configPath),
+			JSON.stringify({
+				compatibility_date: "2026-09-24",
+				name: "dirty-dry-run-test",
+			})
+		);
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: true,
+			installDependencies: false,
+		});
+
+		expect(result).toMatchObject({
+			changedFiles: ["cloudflare.config.ts"],
+			followUps: [],
+			requiresInstall: false,
+			status: "complete",
+		});
+		await expect(
+			readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).rejects.toMatchObject({ code: "ENOENT" });
+	});
+
+	it("is a no-op for an up-to-date project", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { "@cloudflare/vitest-plugin": "^1.0.0" },
+			}),
+		});
+
+		const result = await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		expect(result.changedFiles).toEqual([]);
+	});
+
+	it("does not make partial changes when a codemod fails", async ({
+		expect,
+	}) => {
+		const config = `
+import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+export default defineWorkersProject({
+	test: { poolOptions: { workers: {} } },
+});`;
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: {
+					"@cloudflare/vitest-plugin": "^1.0.0",
+					"@cloudflare/vitest-pool-workers": "^0.18.0",
+				},
+			}),
+			"vitest.config.ts": config,
+		});
+
+		await expect(
+			runCodemod("vitest:pool-workers-to-vitest-plugin", {
+				cwd,
+				dryRun: false,
+			})
+		).rejects.toThrow("conflicting");
+		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
+			config
+		);
+	});
+
+	it("does not flush staged outputs when a codemod throws", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({ "input.txt": "before" });
+		const initialLength = availableCodemods.length;
+		availableCodemods.push({
+			name: "transaction-test",
+			description: "stage a change, then reject it",
+			async run(context) {
+				await transformFiles(context, ["input.txt"], (source) =>
+					source.replace("before", "after")
+				);
+				throw new Error("staged output rejected");
+			},
+		});
+
+		try {
+			await expect(
+				runCodemod("transaction-test", { cwd, dryRun: false })
+			).rejects.toThrow("staged output rejected");
+			expect(await readFile(path.join(cwd, "input.txt"), "utf8")).toBe(
+				"before"
+			);
+		} finally {
+			availableCodemods.splice(initialLength);
+		}
+	});
+
+	it("intersects file restrictions with the codemod's scope", async ({
+		expect,
+	}) => {
+		const source = "@cloudflare/vitest-pool-workers";
+		const cwd = await createProject({ "notes.txt": source });
+
+		const result = await runCodemod("vitest v1", {
+			cwd,
+			dryRun: false,
+			files: ["**/*.txt"],
+		});
+
+		expect(result.changedFiles).toEqual([]);
+		expect(await readFile(path.join(cwd, "notes.txt"), "utf8")).toBe(source);
+	});
+});

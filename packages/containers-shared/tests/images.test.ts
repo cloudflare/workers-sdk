@@ -1,14 +1,25 @@
-import { beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { startContainerBuild } from "../src/build";
 import { ExternalRegistryKind } from "../src/client/models/ExternalRegistryKind";
 import {
-	getEgressInterceptorPlatform,
-	pullEgressInterceptorImage,
 	getAndValidateRegistryType,
+	getEgressInterceptorPlatform,
+	isCloudflareRegistryImage,
+	pullImage,
+	pullEgressInterceptorImage,
+	prepareContainerImagesForDev,
 	validateAndEncodeGarKey,
 } from "../src/images";
-import { runDockerCmd } from "../src/utils";
+import { runDockerCmd, verifyDockerInstalled } from "../src/utils";
+
+vi.mock("../src/build", () => ({ startContainerBuild: vi.fn() }));
+
+vi.mock("../src/login", () => ({
+	dockerLoginImageRegistry: vi.fn(),
+}));
 
 vi.mock("../src/utils", () => ({
+	verifyDockerInstalled: vi.fn(),
 	runDockerCmd: vi.fn(() => ({
 		abort: vi.fn(),
 		ready: Promise.resolve({ aborted: false }),
@@ -17,6 +28,19 @@ vi.mock("../src/utils", () => ({
 		},
 	})),
 }));
+
+describe("isCloudflareRegistryImage", () => {
+	it("recognizes managed registry and shorthand references", ({ expect }) => {
+		for (const [image, isManaged] of [
+			["image:tag", true],
+			["registry.cloudflare.com/image:tag", true],
+			["docker.io/example/image:tag", false],
+			["localhost:5000/image:tag", false],
+		] as const) {
+			expect(isCloudflareRegistryImage(image)).toBe(isManaged);
+		}
+	});
+});
 
 describe("getEgressInterceptorPlatform", () => {
 	beforeEach(() => {
@@ -66,6 +90,33 @@ describe("pullEgressInterceptorImage", () => {
 			"proxy-everything:test",
 			"--platform",
 			"linux/arm64",
+		]);
+	});
+});
+
+describe("pullImage", () => {
+	it("does not retag a Build Output reference pulled under its final name", async ({
+		expect,
+	}) => {
+		vi.mocked(runDockerCmd).mockClear();
+		const image = "registry.example.com/project/image@sha256:abc";
+
+		const pull = await pullImage(
+			"docker",
+			{
+				class_name: "Container",
+				image_uri: image,
+				image_tag: image,
+			},
+			{ info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+		);
+		await pull.ready;
+
+		expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("docker", [
+			"pull",
+			image,
+			"--platform",
+			"linux/amd64",
 		]);
 	});
 });
@@ -130,6 +181,18 @@ describe("getAndValidateRegistryType - GAR", () => {
 		expect(getAndValidateRegistryType("docker.io").type).toBe(
 			ExternalRegistryKind.DOCKER_HUB
 		);
+	});
+});
+
+describe("getAndValidateRegistryType - Cloudflare managed registry", () => {
+	it("recognizes the FedRAMP High managed registry from Wrangler config", ({
+		expect,
+	}) => {
+		expect(
+			getAndValidateRegistryType("registry.fed.cloudflare.com", {
+				compliance_region: "fedramp_high",
+			}).type
+		).toBe("cloudflare");
 	});
 });
 
@@ -293,4 +356,39 @@ describe("validateAndEncodeGarKey", () => {
 			"[Error: The Google service account key has an empty or invalid private_key_id.]"
 		);
 	});
+});
+
+describe("prepareContainerImagesForDev", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it.skipIf(process.platform === "win32")(
+		"prepares only the sidecar when no application images are configured",
+		async ({ expect }) => {
+			vi.mocked(runDockerCmd).mockClear();
+			vi.stubEnv("MINIFLARE_CONTAINER_EGRESS_IMAGE", "proxy-everything:test");
+			vi.stubEnv("MINIFLARE_CONTAINER_EGRESS_IMAGE_PLATFORM", undefined);
+			const onStart = vi.fn();
+			const onEnd = vi.fn();
+			const result = await prepareContainerImagesForDev({
+				dockerPath: "test-docker",
+				containerOptions: [],
+				onContainerImagePreparationStart: onStart,
+				onContainerImagePreparationEnd: onEnd,
+				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			});
+			expect(verifyDockerInstalled).toHaveBeenCalledWith(
+				expect.objectContaining({ dockerPath: "test-docker" })
+			);
+			expect(startContainerBuild).not.toHaveBeenCalled();
+			expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("test-docker", [
+				"pull",
+				"proxy-everything:test",
+			]);
+			expect(onStart).not.toHaveBeenCalled();
+			expect(onEnd).not.toHaveBeenCalled();
+			expect(result).toEqual({ aborted: false });
+		}
+	);
 });

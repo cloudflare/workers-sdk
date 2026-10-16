@@ -13,7 +13,12 @@ export function caseInsensitiveEnv(): Record<string, string> {
 				: undefined;
 		},
 		set(target, property, value, receiver) {
-			tracked.set(canonical(property), property);
+			const key = canonical(property);
+			const previous = tracked.get(key);
+			if (previous !== undefined && previous !== property) {
+				Reflect.deleteProperty(target, previous);
+			}
+			tracked.set(key, property);
 			return Reflect.set(target, property, value, receiver);
 		},
 		has(target, property) {
@@ -29,12 +34,21 @@ export function caseInsensitiveEnv(): Record<string, string> {
 				: undefined;
 		},
 		defineProperty(target, property, descriptor) {
-			tracked.set(canonical(property), property);
+			const key = canonical(property);
+			const previous = tracked.get(key);
+			if (previous !== undefined && previous !== property) {
+				Reflect.deleteProperty(target, previous);
+			}
+			tracked.set(key, property);
 			return Reflect.defineProperty(target, property, descriptor);
 		},
 		deleteProperty(target, property) {
-			tracked.delete(canonical(property));
-			return Reflect.deleteProperty(target, property);
+			const key = canonical(property);
+			const actualProperty = tracked.get(key);
+			tracked.delete(key);
+			return actualProperty !== undefined
+				? Reflect.deleteProperty(target, actualProperty)
+				: Reflect.deleteProperty(target, property);
 		},
 	});
 }

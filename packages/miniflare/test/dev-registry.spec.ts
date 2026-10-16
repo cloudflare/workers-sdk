@@ -1,16 +1,324 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { watch } from "chokidar";
 import { getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
-import { singleModuleManifest, useDispose, useTmp } from "./test-shared";
-import type { MiniflareOptions, WorkerRegistry } from "miniflare";
+import { DevRegistry } from "../src/shared/dev-registry";
+import {
+	singleModuleManifest,
+	TestLog,
+	useDispose,
+	useTmp,
+} from "./test-shared";
+import type {
+	MiniflareOptions,
+	WorkerDefinition,
+	WorkerRegistry,
+} from "miniflare";
 
 describe.sequential("DevRegistry", () => {
+	test("waits for the filesystem watcher to be ready", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+
+		try {
+			const watching = registry.watch(
+				new Map([["worker", { classNames: new Set(), entrypoints: new Set() }]])
+			);
+			expect(watching).toBeInstanceOf(Promise);
+			await watching;
+
+			// Subsequent calls must reuse the settled readiness promise rather than
+			// waiting for another `ready` event that will never be emitted.
+			await registry.watch(new Map(), true);
+		} finally {
+			await registry.dispose();
+		}
+	});
+
+	test("leaves no filesystem watcher behind with shared storage", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const resourcePersistencePath = await useTmp();
+		const isolatedResourcePersistencePath = await useTmp();
+
+		const watchers = () =>
+			process.getActiveResourcesInfo().filter((name) => name === "FSEventWrap")
+				.length;
+		const before = watchers();
+
+		// Shared storage makes every instance watch the registry and heartbeat a
+		// storage-candidate entry into it, so a directory scan can still be in
+		// flight when disposal starts.
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			resourcePersistencePath,
+			isolatedResourcePersistencePath,
+			unsafeEnableSharedStorage: true,
+			workers: [
+				{
+					config: {
+						name: "shared-storage-worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("ok"); } };`
+						),
+					},
+				},
+			],
+		});
+		// Registered before awaiting startup so a rejected `ready` still tears the
+		// instance down. `disposeWithRetry` treats an already-disposed instance as
+		// success, so the explicit disposal under test below is not disturbed.
+		useDispose(mf);
+
+		await mf.ready;
+		await mf.dispose();
+
+		// A scan that outlives `close()` re-enters chokidar's `add()`, which resets
+		// its `closed` flag and clears unwatched paths, attaching a native watcher
+		// nothing can reach. Wait past a storage-candidate heartbeat (2s) so that
+		// re-attach has had its chance, then assert once: polling until success
+		// would hide a watcher that never goes away.
+		await new Promise((resolve) => setTimeout(resolve, 3_000));
+
+		expect(watchers()).toBe(before);
+	});
+
+	test("leaves no filesystem watcher behind after a registry path change", async ({
+		expect,
+	}) => {
+		const firstRegistryPath = await useTmp();
+		const secondRegistryPath = await useTmp();
+		const resourcePersistencePath = await useTmp();
+		const isolatedResourcePersistencePath = await useTmp();
+
+		const watchers = () =>
+			process.getActiveResourcesInfo().filter((name) => name === "FSEventWrap")
+				.length;
+		const before = watchers();
+
+		const workers = [
+			{
+				config: {
+					name: "shared-storage-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } };`
+					),
+				},
+			},
+		] satisfies MiniflareOptions["workers"];
+
+		const mf = new Miniflare({
+			unsafeDevRegistryPath: firstRegistryPath,
+			resourcePersistencePath,
+			isolatedResourcePersistencePath,
+			unsafeEnableSharedStorage: true,
+			workers,
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		// `updateRegistryPath()` retires the watcher for the old path while the
+		// registry itself stays usable, so a disposal-wide flag would not cover it.
+		// A scan of the old path still in flight could otherwise re-attach a
+		// watcher that outlives the reference being cleared here, and survive the
+		// disposal below.
+		await mf.setOptions({
+			unsafeDevRegistryPath: secondRegistryPath,
+			resourcePersistencePath,
+			isolatedResourcePersistencePath,
+			unsafeEnableSharedStorage: true,
+			workers,
+		});
+		await mf.ready;
+		await mf.dispose();
+
+		await new Promise((resolve) => setTimeout(resolve, 3_000));
+
+		expect(watchers()).toBe(before);
+	});
+
+	test("surfaces fresh legacy entries and removes them when stale", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "legacy-worker");
+		await fs.writeFile(
+			definitionPath,
+			JSON.stringify({
+				debugPortAddress: "127.0.0.1:1234",
+				defaultEntrypointService: "core:user:legacy-worker",
+				userWorkerService: "core:user:legacy-worker",
+			})
+		);
+
+		const legacyDefinition = getWorkerRegistry(unsafeDevRegistryPath)[
+			"legacy-worker"
+		];
+		expect(legacyDefinition).toEqual(
+			expect.objectContaining({
+				debugPortAddress: "127.0.0.1:1234",
+			})
+		);
+		expect(legacyDefinition.instanceId).toBeUndefined();
+
+		const stale = new Date(Date.now() - 91_000);
+		await fs.utimes(definitionPath, stale, stale);
+		expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+		await expect(fs.stat(definitionPath)).rejects.toMatchObject({
+			code: "ENOENT",
+		});
+	});
+
+	test("registers after a conflicting entry becomes stale", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+		await fs.writeFile(
+			definitionPath,
+			JSON.stringify({ ...definition, instanceId: "previous-instance" })
+		);
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		// Filesystem timestamps use the real clock, so only fake the retry timer.
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		try {
+			registry.register({ worker: definition });
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe("previous-instance");
+
+			const stale = new Date(Date.now() - 91_000);
+			await fs.utimes(definitionPath, stale, stale);
+			await vi.runOnlyPendingTimersAsync();
+
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe(registry.instanceId);
+		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("re-registers its entry after stale cleanup removes it", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe(registry.instanceId);
+
+			// Suspending the machine for longer than the stale window freezes this
+			// process's heartbeat as well, so on resume the sweep deletes an entry
+			// whose owner is still running.
+			const stale = new Date(Date.now() - 91_000);
+			await fs.utimes(definitionPath, stale, stale);
+			expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+			await expect(fs.stat(definitionPath)).rejects.toMatchObject({
+				code: "ENOENT",
+			});
+
+			await vi.advanceTimersByTimeAsync(10_001);
+
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
+				...definition,
+				instanceId: registry.instanceId,
+			});
+			expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual(
+				expect.objectContaining({
+					worker: expect.objectContaining({
+						debugPortAddress: "127.0.0.1:1234",
+					}),
+				})
+			);
+		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("leaves an entry claimed by another process alone", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe(registry.instanceId);
+
+			await fs.writeFile(
+				definitionPath,
+				JSON.stringify({
+					...definition,
+					debugPortAddress: "127.0.0.1:5678",
+					instanceId: "another-instance",
+				})
+			);
+
+			await vi.advanceTimersByTimeAsync(10_001);
+
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
+				...definition,
+				debugPortAddress: "127.0.0.1:5678",
+				instanceId: "another-instance",
+			});
+		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
 	test("registers workers by default unless opted out", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const worker = {
 			config: {
-				type: "worker",
 				name: "worker",
 				compatibilityDate: "2025-05-01",
 				compatibilityFlags: ["experimental"],
@@ -48,7 +356,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -69,7 +376,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -81,7 +387,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -116,7 +422,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -133,7 +438,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -153,7 +458,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -192,7 +496,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -229,7 +532,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -243,7 +546,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -295,7 +597,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -312,7 +613,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -332,7 +633,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -378,7 +678,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -397,7 +696,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "TestEntrypoint",
 							},
 						},
@@ -419,7 +718,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -467,7 +765,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -489,7 +786,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -503,7 +799,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "PropsEntrypoint",
 								props: { foo: 123, bar: { baz: "hello from props" } },
 							},
@@ -535,7 +831,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -547,7 +842,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -576,7 +871,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -630,7 +924,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -642,7 +935,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -672,7 +965,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -721,7 +1013,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -742,7 +1033,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -762,7 +1053,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -779,7 +1069,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -807,7 +1097,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -822,7 +1111,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -842,7 +1131,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -865,7 +1153,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -892,7 +1180,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -911,7 +1198,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -933,7 +1220,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -954,7 +1240,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -985,7 +1271,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1008,7 +1293,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1030,7 +1315,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1045,7 +1329,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1077,21 +1361,30 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2024-11-20",
 						env: {
 							MY_WORKFLOW: {
 								type: "workflow",
 								name: "MY_WORKFLOW",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyWorkflow",
 							},
 						},
 						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
-						const instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
+						// Deterministic ids are unique: create() throws once the
+						// instance exists, so later attempts read it instead.
+						let instance;
+						try {
+							instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
+						} catch (e) {
+							if (!String(e).includes("instance.already_exists")) {
+								throw e;
+							}
+							instance = await env.MY_WORKFLOW.get("cross-worker-instance");
+						}
 						return Response.json({ id: instance.id });
 					}
 				}
@@ -1108,7 +1401,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2024-11-20",
 						manifest: singleModuleManifest(`
@@ -1151,7 +1443,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1165,7 +1456,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1184,7 +1475,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1207,7 +1497,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1234,7 +1524,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1248,7 +1537,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1284,7 +1573,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1306,7 +1594,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1323,7 +1610,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1348,7 +1635,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1384,7 +1670,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1423,7 +1708,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1436,7 +1720,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							REMOTE: { type: "worker", workerName: "remote-worker" },
+							REMOTE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1460,7 +1744,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1501,7 +1784,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1516,9 +1798,9 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 						env: {
-							remote: { type: "worker", workerName: "remote-worker" },
+							remote: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1544,7 +1826,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1559,9 +1840,9 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 						env: {
-							remote: { type: "worker", workerName: "remote-worker" },
+							remote: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1591,7 +1872,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1633,7 +1913,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1647,7 +1926,7 @@ describe.sequential("DevRegistry", () => {
 			`),
 						tailConsumers: [
 							{
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								entrypoint: "TailCollector",
 								props: { tailKey: "from-tail-binding" },
 							},
@@ -1684,7 +1963,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1701,7 +1979,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1712,7 +1990,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1793,7 +2070,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1810,7 +2086,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1832,7 +2108,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1872,7 +2147,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1891,7 +2165,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1914,7 +2188,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1935,7 +2208,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1977,7 +2250,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -1994,7 +2266,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -2013,7 +2285,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "unrelated-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2043,7 +2314,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2099,7 +2369,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2116,7 +2385,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -2159,7 +2428,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "consumer-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2194,7 +2462,6 @@ describe.sequential("DevRegistry", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "consumer-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2226,7 +2493,6 @@ describe.sequential("DevRegistry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "remote-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2244,13 +2510,12 @@ describe.sequential("DevRegistry", () => {
 		await remote.ready;
 
 		const logs: string[] = [];
-		const local = new Miniflare({
+		const localOptions: MiniflareOptions = {
 			unsafeDevRegistryPath,
 			handleStructuredLogs: ({ message }) => void logs.push(message),
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "local-worker",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],
@@ -2262,11 +2527,12 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 					},
 				},
 			],
-		});
+		};
+		const local = new Miniflare(localOptions);
 		useDispose(local);
 		await local.ready;
 
@@ -2279,11 +2545,20 @@ describe.sequential("DevRegistry", () => {
 			{ timeout: 10_000, interval: 100 }
 		);
 
-		// Drop the peer without letting it deregister, so `local` keeps a registry
-		// entry pointing at a debug port that is no longer accepting connections.
+		const remoteDefinitionPath = path.join(
+			unsafeDevRegistryPath,
+			"remote-worker"
+		);
+		const remoteDefinition = await fs.readFile(remoteDefinitionPath, "utf8");
+
+		// Restore the registry entry removed by disposal to model a peer that exited
+		// without cleaning up. This leaves `local` pointing at a debug port that is
+		// no longer accepting connections, regardless of watcher timing.
 		// The forwarding RPC now rejects; that rejection must be reported rather
 		// than escaping as an unhandled rejection.
 		await remote.dispose();
+		await fs.writeFile(remoteDefinitionPath, remoteDefinition);
+		await local.setOptions(localOptions);
 		logs.length = 0;
 
 		await vi.waitFor(
@@ -2305,7 +2580,6 @@ describe("registry churn across config updates", () => {
 		({
 			dev: { unsafeRegisterWorker: true },
 			config: {
-				type: "worker",
 				name,
 				compatibilityDate: "2025-05-01",
 				compatibilityFlags,

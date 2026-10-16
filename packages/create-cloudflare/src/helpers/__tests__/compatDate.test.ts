@@ -1,3 +1,4 @@
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	getLatestTypesEntrypoint,
 	getWorkerdCompatibilityDate,
@@ -18,10 +19,10 @@ describe("Compatibility Date Helpers", () => {
 	});
 
 	describe("getWorkerdCompatibilityDate()", () => {
-		test("returns today's date", async ({ expect }) => {
-			const date = getWorkerdCompatibilityDate("./my-app");
+		test("returns the default compatibility date", async ({ expect }) => {
+			const date = getWorkerdCompatibilityDate();
 
-			expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+			expect(date).toBe(DEFAULT_COMPAT_DATE);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(expect.stringContaining(date));
 		});

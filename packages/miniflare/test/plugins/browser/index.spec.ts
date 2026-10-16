@@ -1,6 +1,7 @@
-import { Miniflare } from "miniflare";
+import { Log, LogLevel, Miniflare } from "miniflare";
 import {
 	afterEach,
+	beforeAll,
 	beforeEach,
 	describe,
 	test,
@@ -64,11 +65,20 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 
 const BROWSER_RENDERING_RETRY = {
 	retry: {
-		condition: /Chrome readiness probe .* timed out|Test timed out/i,
+		condition:
+			/Chrome readiness probe .* timed out|Test timed out|Failed to launch (the browser process|local browser)/i,
 		count: 3,
 		delay: 1_000,
 	},
 } satisfies TestOptions;
+
+/**
+ * Budget for the one-off Chrome download in {@link warmChromeInstall}.
+ *
+ * Generous on purpose: a cold CI runner fetches ~150 MB before the first
+ * browser can start.
+ */
+const CHROME_INSTALL_TIMEOUT = 10 * 60 * 1_000;
 
 const BROWSER_WORKER_SCRIPT = () => `
 export default {
@@ -81,9 +91,54 @@ export default {
 };
 `;
 
+/**
+ * Download and launch Chrome once, before any of the timed tests run.
+ *
+ * The tests below allow 20s each, which is nowhere near enough to fetch
+ * ~150 MB of Chrome on a cold runner. Left to the first test, the download
+ * loses that race and the test is abandoned while `@puppeteer/browsers` is
+ * still extracting — but the archive extracts alphabetically, so the
+ * executable is already on disk and every later `install()` short-circuits
+ * onto a half-written directory. Chrome then dies on startup with
+ * `Failed to load ...resources.pak`, failing tests that have nothing wrong
+ * with them.
+ *
+ * Doing the install here, under a timeout that can actually accommodate it,
+ * means the tests only ever see a complete install.
+ */
+async function warmChromeInstall(): Promise<void> {
+	const mf = new Miniflare({
+		// Miniflare logs to a no-op by default, which makes a failure here
+		// (a bad cached install, a download that will not complete) impossible
+		// to diagnose from CI output alone.
+		log: new Log(LogLevel.WARN),
+		workers: [
+			{
+				config: {
+					name: "warmup",
+					compatibilityDate: "2024-11-20",
+					manifest: singleModuleManifest(BROWSER_WORKER_SCRIPT()),
+					env: { MYBROWSER: { type: "browser" } },
+				},
+			},
+		],
+	});
+	try {
+		const res = await mf.dispatchFetch("https://localhost/session");
+		const text = await res.text();
+		if (!text.includes("sessionId")) {
+			throw new Error(`Failed to warm up the Chrome install: ${text}`);
+		}
+	} finally {
+		// Disposal closes the browser process, so the tests start from scratch.
+		await mf.dispose();
+	}
+}
+
 // We need to run browser rendering tests in a serial manner to avoid a race condition installing the browser.
-// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser.
 describe.sequential("browser rendering", { timeout: 20_000 }, () => {
+	beforeAll(warmChromeInstall, CHROME_INSTALL_TIMEOUT);
+
 	// The CLI spinner outputs to stdout, so we mute it during tests
 	beforeEach(() => {
 		vi.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -100,7 +155,6 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(BROWSER_WORKER_SCRIPT()),
@@ -136,7 +190,6 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker-a",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(workerScript("BROWSER_A")),
@@ -145,7 +198,6 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 					},
 					{
 						config: {
-							type: "worker",
 							name: "worker-b",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(workerScript("BROWSER_B")),
@@ -191,7 +243,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(BROWSER_WORKER_CLOSE_SCRIPT),
@@ -244,7 +295,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(BROWSER_WORKER_REUSE_SCRIPT),
@@ -341,7 +391,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(BROWSER_WORKER_RECONNECT_SCRIPT),
@@ -391,7 +440,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -447,7 +495,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(GET_SESSIONS_SCRIPT),
@@ -505,7 +552,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -539,7 +585,6 @@ export default {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2024-11-20",
 						manifest: singleModuleManifest(
@@ -567,7 +612,6 @@ export default {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker",
 						compatibilityDate: "2024-11-20",
 						manifest: singleModuleManifest(
@@ -609,7 +653,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_SESSION_SCRIPT),
@@ -662,7 +705,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_JSON_SCRIPT),
@@ -728,7 +770,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_DELETE_SCRIPT),
@@ -792,7 +833,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_BROWSER_WS_SCRIPT),
@@ -830,7 +870,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -889,7 +928,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_JSON_PROTOCOL_SCRIPT),
@@ -939,7 +977,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -993,7 +1030,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_PAGE_WS_SCRIPT),
@@ -1004,9 +1040,14 @@ export default {
 			});
 			useDispose(mf);
 
-			const { resultValue } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const response = await mf.dispatchFetch("https://localhost");
+			const responseText = await response.text();
+			if (!response.ok) {
+				throw new Error(responseText);
+			}
+			const { resultValue } = JSON.parse(responseText) as {
+				resultValue: number;
+			};
 
 			expect(resultValue).toBe(2);
 		}
@@ -1020,7 +1061,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(
@@ -1112,7 +1152,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(DEVTOOLS_DELETE_ALL_WS_SCRIPT),
@@ -1143,7 +1182,6 @@ export default {
 				workers: [
 					{
 						config: {
-							type: "worker",
 							name: "worker",
 							compatibilityDate: "2024-11-20",
 							manifest: singleModuleManifest(

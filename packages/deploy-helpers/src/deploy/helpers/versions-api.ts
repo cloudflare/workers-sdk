@@ -135,8 +135,11 @@ export async function createDeployment(
 	workerName: string,
 	versionTraffic: Map<VersionId, Percentage>,
 	message: string | undefined,
-	force: boolean | undefined
+	force: boolean | undefined,
+	codeUpdateStrategy?: unknown
 ) {
+	// The generated Cloudflare SDK does not expose code_update_strategy yet.
+	// Keep this request here until the updated deployment schema reaches the SDK.
 	return await fetchResult<{ id: string }>(
 		complianceConfig,
 		`/accounts/${accountId}/workers/scripts/${workerName}/deployments${force ? "?force=true" : ""}`,
@@ -152,6 +155,7 @@ export async function createDeployment(
 				annotations: {
 					"workers/message": message,
 				},
+				code_update_strategy: codeUpdateStrategy,
 			}),
 		}
 	);

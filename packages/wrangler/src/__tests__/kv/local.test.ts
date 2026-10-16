@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import { mockProcess } from "../helpers/mock-process";
 import { runWrangler } from "../helpers/run-wrangler";
 
 vi.unmock("undici");
@@ -9,6 +10,7 @@ vi.unmock("undici");
 describe("kv", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+	const proc = mockProcess();
 
 	describe("local", () => {
 		it("should put local kv storage", async ({ expect }) => {
@@ -215,6 +217,30 @@ describe("kv", () => {
 				  }
 				]"
 			`);
+		});
+
+		it("should put binary values from base64 in local bulk kv storage", async ({
+			expect,
+		}) => {
+			// Bytes that are not valid UTF-8, so a UTF-8 round trip would replace
+			// them with U+FFFD. The first eight are the PNG signature.
+			const binary = Buffer.from([
+				0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x80, 0xff, 0xfe,
+			]);
+			const keyValues = [
+				{
+					key: "binary",
+					value: binary.toString("base64"),
+					base64: true,
+				},
+			];
+			writeFileSync("./binary-keys.json", JSON.stringify(keyValues));
+			await runWrangler(
+				`kv bulk put binary-keys.json --namespace-id binary-namespace-id`
+			);
+
+			await runWrangler(`kv key get binary --namespace-id binary-namespace-id`);
+			expect(proc.write).toEqual(binary);
 		});
 
 		it("should delete local bulk kv storage", async ({ expect }) => {

@@ -7,7 +7,7 @@ export const pipelinesSinksListCommand = createCommand({
 	metadata: {
 		description: "List all sinks",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
@@ -56,7 +56,7 @@ export const pipelinesSinksListCommand = createCommand({
 			sinks.map((sink) => ({
 				Name: sink.name,
 				ID: sink.id,
-				Type: sink.type === "r2" ? "R2" : "R2 Data Catalog",
+				Type: sink.type === "r2" ? "R2" : "Basin Catalog",
 				Destination:
 					sink.type === "r2"
 						? sink.config.bucket

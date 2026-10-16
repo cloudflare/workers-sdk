@@ -8,11 +8,11 @@ export default defineConfig({
 			build: {
 				rollupOptions: {
 					input: {
-						main: path.resolve(__dirname, "index.html"),
-						contact: path.resolve(__dirname, "contact.html"),
-						"404": path.resolve(__dirname, "404.html"),
-						about: path.resolve(__dirname, "about/index.html"),
-						"about-404": path.resolve(__dirname, "about/404.html"),
+						main: path.resolve(import.meta.dirname, "index.html"),
+						contact: path.resolve(import.meta.dirname, "contact.html"),
+						"404": path.resolve(import.meta.dirname, "404.html"),
+						about: path.resolve(import.meta.dirname, "about/index.html"),
+						"about-404": path.resolve(import.meta.dirname, "about/404.html"),
 					},
 				},
 			},
@@ -22,12 +22,7 @@ export default defineConfig({
 		cloudflare({
 			inspectorPort: false,
 			persistState: false,
-			experimental: {
-				newConfig: {
-					cfBuildOutput: true,
-					types: { generate: false },
-				},
-			},
+			types: { includeRuntime: false, generate: false },
 		}),
 	],
 });

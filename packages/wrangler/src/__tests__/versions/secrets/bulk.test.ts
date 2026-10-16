@@ -43,7 +43,7 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker "script-name" "
+			🌀 Processing the secrets for the Worker "script-name" "
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
@@ -79,16 +79,93 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker "script-name"
+			🌀 Processing the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
-			✨ Success! Created version id with 3 secrets.
+			✨ Success! Created version id with 3 secrets created and 0 secrets deleted.
 			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
+
+	test.for(["file", "stdin"])(
+		"creating and deleting secrets from JSON %s",
+		async (source, { expect }) => {
+			const secrets = { OLD_KEY: null, NEW_KEY: "new", EMPTY_KEY: "" };
+			if (source === "file") {
+				await writeFile("secrets.json", JSON.stringify(secrets));
+			} else {
+				mockReadlineInput(JSON.stringify(secrets));
+			}
+
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, secrets);
+				expect(patch.env).toEqual({
+					OLD_KEY: null,
+					NEW_KEY: { type: "secret_text", text: "new" },
+					EMPTY_KEY: { type: "secret_text", text: "" },
+				});
+				expect(patch.annotations).toEqual({
+					"workers/message": "Bulk updated 3 secrets",
+				});
+			});
+
+			await runWrangler(
+				`versions secret bulk ${source === "file" ? "secrets.json " : ""}--name script-name`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Processing the secrets for the Worker "script-name"
+				💥 Successfully deleted secret for key: OLD_KEY
+				✨ Successfully created secret for key: NEW_KEY
+				✨ Successfully created secret for key: EMPTY_KEY
+				✨ Success! Created version id with 2 secrets created and 1 secret deleted.
+				➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
+			`);
+			expect(std.err).toBe("");
+		}
+	);
+
+	test.for(["file", "stdin"])(
+		"deleting secrets without creating any from JSON %s",
+		async (source, { expect }) => {
+			const secrets = { OLD_KEY: null, OTHER_KEY: null };
+			if (source === "file") {
+				await writeFile("secrets.json", JSON.stringify(secrets));
+			} else {
+				mockReadlineInput(JSON.stringify(secrets));
+			}
+
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, secrets);
+				expect(patch.env).toEqual(secrets);
+				expect(patch.annotations).toEqual({
+					"workers/message": "Bulk updated 2 secrets",
+				});
+			});
+
+			await runWrangler(
+				`versions secret bulk ${source === "file" ? "secrets.json " : ""}--name script-name`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Processing the secrets for the Worker "script-name"
+				💥 Successfully deleted secret for key: OLD_KEY
+				💥 Successfully deleted secret for key: OTHER_KEY
+				✨ Success! Created version id with 0 secrets created and 2 secrets deleted.
+				➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
+			`);
+			expect(std.err).toBe("");
+		}
+	);
 
 	test("uploading secrets from env file", async ({ expect }) => {
 		await writeFile(
@@ -108,11 +185,11 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker "script-name"
+			🌀 Processing the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
-			✨ Success! Created version id with 3 secrets.
+			✨ Success! Created version id with 3 secrets created and 0 secrets deleted.
 			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
@@ -153,11 +230,11 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker "script-name"
+			🌀 Processing the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
-			✨ Success! Created version id with 3 secrets.
+			✨ Success! Created version id with 3 secrets created and 0 secrets deleted.
 			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
@@ -183,11 +260,11 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker "script-name"
+			🌀 Processing the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
-			✨ Success! Created version id with 3 secrets.
+			✨ Success! Created version id with 3 secrets created and 0 secrets deleted.
 			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
@@ -213,7 +290,7 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker "script-name" "
+			🌀 Processing the secrets for the Worker "script-name" "
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`

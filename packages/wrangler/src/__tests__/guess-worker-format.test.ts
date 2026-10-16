@@ -81,21 +81,276 @@ describe("guess worker format", () => {
 		expect(guess.format).toBe("service-worker");
 	});
 
-	it("logs a warning when a worker has exports, but not a default one", async ({
+	it.for([
+		{
+			name: "global scope",
+			source: `addEventListener("fetch", (event) => {
+				event.respondWith(new Response(foo.toString()));
+			});`,
+		},
+		{
+			name: "globalThis",
+			source: `globalThis.addEventListener("fetch", (event) => {
+				event.respondWith(new Response(foo.toString()));
+			});`,
+		},
+		{
+			name: "self",
+			source: `self.addEventListener("fetch", (event) => {
+				event.respondWith(new Response(foo.toString()));
+			});`,
+		},
+		{
+			name: "static bracket notation",
+			source: `self["addEventListener"]("fetch", (event) => {
+				event.respondWith(new Response(foo.toString()));
+			});`,
+		},
+		{
+			name: "a method alias",
+			source: `const register = self.addEventListener;
+			register.call(self, "fetch", (event) => {
+				event.respondWith(new Response(foo.toString()));
+			});`,
+		},
+	])(
+		"detects a legacy Service Worker with a named export using $name",
+		async ({ source }, { expect }) => {
+			await writeFile(
+				"./index.ts",
+				`
+				export const foo = 1;
+
+				${source}
+				`
+			);
+			const guess = await guessWorkerFormat(
+				path.join(process.cwd(), "./index.ts"),
+				process.cwd(),
+				undefined
+			);
+			expect(guess.format).toBe("service-worker");
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.ts has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using "service-worker" format...[0m
+
+				"
+			`);
+		}
+	);
+
+	it.for([
+		{
+			name: "locally shadowed globals",
+			source: `
+				function registerWithSelf(self: { addEventListener: (...args: unknown[]) => void }) {
+					self.addEventListener("fetch", () => {});
+				}
+				function registerWithGlobalThis(globalThis: { addEventListener: (...args: unknown[]) => void }) {
+					globalThis.addEventListener("fetch", () => {});
+				}
+				registerWithSelf({ addEventListener() {} });
+				registerWithGlobalThis({ addEventListener() {} });
+			`,
+		},
+		{
+			name: "receiver aliases",
+			source: `
+				const receiver = self;
+				receiver.addEventListener("fetch", (event) => {
+					event.respondWith(new Response(foo.toString()));
+				});
+			`,
+		},
+	])(
+		"chooses a Module Worker with a named export when using $name",
+		async ({ source }, { expect }) => {
+			await writeFile("./index.ts", `export const foo = 1;\n${source}`);
+			const guess = await guessWorkerFormat(
+				path.join(process.cwd(), "./index.ts"),
+				process.cwd(),
+				undefined
+			);
+			expect(guess.format).toBe("modules");
+		}
+	);
+
+	it("detects a Module Worker with only a named WorkerEntrypoint", async ({
 		expect,
 	}) => {
-		await writeFile("./index.ts", "export const foo = 1;");
+		await writeFile(
+			"./index.ts",
+			`
+			import { WorkerEntrypoint } from "cloudflare:workers";
+
+			export class NamedEntrypoint extends WorkerEntrypoint {
+				fetch(): Response {
+					return new Response("Hello from the named entrypoint");
+				}
+			}
+			`
+		);
 		const guess = await guessWorkerFormat(
 			path.join(process.cwd(), "./index.ts"),
 			process.cwd(),
 			undefined
 		);
-		expect(guess.format).toBe("service-worker");
-		expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.ts has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using "service-worker" format...[0m
+		expect(guess.format).toBe("modules");
+		expect(std.warn).not.toContain(
+			'Building the worker using "service-worker" format'
+		);
+	});
 
-			"
-		`);
+	it("detects a Module Worker with only a DurableObject", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"./index.ts",
+			`
+			import { DurableObject } from "cloudflare:workers";
+
+			export class NamedEntrypoint extends DurableObject {
+				fetch(): Response {
+					return new Response("Hello from the named entrypoint");
+				}
+			}
+			`
+		);
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.ts"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess.format).toBe("modules");
+		expect(std.warn).not.toContain(
+			'Building the worker using "service-worker" format'
+		);
+	});
+
+	it("detects a Module Worker with only a legacy DurableObject", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"./index.ts",
+			`
+			export class SomeClass {
+				constructor(controller, env) {}
+
+				async fetch(request) {
+					return new Response("Actor!");
+				}
+			}
+			`
+		);
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.ts"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess.format).toBe("modules");
+		expect(std.warn).not.toContain(
+			'Building the worker using "service-worker" format'
+		);
+	});
+
+	it("detects Module Worker via default export over named WorkerEntrypoint and addEventListener", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"./index.ts",
+			`
+			import { WorkerEntrypoint } from "cloudflare:workers";
+
+			export default {
+				fetch(): Response {
+					return new Response("Hello from the default entrypoint");
+				},
+			};
+
+			export class NamedEntrypoint extends WorkerEntrypoint {
+				fetch(): Response {
+					return new Response("Hello from the named entrypoint");
+				}
+			}
+
+			addEventListener("fetch", () => {});
+			`
+		);
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.ts"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess).toStrictEqual({
+			format: "modules",
+			exports: ["NamedEntrypoint", "default"],
+		});
+		expect(std.warn).not.toContain(
+			'Building the worker using "service-worker" format'
+		);
+	});
+
+	it("detects Service Worker format when a named Object and addEventListener are both present", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"./index.ts",
+			`
+			export const NamedEntrypoint = {
+				fetch(): Response {
+					return new Response("Hello from the named entrypoint");
+				}
+			}
+
+			addEventListener("fetch", () => {});
+			`
+		);
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.ts"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess).toStrictEqual({
+			format: "service-worker",
+			exports: ["NamedEntrypoint"],
+		});
+		expect(std.warn).toContain(
+			'Building the worker using "service-worker" format'
+		);
+	});
+
+	// NOTE: this is very strange behavior, but it is intentional
+	// For backwards compatibility, the heuristic must assume SW syntax here,
+	// even though the file is guaranteed to fail the actual build later, because SW
+	// cannot perform internal imports.
+	it("detects Service Worker format when a named Entrypoint and addEventListener are both present", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"./index.ts",
+			`
+			import { WorkerEntrypoint } from "cloudflare:workers";
+
+			export class NamedEntrypoint extends WorkerEntrypoint {
+				fetch(): Response {
+					return new Response("Hello from the named entrypoint");
+				}
+			}
+
+			addEventListener("fetch", () => {});
+			`
+		);
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.ts"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess).toStrictEqual({
+			format: "service-worker",
+			exports: ["NamedEntrypoint"],
+		});
+		expect(std.warn).toContain(
+			'Building the worker using "service-worker" format'
+		);
 	});
 
 	it("should list exports", async ({ expect }) => {

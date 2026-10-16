@@ -76,7 +76,6 @@ async function testGet(
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -96,7 +95,9 @@ async function testGet(
 		const expected = opts.expectedRoutes.has(route as Route);
 		const text = (await res.text()).trim();
 		expect(res.status).toBe(expected ? 200 : 404);
-		if (expected) expect(text).toBe(expectedContents);
+		if (expected) {
+			expect(text).toBe(expectedContents);
+		}
 	}
 }
 
@@ -137,7 +138,6 @@ async function testMatch(expect: ExpectStatic, include: string) {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -180,7 +180,6 @@ test("doesn't cache assets", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -211,7 +210,6 @@ test("gets assets with module worker", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(
@@ -239,7 +237,6 @@ test("gets assets with percent-encoded paths", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
@@ -271,7 +268,6 @@ test.skipIf(process.platform === "win32")(
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},

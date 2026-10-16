@@ -162,6 +162,33 @@ export interface AiSearchMessage {
 }
 
 /**
+ * Per-request retrieval overrides for an AI Search query.
+ */
+export interface AiSearchSearchRetrievalOptions {
+	filters?: Record<string, string>;
+	match_threshold?: number;
+	max_num_results?: number;
+}
+
+/**
+ * Per-request options for an AI Search query.
+ */
+export interface AiSearchSearchOptions {
+	retrieval?: AiSearchSearchRetrievalOptions;
+	reranking?: {
+		enabled: boolean;
+	};
+}
+
+/**
+ * Request body for an AI Search query.
+ */
+export interface AiSearchSearchRequest {
+	messages: AiSearchMessage[];
+	ai_search_options?: AiSearchSearchOptions;
+}
+
+/**
  * Represents an AI Search namespace.
  */
 export interface AiSearchNamespace {

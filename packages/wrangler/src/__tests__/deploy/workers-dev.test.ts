@@ -1,6 +1,7 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { getSubdomainValues } from "@cloudflare/deploy-helpers";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -38,14 +39,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -799,20 +792,18 @@ describe("deploy", () => {
 			expect,
 		}) => {
 			setIsTTY(false);
-			vi.setSystemTime(new Date(2020, 11, 1));
 
 			writeWorkerSource();
 
 			await expect(
 				async () => await runWrangler("deploy ./index.js --name my-worker")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: A compatibility_date is required when uploading a Worker. Add the following to your Wrangler configuration file:
-				    \`\`\`
-				    {"compatibility_date":"2020-12-01"}
-				    \`\`\`
-				    Or you could pass it in your terminal as \`--compatibility-date 2020-12-01\`
-				See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.]
-			`);
+			).rejects
+				.toThrow(`A compatibility_date is required when uploading a Worker. Add the following to your Wrangler configuration file:
+    \`\`\`
+    {"compatibility_date":"${DEFAULT_COMPAT_DATE}"}
+    \`\`\`
+    Or you could pass it in your terminal as \`--compatibility-date ${DEFAULT_COMPAT_DATE}\`
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
 		});
 
 		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async ({
@@ -867,6 +858,37 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should get the workers.dev URL from the Worker resource", async ({
+			expect,
+		}) => {
+			vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "output.json");
+			writeWranglerConfig({ workers_dev: true });
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: false });
+			mockUpdateWorkerSubdomain({ enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toContain("Uploaded test-name");
+			expect(std.out).toContain("Current Version ID");
+			expect(std.out).toContain("Deployed test-name triggers");
+			expect(std.out).toContain(
+				"https://test-name.test-sub-domain.workers.dev"
+			);
+			expect(std.out).not.toContain("No targets deployed");
+			expect(std.err).toBe("");
+
+			const outputEntries = readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(
+				outputEntries.find((entry) => entry.type === "deploy")
+			).toMatchObject({
+				targets: ["https://test-name.test-sub-domain.workers.dev"],
+			});
+		});
+
 		it("should fail to deploy to the workers.dev domain if email is unverified", async ({
 			expect,
 		}) => {
@@ -911,7 +933,7 @@ describe("deploy", () => {
 			});
 			writeWorkerSource();
 			mockUploadWorkerRequest();
-			mockGetWorkerSubdomain({ enabled: false });
+			mockGetWorkerSubdomain({ enabled: false, subdomain: false });
 			mockSubDomainRequest("does-not-exist", false);
 
 			mockConfirm({
@@ -950,8 +972,7 @@ describe("deploy", () => {
 				writeWorkerSource();
 				mockWorkerDoesNotExist();
 				// The account-level subdomain lookup reports "not registered" until we
-				// register one, then succeeds for the post-upload triggers lookup.
-				mockSubDomainRequest("test-sub-domain", true, false);
+				// register one before upload.
 				mockSubDomainRequest("test-sub-domain", false, true);
 				mockUploadWorkerRequest({ useOldUploadApi: true });
 
@@ -1017,6 +1038,48 @@ describe("deploy", () => {
 				`);
 			});
 
+			it("fails when workers.dev subdomain registration is unauthorized", async ({
+				expect,
+			}) => {
+				writeFileSync(
+					"package.json",
+					JSON.stringify({ name: "agent-project-name" })
+				);
+				writeWranglerConfig({ name: undefined as unknown as string });
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockSubDomainRequest("agent-project-name", false, false);
+				mockUploadWorkerRequest({
+					expectedScriptName: "agent-project-name",
+					useOldUploadApi: true,
+				});
+				vi.mocked(detectAgent).mockReturnValue({
+					isAgent: true,
+					id: "test-agent",
+				});
+				msw.use(
+					http.get("*/accounts/:accountId/workers/subdomains/:subdomain", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10032, message: "subdomain_unavailable" },
+							])
+						)
+					),
+					http.put("*/accounts/:accountId/workers/subdomain", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10000, message: "Authentication error" },
+							]),
+							{ status: 403 }
+						)
+					)
+				);
+
+				await expect(runWrangler("deploy ./index")).rejects.toThrow(
+					'Wrangler could not automatically register "agent-project-name" as your `workers.dev` subdomain.'
+				);
+			});
+
 			it("uses the project name without prompting when run by an agent", async ({
 				expect,
 			}) => {
@@ -1032,6 +1095,11 @@ describe("deploy", () => {
 				mockUploadWorkerRequest({
 					expectedScriptName: "agent-project-name",
 					useOldUploadApi: true,
+				});
+				mockGetWorkerSubdomain({
+					enabled: true,
+					expectedScriptName: "agent-project-name",
+					subdomain: "agent-project-name",
 				});
 				vi.mocked(detectAgent).mockReturnValue({
 					isAgent: true,
@@ -1105,8 +1173,8 @@ describe("deploy", () => {
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockWorkerDoesNotExist();
-				// Fetched once before upload and once for the post-upload triggers.
-				mockSubDomainRequest("test-sub-domain", true, false);
+				// Fetched before upload to confirm that registration is not required.
+				mockSubDomainRequest("test-sub-domain");
 				mockUploadWorkerRequest({ useOldUploadApi: true });
 
 				await runWrangler("deploy ./index");
@@ -1123,6 +1191,34 @@ describe("deploy", () => {
 					Current Version ID: Galaxy-Class"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("uploads a new Worker when granular auth prevents the account subdomain lookup", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+				msw.use(
+					http.get("*/accounts/:accountId/workers/subdomain", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10000, message: "Authentication error" },
+							]),
+							{ status: 403 }
+						)
+					)
+				);
+
+				await runWrangler("deploy ./index");
+
+				expect(std.out).toContain("Uploaded test-name");
+				expect(std.out).toContain(
+					"https://test-name.test-sub-domain.workers.dev"
+				);
+				expect(std.out).toContain("Current Version ID");
+				expect(std.err).toBe("");
 			});
 
 			it("does not check for a workers.dev subdomain when a new Worker only targets routes", async ({
@@ -1523,10 +1619,10 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should warn the user if workers_dev default is different from remote", async ({
+		it("should warn with TOML syntax if workers_dev default is different from remote when using wrangler.toml", async ({
 			expect,
 		}) => {
-			writeWranglerConfig({}); // Default workers_dev should be true, since there's no routes.
+			writeWranglerConfig({}, "./wrangler.toml"); // Default workers_dev should be true, since there's no routes.
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
@@ -1547,15 +1643,14 @@ describe("deploy", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your Wrangler file, it will be enabled for this deployment by default.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your Wrangler config file, it will be enabled for this deployment by default.[0m
 
 				  To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false'
-				  in your Wrangler file.
+				  in your Wrangler config file.
 
 				"
 			`);
 		});
-
 		it("should warn the user if preview_urls default is different from remote", async ({
 			expect,
 		}) => {
@@ -1580,10 +1675,10 @@ describe("deploy", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be enabled for this deployment by default.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler config file, Preview URLs will be enabled for this deployment by default.[0m
 
 				  To override this setting, you can disable Preview URLs by explicitly setting 'preview_urls =
-				  false' in your Wrangler file.
+				  false' in your Wrangler config file.
 
 				"
 			`);
@@ -1719,6 +1814,28 @@ describe("deploy", () => {
 
 				"
 			`);
+		});
+
+		it("should use the Worker preview URL suffix in mixed-state warnings", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				workers_dev: false,
+				preview_urls: true,
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+			mockUpdateWorkerSubdomain({ enabled: false, previews_enabled: true });
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toContain("Uploaded test-name");
+			expect(std.warn).toContain(
+				"You are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled."
+			);
+			expect(std.warn).toContain(
+				"https://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev"
+			);
 		});
 
 		it("should warn when workers_dev=true,preview_urls=false", async ({

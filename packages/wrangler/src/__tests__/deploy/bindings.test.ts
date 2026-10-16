@@ -31,14 +31,6 @@ import {
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -113,6 +105,25 @@ describe("deploy", () => {
 		vi.unstubAllGlobals();
 		clearDialogs();
 		clearOutputFilePath();
+	});
+
+	describe("k2", () => {
+		it("uploads K2 producer bindings with only the public stream identifier", async ({
+			expect,
+		}) => {
+			const stream = "0123456789abcdef0123456789abcdef";
+			writeWranglerConfig({
+				k2: [{ binding: "ORDERS", stream }],
+			});
+			await fs.promises.writeFile("index.js", "export default {};");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [{ type: "k2", name: "ORDERS", stream }],
+			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toContain("K2 Stream");
+			expect(std.out).toContain(stream);
+		});
 	});
 
 	describe("bindings", () => {

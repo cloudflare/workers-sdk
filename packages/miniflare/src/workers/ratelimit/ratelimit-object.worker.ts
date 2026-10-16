@@ -6,7 +6,7 @@
 // limit part way through a window.
 //
 // Durable storage is still cleared by `deleteAllDurableObjects()`, so
-// vitest-pool-workers' `reset()` clears it for free — the same mechanism that
+// vitest-plugin's `reset()` clears it for free — the same mechanism that
 // resets the KV, R2 and D1 simulators.
 import { drain, get, MiniflareDurableObject, POST } from "miniflare:shared";
 import type { RouteHandler, TypedSql } from "miniflare:shared";

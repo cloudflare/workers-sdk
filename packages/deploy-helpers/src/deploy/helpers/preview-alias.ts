@@ -1,7 +1,8 @@
-import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { getWorkersCIBranchName } from "@cloudflare/workers-utils";
 import { logger } from "../../shared/context";
+import { resolveGitBranchName } from "../../shared/git-branch";
+import { truncateWithSuffix } from "../../shared/names";
 
 const MAX_DNS_LABEL_LENGTH = 63;
 const HASH_LENGTH = 4;
@@ -29,13 +30,7 @@ export function getBranchName(): string | undefined {
 		return ciBranchName;
 	}
 
-	// Fall back to git commands
-	try {
-		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();
-	} catch {
-		return undefined;
-	}
+	return resolveGitBranchName();
 }
 
 /**
@@ -47,21 +42,18 @@ export function createTruncatedAlias(
 	sanitizedAlias: string,
 	availableSpace: number
 ): string | undefined {
-	const spaceForHash = HASH_LENGTH + 1; // +1 for hyphen separator
-	const maxPrefixLength = availableSpace - spaceForHash;
-
-	if (maxPrefixLength < 1) {
-		// Not enough space even with truncation
-		return undefined;
-	}
-
 	const hash = createHash("sha256")
 		.update(branchName)
 		.digest("hex")
 		.slice(0, HASH_LENGTH);
+	const suffix = `-${hash}`;
 
-	const truncatedPrefix = sanitizedAlias.slice(0, maxPrefixLength);
-	return `${truncatedPrefix}-${hash}`;
+	if (availableSpace - suffix.length < 1) {
+		// Not enough space even with truncation
+		return undefined;
+	}
+
+	return truncateWithSuffix(sanitizedAlias, suffix, availableSpace);
 }
 
 /**

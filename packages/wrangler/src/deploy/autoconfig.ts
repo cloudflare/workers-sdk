@@ -2,8 +2,8 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
+	DEFAULT_COMPAT_DATE,
 	getWorkerNameFromProject,
-	getTodaysCompatDate,
 	UserError,
 	type Config,
 } from "@cloudflare/workers-utils";
@@ -17,6 +17,7 @@ import {
 } from "../autoconfig";
 import { createWranglerAutoConfigContext } from "../autoconfig-context";
 import { readConfig } from "../config";
+import { applyZoneArgsToRoutes } from "../deployment-bundle/route-zone-args";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
@@ -33,6 +34,9 @@ type DeployConfigFlags = {
 	compatibilityFlags: string[] | undefined;
 	// Routing & scheduling
 	routes: string[] | undefined;
+	zone: string[] | undefined;
+	zoneId: string[] | undefined;
+	experimentalRouteZones: boolean | undefined;
 	domains: string[] | undefined;
 	triggers: string[] | undefined;
 	// Variables & build-time substitutions
@@ -217,14 +221,12 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 
 	// Prompt for compatibility date when missing
 	if (!args.latest && !args.compatibilityDate && !config.compatibility_date) {
-		const compatibilityDateStr = getTodaysCompatDate();
-
 		if (
 			await confirm(
-				`No compatibility date is set. Would you like to use today's date (${compatibilityDateStr})?`
+				`No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`
 			)
 		) {
-			args.compatibilityDate = compatibilityDateStr;
+			args.compatibilityDate = DEFAULT_COMPAT_DATE;
 			promptedForMissing = true;
 			logger.log("");
 		} else {
@@ -242,8 +244,7 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		// When --latest was used, the compat date prompt was skipped but we still
 		// need a concrete date in the config file for future deploys without --latest
 		const effectiveCompatDate =
-			args.compatibilityDate ??
-			(args.latest ? getTodaysCompatDate() : undefined);
+			args.compatibilityDate ?? (args.latest ? DEFAULT_COMPAT_DATE : undefined);
 
 		const configContent: Record<string, unknown> = {
 			name: args.name,
@@ -259,7 +260,10 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 			configContent.compatibility_flags = args.compatibilityFlags;
 		}
 		if (args.routes?.length || args.domains?.length) {
-			const routeEntries: unknown[] = [...(args.routes ?? [])];
+			const routeEntries: unknown[] = applyZoneArgsToRoutes(
+				args.routes ?? [],
+				args
+			);
 			for (const domain of args.domains ?? []) {
 				routeEntries.push({ pattern: domain, custom_domain: true });
 			}
@@ -332,6 +336,11 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 					? [`--compatibility-flags ${args.compatibilityFlags.join(" ")}`]
 					: []),
 				...(args.routes?.length ? [`--routes ${args.routes.join(" ")}`] : []),
+				...(args.zone?.length || args.zoneId?.length
+					? ["--x-route-zones"]
+					: []),
+				...(args.zone?.length ? [`--zone ${args.zone.join(" ")}`] : []),
+				...(args.zoneId?.length ? [`--zone-id ${args.zoneId.join(" ")}`] : []),
 				...(args.domains?.length
 					? [`--domains ${args.domains.join(" ")}`]
 					: []),

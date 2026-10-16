@@ -38,6 +38,11 @@ updates:
     schedule:
       interval: "daily"
       time: "06:00"
+    # These packages are published by Cloudflare and can be updated immediately.
+    cooldown:
+      exclude:
+        - "workerd"
+        - "@cloudflare/workers-types"
     versioning-strategy: increase
     labels:
       - "package:miniflare"

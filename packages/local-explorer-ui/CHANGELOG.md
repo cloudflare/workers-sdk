@@ -1,5 +1,31 @@
 # @cloudflare/local-explorer-ui
 
+## 0.17.0
+
+### Minor Changes
+
+- [#15652](https://github.com/cloudflare/workers-sdk/pull/15652) [`44f5295`](https://github.com/cloudflare/workers-sdk/commit/44f52951a699f77a35fa5d3b0ba1d33c7e2e3a31) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add one-off Cron Trigger testing to Local Explorer
+
+  Developers can invoke a Worker's configured or custom Cron Trigger with an exact or guided expression, choose a UTC or epoch-millisecond scheduled time, and inspect the latest structured result without editing configuration.
+
+## 0.16.0
+
+### Minor Changes
+
+- [#15567](https://github.com/cloudflare/workers-sdk/pull/15567) [`a71237a`](https://github.com/cloudflare/workers-sdk/commit/a71237a662d50d51caed454f0a47f4a29f9cd2b1) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add row-level email resend tools to the Local Explorer
+
+  Routing captures can now be resent directly or loaded into the test email composer for editing. Routing rows expose and use a UUID-based capture ID for identity, detail lookup, and resend operations instead of relying on the email's Message-ID. Message-ID detail lookup remains available for compatibility, and resends preserve partial-capture warnings across replayed messages.
+
+## 0.15.0
+
+### Minor Changes
+
+- [#15337](https://github.com/cloudflare/workers-sdk/pull/15337) [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add email inspection and testing to Local Explorer
+
+  Add an Email group with Routing and Sending views for inspecting messages received by a Worker's `email()` handler and messages sent through its `send_email` bindings. Detail views show message content, metadata, attachments, and handler activity including forwarding, replies, rejection, and unhandled messages.
+
+  Add a test-email composer that delivers custom text, HTML, headers, and attachments directly to the selected Worker's `email()` handler during local development.
+
 ## 0.14.2
 
 ### Patch Changes

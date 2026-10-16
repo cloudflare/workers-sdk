@@ -2,6 +2,7 @@ import { Sidebar, Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
+	useMatchRoute,
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
@@ -28,10 +29,17 @@ import type { ThemeMode } from "../utils/theme-state";
 export const Route = createRootRoute({
 	component: RootLayout,
 	notFoundComponent: NotFound,
-	loader: async () => {
-		const workersResponse = await localExplorerListWorkers();
-		const workers = workersResponse.data?.result ?? [];
-		return { workers };
+	loader: async ({ location }) => {
+		try {
+			const workersResponse = await localExplorerListWorkers();
+			const workers = workersResponse.data?.result ?? [];
+			return { bootstrapAuthoritative: true, workers };
+		} catch (error) {
+			if (/\/cron-triggers(?:\/.*)?$/.test(location.pathname)) {
+				return { bootstrapAuthoritative: false, workers: [] };
+			}
+			throw error;
+		}
 	},
 });
 
@@ -40,6 +48,11 @@ function RootLayout() {
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
 	const router = useRouter();
+	const matchRoute = useMatchRoute();
+	const routingDetailParams = matchRoute({
+		includeSearch: false,
+		to: "/email/routing/$captureId",
+	});
 
 	const [sidebarOpen, setSidebarOpen] = useState<boolean>(loadSidebarOpenState);
 	const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
@@ -74,18 +87,28 @@ function RootLayout() {
 
 	const handleWorkerChange = useCallback(
 		(workerName: string) => {
+			if (routingDetailParams) {
+				// Email details belong to one worker. Redirect while the selector action
+				// is known so browser history changes are not mistaken for worker switches.
+				void router.navigate({
+					search: (previous) => ({ ...previous, worker: workerName }),
+					to: "/email/routing",
+				});
+				return;
+			}
+
 			const currentSearch = new URLSearchParams(routerState.location.searchStr);
 			currentSearch.set("worker", workerName);
 			router.history.push(
 				`${window.location.pathname}?${currentSearch.toString()}`
 			);
 		},
-		[router, routerState.location.searchStr]
+		[router, routerState.location.searchStr, routingDetailParams]
 	);
 
 	return (
 		<Toasty>
-			<div className="flex h-screen">
+			<div className="flex h-screen overflow-hidden">
 				<Sidebar.Provider
 					onOpenChange={handleSidebarOpenChange}
 					open={sidebarOpen}
@@ -100,7 +123,7 @@ function RootLayout() {
 						themeMode={themeMode}
 						workers={visibleWorkers}
 					/>
-					<main className="flex flex-1 flex-col overflow-y-auto">
+					<main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 						<Outlet />
 					</main>
 				</Sidebar.Provider>

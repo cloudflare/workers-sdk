@@ -15,22 +15,45 @@ const WORKER_SCRIPT = `export default {
 	}
 }`;
 
-function makeOptions(directory: string, rootPath?: string): MiniflareOptions {
+function makeOptions(
+	directory: string,
+	{ rootPath, basePath }: { rootPath?: string; basePath?: string } = {}
+): MiniflareOptions {
 	return {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2026-04-29",
 					manifest: singleModuleManifest(WORKER_SCRIPT),
-					assets: { directory },
+					assets: { directory, basePath },
 				},
 				dev: rootPath === undefined ? undefined : { rootPath },
 			},
 		],
 	};
 }
+
+test("omits Sentry from the embedded asset service Workers", async ({
+	expect,
+}) => {
+	for (const worker of ["assets", "router"]) {
+		for (const extension of ["js", "js.map"]) {
+			const artifact = await fs.readFile(
+				path.join(
+					"dist",
+					"src",
+					"workers",
+					"assets",
+					`${worker}.worker.${extension}`
+				),
+				"utf8"
+			);
+			expect(artifact).not.toContain("node_modules/toucan-js");
+			expect(artifact).not.toContain("node_modules/@sentry");
+		}
+	}
+});
 
 test("starts without error when assets directory does not exist", async ({
 	expect,
@@ -82,12 +105,88 @@ test("serves files from assets directory relative to rootPath", async ({
 	await fs.mkdir(assetsDir);
 	await fs.writeFile(path.join(assetsDir, "test.txt"), "hello from asset");
 
-	const mf = new Miniflare(makeOptions("public", tmp));
+	const mf = new Miniflare(makeOptions("public", { rootPath: tmp }));
 	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://example.com/test.txt");
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("hello from asset");
+});
+
+test("serves an in-prefix asset under a non-root basePath", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "test.txt"), "hello from asset");
+
+	const mf = new Miniflare(makeOptions(tmp, { basePath: "/subpath" }));
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://example.com/subpath/test.txt");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("hello from asset");
+});
+
+test("returns 404 for an off-prefix request under a non-root basePath", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "test.txt"), "hello from asset");
+
+	const mf = new Miniflare(makeOptions(tmp, { basePath: "/subpath" }));
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://example.com/test.txt");
+	expect(res.status).toBe(404);
+	await res.arrayBuffer();
+});
+
+test("normalizes a relative basePath in the Asset Worker", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "test.txt"), "hello from asset");
+	const mf = new Miniflare(makeOptions(tmp, { basePath: "relative/path" }));
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch(
+		"http://example.com/relative/path/test.txt"
+	);
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("hello from asset");
+});
+
+test("serves each Worker's own assets when several Workers have assets", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const names = ["first", "second"];
+	for (const name of names) {
+		await fs.mkdir(path.join(tmp, name));
+		await fs.writeFile(path.join(tmp, name, "name.txt"), name);
+	}
+
+	const mf = new Miniflare({
+		workers: names.map((name) => ({
+			config: {
+				name,
+				compatibilityDate: "2026-04-29",
+				manifest: singleModuleManifest(
+					"export default { fetch(request, env) { return env.ASSETS.fetch(request); } }"
+				),
+				assets: { directory: path.join(tmp, name) },
+				env: { ASSETS: { type: "assets" } },
+			},
+		})),
+	});
+	useDispose(mf);
+
+	for (const name of names) {
+		const worker = await mf.getWorker(name);
+		const res = await worker.fetch("http://example.com/name.txt");
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe(name);
+	}
 });
 
 // ─── Watch / reload behaviour ────────────────────────────────────────────────

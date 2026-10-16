@@ -5,6 +5,10 @@ import {
 	ANALYTICS_ENGINE_PLUGIN,
 	ANALYTICS_ENGINE_PLUGIN_NAME,
 } from "./analytics-engine";
+import {
+	ANALYTICS_SQL_PLUGIN,
+	ANALYTICS_SQL_PLUGIN_NAME,
+} from "./analytics-sql";
 import { ARTIFACTS_PLUGIN, ARTIFACTS_PLUGIN_NAME } from "./artifacts";
 import { ASSETS_PLUGIN } from "./assets";
 import { ASSETS_PLUGIN_NAME } from "./assets/constants";
@@ -25,6 +29,7 @@ import { FLAGSHIP_PLUGIN, FLAGSHIP_PLUGIN_NAME } from "./flagship";
 import { HELLO_WORLD_PLUGIN, HELLO_WORLD_PLUGIN_NAME } from "./hello-world";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
+import { K2_PLUGIN, K2_PLUGIN_NAME } from "./k2";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
 import { MEDIA_PLUGIN, MEDIA_PLUGIN_NAME } from "./media";
 import { MTLS_PLUGIN, MTLS_PLUGIN_NAME } from "./mtls";
@@ -41,7 +46,6 @@ import {
 } from "./version-metadata";
 import { VPC_NETWORKS_PLUGIN, VPC_NETWORKS_PLUGIN_NAME } from "./vpc-networks";
 import { VPC_SERVICES_PLUGIN, VPC_SERVICES_PLUGIN_NAME } from "./vpc-services";
-import { WEBSEARCH_PLUGIN, WEBSEARCH_PLUGIN_NAME } from "./websearch";
 import {
 	WORKER_LOADER_PLUGIN,
 	WORKER_LOADER_PLUGIN_NAME,
@@ -62,13 +66,14 @@ export const PLUGINS = {
 	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
 	[WORKFLOWS_PLUGIN_NAME]: WORKFLOWS_PLUGIN,
 	[PIPELINES_PLUGIN_NAME]: PIPELINE_PLUGIN,
+	[K2_PLUGIN_NAME]: K2_PLUGIN,
 	[SECRET_STORE_PLUGIN_NAME]: SECRET_STORE_PLUGIN,
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
+	[ANALYTICS_SQL_PLUGIN_NAME]: ANALYTICS_SQL_PLUGIN,
 	[AI_PLUGIN_NAME]: AI_PLUGIN,
 	[AGENT_MEMORY_PLUGIN_NAME]: AGENT_MEMORY_PLUGIN,
 	[AI_SEARCH_PLUGIN_NAME]: AI_SEARCH_PLUGIN,
-	[WEBSEARCH_PLUGIN_NAME]: WEBSEARCH_PLUGIN,
 	[BROWSER_RENDERING_PLUGIN_NAME]: BROWSER_RENDERING_PLUGIN,
 	[DISPATCH_NAMESPACE_PLUGIN_NAME]: DISPATCH_NAMESPACE_PLUGIN,
 	[IMAGES_PLUGIN_NAME]: IMAGES_PLUGIN,
@@ -113,6 +118,10 @@ export type {
 	GlobalServicesOptions,
 	NodeJSCompatMode,
 } from "./core";
+export type {
+	ContainerPrivileges,
+	ContainerPrivilegesCache,
+} from "./core/container";
 export type * from "./core/proxy/types";
 export * from "./d1";
 export * from "./do";
@@ -124,13 +133,14 @@ export * from "./ratelimit";
 export * from "./assets";
 export * from "./workflows";
 export * from "./pipelines";
+export * from "./k2";
 export * from "./secret-store";
 export * from "./email";
 export * from "./analytics-engine";
+export * from "./analytics-sql";
 export * from "./ai";
 export * from "./agent-memory";
 export * from "./ai-search";
-export * from "./websearch";
 export * from "./browser-rendering";
 export * from "./dispatch-namespace";
 export * from "./images";

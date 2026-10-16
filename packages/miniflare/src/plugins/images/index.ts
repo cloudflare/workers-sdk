@@ -4,11 +4,13 @@ import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { SharedBindings } from "../../workers";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
+	buildObjectEntryProps,
 	buildRemoteProxyProps,
 	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getRemoteProxyConnectionString,
+	getStorageService,
 	getUserBindingServiceName,
 	objectEntryWorker,
 	ProxyNodeBinding,
@@ -21,6 +23,12 @@ import type { Plugin } from "../shared";
 
 export const IMAGES_PLUGIN_NAME = "images";
 const IMAGES_REMOTE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:remote`;
+const IMAGES_DATA_NAMESPACE = "images-data";
+const IMAGES_DATA_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:ns:data`;
+
+export function getImagesBindingServiceName(name: string): string {
+	return getUserBindingServiceName(IMAGES_PLUGIN_NAME, `binding:${name}`);
+}
 
 export const IMAGES_PLUGIN: Plugin = {
 	bindingTypeDescription: "Images",
@@ -47,7 +55,7 @@ export const IMAGES_PLUGIN: Plugin = {
 											),
 										}
 									: {
-											name: getUserBindingServiceName(IMAGES_PLUGIN_NAME, name),
+											name: getImagesBindingServiceName(name),
 										},
 							},
 						],
@@ -68,6 +76,10 @@ export const IMAGES_PLUGIN: Plugin = {
 		const services: Service[] = [];
 
 		const imagesBindings = getEnvBindingsOfType(options.config, "images");
+		const hasLocalImages = imagesBindings.some(
+			([, binding]) =>
+				getRemoteProxyConnectionString(binding, options.dev) === undefined
+		);
 
 		for (const [name, binding] of imagesBindings) {
 			const remoteProxyConnectionString = getRemoteProxyConnectionString(
@@ -83,65 +95,8 @@ export const IMAGES_PLUGIN: Plugin = {
 				continue;
 			}
 
-			const serviceName = getUserBindingServiceName(IMAGES_PLUGIN_NAME, name);
-
-			const persistPath = getPersistPath(
-				IMAGES_PLUGIN_NAME,
-				tmpPath,
-				sharedOptions.resourcePersistencePath
-			);
-
-			await fs.mkdir(persistPath, { recursive: true });
-
-			const storageService = {
-				name: `${IMAGES_PLUGIN_NAME}:storage`,
-				disk: { path: persistPath, writable: true },
-			} satisfies Service;
-
-			const objectService = {
-				name: `${IMAGES_PLUGIN_NAME}:ns`,
-				worker: {
-					compatibilityDate: "2023-07-24",
-					compatibilityFlags: ["nodejs_compat", "experimental"],
-					modules: [
-						{
-							name: "namespace.worker.js",
-							esModule: SCRIPT_KV_NAMESPACE_OBJECT(),
-						},
-					],
-					durableObjectNamespaces: [
-						{
-							className: KV_NAMESPACE_OBJECT_CLASS_NAME,
-							uniqueKey: `miniflare-images-${KV_NAMESPACE_OBJECT_CLASS_NAME}`,
-						},
-					],
-					durableObjectStorage: { localDisk: storageService.name },
-					bindings: [
-						{
-							name: SharedBindings.MAYBE_SERVICE_BLOBS,
-							service: { name: storageService.name },
-						},
-						{
-							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-							service: { name: SERVICE_LOOPBACK },
-						},
-						...getMiniflareObjectBindings(),
-					],
-				},
-			} satisfies Service;
-
-			const kvNamespaceService = {
-				name: `${IMAGES_PLUGIN_NAME}:ns:data`,
-				worker: objectEntryWorker(
-					{
-						serviceName: objectService.name,
-						className: KV_NAMESPACE_OBJECT_CLASS_NAME,
-					},
-					"images-data"
-				),
-			} satisfies Service;
-
-			const imagesService = {
+			const serviceName = getImagesBindingServiceName(name);
+			services.push({
 				name: serviceName,
 				worker: {
 					compatibilityDate: "2025-04-01",
@@ -154,20 +109,76 @@ export const IMAGES_PLUGIN: Plugin = {
 					bindings: [
 						{
 							name: "IMAGES_STORE",
-							kvNamespace: { name: kvNamespaceService.name },
+							kvNamespace: getStorageService(
+								IMAGES_DATA_SERVICE_NAME,
+								buildObjectEntryProps(IMAGES_DATA_NAMESPACE),
+								sharedOptions
+							),
 						},
 						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 				},
-			} satisfies Service;
-
-			services.push(
-				storageService,
-				objectService,
-				kvNamespaceService,
-				imagesService
-			);
+			});
 		}
+
+		if (!hasLocalImages && !sharedOptions.unsafeEnableSharedStorage) {
+			return services;
+		}
+
+		const persistPath = getPersistPath(
+			IMAGES_PLUGIN_NAME,
+			tmpPath,
+			sharedOptions.resourcePersistencePath
+		);
+
+		await fs.mkdir(persistPath, { recursive: true });
+
+		const storageService = {
+			name: `${IMAGES_PLUGIN_NAME}:storage`,
+			disk: { path: persistPath, writable: true },
+		} satisfies Service;
+
+		const objectService = {
+			name: `${IMAGES_PLUGIN_NAME}:ns`,
+			worker: {
+				compatibilityDate: "2023-07-24",
+				compatibilityFlags: ["nodejs_compat", "experimental"],
+				modules: [
+					{
+						name: "namespace.worker.js",
+						esModule: SCRIPT_KV_NAMESPACE_OBJECT(),
+					},
+				],
+				durableObjectNamespaces: [
+					{
+						className: KV_NAMESPACE_OBJECT_CLASS_NAME,
+						uniqueKey: `miniflare-images-${KV_NAMESPACE_OBJECT_CLASS_NAME}`,
+					},
+				],
+				durableObjectStorage: { localDisk: storageService.name },
+				bindings: [
+					{
+						name: SharedBindings.MAYBE_SERVICE_BLOBS,
+						service: { name: storageService.name },
+					},
+					{
+						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+						service: { name: SERVICE_LOOPBACK },
+					},
+					...getMiniflareObjectBindings(),
+				],
+			},
+		} satisfies Service;
+
+		const kvNamespaceService = {
+			name: IMAGES_DATA_SERVICE_NAME,
+			worker: objectEntryWorker({
+				serviceName: objectService.name,
+				className: KV_NAMESPACE_OBJECT_CLASS_NAME,
+			}),
+		} satisfies Service;
+
+		services.push(storageService, objectService, kvNamespaceService);
 
 		return services;
 	},

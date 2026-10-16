@@ -2,7 +2,9 @@ import { validateRoutes } from "@cloudflare/deploy-helpers";
 import { UserError } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
 import { getScriptName } from "../utils/getScriptName";
+import { applyZoneArgsToRoutes } from "./route-zone-args";
 import type { triggersDeployCommand } from "../triggers";
+import type { RouteZoneArgs } from "./route-zone-args";
 import type { AssetsOptions, Config, Route } from "@cloudflare/workers-utils";
 
 export { validateRoutes } from "@cloudflare/deploy-helpers";
@@ -33,7 +35,7 @@ export function resolveTriggersInput(
 }
 
 function resolveRoutes(
-	args: { routes?: string[]; domains?: string[] },
+	args: RouteZoneArgs & { domains?: string[] },
 	config: Config,
 	assetsOptions: AssetsOptions | undefined
 ): Route[] {
@@ -41,8 +43,9 @@ function resolveRoutes(
 		pattern: domain,
 		custom_domain: true,
 	}));
-	const routes =
-		args.routes ?? config.routes ?? (config.route ? [config.route] : []);
+	const routes = args.routes
+		? applyZoneArgsToRoutes(args.routes, args)
+		: (config.routes ?? (config.route ? [config.route] : []));
 	const allDeploymentRoutes = [...routes, ...domainRoutes];
 	validateRoutes(allDeploymentRoutes, assetsOptions);
 	return allDeploymentRoutes;

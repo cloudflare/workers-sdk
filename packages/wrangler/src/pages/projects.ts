@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	UserError,
@@ -42,7 +43,11 @@ export const pagesProjectListCommand = createCommand({
 			PAGES_CONFIG_CACHE_FILENAME
 		);
 
-		const accountId = await requireAuth(config);
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...config,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		const projects: Array<Project> = await listProjects({ accountId });
 
@@ -97,6 +102,44 @@ export const listProjects = async ({
 	return results;
 };
 
+/**
+ * Checks whether a Pages project with the given name already exists on the
+ * account.
+ *
+ * @param accountId The account to look the project up in.
+ * @param projectName The project name to check, or `undefined` when no name is
+ * available (in which case no lookup is performed).
+ * @returns `true` if the project exists; `false` for a missing name or a
+ * not-found project.
+ * @throws Any API error other than "not found", so the caller can decide how to
+ * treat a failed lookup (the delegation gate skips delegation rather than risk
+ * delegating over a project that may already exist).
+ */
+async function pagesProjectExists({
+	accountId,
+	projectName,
+}: {
+	accountId: string;
+	projectName: string | undefined;
+}): Promise<boolean> {
+	if (!projectName) {
+		return false;
+	}
+	try {
+		await fetchResult<Project>(
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
+			`/accounts/${accountId}/pages/projects/${projectName}`
+		);
+		return true;
+	} catch (err) {
+		// code `8000007` corresponds to project not found
+		if ((err as { code: number }).code === 8000007) {
+			return false;
+		}
+		throw err;
+	}
+}
+
 export const pagesProjectCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new Cloudflare Pages project",
@@ -148,22 +191,33 @@ export const pagesProjectCreateCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(config);
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...config,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		// When run by an AI agent, delegate new static Pages projects to a Workers
-		// static-assets deploy of the current directory. Accounts that already
-		// have Pages projects, projects using unsupported Pages features, and
-		// `--force` are never delegated.
+		// static-assets deploy of the current directory. `pages project create`
+		// always targets a new project, so it is eligible regardless of whether the
+		// account already has other Pages projects. Projects using unsupported Pages
+		// features and `--force` are never delegated.
 		const delegation = await maybeDelegatePagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
-			accountHasPagesProjects: async () =>
-				(await listProjects({ accountId })).length > 0,
+			// Resolved lazily (so only agent sessions pay for it) to avoid
+			// delegating a create that clashes with an existing project name: an
+			// existing project is left on Pages, which reports the clash, rather
+			// than being deployed to Workers under that name.
+			projectExists: () => pagesProjectExists({ accountId, projectName }),
 			force,
 			projectName,
 			compatibilityDate,
 			compatibilityFlags,
-			unsupportedArgs: productionBranch ? ["--production-branch"] : [],
+			// `--production-branch` is not treated as unsupported: it names the
+			// project's production branch, which is exactly what a Workers deploy
+			// targets. `pages project create` always creates a new project, so there
+			// is never an existing production branch to preview against.
 		});
 		if (delegation.delegate) {
 			await runPagesToWorkersDeploy(delegation);
@@ -303,7 +357,11 @@ export const pagesProjectDeleteCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(config);
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...config,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		const confirmed =
 			args.yes ||

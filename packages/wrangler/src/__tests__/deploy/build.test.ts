@@ -11,7 +11,10 @@ import {
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, test, vi } from "vitest";
-import { printBundleSize } from "../../deployment-bundle/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+} from "../../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../../output";
 import { diagnoseScriptSizeError } from "../../utils/friendly-validator-errors";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -32,14 +35,6 @@ import {
 } from "./helpers";
 
 vi.mock("command-exists");
-vi.mock("../../check/commands", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		analyseBundle() {
-			return `{}`;
-		},
-	};
-});
 
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -218,6 +213,32 @@ describe("deploy", () => {
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
 				`console.log("https://www.abc.net.au/news/");`
 			);
+		});
+	});
+	describe("explicit resource management", () => {
+		it("should preserve using declarations instead of lowering them", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"index.js",
+				`
+export default {
+	async fetch() {
+		await using session = { async [Symbol.asyncDispose]() {} };
+		using socket = { [Symbol.dispose]() {} };
+		return new Response("ok");
+	},
+};
+`
+			);
+			await runWrangler("deploy index.js --dry-run --outdir dist");
+
+			const output = fs.readFileSync("dist/index.js", "utf-8");
+			expect(output).toContain("await using session = ");
+			expect(output).toContain("using socket = ");
+			expect(output).not.toContain("__using");
+			expect(output).not.toContain("__callDispose");
 		});
 	});
 	describe("custom builds", () => {
@@ -440,7 +461,7 @@ describe("deploy", () => {
 				Worker Startup Time: 100 ms
 				Uploaded test-name-testEnv (TIMINGS)
 				Deployed test-name-testEnv triggers (TIMINGS)
-				  https://test-name-testEnv.test-sub-domain.workers.dev
+				  https://test-name-testenv.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1071,6 +1092,9 @@ export default { fetch() { return new Response(foo); } }`
 				main: "index.js",
 			});
 
+			// The startup profiler runs Miniflare, whose HTTP server expects real
+			// Node.js timeout handles (including `unref()`).
+			vi.unstubAllGlobals();
 			await expect(runWrangler("deploy")).rejects.toThrow();
 			expect(std).toMatchInlineSnapshot(`
 				{
@@ -1117,17 +1141,19 @@ export default { fetch() { return new Response(foo); } }`
 			// keeping these as unit tests to try and keep them snappy, as they often deal with
 			// big files that would take a while to deal with in a full wrangler test
 
-			test("should print the bundle size", async ({ expect }) => {
+			test("should calculate the bundle size", async ({ expect }) => {
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
-				await printBundleSize({ name: "index.js", content: "" }, [
-					{
-						name: "index.js",
-						filePath: undefined,
-						content: bigModule,
-						type: "buffer",
-					},
-				]);
+				const bundleSize = await getSize([{ content: bigModule }]);
+
+				expect(bundleSize).toEqual({
+					size: 10_000_000,
+					gzipSize: expect.any(Number),
+				});
+			});
+
+			test("should print the bundle size", ({ expect }) => {
+				printBundleSize({ size: 10_000_000, gzipSize: 10_000_000 });
 
 				expect(std).toMatchInlineSnapshot(`
 					{
@@ -1322,6 +1348,62 @@ export default { fetch() { return new Response(mod); } };`;
 			});
 
 			await runWrangler("deploy");
+		});
+
+		it("should include source map with bundle by default", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ main: "index.ts" });
+			writeWorkerSource({ format: "ts" });
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": expect.stringMatching(
+						/"sources":\["another.ts","index.ts"\],"sourceRoot":"".*"file":"index.js"/
+					),
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should skip unresolvable source maps by default rather than failing", async () => {
+			writeWranglerConfig({ no_bundle: true, main: "index.js" });
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=missing.js.map"
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": null,
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should fail on unresolvable source maps when upload_source_maps = true", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				upload_source_maps: true,
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=missing.js.map"
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				/Invalid source map path in .*index\.js: .*missing\.js\.map does not exist\./
+			);
 		});
 
 		it("should not include source map with bundle when upload_source_maps = false", async () => {

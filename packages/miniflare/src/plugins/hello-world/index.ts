@@ -46,7 +46,7 @@ export const HELLO_WORLD_PLUGIN: Plugin = {
 		const persistPath = getPersistPath(
 			HELLO_WORLD_PLUGIN_NAME,
 			tmpPath,
-			sharedOptions.resourcePersistencePath
+			sharedOptions.isolatedResourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });

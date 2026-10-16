@@ -8,29 +8,36 @@ export default {
 		if (url) {
 			url = new URL(url).toString(); // normalize
 			switch (action) {
-				case "select": {
+				case "title": {
 					const browser = await puppeteer.launch(env.MYBROWSER);
-					const page = await browser.newPage();
-					await page.goto(url);
-					const h1Text = await page.$eval("h1", (el) => el.textContent.trim());
-					return new Response(h1Text);
+					try {
+						const page = await browser.newPage();
+						await page.goto(url);
+						return new Response(await page.title());
+					} finally {
+						await browser.close();
+					}
 				}
 
 				case "alter": {
 					const browser = await puppeteer.launch(env.MYBROWSER);
-					const page = await browser.newPage();
+					try {
+						const page = await browser.newPage();
 
-					await page.goto(url); // change to your target URL
+						await page.goto(url); // change to your target URL
 
-					await page.evaluate(() => {
-						const paragraph = document.querySelector("p");
-						if (paragraph) {
-							paragraph.textContent = "New paragraph text set by Puppeteer!";
-						}
-					});
+						await page.evaluate(() => {
+							const paragraph = document.querySelector("p");
+							if (paragraph) {
+								paragraph.textContent = "New paragraph text set by Puppeteer!";
+							}
+						});
 
-					const pText = await page.$eval("p", (el) => el.textContent.trim());
-					return new Response(pText);
+						const pText = await page.$eval("p", (el) => el.textContent.trim());
+						return new Response(pText);
+					} finally {
+						await browser.close();
+					}
 				}
 
 				case "disconnect": {
@@ -53,13 +60,16 @@ export default {
 			let img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });
 			if (img === null) {
 				const browser = await puppeteer.launch(env.MYBROWSER);
-				const page = await browser.newPage();
-				await page.goto(url);
-				img = (await page.screenshot()) as Buffer;
-				await env.BROWSER_KV_DEMO.put(url, img, {
-					expirationTtl: 60 * 60 * 24,
-				});
-				await browser.close();
+				try {
+					const page = await browser.newPage();
+					await page.goto(url);
+					img = (await page.screenshot()) as Buffer;
+					await env.BROWSER_KV_DEMO.put(url, img, {
+						expirationTtl: 60 * 60 * 24,
+					});
+				} finally {
+					await browser.close();
+				}
 			}
 			return new Response(img, {
 				headers: {

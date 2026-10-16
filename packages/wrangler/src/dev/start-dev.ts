@@ -11,6 +11,7 @@ import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerR
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
+import isNonInteractiveTurborepo from "../is-non-interactive-turborepo";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { TunnelManager } from "../tunnel/dev";
@@ -124,7 +125,9 @@ export async function startDev(args: StartDevOptions) {
 		});
 
 		const interactiveDevSession =
-			isInteractive() && args.showInteractiveDevSession !== false;
+			isInteractive() &&
+			!isNonInteractiveTurborepo() &&
+			args.showInteractiveDevSession !== false;
 
 		if (interactiveDevSession) {
 			unregisterHotKeys = registerDevHotKeys(devEnvs, args, { tunnelManager });
@@ -280,6 +283,9 @@ async function setupDevEnv(
 				tunnel: {
 					enabled: args.tunnel ?? false,
 					name: args.tunnelName,
+					allowedMail: args.tunnelAllowedMail?.length
+						? args.tunnelAllowedMail
+						: undefined,
 				},
 			},
 			legacy: {
@@ -368,8 +374,9 @@ function maybePrintScheduledWorkerWarning(
 }
 
 /**
- * Keep the message in sync with the Vite plugin copy in
- * packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts.
+ * Keep the message in sync with:
+ * - packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts (printLocalExplorerAgentHint)
+ * - packages/create-cloudflare/src/agents-md.ts (Local Explorer section)
  */
 function printLocalExplorerAgentHint(url: URL): void {
 	const displayUrl = new URL(url.href);
@@ -380,6 +387,7 @@ function printLocalExplorerAgentHint(url: URL): void {
 		The Local Explorer API is available at ${explorerApiUrl}
 		Useful routes:
 		  GET ${explorerApiUrl}/local/workers - local Workers and bindings
+		  POST ${explorerApiUrl}/local/scheduled?worker=<name> - invoke a Worker's scheduled handler; cron is required (see the OpenAPI schema for the full request)
 		  GET ${explorerApiUrl}/storage/kv/namespaces - KV namespaces
 		  GET ${explorerApiUrl}/d1/database - D1 databases
 		  GET ${explorerApiUrl}/r2/buckets - R2 buckets
@@ -387,6 +395,7 @@ function printLocalExplorerAgentHint(url: URL): void {
 		  GET ${explorerApiUrl}/workflows - Workflows
 		  POST ${explorerApiUrl}/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:
 		    curl -X POST ${explorerApiUrl}/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'
+		  POST ${explorerApiUrl}/local/observability/clear - clear all captured traces and logs
 		If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
 		  GET ${explorerApiUrl} - OpenAPI schema`);
 }

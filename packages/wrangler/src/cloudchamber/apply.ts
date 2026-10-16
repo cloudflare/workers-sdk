@@ -23,24 +23,24 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	Diff,
 	InstanceType,
+	configRolloutStepsToAPI,
 	resolveImageName,
 	RolloutsService,
 	SchedulingPolicy,
+} from "@cloudflare/containers-shared";
+import {
+	sortObjectRecursive,
+	stripUndefined,
 } from "@cloudflare/containers-shared";
 import {
 	FatalError,
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { configRolloutStepsToAPI } from "../containers/deploy";
 import { createCommand } from "../core/create-command";
 import { getOrSelectAccountId } from "../user";
-import { Diff } from "../utils/diff";
-import {
-	sortObjectRecursive,
-	stripUndefined,
-} from "../utils/sortObjectRecursive";
 import {
 	cloudchamberScope,
 	fillOpenAPIConfiguration,
@@ -63,7 +63,7 @@ import type {
 	Observability as ObservabilityConfiguration,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
-import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared";
 import type {
 	Config,
 	ContainerApp,
@@ -123,12 +123,17 @@ function createApplicationToModifyApplication(
 
 function applicationToCreateApplication(
 	accountId: string,
-	application: Application
+	application: Application,
+	config: Config
 ): CreateApplicationRequest {
 	const app: CreateApplicationRequest = {
 		configuration: {
 			...application.configuration,
-			image: resolveImageName(accountId, application.configuration.image),
+			image: resolveImageName(
+				accountId,
+				application.configuration.image,
+				config
+			),
 		},
 		constraints: application.constraints,
 		max_instances: application.max_instances,
@@ -252,6 +257,7 @@ function containerAppToCreateApplication(
 	containerApp: ContainerApp,
 	observability: Observability | undefined,
 	existingApp: Application | undefined,
+	config: Config,
 	skipDefaults = false
 ): CreateApplicationRequest {
 	const observabilityConfiguration = observabilityToConfiguration(
@@ -280,7 +286,7 @@ function containerAppToCreateApplication(
 		configuration: {
 			...configuration,
 			// De-sugar image name
-			image: resolveImageName(accountId, configuration.image),
+			image: resolveImageName(accountId, configuration.image, config),
 		},
 		// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, `instances` is deprecated in favor of `max_instances`
 		instances: containerApp.instances ?? 0,
@@ -392,6 +398,7 @@ export async function apply(
 			appConfigNoDefaults,
 			config.observability,
 			application,
+			config,
 			args.skipDefaults
 		);
 
@@ -399,7 +406,9 @@ export async function apply(
 			// we need to sort the objects (by key) because the diff algorithm works with
 			// lines
 			const prevApp = sortObjectRecursive<CreateApplicationRequest>(
-				stripUndefined(applicationToCreateApplication(accountId, application))
+				stripUndefined(
+					applicationToCreateApplication(accountId, application, config)
+				)
 			);
 
 			// fill up fields that their defaults were changed over-time,

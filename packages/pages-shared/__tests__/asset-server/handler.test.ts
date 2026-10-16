@@ -10,6 +10,40 @@ import type { Metadata } from "../../asset-server/metadata";
 import type { RedirectRule } from "@cloudflare/workers-shared/utils/configuration/types";
 
 describe("asset-server handler", () => {
+	describe.each(["WHAT’S YOUR DREAM JOB", "café", "猫", "🚀", "a#b?c%d"])(
+		"HTML redirects for %s",
+		(name) => {
+			test.for([
+				["/index/", "/index.html", "/"],
+				["/", ".html", ""],
+				["/index.html", "/index.html", "/"],
+				[".html", ".html", ""],
+				["/index", "/index.html", "/"],
+				["", "/index.html", "/"],
+			])(
+				"encodes the destination for suffix %s",
+				async ([suffix, assetSuffix, destinationSuffix], { expect }) => {
+					const encodedName = encodeURIComponent(name);
+					const search = "?next=%2Fhome&tag=%23one";
+					const findAssetEntryForPath = async (path: string) =>
+						path === `/${name}${assetSuffix}` ? path : null;
+					const { response } = await getTestResponse({
+						request: `https://example.com/${encodedName}${suffix}${search}`,
+						findAssetEntryForPath,
+					});
+					const destination = `/${encodedName}${destinationSuffix}${search}`;
+					expect(response.status).toBe(308);
+					expect(response.headers.get("Location")).toBe(destination);
+					const { response: asset } = await getTestResponse({
+						request: `https://example.com${destination}`,
+						findAssetEntryForPath,
+					});
+					expect(asset.status).toBe(200);
+				}
+			);
+		}
+	);
+
 	test("Returns appropriate status codes", async ({ expect }) => {
 		const statuses = [301, 302, 303, 307, 308];
 		const metadata = createMetadataObjectWithRedirects(
@@ -121,7 +155,7 @@ describe("asset-server handler", () => {
 				findAssetEntryForPath,
 			});
 			expect(response.status).toBe(308);
-			expect(response.headers.get("Location")).toEqual("/www.example.com/	/");
+			expect(response.headers.get("Location")).toEqual("/www.example.com/%09/");
 		}
 		{
 			const { response } = await getTestResponse({
@@ -130,7 +164,7 @@ describe("asset-server handler", () => {
 				findAssetEntryForPath,
 			});
 			expect(response.status).toBe(308);
-			expect(response.headers.get("Location")).toEqual("/www.example.com/\\/");
+			expect(response.headers.get("Location")).toEqual("/www.example.com/%5C/");
 		}
 		{
 			const { response } = await getTestResponse({
@@ -148,7 +182,7 @@ describe("asset-server handler", () => {
 				findAssetEntryForPath,
 			});
 			expect(response.status).toBe(308);
-			expect(response.headers.get("Location")).toEqual("/www.example.com/\\/");
+			expect(response.headers.get("Location")).toEqual("/www.example.com/%5C/");
 		}
 		{
 			const { response } = await getTestResponse({

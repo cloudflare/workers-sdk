@@ -1,5 +1,13 @@
 # @cloudflare/unenv-preset
 
+## 2.16.2
+
+### Patch Changes
+
+- [#15745](https://github.com/cloudflare/workers-sdk/pull/15745) [`14d946d`](https://github.com/cloudflare/workers-sdk/commit/14d946d5b5573d856f3b2ddaa0e75c3aa5fb7bfa) Thanks [@edmundhung](https://github.com/edmundhung)! - Preserve runtime polyfills when bundling `@cloudflare/unenv-preset`
+
+  Bundlers now retain side-effect-only polyfills that install runtime globals such as `performance` instead of tree-shaking them from applications.
+
 ## 2.16.1
 
 ### Patch Changes

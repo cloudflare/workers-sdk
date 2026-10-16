@@ -241,7 +241,6 @@ function makeEdge(targetScript: string, directSockets = false): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "proxy-server",
 					compatibilityDate: COMPAT_DATE,
 					compatibilityFlags: ["experimental"],
@@ -254,12 +253,11 @@ function makeEdge(targetScript: string, directSockets = false): Miniflare {
 							},
 						},
 					},
-					env: { VPC: { type: "worker", workerName: "vpc-target" } },
+					env: { VPC: { type: "worker", worker: "vpc-target" } },
 				},
 			},
 			{
 				config: {
-					type: "worker",
 					name: "vpc-target",
 					compatibilityDate: COMPAT_DATE,
 					compatibilityFlags: ["experimental"],
@@ -279,7 +277,6 @@ function makeLocal(userScript: string, edgeUrl: URL): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: COMPAT_DATE,
 					manifest: singleModuleManifest(userScript),
@@ -287,7 +284,7 @@ function makeLocal(userScript: string, edgeUrl: URL): Miniflare {
 						VPC: {
 							type: "vpc-network",
 							networkId: "test-network",
-							remote: true,
+							dev: { remote: true },
 						},
 					},
 				},
@@ -308,7 +305,6 @@ function makeLocalService(userScript: string, edgeUrl: URL): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: COMPAT_DATE,
 					manifest: singleModuleManifest(userScript),
@@ -316,7 +312,7 @@ function makeLocalService(userScript: string, edgeUrl: URL): Miniflare {
 						VPC: {
 							type: "vpc-service",
 							id: "test-service",
-							remote: true,
+							dev: { remote: true },
 						},
 					},
 				},
@@ -758,7 +754,7 @@ describe("VPC_SERVICES plugin: raw TCP opt-in", () => {
 						VPC: {
 							type: "vpc-service",
 							id: "test-service",
-							remote: true,
+							dev: { remote: true },
 						},
 					},
 				},

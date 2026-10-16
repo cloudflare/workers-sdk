@@ -34,10 +34,52 @@ export function castErrorCause(cause: unknown) {
 		return cause;
 	}
 
+	// Errors that cross a JSON channel (e.g. the ProxyWorker's and
+	// InspectorProxyWorker's error reports) arrive as SerializedError plain
+	// objects — rehydrate them so their message/name/stack are surfaced
+	// instead of an empty `new Error()`.
+	if (isSerializedError(cause)) {
+		const error = new Error(cause.message);
+		if (cause.name !== undefined) {
+			error.name = cause.name;
+		}
+		if (cause.stack !== undefined) {
+			error.stack = cause.stack;
+		}
+		if (cause.cause !== undefined) {
+			// Rehydrate serialized cause chains (serialiseError recurses) so the
+			// `instanceof Error` cause-chain classifiers in handle-errors.ts work
+			// across the channel; leave non-SerializedError causes untouched.
+			error.cause = isSerializedError(cause.cause)
+				? castErrorCause(cause.cause)
+				: cause.cause;
+		}
+		return error;
+	}
+
 	const error = new Error();
 	error.cause = cause;
 
 	return error;
+}
+
+const serializedErrorKeys = new Set(["message", "name", "stack", "cause"]);
+
+// Matches exactly the shape produced by serialiseError() and the
+// ProxyWorker's error reports. Kept strict (no extra keys) so that arbitrary
+// message-bearing objects passed to castErrorCause() are still preserved
+// verbatim as `cause` rather than lossily rehydrated.
+function isSerializedError(value: unknown): value is SerializedError {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+	const record = value as Record<string, unknown>;
+	return (
+		typeof record.message === "string" &&
+		(record.name === undefined || typeof record.name === "string") &&
+		(record.stack === undefined || typeof record.stack === "string") &&
+		Object.keys(record).every((key) => serializedErrorKeys.has(key))
+	);
 }
 
 // ConfigController

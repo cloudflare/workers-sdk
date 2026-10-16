@@ -293,7 +293,7 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 		const net = await import("node:net");
 		assert.strictEqual(typeof net, "object");
 		assert.strictEqual(typeof net.createConnection, "function");
-		assert.throws(() => net.createServer(), /not implemented/);
+		assert.strictEqual(typeof net.createServer, "function");
 	},
 
 	async testTls() {

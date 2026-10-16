@@ -21,15 +21,18 @@ export interface EmailAddress {
 	email: string;
 }
 
-export interface MessageBuilder {
+export interface EmailReplyMessageBuilder {
 	from: string | EmailAddress;
-	to: string | EmailAddress | (string | EmailAddress)[];
 	subject: string;
 	replyTo?: string | EmailAddress;
-	cc?: string | EmailAddress | (string | EmailAddress)[];
-	bcc?: string | EmailAddress | (string | EmailAddress)[];
 	headers?: Record<string, string>;
 	text?: string;
 	html?: string;
 	attachments?: EmailAttachment[];
+}
+
+export interface MessageBuilder extends EmailReplyMessageBuilder {
+	to: string | EmailAddress | (string | EmailAddress)[];
+	cc?: string | EmailAddress | (string | EmailAddress)[];
+	bcc?: string | EmailAddress | (string | EmailAddress)[];
 }

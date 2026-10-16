@@ -65,7 +65,7 @@ describe("generateRuntimeTypes", () => {
 		// nodejs_compat flags are stripped from the dispatch URL; the remaining
 		// flags keep their original caller-provided order.
 		expect(dispatchFetchMock).toHaveBeenCalledWith(
-			"http://dummy.com/2024-11-06+flag_b+flag_a"
+			"http://dummy.invalid/2024-11-06+flag_b+flag_a"
 		);
 		expect(result.runtimeHeader).toBe(
 			getRuntimeHeader(WORKERD_VERSION, "2024-11-06", [
@@ -73,6 +73,36 @@ describe("generateRuntimeTypes", () => {
 				"flag_b",
 				"flag_a",
 			])
+		);
+	});
+
+	it("uses a reserved .invalid domain for the dispatch URL", async ({
+		expect,
+	}) => {
+		await generateRuntimeTypes({
+			compatibilityDate: "2024-11-06",
+		});
+
+		// dummy.com is a real, publicly registered domain; .invalid (RFC 2606)
+		// can never resolve, so a misrouted request fails closed instead of
+		// downloading web content into the generated types.
+		expect(dispatchFetchMock).toHaveBeenCalledWith(
+			"http://dummy.invalid/2024-11-06"
+		);
+	});
+
+	it("disables Node.js compatibility when it is enabled by the compatibility date", async ({
+		expect,
+	}) => {
+		const result = await generateRuntimeTypes({
+			compatibilityDate: "2026-08-04",
+		});
+
+		expect(dispatchFetchMock).toHaveBeenCalledWith(
+			"http://dummy.invalid/2026-08-04+no_nodejs_compat+no_nodejs_compat_v2"
+		);
+		expect(result.runtimeHeader).toBe(
+			getRuntimeHeader(WORKERD_VERSION, "2026-08-04", [])
 		);
 	});
 

@@ -2,6 +2,7 @@ import assert from "node:assert";
 import http from "node:http";
 import url from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
+import dedent from "ts-dedent";
 import { ErrorAccessDenied, ErrorNoAuthCode, ErrorOAuth2 } from "./errors";
 import {
 	exchangeAuthCodeForAccessToken,
@@ -28,6 +29,60 @@ export interface GetOauthTokenOptions {
 	};
 	callbackHost: string;
 	callbackPort: number;
+}
+
+/**
+ * Renders the browser page shown when the OAuth provider rejects a callback.
+ *
+ * @param cliDisplayName Consumer name shown to the user.
+ * @param detail OAuth error details returned by the provider.
+ * @returns An escaped HTML error page.
+ */
+export function renderOauthErrorPage(
+	cliDisplayName: string,
+	detail: { code?: string; description?: string }
+): string {
+	const escape = (value: string) =>
+		value.replace(
+			/[&<>"']/g,
+			(character) =>
+				({
+					"&": "&amp;",
+					"<": "&lt;",
+					">": "&gt;",
+					'"': "&quot;",
+					"'": "&#39;",
+				})[character] as string
+		);
+	const codeRow = detail.code
+		? `<p>Code: <code>${escape(detail.code)}</code></p>`
+		: "";
+	const descriptionRow = detail.description
+		? `<p class="detail">${escape(detail.description)}</p>`
+		: "";
+	const escapedDisplayName = escape(cliDisplayName);
+	return dedent`
+		<!doctype html>
+		<html lang="en">
+		<head>
+		  <meta charset="utf-8" />
+		  <title>${escapedDisplayName} login failed</title>
+		  <style>
+		    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 720px; margin: 4rem auto; padding: 0 1rem; color: #1f2933; line-height: 1.5; }
+		    h1 { color: #c12d3f; }
+		    code { background: #f5f7fa; padding: 0.15em 0.3em; border-radius: 3px; }
+		    p.detail { background: #f5f7fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap; }
+		  </style>
+		</head>
+		<body>
+		  <h1>${escapedDisplayName} login failed</h1>
+		  <p>The Cloudflare OAuth provider returned an error.</p>
+		  ${codeRow}
+		  ${descriptionRow}
+		  <p>You can close this tab and return to your terminal for more details.</p>
+		</body>
+		</html>
+	`;
 }
 
 /**
@@ -102,46 +157,8 @@ export async function getOauthToken(
 				code?: string;
 				description?: string;
 			}): void {
-				const escape = (s: string) =>
-					s.replace(
-						/[&<>"']/g,
-						(c) =>
-							({
-								"&": "&amp;",
-								"<": "&lt;",
-								">": "&gt;",
-								'"': "&quot;",
-								"'": "&#39;",
-							})[c] as string
-					);
-				const codeRow = detail.code
-					? `<p>Code: <code>${escape(detail.code)}</code></p>`
-					: "";
-				const descriptionRow = detail.description
-					? `<p class="detail">${escape(detail.description)}</p>`
-					: "";
-				const body = `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Wrangler login failed</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 720px; margin: 4rem auto; padding: 0 1rem; color: #1f2933; line-height: 1.5; }
-    h1 { color: #c12d3f; }
-    code { background: #f5f7fa; padding: 0.15em 0.3em; border-radius: 3px; }
-    p.detail { background: #f5f7fa; padding: 1rem; border-radius: 4px; white-space: pre-wrap; }
-  </style>
-</head>
-<body>
-  <h1>Wrangler login failed</h1>
-  <p>The Cloudflare OAuth provider returned an error.</p>
-  ${codeRow}
-  ${descriptionRow}
-  <p>You can close this tab and return to your terminal for more details.</p>
-</body>
-</html>`;
 				res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-				res.end(body);
+				res.end(renderOauthErrorPage(ctx.cliDisplayName, detail));
 			}
 
 			assert(req.url, "This request doesn't have a URL"); // This should never happen
@@ -203,7 +220,8 @@ export async function getOauthToken(
 							ctx.logger,
 							ctx.isNonInteractiveOrCI,
 							options.clientId,
-							options.redirectUri
+							options.redirectUri,
+							ctx.cliDisplayName
 						);
 						res.writeHead(307, {
 							Location: options.granted.url,

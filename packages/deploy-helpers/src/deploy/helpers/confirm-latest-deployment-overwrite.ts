@@ -2,6 +2,7 @@ import * as cli from "@cloudflare/cli-shared-helpers";
 import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
 import { inputPrompt, leftT } from "@cloudflare/cli-shared-helpers/interactive";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { cliPresentation } from "../../shared/context";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "./versions-api";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
@@ -15,18 +16,37 @@ import type { Config } from "@cloudflare/workers-utils";
 
 const BLANK_INPUT = "-";
 
+/** Confirm replacement of the current deployment, preserving the public boolean API. */
 export async function confirmLatestDeploymentOverwrite(
 	config: Config,
 	accountId: string,
 	scriptName: string
-) {
+): Promise<boolean> {
+	return (
+		await confirmLatestDeploymentOverwriteAndGetLatest(
+			config,
+			accountId,
+			scriptName
+		)
+	).confirmed;
+}
+
+/** Internal deployment flow that also reuses the fetched deployment metadata. */
+export async function confirmLatestDeploymentOverwriteAndGetLatest(
+	config: Config,
+	accountId: string,
+	scriptName: string
+): Promise<{
+	confirmed: boolean;
+	latestDeployment: ApiDeployment | undefined;
+}> {
 	try {
 		const latest = await fetchLatestDeployment(config, accountId, scriptName);
 		if (latest && latest.versions.length >= 2) {
 			const versionCache: VersionCache = new Map();
 
 			cli.warn(
-				`Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.`,
+				`Your last deployment has multiple versions. To progress that deployment use "${cliPresentation.commands.versionsDeploy}" instead.`,
 				{ shape: cli.shapes.corners.tl, newlineBefore: false }
 			);
 			cli.newline();
@@ -39,20 +59,22 @@ export async function confirmLatestDeploymentOverwrite(
 				versionCache
 			);
 
-			return inputPrompt<boolean>({
+			const confirmed = await inputPrompt<boolean>({
 				type: "confirm",
-				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
+				question: `"${cliPresentation.commands.deploy}" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
 				label: "",
 				defaultValue: isNonInteractiveOrCI(),
 				acceptDefault: isNonInteractiveOrCI(),
 			});
+			return { confirmed, latestDeployment: latest };
 		}
+		return { confirmed: true, latestDeployment: latest };
 	} catch (e) {
 		if (!isWorkerNotFoundError(e)) {
 			throw e;
 		}
 	}
-	return true;
+	return { confirmed: true, latestDeployment: undefined };
 }
 
 async function printDeployment(

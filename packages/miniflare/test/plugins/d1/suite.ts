@@ -255,6 +255,9 @@ test("D1PreparedStatement: run", async ({ expect }) => {
 			// Not an `INSERT`, so `last_row_id` non-deterministic
 			last_row_id: result.meta.last_row_id,
 			served_by: "miniflare.db",
+			served_by_primary: true,
+			total_attempts: 1,
+			timings: { sql_duration_ms: result.meta.duration },
 			size_after: result.meta.size_after,
 			rows_read: 3,
 			rows_written: 0,
@@ -279,6 +282,9 @@ test("D1PreparedStatement: run", async ({ expect }) => {
 			duration: result.meta.duration,
 			last_row_id: 4,
 			served_by: "miniflare.db",
+			served_by_primary: true,
+			total_attempts: 1,
+			timings: { sql_duration_ms: result.meta.duration },
 			size_after: result.meta.size_after,
 			rows_read: 2,
 			rows_written: 1,
@@ -305,6 +311,9 @@ test("D1PreparedStatement: run", async ({ expect }) => {
 				rows_read: 1,
 				rows_written: 1,
 				served_by: "miniflare.db",
+				served_by_primary: true,
+				total_attempts: 1,
+				timings: { sql_duration_ms: result.meta.duration },
 				size_after: result.meta.size_after,
 			},
 			results: [],
@@ -335,6 +344,9 @@ test("D1PreparedStatement: run", async ({ expect }) => {
 			duration: result.meta.duration,
 			last_row_id: 5,
 			served_by: "miniflare.db",
+			served_by_primary: true,
+			total_attempts: 1,
+			timings: { sql_duration_ms: result.meta.duration },
 			size_after: result.meta.size_after,
 			rows_read: 1,
 			rows_written: 1,
@@ -364,6 +376,9 @@ test("D1PreparedStatement: all", async ({ expect }) => {
 			// Not an `INSERT`, so `last_row_id` non-deterministic
 			last_row_id: result.meta.last_row_id,
 			served_by: "miniflare.db",
+			served_by_primary: true,
+			total_attempts: 1,
+			timings: { sql_duration_ms: result.meta.duration },
 			size_after: result.meta.size_after,
 			rows_read: 3,
 			rows_written: 0,
@@ -390,6 +405,9 @@ test("D1PreparedStatement: all", async ({ expect }) => {
 				rows_read: 1,
 				rows_written: 0,
 				served_by: "miniflare.db",
+				served_by_primary: true,
+				total_attempts: 1,
+				timings: { sql_duration_ms: result.meta.duration },
 				size_after: result.meta.size_after,
 			},
 			results: [
@@ -630,6 +648,73 @@ test("dumpSql exports and imports complete database structure and content correc
 
 	// Verify that the schema and data in both databases are equal
 	await isDatabaseEqual(expect, originalDb, mirrorDb);
+});
+
+/**
+ * Test that dumpSql emits a valid SQL literal for non-finite REAL values
+ * (Infinity / -Infinity), instead of the raw JS Infinity/-Infinity string,
+ * which SQLite parses back as a bare identifier and fails to re-import.
+ */
+test("dumpSql exports Infinity and -Infinity as valid, re-importable SQL literals", async ({
+	expect,
+}) => {
+	const tmp1 = await useTmp();
+	const baseConfig = opts.workers[0].config;
+	const originalMF = new Miniflare({
+		resourcePersistencePath: tmp1,
+		workers: [
+			{ config: { ...baseConfig, env: { test: { type: "d1", id: "test" } } } },
+		],
+	});
+	useDispose(originalMF);
+	const originalDb = await originalMF.getD1Database("test");
+
+	await originalDb.exec(
+		`CREATE TABLE inf_test (id INTEGER PRIMARY KEY, r REAL)`
+	);
+	await originalDb.exec(
+		`INSERT INTO inf_test (id, r) VALUES (1, 9e999), (2, -9e999)`
+	);
+
+	const result = await originalDb
+		.prepare("PRAGMA miniflare_d1_export(?,?,?);")
+		.bind(0, 0)
+		.raw();
+	const [dumpStatements] = result as [string[]];
+	const dump = dumpStatements.join("\n");
+
+	// The dump must not contain the raw JS Infinity/-Infinity tokens as bare identifiers
+	expect(dump).not.toMatch(/VALUES\(1,Infinity\)/);
+	expect(dump).not.toMatch(/VALUES\(2,-Infinity\)/);
+
+	// Re-importing the dump must succeed and preserve the values
+	const tmp2 = await useTmp();
+	const mirrorMF = new Miniflare({
+		resourcePersistencePath: tmp2,
+		workers: [
+			{ config: { ...baseConfig, env: { test: { type: "d1", id: "test" } } } },
+		],
+	});
+	useDispose(mirrorMF);
+	const mirrorDb = await mirrorMF.getD1Database("test");
+
+	// exec(dump) must not throw, If the dump contained the bare `Infinity`/`-Infinity`
+	// identifiers, SQLite would reject them at parse time and exec would throw
+	await mirrorDb.exec(dump);
+
+	// Assert the exported SQL actually contains the correctly converted value for each row
+	expect(dump).toMatch(
+		/INSERT INTO "inf_test" \("id","r"\) VALUES\(1,9e999\);/
+	);
+	expect(dump).toMatch(
+		/INSERT INTO "inf_test" \("id","r"\) VALUES\(2,-9e999\);/
+	);
+
+	// And confirm the import actually succeeded (rows exist post-import)
+	const rows = await mirrorDb
+		.prepare(`SELECT id FROM inf_test ORDER BY id`)
+		.raw();
+	expect(rows).toEqual([[1], [2]]);
 });
 
 /**

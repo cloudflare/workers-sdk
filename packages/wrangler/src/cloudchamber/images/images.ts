@@ -11,6 +11,7 @@ import {
 	cloudchamberScope,
 	fillOpenAPIConfiguration,
 	handleFailure,
+	isValidImageTag,
 	promiseSpinner,
 } from "../common";
 import type { containersScope } from "../../containers";
@@ -20,7 +21,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 interface CatalogWithTagsResponse {
 	repositories: Record<string, string[]>;
@@ -95,9 +96,9 @@ async function handleDeleteImageCommand(
 	}
 
 	const digest = await promiseSpinner(
-		getCreds().then(async (creds) => {
+		getCreds(config).then(async (creds) => {
 			const accountId = await getOrSelectAccountId(config);
-			const url = new URL(`https://${getCloudflareContainerRegistry()}`);
+			const url = new URL(`https://${getCloudflareContainerRegistry(config)}`);
 			const baseUrl = `${url.protocol}//${url.host}`;
 			const [image, tag] = args.image.split(":");
 			const digest_ = await deleteTag(baseUrl, accountId, image, tag, creds);
@@ -130,8 +131,8 @@ async function handleListImagesCommand(
 	config: Config
 ) {
 	const responses = await promiseSpinner(
-		getCreds().then(async (creds) => {
-			const repos = await listReposWithTags(creds);
+		getCreds(config).then(async (creds) => {
+			const repos = await listReposWithTags(creds, config);
 			const processed: Repository[] = [];
 			const accountId = await getOrSelectAccountId(config);
 			const accountIdPrefix = new RegExp(`^${accountId}/`);
@@ -161,7 +162,7 @@ async function listImages(
 		responses = responses.map((resp) => {
 			return {
 				name: resp.name,
-				tags: resp.tags.filter((t) => !t.startsWith("sha256")),
+				tags: resp.tags.filter(isValidImageTag),
 			};
 		});
 	}
@@ -191,9 +192,12 @@ async function listImages(
 }
 
 async function listReposWithTags(
-	creds: string
+	creds: string,
+	complianceConfig?: ComplianceConfig
 ): Promise<Record<string, string[]>> {
-	const url = new URL(`https://${getCloudflareContainerRegistry()}`);
+	const url = new URL(
+		`https://${getCloudflareContainerRegistry(complianceConfig)}`
+	);
 	const catalogUrl = `${url.protocol}//${url.host}/v2/_catalog?tags=true`;
 
 	const response = await fetch(catalogUrl, {
@@ -261,10 +265,10 @@ async function deleteTag(
 	return digest;
 }
 
-async function getCreds(): Promise<string> {
+async function getCreds(complianceConfig?: ComplianceConfig): Promise<string> {
 	const credentials =
 		await ImageRegistriesService.generateImageRegistryCredentials(
-			getCloudflareContainerRegistry(),
+			getCloudflareContainerRegistry(complianceConfig),
 			{
 				expiration_minutes: 5,
 				permissions: ["pull", "push"] as ImageRegistryPermissions[],

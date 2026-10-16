@@ -17,7 +17,6 @@ function createConsumer(
 			{
 				dev: { unsafeRegisterWorker: true },
 				config: {
-					type: "worker",
 					name,
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["experimental"],
@@ -59,7 +58,6 @@ function createProducer(unsafeDevRegistryPath: string): Miniflare {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "producer",
 					compatibilityDate: "2025-05-01",
 					compatibilityFlags: ["experimental"],
@@ -198,7 +196,6 @@ describe.sequential("cross-process queues", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "failing-consumer",
 						compatibilityDate: "2025-05-01",
 						compatibilityFlags: ["experimental"],

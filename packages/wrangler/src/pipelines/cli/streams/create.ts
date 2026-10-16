@@ -13,7 +13,7 @@ export const pipelinesStreamsCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new stream",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 	},
 	positionalArgs: ["stream"],
 	args: {

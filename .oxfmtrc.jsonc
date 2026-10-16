@@ -36,6 +36,8 @@
 	],
 	"ignorePatterns": [
 		"CHANGELOG.md",
+		// tsup deletes these generated config bundles while checks run concurrently.
+		"**/tsup.config.bundled_*.{mjs,cjs}",
 		// In the C3 templates, in particular framework templates, we want to be able to
 		// use any format that the framework authors prefer/use in their own templates,
 		// so let's ignore all the c3 template files, exlcuding the c3.ts ones, and tests
@@ -48,7 +50,7 @@
 		"!packages/create-cloudflare/templates*/hello-world/**/*.*",
 		"packages/create-cloudflare/templates*/hello-world/**/worker-configuration.d.ts",
 
-		"packages/vitest-pool-workers/scripts/rtti/rtti.js",
+		"packages/vitest-plugin/scripts/rtti/rtti.js",
 		"packages/vite-plugin-cloudflare/playground/prisma/src/generated",
 		"dist-functions",
 		"vscode.d.ts",

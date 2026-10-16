@@ -7,6 +7,31 @@ import {
 	resolveNodejsCompat,
 	stripRedundantNodejsCompatFlags,
 } from "../src/compatibility-date";
+import { DEFAULT_COMPAT_DATE } from "../src/default-compat-date";
+
+describe("DEFAULT_COMPAT_DATE", () => {
+	it("should be a valid compat date in YYYY-MM-DD format", ({ expect }) => {
+		expect(isCompatDate(DEFAULT_COMPAT_DATE)).toBe(true);
+	});
+
+	// The default must not be later than the pinned workerd's release date, or
+	// workerd rejects it. `pnpm check:compat-date` asserts that it matches
+	// exactly; this catches the "in the future" half of workerd's validation
+	// without needing to read the catalog.
+	it("should not be in the future", ({ expect }) => {
+		const today = getTodaysCompatDate();
+
+		expect(
+			DEFAULT_COMPAT_DATE <= today,
+			`DEFAULT_COMPAT_DATE is ${DEFAULT_COMPAT_DATE}, which is later than today (${today}), ` +
+				`and workerd rejects a compatibility date in the future.\n\n` +
+				`workerd releases are sometimes versioned with the following day's date, so ` +
+				`if this is failing on a Dependabot workerd bump it should pass once that ` +
+				`date arrives (UTC) — re-run the job rather than editing the constant, which ` +
+				`\`pnpm check:compat-date\` pins to the workerd release.`
+		).toBe(true);
+	});
+});
 
 describe("getTodaysCompatDate()", () => {
 	it("should be a valid compat date in YYYY-MM-DD format", ({ expect }) => {
