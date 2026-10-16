@@ -660,7 +660,6 @@ test("revives a gzipped ERROR_STACK body on WebSocket upgrade", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(GZIPPED_JSON_ERROR_SCRIPT),

@@ -31,24 +31,6 @@ export function isGzip(bytes: Uint8Array): boolean {
 }
 
 /**
- * workerd may gzip a body the Worker already compressed, so inflate until the
- * magic is gone, a round or size cap is hit, or inflate throws.
- */
-function gunzipNested(bytes: Uint8Array): Buffer {
-	let decoded: Buffer = Buffer.from(bytes);
-	for (let round = 0; isGzip(decoded) && round < MAX_GZIP_ROUNDS; round++) {
-		const next = zlib.gunzipSync(decoded, {
-			maxOutputLength: MAX_ERROR_STACK_BYTES,
-		});
-		if (next.equals(decoded)) {
-			break;
-		}
-		decoded = Buffer.from(next);
-	}
-	return decoded;
-}
-
-/**
  * Returns serialised JSON, or the payload header when the body is empty or is
  * not JSON (oversized brotli that skipped inflate, leftover compressed bytes).
  */
@@ -112,36 +94,37 @@ export async function readErrorStackBody(response: {
 		return decodeErrorPayload(response);
 	}
 
-	if (isGzip(bytes)) {
-		if (bytes.byteLength > MAX_ERROR_STACK_BYTES) {
-			return decodeErrorPayload(response);
-		}
-
-		let decoded: Buffer;
-		try {
-			decoded = gunzipNested(bytes);
-		} catch {
-			return decodeErrorPayload(response);
-		}
-
-		if (isGzip(decoded)) {
-			return decodeErrorPayload(response);
-		}
-
-		const serialised = decoded.toString("utf8");
-		return jsonOrPayload(serialised, response);
-	}
-
-	const brotli = tryBrotli(bytes);
-	if (brotli === "bomb") {
+	if (isGzip(bytes) && bytes.byteLength > MAX_ERROR_STACK_BYTES) {
 		return decodeErrorPayload(response);
 	}
-	if (brotli !== null) {
-		const serialised = brotli.toString("utf8");
-		if (serialised !== "") {
-			return jsonOrPayload(serialised, response);
-		}
-	}
 
-	return jsonOrPayload(Buffer.from(bytes).toString("utf8"), response);
+	// workerd may wrap a body the Worker already compressed with a different
+	// algorithm (e.g. gzip(brotli(JSON))), so alternate gzip and brotli in
+	// bounded rounds until neither applies.
+	let decoded: Buffer = Buffer.from(bytes);
+	for (let round = 0; round < MAX_GZIP_ROUNDS; round++) {
+		let next: Buffer | "bomb" | null;
+		if (isGzip(decoded)) {
+			try {
+				next = zlib.gunzipSync(decoded, {
+					maxOutputLength: MAX_ERROR_STACK_BYTES,
+				});
+			} catch {
+				return decodeErrorPayload(response);
+			}
+		} else {
+			next = tryBrotli(decoded);
+			if (next === "bomb") {
+				return decodeErrorPayload(response);
+			}
+		}
+		if (next === null || next.length === 0 || next.equals(decoded)) {
+			break;
+		}
+		decoded = Buffer.from(next);
+	}
+	if (isGzip(decoded)) {
+		return decodeErrorPayload(response);
+	}
+	return jsonOrPayload(decoded.toString("utf8"), response);
 }

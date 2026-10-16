@@ -116,6 +116,22 @@ test("inflates a brotli ERROR_STACK body that was left compressed", async ({
 	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
 });
 
+test("inflates a brotli body wrapped in gzip", async ({ expect }) => {
+	const response = new Response(
+		zlib.gzipSync(zlib.brotliCompressSync(ERROR_JSON)),
+		{ headers: { "Content-Type": "application/json" }, status: 500 }
+	);
+	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
+});
+
+test("inflates a gzip body wrapped in brotli", async ({ expect }) => {
+	const response = new Response(
+		zlib.brotliCompressSync(zlib.gzipSync(ERROR_JSON)),
+		{ headers: { "Content-Type": "application/json" }, status: 500 }
+	);
+	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
+});
+
 test("does not brotli-decompress a plain body that still carries Content-Encoding br", async ({
 	expect,
 }) => {
