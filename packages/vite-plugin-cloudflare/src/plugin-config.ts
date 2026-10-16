@@ -684,6 +684,11 @@ function resolveWorker(
 }
 
 const CONFIG_FILENAME = "cloudflare.config.ts";
+const WRANGLER_CONFIG_FILENAMES = [
+	"wrangler.json",
+	"wrangler.jsonc",
+	"wrangler.toml",
+];
 const TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
 const CONFIG_PACKAGE = "cf/config";
 
@@ -710,6 +715,14 @@ async function loadCloudflareConfig(options: {
 	const configPath = path.resolve(options.root, CONFIG_FILENAME);
 
 	if (!fs.existsSync(configPath)) {
+		const wranglerConfigFilename = WRANGLER_CONFIG_FILENAMES.find((filename) =>
+			fs.existsSync(path.resolve(options.root, filename))
+		);
+		if (wranglerConfigFilename !== undefined) {
+			throw new Error(
+				`Found \`${wranglerConfigFilename}\` but no \`${CONFIG_FILENAME}\`. The Cloudflare Vite plugin no longer reads Wrangler configuration files, so this configuration would be ignored. Run \`npx cf migrate --bundler vite\` to generate \`${CONFIG_FILENAME}\`.`
+			);
+		}
 		return;
 	}
 
