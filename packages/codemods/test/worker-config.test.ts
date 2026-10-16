@@ -82,6 +82,55 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result.output).toContain("addresses: []");
 	});
 
+	it.for([
+		["absent", {}],
+		["empty", { environment: "" }],
+		["production", { environment: "production" }],
+		["staging", { environment: "staging" }],
+	] as const)(
+		"preserves Worker targets with %s legacy environments",
+		([_name, legacy], { expect }) => {
+			const result = convert({
+				compatibility_date: "2026-09-23",
+				dispatch_namespaces: [
+					{
+						binding: "DISPATCH",
+						namespace: "namespace",
+						outbound: {
+							...legacy,
+							parameters: ["tenant"],
+							service: "outbound-staging",
+						},
+					},
+				],
+				name: "app",
+				services: [
+					{
+						...legacy,
+						binding: "BACKEND",
+						entrypoint: "Backend",
+						props: { enabled: true },
+						remote: true,
+						service: "backend-staging",
+					},
+				],
+				tail_consumers: [{ ...legacy, service: "tail-staging" }],
+			});
+
+			expect(result.output).toContain('worker: "backend-staging"');
+			expect(result.output).toContain('exportName: "Backend"');
+			expect(result.output).toContain("props: {");
+			expect(result.output).toContain("enabled: true");
+			expect(result.output).toContain("remote: true");
+			expect(result.output).toContain('worker: "outbound-staging"');
+			expect(result.output).toMatch(/parameters:\s*\[\s*"tenant",?\s*\]/);
+			expect(result.output).toContain('worker: "tail-staging"');
+			expect(result.output).not.toContain("environment:");
+			expect(result.output).not.toContain("TODO");
+			expect(result.followUps).toEqual([]);
+		}
+	);
+
 	it("guards output that requires manual migration", ({ expect }) => {
 		const result = convert({
 			containers: [{}],

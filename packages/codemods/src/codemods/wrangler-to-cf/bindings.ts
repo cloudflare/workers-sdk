@@ -361,15 +361,7 @@ export function convertBindings(
 		);
 		const outbound = getRecord(entry, "outbound");
 		if (outbound) {
-			const outboundTarget = { ...outbound };
-			if (
-				typeof outbound.service === "string" &&
-				typeof outbound.environment === "string"
-			) {
-				outboundTarget.service = `${outbound.service}-${outbound.environment}`;
-			}
-
-			const outboundOptions = optionsFromRecord(outboundTarget, [
+			const outboundOptions = optionsFromRecord(outbound, [
 				["service", "worker"],
 				["parameters", "parameters"],
 			]);
@@ -377,16 +369,6 @@ export function convertBindings(
 				key: "outbound",
 				value: outboundOptions,
 			});
-
-			if (hasOwn(outbound, "environment")) {
-				report(
-					createFollowUp(
-						"service-environment",
-						"A dispatch namespace uses a legacy service environment. Verify its target Worker name.",
-						{ sourcePath: pathFor("dispatch_namespaces", index) }
-					)
-				);
-			}
 		}
 
 		imports.add("bindings");
@@ -447,19 +429,6 @@ export function convertBindings(
 	}
 
 	for (const [index, entry] of getRecords(source, "services").entries()) {
-		let worker = entry.service;
-		if (typeof entry.environment === "string" && typeof worker === "string") {
-			worker = `${worker}-${entry.environment}`;
-			report(
-				createFollowUp(
-					"service-environment",
-					"A service binding used a legacy service environment. Verify the generated Worker name.",
-					{ sourcePath: pathFor("services", index) }
-				)
-			);
-		}
-
-		const service = { ...entry, service: worker };
 		imports.add("bindings");
 
 		addBinding(
@@ -468,7 +437,7 @@ export function convertBindings(
 			call(
 				"bindings.worker",
 				optionsFromRecord(
-					service,
+					entry,
 					[
 						["service", "worker"],
 						["entrypoint", "exportName"],
