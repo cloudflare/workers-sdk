@@ -1,5 +1,41 @@
 # create-cloudflare
 
+## 2.74.1
+
+### Patch Changes
+
+- [#16308](https://github.com/cloudflare/workers-sdk/pull/16308) [`6895ddc`](https://github.com/cloudflare/workers-sdk/commit/6895ddc15afc89667f48b95162c8b344c05d8c07) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.682 | 0.0.685 |
+
+- [#16309](https://github.com/cloudflare/workers-sdk/pull/16309) [`ba31e6e`](https://github.com/cloudflare/workers-sdk/commit/ba31e6e0806cbc564c5e70c34a0737f4c61f1eed) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.8.0 | 2.8.1 |
+
+- [#16310](https://github.com/cloudflare/workers-sdk/pull/16310) [`62170b5`](https://github.com/cloudflare/workers-sdk/commit/62170b51f929f422a6eee038b0c5be5fa5e2a59d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.4.0 | 16.4.1 |
+
+- [#16312](https://github.com/cloudflare/workers-sdk/pull/16312) [`d7da6ac`](https://github.com/cloudflare/workers-sdk/commit/d7da6acb35a800dd394665e96d0b2795e4c3d738) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-vinext-app | 1.0.0 | 1.1.0 |
+
 ## 2.74.0
 
 ### Minor Changes
