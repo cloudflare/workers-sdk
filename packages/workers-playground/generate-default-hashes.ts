@@ -2,10 +2,15 @@ import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
 import { FormData, Response } from "undici";
 
+type SerialisedWorker = {
+	contentType: string;
+	worker: string;
+};
+
 async function serialiseHashes(
 	workers: Record<string, FormData>
-): Promise<Record<string, string>> {
-	const workerHashes = {};
+): Promise<Record<string, SerialisedWorker>> {
+	const workerHashes: Record<string, SerialisedWorker> = {};
 	for (const [name, worker] of Object.entries(workers)) {
 		workerHashes[name] = await serialiseWorker(worker);
 	}
@@ -79,12 +84,11 @@ const defaultWorker = async () => {
 async function serialiseWorker(worker: FormData) {
 	const serialisedWorker = new Response(worker);
 
-	const generatedBoundary =
-		// content-type is always set for a FormData response, and always has the boundary as a parameter
-		(serialisedWorker.headers.get("content-type") as string)
-			.split(";")[1]
-			.split("=")[1]
-			.trim();
+	// content-type is always set for a FormData response, and always has the boundary as a parameter
+	const contentType = serialisedWorker.headers.get("content-type");
+	assert(contentType !== null);
+	const generatedBoundary = /boundary=(.+)$/.exec(contentType)?.[1];
+	assert(generatedBoundary !== undefined);
 
 	// This boundary is arbitrary, it's just specified for stability
 	const fixedBoundary = "----formdata-88e2b909-318c-42df-af0d-9077f33c7988";
