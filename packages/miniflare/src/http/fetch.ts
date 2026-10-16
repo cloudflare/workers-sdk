@@ -91,6 +91,10 @@ export async function fetch(
 		});
 		ws.once("unexpected-response", (_, incoming) => {
 			const headers = convertUndiciHeadersToStandard(incoming.headers);
+			// `ws` leaves the socket of a failed upgrade open. If the server resets
+			// it after the response was consumed (seen as `ECONNRESET` on Windows),
+			// nothing is listening and Node raises an uncaught exception.
+			incoming.socket.on("error", () => {});
 			/**
 			 * Only ERROR_STACK 500s need a byte buffer: `IncomingMessage` is not a
 			 * valid `BodyInit`, and undici would decode gzip as text (#15198). Gzip
@@ -182,7 +186,12 @@ function bufferIncomingMessage(
 				finish(Buffer.alloc(0), true);
 			}
 		});
-		incoming.on("end", () => finish(Buffer.concat(chunks)));
+		incoming.on("end", () => {
+			finish(Buffer.concat(chunks));
+			// The body is fully read and the upgrade failed, so release the socket
+			// instead of leaving it open for the server to reset later.
+			incoming.socket.destroy();
+		});
 		incoming.on("error", (error) => {
 			if (!settled) {
 				settled = true;
