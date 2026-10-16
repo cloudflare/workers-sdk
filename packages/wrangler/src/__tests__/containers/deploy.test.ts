@@ -146,7 +146,7 @@ describe("wrangler deploy with containers", () => {
 			})
 		);
 		await expect(runWrangler("deploy index.js")).rejects.toThrow(
-			"The Worker version was deployed, but the CLI could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command"
+			"The Worker version was deployed, but its Durable Object-managed Container application settings were not fully applied. Re-run the same `wrangler deploy` command"
 		);
 		expect(applicationRequests).toBe(1);
 		expect(std.out).toContain("Uploaded test-name");

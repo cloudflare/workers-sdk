@@ -857,7 +857,7 @@ async function deployWorker(
 			);
 		} catch (error) {
 			throw new UserError(
-				`The Worker version was deployed, but the CLI could not finish applying its Durable Object-managed Container application settings. Re-run the same \`${options.deployCommand}\` command to retry and finish deployment.`,
+				`The Worker version was deployed, but its Durable Object-managed Container application settings were not fully applied. Re-run the same \`${options.deployCommand}\` command to retry and finish deployment.`,
 				{
 					telemetryMessage:
 						"deploy durable object container application creation failed after deployment",
