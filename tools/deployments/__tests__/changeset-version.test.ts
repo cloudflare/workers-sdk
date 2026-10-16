@@ -1,12 +1,65 @@
 import assert from "node:assert";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { gt } from "semver";
 import { it } from "vitest";
 import {
+	correctVersionReferences,
 	getNpmPrereleaseConfig,
 	getNextMiniflarePrereleaseVersion,
 	getNextMiniflareVersion,
 	getNextNpmPrereleaseVersion,
 } from "../changeset-version";
+
+it.for([
+	["2.0.0", "2.0.0-beta.v.2"],
+	["npm:@cloudflare/vite-plugin@1.63.2", "npm:@cloudflare/vite-plugin@1.63.2"],
+	["workspace:*", "workspace:*"],
+	["workspace:^", "workspace:^"],
+	["1.63.2", "1.63.2"],
+	["^1.63.2", "^1.63.2"],
+	["catalog:default", "catalog:default"],
+] as const)(
+	"rewrites %s as %s across dependency fields",
+	([constraint, expected], { expect, onTestFinished }) => {
+		const directory = mkdtempSync(join(tmpdir(), "changeset-version-"));
+		onTestFinished(() => {
+			// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- test cleanup
+			rmSync(directory, { recursive: true, force: true });
+		});
+		const packagePath = join(directory, "package.json");
+		const packageName = "@cloudflare/vite-plugin";
+		const fields = [
+			"dependencies",
+			"devDependencies",
+			"peerDependencies",
+			"optionalDependencies",
+		];
+		writeFileSync(
+			packagePath,
+			JSON.stringify(
+				Object.fromEntries(
+					fields.map((key) => [key, { [packageName]: constraint }])
+				)
+			)
+		);
+
+		correctVersionReferences({
+			packageName,
+			packagePath,
+			versionAfterChangesets: "2.0.0",
+			nextVersion: "2.0.0-beta.v.2",
+			changedPaths: [packagePath],
+		});
+
+		expect(JSON.parse(readFileSync(packagePath, "utf8"))).toEqual(
+			Object.fromEntries(
+				fields.map((key) => [key, { [packageName]: expected }])
+			)
+		);
+	}
+);
 
 it("rejects latest as an npm prerelease tag", ({ expect }) => {
 	expect(() =>

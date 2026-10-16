@@ -61,6 +61,7 @@ interface CorrectVersionReferencesOptions {
 	packagePath: string;
 	versionAfterChangesets: string;
 	nextVersion: string;
+	changedPaths: string[];
 }
 
 function getPkg(filePath: string): PackageJSON {
@@ -273,19 +274,17 @@ function getPackagesBeforeVersioning(): PreviousPackage[] {
 	return packages;
 }
 
-function correctVersionReferences({
+/** Corrects references to the version produced by Changesets in modified files. */
+export function correctVersionReferences({
 	packageName,
 	packagePath,
 	versionAfterChangesets,
 	nextVersion,
+	changedPaths,
 }: CorrectVersionReferencesOptions): void {
 	// Changesets has already updated the affected manifests and changelogs. Limit
 	// corrections to those files instead of scanning and rewriting the workspace.
-	const changedPathsBuffer = execSync("git ls-files --modified", {
-		cwd: rootPath,
-	});
 	console.log("Checking modified files...");
-	const changedPaths = changedPathsBuffer.toString().trim().split("\n");
 	for (const relativeChangedPath of changedPaths) {
 		const changedPath = resolve(rootPath, relativeChangedPath);
 		const name = basename(changedPath);
@@ -299,12 +298,9 @@ function correctVersionReferences({
 					continue;
 				}
 				const constraint = dependencies[packageName];
-				if (constraint === undefined) {
-					continue;
-				}
-				// Workspace ranges are resolved from the target manifest at publish time
-				// and do not contain the incorrect version produced by Changesets.
-				if (constraint.startsWith("workspace:")) {
+				// Only correct the version produced by Changesets. Other constraints,
+				// including npm aliases pinning a stable release, are intentional.
+				if (constraint !== versionAfterChangesets) {
 					continue;
 				}
 				dependencies[packageName] = nextVersion;
@@ -383,6 +379,10 @@ function main(): void {
 			packagePath: previousPackage.pkgPath,
 			versionAfterChangesets,
 			nextVersion,
+			changedPaths: execSync("git ls-files --modified", { cwd: rootPath })
+				.toString()
+				.trim()
+				.split("\n"),
 		});
 	}
 
