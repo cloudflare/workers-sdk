@@ -110,6 +110,7 @@ import {
 	NoOpLog,
 	stripAnsi,
 } from "./shared";
+import { selectConnectTrigger } from "./shared/connect";
 import { createDurableObjectStorageHandle } from "./shared/dev-control";
 import {
 	DevRegistry,
@@ -3288,39 +3289,12 @@ export class Miniflare {
 		await this.ready;
 
 		const protocol = options.protocol ?? "tcp";
-		const protocolName = protocol.toUpperCase();
 		const workerIndex = this.#findAndAssertWorkerIndex(options.workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
-		const connectTriggers = getTriggersOfType(
-			workerOpts.config,
-			"connect"
-		).filter((trigger) => trigger.protocol === protocol);
-		const workerDescription =
-			options.workerName === undefined
-				? "entrypoint worker"
-				: `${JSON.stringify(options.workerName)} worker`;
-
-		let trigger: (typeof connectTriggers)[number] | undefined;
-		if (options.port === undefined) {
-			if (connectTriggers.length === 0) {
-				throw new TypeError(
-					`No ${protocolName} connect triggers configured for ${workerDescription}`
-				);
-			}
-			if (connectTriggers.length > 1) {
-				throw new TypeError(
-					`Multiple ${protocolName} connect triggers configured for ${workerDescription}; specify a port`
-				);
-			}
-			trigger = connectTriggers[0];
-		} else {
-			trigger = connectTriggers.find(({ port }) => port === options.port);
-			if (trigger === undefined) {
-				throw new TypeError(
-					`${protocolName} connect trigger on port ${options.port} not found for ${workerDescription}`
-				);
-			}
-		}
+		const trigger = selectConnectTrigger(
+			getTriggersOfType(workerOpts.config, "connect"),
+			options
+		);
 
 		assert(this.#socketPorts !== undefined);
 		const socketName = getConnectSocketName(
