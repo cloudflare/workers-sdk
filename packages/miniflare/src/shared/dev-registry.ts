@@ -12,7 +12,7 @@ import {
 import path from "node:path";
 import { getGlobalConfigPath } from "@cloudflare/workers-utils/global-wrangler-config-path";
 import { watch } from "chokidar";
-import { isFileNotFoundError } from "./error";
+import { isFileExistsError, isFileNotFoundError } from "./error";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
 import { randomUUID } from "node:crypto";
@@ -259,11 +259,13 @@ export class DevRegistry {
 
 	private writeWorkerDefinition(
 		definitionPath: string,
-		definition: WorkerDefinition
+		definition: WorkerDefinition,
+		flag: "w" | "wx"
 	): void {
 		writeFileSync(
 			definitionPath,
-			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
+			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2),
+			{ flag }
 		);
 	}
 
@@ -315,44 +317,58 @@ export class DevRegistry {
 			clearInterval(existingHeartbeat);
 		}
 
-		this.writeWorkerDefinition(definitionPath, definition);
+		this.writeWorkerDefinition(definitionPath, definition, "w");
 		this.registeredWorkers.add(name);
+		const stopHeartbeat = () => {
+			const heartbeat = this.heartbeats.get(name);
+			if (heartbeat !== undefined) {
+				clearInterval(heartbeat);
+				this.heartbeats.delete(name);
+			}
+		};
 		// Stale cleanup may remove a live Worker's entry after system sleep.
-		// Recreate it so peers can discover this Worker again.
+		// Recreate it so peers can discover this Worker again. Another session
+		// may claim the vacant name first, so only create the file if it is still
+		// missing, and leave the name to that session otherwise.
 		const reregister = () => {
 			try {
-				this.writeWorkerDefinition(definitionPath, definition);
+				this.writeWorkerDefinition(definitionPath, definition, "wx");
 			} catch (e) {
-				this.log.debug(`Failed to re-register Worker "${name}": ${e}`);
+				if (isFileExistsError(e)) {
+					stopHeartbeat();
+				} else {
+					this.log.debug(`Failed to re-register Worker "${name}": ${e}`);
+				}
 			}
 		};
 		this.heartbeats.set(
 			name,
 			setInterval(
 				() => {
-					if (!existsSync(definitionPath)) {
-						reregister();
+					const currentDefinition = readDefinition(definitionPath);
+					if (currentDefinition === undefined) {
+						// Either a sweep removed the entry, or a peer is partway through
+						// writing it. Only an entry that is gone is free to claim; an
+						// unreadable one is left until the next beat.
+						if (!existsSync(definitionPath)) {
+							reregister();
+						}
 						return;
 					}
 
-					const currentDefinition = readDefinition(definitionPath);
-					if (currentDefinition?.instanceId === this.instanceId) {
+					if (currentDefinition.instanceId === this.instanceId) {
 						try {
 							utimesSync(definitionPath, new Date(), new Date());
 						} catch (e) {
 							// Every process wakes together, so a peer's sweep can delete
-							// the entry between the checks above and this touch.
+							// the entry between the read above and this touch.
 							if (!isFileNotFoundError(e)) {
 								throw e;
 							}
 							reregister();
 						}
 					} else {
-						const heartbeat = this.heartbeats.get(name);
-						if (heartbeat !== undefined) {
-							clearInterval(heartbeat);
-							this.heartbeats.delete(name);
-						}
+						stopHeartbeat();
 					}
 				},
 				isStorageCandidateName(name)
