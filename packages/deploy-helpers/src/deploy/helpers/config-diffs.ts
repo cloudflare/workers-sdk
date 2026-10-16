@@ -432,7 +432,8 @@ function normalizeRemoteConfigAsResolvedLocal(
 	// We then override the configs present in the remote config object
 	Object.entries(remoteConfig).forEach(([key, value]) => {
 		if (key !== "main" && value !== undefined) {
-			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
+			(normalizedRemote as unknown as Record<string, unknown>)[key] =
+				removeUndefinedFields(value);
 		}
 	});
 
@@ -506,6 +507,27 @@ function normalizeRemoteConfigAsResolvedLocal(
 	}
 
 	return normalizedRemote;
+}
+
+/**
+ * Returns a copy of the given value without the object fields that are set to `undefined`.
+ *
+ * The remote config sets optional binding fields (e.g. a Durable Object's `script_name` or
+ * an R2 bucket's `jurisdiction`) to `undefined` when they are not set, which is equivalent
+ * to the field being absent from the local config, so such fields must not be diffed as deletions.
+ */
+function removeUndefinedFields(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		return value.map(removeUndefinedFields);
+	}
+	if (value && typeof value === "object") {
+		return Object.fromEntries(
+			Object.entries(value)
+				.filter(([, fieldValue]) => fieldValue !== undefined)
+				.map(([key, fieldValue]) => [key, removeUndefinedFields(fieldValue)])
+		);
+	}
+	return value;
 }
 
 /**
