@@ -6,7 +6,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { previewBuildOutput } from "../src/preview/preview";
 import type {
 	PreviewBuildOutput,
-	PreviewCallbacks,
+	PreviewOptions,
 } from "../src/preview/preview";
 import type {
 	ParsedOutputRootConfig,
@@ -210,7 +210,7 @@ describe("previewBuildOutput", () => {
 			.fn()
 			.mockResolvedValue(normalisedContainerConfig);
 		const deployPreviewContainers = vi.fn().mockResolvedValue(undefined);
-		const callbacks: PreviewCallbacks = {
+		const options: PreviewOptions = {
 			getNormalizedContainerOptions,
 			deployPreviewContainers,
 		};
@@ -238,7 +238,7 @@ describe("previewBuildOutput", () => {
 					},
 				],
 			},
-			callbacks
+			options
 		);
 
 		expect(getNormalizedContainerOptions).toHaveBeenCalledWith(

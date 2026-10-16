@@ -217,6 +217,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						containerOptions,
 						settings: ctx.resolvedPluginConfig.settings,
 						logger: viteDevServer.config.logger,
+						cliDisplayName: ctx.resolvedPluginConfig.cliDisplayName,
 					});
 
 					containerCleanup.track(

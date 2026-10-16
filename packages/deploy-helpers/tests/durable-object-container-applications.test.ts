@@ -74,7 +74,13 @@ const exportConfig = {
 		},
 	],
 } as unknown as Config;
-const args = { accountId: "account", dryRun: false, scriptName: "worker" };
+const args = {
+	accountId: "account",
+	deployCommand: "wrangler deploy",
+	dryRun: false,
+	scriptName: "worker",
+	versionsUploadCommand: "wrangler versions upload",
+};
 const namespace = {
 	id: "namespace",
 	name: "sandbox",

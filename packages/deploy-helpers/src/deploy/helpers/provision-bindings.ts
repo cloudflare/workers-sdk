@@ -11,7 +11,6 @@ import {
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import {
-	cliPresentation,
 	fetchListResult,
 	fetchPagedListResult,
 	fetchResult,
@@ -628,7 +627,9 @@ class D1Handler extends ProvisionResourceHandler<
 		const db = await createD1Database(
 			this.complianceConfig,
 			this.accountId,
-			name
+			name,
+			this.d1ListCommand,
+			this.d1DeleteCommand
 		);
 		return db.uuid;
 	}
@@ -636,7 +637,9 @@ class D1Handler extends ProvisionResourceHandler<
 		bindingName: string,
 		binding: Extract<Binding, { type: "d1" }>,
 		complianceConfig: ComplianceConfig,
-		accountId: string
+		accountId: string,
+		private readonly d1ListCommand: string,
+		private readonly d1DeleteCommand: string
 	) {
 		super(
 			"d1",
@@ -1113,7 +1116,9 @@ function createHandler(
 	bindingName: string,
 	binding: ProvisionableBinding,
 	complianceConfig: ComplianceConfig,
-	accountId: string
+	accountId: string,
+	d1ListCommand: string,
+	d1DeleteCommand: string
 ):
 	| KVHandler
 	| D1Handler
@@ -1127,7 +1132,14 @@ function createHandler(
 		case "kv_namespace":
 			return new KVHandler(bindingName, binding, complianceConfig, accountId);
 		case "d1":
-			return new D1Handler(bindingName, binding, complianceConfig, accountId);
+			return new D1Handler(
+				bindingName,
+				binding,
+				complianceConfig,
+				accountId,
+				d1ListCommand,
+				d1DeleteCommand
+			);
 		case "r2_bucket":
 			return new R2Handler(bindingName, binding, complianceConfig, accountId);
 		case "ai_search_namespace":
@@ -1204,7 +1216,9 @@ async function collectPendingResources(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	bindings: StartDevWorkerInput["bindings"]
+	bindings: StartDevWorkerInput["bindings"],
+	d1ListCommand: string,
+	d1DeleteCommand: string
 ): Promise<{
 	pendingResources: PendingResource[];
 	resolvedResources: PendingResource[];
@@ -1231,7 +1245,9 @@ async function collectPendingResources(
 			bindingName,
 			binding,
 			complianceConfig,
-			accountId
+			accountId,
+			d1ListCommand,
+			d1DeleteCommand
 		);
 		const resource: PendingResource = {
 			binding: bindingName,
@@ -1280,11 +1296,20 @@ export async function provisionBindings(
 	config: Config,
 	options: {
 		skipConfigWriteback?: boolean;
+		d1ListCommand: string;
+		d1DeleteCommand: string;
 	}
 ): Promise<ProvisionBindingsResult> {
 	const configPath = config.userConfigPath ?? config.configPath;
 	const { pendingResources, resolvedResources, skippedProvisioning } =
-		await collectPendingResources(config, accountId, scriptName, bindings);
+		await collectPendingResources(
+			config,
+			accountId,
+			scriptName,
+			bindings,
+			options.d1ListCommand,
+			options.d1DeleteCommand
+		);
 
 	if (pendingResources.length > 0) {
 		assert(
@@ -1601,7 +1626,9 @@ async function listFlagshipApps(
 async function createD1Database(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	name: string
+	name: string,
+	d1ListCommand: string,
+	d1DeleteCommand: string
 ) {
 	try {
 		return await fetchResult<DatabaseCreationResult>(
@@ -1625,9 +1652,12 @@ async function createD1Database(
 		}
 
 		if (errorCode === 7406) {
-			throw new UserError(renderD1DatabaseLimitError(accountId), {
-				telemetryMessage: "d1 create database limit reached",
-			});
+			throw new UserError(
+				renderD1DatabaseLimitError(accountId, d1ListCommand, d1DeleteCommand),
+				{
+					telemetryMessage: "d1 create database limit reached",
+				}
+			);
 		}
 
 		throw e;
@@ -1640,7 +1670,11 @@ async function createD1Database(
  * @param accountId Account identifier used to construct the upgrade URL.
  * @returns Consumer-specific database listing and deletion guidance.
  */
-export function renderD1DatabaseLimitError(accountId: string): string {
+export function renderD1DatabaseLimitError(
+	accountId: string,
+	d1ListCommand: string,
+	d1DeleteCommand: string
+): string {
 	return dedent`
 		You have reached the maximum number of D1 databases for your account.
 
@@ -1651,8 +1685,8 @@ export function renderD1DatabaseLimitError(accountId: string): string {
 		https://developers.cloudflare.com/d1/
 
 		Or free up space:
-		To list your existing databases, run: ${cliPresentation.commands.d1List}
-		To delete a database, run: ${cliPresentation.commands.d1Delete} <database-name>
+		To list your existing databases, run: ${d1ListCommand}
+		To delete a database, run: ${d1DeleteCommand}
 	`;
 }
 

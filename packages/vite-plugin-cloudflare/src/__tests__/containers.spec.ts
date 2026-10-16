@@ -133,6 +133,7 @@ describe("prepareContainerImagesForVite", () => {
 			],
 			settings: {},
 			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			cliDisplayName: "Wrangler",
 		});
 
 		expect(prepareContainerImagesForDev).toHaveBeenCalledWith(
@@ -183,6 +184,7 @@ describe("prepareContainerImagesForVite", () => {
 			],
 			settings: { accountId: "standard-account" },
 			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			cliDisplayName: "Wrangler",
 		});
 		await prepareContainerImagesForVite({
 			dockerPath: "docker",
@@ -198,6 +200,7 @@ describe("prepareContainerImagesForVite", () => {
 				complianceRegion: "fedramp-high",
 			},
 			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			cliDisplayName: "Wrangler",
 		});
 
 		expect(preparations).toEqual([
@@ -227,6 +230,7 @@ describe("prepareContainerImagesForVite", () => {
 			containerOptions: [],
 			settings: {},
 			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			cliDisplayName: "Wrangler",
 		});
 
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
@@ -236,5 +240,43 @@ describe("prepareContainerImagesForVite", () => {
 			})
 		);
 		expect(OpenAPI.BASE).toBe("");
+	});
+
+	test("uses the Wrangler registry configuration command by default", async ({
+		expect,
+	}) => {
+		await prepareContainerImagesForVite({
+			dockerPath: "test-docker",
+			containerOptions: [],
+			settings: {},
+			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			cliDisplayName: "Wrangler",
+		});
+
+		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
+			expect.objectContaining({
+				configFileName: "cloudflare.config.ts",
+				registryConfigureCommand: "wrangler containers registries configure",
+			})
+		);
+	});
+
+	test("uses the cf registry configuration command for cf", async ({
+		expect,
+	}) => {
+		await prepareContainerImagesForVite({
+			dockerPath: "test-docker",
+			containerOptions: [],
+			settings: {},
+			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			cliDisplayName: "cf",
+		});
+
+		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
+			expect.objectContaining({
+				configFileName: "cloudflare.config.ts",
+				registryConfigureCommand: "cf containers registries create",
+			})
+		);
 	});
 });

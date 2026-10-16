@@ -108,7 +108,9 @@ describe("pullImage", () => {
 				image_uri: image,
 				image_tag: image,
 			},
-			{ info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+			{ info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			undefined,
+			"test registry configure"
 		);
 		await pull.ready;
 
@@ -374,6 +376,8 @@ describe("prepareContainerImagesForDev", () => {
 			const result = await prepareContainerImagesForDev({
 				dockerPath: "test-docker",
 				containerOptions: [],
+				configFileName: "test config file",
+				registryConfigureCommand: "test registry configure",
 				onContainerImagePreparationStart: onStart,
 				onContainerImagePreparationEnd: onEnd,
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
