@@ -490,9 +490,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		// Pass a getter function so WorkflowHandle can get a fresh stub after abort
 		const getStub = () => this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
 
-		const handle = new WorkflowHandle(id, stub, getStub, () =>
-			this.deleteInstance(id)
-		);
+		const handle = new WorkflowHandle(id, stub, getStub, this);
 
 		try {
 			await handle.status();
@@ -943,7 +941,7 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		public id: string,
 		stub: DurableObjectStub<Engine>,
 		private getStub: () => DurableObjectStub<Engine>,
-		private deleteCallback: () => Promise<void>
+		private binding: WorkflowBinding
 	) {
 		super();
 		this.stub = stub;
@@ -978,7 +976,7 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	}
 
 	public async delete(): Promise<void> {
-		await this.deleteCallback();
+		await this.binding.deleteInstance(this.id);
 	}
 
 	public async restart(
