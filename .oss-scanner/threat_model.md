@@ -98,7 +98,7 @@ pnpm --filter miniflare exec vitest run test/loopback-auth.spec.ts test/dev-regi
 pnpm --filter miniflare exec vitest run test/plugins/browser/index.spec.ts --testNamePattern='it creates a browser session'
 pnpm --filter @cloudflare/workers-auth test:ci
 pnpm --filter @cloudflare/kv-asset-handler test:ci
-pnpm --filter wrangler test:ci -- src/__tests__/get-host-from-url.test.ts
+pnpm --filter wrangler test:ci src/__tests__/get-host-from-url.test.ts
 ```
 
 After changing package source, rebuild the affected package and its dependencies,
