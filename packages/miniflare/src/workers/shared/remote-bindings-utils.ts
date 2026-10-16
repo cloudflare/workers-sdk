@@ -96,6 +96,29 @@ function buildAccessBlockResponseBody(
 }
 
 /**
+ * Set by the remote-bindings proxy server (ProxyServerWorker in
+ * @cloudflare/remote-bindings) on every response it forwards from a binding.
+ * Responses generated in front of the proxy server, such as a Cloudflare Access
+ * login redirect or block page, never carry it. Older proxy servers don't set
+ * it at all, in which case every response is checked for an Access block.
+ */
+const FORWARDED_RESPONSE_HEADER = "MF-Forwarded-Response";
+
+/**
+ * Remove {@link FORWARDED_RESPONSE_HEADER} so bindings see the response exactly
+ * as the remote binding returned it.
+ */
+function stripForwardedResponseMarker(response: Response): Response {
+	// A WebSocket upgrade response can't be re-wrapped without losing its socket.
+	if (response.webSocket) {
+		return response;
+	}
+	const stripped = new Response(response.body, response);
+	stripped.headers.delete(FORWARDED_RESPONSE_HEADER);
+	return stripped;
+}
+
+/**
  * Whether `location` points at a Cloudflare Access login page, i.e.
  * `https://<team>.cloudflareaccess.com/cdn-cgi/access/login/<host>?...`.
  */
@@ -118,10 +141,9 @@ function isCloudflareAccessLoginUrl(location: string | null): boolean {
  * Classify a response from the remote-bindings proxy server as a Cloudflare
  * Access block, if it is one.
  *
- * The remote-bindings proxy CLIENT worker only ever calls the
- * `remoteProxyConnectionString`, so a 403 with a Cloudflare Access body, or a
- * redirect to the Access login page, is unambiguously Access — never a
- * user-worker response.
+ * Only called for responses without {@link FORWARDED_RESPONSE_HEADER}: a 403
+ * with a Cloudflare Access body, or a redirect to the Access login page, then
+ * came from Access in front of the proxy server rather than from the binding.
  */
 async function getCloudflareAccessBlockReason(
 	response: Response
@@ -238,6 +260,11 @@ export function makeFetch(
 		});
 
 		const response = await fetch(remoteProxyConnectionString, req);
+		if (response.headers.has(FORWARDED_RESPONSE_HEADER)) {
+			// The remote proxy server got this response from the binding itself,
+			// so it can't be an Access block, even if it looks like one.
+			return stripForwardedResponseMarker(response);
+		}
 		// Awaited (rather than fire-and-forget) so the loopback POST isn't
 		// cancelled when the proxy client returns. The happy path
 		// (non-403) short-circuits before any body read or loopback call,

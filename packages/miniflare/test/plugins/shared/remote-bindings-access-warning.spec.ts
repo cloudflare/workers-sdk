@@ -1,5 +1,7 @@
+import path from "node:path";
+import { build } from "esbuild";
 import { LogLevel, Miniflare } from "miniflare";
-import { describe, test } from "vitest";
+import { beforeAll, describe, test } from "vitest";
 import {
 	singleModuleManifest,
 	TestLog,
@@ -40,6 +42,81 @@ const SCRIPT = /* javascript */ `
 		},
 	};
 `;
+
+// Script that calls the binding without following redirects (as a Worker
+// proxying its incoming request with `env.SERVICE.fetch(request)` does) and
+// reports what it got back.
+const MANUAL_REDIRECT_SCRIPT = /* javascript */ `
+	export default {
+		async fetch(request, env) {
+			const { pathname } = new URL(request.url);
+			const res = await env.SERVICE.fetch("http://example.com" + pathname, {
+				redirect: "manual",
+			});
+			return Response.json({
+				status: res.status,
+				location: res.headers.get("Location"),
+				forwardedMarker: res.headers.get("MF-Forwarded-Response"),
+				body: await res.text(),
+			});
+		},
+	};
+`;
+
+type ManualRedirectResult = {
+	status: number;
+	location: string | null;
+	forwardedMarker: string | null;
+	body: string;
+};
+
+// Real edge-side remote-bindings proxy server, bundled for the tests that run
+// it in a second "edge" Miniflare instance.
+const PROXY_SERVER_WORKER_PATH = path.resolve(
+	__dirname,
+	"../../../../remote-bindings/templates/remoteBindings/ProxyServerWorker.ts"
+);
+
+/**
+ * Start a Miniflare instance running `script`, with a remote `SERVICE` service
+ * binding served by the remote-bindings proxy server at `proxyUrl`.
+ */
+function useRemoteServiceMiniflare(
+	proxyUrl: URL,
+	{ log, script = SCRIPT }: { log: TestLog; script?: string }
+): Miniflare {
+	const mf = new Miniflare({
+		log,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-01-01",
+					manifest: singleModuleManifest(script),
+					env: {
+						SERVICE: {
+							type: "worker",
+							worker: "some-remote-service",
+							dev: { remote: true },
+						},
+					},
+				},
+				dev: {
+					remoteProxyConnectionString:
+						proxyUrl as unknown as RemoteProxyConnectionString,
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	return mf;
+}
+
+function getAccessWarnings(log: TestLog): string[] {
+	return log
+		.logsAtLevel(LogLevel.WARN)
+		.filter((message) => message.includes(ACCESS_WARNING_FRAGMENT));
+}
 
 describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 	test("logs a single warning when the remote proxy returns a Cloudflare Access block", async ({
@@ -226,30 +303,7 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 		});
 
 		const log = new TestLog();
-		const mf = new Miniflare({
-			log,
-			workers: [
-				{
-					config: {
-						name: "",
-						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(SCRIPT),
-						env: {
-							SERVICE: {
-								type: "worker",
-								worker: "some-remote-service",
-								dev: { remote: true },
-							},
-						},
-					},
-					dev: {
-						remoteProxyConnectionString:
-							proxyUrl as unknown as RemoteProxyConnectionString,
-					},
-				},
-			],
-		});
-		useDispose(mf);
+		const mf = useRemoteServiceMiniflare(proxyUrl, { log });
 
 		for (let i = 0; i < 3; i++) {
 			const response = await mf.dispatchFetch("http://localhost/");
@@ -272,14 +326,88 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 
 		await new Promise((resolve) => setTimeout(resolve, 200));
 
-		const accessWarnings = log
-			.logsAtLevel(LogLevel.WARN)
-			.filter((message) => message.includes(ACCESS_WARNING_FRAGMENT));
+		const accessWarnings = getAccessWarnings(log);
 		expect(accessWarnings).toHaveLength(1);
 		const [warning] = accessWarnings;
 		expect(warning).toContain('Remote binding "SERVICE"');
 		expect(warning).toContain("redirected to the Cloudflare Access login page");
 		expect(warning).not.toContain(ACCESS_LOGIN_URL);
+	});
+
+	test("reports an Access login redirect to callers that don't follow redirects", async ({
+		expect,
+	}) => {
+		// Unmarked, so it came from Access in front of the proxy server. Passing
+		// it on would send a browser to log in to the proxy server's host, which
+		// would never give the dev server a `CF_Authorization` cookie.
+		const { http: proxyUrl } = await useServer((req, res) => {
+			res.statusCode = 302;
+			res.setHeader("Location", ACCESS_LOGIN_URL);
+			res.end();
+		});
+
+		const mf = useRemoteServiceMiniflare(proxyUrl, {
+			log: new TestLog(),
+			script: MANUAL_REDIRECT_SCRIPT,
+		});
+
+		const response = await mf.dispatchFetch("http://localhost/");
+		const result = (await response.json()) as ManualRedirectResult;
+		expect(result.status).toBe(401);
+		expect(result.location).toBeNull();
+		expect(result.body).toContain(
+			"Cloudflare Access redirected this remote bindings request"
+		);
+	});
+
+	test("passes through Access-looking responses returned by the remote binding itself", async ({
+		expect,
+	}) => {
+		// The remote proxy server marks every response it forwards from the
+		// binding. A marked Access login redirect or block page came from the
+		// bound service (e.g. a Worker proxying an Access-protected origin), not
+		// from Access in front of the proxy server, so it must reach the caller
+		// unchanged.
+		const { http: proxyUrl } = await useServer((req, res) => {
+			res.setHeader("MF-Forwarded-Response", "true");
+			if (req.headers["mf-url"] === "http://example.com/redirect") {
+				res.statusCode = 302;
+				res.setHeader("Location", ACCESS_LOGIN_URL);
+				res.end();
+				return;
+			}
+			res.statusCode = 403;
+			res.setHeader("Content-Type", "text/html");
+			res.end(CF_ACCESS_BLOCK_HTML);
+		});
+
+		const log = new TestLog();
+		const mf = useRemoteServiceMiniflare(proxyUrl, {
+			log,
+			script: MANUAL_REDIRECT_SCRIPT,
+		});
+
+		const redirect = (await (
+			await mf.dispatchFetch("http://localhost/redirect")
+		).json()) as ManualRedirectResult;
+		expect(redirect).toMatchObject({
+			status: 302,
+			location: ACCESS_LOGIN_URL,
+			forwardedMarker: null,
+		});
+
+		const blocked = (await (
+			await mf.dispatchFetch("http://localhost/blocked")
+		).json()) as ManualRedirectResult;
+		expect(blocked).toMatchObject({
+			status: 403,
+			body: CF_ACCESS_BLOCK_HTML,
+			forwardedMarker: null,
+		});
+
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(getAccessWarnings(log)).toHaveLength(0);
 	});
 
 	test("does not intercept redirects that are not to the Access login page", async ({
@@ -298,30 +426,7 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 		});
 
 		const log = new TestLog();
-		const mf = new Miniflare({
-			log,
-			workers: [
-				{
-					config: {
-						name: "",
-						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(SCRIPT),
-						env: {
-							SERVICE: {
-								type: "worker",
-								worker: "some-remote-service",
-								dev: { remote: true },
-							},
-						},
-					},
-					dev: {
-						remoteProxyConnectionString:
-							proxyUrl as unknown as RemoteProxyConnectionString,
-					},
-				},
-			],
-		});
-		useDispose(mf);
+		const mf = useRemoteServiceMiniflare(proxyUrl, { log });
 
 		const response = await mf.dispatchFetch("http://localhost/");
 		expect(response.status).toBe(200);
@@ -329,10 +434,7 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 
 		await new Promise((resolve) => setTimeout(resolve, 200));
 
-		const accessWarnings = log
-			.logsAtLevel(LogLevel.WARN)
-			.filter((message) => message.includes(ACCESS_WARNING_FRAGMENT));
-		expect(accessWarnings).toHaveLength(0);
+		expect(getAccessWarnings(log)).toHaveLength(0);
 	});
 
 	test("does not log a warning when the response is not a 403", async ({
@@ -380,5 +482,86 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 			.logsAtLevel(LogLevel.WARN)
 			.filter((message) => message.includes(ACCESS_WARNING_FRAGMENT));
 		expect(accessWarnings).toHaveLength(0);
+	});
+});
+
+describe("remote-bindings proxy server: forwarded responses", () => {
+	let proxyServerBundle: string;
+	beforeAll(async () => {
+		const result = await build({
+			entryPoints: [PROXY_SERVER_WORKER_PATH],
+			bundle: true,
+			format: "esm",
+			target: "esnext",
+			platform: "browser",
+			// Workers runtime built-ins are provided by workerd, not bundled.
+			external: ["cloudflare:*"],
+			write: false,
+		});
+		proxyServerBundle = result.outputFiles[0].text;
+	});
+
+	test("an Access login redirect returned by the remote service reaches the caller unchanged", async ({
+		expect,
+	}) => {
+		// "Edge" instance running the real proxy server in front of a service
+		// that itself redirects to an Access login page.
+		const edge = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "proxy-server",
+						compatibilityDate: "2025-01-01",
+						manifest: {
+							mainModule: "ProxyServerWorker.js",
+							modules: {
+								"ProxyServerWorker.js": {
+									type: "esm",
+									contents: proxyServerBundle,
+								},
+							},
+						},
+						env: { SERVICE: { type: "worker", worker: "remote-service" } },
+					},
+				},
+				{
+					config: {
+						name: "remote-service",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(/* javascript */ `
+							export default {
+								fetch() {
+									return new Response(null, {
+										status: 302,
+										headers: { Location: ${JSON.stringify(ACCESS_LOGIN_URL)} },
+									});
+								},
+							};
+						`),
+					},
+				},
+			],
+		});
+		useDispose(edge);
+		const edgeUrl = await edge.ready;
+
+		const log = new TestLog();
+		const mf = useRemoteServiceMiniflare(edgeUrl, {
+			log,
+			script: MANUAL_REDIRECT_SCRIPT,
+		});
+
+		const result = (await (
+			await mf.dispatchFetch("http://localhost/")
+		).json()) as ManualRedirectResult;
+		expect(result).toMatchObject({
+			status: 302,
+			location: ACCESS_LOGIN_URL,
+			forwardedMarker: null,
+		});
+
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		expect(getAccessWarnings(log)).toHaveLength(0);
 	});
 });
