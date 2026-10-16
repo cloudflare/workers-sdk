@@ -1,9 +1,13 @@
 ---
+"@cloudflare/vite-plugin": patch
+"create-cloudflare": patch
 "miniflare": patch
 "wrangler": patch
 ---
 
-Update dependencies of "miniflare", "wrangler"
+Update the local Workers runtime to workerd 1.20261016.1
+
+Use matching Workers types and a default compatibility date of 2026-10-16. Preserve nested asset serving on Windows by normalizing filesystem paths before building asset URLs.
 
 The following dependency versions have been updated:
 
