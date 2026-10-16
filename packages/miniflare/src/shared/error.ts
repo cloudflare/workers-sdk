@@ -62,3 +62,9 @@ export const isFileNotFoundError = (e: unknown): boolean => {
 		typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT"
 	);
 };
+
+export const isFileExistsError = (e: unknown): boolean => {
+	return (
+		typeof e === "object" && e !== null && "code" in e && e.code === "EEXIST"
+	);
+};
