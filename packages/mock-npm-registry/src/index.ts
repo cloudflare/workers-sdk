@@ -87,6 +87,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		// this list in sync with `minimumReleaseAgeExclude` in the root
 		// pnpm-workspace.yaml.
 		"@cloudflare/*",
+		"wrangler",
 		"cf",
 		"miniflare",
 		"workerd",
