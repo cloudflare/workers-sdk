@@ -17,6 +17,10 @@ const CF_ACCESS_BLOCK_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// Where the edge redirects a request that carries no valid Access credentials.
+const ACCESS_LOGIN_URL =
+	"https://example-team.cloudflareaccess.com/cdn-cgi/access/login/my-worker.example.workers.dev?kid=0123&meta=eyJ0eXAiOiJKV1QifQ.e30.c2ln";
+
 // Header line of the formatted warning. Distinct enough to filter on without
 // matching the user-worker's stack-trace lines that follow it.
 const ACCESS_WARNING_FRAGMENT =
@@ -198,6 +202,130 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 		// Non-Access 403 bodies should pass through unmodified.
 		const body = await response.text();
 		expect(body).toBe(JSON.stringify({ error: "forbidden" }));
+
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		const accessWarnings = log
+			.logsAtLevel(LogLevel.WARN)
+			.filter((message) => message.includes(ACCESS_WARNING_FRAGMENT));
+		expect(accessWarnings).toHaveLength(0);
+	});
+
+	test("reports a Cloudflare Access login redirect instead of following it", async ({
+		expect,
+	}) => {
+		// Local server that simulates the remote-bindings proxy server being
+		// redirected to the Access login page, which is what the edge does when
+		// the request carries no (or an expired) `CF_Authorization` cookie.
+		let requestCount = 0;
+		const { http: proxyUrl } = await useServer((req, res) => {
+			requestCount++;
+			res.statusCode = 302;
+			res.setHeader("Location", ACCESS_LOGIN_URL);
+			res.end();
+		});
+
+		const log = new TestLog();
+		const mf = new Miniflare({
+			log,
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(SCRIPT),
+						env: {
+							SERVICE: {
+								type: "worker",
+								worker: "some-remote-service",
+								dev: { remote: true },
+							},
+						},
+					},
+					dev: {
+						remoteProxyConnectionString:
+							proxyUrl as unknown as RemoteProxyConnectionString,
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		for (let i = 0; i < 3; i++) {
+			const response = await mf.dispatchFetch("http://localhost/");
+			const body = await response.text();
+
+			expect(response.status).toBe(401);
+			expect(response.headers.get("Content-Type")).toContain("text/plain");
+			expect(body).toContain(
+				"Cloudflare Access redirected this remote bindings request"
+			);
+			expect(body).toContain('binding "SERVICE"');
+			expect(body).toContain("CLOUDFLARE_ACCESS_CLIENT_ID");
+			// The login URL carries an Access `meta` JWT with user/device details.
+			expect(body).not.toContain(ACCESS_LOGIN_URL);
+		}
+
+		// Following the redirect would send every hop back through the service
+		// binding to the proxy server, looping until "Too many redirects".
+		expect(requestCount).toBe(3);
+
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		const accessWarnings = log
+			.logsAtLevel(LogLevel.WARN)
+			.filter((message) => message.includes(ACCESS_WARNING_FRAGMENT));
+		expect(accessWarnings).toHaveLength(1);
+		const [warning] = accessWarnings;
+		expect(warning).toContain('Remote binding "SERVICE"');
+		expect(warning).toContain("redirected to the Cloudflare Access login page");
+		expect(warning).not.toContain(ACCESS_LOGIN_URL);
+	});
+
+	test("does not intercept redirects that are not to the Access login page", async ({
+		expect,
+	}) => {
+		const { http: proxyUrl } = await useServer((req, res) => {
+			if (req.headers["mf-url"] === "http://example.com/") {
+				res.statusCode = 302;
+				res.setHeader("Location", "http://example.com/moved");
+				res.end();
+				return;
+			}
+			res.statusCode = 200;
+			res.setHeader("Content-Type", "text/plain");
+			res.end("moved");
+		});
+
+		const log = new TestLog();
+		const mf = new Miniflare({
+			log,
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(SCRIPT),
+						env: {
+							SERVICE: {
+								type: "worker",
+								worker: "some-remote-service",
+								dev: { remote: true },
+							},
+						},
+					},
+					dev: {
+						remoteProxyConnectionString:
+							proxyUrl as unknown as RemoteProxyConnectionString,
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost/");
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("moved");
 
 		await new Promise((resolve) => setTimeout(resolve, 200));
 
