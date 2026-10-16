@@ -62,7 +62,7 @@
 		"@cloudflare/containers-shared": "0.22.1",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
-		"@cloudflare/runtime-types": "0.1.11",
+		"@cloudflare/runtime-types": "0.1.12",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "5.20261015.1",
