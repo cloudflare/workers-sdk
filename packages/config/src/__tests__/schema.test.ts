@@ -25,6 +25,48 @@ const baseContainer = {
 const baseOutputConfig = { ...baseConfig } as const;
 const baseOutputContainer = { ...baseContainer } as const;
 
+describe.each([
+	["input", InputWorkerSchema],
+	["output", OutputWorkerSchema],
+] as const)("%s Worker domains", (_name, schema) => {
+	it.for([
+		{ production: true, previews: false },
+		{ production: false, previews: true },
+		{ production: true, previews: true },
+	])(
+		"accepts traffic settings $production/$previews",
+		(traffic, { expect }) => {
+			const domains = [
+				"example.com",
+				{ hostname: "previews.example.com", ...traffic },
+			];
+			const result = schema.parse({ ...baseConfig, domains });
+			expect(result.domains).toEqual(domains);
+		}
+	);
+
+	it.for([
+		{ hostname: "example.com", production: false, previews: false },
+		{ hostname: "example.com", production: true },
+		{ hostname: "example.com", previews: true },
+		{ hostname: "example.com", production: "true", previews: false },
+		{ hostname: "example.com", production: false, previews: "true" },
+		{ production: true, previews: false },
+		{ hostname: 123, production: true, previews: false },
+		{
+			hostname: "example.com",
+			production: true,
+			previews: false,
+			enabled: true,
+		},
+		123,
+	])("rejects invalid domain %j", (domain, { expect }) => {
+		expect(schema.safeParse({ ...baseConfig, domains: [domain] }).success).toBe(
+			false
+		);
+	});
+});
+
 describe("InputWorkerSchema", () => {
 	describe("env singleton bindings", () => {
 		it("accepts undefined env", ({ expect }) => {

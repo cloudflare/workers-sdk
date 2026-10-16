@@ -16,6 +16,7 @@ import { validateRoutes } from "./deployment-bundle/resolve-config-args";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
+import isNonInteractiveTurborepo from "./is-non-interactive-turborepo";
 import { logger } from "./logger";
 import { detectAgent } from "./utils/detect-agent";
 import type { StartDevWorkerInput, Trigger } from "./api/startDevWorker/types";
@@ -318,7 +319,9 @@ export const dev = createCommand({
 	},
 	async handler(args) {
 		const interactiveDevSession =
-			isInteractive() && args.showInteractiveDevSession !== false;
+			isInteractive() &&
+			!isNonInteractiveTurborepo() &&
+			args.showInteractiveDevSession !== false;
 		const showLocalExplorerAgentHint =
 			!interactiveDevSession &&
 			!args.remote &&

@@ -1319,16 +1319,7 @@ export async function previewBuildOutput(
 ): Promise<PreviewResult> {
 	const { workerConfig, rootConfig, buildResult, assets } = buildOutput;
 	assertPreviewBuildOutputRootConfig(rootConfig);
-	// TODO: Upload domains and triggers when Preview deployments support them.
-	// Wrangler can't configure them today, so reject them instead of ignoring them.
-	if (workerConfig.domains?.length) {
-		throw new UserError(
-			"Preview uploads from Build Output don't support the `domains` field.",
-			{
-				telemetryMessage: "preview build output custom domains not supported",
-			}
-		);
-	}
+	// TODO: Upload triggers when Preview deployments support them.
 	if (workerConfig.triggers?.length) {
 		throw new UserError(
 			"Preview uploads from Build Output don't support the `triggers` field.",

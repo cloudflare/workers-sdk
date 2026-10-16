@@ -222,7 +222,9 @@ function getWorkerZone(
 	// first-route selection used by Wrangler's Miniflare options.
 	const domain = config.domains?.[0];
 	if (domain !== undefined) {
-		return getZoneFromRoute(domain);
+		return getZoneFromRoute(
+			typeof domain === "string" ? domain : domain.hostname
+		);
 	}
 
 	const fetchTrigger = config.triggers?.find(
