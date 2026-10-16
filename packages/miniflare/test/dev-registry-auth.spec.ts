@@ -6,7 +6,7 @@ import { CoreHeaders } from "../src/workers/core/constants";
 import { disposeWithRetry } from "./test-shared";
 import { test } from "./test-shared/control-plane-auth";
 
-describe.sequential("dev-registry authentication", () => {
+describe("dev-registry authentication", { concurrent: false }, () => {
 	test("rejects registry replacement before parsing and preserves shared storage", async ({
 		expect,
 		start,

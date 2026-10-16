@@ -24,7 +24,7 @@
 		"miniflare": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:default",
+		"@cloudflare/vitest-plugin": "catalog:default",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
