@@ -1,15 +1,17 @@
 import assert from "node:assert";
 import { fork } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { createConnection } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import treeKill from "tree-kill";
 
+const require = createRequire(import.meta.url);
 export const wranglerEntryPath = path.resolve(
-	__dirname,
-	"../../../packages/wrangler/bin/wrangler.js"
+	path.dirname(require.resolve("wrangler/package.json")),
+	"bin/wrangler.js"
 );
 
 /**
@@ -24,7 +26,7 @@ export const wranglerEntryPath = path.resolve(
  * calls share the same registry so multi-worker setups (service bindings,
  * durable objects across workers) continue to work.
  *
- * See `packages/miniflare/src/shared/DEV_REGISTRY.md` for registry architecture.
+ * The published Wrangler process supplies the dev registry implementation.
  */
 let isolatedRegistryPath: string | undefined;
 function getIsolatedRegistryPath(): string {

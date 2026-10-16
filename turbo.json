@@ -3,7 +3,12 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": ["CI_OS", "NODE_VERSION", "X_LOCAL_OBSERVABILITY_BATCH_SIZE"],
+	"globalEnv": [
+		"CI_BASE_BRANCH",
+		"CI_OS",
+		"NODE_VERSION",
+		"X_LOCAL_OBSERVABILITY_BATCH_SIZE"
+	],
 	"globalPassThroughEnv": [
 		"CI",
 		"CI_TEST_SHARD",

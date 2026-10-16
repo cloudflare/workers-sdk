@@ -1,9 +1,0 @@
-{
-	"private": true,
-	"description": "A template for kick starting a Cloudflare Workers project",
-	"license": "MIT",
-	"main": "index.js",
-	"dependencies": {
-		"@cloudflare/kv-asset-handler": "workspace:*"
-	}
-}

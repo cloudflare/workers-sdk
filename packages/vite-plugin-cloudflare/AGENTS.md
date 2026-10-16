@@ -16,7 +16,7 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 
 ## BUILD
 
-- Only package using `tsdown` as build tool
+- Uses `tsdown` as the build tool
 - Outputs ESM (`.mjs`) to `dist/index.mjs`
 - `src/cf-vite.ts` is a second top-level tsdown entry, bundled to `dist/cf-vite.mjs` (no dts)
 - Also bundles 4 internal worker scripts from `src/workers/*/index.ts` as separate neutral-platform outputs to `dist/workers/`
@@ -76,6 +76,13 @@ contract so the parent can drive either impl interchangeably.
   parent process should not assume identical hotkey UX across delegates.
 - **Exit codes.** `0` graceful, `2` unknown verb / argv parse error,
   `130` SIGINT, `143` SIGTERM.
+
+## MAINTENANCE DEPENDENCIES
+
+- Public SDK packages are pinned to exact published npm releases.
+- Private support packages remain in the workspace and use workspace:* references: remote-bindings, workers-shared, mock-npm-registry, workers-tsconfig, and lint-config-shared.
+- Preserve shared TypeScript configurations and custom lint rules in their existing packages.
+- Root pnpm build builds the plugin and its private build dependencies. Only the plugin is published from this branch.
 
 ## CONVENTIONS
 

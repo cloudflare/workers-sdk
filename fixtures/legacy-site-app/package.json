@@ -1,9 +1,0 @@
-{
-	"name": "@fixture/sites-legacy",
-	"private": true,
-	"description": "",
-	"keywords": [],
-	"license": "ISC",
-	"author": "",
-	"main": "index.js"
-}

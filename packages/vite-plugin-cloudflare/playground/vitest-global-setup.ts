@@ -22,6 +22,13 @@ export async function setup({ provide }: TestProject): Promise<void> {
 	provide("wsEndpoint", browserServer.wsEndpoint());
 }
 
+const expectedViteMajor = process.env.VITE_VERSION?.replace(/^vite-/, "");
+if (expectedViteMajor && !version.startsWith(`${expectedViteMajor}.`)) {
+	throw new Error(
+		`Expected Vite ${expectedViteMajor}, but the playground test harness loaded Vite ${version}. Check that the workspace uses the same Vite version.`
+	);
+}
+
 console.log(`Testing with Vite ${version}`);
 
 const dockerIsRunning = await isDockerRunning(getDockerPath());

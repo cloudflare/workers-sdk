@@ -9,7 +9,7 @@
 		"vite-plugin",
 		"workers"
 	],
-	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin-cloudflare#readme",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/vite-plugin-v1/packages/vite-plugin-cloudflare#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
@@ -49,48 +49,48 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/unenv-preset": "workspace:*",
-		"miniflare": "workspace:*",
+		"@cloudflare/unenv-preset": "2.16.2",
+		"miniflare": "5.20261012.0-beta",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "catalog:default",
-		"wrangler": "workspace:*",
-		"ws": "catalog:default"
+		"workerd": "1.20261015.1",
+		"wrangler": "4.151.0",
+		"ws": "8.22.0"
 	},
 	"devDependencies": {
-		"@cloudflare/build-output-utils": "workspace:*",
-		"@cloudflare/config": "workspace:*",
-		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/build-output-utils": "0.9.2",
+		"@cloudflare/config": "0.26.0",
+		"@cloudflare/containers-shared": "0.22.0",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
-		"@cloudflare/runtime-types": "workspace:*",
+		"@cloudflare/runtime-types": "0.1.11",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@cloudflare/workers-utils": "workspace:*",
-		"@remix-run/node-fetch-server": "^0.8.0",
-		"@types/node": "catalog:default",
-		"@types/semver": "^7.5.1",
-		"@types/ws": "^8.5.13",
-		"am-i-vibing": "^0.5.0",
-		"defu": "^6.1.4",
-		"get-port": "^7.1.0",
-		"magic-string": "^0.30.12",
-		"mlly": "^1.7.4",
-		"open": "catalog:default",
-		"picocolors": "^1.1.1",
-		"qr": "^0.6.0",
-		"semver": "^7.7.1",
-		"tinyglobby": "catalog:default",
-		"tree-kill": "catalog:default",
+		"@cloudflare/workers-types": "5.20261015.1",
+		"@cloudflare/workers-utils": "0.47.2",
+		"@remix-run/node-fetch-server": "0.8.1",
+		"@types/node": "22.15.17",
+		"@types/semver": "7.8.0",
+		"@types/ws": "8.18.2",
+		"am-i-vibing": "0.5.0",
+		"defu": "6.1.7",
+		"get-port": "7.2.0",
+		"magic-string": "0.30.21",
+		"mlly": "1.8.2",
+		"open": "11.0.0",
+		"picocolors": "1.1.1",
+		"qr": "0.6.0",
+		"semver": "7.8.5",
+		"tinyglobby": "0.2.16",
+		"tree-kill": "1.2.2",
 		"tsdown": "0.16.3",
-		"typescript": "catalog:default",
+		"typescript": "5.8.3",
 		"vite": "catalog:default",
 		"vite-legacy": "npm:vite@7.1.12",
-		"vitest": "catalog:default"
+		"vitest": "4.1.0"
 	},
 	"peerDependencies": {
 		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
-		"wrangler": "workspace:^"
+		"wrangler": "^4.151.0"
 	},
 	"workers-sdk": {
 		"prerelease": true

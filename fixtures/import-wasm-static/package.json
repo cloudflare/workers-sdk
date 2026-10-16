@@ -1,8 +1,0 @@
-{
-	"name": "@fixture/import-wasm-static",
-	"private": true,
-	"sideEffects": false,
-	"exports": {
-		"./multiply.wasm": "./wasm/multiply.wasm"
-	}
-}

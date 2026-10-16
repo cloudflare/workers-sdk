@@ -27,6 +27,7 @@ permissions: {}
 jobs:
   trigger:
     name: "Trigger Privileged Rerun"
+    if: github.event.pull_request.base.ref == 'vite-plugin-v1'
     runs-on: ubuntu-latest
     steps:
       - name: Log trigger

@@ -18,6 +18,6 @@
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
-		"wrangler": "workspace:*"
+		"wrangler": "4.151.0"
 	}
 }

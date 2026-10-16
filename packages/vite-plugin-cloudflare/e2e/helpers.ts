@@ -2,6 +2,7 @@ import assert from "node:assert";
 import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import util from "node:util";
@@ -16,8 +17,10 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
-import wranglerPackage from "../../wrangler/package.json";
 import vitePluginPackage from "../package.json";
+
+const require = createRequire(import.meta.url);
+const wranglerPackage: { version: string } = require("wrangler/package.json");
 
 const debuglog = util.debuglog("vite-plugin:test");
 
@@ -252,6 +255,9 @@ export function runCommand(
 			}
 			return output;
 		} catch (e) {
+			if (e instanceof Error && "stdout" in e && "stderr" in e) {
+				debuglog("Failed command stdout: %s\nstderr: %s", e.stdout, e.stderr);
+			}
 			attempts--;
 			if (attempts > 0) {
 				debuglog(`Retrying failed command (${e})`);
@@ -272,9 +278,10 @@ function getWranglerCommand(command: string) {
 			command
 	);
 	const wranglerBin = path.resolve(
-		`${__dirname}/../../../packages/wrangler/bin/wrangler.js`
+		path.dirname(require.resolve("wrangler/package.json")),
+		"bin/wrangler.js"
 	);
-	return `node ${wranglerBin} ${command.slice("wrangler ".length)}`;
+	return `node "${wranglerBin}" ${command.slice("wrangler ".length)}`;
 }
 
 export async function runWrangler(

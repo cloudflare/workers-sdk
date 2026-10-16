@@ -32,7 +32,7 @@
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
+		"wrangler": "4.151.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

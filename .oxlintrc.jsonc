@@ -34,7 +34,9 @@
 		"prefer-spread": "error",
 		"@typescript-eslint/consistent-type-imports": [
 			"error",
-			{ "disallowTypeAnnotations": false },
+			{
+				"disallowTypeAnnotations": false,
+			},
 		],
 		"no-var": "error",
 		"no-regex-spaces": "error",
@@ -42,7 +44,12 @@
 		"@typescript-eslint/no-explicit-any": "error",
 		"@typescript-eslint/no-namespace": "error",
 		"@typescript-eslint/no-require-imports": "error",
-		"no-shadow": ["error", { "allow": ["expect"] }],
+		"no-shadow": [
+			"error",
+			{
+				"allow": ["expect"],
+			},
+		],
 		"no-unexpected-multiline": "error",
 		"@typescript-eslint/no-unnecessary-type-constraint": "error",
 		"unicorn/prefer-node-protocol": "error",
@@ -53,14 +60,15 @@
 		"workers-sdk/no-direct-recursive-rm": "error",
 		"workers-sdk/require-description-when-disabling": "error",
 		"@typescript-eslint/no-deprecated": "error",
-
 		"no-unused-vars": [
 			"error",
 			{
 				"argsIgnorePattern": "^_",
 				"varsIgnorePattern": "^_",
 				"ignoreRestSiblings": true,
-				"fix": { "imports": "fix" },
+				"fix": {
+					"imports": "fix",
+				},
 			},
 		],
 		"no-restricted-imports": [
@@ -91,23 +99,7 @@
 			},
 		],
 	},
-	"ignorePatterns": [
-		"**/*.js",
-		"**/*.cjs",
-		"**/*.mjs",
-		"fixtures/**",
-		"packages/create-cloudflare/**/templates/**/*.*",
-		"!packages/create-cloudflare/**/templates*/**/c3.ts",
-		// TODO: we really should be linting this folder
-		"packages/wrangler/templates/**",
-		// Ignore generated files
-		"packages/containers-shared/src/client/**",
-		"packages/local-explorer-ui/src/api/generated/**",
-		"packages/local-explorer-ui/src/routeTree.gen.ts",
-		"packages/miniflare/src/runtime/config/workerd.*",
-		"packages/quick-edit-extension/vscode.d.ts",
-		"packages/quick-edit-extension/vscode.proposed.*.d.ts",
-	],
+	"ignorePatterns": ["**/*.js", "**/*.cjs", "**/*.mjs", "fixtures/**"],
 	"jsPlugins": [
 		"eslint-plugin-turbo",
 		{
@@ -116,107 +108,14 @@
 		},
 	],
 	"overrides": [
-		// Published packages which all have their own "logger" class that should be used instead.
 		{
-			"files": [
-				"packages/cli/**",
-				"packages/create-cloudflare/**",
-				"packages/miniflare/**",
-				"packages/wrangler/**",
-				"packages/workers-utils/**",
-			],
-			"rules": {
-				"no-console": "error",
-			},
-		},
-		// TODO: remove these overrides. This is a legacy of Miniflare's history, not intentional
-		{
-			"files": ["packages/miniflare/**"],
-			"rules": {
-				"@typescript-eslint/no-explicit-any": "off",
-				"@typescript-eslint/ban-ts-comment": "off",
-				"@typescript-eslint/no-floating-promises": "off",
-				"no-shadow": "off",
-				"no-useless-escape": "off",
-				"no-unsafe-optional-chaining": "off",
-				"no-control-regex": "off",
-				"no-case-declarations": "off",
-				"turbo/no-undeclared-env-vars": "off",
-			},
-		},
-		{
-			"files": ["packages/wrangler/src/**", "packages/workers-utils/src/**"],
-			"rules": {
-				"no-restricted-globals": [
-					"error",
-					{
-						"name": "__dirname",
-						"message": "Use `getBasePath()` instead.",
-					},
-					{
-						"name": "__filename",
-						"message": "Use `getBasePath()` instead.",
-					},
-					{
-						"name": "fetch",
-						"message": "Use undici's fetch instead",
-					},
-				],
-			},
-		},
-		// Although in _general_ Miniflare shouldn't use console.log(), it's Workers can and should
-		{
-			"files": ["packages/miniflare/src/workers/**/*.ts"],
-			"rules": {
-				"no-console": "off",
-				"no-restricted-imports": [
-					"error",
-					{
-						"paths": [
-							{
-								"name": "zod",
-								"allowTypeImports": true,
-								"message": "Import runtime values from `miniflare:zod` instead.",
-							},
-						],
-					},
-				],
-			},
-		},
-		{
-			"files": ["packages/miniflare/src/workers/shared/zod.worker.ts"],
-			"rules": {
-				"no-restricted-imports": "off",
-			},
-		},
-		// Relax some rules for test & script files
-		{
-			"files": [
-				"packages/wrangler/src/__tests__/**",
-				"packages/wrangler/e2e/**",
-				"packages/wrangler/scripts/**",
-				"packages/miniflare/scripts/**",
-				"packages/cli/src/__tests__/**",
-				"packages/create-cloudflare/scripts/**",
-				"packages/create-cloudflare/src/__tests__/**",
-				"packages/workers-utils/tests/**",
-				"packages/vite-plugin-cloudflare/e2e/**",
-			],
+			"files": ["packages/vite-plugin-cloudflare/e2e/**"],
 			"rules": {
 				"no-console": "off",
 				"no-restricted-globals": "off",
 				"workers-sdk/no-unsafe-command-execution": "off",
 			},
 		},
-		// Local Explorer UI e2e tests use Playwright helpers (waitForText, waitForTableRows, etc.)
-		// as assertions, which the vitest/expect-expect rule doesn't recognise.
-		{
-			"files": ["packages/local-explorer-ui/src/__e2e__/**"],
-			"rules": {
-				"vitest/expect-expect": "off",
-			},
-		},
-		// Make sure Wrangler's version checking logic in vite-plugin-cloudflare can run properly
 		{
 			"files": ["packages/vite-plugin-cloudflare/**"],
 			"rules": {

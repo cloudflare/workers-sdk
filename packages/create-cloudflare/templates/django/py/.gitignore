@@ -1,7 +1,0 @@
-node_modules/
-.wrangler/
-.venv/
-.venv-workers/
-python_modules/
-__pycache__/
-*.py[cod]

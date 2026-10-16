@@ -1,122 +1,44 @@
-name: Handle Changesets
+name: Release Vite plugin v1
 
 on:
   push:
-    branches:
-      - main
+    branches: [vite-plugin-v1]
 
 permissions:
-  id-token: write
   contents: read
-  # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
+  id-token: write
+
+concurrency:
+  group: vite-plugin-v1-release
+  cancel-in-progress: false
 
 env:
-  # This workflow only builds and publishes — it never runs Playwright tests.
-  # Skip the browser download to avoid the postinstall script hanging in CI.
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
 jobs:
   release:
-    if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Handle Changesets
-    runs-on: macos-latest-large
+    if: github.repository_owner == 'cloudflare'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          # See https://github.com/changesets/action/issues/187
           token: ${{ secrets.GH_ACCESS_TOKEN }}
           persist-credentials: true
-          # Pull in more history to cover the changeset commits
-          fetch-depth: 500
-
-      - name: Install Dependencies
-        # Defense in depth: do not pass Turbo remote cache credentials and
-        # disable the pnpm store cache so release builds always resolve
-        # packages from the registry and rebuild every task from source,
-        # rather than restoring from a (potentially poisoned) cache.
-        uses: ./.github/actions/install-dependencies
+          fetch-depth: 0
+      - uses: ./.github/actions/install-dependencies
         with:
-          # Pinned to 24.18.0 (rather than floating `24`) until it's safe to
-          # float back: Node 24.17.0 regressed node-fetch@2 keep-alive responses
-          # with ERR_STREAM_PREMATURE_CLOSE (nodejs/node#63989, fixed in 24.18.0).
           node-version: 24.18.0
           disable-cache: "true"
-
-      - name: Check npm version
-        run: node -r esbuild-register tools/deployments/check-npm-version.ts
-
-      - name: Check the changesets
-        run: node -r esbuild-register tools/deployments/validate-changesets.ts
-
-      - name: Build all packages
-        run: pnpm run build
+      - run: node -r esbuild-register tools/deployments/check-npm-version.ts
+      - run: pnpm check:changesets
+      - run: pnpm build
         env:
-          CI_OS: ${{ runner.os }}
           SOURCEMAPS: "false"
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
-          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
-          NODE_ENV: "production"
-          # This is the "production" key for sparrow analytics.
-          # Include this here because this step will rebuild Wrangler and needs to have this available
-          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
-
-      - name: Create Version PR or Publish to NPM
-        id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+      - uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
-          version: node -r esbuild-register tools/deployments/changeset-version.ts
-          # Replaces `changeset publish` with an orchestrator that publishes in
-          # dependency-tier order and waits for each tier to become resolvable
-          # on the registry before starting the next one. Packages pin their
-          # siblings at an exact version, so publishing a dependent before its
-          # dependency has propagated produces an installable-but-broken
-          # release. It still ends with `changeset tag`, so the `New tag:` lines
-          # this action parses into `publishedPackages` are unchanged.
-          publish: node -r esbuild-register tools/deployments/publish-packages.ts
+          title: "[vite-plugin] Version v1 maintenance release"
+          version: pnpm version-packages
+          publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          # Once every version in a tier reads back OK, wait this long before
-          # starting the next tier. A successful read only proves this runner's
-          # CDN edge is up to date, not everyone else's.
-          PUBLISH_PROPAGATION_MIN_SECONDS: "60"
-          # Fail the release rather than publish a broken dependent if a version
-          # never becomes resolvable.
-          PUBLISH_PROPAGATION_TIMEOUT_SECONDS: "600"
-
-      # Switch to Node 22 for non-npm package deployments because quick-edit
-      # builds native modules (tree-sitter) that are not compatible with
-      # Node 24's C++20 requirement for V8 headers.
-      - name: Switch to Node 22 for non-npm package deployments
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          # Pinned to 22.23.1 (rather than floating `22`) until it's safe to
-          # float back: Node 22.23.0 regressed node-fetch@2 keep-alive responses
-          # with ERR_STREAM_PREMATURE_CLOSE (nodejs/node#63989, fixed in 22.23.1).
-          node-version: 22.23.1
-
-      - name: Deploy non-NPM Packages
-        id: deploy
-        run: |
-          node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts
-          echo "status=$(cat deployment-status.json)" >> $GITHUB_OUTPUT;
-        env:
-          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID }}
-          WORKERS_NEW_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_NEW_CLOUDFLARE_API_TOKEN }}
-          WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN }}
-          WORKERS_SHARED_SENTRY_ACCESS_ID: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_ID }}
-          WORKERS_SHARED_SENTRY_ACCESS_SECRET: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_SECRET }}
-          WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}
-
-      - name: Send Alert
-        if: always()
-        run: node -r esbuild-register tools/deployments/alert-on-error.ts
-        env:
-          PUBLISH_STATUS: ${{ steps.changesets.outcome }}
-          HAS_CHANGESETS: ${{ steps.changesets.outputs.hasChangesets }}
-          DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          TOKEN: ${{ secrets.STATUS_BOT_SECRET }}

@@ -1,89 +1,56 @@
-name: Vite plugin playgrounds
+name: Vite plugin v1 playgrounds
 
 on:
-  merge_group:
   pull_request:
+    branches: [vite-plugin-v1]
+  push:
+    branches: [vite-plugin-v1]
+  merge_group:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
-  cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  # We run `playwright install` manually instead
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
 jobs:
   test:
-    # Windows jobs that miss the turbo cache already take 15-25 minutes, and the
-    # timeouts/retries in `playground/vitest.config.e2e.ts` give slow tests more
-    # room to finish, so leave headroom before the hard job kill.
-    timeout-minutes: 45
-    name: ${{ format('Vite Plugin Playground ({0}, {1})', matrix.os, matrix.vite) }}
+    name: Vite Plugin Playground (${{ matrix.os }}, vite-${{ matrix.vite }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        vite: ["vite-8"]
+        vite: [8]
         include:
           - os: ubuntu-latest
-            vite: "vite-6"
+            vite: 6
           - os: ubuntu-latest
-            vite: "vite-7"
-    runs-on: ${{ matrix.os }}
-    env:
-      # Miniflare build outputs contain platform-specific paths. Include the OS
-      # in both the build cache key and the exported plugin build hash.
-      CI_OS: ${{ matrix.os }}
+            vite: 7
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
-      - name: Filter changed paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
-        id: changes
-        with:
-          filters: |
-            everything_but_markdown:
-              - '!**/*.md'
-      - name: Install Dependencies
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        uses: ./.github/actions/install-dependencies
+      - uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-      - name: Install playwright
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: |
-          pnpm --filter @vite-plugin-cloudflare/playground playwright:install
-      - name: Build plugin with initial Vite version
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: |
-          pnpm dotenv -- pnpm turbo build --filter @cloudflare/vite-plugin
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-      # The test steps below pass `--only`, which does not merely skip *running*
-      # dependencies — it strips them from the cache key as well. Left alone,
-      # the playground tests are cached on a key that ignores
-      # `@cloudflare/vite-plugin`, `wrangler`, `miniflare` and `workerd`, so
-      # they replay from cache and never actually run on internal PRs (#14967).
-      #
-      # The turbo hash for `@cloudflare/vite-plugin#build` covers that whole
-      # dependency graph, so exporting it here and declaring it as a task `env`
-      # in `playground/turbo.json` restores the invalidation `--only` removed.
-      #
-      # This must run before the Vite downgrade steps so that the hash
-      # describes the plugin that was actually built and tested.
+      - run: pnpm build
+      # --only avoids rebuilding the plugin after selecting Vite 6 or 7, but
+      # also removes its dependency hashes from the test cache key. Capture the
+      # actual build hash before the downgrade to restore that invalidation.
       - name: Export plugin build hash for the playground cache key
-        if: steps.changes.outputs.everything_but_markdown == 'true'
         shell: bash
         run: |
-          pnpm dotenv -- pnpm turbo build --filter @cloudflare/vite-plugin --dry=json |
+          pnpm dotenv -- turbo build --filter @cloudflare/vite-plugin --dry=json |
             node --input-type=module -e '
               import { readFileSync } from "node:fs";
               const { tasks } = JSON.parse(readFileSync(0, "utf8"));
@@ -93,47 +60,20 @@ jobs:
               }
               console.log(`VITE_PLUGIN_BUILD_HASH=${task.hash}`);
             ' >> "$GITHUB_ENV"
-      # The exact Vite 8 workspace patch is intentionally unused after these
-      # compatibility-job downgrades.
-      - name: Downgrade to Vite 6
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
-        run: |
-          pnpm --config.allow-unused-patches=true update -r --no-save vite@^6.1.0
-      - name: Downgrade to Vite 7
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-7'
-        run: |
-          pnpm --config.allow-unused-patches=true update -r --no-save vite@^7.0.0
-      - name: Run dev playground tests
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        # We use `--only` to prevent TurboRepo from rebuilding dependencies
-        # This ensures the Vite plugin is not rebuilt using a different Vite version
-        # `VITE_PLUGIN_BUILD_HASH` puts the stripped dependency hashes back into
-        # the cache key — see "Export plugin build hash" above
-        run: |
-          pnpm dotenv -- pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
+      - name: Select compatibility Vite version
+        if: matrix.vite != 8
         env:
-          VITE_VERSION: ${{ matrix.vite }}
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          NODE_DEBUG: "@cloudflare:vite-plugin"
-      - name: Run build/preview playground tests
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        # We use `--only` to prevent TurboRepo from rebuilding dependencies
-        # This ensures the Vite plugin is not rebuilt using a different Vite version
-        # `VITE_PLUGIN_BUILD_HASH` puts the stripped dependency hashes back into
-        # the cache key — see "Export plugin build hash" above
-        run: |
-          pnpm dotenv -- pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
+          VITE_MAJOR: ${{ matrix.vite }}
+        shell: bash
+        run: pnpm --config.allow-unused-patches=true update -r --no-save "vite@^${VITE_MAJOR}.0.0"
+      - run: pnpm --filter @vite-plugin-cloudflare/playground playwright:install
+      - run: pnpm dotenv -- turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only --summarize
         env:
-          VITE_VERSION: ${{ matrix.vite }}
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          VITE_VERSION: vite-${{ matrix.vite }}
+          NODE_OPTIONS: --max_old_space_size=8192
           NODE_DEBUG: "@cloudflare:vite-plugin"
-      - name: Upload turbo logs
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.vite }}
-          path: .turbo/runs
+      - run: pnpm dotenv -- turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only --summarize
+        env:
+          VITE_VERSION: vite-${{ matrix.vite }}
+          NODE_OPTIONS: --max_old_space_size=8192
+          NODE_DEBUG: "@cloudflare:vite-plugin"

@@ -22,7 +22,7 @@ runs:
         REPO: ${{ github.repository }}
       run: |
         if [ "$EVENT_NAME" = "merge_group" ] || \
-           [ "$HEAD_REF" = "changeset-release/main" ]; then
+           [[ "$HEAD_REF" == changeset-release/vite-plugin-v1 ]]; then
           echo "run_remote=true" >> "$GITHUB_OUTPUT"
         elif [ "$EVENT_NAME" = "pull_request" ]; then
           HAS_LABEL=$(gh pr view "$PR_NUMBER" \

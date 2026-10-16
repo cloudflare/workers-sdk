@@ -1,5 +1,0 @@
-{
-	"name": "node-env",
-	"compatibility_date": "2025-10-01",
-	"main": "./src/index.ts",
-}

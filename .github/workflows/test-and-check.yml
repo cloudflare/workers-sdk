@@ -1,366 +1,71 @@
-name: CI
+name: Vite plugin v1 CI
 
 on:
-  merge_group:
   pull_request:
+    branches: [vite-plugin-v1]
+  push:
+    branches: [vite-plugin-v1]
+  merge_group:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+
 env:
-  # We run `playwright install` manually instead
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
-  # Use the PR label for deliberate benchmarks, including nested Turbo builds.
-  # Dependency and browser downloads retain their separate caches.
-  TURBO_CACHE: ${{ contains(github.event.pull_request.labels.*.name, 'ci:no-turbo-cache') && 'local:,remote:' || 'local:rw,remote:rw' }}
-  TURBO_RUN_SUMMARY: "true"
 
 jobs:
-  add-to-project:
-    if: github.head_ref != 'changeset-release/main'
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-add-pr
-      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
-    timeout-minutes: 30
-    name: Add PR to project
-    runs-on: ubuntu-latest
-    steps:
-      - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
-
   check:
-    timeout-minutes: 30
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-checks
-      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
-
-    name: "Checks"
+    name: Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
           persist-credentials: false
-
-      - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+      - uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - name: Check the changesets
-        run: node -r esbuild-register tools/deployments/validate-changesets.ts
-
-      - name: Check for errors
-        run: pnpm run check --summarize
+      - run: pnpm check
         env:
-          CI_OS: ${{ runner.os }}
-          NODE_OPTIONS: "--max_old_space_size=8192"
-
-      - name: Filter changed paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
-        id: changes
-        with:
-          filters: |
-            miniflare_openapi:
-              - 'packages/miniflare/src/workers/local-explorer/openapi.local.json'
-              - 'packages/miniflare/src/workers/local-explorer/generated/**'
-              - 'packages/miniflare/scripts/openapi-filter-config.ts'
-              - 'packages/miniflare/scripts/filter-openapi.ts'
-              - 'packages/miniflare/scripts/check-generate-api.ts'
-              - 'packages/miniflare/openapi-ts.config.ts'
-
-      - name: Check generated OpenAPI types are up to date
-        if: steps.changes.outputs.miniflare_openapi == 'true'
-        run: pnpm -F miniflare check:generate-api
-
-      # Check for old Node.js version warnings and errors
-      - name: Use Node.js v20
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 20
-
-      - name: Check for error message on Node.js < v22
-        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
-
-      - name: Upload turbo logs
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: turbo-runs-checks
-          path: .turbo/runs
-
-  test-partitions:
-    timeout-minutes: 30
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.suite }}-${{ matrix.shard }}-test
-      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
-
-    name: ${{ format('Test partition ({0}, {1}, {2})', matrix.description, matrix.suite, matrix.shard) }}
+          NODE_OPTIONS: --max_old_space_size=8192
+  test:
+    name: Tests (${{ matrix.description }}, ${{ matrix.suite }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-latest
-          - ubuntu-latest
-          - windows-latest
-        suite:
-          - packages-and-tools
-          - integrations
-          - runtime
-          - fixtures
-          - dev-registry
-        shard: [1, 2]
-        exclude:
-          # The other packages run once per OS; tools and release source maps
-          # are tested on Linux only.
-          # dev-registry starts independently to avoid a long tail of fixtures.
-          - suite: packages-and-tools
-            shard: 2
-          - suite: integrations
-            shard: 2
-          - suite: dev-registry
-            shard: 2
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        suite: [packages-and-tools, fixtures]
         include:
-          - os: macos-latest
-            description: macOS
-            runtime-shards: 2
           - os: ubuntu-latest
             description: Linux
-            runtime-shards: 2
+          - os: macos-latest
+            description: macOS
           - os: windows-latest
             description: Windows
-            runtime-shards: 3
-          # The Windows runtime partitions take longer than the other OSes.
-          - os: windows-latest
-            description: Windows
-            suite: runtime
-            shard: 3
-            runtime-shards: 3
-
-    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
           persist-credentials: false
-
-      - name: Filter changed paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
-        id: changes
-        with:
-          filters: |
-            everything_but_markdown:
-              - '!**/*.md'
-
-      - name: Install Dependencies
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        uses: ./.github/actions/install-dependencies
+      - uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      # Browser Run tests in `packages/miniflare/test/plugins/browser/index.spec.ts`
-      # and the `fixtures/browser-run` fixture use `@puppeteer/browsers` to
-      # download Chrome into the global Wrangler cache. Caching that binary
-      # across CI runs avoids ~150 MB of repeat downloads per run.
-      #
-      # Note this is `cache/restore` paired with an explicit `cache/save`
-      # below, not plain `cache`: `actions/cache` saves from a post step
-      # declaring `post-if: success()`, so a job that fails for *any* reason
-      # never saves. Combined with this workflow only running on
-      # `pull_request`/`merge_group` — so nothing is ever written to
-      # `refs/heads/main`, the one ref every PR can restore from — that left
-      # Windows re-downloading Chrome on every single run.
-      #
-      # The Browser Run fixture is skipped on Ubuntu (AppArmor), but the
-      # miniflare browser spec runs everywhere, so the cache is needed on all
-      # three OSes for `runtime` and on Windows + macOS for
-      # `fixtures`.
-      - name: Restore Chrome browser cache (Browser Run)
-        id: chrome-cache
-        if: steps.changes.outputs.everything_but_markdown == 'true' && (matrix.suite == 'runtime' || (matrix.suite == 'fixtures' && matrix.os != 'ubuntu-latest'))
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          # The Chrome version lives in
-          # `packages/miniflare/src/plugins/browser-rendering/browser-version.ts`.
-          # Bumping that constant invalidates this cache automatically via
-          # `hashFiles()` — a cache miss only triggers a fresh download, no
-          # functional impact.
-          key: chrome-${{ runner.os }}-${{ hashFiles('packages/miniflare/src/plugins/browser-rendering/browser-version.ts') }}
-          path: |
-            ~/.cache/.wrangler/chrome
-            ~/Library/Caches/.wrangler/chrome
-            ~/AppData/Local/xdg.cache/.wrangler/chrome
-
-      - name: Run tests (tools only)
-        # tools _only_ needs to be tested on Linux because they're only intended to run in CI
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
-        run: |
-          mkdir -p .turbo/ci-logs
-          pnpm run test:ci:logged .turbo/ci-logs/tools.log run test:ci --log-order=stream --filter="@cloudflare/tools"
-        shell: bash
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/tools/index.html
-          CI_OS: ${{ matrix.description }}
-
-      - name: Run tests (packages)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools'
-        # Wrangler and Miniflare run in the runtime partitions below. Keep the
-        # broad filter so new packages automatically retain CI coverage.
-        run: |
-          mkdir -p .turbo/ci-logs
-          pnpm run test:ci:logged .turbo/ci-logs/packages.log run test:ci --summarize --log-order=stream --concurrency=3 --filter="./packages/*" --filter="!wrangler" --filter="!miniflare" --filter="!@cloudflare/vite-plugin" --filter="!@cloudflare/vitest-plugin"
-        shell: bash
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
-          CI_OS: ${{ matrix.description }}
-
-      - name: Run tests (Vite and Vitest integrations)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'integrations'
-        # Start the integration packages without queuing behind the other packages.
-        # Preserve the existing Windows exclusion for flaky Vitest plugin watch
-        # tests; the comprehensive vitest-plugin-examples fixture still runs.
-        run: |
-          mkdir -p .turbo/ci-logs
-          pnpm run test:ci:logged .turbo/ci-logs/integrations.log run test:ci --summarize --log-order=stream --concurrency=2 --filter="@cloudflare/vite-plugin" ${{ matrix.os != 'windows-latest' && '--filter="@cloudflare/vitest-plugin"' || '' }}
-        shell: bash
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
-          CI_OS: ${{ matrix.description }}
-
-      - name: Run tests (Wrangler and Miniflare shard)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'runtime'
-        # Use Vitest's complete file partition: three shards on Windows, two elsewhere.
-        # Keep Miniflare's single worker and Wrangler's per-file isolation.
-        run: |
-          mkdir -p .turbo/ci-logs
-          pnpm run test:ci:logged .turbo/ci-logs/runtime.log run test:ci --summarize --log-order=stream --concurrency=2 --filter=wrangler --filter=miniflare
-        shell: bash
-        env:
-          CI_TEST_SHARD: ${{ format('{0}/{1}', matrix.shard, matrix.runtime-shards) }}
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
-          CI_OS: ${{ matrix.description }}
-
-      - name: Test release source maps (Miniflare and Vite plugin)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
-        run: |
-          rm -rf packages/miniflare/dist packages/vite-plugin-cloudflare/dist
-          pnpm run build --filter=miniflare --filter=@cloudflare/vite-plugin
-          pnpm --filter miniflare exec vitest run test/sourcemap.spec.ts test/plugins/core/errors/index.spec.ts
-          pnpm --filter @cloudflare/vite-plugin exec vitest run src/__tests__/package-sourcemaps.spec.ts
-        env:
-          SOURCEMAPS: "false"
-          CI_OS: ${{ matrix.description }}
-
-      - name: Run tests (fixtures)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
-        # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-        # Partition whole packages so their custom test scripts still run in full.
-        # Each runner keeps concurrency=2 to limit workerd resource contention.
-        run: |
-          mkdir -p .turbo/ci-logs
-          pnpm run test:ci:logged .turbo/ci-logs/fixtures.log run test:ci:fixtures --group=remaining --shard="$TEST_SHARD/2"
-        shell: bash
-        env:
-          TEST_SHARD: ${{ matrix.shard }}
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.description }}
-
-      - name: Run tests (dev-registry)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'dev-registry'
-        # Start this long fixture without queuing behind the remaining packages.
-        run: |
-          mkdir -p .turbo/ci-logs
-          pnpm run test:ci:logged .turbo/ci-logs/dev-registry.log run test:ci:fixtures --group=dev-registry --shard=1/1
-        shell: bash
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.description }}
-
-      # Only cache an install that Miniflare marked as complete. Without this
-      # check a job interrupted mid-download would publish a half-extracted
-      # Chrome under the cache key, which — because `@puppeteer/browsers`
-      # considers an install present as soon as the executable exists — every
-      # later run would restore and fail to launch.
-      - name: Check for a complete Chrome install
-        id: chrome-complete
-        if: always() && steps.chrome-cache.outcome == 'success' && steps.chrome-cache.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          for dir in "$HOME/.cache/.wrangler/chrome" \
-                     "$HOME/Library/Caches/.wrangler/chrome" \
-                     "$HOME/AppData/Local/xdg.cache/.wrangler/chrome"; do
-            if [ -d "$dir" ] && [ -n "$(find "$dir" -name .miniflare-install-complete -print -quit)" ]; then
-              echo "Found a complete Chrome install under $dir"
-              echo "complete=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          done
-          echo "No complete Chrome install found; skipping cache save"
-          echo "complete=false" >> "$GITHUB_OUTPUT"
-
-      # Saved here rather than in a post step so that an unrelated test failure
-      # elsewhere in the job doesn't stop Chrome from being cached.
-      - name: Save Chrome browser cache (Browser Run)
-        if: always() && steps.chrome-complete.outputs.complete == 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          key: chrome-${{ runner.os }}-${{ hashFiles('packages/miniflare/src/plugins/browser-rendering/browser-version.ts') }}
-          path: |
-            ~/.cache/.wrangler/chrome
-            ~/Library/Caches/.wrangler/chrome
-            ~/AppData/Local/xdg.cache/.wrangler/chrome
-
-      - name: Report test retries
-        if: always() && steps.changes.outputs.everything_but_markdown == 'true'
-        run: node -r esbuild-register tools/test/report-test-retries.ts
-
-      - name: Upload turbo logs
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.suite }}-${{ matrix.shard }}
-          path: |
-            .turbo/runs
-            .turbo/test-retries.json
-            .turbo/ci-logs
-
-  # These names are required by branch protection. Every partition must succeed
-  # before any required test check passes, including when a partition is cancelled.
-  test:
-    needs: test-partitions
-    if: always()
-    timeout-minutes: 5
-    name: ${{ format('Tests ({0}, {1})', matrix.description, matrix.suite) }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        description: [macOS, Linux, Windows]
-        suite: [packages-and-tools, fixtures]
-    steps:
-      - name: Require all test partitions to pass
-        env:
-          TEST_RESULT: ${{ needs.test-partitions.result }}
-        run: |
-          if [ "$TEST_RESULT" != "success" ]; then
-            echo "Test partitions did not all pass: $TEST_RESULT"
-            exit 1
-          fi
+      - run: pnpm build
+      - run: pnpm test:ci
+        if: matrix.suite == 'packages-and-tools'
+      - run: pnpm --filter @fixture/create-test-harness-example playwright:install
+        if: matrix.suite == 'fixtures'
+      - run: pnpm test:fixtures
+        if: matrix.suite == 'fixtures'

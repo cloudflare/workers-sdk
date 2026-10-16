@@ -1,9 +1,0 @@
-{
-	"extends": ["@cloudflare/workers-tsconfig/base.json"],
-	"compilerOptions": {
-		"composite": true,
-		"module": "ESNext",
-		"moduleResolution": "bundler"
-	},
-	"include": ["vite.config.ts", "src/constants.ts"]
-}

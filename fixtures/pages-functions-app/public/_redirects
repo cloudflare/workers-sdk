@@ -1,2 +1,0 @@
-/redirect /me
-/users/:id /users/[id] 200

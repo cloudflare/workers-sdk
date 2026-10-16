@@ -1,6 +1,0 @@
-{
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "my-hono-cf-workers-app",
-	"main": "src/index.ts",
-	"compatibility_date": "2025-12-15",
-}

@@ -1,8 +1,0 @@
-{
-	"name": "<WORKER_NAME>",
-	"main": "src/index.ts",
-	"compatibility_date": "<COMPATIBILITY_DATE>",
-	"observability": {
-		"enabled": true,
-	},
-}

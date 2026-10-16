@@ -1,53 +1,32 @@
-name: Prerelease
+name: Vite plugin v1 preview package
 
 on:
   pull_request:
+    branches: [vite-plugin-v1]
   push:
-    branches:
-      - main
-      - d1
-      - workflows
-      - next
-      - v3-maintenance
+    branches: [vite-plugin-v1]
+  merge_group:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+env:
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
 jobs:
   build:
-    if: ${{ github.repository_owner == 'cloudflare' }}
+    if: github.repository_owner == 'cloudflare'
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
     timeout-minutes: 30
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 1
           persist-credentials: false
-
-      - name: Install Dependencies
-        # Defense in depth: do not pass Turbo remote cache credentials and
-        # disable the pnpm store cache so release builds always resolve
-        # packages from the registry and rebuild every task from source,
-        # rather than restoring from a (potentially poisoned) cache.
-        uses: ./.github/actions/install-dependencies
+      - uses: ./.github/actions/install-dependencies
         with:
           disable-cache: "true"
-
-      - name: Build
-        run: pnpm build --filter="./packages/*"
+      - run: pnpm build
         env:
-          NODE_ENV: "production"
-          CI_OS: ${{ runner.os }}
-          # this is the "test/staging" key for sparrow analytics
-          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
-          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
-          WRANGLER_PRERELEASE_LABEL: ${{ github.head_ref || github.ref_name }}
-
-      - name: Upload packages
-        run: node -r esbuild-register .github/prereleases/upload.mjs
+          SOURCEMAPS: "false"
+      - run: node .github/prereleases/upload.mjs
