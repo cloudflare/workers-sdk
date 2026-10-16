@@ -17,7 +17,7 @@
 		"test:fixtures": "dotenv -- turbo test:ci --filter \"@fixture/*\"",
 		"test:playgrounds": "pnpm --filter @vite-plugin-cloudflare/playground test:ci",
 		"test:e2e": "dotenv -- turbo test:e2e --filter @cloudflare/vite-plugin",
-		"check": "pnpm check:changesets && pnpm check:workflows && pnpm check:pinned-deps && pnpm check:package-deps && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "pnpm check:changesets && pnpm check:workflows && pnpm check:pinned-deps && pnpm check:package-deps && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:changesets": "node -r esbuild-register tools/deployments/validate-changesets.ts",
 		"check:workflows": "node -r esbuild-register tools/github-workflow-helpers/validate-action-pinning.ts",
 		"check:pinned-deps": "node -r esbuild-register tools/deployments/validate-pinned-dependencies.ts",
