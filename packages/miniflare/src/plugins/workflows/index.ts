@@ -185,8 +185,9 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		}));
 
 		// The engine service is built here, not through the core plugin's
-		// per-user-worker path, so tail it explicitly or workflow invocations are
-		// invisible in the Local Explorer.
+		// per-user-worker path, so tail it explicitly or workflow logs are missing
+		// from the Local Explorer. Its spans reach the collector over OTLP (see
+		// getTracedServices() in src/index.ts).
 		const observabilityEnabled = sharedOptions.unsafeObservability === true;
 		const engineCompatibilityFlags = [
 			"experimental",
@@ -199,17 +200,12 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 				)
 			);
 		}
-		// Mirrors core's designator shape (prefixed name, JSON props); `worker`
-		// is the name invocations are attributed to.
-		const getStreamingTails = (
-			worker: string
-		): { streamingTails?: ServiceDesignator[] } =>
+		const streamingTails: { streamingTails?: ServiceDesignator[] } =
 			observabilityEnabled
 				? {
 						streamingTails: [
 							{
 								name: getUserServiceName(OBSERVABILITY_COLLECTOR_SERVICE_NAME),
-								props: { json: JSON.stringify({ worker }) },
 							},
 						],
 					}
@@ -234,7 +230,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 				name: getWorkflowBindingServiceName(binding.name),
 				worker: {
 					...engineWorker,
-					...getStreamingTails(binding.name),
+					...streamingTails,
 					durableObjectNamespaces: [
 						{
 							className: "Engine",
@@ -316,7 +312,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 			name: getWorkflowsEngineServiceName(config.name),
 			worker: {
 				...engineWorker,
-				...getStreamingTails(config.name),
+				...streamingTails,
 				bindings: [
 					WORKER_BINDING_SERVICE_LOOPBACK,
 					{ name: "STEP_LIMITS", json: JSON.stringify(stepLimits) },
@@ -328,7 +324,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 				name: getWorkflowBindingServiceName(workflow.name),
 				worker: {
 					...engineWorker,
-					...getStreamingTails(workflow.name),
+					...streamingTails,
 					durableObjectStorage: {
 						localDisk: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflow.name}`,
 					},
