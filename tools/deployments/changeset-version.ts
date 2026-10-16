@@ -299,13 +299,16 @@ function correctVersionReferences({
 					continue;
 				}
 				const constraint = dependencies[packageName];
-				// npm aliases intentionally use a published version outside the workspace.
-				if (constraint === undefined || constraint.startsWith("npm:")) {
+				if (constraint === undefined) {
 					continue;
 				}
-				// Workspace ranges are resolved from the target manifest at publish time
-				// and do not contain the incorrect version produced by Changesets.
-				if (constraint.startsWith("workspace:")) {
+				// Workspace ranges resolve from the target manifest at publish time;
+				// npm aliases intentionally use a published version outside the workspace.
+				// Neither needs the version correction applied by this script.
+				if (
+					constraint.startsWith("workspace:") ||
+					constraint.startsWith("npm:")
+				) {
 					continue;
 				}
 				dependencies[packageName] = nextVersion;
