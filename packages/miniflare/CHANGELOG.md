@@ -1,5 +1,13 @@
 # miniflare
 
+## 5.20261012.1-beta
+
+### Patch Changes
+
+- [#16257](https://github.com/cloudflare/workers-sdk/pull/16257) [`e1d1b77`](https://github.com/cloudflare/workers-sdk/commit/e1d1b7765829ef9538e7d7882fe74ad8ca2a38d4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix occupied-port diagnostics when runtime errors arrive in separate stderr chunks
+
+  Miniflare now reconstructs complete stderr lines before checking startup failures for an address already in use. This preserves the specific error and full address even when workerd splits the message across writes, instead of reporting a generic runtime startup failure or an incomplete address.
+
 ## 5.20261012.0-beta
 
 ### Minor Changes
