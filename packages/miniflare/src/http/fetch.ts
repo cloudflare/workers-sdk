@@ -69,7 +69,12 @@ export async function fetch(
 		});
 
 		const responsePromise = new DeferredPromise<Response>();
-		ws.once("error", (error) => {
+		// Keep this listener for the socket's lifetime (`on`, not `once`): `ws` can
+		// emit a second `error` (e.g. `ECONNRESET` when the server tears down the
+		// connection after a failed upgrade response was consumed), and an
+		// `error` with no listener is thrown as an uncaught exception. Rejecting an
+		// already-settled promise is a no-op.
+		ws.on("error", (error) => {
 			responsePromise.reject(error);
 		});
 		ws.once("upgrade", (req) => {
