@@ -50,10 +50,10 @@
 	},
 	"dependencies": {
 		"@cloudflare/unenv-preset": "2.16.2",
-		"miniflare": "5.20261012.0-beta",
+		"miniflare": "5.20261012.1-beta",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "1.20261015.1",
-		"wrangler": "4.151.0",
+		"wrangler": "4.151.1",
 		"ws": "8.22.0"
 	},
 	"devDependencies": {
@@ -90,7 +90,7 @@
 	},
 	"peerDependencies": {
 		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
-		"wrangler": "^4.151.0"
+		"wrangler": "^4.151.1"
 	},
 	"workers-sdk": {
 		"prerelease": true

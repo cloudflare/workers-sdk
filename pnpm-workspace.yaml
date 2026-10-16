@@ -8,6 +8,8 @@ blockExoticSubdeps: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - "@cloudflare/*"
+  # Wrangler is also first-party and must be usable on its release day.
+  - wrangler
   - cf
   - miniflare
   - workerd
