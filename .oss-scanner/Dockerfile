@@ -8,7 +8,7 @@ ENV CI=true \
     TURBO_CACHE=local:rw
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ca-certificates git libatomic1 python3 \
+    build-essential ca-certificates git libatomic1 libc++1 python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # The scanner expects the complete checkout, including test fixtures, at /src.
