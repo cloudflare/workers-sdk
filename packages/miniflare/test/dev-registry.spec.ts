@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { watch } from "chokidar";
-import { getWorkerRegistry, Miniflare } from "miniflare";
+import { DeferredPromise, getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { DevRegistry } from "../src/shared/dev-registry";
 import {
@@ -1659,6 +1659,102 @@ describe("DevRegistry", { concurrent: false }, () => {
 			},
 			{ timeout: 10_000, interval: 100 }
 		);
+	});
+
+	test("cross-process bindings survive a local workerd crash restart", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const remote = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
+				import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+				export class MyDurableObject extends DurableObject {
+					ping() { return "object pong"; }
+				}
+				export default class extends WorkerEntrypoint {
+					ping() { return "service pong"; }
+				}
+			`),
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const runtimeRestarted = new DeferredPromise<void>();
+		const local = new Miniflare({
+			unsafeDevRegistryPath,
+			unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+			workers: [
+				{
+					config: {
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
+				import { abortIsolate } from "cloudflare:workers";
+				export default {
+					async fetch(request, env) {
+						if (new URL(request.url).searchParams.get("crash")) {
+							abortIsolate("test crash");
+						}
+						try {
+							const service = await env.SERVICE.ping();
+							const object = await env.DO.get(env.DO.idFromName("a")).ping();
+							return new Response(service + ", " + object);
+						} catch (e) {
+							return new Response(e.message, { status: 500 });
+						}
+					}
+				}
+			`),
+						env: {
+							SERVICE: { type: "worker", worker: "remote-worker" },
+							DO: {
+								type: "durable-object",
+								worker: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(local);
+
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("service pong, object pong");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		await expect(
+			local.dispatchFetch("http://placeholder/?crash=1")
+		).rejects.toThrow();
+		await runtimeRestarted;
+
+		// The restarted runtime is assembled from the same options as the first
+		// one, so its bindings must still route through the dev registry proxy to
+		// `remote-worker`, not through the proxy to itself.
+		const res = await local.dispatchFetch("http://placeholder");
+		expect(await res.text()).toBe("service pong, object pong");
+		expect(res.status).toBe(200);
 	});
 
 	test("scheduled to default entrypoint", async ({ expect }) => {
