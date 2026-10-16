@@ -209,6 +209,85 @@ function createMockPostgresNoSslServer(): Promise<{
 	});
 }
 
+const PUMP_CHUNK = Buffer.alloc(256 * 1024, "P");
+
+interface MockServer {
+	port: number;
+	close(): void;
+}
+
+function startMockServer(
+	onConnection: (socket: net.Socket) => void
+): Promise<MockServer> {
+	const sockets = new Set<net.Socket>();
+	const server = net.createServer((socket) => {
+		sockets.add(socket);
+		socket.on("close", () => sockets.delete(socket));
+		socket.on("error", () => {});
+		onConnection(socket);
+	});
+	const close = () => {
+		server.close();
+		for (const socket of sockets) {
+			socket.destroy();
+		}
+	};
+
+	return new Promise((resolve, reject) => {
+		server.once("error", reject);
+		server.listen(0, "127.0.0.1", () => {
+			server.off("error", reject);
+			const address = server.address() as net.AddressInfo;
+			resolve({ port: address.port, close });
+		});
+	});
+}
+
+/**
+ * Creates a mock Postgres server that accepts the SSL upgrade and then writes
+ * large chunks continuously, so there is always data in flight towards the
+ * client. Used to exercise what happens when the client goes away mid-stream.
+ */
+function createMockPostgresPumpServer(
+	serverCert: CertPair,
+	caCert: string
+): Promise<MockServer> {
+	return startMockServer((socket) => {
+		socket.once("data", () => {
+			socket.write("S", () => {
+				const tlsSocket = new tls.TLSSocket(socket, {
+					isServer: true,
+					key: serverCert.key,
+					cert: serverCert.cert,
+					ca: caCert,
+				});
+				tlsSocket.on("error", () => socket.destroy());
+				const pump = () => {
+					while (!tlsSocket.destroyed && tlsSocket.write(PUMP_CHUNK)) {}
+					if (!tlsSocket.destroyed) {
+						tlsSocket.once("drain", pump);
+					}
+				};
+				tlsSocket.on("secure", pump);
+			});
+		});
+	});
+}
+
+/**
+ * Creates a mock Postgres server that sits on the SSL negotiation for `delayMs`
+ * before answering, leaving a window in which the proxy is still negotiating
+ * while the client goes away.
+ */
+function createMockPostgresSlowServer(delayMs: number): Promise<MockServer> {
+	return startMockServer((socket) => {
+		socket.once("data", () => {
+			const reply = setTimeout(() => socket.write("N"), delayMs);
+			socket.once("close", () => clearTimeout(reply));
+		});
+	});
+}
+
 // -- Test helper to send data through the proxy and read the response --
 
 function sendThroughProxy(
@@ -634,6 +713,103 @@ describe("HyperdriveProxyController TLS modes", () => {
 			}
 		}
 	);
+
+	test("a client socket error does not take down the process", async ({
+		expect,
+	}) => {
+		const { port: dbPort, close } = await createMockPostgresPumpServer(
+			certs.localhost,
+			certs.ca.cert
+		);
+		const uncaught: Error[] = [];
+		const collect = (err: Error) => uncaught.push(err);
+		process.on("uncaughtException", collect);
+
+		try {
+			const proxyPort = await controller.createProxyServer({
+				name: "test-client-error",
+				targetHost: "127.0.0.1",
+				targetPort: String(dbPort),
+				scheme: "postgres",
+				sslmode: "require",
+			});
+
+			const firstResponse = await new Promise<string>((resolve) => {
+				const socket = net.connect({ host: "127.0.0.1", port: proxyPort }, () =>
+					socket.write("hello")
+				);
+				socket.on("error", () => {});
+				socket.once("data", (data) => {
+					socket.pause();
+					setTimeout(() => {
+						socket.destroy();
+						resolve(data.toString());
+					}, 50);
+				});
+			});
+			expect(firstResponse).toMatch(/^P+$/);
+
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			expect(uncaught).toEqual([]);
+
+			const second = await connectThroughProxy(
+				await controller.createProxyServer({
+					name: "test-client-error-second",
+					targetHost: "127.0.0.1",
+					targetPort: String(dbPort),
+					scheme: "postgres",
+					sslmode: "require",
+				}),
+				"hello"
+			);
+			second.socket.destroy();
+			expect(second.response).toMatch(/^P+$/);
+		} finally {
+			process.off("uncaughtException", collect);
+			close();
+		}
+	});
+
+	test("a client reset during negotiation does not take down the process", async ({
+		expect,
+	}) => {
+		const { port: dbPort, close } = await createMockPostgresSlowServer(400);
+		const uncaught: Error[] = [];
+		const collect = (err: Error) => uncaught.push(err);
+		process.on("uncaughtException", collect);
+
+		try {
+			const proxyPort = await controller.createProxyServer({
+				name: "test-client-reset-during-negotiation",
+				targetHost: "127.0.0.1",
+				targetPort: String(dbPort),
+				scheme: "postgres",
+				sslmode: "require",
+			});
+
+			await new Promise<void>((resolve) => {
+				const socket = net.connect(
+					{ host: "127.0.0.1", port: proxyPort },
+					() => {
+						socket.write("hello");
+						setTimeout(() => {
+							socket.resetAndDestroy();
+							resolve();
+						}, 50);
+					}
+				);
+				socket.on("error", () => {});
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 800));
+
+			expect(uncaught).toEqual([]);
+		} finally {
+			process.off("uncaughtException", collect);
+			close();
+		}
+	});
 });
 
 describe("MySQL ssl-mode parsing via Miniflare", () => {
