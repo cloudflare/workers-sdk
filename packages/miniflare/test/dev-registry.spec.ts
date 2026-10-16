@@ -1661,7 +1661,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("cross-process bindings survive a local workerd crash restart", async ({
+	test("cross-process bindings and tail consumers survive a local workerd crash restart", async ({
 		expect,
 	}) => {
 		const unsafeDevRegistryPath = await useTmp();
@@ -1677,11 +1677,18 @@ describe.sequential("DevRegistry", () => {
 						compatibilityFlags: ["experimental"],
 						manifest: singleModuleManifest(`
 				import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+				const tailedLogs = [];
 				export class MyDurableObject extends DurableObject {
 					ping() { return "object pong"; }
 				}
 				export default class extends WorkerEntrypoint {
 					ping() { return "service pong"; }
+					fetch() { return Response.json(tailedLogs); }
+					tail(events) {
+						for (const event of events) {
+							for (const log of event.logs) tailedLogs.push(log.message[0]);
+						}
+					}
 				}
 			`),
 						exports: {
@@ -1698,6 +1705,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			unsafeDevRegistryPath,
 			unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+			handleStructuredLogs: () => {},
 			workers: [
 				{
 					config: {
@@ -1708,9 +1716,11 @@ describe.sequential("DevRegistry", () => {
 				import { abortIsolate } from "cloudflare:workers";
 				export default {
 					async fetch(request, env) {
-						if (new URL(request.url).searchParams.get("crash")) {
+						const url = new URL(request.url);
+						if (url.searchParams.get("crash")) {
 							abortIsolate("test crash");
 						}
+						console.log("tail mark: " + url.searchParams.get("mark"));
 						try {
 							const service = await env.SERVICE.ping();
 							const object = await env.DO.get(env.DO.idFromName("a")).ping();
@@ -1729,17 +1739,26 @@ describe.sequential("DevRegistry", () => {
 								exportName: "MyDurableObject",
 							},
 						},
+						tailConsumers: [{ worker: "remote-worker" }],
 					},
 				},
 			],
 		});
 		useDispose(local);
 
+		const tailedLogs = async () => {
+			const res = await remote.dispatchFetch("http://placeholder");
+			return (await res.json()) as string[];
+		};
+
 		await vi.waitFor(
 			async () => {
-				const res = await local.dispatchFetch("http://placeholder");
+				const res = await local.dispatchFetch(
+					"http://placeholder/?mark=before"
+				);
 				expect(await res.text()).toBe("service pong, object pong");
 				expect(res.status).toBe(200);
+				expect(await tailedLogs()).toContain("tail mark: before");
 			},
 			{ timeout: 10_000, interval: 100 }
 		);
@@ -1750,11 +1769,17 @@ describe.sequential("DevRegistry", () => {
 		await runtimeRestarted;
 
 		// The restarted runtime is assembled from the same options as the first
-		// one, so its bindings must still route through the dev registry proxy to
-		// `remote-worker`, not through the proxy to itself.
-		const res = await local.dispatchFetch("http://placeholder");
+		// one, so its bindings and tail consumer must still route through the dev
+		// registry proxy to `remote-worker`, not through the proxy to itself.
+		const res = await local.dispatchFetch("http://placeholder/?mark=after");
 		expect(await res.text()).toBe("service pong, object pong");
 		expect(res.status).toBe(200);
+		await vi.waitFor(
+			async () => {
+				expect(await tailedLogs()).toContain("tail mark: after");
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
 	});
 
 	test("scheduled to default entrypoint", async ({ expect }) => {
