@@ -126,33 +126,34 @@ export function deleteWorkflowStorage({
 			}
 			return deleted;
 		});
-	const cleanup = readyToDelete.then(
-		async (deleted) => {
-			let failure: unknown;
-			for (const extension of [".sqlite", ".sqlite-shm", ".sqlite-wal"]) {
-				try {
-					const removed = await removeFile(disk, url + extension);
-					deleted ||= extension === ".sqlite" && removed;
-				} catch (error) {
-					failure ??= error;
-				}
+	const cleanup = readyToDelete.then(async (deleted) => {
+		let failure: unknown;
+		for (const extension of [".sqlite", ".sqlite-shm", ".sqlite-wal"]) {
+			try {
+				const removed = await removeFile(disk, url + extension);
+				deleted ||= extension === ".sqlite" && removed;
+			} catch (error) {
+				failure ??= error;
 			}
-			if (failure !== undefined) {
-				throw failure;
-			}
-			return deleted;
-		},
+		}
+		if (failure !== undefined) {
+			throw failure;
+		}
+		return deleted;
+	});
+	const pendingDelete = readyToDelete.then(
+		() => cleanup,
 		() => previous ?? false
 	);
-	pendingDeletes.set(url, cleanup);
+	pendingDeletes.set(url, pendingDelete);
 	ctx.waitUntil(
-		cleanup.then(() => {
-			if (pendingDeletes.get(url) === cleanup) {
+		pendingDelete.then(() => {
+			if (pendingDeletes.get(url) === pendingDelete) {
 				pendingDeletes.delete(url);
 			}
 		})
 	);
-	return readyToDelete.then(() => cleanup);
+	return cleanup;
 }
 
 /** Waits for Miniflare to finish deleting an instance's persistence files. */
