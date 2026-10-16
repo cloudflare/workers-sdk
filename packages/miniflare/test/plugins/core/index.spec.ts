@@ -18,7 +18,7 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 
 	// Generate self-signed certificate
 	childProcess.execSync(
-		'openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 30 -out cert.pem -subj "/CN=localhost"',
+		'openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 30 -out cert.pem -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost" -addext "extendedKeyUsage=serverAuth"',
 		{ cwd: tmp, stdio: "ignore" }
 	);
 	const keyPath = path.join(tmp, "key.pem");

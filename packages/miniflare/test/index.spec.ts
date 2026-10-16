@@ -17,6 +17,7 @@ import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
 	DeferredPromise,
+	DispatchFetchDispatcher,
 	fetch,
 	kCurrentWorker,
 	Log,
@@ -27,6 +28,7 @@ import {
 	Response,
 	viewToBuffer,
 } from "miniflare";
+import { Pool } from "undici";
 import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
@@ -4072,6 +4074,80 @@ test.for(["GET", "POST", "PUT"])(
 		await failedResponse;
 		const count = await worker.fetch("http://placeholder/count");
 		expect(await count.text()).toBe("1");
+	}
+);
+
+test.for(["string", "stream"])(
+	"Miniflare: reuses connections when a Worker ignores a %s request body",
+	async (bodyType, { expect, onTestFinished }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2026-09-26",
+						manifest: singleModuleManifest(`
+				export default {
+					fetch(request) {
+						if (request.method === "POST") {
+							return new Response("forbidden", { status: 403 });
+						}
+						return new Response("ok");
+					}
+				};
+			`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+		const runtimeOrigin = (await mf.ready).origin;
+		const runtimeDispatcher = new Pool(runtimeOrigin, { connections: 1 });
+		onTestFinished(() => runtimeDispatcher.close());
+		const dispatcher = new DispatchFetchDispatcher(
+			runtimeDispatcher,
+			runtimeDispatcher,
+			runtimeOrigin,
+			"http://localhost"
+		);
+		const runtimeSockets = new Set<net.Socket>();
+		function onSendHeaders(message: unknown) {
+			const { request, socket } = message as {
+				request: { origin: string };
+				socket: net.Socket;
+			};
+			if (request.origin === runtimeOrigin) {
+				runtimeSockets.add(socket);
+			}
+		}
+		diagnosticsChannel.subscribe("undici:client:sendHeaders", onSendHeaders);
+		onTestFinished(() => {
+			diagnosticsChannel.unsubscribe(
+				"undici:client:sendHeaders",
+				onSendHeaders
+			);
+		});
+
+		for (let requestIndex = 0; requestIndex < 20; requestIndex++) {
+			const response = await fetch("http://localhost/", {
+				dispatcher,
+				method: "POST",
+				headers: { "accept-encoding": "identity" },
+				body:
+					bodyType === "stream" ? new Blob(['{"a":1}']).stream() : '{"a":1}',
+				duplex: "half",
+			});
+			expect(response.status).toBe(403);
+			expect(await response.text()).toBe("forbidden");
+
+			const nextResponse = await fetch("http://localhost/", {
+				dispatcher,
+				headers: { "accept-encoding": "identity" },
+			});
+			expect(nextResponse.status).toBe(200);
+			expect(await nextResponse.text()).toBe("ok");
+		}
+		expect(runtimeSockets.size).toBe(1);
 	}
 );
 
