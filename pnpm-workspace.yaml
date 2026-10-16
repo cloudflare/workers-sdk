@@ -139,4 +139,4 @@ catalog:
   "open": "11.0.0"
   "signal-exit": "4.1.0"
   # Use a published plugin for packages bundled into Wrangler to avoid a workspace cycle.
-  "@cloudflare/vitest-plugin": "1.4.0"
+  "@cloudflare/vitest-plugin": "1.4.3"

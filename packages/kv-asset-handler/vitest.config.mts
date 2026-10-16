@@ -10,8 +10,6 @@ export default defineConfig({
 		}),
 	],
 	test: {
-		// The published plugin cannot read Vitest's host filesystem module cache.
-		fsModuleCache: false,
 		reporters: ["default"],
 		testTimeout: 50_000,
 	},

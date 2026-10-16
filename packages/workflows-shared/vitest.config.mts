@@ -5,10 +5,6 @@ import configShared from "../../vitest.shared";
 export default mergeConfig(
 	configShared,
 	defineConfig({
-		test: {
-			// The published plugin cannot read Vitest's host filesystem module cache.
-			fsModuleCache: false,
-		},
 		plugins: [
 			cloudflareTest({
 				miniflare: {
