@@ -273,7 +273,6 @@ function getPackagesBeforeVersioning(): PreviousPackage[] {
 	return packages;
 }
 
-/** Corrects custom package versions in modified manifests and changelogs. */
 export function correctVersionReferences({
 	packageName,
 	packagePath,
