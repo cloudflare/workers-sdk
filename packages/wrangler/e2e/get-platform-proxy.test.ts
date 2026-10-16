@@ -1,4 +1,4 @@
-import { execSync, spawn } from "node:child_process";
+import { execFileSync, execSync, spawn } from "node:child_process";
 import * as nodeNet from "node:net";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it } from "vitest";
@@ -131,7 +131,7 @@ describe("getPlatformProxy()", () => {
 			});
 		});
 
-		async function runInNode(code: string) {
+		async function runInNode(code: string, timeout?: number) {
 			const w = helper.runLongLived("wrangler dev", {
 				cwd: worker,
 			});
@@ -151,9 +151,11 @@ describe("getPlatformProxy()", () => {
 						process.exit(0);
 						`,
 			});
-			const stdout = execSync(`node index.mjs`, {
+			const stdout = execFileSync(process.execPath, ["index.mjs"], {
 				cwd: app,
 				encoding: "utf-8",
+				timeout,
+				killSignal: "SIGKILL",
 			});
 			return stdout;
 		}
@@ -215,6 +217,51 @@ describe("getPlatformProxy()", () => {
 				"Hello from DurableObject
 				"
 			`);
+		});
+
+		it("creates, deletes and recreates a Workflow through synchronous RPC", async ({
+			expect,
+		}) => {
+			await seed(worker, {
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2026-05-20"
+					[[workflows]]
+					binding = "WORKFLOW"
+					name = "rpc-workflow"
+					class_name = "TestWorkflow"
+				`,
+				"src/index.ts": dedent`
+					import { WorkerEntrypoint, WorkflowEntrypoint } from "cloudflare:workers";
+					export class TestWorkflow extends WorkflowEntrypoint {
+						async run() { return "done"; }
+					}
+					export default class Api extends WorkerEntrypoint {
+						async createWorkflow(id) {
+							return (await this.env.WORKFLOW.create({ id })).id;
+						}
+						async deleteWorkflow(id) {
+							await (await this.env.WORKFLOW.get(id)).delete();
+						}
+					}
+				`,
+			});
+			await expect(
+				runInNode(
+					/* javascript */ `await (async () => {
+						const { default: assert } = await import("node:assert/strict");
+						const first = env.WORKER.createWorkflow();
+						assert.equal(typeof first, "string");
+						assert.match(first, /^[0-9a-f-]{36}$/);
+						assert.equal(env.WORKER.createWorkflow("explicit-id"), "explicit-id");
+						env.WORKER.deleteWorkflow("explicit-id");
+						assert.equal(env.WORKER.createWorkflow("explicit-id"), "explicit-id");
+						return "Workflow RPC completed";
+					})()`,
+					20_000
+				)
+			).resolves.toContain("Workflow RPC completed");
 		});
 
 		describe("provides rpc service bindings to external local workers", () => {
