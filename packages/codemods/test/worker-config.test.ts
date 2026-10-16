@@ -97,7 +97,6 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result.followUps.map(({ code }) => code)).toEqual(
 			expect.arrayContaining([
 				"container-review",
-				"durable-object-migrations",
 				"missing-compatibility-date",
 				"missing-name",
 				"unsupported-field",
