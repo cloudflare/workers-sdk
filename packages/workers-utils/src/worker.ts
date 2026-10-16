@@ -481,6 +481,7 @@ export interface CfTailConsumer {
 export interface CfUserLimits {
 	cpu_ms?: number;
 	subrequests?: number;
+	durable_object_memory_mb?: 128 | 256 | 512;
 }
 
 /**

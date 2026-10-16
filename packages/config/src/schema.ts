@@ -665,6 +665,9 @@ export const ExportSchema = z.union([
 const LimitsSchema = z.strictObject({
 	cpuMs: z.number().optional(),
 	subrequests: z.number().optional(),
+	durableObjectMemoryMb: z
+		.union([z.literal(128), z.literal(256), z.literal(512)])
+		.optional(),
 });
 
 const ObservabilitySchema = z.strictObject({
