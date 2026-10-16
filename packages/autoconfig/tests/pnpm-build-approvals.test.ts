@@ -15,6 +15,30 @@ describe("pnpm build approvals", () => {
 			allowBuilds: { esbuild: true, workerd: true },
 		});
 	});
+	it.for(["\n", "\r\n"])(
+		"separates new approvals from existing content using %j line endings",
+		async (newline, { expect }) => {
+			await seed({
+				"pnpm-workspace.yaml": [
+					"# workspace policy",
+					"packages: ['apps/*']",
+					"",
+				].join(newline),
+			});
+			await writePnpmBuildApprovals(process.cwd());
+			expect(readFileSync("pnpm-workspace.yaml", "utf8")).toBe(
+				[
+					"# workspace policy",
+					"packages: [ 'apps/*' ]",
+					"",
+					"allowBuilds:",
+					"  esbuild: true",
+					"  workerd: true",
+					"",
+				].join(newline)
+			);
+		}
+	);
 	it("updates the workspace root and preserves comments, unrelated entries and explicit denials", async ({
 		expect,
 	}) => {

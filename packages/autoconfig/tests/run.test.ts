@@ -435,9 +435,13 @@ describe("runAutoConfig()", () => {
 				.mockImplementation(async () => {
 					expect(existsSync("pnpm-workspace.yaml")).toBe(manager === "pnpm");
 					if (manager === "pnpm") {
-						expect(readFileSync("pnpm-workspace.yaml", "utf8")).toContain(
-							"workerd: true"
-						);
+						expect(readFileSync("pnpm-workspace.yaml", "utf8"))
+							.toMatchInlineSnapshot(`
+								"allowBuilds:
+								  esbuild: true
+								  workerd: true
+								"
+							`);
 					}
 				});
 			await runAutoConfig(
@@ -461,6 +465,7 @@ describe("runAutoConfig()", () => {
 				}
 			);
 			expect(install).toHaveBeenCalledTimes(1);
+			expect(existsSync("pnpm-workspace.yaml")).toBe(manager === "pnpm");
 		}
 	);
 

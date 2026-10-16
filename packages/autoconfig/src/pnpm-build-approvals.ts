@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { join } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
-import { isMap, isScalar, parseDocument } from "yaml";
+import * as find from "empathic/find";
+import { isMap, isScalar, parseDocument, Scalar } from "yaml";
 
 const REQUIRED_BUILDS = ["esbuild", "workerd"];
 const LEGACY_BUILD_SETTINGS = [
@@ -16,6 +17,7 @@ const LEGACY_BUILD_SETTINGS = [
 /**
  * Approve the native dependencies installed by autoconfig at the pnpm workspace root.
  * Existing build decisions, including version-scoped policies, remain authoritative.
+ *
  * @param projectPath - The project being configured.
  * @param options - Set dryRun to preview approvals without writing the workspace file.
  * @returns The workspace path and packages whose approvals would change, if any.
@@ -24,17 +26,9 @@ export async function writePnpmBuildApprovals(
 	projectPath: string,
 	{ dryRun = false }: { dryRun?: boolean } = {}
 ): Promise<{ workspacePath: string; packages: string[] } | undefined> {
-	let directory = resolve(projectPath);
-	let workspacePath = join(directory, "pnpm-workspace.yaml");
-	while (!existsSync(workspacePath)) {
-		const parent = dirname(directory);
-		if (parent === directory) {
-			workspacePath = join(projectPath, "pnpm-workspace.yaml");
-			break;
-		}
-		directory = parent;
-		workspacePath = join(directory, "pnpm-workspace.yaml");
-	}
+	const workspacePath =
+		find.file("pnpm-workspace.yaml", { cwd: projectPath }) ??
+		join(projectPath, "pnpm-workspace.yaml");
 
 	const original = existsSync(workspacePath)
 		? await readFile(workspacePath, "utf8")
@@ -72,6 +66,11 @@ export async function writePnpmBuildApprovals(
 			isScalar(item.key) ? item.key.value : undefined
 		) ?? [];
 	const packages: string[] = [];
+	if (!approvals) {
+		const key = new Scalar("allowBuilds");
+		key.spaceBefore = original.trim().length > 0;
+		document.set(key, document.createNode({}));
+	}
 	for (const name of REQUIRED_BUILDS) {
 		// Do not broaden an existing glob or version-specific decision into an unconditional approval.
 		if (
