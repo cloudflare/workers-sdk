@@ -20,11 +20,34 @@ export interface MiddlewareLoader {
 	supports: CfScriptFormat[];
 }
 
+/**
+ * Whether the middleware loader facade should be applied to an entrypoint.
+ *
+ * Entries with no known exports may be synthesized (for example, by Pages), so
+ * preserve the historical behavior of applying middleware to them.
+ */
+export function shouldApplyMiddlewareLoaderFacade(
+	entry: Pick<Entry, "exports" | "format">
+): boolean {
+	return !(
+		entry.format === "modules" &&
+		entry.exports.length > 0 &&
+		!entry.exports.includes("default")
+	);
+}
+
 export async function applyMiddlewareLoaderFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	middleware: MiddlewareLoader[]
 ): Promise<{ entry: Entry; inject?: string[] }> {
+	// Module middleware only wraps the default entrypoint. Named entrypoints are
+	// re-exported unchanged, so a module with only named exports has nothing to
+	// wrap. Skipping the facade also avoids generating an invalid default import.
+	if (!shouldApplyMiddlewareLoaderFacade(entry)) {
+		return { entry };
+	}
+
 	// Firstly we need to insert the middleware array into the project,
 	// and then we load the middleware - this insertion and loading is
 	// different for each format.
