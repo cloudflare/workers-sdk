@@ -41,6 +41,11 @@ type Env = {
 	WORKFLOW_STORAGE?: Fetcher;
 };
 
+const STORAGE_DELETE_RETRY_INTERVAL_MS = 50;
+const STORAGE_DELETE_RETRY_BUDGET_MS = 2_000;
+const STORAGE_DELETE_MAX_RETRIES =
+	STORAGE_DELETE_RETRY_BUDGET_MS / STORAGE_DELETE_RETRY_INTERVAL_MS;
+
 const pendingDeletes = new Map<string, Promise<boolean>>();
 
 function getStorageUrl(workflowName: string, hexId: string): string {
@@ -74,17 +79,17 @@ async function removeFile(disk: Fetcher, url: string): Promise<boolean> {
 				}
 			}
 		} catch (error) {
-			if (attempt === 40) {
+			if (attempt === STORAGE_DELETE_MAX_RETRIES) {
 				throw error;
 			}
 		}
 		if (isDirectory) {
 			throw new Error("Refusing to delete a Workflow storage directory");
 		}
-		if (attempt === 40) {
+		if (attempt === STORAGE_DELETE_MAX_RETRIES) {
 			throw new Error("Failed to delete Workflow storage file");
 		}
-		await scheduler.wait(50);
+		await scheduler.wait(STORAGE_DELETE_RETRY_INTERVAL_MS);
 	}
 }
 
