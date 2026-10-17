@@ -240,7 +240,6 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							className: "Engine",
 							enableSql: true,
 							uniqueKey: getWorkflowNamespaceKey(binding.name),
-							preventEviction: true,
 						},
 					],
 					durableObjectStorage: {
