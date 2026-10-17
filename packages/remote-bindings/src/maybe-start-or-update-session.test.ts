@@ -35,6 +35,20 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		}
 	);
 
+	it("keeps Artifacts offline unless remote is explicitly enabled", ({
+		expect,
+	}) => {
+		const local = { type: "artifacts" as const, namespace: "local" };
+		const remote = {
+			type: "artifacts" as const,
+			namespace: "remote",
+			remote: true,
+		};
+		expect(pickRemoteBindings({ LOCAL: local, REMOTE: remote })).toEqual({
+			REMOTE: remote,
+		});
+	});
+
 	it("updates an existing session when all remote bindings are removed", async ({
 		expect,
 	}) => {
