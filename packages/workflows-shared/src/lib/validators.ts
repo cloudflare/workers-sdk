@@ -78,8 +78,35 @@ const STEP_CONFIG_SCHEMA = z
 			.optional(),
 		timeout: z.number().gte(0).or(z.string()).optional(),
 		sensitive: z.literal(SENSITIVE_STEP_OUTPUT).optional(),
+		concurrency: z
+			.union([z.string(), z.array(z.string()).nonempty()])
+			.optional(),
 	})
 	.strict();
+
+export type StepConcurrencyConfig = string | readonly string[];
+
+export function findDuplicateConcurrencyKey(
+	concurrency: StepConcurrencyConfig | undefined
+): string | undefined {
+	const seen = new Set<string>();
+	for (const key of normalizeConcurrencyKeys(concurrency)) {
+		if (seen.has(key)) {
+			return key;
+		}
+		seen.add(key);
+	}
+	return undefined;
+}
+
+export function normalizeConcurrencyKeys(
+	concurrency: StepConcurrencyConfig | undefined
+): readonly string[] {
+	if (concurrency === undefined) {
+		return [];
+	}
+	return typeof concurrency === "string" ? [concurrency] : concurrency;
+}
 
 export function isValidStepConfig(stepConfig: unknown): boolean {
 	const config = STEP_CONFIG_SCHEMA.safeParse(stepConfig);

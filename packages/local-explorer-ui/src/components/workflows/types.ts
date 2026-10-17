@@ -9,6 +9,11 @@ export interface StepData {
 	error?: { name?: string; message?: string } | null;
 	config?: Record<string, unknown> | null;
 	attempts?: AttemptData[];
+	concurrency?: {
+		keys: string[];
+		waiting_since?: string | null;
+		acquired_at?: string | null;
+	};
 }
 
 export interface AttemptData {
@@ -28,6 +33,22 @@ export interface InstanceDetails {
 	error?: { name?: string; message?: string } | null;
 	steps?: StepData[];
 	step_count?: number;
+	waiting_for?: Array<{
+		type: "concurrency_key";
+		step: string;
+		key: string;
+		keys: string[];
+		since: string;
+	}>;
+}
+
+export function isWaitingForConcurrency(step: StepData): boolean {
+	return (
+		step.concurrency !== undefined &&
+		!step.concurrency.acquired_at &&
+		(step.attempts?.length ?? 0) === 0 &&
+		step.success == null
+	);
 }
 
 export type Action = "pause" | "resume" | "restart" | "terminate";

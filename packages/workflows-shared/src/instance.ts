@@ -139,6 +139,10 @@ export const enum InstanceEvent {
 	WORKFLOW_PAUSED = 27,
 	WORKFLOW_WAITING_FOR_PAUSE = 28,
 	WORKFLOW_WAITING = 29,
+
+	WAITING_FOR_STEP_CONCURRENCY = 30,
+	TICKET_CLAIMED = 31,
+	TICKET_RELEASED = 32,
 }
 
 export const enum InstanceTrigger {

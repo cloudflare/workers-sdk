@@ -24,6 +24,7 @@ import {
 import {
 	getWorkflowBindingServiceName,
 	getWorkflowNamespaceKey,
+	WORKFLOWS_CONCURRENCY_KEYS_BINDING,
 	WORKFLOWS_PLUGIN_NAME,
 } from "../workflows";
 import {
@@ -235,6 +236,15 @@ export function getExplorerServices(
 				},
 			});
 		}
+	}
+
+	// The workflows plugin only defines the concurrency service for a Worker with Workflows,
+	// and binding a namespace whose service is missing stops workerd from starting.
+	if (Object.keys(bindingIdMap.workflows).length > 0) {
+		explorerBindings.push({
+			...WORKFLOWS_CONCURRENCY_KEYS_BINDING,
+			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_WORKFLOW_CONCURRENCY_KEYS,
+		});
 	}
 
 	// Bind each locally simulated Flagship app's binding worker, so the

@@ -553,7 +553,16 @@ import { vpcServiceGetCommand } from "./vpc/get";
 import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
 import { vpcServiceListCommand } from "./vpc/list";
 import { vpcServiceUpdateCommand } from "./vpc/update";
-import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
+import {
+	workflowsConcurrencyNamespace,
+	workflowsInstanceNamespace,
+	workflowsNamespace,
+} from "./workflows";
+import { workflowsConcurrencyCreateCommand } from "./workflows/commands/concurrency/create";
+import { workflowsConcurrencyDeleteCommand } from "./workflows/commands/concurrency/delete";
+import { workflowsConcurrencyGetCommand } from "./workflows/commands/concurrency/get";
+import { workflowsConcurrencyListCommand } from "./workflows/commands/concurrency/list";
+import { workflowsConcurrencyUpdateCommand } from "./workflows/commands/concurrency/update";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
 import { workflowsInstancesDeleteCommand } from "./workflows/commands/instances/delete";
@@ -2417,6 +2426,30 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances delete",
 			definition: workflowsInstancesDeleteCommand,
+		},
+		{
+			command: "wrangler workflows concurrency",
+			definition: workflowsConcurrencyNamespace,
+		},
+		{
+			command: "wrangler workflows concurrency list",
+			definition: workflowsConcurrencyListCommand,
+		},
+		{
+			command: "wrangler workflows concurrency create",
+			definition: workflowsConcurrencyCreateCommand,
+		},
+		{
+			command: "wrangler workflows concurrency get",
+			definition: workflowsConcurrencyGetCommand,
+		},
+		{
+			command: "wrangler workflows concurrency update",
+			definition: workflowsConcurrencyUpdateCommand,
+		},
+		{
+			command: "wrangler workflows concurrency delete",
+			definition: workflowsConcurrencyDeleteCommand,
 		},
 	]);
 	registry.registerNamespace("workflows");

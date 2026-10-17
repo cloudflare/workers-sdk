@@ -13,6 +13,7 @@ import { version } from "workerd";
 import yargs from "yargs";
 import { getEntry } from "../deployment-bundle/entry";
 import { logger } from "../logger";
+import { resolveConcurrencyKeysSection } from "./concurrency-keys";
 import { generateRuntimeTypes } from "./runtime";
 import { generateEnvTypes } from ".";
 import type { Config, Entry } from "@cloudflare/workers-utils";
@@ -370,11 +371,17 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 		config,
 		existingContent: existingTypesFileContent,
 	});
+	const concurrencyKeysSection = await resolveConcurrencyKeysSection(
+		config,
+		"keep",
+		existingTypesFileContent
+	);
 	const newTypesFile = [
 		"/* eslint-disable */",
 		newEnvHeader,
 		runtimeHeader,
 		newEnvTypes,
+		...(concurrencyKeysSection === undefined ? [] : [concurrencyKeysSection]),
 		`${RUNTIME_TYPES_MARKER}\n${runtimeTypes}`,
 	].join("\n");
 	try {

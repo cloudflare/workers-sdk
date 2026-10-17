@@ -290,7 +290,10 @@ test("persists Workflow data on file-system between runs", async ({
 
 	// check if files were committed under the plugin subdirectory
 	const names = await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME));
-	expect(names).toEqual(["miniflare-workflows-MY_WORKFLOW"]);
+	expect(names.sort()).toEqual([
+		"miniflare-workflow-concurrency-keys",
+		"miniflare-workflows-MY_WORKFLOW",
+	]);
 
 	// restart miniflare
 	await mf.dispose();

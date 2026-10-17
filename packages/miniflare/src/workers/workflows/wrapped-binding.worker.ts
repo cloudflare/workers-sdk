@@ -5,6 +5,7 @@ import type {
 	WorkflowInstanceRestartOptions,
 	WorkflowInstanceTerminateOptions,
 } from "@cloudflare/workflows-shared/src/binding";
+import type { ConcurrencyKeysAdmin } from "@cloudflare/workflows-shared/src/concurrency";
 import type {
 	WorkflowSubscription,
 	WorkflowSubscriptionOptions,
@@ -65,6 +66,10 @@ class WorkflowImpl implements Workflow {
 
 	async unsafeGetBindingName(): Promise<string> {
 		return this.binding.unsafeGetBindingName();
+	}
+
+	async unsafeGetConcurrencyKeysAdmin(): Promise<ConcurrencyKeysAdmin> {
+		return this.binding.unsafeGetConcurrencyKeysAdmin();
 	}
 
 	async unsafeStartIntrospection(): Promise<string> {

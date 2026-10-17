@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import {
+	findDuplicateConcurrencyKey,
 	isValidAddressableWorkflowInstanceId,
 	isValidStepConfig,
 	isValidStepName,
@@ -124,6 +125,10 @@ describe("Workflow step config validation", () => {
 		},
 		{ timeout: "5 minutes", sensitive: "all" },
 		{ timeout: "5 minutes", sensitive: true },
+		{ concurrency: [] },
+		{ concurrency: 3 },
+		{ concurrency: ["k1", 3] },
+		{ concurrency: { name: "k1" } },
 	])("should reject invalid step configs", (value, { expect }) => {
 		expect(isValidStepConfig(value)).toBe(false);
 	});
@@ -150,7 +155,23 @@ describe("Workflow step config validation", () => {
 			timeout: "2 minutes",
 			sensitive: "output",
 		},
+		{ concurrency: "payments-api" },
+		{ concurrency: ["payments-api", "ledger"], timeout: "2 minutes" },
 	])("should accept valid step configs", (value, { expect }) => {
 		expect(isValidStepConfig(value)).toBe(true);
 	});
+});
+
+describe("Step concurrency key duplicates", () => {
+	it.for([
+		[undefined, undefined],
+		["k1", undefined],
+		[["k1", "k2"], undefined],
+		[["k1", "k2", "k1"], "k1"],
+	] as const)(
+		"finds the repeated key in %j",
+		([value, expected], { expect }) => {
+			expect(findDuplicateConcurrencyKey(value)).toBe(expected);
+		}
+	);
 });

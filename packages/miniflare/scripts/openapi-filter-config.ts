@@ -52,6 +52,61 @@ function flagshipRequestBody(schema: object) {
 	};
 }
 
+// Local concurrency keys mirror `/accounts/{account_id}/workflows/concurrency`, which the
+// pinned upstream spec predates, plus the usage, holders and waiters only local dev reports.
+const CONCURRENCY_KEY_ID_PARAMETER = {
+	in: "path" as const,
+	name: "key_id",
+	required: true,
+	schema: { $ref: "#/components/schemas/workflows_concurrency-key-id" },
+};
+
+function concurrencyResponses(
+	description: string,
+	result: object,
+	resultInfo?: object
+) {
+	return {
+		"200": {
+			content: {
+				"application/json": {
+					schema: {
+						allOf: [
+							{ $ref: "#/components/schemas/workers_api-response-common" },
+							{
+								properties: {
+									result,
+									...(resultInfo === undefined
+										? {}
+										: { result_info: resultInfo }),
+								},
+								type: "object" as const,
+							},
+						],
+					},
+				},
+			},
+			description: `${description} response.`,
+		},
+		"4XX": {
+			content: {
+				"application/json": {
+					schema: {
+						$ref: "#/components/schemas/workers_api-response-common-failure",
+					},
+				},
+			},
+			description: `${description} response failure.`,
+		},
+	};
+}
+
+const CONCURRENCY_KEY_LIMIT = {
+	description: "Maximum number of steps that may hold the key at once.",
+	minimum: 1,
+	type: "integer" as const,
+};
+
 const FLAGSHIP_FLAG_PROPERTIES = {
 	description: {
 		description: "Human readable description",
@@ -1919,6 +1974,165 @@ const config = {
 						tags: ["Workflows"],
 					},
 				},
+			"/workflows/concurrency": {
+				get: {
+					description:
+						"Lists the concurrency keys shared by every Workflow in this local session.",
+					operationId: "workflows-list-concurrency-keys",
+					parameters: [
+						{
+							in: "query",
+							name: "page",
+							schema: {
+								default: 1,
+								description: "Page number (1-indexed).",
+								minimum: 1,
+								type: "number",
+							},
+						},
+						{
+							in: "query",
+							name: "per_page",
+							schema: {
+								default: 25,
+								description: "Number of keys per page.",
+								maximum: 100,
+								minimum: 1,
+								type: "number",
+							},
+						},
+					],
+					responses: concurrencyResponses(
+						"List Concurrency Keys",
+						{
+							items: { $ref: "#/components/schemas/workflows_concurrency-key" },
+							type: "array",
+						},
+						{
+							properties: {
+								count: { type: "number" },
+								page: { type: "number" },
+								per_page: { type: "number" },
+								total_count: { type: "number" },
+								total_pages: { type: "number" },
+							},
+							type: "object",
+						}
+					),
+					summary: "List Concurrency Keys",
+					tags: ["Workflows"],
+				},
+				post: {
+					description: "Creates a local concurrency key.",
+					operationId: "workflows-create-concurrency-key",
+					parameters: [],
+					requestBody: {
+						content: {
+							"application/json": {
+								schema: {
+									properties: {
+										name: {
+											description:
+												"Name of the key, referenced by steps through `concurrency`.",
+											maxLength: 255,
+											minLength: 1,
+											type: "string",
+										},
+										limit: CONCURRENCY_KEY_LIMIT,
+									},
+									required: ["name", "limit"],
+									type: "object",
+								},
+							},
+						},
+						required: true,
+					},
+					responses: concurrencyResponses("Create Concurrency Key", {
+						$ref: "#/components/schemas/workflows_concurrency-key",
+					}),
+					summary: "Create Concurrency Key",
+					tags: ["Workflows"],
+				},
+			},
+			"/workflows/concurrency/{key_id}": {
+				get: {
+					description: "Returns a local concurrency key by ID or name.",
+					operationId: "workflows-get-concurrency-key",
+					parameters: [CONCURRENCY_KEY_ID_PARAMETER],
+					responses: concurrencyResponses("Get Concurrency Key", {
+						$ref: "#/components/schemas/workflows_concurrency-key-details",
+					}),
+					summary: "Get Concurrency Key",
+					tags: ["Workflows"],
+				},
+				patch: {
+					description:
+						"Changes the limit of a local concurrency key. Waiting steps see the new limit at once.",
+					operationId: "workflows-update-concurrency-key",
+					parameters: [CONCURRENCY_KEY_ID_PARAMETER],
+					requestBody: {
+						content: {
+							"application/json": {
+								schema: {
+									properties: { limit: CONCURRENCY_KEY_LIMIT },
+									required: ["limit"],
+									type: "object",
+								},
+							},
+						},
+						required: true,
+					},
+					responses: concurrencyResponses("Update Concurrency Key", {
+						$ref: "#/components/schemas/workflows_concurrency-key",
+					}),
+					summary: "Update Concurrency Key",
+					tags: ["Workflows"],
+				},
+				delete: {
+					description:
+						"Deletes a local concurrency key. Steps that reference it then run without a limit.",
+					operationId: "workflows-delete-concurrency-key",
+					parameters: [CONCURRENCY_KEY_ID_PARAMETER],
+					responses: concurrencyResponses("Delete Concurrency Key", {
+						properties: { status: { type: "string" } },
+						type: "object",
+					}),
+					summary: "Delete Concurrency Key",
+					tags: ["Workflows"],
+				},
+			},
+			"/workflows/concurrency/{key_id}/holders": {
+				get: {
+					description:
+						"Lists the steps holding a slot of a local concurrency key.",
+					operationId: "workflows-list-concurrency-key-holders",
+					parameters: [CONCURRENCY_KEY_ID_PARAMETER],
+					responses: concurrencyResponses("List Concurrency Key Holders", {
+						items: {
+							$ref: "#/components/schemas/workflows_concurrency-key-holder",
+						},
+						type: "array",
+					}),
+					summary: "List Concurrency Key Holders",
+					tags: ["Workflows"],
+				},
+			},
+			"/workflows/concurrency/{key_id}/waiters": {
+				get: {
+					description:
+						"Lists the steps waiting for a slot of a local concurrency key.",
+					operationId: "workflows-list-concurrency-key-waiters",
+					parameters: [CONCURRENCY_KEY_ID_PARAMETER],
+					responses: concurrencyResponses("List Concurrency Key Waiters", {
+						items: {
+							$ref: "#/components/schemas/workflows_concurrency-key-waiter",
+						},
+						type: "array",
+					}),
+					summary: "List Concurrency Key Waiters",
+					tags: ["Workflows"],
+				},
+			},
 			// Local-only observability endpoint. Runs a single read-only SQL query
 			// against the trace store; the schema it queries is in the description
 			// below.
@@ -2807,8 +3021,119 @@ const config = {
 						},
 						description: "Error details if the workflow errored.",
 					},
+					waiting_for: {
+						type: "array",
+						description:
+							"Steps of the instance waiting for a concurrency key slot.",
+						items: {
+							type: "object",
+							properties: {
+								type: { type: "string", enum: ["concurrency_key"] },
+								step: { type: "string" },
+								key: { type: "string" },
+								keys: { type: "array", items: { type: "string" } },
+								since: { type: "string" },
+							},
+							required: ["type", "step", "key", "keys", "since"],
+						},
+					},
 				},
 				required: ["id", "status"],
+			},
+			"workflows_concurrency-key-id": {
+				description: "ID or name of a concurrency key.",
+				example: "payments-api",
+				type: "string",
+			},
+			"workflows_concurrency-key": {
+				type: "object",
+				properties: {
+					id: { type: "string", description: "ID of the concurrency key." },
+					name: {
+						type: "string",
+						description: "Name of the key, referenced by steps.",
+					},
+					limit: CONCURRENCY_KEY_LIMIT,
+					created_on: {
+						type: "string",
+						description: "ISO 8601 timestamp of when the key was created.",
+					},
+					usage: {
+						type: "object",
+						properties: {
+							holding: {
+								type: "number",
+								description: "Steps holding a slot of the key.",
+							},
+							waiting: {
+								type: "number",
+								description: "Steps waiting for a slot of the key.",
+							},
+						},
+						required: ["holding", "waiting"],
+					},
+				},
+				required: ["id", "name", "limit", "created_on", "usage"],
+			},
+			"workflows_concurrency-key-details": {
+				allOf: [
+					{ $ref: "#/components/schemas/workflows_concurrency-key" },
+					{
+						type: "object",
+						properties: {
+							referencing_workflows: {
+								type: "array",
+								description:
+									"Always empty locally: local Workflows do not declare the keys they use.",
+								items: {
+									type: "object",
+									properties: {
+										workflow_name: { type: "string" },
+										version_id: { type: "string" },
+									},
+								},
+							},
+						},
+						required: ["referencing_workflows"],
+					},
+				],
+			},
+			"workflows_concurrency-key-holder": {
+				type: "object",
+				properties: {
+					workflow_name: {
+						type: "string",
+						nullable: true,
+						description: "Workflow of the step, or null for a test hold.",
+					},
+					instance_id: { type: "string", nullable: true },
+					step: { type: "string", nullable: true },
+					since: {
+						type: "string",
+						description: "ISO 8601 timestamp of when the slot was taken.",
+					},
+				},
+				required: ["workflow_name", "instance_id", "step", "since"],
+			},
+			"workflows_concurrency-key-waiter": {
+				allOf: [
+					{ $ref: "#/components/schemas/workflows_concurrency-key-holder" },
+					{
+						type: "object",
+						properties: {
+							blocked_on: {
+								type: "string",
+								description: "The full key the step is waiting for.",
+							},
+							keys: {
+								type: "array",
+								items: { type: "string" },
+								description: "Every key the step needs.",
+							},
+						},
+						required: ["blocked_on", "keys"],
+					},
+				],
 			},
 			// Observability schema (local-only)
 			"observability_query-result": {

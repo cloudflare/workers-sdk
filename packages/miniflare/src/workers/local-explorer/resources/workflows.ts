@@ -4,6 +4,7 @@ import {
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
+import { getInstanceConcurrencyWaits } from "./workflow-concurrency";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
@@ -82,7 +83,18 @@ const EVT = {
 	WAIT_START: 14,
 	WAIT_COMPLETE: 15,
 	WAIT_TIMED_OUT: 16,
+	WAITING_FOR_STEP_CONCURRENCY: 30,
+	TICKET_CLAIMED: 31,
 } as const;
+
+function toKeyList(value: unknown): string[] {
+	if (typeof value === "string") {
+		return [value];
+	}
+	return Array.isArray(value)
+		? value.filter((key): key is string => typeof key === "string")
+		: [];
+}
 
 // ---------------------------------------------------------------------------
 // Status counts cache — avoids resolving ALL Engine DOs on every page load.
@@ -630,7 +642,12 @@ export async function getWorkflowInstanceDetails(
 	const engineNamespace = getEngineNamespace(c.env, workflowName);
 
 	if (engineNamespace) {
-		return executeGetInstanceDetails(engineNamespace, instanceId, c);
+		return executeGetInstanceDetails(
+			engineNamespace,
+			workflowName,
+			instanceId,
+			c
+		);
 	}
 
 	const ownerMiniflare = await findWorkflowOwner(c, workflowName);
@@ -661,6 +678,7 @@ export async function getWorkflowInstanceDetails(
  */
 async function executeGetInstanceDetails(
 	engineNamespace: DurableObjectNamespace,
+	workflowName: string,
 	instanceId: string,
 	c: AppContext
 ): Promise<Response> {
@@ -719,6 +737,24 @@ async function executeGetInstanceDetails(
 			const waitTimedOut = groupLogs.find(
 				(l) => l.event === EVT.WAIT_TIMED_OUT
 			);
+			const concurrencyWait = groupLogs.findLast(
+				(l) => l.event === EVT.WAITING_FOR_STEP_CONCURRENCY
+			);
+			const concurrencyClaim = groupLogs.find(
+				(l) => l.event === EVT.TICKET_CLAIMED
+			);
+			const concurrencyKeys = toKeyList(
+				(stepStart?.metadata?.config as Record<string, unknown> | undefined)
+					?.concurrency ?? concurrencyWait?.metadata?.keys
+			);
+			const concurrency =
+				concurrencyKeys.length === 0
+					? undefined
+					: {
+							keys: concurrencyKeys,
+							waiting_since: concurrencyWait?.timestamp ?? null,
+							acquired_at: concurrencyClaim?.timestamp ?? null,
+						};
 
 			if (sleepStart) {
 				// Sleep step
@@ -807,9 +843,26 @@ async function executeGetInstanceDetails(
 					output: stepSuccess?.metadata?.result ?? undefined,
 					config: stepStart.metadata?.config ?? null,
 					attempts,
+					...(concurrency === undefined ? {} : { concurrency }),
+				});
+			} else if (concurrencyWait) {
+				steps.push({
+					name,
+					start: concurrencyWait.timestamp,
+					end: null,
+					success: null,
+					type: "step",
+					config: null,
+					attempts: [],
+					concurrency,
 				});
 			}
 		}
+		const waitingFor = await getInstanceConcurrencyWaits(
+			c,
+			workflowName,
+			metadata.instanceId
+		);
 
 		return c.json(
 			wrapResponse({
@@ -824,6 +877,7 @@ async function executeGetInstanceDetails(
 					: null,
 				steps,
 				step_count: steps.length,
+				waiting_for: waitingFor,
 			})
 		);
 	} catch (error) {

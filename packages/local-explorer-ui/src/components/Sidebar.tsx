@@ -198,18 +198,34 @@ export function AppSidebar({
 			emptyLabel: "No workflows",
 			groupId: "workflows" as const,
 			icon: WorkflowsIcon,
-			items: workflows.map((wf) => ({
-				id: wf.id,
-				isActive:
-					currentPath === `/workflows/${wf.id}` ||
-					currentPath.startsWith(`/workflows/${wf.id}/`),
-				label: wf.bindingName,
-				link: {
-					params: { workflowName: wf.id },
-					search: workerSearch,
-					to: "/workflows/$workflowName",
-				},
-			})),
+			items: [
+				...workflows.map((wf) => ({
+					id: wf.id,
+					isActive:
+						currentPath === `/workflows/${wf.id}` ||
+						currentPath.startsWith(`/workflows/${wf.id}/`),
+					label: wf.bindingName,
+					link: {
+						params: { workflowName: wf.id },
+						search: workerSearch,
+						to: "/workflows/$workflowName" as const,
+					},
+				})),
+				...(workflows.length === 0
+					? []
+					: [
+							{
+								id: "concurrency-keys",
+								isActive: currentPath === "/workflows/concurrency",
+								label: "Concurrency keys",
+								link: {
+									params: {},
+									search: workerSearch,
+									to: "/workflows/concurrency" as const,
+								},
+							},
+						]),
+			],
 			title: "Workflows",
 		},
 		{

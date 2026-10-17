@@ -31,7 +31,10 @@ import {
 	zObservabilityQueryData,
 	zWorkflowsBatchDeleteInstancesData,
 	zWorChangeStatusWorkflowInstanceData,
+	zWorkflowsCreateConcurrencyKeyData,
+	zWorkflowsListConcurrencyKeysData,
 	zWorkflowsListInstancesData,
+	zWorkflowsUpdateConcurrencyKeyData,
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
@@ -74,6 +77,15 @@ import {
 	putR2Object,
 } from "./resources/r2";
 import { dispatchScheduledToWorker } from "./resources/scheduled";
+import {
+	createConcurrencyKey,
+	deleteConcurrencyKey,
+	getConcurrencyKey,
+	listConcurrencyKeyHolders,
+	listConcurrencyKeys,
+	listConcurrencyKeyWaiters,
+	updateConcurrencyKey,
+} from "./resources/workflow-concurrency";
 import {
 	changeWorkflowInstanceStatus,
 	createWorkflowInstance,
@@ -374,6 +386,42 @@ app.delete(
 // ============================================================================
 
 app.get("/api/workflows", (c) => listWorkflows(c));
+
+// Registered before `/api/workflows/:workflow_name` so `concurrency` is never read as a
+// Workflow name, which production's API reserves the same way.
+app.get(
+	"/api/workflows/concurrency",
+	validateQuery(zWorkflowsListConcurrencyKeysData.shape.query.unwrap()),
+	(c) => listConcurrencyKeys(c, c.req.valid("query"))
+);
+
+app.post(
+	"/api/workflows/concurrency",
+	validateRequestBody(zWorkflowsCreateConcurrencyKeyData.shape.body),
+	(c) => createConcurrencyKey(c, c.req.valid("json"))
+);
+
+app.get("/api/workflows/concurrency/:key_id", (c) =>
+	getConcurrencyKey(c, c.req.param("key_id"))
+);
+
+app.patch(
+	"/api/workflows/concurrency/:key_id",
+	validateRequestBody(zWorkflowsUpdateConcurrencyKeyData.shape.body),
+	(c) => updateConcurrencyKey(c, c.req.param("key_id"), c.req.valid("json"))
+);
+
+app.delete("/api/workflows/concurrency/:key_id", (c) =>
+	deleteConcurrencyKey(c, c.req.param("key_id"))
+);
+
+app.get("/api/workflows/concurrency/:key_id/holders", (c) =>
+	listConcurrencyKeyHolders(c, c.req.param("key_id"))
+);
+
+app.get("/api/workflows/concurrency/:key_id/waiters", (c) =>
+	listConcurrencyKeyWaiters(c, c.req.param("key_id"))
+);
 
 app.get("/api/workflows/:workflow_name", (c) =>
 	getWorkflowDetails(c, c.req.param("workflow_name"))
