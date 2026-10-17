@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
 	configureOpenAPIForContainerPull,
 	isCloudflareRegistryImage,
@@ -15,7 +16,10 @@ import type {
 } from "@cloudflare/containers-shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
-type ContainerWorkerConfig = ComplianceConfig & { account_id?: string };
+type ContainerWorkerConfig = ComplianceConfig & {
+	account_id?: string;
+	configPath?: string;
+};
 
 /**
  * Configures the Containers API client used to retrieve image pull credentials.
@@ -73,13 +77,14 @@ export function normalizeContainerImageUris(
  * registry account and compliance settings, including Workers whose images
  * are selected at start time.
  *
- * @param args - Planned images, Docker executable, and Vite logger.
+ * @param args - Planned images, Docker executable, Vite logger, and CLI identity.
  * @returns No value.
  */
 export async function prepareContainerImagesForVite(args: {
 	dockerPath: string;
 	containerOptionsByWorker: ContainerOptionsByWorker;
 	logger: ViteLogger;
+	cliDisplayName: string;
 }): Promise<void> {
 	for (const [workerConfig, plannedOptions] of args.containerOptionsByWorker) {
 		let containerOptions = plannedOptions;
@@ -119,6 +124,14 @@ export async function prepareContainerImagesForVite(args: {
 			onContainerImagePreparationEnd: () => {},
 			logger: args.logger,
 			complianceConfig: workerConfig,
+			configFileName: workerConfig.configPath
+				? path.basename(workerConfig.configPath)
+				: "cloudflare.config.ts",
+			// TODO: Let cf provide its own command when the delegate supports that contract.
+			registryConfigureCommand:
+				args.cliDisplayName === "cf"
+					? "cf containers registries create"
+					: "wrangler containers registries configure",
 		});
 	}
 }

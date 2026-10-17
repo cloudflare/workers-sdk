@@ -487,6 +487,14 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 					expect(prepareContainerImagesForDev).not.toHaveBeenCalled();
 				} else {
 					expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(1);
+					expect(prepareContainerImagesForDev).toHaveBeenCalledWith(
+						expect.objectContaining({
+							configFileName:
+								mode === "dev" ? "wrangler.jsonc" : "wrangler.json",
+							registryConfigureCommand:
+								"wrangler containers registries configure",
+						})
+					);
 					const options = vi.mocked(prepareContainerImagesForDev).mock
 						.calls[0]?.[0].containerOptions;
 					expect(options).toHaveLength(scenario === "configured" ? 1 : 0);
