@@ -5,8 +5,98 @@ import { UNKNOWN_HOST } from "./shared";
 import { getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
+import type { Socket } from "node:net";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
+
+const UPGRADE_SERVER_PATCH = Symbol(
+	"vite-plugin-cloudflare.upgrade-server-patch"
+);
+
+type UpgradeListener = (
+	request: IncomingMessage,
+	socket: Duplex,
+	head: Buffer
+) => void;
+
+/** Shared upgrade state owned by one HTTP server. */
+type UpgradeServerPatch = {
+	pendingUpgrades: Set<Duplex>;
+	closing: { current: boolean };
+	listenerCounts: WeakMap<IncomingMessage, number>;
+	upgradeListener?: UpgradeListener;
+};
+
+type PatchedHttpServer = vite.HttpServer & {
+	[UPGRADE_SERVER_PATCH]?: UpgradeServerPatch;
+};
+
+function getUpgradeServerPatch(
+	httpServer: vite.HttpServer
+): UpgradeServerPatch {
+	const server = httpServer as PatchedHttpServer;
+	const existing = server[UPGRADE_SERVER_PATCH];
+	if (existing) {
+		return existing;
+	}
+	const patch: UpgradeServerPatch = {
+		pendingUpgrades: new Set(),
+		closing: { current: false },
+		listenerCounts: new WeakMap(),
+	};
+	server[UPGRADE_SERVER_PATCH] = patch;
+
+	// Snapshot the `upgrade` listener set at emit time, before Node removes
+	// `once` wrappers. A later `prependOnceListener` owner runs before our
+	// prepended handler but is already unregistered when our handler runs,
+	// so a live `listenerCount` would miss it and schedule a destroy that
+	// races its async handshake. The emit entry still sees it.
+	const originalEmit = httpServer.emit.bind(httpServer) as (
+		event: string | symbol,
+		...args: Array<unknown>
+	) => boolean;
+	httpServer.emit = function (
+		event: string | symbol,
+		...args: Array<unknown>
+	): boolean {
+		if (event === "upgrade") {
+			const request = args[0];
+			if (typeof request === "object" && request !== null) {
+				try {
+					patch.listenerCounts.set(
+						request as IncomingMessage,
+						httpServer.listenerCount("upgrade")
+					);
+				} catch {
+					// Snapshot is best-effort; the handler falls back to a live count.
+				}
+			}
+		}
+		return originalEmit(event, ...args);
+	} as typeof httpServer.emit;
+
+	const originalClose = httpServer.close.bind(httpServer) as (
+		callback?: (err?: Error) => void
+	) => unknown;
+	httpServer.close = ((callback?: (err?: Error) => void) => {
+		patch.closing.current = true;
+		for (const pending of patch.pendingUpgrades) {
+			pending.destroy();
+		}
+		patch.pendingUpgrades.clear();
+		return originalClose(callback);
+	}) as typeof httpServer.close;
+
+	const originalListen = httpServer.listen.bind(httpServer) as (
+		...args: Array<unknown>
+	) => unknown;
+	httpServer.listen = ((...args: Array<unknown>) => {
+		patch.closing.current = false;
+		return originalListen(...args);
+	}) as typeof httpServer.listen;
+
+	return patch;
+}
 
 /**
  * Handles 'upgrade' requests to the Vite HTTP server and forwards WebSocket events between the client and Worker environments.
@@ -18,6 +108,14 @@ export function handleWebSocket(
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
+	// Shared per-server patch (idempotent across Vite restarts): holds the
+	// unresolved-upgrade set, the closing flag, and emit-time listener counts.
+	const patch = getUpgradeServerPatch(httpServer);
+	const { pendingUpgrades, closing, listenerCounts, upgradeListener } = patch;
+	// Reset the closing flag on setup so that unowned upgrades are preserved
+	// for other listeners after a server close and restart.
+	closing.current = false;
+
 	// Stash Worker 101-response headers keyed by the upgrade request so a single
 	// persistent `headers` listener can apply them when `ws` emits the upgrade
 	// response. Matches the pattern in `packages/miniflare/src/index.ts`.
@@ -28,6 +126,28 @@ export function handleWebSocket(
 	// upgrade with stale headers leaked from the previous Worker response. The
 	// WeakMap entry is GC'd if the request never completes.
 	const workerResponseHeaders = new WeakMap<IncomingMessage, Headers>();
+
+	// Upgrade sockets this handler leaves unanswered (another listener may
+	// own them) stay pending on the server: Node reaps neither them on
+	// close() nor on closeAllConnections(), so one rejected, unclaimed
+	// upgrade would hang server shutdown forever. Track such sockets and
+	// destroy them when close() is initiated. Destroying here races no one:
+	// the server is going down, and claimed sockets are never tracked.
+	const trackUnresolved = (socket: Duplex) => {
+		const netSocket = socket as unknown as Socket;
+		if (socket.destroyed || netSocket.closed) {
+			return;
+		}
+		if (closing.current) {
+			socket.destroy();
+			return;
+		}
+		pendingUpgrades.add(socket);
+		socket.once("close", () => {
+			pendingUpgrades.delete(socket);
+		});
+	};
+
 	nodeWebSocket.on(
 		"headers",
 		(responseHeaders: string[], request: IncomingMessage) => {
@@ -39,78 +159,162 @@ export function handleWebSocket(
 		}
 	);
 
-	httpServer.on(
-		"upgrade",
-		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-			// Socket errors crash Node.js if unhandled
-			socket.on("error", () => socket.destroy());
+	// Node dispatches `upgrade` to *every* registered listener, not just the
+	// first, so another listener (e.g. Vite DevTools at `/__devtools/__ws`) may
+	// own a socket we don't. We must never tear down a socket someone else
+	// claimed. Prepend so our `bytesWritten` baseline (see `isClaimed` below) is
+	// captured before any other listener can write its 101 response.
+	// See https://github.com/cloudflare/workers-sdk/issues/15654
+	if (upgradeListener) {
+		httpServer.removeListener("upgrade", upgradeListener);
+	}
+	const nextUpgradeListener: UpgradeListener = async (
+		request: IncomingMessage,
+		socket: Duplex,
+		head: Buffer
+	) => {
+		// Socket errors crash Node.js if unhandled
+		socket.on("error", () => socket.destroy());
 
-			try {
-				const rawHost = request.headers.host ?? UNKNOWN_HOST;
-				// Honor `X-Forwarded-Proto` so that the upgrade URL reflects the
-				// protocol the original client used (e.g. behind a TLS-terminating
-				// reverse proxy or tunnel). Matches `createRequestHandler` in utils.ts.
-				const protocol = getForwardedProto(request) ?? "http:";
-				const base = /^https?:\/\//i.test(rawHost)
-					? rawHost
-					: `${protocol}//${rawHost}`;
-				const url = new URL(request.url ?? "", base);
+		// True once another listener has written to the socket. Conservatively
+		// treated as claimed: whether the peer sent a 101 or an error
+		// response, attempting our own upgrade afterwards would corrupt it.
+		// `bytesWritten` is lifetime-cumulative, so compare against a baseline
+		// rather than zero to stay correct on reused keep-alive connections.
+		const bytesWrittenAtStart = (socket as unknown as Socket).bytesWritten ?? 0;
+		const isClaimed = () =>
+			(socket as unknown as Socket).bytesWritten > bytesWrittenAtStart;
 
-				const isViteRequest =
-					request.headers["sec-websocket-protocol"]?.startsWith("vite");
-				const isSandboxRequest = hasSandboxOrigin(url.origin);
-
-				// Ignore Vite HMR WebSockets but forward on all sandbox requests.
-				if (isViteRequest && !isSandboxRequest) {
-					return;
-				}
-
-				const headers = createHeaders(request);
-
-				if (entryWorkerName) {
-					headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
-				}
-
-				const response = await miniflare.dispatchFetch(url, {
-					headers: headers as unknown as Headers,
-					method: request.method,
-				});
-				const workerWebSocket = response.webSocket;
-
-				if (!workerWebSocket) {
-					socket.destroy();
-					return;
-				}
-
-				// Forward response headers (e.g. Set-Cookie, custom auth headers) from
-				// the Worker's 101 response onto the upgrade response sent to the
-				// client. Without this, headers set on a `new Response(null, { status:
-				// 101, webSocket, headers })` are silently dropped during `vite dev`,
-				// even though they are delivered correctly by `wrangler dev`.
-				// See cloudflare/workers-sdk#10390.
-				workerResponseHeaders.set(request, response.headers);
-
-				nodeWebSocket.handleUpgrade(
-					request,
-					socket,
-					head,
-					async (clientWebSocket) => {
-						void coupleWebSocket(clientWebSocket, workerWebSocket);
-						nodeWebSocket.emit("connection", clientWebSocket, request);
-					}
-				);
-			} catch {
-				// `dispatchFetch` rejects if Miniflare is disposed while an upgrade
-				// is still in flight (e.g. during dev server shutdown or restart).
-				// This listener is `async`, so an uncaught rejection here escapes as
-				// an unhandled rejection — which terminates the Node.js process on
-				// modern versions and leaks the client socket. Tear the socket down
-				// instead, mirroring the `!workerWebSocket` path above.
-				workerResponseHeaders.delete(request);
-				socket.destroy();
+		// Prefer the emit-time listener count: a `prependOnceListener`
+		// owner added after us runs before us but its wrapper is already
+		// removed when our handler runs, so a live `listenerCount` would
+		// miss it. The emit wrapper snapshots before any removal. Fall
+		// back to a live count for direct (non-emit) invocations.
+		// Listeners added after emit cannot receive this event, so the
+		// snapshot stays valid for this socket.
+		const hadOtherListeners =
+			(listenerCounts.get(request) ?? httpServer.listenerCount("upgrade")) > 1;
+		const deferUnclaimedTeardown = () => {
+			if (socket.destroyed || isClaimed()) {
+				return;
 			}
+			if (hadOtherListeners) {
+				trackUnresolved(socket);
+				return;
+			}
+			setImmediate(() => {
+				if (!socket.destroyed && !isClaimed()) {
+					socket.destroy();
+				}
+			});
+		};
+
+		// The synchronous preamble runs before other listeners. On failure,
+		// preserve the socket for another owner or close it when none exists.
+		let url: URL;
+		let isViteRequest: boolean | undefined;
+		let isSandboxRequest: boolean;
+		try {
+			const rawHost = request.headers.host ?? UNKNOWN_HOST;
+			// Honor `X-Forwarded-Proto` so that the upgrade URL reflects the
+			// protocol the original client used (e.g. behind a TLS-terminating
+			// reverse proxy or tunnel). Matches `createRequestHandler` in utils.ts.
+			const protocol = getForwardedProto(request) ?? "http:";
+			const base = /^https?:\/\//i.test(rawHost)
+				? rawHost
+				: `${protocol}//${rawHost}`;
+			url = new URL(request.url ?? "", base);
+
+			isViteRequest =
+				request.headers["sec-websocket-protocol"]?.startsWith("vite");
+			isSandboxRequest = hasSandboxOrigin(url.origin);
+		} catch {
+			deferUnclaimedTeardown();
+			return;
 		}
-	);
+
+		// Ignore Vite HMR WebSockets but forward on all sandbox requests.
+		if (isViteRequest && !isSandboxRequest) {
+			trackUnresolved(socket);
+			return;
+		}
+
+		const headers = createHeaders(request);
+
+		if (entryWorkerName) {
+			headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+		}
+
+		try {
+			const response = await miniflare.dispatchFetch(url, {
+				headers: headers as unknown as Headers,
+				method: request.method,
+			});
+			const workerWebSocket = response.webSocket;
+
+			if (!workerWebSocket) {
+				// No route on the Worker → this upgrade isn't ours. If another
+				// listener claimed it, leave it untouched; otherwise tear it
+				// down deferred by a tick (an unanswered upgrade dangles
+				// forever and hangs `httpServer.close()`), but only when no
+				// other `upgrade` listener could still be processing it (see
+				// hadOtherListeners above). The socket is tracked instead so
+				// server shutdown can still reap it (see pendingUpgrades).
+				// `isClaimed()` only sees bytes already written, so it can't
+				// reveal a delayed async owner (e.g. awaiting auth) — and any
+				// fixed deadline races one. With only this listener
+				// registered, no other owner can exist for an already-emitted
+				// event, so deferred teardown is safe.
+				deferUnclaimedTeardown();
+				return;
+			}
+
+			// Another listener claimed the socket, or the client went away,
+			// while `dispatchFetch` was in flight: don't attempt a second upgrade.
+			if (socket.destroyed || isClaimed()) {
+				workerResponseHeaders.delete(request);
+				return;
+			}
+
+			// Forward response headers (e.g. Set-Cookie, custom auth headers) from
+			// the Worker's 101 response onto the upgrade response sent to the
+			// client. Without this, headers set on a `new Response(null, { status:
+			// 101, webSocket, headers })` are silently dropped during `vite dev`,
+			// even though they are delivered correctly by `wrangler dev`.
+			// See cloudflare/workers-sdk#10390.
+			workerResponseHeaders.set(request, response.headers);
+
+			nodeWebSocket.handleUpgrade(
+				request,
+				socket,
+				head,
+				async (clientWebSocket) => {
+					void coupleWebSocket(clientWebSocket, workerWebSocket);
+					nodeWebSocket.emit("connection", clientWebSocket, request);
+				}
+			);
+		} catch {
+			// `dispatchFetch` can reject mid-upgrade (e.g. when Miniflare is
+			// disposed on dev server restart). This listener is `async`, so
+			// an uncaught rejection would crash Node and leak the socket.
+			// Tear it down, but only if no other listener claimed it in
+			// the meantime and no other listener could still own it (see
+			// hadOtherListeners above): a rejection is not proof of
+			// disposal, and another listener may yet finish a viable
+			// handshake on this socket.
+			workerResponseHeaders.delete(request);
+			if (socket.destroyed || isClaimed()) {
+				return;
+			}
+			if (hadOtherListeners) {
+				trackUnresolved(socket);
+				return;
+			}
+			socket.destroy();
+		}
+	};
+	patch.upgradeListener = nextUpgradeListener;
+	httpServer.prependListener("upgrade", nextUpgradeListener);
 }
 
 /**

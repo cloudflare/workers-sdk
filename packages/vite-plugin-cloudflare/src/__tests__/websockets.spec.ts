@@ -11,6 +11,7 @@ import {
 	test,
 	vi,
 } from "vitest";
+import { WebSocketServer } from "ws";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
 
@@ -386,6 +387,9 @@ describe("handleWebSocket", () => {
 		const mf = await listen();
 
 		// Simulate Miniflare being disposed mid-upgrade: `dispatchFetch` rejects.
+		// No other `upgrade` listener claims the socket here, so the handler
+		// still tears it down (see below for the multi-listener case where it
+		// must not).
 		vi.spyOn(mf, "dispatchFetch").mockRejectedValue(
 			new Error("Cannot use disposed instance")
 		);
@@ -416,5 +420,651 @@ describe("handleWebSocket", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/15654
+	test("does not destroy WebSockets owned by another upgrade listener", async ({
+		expect,
+	}) => {
+		// Worker has no route for the DevTools path, so `dispatchFetch` yields
+		// no `webSocket` (404). The route owner is registered *after* the
+		// plugin handler, mirroring real dev server order (Vite HMR, plugin,
+		// DevTools). Node dispatches `upgrade` to every listener — the owner
+		// upgrades synchronously while the plugin is still awaiting
+		// `dispatchFetch`. The plugin must not destroy the socket it doesn't own.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				owner.handleUpgrade(request, socket, head, (ws) => {
+					owner.emit("connection", ws, request);
+				});
+			}
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Owner upgrades synchronously; the plugin's `dispatchFetch` round-trip
+		// completes after. Old code destroyed the socket here (client saw
+		// `onopen` then close `1006`).
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		// Give the plugin handler time to finish `dispatchFetch` and (incorrectly)
+		// destroy a socket it doesn't own.
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
+
+	test("does not destroy WebSockets owned by an earlier upgrade listener", async ({
+		expect,
+	}) => {
+		// Same as above, but the owner is registered *before* the plugin
+		// handler. Node invokes `upgrade` listeners in registration order, so
+		// with `on()` the owner would complete its 101 before the plugin
+		// captures its `bytesWritten` baseline. The plugin prepends its
+		// listener, so the baseline is still captured first.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				owner.handleUpgrade(request, socket, head, (ws) => {
+					owner.emit("connection", ws, request);
+				});
+			}
+		});
+
+		await listen();
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
+
+	test("does not destroy sockets owned by an earlier listener on malformed host", async ({
+		expect,
+	}) => {
+		// The plugin listener is prepended, so its synchronous preamble runs
+		// before previously registered owners. A malformed `Host` makes
+		// `new URL()` throw before `dispatchFetch` — that must not destroy
+		// the socket, or the earlier owner's valid handshake fails.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url === "/custom") {
+				owner.handleUpgrade(request, socket, head, (ws) => {
+					owner.emit("connection", ws, request);
+				});
+			}
+		});
+
+		await listen();
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /custom HTTP/1.1\r\n" +
+				"Host: not a host\r\n" +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
+
+	test("destroys malformed upgrades when no other listener can own them", async () => {
+		await listen();
+
+		const socket = await connect();
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+
+		socket.write(
+			"GET /custom HTTP/1.1\r\n" +
+				"Host: not a host\r\n" +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
+	});
+
+	test("does not destroy sockets claimed asynchronously by another upgrade listener", async ({
+		expect,
+	}) => {
+		// Another listener may complete its handshake only after async work
+		// (e.g. an authorization lookup) that outlasts the plugin's
+		// `dispatchFetch` round-trip plus a tick. `isClaimed()` can't see such
+		// a delayed owner (no bytes written yet), so the deferred
+		// unclaimed-upgrade teardown must not run while any other `upgrade`
+		// listener exists.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				setTimeout(() => {
+					owner.handleUpgrade(request, socket, head, (ws) => {
+						owner.emit("connection", ws, request);
+					});
+				}, 300);
+			}
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// The owner's 101 arrives after its async setup; the plugin's
+		// deferred teardown would previously have destroyed the socket first.
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
+
+	test("does not destroy sockets owned by a one-shot async upgrade listener", async ({
+		expect,
+	}) => {
+		// A `once("upgrade")` owner is removed before its callback runs, so a
+		// listener count taken after `dispatchFetch` cannot see it. The
+		// presence snapshot is taken synchronously instead, letting a delayed
+		// one-shot owner complete its handshake.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.once("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				setTimeout(() => {
+					owner.handleUpgrade(request, socket, head, (ws) => {
+						owner.emit("connection", ws, request);
+					});
+				}, 300);
+			}
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// The one-shot 101 arrives after its async setup; a post-yield
+		// listener count would have missed the removed owner and destroyed
+		// the socket first.
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
+
+	test("does not destroy sockets owned by a prepended one-shot async listener", async ({
+		expect,
+	}) => {
+		// A `prependOnceListener` owner added after our prepended handler runs
+		// before us, but Node removes its wrapper before invoking it. A live
+		// `listenerCount` in our handler would therefore miss it. The emit-time
+		// snapshot still sees it, letting a delayed one-shot owner complete.
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const owner = new WebSocketServer({ noServer: true });
+		onTestFinished(() => owner.close());
+		httpServer.prependOnceListener("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				setTimeout(() => {
+					owner.handleUpgrade(request, socket, head, (ws) => {
+						owner.emit("connection", ws, request);
+					});
+				}, 300);
+			}
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		socket.destroy();
+	});
+
+	test("leaves the socket alone when dispatchFetch rejects with another listener present", async ({
+		expect,
+	}) => {
+		// Rejection (e.g. Miniflare disposed on dev server restart) is not
+		// proof that no owner exists: another listener may yet finish a
+		// viable handshake on this socket. The bystander below ignores the
+		// path, so the socket simply survives; the test tracks and destroys
+		// the server-side socket itself so afterEach never hangs on an
+		// upgrade that received no response.
+		const mf = await listen();
+
+		const serverSockets = new Set<net.Socket>();
+		httpServer.on("connection", (socket) => {
+			serverSockets.add(socket);
+			socket.on("close", () => serverSockets.delete(socket));
+		});
+		onTestFinished(() => {
+			for (const socket of serverSockets) {
+				socket.destroy();
+			}
+		});
+		httpServer.on("upgrade", (request) => {
+			if (request.url === "/__devtools/__ws") {
+				// Bystander: present but never claims.
+			}
+		});
+
+		vi.spyOn(mf, "dispatchFetch").mockRejectedValue(
+			new Error("Cannot use disposed instance")
+		);
+
+		const unhandled = vi.fn();
+		process.on("unhandledRejection", unhandled);
+		onTestFinished(() => {
+			process.off("unhandledRejection", unhandled);
+		});
+
+		const socket = await connect();
+		let closed = false;
+		socket.on("close", () => {
+			closed = true;
+		});
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Give the rejection handler time to run: it must leave the socket
+		// open and swallow the rejection.
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		expect(closed).toBe(false);
+		expect(unhandled).not.toHaveBeenCalled();
+		socket.destroy();
+	});
+
+	test("destroys sole-listener upgrades the Worker does not route", async () => {
+		// No other listener exists, so an unrouted upgrade has no possible
+		// owner: the deferred teardown must destroy it, or the socket would
+		// dangle forever and hang httpServer.close().
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const socket = await connect();
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+
+		socket.write(
+			"GET /nothing-here HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
+	});
+
+	test("replaces its upgrade listener when setup repeats", async ({
+		expect,
+	}) => {
+		const mf = startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		handleWebSocket(httpServer, mf);
+		handleWebSocket(httpServer, mf);
+		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
+		port = (httpServer.address() as AddressInfo).port;
+		await mf.ready;
+
+		const dispatchFetch = vi.spyOn(mf, "dispatchFetch");
+		const socket = await connect();
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+
+		socket.write(
+			"GET /nothing-here HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
+		expect(dispatchFetch).toHaveBeenCalledTimes(1);
+		expect(httpServer.listenerCount("upgrade")).toBe(1);
+	});
+
+	test("preserves other upgrade listeners after server close and restart", async ({
+		expect,
+	}) => {
+		const mf = startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		handleWebSocket(httpServer, mf);
+		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
+		port = (httpServer.address() as AddressInfo).port;
+		await mf.ready;
+
+		// Simulate server close on restart
+		await new Promise<void>((r) => httpServer.close(() => r()));
+
+		// Simulate restart: re-listen and rerun handleWebSocket
+		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
+		port = (httpServer.address() as AddressInfo).port;
+		handleWebSocket(httpServer, mf);
+
+		// Register another upgrade listener (e.g. DevTools)
+		const otherClaimed = new Promise<void>((resolve) => {
+			httpServer.on("upgrade", (_req, socket) => {
+				socket.write(
+					"HTTP/1.1 101 Switching Protocols\r\n" +
+						"Upgrade: websocket\r\n" +
+						"Connection: Upgrade\r\n" +
+						"Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n"
+				);
+				resolve();
+			});
+		});
+
+		const socket = await connect();
+		socket.write(
+			"GET /other-service HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await otherClaimed;
+		expect(socket.destroyed).toBe(false);
+		socket.destroy();
+	});
+
+	test("upgrades Worker routes on reused keep-alive connections", async ({
+		expect,
+	}) => {
+		// bytesWritten counts the whole socket lifetime, so the claimed check
+		// must baseline at upgrade time: a 200 served earlier on the same
+		// keep-alive connection must not read as another listener 101.
+		await listen();
+
+		const socket = await connect();
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		// Ordinary request first: the server answers 200 on this connection.
+		socket.write(
+			`GET / HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nConnection: keep-alive\r\n\r\n`
+		);
+		await vi.waitFor(
+			() => {
+				expect(Buffer.concat(chunks).toString("utf8")).toContain("200 OK");
+			},
+			{ timeout: 10_000 }
+		);
+
+		// Then upgrade on the SAME socket: the Worker (default script answers
+		// 101 to everything) must still upgrade despite the earlier bytes.
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 101");
+			},
+			{ timeout: 10_000 }
+		);
+		socket.destroy();
+	});
+
+	test("server close reaps unanswered upgrades left for another listener", async () => {
+		// A rejected, unclaimed upgrade with a bystander present is left open
+		// with no response, which neither close() nor closeAllConnections()
+		// can reap on their own. The handler tracks such sockets and destroys
+		// them when close() is initiated, so shutdown completes. Uses a
+		// dedicated server: afterEach owns the shared one, and closing a
+		// server twice reports an error.
+		const mf = startMiniflare(`export default {
+			fetch() {
+				return new Response("not found", { status: 404 });
+			}
+		}`);
+		await listen();
+
+		const localServer = http.createServer((_req, res) => res.end("OK"));
+		handleWebSocket(localServer, mf);
+		localServer.on("upgrade", (request) => {
+			if (request.url === "/__devtools/__ws") {
+				// Bystander: present but never claims.
+			}
+		});
+		const localSockets = new Set<net.Socket>();
+		localServer.on("connection", (socket) => {
+			localSockets.add(socket);
+			socket.on("close", () => localSockets.delete(socket));
+		});
+		onTestFinished(() => {
+			for (const socket of localSockets) {
+				socket.destroy();
+			}
+		});
+		await new Promise<void>((r) => localServer.listen(0, "127.0.0.1", r));
+		const localPort = (localServer.address() as AddressInfo).port;
+
+		vi.spyOn(mf, "dispatchFetch").mockRejectedValue(
+			new Error("Cannot use disposed instance")
+		);
+
+		const client = net.connect(localPort, "127.0.0.1");
+		openSockets.add(client);
+		client.on("close", () => openSockets.delete(client));
+		await new Promise<void>((r) => client.on("connect", r));
+		client.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${localPort}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Let the rejection handler run and leave the socket open...
+		await new Promise((resolve) => setTimeout(resolve, 500));
+
+		// ...then shut down directly: the tracked socket must be reaped so
+		// close() resolves instead of hanging.
+		client.destroy();
+		await new Promise<void>((resolve, reject) =>
+			localServer.close((e) => (e ? reject(e) : resolve()))
+		);
 	});
 });
