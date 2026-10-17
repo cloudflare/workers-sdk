@@ -341,8 +341,8 @@ importers:
         specifier: workspace:*
         version: link:../remote-bindings
       '@cloudflare/runtime-types':
-        specifier: 0.1.11
-        version: 0.1.11(@types/node@22.15.17)
+        specifier: 0.1.12
+        version: 0.1.12(@types/node@22.15.17)
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
@@ -2036,8 +2036,8 @@ packages:
     resolution: {integrity: sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg==}
     engines: {node: '>=22.0.0'}
 
-  '@cloudflare/runtime-types@0.1.11':
-    resolution: {integrity: sha512-iLOEoGkJidkJ+E5BuWeSXH137Z8oKyxsLN00/POU5rjz1+Rs5W1cq4PeHSfGd6GBR/7JL3Tt4/DK+uQhNDvxsg==}
+  '@cloudflare/runtime-types@0.1.12':
+    resolution: {integrity: sha512-eYF5teHQ+Jss4sbSVINM5tNPHxo/kJ2gKcMs7omyy7gO9PEkgUbGPZCYl06SxbBWTcJFF2vrX4epB775QTE4BQ==}
 
   '@cloudflare/runtime-types@0.1.4':
     resolution: {integrity: sha512-Jp3Za6h0KybVoi/4D6La3HicW71L8nyS7AGf0WHpbKqCs17lLkCuTbOcAuUTraoib8+SR74L+AbqxwcDq3VhTw==}
@@ -8833,9 +8833,9 @@ snapshots:
 
   '@cloudflare/kv-asset-handler@0.5.0': {}
 
-  '@cloudflare/runtime-types@0.1.11(@types/node@22.15.17)':
+  '@cloudflare/runtime-types@0.1.12(@types/node@22.15.17)':
     dependencies:
-      miniflare: 5.20261012.0-beta(@types/node@22.15.17)
+      miniflare: 5.20261012.1-beta(@types/node@22.15.17)
       workerd: 1.20261012.1
     transitivePeerDependencies:
       - '@types/node'
