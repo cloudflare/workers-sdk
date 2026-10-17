@@ -1,5 +1,39 @@
 # @cloudflare/vite-plugin
 
+## 1.65.0
+
+### Minor Changes
+
+- [#16299](https://github.com/cloudflare/workers-sdk/pull/16299) [`028c82a`](https://github.com/cloudflare/workers-sdk/commit/028c82a1eaff109dce74064e96da866e50037e16) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support custom domain traffic settings in experimental programmatic Worker configuration
+
+  Update the public configuration and Build Output dependencies so `experimental.newConfig` accepts domain objects with `hostname`, `production`, and `previews`. String domains continue to serve production traffic only.
+
+### Patch Changes
+
+- [#16315](https://github.com/cloudflare/workers-sdk/pull/16315) [`b26e3b3`](https://github.com/cloudflare/workers-sdk/commit/b26e3b3bb2ae9098c03071693e57687586269acd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Keep cancelled Wrangler rollbacks from reporting a successful deployment
+
+  The bundled Wrangler release now stops after declining the changed-secrets confirmation, without printing a success message or a new current version. The compatible Wrangler dependency is supplied by the earlier remote-token retry backport.
+
+- [#16290](https://github.com/cloudflare/workers-sdk/pull/16290) [`cfd5206`](https://github.com/cloudflare/workers-sdk/commit/cfd5206688d218ffba442371e7fc991de4d49bb5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Miniflare to preserve occupied-port diagnostics across stderr chunks
+
+  Use `miniflare@5.20261012.1-beta` so local development reports the complete address-in-use error even when workerd splits its diagnostic across stderr writes.
+
+- [#16289](https://github.com/cloudflare/workers-sdk/pull/16289) [`bbe822f`](https://github.com/cloudflare/workers-sdk/commit/bbe822f7dd7d13ac4f975d987b3043a91687ca1f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Retry remote preview token refreshes after transient failures
+
+  Backport the retry fix to the private remote-bindings workspace package and require `wrangler@4.151.1` so long-running remote development sessions recover after a network outage.
+
+- [#16317](https://github.com/cloudflare/workers-sdk/pull/16317) [`5d6b32d`](https://github.com/cloudflare/workers-sdk/commit/5d6b32dd67775383df9466dda0d3d730aae83e43) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Align experimental runtime type generation with the updated Miniflare release
+
+  Use `@cloudflare/runtime-types@0.1.12` for experimental programmatic configuration so its runtime type generator uses the same Miniflare patch as the plugin. Other compatible dependency versions from this SDK release are supplied by the earlier backports.
+
+- [#16291](https://github.com/cloudflare/workers-sdk/pull/16291) [`0262f7d`](https://github.com/cloudflare/workers-sdk/commit/0262f7d180d9dd58649499e25de8dccccf2d3890) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use published SDK dependencies for Vite plugin v1 maintenance
+
+  Pin the plugin's published SDK dependencies to their deployed npm versions. Keep private shared packages as workspace dependencies so their implementation and build tools remain available on the v1 maintenance branch.
+
+- [#16316](https://github.com/cloudflare/workers-sdk/pull/16316) [`38c06d6`](https://github.com/cloudflare/workers-sdk/commit/38c06d6aeb194389e3aacb02761bc050972f3ab6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Hide unusable Wrangler development hotkeys under Turborepo stream output
+
+  The bundled Wrangler release hides shortcuts when Turborepo does not forward keyboard input, while retaining them in its interactive terminal UI. The compatible Wrangler dependency is supplied by the earlier remote-token retry backport; Vite's own shortcuts remain unchanged.
+
 ## 1.64.0
 
 ### Minor Changes
