@@ -7,10 +7,10 @@ import { test } from "vitest";
 test("generates and reuses real runtime types for experimental configuration", async ({
 	expect,
 }) => {
-	const options = { compatibilityDate: "2026-10-12" };
+	const options = { compatibilityDate: "2026-10-16" };
 	const generated = await generateRuntimeTypes(options);
 	expect(generated.isCached).toBe(false);
-	expect(generated.runtimeHeader).toContain("2026-10-12");
+	expect(generated.runtimeHeader).toContain("2026-10-16");
 	expect(generated.runtimeTypes).toMatch(/(?:class|interface) Request\b/);
 
 	const cached = await generateRuntimeTypes({
