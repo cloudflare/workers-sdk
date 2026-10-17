@@ -174,6 +174,7 @@ test("prepares registry images with their owning Worker configuration", async ({
 		dockerPath: "docker",
 		containerOptionsByWorker,
 		logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+		cliDisplayName: "Wrangler",
 	});
 
 	expect(preparations).toEqual([
@@ -201,6 +202,7 @@ test("prepares the sidecar for a configured Worker without images or registry cr
 		dockerPath: "test-docker",
 		containerOptionsByWorker: new Map([[{}, []]]),
 		logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+		cliDisplayName: "Wrangler",
 	});
 	expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 		expect.objectContaining({
@@ -334,3 +336,40 @@ describe("Container image planning", () => {
 		expect(new Set(runtimeImageTags)).toEqual(imageTags);
 	});
 });
+
+test.for([
+	{
+		cliDisplayName: "Wrangler",
+		configPath: "project/wrangler.jsonc",
+		configFileName: "wrangler.jsonc",
+		registryConfigureCommand: "wrangler containers registries configure",
+	},
+	{
+		cliDisplayName: "Wrangler",
+		configPath: undefined,
+		configFileName: "cloudflare.config.ts",
+		registryConfigureCommand: "wrangler containers registries configure",
+	},
+	{
+		cliDisplayName: "cf",
+		configPath: undefined,
+		configFileName: "cloudflare.config.ts",
+		registryConfigureCommand: "cf containers registries create",
+	},
+])(
+	"passes $configFileName and $cliDisplayName guidance to the Container helper",
+	async (
+		{ cliDisplayName, configPath, configFileName, registryConfigureCommand },
+		{ expect }
+	) => {
+		await prepareContainerImagesForVite({
+			dockerPath: "test-docker",
+			containerOptionsByWorker: new Map([[{ configPath }, []]]),
+			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			cliDisplayName,
+		});
+		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
+			expect.objectContaining({ configFileName, registryConfigureCommand })
+		);
+	}
+);

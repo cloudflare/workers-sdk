@@ -66,6 +66,7 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					dockerPath,
 					containerOptionsByWorker,
 					logger: vitePreviewServer.config.logger,
+					cliDisplayName: ctx.resolvedPluginConfig.cliDisplayName,
 				});
 
 				containerCleanup.track(
