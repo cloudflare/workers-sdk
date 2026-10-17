@@ -221,6 +221,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						dockerPath: getDockerPath(),
 						containerOptionsByWorker,
 						logger: viteDevServer.config.logger,
+						cliDisplayName: ctx.resolvedPluginConfig.cliDisplayName,
 					});
 
 					containerCleanup.track(
