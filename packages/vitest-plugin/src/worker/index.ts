@@ -15,6 +15,10 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
+import {
+	createChunkedWebSocketMessageHandler,
+	sendChunkedWebSocketMessage,
+} from "../shared/chunked-websocket";
 import { markCreateRequireUrl } from "../shared/module-path";
 import type { Session } from "node:inspector/promises";
 
@@ -352,6 +356,12 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const v8CoverageEvaluators = new WeakSet<ModuleEvaluator>();
 
 		poolSocket.accept();
+		const sendMessage = (message: unknown) => {
+			sendChunkedWebSocketMessage(
+				(frame) => poolSocket.send(frame),
+				structuredSerializableStringify(message)
+			);
+		};
 		// Sending over the runner's WebSocket from another Durable Object requires
 		// I/O that cannot complete if that object's input gate breaks. Buffer console
 		// messages and flush them on the next successful post from the runner's
@@ -362,7 +372,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const pendingConsoleLogs: unknown[] = [];
 		const sendPendingConsoleLogs = () => {
 			while (pendingConsoleLogs.length > 0) {
-				poolSocket.send(structuredSerializableStringify(pendingConsoleLogs[0]));
+				sendMessage(pendingConsoleLogs[0]);
 				pendingConsoleLogs.shift();
 			}
 		};
@@ -371,7 +381,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			post: (response) => {
 				try {
 					sendPendingConsoleLogs();
-					poolSocket.send(structuredSerializableStringify(response));
+					sendMessage(response);
 				} catch (error) {
 					// If the user called `console.log()` or similar from inside an
 					// `export default { fetch() {} }` handler (via `SELF`/`exports`) or
@@ -387,7 +397,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 							return;
 						}
 						const promise = runInRunnerObject(() => {
-							poolSocket.send(structuredSerializableStringify(response));
+							sendMessage(response);
 						}).catch((e) => {
 							__console.error(
 								"Error sending to pool inside runner:",
@@ -402,8 +412,11 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				}
 			},
 			on: (callback) => {
+				const handleMessage = createChunkedWebSocketMessageHandler((data) => {
+					callback(structuredSerializableParse(data));
+				});
 				poolSocket.addEventListener("message", (m) => {
-					callback(structuredSerializableParse(m.data));
+					handleMessage(m.data as string);
 				});
 			},
 			runTests: (state, traces) => {

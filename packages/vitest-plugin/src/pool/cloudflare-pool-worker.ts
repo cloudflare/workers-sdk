@@ -5,6 +5,10 @@ import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
+import {
+	createChunkedWebSocketMessageHandler,
+	sendChunkedWebSocketMessage,
+} from "../shared/chunked-websocket";
 import { disposeAllRemoteProxySessions, parseProjectOptions } from "./config";
 import { poolWorkerStarted, poolWorkerStopped } from "./pages";
 import { type WorkerPoolOptionsContext } from "./plugin";
@@ -208,6 +212,12 @@ export class CloudflarePoolWorker implements PoolWorker {
 		}
 	}
 
+	private sendSerializedMessage(message: string): void {
+		const socket = this.socket;
+		assert(socket, "Message sent to Worker before initialisation");
+		sendChunkedWebSocketMessage((frame) => socket.send(frame), message);
+	}
+
 	send(message: WorkerRequest): void {
 		// Vitest will always call `start()` before calling `send()`
 		assert(this.socket, "Message sent to Worker before initialisation");
@@ -284,7 +294,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 				toSend = inlinedResponse;
 			}
 		}
-		this.socket.send(structuredSerializableStringify(toSend));
+		this.sendSerializedMessage(structuredSerializableStringify(toSend));
 	}
 
 	on(
@@ -306,10 +316,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 		);
 
 		if (event === "message") {
-			const messageWrapper = (m: { data: string | ArrayBuffer }) => {
-				const d = structuredSerializableParse(
-					m.data as string
-				) as WorkerResponse;
+			const handleMessage = createChunkedWebSocketMessageHandler((data) => {
+				const d = structuredSerializableParse(data) as WorkerResponse;
 
 				// This is a birpc serialised message before it's been parsed, which is why the properties are so unintelligible
 				// We're looking for a `fetch()` RPC call: https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/types/rpc.ts#L8
@@ -334,7 +342,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 						(/^(cloudflare|workerd):/.test(specifier) ||
 							workerdBuiltinModules.has(specifier))
 					) {
-						return this.socket.send(
+						return this.sendSerializedMessage(
 							// Tell Vitest to treat this module as "external" and load it using a workerd module import
 							structuredSerializableStringify({
 								t: "s",
@@ -367,7 +375,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 							externalize = externalize.slice(0, -"?module".length);
 						}
 
-						return this.socket.send(
+						return this.sendSerializedMessage(
 							structuredSerializableStringify({
 								t: "s",
 								i: d.i,
@@ -393,6 +401,9 @@ export class CloudflarePoolWorker implements PoolWorker {
 					this.moduleFetchRequestIds.add(d.i);
 				}
 				(callback as (response: WorkerResponse) => void)(d);
+			});
+			const messageWrapper = (m: { data: string | ArrayBuffer }) => {
+				handleMessage(m.data as string);
 			};
 			this.messageListener = messageWrapper as (
 				event: MiniflareMessageEvent
