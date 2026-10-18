@@ -4,7 +4,7 @@ import dedent from "ts-dedent";
 import { test } from "./helpers";
 
 test(
-	"v8 coverage reports source files with the default provider",
+	"v8 coverage reports source files across isolated test files with the default provider",
 	{ timeout: 60_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		await seed({
@@ -25,6 +25,8 @@ test(
 						}),
 					],
 					test: {
+						fileParallelism: false,
+						isolate: true,
 						coverage: {
 							reporter: ["json-summary"],
 							include: ["src/**"],
@@ -48,11 +50,27 @@ test(
 					expect(greeting("World")).toBe("Hello, World!");
 				});
 			`,
+			"src/farewell.ts": dedent /* javascript */ `
+				export function farewell(name: string): string {
+					if (name === "World") {
+						return "Goodbye, World!";
+					}
+					return "Goodbye, stranger!";
+				}
+			`,
+			"farewell.test.ts": dedent /* javascript */ `
+				import { farewell } from "./src/farewell";
+				import { it } from "vitest";
+
+				it("says goodbye to the world", ({ expect }) => {
+					expect(farewell("World")).toBe("Goodbye, World!");
+				});
+			`,
 		});
 
 		const result = await vitestRun({ flags: ["--coverage"] });
-		expect(await result.exitCode).toBe(0);
 		const output = result.stdout + result.stderr;
+		expect(await result.exitCode, output).toBe(0);
 		expect(output).toContain(
 			'Removing `disable_nodejs_inspector_module` compatibility flag during tests as that feature is needed because Vitest\'s `coverage.provider` is set to `"v8"`.'
 		);
@@ -70,13 +88,15 @@ test(
 				lines: { pct: number };
 			},
 		][];
-		const greetingCoverage = entries.find(([key]) =>
-			key.endsWith("/src/greeting.ts")
-		)?.[1];
+		for (const file of ["greeting.ts", "farewell.ts"]) {
+			const coverage = entries.find(([key]) =>
+				key.endsWith(`/src/${file}`)
+			)?.[1];
 
-		expect(greetingCoverage?.branches.pct).toBe(50);
-		expect(greetingCoverage?.functions.pct).toBe(100);
-		expect(greetingCoverage?.lines.pct).toBeLessThan(100);
+			expect(coverage?.branches.pct, file).toBe(50);
+			expect(coverage?.functions.pct, file).toBe(100);
+			expect(coverage?.lines.pct, file).toBeLessThan(100);
+		}
 	}
 );
 

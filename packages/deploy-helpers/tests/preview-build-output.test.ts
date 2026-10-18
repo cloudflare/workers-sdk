@@ -6,7 +6,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { previewBuildOutput } from "../src/preview/preview";
 import type {
 	PreviewBuildOutput,
-	PreviewCallbacks,
+	PreviewOptions,
 } from "../src/preview/preview";
 import type {
 	ParsedOutputRootConfig,
@@ -210,7 +210,7 @@ describe("previewBuildOutput", () => {
 			.fn()
 			.mockResolvedValue(normalisedContainerConfig);
 		const deployPreviewContainers = vi.fn().mockResolvedValue(undefined);
-		const callbacks: PreviewCallbacks = {
+		const options: PreviewOptions = {
 			getNormalizedContainerOptions,
 			deployPreviewContainers,
 		};
@@ -238,7 +238,7 @@ describe("previewBuildOutput", () => {
 					},
 				],
 			},
-			callbacks
+			options
 		);
 
 		expect(getNormalizedContainerOptions).toHaveBeenCalledWith(
@@ -697,8 +697,38 @@ describe("previewBuildOutput", () => {
 		expect(mocks.getPreview).not.toHaveBeenCalled();
 	});
 
+	it.for<NonNullable<ParsedOutputWorkerConfig["domains"]>>([
+		["example.com"],
+		[{ hostname: "example.com", production: true, previews: false }],
+		[{ hostname: "previews.example.com", production: false, previews: true }],
+		[{ hostname: "example.com", production: true, previews: true }],
+	])("uses parent hosting with domains %j", async (domains, { expect }) => {
+		const config = buildOutputConfig({ domains });
+		const preview = {
+			...previewResource,
+			urls: ["https://feature.previews.example.com"],
+		};
+		const deployment = {
+			...deploymentResource,
+			urls: ["https://deployment-id-feature.previews.example.com"],
+		};
+		mocks.getPreview.mockResolvedValue(preview);
+		mocks.getPreviewDeployment.mockResolvedValue(deployment);
+		mocks.createPreviewDeployment.mockResolvedValue(deployment);
+
+		const result = await uploadPreview(config);
+
+		expect(result).toMatchObject({ preview, deployment });
+		expect(mocks.createPreviewDeployment).toHaveBeenCalledOnce();
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request).toMatchObject({ main_module: "index.js" });
+		expect(request).not.toHaveProperty("domains");
+		expect(request).not.toHaveProperty("routes");
+		expect(mocks.createPreviewParentWorker).not.toHaveBeenCalled();
+		expect(config.domains).toEqual(domains);
+	});
+
 	it.for<[string, Partial<ParsedOutputWorkerConfig>]>([
-		["custom domains", { domains: ["preview.example.com"] }],
 		["triggers", { triggers: [{ type: "scheduled", schedule: "0 * * * *" }] }],
 		[
 			"streaming tail consumers",

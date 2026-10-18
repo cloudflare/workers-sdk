@@ -259,6 +259,9 @@ function convertTopLevel(
 	if (config.observability !== undefined) {
 		result.observability = convertObservability(config.observability);
 	}
+	if (config.access !== undefined) {
+		result.access = config.access;
+	}
 	if (config.cache !== undefined) {
 		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
 		const cache: RawCacheConfig = {
@@ -1085,7 +1088,16 @@ function convertDomains(
 		? [...result.routes]
 		: [];
 	for (const domain of config.domains) {
-		routes.push({ pattern: domain, custom_domain: true });
+		routes.push(
+			typeof domain === "string"
+				? { pattern: domain, custom_domain: true }
+				: {
+						pattern: domain.hostname,
+						custom_domain: true,
+						enabled: domain.production,
+						previews_enabled: domain.previews,
+					}
+		);
 	}
 	result.routes = routes;
 }

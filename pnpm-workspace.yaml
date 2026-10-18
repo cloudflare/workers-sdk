@@ -43,10 +43,6 @@ minimumReleaseAgeExclude:
   # cf is developed in a separate repository and may need to be tested here on
   # the day it is published.
   - "cf"
-  # TEMPORARY: vite-plugin-cloudflare + vitest-plugin are pinned to the
-  # published miniflare while the workspace miniflare is mid-migration. Revert
-  # with the repoint.
-  - "miniflare"
   - "workerd"
   # The below is to install the rosie-skills package and remove the problematic
   # wasm module it brings as soon as possible
@@ -110,7 +106,7 @@ patchedDependencies:
 # ──────────────────────────────────────────────────────────────────────────────
 
 catalog:
-  cf: "1.0.0-beta.2"
+  cf: "1.0.0-beta.7"
   chalk: "5.3.0"
   command-exists: "1.2.9"
   dotenv: "16.3.1"
@@ -131,8 +127,8 @@ catalog:
   esbuild: "0.28.2"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20261006.1"
-  workerd: "1.20261006.1"
+  "@cloudflare/workers-types": "^5.20261016.1"
+  workerd: "1.20261016.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.9.0"
   msw: "2.14.6"
@@ -155,5 +151,5 @@ catalog:
 
 catalogs:
   vitest5:
-    "@vitest/ui": "5.0.3"
-    vitest: "5.0.3"
+    "@vitest/ui": "5.0.4"
+    vitest: "5.0.4"

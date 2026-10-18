@@ -1,9 +1,9 @@
 export * from "./shared/types";
 export { initDeployHelpersContext } from "./shared/context";
 export { default as deploy } from "./deploy/deploy";
-export type { DeployCallbacks } from "./deploy/deploy";
+export type { DeployOptions } from "./deploy/deploy";
 export { default as versionsUpload } from "./deploy/versions-upload";
-export type { VersionsUploadCallbacks } from "./deploy/versions-upload";
+export type { VersionsUploadOptions } from "./deploy/versions-upload";
 export * from "./triggers/deploy";
 export * from "./triggers/subdomain";
 export * from "./triggers/zones";

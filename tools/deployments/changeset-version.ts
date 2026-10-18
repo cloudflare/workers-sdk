@@ -20,6 +20,7 @@ const DEPENDENCY_FIELDS = [
 interface NpmPrereleaseConfig {
 	tag: string;
 	numbered: boolean;
+	numberPrefix?: "v";
 }
 
 interface PackageJSON {
@@ -95,7 +96,18 @@ export function getNpmPrereleaseConfig(
 		typeof numbered === "boolean",
 		`Invalid ${pkg.name} npmPrerelease numbered value`
 	);
-	return { tag, numbered };
+	// Vite plugin v2 betas were previously published as `2.0.0-beta.sha-*`.
+	// Temporarily start its Changesets releases at `2.0.0-beta.v.0`; `v` sorts
+	// after `sha-*`. Remove this special case once v2 is stable.
+	const numberPrefix =
+		pkg.name === "@cloudflare/vite-plugin" && tag === "beta" && numbered
+			? "v"
+			: undefined;
+	return {
+		tag,
+		numbered,
+		...(numberPrefix === undefined ? {} : { numberPrefix }),
+	};
 }
 
 function appendPrerelease(
@@ -103,7 +115,9 @@ function appendPrerelease(
 	config: NpmPrereleaseConfig,
 	number: number
 ): string {
-	const suffix = config.numbered ? `.${number}` : "";
+	const prefix =
+		config.numberPrefix === undefined ? "" : `.${config.numberPrefix}`;
+	const suffix = config.numbered ? `${prefix}.${number}` : "";
 	return `${coreVersion}-${config.tag}${suffix}`;
 }
 
@@ -113,7 +127,8 @@ function appendPrerelease(
  * but it does not preserve either of the prerelease policies we support:
  *
  * - Numbered prereleases keep their original core version and increment the
- *   suffix: `2.0.0-beta.0` -> `2.0.0-beta.1`.
+ *   suffix: `2.0.0-beta.0` -> `2.0.0-beta.1`. Vite plugin v2 temporarily uses
+ *   `2.0.0-beta.v.0` -> `2.0.0-beta.v.1` instead.
  * - Unnumbered prereleases increment the patch instead:
  *   `5.20261006.1-beta` -> `5.20261006.2-beta`.
  *
@@ -157,17 +172,17 @@ export function getNextNpmPrereleaseVersion({
 	}
 	nextCoreVersion = normalizeVersion(nextCoreVersion);
 
-	// Continue an existing `<tag>.<number>` sequence when possible. A tag or core
-	// change starts a new sequence at zero.
+	// Continue an existing numbered sequence when possible. A tag or core change
+	// starts a new sequence at zero.
 	let number = 0;
+	const previousNumber = previous.prerelease.at(-1);
 	if (
 		config.numbered &&
 		previous.prerelease[0] === config.tag &&
-		previous.prerelease.length === 2 &&
-		typeof previous.prerelease[1] === "number" &&
+		typeof previousNumber === "number" &&
 		nextCoreVersion === previousCoreVersion
 	) {
-		number = previous.prerelease[1];
+		number = previousNumber;
 		if (previousVersion !== versionAfterChangesets) {
 			number++;
 		}
@@ -258,7 +273,7 @@ function getPackagesBeforeVersioning(): PreviousPackage[] {
 	return packages;
 }
 
-function correctVersionReferences({
+export function correctVersionReferences({
 	packageName,
 	packagePath,
 	versionAfterChangesets,
@@ -287,9 +302,13 @@ function correctVersionReferences({
 				if (constraint === undefined) {
 					continue;
 				}
-				// Workspace ranges are resolved from the target manifest at publish time
-				// and do not contain the incorrect version produced by Changesets.
-				if (constraint.startsWith("workspace:")) {
+				// Workspace ranges resolve from the target manifest at publish time;
+				// npm aliases intentionally use a published version outside the workspace.
+				// Neither needs the version correction applied by this script.
+				if (
+					constraint.startsWith("workspace:") ||
+					constraint.startsWith("npm:")
+				) {
 					continue;
 				}
 				dependencies[packageName] = nextVersion;

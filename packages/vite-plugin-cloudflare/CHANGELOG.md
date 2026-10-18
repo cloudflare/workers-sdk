@@ -1,5 +1,118 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.1
+
+### Minor Changes
+
+- [#16266](https://github.com/cloudflare/workers-sdk/pull/16266) [`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add custom domain traffic settings to experimental programmatic Worker configuration
+
+  Domain objects accept `hostname`, `production`, and `previews` to serve production traffic, Preview traffic, or both. String domains continue to serve production traffic only. Apply hosting settings with a parent Worker or trigger deployment.
+
+### Patch Changes
+
+- Updated dependencies [[`e1d1b77`](https://github.com/cloudflare/workers-sdk/commit/e1d1b7765829ef9538e7d7882fe74ad8ca2a38d4), [`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c)]:
+  - miniflare@5.20261012.1-beta
+  - @cloudflare/config@0.27.0
+  - @cloudflare/runtime-types@0.1.12
+  - @cloudflare/build-output-utils@0.9.3
+
+## 2.0.0-beta.v.0
+
+### Major Changes
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Load local Worker secrets with Vite-compatible file resolution
+
+  The plugin now uses Vite's resolved mode and `envDir` when locating files that provide declared Worker secrets.
+
+  `CLOUDFLARE_ENV` is no longer used to select mode-specific `.dev.vars` and `.env` files. Projects that relied on it should use Vite's `--mode` option instead. For preview, set the mode during `vite build`; `vite preview` uses the mode recorded in the Build Output.
+
+  The deprecated `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_<BINDING_NAME>` environment variable is no longer supported. Rename Hyperdrive overrides to `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_<BINDING_NAME>`.
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Remove legacy local testing endpoint rewrites
+
+  The plugin no longer rewrites legacy local testing endpoints to their canonical `/cdn-cgi/local/*` and `/__cf_local/*` equivalents. Local-development scripts, tests, or integrations that call the legacy endpoints directly must update them as follows:
+
+  - `/cdn-cgi/handler/scheduled` and `/cdn-cgi/mf/scheduled` → `/cdn-cgi/local/scheduled`
+  - `/cdn-cgi/handler/email` → `/cdn-cgi/local/email`
+  - `/cdn-cgi/mf/stream/*` → `/__cf_local/stream/*`
+  - `/cdn-cgi/mf/imagedelivery/*` → `/__cf_local/imagedelivery/*`
+  - `/cdn-cgi/explorer/*` → `/cdn-cgi/local/explorer/*`
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use native Cloudflare configuration and Build Output in Vite plugin v2
+
+  **Wrangler cannot deploy apps built with Vite plugin v2. Deploy with `cf deploy` instead.**
+
+  The plugin now loads Worker configuration from `cloudflare.config.ts` and no longer loads Wrangler configuration files. The `configPath` and `experimental.newConfig` options have been removed. Worker configuration supplied through the `config`, `auxiliaryWorkers`, and `prerenderWorker` plugin options now uses the native camelCase configuration format, and the exported `WorkerConfig` type has been updated to match.
+
+  Projects using a Wrangler configuration file must move their Worker configuration to `cloudflare.config.ts`.
+
+  Builds now always emit a structured Build Output in `.cloudflare/output`. When Containers are configured, `vite build` builds any Dockerfile-backed Container images and records them in the output. `vite preview` then reuses those images rather than rebuilding them when the preview server starts.
+
+  Wrangler is no longer a runtime or peer dependency of the plugin.
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Drop support for Vite 6
+
+  The minimum supported Vite version is now Vite 7. Projects using Vite 6 must upgrade to Vite 7 or later before updating `@cloudflare/vite-plugin` to this release.
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Default the entry Worker to the `ssr` Vite environment
+
+  The entry Worker's Vite environment now defaults to `ssr` instead of deriving its name from the Worker name. Projects whose Vite configuration or plugins target the entry environment by its previous Worker-derived name must target `environments.ssr`, or preserve the previous name by setting `viteEnvironment.name` explicitly.
+
+### Minor Changes
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Generate Worker types from `cloudflare.config.ts`
+
+  The plugin now generates `.cloudflare/types/index.d.ts` during development and builds. Generated declarations infer bindings from `cloudflare.config.ts` and include runtime types for the configured compatibility date and flags by default. Use the top-level `types` option to disable generation or omit runtime types.
+
+  Include the configuration and generated declarations in the TypeScript configuration for your Worker:
+
+  ```json
+  {
+    "include": ["src", "cloudflare.config.ts", ".cloudflare/types"]
+  }
+  ```
+
+  The `experimental.newConfig` option, including `experimental.newConfig.types`, has been removed.
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Stabilize the `prerenderWorker` plugin option
+
+  Configure a dedicated prerender Worker with the top-level `prerenderWorker` option instead of `experimental.prerenderWorker`.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - miniflare@5.20261012.0-beta
+
+## 1.64.0
+
+### Minor Changes
+
+- [#16245](https://github.com/cloudflare/workers-sdk/pull/16245) [`d6b1c82`](https://github.com/cloudflare/workers-sdk/commit/d6b1c823268226754441ac79084be2cec4abcea3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Generate source maps for Worker environments by default
+
+  Worker builds now emit source maps unless Vite's `build.sourcemap` or the Worker's `upload_source_maps` is set, so deployed Workers get stack traces that point at the original source. The source maps are written next to the Worker bundle and included in Build Output; the client environment is unchanged, so no source maps are added to public assets. Set `build.sourcemap: false` for the Worker environment, or `upload_source_maps: false` in the Worker config, to opt out.
+
+### Patch Changes
+
+- Updated dependencies [[`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be), [`d6b1c82`](https://github.com/cloudflare/workers-sdk/commit/d6b1c823268226754441ac79084be2cec4abcea3), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`acd2822`](https://github.com/cloudflare/workers-sdk/commit/acd2822046a1bf201d9143ee40969f3dc3eb9650)]:
+  - miniflare@5.20261012.0-beta
+  - wrangler@4.151.0
+
+## 1.63.2
+
+### Patch Changes
+
+- [#16025](https://github.com/cloudflare/workers-sdk/pull/16025) [`61e07fd`](https://github.com/cloudflare/workers-sdk/commit/61e07fd59d2ae474c2ddf4e5b3805319b7541fe3) Thanks [@kohjunhao](https://github.com/kohjunhao)! - Fix optional Docker lookups printing Docker CLI errors during successful builds
+
+  `cf build` looks for Container images left behind by earlier builds so it can remove them. This lookup is best effort, but when Docker could not be reached it still printed errors such as `Cannot connect to the Docker daemon`, even when the build succeeded and no image needed Docker. Docker commands whose output Wrangler reads no longer forward the Docker CLI's error output to the terminal. If one of these commands fails in a way that stops the command, the error message still includes the Docker CLI's output.
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+- Updated dependencies [[`fcf625d`](https://github.com/cloudflare/workers-sdk/commit/fcf625da014474f656a962b9313dec54563f3573), [`091e5ec`](https://github.com/cloudflare/workers-sdk/commit/091e5ec2ac3f4ba26c048d12546b5b83ca8eaab1), [`5152bf8`](https://github.com/cloudflare/workers-sdk/commit/5152bf8c3591863243da275debf02ecbf66f560e), [`9f87de8`](https://github.com/cloudflare/workers-sdk/commit/9f87de8cd6e8ff5afedb5430acd8776cb239844e), [`daae435`](https://github.com/cloudflare/workers-sdk/commit/daae4351fb517f8a93106a00c6a2a5b31600242a), [`18f061c`](https://github.com/cloudflare/workers-sdk/commit/18f061c3cf604479d9f9d2883cc49786a46eb07a), [`9be5ec7`](https://github.com/cloudflare/workers-sdk/commit/9be5ec7cf2c3988d0a446a5207d0d23def541cf5), [`61e07fd`](https://github.com/cloudflare/workers-sdk/commit/61e07fd59d2ae474c2ddf4e5b3805319b7541fe3), [`cafd3f9`](https://github.com/cloudflare/workers-sdk/commit/cafd3f94207bd2c886e6ab20de17e45e0eb50f1e), [`ea64ec4`](https://github.com/cloudflare/workers-sdk/commit/ea64ec4e681f9e43bd0ded93e490c0027018f80e), [`d232454`](https://github.com/cloudflare/workers-sdk/commit/d232454ca9059b7722a013ab128354d7e44a2031)]:
+  - wrangler@4.150.0
+  - miniflare@5.20261006.2-beta
+
 ## 1.63.1
 
 ### Patch Changes

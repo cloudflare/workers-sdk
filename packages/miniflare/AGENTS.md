@@ -8,6 +8,9 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 
 - `src/index.ts` — Main `Miniflare` class, server setup, plugin orchestration, all exports
 - `src/workers/` — ~30 embedded worker scripts (D1, KV, R2, caches, etc.), built via `worker:` virtual import scheme
+- `src/workers/d1/entry.worker.ts` — D1-specific HTTP/RPC entrypoint; selects a database using binding props and adapts RPC queries to the database worker's HTTP protocol
+- `src/workers/d1/database.worker.ts` — local D1 SQLite execution, transactions, metadata, and export; protocol schemas shared with the entrypoint live in `src/workers/d1/schemas.ts`
+- `src/workers/d1/export.ts` — shared local export pragma recognition and dedicated RPC export adaptation; keeps the legacy export response separate from ordinary query contracts
 - `src/workers/shared/` — Shared utilities across embedded workers
 - `src/workers/core/dev-registry-proxy.worker.ts` — Proxy worker for cross-process service bindings via debug port RPC
 - `src/workers/core/dev-registry-proxy-shared.worker.ts` — Shared proxy logic (registry Map, DO proxy class, tail serializers)

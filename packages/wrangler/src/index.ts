@@ -1065,7 +1065,10 @@ export function createCLIParser(argv: string[]) {
 
 	registry.define([
 		{ command: "wrangler triggers", definition: triggersNamespace },
-		{ command: "wrangler triggers deploy", definition: triggersDeployCommand },
+		{
+			command: "wrangler triggers deploy",
+			definition: triggersDeployCommand,
+		},
 	]);
 	registry.registerNamespace("triggers");
 
@@ -1169,7 +1172,10 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler queues", definition: queuesNamespace },
 		{ command: "wrangler queues list", definition: queuesListCommand },
-		{ command: "wrangler queues create", definition: queuesCreateCommand },
+		{
+			command: "wrangler queues create",
+			definition: queuesCreateCommand,
+		},
 		{ command: "wrangler queues update", definition: queuesUpdateCommand },
 		{ command: "wrangler queues delete", definition: queuesDeleteCommand },
 		{ command: "wrangler queues info", definition: queuesInfoCommand },

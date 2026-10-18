@@ -51,6 +51,29 @@ describe("loadSourceMaps", () => {
 		expect(result[0].name).toBe("src/index.ts.map");
 	});
 
+	it("loads bundled source maps when the output path is absolute", ({
+		expect,
+	}) => {
+		const entryDir = createTempDir();
+		const outDir = createTempDir();
+		writeFileSync(path.join(outDir, "index.js.map"), validSourceMap);
+
+		const main = makeModule(
+			"index.js",
+			path.join(entryDir, "index.js"),
+			"const x = 1;\n"
+		);
+		const bundle: SourceMapBundle = {
+			sourceMapPath: path.join(outDir, "index.js.map"),
+			sourceMapMetadata: { tmpDir: outDir, entryDirectory: entryDir },
+		};
+
+		const result = loadSourceMaps(main, [], bundle);
+
+		expect(result).toHaveLength(1);
+		expect(result[0].name).toBe("index.js.map");
+	});
+
 	it("throws when bundled source map file is missing", ({ expect }) => {
 		const dir = createTempDir();
 		const main = makeModule(
@@ -83,6 +106,30 @@ describe("loadSourceMaps", () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].name).toBe("index.js.map");
+	});
+
+	it("skips unresolvable source maps in scan mode when not strict", ({
+		expect,
+	}) => {
+		const dir = createTempDir();
+		writeFileSync(path.join(dir, "other.js.map"), validSourceMap);
+
+		const main = makeModule(
+			"index.js",
+			path.join(dir, "index.js"),
+			`console.log("hello");\n//# sourceMappingURL=missing.js.map`
+		);
+		const other = makeModule(
+			"other.js",
+			path.join(dir, "other.js"),
+			`console.log("other");\n//# sourceMappingURL=other.js.map`
+		);
+
+		expect(() => loadSourceMaps(main, [other], {})).toThrow();
+
+		const result = loadSourceMaps(main, [other], {}, { strict: false });
+
+		expect(result.map((sourceMap) => sourceMap.name)).toEqual(["other.js.map"]);
 	});
 
 	it("handles multiple modules with source maps in scan mode", ({ expect }) => {

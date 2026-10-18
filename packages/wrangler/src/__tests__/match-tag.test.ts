@@ -154,7 +154,7 @@ describe("match-tag", () => {
 					"network-error-worker"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build. If the problem persists, please contact support.]`
+				`[Error: The Worker name could not be validated against what is expected by the build system. Please retry the build. If the problem persists, please contact support.]`
 			);
 		});
 

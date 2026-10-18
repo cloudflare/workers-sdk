@@ -1,10 +1,53 @@
-import { it } from "vitest";
+import assert from "node:assert";
+import { execSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { gt } from "semver";
+import { it, vi } from "vitest";
 import {
+	correctVersionReferences,
 	getNpmPrereleaseConfig,
 	getNextMiniflarePrereleaseVersion,
 	getNextMiniflareVersion,
 	getNextNpmPrereleaseVersion,
 } from "../changeset-version";
+
+vi.mock("node:child_process", () => ({ execSync: vi.fn() }));
+
+it("preserves npm aliases when correcting manifest versions", ({
+	expect,
+	onTestFinished,
+}) => {
+	const directory = mkdtempSync(join(tmpdir(), "changeset-version-"));
+	onTestFinished(() => {
+		// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- test cleanup
+		rmSync(directory, { recursive: true, force: true });
+	});
+	const packagePath = join(directory, "package.json");
+	writeFileSync(
+		packagePath,
+		JSON.stringify({
+			name: "consumer",
+			version: "1.0.0",
+			dependencies: { "package-a": "2.0.0" },
+			devDependencies: { "package-a": "npm:package-a@1.0.0" },
+		})
+	);
+	vi.mocked(execSync).mockReturnValue(Buffer.from(packagePath));
+
+	correctVersionReferences({
+		packageName: "package-a",
+		packagePath,
+		versionAfterChangesets: "2.0.0",
+		nextVersion: "2.0.0-beta.1",
+	});
+
+	expect(JSON.parse(readFileSync(packagePath, "utf8"))).toMatchObject({
+		dependencies: { "package-a": "2.0.0-beta.1" },
+		devDependencies: { "package-a": "npm:package-a@1.0.0" },
+	});
+});
 
 it("rejects latest as an npm prerelease tag", ({ expect }) => {
 	expect(() =>
@@ -138,3 +181,29 @@ it.for(
 		expect(actual).toEqual(correctVersion);
 	}
 );
+
+it("versions Vite plugin v2 betas after its SHA prereleases", ({ expect }) => {
+	const config = getNpmPrereleaseConfig({
+		name: "@cloudflare/vite-plugin",
+		version: "1.63.1",
+		"workers-sdk": {
+			npmPrerelease: { tag: "beta", numbered: true },
+		},
+	});
+	assert(config !== undefined);
+
+	const firstVersion = getNextNpmPrereleaseVersion({
+		previousVersion: "1.63.1",
+		versionAfterChangesets: "2.0.0",
+		config,
+	});
+	expect(firstVersion).toBe("2.0.0-beta.v.0");
+	expect(gt(firstVersion, "2.0.0-beta.sha-fffffffff")).toBe(true);
+	expect(
+		getNextNpmPrereleaseVersion({
+			previousVersion: firstVersion,
+			versionAfterChangesets: "2.0.0",
+			config,
+		})
+	).toBe("2.0.0-beta.v.1");
+});

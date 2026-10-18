@@ -1,5 +1,60 @@
 # @cloudflare/deploy-helpers
 
+## 0.21.0
+
+### Minor Changes
+
+- [#16266](https://github.com/cloudflare/workers-sdk/pull/16266) [`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add custom domain traffic settings to experimental programmatic Worker configuration
+
+  Domain objects accept `hostname`, `production`, and `previews` to serve production traffic, Preview traffic, or both. String domains continue to serve production traffic only. Apply hosting settings with a parent Worker or trigger deployment.
+
+### Patch Changes
+
+- Updated dependencies [[`e1d1b77`](https://github.com/cloudflare/workers-sdk/commit/e1d1b7765829ef9538e7d7882fe74ad8ca2a38d4), [`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c)]:
+  - miniflare@5.20261012.1-beta
+  - @cloudflare/config@0.27.0
+  - @cloudflare/containers-shared@0.22.1
+
+## 0.20.4
+
+### Patch Changes
+
+- Updated dependencies [[`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd)]:
+  - @cloudflare/containers-shared@0.22.0
+  - miniflare@5.20261012.0-beta
+
+## 0.20.3
+
+### Patch Changes
+
+- Updated dependencies [[`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`acd2822`](https://github.com/cloudflare/workers-sdk/commit/acd2822046a1bf201d9143ee40969f3dc3eb9650)]:
+  - @cloudflare/config@0.26.0
+  - miniflare@5.20261012.0-beta
+  - @cloudflare/containers-shared@0.21.7
+
+## 0.20.2
+
+### Patch Changes
+
+- [#16161](https://github.com/cloudflare/workers-sdk/pull/16161) [`fcf625d`](https://github.com/cloudflare/workers-sdk/commit/fcf625da014474f656a962b9313dec54563f3573) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Clarify the Worker not found error during CI deploy validation
+
+  Wrangler now reports that the configured Worker could not be found in the account instead of incorrectly describing the failure as a name mismatch.
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+- [#15517](https://github.com/cloudflare/workers-sdk/pull/15517) [`ea64ec4`](https://github.com/cloudflare/workers-sdk/commit/ea64ec4e681f9e43bd0ded93e490c0027018f80e) Thanks [@xgame92](https://github.com/xgame92)! - Preserve binding options when provisioning resources through a redirected config
+
+  Wrangler now writes provisioned resource identifiers to both the redirected and original config files without copying other binding options between them. This prevents generated relative paths such as D1 `migrations_dir` from replacing user-authored paths during Vite deployments.
+
+- Updated dependencies [[`5152bf8`](https://github.com/cloudflare/workers-sdk/commit/5152bf8c3591863243da275debf02ecbf66f560e), [`9f87de8`](https://github.com/cloudflare/workers-sdk/commit/9f87de8cd6e8ff5afedb5430acd8776cb239844e), [`9be5ec7`](https://github.com/cloudflare/workers-sdk/commit/9be5ec7cf2c3988d0a446a5207d0d23def541cf5), [`61e07fd`](https://github.com/cloudflare/workers-sdk/commit/61e07fd59d2ae474c2ddf4e5b3805319b7541fe3), [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9), [`d8b1fca`](https://github.com/cloudflare/workers-sdk/commit/d8b1fca2ba2fec3d3945fa6ec719b8f6766ad610), [`d232454`](https://github.com/cloudflare/workers-sdk/commit/d232454ca9059b7722a013ab128354d7e44a2031)]:
+  - miniflare@5.20261006.2-beta
+  - @cloudflare/containers-shared@0.21.6
+  - @cloudflare/workers-utils@0.47.2
+  - @cloudflare/config@0.25.0
+  - @cloudflare/cli-shared-helpers@0.2.6
+
 ## 0.20.1
 
 ### Patch Changes
