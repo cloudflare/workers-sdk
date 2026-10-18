@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { mockPackageManager } from "helpers/__tests__/mocks";
+import astro from "templates/astro/c3";
 import nuxt from "templates/nuxt/c3";
 import { afterEach, describe, test, vi } from "vitest";
 import { getFrameworkCli, runFrameworkGenerator } from "..";
@@ -61,6 +62,50 @@ describe("framework CLI Node.js requirements", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
 	});
+
+	describe.each(Object.entries(astro.platformVariants))(
+		"Astro (%s)",
+		(_, template) => {
+			test.for(["22.0.0", "22.21.99"])(
+				"rejects Node.js %s before running create-astro",
+				async (nodeVersion, { expect }) => {
+					vi.stubGlobal("process", {
+						...process,
+						versions: { ...process.versions, node: nodeVersion },
+					});
+					const ctx = createTestContext();
+					ctx.template = template;
+
+					await expect(
+						runFrameworkGenerator(ctx, [ctx.project.name])
+					).rejects.toThrow(
+						`Astro requires Node.js >=22.22.0. You are using Node.js ${nodeVersion}. Please upgrade Node.js and try again.`
+					);
+					expect(runCommand).not.toHaveBeenCalled();
+				}
+			);
+
+			test.for(["22.22.0", "24.0.0", "26.0.0"])(
+				"runs create-astro on Node.js %s",
+				async (nodeVersion, { expect }) => {
+					vi.stubGlobal("process", {
+						...process,
+						versions: { ...process.versions, node: nodeVersion },
+					});
+					mockPackageManager("pnpm");
+					const ctx = createTestContext();
+					ctx.template = template;
+
+					await runFrameworkGenerator(ctx, [ctx.project.name]);
+
+					expect(runCommand).toHaveBeenCalledWith(
+						["pnpx", getFrameworkCli(ctx), ctx.project.name],
+						{ env: {} }
+					);
+				}
+			);
+		}
+	);
 
 	describe.each(Object.entries(nuxt.platformVariants))(
 		"Nuxt (%s)",

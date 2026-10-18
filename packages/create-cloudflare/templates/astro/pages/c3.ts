@@ -75,6 +75,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "astro",
 	frameworkCli: "create-astro",
+	frameworkCliNodeVersion: ">=22.22.0",
 	platform: "pages",
 	hidden: true,
 	displayName: "Astro",
