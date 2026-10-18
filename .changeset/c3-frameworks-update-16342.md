@@ -2,7 +2,7 @@
 "create-cloudflare": patch
 ---
 
-Update dependencies of "create-cloudflare"
+Use create-astro 5.3.0 for new Astro projects. If your Node.js version is older than 22.22.0, C3 now explains the required upgrade before starting the Astro generator.
 
 The following dependency versions have been updated:
 
