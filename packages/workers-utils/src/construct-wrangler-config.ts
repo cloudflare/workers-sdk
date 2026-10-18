@@ -9,7 +9,6 @@ import type {
 } from "./config/environment";
 import type { WorkerMetadata } from "./types";
 import type { AssetConfig } from "@cloudflare/workers-shared";
-import type { Cloudflare } from "cloudflare";
 
 type RoutesRes = {
 	id: string;
@@ -18,6 +17,8 @@ type RoutesRes = {
 	script: string;
 }[];
 
+// Keep SDK response shapes structural so consumers do not need the SDK's
+// declarations. The type assertions in the tests track changes to these shapes.
 interface APIWorkerConfig {
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/list/ */
 	name: string; // property renamed from `id`...
@@ -31,16 +32,37 @@ interface APIWorkerConfig {
 	migration_tag?: string;
 
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/list/ */
-	domains: Cloudflare.Workers.Domain[];
+	domains: {
+		id?: string;
+		environment?: string;
+		hostname?: string;
+		service?: string;
+		zone_id?: string;
+		zone_name?: string;
+	}[];
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/schedules/methods/get/ */
-	schedules: Cloudflare.Workers.Scripts.Schedules.ScheduleGetResponse.Schedule[];
+	schedules: {
+		cron: string;
+		created_on?: string;
+		modified_on?: string;
+	}[];
 
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/subresources/versions/methods/get/ using `{version_id}` of `latest` */
 	assets?: AssetConfig;
 	bindings: WorkerMetadata["bindings"];
-	observability: Cloudflare.Workers.Beta.Worker.Observability | undefined;
+	observability:
+		| {
+				enabled?: boolean;
+				head_sampling_rate?: number;
+				logs?: {
+					enabled?: boolean;
+					head_sampling_rate?: number;
+					invocation_logs?: boolean;
+				};
+		  }
+		| undefined;
 	limits: { cpu_ms?: number; subrequests?: number } | undefined;
-	placement: Cloudflare.Workers.Beta.Workers.Version.Placement | undefined;
+	placement: { mode?: "smart" } | undefined;
 	subdomain: {
 		enabled: boolean;
 		previews_enabled: boolean;
