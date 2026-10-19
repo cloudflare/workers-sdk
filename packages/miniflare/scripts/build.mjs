@@ -33,6 +33,7 @@
 import { cpSync, existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import esbuild from "esbuild";
 import { getPackage, pkgRoot } from "./common.mjs";
 
@@ -40,6 +41,7 @@ import { getPackage, pkgRoot } from "./common.mjs";
 
 const argv = process.argv.slice(2);
 const watch = argv[0] === "--watch";
+const sourcemap = process.env.SOURCEMAPS !== "false";
 
 // --- Helpers ---
 
@@ -237,7 +239,7 @@ const embedWorkersPlugin = {
 					format: "esm",
 					target: "esnext",
 					bundle: true,
-					sourcemap: true,
+					sourcemap,
 					sourcesContent: true,
 					// These virtual modules are provided by workerd at runtime
 					external: [
@@ -416,13 +418,17 @@ async function buildPackage() {
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
 	const outPath = path.join(pkgRoot, "dist");
+	if (!watch) {
+		// A release build must not retain maps emitted by an earlier development build.
+		await removeDir(outPath);
+	}
 
 	const buildOptions = {
 		platform: "node",
 		format: "cjs",
 		target: "esnext",
 		bundle: true,
-		sourcemap: true,
+		sourcemap,
 		sourcesContent: true,
 		tsconfig: path.join(pkgRoot, "tsconfig.json"),
 		external: [
@@ -451,7 +457,9 @@ async function buildPackage() {
 	}
 
 	copyLocalExplorerUi(outPath, pkgRoot);
-	await patchSourcemaps(outPath);
+	if (sourcemap) {
+		await patchSourcemaps(outPath);
+	}
 }
 
 buildPackage().catch((e) => {

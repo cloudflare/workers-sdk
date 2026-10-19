@@ -6,7 +6,7 @@ import {
 	cleanupContainers,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
-import { getDockerPath } from "@cloudflare/workers-utils";
+import { configFileName, getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	buildPublicUrl,
@@ -233,6 +233,7 @@ export async function convertToConfigBundle(
 
 export type ContainerImagePreparationState = {
 	dockerPath: string;
+	configFileName: string;
 	complianceRegion: StartDevWorkerOptions["complianceRegion"];
 	hasContainers: boolean;
 	containerOptions: ContainerDevOptions[];
@@ -311,6 +312,7 @@ export class LocalRuntimeController extends RuntimeController {
 	): Promise<ContainerImagePreparationState | undefined> {
 		const nextState: ContainerImagePreparationState = {
 			dockerPath: data.config.dev.dockerPath ?? getDockerPath(),
+			configFileName: configFileName(data.config.config),
 			complianceRegion: data.config.complianceRegion,
 			hasContainers: Boolean(
 				data.config.dev.enableContainers &&
@@ -350,6 +352,8 @@ export class LocalRuntimeController extends RuntimeController {
 			complianceConfig: {
 				compliance_region: nextState.complianceRegion,
 			},
+			configFileName: nextState.configFileName,
+			registryConfigureCommand: "wrangler containers registries configure",
 		});
 		if (this.containerBeingBuilt) {
 			this.containerBeingBuilt.abortRequested = false;

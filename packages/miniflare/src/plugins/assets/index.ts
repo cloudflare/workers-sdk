@@ -461,7 +461,7 @@ const walk = async (dir: string) => {
 					contentHash,
 				});
 				assetsReverseMap[bytesToHex(contentHash)] = {
-					filePath: relativeFilepath,
+					filePath: relativeFilepath.split(path.sep).join("/"),
 					contentType: getContentType(filepath),
 				};
 				counter++;

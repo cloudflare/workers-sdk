@@ -1,5 +1,37 @@
 # @cloudflare/codemods
 
+## 0.5.0
+
+### Minor Changes
+
+- [#16239](https://github.com/cloudflare/workers-sdk/pull/16239) [`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support Cloudflare Access local development configuration in `cloudflare.config.ts`
+
+  Workers can now configure an Access audience and mock identity under `access.dev`, and `cf migrate` preserves this setting when converting a Wrangler configuration. Miniflare v5 now reads the setting from `config.access.dev`, aligning its Worker configuration with `@cloudflare/config`; the Miniflare v4 compatibility adapter continues to accept its existing `access` option.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      name: "api",
+      access: {
+        dev: {
+          aud: "my-access-audience",
+          identity: { email: "developer@example.com" },
+        },
+      },
+    },
+  });
+  ```
+
+  This is a breaking change for direct Miniflare v5 users: move `workers[].dev.access` to `workers[].config.access.dev`. Miniflare v5 is currently in beta.
+
+## 0.4.2
+
+### Patch Changes
+
+- [#16143](https://github.com/cloudflare/workers-sdk/pull/16143) [`271ac8e`](https://github.com/cloudflare/workers-sdk/commit/271ac8e3fe67e350c4c9a5927c2f981ba320f134) Thanks [@cpojer](https://github.com/cpojer)! - Share bundled dependencies between the CLI and library entry points
+
+  Build both entry points together to avoid shipping the same migration implementation and dependencies twice. The CLI command and public library exports remain unchanged.
+
 ## 0.4.1
 
 ### Patch Changes

@@ -204,4 +204,9 @@ export type TriggerProps = {
 	firstDeploy: boolean;
 	dryRun: boolean;
 	validated: boolean;
+	queueCreateCommand: (queueName: string) => string;
+	workersDevConfigFieldName: string;
+	workersDevConfigAssignment: (value: boolean) => string;
+	previewUrlsConfigFieldName: string;
+	previewUrlsConfigAssignment: (value: boolean) => string;
 };

@@ -14,6 +14,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import {
+	configFileName,
 	getResolvedDurableObjectContainerApps,
 	getDockerPath,
 	getDurableObjectClassNameToUseSQLiteMap,
@@ -56,6 +57,8 @@ type PrepareDurableObjectContainerApplicationsArgs = {
 	scriptName: string;
 	/** Version uploads cannot initialize applications without named images. */
 	requireExistingImageLessApplications?: boolean;
+	deployCommand?: string;
+	versionsUploadCommand?: string;
 };
 
 export type DurableObjectContainerApplication = Pick<
@@ -310,7 +313,17 @@ function validateApplicationIdentity(
 export async function validateImageLessContainerApplicationsForUpload(
 	config: ContainerlessConfig,
 	containers: DurableObjectContainerApp[],
-	{ accountId, scriptName }: { accountId: string; scriptName: string }
+	{
+		accountId,
+		scriptName,
+		deployCommand,
+		versionsUploadCommand,
+	}: {
+		accountId: string;
+		scriptName: string;
+		deployCommand: string;
+		versionsUploadCommand: string;
+	}
 ): Promise<void> {
 	const imageLessContainers = getResolvedDurableObjectContainerApps(
 		containers,
@@ -340,7 +353,7 @@ export async function validateImageLessContainerApplicationsForUpload(
 		}
 		if (namespace === undefined || existing === undefined) {
 			throw new UserError(
-				`Container "${container.name}" has no named images and has not been provisioned. Run \`wrangler deploy\` to create its Durable Object-managed application before using \`wrangler versions upload\`, or configure at least one named image.`,
+				`Container "${container.name}" has no named images and has not been provisioned. Run \`${deployCommand}\` to create its Durable Object-managed application before using \`${versionsUploadCommand}\`, or configure at least one named image.`,
 				{
 					telemetryMessage:
 						"versions upload image less container application missing",
@@ -591,11 +604,14 @@ export async function prepareDurableObjectContainerApplications(
 		scriptName,
 		dispatchNamespace,
 		requireExistingImageLessApplications = false,
+		deployCommand,
+		versionsUploadCommand,
 	}: PrepareDurableObjectContainerApplicationsArgs
 ): Promise<PreparedContainerImages> {
 	validateDurableObjectContainerApplications(
 		config,
-		durableObjectContainerConfig
+		durableObjectContainerConfig,
+		configFileName(config.configPath, config.userConfigPath)
 	);
 	const managedContainers = getResolvedDurableObjectContainerApps(
 		durableObjectContainerConfig,
@@ -637,10 +653,15 @@ export async function prepareDurableObjectContainerApplications(
 
 	if (!dryRun && requireExistingImageLessApplications) {
 		assert(accountId);
+		assert(deployCommand, "Expected deploy command for versions upload");
+		assert(
+			versionsUploadCommand,
+			"Expected versions upload command for versions upload"
+		);
 		await validateImageLessContainerApplicationsForUpload(
 			config,
 			durableObjectContainerConfig,
-			{ accountId, scriptName }
+			{ accountId, scriptName, deployCommand, versionsUploadCommand }
 		);
 	}
 

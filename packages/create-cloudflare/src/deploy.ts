@@ -13,8 +13,10 @@ import { readFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
 import * as TOML from "smol-toml";
+import { usesCfCli } from "./cf/config";
+import { getDeploymentUrl } from "./cf/deploy";
 import { isInsideGitRepo } from "./git";
-import { chooseAccount, wranglerLogin } from "./wrangler/accounts";
+import { chooseAccount, login } from "./wrangler/accounts";
 import {
 	readWranglerJsonOrJsonc,
 	readWranglerToml,
@@ -57,7 +59,7 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	// initialize a deployment object in context
 	ctx.deployment = {};
 
-	const loginSuccess = await wranglerLogin(ctx);
+	const loginSuccess = await login(ctx);
 
 	if (!loginSuccess) {
 		return false;
@@ -76,7 +78,8 @@ export const offerToDeploy = async (ctx: C3Context) => {
  * before they can be deployed.
  */
 const isDeployable = async (ctx: C3Context) => {
-	if (ctx.template.platform === "pages") {
+	// A `cloudflare.config.ts` file is code, so C3 cannot inspect its bindings
+	if (ctx.template.platform === "pages" || usesCfCli(ctx.project.path)) {
 		return true;
 	}
 	const wranglerConfig = readWranglerConfig(ctx);
@@ -114,10 +117,10 @@ export const runDeploy = async (ctx: C3Context) => {
 			: []),
 	];
 
-	const outputFile = join(
-		await mkdtemp(join(tmpdir(), "c3-wrangler-deploy-")),
-		"output.json"
-	);
+	const useCf = usesCfCli(ctx.project.path);
+	const outputFile = useCf
+		? undefined
+		: join(await mkdtemp(join(tmpdir(), "c3-wrangler-deploy-")), "output.json");
 
 	await runCommand(deployCmd, {
 		cwd: ctx.project.path,
@@ -132,26 +135,15 @@ export const runDeploy = async (ctx: C3Context) => {
 		)}`,
 	});
 
-	try {
-		const contents = readFile(outputFile);
-
-		const entries = contents
-			.split("\n")
-			.filter(Boolean)
-			.map((entry) => JSON.parse(entry));
-		const url: string | undefined =
-			entries.find((entry) => entry.type === "deploy")?.targets?.[0] ??
-			entries.find((entry) => entry.type === "pages-deploy")?.url;
-		const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
-		const deployedUrlMatch = url?.match(deployedUrlRegex);
-		if (deployedUrlMatch) {
-			ctx.deployment.url = deployedUrlMatch[0];
-		} else {
-			throw new Error("Failed to find deployment url.");
-		}
-	} catch {
+	const url = outputFile
+		? readDeploymentUrl(outputFile)
+		: await getDeploymentUrl(ctx.project.path, ctx.account.id);
+	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
+	const deployedUrlMatch = url?.match(deployedUrlRegex);
+	if (!deployedUrlMatch) {
 		throw new Error("Failed to find deployment url.");
 	}
+	ctx.deployment.url = deployedUrlMatch[0];
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
 	if (ctx.deployment.url?.endsWith(".pages.dev")) {
@@ -161,6 +153,27 @@ export const runDeploy = async (ctx: C3Context) => {
 		ctx.deployment.url = `${proto}://${hostnameWithoutSHA1}`;
 	}
 };
+
+/**
+ * Reads the deployment URL from the output file written by Wrangler.
+ *
+ * @param outputFile The path that `WRANGLER_OUTPUT_FILE_PATH` pointed Wrangler at.
+ * @returns The URL of the deployment, if one was reported and could be read.
+ */
+function readDeploymentUrl(outputFile: string): string | undefined {
+	try {
+		const entries = readFile(outputFile)
+			.split("\n")
+			.filter(Boolean)
+			.map((entry) => JSON.parse(entry));
+		return (
+			entries.find((entry) => entry.type === "deploy")?.targets?.[0] ??
+			entries.find((entry) => entry.type === "pages-deploy")?.url
+		);
+	} catch {
+		return undefined;
+	}
+}
 
 export const maybeOpenBrowser = async (ctx: C3Context) => {
 	if (ctx.deployment.url) {

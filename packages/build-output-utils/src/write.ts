@@ -36,6 +36,8 @@ export interface WriteAssetsOptions {
 /**
  * Copy static assets into the Build Output Specification tree.
  *
+ * Symlinks are dereferenced so the output remains portable and self-contained.
+ *
  * When the project root is itself the asset source, the reserved
  * `.cloudflare` directory is omitted so the nested output is not copied into
  * itself.
@@ -51,6 +53,7 @@ export async function writeAssets({
 		await fsp.cp(sourceDirectory, assetsDir, {
 			recursive: true,
 			force: false,
+			dereference: true,
 		});
 		return;
 	}
@@ -63,6 +66,7 @@ export async function writeAssets({
 				fsp.cp(path.join(sourceDirectory, entry), path.join(assetsDir, entry), {
 					recursive: true,
 					force: false,
+					dereference: true,
 				})
 			)
 	);

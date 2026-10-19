@@ -3,6 +3,7 @@ import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
+import { usesCfCli } from "../../src/cf/config";
 import { downloadRemoteTemplate, updatePackageName } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -142,7 +143,11 @@ export default {
 				// Align with OpenNext so the shared previewScript: "preview" works
 				// for both variants (vinext only ships dev/build/start/deploy).
 				preview: `${npm} run build && ${npm} run start${npm === "npm" ? " --" : ""}`,
-				"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${VINEXT_TYPES_PATH}`,
+				// vinext configures projects for the `cf` CLI unless it is passed
+				// `--legacy-wrangler-cloudflare-init`
+				"cf-typegen": usesCfCli(ctx.project.path)
+					? "cf workers types"
+					: `wrangler types --env-interface ${envInterfaceName} ${VINEXT_TYPES_PATH}`,
 			},
 		};
 	},

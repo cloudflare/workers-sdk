@@ -19,7 +19,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/state.ts` — `readStoredAuthState()` + `StoredAuthState` shape
 - `src/token-exchange.ts` — auth-code → token + refresh-token rotation + `fetchAuthToken`
 - `src/callback-server.ts` — local HTTP server for the OAuth callback (listens on the host/port from the consumer's `redirectUri`)
-- `src/device-flow.ts` — `getOauthTokenViaDeviceFlow(options, ctx)`: the OAuth 2.0 Device Authorization Grant (RFC 8628) used by `login({device: true})` when the browser cannot reach the local callback URL. No callback server; prints the verification URL + user code and polls `/oauth2/token`. Every user-facing string is parameterised by `ctx.displayName` / `ctx.deviceLoginCommand` so the module carries no per-CLI branding. Both endpoints' bodies are narrowed before use (`asDeviceAuthorizationResponse`, `pollDeviceToken`'s `DevicePollResult`) rather than cast — an intermediary's envelope or a 2xx without a grant must produce a reportable `unexpected`/unusable-response error, never `undefined` arithmetic. `slow_down` / 5xx / 429 / unparseable bodies keep the loop alive; the last such failure is reported in place of the generic timeout if the deadline passes
+- `src/device-flow.ts` — `getOauthTokenViaDeviceFlow(options, ctx)`: the OAuth 2.0 Device Authorization Grant (RFC 8628) used by `login({device: true})` when the browser cannot reach the local callback URL. No callback server; prints the verification URL + user code and polls `/oauth2/token`. Every user-facing string is parameterised by `ctx.cliDisplayName` / `ctx.deviceLoginCommand` so the module carries no per-CLI branding. Both endpoints' bodies are narrowed before use (`asDeviceAuthorizationResponse`, `pollDeviceToken`'s `DevicePollResult`) rather than cast — an intermediary's envelope or a 2xx without a grant must produce a reportable `unexpected`/unusable-response error, never `undefined` arithmetic. `slow_down` / 5xx / 429 / unparseable bodies keep the loop alive; the last such failure is reported in place of the generic timeout if the deadline passes
 - `src/generate-device-auth-url.ts` — `generateVerificationUrl` (fallback `verification_uri_complete` builder for servers that omit it, RFC 8628 §3.3.1) + `assertTrustedVerificationUrl`, which rejects any server-supplied verification URL that is not `https:` on exactly the resolved auth domain (with no embedded credentials) before it is printed or handed to `openInBrowser` — the device flow is the only place this package opens a URL it did not build itself (RFC 8628 §5.4, remote phishing)
 - `src/flow.ts` — `createOAuthFlow(ctx)` factory wiring everything together
 - `src/context.ts` — `OAuthFlowContext` interface (DI surface)
@@ -64,7 +64,7 @@ files and its own encryption key.
 - `clientId` (required) — the consumer's registered OAuth app ID; `string` or
   `() => string` for lazy (e.g. env-driven prod/staging) resolution
 - `consent` (required) — the consumer's branded granted/denied consent pages
-- `displayName` (required) — the consumer's branded name (`"Wrangler"`, `"cf"`),
+- `cliDisplayName` (required) — the consumer's branded name (`"Wrangler"`, `"cf"`),
   interpolated into the device flow's "To authorize \<name\>…" copy
 - `deviceLoginCommand` (required) — the command that restarts the device flow
   (`"wrangler login --device"`), quoted when a device code is denied, expires,
@@ -82,7 +82,7 @@ files and its own encryption key.
 - `generateAuthUrl?` / `generateRandomState?` — test overrides for deterministic
   snapshot tests (defaults pull from `./generate-auth-url` / `./generate-random-state`)
 
-`clientId`, `consent`, `displayName`, `deviceLoginCommand`, `redirectUri`, and
+`clientId`, `consent`, `cliDisplayName`, `deviceLoginCommand`, `redirectUri`, and
 `storageFactory` are consumer-specific, so they are required rather than
 defaulted here. Wrangler's values live in the in-package wrangler layer
 (`src/wrangler/`, see below) rather than in the `wrangler` package itself.
@@ -109,7 +109,8 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `prompt` / `select`, `isNoDefaultValueProvidedError`) and
   `CliDescriptor` (everything that varies per CLI: `cliName` (the executable),
   `displayName` (branded name used in prose), auth command names
-  (`login` / `whoami` / `createProfile` / `deviceLogin`), `keyringServiceName`,
+  (`login` / `logout` / `whoami` / `createProfile` / `deviceLogin`),
+  `keyringServiceName`,
   `clientId`, `consent`, `redirectUri`, `useDeviceFlowByDefault`,
   `getConfigPath`, `fileFormat`,
   `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
@@ -145,10 +146,11 @@ Each CLI is a thin **descriptor + entrypoint**:
     CLI's registration, and device authorization is its default interactive
     login flow. cf carries its own scope policy (`src/cf/scopes.ts`): the raw
     client registration is kept separate from the known-grantable catalog used
-    for validation, types, and login defaults. Requestable scopes must both
-    appear in the client registration and resolve in the consent service's Bach
-    catalog; registered exceptions stay explicit negative regressions. Retain
-    separately verified, grandfathered legacy scopes and registration order.
+    for validation and types, and sensitive requestable scopes can be excluded
+    from login defaults. Requestable scopes must both appear in the client
+    registration and resolve in the consent service's Bach catalog; registered
+    exceptions stay explicit negative regressions. Retain separately verified,
+    grandfathered legacy scopes and registration order.
     This is distinct from wrangler's smaller `src/core/scopes.ts` key →
     description map, so cf does not re-export `DefaultScopes`.
 

@@ -9,6 +9,7 @@ import type {
 
 export type StartDevWorkerOptions = {
 	name: string;
+	cliDisplayName: string;
 	entrypointSource: string;
 	bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 	compatibilityDate: StartDevWorkerInput["compatibilityDate"];

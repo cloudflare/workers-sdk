@@ -1,5 +1,95 @@
 # create-cloudflare
 
+## 2.74.0
+
+### Minor Changes
+
+- [#16129](https://github.com/cloudflare/workers-sdk/pull/16129) [`070c3f2`](https://github.com/cloudflare/workers-sdk/commit/070c3f299238c7c1b81f3eaae2bdd801f5aacfd3) Thanks [@james-elicx](https://github.com/james-elicx)! - Support projects configured with `cloudflare.config.ts` and the `cf` CLI
+
+  Framework generators can now scaffold projects that use `cloudflare.config.ts` and the `cf` CLI in place of a Wrangler configuration file. C3 detects these projects and installs `cf` instead of Wrangler, logs in and selects accounts with `cf`, and looks up the deployed Worker's URL with `cf`. Projects that use Wrangler are unaffected.
+
+### Patch Changes
+
+- [#16129](https://github.com/cloudflare/workers-sdk/pull/16129) [`070c3f2`](https://github.com/cloudflare/workers-sdk/commit/070c3f299238c7c1b81f3eaae2bdd801f5aacfd3) Thanks [@james-elicx](https://github.com/james-elicx)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From         | To    |
+  | ----------------- | ------------ | ----- |
+  | create-vinext-app | 1.0.0-beta.3 | 1.0.0 |
+
+- [#16205](https://github.com/cloudflare/workers-sdk/pull/16205) [`7e702ed`](https://github.com/cloudflare/workers-sdk/commit/7e702ed9c581a3c0152fac91d365ec6296010524) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.20.1 | 1.20.2 |
+
+- [#16206](https://github.com/cloudflare/workers-sdk/pull/16206) [`92676ad`](https://github.com/cloudflare/workers-sdk/commit/92676ad53d2fab499f78c95137ac819abba70ec9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.681 | 0.0.682 |
+
+- [#16207](https://github.com/cloudflare/workers-sdk/pull/16207) [`478a6b5`](https://github.com/cloudflare/workers-sdk/commit/478a6b5b98538faaeb8ece2759a391c6bd3fbfc0) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 1.0.1 | 1.1.1 |
+
+- [#16208](https://github.com/cloudflare/workers-sdk/pull/16208) [`0693fbc`](https://github.com/cloudflare/workers-sdk/commit/0693fbceec93310c66bc65484973999c76996d40) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.2.4 | 5.2.6 |
+
+- [#16209](https://github.com/cloudflare/workers-sdk/pull/16209) [`f508d50`](https://github.com/cloudflare/workers-sdk/commit/f508d5047c0410266157c95c4050caeb4018e924) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.3.8 | 16.4.0 |
+
+- [#16210](https://github.com/cloudflare/workers-sdk/pull/16210) [`c09832d`](https://github.com/cloudflare/workers-sdk/commit/c09832d6e5600390102821052880173c80529843) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To    |
+  | ---------- | ------ | ----- |
+  | nuxi       | 3.37.0 | 4.0.1 |
+
+- [#16211](https://github.com/cloudflare/workers-sdk/pull/16211) [`7ba4e38`](https://github.com/cloudflare/workers-sdk/commit/7ba4e389327365bb2bca39ea00d688a342493ef8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.2.1 | 22.2.2 |
+
+- [#15288](https://github.com/cloudflare/workers-sdk/pull/15288) [`1787b35`](https://github.com/cloudflare/workers-sdk/commit/1787b353ddb35c9d82a6a7fdae8bc4dc2f4cd035) Thanks [@AiAlchemist0](https://github.com/AiAlchemist0)! - Skip `mkdir` when the project parent directory already exists, so `create-cloudflare` works at a Windows drive root (`E:\`) instead of throwing `EPERM`.
+
+- [#16210](https://github.com/cloudflare/workers-sdk/pull/16210) [`c09832d`](https://github.com/cloudflare/workers-sdk/commit/c09832d6e5600390102821052880173c80529843) Thanks [@dependabot](https://github.com/apps/dependabot)! - Check Node.js compatibility when creating Nuxt projects and select a supported version
+
+  Before launching nuxi 4, both Nuxt templates check its supported Node.js versions: 22.21.0 or later in the 22.x release line, 24.11.0 or later in the 24.x release line, or 26.0.0 or later. Unsupported versions receive an error showing the required range, the current version, and guidance to upgrade Node.js.
+
+  Generated Nuxt projects now pin Node.js 22.23.1 in their own `.node-version` file, replacing the outdated Node.js 18 pin that was written to the parent directory.
+
+## 2.73.4
+
+### Patch Changes
+
+- [#16139](https://github.com/cloudflare/workers-sdk/pull/16139) [`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d) Thanks [@cpojer](https://github.com/cpojer)! - Update esbuild to 0.28.2
+
+  Align esbuild dependency with tooling using the latest 0.28 patch so package managers can share one installation instead of downloading a second native binary.
+
 ## 2.73.3
 
 ### Patch Changes

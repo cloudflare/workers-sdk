@@ -2,14 +2,14 @@ import {
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	readBuildOutput,
 } from "@cloudflare/build-output-utils";
-import { convertToWranglerConfig } from "@cloudflare/config";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
+import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
+import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
 import type {
 	ModuleType,
-	ParsedInputContainerConfig,
 	ParsedOutputContainerConfig,
+	ParsedOutputRootConfig,
+	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
-import type { Unstable_Config } from "wrangler";
 
 export interface Bundle {
 	rootPath: string;
@@ -18,64 +18,54 @@ export interface Bundle {
 }
 
 export interface BuildOutputPreviewWorker {
-	source: "build-output";
-	config: Unstable_Config;
+	config: ParsedOutputWorkerConfig;
+	assetsDir: string | undefined;
 	bundle: Bundle | undefined;
 }
 
+export interface BuildOutputPreview {
+	rootConfig: ParsedOutputRootConfig;
+	containers: ParsedOutputContainerConfig[];
+	workers: BuildOutputPreviewWorker[];
+}
+
 /**
- * Read the Build Output Specification at
- * `<root>/.cloudflare/output/v0/workers/default/` and reconstruct a
- * `BuildOutputPreviewWorker`.
- *
- * Preview currently uses only the `default` Worker, so this returns a
- * single-element array.
+ * Read the Build Output Specification and select the Workers used for preview.
+ * Every auxiliary Worker is always included. During prerendering, the
+ * `prerender` Worker replaces the `default` entry Worker when present.
  */
-export async function readBuildOutputWorkers(
-	root: string
-): Promise<BuildOutputPreviewWorker[]> {
-	// `rootConfig` comes from the root `config.json` holding account
-	// settings and build context. Preview does not act on `mode` yet.
+export async function readBuildOutputPreview(
+	root: string,
+	isPrerender: boolean
+): Promise<BuildOutputPreview> {
+	// `rootConfig` comes from the top-level `config.json` holding project-level
+	// settings and build context shared by every Worker.
 	const { workers, rootConfig, containers } = await readBuildOutput(root);
-	const worker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
+	const defaultWorker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
+	const entryWorker = isPrerender
+		? (workers[PRERENDER_WORKER_DIRECTORY_NAME] ?? defaultWorker)
+		: defaultWorker;
+	const auxiliaryWorkers = Object.entries(workers)
+		.filter(([directoryName]) => {
+			return (
+				directoryName !== DEFAULT_WORKER_DIRECTORY_NAME &&
+				directoryName !== PRERENDER_WORKER_DIRECTORY_NAME
+			);
+		})
+		.map(([_, worker]) => worker);
+	const selectedWorkers = [entryWorker, ...auxiliaryWorkers];
 
-	const { manifest, ...inputShape } = worker.config;
-	const { buildContext: _buildContext, ...settings } = rootConfig;
-	const rawConfig = convertToWranglerConfig({
-		...settings,
-		worker: inputShape,
-		containers: containers.map(({ config }) =>
-			convertOutputContainerToInput(config)
-		),
-	});
+	return {
+		rootConfig,
+		containers: containers.map(({ config }) => config),
+		workers: selectedWorkers.map(toPreviewWorker),
+	};
+}
 
-	const { config, diagnostics } = normalizeAndValidateConfig(
-		rawConfig,
-		undefined,
-		undefined,
-		// Build Output preview does not consume Container images yet. Include
-		// their configs for reference validation, but do not prepare them locally.
-		{ enableContainers: false },
-		true
-	);
-
-	if (diagnostics.hasWarnings()) {
-		console.warn(diagnostics.renderWarnings());
-	}
-	if (diagnostics.hasErrors()) {
-		throw new Error(diagnostics.renderErrors());
-	}
-
-	if (worker.assetsDir) {
-		config.assets = {
-			...(config.assets ?? {}),
-			directory: worker.assetsDir,
-		};
-	}
-
+function toPreviewWorker(worker: BuildOutputWorker): BuildOutputPreviewWorker {
+	const { manifest } = worker.config;
 	let bundle: Bundle | undefined;
 	if (manifest && worker.bundleDir) {
-		config.main = manifest.mainModule;
 		bundle = {
 			rootPath: worker.bundleDir,
 			mainModule: manifest.mainModule,
@@ -83,34 +73,9 @@ export async function readBuildOutputWorkers(
 		};
 	}
 
-	return [{ source: "build-output", config, bundle }];
-}
-
-type OutputContainerImage = Extract<
-	ParsedOutputContainerConfig,
-	{ image: unknown }
->["image"];
-
-function convertOutputContainerToInput(
-	config: ParsedOutputContainerConfig
-): ParsedInputContainerConfig {
-	if (config.schedulingPolicy === "durable-object") {
-		// Preview does not run Containers. Keep the application metadata so
-		// Worker export references can be validated, but omit named images: a
-		// locally built output image cannot be represented by Wrangler's remote,
-		// managed-registry-only `images.<name>.image` field.
-		const { images: _images, ...container } = config;
-		return container;
-	}
-
 	return {
-		...config,
-		image: convertOutputContainerImage(config.image),
-	};
-}
-
-function convertOutputContainerImage(image: OutputContainerImage) {
-	return {
-		reference: "reference" in image ? image.reference : image.localReference,
+		config: worker.config,
+		assetsDir: worker.assetsDir,
+		bundle,
 	};
 }

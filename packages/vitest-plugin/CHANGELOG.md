@@ -1,5 +1,65 @@
 # @cloudflare/vitest-plugin
 
+## 1.4.4
+
+### Patch Changes
+
+- Updated dependencies [[`e1d1b77`](https://github.com/cloudflare/workers-sdk/commit/e1d1b7765829ef9538e7d7882fe74ad8ca2a38d4), [`e13d5cc`](https://github.com/cloudflare/workers-sdk/commit/e13d5ccf0555e4b2af29255165237bbb17825b39), [`42c6912`](https://github.com/cloudflare/workers-sdk/commit/42c69124d9021d8a12cb5ad1a3bc541f6a602236), [`4a5377f`](https://github.com/cloudflare/workers-sdk/commit/4a5377fc228dd94aa5df7545c8185cdd98be733e)]:
+  - miniflare@5.20261012.1-beta
+  - wrangler@4.151.1
+
+## 1.4.3
+
+### Patch Changes
+
+- [#16248](https://github.com/cloudflare/workers-sdk/pull/16248) [`ad01099`](https://github.com/cloudflare/workers-sdk/commit/ad01099fef3baa6af4bcc1bd6325257831f4b911) Thanks [@mattjohnsonpint](https://github.com/mattjohnsonpint)! - Fix V8 coverage failing with Vitest 5.0.4
+
+  Tests using V8 coverage with Vitest 5.0.4 no longer fail with an assertion error during teardown.
+
+- [#16163](https://github.com/cloudflare/workers-sdk/pull/16163) [`5f12934`](https://github.com/cloudflare/workers-sdk/commit/5f1293480f58c59bb4a9e74e76e5fba0f72e90cc) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix Workers tests failing with Vitest's filesystem module cache
+
+  This supports Vitest 4.1's `test.experimental.fsModuleCache` and Vitest 5's `test.fsModuleCache`.
+
+## 1.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be), [`d6b1c82`](https://github.com/cloudflare/workers-sdk/commit/d6b1c823268226754441ac79084be2cec4abcea3), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`97b2fb1`](https://github.com/cloudflare/workers-sdk/commit/97b2fb1632de1f02bb0d12639f8602cefb3de158), [`acd2822`](https://github.com/cloudflare/workers-sdk/commit/acd2822046a1bf201d9143ee40969f3dc3eb9650)]:
+  - miniflare@5.20261012.0-beta
+  - wrangler@4.151.0
+
+## 1.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`fcf625d`](https://github.com/cloudflare/workers-sdk/commit/fcf625da014474f656a962b9313dec54563f3573), [`091e5ec`](https://github.com/cloudflare/workers-sdk/commit/091e5ec2ac3f4ba26c048d12546b5b83ca8eaab1), [`5152bf8`](https://github.com/cloudflare/workers-sdk/commit/5152bf8c3591863243da275debf02ecbf66f560e), [`9f87de8`](https://github.com/cloudflare/workers-sdk/commit/9f87de8cd6e8ff5afedb5430acd8776cb239844e), [`daae435`](https://github.com/cloudflare/workers-sdk/commit/daae4351fb517f8a93106a00c6a2a5b31600242a), [`18f061c`](https://github.com/cloudflare/workers-sdk/commit/18f061c3cf604479d9f9d2883cc49786a46eb07a), [`9be5ec7`](https://github.com/cloudflare/workers-sdk/commit/9be5ec7cf2c3988d0a446a5207d0d23def541cf5), [`61e07fd`](https://github.com/cloudflare/workers-sdk/commit/61e07fd59d2ae474c2ddf4e5b3805319b7541fe3), [`cafd3f9`](https://github.com/cloudflare/workers-sdk/commit/cafd3f94207bd2c886e6ab20de17e45e0eb50f1e), [`ea64ec4`](https://github.com/cloudflare/workers-sdk/commit/ea64ec4e681f9e43bd0ded93e490c0027018f80e), [`d232454`](https://github.com/cloudflare/workers-sdk/commit/d232454ca9059b7722a013ab128354d7e44a2031)]:
+  - wrangler@4.150.0
+  - miniflare@5.20261006.2-beta
+
+## 1.4.0
+
+### Minor Changes
+
+- [#15591](https://github.com/cloudflare/workers-sdk/pull/15591) [`e3d1867`](https://github.com/cloudflare/workers-sdk/commit/e3d186776fcc2e4b5cc4cfd7155591778a375957) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support V8 code coverage in the Workers Vitest integration
+
+  Vitest's default V8 coverage provider now collects and reports coverage for tests running locally in the Workers runtime.
+
+- [#16132](https://github.com/cloudflare/workers-sdk/pull/16132) [`08d694c`](https://github.com/cloudflare/workers-sdk/commit/08d694cc8ed69ffe264405a342f1ae0f233d7792) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for [Vitest 5](https://vitest.dev/blog/vitest-5)
+
+### Patch Changes
+
+- [#16139](https://github.com/cloudflare/workers-sdk/pull/16139) [`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d) Thanks [@cpojer](https://github.com/cpojer)! - Update esbuild to 0.28.2
+
+  Align esbuild dependency with tooling using the latest 0.28 patch so package managers can share one installation instead of downloading a second native binary.
+
+- [#16140](https://github.com/cloudflare/workers-sdk/pull/16140) [`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717) Thanks [@cpojer](https://github.com/cpojer)! - Update Zod to 4.6.5
+
+  Align the published Zod dependencies in Cloudflare configuration and the Vitest plugin with other tools using Zod 4.6.5 so consumers can reuse one installation.
+
+- Updated dependencies [[`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d), [`85b14e7`](https://github.com/cloudflare/workers-sdk/commit/85b14e79800fe71958755982061be91311b2089d), [`e6f7663`](https://github.com/cloudflare/workers-sdk/commit/e6f76636249eeca2407a28f3e0e786c4db24ab19), [`fe607f9`](https://github.com/cloudflare/workers-sdk/commit/fe607f9d7d35b377d5e272e8f946598e3812fe41), [`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999), [`8de6b3c`](https://github.com/cloudflare/workers-sdk/commit/8de6b3c3bf171521cc89f46a2f6e52c633a53b53), [`ae29445`](https://github.com/cloudflare/workers-sdk/commit/ae2944543a8be0b2b73d8d9140103fa1195c90d0), [`757faa6`](https://github.com/cloudflare/workers-sdk/commit/757faa6687bdeaabfb5213bd0211da0e8fc767d3), [`cc8e969`](https://github.com/cloudflare/workers-sdk/commit/cc8e969750703538507b471a59e7d56045ebb640), [`417b186`](https://github.com/cloudflare/workers-sdk/commit/417b18661812ee9b8d51fa51114a3ac73cbb48b1), [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82), [`6947df3`](https://github.com/cloudflare/workers-sdk/commit/6947df3ceb107605d766fae3ea461f9281c93a9f), [`82acf3c`](https://github.com/cloudflare/workers-sdk/commit/82acf3cdf14de30cc45a134c5f7762f41fba22b1), [`9a58244`](https://github.com/cloudflare/workers-sdk/commit/9a58244a919289f9a8f3c7a81d410a52b96a9136)]:
+  - miniflare@5.20261006.1-alpha
+  - wrangler@4.149.0
+
 ## 1.3.7
 
 ### Patch Changes

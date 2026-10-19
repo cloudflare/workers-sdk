@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.20.1
+
+### Patch Changes
+
+- [#16139](https://github.com/cloudflare/workers-sdk/pull/16139) [`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d) Thanks [@cpojer](https://github.com/cpojer)! - Update esbuild to 0.28.2
+
+  Align esbuild dependency with tooling using the latest 0.28 patch so package managers can share one installation instead of downloading a second native binary.
+
 ## 0.20.0
 
 ### Minor Changes

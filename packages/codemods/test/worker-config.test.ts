@@ -108,6 +108,146 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("reports invalid dependency instrumentation configuration", ({
+		expect,
+	}) => {
+		for (const dependenciesInstrumentation of [
+			{ enabled: "false" },
+			{ enabled: true, exclude_packages: "@internal/*" },
+			{ enabled: true, exclude_packages: [123] },
+		]) {
+			const result = convert({
+				compatibility_date: "2026-09-23",
+				dependencies_instrumentation: dependenciesInstrumentation,
+				name: "example-worker",
+			});
+
+			expect(result.followUps).toEqual([
+				expect.objectContaining({
+					blocking: true,
+					code: "unsupported-field",
+					message:
+						"The dependency instrumentation configuration is invalid and was not migrated.",
+					sourcePath: "dependencies_instrumentation",
+				}),
+			]);
+		}
+	});
+
+	it("preserves recognized guidance when unknown fields are present", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: false,
+				unknown_field: true,
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				code: "dependencies-instrumentation-opt-out",
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false"
+		);
+	});
+
+	it("reports how to preserve disabled dependency instrumentation", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: { enabled: false },
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-opt-out",
+				message:
+					"Set CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false before deploying to keep package dependency metadata disabled.",
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false"
+		);
+		expect(result.output).toContain("Migration incomplete");
+	});
+
+	it("reports exclusions when dependency instrumentation is disabled", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: false,
+				exclude_packages: ["@internal/*"],
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-opt-out",
+				message: expect.stringContaining(
+					"The package exclusion list was not migrated"
+				),
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"if dependency metadata is later enabled, those packages will be included"
+		);
+	});
+
+	it("drops enabled dependency instrumentation without follow-up work", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: { enabled: true },
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([]);
+		expect(result.output).not.toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION"
+		);
+		expect(result.output).not.toContain("Migration incomplete");
+	});
+
+	it("reports dependency package exclusions that cannot be preserved", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: true,
+				exclude_packages: ["@internal/*"],
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-exclusions",
+				message: expect.stringContaining(
+					"only enables or disables dependency metadata as a whole"
+				),
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+	});
+
 	it("converts Workflow bindings and exports the Workflows the Worker defines", ({
 		expect,
 	}) => {

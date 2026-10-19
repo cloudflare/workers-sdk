@@ -19,8 +19,6 @@ vi.mock("node:fs", async (importOriginal) => {
 	);
 	return {
 		...original,
-		// Source imports resolve bundled Workers under src; read their real build
-		// outputs from dist so dev exercises the same Workers as the published plugin.
 		readFileSync(
 			file: Parameters<typeof original.readFileSync>[0],
 			options: Parameters<typeof original.readFileSync>[1]
@@ -37,6 +35,28 @@ vi.mock("node:fs", async (importOriginal) => {
 	};
 });
 
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const original = await importOriginal<typeof import("node:fs/promises")>();
+	const { fileURLToPath } = await import("node:url");
+	const sourceWorkers = fileURLToPath(new URL("../workers/", import.meta.url));
+	const builtWorkers = fileURLToPath(
+		new URL("../../dist/workers/", import.meta.url)
+	);
+	return {
+		...original,
+		readFile(file: Parameters<typeof original.readFile>[0], options?: object) {
+			if (
+				typeof file === "string" &&
+				file.startsWith(sourceWorkers) &&
+				file.endsWith(".js")
+			) {
+				file = builtWorkers + file.slice(sourceWorkers.length);
+			}
+			return original.readFile(file, options);
+		},
+	};
+});
+
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const original =
 		await importOriginal<typeof import("@cloudflare/containers-shared")>();
@@ -47,14 +67,58 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	};
 });
 
+type ContainerScenario = "image-free" | "configured" | "unlinked" | "absent";
+const configModuleUrl = import.meta.resolve("@cloudflare/config");
+
+function writeWorkerSource(): void {
+	fs.writeFileSync(
+		"index.js",
+		`
+			import { DurableObject } from "cloudflare:workers";
+			export class Probe extends DurableObject {}
+			export default { fetch() { return new Response("ready"); } };
+		`
+	);
+	fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
+	fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
+}
+
+function writeCloudflareConfig(options: {
+	scenario: ContainerScenario;
+	remoteImage?: boolean;
+}): void {
+	const hasContainer = options.scenario !== "absent";
+	const isLinked = !["unlinked", "absent"].includes(options.scenario);
+	const hasImage = options.scenario === "configured";
+	const image = options.remoteImage
+		? "image: { reference: 'docker.io/cloudflare/test:latest' },"
+		: "image: { dockerfile: './Dockerfile' },";
+	fs.writeFileSync(
+		"cloudflare.config.ts",
+		[
+			`import { defineConfig, defineContainer, exports as workerExports } from '${configModuleUrl}';`,
+			hasContainer
+				? `const probe = defineContainer({ name: 'probe', ${hasImage ? image : "schedulingPolicy: 'durable-object',"} });`
+				: "",
+			"export default defineConfig({",
+			`  containers: ${hasContainer ? "[probe]" : "[]"},`,
+			"  worker: {",
+			"    name: 'container-test',",
+			"    entrypoint: './index.js',",
+			"    compatibilityDate: '2026-09-21',",
+			`    exports: { Probe: workerExports.durableObject({ storage: 'sqlite'${isLinked ? ", container: probe" : ""} }) },`,
+			"  },",
+			"});",
+		].join("\n")
+	);
+}
+
 describe.each(["dev", "preview"] as const)(
 	"Container preparation in Vite %s",
 	(mode) => {
 		runInTempDir();
 
 		beforeEach(async () => {
-			// Vite rejects Windows 8.3 paths such as RUNNER~1. Unlike the
-			// synchronous helper, fs.promises.realpath expands these short names.
 			const root = await fs.promises.realpath(process.cwd());
 			process.chdir(root);
 			vi.stubEnv("PWD", root);
@@ -73,33 +137,8 @@ describe.each(["dev", "preview"] as const)(
 			test.for(["single", "concurrent"] as const)(
 				"retries pending cleanup once on close after %s restart removes the Cloudflare plugin",
 				async (restartMode, { expect, onTestFinished }) => {
-					fs.writeFileSync(
-						"index.js",
-						`import { DurableObject } from "cloudflare:workers";
-export class Probe extends DurableObject {}
-export default { fetch() { return new Response("ready"); } };`
-					);
-					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-					fs.writeFileSync(
-						"wrangler.jsonc",
-						JSON.stringify({
-							name: "container-cleanup-plugin-removal-test",
-							main: "index.js",
-							compatibility_date: "2026-09-21",
-							containers: [
-								{
-									class_name: "Probe",
-									scheduling_policy: "durable_object",
-									images: { app: { dockerfile: "./Dockerfile" } },
-								},
-							],
-							durable_objects: {
-								bindings: [{ name: "PROBE", class_name: "Probe" }],
-							},
-							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-						})
-					);
+					writeWorkerSource();
+					writeCloudflareConfig({ scenario: "configured" });
 					const require = createRequire(import.meta.url);
 					const bridgePath = path.resolve("factory.cjs");
 					fs.writeFileSync(bridgePath, "module.exports = {};\n");
@@ -119,7 +158,7 @@ import { createRequire } from "node:module";
 const bridge = createRequire(import.meta.url)("./factory.cjs");
 export default {
   plugins: bridge.includeCloudflare
-    ? [bridge.cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false })]
+    ? [bridge.cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })]
     : [],
 };
 `
@@ -177,37 +216,8 @@ export default {
 			test.for(["configured", "absent"] as const)(
 				"keeps dependency optimizer hashes stable on the first restart with Containers %s",
 				async (scenario, { expect, onTestFinished }) => {
-					fs.writeFileSync(
-						"index.js",
-						`import { DurableObject } from "cloudflare:workers";
-export class Probe extends DurableObject {}
-export default { fetch() { return new Response("ready"); } };`
-					);
-					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-					fs.writeFileSync(
-						"wrangler.jsonc",
-						JSON.stringify({
-							name: "container-restart-hash-test",
-							main: "index.js",
-							compatibility_date: "2026-09-21",
-							...(scenario === "configured"
-								? {
-										containers: [
-											{
-												class_name: "Probe",
-												scheduling_policy: "durable_object",
-												images: { app: { dockerfile: "./Dockerfile" } },
-											},
-										],
-									}
-								: {}),
-							durable_objects: {
-								bindings: [{ name: "PROBE", class_name: "Probe" }],
-							},
-							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-						})
-					);
+					writeWorkerSource();
+					writeCloudflareConfig({ scenario });
 					const require = createRequire(import.meta.url);
 					const bridgePath = path.resolve("factory.cjs");
 					fs.writeFileSync(bridgePath, "module.exports = {};\n");
@@ -223,7 +233,7 @@ export default { fetch() { return new Response("ready"); } };`
 						`
 import { createRequire } from "node:module";
 const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
-export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false })] };
+export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })] };
 `
 					);
 					const server = await createServer({
@@ -251,38 +261,8 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 			test.for(["inline", "config-file"] as const)(
 				"retries failed cleanup across %s restarts without mixing servers",
 				async (configuration, { expect, onTestFinished }) => {
-					fs.writeFileSync(
-						"index.js",
-						`
-					import { DurableObject } from "cloudflare:workers";
-					export class Probe extends DurableObject {}
-					export default { fetch() { return new Response("ready"); } };
-				`
-					);
-					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-					fs.writeFileSync(
-						"wrangler.jsonc",
-						JSON.stringify({
-							name: "container-restart-test",
-							main: "index.js",
-							compatibility_date: "2026-09-21",
-							containers: [
-								{
-									class_name: "Probe",
-									scheduling_policy: "durable_object",
-									images: { app: { dockerfile: "./Dockerfile" } },
-								},
-							],
-							durable_objects: {
-								bindings: [{ name: "PROBE", class_name: "Probe" }],
-							},
-							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-						})
-					);
-					// Vite evaluates config files outside Vitest's module runner. This
-					// bridge gives the real config loader our factory with mocked Docker
-					// calls, while every reload still calls cloudflare() afresh.
+					writeWorkerSource();
+					writeCloudflareConfig({ scenario: "configured" });
 					if (configuration === "config-file") {
 						const require = createRequire(import.meta.url);
 						const bridgePath = path.resolve("factory.cjs");
@@ -297,10 +277,10 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 						fs.writeFileSync(
 							"vite.config.mjs",
 							`
-						import { createRequire } from "node:module";
-						const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
-						export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false })] };
-					`
+								import { createRequire } from "node:module";
+								const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
+								export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })] };
+							`
 						);
 					}
 					const initialExitListeners = new Set(process.listeners("exit"));
@@ -318,12 +298,14 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 											inspectorPort: false,
 											persistState: false,
 											remoteBindings: false,
+											types: { generate: false },
 										}),
 									]
 								: [],
 					};
 					const server = await createServer(options);
 					onTestFinished(() => server.close());
+					expect(server.config.inlineConfig).toBe(options);
 					const containerExitListeners = () =>
 						process
 							.listeners("exit")
@@ -342,9 +324,9 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 					let pendingTags = latestTags();
 					const exitListener = containerExitListeners()[0];
 					expect(exitListener).toBeDefined();
-					// Even servers constructed with the same options must not share cleanup.
 					const secondServer = await createServer(options);
 					onTestFinished(() => secondServer.close());
+					expect(secondServer.config.inlineConfig).toBe(options);
 					const secondTags = latestTags();
 					const listeners = containerExitListeners();
 					expect(listeners).toHaveLength(2);
@@ -370,6 +352,7 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 						} else {
 							expect(currentPlugin).toBe(previousPlugin);
 						}
+						expect(server.config.inlineConfig).toBe(options);
 						pendingTags = new Set([...pendingTags, ...latestTags()]);
 						expect(pendingTags.size).toBe(restart + 2);
 						expect(new Set(containerExitListeners())).toEqual(
@@ -400,50 +383,64 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 					expect(containerExitListeners()).toHaveLength(0);
 				}
 			);
+
+			test("uses distinct image tags for same-class Containers in different Workers", async ({
+				expect,
+				onTestFinished,
+			}) => {
+				writeWorkerSource();
+				writeCloudflareConfig({ scenario: "configured" });
+				const server = await createServer({
+					configFile: false,
+					logLevel: "silent",
+					plugins: [
+						cloudflare({
+							inspectorPort: false,
+							persistState: false,
+							remoteBindings: false,
+							types: { generate: false },
+							auxiliaryWorkers: [
+								{
+									config: {
+										name: "auxiliary-container-test",
+										entrypoint: "./index.js",
+										compatibilityDate: "2026-09-21",
+										exports: {
+											Probe: {
+												type: "durable-object",
+												storage: "sqlite",
+												container: "probe",
+											},
+										},
+									},
+								},
+							],
+						}),
+					],
+				});
+				onTestFinished(() => server.close());
+
+				const options = vi.mocked(prepareContainerImagesForDev).mock
+					.calls[0]?.[0].containerOptions;
+				expect(options).toHaveLength(2);
+				expect(options?.map(({ class_name }) => class_name)).toEqual([
+					"Probe",
+					"Probe",
+				]);
+				expect(new Set(options?.map(({ image_tag }) => image_tag)).size).toBe(
+					2
+				);
+			});
 		}
 
-		test.for(["image-free", "configured", "disabled", "absent"] as const)(
-			"prepares only enabled Containers: %s",
+		test.for(["image-free", "configured", "unlinked", "absent"] as const)(
+			"prepares only linked Containers: %s",
 			async (scenario, { expect, onTestFinished }) => {
-				fs.writeFileSync(
-					"index.js",
-					`
-				import { DurableObject } from "cloudflare:workers";
-				export class Probe extends DurableObject {}
-				export default { fetch() { return new Response("ready"); } };
-			`
-				);
-				fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-				fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-				fs.writeFileSync(
-					"wrangler.jsonc",
-					JSON.stringify({
-						name: "container-test",
-						main: "index.js",
-						compatibility_date: "2026-09-21",
-						dev: { enable_containers: scenario !== "disabled" },
-						containers:
-							scenario === "absent"
-								? []
-								: [
-										{
-											class_name: "Probe",
-											scheduling_policy: "durable_object",
-											...(scenario === "configured"
-												? {
-														images: {
-															app: { dockerfile: "./Dockerfile" },
-														},
-													}
-												: {}),
-										},
-									],
-						durable_objects: {
-							bindings: [{ name: "PROBE", class_name: "Probe" }],
-						},
-						migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-					})
-				);
+				writeWorkerSource();
+				writeCloudflareConfig({
+					scenario,
+					remoteImage: mode === "preview",
+				});
 				function config() {
 					return {
 						root: process.cwd(),
@@ -453,10 +450,10 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 						preview: { port: 0 },
 						plugins: [
 							cloudflare({
-								configPath: path.resolve("wrangler.jsonc"),
 								inspectorPort: false,
 								persistState: false,
 								remoteBindings: false,
+								types: { generate: false },
 							}),
 						],
 					};
@@ -483,7 +480,7 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 								listener.name === "cleanupContainerImages"
 						);
 
-				if (scenario === "disabled" || scenario === "absent") {
+				if (scenario === "unlinked" || scenario === "absent") {
 					expect(prepareContainerImagesForDev).not.toHaveBeenCalled();
 				} else {
 					expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(1);
@@ -492,15 +489,18 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 					expect(options).toHaveLength(scenario === "configured" ? 1 : 0);
 				}
 
-				if (scenario !== "configured") {
+				if (
+					mode === "preview" ||
+					scenario === "image-free" ||
+					scenario === "unlinked" ||
+					scenario === "absent"
+				) {
 					expect(containerExitListeners()).toHaveLength(0);
 					await server.close();
 					expect(cleanupContainers).not.toHaveBeenCalled();
 					return;
 				}
 
-				// Two servers must retain independent cleanup callbacks. Closing one
-				// must not remove the other's process-exit fallback.
 				expect(containerExitListeners()).toHaveLength(1);
 				const firstExitListener = containerExitListeners()[0];
 				const secondServer = await startServer();
@@ -517,7 +517,6 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 					expect.any(String),
 					plannedImages[0]
 				);
-				// Failed graceful cleanup must leave the exit fallback and tags intact.
 				expect(containerExitListeners()).toHaveLength(2);
 				expect(containerExitListeners()).toContain(firstExitListener);
 				firstExitListener?.(0);
@@ -529,7 +528,6 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 				expect(containerExitListeners()).toHaveLength(1);
 				expect(containerExitListeners()).not.toContain(firstExitListener);
 
-				// Exercise only this server's listener, without emitting process.exit.
 				const secondExitListener = containerExitListeners()[0];
 				expect(secondExitListener).toBeDefined();
 				secondExitListener?.(0);

@@ -1,3 +1,4 @@
+import assertContainers from "node:assert";
 import childProcess, { execSync } from "node:child_process";
 import fs from "node:fs";
 import { tmpdir } from "node:os";
@@ -45,12 +46,16 @@ if (process.platform === "win32") {
 	}
 
 	const pkgRoot = path.resolve(__dirname, "..");
+	function getDefaultPtyEnv(): NodeJS.ProcessEnv {
+		const { TURBO_HASH: _, TURBO_IS_TUI: __, ...env } = process.env;
+		return env;
+	}
 	const ptyOptions: pty.IPtyForkOptions = {
 		name: "xterm-color",
 		cols: 80,
 		rows: 30,
 		cwd: pkgRoot,
-		env: process.env as Record<string, string>,
+		env: getDefaultPtyEnv(),
 	};
 
 	// Check `node-pty` installed and working correctly, skipping tests if not
@@ -126,7 +131,7 @@ if (process.platform === "win32") {
 
 		const ptyOptionsWithEnv = {
 			...ptyOptions,
-			env: env ?? (process.env as Record<string, string>),
+			env: env ?? getDefaultPtyEnv(),
 		} satisfies pty.IPtyForkOptions;
 
 		const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
@@ -281,6 +286,23 @@ if (process.platform === "win32") {
 				expect(wrangler.stdout).not.toContain("rebuild container");
 				expect(wrangler.stdout).not.toContain("open local explorer");
 			});
+			it.each(["", "false"])(
+				"should not show hotkeys under Turborepo stream output (TURBO_IS_TUI=%j)",
+				async (turboIsTui) => {
+					const wrangler = await startWranglerDev(args, false, {
+						...getDefaultPtyEnv(),
+						TURBO_HASH: "test-hash",
+						TURBO_IS_TUI: turboIsTui,
+					});
+					wrangler.pty.kill();
+					expect(wrangler.stdout).not.toContain("open a browser");
+					expect(wrangler.stdout).not.toContain("open devtools");
+					expect(wrangler.stdout).not.toContain("clear console");
+					expect(wrangler.stdout).not.toContain("to exit");
+					expect(wrangler.stdout).not.toContain("rebuild container");
+					expect(wrangler.stdout).not.toContain("open local explorer");
+				}
+			);
 		});
 	});
 
@@ -353,21 +375,11 @@ if (process.platform === "win32") {
 					}
 				);
 
-				const ids = getContainerIds();
-				if (ids.length > 0) {
-					execSync("docker rm -f " + ids.join(" "), {
-						encoding: "utf8",
-					});
-				}
+				await removeFixtureContainers();
 			});
 
 			afterEach(async () => {
-				const ids = getContainerIds();
-				if (ids.length > 0) {
-					execSync("docker rm -f " + ids.join(" "), {
-						encoding: "utf8",
-					});
-				}
+				await removeFixtureContainers();
 			});
 			afterAll(() => {
 				removeDir(tmpDir, { fireAndForget: true });
@@ -399,18 +411,23 @@ if (process.platform === "win32") {
 					expect(await status.json()).toBe(true);
 				}, WAITFOR_OPTIONS);
 
-				await vi.waitFor(async () => {
-					const res = await fetch(wrangler.url + "/fetch", {
-						// Sometimes this fetch can hang if the container is not ready
-						// The default timeout is longer than the timeout on the `waitFor()` which results in the test failing.
-						// So abort this request sooner to allow it to retry.
-						signal: AbortSignal.timeout(500),
-					});
+				// A running container can still be starting its HTTP server. Give port
+				// readiness time without retrying the whole build/rebuild test.
+				await vi.waitFor(
+					async () => {
+						const res = await fetch(wrangler.url + "/fetch", {
+							// Sometimes this fetch can hang if the container is not ready
+							// The default timeout is longer than the timeout on the `waitFor()` which results in the test failing.
+							// So abort this request sooner to allow it to retry.
+							signal: AbortSignal.timeout(500),
+						});
 
-					expect(await res.text()).toBe(
-						"Hello World! Have an env var! I'm an env var!"
-					);
-				}, WAITFOR_OPTIONS);
+						expect(await res.text()).toBe(
+							"Hello World! Have an env var! I'm an env var!"
+						);
+					},
+					{ ...WAITFOR_OPTIONS, timeout: 10_000 }
+				);
 				const output = wrangler.stdout;
 				// Extract the Docker image name from the output
 				const imageNameMatch = output.match(
@@ -476,12 +493,15 @@ if (process.platform === "win32") {
 					});
 					expect(await status.json()).toBe(true);
 				}, WAITFOR_OPTIONS);
-				await vi.waitFor(async () => {
-					const res = await fetch(wrangler.url + "/fetch", {
-						signal: AbortSignal.timeout(500),
-					});
-					expect(await res.text()).toBe("Blah! I'm an env var!");
-				}, WAITFOR_OPTIONS);
+				await vi.waitFor(
+					async () => {
+						const res = await fetch(wrangler.url + "/fetch", {
+							signal: AbortSignal.timeout(500),
+						});
+						expect(await res.text()).toBe("Blah! I'm an env var!");
+					},
+					{ ...WAITFOR_OPTIONS, timeout: 10_000 }
+				);
 
 				wrangler.pty.kill();
 			});
@@ -541,21 +561,11 @@ if (process.platform === "win32") {
 						tmpDockerFilePath
 					);
 
-					const ids = getContainerIds();
-					if (ids.length > 0) {
-						execSync("docker rm -f " + ids.join(" "), {
-							encoding: "utf8",
-						});
-					}
+					await removeFixtureContainers();
 				});
 
 				afterEach(async () => {
-					const ids = getContainerIds();
-					if (ids.length > 0) {
-						execSync("docker rm -f " + ids.join(" "), {
-							encoding: "utf8",
-						});
-					}
+					await removeFixtureContainers();
 				});
 
 				afterAll(() => {
@@ -663,21 +673,11 @@ if (process.platform === "win32") {
 					}
 				);
 
-				const ids = getContainerIds();
-				if (ids.length > 0) {
-					execSync("docker rm -f " + ids.join(" "), {
-						encoding: "utf8",
-					});
-				}
+				await removeFixtureContainers();
 			});
 
 			afterEach(async () => {
-				const ids = getContainerIds();
-				if (ids.length > 0) {
-					execSync("docker rm -f " + ids.join(" "), {
-						encoding: "utf8",
-					});
-				}
+				await removeFixtureContainers();
 			});
 			afterAll(() => {
 				removeDir(tmpDir, { fireAndForget: true });
@@ -817,22 +817,11 @@ if (process.platform === "win32") {
 						}
 					);
 
-					const ids = getContainerIds();
-					if (ids.length > 0) {
-						execSync("docker rm -f " + ids.join(" "), {
-							encoding: "utf8",
-						});
-					}
+					await removeFixtureContainers();
 				});
 
 				afterEach(async () => {
-					const ids = getContainerIds();
-
-					if (ids.length > 0) {
-						execSync("docker rm -f " + ids.join(" "), {
-							encoding: "utf8",
-						});
-					}
+					await removeFixtureContainers();
 				});
 				afterAll(() => {
 					removeDir(tmpDir, { fireAndForget: true });
@@ -914,6 +903,22 @@ if (process.platform === "win32") {
 				});
 			}
 		);
+
+		/** Await cleanup even when Wrangler is already removing the same containers. */
+		async function removeFixtureContainers() {
+			await vi.waitFor(
+				() => {
+					const ids = getContainerIds();
+					if (ids.length > 0) {
+						childProcess.execFileSync("docker", ["rm", "-f", ...ids], {
+							encoding: "utf8",
+						});
+					}
+					assertContainers.strictEqual(getContainerIds().length, 0);
+				},
+				{ timeout: 10_000, interval: 500 }
+			);
+		}
 
 		/** gets any containers that were created by running this fixture */
 		const getContainerIds = () => {
