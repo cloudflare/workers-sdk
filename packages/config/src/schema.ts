@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { WORKFLOW_JURISDICTIONS } from "./exports";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
 import type { ContainerConfig, WorkerConfig } from "./types";
@@ -626,6 +627,7 @@ export const WorkflowExportSchema = z.strictObject({
 			errorRetention: WorkflowRetentionSchema.optional(),
 		})
 		.optional(),
+	jurisdiction: z.enum(WORKFLOW_JURISDICTIONS).optional(),
 });
 
 // Containers are only supported on the SQLite storage engine, so each live
