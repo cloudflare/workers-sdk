@@ -1,0 +1,45 @@
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_af189af6800ac9::t_1bd28087596267 1901,1945
+packages/wrangler/src/__tests__/versions/versions.deploy.test.ts
+  s_af189af6800ac9::t_8b735b24ca4859 88-89,130-135,370,381-385,409-410,562-586,588-601,603-610,612-614,616-624
+packages/workers-utils/src/config/environment.ts
+  s_af189af6800ac9::t_a054e38acc5c6c 185,188-189
+packages/deploy-helpers/src/deploy/helpers/durable-object-container-applications.ts
+  s_af189af6800ac9::t_507a16605b0602 56-57,154-155,158,162-164,166-171,190,192-194,202-208,210-214,260-329,349,572,617-625
+packages/workers-utils/src/config/validation.ts
+  s_af189af6800ac9::t_0cb7b15965436d 13
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_af189af6800ac9::t_b1212c776f1a79 4697,4711
+packages/deploy-helpers/tests/versioned-container-applications.test.ts
+  s_af189af6800ac9::t_1607bfc9ff63ea 1-3,5-6,9-23,25-29,31-34,36-37,40-51,54-73,77-95,97-115,118-132,134,138-143,145,149-150,152-153,156-163
+packages/deploy-helpers/tests/durable-object-container-applications.test.ts
+  s_af189af6800ac9::t_fdaa1295fe5845 389-469
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_af189af6800ac9::t_9e988fe048df93 84,86-89,92-93,113,433,503,588,756,765,798,4240
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_af189af6800ac9::t_c047ebb86ae772 11,1063-1066,1068-1071,1074,1104,1269,2536,2621-2630,2655-2668,2671-2694,2732-2747,2765,2767-2769,2776,2781-2861
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_af189af6800ac9::t_db1454a033ea45 132,199,479-481
+.changeset/native-container-image-metadata.md
+  s_af189af6800ac9::t_c4e9b04d47a500 1-11
+packages/deploy-helpers/tests/container-metadata.test.ts
+  s_af189af6800ac9::t_10dbdffd115969 1,173,181,192,205,209,252,377,382,401,414,417-418,422,431
+.github/workflows/vite-plugin-playgrounds.yml
+  s_af189af6800ac9::t_4bc4cec2c384d9 36-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "02352c136df97c28e1e26f8c652b010ee9b40834",
+  "prompts": {},
+  "sessions": {
+    "s_af189af6800ac9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a5fe-e3fa-7091-b9ac-6abba3257ce7",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

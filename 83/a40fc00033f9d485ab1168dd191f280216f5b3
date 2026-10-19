@@ -1,0 +1,19 @@
+packages/wrangler/src/preview/preview-config.ts
+  s_519c7f59dc6d0d::t_d2eb587635be03 21-26,119,123-154,164,167,185,188,190,193,195,198,204,207,439,443
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "83a40fc00033f9d485ab1168dd191f280216f5b3",
+  "prompts": {},
+  "sessions": {
+    "s_519c7f59dc6d0d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f726b8a7dffeSxkYmDdFG9brgy",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

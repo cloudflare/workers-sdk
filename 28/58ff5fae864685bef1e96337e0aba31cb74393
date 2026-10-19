@@ -1,0 +1,23 @@
+packages/workers-utils/src/config/patch-config.ts
+  s_267c67b4382bfe::t_cce47f611e3a3a 8-58,76
+packages/workers-utils/src/index.ts
+  s_267c67b4382bfe::t_bbf874c6af23de 41
+packages/wrangler/src/preview/ensure-config.ts
+  s_267c67b4382bfe::t_bd78cbb39b70de 8,209-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2858ff5fae864685bef1e96337e0aba31cb74393",
+  "prompts": {},
+  "sessions": {
+    "s_267c67b4382bfe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3befe3ddffe8kYR1T6hO1GZ5d",
+        "model": "cloudflare/auto"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

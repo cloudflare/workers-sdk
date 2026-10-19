@@ -1,0 +1,19 @@
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_519c7f59dc6d0d::t_b7f817fb444b96 13531-13551
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "35fc916ed8157dbb5fd372c8f1d037dcdbca08c7",
+  "prompts": {},
+  "sessions": {
+    "s_519c7f59dc6d0d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f726b8a7dffeSxkYmDdFG9brgy",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

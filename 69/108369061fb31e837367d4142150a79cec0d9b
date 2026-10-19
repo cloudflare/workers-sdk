@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/d1/splitter.test.ts
+  s_be2b3626dafbbd::t_1b022ab3ab7d66 503-698
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "69108369061fb31e837367d4142150a79cec0d9b",
+  "prompts": {},
+  "sessions": {
+    "s_be2b3626dafbbd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f504b0509ffe4Tr53JjoxVzzZ6",
+        "model": "unknown"
+      },
+      "human_author": "David Laban <dlaban@cloudflare.com>"
+    }
+  }
+}

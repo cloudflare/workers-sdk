@@ -1,0 +1,19 @@
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_e6ef9db3485b14::t_9b21285a61fd69 1254-1256,1286-1327
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b626c204be59cbc52bcdde08a7b45c87ad56d590",
+  "prompts": {},
+  "sessions": {
+    "s_e6ef9db3485b14": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f940fb7bdffeOOke2jjtQ9MxFI",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}

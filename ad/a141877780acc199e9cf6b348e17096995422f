@@ -1,0 +1,19 @@
+.changeset/fuzzy-toml-previews.md
+  s_e1a63d0aa9b40e::t_4b540abbe25126 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ada141877780acc199e9cf6b348e17096995422f",
+  "prompts": {},
+  "sessions": {
+    "s_e1a63d0aa9b40e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b5d72c7ffe8r7FT1i3vVJTpi",
+        "model": "cloudflare/auto"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/wrangler/src/preview/secret.ts
+  s_bfc4061679970e::t_21940a12c40453 5,8,12-16,90-146,150-153,160,168-172,176-178,180-181,184-185,187-192,199-201,203,210,213-220,223-245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7afe4e7738654b641ad3001ea8c03d7a7ec400c6",
+  "prompts": {},
+  "sessions": {
+    "s_bfc4061679970e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_032939564ffeQ1M6Zc3FzJG4Mf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

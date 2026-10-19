@@ -1,0 +1,64 @@
+.changeset/polite-rings-make.md
+  s_9eea9b4e1390a1::t_0dd549054a991b 1-7
+packages/deploy-helpers/src/preview/api.ts
+  s_9eea9b4e1390a1::t_86e83843a96c26 9,16,27,32
+packages/deploy-helpers/src/preview/preview.ts
+  s_9eea9b4e1390a1::t_e3edbc082cd5b0 104,608,616-617,622,628,832-834,841
+packages/deploy-helpers/src/preview/shared.ts
+  s_9eea9b4e1390a1::t_9ecc146e63a6bf 469
+packages/wrangler/src/__tests__/preview-config.test.ts
+  s_9eea9b4e1390a1::t_1b9bacc5f6ec26 1-52,58-129,137-146,150-177,178,183-235,236-244,246-282,286-351,353-356
+  s_d204364f9c2354::t_cdb0e3549e79d4 53-57,130-136
+packages/wrangler/src/__tests__/preview.test.ts
+  s_9eea9b4e1390a1::t_635f211cdc9d7f 27,686-691,696-701,882-884,959-967,976-1115,1124,1129-1158,1203-1210,1217-1246,1264-1346,1348-1373,1375-1438,1440-1475,1477-1543,1706,1779,1835,1848-1858,1862-1875,1877-1885,1888-1890,1892-1893,1902-1903,1905-1915,1936-1941,1948,1952,1955,2134,2322,2331,2438,3142,3246,4954,5325,5435,5846,5857,5878,5958-5961,6154
+  s_d204364f9c2354::t_fd2844a908b2fc 968-975,1129
+  s_7d354ec635832e::t_013b3c6d6fe955 886,890-908,912-958
+packages/wrangler/src/preview/ensure-config.ts
+  s_9eea9b4e1390a1::t_4f971db74419f3 1-36,37-41,43-85,93-95,106-107,108-118,120-123,124-127,160-165,169-172,176-186,190-192,204-208
+  s_d204364f9c2354::t_30fb2c38709db6 96-101,105
+  s_957fad3aac7998::t_842b43ef334c7b 42,86-92,102-104,128-159,166-168,173-175,187-189,193-203
+packages/wrangler/src/preview/preview-config.ts
+  s_9eea9b4e1390a1::t_2e319659f0d8b8 1-244,246-359,361-363,365-456,461,462-480,482-488,490-689
+packages/wrangler/src/preview/preview.ts
+  s_9eea9b4e1390a1::t_352c4975061546 12-13,71,73-77,82-94,99,104,110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "58656afcd69ae1d71f61d0fb0d34bc3ae0921aaf",
+  "prompts": {},
+  "sessions": {
+    "s_7d354ec635832e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5a082722ffed0oCUVqLQPNWGl",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_957fad3aac7998": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f59c165f2ffeWFGoU8luxR0jqO",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_9eea9b4e1390a1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5a4fb566ffeLoPeOm2j1QDRUt",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_d204364f9c2354": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5a2b5c5effesJ4Ws6nV0Sz4TQ",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

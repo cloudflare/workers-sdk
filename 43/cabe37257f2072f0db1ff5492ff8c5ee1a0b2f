@@ -1,0 +1,47 @@
+.changeset/calm-previews-open.md
+  s_dcd2d461bd398a::t_dada5a69ac0e0c 1-7
+packages/wrangler/src/__tests__/index.test.ts
+  s_dcd2d461bd398a::t_5892351eb14828 71,172
+packages/wrangler/src/preview/base-config/index.ts
+  s_dcd2d461bd398a::t_cdf86fac9bc610 8
+packages/wrangler/src/preview/base-config/secrets/bulk.ts
+  s_dcd2d461bd398a::t_47bcfc7a361e79 17
+packages/wrangler/src/preview/base-config/secrets/delete.ts
+  s_dcd2d461bd398a::t_1efb0b4f71ee69 16
+packages/wrangler/src/preview/base-config/secrets/index.ts
+  s_dcd2d461bd398a::t_b22ec54fca4a09 9
+packages/wrangler/src/preview/base-config/secrets/list.ts
+  s_dcd2d461bd398a::t_7b75cb90ee188d 77
+packages/wrangler/src/preview/base-config/secrets/put.ts
+  s_dcd2d461bd398a::t_883ee60007f785 19
+packages/wrangler/src/preview/delete.ts
+  s_dcd2d461bd398a::t_a92ec417575b64 10
+packages/wrangler/src/preview/preview.ts
+  s_dcd2d461bd398a::t_97b7b24c317a86 19
+packages/wrangler/src/preview/secrets/bulk.ts
+  s_dcd2d461bd398a::t_601b9391b92913 20
+packages/wrangler/src/preview/secrets/delete.ts
+  s_dcd2d461bd398a::t_79728f936b48f3 19
+packages/wrangler/src/preview/secrets/index.ts
+  s_dcd2d461bd398a::t_61ec7e77347db9 17
+packages/wrangler/src/preview/secrets/list.ts
+  s_dcd2d461bd398a::t_f0f05393cf29d4 89
+packages/wrangler/src/preview/secrets/put.ts
+  s_dcd2d461bd398a::t_c72f8948114d5d 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "43cabe37257f2072f0db1ff5492ff8c5ee1a0b2f",
+  "prompts": {},
+  "sessions": {
+    "s_dcd2d461bd398a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5613c67bffeLBLnxscLTH5UOp",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

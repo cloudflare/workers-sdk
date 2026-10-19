@@ -1,0 +1,23 @@
+packages/vite-plugin-cloudflare/src/miniflare-options.ts
+  s_36aec12077a3fd::t_956db6acbf3afa 225-227
+packages/vite-plugin-cloudflare/src/__tests__/preview-server.spec.ts
+  s_36aec12077a3fd::t_b4d6a8c5151d46 1,3,18-40,42-43,45-51,53-63
+.changeset/preview-domain-traffic.md
+  s_36aec12077a3fd::t_303aead589c3f3 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a2928040c4358c642b908e7e137f932e3eeb07dc",
+  "prompts": {},
+  "sessions": {
+    "s_36aec12077a3fd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a136fb-d042-74d1-a394-13c740f1033f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

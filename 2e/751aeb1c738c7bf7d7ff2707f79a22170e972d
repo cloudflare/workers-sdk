@@ -1,0 +1,21 @@
+packages/workers-utils/src/config/patch-config.ts
+  s_7c85d6d0a50d01::t_3b5f3bec7ca786 76-78,90-96
+packages/workers-utils/tests/config/patch-config.test.ts
+  s_7c85d6d0a50d01::t_9692dab86b67af 483-522
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2e751aeb1c738c7bf7d7ff2707f79a22170e972d",
+  "prompts": {},
+  "sessions": {
+    "s_7c85d6d0a50d01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f72f8060effeY1xn8zZSffVU7y",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+.changeset/container-durable-object-own-script-name.md
+  s_7befcead58ee09::t_de6492287f1013 1-7
+packages/wrangler/src/__tests__/api/startDevWorker/ConfigController.test.ts
+  s_7befcead58ee09::t_134e5af99dd0d4 15-20,303-409
+packages/wrangler/src/__tests__/containers/config.test.ts
+  s_7befcead58ee09::t_a41a0395097072 215-249
+packages/wrangler/src/containers/config.ts
+  s_7befcead58ee09::t_d28ab23c7d18fc 132-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9d42755a119053973e1e12264832dbc3c169871b",
+  "prompts": {},
+  "sessions": {
+    "s_7befcead58ee09": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2754d93dffemaqZXk0TpUufZa",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

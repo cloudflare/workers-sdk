@@ -1,0 +1,19 @@
+.changeset/two-lamps-leave.md
+  s_c6e46a628a9d65::t_fbf23e2793c0aa 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0fdb6e7608f2b67866a6438f80504b06e28ef6fa",
+  "prompts": {},
+  "sessions": {
+    "s_c6e46a628a9d65": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b963e67ffedCMkNPjBEMQ5gU",
+        "model": "unknown"
+      },
+      "human_author": "David Laban <dlaban@cloudflare.com>"
+    }
+  }
+}

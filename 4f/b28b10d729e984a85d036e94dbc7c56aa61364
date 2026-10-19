@@ -1,0 +1,21 @@
+.changeset/preview-domain-traffic.md
+  s_36aec12077a3fd::t_4b33fd63e8e5c1 9
+packages/deploy-helpers/src/preview/preview.ts
+  s_36aec12077a3fd::t_45c0bac096351e 1352
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4fb28b10d729e984a85d036e94dbc7c56aa61364",
+  "prompts": {},
+  "sessions": {
+    "s_36aec12077a3fd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a136fb-d042-74d1-a394-13c740f1033f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}
