@@ -501,11 +501,11 @@ describe("remote-bindings proxy server: forwarded responses", () => {
 		proxyServerBundle = result.outputFiles[0].text;
 	});
 
-	test("an Access login redirect returned by the remote service reaches the caller unchanged", async ({
-		expect,
-	}) => {
-		// "Edge" instance running the real proxy server in front of a service
-		// that itself redirects to an Access login page.
+	/**
+	 * Start an "edge" Miniflare instance running the real proxy server in front
+	 * of a `remote-service` Worker running `serviceScript`, and return its URL.
+	 */
+	async function useEdgeMiniflare(serviceScript: string): Promise<URL> {
 		const edge = new Miniflare({
 			workers: [
 				{
@@ -528,22 +528,28 @@ describe("remote-bindings proxy server: forwarded responses", () => {
 					config: {
 						name: "remote-service",
 						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(/* javascript */ `
-							export default {
-								fetch() {
-									return new Response(null, {
-										status: 302,
-										headers: { Location: ${JSON.stringify(ACCESS_LOGIN_URL)} },
-									});
-								},
-							};
-						`),
+						manifest: singleModuleManifest(serviceScript),
 					},
 				},
 			],
 		});
 		useDispose(edge);
-		const edgeUrl = await edge.ready;
+		return edge.ready;
+	}
+
+	test("an Access login redirect returned by the remote service reaches the caller unchanged", async ({
+		expect,
+	}) => {
+		const edgeUrl = await useEdgeMiniflare(/* javascript */ `
+			export default {
+				fetch() {
+					return new Response(null, {
+						status: 302,
+						headers: { Location: ${JSON.stringify(ACCESS_LOGIN_URL)} },
+					});
+				},
+			};
+		`);
 
 		const log = new TestLog();
 		const mf = useRemoteServiceMiniflare(edgeUrl, {
@@ -563,5 +569,34 @@ describe("remote-bindings proxy server: forwarded responses", () => {
 		await new Promise((resolve) => setTimeout(resolve, 200));
 
 		expect(getAccessWarnings(log)).toHaveLength(0);
+	});
+
+	test("a manually encoded response from the remote service reaches the caller intact", async ({
+		expect,
+	}) => {
+		// The proxy server re-wraps forwarded responses to tag them. The body it
+		// receives has already been decoded by the runtime, so the re-wrapped
+		// response must keep automatic encoding: `encodeBody: "manual"` would
+		// send the decoded bytes under the original `Content-Encoding: gzip`.
+		const text = "manually gzip-encoded response body ".repeat(20);
+		const edgeUrl = await useEdgeMiniflare(/* javascript */ `
+			export default {
+				fetch() {
+					const body = new Blob([${JSON.stringify(text)}])
+						.stream()
+						.pipeThrough(new CompressionStream("gzip"));
+					return new Response(body, {
+						headers: { "Content-Encoding": "gzip", "Content-Type": "text/plain" },
+						encodeBody: "manual",
+					});
+				},
+			};
+		`);
+
+		const mf = useRemoteServiceMiniflare(edgeUrl, { log: new TestLog() });
+
+		const response = await mf.dispatchFetch("http://localhost/");
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe(text);
 	});
 });

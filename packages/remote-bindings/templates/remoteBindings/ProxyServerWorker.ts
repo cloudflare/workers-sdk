@@ -317,6 +317,10 @@ async function pipeSocketOverWebSocket(
  * untagged responses and strips the tag before handing the response to the
  * binding. See `makeFetch` in
  * packages/miniflare/src/workers/shared/remote-bindings-utils.ts
+ *
+ * Like the `MF-*` request headers this worker reads, the header name is
+ * reserved for remote bindings: a binding's own `MF-Forwarded-Response` header
+ * is overwritten here and then removed by the client.
  */
 function markForwardedResponse(response: Response): Response {
 	// A WebSocket upgrade response can't be re-wrapped without losing its

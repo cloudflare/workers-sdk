@@ -101,6 +101,8 @@ function buildAccessBlockResponseBody(
  * Responses generated in front of the proxy server, such as a Cloudflare Access
  * login redirect or block page, never carry it. Older proxy servers don't set
  * it at all, in which case every response is checked for an Access block.
+ * Like the `MF-*` request headers, the name is reserved for remote bindings: a
+ * binding's own header of the same name doesn't reach the caller.
  */
 const FORWARDED_RESPONSE_HEADER = "MF-Forwarded-Response";
 
