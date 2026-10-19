@@ -16,6 +16,41 @@ import type {
 	WorkerRegistry,
 } from "miniflare";
 
+const fsRace = vi.hoisted(() => ({
+	unlinkBeforeUtimes: undefined as string | undefined,
+	unlinkBeforeRead: undefined as string | undefined,
+	claimBeforeWrite: undefined as { path: string; data: string } | undefined,
+}));
+
+vi.mock("node:fs", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs")>();
+	return {
+		...actual,
+		utimesSync: (...args: Parameters<typeof actual.utimesSync>) => {
+			if (args[0] === fsRace.unlinkBeforeUtimes) {
+				fsRace.unlinkBeforeUtimes = undefined;
+				actual.unlinkSync(args[0]);
+			}
+			actual.utimesSync(...args);
+		},
+		readFileSync: ((...args: Parameters<typeof actual.readFileSync>) => {
+			if (args[0] === fsRace.unlinkBeforeRead) {
+				fsRace.unlinkBeforeRead = undefined;
+				actual.unlinkSync(args[0]);
+			}
+			return actual.readFileSync(...args);
+		}) as typeof actual.readFileSync,
+		writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => {
+			const claim = fsRace.claimBeforeWrite;
+			if (claim !== undefined && args[0] === claim.path) {
+				fsRace.claimBeforeWrite = undefined;
+				actual.writeFileSync(claim.path, claim.data);
+			}
+			actual.writeFileSync(...args);
+		},
+	};
+});
+
 describe.sequential("DevRegistry", () => {
 	test("waits for the filesystem watcher to be ready", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
@@ -265,6 +300,171 @@ describe.sequential("DevRegistry", () => {
 				})
 			);
 		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("re-registers its entry when stale cleanup removes it mid-heartbeat", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+
+			// After a machine wakes, a peer's sweep can delete the entry after the
+			// heartbeat has confirmed it exists but before it touches the mtime.
+			fsRace.unlinkBeforeUtimes = definitionPath;
+			await vi.advanceTimersByTimeAsync(10_001);
+			expect(fsRace.unlinkBeforeUtimes).toBeUndefined();
+
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
+				...definition,
+				instanceId: registry.instanceId,
+			});
+		} finally {
+			fsRace.unlinkBeforeUtimes = undefined;
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("re-registers its entry when stale cleanup removes it before the heartbeat reads it", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+
+			fsRace.unlinkBeforeRead = definitionPath;
+			await vi.advanceTimersByTimeAsync(10_001);
+			expect(fsRace.unlinkBeforeRead).toBeUndefined();
+
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
+				...definition,
+				instanceId: registry.instanceId,
+			});
+		} finally {
+			fsRace.unlinkBeforeRead = undefined;
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("keeps its heartbeat while its entry is unreadable", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+			const ownEntry = await fs.readFile(definitionPath, "utf8");
+
+			// A peer writing the file is seen partway through, as truncated JSON.
+			await fs.writeFile(definitionPath, ownEntry.slice(0, 10));
+			await vi.advanceTimersByTimeAsync(10_001);
+			expect(await fs.readFile(definitionPath, "utf8")).toBe(
+				ownEntry.slice(0, 10)
+			);
+
+			await fs.writeFile(definitionPath, ownEntry);
+			const old = new Date(Date.now() - 30_000);
+			await fs.utimes(definitionPath, old, old);
+			await vi.advanceTimersByTimeAsync(10_001);
+
+			expect((await fs.stat(definitionPath)).mtimeMs).toBeGreaterThan(
+				old.getTime() + 20_000
+			);
+		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("does not overwrite an entry another process claims while re-registering", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+		const otherEntry = {
+			...definition,
+			debugPortAddress: "127.0.0.1:5678",
+			instanceId: "another-instance",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+
+			// The sweep empties the name mid-heartbeat, and another session
+			// registers it before this one writes its entry back.
+			fsRace.unlinkBeforeUtimes = definitionPath;
+			fsRace.claimBeforeWrite = {
+				path: definitionPath,
+				data: JSON.stringify(otherEntry),
+			};
+			await vi.advanceTimersByTimeAsync(10_001);
+			expect(fsRace.claimBeforeWrite).toBeUndefined();
+
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual(
+				otherEntry
+			);
+
+			await vi.advanceTimersByTimeAsync(10_001);
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual(
+				otherEntry
+			);
+		} finally {
+			fsRace.unlinkBeforeUtimes = undefined;
+			fsRace.claimBeforeWrite = undefined;
 			await registry.dispose();
 			vi.useRealTimers();
 		}
