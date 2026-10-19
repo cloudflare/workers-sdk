@@ -62,7 +62,7 @@
 		"staging": {
 			"name": "asset-worker-staging",
 			// enable_version_api is set per-environment (not top-level) because
-			// the local workerd in vitest-pool-workers does not support it yet.
+			// the local workerd in @cloudflare/vitest-plugin does not support it yet.
 			"compatibility_flags": [
 				"nodejs_compat",
 				"enable_ctx_exports",
