@@ -26,6 +26,7 @@ import {
 import { validateHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
+import { isBun } from "../../utils/is-bun";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
@@ -373,7 +374,36 @@ export class ProxyController extends Controller {
 				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
 				error
 			);
+			if (isBun()) {
+				await this.reportMissingControlPayload();
+			}
 			return false;
+		}
+	}
+	/**
+	 * Under Bun, `dispatchFetch()` cannot reach the ProxyWorker: the URL rewrite
+	 * onto its origin lives in the undici `dispatcher` that Bun's `fetch()`
+	 * ignores, so control requests go to `http://dummy/` and fail. Send one
+	 * without a payload straight to the ProxyWorker's own URL, which Bun can
+	 * reach, so the ProxyWorker answers queued and later requests with a 503
+	 * naming the cause instead of holding them for a `play` that cannot arrive.
+	 */
+	async reportMissingControlPayload() {
+		try {
+			const { url } = await this.ready.promise;
+			await globalThis.fetch(new URL("/cdn-cgi/ProxyWorker/play", url), {
+				method: "POST",
+				headers: { Authorization: this.secret },
+				// Bun's option for accepting the local self-signed dev certificate.
+				...(url.protocol === "https:"
+					? { tls: { rejectUnauthorized: false } }
+					: {}),
+			} as RequestInit);
+		} catch (cause) {
+			logger.debug(
+				"Could not tell the ProxyWorker that its control payload is missing",
+				cause
+			);
 		}
 	}
 	async sendMessageToInspectorProxyWorker(

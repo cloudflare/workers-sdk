@@ -8,6 +8,9 @@ import type { SerializedError } from "../../../api/startDevWorker/events";
 import type { StartDevWorkerOptions } from "../../../api/startDevWorker/types";
 import type { AddressInfo, Socket } from "node:net";
 
+const { isBunMock } = vi.hoisted(() => ({ isBunMock: vi.fn(() => false) }));
+vi.mock("../../../utils/is-bun", () => ({ isBun: isBunMock }));
+
 describe("ProxyController", () => {
 	mockConsoleMethods();
 
@@ -176,6 +179,63 @@ describe("ProxyController", () => {
 		}
 
 		const response = await inFlight;
+		expect(response.status).toBe(503);
+		expect(await response.text()).toContain(
+			"https://github.com/oven-sh/bun/issues/39247"
+		);
+	});
+
+	test("a request to the ProxyWorker URL gets a 503 when Bun cannot deliver control requests", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		// Since #15906, Miniflare rewrites `dispatchFetch()`'s URL onto the
+		// ProxyWorker's origin inside the undici dispatcher, which Bun's
+		// `fetch()` ignores. Under Bun a control request therefore goes to the
+		// literal `http://dummy/...` URL and fails, so no request reaches the
+		// ProxyWorker, while a plain `fetch()` to its real URL still works.
+		isBunMock.mockReturnValue(true);
+		onTestFinished(() => {
+			isBunMock.mockReturnValue(false);
+		});
+		const bus = new FakeBus();
+		const controller = new ProxyController(bus);
+		onTestFinished(() => controller.teardown());
+
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: {
+				dev: { inspector: false, server: { hostname: "127.0.0.1", port: 0 } },
+			} as StartDevWorkerOptions,
+		});
+		const { proxyWorker, url } = await controller.ready.promise;
+		const dispatchFetch = proxyWorker.dispatchFetch;
+		proxyWorker.dispatchFetch = (input, init) => {
+			if (String(input).startsWith("http://dummy/")) {
+				return Promise.reject(
+					new TypeError("fetch failed", {
+						cause: new Error("getaddrinfo ENOTFOUND dummy"),
+					})
+				);
+			}
+			return dispatchFetch(input, init);
+		};
+
+		await expect(
+			controller.sendMessageToProxyWorker({
+				type: "play",
+				proxyData: {
+					userWorkerUrl: {
+						protocol: "http:",
+						hostname: "127.0.0.1",
+						port: "1",
+					},
+					headers: {},
+				},
+			})
+		).resolves.toBe(false);
+
+		const response = await fetch(url, { signal: AbortSignal.timeout(5_000) });
 		expect(response.status).toBe(503);
 		expect(await response.text()).toContain(
 			"https://github.com/oven-sh/bun/issues/39247"
