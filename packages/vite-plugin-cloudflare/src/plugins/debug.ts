@@ -1,10 +1,10 @@
 import assert from "node:assert";
-import { assertIsNotPreview, assertIsPreview } from "../context";
 import {
-	addDebugToVitePrintUrls,
+	createDebugMiddleware,
 	DEBUG_PATH,
-	getDebugPathHtml,
-} from "../debug";
+} from "@cloudflare/workers-dev-shared";
+import { assertIsNotPreview, assertIsPreview } from "../context";
+import { addDebugToVitePrintUrls } from "../debug";
 import { createPlugin } from "../utils";
 
 /**
@@ -38,17 +38,10 @@ export const debugPlugin = createPlugin("debug", (ctx) => {
 						].map((worker) => worker.config.name)
 					: [];
 
-			viteDevServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
-				const resolvedInspectorPort = await ctx.getResolvedInspectorPort();
-
-				if (resolvedInspectorPort) {
-					const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
-					res.setHeader("Content-Type", "text/html");
-					res.end(html);
-				} else {
-					next();
-				}
-			});
+			viteDevServer.middlewares.use(
+				DEBUG_PATH,
+				createDebugMiddleware(workerNames, () => ctx.getResolvedInspectorPort())
+			);
 		},
 		async configurePreviewServer(vitePreviewServer) {
 			assertIsPreview(ctx);
@@ -73,17 +66,10 @@ export const debugPlugin = createPlugin("debug", (ctx) => {
 				return worker.config.name;
 			});
 
-			vitePreviewServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
-				const resolvedInspectorPort = await ctx.getResolvedInspectorPort();
-
-				if (resolvedInspectorPort) {
-					const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
-					res.setHeader("Content-Type", "text/html");
-					res.end(html);
-				} else {
-					next();
-				}
-			});
+			vitePreviewServer.middlewares.use(
+				DEBUG_PATH,
+				createDebugMiddleware(workerNames, () => ctx.getResolvedInspectorPort())
+			);
 		},
 	};
 });

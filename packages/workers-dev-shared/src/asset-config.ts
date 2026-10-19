@@ -14,6 +14,7 @@ import {
 	HeadersSchema,
 	RedirectsSchema,
 } from "@cloudflare/workers-shared/utils/types";
+import type { DevLogger } from "./logger";
 import type {
 	AssetsOnlyResolvedConfig,
 	ResolvedWorkerConfig,
@@ -21,7 +22,6 @@ import type {
 } from "./plugin-config";
 import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
-import type * as vite from "vite";
 
 /**
  * Returns true if the `changedFile` matches one of the _headers or _redirects files,
@@ -29,15 +29,15 @@ import type * as vite from "vite";
  */
 export function hasAssetsConfigChanged(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	resolvedViteConfig: vite.ResolvedConfig,
+	publicDir: string,
 	changedFilePath: string
 ) {
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
 		return false;
 	}
 	return [
-		getRedirectsConfigPath(resolvedViteConfig),
-		getHeadersConfigPath(resolvedViteConfig),
+		getRedirectsConfigPath(publicDir),
+		getHeadersConfigPath(publicDir),
 	].includes(changedFilePath);
 }
 
@@ -48,7 +48,7 @@ export function hasAssetsConfigChanged(
 export function getAssetsConfig(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	entryWorkerConfig: ResolvedWorkerConfig | undefined,
-	resolvedConfig: vite.ResolvedConfig
+	options: { publicDir: string; logger: DevLogger }
 ): AssetConfig {
 	const assetsConfig =
 		resolvedPluginConfig.type === "assets-only"
@@ -89,23 +89,23 @@ export function getAssetsConfig(
 
 	const logger: Logger = {
 		debug() {
-			/* No debug log in Vite. */
+			/* No debug log in dev. */
 		},
 		log(message: string) {
-			resolvedConfig.logger.info(message);
+			options.logger.info(message);
 		},
 		info(message: string) {
-			resolvedConfig.logger.info(message);
+			options.logger.info(message);
 		},
 		warn(message: string) {
-			resolvedConfig.logger.warn(message);
+			options.logger.warn(message);
 		},
 		error(error: Error) {
-			resolvedConfig.logger.error(error.message, { error });
+			options.logger.error(error.message, { error });
 		},
 	};
 
-	const redirectsFile = getRedirectsConfigPath(resolvedConfig);
+	const redirectsFile = getRedirectsConfigPath(options.publicDir);
 	const redirectsContents = maybeGetFile(redirectsFile);
 	const redirects =
 		redirectsContents &&
@@ -119,7 +119,7 @@ export function getAssetsConfig(
 			}).redirects
 		);
 
-	const headersFile = getHeadersConfigPath(resolvedConfig);
+	const headersFile = getHeadersConfigPath(options.publicDir);
 	const headersContents = maybeGetFile(headersFile);
 	const headers =
 		headersContents &&
@@ -138,10 +138,10 @@ export function getAssetsConfig(
 	};
 }
 
-function getRedirectsConfigPath(config: vite.ResolvedConfig): string {
-	return path.join(config.publicDir, REDIRECTS_FILENAME);
+function getRedirectsConfigPath(publicDir: string): string {
+	return path.join(publicDir, REDIRECTS_FILENAME);
 }
 
-function getHeadersConfigPath(config: vite.ResolvedConfig): string {
-	return path.join(config.publicDir, HEADERS_FILENAME);
+function getHeadersConfigPath(publicDir: string): string {
+	return path.join(publicDir, HEADERS_FILENAME);
 }

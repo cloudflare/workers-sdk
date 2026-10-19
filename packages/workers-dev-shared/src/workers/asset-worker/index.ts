@@ -1,7 +1,7 @@
 import { AssetWorkerInner } from "@cloudflare/workers-shared/asset-worker";
-import { UNKNOWN_HOST } from "../../shared";
 import type { Env as _Env } from "@cloudflare/workers-shared/asset-worker";
-import type { ResolvedConfig } from "vite";
+
+const UNKNOWN_HOST = "http://localhost";
 
 interface Env extends _Env {
 	__VITE_HTML_EXISTS__: Fetcher;
@@ -15,10 +15,11 @@ export default class CustomAssetWorker extends AssetWorkerInner<Env> {
 		const modifiedResponse = new Response(response.body, response);
 		modifiedResponse.headers.delete("ETag");
 		modifiedResponse.headers.delete("Cache-Control");
-		// Add headers set via `server.headers` in the Vite config
-		const viteHeaders = JSON.parse(
-			this.env.__VITE_HEADERS__
-		) as ResolvedConfig["server"]["headers"];
+		// Add headers set via the dev server's `server.headers` config
+		const viteHeaders = JSON.parse(this.env.__VITE_HEADERS__) as Record<
+			string,
+			string | number | string[] | undefined
+		>;
 
 		for (const [key, value] of Object.entries(viteHeaders)) {
 			if (Array.isArray(value)) {

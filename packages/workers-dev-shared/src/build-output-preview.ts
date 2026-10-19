@@ -3,13 +3,13 @@ import {
 	readBuildOutput,
 } from "@cloudflare/build-output-utils";
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
+import type { Bundle } from "./miniflare-manifest";
 import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
 import type {
 	ParsedOutputContainerConfig,
 	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
-import type { Bundle } from "@cloudflare/workers-dev-shared";
 
 export interface BuildOutputPreviewWorker {
 	config: ParsedOutputWorkerConfig;

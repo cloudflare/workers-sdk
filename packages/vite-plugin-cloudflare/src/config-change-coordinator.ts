@@ -1,6 +1,6 @@
 import assert from "node:assert";
+import { hasAssetsConfigChanged } from "@cloudflare/workers-dev-shared";
 import { getDevVarsCandidatePaths } from "@cloudflare/workers-utils/local-env";
-import { hasAssetsConfigChanged } from "./asset-config";
 import { assertIsNotPreview } from "./context";
 import { debuglog } from "./utils";
 import type { PluginContext } from "./context";
@@ -64,7 +64,7 @@ export class ConfigChangeCoordinator {
 			!resolvedPluginConfig.configPaths.has(changedFilePath) &&
 			!hasAssetsConfigChanged(
 				resolvedPluginConfig,
-				ctx.resolvedViteConfig,
+				ctx.resolvedViteConfig.publicDir,
 				changedFilePath
 			)
 		) {

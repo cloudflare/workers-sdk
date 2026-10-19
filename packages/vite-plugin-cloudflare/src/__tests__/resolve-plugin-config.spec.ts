@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { CLI_DISPLAY_NAME_ENV_VAR } from "@cloudflare/workers-dev-shared";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import { CLI_DISPLAY_NAME_ENV_VAR } from "../build-output-env";
 import { resolvePluginConfig } from "../plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
@@ -15,8 +15,8 @@ const { readBuildOutputPreviewMock } = vi.hoisted(() => ({
 	readBuildOutputPreviewMock: vi.fn(),
 }));
 
-vi.mock("../build-output-preview", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../build-output-preview")>()),
+vi.mock("@cloudflare/workers-dev-shared", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/workers-dev-shared")>()),
 	readBuildOutputPreview: readBuildOutputPreviewMock,
 }));
 

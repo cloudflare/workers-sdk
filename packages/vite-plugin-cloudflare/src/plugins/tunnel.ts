@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { toApiComplianceRegion } from "@cloudflare/workers-dev-shared";
 import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
@@ -6,7 +7,7 @@ import colors from "picocolors";
 import encodeQR from "qr";
 import { createAuth, createLogger, USER_AGENT } from "../auth";
 import { assertIsNotPreview, assertIsPreview } from "../context";
-import { createPlugin, debuglog, toApiComplianceRegion } from "../utils";
+import { createPlugin, debuglog } from "../utils";
 import type { PluginContext } from "../context";
 import type { Config, Tunnel } from "@cloudflare/workers-utils";
 import type * as vite from "vite";

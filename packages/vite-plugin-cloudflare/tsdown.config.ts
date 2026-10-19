@@ -13,8 +13,12 @@ export default defineConfig([
 		sourcemap,
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",
+		// Dependencies, whose types the declarations import rather than inline.
+		external: ["miniflare", "@cloudflare/config"],
 		dts: {
 			sourcemap,
+			// `@cloudflare/workers-dev-shared` is private, so inline its types.
+			resolve: ["@cloudflare/workers-dev-shared"],
 			compilerOptions: {
 				// workaround for https://github.com/rolldown/tsdown/issues/345
 				paths: {
@@ -41,8 +45,15 @@ export default defineConfig([
 		dts: false,
 		ignoreWatch,
 	},
-	worker("asset-worker"),
-	worker("router-worker"),
+	// Shared with `@cloudflare/rsbuild-plugin` (see `getDevAssetWorkerOptions()`).
+	worker("asset-worker", {
+		entry: { index: "../workers-dev-shared/src/workers/asset-worker/index.ts" },
+	}),
+	worker("router-worker", {
+		entry: {
+			index: "../workers-dev-shared/src/workers/router-worker/index.ts",
+		},
+	}),
 	worker("runner-worker", {
 		entry: {
 			index: "src/workers/runner-worker/index.ts",

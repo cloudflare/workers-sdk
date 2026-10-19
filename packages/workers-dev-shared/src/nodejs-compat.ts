@@ -198,6 +198,23 @@ export class NodeJsCompat {
 }
 
 /**
+ * Returns true if Node.js async local storage (ALS) is enabled (and not full Node.js compatibility mode).
+ */
+export function hasNodeJsAls(workerConfig: CompatConfig | undefined) {
+	return (
+		workerConfig !== undefined &&
+		getNodeCompat(
+			workerConfig.compatibilityDate,
+			workerConfig.compatibilityFlags ?? []
+		).mode === "als"
+	);
+}
+
+export function isNodeAlsModule(modulePath: string) {
+	return /^(?:node:)?async_hooks$/.test(modulePath);
+}
+
+/**
  * Returns `true` if the given combination of compat dates and flags enables Node.js compatibility.
  */
 export function hasNodeJsCompat(workerConfig: CompatConfig) {

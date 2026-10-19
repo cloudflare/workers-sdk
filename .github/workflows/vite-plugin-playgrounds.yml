@@ -131,3 +131,59 @@ jobs:
         with:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.vite }}
           path: .turbo/runs
+
+  # The playground suite against `@cloudflare/rsbuild-plugin`, whose harness
+  # translates each playground's Vite config. These steps run without `--only`,
+  # so turbo builds the plugins and keys the cache on their dependency graph.
+  test-rsbuild:
+    timeout-minutes: 45
+    name: Vite Plugin Playground (ubuntu-latest, rsbuild)
+    runs-on: ubuntu-latest
+    env:
+      CI_OS: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Filter changed paths
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+      - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+      - name: Install playwright
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: |
+          pnpm --filter @vite-plugin-cloudflare/playground playwright:install
+      - name: Run dev playground tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: |
+          pnpm dotenv -- pnpm turbo test:ci:rsbuild:serve --filter @vite-plugin-cloudflare/playground
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+      - name: Run build/preview playground tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: |
+          pnpm dotenv -- pnpm turbo test:ci:rsbuild:build --filter @vite-plugin-cloudflare/playground
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: turbo-runs-ubuntu-latest-rsbuild
+          path: .turbo/runs

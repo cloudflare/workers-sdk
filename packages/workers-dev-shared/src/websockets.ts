@@ -1,21 +1,31 @@
 import { createHeaders } from "@remix-run/node-fetch-server";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
-import { UNKNOWN_HOST } from "./shared";
-import { getForwardedProto } from "./utils";
+import { getForwardedProto } from "./request-handler";
 import type { Headers, Miniflare } from "miniflare";
-import type { IncomingMessage } from "node:http";
+import type { IncomingMessage, Server } from "node:http";
+import type { Http2SecureServer } from "node:http2";
 import type { Duplex } from "node:stream";
-import type * as vite from "vite";
+
+const UNKNOWN_HOST = "http://localhost";
 
 /**
- * Handles 'upgrade' requests to the Vite HTTP server and forwards WebSocket events between the client and Worker environments.
+ * Handles 'upgrade' requests to the dev server and forwards WebSocket events between the client and Worker environments.
+ *
+ * @param httpServer The dev server's HTTP server
+ * @param miniflare The Miniflare instance to dispatch upgrades to
+ * @param options.entryWorkerName Routes upgrades to this Worker when set
+ * @param options.isBundlerUpgrade Identifies the bundler's own WebSockets (e.g. HMR), which are left to the bundler
  */
 export function handleWebSocket(
-	httpServer: vite.HttpServer,
+	httpServer: Server | Http2SecureServer,
 	miniflare: Miniflare,
-	entryWorkerName?: string
+	options: {
+		entryWorkerName?: string;
+		isBundlerUpgrade: (request: IncomingMessage, url: URL) => boolean;
+	}
 ) {
+	const { entryWorkerName, isBundlerUpgrade } = options;
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
 	// Stash Worker 101-response headers keyed by the upgrade request so a single
@@ -49,19 +59,17 @@ export function handleWebSocket(
 				const rawHost = request.headers.host ?? UNKNOWN_HOST;
 				// Honor `X-Forwarded-Proto` so that the upgrade URL reflects the
 				// protocol the original client used (e.g. behind a TLS-terminating
-				// reverse proxy or tunnel). Matches `createRequestHandler` in utils.ts.
+				// reverse proxy or tunnel). Matches `createRequestHandler`.
 				const protocol = getForwardedProto(request) ?? "http:";
 				const base = /^https?:\/\//i.test(rawHost)
 					? rawHost
 					: `${protocol}//${rawHost}`;
 				const url = new URL(request.url ?? "", base);
 
-				const isViteRequest =
-					request.headers["sec-websocket-protocol"]?.startsWith("vite");
 				const isSandboxRequest = hasSandboxOrigin(url.origin);
 
-				// Ignore Vite HMR WebSockets but forward on all sandbox requests.
-				if (isViteRequest && !isSandboxRequest) {
+				// Ignore the bundler's WebSockets but forward on all sandbox requests.
+				if (isBundlerUpgrade(request, url) && !isSandboxRequest) {
 					return;
 				}
 
@@ -85,7 +93,7 @@ export function handleWebSocket(
 				// Forward response headers (e.g. Set-Cookie, custom auth headers) from
 				// the Worker's 101 response onto the upgrade response sent to the
 				// client. Without this, headers set on a `new Response(null, { status:
-				// 101, webSocket, headers })` are silently dropped during `vite dev`,
+				// 101, webSocket, headers })` are silently dropped during dev,
 				// even though they are delivered correctly by `wrangler dev`.
 				// See cloudflare/workers-sdk#10390.
 				workerResponseHeaders.set(request, response.headers);

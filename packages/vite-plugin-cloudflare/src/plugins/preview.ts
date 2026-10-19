@@ -1,11 +1,15 @@
+import { handleWebSocket } from "@cloudflare/workers-dev-shared";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import { prepareContainerImagesForVite } from "../containers";
 import { assertIsPreview } from "../context";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
-import { createPlugin, createRequestHandler } from "../utils";
-import { handleWebSocket } from "../websockets";
+import {
+	createPlugin,
+	createRequestHandler,
+	isViteWebSocketUpgrade,
+} from "../utils";
 
 /**
  * Plugin to provide core preview functionality
@@ -64,7 +68,9 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					}
 				});
 			}
-			handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare);
+			handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare, {
+				isBundlerUpgrade: isViteWebSocketUpgrade,
+			});
 
 			// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 			vitePreviewServer.middlewares.use(

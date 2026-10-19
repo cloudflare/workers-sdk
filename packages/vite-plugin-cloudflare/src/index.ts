@@ -71,6 +71,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		{
 			name: "vite-plugin-cloudflare",
 			sharedDuringBuild: true,
+			// Exposes the options so that tools can read them from a resolved Vite config.
+			api: { pluginConfig },
 			async config(userConfig, env) {
 				ctx.setResolvedPluginConfig(
 					await resolvePluginConfig(pluginConfig, userConfig, env)

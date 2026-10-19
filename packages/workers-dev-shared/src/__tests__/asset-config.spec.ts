@@ -1,7 +1,6 @@
 import { test } from "vitest";
 import { getAssetsConfig } from "../asset-config";
 import type { AssetsOnlyResolvedConfig } from "../plugin-config";
-import type * as vite from "vite";
 
 test("maps the native asset base path to the Asset Worker config", ({
 	expect,
@@ -13,7 +12,10 @@ test("maps the native asset base path to the Asset Worker config", ({
 	} as unknown as AssetsOnlyResolvedConfig;
 
 	expect(
-		getAssetsConfig(resolvedPluginConfig, undefined, {} as vite.ResolvedConfig)
+		getAssetsConfig(resolvedPluginConfig, undefined, {
+			publicDir: "public",
+			logger: console,
+		})
 	).toEqual({
 		base_path: "/docs",
 		has_static_routing: false,

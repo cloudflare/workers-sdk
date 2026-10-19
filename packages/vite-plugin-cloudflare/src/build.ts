@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { moveImportedAssets } from "@cloudflare/workers-dev-shared";
 import colors from "picocolors";
 import { resolveDevOnly } from "./plugin-config";
 import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
@@ -94,26 +95,12 @@ export function createBuildApp(
 			builder.config.root,
 			clientEnvironment.config.build.outDir
 		);
-		const movedAssetPaths: string[] = [];
-
 		// Move assets imported in the entry Worker to the client build
-		for (const assetPath of importedAssetPaths) {
-			const src = path.join(entryWorkerBuildDirectory, assetPath);
-			const dest = path.join(clientBuildDirectory, assetPath);
-
-			if (!fs.existsSync(src)) {
-				continue;
-			}
-
-			if (fs.existsSync(dest)) {
-				fs.unlinkSync(src);
-			} else {
-				const destDir = path.dirname(dest);
-				fs.mkdirSync(destDir, { recursive: true });
-				fs.renameSync(src, dest);
-				movedAssetPaths.push(dest);
-			}
-		}
+		const movedAssetPaths = moveImportedAssets(
+			importedAssetPaths,
+			entryWorkerBuildDirectory,
+			clientBuildDirectory
+		);
 
 		if (movedAssetPaths.length) {
 			builder.config.logger.info(

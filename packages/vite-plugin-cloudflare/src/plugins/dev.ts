@@ -1,14 +1,14 @@
 import assert from "node:assert";
-import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
+import {
+	createStaticRoutingMiddleware,
+	dispatchDevRequest,
+	handleWebSocket,
+	resolveStaticRouting,
+} from "@cloudflare/workers-dev-shared";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
-import {
-	ASSET_WORKER_NAME,
-	kRequestType,
-	ROUTER_WORKER_NAME,
-} from "../constants";
 import { getDevContainerCleanup } from "../container-cleanup";
 import { prepareContainerImagesForVite } from "../containers";
 import { assertIsNotPreview } from "../context";
@@ -18,10 +18,12 @@ import {
 	getCurrentWorkerNameToExportTypesMap,
 } from "../export-types";
 import { getDevMiniflareOptions } from "../miniflare-options";
-import { UNKNOWN_HOST } from "../shared";
-import { createPlugin, createRequestHandler, debuglog } from "../utils";
-import { handleWebSocket } from "../websockets";
-import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
+import {
+	createPlugin,
+	createRequestHandler,
+	debuglog,
+	isViteWebSocketUpgrade,
+} from "../utils";
 
 /**
  * Plugin to provide core development functionality
@@ -155,25 +157,18 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 				// The HTTP server is not available in middleware mode
 				if (viteDevServer.httpServer) {
-					handleWebSocket(
-						viteDevServer.httpServer,
-						ctx.miniflare,
-						entryWorkerName
-					);
+					handleWebSocket(viteDevServer.httpServer, ctx.miniflare, {
+						entryWorkerName,
+						isBundlerUpgrade: isViteWebSocketUpgrade,
+					});
 				}
 
-				const staticRouting: StaticRouting | undefined =
-					entryWorkerConfig.assets?.runWorkerFirst === true
-						? { user_worker: ["/*"] }
-						: ctx.resolvedPluginConfig.staticRouting;
+				const staticRouting = resolveStaticRouting(
+					entryWorkerConfig,
+					ctx.resolvedPluginConfig.staticRouting
+				);
 
 				if (staticRouting) {
-					const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
-						staticRouting.asset_worker ?? []
-					);
-					const includeRulesMatcher = generateStaticRoutingRuleMatcher(
-						staticRouting.user_worker
-					);
 					const userWorkerHandler = createRequestHandler(async (request) => {
 						request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 
@@ -183,22 +178,10 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					});
 
 					viteDevServer.middlewares.use(
-						async function cloudflarePreMiddleware(req, res, next) {
-							assert(req.url, `req.url not defined`);
-							// Only the URL pathname is used to match rules
-							const request = new Request(new URL(req.url, UNKNOWN_HOST));
-
-							if (req[kRequestType] === "asset") {
-								next();
-							} else if (excludeRulesMatcher({ request })) {
-								req[kRequestType] = "asset";
-								next();
-							} else if (includeRulesMatcher({ request })) {
-								void userWorkerHandler(req, res, next);
-							} else {
-								next();
-							}
-						}
+						createStaticRoutingMiddleware(
+							staticRouting,
+							(req, res, next) => void userWorkerHandler(req, res, next)
+						)
 					);
 				}
 
@@ -237,27 +220,9 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			return () => {
 				// post middleware
 				viteDevServer.middlewares.use(
-					createRequestHandler(async (request, req) => {
-						if (req[kRequestType] === "asset") {
-							request.headers.set(
-								CoreHeaders.ROUTE_OVERRIDE,
-								ASSET_WORKER_NAME
-							);
-
-							return ctx.miniflare.dispatchFetch(request, {
-								redirect: "manual",
-							});
-						} else {
-							request.headers.set(
-								CoreHeaders.ROUTE_OVERRIDE,
-								ROUTER_WORKER_NAME
-							);
-
-							return ctx.miniflare.dispatchFetch(request, {
-								redirect: "manual",
-							});
-						}
-					})
+					createRequestHandler((request, req) =>
+						dispatchDevRequest(ctx.miniflare, request, req)
+					)
 				);
 			};
 		},

@@ -1,8 +1,17 @@
+import { format } from "node:util";
+import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
+import { getZoneFromRoute } from "@cloudflare/workers-utils";
+import type { DevLogger } from "./logger";
 import type {
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
-import type { Binding } from "@cloudflare/workers-utils";
+import type {
+	RemoteBindingsLogger,
+	RemoteProxySessionData,
+} from "@cloudflare/remote-bindings";
+import type { Binding, ComplianceConfig } from "@cloudflare/workers-utils";
 
 type WorkerConfig = ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
 
@@ -195,4 +204,115 @@ export function getRemoteBindings(
 	}
 
 	return bindings;
+}
+
+export function toApiComplianceRegion(
+	region: ParsedInputSettingsConfig["complianceRegion"]
+): ComplianceConfig["compliance_region"] {
+	return region === "fedramp-high" ? "fedramp_high" : region;
+}
+
+/** Existing remote proxy sessions keyed by Worker name. */
+const remoteProxySessionsDataMap = new Map<
+	string,
+	RemoteProxySessionData | null
+>();
+
+/**
+ * Starts a remote proxy session for the Worker's remote bindings, or updates
+ * the existing one, so that it is reused across Miniflare updates.
+ *
+ * @returns The session data, or `null` when remote bindings are disabled
+ */
+export async function getRemoteProxySessionData(
+	config: Pick<WorkerConfig, "name" | "env">,
+	options: {
+		remoteBindings: boolean;
+		settings: Pick<ParsedInputSettingsConfig, "accountId" | "complianceRegion">;
+		root: string;
+		cliDisplayName: string;
+		logger: DevLogger;
+	}
+): Promise<RemoteProxySessionData | null> {
+	if (!options.remoteBindings) {
+		return null;
+	}
+
+	const remoteProxySessionData = await maybeStartOrUpdateRemoteProxySession(
+		{
+			name: config.name,
+			bindings: getRemoteBindings(config),
+			complianceRegion: toApiComplianceRegion(
+				options.settings.complianceRegion
+			),
+			account_id: options.settings.accountId,
+			profileDir: options.root,
+		},
+		remoteProxySessionsDataMap.get(config.name) ?? null,
+		undefined,
+		{
+			cliDisplayName: options.cliDisplayName,
+			logger: createRemoteBindingsLogger(options.logger),
+		}
+	);
+
+	if (remoteProxySessionData) {
+		remoteProxySessionsDataMap.set(config.name, remoteProxySessionData);
+	}
+
+	return remoteProxySessionData;
+}
+
+function createRemoteBindingsLogger(logger: DevLogger): RemoteBindingsLogger {
+	const write = (
+		level: "info" | "warn" | "error",
+		args: Parameters<typeof console.log>
+	) => logger[level](format(...args));
+
+	return {
+		loggerLevel: "log",
+		debug() {},
+		log: (...args) => write("info", args),
+		info: (...args) => write("info", args),
+		warn: (...args) => write("warn", args),
+		error: (...args) => write("error", args),
+		console(method, ...args) {
+			if (method === "error") {
+				write("error", args);
+			} else if (method === "warn") {
+				write("warn", args);
+			} else if (method !== "debug" && method !== "trace") {
+				write("info", args);
+			}
+		},
+	};
+}
+
+/**
+ * Gets the zone that local requests to the Worker should appear to come from.
+ */
+export function getWorkerZone(
+	config: Pick<ParsedInputWorkerConfig, "domains" | "triggers">
+): string | undefined {
+	// Domains are converted to routes before fetch triggers, so this mirrors the
+	// first-route selection used by Wrangler's Miniflare options.
+	const domain = config.domains?.[0];
+	if (domain !== undefined) {
+		return getZoneFromRoute(
+			typeof domain === "string" ? domain : domain.hostname
+		);
+	}
+
+	const fetchTrigger = config.triggers?.find(
+		(trigger) => trigger.type === "fetch"
+	);
+	if (fetchTrigger?.type !== "fetch") {
+		return undefined;
+	}
+
+	return getZoneFromRoute(
+		fetchTrigger.zone?.includes(".")
+			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
+			: fetchTrigger.pattern
+	);
 }

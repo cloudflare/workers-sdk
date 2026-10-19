@@ -9,6 +9,7 @@ import {
 	preview,
 } from "vite";
 import { assert, beforeAll, inject } from "vitest";
+import { isRsbuild, startRsbuildServe } from "./__test-utils__/rsbuild";
 import type { Browser, Page } from "playwright-chromium";
 import type {
 	ConfigEnv,
@@ -285,6 +286,16 @@ export async function startDefaultServe(): Promise<
 
 	// Vitest 4 sets NODE_ENV=test — override so Vite uses the correct mode
 	process.env.NODE_ENV = isBuild ? "production" : "development";
+
+	if (isRsbuild) {
+		const server = await startRsbuildServe(
+			await loadConfig({ command: isBuild ? "build" : "serve", mode: "" }),
+			{ isBuild }
+		);
+		viteTestUrl = server.url;
+		await page.goto(viteTestUrl);
+		return server as unknown as ViteDevServer;
+	}
 
 	if (!isBuild) {
 		process.env.VITE_INLINE = "inline-serve";

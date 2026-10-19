@@ -113,3 +113,10 @@ contract so the parent can drive either impl interchangeably.
   `retry: 1` from the root `vitest.shared.ts`. It spreads `configShared.test`
   rather than using `mergeConfig()`, which concatenates arrays and would
   silently enable the shared `default` reporter alongside `dot`.
+- `test:ci:rsbuild:serve` / `test:ci:rsbuild:build` run the same specs against
+  `@cloudflare/rsbuild-plugin`. `playground/__test-utils__/rsbuild.ts` loads
+  each playground's Vite config, reads the `cloudflare()` options from the
+  plugin's `api.pluginConfig` and translates a small set of Vite options; it
+  throws on Vite plugins it can't translate. Playgrounds and tests that depend
+  on Vite-specific behaviour are skipped in `playground/vitest.config.e2e.rsbuild.ts`,
+  each with the reason. Don't edit specs to make them pass under Rsbuild.

@@ -29,8 +29,8 @@
  */
 
 import { parseArgs as nodeParseArgs } from "node:util";
+import { CLI_DISPLAY_NAME_ENV_VAR } from "@cloudflare/workers-dev-shared";
 import { createBuilder, createServer } from "vite";
-import { CLI_DISPLAY_NAME_ENV_VAR } from "./build-output-env";
 import type { InlineConfig, ServerOptions } from "vite";
 
 interface DevArgs {

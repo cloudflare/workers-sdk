@@ -1,27 +1,8 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
-import { getNodeCompat } from "miniflare";
-import type { ResolvedWorkerConfig } from "./plugin-config";
 import type { NodeJsCompat } from "@cloudflare/workers-dev-shared";
 import type * as vite from "vite";
-
-/**
- * Returns true if Node.js async local storage (ALS) is enabled (and not full Node.js compatibility mode).
- */
-export function hasNodeJsAls(workerConfig: ResolvedWorkerConfig | undefined) {
-	return (
-		workerConfig !== undefined &&
-		getNodeCompat(
-			workerConfig.compatibilityDate,
-			workerConfig.compatibilityFlags ?? []
-		).mode === "als"
-	);
-}
-
-export function isNodeAlsModule(modulePath: string) {
-	return /^(?:node:)?async_hooks$/.test(modulePath);
-}
 
 export const nodeBuiltinsRE = new RegExp(
 	`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`

@@ -1,10 +1,17 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import {
+	ADDITIONAL_MODULE_TYPES,
+	isAdditionalModuleType,
+	matchAdditionalModule,
+	moduleRuleFilters,
+	toModuleType,
+} from "@cloudflare/workers-dev-shared";
 import MagicString from "magic-string";
 import * as vite from "vite";
 import { cleanUrl, createPlugin } from "../utils";
-import type { ModuleType } from "@cloudflare/config";
+import type { AdditionalModuleType } from "@cloudflare/workers-dev-shared";
 
 /**
  * Plugin to support additional module types (`CompiledWasm`, `Data` and `Text`)
@@ -129,56 +136,9 @@ export const additionalModulesPlugin = createPlugin(
 	}
 );
 
-const ADDITIONAL_MODULE_TYPES = ["CompiledWasm", "Data", "Text"] as const;
-type AdditionalModuleType = (typeof ADDITIONAL_MODULE_TYPES)[number];
-
-function isAdditionalModuleType(
-	type: string | undefined
-): type is AdditionalModuleType {
-	return ADDITIONAL_MODULE_TYPES.some((moduleType) => moduleType === type);
-}
-
-function toModuleType(type: AdditionalModuleType): ModuleType {
-	switch (type) {
-		case "CompiledWasm":
-			return "wasm";
-		case "Data":
-			return "data";
-		case "Text":
-			return "text";
-	}
-}
-
 const ADDITIONAL_MODULE_PATTERN = `__CLOUDFLARE_MODULE__(${ADDITIONAL_MODULE_TYPES.join("|")})__(.*?)__CLOUDFLARE_MODULE__`;
 export const additionalModuleRE = new RegExp(ADDITIONAL_MODULE_PATTERN);
 const additionalModuleGlobalRE = new RegExp(ADDITIONAL_MODULE_PATTERN, "g");
-
-type ModuleRules = Array<{
-	type: AdditionalModuleType;
-	pattern: RegExp;
-}>;
-
-const moduleRules: ModuleRules = [
-	{ type: "CompiledWasm", pattern: /\.wasm(\?module)?$/ },
-	{ type: "Data", pattern: /\.bin$/ },
-	{ type: "Text", pattern: /\.(txt|html|sql)$/ },
-];
-
-const subpathImportRE = /^#/;
-const moduleRuleFilters = [
-	...moduleRules.map((rule) => rule.pattern),
-	subpathImportRE,
-];
-
-function matchAdditionalModule(source: string) {
-	for (const rule of moduleRules) {
-		if (rule.pattern.test(source)) {
-			return rule.type;
-		}
-	}
-
-	return null;
-}
 
 function createModuleReference(type: AdditionalModuleType, id: string) {
 	return `__CLOUDFLARE_MODULE__${type}__${id}__CLOUDFLARE_MODULE__`;

@@ -1,6 +1,5 @@
+import { getWasmInitModule, wasmInitRE } from "@cloudflare/workers-dev-shared";
 import { cleanUrl, createPlugin } from "../utils";
-
-const wasmInitRE = /\.wasm\?init$/;
 
 /**
  * Plugin to support the `.wasm?init` extension
@@ -14,12 +13,7 @@ export const wasmHelperPlugin = createPlugin("wasm-helper", (ctx) => {
 		load: {
 			filter: { id: wasmInitRE },
 			handler(id) {
-				return `
-					import wasm from "${cleanUrl(id)}";
-					export default function(opts = {}) {
-						return WebAssembly.instantiate(wasm, opts);
-					}
-				`;
+				return getWasmInitModule(cleanUrl(id));
 			},
 		},
 	};

@@ -1,9 +1,8 @@
 import assert from "node:assert";
+import { hasNodeJsAls, isNodeAlsModule } from "@cloudflare/workers-dev-shared";
 import * as vite from "vite";
 import {
 	assertHasNodeJsCompat,
-	hasNodeJsAls,
-	isNodeAlsModule,
 	nodeBuiltinsRE,
 	NodeJsCompatWarnings,
 } from "../nodejs-compat";

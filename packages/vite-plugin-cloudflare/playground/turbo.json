@@ -57,6 +57,20 @@
 				"WRANGLER_DOCKER_BIN"
 			],
 			"outputLogs": "new-only"
+		},
+		// The playground suite against `@cloudflare/rsbuild-plugin`. CI runs these
+		// without `--only`, so the dependencies' hashes are in the cache key.
+		"test:ci:rsbuild:serve": {
+			"dependsOn": ["build"],
+			"env": ["CLOUDFLARE_TEST_BUNDLER", "NODE_DEBUG", "NODE_ENV"],
+			"passThroughEnv": ["CLOUDFLARE_VITE_BUILD", "VITE_INLINE"],
+			"outputLogs": "new-only"
+		},
+		"test:ci:rsbuild:build": {
+			"dependsOn": ["build"],
+			"env": ["CLOUDFLARE_TEST_BUNDLER", "NODE_DEBUG", "NODE_ENV"],
+			"passThroughEnv": ["CLOUDFLARE_VITE_BUILD", "VITE_INLINE"],
+			"outputLogs": "new-only"
 		}
 	}
 }

@@ -74,7 +74,11 @@ describe("handleWebSocket", () => {
 
 	async function listen(entryWorkerName?: string) {
 		const mf = miniflare ?? startMiniflare();
-		handleWebSocket(httpServer, mf, entryWorkerName);
+		handleWebSocket(httpServer, mf, {
+			entryWorkerName,
+			isBundlerUpgrade: (request) =>
+				request.headers["sec-websocket-protocol"]?.startsWith("vite") ?? false,
+		});
 		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
 		port = (httpServer.address() as AddressInfo).port;
 		// Wait for `workerd` to boot here (under the generous `testTimeout`)

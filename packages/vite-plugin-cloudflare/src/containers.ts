@@ -4,12 +4,12 @@ import {
 	prepareContainerImagesForDev,
 	resolveImageName,
 } from "@cloudflare/containers-shared";
+import { toApiComplianceRegion } from "@cloudflare/workers-dev-shared";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getCloudflareApiBaseUrl,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { toApiComplianceRegion } from "./utils";
 import type { ParsedInputSettingsConfig } from "@cloudflare/config";
 import type {
 	ContainerDevOptions,

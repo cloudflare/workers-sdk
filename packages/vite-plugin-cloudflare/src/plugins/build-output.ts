@@ -7,10 +7,10 @@ import {
 	writeWorkerConfig as writeBuildOutputWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { buildAndWriteContainerOutput } from "@cloudflare/containers-shared";
+import { isPreviewBuild } from "@cloudflare/workers-dev-shared";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import * as vite from "vite";
 import { loadViteManifest } from "../build";
-import { isPreviewBuild } from "../build-output-env";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
 import { resolveDevOnly } from "../plugin-config";

@@ -1,72 +1,86 @@
+import assert from "node:assert";
+import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
 	BUILD_OUTPUT_ROOT,
 	cleanBuildOutputDir,
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getWorkerAssetsDir,
-	getWorkerBundleDir,
-	readBuildOutput,
 	writeRootConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import {
+	createDebugMiddleware,
 	createMiniflareExports,
-	getMiniflareManifest,
-	getPersistenceRoot,
-	loadCloudflareConfig,
+	createRequestHandler,
+	createStaticRoutingMiddleware,
+	DEBUG_PATH,
+	DevMiniflareLogger,
+	dispatchDevRequest,
+	getAssetsConfig,
+	getCommonMiniflareOptions,
+	getDevAssetWorkerOptions,
+	getPreviewMiniflareOptions,
+	getRemoteProxySessionData,
+	getWorkerZone,
+	handleWebSocket,
+	isPreviewBuild,
+	kRequestType,
+	moveImportedAssets,
+	readBuildOutputPreview,
+	resolveDevOnly,
+	resolveInspectorPort,
 	resolveLocalBindingsByWorkerName,
+	resolvePluginConfig,
+	resolveStaticRouting,
 	warnForMissingSecrets,
 } from "@cloudflare/workers-dev-shared";
-import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
-import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
-import { logger } from "@rsbuild/core";
 import {
-	getDefaultDevRegistryPath,
-	Log,
-	Miniflare,
-	Request as MiniflareRequest,
-} from "miniflare";
+	getDevVarsCandidatePaths,
+	getEnvPaths,
+} from "@cloudflare/workers-utils/local-env";
+import { CoreHeaders, Miniflare } from "miniflare";
 import {
+	getAdditionalModuleTypes,
+	getImportedAssetPaths,
 	getManifestFromCompilation,
 	getWorkerEnvironmentConfig,
 	removeUnemittedFiles,
-	WORKER_ENTRY_NAME,
 } from "./worker-environment";
 import type {
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
-} from "@cloudflare/config";
-import type { PersistState } from "@cloudflare/workers-dev-shared";
+	DevHtmlHandlers,
+	IncomingMessage,
+	PluginConfig,
+	ResolvedPluginConfig,
+	Worker,
+} from "@cloudflare/workers-dev-shared";
 import type {
-	RequestHandler,
+	EnvironmentContext,
+	PublicDir,
 	RsbuildDevServer,
 	RsbuildPlugin,
 } from "@rsbuild/core";
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
-import type { IncomingMessage } from "node:http";
 
-export interface PluginCloudflareOptions {
-	/** Whether to persist local binding state between dev sessions. Defaults to `true`. */
-	persistState?: PersistState;
-	/** Options for generating `.cloudflare/types/index.d.ts`. */
-	types?: { generate?: boolean; includeRuntime?: boolean };
+/** The same options as the Vite plugin's `cloudflare()`, apart from the tunnel. */
+export interface PluginCloudflareOptions extends Omit<PluginConfig, "tunnel"> {
+	/** The directory to load `.env` and `.dev.vars` files from, or `false` to skip them. Defaults to the project root. */
+	envDir?: string | false;
+	/** The mode used to load `cloudflare.config.ts`, `.env.[mode]` and `.dev.vars.[mode]`. Defaults to Rsbuild's mode. */
+	envMode?: string;
 }
 
-/** The Rsbuild environment that builds the Worker. */
+/** The Rsbuild environment that builds the entry Worker. */
 const ENVIRONMENT_NAME = "cloudflare";
 
-/** Marks requests that the Worker's assets binding forwarded to Rsbuild. */
-const kAssetRequest = Symbol("kAssetRequest");
-
-type MiniflareWorkerConfig = WorkerOptions["config"];
-type MiniflareManifest = NonNullable<MiniflareWorkerConfig["manifest"]>;
-type LoadedConfig = Awaited<ReturnType<typeof loadCloudflareConfig>>;
+type MiniflareManifest = NonNullable<WorkerOptions["config"]["manifest"]>;
 
 /**
- * Rsbuild plugin that builds the Worker defined in `cloudflare.config.ts` with
- * rspack and runs it in workerd (via Miniflare) during `rsbuild dev`.
- * `rsbuild build` writes the Build Output Specification to `.cloudflare/output`,
- * which `rsbuild preview` runs in workerd.
+ * Rsbuild plugin that builds the Workers defined in `cloudflare.config.ts` and
+ * the plugin options with rspack and runs them in workerd (via Miniflare)
+ * during `rsbuild dev`. `rsbuild build` writes the Build Output Specification
+ * to `.cloudflare/output`, which `rsbuild preview` runs in workerd.
  *
  * @param options Plugin options.
  * @returns An Rsbuild plugin.
@@ -78,33 +92,58 @@ export function pluginCloudflare(
 		name: "rsbuild:cloudflare",
 		setup(api) {
 			const { action, rootPath: root } = api.context;
-			const isPreview = process.env.CLOUDFLARE_PREVIEW_BUILD === "true";
 			let mode = "development";
-			let loadedConfig: LoadedConfig;
+			let resolvedPluginConfig: ResolvedPluginConfig;
+			/** The Workers to bundle, keyed by Rsbuild environment name, with the entry Worker first. */
+			const workerEnvironments = new Map<string, Worker>();
+			/** The latest bundles, keyed by Rsbuild environment name. */
+			const manifests = new Map<string, MiniflareManifest>();
+			let manifestsChanged = false;
+			/** The assets that the entry Worker imports, which a build moves to the client output. */
+			let importedAssets: { distPath: string; paths: string[] } | undefined;
+			/** The Worker environments whose latest dev build failed. */
+			const failedEnvironments = new Set<string>();
 			let devServer: RsbuildDevServer | undefined;
+			let environmentContexts: Record<string, EnvironmentContext> = {};
 			let miniflare: Miniflare | undefined;
-			let resolveMiniflare: (miniflare: Miniflare) => void = () => {};
-			const miniflareReady = new Promise<Miniflare>((resolve) => {
-				resolveMiniflare = resolve;
+			let inspectorPort: number | false = false;
+			/** Why Miniflare last failed to start or update, which requests report. */
+			let miniflareError: unknown;
+			let settleFirstStart: () => void = () => {};
+			/** Settles once Miniflare has first started, or failed to. */
+			const firstStart = new Promise<void>((resolve) => {
+				settleFirstStart = resolve;
 			});
-
-			function getWorkerConfig(): ParsedInputWorkerConfig & {
-				entrypoint: string;
-			} {
-				const worker = loadedConfig?.parsedConfig.worker;
-				if (worker?.entrypoint === undefined) {
-					throw new Error(
-						"The Cloudflare Rsbuild plugin requires a `cloudflare.config.ts` that defines `worker.entrypoint`."
-					);
-				}
-				return {
-					...worker,
-					entrypoint: path.resolve(root, worker.entrypoint),
-				};
-			}
+			let miniflareLogger: DevMiniflareLogger;
 
 			api.modifyRsbuildConfig(async (userConfig, { mergeRsbuildConfig }) => {
-				if (action === "preview") {
+				miniflareLogger = new DevMiniflareLogger(
+					api.logger,
+					userConfig.logLevel
+				);
+				mode =
+					options.envMode ??
+					userConfig.mode ??
+					(action === "dev" ? "development" : "production");
+				const envDir =
+					options.envDir === false
+						? false
+						: path.resolve(root, options.envDir ?? ".");
+				const preview =
+					action === "preview"
+						? await readBuildOutputPreview(root, false)
+						: undefined;
+				// Load the same `.env` files as the build.
+				mode = preview?.rootConfig.buildContext.mode ?? mode;
+				resolvedPluginConfig = await resolvePluginConfig(options, {
+					root,
+					mode,
+					envDir,
+					command: action === "build" ? "build" : "serve",
+					preview,
+				});
+
+				if (resolvedPluginConfig.type === "preview") {
 					// Preview runs the Build Output rather than the project's sources,
 					// and Rsbuild checks that this directory exists before starting.
 					return mergeRsbuildConfig(userConfig, {
@@ -112,68 +151,133 @@ export function pluginCloudflare(
 					});
 				}
 
-				mode =
-					userConfig.mode ?? (action === "dev" ? "development" : "production");
-				loadedConfig = await loadCloudflareConfig({
-					root,
-					mode,
-					isPreview,
-					types: {
-						generate: options.types?.generate ?? true,
-						includeRuntime: options.types?.includeRuntime ?? true,
-					},
-				});
+				for (const worker of resolvedPluginConfig.environmentNameToWorkerMap.values()) {
+					if (action !== "build" || !resolveDevOnly(worker.devOnly)) {
+						workerEnvironments.set(getEnvironmentName(worker), worker);
+					}
+				}
 
 				// Without explicit environments (Rsbuild defaults them to `{}`), Rsbuild
 				// builds a single `web` environment from the top-level config, so keep
 				// it when there is a client entry.
-				const hasEnvironments =
-					Object.keys(userConfig.environments ?? {}).length > 0;
-				const environments = hasEnvironments
-					? userConfig.environments
-					: userConfig.source?.entry
-						? { web: {} }
-						: {};
+				const clientEnvironments = Object.fromEntries(
+					Object.entries(userConfig.environments ?? {}).filter(
+						([name]) => !workerEnvironments.has(name)
+					)
+				);
+				const environments =
+					Object.keys(clientEnvironments).length > 0
+						? clientEnvironments
+						: userConfig.source?.entry
+							? { web: {} }
+							: {};
 
 				return mergeRsbuildConfig(userConfig, {
 					environments: {
 						...environments,
-						[ENVIRONMENT_NAME]: getWorkerEnvironmentConfig(
-							getWorkerConfig(),
-							getWorkerBundleDir(root)
+						...Object.fromEntries(
+							[...workerEnvironments].map(([name, worker]) => [
+								name,
+								// The user's environment config overrides the defaults.
+								mergeRsbuildConfig(
+									getWorkerEnvironmentConfig(worker, root),
+									userConfig.environments?.[name] ?? {}
+								),
+							])
 						),
 					},
 					dev: {
 						watchFiles: {
-							paths: loadedConfig
-								? [loadedConfig.configPath, ...loadedConfig.dependencies]
-								: [],
+							paths: [
+								...resolvedPluginConfig.configPaths,
+								...getEnvPaths(envDir, mode),
+								...getDevVarsCandidatePaths(envDir, mode),
+								...(resolvedPluginConfig.experimental
+									.headersAndRedirectsDevModeSupport
+									? getPublicDirs(userConfig.server?.publicDir, root).flatMap(
+											(dir) => [
+												path.join(dir, "_headers"),
+												path.join(dir, "_redirects"),
+											]
+										)
+									: []),
+							],
 							type: "reload-server",
 						},
 					},
+					// The asset Worker handles HTML requests, as when deployed.
+					server: { htmlFallback: false },
 				});
 			});
 
 			api.modifyEnvironmentConfig((config, { name }) => {
-				if (action === "preview") {
-					return;
-				}
-				if (name === ENVIRONMENT_NAME) {
+				const worker = workerEnvironments.get(name);
+				if (worker) {
 					// Top-level entries are merged into every environment, so replace
 					// them to keep client entries out of the Worker.
 					config.source.entry = getWorkerEnvironmentConfig(
-						getWorkerConfig(),
-						getWorkerBundleDir(root)
+						worker,
+						root
 					).source?.entry;
-				} else if (action === "build" && config.output.target === "web") {
+				} else if (
+					action === "build" &&
+					resolvedPluginConfig.type !== "preview" &&
+					config.output.target === "web"
+				) {
 					config.output.distPath.root = getWorkerAssetsDir(root);
 				}
 			});
 
-			api.onBeforeStartDevServer(({ server }) => {
+			api.onBeforeStartDevServer(({ server, environments }) => {
 				devServer = server;
+				environmentContexts = environments;
+				addServerHandlers(
+					server,
+					[...workerEnvironments.values()].map(({ config }) => config.name)
+				);
+				const entryWorker = workerEnvironments.get(ENVIRONMENT_NAME);
+				const staticRouting =
+					entryWorker && resolvedPluginConfig.type === "workers"
+						? resolveStaticRouting(
+								entryWorker.config,
+								resolvedPluginConfig.staticRouting
+							)
+						: undefined;
+				if (entryWorker) {
+					const userWorkerHandler = createRequestHandler(async (request) => {
+						request.headers.set(
+							CoreHeaders.ROUTE_OVERRIDE,
+							entryWorker.config.name
+						);
+						return (await getMiniflare()).dispatchFetch(request, {
+							redirect: "manual",
+						});
+					});
+					// Local trigger routes (e.g. `/cdn-cgi/local/scheduled`) must reach
+					// the entry Worker rather than the router Worker.
+					server.middlewares.use(
+						"/cdn-cgi/local/",
+						(req, res, next) => void userWorkerHandler(req, res, next)
+					);
+					if (staticRouting) {
+						server.middlewares.use(
+							createStaticRoutingMiddleware(
+								staticRouting,
+								(req, res, next) => void userWorkerHandler(req, res, next)
+							)
+						);
+					}
+				}
+				// Rsbuild would serve its HTML pages itself, so send page requests to
+				// the router Worker first.
+				const hmrPath = api.getNormalizedConfig().dev.client.path;
+				server.middlewares.use((req, res, next) =>
+					isPageRequest(req, hmrPath)
+						? void workerMiddleware(req, res, next)
+						: next()
+				);
 				// Runs after Rsbuild's built-in middleware, so client assets are
-				// served first and every other request is handled by the Worker.
+				// served first and every other request is handled by the router Worker.
 				return () => {
 					server.middlewares.use(workerMiddleware);
 				};
@@ -193,27 +297,56 @@ export function pluginCloudflare(
 			});
 
 			api.onAfterEnvironmentCompile(async ({ environment, stats }) => {
+				if (!workerEnvironments.has(environment.name) || !stats) {
+					return;
+				}
+				if (stats.hasErrors()) {
+					failedEnvironments.add(environment.name);
+					return;
+				}
+				failedEnvironments.delete(environment.name);
+				manifests.set(environment.name, {
+					...getManifestFromCompilation(stats.compilation),
+					modulesRoot: environment.distPath,
+				});
+				manifestsChanged = true;
+				if (action === "build") {
+					await removeUnemittedFiles(environment.distPath, stats.compilation);
+					if (environment.name === ENVIRONMENT_NAME) {
+						importedAssets = {
+							distPath: environment.distPath,
+							paths: getImportedAssetPaths(stats.compilation),
+						};
+					}
+				}
+			});
+
+			api.onAfterDevCompile(async () => {
+				if (failedEnvironments.size > 0) {
+					miniflareError = new Error(
+						"The Worker failed to build. See the dev server output for details."
+					);
+					settleFirstStart();
+					return;
+				}
+				// Miniflare runs every Worker, so wait until they have all built, and
+				// don't restart it when only client code changed.
 				if (
-					environment.name !== ENVIRONMENT_NAME ||
-					!stats ||
-					stats.hasErrors()
+					(miniflare && !manifestsChanged) ||
+					manifests.size < workerEnvironments.size
 				) {
 					return;
 				}
-				if (action === "build") {
-					await removeUnemittedFiles(environment.distPath, stats.compilation);
-					return;
+				manifestsChanged = false;
+				try {
+					await startOrUpdateMiniflare(await getDevMiniflareOptions());
+					miniflareError = undefined;
+				} catch (error) {
+					// Keep the dev server running, so that fixing the Worker retries.
+					miniflareError = error;
+					api.logger.error(error);
 				}
-				if (action !== "dev") {
-					return;
-				}
-
-				await startOrUpdateMiniflare(
-					await getDevMiniflareOptions({
-						...getManifestFromCompilation(stats.compilation),
-						modulesRoot: environment.distPath,
-					})
-				);
+				settleFirstStart();
 			});
 
 			api.onCloseDevServer(async () => {
@@ -221,32 +354,88 @@ export function pluginCloudflare(
 			});
 
 			api.onBeforeStartPreviewServer(async ({ server }) => {
-				await startOrUpdateMiniflare(await getPreviewMiniflareOptions());
+				if (resolvedPluginConfig.type !== "preview") {
+					return;
+				}
+				inspectorPort = await getInspectorPort();
+				const { miniflareOptions } = await getPreviewMiniflareOptions({
+					resolvedPluginConfig,
+					root,
+					mode,
+					logger: api.logger,
+					miniflareLogger,
+					inspectorPort,
+					publicUrl: undefined,
+				});
+				await startOrUpdateMiniflare(miniflareOptions);
+				settleFirstStart();
 				// Rsbuild has no preview close hook, so dispose with the HTTP server.
 				server.httpServer?.on("close", () => void miniflare?.dispose());
+				addServerHandlers(
+					server,
+					miniflareOptions.workers.map(({ config }) => config.name)
+				);
 				// Added before Rsbuild's built-in middleware, so that Miniflare serves
 				// the assets as well, as it would when deployed.
 				server.middlewares.use(workerMiddleware);
 			});
 
-			api.onAfterBuild(async () => {
-				await writeWorkerConfig({
-					root,
-					config: getWorkerConfig(),
-					manifest: {
-						type: "partial",
-						mainModule: `${WORKER_ENTRY_NAME}.js`,
-						modules: {},
-					},
+			api.onAfterBuild(async ({ stats }) => {
+				if (resolvedPluginConfig.type === "preview" || stats?.hasErrors()) {
+					return;
+				}
+				const assetsDir = getWorkerAssetsDir(root);
+				if (!fs.existsSync(assetsDir)) {
+					// Without a client entry there's no web environment to copy
+					// `public/` into the assets directory, as Vite's client build does.
+					for (const { name, copyOnBuild } of api.getNormalizedConfig().server
+						.publicDir) {
+						const dir = path.resolve(root, name);
+						if (copyOnBuild && fs.existsSync(dir)) {
+							await fsp.cp(dir, assetsDir, { recursive: true });
+						}
+					}
+				}
+				if (importedAssets) {
+					// As in the Vite plugin, serve assets that the entry Worker imports.
+					moveImportedAssets(
+						importedAssets.paths,
+						importedAssets.distPath,
+						assetsDir
+					);
+				}
+				if (resolvedPluginConfig.type === "assets-only") {
+					await writeWorkerConfig({
+						root,
+						config: resolvedPluginConfig.config,
+					});
+				}
+				for (const worker of resolvedPluginConfig.environmentNameToWorkerMap.values()) {
+					if (!resolveDevOnly(worker.devOnly)) {
+						const manifest = manifests.get(getEnvironmentName(worker));
+						assert(
+							manifest,
+							`Expected Worker "${worker.config.name}" to be built`
+						);
+						await writeWorkerConfig({
+							root,
+							config: worker.config,
+							manifest: {
+								type: "partial",
+								mainModule: manifest.mainModule,
+								modules: getAdditionalModuleTypes(manifest.modules),
+							},
+							directoryName: worker.directoryName,
+						});
+					} else if (worker.directoryName === DEFAULT_WORKER_DIRECTORY_NAME) {
+						// `assetsOnly`: the entry Worker runs in dev but deploys as assets.
+						await writeWorkerConfig({ root, config: worker.config });
+					}
+				}
+				await writeRootConfig(root, resolvedPluginConfig.settings, {
+					isPreview: isPreviewBuild(),
+					mode,
 				});
-				await writeRootConfig(
-					root,
-					{
-						accountId: loadedConfig?.parsedConfig.accountId,
-						complianceRegion: loadedConfig?.parsedConfig.complianceRegion,
-					},
-					{ isPreview, mode }
-				);
 			});
 
 			async function startOrUpdateMiniflare(
@@ -257,142 +446,238 @@ export function pluginCloudflare(
 				} else {
 					miniflare = new Miniflare(miniflareOptions);
 					await miniflare.ready;
-					resolveMiniflare(miniflare);
 				}
 			}
 
-			/** Forwards a request to the Worker running in Miniflare. */
-			const workerMiddleware: RequestHandler = async (req, res, next) => {
-				if (kAssetRequest in req) {
-					return next();
+			async function getMiniflare(): Promise<Miniflare> {
+				await firstStart;
+				if (miniflareError || !miniflare) {
+					throw miniflareError;
 				}
+				return miniflare;
+			}
 
-				try {
-					const request = createRequest(req, res);
-					const response = await (
-						await miniflareReady
-					).dispatchFetch(
-						new MiniflareRequest(request.url, {
-							method: request.method,
-							// The body is streamed back as-is, so ask for it uncompressed.
-							headers: [["accept-encoding", "identity"], ...request.headers],
-							body: request.body,
-							duplex: "half",
-							signal: request.signal,
+			/** Forwards a request to the router Worker, or to the asset Worker for asset requests. */
+			const workerMiddleware = createRequestHandler(async (request, req) =>
+				action === "dev"
+					? dispatchDevRequest(await getMiniflare(), request, req)
+					: (await getMiniflare()).dispatchFetch(request, {
 							redirect: "manual",
 						})
-					);
-					await sendResponse(res, response as unknown as Response);
-				} catch (error) {
-					next(error);
-				}
+			);
+
+			/** Reads HTML pages from Rsbuild for the asset Worker. */
+			const htmlHandlers: DevHtmlHandlers = {
+				async htmlExists(pathname) {
+					return findHtmlEntry(pathname) || findPublicFile(pathname)
+						? pathname
+						: null;
+				},
+				async fetchHtml(pathname) {
+					const entry = findHtmlEntry(pathname);
+					const environment =
+						entry && devServer?.environments[entry.environmentName];
+					if (entry && environment) {
+						return environment.getTransformedHtml(entry.entryName);
+					}
+					const publicFile = findPublicFile(pathname);
+					if (!publicFile) {
+						throw new Error(`No HTML found for "${pathname}".`);
+					}
+					return fsp.readFile(publicFile, "utf8");
+				},
 			};
 
-			async function getDevMiniflareOptions(
-				manifest: MiniflareManifest
-			): Promise<MiniflareOptions> {
-				const {
-					entrypoint: _entrypoint,
-					assets: _assets,
-					...config
-				} = getWorkerConfig();
-				const env = await getLocalBindings(config);
-				// Rsbuild serves the client assets in dev, so the assets binding is
-				// forwarded to its middleware.
-				for (const [name, binding] of Object.entries(env)) {
-					if (binding.type === "assets") {
-						env[name] = {
-							type: "node-handler",
-							handler: (req: IncomingMessage, res) => {
-								Object.assign(req, { [kAssetRequest]: true });
-								devServer?.middlewares(req, res);
-							},
-						};
+			function findHtmlEntry(
+				pathname: string
+			): { environmentName: string; entryName: string } | undefined {
+				const { base } = api.getNormalizedConfig().server;
+				for (const [environmentName, { htmlPaths }] of Object.entries(
+					environmentContexts
+				)) {
+					for (const [entryName, htmlPath] of Object.entries(htmlPaths)) {
+						if (path.posix.join(base, htmlPath) === pathname) {
+							return { environmentName, entryName };
+						}
 					}
 				}
-				return getMiniflareOptions({ ...config, env, manifest });
 			}
 
-			async function getPreviewMiniflareOptions(): Promise<MiniflareOptions> {
-				const { workers, rootConfig } = await readBuildOutput(root);
-				const worker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
-				const workerManifest = worker?.config.manifest;
-				if (!worker?.bundleDir || !workerManifest) {
-					throw new Error(
-						"No Worker found in the Build Output. Run `rsbuild build` before `rsbuild preview`."
+			function findPublicFile(pathname: string): string | undefined {
+				return getPublicDirs(api.getNormalizedConfig().server.publicDir, root)
+					.map((dir) => path.join(dir, pathname))
+					.find((file) =>
+						fs.statSync(file, { throwIfNoEntry: false })?.isFile()
+					);
+			}
+
+			/** Adds the `/__debug` page and forwards the Workers' WebSockets. */
+			function addServerHandlers(
+				server: Pick<RsbuildDevServer, "httpServer" | "middlewares">,
+				workerNames: string[]
+			): void {
+				server.middlewares.use(
+					DEBUG_PATH,
+					createDebugMiddleware(workerNames, async () =>
+						inspectorPort === false || !miniflare
+							? null
+							: Number((await miniflare.getInspectorURL()).port)
+					)
+				);
+				const { httpServer } = server;
+				if (httpServer) {
+					// Rsbuild handles its own HMR upgrades on `dev.client.path`.
+					const hmrPath = api.getNormalizedConfig().dev.client.path;
+					void firstStart.then(
+						() =>
+							miniflare &&
+							handleWebSocket(httpServer, miniflare, {
+								isBundlerUpgrade: (_request, url) => url.pathname === hmrPath,
+							})
 					);
 				}
-				// Load the same `.env` files as the build.
-				mode = rootConfig.buildContext.mode ?? "production";
-				const { manifest: _manifest, assets, ...config } = worker.config;
-				return getMiniflareOptions({
-					...config,
-					env: await getLocalBindings(config),
-					manifest: await getMiniflareManifest({
-						...workerManifest,
-						rootPath: worker.bundleDir,
-					}),
-					assets: worker.assetsDir
-						? { ...assets, directory: worker.assetsDir, hasUserWorker: true }
-						: undefined,
+			}
+
+			function getInspectorPort(): Promise<number | false> {
+				return resolveInspectorPort({
+					inspectorPort: resolvedPluginConfig.inspectorPort,
+					getPreviousPort: async () =>
+						miniflare ? Number((await miniflare.getInspectorURL()).port) : null,
+					logger: api.logger,
 				});
 			}
 
-			/** Resolves the Worker's bindings, including values from `.env` and `.dev.vars` files. */
-			async function getLocalBindings(
-				config: Pick<
-					ParsedInputWorkerConfig | ParsedOutputWorkerConfig,
-					"name" | "env"
-				>
-			): Promise<NonNullable<MiniflareWorkerConfig["env"]>> {
-				const [localEnv, devVars] = await Promise.all([
-					loadEnv(root, mode),
-					loadDevVars(root, mode),
-				]);
-				const localBindings = resolveLocalBindingsByWorkerName(
-					[config],
-					localEnv,
-					devVars
-				);
-				warnForMissingSecrets(localBindings, mode, logger);
-				return { ...localBindings.get(config.name)?.bindings };
-			}
-
-			function getMiniflareOptions({
-				exports,
-				...config
-			}: Omit<MiniflareWorkerConfig, "exports"> & {
-				exports?:
-					| ParsedInputWorkerConfig["exports"]
-					| ParsedOutputWorkerConfig["exports"];
-			}): MiniflareOptions {
-				return {
-					log: new RsbuildMiniflareLog(),
-					unsafeDevRegistryPath: getDefaultDevRegistryPath(),
-					resourcePersistencePath: getPersistenceRoot(
-						root,
-						options.persistState ?? true
-					),
-					workers: [
+			async function getDevMiniflareOptions(): Promise<MiniflareOptions> {
+				if (resolvedPluginConfig.type === "preview") {
+					throw new Error("Unexpected preview config in dev.");
+				}
+				inspectorPort = await getInspectorPort();
+				const entryWorkerConfig =
+					workerEnvironments.get(ENVIRONMENT_NAME)?.config;
+				const { headers } = api.getNormalizedConfig().server;
+				const assetWorkers = await getDevAssetWorkerOptions({
+					baseUrl: import.meta.url,
+					entryWorkerConfig,
+					hasUserWorker: resolvedPluginConfig.type === "workers",
+					assetsConfig: getAssetsConfig(
+						resolvedPluginConfig,
+						entryWorkerConfig,
 						{
-							config: {
-								...config,
-								// Containers aren't supported yet, so Container-backed exports throw.
-								exports: createMiniflareExports({
-									exports,
-									containerRuntimeOptions: undefined,
-								}),
-							},
-						},
-					],
+							publicDir:
+								getPublicDirs(
+									api.getNormalizedConfig().server.publicDir,
+									root
+								)[0] ?? path.join(root, "public"),
+							logger: api.logger,
+						}
+					),
+					headers,
+					html: htmlHandlers,
+				});
+				const localBindings = resolveLocalBindingsByWorkerName(
+					[...workerEnvironments.values()].map(({ config }) => config),
+					resolvedPluginConfig.localEnv,
+					resolvedPluginConfig.devVars
+				);
+				warnForMissingSecrets(localBindings, mode, api.logger);
+
+				const workers = await Promise.all(
+					[...workerEnvironments].map(
+						async ([name, { config: workerConfig }]) => {
+							const {
+								entrypoint: _entrypoint,
+								assets: _assets,
+								exports,
+								...config
+							} = workerConfig;
+							const env = { ...localBindings.get(config.name)?.bindings };
+							// Rsbuild serves the client assets in dev, so the assets binding is
+							// forwarded to its middleware.
+							for (const [bindingName, binding] of Object.entries(env)) {
+								if (binding.type === "assets") {
+									env[bindingName] = {
+										type: "node-handler",
+										handler: (req, res) => {
+											req[kRequestType] = "asset";
+											devServer?.middlewares(req, res);
+										},
+									};
+								}
+							}
+							const remoteProxySessionData = await getRemoteProxySessionData(
+								workerConfig,
+								{ ...resolvedPluginConfig, root, logger: api.logger }
+							);
+
+							return {
+								config: {
+									...config,
+									env,
+									manifest: manifests.get(name),
+									// Containers aren't supported yet, so Container-backed exports throw.
+									exports: createMiniflareExports({
+										exports,
+										containerRuntimeOptions: undefined,
+									}),
+								},
+								dev: {
+									zone: getWorkerZone(config),
+									remoteProxyConnectionString:
+										remoteProxySessionData?.session
+											?.remoteProxyConnectionString,
+									unsafeInspectorProxy: inspectorPort !== false,
+								},
+							} satisfies WorkerOptions;
+						}
+					)
+				);
+
+				return {
+					...getCommonMiniflareOptions({
+						root,
+						persistState: resolvedPluginConfig.persistState,
+						logger: miniflareLogger,
+						inspectorPort,
+						publicUrl: undefined,
+					}),
+					workers: [...assetWorkers, ...workers],
 				};
 			}
 		},
 	};
 }
 
-class RsbuildMiniflareLog extends Log {
-	override logReady() {
-		// Rsbuild prints its own server URLs.
+/** Resolves Rsbuild's `server.publicDir` option to absolute directories. */
+function getPublicDirs(
+	publicDir: PublicDir | undefined,
+	root: string
+): string[] {
+	if (publicDir === false) {
+		return [];
 	}
+	return [publicDir ?? {}]
+		.flat()
+		.map(({ name = "public" }) => path.resolve(root, name));
+}
+
+/**
+ * Whether a request is for a page, which Rsbuild would otherwise serve itself:
+ * a `GET` or `HEAD` for an HTML file or an extension-less path, other than
+ * Rsbuild's own routes.
+ */
+function isPageRequest(req: IncomingMessage, hmrPath: string): boolean {
+	const { pathname } = new URL(req.url ?? "/", "http://localhost");
+	return (
+		(req.method === "GET" || req.method === "HEAD") &&
+		pathname !== hmrPath &&
+		!/^\/(__|rsbuild-)/.test(pathname) &&
+		(pathname.endsWith(".html") || path.posix.extname(pathname) === "")
+	);
+}
+
+/** The entry Worker builds in `cloudflare`, and every other Worker in `cloudflare_<directory>`. */
+function getEnvironmentName({ directoryName }: Worker): string {
+	return directoryName === DEFAULT_WORKER_DIRECTORY_NAME
+		? ENVIRONMENT_NAME
+		: `${ENVIRONMENT_NAME}_${directoryName}`;
 }
