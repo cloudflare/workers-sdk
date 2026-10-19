@@ -206,6 +206,35 @@ export async function getDetailsForAutoConfig({
 		});
 	}
 
+	// A `functions` directory next to static files in the project root usually
+	// means a Cloudflare Pages project using Pages Functions. Interactively the
+	// user is asked whether it is a Pages project; non-interactive runs assume it
+	// is not and continue as a static site, which would deploy the project root
+	// as assets and silently drop the Functions (the API routes). Stop instead.
+	if (
+		framework.id === staticFramework.id &&
+		(context.isNonInteractiveOrCI?.() ?? false) &&
+		resolve(projectPath, outputDir) === resolve(projectPath) &&
+		(await getPathStats(join(projectPath, "functions")))?.isDirectory()
+	) {
+		const configFile =
+			target === "cf"
+				? `a \`${CLOUDFLARE_CONFIG_FILE}\` file`
+				: "a Wrangler configuration file";
+		throw new AutoConfigDetectionError(
+			"This project has a `functions` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. " +
+				"Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.\n" +
+				"If `functions` contains Pages Functions, move the static files into a subdirectory (for example `public/`) and deploy with `wrangler pages deploy public --project-name <name>`, " +
+				"or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/\n" +
+				`If \`functions\` is not Pages Functions, move the static files into a subdirectory or add ${configFile} for the Worker.`,
+			{
+				telemetryMessage: "autoconfig details pages functions with root assets",
+				frameworkId: framework.id,
+				configured,
+			}
+		);
+	}
+
 	return {
 		...baseDetails,
 		outputDir,

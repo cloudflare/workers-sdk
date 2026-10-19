@@ -612,6 +612,173 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			expect(result.framework?.name).toBe("Static");
 		});
 
+		describe("functions directory with static files in the project root", () => {
+			// Mirrors Wrangler in CI and agent sessions: the Pages prompt falls back
+			// to `false` and the context reports a non-interactive environment.
+			const nonInteractiveContext = createMockContext({
+				isNonInteractiveOrCI: () => true,
+				dialogs: {
+					confirm: vi.fn().mockResolvedValue(false),
+					prompt: vi.fn().mockResolvedValue(""),
+					select: vi.fn().mockResolvedValue(""),
+				},
+			});
+			const pagesFunction = `
+				export function onRequest(context) {
+					return new Response("Hello, world!");
+				}
+			`;
+
+			it("should throw in a non-interactive run instead of deploying the root without its Functions", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: This project has a \`functions\` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.
+					If \`functions\` contains Pages Functions, move the static files into a subdirectory (for example \`public/\`) and deploy with \`wrangler pages deploy public --project-name <name>\`, or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/
+					If \`functions\` is not Pages Functions, move the static files into a subdirectory or add a \`cloudflare.config.ts\` file for the Worker.]
+				`);
+			});
+
+			it("should name a Wrangler configuration file in the error for the wrangler target", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({
+						context: nonInteractiveContext,
+						target: "wrangler",
+					})
+				).rejects.toThrow(
+					"move the static files into a subdirectory or add a Wrangler configuration file for the Worker."
+				);
+			});
+
+			it("should not throw in a non-interactive run when `functions` is a file", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					functions: "not a directory",
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "static" }),
+					outputDir: ".",
+				});
+			});
+
+			it("should not throw in a non-interactive run for a project detected as Pages through its Wrangler config", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({
+						context: nonInteractiveContext,
+						target: "wrangler",
+						wranglerConfig: {
+							pages_build_output_dir: process.cwd(),
+						} as Config,
+					})
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "cloudflare-pages" }),
+				});
+			});
+
+			it("should not throw in a non-interactive run for a project detected as Pages through the Pages cache", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+					".wrangler/cache/pages.json": "{}",
+				});
+				const cachedContext = createMockContext({
+					...nonInteractiveContext,
+					getCacheFolder: () => join(process.cwd(), ".wrangler/cache"),
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: cachedContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "cloudflare-pages" }),
+				});
+			});
+
+			it("should not throw in a non-interactive run when the static files are in a subdirectory", async ({
+				expect,
+			}) => {
+				// e.g. a Firebase project: `functions/` holds server code for another
+				// platform and `public/` is what gets deployed
+				await seed({
+					"public/index.html": `<h1>Hello World</h1>`,
+					"functions/index.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "static" }),
+					outputDir: "public",
+				});
+			});
+
+			it("should not throw when an interactive user says it is not a Pages project", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+				const denyContext = createMockContext({
+					dialogs: {
+						confirm: vi.fn().mockResolvedValue(false),
+						prompt: vi.fn().mockResolvedValue(""),
+						select: vi.fn().mockResolvedValue(""),
+					},
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: denyContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "static" }),
+					outputDir: ".",
+				});
+			});
+
+			it("should not throw in a non-interactive run when a framework is detected", async ({
+				expect,
+			}) => {
+				await seed({
+					"package.json": JSON.stringify({ dependencies: { astro: "5" } }),
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "astro" }),
+				});
+			});
+		});
+
 		it("should not detect Pages project when functions directory exists but a framework is detected", async ({
 			expect,
 		}) => {
