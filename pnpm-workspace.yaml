@@ -10,7 +10,6 @@ minimumReleaseAgeExclude:
   - "@cloudflare/*"
   # Wrangler is also first-party and must be usable on its release day.
   - wrangler
-  - cf
   - miniflare
   - workerd
 allowBuilds:
@@ -31,7 +30,6 @@ patchedDependencies:
   buffer-equal-constant-time@1.0.1: patches/buffer-equal-constant-time@1.0.1.patch
   vite@8.1.5: patches/vite@8.1.5.patch
 catalog:
-  cf: 1.0.0-beta.2
   "@types/node": 22.15.17
   typescript: 5.8.3
   undici: 7.29.1

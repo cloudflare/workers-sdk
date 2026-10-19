@@ -88,7 +88,6 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		// pnpm-workspace.yaml.
 		"@cloudflare/*",
 		"wrangler",
-		"cf",
 		"miniflare",
 		"workerd",
 	];
