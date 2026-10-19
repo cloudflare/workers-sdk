@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "git clean -xdf dist && pnpm run check:type && vite build",
+		"build": "pnpm run check:type && vite build",
 		"check": "pnpm run check:default-hashes && pnpm run check:type",
 		"check:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts check",
 		"check:type": "cf workers types && tsc --build",
