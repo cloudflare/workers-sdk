@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
+	PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
 } from "@cloudflare/cli-shared-helpers/gitignore";
 import {
 	installPackages,
@@ -297,11 +298,30 @@ export async function runAutoConfig(
 
 	maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
 
-	// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
-	if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
+	// If we're uploading the project path as the output directory, make sure we
+	// don't accidentally upload sensitive files or anything a Cloudflare Pages
+	// upload would have skipped. Paths are resolved before comparing because the
+	// detected output directory is relative (e.g. ".") while projectPath is
+	// usually absolute.
+	if (
+		resolve(autoConfigDetails.projectPath, autoConfigDetails.outputDir) ===
+		resolve(autoConfigDetails.projectPath)
+	) {
 		maybeAppendWranglerToGitIgnoreLikeFile(
-			`${autoConfigDetails.projectPath}/.assetsignore`
+			`${autoConfigDetails.projectPath}/.assetsignore`,
+			PROJECT_ROOT_ASSETS_IGNORE_ENTRIES
 		);
+
+		// Pages server code at the root is now excluded from the assets rather than
+		// published, but it is not deployed as a Worker either, so say so.
+		const pagesServerCode = ["functions", "_worker.js"].filter((name) =>
+			existsSync(resolve(autoConfigDetails.projectPath, name))
+		);
+		if (pagesServerCode.length > 0) {
+			context.logger.warn(
+				`${pagesServerCode.map((name) => `\`${name}\``).join(" and ")} in the project root will not be deployed: the project is configured as static assets, so Pages server code is excluded from the upload (via .assetsignore) and is not run. To keep it, migrate it to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/`
+			);
+		}
 	}
 
 	if (buildCommand && runBuild) {

@@ -4,6 +4,7 @@ import { beforeEach, describe, test, vi } from "vitest";
 import {
 	maybeAppendWranglerToGitIgnore,
 	maybeAppendWranglerToGitIgnoreLikeFile,
+	PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
 } from "../gitignore";
 import type { PathLike } from "node:fs";
 import type { Mock } from "vitest";
@@ -326,6 +327,77 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
 			!.dev.vars.example
 			.env*
 			!.env.example
+			",
+			  ],
+			]
+		`);
+	});
+
+	test("should append additional entries after the wrangler entries", ({
+		expect,
+	}) => {
+		mockIgnoreFile(
+			"my-project/.assetsignore",
+			`
+      *.bak
+    `
+		);
+		maybeAppendWranglerToGitIgnoreLikeFile(
+			"my-project/.assetsignore",
+			PROJECT_ROOT_ASSETS_IGNORE_ENTRIES
+		);
+
+		expect(appendFileSyncMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.assetsignore",
+			    "
+			# wrangler files
+			.wrangler
+			.dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
+			/_worker.js
+			/_routes.json
+			/functions
+			node_modules
+			.git
+			.DS_Store
+			.npmrc
+			",
+			  ],
+			]
+		`);
+	});
+
+	test("should only append additional entries that are not already present as exact lines", ({
+		expect,
+	}) => {
+		mockIgnoreFile(
+			"my-project/.assetsignore",
+			`
+      .wrangler
+      .dev.vars*
+      !.dev.vars.example
+      .env*
+      !.env.example
+      /functions
+      .git
+    `
+		);
+		maybeAppendWranglerToGitIgnoreLikeFile("my-project/.assetsignore", [
+			"/functions",
+			".git",
+			".npmrc",
+		]);
+
+		expect(appendFileSyncMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.assetsignore",
+			    "
+			.npmrc
 			",
 			  ],
 			]

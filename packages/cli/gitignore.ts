@@ -5,6 +5,31 @@ import { brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
 
 /**
+ * Entries to add, on top of the Wrangler entries, to an `.assetsignore` file
+ * in a project root that is used as the static assets directory.
+ *
+ * They mirror what a direct Cloudflare Pages upload skips (which the Workers
+ * assets uploader does not), so that a project root deployed to Workers does
+ * not publish its Pages Functions source, dependencies or git metadata, plus
+ * `.npmrc`, which can hold registry credentials. As in Pages, `_worker.js`,
+ * `_routes.json` and `functions` are only skipped at the root (so nested paths
+ * such as `blog/functions/index.html` are still uploaded), while
+ * `node_modules`, `.git` and `.DS_Store` are skipped at any depth.
+ * `/_worker.js` must be listed because the presence of any `.assetsignore`
+ * disables the error that otherwise stops a Pages `_worker.js` from being
+ * uploaded as an asset.
+ */
+export const PROJECT_ROOT_ASSETS_IGNORE_ENTRIES = [
+	"/_worker.js",
+	"/_routes.json",
+	"/functions",
+	"node_modules",
+	".git",
+	".DS_Store",
+	".npmrc",
+] as const;
+
+/**
  * Appends to a file that follows a .gitignore-like structure any missing
  * Wrangler-related entries (`.wrangler`, `.dev.vars*`, `.env*`, and their
  * negated example patterns).
@@ -12,8 +37,13 @@ import { spinner } from "./interactive";
  * Creates the file if it does not already exist.
  *
  * @param filePath Absolute or relative path to the ignore file to update.
+ * @param additionalEntries Further entries to append after the Wrangler ones,
+ * each added only if the file does not already contain that exact line.
  */
-export function maybeAppendWranglerToGitIgnoreLikeFile(filePath: string): void {
+export function maybeAppendWranglerToGitIgnoreLikeFile(
+	filePath: string,
+	additionalEntries: readonly string[] = []
+): void {
 	const filePreExisted = existsSync(filePath);
 
 	if (!filePreExisted) {
@@ -72,6 +102,15 @@ export function maybeAppendWranglerToGitIgnoreLikeFile(filePath: string): void {
 	);
 	if (!hasDotEnvExample) {
 		wranglerGitIgnoreFilesToAdd.push("!.env.example");
+	}
+
+	const existingLines = new Set(
+		existingGitIgnoreContent.split(/\r?\n/).map((line) => line.trim())
+	);
+	for (const entry of additionalEntries) {
+		if (!existingLines.has(entry)) {
+			wranglerGitIgnoreFilesToAdd.push(entry);
+		}
 	}
 
 	if (wranglerGitIgnoreFilesToAdd.length === 0) {
