@@ -1,5 +1,17 @@
 # @cloudflare/vitest-plugin
 
+## 1.4.5
+
+### Patch Changes
+
+- [#16135](https://github.com/cloudflare/workers-sdk/pull/16135) [`329d757`](https://github.com/cloudflare/workers-sdk/commit/329d757005350c3d58ad0cebcc45eecad4f9afd2) Thanks [@Zyles](https://github.com/Zyles)! - Fix test runs slowing down file after file, and stalling, with `isolate: false`
+
+  With `isolate: false`, Vitest hands a worker's module runner to the pool again for every test file the worker runs, and the pool wrapped the runner's module fetches in one more layer each time, so imports got slower with every file until runs stalled. The pool now patches each module runner once.
+
+- Updated dependencies [[`37ab91c`](https://github.com/cloudflare/workers-sdk/commit/37ab91c639062dda2acd12f02df4ee49e67ba56f), [`0ae7926`](https://github.com/cloudflare/workers-sdk/commit/0ae7926b77d860a4330448c6cc398946b6797f3d)]:
+  - miniflare@5.20261019.0-beta
+  - wrangler@4.151.2
+
 ## 1.4.4
 
 ### Patch Changes

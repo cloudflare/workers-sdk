@@ -106,7 +106,7 @@ patchedDependencies:
 # ──────────────────────────────────────────────────────────────────────────────
 
 catalog:
-  cf: "1.0.0-beta.7"
+  cf: "1.0.0-beta.17"
   chalk: "5.3.0"
   command-exists: "1.2.9"
   dotenv: "16.3.1"
@@ -127,8 +127,8 @@ catalog:
   esbuild: "0.28.2"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20261016.1"
-  workerd: "1.20261016.1"
+  "@cloudflare/workers-types": "^5.20261019.1"
+  workerd: "1.20261019.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.9.0"
   msw: "2.14.6"

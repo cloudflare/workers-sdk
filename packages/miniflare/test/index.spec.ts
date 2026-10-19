@@ -13,7 +13,6 @@ import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
 import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils";
-import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
 	DeferredPromise,
@@ -3680,8 +3679,6 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	expect,
 	onTestFinished,
 }) => {
-	const firstPort = await getPort();
-	const secondPort = await getPort({ exclude: [firstPort] });
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -3698,10 +3695,9 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 							},
 						};
 					`),
-					triggers: [
-						{ type: "connect", protocol: "tcp", port: firstPort },
-						{ type: "connect", protocol: "tcp", port: secondPort },
-					],
+					// Let workerd bind the port atomically. Trigger-selection
+					// ambiguity is covered without sockets in connect.spec.ts.
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
 				},
 			},
 			{
@@ -3725,15 +3721,14 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	});
 	onTestFinished(() => mf.dispose());
 
-	await expect(mf.dispatchConnect()).rejects.toThrow(
-		"Multiple TCP connect triggers configured for entrypoint worker; specify a port"
-	);
 	await expect(mf.dispatchConnect({ port: 123 })).rejects.toThrow(
 		"TCP connect trigger on port 123 not found for entrypoint worker"
 	);
 
-	const firstSocket = await mf.dispatchConnect({ port: firstPort });
-	expect(await text(firstSocket)).toBe("a");
+	const entrypointSocket = await mf.dispatchConnect();
+	expect(await text(entrypointSocket)).toBe("a");
+	const explicitPortSocket = await mf.dispatchConnect({ port: 0 });
+	expect(await text(explicitPortSocket)).toBe("a");
 	const secondWorkerSocket = await mf.dispatchConnect({ workerName: "b" });
 	expect(await text(secondWorkerSocket)).toBe("b");
 });

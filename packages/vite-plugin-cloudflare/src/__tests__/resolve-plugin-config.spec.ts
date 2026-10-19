@@ -99,6 +99,28 @@ describe("resolvePluginConfig", () => {
 		);
 	});
 
+	test.for(["wrangler.json", "wrangler.jsonc", "wrangler.toml"])(
+		"rejects %s without cloudflare.config.ts",
+		async (wranglerConfigFilename, { expect }) => {
+			fs.writeFileSync(path.join(root, wranglerConfigFilename), "");
+
+			await expect(resolvePluginConfig({}, { root }, buildEnv)).rejects.toThrow(
+				`Found \`${wranglerConfigFilename}\` but no \`cloudflare.config.ts\`. The Cloudflare Vite plugin no longer reads Wrangler configuration files, so this configuration would be ignored. Run \`npx cf migrate --bundler vite\` to generate \`cloudflare.config.ts\`.`
+			);
+		}
+	);
+
+	test("loads cloudflare.config.ts when a Wrangler config also exists", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		fs.writeFileSync(path.join(root, "wrangler.jsonc"), "");
+
+		await expect(
+			resolvePluginConfig({}, { root }, buildEnv)
+		).resolves.toMatchObject({ type: "workers" });
+	});
+
 	test.for([
 		["Wrangler", undefined],
 		["cf", "cf"],

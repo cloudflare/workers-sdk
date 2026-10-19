@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.23.0
+
+### Minor Changes
+
+- [#16225](https://github.com/cloudflare/workers-sdk/pull/16225) [`fc51b96`](https://github.com/cloudflare/workers-sdk/commit/fc51b96c7f9952e46a6ceee6dfce22d004e539a8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Decouple shared deployment guidance from Wrangler
+
+  Shared deployment and Container helpers now receive only the command paths and configuration syntax required by each operation. Wrangler reuses the paths that register its command tree, while other consumers can supply their own values without global presentation state or Wrangler-specific fallbacks.
+
 ## 0.22.1
 
 ### Patch Changes

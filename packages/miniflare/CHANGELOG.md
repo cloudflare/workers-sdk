@@ -1,5 +1,27 @@
 # miniflare
 
+## 5.20261019.0-beta
+
+### Patch Changes
+
+- [#16307](https://github.com/cloudflare/workers-sdk/pull/16307) [`37ab91c`](https://github.com/cloudflare/workers-sdk/commit/37ab91c639062dda2acd12f02df4ee49e67ba56f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261006.1 | ^5.20261016.1 |
+  | workerd                   | 1.20261012.1  | 1.20261016.1  |
+
+- [#16352](https://github.com/cloudflare/workers-sdk/pull/16352) [`0ae7926`](https://github.com/cloudflare/workers-sdk/commit/0ae7926b77d860a4330448c6cc398946b6797f3d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261016.1 | ^5.20261019.1 |
+  | workerd                   | 1.20261016.1  | 1.20261019.1  |
+
 ## 5.20261012.1-beta
 
 ### Patch Changes

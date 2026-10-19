@@ -41,6 +41,7 @@
 		"@types/node": "catalog:default",
 		"chalk": "catalog:default",
 		"empathic": "^2.0.0",
+		"esbuild": "catalog:default",
 		"esprima": "4.0.1",
 		"recast": "0.23.11",
 		"semiver": "^1.1.0",
