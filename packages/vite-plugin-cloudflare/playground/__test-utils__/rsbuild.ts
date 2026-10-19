@@ -18,12 +18,6 @@ import type {
 } from "vite";
 
 /**
- * Runs the playground suite against `@cloudflare/rsbuild-plugin` instead of
- * the Vite plugin when `CLOUDFLARE_TEST_BUNDLER=rsbuild`.
- */
-export const isRsbuild = process.env.CLOUDFLARE_TEST_BUNDLER === "rsbuild";
-
-/**
  * Builds (when `isBuild`) and serves a playground with Rsbuild, using the
  * options passed to `cloudflare()` in the playground's Vite config.
  *
