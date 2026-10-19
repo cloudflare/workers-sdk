@@ -10,7 +10,6 @@ import {
 	Mutex,
 	Response,
 } from "miniflare";
-import { Agent, fetch } from "undici";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
@@ -27,7 +26,7 @@ import {
 import { validateHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
-import { isBun } from "../../utils/is-bun";
+import { BUN_UNSUPPORTED_MESSAGE, isBun } from "../../utils/is-bun";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
@@ -118,6 +117,12 @@ export class ProxyController extends Controller {
 					},
 					bindings: {
 						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+						// Bun's `fetch()` ignores the undici `dispatcher` that carries
+						// control messages here, so the ProxyWorker would queue every
+						// request forever waiting for a `play` message.
+						...(isBun() && {
+							UNSUPPORTED_RUNTIME_MESSAGE: BUN_UNSUPPORTED_MESSAGE,
+						}),
 					},
 
 					// no need to use file-system, so don't
@@ -330,19 +335,18 @@ export class ProxyController extends Controller {
 	}
 
 	runtimeMessageMutex = new Mutex();
-	latestReloadCompleteMessage = Promise.resolve(true);
 	async sendMessageToProxyWorker(
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
-	): Promise<boolean> {
+	): Promise<void> {
 		if (this._torndown) {
-			return false;
+			return;
 		}
 
 		// Don't do any async work here. Enqueue the message with the mutex immediately.
 
 		try {
-			const response = await this.runtimeMessageMutex.runWith(async () => {
+			await this.runtimeMessageMutex.runWith(async () => {
 				const { proxyWorker } = await this.ready.promise;
 
 				const ready = await proxyWorker.ready.catch(() => undefined);
@@ -358,11 +362,9 @@ export class ProxyController extends Controller {
 					}
 				);
 			});
-
-			return response?.status === 204;
 		} catch (cause) {
 			if (this._torndown) {
-				return false;
+				return;
 			}
 
 			const error = castErrorCause(cause);
@@ -375,41 +377,6 @@ export class ProxyController extends Controller {
 				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
 				error
 			);
-			if (isBun()) {
-				await this.reportMissingControlPayload();
-			}
-			return false;
-		}
-	}
-	/**
-	 * Under Bun, `dispatchFetch()` cannot reach the ProxyWorker: the URL rewrite
-	 * onto its origin lives in the undici `dispatcher` that Bun's `fetch()`
-	 * ignores, so control requests go to `http://dummy/` and fail. Send one
-	 * without a payload straight to the ProxyWorker's own URL, which Bun can
-	 * reach, so the ProxyWorker answers queued and later requests with a 503
-	 * naming the cause instead of holding them for a `play` that cannot arrive.
-	 *
-	 * Wrangler bundles undici, so this `fetch` and its `dispatcher` are undici's
-	 * own even under Bun; only Miniflare's runtime `undici` import resolves to
-	 * Bun's dispatcher-less shim.
-	 */
-	async reportMissingControlPayload() {
-		// The local dev certificate is self-signed.
-		const insecure = new Agent({ connect: { rejectUnauthorized: false } });
-		try {
-			const { url } = await this.ready.promise;
-			await fetch(new URL("/cdn-cgi/ProxyWorker/play", url), {
-				method: "POST",
-				headers: { Authorization: this.secret },
-				...(url.protocol === "https:" ? { dispatcher: insecure } : {}),
-			});
-		} catch (cause) {
-			logger.debug(
-				"Could not tell the ProxyWorker that its control payload is missing",
-				cause
-			);
-		} finally {
-			await insecure.close();
 		}
 	}
 	async sendMessageToInspectorProxyWorker(
@@ -496,7 +463,7 @@ export class ProxyController extends Controller {
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
 
-		this.latestReloadCompleteMessage = this.sendMessageToProxyWorker({
+		void this.sendMessageToProxyWorker({
 			type: "play",
 			proxyData: data.proxyData,
 		});

@@ -15,6 +15,9 @@ interface Env {
 	PROXY_CONTROLLER: Fetcher;
 	PROXY_CONTROLLER_AUTH_SECRET: string;
 	DURABLE_OBJECT: DurableObjectNamespace;
+	// Set when the ProxyController can never reach this Worker, so requests
+	// fail with this message instead of queueing for a `play` that won't arrive.
+	UNSUPPORTED_RUNTIME_MESSAGE?: string;
 }
 
 // request.cf.hostMetadata is verbose to type using the workers-types Request -- this allows us to have Request correctly typed in this scope
@@ -45,14 +48,6 @@ export class ProxyWorker implements DurableObject {
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
 	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
 
-	/**
-	 * Set when a ProxyController request arrives without its `cf.hostMetadata`
-	 * payload. Bun's `fetch()` ignores the undici `dispatcher` that Miniflare
-	 * uses to attach that payload, so under Bun no `play` message can ever
-	 * reach this ProxyWorker, and a queued request would wait forever.
-	 */
-	controlPayloadMissing = false;
-
 	fetch(request: Request) {
 		if (isRequestForLiveReloadWebsocket(request)) {
 			// requests for live-reload websocket
@@ -66,8 +61,10 @@ export class ProxyWorker implements DurableObject {
 			return this.processProxyControllerRequest(request);
 		}
 
-		if (this.controlPayloadMissing) {
-			return controlPayloadMissingResponse();
+		if (this.env.UNSUPPORTED_RUNTIME_MESSAGE) {
+			return new Response(this.env.UNSUPPORTED_RUNTIME_MESSAGE, {
+				status: 503,
+			});
 		}
 
 		// regular requests to be proxied
@@ -97,12 +94,10 @@ export class ProxyWorker implements DurableObject {
 		const event = request.cf?.hostMetadata;
 		switch (event?.type) {
 			case "pause":
-				this.controlPayloadMissing = false;
 				this.proxyData = undefined;
 				break;
 
 			case "play":
-				this.controlPayloadMissing = false;
 				this.proxyData = event.proxyData;
 				this.processQueue();
 				this.state
@@ -110,14 +105,6 @@ export class ProxyWorker implements DurableObject {
 					.forEach((ws) => ws.send("reload"));
 
 				break;
-
-			default:
-				// Bun currently drops `cf.hostMetadata`, so acknowledge only control
-				// requests whose payload actually reached the ProxyWorker, and fail
-				// requests instead of queueing them for a `play` that cannot arrive.
-				this.controlPayloadMissing = true;
-				this.failQueuedRequests();
-				return new Response(null, { status: 400 });
 		}
 
 		return new Response(null, { status: 204 });
@@ -131,38 +118,6 @@ export class ProxyWorker implements DurableObject {
 	*getOrderedQueue() {
 		yield* this.requestRetryQueue;
 		yield* this.requestQueue;
-	}
-
-	/**
-	 * Answers every queued request with the same 503 that new requests get once
-	 * `controlPayloadMissing` is set.
-	 */
-	failQueuedRequests() {
-		for (const [request, deferredResponse] of this.getOrderedQueue()) {
-			this.requestRetryQueue.delete(request);
-			this.requestQueue.delete(request);
-			deferredResponse.resolve(controlPayloadMissingResponse());
-		}
-	}
-
-	/**
-	 * Puts a request back on the retry queue, unless a control request has
-	 * already arrived without its payload. Retries settle asynchronously, so one
-	 * can land after `failQueuedRequests()` has drained the queues, and no `play`
-	 * would ever release it.
-	 *
-	 * @param request The request to retry.
-	 * @param deferredResponse The response promise its caller is waiting on.
-	 */
-	requeueForRetry(
-		request: Request,
-		deferredResponse: DeferredPromise<Response>
-	) {
-		if (this.controlPayloadMissing) {
-			deferredResponse.resolve(controlPayloadMissingResponse());
-			return;
-		}
-		this.requestRetryQueue.set(request, deferredResponse);
 	}
 
 	processQueue() {
@@ -296,7 +251,7 @@ export class ProxyWorker implements DurableObject {
 										// the pre-reload Worker or send a stale preview token.
 										// Requeue instead and let the current proxyData rebuild it.
 										if (this.proxyData !== proxyData) {
-											this.requeueForRetry(request, deferredResponse);
+											this.requestRetryQueue.set(request, deferredResponse);
 											this.processQueue();
 											return;
 										}
@@ -347,7 +302,7 @@ export class ProxyWorker implements DurableObject {
 
 						// if the request can be retried (subset of idempotent requests which have no body), requeue it
 						else if (request.method === "GET" || request.method === "HEAD") {
-							this.requeueForRetry(request, deferredResponse);
+							this.requestRetryQueue.set(request, deferredResponse);
 							// we would only end up here if the downstream UserWorker is chang*ing*
 							// i.e. we are in a `pause`d state and expecting a `play` message soon
 							// this request will be processed (retried) when the `play` message arrives
@@ -377,19 +332,6 @@ export class ProxyWorker implements DurableObject {
 			attemptUserWorkerFetch();
 		}
 	}
-}
-
-/**
- * Builds the response for requests that the ProxyWorker cannot forward because
- * its control requests arrive without their payload.
- *
- * @returns A 503 response naming the cause and the ways around it.
- */
-function controlPayloadMissingResponse(): Response {
-	return new Response(
-		"The Wrangler ProxyWorker received a control request without its payload, so it cannot forward requests to your Worker. This happens when the JavaScript runtime's `fetch()` ignores undici's `dispatcher` option, which Bun does today (https://github.com/oven-sh/bun/issues/39247). Run under Node.js.",
-		{ status: 503 }
-	);
 }
 
 function isRequestFromProxyController(req: Request, env: Env): boolean {

@@ -28,11 +28,10 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { runWithLogLevel } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
-import { isBun } from "../utils/is-bun";
+import { BUN_UNSUPPORTED_MESSAGE, isBun } from "../utils/is-bun";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
-import { waitForBunProxyMessages } from "./test-harness-runtime";
 import type { CfAccount } from "../dev/create-worker-preview";
 import type { ErrorEvent } from "./startDevWorker/events";
 import type { WranglerStartDevWorkerInput } from "./startDevWorker/types";
@@ -979,11 +978,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	) {
 		// Miniflare's `dispatchFetch()` routes every request, `getWorker()` ones
 		// included, through an undici dispatcher that Bun's `fetch()` ignores, so
-		// a request can leave for the network. Check before sending anything.
+		// a request can leave for the network. Refuse before sending anything.
 		if (isBun()) {
-			const session = await resolveSession();
-			await waitForBunProxyMessages(
-				() => session.primaryDevEnv.proxy.latestReloadCompleteMessage
+			throw new UserError(
+				`${BUN_UNSUPPORTED_MESSAGE} \`server.getWorker().getEnv()\` and \`getExport()\` still work under Bun.`,
+				{ telemetryMessage: "test harness dispatch under bun" }
 			);
 		}
 
