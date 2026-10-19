@@ -13,6 +13,15 @@
 			"env": ["$TURBO_EXTENDS$", "CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS"],
 			"dependsOn": ["build"],
 			"inputs": ["e2e/**"]
+		},
+		"test:e2e:rsbuild": {
+			"env": [
+				"$TURBO_EXTENDS$",
+				"CLOUDFLARE_TEST_BUNDLER",
+				"CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS"
+			],
+			"dependsOn": ["build", "@cloudflare/rsbuild-plugin#build"],
+			"inputs": ["e2e/**"]
 		}
 	}
 }

@@ -65,6 +65,15 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
           CI_OS: ${{ matrix.os }}
 
+      - name: Run Vite plugin E2E tests against the Rsbuild plugin
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.os == 'ubuntu-latest'
+        run: pnpm dotenv -- pnpm turbo test:e2e:rsbuild -F @cloudflare/vite-plugin --log-order=stream
+        timeout-minutes: 20
+        env:
+          NODE_DEBUG: "vite-plugin:test"
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          CI_OS: ${{ matrix.os }}
+
       - name: Upload turbo logs
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

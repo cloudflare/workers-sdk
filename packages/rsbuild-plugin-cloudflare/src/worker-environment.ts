@@ -156,6 +156,18 @@ export function getWorkerEntry(
 	const entrypoint = fs.existsSync(entrypointPath)
 		? entrypointPath
 		: config.entrypoint;
+	// As in the Vite plugin, fail at startup rather than with a build error,
+	// which `rsbuild dev` would report and then keep running.
+	if (
+		entrypoint === config.entrypoint &&
+		new rspack.experiments.resolver.ResolverFactory({
+			conditionNames: [...conditionNames, "import"],
+		}).sync(root, entrypoint).error
+	) {
+		throw new Error(
+			`Failed to resolve Worker entrypoint "${entrypoint}" for Worker "${config.name}"`
+		);
+	}
 
 	return {
 		[WORKER_ENTRY_NAME]: {

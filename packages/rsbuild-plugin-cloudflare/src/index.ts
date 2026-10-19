@@ -203,8 +203,15 @@ export function pluginCloudflare(
 							type: "reload-server",
 						},
 					},
-					// The asset Worker handles HTML requests, as when deployed.
-					server: { htmlFallback: false },
+					server: {
+						// The asset Worker handles HTML requests, as when deployed.
+						htmlFallback: false,
+						// Rsbuild only prints the server's URLs for client environments.
+						...(Object.keys(environments).length === 0 &&
+							userConfig.server?.printUrls === true && {
+								printUrls: ({ urls }: { urls: string[] }) => urls,
+							}),
+					},
 				});
 			});
 

@@ -36,3 +36,11 @@ pnpm --filter @vite-plugin-cloudflare/playground test:ci:rsbuild:build
 ```
 
 See `packages/vite-plugin-cloudflare/playground/vitest.config.e2e.rsbuild.ts` for the playgrounds and tests that are skipped, and why.
+
+So does the Vite plugin's e2e suite, which installs fixtures from a mock npm registry:
+
+```sh
+pnpm turbo test:e2e:rsbuild -F @cloudflare/vite-plugin
+```
+
+See `packages/vite-plugin-cloudflare/e2e/vitest.config.rsbuild.ts` for the tests that are skipped.

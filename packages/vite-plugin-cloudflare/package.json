@@ -46,6 +46,7 @@
 		"test": "vitest run",
 		"test:ci": "pnpm test",
 		"test:e2e": "vitest run -c e2e/vitest.config.ts",
+		"test:e2e:rsbuild": "vitest run -c e2e/vitest.config.rsbuild.ts",
 		"test:watch": "vitest"
 	},
 	"dependencies": {

@@ -55,3 +55,7 @@ You can control the logging and cleanup via environment variables:
 - See debug logs for the tests: `NODE_DEBUG=vite-plugin:test`
 - See debug logs for the mock npm registry: `NODE_DEBUG=mock-npm-registry`
 - See debug logs for Vite: `DEBUG="vite:*"`
+
+## Running against the Rsbuild plugin
+
+`pnpm turbo test:e2e:rsbuild -F @cloudflare/vite-plugin` runs the same tests against `@cloudflare/rsbuild-plugin`. `seed()` converts each fixture to an Rsbuild project (see `rsbuild.ts`), installing a packed copy of the private Rsbuild plugin. Tests of Vite-specific behaviour are skipped in `vitest.config.rsbuild.ts`. Don't edit tests to make them pass under Rsbuild.

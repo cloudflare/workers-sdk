@@ -120,3 +120,7 @@ contract so the parent can drive either impl interchangeably.
   throws on Vite plugins it can't translate. Playgrounds and tests that depend
   on Vite-specific behaviour are skipped in `playground/vitest.config.e2e.rsbuild.ts`,
   each with the reason. Don't edit specs to make them pass under Rsbuild.
+- `test:e2e:rsbuild` runs the `e2e/` suite against `@cloudflare/rsbuild-plugin`.
+  `e2e/rsbuild.ts` packs the private plugin and converts each seeded fixture
+  (dependencies, scripts and `vite.config` → `rsbuild.config`). Vite-specific
+  tests are skipped in `e2e/vitest.config.rsbuild.ts`.

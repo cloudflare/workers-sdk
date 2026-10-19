@@ -17,6 +17,7 @@ import {
 	vi,
 } from "vitest";
 import vitePluginPackage from "../package.json";
+import { convertToRsbuild } from "./rsbuild";
 
 const debuglog = util.debuglog("vite-plugin:test");
 
@@ -62,6 +63,9 @@ export function seed(
 		});
 		debuglog("Fixture copied to " + projectPath);
 		await updateVitePluginVersion(projectPath, pm);
+		if (process.env.CLOUDFLARE_TEST_BUNDLER === "rsbuild") {
+			await convertToRsbuild(projectPath, inject("rsbuildPluginTarball"));
+		}
 		debuglog("Fixing up replacements in seeded files");
 		await fixupReplacements(projectPath, replacements);
 		debuglog("Updated vite-plugin version in package.json");
