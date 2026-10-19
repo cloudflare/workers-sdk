@@ -1,12 +1,21 @@
 import childProcess from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import tls from "node:tls";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import { DeferredPromise, Miniflare } from "miniflare";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	test,
+	vi,
+} from "vitest";
 import {
 	HyperdriveProxyController,
 	POSTGRES_SSL_REQUEST_PACKET,
@@ -901,4 +910,230 @@ test("retiring a proxy stops new connections but preserves an active one", async
 		controller.dispose();
 		database.close();
 	}
+});
+
+describe("local Hyperdrive connection cleanup", () => {
+	let database: net.Server;
+	let controller: HyperdriveProxyController;
+	let client: net.Socket | undefined;
+	let connections: net.Socket[];
+	let secureSockets: tls.TLSSocket[];
+	let tmpDir: string;
+	let certs: TestCerts;
+
+	beforeAll(() => {
+		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hyperdrive-cleanup-"));
+		certs = generateCerts(tmpDir);
+	});
+	afterAll(() => removeDirSync(tmpDir));
+	beforeEach(() => {
+		controller = new HyperdriveProxyController();
+		client = undefined;
+		connections = [];
+		secureSockets = [];
+		database = net.createServer((socket) => {
+			connections.push(socket);
+			socket.on("error", () => {});
+		});
+	});
+	afterEach(() => {
+		client?.destroy();
+		controller.dispose();
+		for (const socket of [...connections, ...secureSockets]) {
+			socket.destroy();
+		}
+		database.close();
+	});
+
+	async function connect(scheme = "postgres", sslmode = "prefer") {
+		await new Promise<void>((resolve) =>
+			database.listen(0, "127.0.0.1", resolve)
+		);
+		const address = database.address();
+		if (address === null || typeof address === "string") {
+			throw new Error("Expected TCP port");
+		}
+		const port = await controller.createProxyServer({
+			name: "cleanup",
+			targetHost: "127.0.0.1",
+			targetPort: String(address.port),
+			scheme,
+			sslmode,
+		});
+		client = net.connect(port, "127.0.0.1");
+		client.on("error", () => {});
+		await once(client, "connect");
+		return client;
+	}
+
+	test.for([
+		{ scheme: "postgres", stage: "SSL response" },
+		{ scheme: "postgres", stage: "TLS handshake" },
+		{ scheme: "mysql", stage: "greeting" },
+	])(
+		"dispose closes local outbound sockets during $scheme $stage",
+		async ({ scheme, stage }, { expect }) => {
+			const waiting = new DeferredPromise<net.Socket>();
+			database.on("connection", (socket) => {
+				if (scheme === "mysql") {
+					waiting.resolve(socket);
+				} else {
+					socket.once("data", () => {
+						if (stage === "TLS handshake") {
+							socket.write("S");
+							socket.once("data", () => waiting.resolve(socket));
+						} else {
+							waiting.resolve(socket);
+						}
+					});
+				}
+			});
+			const client = await connect(scheme, "require");
+			const accepted = await waiting;
+			const closed = Promise.all([
+				once(client, "close"),
+				once(accepted, "close"),
+			]);
+			controller.beginUpdate();
+			controller.commitUpdate(new Set());
+			controller.dispose();
+			controller.dispose();
+			await closed;
+			expect(client.destroyed).toBe(true);
+			expect(accepted.destroyed).toBe(true);
+		}
+	);
+
+	test("client close cancels PostgreSQL negotiation without starting a fallback", async ({
+		expect,
+	}) => {
+		const waiting = new DeferredPromise<net.Socket>();
+		database.on("connection", (socket) => {
+			socket.once("data", () => waiting.resolve(socket));
+		});
+		const client = await connect();
+		const accepted = await waiting;
+		const closed = once(accepted, "close");
+		client.destroy();
+		await closed;
+		expect(connections).toHaveLength(1);
+	});
+
+	test.for(["CLIENT STARTUP", "x".repeat(64 * 1024 + 1)])(
+		"PostgreSQL pending SSL closes on buffered FIN or oversized startup (%#)",
+		async (input, { expect }) => {
+			const waiting = new DeferredPromise<net.Socket>();
+			database.on("connection", (socket) => {
+				socket.once("data", () => waiting.resolve(socket));
+			});
+			const client = await connect();
+			const accepted = await waiting;
+			const closed = Promise.all(
+				[client, accepted].map(
+					(socket) =>
+						new Promise<void>((resolve) =>
+							socket.once("close", () => resolve())
+						)
+				)
+			);
+			if (input.length > 64 * 1024) {
+				client.write(input);
+			} else {
+				client.end(input);
+			}
+			await closed;
+			expect(connections).toHaveLength(1);
+			expect(accepted.destroyed).toBe(true);
+		}
+	);
+
+	test.for(["S", "N"] as const)(
+		"PostgreSQL replays startup bytes sent before a delayed %s response in order",
+		async (sslResponse, { expect }) => {
+			const responseGate = new DeferredPromise<void>();
+			const sslRequestSeen = new DeferredPromise<void>();
+			let carried = "";
+			database.on("connection", (socket) => {
+				if (connections.length > 1) {
+					socket.on("data", (data) => {
+						carried += data.toString();
+					});
+					return;
+				}
+				socket.once("readable", () => {
+					socket.read(POSTGRES_SSL_REQUEST_PACKET.length);
+					sslRequestSeen.resolve();
+					void responseGate.then(() => {
+						socket.write(sslResponse);
+						if (sslResponse === "S") {
+							const secure = new tls.TLSSocket(socket, {
+								isServer: true,
+								key: certs.localhost.key,
+								cert: certs.localhost.cert,
+							});
+							secureSockets.push(secure);
+							secure.on("error", () => {});
+							secure.on("data", (data) => {
+								carried += data.toString();
+							});
+						}
+					});
+				});
+			});
+			const client = await connect();
+			await sslRequestSeen;
+			client.write("STARTUP-1|");
+			client.write("STARTUP-2|");
+			await vi.waitFor(() => expect(connections).toHaveLength(1));
+			responseGate.resolve();
+			await vi.waitFor(() => expect(carried).toBe("STARTUP-1|STARTUP-2|"));
+			client.write("AFTER|");
+			await vi.waitFor(() =>
+				expect(carried).toBe("STARTUP-1|STARTUP-2|AFTER|")
+			);
+			expect(connections).toHaveLength(sslResponse === "S" ? 1 : 2);
+		}
+	);
+
+	test("MySQL auth half-close cancels TLS without opening a prefer fallback", async ({
+		expect,
+	}) => {
+		const payload = Buffer.concat([
+			Buffer.from([10]),
+			Buffer.from("test\0"),
+			Buffer.alloc(4),
+			Buffer.alloc(8),
+			Buffer.from([0, 0, 8]),
+		]);
+		const greeting = Buffer.concat([
+			Buffer.from([payload.length, 0, 0, 0]),
+			payload,
+		]);
+		database.on("connection", (socket) => {
+			socket.write(greeting);
+			socket.once("readable", () => {
+				socket.read(36);
+				const secure = new tls.TLSSocket(socket, {
+					isServer: true,
+					key: certs.localhost.key,
+					cert: certs.localhost.cert,
+				});
+				secureSockets.push(secure);
+				secure.on("error", () => {});
+				secure.on("data", () => {});
+			});
+		});
+		const client = await connect("mysql");
+		await once(client, "data");
+		const dbClosed = Promise.all(
+			secureSockets.map(
+				(socket) =>
+					new Promise<void>((resolve) => socket.once("close", () => resolve()))
+			)
+		);
+		const clientClosed = once(client, "close");
+		client.end();
+		await Promise.all([dbClosed, clientClosed]);
+		expect(connections).toHaveLength(1);
+	});
 });

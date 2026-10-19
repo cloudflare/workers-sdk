@@ -292,6 +292,7 @@ export class HyperdriveProxyController {
 				Number.parseInt(targetPort),
 				scheme,
 				sslmode,
+				owner,
 				sslrootcert
 			).catch(() => owner.close());
 		});
@@ -361,10 +362,14 @@ export class HyperdriveProxyController {
 		targetPort: number,
 		scheme: string,
 		sslmode: string,
+		owner: ConnectionOwner,
 		sslrootcert?: string
 	) {
-		// Connect to real database
-		const dbSocket = net.connect({ host: targetHost, port: targetPort });
+		// Track outbound sockets before any connect or TLS wait can yield.
+		const dbSocket = owner.track(
+			net.connect({ host: targetHost, port: targetPort })
+		);
+		dbSocket.on("error", () => {});
 		dbSocket.setNoDelay(true);
 		const sslmodeRequire = sslmode === "require";
 		const sslmodePrefer = sslmode === "prefer";
@@ -387,7 +392,8 @@ export class HyperdriveProxyController {
 						targetHost,
 						targetPort,
 						sslmodeRequire || sslmodeStrict,
-						tlsConfig
+						tlsConfig,
+						owner
 					);
 				} else if (scheme === schemes.mysql) {
 					return await handleMySQLTlsConnection(
@@ -396,22 +402,20 @@ export class HyperdriveProxyController {
 						targetHost,
 						targetPort,
 						sslmodeRequire || sslmodeStrict,
-						tlsConfig
+						tlsConfig,
+						owner
 					);
 				}
 			} catch (e) {
-				if (sslmodeRequire || sslmodeStrict) {
-					// Write error to client so worker can read it
+				if (!clientSocket.destroyed) {
 					clientSocket.write(`${e}\n`);
 					clientSocket.end();
-					dbSocket.destroy();
-					return;
 				}
+				dbSocket.destroy();
+				return;
 			}
 		}
-		// Pipe plain tcp sockets
-		clientSocket.pipe(dbSocket);
-		dbSocket.pipe(clientSocket);
+		setupTLSConnection(clientSocket, dbSocket);
 	}
 
 	/**
@@ -691,45 +695,74 @@ async function handlePostgresTlsConnection(
 	targetHost: string,
 	targetPort: number,
 	sslmodeRequire: boolean,
-	tlsConfig: TlsConfig
+	tlsConfig: TlsConfig,
+	owner: ConnectionOwner
 ) {
-	// Send Postgres sslrequest bytes
-	await writeAsync(dbSocket, POSTGRES_SSL_REQUEST_PACKET);
-
-	const response = await readAsync(dbSocket);
-	// Read first byte ssl flag
-	const sslResponseFlag = response.toString("utf8", 0, 1);
-	if (sslResponseFlag === "S") {
-		const tlsOptions = buildTlsConnectionOptions(
-			dbSocket,
-			targetHost,
-			tlsConfig
-		);
-		try {
-			const tlsSocket = await tlsConnect(tlsOptions);
-			setupTLSConnection(clientSocket, tlsSocket);
+	// Consume pending startup bytes so EOF can cancel negotiation. Bound this
+	// buffer rather than allowing a stalled database to accumulate client input.
+	const startupChunks: Buffer[] = [];
+	let startupLength = 0;
+	const collectStartup = (chunk: Buffer) => {
+		startupLength += chunk.length;
+		if (startupLength > 64 * 1024) {
+			owner.close();
 			return;
-		} catch (e) {
-			if (sslmodeRequire) {
-				throw e;
-			}
-			// Fallback to plain TCP connection
 		}
+		startupChunks.push(chunk);
+	};
+	const releaseStartup = () => {
+		clientSocket.pause();
+		clientSocket.off("data", collectStartup);
+		owner.assertOpen();
+		if (startupLength > 0) {
+			clientSocket.unshift(Buffer.concat(startupChunks));
+		}
+	};
+	clientSocket.on("data", collectStartup);
+	clientSocket.resume();
+	try {
+		// Send Postgres sslrequest bytes
+		await writeAsync(dbSocket, POSTGRES_SSL_REQUEST_PACKET);
+
+		const response = await readAsync(dbSocket);
+		// Read first byte ssl flag
+		const sslResponseFlag = response.toString("utf8", 0, 1);
+		if (sslResponseFlag === "S") {
+			const tlsOptions = buildTlsConnectionOptions(
+				dbSocket,
+				targetHost,
+				tlsConfig
+			);
+			try {
+				const tlsSocket = await tlsConnect(tlsOptions, owner);
+				releaseStartup();
+				setupTLSConnection(clientSocket, tlsSocket);
+				return;
+			} catch (e) {
+				if (sslmodeRequire) {
+					throw e;
+				}
+				// Fallback to plain TCP connection
+			}
+		}
+		// Server doesn't support SSL but client requires it
+		if (sslmodeRequire) {
+			throw Error("Server does not support SSL, but client requires SSL.");
+		}
+		// fallback to plain TCP
+		dbSocket.destroy();
+		const newDbSocket = await createPlainTCPConnection(
+			targetHost,
+			targetPort,
+			clientSocket,
+			owner
+		);
+		releaseStartup();
+		// Pipe plain TCP sockets
+		setupTLSConnection(clientSocket, newDbSocket);
+	} finally {
+		clientSocket.off("data", collectStartup);
 	}
-	// Server doesn't support SSL but client requires it
-	if (sslmodeRequire) {
-		throw Error("Server does not support SSL, but client requires SSL.");
-	}
-	// fallback to plain TCP
-	dbSocket.destroy();
-	const newDbSocket = await createPlainTCPConnection(
-		targetHost,
-		targetPort,
-		clientSocket
-	);
-	// Pipe plain TCP sockets
-	clientSocket.pipe(newDbSocket);
-	newDbSocket.pipe(clientSocket);
 }
 
 /** Handles MySQL TLS connection */
@@ -739,7 +772,8 @@ async function handleMySQLTlsConnection(
 	targetHost: string,
 	targetPort: number,
 	sslmodeRequire: boolean,
-	tlsConfig: TlsConfig
+	tlsConfig: TlsConfig,
+	owner: ConnectionOwner
 ) {
 	const initPacketChunk = await readAsync(dbSocket);
 	// Little-endian parse payload header length
@@ -798,7 +832,7 @@ async function handleMySQLTlsConnection(
 		);
 
 		try {
-			const tlsSocket = await tlsConnect(tlsOptions);
+			const tlsSocket = await tlsConnect(tlsOptions, owner);
 
 			// Send original init packet to client (with SSL capability)
 			const fullInitPacket = Buffer.concat([
@@ -837,52 +871,37 @@ async function handleMySQLTlsConnection(
 	const newDbSocket = await createPlainTCPConnection(
 		targetHost,
 		targetPort,
-		clientSocket
+		clientSocket,
+		owner
 	);
 
 	// Pipe plain TCP sockets
-	clientSocket.pipe(newDbSocket);
-	newDbSocket.pipe(clientSocket);
+	setupTLSConnection(clientSocket, newDbSocket);
 	return;
 }
 
-/** Create and wait for plain TCP connection */
+/** Creates a fallback socket only while the client still owns the connection. */
 async function createPlainTCPConnection(
 	targetHost: string,
 	targetPort: number,
-	clientSocket: net.Socket
+	clientSocket: net.Socket,
+	owner: ConnectionOwner
 ): Promise<net.Socket> {
-	const dbSocket = net.connect({ host: targetHost, port: targetPort });
+	owner.assertOpen();
+	const dbSocket = owner.track(
+		net.connect({ host: targetHost, port: targetPort })
+	);
 	dbSocket.setNoDelay(true);
-
-	// Wait for connection to be established
-	await new Promise<void>((resolve, reject) => {
-		const handleConnect = () => {
-			dbSocket.off("error", handleError);
-			resolve();
-		};
-
-		const handleError = (err: Error) => {
-			dbSocket.off("data", handleConnect);
-			reject(err);
-		};
-
-		dbSocket.once("connect", handleConnect);
-		dbSocket.once("error", handleError);
-	});
-
-	// Set up error handler
-	dbSocket.on("error", () => {
-		clientSocket.destroy();
-	});
-
+	dbSocket.on("error", () => clientSocket.destroy());
+	await waitForSocket(dbSocket, "connect");
+	owner.assertOpen();
 	return dbSocket;
 }
 
 /** Set up TLS connection with pipes and error handlers */
 function setupTLSConnection(
 	clientSocket: net.Socket,
-	tlsSocket: tls.TLSSocket
+	tlsSocket: net.Socket
 ): void {
 	// Set up error handler for runtime TLS errors
 	tlsSocket.on("error", () => {
@@ -890,6 +909,7 @@ function setupTLSConnection(
 		tlsSocket.destroy();
 	});
 
+	tlsSocket.once("close", () => clientSocket.destroy());
 	// Pipe sockets
 	clientSocket.pipe(tlsSocket);
 	tlsSocket.pipe(clientSocket);
@@ -906,41 +926,79 @@ function writeAsync(
 	});
 }
 
-/** Ready buffer from socket and return as a promise helper function  */
+/** Reads the next chunk, rejecting when the peer closes before sending it. */
 function readAsync(socket: net.Socket): Promise<Buffer<ArrayBufferLike>> {
 	return new Promise((resolve, reject) => {
-		const handleData = (data: Buffer) => {
+		const cleanup = () => {
+			socket.off("data", handleData);
 			socket.off("error", handleError);
+			socket.off("close", handleClose);
+			socket.off("end", handleClose);
+		};
+		const handleData = (data: Buffer) => {
+			cleanup();
 			resolve(data);
 		};
-
 		const handleError = (err: Error) => {
-			socket.off("data", handleData);
+			cleanup();
 			reject(err);
 		};
-
+		const handleClose = () =>
+			handleError(new Error("Hyperdrive connection closed"));
+		if (socket.destroyed || socket.readableEnded) {
+			handleClose();
+			return;
+		}
 		socket.once("data", handleData);
 		socket.once("error", handleError);
+		socket.once("close", handleClose);
+		socket.once("end", handleClose);
 	});
 }
 
-function tlsConnect(options: tls.ConnectionOptions): Promise<tls.TLSSocket> {
+/** Waits for TCP/TLS readiness without retaining listeners after settlement. */
+function waitForSocket(
+	socket: net.Socket,
+	event: "connect" | "secureConnect"
+): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const socket = tls.connect(options);
-
-		const handleSecureConnect = () => {
+		const cleanup = () => {
+			socket.off(event, handleReady);
 			socket.off("error", handleError);
-			resolve(socket);
+			socket.off("close", handleClose);
+			socket.off("end", handleClose);
 		};
-
-		const handleError = (err: Error) => {
-			socket.off("secureConnect", handleSecureConnect);
-			reject(err);
+		const handleReady = () => {
+			cleanup();
+			resolve();
 		};
-
-		socket.once("secureConnect", handleSecureConnect);
+		const handleError = (error: Error) => {
+			cleanup();
+			reject(error);
+		};
+		const handleClose = () =>
+			handleError(new Error("Hyperdrive connection closed"));
+		if (socket.destroyed || socket.readableEnded) {
+			handleClose();
+			return;
+		}
+		socket.once(event, handleReady);
 		socket.once("error", handleError);
+		socket.once("close", handleClose);
+		socket.once("end", handleClose);
 	});
+}
+
+async function tlsConnect(
+	options: tls.ConnectionOptions,
+	owner: ConnectionOwner
+): Promise<tls.TLSSocket> {
+	owner.assertOpen();
+	const socket = owner.track(tls.connect(options));
+	socket.on("error", () => {});
+	await waitForSocket(socket, "secureConnect");
+	owner.assertOpen();
+	return socket;
 }
 
 /** MySQL helper that skips through reading the init packet
