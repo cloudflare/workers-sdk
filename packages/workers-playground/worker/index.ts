@@ -1,25 +1,26 @@
-interface Env {
-	ASSETS: { fetch(input: RequestInfo, init?: RequestInit): Promise<Response> };
-}
-
 const TESTING_ORIGIN = "playground-testing.devprod.cloudflare.dev";
 
 export default {
 	/**
-	 * This Worker entry point is only used in the dev environment (wrangler.dev.jsonc).
+	 * This Worker entry point is only used in development mode, as configured in
+	 * cloudflare.config.ts.
 	 *
 	 * In production, workers-playground is deployed as an assets-only Worker,
 	 * and the playground-preview-worker handles all routing and proxying.
 	 *
-	 *   eyeball -> playground-preview-worker (production) -> workers-playground (production, wrangler.jsonc)
+	 *   eyeball -> playground-preview-worker (production) -> workers-playground (production)
 	 *
 	 * Locally, this Worker replicates the proxying behavior so that the
 	 * playground can communicate with the testing playground-preview-worker:
 	 *
-	 *   eyeball -> workers-playground (local, wrangler.dev.jsonc) -> playground-preview-worker (testing)
+	 *   eyeball -> workers-playground (local) -> playground-preview-worker (testing)
 	 */
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
+		const assets = env.ASSETS;
+		if (assets === undefined) {
+			throw new Error("The ASSETS binding is required in development mode.");
+		}
 
 		// For the root `/playground` path, fetch a cookie from the testing endpoint and inject it into
 		// the response so that the preview iframe can authenticate with the testing preview worker.
@@ -28,7 +29,7 @@ export default {
 				await fetchTokenCookieFromTestingEndpoint()
 			);
 			url.pathname = "/"; // Rewrite to fetch the index.html asset
-			const asset = await env.ASSETS.fetch(url.href);
+			const asset = await assets.fetch(url.href);
 			const response = new Response(asset.body, asset);
 			if (tokenCookie) {
 				response.headers.set("Set-Cookie", tokenCookie);
@@ -45,7 +46,7 @@ export default {
 		}
 
 		// All other requests fall through to static assets
-		return env.ASSETS.fetch(request);
+		return assets.fetch(request);
 	},
 };
 
