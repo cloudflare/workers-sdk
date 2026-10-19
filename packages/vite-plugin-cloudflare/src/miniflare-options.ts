@@ -259,7 +259,8 @@ export async function getDevMiniflareOptions(
 	const resolvedLocalBindingsByWorkerName = resolveLocalBindingsByWorkerName(
 		ctx.allWorkerConfigs,
 		resolvedPluginConfig.localEnv,
-		resolvedPluginConfig.devVars
+		resolvedPluginConfig.devVars,
+		resolvedPluginConfig.remoteBindings
 	);
 	warnForMissingSecrets(
 		resolvedLocalBindingsByWorkerName,
@@ -808,7 +809,8 @@ export async function getPreviewMiniflareOptions(
 	const resolvedLocalBindingsByWorkerName = resolveLocalBindingsByWorkerName(
 		ctx.allWorkerConfigs,
 		resolvedPluginConfig.localEnv,
-		resolvedPluginConfig.devVars
+		resolvedPluginConfig.devVars,
+		resolvedPluginConfig.remoteBindings
 	);
 	warnForMissingSecrets(
 		resolvedLocalBindingsByWorkerName,
@@ -987,7 +989,8 @@ export function createMiniflareExports(options: {
 function resolveLocalBindingsByWorkerName(
 	workerConfigs: Array<ParsedInputWorkerConfig | ParsedOutputWorkerConfig>,
 	localEnv: LoadedEnv,
-	devVars: Record<string, string> | undefined
+	devVars: Record<string, string> | undefined,
+	remoteBindings: boolean
 ): Map<string, ResolvedLocalBindings> {
 	const resolvedLocalBindingsByWorkerName = new Map<
 		string,
@@ -996,7 +999,7 @@ function resolveLocalBindingsByWorkerName(
 	for (const config of workerConfigs) {
 		resolvedLocalBindingsByWorkerName.set(
 			config.name,
-			resolveLocalBindings(config.env, localEnv.values, devVars)
+			resolveLocalBindings(config.env, localEnv.values, devVars, remoteBindings)
 		);
 	}
 	return resolvedLocalBindingsByWorkerName;

@@ -543,6 +543,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
+						remote: binding.dev?.remote,
 						localConnectionString: binding.dev?.connectionString,
 					})
 				);
