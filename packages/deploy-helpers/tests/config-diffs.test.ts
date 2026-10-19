@@ -1,3 +1,4 @@
+import { mapWorkerMetadataBindings } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
 import { getRemoteConfigDiff } from "../src/deploy/helpers/config-diffs";
 import type { Config, Route } from "@cloudflare/workers-utils";
@@ -126,5 +127,62 @@ describe("custom-domain remote config diffs", () => {
 
 	it("preserves absent routes", ({ expect }) => {
 		expect(getRemoteConfigDiff({}, {} as Config).diff).toBeNull();
+	});
+});
+
+describe("binding fields omitted by the API", () => {
+	it("treats an absent R2 jurisdiction as unchanged", ({ expect }) => {
+		const remote = mapWorkerMetadataBindings([
+			{
+				type: "r2_bucket",
+				name: "EXAMPLE_BUCKET",
+				bucket_name: "example-bucket",
+			},
+		]);
+		const local = {
+			r2_buckets: [
+				{ binding: "EXAMPLE_BUCKET", bucket_name: "example-bucket" },
+			],
+		} as Config;
+
+		expect(getRemoteConfigDiff(remote, local)).toEqual({
+			diff: null,
+			nonDestructive: true,
+		});
+	});
+
+	it("treats optional fields that are undefined locally as absent", ({
+		expect,
+	}) => {
+		const remote = mapWorkerMetadataBindings([
+			{ type: "service", name: "AUTH", service: "auth-worker" },
+		]);
+		const local = {
+			services: [
+				{ binding: "AUTH", service: "auth-worker", entrypoint: undefined },
+			],
+		} as Config;
+
+		expect(getRemoteConfigDiff(remote, local).diff).toBeNull();
+	});
+
+	it("still reports a changed R2 jurisdiction", ({ expect }) => {
+		const remote = mapWorkerMetadataBindings([
+			{
+				type: "r2_bucket",
+				name: "EXAMPLE_BUCKET",
+				bucket_name: "example-bucket",
+				jurisdiction: "eu",
+			},
+		]);
+		const local = {
+			r2_buckets: [
+				{ binding: "EXAMPLE_BUCKET", bucket_name: "example-bucket" },
+			],
+		} as Config;
+
+		const result = getRemoteConfigDiff(remote, local);
+		expect(result.diff).not.toBeNull();
+		expect(result.nonDestructive).toBe(false);
 	});
 });
