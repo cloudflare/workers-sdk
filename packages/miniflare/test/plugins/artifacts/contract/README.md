@@ -1,0 +1,5 @@
+# Artifacts local contract tests
+
+`../contract.spec.ts` runs shared scenarios against Miniflare's real RPC binding with a deterministic, locally pushed Git fixture. The scenarios assert returned objects, error fields, Blob MIME types and bytes, missing/null outcomes, repository lifecycle, tokens, Git objects and files, and forks. Git HTTP authorization is tested separately in `../index.spec.ts`. The scenarios refuse a nonempty namespace and clean up repositories they create.
+
+**These are local-only observations, not a specification or evidence of deployed-service parity.** No production binding is contacted by CI, and this PR does not include an unexercised live-comparison harness. A future live comparison requires the namespace owner's explicit approval of an exclusively reserved disposable namespace and a trusted private test context; do not point these tests at a production or shared namespace. Keep credentials, raw observations, and workspace-only comparison tools out of public PRs.
