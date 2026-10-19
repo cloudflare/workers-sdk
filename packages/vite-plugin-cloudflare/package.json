@@ -19,11 +19,7 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
-	"bin": {
-		"cf-vite": "./bin/cf-vite"
-	},
 	"files": [
-		"bin",
 		"dist"
 	],
 	"type": "module",
@@ -52,17 +48,13 @@
 		"@cloudflare/unenv-preset": "2.16.2",
 		"miniflare": "5.20261012.1-beta",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20261015.1",
 		"wrangler": "4.151.1",
 		"ws": "8.22.0"
 	},
 	"devDependencies": {
-		"@cloudflare/build-output-utils": "0.9.3",
-		"@cloudflare/config": "0.27.0",
 		"@cloudflare/containers-shared": "0.22.1",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
-		"@cloudflare/runtime-types": "0.1.12",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "5.20261015.1",

@@ -1,13 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
 import * as wrangler from "wrangler";
 import type {
 	ResolvedAssetsOnlyConfig,
 	ResolvedWorkerConfig,
 } from "./plugin-config";
 import type { Optional } from "./utils";
-import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
 
 export type WorkerResolvedConfig =
@@ -187,40 +185,6 @@ function readWorkerConfig(
 		{ preserveOriginalMain: true }
 	);
 	return processNormalizedWorkerConfig(normalized);
-}
-
-/**
- * Normalise a `RawConfig` produced in-memory (for example by
- * `convertToWranglerConfig` from `@cloudflare/config`) using the same
- * validation pipeline as on-disk Wrangler config files, then apply the
- * Vite-specific sanitization.
- */
-export function readWorkerConfigFromRaw(
-	rawConfig: RawConfig,
-	configPath?: string
-): {
-	raw: RawWorkerConfig;
-	config: WorkerConfig;
-	nonApplicable: NonApplicableConfigMap;
-} {
-	const { config, diagnostics } = normalizeAndValidateConfig(
-		rawConfig,
-		configPath,
-		configPath,
-		{},
-		// Preserve the original `main` value so that Vite can resolve it
-		true
-	);
-
-	if (diagnostics.hasWarnings()) {
-		console.warn(diagnostics.renderWarnings());
-	}
-
-	if (diagnostics.hasErrors()) {
-		throw new Error(diagnostics.renderErrors());
-	}
-
-	return processNormalizedWorkerConfig(config as RawWorkerConfig);
 }
 
 // TODO: separate prerender Worker warnings from auxiliary Worker warnings

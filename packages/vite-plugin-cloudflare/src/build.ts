@@ -86,10 +86,8 @@ export function createBuildApp(
 		) {
 			await fallbackBuild(builder, clientEnvironment);
 		} else {
-			const cfBuildOutput =
-				resolvedPluginConfig.experimental.newConfig?.cfBuildOutput === true;
 			// In Vite 7 and above we do this in the `buildApp` hook.
-			if (!satisfiesMinimumViteVersion("7.0.0") && !cfBuildOutput) {
+			if (!satisfiesMinimumViteVersion("7.0.0")) {
 				removeAssetsField(entryWorkerBuildDirectory);
 			}
 			// Return early as there is no client build
