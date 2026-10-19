@@ -21,10 +21,10 @@ export default defineConfig({
 	appType: "spa",
 	build: {
 		chunkSizeWarningLimit: 1000,
-		// The application is actually hosted at `playground/`, but we can't use the `base` option.
-		// That would cause Vite to put the assets directly in `dist/assets` and to refer to them via `/playground/assets/` in the generated HTML.
-		// The deploy tooling uploads the assets as though they were in `/assets`, so the links in the HTML would be broken.
-		// By keeping the assets in `dist/playground/assets`, the links in the HTML match their deployed locations.
+		// The application is hosted at `/playground/`, but setting `base` would only
+		// prefix the generated URLs; files would still be emitted under `/assets/`.
+		// Emit them under `playground/assets` so their deployed paths match the URLs.
+		// TODO: Use `assets.basePath` with Vite's `base` option instead of this workaround
 		assetsDir: "playground/assets",
 	},
 });

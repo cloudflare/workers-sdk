@@ -19,7 +19,7 @@ It is deployed as a Cloudflare Worker with static assets (assets-only in product
 
 1. Run `pnpm build -F @cloudflare/workers-playground`
 
-This generates the files into the `dist` directory that can then be deployed as a Cloudflare Worker with static assets.
+This generates deployable Build Output in `.cloudflare/output` for a Cloudflare Worker with static assets.
 
 ## Deployment
 
