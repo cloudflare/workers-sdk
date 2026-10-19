@@ -10,6 +10,7 @@ import {
 	Mutex,
 	Response,
 } from "miniflare";
+import { Agent, fetch } from "undici";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
@@ -387,23 +388,28 @@ export class ProxyController extends Controller {
 	 * without a payload straight to the ProxyWorker's own URL, which Bun can
 	 * reach, so the ProxyWorker answers queued and later requests with a 503
 	 * naming the cause instead of holding them for a `play` that cannot arrive.
+	 *
+	 * Wrangler bundles undici, so this `fetch` and its `dispatcher` are undici's
+	 * own even under Bun; only Miniflare's runtime `undici` import resolves to
+	 * Bun's dispatcher-less shim.
 	 */
 	async reportMissingControlPayload() {
+		// The local dev certificate is self-signed.
+		const insecure = new Agent({ connect: { rejectUnauthorized: false } });
 		try {
 			const { url } = await this.ready.promise;
-			await globalThis.fetch(new URL("/cdn-cgi/ProxyWorker/play", url), {
+			await fetch(new URL("/cdn-cgi/ProxyWorker/play", url), {
 				method: "POST",
 				headers: { Authorization: this.secret },
-				// Bun's option for accepting the local self-signed dev certificate.
-				...(url.protocol === "https:"
-					? { tls: { rejectUnauthorized: false } }
-					: {}),
-			} as RequestInit);
+				...(url.protocol === "https:" ? { dispatcher: insecure } : {}),
+			});
 		} catch (cause) {
 			logger.debug(
 				"Could not tell the ProxyWorker that its control payload is missing",
 				cause
 			);
+		} finally {
+			await insecure.close();
 		}
 	}
 	async sendMessageToInspectorProxyWorker(
