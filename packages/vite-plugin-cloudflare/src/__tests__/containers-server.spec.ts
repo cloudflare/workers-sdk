@@ -402,6 +402,66 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 			);
 		}
 
+		test("uses inline configuration guidance without inventing a config file", async ({
+			expect,
+			onTestFinished,
+		}) => {
+			fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
+			fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
+			fs.writeFileSync(
+				"index.js",
+				`import { DurableObject } from "cloudflare:workers";
+export class Probe extends DurableObject {}
+export default { fetch() { return new Response("ready"); } };`
+			);
+			function config() {
+				return {
+					root: process.cwd(),
+					configFile: false as const,
+					logLevel: "silent" as const,
+					server: { port: 0 },
+					preview: { port: 0 },
+					plugins: [
+						cloudflare({
+							inspectorPort: false,
+							persistState: false,
+							remoteBindings: false,
+							config: {
+								name: "inline-container-test",
+								main: path.resolve("index.js"),
+								compatibility_date: "2026-10-19",
+								containers: [
+									{
+										class_name: "Probe",
+										scheduling_policy: "durable_object",
+										images: { app: { dockerfile: path.resolve("Dockerfile") } },
+									},
+								],
+								durable_objects: {
+									bindings: [{ name: "PROBE", class_name: "Probe" }],
+								},
+								migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
+							},
+						}),
+					],
+				};
+			}
+			if (mode === "preview") {
+				const builder = await createBuilder(config());
+				await builder.buildApp();
+			}
+			const server = await (mode === "dev"
+				? createServer(config())
+				: preview(config()));
+			onTestFinished(() => server.close());
+			expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
+				expect.objectContaining({
+					configFileName:
+						mode === "dev" ? "Vite plugin configuration" : "wrangler.json",
+				})
+			);
+		});
+
 		test.for(["image-free", "configured", "disabled", "absent"] as const)(
 			"prepares only enabled Containers: %s",
 			async (scenario, { expect, onTestFinished }) => {

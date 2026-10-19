@@ -341,25 +341,54 @@ test.for([
 	{
 		cliDisplayName: "Wrangler",
 		configPath: "project/wrangler.jsonc",
+		viteConfigFile: "project/vite.config.mts",
+		experimentalNewConfig: false,
 		configFileName: "wrangler.jsonc",
 		registryConfigureCommand: "wrangler containers registries configure",
 	},
 	{
 		cliDisplayName: "Wrangler",
 		configPath: undefined,
+		viteConfigFile: "project/vite.config.mts",
+		experimentalNewConfig: false,
+		configFileName: "vite.config.mts",
+		registryConfigureCommand: "wrangler containers registries configure",
+	},
+	{
+		cliDisplayName: "Wrangler",
+		configPath: undefined,
+		viteConfigFile: false as const,
+		experimentalNewConfig: false,
+		configFileName: "Vite plugin configuration",
+		registryConfigureCommand: "wrangler containers registries configure",
+	},
+	{
+		cliDisplayName: "Wrangler",
+		configPath: undefined,
+		viteConfigFile: "project/vite.config.ts",
+		experimentalNewConfig: true,
 		configFileName: "cloudflare.config.ts",
 		registryConfigureCommand: "wrangler containers registries configure",
 	},
 	{
 		cliDisplayName: "cf",
 		configPath: undefined,
+		viteConfigFile: false as const,
+		experimentalNewConfig: true,
 		configFileName: "cloudflare.config.ts",
 		registryConfigureCommand: "cf containers registries create",
 	},
 ])(
 	"passes $configFileName and $cliDisplayName guidance to the Container helper",
 	async (
-		{ cliDisplayName, configPath, configFileName, registryConfigureCommand },
+		{
+			cliDisplayName,
+			configPath,
+			viteConfigFile,
+			experimentalNewConfig,
+			configFileName,
+			registryConfigureCommand,
+		},
 		{ expect }
 	) => {
 		await prepareContainerImagesForVite({
@@ -367,6 +396,8 @@ test.for([
 			containerOptionsByWorker: new Map([[{ configPath }, []]]),
 			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 			cliDisplayName,
+			viteConfigFile,
+			experimentalNewConfig,
 		});
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 			expect.objectContaining({ configFileName, registryConfigureCommand })

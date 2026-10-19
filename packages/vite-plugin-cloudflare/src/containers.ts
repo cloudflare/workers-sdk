@@ -77,7 +77,7 @@ export function normalizeContainerImageUris(
  * registry account and compliance settings, including Workers whose images
  * are selected at start time.
  *
- * @param args - Planned images, Docker executable, Vite logger, and CLI identity.
+ * @param args - Planned images, Docker executable, Vite logger, CLI identity, and configuration source.
  * @returns No value.
  */
 export async function prepareContainerImagesForVite(args: {
@@ -85,6 +85,8 @@ export async function prepareContainerImagesForVite(args: {
 	containerOptionsByWorker: ContainerOptionsByWorker;
 	logger: ViteLogger;
 	cliDisplayName: string;
+	viteConfigFile?: string | false;
+	experimentalNewConfig?: boolean;
 }): Promise<void> {
 	for (const [workerConfig, plannedOptions] of args.containerOptionsByWorker) {
 		let containerOptions = plannedOptions;
@@ -126,7 +128,11 @@ export async function prepareContainerImagesForVite(args: {
 			complianceConfig: workerConfig,
 			configFileName: workerConfig.configPath
 				? path.basename(workerConfig.configPath)
-				: "cloudflare.config.ts",
+				: args.experimentalNewConfig
+					? "cloudflare.config.ts"
+					: args.viteConfigFile
+						? path.basename(args.viteConfigFile)
+						: "Vite plugin configuration",
 			// TODO: Let cf provide its own command when the delegate supports that contract.
 			registryConfigureCommand:
 				args.cliDisplayName === "cf"
