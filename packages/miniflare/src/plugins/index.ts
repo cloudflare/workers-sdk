@@ -117,6 +117,7 @@ export type {
 	CompiledModuleRule,
 	GlobalServicesOptions,
 	NodeJSCompatMode,
+	TracedServices,
 } from "./core";
 export type {
 	ContainerPrivileges,

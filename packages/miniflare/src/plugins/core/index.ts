@@ -81,7 +81,7 @@ import {
 	convertManifestModule,
 	withSourceURL,
 } from "./modules";
-import { getObservabilityServices } from "./observability";
+import { getObservabilityServices, type TracedServices } from "./observability";
 import { PROXY_SECRET } from "./proxy";
 import type {
 	Extension,
@@ -104,6 +104,8 @@ import type {
 	WorkflowOption,
 } from "../shared";
 import type { BindingIdMap } from "./types";
+
+export type { TracedServices };
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -565,23 +567,19 @@ export const CORE_PLUGIN: Plugin = {
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
 		// When local observability is on, attach the collector to every user worker
-		// (as a streaming tail consumer) and add the compatibility flags workerd
-		// needs to emit those tail events. This is done here so wrangler and the
-		// Vite plugin don't each have to repeat it.
+		// (as a streaming tail consumer, for logs and exceptions) and add the
+		// compatibility flags workerd needs to emit those tail events. Spans reach
+		// the collector separately, over OTLP (see `#assembleConfig()`). This is
+		// done here so wrangler and the Vite plugin don't each have to repeat it.
 		const observabilityEnabled =
 			sharedOptions.unsafeObservability === true &&
 			dev?.unsafeRegisterWorker !== false;
 		const tailConsumers = observabilityEnabled
 			? [
 					...(config.tailConsumers ?? []),
-					// Pass the worker's name to the collector via binding props. workerd
-					// doesn't populate the tail onset's `scriptName` locally, so this is
-					// how the collector attributes each captured invocation to its worker
-					// (each worker streams to the collector with its own props).
 					{
 						worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 						streaming: true,
-						props: { worker: config.name },
 					},
 				]
 			: (config.tailConsumers ?? []);
@@ -767,6 +765,11 @@ export interface GlobalServicesOptions {
 	workflowExporters: WorkflowExporters;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: ParsedWorkerOptions[];
+	/**
+	 * The services whose spans the observability collector keeps, mapped to the
+	 * worker name each one's spans are attributed to
+	 */
+	tracedServices: TracedServices;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -779,6 +782,7 @@ export function getGlobalServices({
 	durableObjectClassNames,
 	workflowExporters,
 	allWorkerOpts,
+	tracedServices,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1048,13 +1052,14 @@ export function getGlobalServices({
 	}
 
 	// Register the trace collector service. It's attached to each user worker's
-	// tail above.
+	// tail above, and receives the spans of the services in `tracedServices`.
 	if (sharedOptions.unsafeObservability) {
 		services.push(
 			...getObservabilityServices(
 				tmpPath,
 				sharedOptions.isolatedResourcePersistencePath,
-				sharedOptions.unsafeRuntimeEnv
+				sharedOptions.unsafeRuntimeEnv,
+				tracedServices
 			)
 		);
 	}

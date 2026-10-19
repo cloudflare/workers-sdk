@@ -1,14 +1,18 @@
 /**
- * The local observability collector. Miniflare attaches it to the user's
- * worker(s) as a tail consumer, so workerd delivers each invocation's tail events
- * here. `TailToStoreHandler` converts them into spans and logs, which are stored
- * in the `TraceStore` Durable Object hosted by this same worker. The endpoint for
- * querying that store is also defined here.
+ * The local observability collector. Miniflare designates it as workerd's OTLP
+ * collector (`tracing.otlp`), so workerd POSTs each invocation's spans to its
+ * `/v1/traces`, and attaches it to the user's worker(s) as a tail consumer, so
+ * workerd delivers each invocation's tail events here. `otlp-to-store.ts` turns
+ * the former into spans and `TailToStoreHandler` the latter into logs, which are
+ * stored in the `TraceStore` Durable Object hosted by this same worker. The
+ * endpoint for querying that store is also defined here.
  */
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { decodeExportTraceServiceRequest } from "./otlp-to-store";
 import { TailToStoreHandler } from "./tail-to-store";
 import { TraceStore } from "./trace-store";
 import { TraceWriter } from "./trace-writer";
+import type { TracedServices } from "./otlp-to-store";
 
 // Re-export so the embedded worker registers the DO class under its namespace.
 export { TraceStore };
@@ -16,6 +20,7 @@ export { TraceStore };
 interface Env {
 	TRACE_STORE: DurableObjectNamespace<TraceStore>;
 	TRACE_BATCH_SIZE: number;
+	TRACED_SERVICES: TracedServices;
 }
 
 let writer: TraceWriter | undefined;
@@ -27,11 +32,7 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 			this.env.TRACE_STORE.idFromName("singleton")
 		);
 		writer ??= new TraceWriter(this.env.TRACE_BATCH_SIZE);
-		// Miniflare core passes the source worker's name in binding props (workerd
-		// doesn't surface it on the tail onset locally), so captured spans can be
-		// attributed to the right worker.
-		const worker = (this.ctx.props as { worker?: string } | undefined)?.worker;
-		return new TailToStoreHandler(writer, store, onset, worker);
+		return new TailToStoreHandler(writer, store, onset);
 	}
 
 	/**
@@ -46,6 +47,26 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 		const store = this.env.TRACE_STORE.get(
 			this.env.TRACE_STORE.idFromName("singleton")
 		);
+		// workerd's OTLP exporter (`tracing.otlp`) posts every traced invocation's
+		// spans here.
+		if (url.pathname === "/v1/traces" && request.method === "POST") {
+			const spans = decodeExportTraceServiceRequest(
+				new Uint8Array(await request.arrayBuffer()),
+				this.env.TRACED_SERVICES
+			);
+			if (spans.length > 0) {
+				writer ??= new TraceWriter(this.env.TRACE_BATCH_SIZE);
+				const owner = writer.createOwner(store);
+				for (const span of spans) {
+					writer.enqueueCompletedSpan(owner, span);
+				}
+				await writer.drain(owner);
+			}
+			// An empty `ExportTraceServiceResponse`.
+			return new Response(null, {
+				headers: { "content-type": "application/x-protobuf" },
+			});
+		}
 		if (url.pathname === "/query" && request.method === "POST") {
 			const { sql, params } = (await request.json()) as {
 				sql?: string;

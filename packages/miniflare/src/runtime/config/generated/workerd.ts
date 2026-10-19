@@ -9,7 +9,7 @@ export class Config extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Config",
 		id: "8794486c76aaa7d6",
-		size: new $.ObjectSize(8, 6),
+		size: new $.ObjectSize(8, 7),
 		defaultStructuredLogging: $.getBitMask(false, 0),
 	};
 	static _Services: $.ListCtor<Service>;
@@ -187,8 +187,78 @@ export class Config extends $.Struct {
 	set logging(value: LoggingOptions) {
 		$.utils.copyFrom(value, $.utils.getPointer(5, this));
 	}
+	_adoptTracing(value: $.Orphan<TracingOptions>): void {
+		$.utils.adopt(value, $.utils.getPointer(6, this));
+	}
+	_disownTracing(): $.Orphan<TracingOptions> {
+		return $.utils.disown(this.tracing);
+	}
+	/**
+	 * Where the spans of Worker invocations are exported.
+	 *
+	 */
+	get tracing(): TracingOptions {
+		return $.utils.getStruct(6, TracingOptions, this);
+	}
+	_hasTracing(): boolean {
+		return !$.utils.isNull($.utils.getPointer(6, this));
+	}
+	_initTracing(): TracingOptions {
+		return $.utils.initStructAt(6, TracingOptions, this);
+	}
+	set tracing(value: TracingOptions) {
+		$.utils.copyFrom(value, $.utils.getPointer(6, this));
+	}
 	toString(): string {
 		return "Config_" + super.toString();
+	}
+}
+export class TracingOptions extends $.Struct {
+	static readonly _capnp = {
+		displayName: "TracingOptions",
+		id: "f6a0cf21c4a0536c",
+		size: new $.ObjectSize(0, 1),
+	};
+	_adoptOtlp(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(0, this));
+	}
+	_disownOtlp(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.otlp);
+	}
+	/**
+	 * Export spans to an OpenTelemetry collector. Every Worker invocation produces a trace: a span
+	 * for the invocation itself, one for each subrequest and binding operation it performs, and any
+	 * the Worker opens with `ctx.tracing.enterSpan()`. They are POSTed to `/v1/traces` on this
+	 * service in the OTLP/HTTP protobuf encoding, so the service is typically an `ExternalServer`
+	 * pointing at a collector's OTLP/HTTP port. For example, to see traces in a local Jaeger:
+	 *
+	 *     services = [
+	 *       ...,
+	 *       (name = "jaeger", external = (address = "localhost:4318", http = ())),
+	 *     ],
+	 *     tracing = (otlp = "jaeger"),
+	 *
+	 * Use `HttpOptions.injectRequestHeaders` to send credentials along. The `service.name` resource
+	 * attribute is the name of the Worker's service. A request arriving on a socket starts its trace
+	 * with an `http_request` span of the `workers-runtime` service, under which the invocation's span
+	 * sits. Invocations of the designated service itself are not traced. While this is set, spans are
+	 * not delivered to streaming tail workers.
+	 *
+	 */
+	get otlp(): ServiceDesignator {
+		return $.utils.getStruct(0, ServiceDesignator, this);
+	}
+	_hasOtlp(): boolean {
+		return !$.utils.isNull($.utils.getPointer(0, this));
+	}
+	_initOtlp(): ServiceDesignator {
+		return $.utils.initStructAt(0, ServiceDesignator, this);
+	}
+	set otlp(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(0, this));
+	}
+	toString(): string {
+		return "TracingOptions_" + super.toString();
 	}
 }
 export class LoggingOptions extends $.Struct {
