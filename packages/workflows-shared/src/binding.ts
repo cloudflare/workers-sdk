@@ -93,6 +93,26 @@ async function removeFile(disk: Fetcher, url: string): Promise<boolean> {
 	}
 }
 
+async function deleteWorkflowStorageFiles(
+	disk: Fetcher,
+	url: string,
+	deleted = false
+): Promise<boolean> {
+	let failure: unknown;
+	for (const extension of [".sqlite", ".sqlite-shm", ".sqlite-wal"]) {
+		try {
+			const removed = await removeFile(disk, url + extension);
+			deleted ||= extension === ".sqlite" && removed;
+		} catch (error) {
+			failure ??= error;
+		}
+	}
+	if (failure !== undefined) {
+		throw failure;
+	}
+	return deleted;
+}
+
 /** Aborts local execution and serializes file cleanup with reuse of the same ID. */
 export function deleteWorkflowStorage({
 	disk,
@@ -126,37 +146,28 @@ export function deleteWorkflowStorage({
 			}
 			return deleted;
 		});
-	const cleanup = readyToDelete.then(async (deleted) => {
-		let failure: unknown;
-		for (const extension of [".sqlite", ".sqlite-shm", ".sqlite-wal"]) {
-			try {
-				const removed = await removeFile(disk, url + extension);
-				deleted ||= extension === ".sqlite" && removed;
-			} catch (error) {
-				failure ??= error;
-			}
-		}
-		if (failure !== undefined) {
-			throw failure;
-		}
-		return deleted;
-	});
+	const cleanup = readyToDelete.then((deleted) =>
+		deleteWorkflowStorageFiles(disk, url, deleted)
+	);
 	const pendingDelete = readyToDelete.then(
 		() => cleanup,
 		() => previous ?? false
 	);
 	pendingDeletes.set(url, pendingDelete);
 	ctx.waitUntil(
-		pendingDelete.then(() => {
-			if (pendingDeletes.get(url) === pendingDelete) {
-				pendingDeletes.delete(url);
-			}
-		})
+		pendingDelete.then(
+			() => {
+				if (pendingDeletes.get(url) === pendingDelete) {
+					pendingDeletes.delete(url);
+				}
+			},
+			() => {}
+		)
 	);
 	return cleanup;
 }
 
-/** Waits for Miniflare to finish deleting an instance's persistence files. */
+/** Waits for queued file cleanup, retrying a failed cleanup once before reuse. */
 async function waitForPersistedInstanceDelete(
 	env: Env,
 	id: string | undefined
@@ -167,11 +178,29 @@ async function waitForPersistedInstanceDelete(
 
 	const hexId = env.ENGINE.idFromName(id).toString();
 	const url = getStorageUrl(env.WORKFLOW_NAME, hexId);
+	let retried = false;
 	let pending = pendingDeletes.get(url);
 	while (pending !== undefined) {
-		await pending;
+		try {
+			await pending;
+		} catch (error) {
+			if (pendingDeletes.get(url) === pending) {
+				if (retried) {
+					throw error;
+				}
+				retried = true;
+				pendingDeletes.set(
+					url,
+					deleteWorkflowStorageFiles(env.WORKFLOW_STORAGE, url)
+				);
+			}
+		}
 		const latest = pendingDeletes.get(url);
-		pending = latest === pending ? undefined : latest;
+		if (latest === pending) {
+			pendingDeletes.delete(url);
+			return;
+		}
+		pending = latest;
 	}
 }
 
