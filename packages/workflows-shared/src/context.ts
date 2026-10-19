@@ -767,13 +767,11 @@ export class Context extends RpcTarget {
 					}
 				} else {
 					timeoutTask = timeoutPromise();
-					const callbackTask = Promise.resolve(
-						doWrapperClosure({
-							step: { name, count },
-							attempt: stepState.attemptedCount,
-							config: toEngineStepConfig(config),
-						})
-					);
+					const callbackTask = doWrapperClosure({
+						step: { name, count },
+						attempt: stepState.attemptedCount,
+						config: toEngineStepConfig(config),
+					});
 					try {
 						result = await Promise.race([callbackTask, timeoutTask]);
 					} catch (error) {
