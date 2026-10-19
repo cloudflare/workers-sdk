@@ -15,20 +15,18 @@ const CLIENT_REGISTERED_BUT_NON_CONSENTABLE_SCOPES = [
 ];
 
 describe("cf OAuth scopes", () => {
-	it("excludes explicit-only scopes from login defaults", ({ expect }) => {
-		expect(DefaultScopeKeys).toEqual(
-			CF_REQUESTABLE_SCOPES.filter(
-				(scope) => scope !== "hyperdrive-planetscale:setup"
-			)
-		);
+	it("requests the complete requestable scope catalog by default", ({
+		expect,
+	}) => {
+		expect(DefaultScopeKeys).toEqual(CF_REQUESTABLE_SCOPES);
 		expect(new Set(DefaultScopeKeys).size).toBe(DefaultScopeKeys.length);
 		expect(validateScopeKeys(DefaultScopeKeys)).toBe(true);
 	});
 
-	it("allows PlanetScale setup when explicitly requested", ({ expect }) => {
-		expect(CF_REQUESTABLE_SCOPES).toContain("hyperdrive-planetscale:setup");
-		expect(DefaultScopeKeys).not.toContain("hyperdrive-planetscale:setup");
-		expect(validateScopeKeys(["hyperdrive-planetscale:setup"])).toBe(true);
+	it("requests PlanetScale setup by default", ({ expect }) => {
+		expect(CF_REQUESTABLE_SCOPES).toContain("hyperdrive-planetscale.setup");
+		expect(DefaultScopeKeys).toContain("hyperdrive-planetscale.setup");
+		expect(validateScopeKeys(["hyperdrive-planetscale.setup"])).toBe(true);
 	});
 
 	it("matches the production client registration", ({ expect }) => {
@@ -38,7 +36,7 @@ describe("cf OAuth scopes", () => {
 		);
 	});
 
-	it("matches the explicitly requestable production catalog", ({ expect }) => {
+	it("matches the requestable production catalog", ({ expect }) => {
 		expect(CF_REQUESTABLE_SCOPES).toHaveLength(476);
 		expect(new Set(CF_REQUESTABLE_SCOPES).size).toBe(
 			CF_REQUESTABLE_SCOPES.length
@@ -57,7 +55,12 @@ describe("cf OAuth scopes", () => {
 	});
 
 	it("rejects values outside the requestable scope catalog", ({ expect }) => {
-		const rejectedScopes = ["dns_read", "not-a-real-scope", "offline_access"];
+		const rejectedScopes = [
+			"dns_read",
+			"hyperdrive-planetscale:setup",
+			"not-a-real-scope",
+			"offline_access",
+		];
 
 		for (const scope of rejectedScopes) {
 			expect(CF_CLIENT_REGISTERED_SCOPES).not.toContain(scope);
