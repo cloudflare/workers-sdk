@@ -5,12 +5,13 @@ import {
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
 import {
+	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { getDefaultDevRegistryPath } from "miniflare";
-import { PROXY_SHARED_SECRET } from "./constants";
+import { kRequestType, PROXY_SHARED_SECRET } from "./constants";
 import {
 	resolveLocalBindingsByWorkerName,
 	warnForMissingSecrets,
@@ -20,14 +21,20 @@ import { getStructuredLogsLogger } from "./miniflare-logger";
 import { getMiniflareManifest } from "./miniflare-manifest";
 import { getPersistenceRoot } from "./persist";
 import { getRemoteProxySessionData, getWorkerZone } from "./remote-bindings";
+import type { ResolvedLocalBindings } from "./local-env";
 import type { DevLogger } from "./logger";
 import type { PersistState } from "./persist";
-import type { PreviewResolvedConfig } from "./plugin-config";
+import type {
+	PreviewResolvedConfig,
+	ResolvedWorkerConfig,
+} from "./plugin-config";
 import type {
 	ContainerDevOptions,
 	ContainerDevPlan,
+	ContainerDevRuntimeOptions,
 } from "@cloudflare/containers-shared";
 import type { Log, MiniflareOptions, WorkerOptions } from "miniflare";
+import type * as http from "node:http";
 
 const ASSETS_ONLY_MODULE = "__VITE_ASSETS_ONLY__.js";
 
@@ -198,6 +205,91 @@ export async function getPreviewMiniflareOptions(options: {
 		>,
 		containerOptions:
 			containerPlansByWorkerName.size === 0 ? undefined : containerOptions,
+	};
+}
+
+type DevUserWorkerOptions = {
+	config: Omit<
+		ResolvedWorkerConfig,
+		"entrypoint" | "assets" | "env" | "exports"
+	> & {
+		env: ResolvedLocalBindings["bindings"];
+		exports: ReturnType<typeof createMiniflareExports>;
+	};
+	dev: Pick<
+		NonNullable<WorkerOptions["dev"]>,
+		"zone" | "remoteProxyConnectionString" | "unsafeInspectorProxy"
+	>;
+};
+
+/**
+ * Gets the dev options for a user Worker that are the same for every bundler.
+ * The bundler adds the Worker's modules, and anything else it needs, on top.
+ *
+ * @param workerConfig The Worker's resolved config
+ * @param options.resolvedLocalBindings The Worker's local bindings
+ * @param options.remoteProxy The options for the Worker's remote proxy session
+ * @param options.handleAssetRequest Serves the Worker's assets binding from the dev server
+ * @param options.inspectorPort The inspector port, or `false` if the inspector is disabled
+ * @param options.containerRuntimeOptions The Worker's Container runtime options, if any
+ * @returns The Worker's options, without its modules
+ */
+export async function getDevUserWorkerOptions(
+	workerConfig: ResolvedWorkerConfig,
+	options: {
+		resolvedLocalBindings: ResolvedLocalBindings | undefined;
+		remoteProxy: Parameters<typeof getRemoteProxySessionData>[1];
+		handleAssetRequest: (
+			req: http.IncomingMessage,
+			res: http.ServerResponse
+		) => void;
+		inspectorPort: number | false;
+		containerRuntimeOptions:
+			| Map<string, ContainerDevRuntimeOptions>
+			| undefined;
+	}
+): Promise<DevUserWorkerOptions> {
+	const remoteProxySessionData = await getRemoteProxySessionData(
+		workerConfig,
+		options.remoteProxy
+	);
+
+	const { entrypoint: _entrypoint, assets: _assets, ...config } = workerConfig;
+	const { resolvedLocalBindings } = options;
+	assert(resolvedLocalBindings);
+	const env = { ...resolvedLocalBindings.bindings };
+	for (const [name, binding] of Object.entries(env)) {
+		if (binding.type === "assets") {
+			env[name] = {
+				type: "node-handler",
+				handler: (req, res) => {
+					req[kRequestType] = "asset";
+					options.handleAssetRequest(req, res);
+				},
+			};
+		} else if (
+			binding.type === "browser" &&
+			getBrowserRenderingHeadfulFromEnv()
+		) {
+			env[name] = { ...binding, headful: true };
+		}
+	}
+
+	return {
+		config: {
+			...config,
+			env,
+			exports: createMiniflareExports({
+				exports: config.exports,
+				containerRuntimeOptions: options.containerRuntimeOptions,
+			}),
+		},
+		dev: {
+			zone: getWorkerZone(config),
+			remoteProxyConnectionString:
+				remoteProxySessionData?.session?.remoteProxyConnectionString,
+			unsafeInspectorProxy: options.inspectorPort !== false,
+		},
 	};
 }
 

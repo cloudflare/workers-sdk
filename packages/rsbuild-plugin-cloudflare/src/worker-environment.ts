@@ -33,15 +33,10 @@ export const WORKER_ENTRY_NAME = "index";
  * @returns An Rsbuild environment config.
  */
 export function getWorkerEnvironmentConfig(
-	{ config, directoryName, nodeJsCompat }: Worker,
+	worker: Worker,
 	root: string
 ): EnvironmentConfig {
-	// As in Vite, the entrypoint is a path relative to the root, or else a
-	// module specifier (e.g. a package export).
-	const entrypointPath = path.resolve(root, config.entrypoint);
-	const entrypoint = fs.existsSync(entrypointPath)
-		? entrypointPath
-		: config.entrypoint;
+	const { config, directoryName, nodeJsCompat } = worker;
 	/** The additional modules to emit, keyed by output file name. */
 	const additionalModules = new Map<
 		string,
@@ -49,16 +44,7 @@ export function getWorkerEnvironmentConfig(
 	>();
 
 	return {
-		source: {
-			entry: {
-				[WORKER_ENTRY_NAME]: {
-					import: nodeJsCompat
-						? [toDataUri(nodeJsCompat.injectGlobalCode()), entrypoint]
-						: entrypoint,
-					html: false,
-				},
-			},
-		},
+		source: { entry: getWorkerEntry(worker, root) },
 		resolve: {
 			conditionNames,
 			// As in the Vite plugin, don't prefer packages' browser builds.
@@ -148,6 +134,35 @@ export function getWorkerEnvironmentConfig(
 					additionalModulesPlugin(additionalModules),
 				],
 			},
+		},
+	};
+}
+
+/**
+ * Gets the Worker environment's entry, which imports the Node.js compat globals
+ * before the Worker when they're needed.
+ *
+ * @param worker The resolved Worker.
+ * @param root The project root.
+ * @returns The Rsbuild entry config.
+ */
+export function getWorkerEntry(
+	{ config, nodeJsCompat }: Worker,
+	root: string
+): NonNullable<NonNullable<EnvironmentConfig["source"]>["entry"]> {
+	// As in Vite, the entrypoint is a path relative to the root, or else a
+	// module specifier (e.g. a package export).
+	const entrypointPath = path.resolve(root, config.entrypoint);
+	const entrypoint = fs.existsSync(entrypointPath)
+		? entrypointPath
+		: config.entrypoint;
+
+	return {
+		[WORKER_ENTRY_NAME]: {
+			import: nodeJsCompat
+				? [toDataUri(nodeJsCompat.injectGlobalCode()), entrypoint]
+				: entrypoint,
+			html: false,
 		},
 	};
 }

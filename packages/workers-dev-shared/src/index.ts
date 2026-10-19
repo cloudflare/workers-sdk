@@ -63,6 +63,7 @@ export type { DevLogger } from "./logger";
 export { createMiniflareExports } from "./miniflare-exports";
 export {
 	getCommonMiniflareOptions,
+	getDevUserWorkerOptions,
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 export {

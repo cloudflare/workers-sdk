@@ -9,23 +9,19 @@ import {
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
 import {
-	createMiniflareExports,
 	DevMiniflareLogger,
 	getPreviewMiniflareOptions as getSharedPreviewMiniflareOptions,
 	getAssetsConfig,
 	getCommonMiniflareOptions,
 	getDevAssetWorkerOptions,
+	getDevUserWorkerOptions,
 	getInternalWorkerManifest,
-	getRemoteProxySessionData,
-	getWorkerZone,
 	INTERNAL_WORKERS_COMPATIBILITY_DATE,
-	kRequestType,
 	miniflareModulesRoot,
 	resolveLocalBindingsByWorkerName,
 	VITE_PROXY_WORKER_NAME,
 	warnForMissingSecrets,
 } from "@cloudflare/workers-dev-shared";
-import { getBrowserRenderingHeadfulFromEnv } from "@cloudflare/workers-utils";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import {
 	buildPublicUrl,
@@ -275,14 +271,25 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
-							const remoteProxySessionData = await getRemoteProxySessionData(
+							const workerOptions = await getDevUserWorkerOptions(
 								worker.config,
 								{
-									remoteBindings: resolvedPluginConfig.remoteBindings,
-									settings: resolvedPluginConfig.settings,
-									root: resolvedViteConfig.root,
-									cliDisplayName: resolvedPluginConfig.cliDisplayName,
-									logger: viteDevServer.config.logger,
+									resolvedLocalBindings: resolvedLocalBindingsByWorkerName.get(
+										worker.config.name
+									),
+									remoteProxy: {
+										remoteBindings: resolvedPluginConfig.remoteBindings,
+										settings: resolvedPluginConfig.settings,
+										root: resolvedViteConfig.root,
+										cliDisplayName: resolvedPluginConfig.cliDisplayName,
+										logger: viteDevServer.config.logger,
+									},
+									handleAssetRequest: (req, res) =>
+										viteDevServer.middlewares(req, res),
+									inspectorPort: inputInspectorPort,
+									containerRuntimeOptions: containerPlansByWorkerName.get(
+										worker.config.name
+									)?.containerRuntimeOptions,
 								}
 							);
 
@@ -303,31 +310,7 @@ export async function getDevMiniflareOptions(
 								);
 							}
 
-							const {
-								entrypoint: _entrypoint,
-								assets: _assets,
-								...config
-							} = worker.config;
-							const resolvedLocalBindings =
-								resolvedLocalBindingsByWorkerName.get(worker.config.name);
-							assert(resolvedLocalBindings);
-							const env = { ...resolvedLocalBindings.bindings };
-							for (const [name, binding] of Object.entries(env)) {
-								if (binding.type === "assets") {
-									env[name] = {
-										type: "node-handler",
-										handler: (req, res) => {
-											req[kRequestType] = "asset";
-											viteDevServer.middlewares(req, res);
-										},
-									};
-								} else if (
-									binding.type === "browser" &&
-									getBrowserRenderingHeadfulFromEnv()
-								) {
-									env[name] = { ...binding, headful: true };
-								}
-							}
+							const { env, exports: workerExports } = workerOptions.config;
 							env.__VITE_INVOKE_MODULE__ = {
 								type: "fetcher",
 								handler: async (request) => {
@@ -351,12 +334,6 @@ export async function getDevMiniflareOptions(
 								worker: worker.config.name,
 								exportName: "__VITE_RUNNER_OBJECT__",
 							};
-							const workerExports = createMiniflareExports({
-								exports: config.exports,
-								containerRuntimeOptions: containerPlansByWorkerName.get(
-									worker.config.name
-								)?.containerRuntimeOptions,
-							});
 							workerExports.__VITE_RUNNER_OBJECT__ = {
 								type: "durable-object",
 								storage: "sqlite",
@@ -366,17 +343,11 @@ export async function getDevMiniflareOptions(
 
 							return {
 								config: {
-									...config,
-									env,
-									exports: workerExports,
+									...workerOptions.config,
 									manifest: await getUserWorkerManifest(wrappers.join("\n")),
 								},
 								dev: {
-									zone: getWorkerZone(config),
-									remoteProxyConnectionString:
-										remoteProxySessionData?.session
-											?.remoteProxyConnectionString,
-									unsafeInspectorProxy: inputInspectorPort !== false,
+									...workerOptions.dev,
 									useModuleFallbackService: true,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									...(environmentName ===

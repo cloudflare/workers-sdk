@@ -12,7 +12,6 @@ import {
 } from "@cloudflare/build-output-utils";
 import {
 	createDebugMiddleware,
-	createMiniflareExports,
 	createRequestHandler,
 	createStaticRoutingMiddleware,
 	DEBUG_PATH,
@@ -21,12 +20,10 @@ import {
 	getAssetsConfig,
 	getCommonMiniflareOptions,
 	getDevAssetWorkerOptions,
+	getDevUserWorkerOptions,
 	getPreviewMiniflareOptions,
-	getRemoteProxySessionData,
-	getWorkerZone,
 	handleWebSocket,
 	isPreviewBuild,
-	kRequestType,
 	moveImportedAssets,
 	readBuildOutputPreview,
 	resolveDevOnly,
@@ -45,6 +42,7 @@ import {
 	getAdditionalModuleTypes,
 	getImportedAssetPaths,
 	getManifestFromCompilation,
+	getWorkerEntry,
 	getWorkerEnvironmentConfig,
 	removeUnemittedFiles,
 } from "./worker-environment";
@@ -215,10 +213,7 @@ export function pluginCloudflare(
 				if (worker) {
 					// Top-level entries are merged into every environment, so replace
 					// them to keep client entries out of the Worker.
-					config.source.entry = getWorkerEnvironmentConfig(
-						worker,
-						root
-					).source?.entry;
+					config.source.entry = getWorkerEntry(worker, root);
 				} else if (
 					action === "build" &&
 					resolvedPluginConfig.type !== "preview" &&
@@ -236,13 +231,6 @@ export function pluginCloudflare(
 					[...workerEnvironments.values()].map(({ config }) => config.name)
 				);
 				const entryWorker = workerEnvironments.get(ENVIRONMENT_NAME);
-				const staticRouting =
-					entryWorker && resolvedPluginConfig.type === "workers"
-						? resolveStaticRouting(
-								entryWorker.config,
-								resolvedPluginConfig.staticRouting
-							)
-						: undefined;
 				if (entryWorker) {
 					const userWorkerHandler = createRequestHandler(async (request) => {
 						request.headers.set(
@@ -253,18 +241,22 @@ export function pluginCloudflare(
 							redirect: "manual",
 						});
 					});
+					const toUserWorker: Parameters<
+						typeof createStaticRoutingMiddleware
+					>[1] = (req, res, next) => void userWorkerHandler(req, res, next);
 					// Local trigger routes (e.g. `/cdn-cgi/local/scheduled`) must reach
 					// the entry Worker rather than the router Worker.
-					server.middlewares.use(
-						"/cdn-cgi/local/",
-						(req, res, next) => void userWorkerHandler(req, res, next)
-					);
+					server.middlewares.use("/cdn-cgi/local/", toUserWorker);
+					const staticRouting =
+						resolvedPluginConfig.type === "workers"
+							? resolveStaticRouting(
+									entryWorker.config,
+									resolvedPluginConfig.staticRouting
+								)
+							: undefined;
 					if (staticRouting) {
 						server.middlewares.use(
-							createStaticRoutingMiddleware(
-								staticRouting,
-								(req, res, next) => void userWorkerHandler(req, res, next)
-							)
+							createStaticRoutingMiddleware(staticRouting, toUserWorker)
 						);
 					}
 				}
@@ -390,9 +382,9 @@ export function pluginCloudflare(
 					// `public/` into the assets directory, as Vite's client build does.
 					for (const { name, copyOnBuild } of api.getNormalizedConfig().server
 						.publicDir) {
-						const dir = path.resolve(root, name);
-						if (copyOnBuild && fs.existsSync(dir)) {
-							await fsp.cp(dir, assetsDir, { recursive: true });
+						// Rsbuild normalizes `name` to an absolute path.
+						if (copyOnBuild && fs.existsSync(name)) {
+							await fsp.cp(name, assetsDir, { recursive: true });
 						}
 					}
 				}
@@ -582,54 +574,29 @@ export function pluginCloudflare(
 				warnForMissingSecrets(localBindings, mode, api.logger);
 
 				const workers = await Promise.all(
-					[...workerEnvironments].map(
-						async ([name, { config: workerConfig }]) => {
-							const {
-								entrypoint: _entrypoint,
-								assets: _assets,
-								exports,
-								...config
-							} = workerConfig;
-							const env = { ...localBindings.get(config.name)?.bindings };
-							// Rsbuild serves the client assets in dev, so the assets binding is
-							// forwarded to its middleware.
-							for (const [bindingName, binding] of Object.entries(env)) {
-								if (binding.type === "assets") {
-									env[bindingName] = {
-										type: "node-handler",
-										handler: (req, res) => {
-											req[kRequestType] = "asset";
-											devServer?.middlewares(req, res);
-										},
-									};
-								}
-							}
-							const remoteProxySessionData = await getRemoteProxySessionData(
-								workerConfig,
-								{ ...resolvedPluginConfig, root, logger: api.logger }
-							);
-
-							return {
-								config: {
-									...config,
-									env,
-									manifest: manifests.get(name),
-									// Containers aren't supported yet, so Container-backed exports throw.
-									exports: createMiniflareExports({
-										exports,
-										containerRuntimeOptions: undefined,
-									}),
-								},
-								dev: {
-									zone: getWorkerZone(config),
-									remoteProxyConnectionString:
-										remoteProxySessionData?.session
-											?.remoteProxyConnectionString,
-									unsafeInspectorProxy: inspectorPort !== false,
-								},
-							} satisfies WorkerOptions;
-						}
-					)
+					[...workerEnvironments].map(async ([name, { config }]) => {
+						const workerOptions = await getDevUserWorkerOptions(config, {
+							resolvedLocalBindings: localBindings.get(config.name),
+							remoteProxy: {
+								...resolvedPluginConfig,
+								root,
+								logger: api.logger,
+							},
+							// Rsbuild serves the client assets in dev.
+							handleAssetRequest: (req, res) =>
+								devServer?.middlewares(req, res),
+							inspectorPort,
+							// Containers aren't supported yet, so Container-backed exports throw.
+							containerRuntimeOptions: undefined,
+						});
+						return {
+							...workerOptions,
+							config: {
+								...workerOptions.config,
+								manifest: manifests.get(name),
+							},
+						} satisfies WorkerOptions;
+					})
 				);
 
 				return {
@@ -640,6 +607,8 @@ export function pluginCloudflare(
 						inspectorPort,
 						publicUrl: undefined,
 					}),
+					// As in the Vite plugin, don't log every request.
+					logRequests: false,
 					workers: [...assetWorkers, ...workers],
 				};
 			}
