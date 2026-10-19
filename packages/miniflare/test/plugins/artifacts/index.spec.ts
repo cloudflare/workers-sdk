@@ -9,6 +9,8 @@ import {
 	writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { Readable, Writable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
@@ -20,6 +22,7 @@ import {
 	withRepositoryCreationLock,
 } from "../../../src/plugins/artifacts/git-client";
 import {
+	limitGitUpload,
 	startGitSidecar,
 	type GitSidecar,
 } from "../../../src/plugins/artifacts/git-sidecar";
@@ -1361,6 +1364,62 @@ test("artifacts: sidecar creates a repository without host Git config", async ({
 	} finally {
 		await sidecar.close();
 	}
+});
+
+test("artifacts: an unreadable ownership marker cannot complete deletion", async ({
+	expect,
+}) => {
+	const root = path.join(await useTmp(), "repos");
+	const sidecar = await startGitSidecar(root);
+	try {
+		await createSidecarRepository(sidecar, "original");
+		const repository = repositoryPath(root, "test", "repo");
+		await git(["config", "--unset", "local-artifacts.generation"], repository);
+		const remove = () =>
+			fetch(`http://${sidecar.address}/__local_artifacts__`, {
+				method: "POST",
+				headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+				body: JSON.stringify({
+					action: "delete",
+					namespace: "test",
+					name: "repo",
+					generation: "original",
+				}),
+			});
+		const failed = await remove();
+		expect(failed.status).toBe(500);
+		await failed.body?.cancel();
+		await expect(stat(repository)).resolves.toBeDefined();
+		await git(["config", "local-artifacts.generation", "original"], repository);
+		const retried = await remove();
+		expect(retried.status).toBe(200);
+		await retried.body?.cancel();
+		await expect(stat(repository)).rejects.toMatchObject({ code: "ENOENT" });
+	} finally {
+		await sidecar.close();
+	}
+});
+
+test("artifacts: chunked Git uploads enforce the streamed byte limit", async ({
+	expect,
+}) => {
+	const received: Buffer[] = [];
+	let rejected = 0;
+	const sink = new Writable({
+		write(chunk: Buffer, _encoding, callback) {
+			received.push(chunk);
+			callback();
+		},
+	});
+	await expect(
+		pipeline(
+			Readable.from([Buffer.alloc(4), Buffer.alloc(7)]),
+			limitGitUpload(10, () => rejected++),
+			sink
+		)
+	).rejects.toThrow(/request size limit/);
+	expect(rejected).toBe(1);
+	expect(Buffer.concat(received)).toHaveLength(4);
 });
 
 test("artifacts: stale deletion cannot remove a replacement generation", async ({

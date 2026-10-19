@@ -83,6 +83,10 @@ async function clockedWorker(): Promise<string> {
 			`\tprivate failNextSave = false;
 	failSaveOnce(): void { this.failNextSave = true; }
 	setTestClock(time: number): void { testClock = time; }
+	async storedTokenIds(name: string): Promise<string[]> {
+		const repositories = await this.ctx.storage.get<RepositoryMap>("repos");
+		return repositories?.[name]?.tokens.map((token) => token.id) ?? [];
+	}
 	// The resolved tail lets the first mutation run immediately.`,
 		],
 		[
@@ -117,6 +121,9 @@ export default {
     if (action === "failSave") {
       await state.failSaveOnce();
       return Response.json(true);
+    }
+    if (action === "storedTokens") {
+      return Response.json(await state.storedTokenIds(name));
     }
     if (action === "backendStatus" || action === "failDelete") {
       return env.gitBackend.fetch("http://backend/__local_artifacts__", {
@@ -378,6 +385,29 @@ test("artifacts: token expiry is exclusive at the exact workerd clock boundary a
 	expect(
 		await gitStatus(restarted, String(replacement.plaintext), "upload")
 	).toBe(401);
+});
+
+test("artifacts: saving repositories prunes revoked and expired token records", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(clockOptions(await clockedWorker()));
+	useDispose(mf);
+	await setClock(mf, start);
+	await clockRpc(mf, "create", ["repo"]);
+	const expired = await clockRpc(mf, "createToken", ["read", 60], "repo");
+	const revoked = await clockRpc(mf, "createToken", ["read", 600], "repo");
+	await setClock(mf, start + 60_000);
+	const active = await clockRpc(mf, "createToken", ["read", 600], "repo");
+	const stored = async () =>
+		(await (
+			await clockRequest(mf, { action: "storedTokens", name: "repo" })
+		).json()) as string[];
+	expect(await stored()).toHaveLength(3);
+	expect(await stored()).not.toContain(expired.id);
+	expect(await stored()).toContain(revoked.id);
+	expect(await clockRpc(mf, "revokeToken", [revoked.id], "repo")).toBe(true);
+	expect(await stored()).not.toContain(revoked.id);
+	expect(await stored()).toContain(active.id);
 });
 
 test("artifacts: concurrent same-name creates and forks commit one winner each", async ({

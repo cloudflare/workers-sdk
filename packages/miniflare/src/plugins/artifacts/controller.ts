@@ -2,6 +2,7 @@ import { once } from "node:events";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
 import getPort from "get-port";
+import type { Log } from "../../shared";
 import type { GitSidecar } from "./git-sidecar";
 
 export interface LocalArtifactsBackend {
@@ -16,6 +17,8 @@ export class ArtifactsController {
 	// Keep the old roots alive until workerd accepts the replacement config.
 	#activeRoots = new Set<string>();
 	#pendingRoots?: Set<string>;
+
+	constructor(private readonly getLog?: () => Pick<Log, "warn">) {}
 
 	beginUpdate(): void {
 		if (this.#pendingRoots) {
@@ -77,15 +80,13 @@ export class ArtifactsController {
 		try {
 			const endpoint = await waitForSidecarReady(worker);
 			let stopping = false;
-			worker.on("error", (error) => {
-				process.emitWarning(
-					`Local Artifacts Git backend failed: ${error.message}`
-				);
+			worker.on("error", () => {
+				this.getLog?.().warn("Local Artifacts Git backend failed");
 			});
 			worker.once("exit", (code) => {
 				onExit();
 				if (!stopping) {
-					process.emitWarning(
+					this.getLog?.().warn(
 						`Local Artifacts Git backend exited (${code}). Restart the dev server or reload its configuration to reconnect.`
 					);
 				}
@@ -126,7 +127,7 @@ export class ArtifactsController {
 		);
 		for (const result of results) {
 			if (result.status === "rejected") {
-				process.emitWarning("Unable to stop a retired Artifacts Git backend");
+				this.getLog?.().warn("Unable to stop a retired Artifacts Git backend");
 			}
 		}
 	}

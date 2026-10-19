@@ -873,7 +873,7 @@ export class Miniflare {
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
-	#artifactsController = new ArtifactsController();
+	#artifactsController = new ArtifactsController(() => this.#log);
 	#containerPrivilegesCache = new ContainerPrivilegesCache();
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController(this.#disposeController.signal);

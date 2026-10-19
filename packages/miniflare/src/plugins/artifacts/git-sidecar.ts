@@ -8,6 +8,7 @@ import {
 	type ServerResponse,
 } from "node:http";
 import path from "node:path";
+import { Transform } from "node:stream";
 import { parentPort, workerData } from "node:worker_threads";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { z } from "zod";
@@ -338,8 +339,16 @@ async function handleAction(
 		case "create":
 			return handleCreate(root, body, git);
 		case "delete":
+			if (!(await exists(git.repository))) {
+				return true;
+			}
 			// A retried tombstone must never delete a replacement repository.
-			if ((await git.generation()) === body.generation) {
+			// An unreadable ownership marker must not clear the tombstone either.
+			const generation = await git.generation();
+			if (generation === null) {
+				throw new Error("Unable to verify Git repository ownership");
+			}
+			if (generation === body.generation) {
 				await retireRepository(git.repository);
 			}
 			return true;
@@ -540,6 +549,7 @@ async function runGitHttpBackend(
 		let headersSent = false;
 		let settled = false;
 		let timedOut = false;
+		let uploadTooLarge = false;
 		const timeout = setTimeout(() => {
 			timedOut = true;
 			stop();
@@ -618,6 +628,10 @@ async function runGitHttpBackend(
 		});
 		child.once("error", finish);
 		child.once("close", (status) => {
+			if (uploadTooLarge) {
+				finish();
+				return;
+			}
 			if (timedOut) {
 				finish(new Error("git http-backend timed out"));
 				return;
@@ -633,7 +647,36 @@ async function runGitHttpBackend(
 				finish();
 			}
 		});
-		request.pipe(child.stdin);
+		const upload = limitGitUpload(256 * 1024 * 1024, () => {
+			uploadTooLarge = true;
+			if (!response.headersSent) {
+				response.writeHead(413).end("Request body too large");
+			}
+			stop();
+		});
+		upload.on("error", () => {
+			request.unpipe(upload);
+			child.stdin.destroy();
+		});
+		request.pipe(upload).pipe(child.stdin);
+	});
+}
+
+export function limitGitUpload(
+	maxBytes: number,
+	onLimit: () => void
+): Transform {
+	let received = 0;
+	return new Transform({
+		transform(chunk: Buffer, _encoding, callback) {
+			received += chunk.length;
+			if (received > maxBytes) {
+				onLimit();
+				callback(new Error("Git upload exceeds the request size limit"));
+			} else {
+				callback(null, chunk);
+			}
+		},
 	});
 }
 
