@@ -1,5 +1,13 @@
 # @cloudflare/codemods
 
+## 0.5.1
+
+### Patch Changes
+
+- [#16240](https://github.com/cloudflare/workers-sdk/pull/16240) [`1a0e1a4`](https://github.com/cloudflare/workers-sdk/commit/1a0e1a4efb17ce6e2e02845e6682bb1748633289) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Explain how to preserve dependency metadata opt-outs when migrating to cf
+
+  Wrangler configurations with `dependencies_instrumentation.enabled` set to `false` now receive a migration follow-up directing them to `CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false`. Package exclusion lists remain required follow-up work because the environment variable controls dependency metadata as a whole.
+
 ## 0.5.0
 
 ### Minor Changes
