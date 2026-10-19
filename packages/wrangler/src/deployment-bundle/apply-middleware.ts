@@ -29,11 +29,9 @@ export interface MiddlewareLoader {
 export function shouldApplyMiddlewareLoaderFacade(
 	entry: Pick<Entry, "exports" | "format">
 ): boolean {
-	return !(
-		entry.format === "modules" &&
-		entry.exports.length > 0 &&
-		!entry.exports.includes("default")
-	);
+	return  entry.format !== "modules" ||
+		entry.exports.length === 0 ||
+		entry.exports.includes("default");
 }
 
 export async function applyMiddlewareLoaderFacade(
