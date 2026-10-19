@@ -440,6 +440,77 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
+	it("a caller-supplied outputDir should be used instead of the detected project directory", async ({
+		expect,
+	}) => {
+		await seed({
+			"index.html": `<h1>Hello World</h1>`,
+			".env": "SECRET=1",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context, outputDir: "public" })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
+	it("a caller-supplied outputDir should not replace a detected framework's dist directory", async ({
+		expect,
+	}) => {
+		// Framework configuration derives paths from its own build output, so the
+		// override only applies to static projects.
+		await seed({
+			"package.json": JSON.stringify({
+				name: "my-app",
+				dependencies: { astro: "5" },
+			}),
+			"static/index.html": `<h1>Hello World</h1>`,
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context, outputDir: "static" })
+		).resolves.toMatchObject({
+			framework: expect.objectContaining({ id: "astro" }),
+			outputDir: "dist",
+		});
+	});
+
+	it.for([
+		{ input: "./public/", expected: "public" },
+		{ input: "public/nested/..", expected: "public" },
+		{ input: ".", expected: "." },
+		{ input: "./", expected: "." },
+		{ input: "../site", expected: join("..", "site") },
+	])(
+		"a caller-supplied outputDir of $input should be normalised to $expected",
+		async ({ input, expected }, { expect }) => {
+			await seed({ "public/index.html": `<h1>Hello World</h1>` });
+
+			await expect(
+				details.getDetailsForAutoConfig({ context, outputDir: input })
+			).resolves.toMatchObject({
+				outputDir: expected,
+			});
+		}
+	);
+
+	it("an absolute caller-supplied outputDir should be made relative to the project", async ({
+		expect,
+	}) => {
+		await seed({ "public/index.html": `<h1>Hello World</h1>` });
+
+		await expect(
+			details.getDetailsForAutoConfig({
+				context,
+				outputDir: join(process.cwd(), "public"),
+			})
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
 	const workerNamesToTest = [
 		{ rawName: "my-project-1", normalizedName: "my-project-1" },
 		{

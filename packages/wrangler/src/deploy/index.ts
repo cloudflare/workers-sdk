@@ -138,7 +138,18 @@ export async function runDeployCommandHandler(
 	{
 		config,
 		pagesToWorkersDelegation = false,
-	}: { config: Config; pagesToWorkersDelegation?: boolean }
+		autoConfigOutputDir,
+	}: {
+		config: Config;
+		pagesToWorkersDelegation?: boolean;
+		/**
+		 * Assets directory autoconfig must use for a static project instead of
+		 * detecting one. Set by the Pages-to-Workers delegation so the directory
+		 * passed to `wrangler pages deploy <directory>` is the one that gets
+		 * deployed.
+		 */
+		autoConfigOutputDir?: string;
+	}
 ): Promise<void> {
 	// Runs before autoconfig, which may write a config file, and so before any
 	// local or remote mutation. `--dry-run` is exempt: it uploads nothing, so
@@ -180,6 +191,7 @@ export async function runDeployCommandHandler(
 	// --- Step 0. Auto-config --- //
 	const autoConfigResult = await maybeRunAutoConfig(args, config, {
 		skipConfirmations: pagesToWorkersDelegation || detectedAgent.isAgent,
+		outputDir: autoConfigOutputDir,
 	});
 	if (autoConfigResult.aborted) {
 		return;

@@ -101,6 +101,14 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 }
 
 /**
+ * Expresses a caller-supplied output directory relative to the project, matching
+ * the shape of a detected one (e.g. `"public"`, or `"."` for the project itself).
+ */
+function normalizeOutputDir(projectPath: string, outputDir: string): string {
+	return relative(projectPath, resolve(projectPath, outputDir)) || ".";
+}
+
+/**
  * Detects project details needed for autoconfig: framework, package manager,
  * output directory, worker name, commands, and whether the project is already configured.
  * By default, the project is considered configured when `cloudflare.config.ts`
@@ -114,6 +122,7 @@ export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
 	target = "cf",
+	outputDir: requestedOutputDir,
 	context,
 }: {
 	/** The path to the project, defaults to cwd. */
@@ -122,6 +131,16 @@ export async function getDetailsForAutoConfig({
 	wranglerConfig?: Config;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
+	/**
+	 * An output directory the caller has already chosen for a static project,
+	 * for example the directory passed to `wrangler pages deploy <directory>`.
+	 * When the project is detected as static, it is used as-is instead of being
+	 * detected, so autoconfig never swaps an explicitly chosen directory for a
+	 * different (possibly much broader) one. Relative paths are resolved against
+	 * `projectPath`. Projects using a framework keep the framework's own build
+	 * output directory, because the framework configuration depends on it.
+	 */
+	outputDir?: string;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
@@ -169,7 +188,9 @@ export async function getDetailsForAutoConfig({
 		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
 
 	const outputDir =
-		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
+		requestedOutputDir !== undefined && framework.id === staticFramework.id
+			? normalizeOutputDir(projectPath, requestedOutputDir)
+			: (detectedFramework?.dist ?? (await findAssetsDir(projectPath)));
 
 	const baseDetails = {
 		projectPath,

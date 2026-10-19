@@ -248,6 +248,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 				command: "deploy",
 				agentId: "test-agent",
 				deployArgs: {},
+				assetsDirectory,
 			});
 		});
 	}
@@ -306,7 +307,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 	});
 
-	it("does not forward --assets, so autoconfig stays enabled to configure the deploy", async ({
+	it("carries the requested assets directory across separately from the deploy argv", async ({
 		expect,
 	}) => {
 		const assetsDirectory = join(process.cwd(), "dist");
@@ -325,14 +326,15 @@ describe("maybeDelegatePagesToWorkers", () => {
 			command: "deploy",
 			agentId: "test-agent",
 			deployArgs: { name: "my-app" },
+			assetsDirectory,
 		});
 		if (!result.delegate) {
 			throw new Error("Expected delegation to be actioned");
 		}
 		// Regression guard: forwarding `--assets` would disable autoconfig, and a
 		// non-interactive agent deploy would then have no compatibility date and
-		// fail validation. autoconfig must run to detect the directory and write a
-		// Workers config, so the assets directory must never reach the deploy argv.
+		// fail validation. The directory therefore travels as `assetsDirectory`
+		// (used to pin autoconfig) and must never reach the deploy argv.
 		expect(result.deployArgs).not.toHaveProperty("assets");
 		expect(result.deployArgs).not.toHaveProperty("path");
 	});
