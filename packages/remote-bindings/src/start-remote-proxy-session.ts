@@ -71,13 +71,6 @@ function formatRemoteProxySessionError(error: unknown): string | undefined {
 }
 
 /**
- * Walk an error's cause chain (including through error events) for a
- * {@link RemoteSessionAuthenticationError}, mirroring the original Wrangler
- * `findRemoteSessionAuthError` walk. Only this specific user error is surfaced
- * verbatim from the chain — generic API errors (which also extend
- * {@link UserError} via {@link APIError}) fall through to the wrapping logic.
- */
-/**
  * Turns an error raised while the remote proxy session starts into the error
  * to throw. A UserError emitted directly (e.g. the Miniflare user-error case
  * that DevEnv re-emits), and a RemoteSessionAuthenticationError found in the
@@ -124,6 +117,32 @@ function createBunRemoteBindingsError(cause: unknown): UserError {
 	);
 }
 
+/**
+ * The error for a `play` message that never reached the ProxyWorker. Until it
+ * arrives, the ProxyWorker queues every binding request, so callers would wait
+ * forever if the session carried on.
+ *
+ * @param cause The send failure ProxyController recorded, if any.
+ * @returns The Bun-specific UserError under Bun, otherwise a startup error.
+ */
+function createPlayNotDeliveredError(cause: unknown): Error {
+	if (isBun()) {
+		return createBunRemoteBindingsError(cause);
+	}
+	return cause !== undefined
+		? toStartupError(cause)
+		: new Error(
+				"Failed to start the remote proxy session. Its local proxy never received the session. There is likely additional logging output above."
+			);
+}
+
+/**
+ * Walk an error's cause chain (including through error events) for a
+ * {@link RemoteSessionAuthenticationError}, mirroring the original Wrangler
+ * `findRemoteSessionAuthError` walk. Only this specific user error is surfaced
+ * verbatim from the chain — generic API errors (which also extend
+ * {@link UserError} via {@link APIError}) fall through to the wrapping logic.
+ */
 function findRemoteSessionAuthError(
 	error: unknown
 ): RemoteSessionAuthenticationError | undefined {
@@ -194,12 +213,7 @@ export async function startRemoteProxySession(
 	}
 
 	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
-	// Also kept synchronously: a failed `play` emits its error just before
-	// `latestReloadCompleteMessage` resolves to false, and the race below can
-	// settle on either.
-	let startupError: unknown;
 	const onStartupError = (error: unknown) => {
-		startupError ??= error;
 		maybeErrorPromise.resolve({ error });
 	};
 	devEnv.addListener("error", onStartupError);
@@ -223,16 +237,14 @@ export async function startRemoteProxySession(
 			maybeErrorPromise,
 			devEnv.proxy.latestReloadCompleteMessage,
 		]);
+		if (delivery === false) {
+			throw createPlayNotDeliveredError(devEnv.proxy.latestSendError);
+		}
 		if (delivery !== true) {
-			const cause = delivery ? delivery.error : startupError;
-			if (isBun()) {
-				throw createBunRemoteBindingsError(cause);
-			}
-			throw cause !== undefined
-				? toStartupError(cause)
-				: new Error(
-						"Failed to start the remote proxy session. Its local proxy never received the session. There is likely additional logging output above."
-					);
+			// DevEnv only logs a failed `play` send and never re-emits it, so an
+			// error event here is a separate startup failure (authentication, the
+			// remote preview, ...). Report it as itself, even under Bun.
+			throw toStartupError(delivery.error);
 		}
 
 		remoteProxyConnectionString = (await devEnv.proxy.ready.promise)
@@ -262,6 +274,11 @@ export async function startRemoteProxySession(
 						}`,
 						{ cause: errorOrEvent }
 					);
+		}
+		// `reloadComplete` fires just after ProxyController starts sending the
+		// new `play`, so this is that message's delivery, as at startup.
+		if (!(await devEnv.proxy.latestReloadCompleteMessage)) {
+			throw createPlayNotDeliveredError(devEnv.proxy.latestSendError);
 		}
 		await devEnv.proxy.runtimeMessageMutex.drained();
 	};

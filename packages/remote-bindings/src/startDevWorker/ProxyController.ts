@@ -39,6 +39,14 @@ export class ProxyController {
 	 */
 	latestReloadCompleteMessage = Promise.resolve(true);
 
+	/**
+	 * The error from the most recent control message that could not be sent
+	 * after its retries. DevEnv only logs these send failures and never
+	 * re-emits them, so this is how a caller waiting on
+	 * {@link latestReloadCompleteMessage} learns why it resolved to false.
+	 */
+	latestSendError?: Error;
+
 	public proxyWorker?: Miniflare;
 
 	protected latestConfig?: StartDevWorkerOptions;
@@ -187,6 +195,7 @@ export class ProxyController {
 				return this.sendMessageToProxyWorker(message, retries - 1);
 			}
 
+			this.latestSendError = error;
 			this.emitErrorEvent(
 				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
 				error
