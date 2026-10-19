@@ -1,0 +1,7 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/worker.json",
+	"compilerOptions": {
+		"types": ["@cloudflare/workers-types", "@types/node"]
+	},
+	"include": ["src", "cloudflare.config.ts"]
+}

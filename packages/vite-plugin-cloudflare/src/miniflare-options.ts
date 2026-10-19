@@ -12,6 +12,13 @@ import {
 } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
+	createMiniflareExports,
+	getMiniflareManifest,
+	getPersistenceRoot,
+	resolveLocalBindingsByWorkerName,
+	warnForMissingSecrets,
+} from "@cloudflare/workers-dev-shared";
+import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
@@ -36,7 +43,6 @@ import {
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { getInputInspectorPort } from "./debug";
-import { resolveLocalBindings } from "./local-env";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { getRemoteBindings } from "./remote-bindings";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
@@ -47,29 +53,21 @@ import {
 	toApiComplianceRegion,
 	withTrailingSlash,
 } from "./utils";
-import type { Bundle } from "./build-output-preview";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	AssetsOnlyPluginContext,
 	PreviewPluginContext,
 	WorkersPluginContext,
 } from "./context";
-import type { ResolvedLocalBindings } from "./local-env";
-import type { PersistState } from "./plugin-config";
-import type {
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
-} from "@cloudflare/config";
+import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 import type {
 	ContainerDevOptions,
 	ContainerDevPlan,
-	ContainerDevRuntimeOptions,
 } from "@cloudflare/containers-shared";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
 } from "@cloudflare/remote-bindings";
-import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
 import type {
 	MiniflareOptions,
 	WorkerdStructuredLog,
@@ -80,24 +78,6 @@ import type * as vite from "vite";
 const INTERNAL_WORKERS_COMPATIBILITY_DATE = "2024-10-04";
 // Used to mark HTML assets as being in the public directory so that they can be resolved from their root relative paths
 const PUBLIC_DIR_PREFIX = "/__vite_public_dir__";
-
-function getPersistenceRoot(
-	root: string,
-	persistState: PersistState
-): string | undefined {
-	if (persistState === false) {
-		return;
-	}
-
-	const defaultPersistPath = ".cloudflare/state";
-	const persistPath = path.resolve(
-		root,
-		typeof persistState === "object" ? persistState.path : defaultPersistPath,
-		"v3"
-	);
-
-	return persistPath;
-}
 
 // We want module names to be their absolute path without the leading slash
 // (i.e. the modules root should be the root directory). On Windows, we need
@@ -117,7 +97,6 @@ const MODULE_RUNNER_LEGACY_PATH =
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 const ASSETS_ONLY_MODULE = "__VITE_ASSETS_ONLY__.js";
 type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
-type MiniflareExports = NonNullable<WorkerOptions["config"]["exports"]>;
 
 async function getInternalWorkerManifest(
 	workerPath: string
@@ -755,44 +734,6 @@ export async function getDevMiniflareOptions(
 	};
 }
 
-/**
- * Read a Build Output Specification manifest into Miniflare's native module
- * manifest shape.
- */
-export async function getMiniflareManifest(
-	bundle: Bundle
-): Promise<NonNullable<WorkerOptions["config"]["manifest"]>> {
-	const { mainModule } = bundle;
-	const mainEntry = bundle.modules[mainModule];
-	assert(
-		mainEntry !== undefined,
-		`Build Output Specification: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
-	);
-
-	const modules: NonNullable<WorkerOptions["config"]["manifest"]>["modules"] =
-		{};
-	await Promise.all(
-		Object.entries(bundle.modules).map(async ([modulePath, { type }]) => {
-			const contents = await fsp.readFile(
-				path.join(bundle.rootPath, modulePath)
-			);
-			modules[modulePath] = {
-				type,
-				contents:
-					type === "wasm" || type === "data"
-						? new Uint8Array(contents)
-						: contents.toString(),
-			};
-		})
-	);
-
-	return {
-		mainModule,
-		modulesRoot: bundle.rootPath,
-		modules,
-	};
-}
-
 export async function getPreviewMiniflareOptions(
 	ctx: PreviewPluginContext,
 	vitePreviewServer: vite.PreviewServer
@@ -948,79 +889,6 @@ export async function getPreviewMiniflareOptions(
 		containerOptions:
 			containerPlansByWorkerName.size === 0 ? undefined : containerOptions,
 	};
-}
-
-/**
- * Replaces authored Container names on Durable Object exports with workerd's
- * local Container runtime metadata.
- *
- * @param options - Worker exports and their planned local Container metadata.
- * @returns Exports accepted by Miniflare's native Worker config schema.
- */
-export function createMiniflareExports(options: {
-	exports:
-		| ParsedInputWorkerConfig["exports"]
-		| ParsedOutputWorkerConfig["exports"];
-	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions> | undefined;
-}): MiniflareExports {
-	const workerExports: MiniflareExports = {};
-	for (const [name, workerExport] of Object.entries(options.exports ?? {})) {
-		if (workerExport.type === "durable-object" && "storage" in workerExport) {
-			const containerName =
-				"container" in workerExport ? workerExport.container : undefined;
-			const container =
-				containerName === undefined
-					? undefined
-					: options.containerRuntimeOptions?.get(name);
-			assert(
-				containerName === undefined || container !== undefined,
-				`Expected runtime options for Container-backed Durable Object export "${name}".`
-			);
-			workerExports[name] = { ...workerExport, container };
-		} else {
-			workerExports[name] = workerExport;
-		}
-	}
-	return workerExports;
-}
-
-function resolveLocalBindingsByWorkerName(
-	workerConfigs: Array<ParsedInputWorkerConfig | ParsedOutputWorkerConfig>,
-	localEnv: LoadedEnv,
-	devVars: Record<string, string> | undefined
-): Map<string, ResolvedLocalBindings> {
-	const resolvedLocalBindingsByWorkerName = new Map<
-		string,
-		ResolvedLocalBindings
-	>();
-	for (const config of workerConfigs) {
-		resolvedLocalBindingsByWorkerName.set(
-			config.name,
-			resolveLocalBindings(config.env, localEnv.values, devVars)
-		);
-	}
-	return resolvedLocalBindingsByWorkerName;
-}
-
-function warnForMissingSecrets(
-	resolvedLocalBindingsByWorkerName: Map<string, ResolvedLocalBindings>,
-	mode: string,
-	logger: vite.Logger
-): void {
-	for (const [
-		workerName,
-		{ missingSecrets },
-	] of resolvedLocalBindingsByWorkerName) {
-		if (missingSecrets.length === 0) {
-			continue;
-		}
-		logger.warn(
-			`Missing required secrets for Worker "${workerName}": ${missingSecrets.join(", ")}. ` +
-				`Add them to one of \`.dev.vars.${mode}\`, \`.dev.vars\`, ` +
-				`\`.env.${mode}.local\`, \`.env.${mode}\`, \`.env.local\`, or \`.env\`. ` +
-				"Alternatively, set them as environment variables."
-		);
-	}
 }
 
 /**

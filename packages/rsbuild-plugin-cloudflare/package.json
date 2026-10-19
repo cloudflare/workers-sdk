@@ -1,0 +1,70 @@
+{
+	"name": "@cloudflare/rsbuild-plugin",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Cloudflare plugin for Rsbuild (experimental prototype)",
+	"keywords": [
+		"cloudflare",
+		"cloudflare-workers",
+		"rsbuild",
+		"rsbuild-plugin",
+		"rspack",
+		"workers"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/rsbuild-plugin-cloudflare#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/rsbuild-plugin-cloudflare"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check:type": "tsc",
+		"dev": "tsdown --watch",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@cloudflare/config": "workspace:*",
+		"@cloudflare/runtime-types": "workspace:*",
+		"@cloudflare/unenv-preset": "workspace:*",
+		"miniflare": "workspace:*",
+		"unenv": "2.0.0-rc.24"
+	},
+	"devDependencies": {
+		"@cloudflare/build-output-utils": "workspace:*",
+		"@cloudflare/workers-dev-shared": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
+		"@remix-run/node-fetch-server": "^0.8.0",
+		"@rsbuild/core": "^2.2.13",
+		"@types/node": "catalog:default",
+		"cf": "catalog:default",
+		"get-port": "^7.1.0",
+		"mlly": "^1.7.4",
+		"tsdown": "0.16.3",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"peerDependencies": {
+		"@rsbuild/core": "^2.0.0"
+	}
+}

@@ -1,6 +1,6 @@
 import { InputWorkerSchema } from "@cloudflare/config";
 import { describe, test } from "vitest";
-import { createMiniflareExports } from "../miniflare-options";
+import { createMiniflareExports } from "../miniflare-exports";
 
 describe("Container Miniflare exports", () => {
 	test("replaces Container names with runtime image metadata", ({ expect }) => {

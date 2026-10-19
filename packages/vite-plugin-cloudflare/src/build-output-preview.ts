@@ -5,17 +5,11 @@ import {
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
 import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
 import type {
-	ModuleType,
 	ParsedOutputContainerConfig,
 	ParsedOutputRootConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
-
-export interface Bundle {
-	rootPath: string;
-	mainModule: string;
-	modules: Record<string, { type: ModuleType }>;
-}
+import type { Bundle } from "@cloudflare/workers-dev-shared";
 
 export interface BuildOutputPreviewWorker {
 	config: ParsedOutputWorkerConfig;

@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as path from "node:path";
+import { VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX } from "@cloudflare/workers-dev-shared";
 import { assertHasNodeJsCompat } from "../nodejs-compat";
 import {
 	VIRTUAL_EXPORT_TYPES,
@@ -10,7 +11,6 @@ import { createPlugin } from "../utils";
 
 export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
 export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-entry`;
-export const VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX = `${virtualPrefix}nodejs-global-inject/`;
 
 const virtualCloudflareResolveRE = /^virtual:cloudflare\//;
 // eslint-disable-next-line no-control-regex -- Vite virtual module convention uses \0 prefix

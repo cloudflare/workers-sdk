@@ -1,4 +1,5 @@
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
 import type { WorkerOptions } from "miniflare";
 
 type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
@@ -59,4 +60,43 @@ export function resolveLocalBindings(
 	}
 
 	return { bindings, missingSecrets };
+}
+
+export function resolveLocalBindingsByWorkerName(
+	workerConfigs: Array<Pick<ParsedInputWorkerConfig, "name" | "env">>,
+	localEnv: LoadedEnv,
+	devVars: Record<string, string> | undefined
+): Map<string, ResolvedLocalBindings> {
+	const resolvedLocalBindingsByWorkerName = new Map<
+		string,
+		ResolvedLocalBindings
+	>();
+	for (const config of workerConfigs) {
+		resolvedLocalBindingsByWorkerName.set(
+			config.name,
+			resolveLocalBindings(config.env, localEnv.values, devVars)
+		);
+	}
+	return resolvedLocalBindingsByWorkerName;
+}
+
+export function warnForMissingSecrets(
+	resolvedLocalBindingsByWorkerName: Map<string, ResolvedLocalBindings>,
+	mode: string,
+	logger: { warn(message: string): void }
+): void {
+	for (const [
+		workerName,
+		{ missingSecrets },
+	] of resolvedLocalBindingsByWorkerName) {
+		if (missingSecrets.length === 0) {
+			continue;
+		}
+		logger.warn(
+			`Missing required secrets for Worker "${workerName}": ${missingSecrets.join(", ")}. ` +
+				`Add them to one of \`.dev.vars.${mode}\`, \`.dev.vars\`, ` +
+				`\`.env.${mode}.local\`, \`.env.${mode}\`, \`.env.local\`, or \`.env\`. ` +
+				"Alternatively, set them as environment variables."
+		);
+	}
 }

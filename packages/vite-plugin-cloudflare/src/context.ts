@@ -4,7 +4,6 @@ import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
 import type { ConfigChangeCoordinator } from "./config-change-coordinator";
 import type { ExportTypes } from "./export-types";
-import type { NodeJsCompat } from "./nodejs-compat";
 import type {
 	AssetsOnlyResolvedConfig,
 	PreviewResolvedConfig,
@@ -18,6 +17,7 @@ import type {
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
+import type { NodeJsCompat } from "@cloudflare/workers-dev-shared";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 

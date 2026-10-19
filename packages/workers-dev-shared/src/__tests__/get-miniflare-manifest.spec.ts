@@ -3,13 +3,13 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, test } from "vitest";
-import { getMiniflareManifest } from "../miniflare-options";
+import { getMiniflareManifest } from "../miniflare-manifest";
 
 describe("getMiniflareManifest", () => {
 	let rootPath: string;
 
 	beforeEach(() => {
-		rootPath = mkdtempSync(path.join(tmpdir(), "vite-plugin-manifest-"));
+		rootPath = mkdtempSync(path.join(tmpdir(), "workers-dev-shared-manifest-"));
 		mkdirSync(path.join(rootPath, "assets"));
 		writeFileSync(path.join(rootPath, "index.js"), "export default {};");
 		writeFileSync(path.join(rootPath, "assets/data.bin"), Buffer.from([0, 1]));
