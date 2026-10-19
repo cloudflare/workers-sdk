@@ -7,6 +7,7 @@ import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker"
 import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
 import { DevEnv } from "./startDevWorker/DevEnv";
+import { isBun } from "./utils/is-bun";
 import { RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
 import type {
@@ -76,6 +77,53 @@ function formatRemoteProxySessionError(error: unknown): string | undefined {
  * verbatim from the chain — generic API errors (which also extend
  * {@link UserError} via {@link APIError}) fall through to the wrapping logic.
  */
+/**
+ * Turns an error raised while the remote proxy session starts into the error
+ * to throw. A UserError emitted directly (e.g. the Miniflare user-error case
+ * that DevEnv re-emits), and a RemoteSessionAuthenticationError found in the
+ * error event's cause chain, are surfaced verbatim so callers can still branch
+ * on `instanceof UserError` and the user sees a single actionable message.
+ * Everything else — including generic API errors — is wrapped.
+ *
+ * @param error The error the session emitted during startup.
+ * @returns The error to throw.
+ */
+function toStartupError(error: unknown): Error {
+	if (error instanceof UserError) {
+		return error;
+	}
+	const authError = findRemoteSessionAuthError(error);
+	if (authError) {
+		return authError;
+	}
+	const details = formatRemoteProxySessionError(error);
+	return new Error(
+		details
+			? `Failed to start the remote proxy session. ${details}`
+			: "Failed to start the remote proxy session. There is likely additional logging output above.",
+		{ cause: error }
+	);
+}
+
+/**
+ * The error for a remote proxy session that cannot work under Bun. Bun's
+ * `fetch()` ignores the undici `dispatcher` that Miniflare routes the session's
+ * control messages through, so the local proxy never learns where to forward
+ * binding requests.
+ *
+ * @param cause The failure that showed it, if one was reported.
+ * @returns A UserError explaining the limitation and the way around it.
+ */
+function createBunRemoteBindingsError(cause: unknown): UserError {
+	return new UserError(
+		"Remote bindings cannot work under Bun yet. Bun's `fetch()` ignores the undici `dispatcher` that Miniflare uses to reach the remote proxy session (https://github.com/oven-sh/bun/issues/39247), so every request to a remote binding would wait forever. Run this under Node.js, or turn remote bindings off.",
+		{
+			cause,
+			telemetryMessage: "remote proxy session bun control message failed",
+		}
+	);
+}
+
 function findRemoteSessionAuthError(
 	error: unknown
 ): RemoteSessionAuthenticationError | undefined {
@@ -146,7 +194,12 @@ export async function startRemoteProxySession(
 	}
 
 	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
+	// Also kept synchronously: a failed `play` emits its error just before
+	// `latestReloadCompleteMessage` resolves to false, and the race below can
+	// settle on either.
+	let startupError: unknown;
 	const onStartupError = (error: unknown) => {
+		startupError ??= error;
 		maybeErrorPromise.resolve({ error });
 	};
 	devEnv.addListener("error", onStartupError);
@@ -158,26 +211,28 @@ export async function startRemoteProxySession(
 		]);
 
 		if (maybeError && maybeError.error) {
-			// A UserError emitted directly (e.g. the Miniflare user-error case that
-			// DevEnv re-emits), and a RemoteSessionAuthenticationError found in the
-			// error event's cause chain, are surfaced verbatim so callers can still
-			// branch on `instanceof UserError` and the user sees a single actionable
-			// message. Everything else — including generic API errors — falls through
-			// to the wrapping below.
-			if (maybeError.error instanceof UserError) {
-				throw maybeError.error;
+			throw toStartupError(maybeError.error);
+		}
+
+		// The local server is ready once the remote Worker has reloaded, but the
+		// `play` message that hands the ProxyWorker that remote session is sent in
+		// the background. Wait for it: until it lands, every binding request waits
+		// in the ProxyWorker's queue, so a session whose `play` never arrives would
+		// hang its callers with no error.
+		const delivery = await Promise.race([
+			maybeErrorPromise,
+			devEnv.proxy.latestReloadCompleteMessage,
+		]);
+		if (delivery !== true) {
+			const cause = delivery ? delivery.error : startupError;
+			if (isBun()) {
+				throw createBunRemoteBindingsError(cause);
 			}
-			const authError = findRemoteSessionAuthError(maybeError.error);
-			if (authError) {
-				throw authError;
-			}
-			const details = formatRemoteProxySessionError(maybeError.error);
-			throw new Error(
-				details
-					? `Failed to start the remote proxy session. ${details}`
-					: "Failed to start the remote proxy session. There is likely additional logging output above.",
-				{ cause: maybeError.error }
-			);
+			throw cause !== undefined
+				? toStartupError(cause)
+				: new Error(
+						"Failed to start the remote proxy session. Its local proxy never received the session. There is likely additional logging output above."
+					);
 		}
 
 		remoteProxyConnectionString = (await devEnv.proxy.ready.promise)

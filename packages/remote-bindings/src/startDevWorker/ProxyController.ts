@@ -30,6 +30,15 @@ export class ProxyController {
 
 	public localServerReady = createDeferred<void>();
 
+	/**
+	 * Whether the latest `play` message reached the ProxyWorker. `play` carries
+	 * the remote session that binding requests are forwarded to, and until it
+	 * arrives the ProxyWorker queues every request, so a `play` that is never
+	 * delivered leaves callers waiting forever. Mirrors Wrangler's
+	 * ProxyController.
+	 */
+	latestReloadCompleteMessage = Promise.resolve(true);
+
 	public proxyWorker?: Miniflare;
 
 	protected latestConfig?: StartDevWorkerOptions;
@@ -131,18 +140,25 @@ export class ProxyController {
 	}
 
 	runtimeMessageMutex = new Mutex();
+	/**
+	 * Sends a control message to the ProxyWorker, retrying on failure.
+	 *
+	 * @param message The control message to send.
+	 * @param retries How many more attempts to make after a failed one.
+	 * @returns Whether the ProxyWorker received the message.
+	 */
 	async sendMessageToProxyWorker(
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
-	): Promise<void> {
+	): Promise<boolean> {
 		if (this._torndown) {
-			return;
+			return false;
 		}
 
 		// Don't do any async work here. Enqueue the message with the mutex immediately.
 
 		try {
-			await this.runtimeMessageMutex.runWith(async () => {
+			const response = await this.runtimeMessageMutex.runWith(async () => {
 				const { proxyWorker } = await this.ready.promise;
 
 				const ready = await proxyWorker.ready.catch(() => undefined);
@@ -158,9 +174,11 @@ export class ProxyController {
 					}
 				);
 			});
+
+			return response?.status === 204;
 		} catch (cause) {
 			if (this._torndown) {
-				return;
+				return false;
 			}
 
 			const error = castErrorCause(cause);
@@ -173,6 +191,7 @@ export class ProxyController {
 				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
 				error
 			);
+			return false;
 		}
 	}
 	start(config: StartDevWorkerOptions) {
@@ -189,7 +208,7 @@ export class ProxyController {
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
 
-		void this.sendMessageToProxyWorker({
+		this.latestReloadCompleteMessage = this.sendMessageToProxyWorker({
 			type: "play",
 			proxyData: data.proxyData,
 		});

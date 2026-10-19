@@ -1,37 +1,74 @@
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { describe, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import { RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
 import type { ErrorEvent } from "./startDevWorker/events";
 
-// The error that the mocked `DevEnv` emits asynchronously from `start()`.
-const mockDevEnv = vi.hoisted(() => ({ error: undefined as unknown }));
+// How the mocked `DevEnv` behaves. With `ready` false (the default), it never
+// becomes ready and emits `error` just after `start()`. With `ready` true, the
+// local server and proxy come up, and the `play` message is delivered unless
+// `playError` is set, in which case it fails the way ProxyController reports a
+// failed send: an error event, then `latestReloadCompleteMessage` resolving to false.
+const mockDevEnv = vi.hoisted(() => ({
+	error: undefined as unknown,
+	ready: false,
+	playError: undefined as unknown,
+}));
 
-// Replace `DevEnv` with a stub that never becomes ready and instead emits a
-// configurable error event just after `start()`, so we can exercise the async
-// error-handling path in `startRemoteProxySession` without any real Miniflare.
+const { isBunMock } = vi.hoisted(() => ({ isBunMock: vi.fn(() => false) }));
+vi.mock("./utils/is-bun", () => ({ isBun: isBunMock }));
+
+const PROXY_URL = "http://127.0.0.1:8787/";
+
+// Replace `DevEnv` with a stub, so we can exercise `startRemoteProxySession`'s
+// startup paths without any real Miniflare.
 vi.mock("./startDevWorker/DevEnv", async () => {
 	const { EventEmitter } = await import("node:events");
 	class DevEnv extends EventEmitter {
-		proxy = {
-			// Never resolves — the startup race is always settled by the error event.
-			localServerReady: { promise: new Promise<void>(() => {}) },
-			ready: { promise: new Promise(() => {}) },
-			runtimeMessageMutex: { drained: async () => {} },
-		};
+		proxy = mockDevEnv.ready
+			? {
+					localServerReady: { promise: Promise.resolve() },
+					ready: { promise: Promise.resolve({ url: new URL(PROXY_URL) }) },
+					latestReloadCompleteMessage:
+						mockDevEnv.playError === undefined
+							? Promise.resolve(true)
+							: new Promise<boolean>((resolve) =>
+									queueMicrotask(() => {
+										this.emit("error", mockDevEnv.playError);
+										resolve(false);
+									})
+								),
+					runtimeMessageMutex: { drained: async () => {} },
+				}
+			: {
+					// Never resolves — the startup race is always settled by the error event.
+					localServerReady: { promise: new Promise<void>(() => {}) },
+					ready: { promise: new Promise(() => {}) },
+					latestReloadCompleteMessage: new Promise<boolean>(() => {}),
+					runtimeMessageMutex: { drained: async () => {} },
+				};
 		constructor() {
 			super();
 			// Avoid Node's throw-on-unhandled-"error" behaviour.
 			this.on("error", () => {});
 		}
 		start() {
-			queueMicrotask(() => this.emit("error", mockDevEnv.error));
+			if (!mockDevEnv.ready) {
+				queueMicrotask(() => this.emit("error", mockDevEnv.error));
+			}
 		}
 		update() {}
 		async teardown() {}
 	}
 	return { DevEnv };
+});
+
+beforeEach(() => {
+	mockDevEnv.error = undefined;
+	mockDevEnv.ready = false;
+	mockDevEnv.playError = undefined;
+	isBunMock.mockReturnValue(false);
 });
 
 function createTestLogger(): RemoteBindingsLogger {
@@ -138,5 +175,64 @@ describe("startRemoteProxySession error handling", () => {
 		expect((thrown as Error).message).toContain(
 			"The remote worker preview failed."
 		);
+	});
+});
+
+describe("startRemoteProxySession waits for the play message", () => {
+	// The ProxyWorker queues every binding request until `play` hands it the
+	// remote session. Under Bun that message never arrives, because Bun's
+	// `fetch()` ignores the undici `dispatcher` Miniflare routes it through
+	// (https://github.com/oven-sh/bun/issues/39247), so a session reported as
+	// ready would leave every remote binding call waiting forever.
+	const sendFailure = () =>
+		makeErrorEvent(new Error("getaddrinfo ENOTFOUND dummy"));
+
+	it("resolves once play is delivered", async ({ expect }) => {
+		mockDevEnv.ready = true;
+
+		const session = await startRemoteProxySession(
+			{},
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+		);
+
+		expect(String(session.remoteProxyConnectionString)).toBe(PROXY_URL);
+	});
+
+	it("rejects instead of hanging when play is never delivered", async ({
+		expect,
+	}) => {
+		mockDevEnv.ready = true;
+		mockDevEnv.playError = sendFailure();
+
+		const thrown = await startRemoteProxySession(
+			{},
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+		).catch((error: unknown) => error);
+
+		expect(thrown).toBeInstanceOf(Error);
+		expect(thrown).not.toBeInstanceOf(UserError);
+		expect((thrown as Error).message).toContain(
+			"Failed to start the remote proxy session"
+		);
+		expect((thrown as Error).message).toContain("ENOTFOUND dummy");
+	});
+
+	it("names the Bun limitation when play is never delivered under Bun", async ({
+		expect,
+	}) => {
+		isBunMock.mockReturnValue(true);
+		mockDevEnv.ready = true;
+		mockDevEnv.playError = sendFailure();
+
+		const thrown = await startRemoteProxySession(
+			{},
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+		).catch((error: unknown) => error);
+
+		expect(thrown).toBeInstanceOf(UserError);
+		expect((thrown as Error).message).toContain(
+			"https://github.com/oven-sh/bun/issues/39247"
+		);
+		expect((thrown as Error).cause).toBe(mockDevEnv.playError);
 	});
 });
