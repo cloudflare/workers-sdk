@@ -63,4 +63,38 @@ describe("ProxyController.latestReloadCompleteMessage", () => {
 			})
 		);
 	});
+
+	it("keeps latestSendError about the latest send, never an older one", async ({
+		expect,
+	}) => {
+		const outcomes: Array<() => Promise<Response>> = [
+			// Four attempts that all throw, so the first `play` runs out of retries.
+			...Array.from({ length: 4 }, () => async () => {
+				throw new Error("getaddrinfo ENOTFOUND dummy");
+			}),
+			async () => new Response(null, { status: 500 }),
+			async () => new Response(null, { status: 204 }),
+		];
+		const { controller } = controllerWith(() => {
+			const next = outcomes.shift();
+			if (next === undefined) {
+				throw new Error("unexpected extra send");
+			}
+			return next();
+		});
+
+		controller.play(reloadComplete);
+		expect(await controller.latestReloadCompleteMessage).toBe(false);
+		expect(controller.latestSendError?.message).toContain("ENOTFOUND dummy");
+
+		controller.play(reloadComplete);
+		expect(await controller.latestReloadCompleteMessage).toBe(false);
+		expect(controller.latestSendError?.message).toBe(
+			"The ProxyWorker answered the play message with status 500"
+		);
+
+		controller.play(reloadComplete);
+		expect(await controller.latestReloadCompleteMessage).toBe(true);
+		expect(controller.latestSendError).toBeUndefined();
+	});
 });

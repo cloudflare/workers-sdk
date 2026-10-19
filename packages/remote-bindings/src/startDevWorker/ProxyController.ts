@@ -40,10 +40,11 @@ export class ProxyController {
 	latestReloadCompleteMessage = Promise.resolve(true);
 
 	/**
-	 * The error from the most recent control message that could not be sent
-	 * after its retries. DevEnv only logs these send failures and never
-	 * re-emits them, so this is how a caller waiting on
-	 * {@link latestReloadCompleteMessage} learns why it resolved to false.
+	 * Why the most recent control message was not delivered, or undefined if
+	 * it was. Every send sets or clears it, so it never describes an older
+	 * message. DevEnv only logs send failures and never re-emits them, so this
+	 * is how a caller waiting on {@link latestReloadCompleteMessage} learns why
+	 * it resolved to false.
 	 */
 	latestSendError?: Error;
 
@@ -183,7 +184,16 @@ export class ProxyController {
 				);
 			});
 
-			return response?.status === 204;
+			if (response?.status === 204) {
+				this.latestSendError = undefined;
+				return true;
+			}
+			this.latestSendError = new Error(
+				response
+					? `The ProxyWorker answered the ${message.type} message with status ${response.status}`
+					: `The ProxyWorker was not ready to receive the ${message.type} message`
+			);
+			return false;
 		} catch (cause) {
 			if (this._torndown) {
 				return false;
