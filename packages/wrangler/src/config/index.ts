@@ -76,6 +76,8 @@ export interface NewConfig {
 	config: Config;
 	/** Validated project configuration grouped by resource type. */
 	parsedConfig: ParsedProjectConfig;
+	/** Absolute path to the loaded `cloudflare.config.ts`. */
+	cloudflareConfigPath: string;
 	/**
 	 * The mode the config was resolved in, from `--mode`/`--env` or
 	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
@@ -141,6 +143,7 @@ export async function readNewConfig(
 	return {
 		config,
 		parsedConfig: loaded.parsedConfig,
+		cloudflareConfigPath: loaded.cloudflareConfigPath,
 		mode: loaded.mode,
 		dependencies: loaded.dependencies,
 		types: loaded.types,

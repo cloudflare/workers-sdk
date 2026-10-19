@@ -14,11 +14,9 @@ describe("generateTypes", () => {
 	it("accepts a custom packageName", ({ expect }) => {
 		const out = generateTypes({
 			configPath: "./cloudflare.config.ts",
-			packageName: "@cloudflare/vite-plugin/experimental-config",
+			packageName: "cf/config",
 		});
-		expect(out).toContain(
-			`import("@cloudflare/vite-plugin/experimental-config").UnwrapConfig`
-		);
+		expect(out).toContain(`import("cf/config").UnwrapConfig`);
 		expect(out).not.toContain(`import("@cloudflare/config")`);
 	});
 

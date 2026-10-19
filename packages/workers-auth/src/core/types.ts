@@ -1,4 +1,8 @@
-import type { OAuthConsentPages, OAuthFlowContext } from "../context";
+import type {
+	OAuthConsentPages,
+	OAuthFlowContext,
+	TemporaryAccountLogger,
+} from "../context";
 import type { FileFormat } from "./file-format";
 
 /** Minimal shape of the interactive `select` prompt's options for account selection. */
@@ -18,6 +22,14 @@ export interface AccountSelectOptions {
 export interface AuthContext {
 	/** The consumer's logger (drop-in for wrangler's logger singleton). */
 	logger: OAuthFlowContext["logger"];
+
+	/**
+	 * Where temporary-account status messages go: the terms notice, the
+	 * proof-of-work notice, and the "Temporary account ready" claim details.
+	 * These are not command output, so a CLI whose commands write parseable
+	 * output to stdout should send them to stderr. Defaults to {@link logger}.
+	 */
+	temporaryAccountLogger?: TemporaryAccountLogger;
 
 	/**
 	 * User-Agent header sent with the account/membership REST calls
@@ -61,6 +73,8 @@ export interface CliDescriptor {
 	/** Commands surfaced in auth guidance. */
 	commands: {
 		login: string;
+		/** Command that clears cached auth state. */
+		logout: string;
 		whoami: string;
 		createProfile: string;
 		/**

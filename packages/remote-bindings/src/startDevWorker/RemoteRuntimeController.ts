@@ -17,7 +17,11 @@ import {
 	handlePreviewSessionUploadError,
 } from "../utils/remote";
 import { castErrorCause } from "./events";
-import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
+import {
+	PREVIEW_TOKEN_REFRESH_INTERVAL,
+	PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL,
+	unwrapHook,
+} from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -50,6 +54,7 @@ export class RemoteRuntimeController {
 
 	// Timer for proactive token refresh before the 1-hour expiry
 	#refreshTimer?: ReturnType<typeof setTimeout>;
+	#sessionCreatedAt?: number;
 	#tearingDown = false;
 
 	constructor(
@@ -61,22 +66,28 @@ export class RemoteRuntimeController {
 		props: CfAccount & {
 			complianceConfig: ComplianceConfig;
 			name: string;
+			cliDisplayName: string;
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
-			return await retryOnAPIFailure(
+			const session = await retryOnAPIFailure(
 				() =>
 					createPreviewSession(
 						props.complianceConfig,
 						props,
 						this.#abortController.signal,
-						props.name
+						props.name,
+						props.cliDisplayName
 					),
 				logger,
 				undefined,
 				undefined,
 				this.#abortController.signal
 			);
+			if (session) {
+				this.#sessionCreatedAt = Date.now();
+			}
+			return session;
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
 				return; // ignore
@@ -92,6 +103,7 @@ export class RemoteRuntimeController {
 		props: CreateRemoteWorkerInitProps &
 			CfAccount & {
 				complianceConfig: ComplianceConfig;
+				cliDisplayName: string;
 				bundleId: number;
 			}
 	): Promise<CfPreviewToken | undefined> {
@@ -193,6 +205,7 @@ export class RemoteRuntimeController {
 			accountId: auth.accountId,
 			apiToken: auth.apiToken,
 			name: config.name,
+			cliDisplayName: config.cliDisplayName,
 		});
 	}
 
@@ -217,6 +230,7 @@ export class RemoteRuntimeController {
 			bindings: config.bindings,
 			compatibilityDate: config.compatibilityDate,
 			compatibilityFlags: config.compatibilityFlags,
+			cliDisplayName: config.cliDisplayName,
 			bundleId,
 		});
 		// If we received a new `bundleComplete` event before we were able to
@@ -228,6 +242,8 @@ export class RemoteRuntimeController {
 
 		const accessHeaders = await getAccessHeaders(token.host, {
 			logger,
+			cliDisplayName: config.cliDisplayName,
+			previewToken: token.value,
 		});
 
 		const proxyData: ProxyData = {
@@ -258,11 +274,24 @@ export class RemoteRuntimeController {
 
 	#scheduleRefresh(interval: number) {
 		clearTimeout(this.#refreshTimer);
+		const delay =
+			interval === PREVIEW_TOKEN_REFRESH_INTERVAL &&
+			this.#sessionCreatedAt !== undefined
+				? Math.max(
+						0,
+						PREVIEW_TOKEN_REFRESH_INTERVAL -
+							(Date.now() - this.#sessionCreatedAt)
+					)
+				: interval;
 		this.#refreshTimer = setTimeout(() => {
+			this.#refreshTimer = undefined;
 			if (this.#latestProxyData) {
 				this.onPreviewTokenExpired();
+			} else if (!this.#tearingDown) {
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
-		}, interval);
+		}, delay);
+		this.#refreshTimer.unref?.();
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
@@ -308,6 +337,23 @@ export class RemoteRuntimeController {
 			return;
 		}
 
+		const bundleId = this.#currentBundleId;
+		// Captured before anything async: `onUpdateStart()` aborts this exact
+		// signal (before replacing `#abortController`) if a rebuild starts
+		// while this refresh is in flight, but doesn't bump `#currentBundleId`
+		// until that rebuild *completes* — so a bundle-ID match alone can't
+		// tell an aborted-by-rebuild refresh apart from a genuine failure,
+		// whether that failure surfaces as a thrown error or (from
+		// `#previewToken`'s non-restart upload-error path) a `false` return.
+		const abortSignal = this.#abortController.signal;
+		// A newer bundle superseding this refresh, or this refresh's own
+		// signal having been aborted, means a rebuild is already handling
+		// things — that rebuild's own success path reschedules normally, so
+		// retrying a stale attempt here would revive outdated worker code.
+		const shouldRetry = () =>
+			bundleId === this.#currentBundleId &&
+			!abortSignal.aborted &&
+			!this.#tearingDown;
 		try {
 			const auth = await unwrapHook(this.#latestConfig.auth);
 
@@ -317,11 +363,16 @@ export class RemoteRuntimeController {
 				this.#latestConfig,
 				this.#latestBundle,
 				auth,
-				this.#currentBundleId
+				bundleId
 			);
 
 			if (refreshed) {
 				logger.log(chalk.green("✔ Preview token refreshed successfully"));
+			} else if (shouldRetry()) {
+				// `#updatePreviewToken` (via `#previewToken`) already reported a
+				// non-restart upload failure and returned `false` without
+				// throwing — that failure needs the same retry as a thrown one.
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {
@@ -335,6 +386,16 @@ export class RemoteRuntimeController {
 				source: "RemoteRuntimeController",
 				data: undefined,
 			});
+
+			// A failed refresh must not give up the retry cycle for good: unlike
+			// a successful refresh (which reschedules itself via
+			// `#updatePreviewToken`), nothing else will trigger another attempt
+			// for a long-lived session that isn't otherwise reloading — so a
+			// transient failure (e.g. the machine is offline) would otherwise
+			// strand the session even after connectivity returns.
+			if (shouldRetry()) {
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+			}
 		}
 	}
 
@@ -343,10 +404,16 @@ export class RemoteRuntimeController {
 	// ******************
 
 	onUpdateStart() {
+		// Unlike Wrangler's copy, this needs no "bundle pending" guard against a
+		// retry reloading the previous bundle: `DevEnv.update()` calls
+		// `onBundleComplete()` synchronously right after this, so there is no
+		// window in which the stored bundle is stale while the proxy is paused.
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
-		clearTimeout(this.#refreshTimer);
+		if (!this.#refreshTimer && this.#latestProxyData && !this.#tearingDown) {
+			this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+		}
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;

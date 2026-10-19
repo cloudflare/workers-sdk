@@ -10,6 +10,8 @@ import type { FrameworkTestConfig } from "../../helpers/framework-helpers";
 
 export type NamedFrameworkTestConfig = FrameworkTestConfig & {
 	name: string;
+	/** Override the default single whole-test retry for this case. */
+	retry?: number;
 };
 
 /**
@@ -66,6 +68,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: pm === "pnpm",
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -85,6 +88,22 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: false,
 			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
+		},
+		{
+			name: "django",
+			argv: ["--accept-defaults"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Django on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from Django on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
 		},
 		{
 			name: "docusaurus:pages",
@@ -202,6 +221,42 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			flags: ["--style", "sass"],
 		},
 		{
+			name: "fastapi",
+			// TODO: Unquarantine once FastAPI no longer creates an OpenTelemetry
+			// context key, which requires unavailable entropy, at import time.
+			// https://github.com/fastapi/fastapi/pull/16403
+			quarantine: true,
+			argv: ["--lang", "python"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from FastAPI on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from FastAPI on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
+			name: "flask",
+			argv: ["--lang", "python"],
+			testCommitMessage: false,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Flask on Cloudflare Workers!",
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from Flask on Cloudflare Workers!",
+			},
+			verifyPreview: null,
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
 			name: "gatsby:pages",
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun", "pnpm", "yarn"],
@@ -298,6 +353,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "qwik:pages",
+			// Cold npm installs and builds can exceed the default five-minute budget.
+			timeout: pm === "npm" ? LONG_TIMEOUT : undefined,
 			argv: ["--platform", "pages"],
 			promptHandlers: [
 				{
@@ -321,6 +378,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "qwik:workers",
+			timeout: pm === "npm" ? LONG_TIMEOUT : undefined,
 			argv: ["--platform", "workers"],
 			promptHandlers: [
 				{
@@ -349,9 +407,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--variant", "vinext"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
-			// preview script is `build && start` (wrangler dev on build output).
+			// preview script is `build && start` (vite preview on build output).
 			verifyPreview: {
-				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "vinext + Cloudflare Workers",
 			},
@@ -848,6 +905,7 @@ function getExperimentalFrameworkTestConfig(
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: pm === "pnpm",
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {

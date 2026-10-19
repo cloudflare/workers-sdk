@@ -1,13 +1,15 @@
+import * as path from "node:path";
 import { test, vi } from "vitest";
 import {
 	getTextResponse,
 	isBuild,
+	mockFileChange,
 	viteTestUrl,
 	WAIT_FOR_OPTIONS,
 } from "../../__test-utils__";
 
 test.runIf(!isBuild)(
-	"serves requests after workerd crashes",
+	"serves requests and watches config after workerd crashes",
 	async ({ expect }) => {
 		await vi.waitFor(
 			async () =>
@@ -42,5 +44,17 @@ test.runIf(!isBuild)(
 			expect(response.ok).toBe(true);
 			expect(await response.text()).toContain('The value of MY_VAR is "one"');
 		}, WAIT_FOR_OPTIONS);
+
+		mockFileChange(path.join(__dirname, "../cloudflare.config.ts"), (content) =>
+			content.replace('bindings.text("one")', 'bindings.text("two")')
+		);
+
+		await vi.waitFor(
+			async () =>
+				expect(await getTextResponse()).toContain(
+					'The value of MY_VAR is "two"'
+				),
+			WAIT_FOR_OPTIONS
+		);
 	}
 );

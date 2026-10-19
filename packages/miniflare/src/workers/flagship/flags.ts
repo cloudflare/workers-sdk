@@ -18,7 +18,9 @@ export type Operator =
 	| "starts_with"
 	| "ends_with"
 	| "in"
-	| "not_in";
+	| "not_in"
+	| "has"
+	| "not_has";
 
 export interface BaseCondition {
 	attribute: string;
@@ -85,6 +87,8 @@ const OPERATORS = new Set<Operator>([
 	"ends_with",
 	"in",
 	"not_in",
+	"has",
+	"not_has",
 ]);
 
 const LIST_OPERATORS = new Set<Operator>(["in", "not_in"]);
@@ -141,7 +145,8 @@ export function getFlagType(variations: Record<string, unknown>): FlagType {
 function validateCondition(
 	key: string,
 	condition: unknown,
-	depth: number
+	depth: number,
+	allowLegacyRules: boolean
 ): void {
 	if (
 		typeof condition !== "object" ||
@@ -166,11 +171,16 @@ function validateCondition(
 				`Flag '${key}' has a '${operator}' condition without a list of clauses`
 			);
 		}
+		if (clauses.length === 0 && !allowLegacyRules) {
+			throw new Error(
+				`Flag '${key}' has an '${operator}' condition without any clauses`
+			);
+		}
 		if (depth === 0) {
 			throw new Error(`Flag '${key}' has conditions nested too deeply`);
 		}
 		for (const clause of clauses) {
-			validateCondition(key, clause, depth - 1);
+			validateCondition(key, clause, depth - 1, allowLegacyRules);
 		}
 		return;
 	}
@@ -195,6 +205,15 @@ function validateCondition(
 			`Flag '${key}' has a '${operator}' condition whose value is not a list`
 		);
 	}
+	if (
+		(operator === "has" || operator === "not_has") &&
+		value !== null &&
+		typeof value === "object"
+	) {
+		throw new Error(
+			`Flag '${key}' '${operator}' condition value must be a scalar`
+		);
+	}
 	if (value === undefined) {
 		throw new Error(`Flag '${key}' has a condition without a value`);
 	}
@@ -205,7 +224,25 @@ function validateCondition(
 	}
 }
 
-export function validateFlagInput(input: unknown): asserts input is FlagInput {
+/**
+ * Production only accepts rollouts in steps of 0.01%. The tolerance absorbs
+ * floating-point error, e.g. `33.33 * 100` is `3332.9999999999995`.
+ */
+function hasAtMostTwoDecimals(value: number): boolean {
+	return Math.abs(value * 100 - Math.round(value * 100)) <= 1e-9;
+}
+
+/**
+ * Validates a flag before it is written to the local store.
+ *
+ * @param input The flag to validate.
+ * @param allowLegacyRules Accept rules that were stored before the store
+ * matched production's stricter validation, so unrelated patches still apply.
+ */
+export function validateFlagInput(
+	input: unknown,
+	allowLegacyRules = false
+): asserts input is FlagInput {
 	if (!isRecord(input)) {
 		throw new Error("Flag input must be an object");
 	}
@@ -280,7 +317,7 @@ export function validateFlagInput(input: unknown): asserts input is FlagInput {
 			throw new Error(`Flag '${key}' rule conditions must be a list`);
 		}
 		for (const condition of rule.conditions) {
-			validateCondition(key, condition, MAX_CONDITION_DEPTH);
+			validateCondition(key, condition, MAX_CONDITION_DEPTH, allowLegacyRules);
 		}
 		if (typeof rule.serve_variation !== "string") {
 			throw new Error(`Flag '${key}' rule served variation must be a string`);
@@ -315,7 +352,8 @@ export function validateFlagInput(input: unknown): asserts input is FlagInput {
 				typeof percentage !== "number" ||
 				!Number.isFinite(percentage) ||
 				percentage < 0 ||
-				percentage > 100
+				percentage > 100 ||
+				(!allowLegacyRules && !hasAtMostTwoDecimals(percentage))
 			) {
 				throw new Error(
 					`Flag '${key}' rollout percentage must be a number between 0 and 100`

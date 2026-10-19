@@ -1,3 +1,8 @@
+import { convertToWranglerConfig } from "@cloudflare/config";
+import {
+	convertConfigToBindings,
+	printBindings,
+} from "@cloudflare/workers-utils";
 import {
 	CorePaths,
 	getDefaultDevRegistryPath,
@@ -5,11 +10,17 @@ import {
 } from "miniflare";
 import open from "open";
 import colors from "picocolors";
-import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
+import type {
+	ParsedInputContainerConfig,
+	ParsedInputWorkerConfig,
+	ParsedOutputContainerConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
+import type { ContainerApp } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
@@ -55,20 +66,36 @@ export function addShortcuts(
 			const workerConfigs = ctx.allWorkerConfigs;
 
 			for (const workerConfig of workerConfigs) {
-				const bindings =
-					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-						workerConfig
-					);
+				const wranglerConfig = convertToWranglerConfig({
+					worker: workerConfig,
+					containers: [],
+				});
+				const bindings = convertConfigToBindings(
+					{
+						...wranglerConfig,
+						durable_objects:
+							wranglerConfig.durable_objects === undefined
+								? undefined
+								: {
+										...wranglerConfig.durable_objects,
+										bindings: wranglerConfig.durable_objects.bindings ?? [],
+									},
+					},
+					{ usePreviewIds: true }
+				);
 
-				wrangler.unstable_printBindings(bindings, {
-					tailConsumers: workerConfig.tail_consumers,
-					streamingTailConsumers: workerConfig.streaming_tail_consumers,
-					containers: workerConfig.containers,
+				printBindings(bindings, {
+					tailConsumers: wranglerConfig.tail_consumers,
+					streamingTailConsumers: wranglerConfig.streaming_tail_consumers,
+					containers: getWorkerContainersForDisplay({
+						workerConfig,
+						containers: ctx.resolvedPluginConfig.containers,
+					}),
 					warnIfNoBindings: true,
 					isMultiWorker: workerConfigs.length > 1,
 					name: workerConfig.name ?? "Your Worker",
 					registry: getWorkerRegistry(registryPath),
-					log: (message: string) => viteServer.config.logger.info(message),
+					log: (message) => viteServer.config.logger.info(message),
 				});
 			}
 		},
@@ -156,4 +183,54 @@ export function addShortcuts(
 			extendTunnelExpiryShortcut,
 		],
 	});
+}
+
+/**
+ * Creates the small legacy display shape consumed by `printBindings` directly
+ * from input Container definitions and Worker export links.
+ */
+export function getWorkerContainersForDisplay(options: {
+	workerConfig: ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
+	containers: Array<ParsedInputContainerConfig | ParsedOutputContainerConfig>;
+}): ContainerApp[] {
+	const containersByName = new Map(
+		options.containers.map((container) => [container.name, container])
+	);
+	const displayContainers: ContainerApp[] = [];
+	for (const [className, workerExport] of Object.entries(
+		options.workerConfig.exports ?? {}
+	)) {
+		if (
+			workerExport.type !== "durable-object" ||
+			!("container" in workerExport) ||
+			workerExport.container === undefined
+		) {
+			continue;
+		}
+		const container = containersByName.get(workerExport.container);
+		if (container === undefined) {
+			continue;
+		}
+		if (container.schedulingPolicy === "durable-object") {
+			displayContainers.push({
+				name: container.name,
+				class_name: className,
+				scheduling_policy: "durable_object",
+			});
+			continue;
+		}
+		const image = container.image;
+		displayContainers.push({
+			name: container.name,
+			class_name: className,
+			image:
+				"dockerfile" in image
+					? image.dockerfile
+					: "reference" in image
+						? image.reference
+						: image.localReference,
+			scheduling_policy: container.schedulingPolicy,
+		});
+	}
+	return displayContainers;
 }

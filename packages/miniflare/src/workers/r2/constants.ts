@@ -3,7 +3,8 @@ export const R2Limits = {
 	MAX_KEY_SIZE: 1024,
 	// https://developers.cloudflare.com/r2/platform/limits/
 	MAX_VALUE_SIZE: 5_368_709_120 - 5_242_880, // 5 GiB - 5 MiB
-	MAX_METADATA_SIZE: 2048, // 2048 B
+	// https://developers.cloudflare.com/r2/api/error-codes/#object-errors
+	MAX_METADATA_SIZE: 8192, // 8 KiB
 	MIN_MULTIPART_PART_SIZE: 5 * 1024 * 1024,
 	MIN_MULTIPART_PART_SIZE_TEST: 50,
 } as const;

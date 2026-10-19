@@ -11,17 +11,14 @@ import {
 	normalizeContainerImageRepositoryName,
 	startContainerBuild,
 } from "./build";
+import { resolveInputContainerImage } from "./input-container-image";
 import { runDockerCmdWithOutput, verifyDockerInstalled } from "./utils";
+import type { InputContainerImage } from "./input-container-image";
 import type { WriteContainerConfigOptions } from "@cloudflare/build-output-utils";
 import type {
 	ParsedInputContainerConfig,
 	ParsedOutputContainerConfig,
 } from "@cloudflare/config";
-
-type InputContainerImage = Extract<
-	ParsedInputContainerConfig,
-	{ image: unknown }
->["image"];
 
 type OutputContainerImage = Extract<
 	ParsedOutputContainerConfig,
@@ -168,11 +165,14 @@ async function buildContainerImage(options: {
 	buildId: string;
 	localTags: Set<string>;
 }): Promise<OutputContainerImage> {
-	if ("reference" in options.image) {
-		return { reference: options.image.reference };
+	const image = resolveInputContainerImage({
+		image: options.image,
+		root: options.root,
+	});
+	if ("reference" in image) {
+		return image;
 	}
 
-	const pathToDockerfile = path.resolve(options.root, options.image.dockerfile);
 	const localTag = createBuildOutputImageTag({
 		root: options.root,
 		repositoryName: options.repositoryName,
@@ -187,12 +187,9 @@ async function buildContainerImage(options: {
 	const build = await startContainerBuild({
 		build: {
 			tag: localTag,
-			pathToDockerfile,
-			buildContext:
-				options.image.buildContext === undefined
-					? path.dirname(pathToDockerfile)
-					: path.resolve(options.root, options.image.buildContext),
-			args: options.image.buildVars,
+			pathToDockerfile: image.dockerfile,
+			buildContext: image.buildContext,
+			args: image.buildVars,
 			platform: "linux/amd64",
 		},
 		pathToDocker: options.pathToDocker,

@@ -12,6 +12,7 @@ import type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
+	AnalyticsSQLBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,
@@ -22,6 +23,7 @@ import type {
 	HyperdriveBinding,
 	ImagesBinding,
 	JsonBinding,
+	K2Binding,
 	KvBinding,
 	LogfwdrBinding,
 	MediaBinding,
@@ -42,8 +44,7 @@ import type {
 	VpcServiceBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
-	// TODO: re-enable when workflow bindings return.
-	// WorkflowBinding,
+	WorkflowBinding,
 } from "./bindings";
 import type { ConfigInput } from "./definition";
 import type {
@@ -53,6 +54,7 @@ import type {
 	DurableObjectRenamedExport,
 	DurableObjectTransferredExport,
 	WorkerEntrypointExport,
+	WorkflowExport,
 } from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
@@ -62,6 +64,16 @@ import type {
 	QueueConsumerTrigger,
 	ScheduledTrigger,
 } from "./triggers";
+
+/** Traffic served by a custom domain on the parent Worker. */
+export interface CustomDomain {
+	/** Parent hostname for production and generated Preview subdomains. */
+	hostname: string;
+	/** Serve production traffic on this hostname. */
+	production: boolean;
+	/** Serve Previews on subdomains of this hostname. */
+	previews: boolean;
+}
 
 /** Account-level values shared by the resources in a configuration. */
 export interface Settings {
@@ -94,6 +106,7 @@ type Binding =
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
 	| AnalyticsEngineDatasetBinding
+	| AnalyticsSQLBinding
 	| ArtifactsBinding
 	| AssetsBinding
 	| BrowserBinding
@@ -104,6 +117,7 @@ type Binding =
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding
+	| K2Binding
 	| KvBinding
 	| LogfwdrBinding
 	| MediaBinding
@@ -123,9 +137,8 @@ type Binding =
 	| VpcNetworkBinding
 	| VpcServiceBinding
 	| WorkerBinding
-	| WorkerLoaderBinding;
-// TODO: re-enable when workflow bindings return.
-// | WorkflowBinding;
+	| WorkerLoaderBinding
+	| WorkflowBinding;
 
 /**
  * Union of all trigger definitions accepted in `triggers`.
@@ -140,7 +153,8 @@ type Trigger =
 /**
  * Union of all export definitions accepted in `exports`. Worker entries
  * configure WorkerEntrypoint exports. Durable Object entries configure live
- * classes and tombstone lifecycle operations.
+ * classes and tombstone lifecycle operations. Workflow entries declare the
+ * Workflows defined by the Worker.
  */
 type Export =
 	| DurableObjectCreatedExport
@@ -148,8 +162,8 @@ type Export =
 	| DurableObjectRenamedExport
 	| DurableObjectTransferredExport
 	| DurableObjectExpectingTransferExport
-	| WorkerEntrypointExport;
-// TODO: support Workflows
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /** An image source accepted in an authored Container configuration. */
 type ContainerImage =
@@ -176,7 +190,7 @@ type ContainerImage =
 	  };
 
 /** Application-wide observability settings shared by all Containers. */
-interface ContainerObservabilityConfig {
+export interface ContainerObservabilityConfig {
 	/** Whether observability is enabled. */
 	enabled?: boolean;
 	logs?: {
@@ -216,10 +230,29 @@ interface BaseContainerConfig {
 	 * @hidden
 	 */
 	unsafe?: Record<string, unknown>;
+
+	ssh?: {
+		/**
+		 * If enabled, users with write access to the Container application can
+		 * connect to it over SSH.
+		 *
+		 * @default true
+		 */
+		enabled: boolean;
+		/**
+		 * Port that the SSH service is running on.
+		 *
+		 * @default 22
+		 */
+		port?: number;
+	};
+
+	/** SSH public keys to put in the Container's authorized_keys file. */
+	authorizedKeys?: Array<{ name: string; publicKey: string }>;
 }
 
 /** A Container application managed with a standard scheduling policy. */
-interface StandardContainerConfig extends BaseContainerConfig {
+export interface StandardContainerConfig extends BaseContainerConfig {
 	/** Configures observability and optional targeting for Container instances. */
 	observability?: StandardContainerObservabilityConfig;
 
@@ -272,25 +305,6 @@ interface StandardContainerConfig extends BaseContainerConfig {
 	 */
 	schedulingPolicy?: "default" | "regional";
 
-	ssh?: {
-		/**
-		 * If enabled, users with write access to the Container application can
-		 * connect to it over SSH.
-		 *
-		 * @default false
-		 */
-		enabled: boolean;
-		/**
-		 * Port that the SSH service is running on.
-		 *
-		 * @default 22
-		 */
-		port?: number;
-	};
-
-	/** SSH public keys to put in the Container's authorized_keys file. */
-	authorizedKeys?: Array<{ name: string; publicKey: string }>;
-
 	/** Scheduling constraints for Container placement. */
 	constraints?: {
 		/** Limit Container placement to specific geographic regions. */
@@ -298,7 +312,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 			"ENAM" | "WNAM" | "EEUR" | "WEUR" | "APAC" | "SAM" | "ME" | "OC" | "AFR"
 		>;
 		/** Restrict Containers to compliance boundaries. */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 	};
 
 	rollout?: {
@@ -339,7 +353,7 @@ interface StandardContainerConfig extends BaseContainerConfig {
 }
 
 /** A Container application managed by a Durable Object. */
-interface DurableObjectContainerConfig extends BaseContainerConfig {
+export interface DurableObjectContainerConfig extends BaseContainerConfig {
 	schedulingPolicy: "durable-object";
 	/**
 	 * Configures application-wide observability. Instance targeting is not
@@ -424,6 +438,11 @@ export interface WorkerConfig {
 		notFoundHandling?: "single-page-application" | "404-page" | "none";
 
 		/**
+		 * The public URL prefix under which the application is served.
+		 */
+		basePath?: string;
+
+		/**
 		 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
 		 *
 		 * Can also be `true`, indicating that every request should be routed to the User Worker.
@@ -433,10 +452,14 @@ export interface WorkerConfig {
 
 	/**
 	 * Custom domains that your Worker should be published to.
+	 * Strings serve production traffic only. Objects select production,
+	 * Preview traffic, or both; at least one must be enabled.
+	 * Domain settings are applied when deploying the parent Worker.
+	 * Preview uploads use the parent's existing hosting without applying domains.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
 	 */
-	domains?: string[];
+	domains?: Array<string | CustomDomain>;
 
 	/**
 	 * Event triggers — fetch routes, queue consumers, cron schedules, Email
@@ -568,6 +591,19 @@ export interface WorkerConfig {
 	};
 
 	/**
+	 * Cloudflare Access configuration for this Worker.
+	 */
+	access?: {
+		/** Local development simulation of Cloudflare Access authentication. */
+		dev?: {
+			/** The Access application audience tag (`aud`). */
+			aud: string;
+			/** Mock identity returned by `ctx.access.getIdentity()`. */
+			identity?: Record<string, unknown>;
+		};
+	};
+
+	/**
 	 * Whether we use `<name>.<subdomain>.workers.dev` to
 	 * test and deploy your Worker.
 	 *
@@ -623,21 +659,26 @@ export interface WorkerConfig {
 
 	/**
 	 * Bindings exposed on the Worker's `env` object. Construct entries with
-	 * `bindings.kv(...)`, `bindings.r2(...)`, etc.
+	 * `bindings.kv(...)`, `bindings.r2(...)`, etc. Entries set to `false`,
+	 * `null`, or `undefined` are omitted, which allows bindings to be included
+	 * conditionally.
 	 */
-	env?: Record<string, Binding>;
+	env?: Record<string, Binding | false | null | undefined>;
 
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's
 	 * key is the exported class name; the value configures the export.
-	 *
-	 * Only one export kind is currently supported:
 	 *
 	 * - Construct entries with `exports.durableObject(...)`.
 	 * - Declares Durable Object classes exported from this Worker.
 	 *   For more information about Durable Objects, see the documentation at
 	 *   https://developers.cloudflare.com/workers/learning/using-durable-objects.
 	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
+	 *
+	 * - Construct entries with `exports.workflow(...)`.
+	 * - Declares Workflows defined by this Worker.
+	 *   For more information about Workflows, see the documentation at
+	 *   https://developers.cloudflare.com/workflows/.
 	 */
 	exports?: Record<string, Export>;
 }

@@ -930,6 +930,27 @@ describe("flagship", () => {
 			expect(std.out).toContain("Updated split");
 		});
 
+		it("rounds split thresholds to two decimal places", async ({ expect }) => {
+			const flag = {
+				key: "model",
+				enabled: true,
+				default_variation: "a",
+				variations: { a: "v1", b: "v2", c: "v3" },
+				rules: [],
+			};
+			mockGet("apps/app-1/flags/model", flag);
+			const body = captureBody("put", "apps/app-1/flags/model", flag);
+			await runWrangler(
+				"flagship flags split app-1 model -w a=1 -w b=1 -w c=1"
+			);
+			const { rules } = (await body) as {
+				rules: Array<{ rollout: { percentage: number } }>;
+			};
+			expect(rules.map((rule) => rule.rollout.percentage)).toEqual([
+				33.33, 66.67, 100,
+			]);
+		});
+
 		it("configures a single rollout", async ({ expect }) => {
 			mockGet("apps/app-1/flags/new-ui", {
 				key: "new-ui",
@@ -1930,7 +1951,7 @@ describe("flagship", () => {
 			await runWrangler(
 				"flagship flags evaluate app-1 new-ui --targeting-key user-1 --local"
 			);
-			expect(std.out).toContain("SPLIT");
+			expect(std.out).toContain("TARGETING_MATCH");
 			expect(std.out).toContain("true");
 		});
 

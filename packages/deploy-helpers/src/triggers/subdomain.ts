@@ -2,18 +2,12 @@ import {
 	APIError,
 	configFileName,
 	getComplianceRegionSubdomain,
+	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import {
-	confirm,
-	createCloudflareClient,
-	fetchResult,
-	logger,
-	prompt,
-} from "../shared/context";
+import { confirm, fetchResult, logger, prompt } from "../shared/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
-import type { Worker } from "cloudflare/resources/workers/beta/workers/workers";
 
 type WorkersDevSubdomainRegistrationContext = "workers_dev" | "workflows";
 
@@ -28,7 +22,7 @@ type WorkersDevSubdomainLookup =
 	| { subdomain: string }
 	| { unauthorizedError: APIError };
 
-export type WorkerSubdomain = Worker.Subdomain & {
+export type WorkerSubdomain = {
 	enabled: boolean;
 	previews_enabled: boolean;
 	url?: string;
@@ -166,9 +160,14 @@ export async function getWorkerSubdomain(
 	accountId: string,
 	workerName: string
 ): Promise<WorkerSubdomain> {
-	const worker = await createCloudflareClient(
-		complianceConfig
-	).workers.beta.workers.get(workerName, { account_id: accountId });
+	const worker = await retryOnAPIFailure(
+		() =>
+			fetchResult<{ subdomain: Partial<WorkerSubdomain> }>(
+				complianceConfig,
+				`/accounts/${accountId}/workers/workers/${workerName}`
+			),
+		logger
+	);
 	return {
 		...worker.subdomain,
 		enabled: worker.subdomain.enabled ?? false,
@@ -263,7 +262,7 @@ async function registerSubdomain(
 				} else if (subdomainAvailabilityCheckError.code === 10031) {
 					if (automaticSubdomain) {
 						throw new UserError(
-							`Wrangler could not automatically register "${potentialName}" as your workers.dev subdomain because the name is unavailable. Register a different subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+							`Could not automatically register "${potentialName}" as your workers.dev subdomain because the name is unavailable. Register a different subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
 							{
 								telemetryMessage:
 									"workers dev automatic registration name unavailable",
@@ -277,7 +276,7 @@ async function registerSubdomain(
 				} else {
 					if (automaticSubdomain) {
 						throw new UserError(
-							`Wrangler could not verify whether "${potentialName}" is available as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+							`Could not verify whether "${potentialName}" is available as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
 							{
 								telemetryMessage:
 									"workers dev automatic registration availability check failed",
@@ -321,7 +320,7 @@ async function registerSubdomain(
 			const subdomainCreationError = err as { code?: number };
 			if (automaticSubdomain) {
 				throw new UserError(
-					`Wrangler could not automatically register "${potentialName}" as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+					`Could not automatically register "${potentialName}" as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
 					{
 						telemetryMessage:
 							"workers dev automatic registration creation failed",

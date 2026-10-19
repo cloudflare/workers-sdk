@@ -122,6 +122,11 @@ export function convertConfigToBindings(
 				output[binding] = { type: "browser", ...x };
 				break;
 			}
+			case "analytics": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "analytics", ...x };
+				break;
+			}
 			case "durable_objects": {
 				for (const { name, ...x } of info.bindings ?? []) {
 					output[name] = { type: "durable_object_namespace", ...x };
@@ -278,6 +283,15 @@ export function convertConfigToBindings(
 				}
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "pipeline", ...x };
+				}
+				break;
+			}
+			case "k2": {
+				if (pages) {
+					break;
+				}
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "k2", ...x };
 				}
 				break;
 			}

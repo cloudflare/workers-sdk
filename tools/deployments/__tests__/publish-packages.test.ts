@@ -13,6 +13,7 @@ import {
 	escapePackageName,
 	filterUnpublished,
 	findPublishablePackages,
+	getDistTag,
 	publishAllPackages,
 	publishTier,
 	waitForPropagation,
@@ -281,6 +282,7 @@ describe("the real workspace", () => {
 			    "@cloudflare/build-output-utils",
 			    "@cloudflare/cli-shared-helpers",
 			    "@cloudflare/pages-shared",
+			    "@cloudflare/runtime-types",
 			    "@cloudflare/workers-auth",
 			    "wrangler",
 			  ],
@@ -306,9 +308,6 @@ describe("the real workspace", () => {
 			tiers.findIndex((tier) => tier.some((pkg) => pkg.name === name));
 
 		expect(tierOf("wrangler")).toBeGreaterThan(tierOf("miniflare"));
-		expect(tierOf("@cloudflare/vite-plugin")).toBeGreaterThan(
-			tierOf("wrangler")
-		);
 		expect(tierOf("@cloudflare/vitest-plugin")).toBeGreaterThan(
 			tierOf("wrangler")
 		);
@@ -441,6 +440,32 @@ describe("filterUnpublished()", () => {
 		expect(unpublished.map((p) => p.name)).toEqual(["brand-new"]);
 		expect(registry.requests).toHaveLength(1);
 		expect(clock.now()).toBe(0);
+	});
+});
+
+describe("getDistTag()", () => {
+	it("should derive stable and prerelease tags", ({ expect }) => {
+		expect(getDistTag("1.2.3")).toBe("latest");
+		expect(getDistTag("5.20261006.2-beta")).toBe("beta");
+		expect(getDistTag("2.0.0-beta.0")).toBe("beta");
+		expect(getDistTag("2.0.0-beta.sha-abcdef123")).toBe("beta");
+	});
+
+	it("should reject invalid versions and numeric prerelease tags", ({
+		expect,
+	}) => {
+		expect(() => getDistTag("not-a-version")).toThrow(
+			"Cannot derive an npm dist-tag"
+		);
+		expect(() => getDistTag("2.0.0-0")).toThrow(
+			"Cannot use prerelease identifier"
+		);
+	});
+
+	it("should reject latest as a prerelease tag", ({ expect }) => {
+		expect(() => getDistTag("2.0.0-latest.0")).toThrow(
+			"Cannot use prerelease identifier latest as an npm dist-tag"
+		);
 	});
 });
 
@@ -731,7 +756,6 @@ describe("publishAllPackages()", () => {
 			packagesDir,
 			dryRun: false,
 			registry: REGISTRY,
-			distTag: "latest",
 			concurrency: 4,
 			propagation: {
 				skip: false,

@@ -47,6 +47,40 @@ describe("resolveAndParseConfig", () => {
 		});
 	});
 
+	it("omits conditionally disabled env bindings", async ({ expect }) => {
+		const config = defineConfig(({ mode }) => ({
+			worker: {
+				name: "conditional-bindings",
+				compatibilityDate,
+				env: {
+					ALWAYS: bindings.text("always"),
+					STAGING_ONLY: mode === "staging" && bindings.text("staging"),
+					PRODUCTION_ONLY:
+						mode === "staging" ? null : bindings.text("production"),
+					ALWAYS_DISABLED: undefined,
+				},
+			},
+		}));
+
+		const staging = await resolveAndParseConfig(config, {
+			isPreview: false,
+			mode: "staging",
+		});
+		const production = await resolveAndParseConfig(config, {
+			isPreview: false,
+			mode: "production",
+		});
+
+		expect(staging.success && staging.data.worker?.env).toEqual({
+			ALWAYS: { type: "text", value: "always" },
+			STAGING_ONLY: { type: "text", value: "staging" },
+		});
+		expect(production.success && production.data.worker?.env).toEqual({
+			ALWAYS: { type: "text", value: "always" },
+			PRODUCTION_ONLY: { type: "text", value: "production" },
+		});
+	});
+
 	it("resolves a project with defined and inline resources", async ({
 		expect,
 	}) => {
@@ -177,6 +211,48 @@ describe("resolveAndParseConfig", () => {
 			expect(result.data.worker?.env).toMatchObject({
 				FIRST: { worker: "jobs-test" },
 				SECOND: { worker: "jobs-test" },
+			});
+		}
+	});
+
+	it("resolves a Worker reference in a Workflow binding", async ({
+		expect,
+	}) => {
+		const workflowWorker = defineWorker({
+			name: "workflow-worker",
+			compatibilityDate,
+			exports: {
+				GreetingWorkflow: workerExports.workflow({ name: "greeting" }),
+			},
+		});
+		const config = defineConfig({
+			worker: defineWorker({
+				name: "web",
+				compatibilityDate,
+				env: {
+					GREETING: bindings.workflow({
+						name: "greeting",
+						worker: workflowWorker,
+						exportName: "GreetingWorkflow",
+					}),
+				},
+			}),
+		});
+
+		const result = await resolveAndParseConfig(config, {
+			isPreview: false,
+			mode: undefined,
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.worker?.env).toMatchObject({
+				GREETING: {
+					type: "workflow",
+					name: "greeting",
+					worker: "workflow-worker",
+					exportName: "GreetingWorkflow",
+				},
 			});
 		}
 	});

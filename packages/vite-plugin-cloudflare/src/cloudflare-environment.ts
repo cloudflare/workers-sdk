@@ -115,7 +115,9 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			{
 				headers: {
 					[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
-					[WORKER_ENTRY_PATH_HEADER]: encodeURIComponent(workerConfig.main),
+					[WORKER_ENTRY_PATH_HEADER]: encodeURIComponent(
+						workerConfig.entrypoint
+					),
 					[IS_ENTRY_WORKER_HEADER]: String(options.isEntryWorker),
 					[ENVIRONMENT_NAME_HEADER]: this.name,
 					[IS_PARENT_ENVIRONMENT_HEADER]: String(options.isParentEnvironment),
@@ -195,9 +197,21 @@ export const cloudflareBuiltInModules = [
 
 const defaultConditions = ["workerd", "worker", "module", "browser"];
 
+// workerd runs every es2026 feature natively, including `using` and `await using`.
+// Oxc (Vite 8) accepts an es2026 target, so it leaves them as written instead of
+// lowering them to `_usingCtx` helpers. esbuild (Vite 6 and 7) has no es2026
+// target and rejects the string, so it stays on es2024 and is told about
+// `using` through `esbuildSupported` instead.
 // v8 supports es2024 features as of 11.9
 // workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
-const target = "es2024";
+const target = isRolldown ? "es2026" : "es2024";
+// `build.cssTarget` defaults to `build.target`, and Vite's lightningcss target
+// conversion has no es2026 entry, so CSS keeps the es2024 target.
+const cssTarget = "es2024";
+
+// Syntax newer than es2024 that workerd runs natively, so esbuild should emit
+// it as written. Kept in step with Wrangler's COMMON_ESBUILD_OPTIONS.
+const esbuildSupported = { using: true };
 
 // TODO: consider removing in next major to use default extensions
 const resolveExtensions = [
@@ -213,12 +227,27 @@ const resolveExtensions = [
 	".ctx",
 ];
 
+/**
+ * Worker source maps are written to the Worker's build output rather than its
+ * public assets, so emit them by default for readable stack traces. Users can
+ * opt out with Vite's `build.sourcemap`.
+ */
+function getWorkerSourcemap(
+	userConfig: vite.UserConfig,
+	environmentName: string
+): vite.BuildEnvironmentOptions["sourcemap"] {
+	return (
+		userConfig.environments?.[environmentName]?.build?.sourcemap ??
+		userConfig.build?.sourcemap ??
+		true
+	);
+}
+
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
 	userConfig,
 	mode,
 	environmentName,
-	isEntryWorker,
 	isParentEnvironment,
 	hasNodeJsCompat,
 }: {
@@ -226,7 +255,6 @@ export function createCloudflareEnvironmentOptions({
 	userConfig: vite.UserConfig;
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
-	isEntryWorker: boolean;
 	isParentEnvironment: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
@@ -275,9 +303,11 @@ export function createCloudflareEnvironmentOptions({
 				return new vite.BuildEnvironment(name, config);
 			},
 			target,
+			cssTarget,
 			emitAssets: true,
-			manifest: isEntryWorker,
+			manifest: isParentEnvironment,
 			outDir: getOutputDirectory(userConfig, environmentName),
+			sourcemap: getWorkerSourcemap(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
 			...(isRolldown
@@ -301,7 +331,7 @@ export function createCloudflareEnvironmentOptions({
 			// Longer term solution is to use full-bundle mode rather than `optimizeDeps`
 			ignoreOutdatedRequests: true,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
-			entries: vite.normalizePath(workerConfig.main),
+			entries: vite.normalizePath(workerConfig.entrypoint),
 			exclude: [
 				...cloudflareBuiltInModules,
 				...nonPrefixedNodeModules,
@@ -336,6 +366,7 @@ export function createCloudflareEnvironmentOptions({
 							conditions: [...defaultConditions, "development"],
 							resolveExtensions,
 							target,
+							supported: esbuildSupported,
 							define,
 						},
 					}),
@@ -372,6 +403,44 @@ function getProcessEnvReplacements(
 				"global.process.env": "{}",
 				"globalThis.process.env": "{}",
 			};
+}
+
+/**
+ * On Vite 6 and 7, Vite's `vite:esbuild-transpile` build plugin lowers each
+ * chunk to `build.target` with the top-level `esbuild` options. Those options
+ * have no per-environment form, and setting `supported.using` on them would
+ * also leave `using` unlowered in the client bundle. Each environment's
+ * `config` reads its own resolved options before falling back to the top
+ * level, so giving the Worker environments their own `esbuild` scopes the
+ * override to them.
+ */
+export function applyWorkerEsbuildSupported(
+	resolvedViteConfig: vite.ResolvedConfig,
+	environmentNames: Iterable<string>
+): void {
+	if (isRolldown) {
+		return;
+	}
+
+	/* eslint-disable-next-line @typescript-eslint/no-deprecated --
+		We only reach this on Vite 6 and 7, where `esbuild` is the live option.
+		Vite 8 deprecates it in favour of `oxc` and returns above. */
+	const topLevelEsbuild = resolvedViteConfig.esbuild;
+	if (topLevelEsbuild === false) {
+		return;
+	}
+
+	const esbuild = {
+		...topLevelEsbuild,
+		supported: { ...topLevelEsbuild.supported, ...esbuildSupported },
+	};
+
+	for (const environmentName of environmentNames) {
+		const environment = resolvedViteConfig.environments[environmentName];
+		if (environment) {
+			Object.assign(environment, { esbuild });
+		}
+	}
 }
 
 export function initRunners(

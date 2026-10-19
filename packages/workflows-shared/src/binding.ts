@@ -1,6 +1,9 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+import { ms } from "itty-time";
+import { z } from "zod";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
+	duplicateInstanceError,
 	isUserTriggeredDelete,
 	isUserTriggeredPause,
 	isUserTriggeredRestart,
@@ -189,23 +192,126 @@ export interface WorkflowInstanceRestartOptions {
 	from?: RestartFromStep;
 }
 
+export type WorkflowBatchCreateOptions =
+	| {
+			count: number;
+			params?: unknown;
+			retention?: WorkflowInstanceCreateOptions<unknown>["retention"];
+			locationHint?: WorkflowInstanceCreateOptions<unknown>["locationHint"];
+			instances?: never;
+	  }
+	| {
+			instances: WorkflowInstanceCreateOptions<unknown>[];
+			count?: never;
+			params?: never;
+			retention?: never;
+			locationHint?: never;
+	  };
+
+export type WorkflowBatchCreateResult = {
+	created: { id: string }[];
+	errors: {
+		index: number;
+		id?: string;
+		code: number;
+		message: string;
+	}[];
+};
+
+// Numeric durations are whole milliseconds; both forms must be positive. A
+// single refinement keeps one error message for every invalid duration.
+const retentionDurationSchema = z.union([z.number(), z.string()]).refine(
+	(value) => {
+		if (typeof value === "number") {
+			return Number.isInteger(value) && value > 0;
+		}
+		try {
+			const duration = ms(value);
+			return Number.isFinite(duration) && duration > 0;
+		} catch {
+			return false;
+		}
+	},
+	{
+		message:
+			"Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.",
+	}
+);
+
+const workflowInstanceCreateOptionsSchema = z.object({
+	id: z.string().optional(),
+	params: z.any().optional(),
+	retention: z
+		.object({
+			successRetention: retentionDurationSchema.optional(),
+			errorRetention: retentionDurationSchema.optional(),
+		})
+		.optional(),
+	locationHint: z
+		.enum([
+			"wnam",
+			"weur",
+			"enam",
+			"eeur",
+			"apac",
+			"apac-ne",
+			"apac-se",
+			"oc",
+			"sam",
+			"afr",
+			"me",
+		])
+		.optional(),
+});
+
 // this.env.WORKFLOW is WorkflowBinding
 export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
 	}
 
-	public async create({
-		id = crypto.randomUUID(),
-		params = {},
-	}: WorkflowInstanceCreateOptions = {}): Promise<{
+	async #instanceExists(id: string): Promise<boolean> {
+		// Avoid recreating the engine while its previous persistence is being deleted.
+		await waitForPersistedInstanceDelete(this.env, id);
+		const stub = this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
+		return await stub.hasInstance();
+	}
+
+	public async create(options: WorkflowInstanceCreateOptions = {}): Promise<{
 		id: string;
 	}> {
+		// Destructuring defaults apply only to absent fields: an explicit null
+		// id must reach the validation below rather than becoming a generated
+		// id.
+		const { id = crypto.randomUUID() } = options;
 		if (!isValidWorkflowInstanceId(id)) {
 			throw new WorkflowError("Workflow instance has invalid id");
 		}
 
-		await waitForPersistedInstanceDelete(this.env, id);
+		// Deterministic (caller-provided) ids carry a documented uniqueness
+		// contract: creating an instance with an id that already exists throws
+		// and the existing instance is retained. The existence marker is
+		// committed by the engine's init(), dispatched fire-and-forget below,
+		// so duplicate creates racing ahead of that commit can all resolve
+		// successfully; the engine's init() guards make the extra dispatch a
+		// no-op, so the race cannot double-execute the workflow body.
+		if (options.id !== undefined && (await this.#instanceExists(id))) {
+			throw duplicateInstanceError(id);
+		}
+
+		return this.#createUnchecked(id, options);
+	}
+
+	// Creation body shared by create() and createBatch(), which perform their
+	// own validation and existence checks before calling this.
+	async #createUnchecked(
+		id: string,
+		options: WorkflowInstanceCreateOptions
+	): Promise<{ id: string }> {
+		const { params = {} } = options;
+		if (options.id === undefined) {
+			await waitForPersistedInstanceDelete(this.env, id);
+		}
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 		const introspectionSession = workflowIntrospectionSessions.get(
@@ -278,21 +384,200 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		return handle;
 	}
 
+	// A Workflow on `ctx.exports` is built by workerd's
+	// `cloudflare-internal:workflows-api`, which addresses each instance by id
+	// on the binding rather than calling the instance returned by `get()`. Each
+	// method goes through `get()` so a missing instance still fails with
+	// `instance.not_found`.
+
+	public async getInstance(id: string): Promise<{ id: string }> {
+		await this.get(id);
+		return { id };
+	}
+
+	public async pause(id: string): Promise<void> {
+		await (await this.get(id)).pause();
+	}
+
+	public async resume(id: string): Promise<void> {
+		await (await this.get(id)).resume();
+	}
+
+	public async terminate(
+		id: string,
+		options?: WorkflowInstanceTerminateOptions
+	): Promise<void> {
+		await (await this.get(id)).terminate(options);
+	}
+
+	public async restart(
+		id: string,
+		options?: WorkflowInstanceRestartOptions
+	): Promise<void> {
+		await (await this.get(id)).restart(options);
+	}
+
+	public async status(id: string): Promise<InstanceStatus> {
+		return await (await this.get(id)).status();
+	}
+
+	public async sendEvent(
+		id: string,
+		event: { type: string; payload: unknown }
+	): Promise<void> {
+		await (await this.get(id)).sendEvent(event);
+	}
+
+	public async subscribe(
+		id: string,
+		options?: WorkflowInstanceSubscribeOptions
+	): Promise<WorkflowInstanceSubscription> {
+		return await (await this.get(id)).subscribe(options);
+	}
+
 	public async createBatch(
 		batch: WorkflowInstanceCreateOptions<unknown>[]
-	): Promise<{ id: string }[]> {
+	): Promise<{ id: string }[]>;
+	public async createBatch(
+		options: WorkflowBatchCreateOptions
+	): Promise<WorkflowBatchCreateResult>;
+	public async createBatch(
+		options:
+			| WorkflowInstanceCreateOptions<unknown>[]
+			| WorkflowBatchCreateOptions
+	): Promise<{ id: string }[] | WorkflowBatchCreateResult> {
+		const isLegacyBatch = Array.isArray(options);
+		let batch: WorkflowInstanceCreateOptions<unknown>[];
+		if (isLegacyBatch) {
+			batch = options;
+		} else if (options !== null && typeof options === "object") {
+			if ("count" in options && options.count !== undefined) {
+				if (!Number.isInteger(options.count) || options.count <= 0) {
+					throw createWorkflowError("count must be a positive integer", "body");
+				}
+				if (options.count > 100) {
+					throw createWorkflowError(
+						"batchCreate only supports 100 instances at a time",
+						"body"
+					);
+				}
+				batch = Array.from({ length: options.count }, () => ({
+					params: options.params,
+					retention: options.retention,
+					locationHint: options.locationHint,
+				}));
+			} else if ("instances" in options && Array.isArray(options.instances)) {
+				batch = options.instances;
+			} else {
+				throw createWorkflowError("Provided argument is invalid", "body");
+			}
+		} else {
+			throw createWorkflowError("Provided argument is invalid", "body");
+		}
+
 		if (batch.length === 0) {
+			if (!isLegacyBatch) {
+				throw createWorkflowError("Batch size exceeds maximum allowed", "body");
+			}
 			throw new Error(
 				"WorkflowError: batchCreate should have at least 1 instance"
 			);
 		}
+		if (batch.length > 100) {
+			if (!isLegacyBatch) {
+				throw createWorkflowError("Batch size exceeds maximum allowed", "body");
+			}
+			throw new Error(
+				"WorkflowError: batchCreate only supports 100 instances at a time"
+			);
+		}
 
-		return await Promise.all(
-			batch.map(async (val) => {
-				const res = await this.create(val);
-				return res;
+		// Validate only object-form entries before probing ids, which persists storage;
+		// the deprecated array form retains create()'s option validation behavior.
+		for (const instanceOptions of batch) {
+			if (!isLegacyBatch) {
+				const validation =
+					workflowInstanceCreateOptionsSchema.safeParse(instanceOptions);
+				if (!validation.success) {
+					throw createWorkflowError(
+						validation.error.issues.map((issue) => issue.message).join("; "),
+						"body"
+					);
+				}
+			}
+			// Reserved ids are only rejected by the object form; the deprecated
+			// array form keeps accepting every id that create() accepts.
+			if (
+				instanceOptions.id !== undefined &&
+				(!isValidWorkflowInstanceId(instanceOptions.id) ||
+					(!isLegacyBatch &&
+						(["batch", "terminate", "terminateAll"].includes(
+							instanceOptions.id
+						) ||
+							/^cf_[0-9a-f]{64}$/.test(instanceOptions.id))))
+			) {
+				if (isLegacyBatch) {
+					throw new WorkflowError("Workflow instance has invalid id");
+				}
+				throw createWorkflowError(
+					"Instance ID is invalid",
+					"instance.invalid_id"
+				);
+			}
+		}
+
+		// Probe each distinct caller-provided id once, concurrently, instead of
+		// sequentially per entry (and a second time inside create()).
+		const providedIds = [
+			...new Set(
+				batch
+					.map((instanceOptions) => instanceOptions.id)
+					.filter((id): id is string => id !== undefined)
+			),
+		];
+		const existing = new Set<string>();
+		await Promise.all(
+			providedIds.map(async (id) => {
+				if (await this.#instanceExists(id)) {
+					existing.add(id);
+				}
 			})
 		);
+
+		// Existing and repeated ids are excluded from the created instances. The
+		// legacy form omits them, while the object form reports their input indexes.
+		const result: WorkflowBatchCreateResult = { created: [], errors: [] };
+		const seenIds = new Set<string>();
+		for (const [index, instanceOptions] of batch.entries()) {
+			if (instanceOptions.id !== undefined) {
+				if (seenIds.has(instanceOptions.id)) {
+					if (!isLegacyBatch) {
+						result.errors.push({
+							index,
+							id: instanceOptions.id,
+							code: 10415,
+							message: "workflows.api.error.instance.duplicate_in_batch",
+						});
+					}
+					continue;
+				}
+				seenIds.add(instanceOptions.id);
+				if (existing.has(instanceOptions.id)) {
+					if (!isLegacyBatch) {
+						result.errors.push({
+							index,
+							id: instanceOptions.id,
+							code: 10405,
+							message: "workflows.api.error.instance.already_exists",
+						});
+					}
+					continue;
+				}
+			}
+			const { id = crypto.randomUUID() } = instanceOptions;
+			result.created.push(await this.#createUnchecked(id, instanceOptions));
+		}
+		return isLegacyBatch ? result.created : result;
 	}
 
 	/**

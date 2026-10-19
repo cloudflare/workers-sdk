@@ -83,3 +83,39 @@ test("serializes Durable Object container options", ({ expect }) => {
 	expect(device.cgroupPermissions).toBe("rwm");
 	expect(privileges.securityOpt.get(0)).toBe("apparmor:unconfined");
 });
+
+test("serializes a Worker's Workflows engine", ({ expect }) => {
+	const buffer = serializeConfig({
+		services: [
+			{
+				name: "worker",
+				worker: {
+					workflowsEngine: {
+						actorClass: { name: "engine", entrypoint: "Engine" },
+						workflows: [
+							{
+								className: "MyWorkflow",
+								name: "my-workflow",
+								bindingService: {
+									name: "workflows:my-workflow",
+									entrypoint: "WorkflowBinding",
+								},
+							},
+						],
+					},
+				},
+			},
+		],
+	});
+	const engine = new Message(buffer, false).getRoot(CapnpConfig).services.get(0)
+		.worker.workflowsEngine;
+	const workflow = engine.workflows.get(0);
+
+	expect(engine.actorClass.name).toBe("engine");
+	expect(engine.actorClass.entrypoint).toBe("Engine");
+	expect(engine.workflows.length).toBe(1);
+	expect(workflow.className).toBe("MyWorkflow");
+	expect(workflow.name).toBe("my-workflow");
+	expect(workflow.bindingService.name).toBe("workflows:my-workflow");
+	expect(workflow.bindingService.entrypoint).toBe("WorkflowBinding");
+});

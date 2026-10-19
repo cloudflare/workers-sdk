@@ -683,6 +683,44 @@ describe("deploy", () => {
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
+			it("should not check for zone route conflicts when only custom domains are configured", async ({
+				expect,
+			}) => {
+				// Regression test for https://github.com/cloudflare/workers-sdk/issues/15863:
+				// with `workers_dev: false` and only custom-domain routes, every deploy
+				// after the first used to query `/zones/:zoneId/workers/routes`, which
+				// fails for API tokens without `Zone > Workers Routes > Read` permission.
+				writeWranglerConfig({
+					workers_dev: false,
+					routes: [{ pattern: "api.example.com", custom_domain: true }],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				let zoneRoutesRequests = 0;
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				msw.use(
+					http.get("*/zones/:zoneId/workers/routes", () => {
+						zoneRoutesRequests++;
+						return HttpResponse.json(createFetchResult([]));
+					})
+				);
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+
+				await runWrangler("deploy ./index");
+
+				expect(zoneRoutesRequests).toBe(0);
+				expect(std.out).toContain("api.example.com (custom domain)");
+			});
+
 			it("should pass enabled and previews_enabled to the custom domains API", async ({
 				expect,
 			}) => {

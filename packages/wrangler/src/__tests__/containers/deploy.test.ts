@@ -12,6 +12,7 @@ import {
 } from "@cloudflare/containers-shared";
 import {
 	runInTempDir,
+	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
@@ -81,12 +82,7 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	it.for([
-		{ bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES", containers: [] },
 		{ bindingName: "USER_IMAGES", containers: [] },
-		{
-			bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
-			containers: undefined,
-		},
 		{ bindingName: "USER_IMAGES", containers: undefined },
 	])(
 		"keeps variables without generating Container image bindings: %j",
@@ -150,7 +146,7 @@ describe("wrangler deploy with containers", () => {
 			})
 		);
 		await expect(runWrangler("deploy index.js")).rejects.toThrow(
-			"The Worker version was deployed, but Wrangler could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command"
+			"The Worker version was deployed, but its Durable Object-managed Container application settings were not fully applied. Re-run the same `wrangler deploy` command"
 		);
 		expect(applicationRequests).toBe(1);
 		expect(std.out).toContain("Uploaded test-name");
@@ -500,7 +496,7 @@ describe("wrangler deploy with containers", () => {
 			[
 				defaultDOBinding,
 				{
-					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					name: "USER_IMAGES",
 					type: "json",
 					json: {
 						ExampleDurableObject: { tools: deployedImage },
@@ -585,7 +581,7 @@ describe("wrangler deploy with containers", () => {
 				[
 					defaultDOBinding,
 					{
-						name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+						name: "USER_IMAGES",
 						type: "json",
 						json: {
 							ExampleDurableObject: { tools: deployedImage },
@@ -762,7 +758,7 @@ describe("wrangler deploy with containers", () => {
 			[
 				defaultDOBinding,
 				{
-					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					name: "USER_IMAGES",
 					type: "json",
 					json: { ExampleDurableObject: {} },
 				},
@@ -795,7 +791,7 @@ describe("wrangler deploy with containers", () => {
 			"test-name:version:0",
 			[
 				{
-					name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
+					name: "USER_IMAGES",
 					type: "json",
 					json: {
 						ManagedDurableObject: { tools: deployedImage },
@@ -3103,7 +3099,7 @@ describe("wrangler deploy with containers", () => {
 			]);
 
 			await expect(runWrangler("deploy index.js")).rejects.toThrow(
-				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config and deploy once, then deploy again with target_instance_percentage or target_instance_count."
+				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your wrangler.toml and deploy once, then deploy again with target_instance_percentage or target_instance_count."
 			);
 		});
 
@@ -3111,7 +3107,7 @@ describe("wrangler deploy with containers", () => {
 			expect,
 		}) => {
 			mockGetVersion("Galaxy-Class");
-			writeWranglerConfig({
+			const config = {
 				...DEFAULT_DURABLE_OBJECTS,
 				containers: [
 					{
@@ -3122,6 +3118,11 @@ describe("wrangler deploy with containers", () => {
 						},
 					},
 				],
+			};
+			writeWranglerConfig(config, "./wrangler.jsonc");
+			writeRedirectedWranglerConfig({
+				...config,
+				userConfigPath: "./wrangler.jsonc",
 			});
 
 			mockGetApplications([
@@ -3152,7 +3153,7 @@ describe("wrangler deploy with containers", () => {
 			]);
 
 			await expect(runWrangler("deploy index.js")).rejects.toThrow(
-				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config and deploy once, then deploy again with target_instance_percentage or target_instance_count."
+				"Application-level observability targeting cannot be enabled for container my-container while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your wrangler.jsonc and deploy once, then deploy again with target_instance_percentage or target_instance_count."
 			);
 		});
 
@@ -4225,6 +4226,10 @@ describe("wrangler deploy with containers", () => {
 							name: "managed-app",
 							scheduling_policy: "durable_object",
 							observability: { logs: { enabled: true } },
+							ssh: { enabled: true },
+							authorized_keys: [
+								{ name: "laptop", public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1" },
+							],
 							unsafe: { configuration: { experimental_flags: ["test-flag"] } },
 							...(imageMap === "populated" && { images: { app: { image } } }),
 						},
@@ -4292,7 +4297,16 @@ describe("wrangler deploy with containers", () => {
 							"managed-app",
 							namespaceId
 						),
-						configuration: { experimental_flags: ["test-flag"] },
+						configuration: {
+							experimental_flags: ["test-flag"],
+							wrangler_ssh: { enabled: true },
+							authorized_keys: [
+								{
+									name: "laptop",
+									public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+								},
+							],
+						},
 						observability: { logs: { enabled: true } },
 					},
 				]);

@@ -6,7 +6,7 @@ import {
 	cleanupContainers,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
-import { getDockerPath } from "@cloudflare/workers-utils";
+import { configFileName, getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	buildPublicUrl,
@@ -233,7 +233,9 @@ export async function convertToConfigBundle(
 
 export type ContainerImagePreparationState = {
 	dockerPath: string;
+	configFileName: string;
 	complianceRegion: StartDevWorkerOptions["complianceRegion"];
+	hasContainers: boolean;
 	containerOptions: ContainerDevOptions[];
 };
 
@@ -310,7 +312,12 @@ export class LocalRuntimeController extends RuntimeController {
 	): Promise<ContainerImagePreparationState | undefined> {
 		const nextState: ContainerImagePreparationState = {
 			dockerPath: data.config.dev.dockerPath ?? getDockerPath(),
+			configFileName: configFileName(data.config.config),
 			complianceRegion: data.config.complianceRegion,
+			hasContainers: Boolean(
+				data.config.dev.enableContainers &&
+				data.config.containerDevPlan !== undefined
+			),
 			containerOptions: data.config.dev.enableContainers
 				? (data.config.containerDevPlan?.containerOptions ?? [])
 				: [],
@@ -318,15 +325,11 @@ export class LocalRuntimeController extends RuntimeController {
 
 		if (
 			isDeepStrictEqual(previousState, nextState) ||
-			nextState.containerOptions.length === 0
+			!nextState.hasContainers
 		) {
 			return nextState;
 		}
 
-		assert(
-			data.config.dev.containerBuildId,
-			"Build ID should be set when Container images require preparation"
-		);
 		this.dockerPath = nextState.dockerPath;
 		for (const { image_tag } of nextState.containerOptions) {
 			this.containerImageTagsSeen.add(image_tag);
@@ -349,6 +352,8 @@ export class LocalRuntimeController extends RuntimeController {
 			complianceConfig: {
 				compliance_region: nextState.complianceRegion,
 			},
+			configFileName: nextState.configFileName,
+			registryConfigureCommand: "wrangler containers registries configure",
 		});
 		if (this.containerBeingBuilt) {
 			this.containerBeingBuilt.abortRequested = false;

@@ -35,6 +35,8 @@ const durableObjectContainer = defineContainer({
 		fallback: { reference: "registry.example.com/fallback:latest" },
 	},
 	observability: { enabled: true, logs: { enabled: true } },
+	ssh: { enabled: true },
+	authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
 });
 
 const standaloneContainer = defineContainer({

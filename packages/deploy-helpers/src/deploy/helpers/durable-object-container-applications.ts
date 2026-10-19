@@ -14,6 +14,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import {
+	configFileName,
 	getResolvedDurableObjectContainerApps,
 	getDockerPath,
 	getDurableObjectClassNameToUseSQLiteMap,
@@ -28,6 +29,7 @@ import type { ApiVersion } from "./versions-types";
 import type {
 	Application,
 	CreateDurableObjectApplicationRequest,
+	DurableObjectApplicationConfiguration,
 } from "@cloudflare/containers-shared";
 import type {
 	Config,
@@ -55,6 +57,8 @@ type PrepareDurableObjectContainerApplicationsArgs = {
 	scriptName: string;
 	/** Version uploads cannot initialize applications without named images. */
 	requireExistingImageLessApplications?: boolean;
+	deployCommand?: string;
+	versionsUploadCommand?: string;
 };
 
 export type DurableObjectContainerApplication = Pick<
@@ -69,25 +73,30 @@ export type VersionedDurableObjectContainerApplication =
 
 export type PreparedContainerImages = Record<string, Record<string, string>>;
 
-// Keep the DO request narrower than the generated scheduler configuration.
-type DurableObjectApplicationSettings = {
-	configuration?: { experimental_flags: string[] };
-	observability?: { logs: { enabled: boolean } };
-};
+type DurableObjectApplicationSettings = Pick<
+	CreateDurableObjectApplicationRequest,
+	"configuration" | "observability"
+>;
 
 type DurableObjectApplicationState = Pick<
 	Application,
 	"id" | "name" | "scheduling_policy" | "durable_objects" | "observability"
-> & { configuration?: { experimental_flags?: string[] } };
+> & { configuration?: DurableObjectApplicationConfiguration };
 
 function getApplicationSettings(
 	container: DurableObjectContainerApp
 ): DurableObjectApplicationSettings {
 	const flags = container.unsafe?.configuration?.experimental_flags;
-	return {
-		...(flags !== undefined && {
-			configuration: { experimental_flags: flags },
+	const configuration: DurableObjectApplicationConfiguration = {
+		...(flags !== undefined && { experimental_flags: flags }),
+		// The Containers API calls `ssh` `wrangler_ssh`.
+		...(container.ssh !== undefined && { wrangler_ssh: container.ssh }),
+		...(container.authorized_keys !== undefined && {
+			authorized_keys: container.authorized_keys,
 		}),
+	};
+	return {
+		...(Object.keys(configuration).length > 0 && { configuration }),
 		...(container.observability !== undefined && {
 			observability: {
 				logs: {
@@ -104,6 +113,24 @@ function normalizeFlags(flags: string[] = []): string[] {
 	return [...new Set(flags)].sort();
 }
 
+/** Whether any explicitly configured application configuration differs from the existing one. */
+function hasConfigurationChanged(
+	configured: DurableObjectApplicationConfiguration,
+	existing: DurableObjectApplicationConfiguration = {}
+): boolean {
+	return (
+		(configured.experimental_flags !== undefined &&
+			!isDeepStrictEqual(
+				normalizeFlags(configured.experimental_flags),
+				normalizeFlags(existing.experimental_flags)
+			)) ||
+		(configured.wrangler_ssh !== undefined &&
+			!isDeepStrictEqual(configured.wrangler_ssh, existing.wrangler_ssh)) ||
+		(configured.authorized_keys !== undefined &&
+			!isDeepStrictEqual(configured.authorized_keys, existing.authorized_keys))
+	);
+}
+
 function isRegistryImage(
 	image: DurableObjectContainerImage
 ): image is Extract<DurableObjectContainerImage, { image: string }> {
@@ -114,7 +141,7 @@ function toCreateApplicationRequest(
 	{ name }: DurableObjectContainerApplication,
 	namespaceId: string,
 	settings: DurableObjectApplicationSettings = {}
-): CreateDurableObjectApplicationRequest & DurableObjectApplicationSettings {
+): CreateDurableObjectApplicationRequest {
 	return {
 		name,
 		scheduling_policy: SchedulingPolicy.DURABLE_OBJECT,
@@ -286,7 +313,17 @@ function validateApplicationIdentity(
 export async function validateImageLessContainerApplicationsForUpload(
 	config: ContainerlessConfig,
 	containers: DurableObjectContainerApp[],
-	{ accountId, scriptName }: { accountId: string; scriptName: string }
+	{
+		accountId,
+		scriptName,
+		deployCommand,
+		versionsUploadCommand,
+	}: {
+		accountId: string;
+		scriptName: string;
+		deployCommand: string;
+		versionsUploadCommand: string;
+	}
 ): Promise<void> {
 	const imageLessContainers = getResolvedDurableObjectContainerApps(
 		containers,
@@ -316,7 +353,7 @@ export async function validateImageLessContainerApplicationsForUpload(
 		}
 		if (namespace === undefined || existing === undefined) {
 			throw new UserError(
-				`Container "${container.name}" has no named images and has not been provisioned. Run \`wrangler deploy\` to create its Durable Object-managed application before using \`wrangler versions upload\`, or configure at least one named image.`,
+				`Container "${container.name}" has no named images and has not been provisioned. Run \`${deployCommand}\` to create its Durable Object-managed application before using \`${versionsUploadCommand}\`, or configure at least one named image.`,
 				{
 					telemetryMessage:
 						"versions upload image less container application missing",
@@ -354,10 +391,7 @@ async function applyApplication(
 	const patch: DurableObjectApplicationSettings = {};
 	if (
 		settings.configuration !== undefined &&
-		!isDeepStrictEqual(
-			normalizeFlags(settings.configuration.experimental_flags),
-			normalizeFlags(existing.configuration?.experimental_flags)
-		)
+		hasConfigurationChanged(settings.configuration, existing.configuration)
 	) {
 		patch.configuration = settings.configuration;
 	}
@@ -570,11 +604,14 @@ export async function prepareDurableObjectContainerApplications(
 		scriptName,
 		dispatchNamespace,
 		requireExistingImageLessApplications = false,
+		deployCommand,
+		versionsUploadCommand,
 	}: PrepareDurableObjectContainerApplicationsArgs
 ): Promise<PreparedContainerImages> {
 	validateDurableObjectContainerApplications(
 		config,
-		durableObjectContainerConfig
+		durableObjectContainerConfig,
+		configFileName(config.configPath, config.userConfigPath)
 	);
 	const managedContainers = getResolvedDurableObjectContainerApps(
 		durableObjectContainerConfig,
@@ -616,10 +653,15 @@ export async function prepareDurableObjectContainerApplications(
 
 	if (!dryRun && requireExistingImageLessApplications) {
 		assert(accountId);
+		assert(deployCommand, "Expected deploy command for versions upload");
+		assert(
+			versionsUploadCommand,
+			"Expected versions upload command for versions upload"
+		);
 		await validateImageLessContainerApplicationsForUpload(
 			config,
 			durableObjectContainerConfig,
-			{ accountId, scriptName }
+			{ accountId, scriptName, deployCommand, versionsUploadCommand }
 		);
 	}
 

@@ -6,7 +6,7 @@ import {
 	QueuesError,
 	Response,
 } from "miniflare";
-import { test } from "vitest";
+import { test, vi } from "vitest";
 import { z } from "zod";
 import {
 	MiniflareDurableObjectControlStub,
@@ -1211,4 +1211,77 @@ test("validates message size", async ({ expect }) => {
 	await expect(mf.dispatchFetch("http://localhost")).rejects.toThrow(
 		"Queue send failed: message length of 128001 bytes exceeds limit of 128000"
 	);
+});
+
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/15670.
+test("enqueues more undelayed messages than workerd's active timeout limit", async ({
+	expect,
+}) => {
+	const messagesPerBatch = 100;
+	const batchCount = 200;
+	const total = messagesPerBatch * batchCount;
+	let delivered = 0;
+
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						QUEUE: { type: "queue", name: "QUEUE" },
+						REPORTER: {
+							type: "fetcher",
+							handler: async (request) => {
+								delivered += Number(await request.text());
+								return new Response();
+							},
+						},
+					},
+					triggers: [
+						{
+							type: "queue",
+							name: "QUEUE",
+							maxBatchSize: messagesPerBatch,
+							maxBatchTimeout: 0,
+						},
+					],
+					manifest: singleModuleManifest(`export default {
+      async fetch(request, env, ctx) {
+        const { searchParams } = new URL(request.url);
+        const batchCount = Number(searchParams.get("batchCount"));
+        const messagesPerBatch = Number(searchParams.get("messagesPerBatch"));
+        const batch = Array.from({ length: messagesPerBatch }, (_, i) => ({ body: "message-" + i }));
+        try {
+          for (let i = 0; i < batchCount; i++) {
+            await env.QUEUE.sendBatch(batch);
+          }
+        } catch (e) {
+          return new Response(String(e?.stack ?? e), { status: 500 });
+        }
+        return new Response(null, { status: 204 });
+      },
+
+      async queue(batch, env, ctx) {
+        await env.REPORTER.fetch("http://localhost", {
+          method: "POST",
+          body: String(batch.messages.length),
+        });
+      },
+    }`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch(
+		`http://localhost/?batchCount=${batchCount}&messagesPerBatch=${messagesPerBatch}`
+	);
+	expect(res.status, await res.text()).toBe(204);
+
+	await vi.waitFor(() => expect(delivered).toBe(total), {
+		timeout: 20_000,
+		interval: 50,
+	});
 });

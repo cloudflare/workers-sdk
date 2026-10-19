@@ -801,6 +801,7 @@ export const containersRegistriesCredentialsCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {

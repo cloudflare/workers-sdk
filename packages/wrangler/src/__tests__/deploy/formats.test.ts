@@ -1137,7 +1137,7 @@ export default{
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name="metadata"
 
-				{"main_module":"index.js","bindings":[],"compatibility_date":"2022-01-12","compatibility_flags":[]}
+				{"main_module":"index.js","bindings":[],"compatibility_date":"2022-01-12","compatibility_flags":[],"keep_bindings":["secret_text","secret_key"]}
 				------formdata-undici-0.test
 				Content-Disposition: form-data; name="index.js"; filename="index.js"
 				Content-Type: application/javascript+module
@@ -1166,6 +1166,11 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name="index.js.map"; filename="index.js.map"
+				Content-Type: application/source-map
+
+				{"version":3,"sources":["index.js"],"sourceRoot":"","sourcesContent":["\\nimport txt from './textfile.txt';\\nimport hello from './hello.wasm';\\nexport default{\\n  async fetch(){\\n\\t\\tconst module = await WebAssembly.instantiate(hello);\\n    return new Response(txt + module.exports.hello);\\n  }\\n}\\n"],"mappings":";AACA,OAAO,SAAS;AAChB,OAAO,WAAW;AAClB,IAAO,gBAAO;AAAA,EACZ,MAAM,QAAO;AACb,UAAM,SAAS,MAAM,YAAY,YAAY,KAAK;AAChD,WAAO,IAAI,SAAS,MAAM,OAAO,QAAQ,KAAK;AAAA,EAChD;AACF;","names":[],"file":"index.js"}
 				------formdata-undici-0.test--
 				"
 			`);
@@ -1282,7 +1287,7 @@ export default{
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name="metadata"
 
-				{"main_module":"index.js","bindings":[{"name":"KV","type":"kv_namespace","namespace_id":"kv-namespace-id"}],"compatibility_date":"2022-01-12","compatibility_flags":[]}
+				{"main_module":"index.js","bindings":[{"name":"KV","type":"kv_namespace","namespace_id":"kv-namespace-id"}],"compatibility_date":"2022-01-12","compatibility_flags":[],"keep_bindings":["secret_text","secret_key"]}
 				------formdata-undici-0.test
 				Content-Disposition: form-data; name="index.js"; filename="index.js"
 				Content-Type: application/javascript+module
@@ -1311,6 +1316,11 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name="index.js.map"; filename="index.js.map"
+				Content-Type: application/source-map
+
+				{"version":3,"sources":["index.js"],"sourceRoot":"","sourcesContent":["\\nimport txt from './textfile.txt';\\nimport hello from './hello.wasm';\\nexport default{\\n  async fetch(){\\n\\t\\tconst module = await WebAssembly.instantiate(hello);\\n    return new Response(txt + module.exports.hello);\\n  }\\n}\\n"],"mappings":";AACA,OAAO,SAAS;AAChB,OAAO,WAAW;AAClB,IAAO,gBAAO;AAAA,EACZ,MAAM,QAAO;AACb,UAAM,SAAS,MAAM,YAAY,YAAY,KAAK;AAChD,WAAO,IAAI,SAAS,MAAM,OAAO,QAAQ,KAAK;AAAA,EAChD;AACF;","names":[],"file":"index.js"}
 				------formdata-undici-0.test--
 				"
 			`);

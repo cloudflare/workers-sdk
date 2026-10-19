@@ -65,6 +65,14 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 	if (container.unsafe !== undefined) {
 		converted.unsafe = container.unsafe;
 	}
+	if (container.ssh !== undefined) {
+		converted.ssh = container.ssh;
+	}
+	if (container.authorizedKeys !== undefined) {
+		converted.authorized_keys = container.authorizedKeys.map(
+			({ name, publicKey }) => ({ name, public_key: publicKey })
+		);
+	}
 	if (container.schedulingPolicy === "durable-object") {
 		converted.scheduling_policy = "durable_object";
 		if (container.images !== undefined) {
@@ -113,14 +121,6 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 	}
 	if (container.schedulingPolicy !== undefined) {
 		converted.scheduling_policy = container.schedulingPolicy;
-	}
-	if (container.ssh !== undefined) {
-		converted.ssh = container.ssh;
-	}
-	if (container.authorizedKeys !== undefined) {
-		converted.authorized_keys = container.authorizedKeys.map(
-			({ name, publicKey }) => ({ name, public_key: publicKey })
-		);
 	}
 	if (container.constraints !== undefined) {
 		converted.constraints = container.constraints;
@@ -259,6 +259,9 @@ function convertTopLevel(
 	if (config.observability !== undefined) {
 		result.observability = convertObservability(config.observability);
 	}
+	if (config.access !== undefined) {
+		result.access = config.access;
+	}
 	if (config.cache !== undefined) {
 		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
 		const cache: RawCacheConfig = {
@@ -373,6 +376,7 @@ function convertBindingsAndAssets(
 	const mtlsCertificates: NonNullable<RawConfig["mtls_certificates"]> = [];
 	const hyperdrive: NonNullable<RawConfig["hyperdrive"]> = [];
 	const pipelines: NonNullable<RawConfig["pipelines"]> = [];
+	const k2: NonNullable<RawConfig["k2"]> = [];
 	const flagship: NonNullable<RawConfig["flagship"]> = [];
 	const aiSearch: NonNullable<RawConfig["ai_search"]> = [];
 	const aiSearchNamespaces: NonNullable<RawConfig["ai_search_namespaces"]> = [];
@@ -481,6 +485,13 @@ function convertBindingsAndAssets(
 				});
 				break;
 			}
+			case "analytics": {
+				result.analytics = omitUndefined({
+					binding: name,
+					remote: binding.dev?.remote,
+				});
+				break;
+			}
 			case "d1": {
 				d1Databases.push(
 					omitUndefined({
@@ -584,6 +595,16 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						stream: binding.name,
+						remote: binding.dev?.remote,
+					})
+				);
+				break;
+			}
+			case "k2": {
+				k2.push(
+					omitUndefined({
+						binding: name,
+						stream: binding.stream,
 						remote: binding.dev?.remote,
 					})
 				);
@@ -725,17 +746,15 @@ function convertBindingsAndAssets(
 				workerLoaders.push({ binding: name });
 				break;
 			}
-			// TODO: re-enable when workflow bindings return.
-			// case "workflow": {
-			// 	workflows.push(
-			// 		omitUndefined({
-			// 			binding: name,
-			// 			class_name: binding.exportName,
-			// 			script_name: binding.worker,
-			// 		})
-			// 	);
-			// 	break;
-			// }
+			case "workflow": {
+				workflows.push({
+					binding: name,
+					name: binding.name,
+					class_name: binding.exportName,
+					script_name: binding.worker,
+				});
+				break;
+			}
 		}
 	}
 
@@ -760,6 +779,9 @@ function convertBindingsAndAssets(
 	}
 	if (pipelines.length) {
 		result.pipelines = pipelines;
+	}
+	if (k2.length) {
+		result.k2 = k2;
 	}
 	if (flagship.length) {
 		result.flagship = flagship;
@@ -837,6 +859,9 @@ function convertBindingsAndAssets(
 		if (config.assets?.notFoundHandling !== undefined) {
 			assets.not_found_handling = config.assets.notFoundHandling;
 		}
+		if (config.assets?.basePath !== undefined) {
+			assets.base_path = config.assets.basePath;
+		}
 		if (config.assets?.runWorkerFirst !== undefined) {
 			assets.run_worker_first = config.assets.runWorkerFirst;
 		}
@@ -862,6 +887,23 @@ function convertExports(
 	for (const [exportName, value] of Object.entries(exports)) {
 		if (value.type === "worker") {
 			converted[exportName] = value;
+			continue;
+		}
+		if (value.type === "workflow") {
+			const { defaultRetention, ...workflow } = value;
+			converted[exportName] = {
+				...workflow,
+				...(defaultRetention !== undefined && {
+					default_retention: {
+						...(defaultRetention.successRetention !== undefined && {
+							success_retention: defaultRetention.successRetention,
+						}),
+						...(defaultRetention.errorRetention !== undefined && {
+							error_retention: defaultRetention.errorRetention,
+						}),
+					},
+				}),
+			};
 			continue;
 		}
 
@@ -1000,6 +1042,12 @@ function convertTriggers(
 						protocol: trigger.protocol,
 						port: trigger.port,
 						address: trigger.address,
+						...(trigger.protocol === "udp"
+							? {
+									idle_timeout_ms: trigger.idleTimeoutMs,
+									max_pending_bytes: trigger.maxPendingBytes,
+								}
+							: {}),
 					})
 				);
 				break;
@@ -1040,7 +1088,16 @@ function convertDomains(
 		? [...result.routes]
 		: [];
 	for (const domain of config.domains) {
-		routes.push({ pattern: domain, custom_domain: true });
+		routes.push(
+			typeof domain === "string"
+				? { pattern: domain, custom_domain: true }
+				: {
+						pattern: domain.hostname,
+						custom_domain: true,
+						enabled: domain.production,
+						previews_enabled: domain.previews,
+					}
+		);
 	}
 	result.routes = routes;
 }

@@ -79,6 +79,11 @@ export const triggersDeployCommand = createCommand({
 			firstDeploy: false,
 			dryRun: args.dryRun,
 			validated: false,
+			queueCreateCommand: (queueName) => `wrangler queues create ${queueName}`,
+			workersDevConfigFieldName: "workers_dev",
+			workersDevConfigAssignment: (value) => `workers_dev = ${value}`,
+			previewUrlsConfigFieldName: "preview_urls",
+			previewUrlsConfigAssignment: (value) => `preview_urls = ${value}`,
 			...props,
 		});
 	},

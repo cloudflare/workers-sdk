@@ -287,6 +287,30 @@ describe("MiniflareWorkerConfigSchema", () => {
 		});
 	});
 
+	test("preserves workflow exports", ({ expect }) => {
+		const parsed = MiniflareWorkerConfigSchema.parse({
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			exports: {
+				GreetingWorkflow: { type: "workflow", name: "greeting" },
+				BatchWorkflow: {
+					type: "workflow",
+					name: "batch",
+					limits: { steps: 10 },
+				},
+			},
+		});
+
+		expect(parsed.exports).toEqual({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: {
+				type: "workflow",
+				name: "batch",
+				limits: { steps: 10 },
+			},
+		});
+	});
+
 	test("rejects unresolved Container images on live Durable Object exports", ({
 		expect,
 	}) => {

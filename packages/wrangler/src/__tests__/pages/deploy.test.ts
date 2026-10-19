@@ -7,7 +7,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { x } from "tinyexec";
 import dedent from "ts-dedent";
 /* eslint-disable-next-line no-restricted-imports --

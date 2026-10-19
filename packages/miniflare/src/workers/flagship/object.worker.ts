@@ -23,9 +23,12 @@ export type WriteResult =
 
 type InvalidResult = Extract<WriteResult, { status: "invalid" }>;
 
-function invalidResult(input: FlagInput): InvalidResult | undefined {
+function invalidResult(
+	input: FlagInput,
+	allowLegacyRules = false
+): InvalidResult | undefined {
 	try {
-		validateFlagInput(input);
+		validateFlagInput(input, allowLegacyRules);
 	} catch (error) {
 		return {
 			status: "invalid",
@@ -119,7 +122,7 @@ export class FlagshipObject extends DurableObject {
 			variations: changes.variations ?? current.variations,
 			rules: changes.rules ?? current.rules,
 		};
-		return this.#validateAndWrite(next);
+		return this.#validateAndWrite(next, changes.rules === undefined);
 	}
 
 	put(input: FlagInput): WriteResult {
@@ -154,8 +157,8 @@ export class FlagshipObject extends DurableObject {
 		return true;
 	}
 
-	#validateAndWrite(input: FlagInput): WriteResult {
-		return invalidResult(input) ?? this.#writeResult(input);
+	#validateAndWrite(input: FlagInput, allowLegacyRules = false): WriteResult {
+		return invalidResult(input, allowLegacyRules) ?? this.#writeResult(input);
 	}
 
 	#writeResult(input: FlagInput): WriteResult {

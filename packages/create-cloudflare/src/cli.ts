@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
 import { chdir } from "node:process";
 import {
 	cancel,
@@ -20,19 +18,21 @@ import {
 	detectPackageManager,
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
-import { installWrangler, npmInstall } from "helpers/packages";
+import { installCf, installWrangler, npmInstall } from "helpers/packages";
 import {
 	getPnpmIgnoredBuildsGuidance,
 	isIgnoredBuildsError,
 	writePnpmBuildApprovals,
 } from "helpers/pnpmBuildApprovals";
 import { version } from "../package.json";
+import { usesCfCli } from "./cf/config";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, offerGit } from "./git";
 import { showHelp } from "./help";
 import { reporter, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
+import { setupProjectDirectory } from "./project-directory";
 import {
 	copyTemplateFiles,
 	createContext,
@@ -40,7 +40,6 @@ import {
 	updatePackageScripts,
 	writeAgentsMd,
 } from "./templates";
-import { validateProjectDirectory } from "./validators";
 import { addTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
@@ -115,23 +114,6 @@ export const runCli = async (args: Partial<C3Args>) => {
 	logRaw("");
 };
 
-export const setupProjectDirectory = (ctx: C3Context) => {
-	// Crash if the directory already exists
-	const path = ctx.project.path;
-	const err = validateProjectDirectory(path, ctx.args);
-	if (err) {
-		throw new Error(err);
-	}
-
-	const directory = dirname(path);
-
-	// If the target is a nested directory, create the parent
-	mkdirSync(directory, { recursive: true });
-
-	// Change to the parent directory
-	chdir(directory);
-};
-
 const create = async (ctx: C3Context) => {
 	const { template } = ctx;
 
@@ -169,9 +151,13 @@ const configure = async (ctx: C3Context) => {
 		"Step 2 of 3"
 	);
 
-	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
-	// If we _didn't_ install Wrangler when using autoconfig we'd end up with a double install (one from `npx` and one from autoconfig)
-	await installWrangler();
+	if (usesCfCli(ctx.project.path)) {
+		await installCf();
+	} else {
+		// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
+		// If we _didn't_ install Wrangler when using autoconfig we'd end up with a double install (one from `npx` and one from autoconfig)
+		await installWrangler();
+	}
 
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();

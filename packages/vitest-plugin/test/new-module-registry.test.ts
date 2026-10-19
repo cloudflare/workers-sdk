@@ -80,3 +80,35 @@ test("keeps using the legacy fallback protocol when explicitly requested", async
 	const result = await vitestRun();
 	expect(await result.exitCode).toBe(0);
 });
+
+test("preserves the legacy fallback's import.meta.url rewrite", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			miniflare: {
+				compatibilityDate: "2026-08-10",
+				compatibilityFlags: ["legacy_module_registry"],
+			},
+		}),
+		"node_modules/legacy-meta/package.json": JSON.stringify({
+			name: "legacy-meta",
+			type: "module",
+			exports: "./index.mjs",
+		}),
+		"node_modules/legacy-meta/index.mjs": "export const url = import.meta.url;",
+		"index.test.ts": dedent`
+			import { url } from "legacy-meta";
+			import { it } from "vitest";
+
+			it("provides the fallback module URL", ({ expect }) => {
+				expect(url).toBe(new URL("./node_modules/legacy-meta/index.mjs", import.meta.url).href);
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+	expect(await result.exitCode, `${result.stdout}\n${result.stderr}`).toBe(0);
+});

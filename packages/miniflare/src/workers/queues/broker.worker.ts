@@ -441,7 +441,13 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			};
 
 			const delay = message.delaySecs ?? globalDelay;
-			this.timers.setTimeout(fn, delay * 1000);
+			if (delay > 0) {
+				this.timers.setTimeout(fn, delay * 1000);
+			} else {
+				// Enqueue undelayed messages directly rather than through a
+				// zero-delay timer to avoid the workerd limit on active timeouts
+				fn();
+			}
 		}
 	}
 

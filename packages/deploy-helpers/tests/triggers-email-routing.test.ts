@@ -11,6 +11,14 @@ vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
 const ACCOUNT_ID = "some-account-id";
 const WORKER_NAME = "test-name";
 const WORKER_TAG = "a7e6fb77503c41d8a7f3113c6918f10c";
+const TEST_TRIGGER_GUIDANCE = {
+	queueCreateCommand: (queueName: string) =>
+		`test-cli queue create ${queueName}`,
+	workersDevConfigFieldName: "workersDev",
+	workersDevConfigAssignment: (value: boolean) => `workersDev: ${value}`,
+	previewUrlsConfigFieldName: "previewUrls",
+	previewUrlsConfigAssignment: (value: boolean) => `previewUrls: ${value}`,
+};
 
 describe("triggersDeploy Email Routing integration", () => {
 	let metadataRequests: number;
@@ -23,20 +31,6 @@ describe("triggersDeploy Email Routing integration", () => {
 		planError = undefined;
 
 		initDeployHelpersContext({
-			createCloudflareClient: (() => ({
-				workers: {
-					beta: {
-						workers: {
-							get: async () => ({
-								subdomain: {
-									enabled: false,
-									previews_enabled: false,
-								},
-							}),
-						},
-					},
-				},
-			})) as never,
 			logger: {
 				debug() {},
 				info() {},
@@ -51,6 +45,11 @@ describe("triggersDeploy Email Routing integration", () => {
 			) => {
 				if (path.endsWith("/subdomain")) {
 					return { enabled: false, previews_enabled: false };
+				}
+				if (path.endsWith(`/workers/workers/${WORKER_NAME}`)) {
+					return {
+						subdomain: { enabled: false, previews_enabled: false },
+					};
 				}
 				if (path.endsWith(`/workers/services/${WORKER_NAME}`)) {
 					metadataRequests++;
@@ -94,6 +93,7 @@ describe("triggersDeploy Email Routing integration", () => {
 		expect,
 	}) => {
 		await triggersDeploy({
+			...TEST_TRIGGER_GUIDANCE,
 			config: config(),
 			accountId: ACCOUNT_ID,
 			scriptName: WORKER_NAME,
@@ -113,6 +113,7 @@ describe("triggersDeploy Email Routing integration", () => {
 		expect,
 	}) => {
 		await triggersDeploy({
+			...TEST_TRIGGER_GUIDANCE,
 			config: config(),
 			accountId: ACCOUNT_ID,
 			scriptName: WORKER_NAME,
@@ -134,6 +135,7 @@ describe("triggersDeploy Email Routing integration", () => {
 
 		await expect(
 			triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
 				config: config(),
 				accountId: ACCOUNT_ID,
 				scriptName: WORKER_NAME,
@@ -150,6 +152,7 @@ describe("triggersDeploy Email Routing integration", () => {
 	it("reconciles when another trigger deployment fails", async ({ expect }) => {
 		await expect(
 			triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
 				config: config(),
 				accountId: ACCOUNT_ID,
 				scriptName: WORKER_NAME,
@@ -169,36 +172,14 @@ describe("triggersDeploy Email Routing integration", () => {
 describe("triggersDeploy preflight", () => {
 	let fetchResultRequests: string[];
 	let fetchPagedListRequests: string[];
-	let workerGetRequests: Array<[string, string]>;
 	let logs: string[];
 
 	beforeEach(() => {
 		fetchResultRequests = [];
 		fetchPagedListRequests = [];
-		workerGetRequests = [];
 		logs = [];
 
 		initDeployHelpersContext({
-			createCloudflareClient: (() => ({
-				workers: {
-					beta: {
-						workers: {
-							get: async (
-								workerName: string,
-								params: { account_id: string }
-							) => {
-								workerGetRequests.push([workerName, params.account_id]);
-								return {
-									subdomain: {
-										enabled: false,
-										previews_enabled: false,
-									},
-								};
-							},
-						},
-					},
-				},
-			})) as never,
 			logger: {
 				debug() {},
 				info() {},
@@ -216,6 +197,11 @@ describe("triggersDeploy preflight", () => {
 				fetchResultRequests.push(`${init?.method ?? "GET"} ${path}`);
 				if (path.endsWith("/subdomain")) {
 					return { enabled: false, previews_enabled: false };
+				}
+				if (path.endsWith(`/workers/workers/${WORKER_NAME}`)) {
+					return {
+						subdomain: { enabled: false, previews_enabled: false },
+					};
 				}
 				if (path.endsWith(`/workers/services/${WORKER_NAME}`)) {
 					return { default_environment: { script: { tag: WORKER_TAG } } };
@@ -254,6 +240,7 @@ describe("triggersDeploy preflight", () => {
 		expect,
 	}) => {
 		await triggersDeploy({
+			...TEST_TRIGGER_GUIDANCE,
 			config: baseConfig({
 				workflows: [{ name: "workflow", class_name: "Workflow" }],
 				triggers: {
@@ -284,6 +271,7 @@ describe("triggersDeploy preflight", () => {
 	}) => {
 		await expect(
 			triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
 				config: baseConfig({
 					triggers: {
 						events: [
@@ -315,6 +303,7 @@ describe("triggersDeploy preflight", () => {
 	}) => {
 		await expect(
 			triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
 				config: baseConfig({
 					queues: {
 						producers: [{ binding: "QUEUE", queue: "missing-queue" }],
@@ -337,6 +326,7 @@ describe("triggersDeploy preflight", () => {
 
 	it("skips queue preflight when already validated", async ({ expect }) => {
 		await triggersDeploy({
+			...TEST_TRIGGER_GUIDANCE,
 			config: baseConfig({
 				queues: {
 					producers: [{ binding: "QUEUE", queue: "missing-queue" }],
@@ -353,8 +343,8 @@ describe("triggersDeploy preflight", () => {
 		});
 
 		expect(fetchPagedListRequests).toEqual([]);
-		expect(workerGetRequests).toEqual([[WORKER_NAME, ACCOUNT_ID]]);
 		expect(fetchResultRequests).toEqual([
+			`GET /accounts/${ACCOUNT_ID}/workers/workers/${WORKER_NAME}`,
 			`POST /accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/subdomain`,
 		]);
 	});

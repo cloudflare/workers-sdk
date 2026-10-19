@@ -6,11 +6,8 @@
  * loopback server (see email-store.ts for why that matters).
  */
 import { WorkerEntrypoint } from "cloudflare:workers";
-import {
-	EmailStore,
-	zStoredRoutingEmail,
-	zStoredRoutingEmailSummary,
-} from "./email-store";
+import { EmailStore } from "./email-store";
+import { zStoredRoutingEmail, zStoredRoutingEmailSummary } from "./storage";
 import type {
 	EmailListPage,
 	StoredRoutingEmail,
@@ -38,6 +35,10 @@ export default class EmailStoreHost extends WorkerEntrypoint<Env> {
 		return await this.#store().getSourceId();
 	}
 
+	async beginReceivedCapture(captureId: string): Promise<boolean> {
+		return await this.#store().beginReceivedCapture(captureId);
+	}
+
 	async storeReceivedBody(
 		captureId: string,
 		part: number,
@@ -62,11 +63,35 @@ export default class EmailStoreHost extends WorkerEntrypoint<Env> {
 		await this.#store().discardReceived(captureId);
 	}
 
-	async findReceived(
-		id: string,
+	async findReceivedByCaptureId(
+		captureId: string,
+		worker: string
+	): Promise<StoredRoutingEmail | undefined> {
+		const email = await this.#store().findReceivedByCaptureId(
+			captureId,
+			worker
+		);
+		return email === undefined ? undefined : zStoredRoutingEmail.parse(email);
+	}
+
+	async findReceivedForOperation(captureId: string, worker: string) {
+		const result = await this.#store().findReceivedForOperation(
+			captureId,
+			worker
+		);
+		return result.found && result.email !== undefined
+			? { ...result, email: zStoredRoutingEmail.parse(result.email) }
+			: result;
+	}
+
+	async findReceivedByMessageId(
+		messageId: string,
 		worker?: string
 	): Promise<StoredRoutingEmail | undefined> {
-		const email = await this.#store().findReceived(id, worker);
+		const email = await this.#store().findReceivedByMessageId(
+			messageId,
+			worker
+		);
 		return email === undefined ? undefined : zStoredRoutingEmail.parse(email);
 	}
 

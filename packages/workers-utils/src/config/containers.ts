@@ -1,5 +1,8 @@
 import { UserError } from "../errors";
-import { getDurableObjectExports } from "./durable-object-exports";
+import {
+	getDurableObjectExports,
+	isLiveDurableObjectExport,
+} from "./durable-object-exports";
 import type { Config } from "./config";
 import type { ContainerApp, Exports } from "./environment";
 
@@ -201,11 +204,7 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 		if (entry.type !== "durable-object") {
 			continue;
 		}
-		if (
-			entry.state === undefined ||
-			entry.state === "created" ||
-			entry.state === "expecting-transfer"
-		) {
+		if (isLiveDurableObjectExport(entry)) {
 			durableObjectClassNameToUseSQLiteMap.set(
 				className,
 				entry.storage === "sqlite"
@@ -225,7 +224,8 @@ export function validateDurableObjectContainerApplications(
 	},
 	containers: DurableObjectContainerApp[] = getDurableObjectContainerApps(
 		config.containers
-	)
+	),
+	configFileName = "Wrangler config file"
 ): void {
 	const allDOs = getDurableObjectClassNameToUseSQLiteMap(
 		config.migrations,
@@ -242,7 +242,7 @@ export function validateDurableObjectContainerApplications(
 		const useSQLite = allDOs.get(container.class_name);
 		if (useSQLite === undefined && maybeBoundDO === undefined) {
 			throw new UserError(
-				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
+				`The container class_name ${container.class_name} does not match any durable object class_name defined in your ${configFileName}. Note that the durable object must be defined in the same script as the container.`,
 				{ telemetryMessage: "no DO defined that matches container class_name" }
 			);
 		}

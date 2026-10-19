@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import { cleanupContainers } from "@cloudflare/containers-shared";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
@@ -9,7 +9,8 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
-import { getDockerPath, prepareContainerImagesForVite } from "../containers";
+import { getDevContainerCleanup } from "../container-cleanup";
+import { prepareContainerImagesForVite } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
 	compareExportTypes,
@@ -18,51 +19,23 @@ import {
 } from "../export-types";
 import { getDevMiniflareOptions } from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
-import {
-	createPlugin,
-	createRequestHandler,
-	debuglog,
-	satisfiesMinimumViteVersion,
-} from "../utils";
+import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
-
-let exitCallback = () => {};
-
-process.on("exit", () => {
-	exitCallback();
-});
 
 /**
  * Plugin to provide core development functionality
  */
 export const devPlugin = createPlugin("dev", (ctx) => {
-	let containerImageTags = new Set<string>();
-
 	return {
-		buildEnd() {
-			// Server restarts are handled here.
-			// Server shutdown is handled in the patched `server.close()`.
-			if (
-				ctx.resolvedViteConfig.command === "serve" &&
-				ctx.isRestartingDevServer &&
-				containerImageTags.size
-			) {
-				const dockerPath = getDockerPath();
-				cleanupContainers(dockerPath, containerImageTags);
-			}
-		},
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
-
+			const containerCleanup = getDevContainerCleanup(viteDevServer);
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
-			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
-
+			let containerOptions = initialOptions.containerOptions;
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
-			// Dispose Miniflare and clean up containers when the dev server
-			// shuts down. `buildEnd` can't be used for this under
-			// `experimental.bundledDev`.
+			// Dispose Miniflare when the dev server shuts down.
 			// Note Vite's `restartServer` calls `server.close()` on every restart, so we skip
 			// teardown while restarting.
 			const closeServer = viteDevServer.close.bind(viteDevServer);
@@ -71,14 +44,14 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					await closeServer();
 				} finally {
 					if (!ctx.isRestartingDevServer) {
-						if (containerImageTags.size) {
-							cleanupContainers(getDockerPath(), containerImageTags);
-						}
 						try {
 							await ctx.disposeMiniflare();
 						} catch (error) {
 							debuglog("Failed to dispose Miniflare instance:", error);
 						}
+					}
+					if (!containerCleanup.isRestarting) {
+						containerCleanup.cleanup();
 					}
 				}
 			};
@@ -127,7 +100,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						ctx,
 						viteDevServer
 					);
-					containerTagToOptionsMap = updatedOptions.containerTagToOptionsMap;
+					containerOptions = updatedOptions.containerOptions;
 					await ctx.startOrUpdateMiniflare(updatedOptions.miniflareOptions);
 					await initRunners(
 						ctx.resolvedPluginConfig,
@@ -190,7 +163,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				}
 
 				const staticRouting: StaticRouting | undefined =
-					entryWorkerConfig.assets?.run_worker_first === true
+					entryWorkerConfig.assets?.runWorkerFirst === true
 						? { user_worker: ["/*"] }
 						: ctx.resolvedPluginConfig.staticRouting;
 
@@ -229,7 +202,8 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 				}
 
-				if (containerTagToOptionsMap.size) {
+				if (containerOptions !== undefined) {
+					const dockerPath = getDockerPath();
 					viteDevServer.config.logger.info(
 						colors.dim(
 							colors.yellow(
@@ -239,12 +213,17 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 
 					await prepareContainerImagesForVite({
-						dockerPath: getDockerPath(),
-						containerTagToOptionsMap,
+						dockerPath,
+						containerOptions,
+						settings: ctx.resolvedPluginConfig.settings,
 						logger: viteDevServer.config.logger,
+						cliDisplayName: ctx.resolvedPluginConfig.cliDisplayName,
 					});
 
-					containerImageTags = new Set(containerTagToOptionsMap.keys());
+					containerCleanup.track(
+						dockerPath,
+						containerOptions.map(({ image_tag }) => image_tag)
+					);
 					viteDevServer.config.logger.info(
 						colors.dim(
 							colors.yellow(
@@ -252,70 +231,10 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							)
 						)
 					);
-
-					/*
-					 * Upon exiting the dev process we should ensure we perform any
-					 * containers-specific cleanup work. Vite recommends using the
-					 * `buildEnd` and `closeBundle` hooks, which are called when the
-					 * server is closed. Unfortunately none of these hooks work if the
-					 * process exits forcefully, via `ctrl+C`, and Vite provides no
-					 * other alternatives. For this reason we decided to hook into both
-					 * `buildEnd` and the `exit` event, and ensure we always cleanup
-					 * (please note that handling the `beforeExit` event, which does
-					 * support async ops, is not an option, since Vite calls
-					 * `process.exit()` imperatively, and therefore causes `beforeExit`
-					 * not to be emitted).
-					 *
-					 */
-					exitCallback = () => {
-						if (containerImageTags.size) {
-							cleanupContainers(getDockerPath(), containerImageTags);
-						}
-					};
 				}
 			}
 
 			return () => {
-				// In Vite 6, pre-middleware is placed before the host check middleware,
-				// leaving the server vulnerable to DNS rebinding attacks. We move it to
-				// after the host check middleware by re-inserting it before
-				// viteCachedTransformMiddleware. In Vite 7+, it's already in the
-				// correct position so no action is needed.
-				if (!satisfiesMinimumViteVersion("7.0.0")) {
-					const middlewareStack = viteDevServer.middlewares.stack;
-					const preMiddlewareIndex = middlewareStack.findIndex(
-						(middleware) =>
-							"name" in middleware.handle &&
-							middleware.handle.name === "cloudflarePreMiddleware"
-					);
-
-					if (preMiddlewareIndex !== -1) {
-						const [preMiddleware] = middlewareStack.splice(
-							preMiddlewareIndex,
-							1
-						);
-						assert(
-							preMiddleware,
-							"Failed to remove cloudflarePreMiddleware from stack"
-						);
-
-						const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
-							(middleware) =>
-								"name" in middleware.handle &&
-								middleware.handle.name === "viteCachedTransformMiddleware"
-						);
-						assert(
-							cachedTransformMiddlewareIndex !== -1,
-							"Failed to find viteCachedTransformMiddleware"
-						);
-						middlewareStack.splice(
-							cachedTransformMiddlewareIndex,
-							0,
-							preMiddleware
-						);
-					}
-				}
-
 				// post middleware
 				viteDevServer.middlewares.use(
 					createRequestHandler(async (request, req) => {

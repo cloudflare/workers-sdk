@@ -95,7 +95,11 @@ relying on a duplicated list of every enforced rule. In particular:
 - Lint-disable comments require a reason after `--`.
 - In Wrangler, use the logger rather than calling `console.*` directly, except
   inside the logger implementation.
-- Use the Cloudflare TypeScript SDK rather than adding direct REST API calls.
+- For Cloudflare v4 API calls, prefer the existing request helpers such as
+  `fetchResult`, `fetchListResult`, and `fetchPagedListResult`. Reuse or inject
+  these helpers in shared packages rather than adding the `cloudflare` package
+  solely for a simple request. Use the Cloudflare TypeScript SDK when its
+  generated API surface or behavior is materially useful.
 - Import `ci-info` through its default export.
 
 oxfmt determines whitespace, quoting, import order, and package.json sorting.

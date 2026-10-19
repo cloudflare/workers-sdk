@@ -1021,6 +1021,7 @@ describe("wrangler preview", () => {
 					{ binding: "MY_AE", dataset: "dataset-name" },
 				],
 				browser: { binding: "MY_BROWSER" },
+				analytics: { binding: "MY_ANALYTICS_SQL" },
 				stream: { binding: "MY_STREAM" },
 				version_metadata: { binding: "MY_VERSION_METADATA" },
 				flagship: [{ binding: "MY_FLAGS", app_id: "flagship-app-id" }],
@@ -1032,6 +1033,7 @@ describe("wrangler preview", () => {
 				MY_HYPERDRIVE: { type: "hyperdrive", id: "hyper-id" },
 				MY_AE: { type: "analytics_engine", dataset: "dataset-name" },
 				MY_BROWSER: { type: "browser" },
+				MY_ANALYTICS_SQL: { type: "analytics" },
 				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version_metadata" },
 				MY_FLAGS: { type: "flagship", app_id: "flagship-app-id" },
@@ -2986,6 +2988,85 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should keep secrets that a new deployment of an existing Preview does not set", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secrets.json",
+				JSON.stringify({ ROTATED_SECRET: "new-value" })
+			);
+			const preview = {
+				id: "preview-id-keep-secrets",
+				name: "test-preview",
+				slug: "test-preview",
+				urls: ["https://test-preview.test-worker.cloudflare.app"],
+				worker_name: "test-worker",
+				created_on: new Date().toISOString(),
+			};
+			let deploymentRequestBody:
+				| { env?: Record<string, { type: string; text?: string }> }
+				| undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => HttpResponse.json({ success: true, result: preview })
+				),
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-latest",
+								preview_id: preview.id,
+								preview_name: preview.name,
+								env: {
+									KEPT_SECRET: { type: "secret_text" },
+									ROTATED_SECRET: { type: "secret_text" },
+									CLI_VAR: { type: "secret_text" },
+									ENVIRONMENT: { type: "secret_text" },
+									OLD_VAR: { type: "plain_text", text: "old" },
+								},
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-keep-secrets",
+								preview_id: preview.id,
+								preview_name: preview.name,
+								urls: ["https://keep123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json --var CLI_VAR:from-cli"
+			);
+
+			expect(deploymentRequestBody?.env).toEqual({
+				KEPT_SECRET: { type: "inherit" },
+				// Values supplied by this deployment replace the existing secret
+				ROTATED_SECRET: { type: "secret_text", text: "new-value" },
+				CLI_VAR: { type: "plain_text", text: "from-cli" },
+				ENVIRONMENT: { type: "plain_text", text: "preview" },
+				MY_KV: { type: "kv_namespace", namespace_id: "preview-kv-id" },
+			});
+		});
+
 		test("should not warn about inheritable top-level bindings missing from previews", async ({
 			expect,
 		}) => {
@@ -3724,7 +3805,7 @@ describe("wrangler preview", () => {
 				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 				if (testCase.shouldWarn) {
 					expect(std.warn).toContain(
-						"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
+						"Custom domain Preview URLs are configured, but none are active for this Preview. If you enabled Preview URLs after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
 					);
 				} else {
 					expect(std.warn).not.toContain(
@@ -4218,17 +4299,24 @@ describe("wrangler preview", () => {
 			writeFileSync("public/index.html", "<h1>Hello</h1>");
 			writeFileSync("public/_headers", "/\n  Cache-Control: max-age=3600");
 			writeFileSync("public/_redirects", "/old /new 301");
-			writeFileSync(
-				"wrangler.json",
-				JSON.stringify({
-					name: "test-worker",
-					main: "src/index.ts",
-					compatibility_date: "2025-01-01",
-					assets: { directory: "public", run_worker_first: true },
-					previews: {},
-				})
-			);
-			let deploymentRequestBody: Record<string, unknown> | undefined;
+			const writeAssetsConfig = (base_path?: string) => {
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						assets: {
+							directory: "public",
+							run_worker_first: true,
+							...(base_path === undefined ? {} : { base_path }),
+						},
+						previews: {},
+					})
+				);
+			};
+			writeAssetsConfig("/subpath");
+			const deploymentRequestBodies: Array<Record<string, unknown>> = [];
 			let uploadSessionUrl: string | undefined;
 			msw.use(
 				http.get(
@@ -4276,9 +4364,12 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await readPreviewDeploymentRequest(
-							request
-						)) as Record<string, unknown>;
+						deploymentRequestBodies.push(
+							(await readPreviewDeploymentRequest(request)) as Record<
+								string,
+								unknown
+							>
+						);
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4298,12 +4389,13 @@ describe("wrangler preview", () => {
 				)
 			);
 			await runWrangler("preview --name test-preview");
+			const deploymentRequestBody = deploymentRequestBodies.at(-1);
 			expect(uploadSessionUrl).toContain(
 				"/workers/scripts/test-worker/assets-upload-session"
 			);
 			expect(deploymentRequestBody?.assets).toMatchObject({
 				jwt: "assets-jwt-from-session",
-				config: { run_worker_first: true },
+				config: { base_path: "/subpath", run_worker_first: true },
 			});
 			expect(deploymentRequestBody?.main_module).toBeDefined();
 			expect(Array.isArray(deploymentRequestBody?.modules)).toBe(true);
@@ -4315,6 +4407,12 @@ describe("wrangler preview", () => {
 				(b) => b.type === "assets"
 			);
 			expect(assetsEntries).toHaveLength(0);
+
+			writeAssetsConfig();
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBodies.at(-1)?.assets).not.toHaveProperty(
+				"config.base_path"
+			);
 		});
 
 		test("should include the assets binding in env using the configured binding name", async ({
@@ -6042,93 +6140,97 @@ describe("wrangler preview", () => {
 			);
 		});
 
-		test("should include source maps in deployment modules when upload_source_maps is enabled", async ({
-			expect,
-		}) => {
-			writeFileSync(
-				"wrangler.json",
-				JSON.stringify({
-					name: "test-worker",
-					main: "src/index.ts",
-					compatibility_date: "2025-01-01",
-					upload_source_maps: true,
-					previews: {},
-				})
-			);
+		test.for([
+			{ label: "enabled", uploadSourceMaps: true },
+			{ label: "unset", uploadSourceMaps: undefined },
+		])(
+			"should include source maps in deployment modules when upload_source_maps is $label",
+			async ({ uploadSourceMaps }, { expect }) => {
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						upload_source_maps: uploadSourceMaps,
+						previews: {},
+					})
+				);
 
-			let deploymentRequestBody:
-				| (Record<string, unknown> & {
-						modules?: PreviewDeploymentModulePart[];
-				  })
-				| undefined;
+				let deploymentRequestBody:
+					| (Record<string, unknown> & {
+							modules?: PreviewDeploymentModulePart[];
+					  })
+					| undefined;
 
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
-					() =>
-						HttpResponse.json(
-							{
-								success: false,
-								result: null,
-								errors: [{ code: 10025, message: "Preview not found" }],
-							},
-							{ status: 404 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews`,
-					() =>
-						HttpResponse.json(
-							{
-								success: true,
-								result: {
-									id: "preview-id-sourcemaps",
-									name: "test-preview",
-									slug: "test-preview",
-									urls: ["https://test-preview.test-worker.cloudflare.app"],
-									worker_name: "test-worker",
-									created_on: new Date().toISOString(),
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10025, message: "Preview not found" }],
 								},
-							},
-							{ status: 201 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-					async ({ request }) => {
-						deploymentRequestBody = (await readPreviewDeploymentRequest(
-							request
-						)) as typeof deploymentRequestBody;
-						return HttpResponse.json(
-							{
-								success: true,
-								result: {
-									id: "deployment-id-sourcemaps",
-									preview_id: "preview-id-sourcemaps",
-									preview_name: "test-preview",
-									urls: ["https://sourcemaps123.test-worker.cloudflare.app"],
-									compatibility_date: "2025-01-01",
-									env: {},
-									created_on: new Date().toISOString(),
+								{ status: 404 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "preview-id-sourcemaps",
+										name: "test-preview",
+										slug: "test-preview",
+										urls: ["https://test-preview.test-worker.cloudflare.app"],
+										worker_name: "test-worker",
+										created_on: new Date().toISOString(),
+									},
 								},
-							},
-							{ status: 201 }
-						);
-					}
-				)
-			);
+								{ status: 201 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						async ({ request }) => {
+							deploymentRequestBody = (await readPreviewDeploymentRequest(
+								request
+							)) as typeof deploymentRequestBody;
+							return HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "deployment-id-sourcemaps",
+										preview_id: "preview-id-sourcemaps",
+										preview_name: "test-preview",
+										urls: ["https://sourcemaps123.test-worker.cloudflare.app"],
+										compatibility_date: "2025-01-01",
+										env: {},
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							);
+						}
+					)
+				);
 
-			await runWrangler("preview --name test-preview");
+				await runWrangler("preview --name test-preview");
 
-			const sourceMap = deploymentRequestBody?.modules?.find((module) =>
-				module.name.endsWith(".map")
-			);
+				const sourceMap = deploymentRequestBody?.modules?.find((module) =>
+					module.name.endsWith(".map")
+				);
 
-			expect(sourceMap?.content_type).toBe("application/source-map");
-			expect(JSON.parse(decodeModuleContent(sourceMap))).toEqual(
-				expect.objectContaining({ version: 3 })
-			);
-		});
+				expect(sourceMap?.content_type).toBe("application/source-map");
+				expect(JSON.parse(decodeModuleContent(sourceMap))).toEqual(
+					expect.objectContaining({ version: 3 })
+				);
+			}
+		);
 
 		test("should use previews.define for worker bundling", async ({
 			expect,

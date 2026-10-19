@@ -392,6 +392,12 @@ export const parseArgs = async (
 		args: {
 			...(args.wranglerDefaults && WRANGLER_DEFAULTS),
 			...(args.acceptDefaults && C3_DEFAULTS),
+			...(args.framework && {
+				category: undefined,
+				type: undefined,
+				lang: undefined,
+				template: undefined,
+			}),
 			...args,
 			additionalArgs,
 			projectName: positionalArgs[0] as string | undefined,

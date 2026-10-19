@@ -50,6 +50,10 @@ async function sendMessage(ws: WebSocket, message: unknown) {
 }
 
 async function waitForClosedConnection(ws: WebSocket): Promise<void> {
+	if (ws.readyState === ws.CLOSING) {
+		ws.close();
+		return;
+	}
 	if (ws.readyState === ws.CLOSED) {
 		return;
 	}
@@ -62,6 +66,41 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 		});
 	});
 }
+
+test("waitForClosedConnection handles an already received close event", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "worker",
+					compatibilityDate: "2024-11-20",
+					manifest: singleModuleManifest(`
+${waitForClosedConnection.toString()}
+export default {
+	async fetch() {
+		const [client, server] = Object.values(new WebSocketPair());
+		client.accept();
+		server.accept();
+		const closeEvent = new Promise(resolve => client.addEventListener("close", resolve, { once: true }));
+		server.close();
+		await closeEvent;
+		const closingState = client.readyState;
+		await waitForClosedConnection(client);
+		return Response.json({ closingState, closedState: client.readyState });
+	}
+};`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	const response = await mf.dispatchFetch("https://localhost");
+	const responseText = await response.text();
+	expect(response.status, responseText).toBe(200);
+	expect(JSON.parse(responseText)).toEqual({ closingState: 2, closedState: 3 });
+});
 
 const BROWSER_RENDERING_RETRY = {
 	retry: {

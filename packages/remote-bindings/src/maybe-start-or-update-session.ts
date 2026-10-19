@@ -48,6 +48,7 @@ export type RemoteProxySessionData = {
 };
 
 export type RemoteBindingsContext = {
+	cliDisplayName: string;
 	logger: RemoteBindingsLogger;
 };
 
@@ -80,6 +81,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		remoteProxySession = await startSession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
+			cliDisplayName: context.cliDisplayName,
 			auth: getRemoteBindingsAuthHook(
 				auth,
 				workerConfigObject.account_id,
@@ -100,6 +102,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 					remoteProxySession = await startSession(remoteBindings, {
 						workerName: workerConfigObject.name,
 						complianceRegion: workerConfigObject.complianceRegion,
+						cliDisplayName: context.cliDisplayName,
 						auth: getRemoteBindingsAuthHook(
 							auth,
 							workerConfigObject.account_id,

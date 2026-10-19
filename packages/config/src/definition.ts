@@ -23,14 +23,37 @@ export type ConfigInput<T> =
 	| Promise<T>
 	| ((ctx: ConfigContext) => T | Promise<T>);
 
-/** Create a type-safe identity helper for a configuration value or factory. */
-export function createConfigDefiner<TConfig>() {
-	return function define<const TInput extends ConfigInput<TConfig>>(
-		config: TInput
-	): TInput {
-		return config;
-	};
-}
+/** Recursively apply declared config properties without expanding open records. */
+type ContextualProperties<
+	TInput extends object,
+	TConfig,
+> = TInput extends readonly unknown[]
+	? TConfig extends readonly (infer TElement)[]
+		? {
+				[K in keyof TInput]: ContextualConfig<TInput[K], TElement>;
+			}
+		: TConfig
+	: string extends keyof TConfig
+		? TConfig
+		: {
+				[K in keyof TConfig]: K extends keyof TInput
+					? ContextualConfig<TInput[K], TConfig[K]>
+					: TConfig[K];
+			};
+
+type ContextualConfig<TInput, TConfig> =
+	TInput extends Promise<infer TValue>
+		? Promise<ContextualConfig<TValue, TConfig>>
+		: TInput extends (ctx: ConfigContext) => infer TResult
+			? (ctx: ConfigContext) => ContextualConfig<TResult, TConfig>
+			: TConfig extends unknown
+				? TInput extends TConfig
+					? TInput &
+							(TInput extends object
+								? ContextualProperties<TInput, TConfig>
+								: TConfig)
+					: never
+				: never;
 
 export type ContainerDefinition<T extends ContainerConfig = ContainerConfig> =
 	ConfigInput<T>;
@@ -56,7 +79,11 @@ export type WorkerReference = string | WorkerDefinition;
  * });
  * ```
  */
-export const defineConfig = createConfigDefiner<CloudflareConfig>();
+export function defineConfig<
+	const TInput extends ConfigInput<CloudflareConfig>,
+>(config: TInput & ContextualConfig<TInput, CloudflareConfig>): TInput {
+	return config;
+}
 
 /**
  * Define a Container.
@@ -71,7 +98,11 @@ export const defineConfig = createConfigDefiner<CloudflareConfig>();
  * });
  * ```
  */
-export const defineContainer = createConfigDefiner<ContainerConfig>();
+export function defineContainer<
+	const TInput extends ConfigInput<ContainerConfig>,
+>(config: TInput & ContextualConfig<TInput, ContainerConfig>): TInput {
+	return config;
+}
 
 /**
  * Define a Worker.
@@ -86,4 +117,8 @@ export const defineContainer = createConfigDefiner<ContainerConfig>();
  * });
  * ```
  */
-export const defineWorker = createConfigDefiner<WorkerConfig>();
+export function defineWorker<const TInput extends ConfigInput<WorkerConfig>>(
+	config: TInput & ContextualConfig<TInput, WorkerConfig>
+): TInput {
+	return config;
+}

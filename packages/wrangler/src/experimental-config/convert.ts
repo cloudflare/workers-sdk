@@ -87,10 +87,6 @@ export function convertToolingConfig(
 			local_protocol: parsed.dev.localProtocol,
 			upstream_protocol: parsed.dev.upstreamProtocol,
 			host: parsed.dev.host,
-			// `dev.types` is intentionally NOT mapped — it is consumed
-			// separately via the `types` field on `LoadNewConfigResult`, not
-			// threaded through `RawConfig`. The legacy `config.dev.generate_types`
-			// gate is not used when `--experimental-new-config` is on.
 			enable_containers: parsed.dev.enableContainers,
 			container_engine: parsed.dev.containerEngine,
 		};

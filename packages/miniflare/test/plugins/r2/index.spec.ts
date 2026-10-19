@@ -551,21 +551,29 @@ test("put: validates metadata size", async ({ expect }) => {
 	);
 
 	// Check with ASCII characters
-	await r2.put("key", "value", { customMetadata: { key: "x".repeat(2045) } });
+	await r2.put("key", "value", { customMetadata: { key: "x".repeat(8189) } });
 	await expect(
-		r2.put("key", "value", { customMetadata: { key: "x".repeat(2046) } })
+		r2.put("key", "value", { customMetadata: { key: "x".repeat(8190) } })
 	).rejects.toThrow(metadataError);
-	await r2.put("key", "value", { customMetadata: { hi: "x".repeat(2046) } });
+	await r2.put("key", "value", { customMetadata: { hi: "x".repeat(8190) } });
+
+	// Check the limit applies to the total size of all keys and values
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
+	await r2.put("key", "value", { customMetadata });
+	expect((await r2.head("key"))?.customMetadata).toEqual(customMetadata);
+	await expect(
+		r2.put("key", "value", { customMetadata: { ...customMetadata, a: "" } })
+	).rejects.toThrow(metadataError);
 
 	// Check with extended characters: note "🙂" is 2 UTF-16 code units, so
 	// `"🙂".length === 2`, and it requires 4 bytes to store
-	await r2.put("key", "value", { customMetadata: { key: "🙂".repeat(511) } }); // 3 + 4*511 = 2047
-	await r2.put("key", "value", { customMetadata: { key1: "🙂".repeat(511) } }); // 4 + 4*511 = 2048
+	await r2.put("key", "value", { customMetadata: { key: "🙂".repeat(2047) } }); // 3 + 4*2047 = 8191
+	await r2.put("key", "value", { customMetadata: { key1: "🙂".repeat(2047) } }); // 4 + 4*2047 = 8192
 	await expect(
-		r2.put("key", "value", { customMetadata: { key12: "🙂".repeat(511) } })
+		r2.put("key", "value", { customMetadata: { key12: "🙂".repeat(2047) } })
 	).rejects.toThrow(metadataError);
 	await expect(
-		r2.put("key", "value", { customMetadata: { key: "🙂".repeat(512) } })
+		r2.put("key", "value", { customMetadata: { key: "🙂".repeat(2048) } })
 	).rejects.toThrow(metadataError);
 });
 test("put: can copy values", async ({ expect }) => {
@@ -1143,6 +1151,22 @@ test("createMultipartUpload", async ({ expect }) => {
 		new Error(
 			`createMultipartUpload: The specified object name is not valid. (10020)`
 		)
+	);
+});
+test("createMultipartUpload: validates metadata size", async ({ expect }) => {
+	const { r2 } = ctx;
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
+	const upload = await r2.createMultipartUpload("key", { customMetadata });
+	const part = await upload.uploadPart(1, "value");
+	await upload.complete([part]);
+	expect((await r2.head("key"))?.customMetadata).toEqual(customMetadata);
+
+	await expect(
+		r2.createMultipartUpload("key", {
+			customMetadata: { ...customMetadata, a: "" },
+		})
+	).rejects.toThrow(
+		"createMultipartUpload: Your metadata headers exceed the maximum allowed metadata size. (10012)"
 	);
 });
 test("uploadPart", async ({ expect }) => {

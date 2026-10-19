@@ -10,7 +10,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "*",
-		"vite": "^8.0.0",
-		"wrangler": "*"
+		"cf": "latest",
+		"vite": "^8.0.0"
 	}
 }

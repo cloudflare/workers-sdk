@@ -235,6 +235,11 @@ function getLoginOrRefreshFailureErrorMessage(
 			" Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful.\n" +
 			"Either:\n" +
 			` - Run \`wrangler login\` to try again${localFallback}${whoamiTip}`,
+		"token-refresh-unreachable":
+			" Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. Your stored credentials were left unchanged.\n" +
+			"Either:\n" +
+			" - Check your network connection (connectivity, proxy, or IPv6) and try again; `WRANGLER_LOG=debug` shows the underlying error" +
+			`${localFallback}${whoamiTip}`,
 	};
 	const errorMessageBody = errorMessageBodies[failureReason];
 	const errorMessage = errorMessagePrefix + errorMessageBody;
@@ -333,8 +338,16 @@ async function resolveTriggers(
 
 	const connectHandlers =
 		config.connect?.map<Extract<Trigger, { type: "connect" }>>((c) => ({
-			...c,
 			type: "connect",
+			protocol: c.protocol,
+			port: c.port,
+			address: c.address,
+			...(c.protocol === "udp"
+				? {
+						idleTimeoutMs: c.idle_timeout_ms,
+						maxPendingBytes: c.max_pending_bytes,
+					}
+				: {}),
 		})) ?? [];
 
 	return [...devRoutes, ...queueConsumers, ...crons, ...connectHandlers];
@@ -770,9 +783,9 @@ export class ConfigController extends Controller {
 
 			// Under `--experimental-new-config`, run the new-config type-gen path
 			// instead of the legacy `checkTypesDiff`.
-			if (newConfig && fileConfig.configPath) {
+			if (newConfig) {
 				await regenerateNewConfigTypes({
-					cloudflareConfigPath: fileConfig.configPath,
+					cloudflareConfigPath: newConfig.cloudflareConfigPath,
 					workerConfig: newConfig.parsedConfig.worker,
 					types: newConfig.types,
 				});

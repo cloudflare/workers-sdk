@@ -20,6 +20,34 @@ export function validateChangesets(
 	changesets: ChangesetFile[]
 ) {
 	const errors: string[] = [];
+	for (const pkg of packages.values()) {
+		const config = pkg["workers-sdk"]?.npmPrerelease;
+		if (config === undefined) {
+			continue;
+		}
+		if (
+			typeof config !== "object" ||
+			config === null ||
+			Array.isArray(config)
+		) {
+			errors.push(
+				`Invalid workers-sdk.npmPrerelease config for package "${pkg.name}".`
+			);
+			continue;
+		}
+		if (
+			typeof config.tag !== "string" ||
+			config.tag === "latest" ||
+			!/^[A-Za-z][0-9A-Za-z-]*$/.test(config.tag)
+		) {
+			errors.push(`Invalid npmPrerelease tag for package "${pkg.name}".`);
+		}
+		if (typeof config.numbered !== "boolean") {
+			errors.push(
+				`Invalid npmPrerelease numbered value for package "${pkg.name}".`
+			);
+		}
+	}
 	changesets.map(({ file, contents }) => {
 		try {
 			const changeset = parseChangeset(contents);
@@ -37,9 +65,7 @@ export function validateChangesets(
 					// `@cloudflare/vitest-plugin` v1 is the rename of
 					// `@cloudflare/vitest-pool-workers`, which needs a one-off major bump.
 					release.name !== "@cloudflare/vitest-plugin" &&
-					(release.name !== "miniflare" ||
-						targetPackage?.["workers-sdk"]?.npmPrereleaseIdentifier ===
-							undefined)
+					targetPackage?.["workers-sdk"]?.npmPrerelease === undefined
 				) {
 					errors.push(
 						`Major version bumps are not allowed for package "${release.name}" in changeset at "${file}".`
@@ -115,6 +141,10 @@ export type PackageJSON = {
 	scripts?: Record<string, unknown>;
 	"workers-sdk"?: {
 		deploy?: boolean;
-		npmPrereleaseIdentifier?: string;
+		prerelease?: boolean;
+		npmPrerelease?: {
+			tag?: unknown;
+			numbered?: unknown;
+		};
 	};
 };

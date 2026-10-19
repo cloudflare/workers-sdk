@@ -1,5 +1,6 @@
 import type {
 	CacheOptions,
+	DurableObjectCodeUpdateStrategy,
 	Exports,
 	LocalS3Credentials,
 	Observability,
@@ -133,6 +134,12 @@ export interface CfTextBlobBindings {
 export interface CfBrowserBinding {
 	binding: string;
 	raw?: boolean;
+	remote?: boolean;
+}
+
+/** A binding to Analytics SQL. */
+export interface CfAnalyticsSQLBinding {
+	binding: string;
 	remote?: boolean;
 }
 
@@ -401,6 +408,12 @@ export interface CfPipeline {
 	remote?: boolean;
 }
 
+export interface CfK2Binding {
+	binding: string;
+	stream: string;
+	remote?: boolean;
+}
+
 export interface CfUnsafeBinding {
 	name: string;
 	type: string;
@@ -504,6 +517,7 @@ export interface CfWorkerInit {
 		| undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	/**
 	 * Declarative exports configuration. Durable Object entries are sent instead
 	 * of `migrations`.

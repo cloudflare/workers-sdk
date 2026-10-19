@@ -1,3 +1,6 @@
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { Miniflare, WorkerOptionsSchema } from "miniflare";
 import { describe, test } from "vitest";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
@@ -353,6 +356,17 @@ describe("flagship plugin", () => {
 					rules: [
 						{
 							...BOOL_FLAG.rules[0],
+							conditions: [{ logical_operator: "OR", clauses: [] }],
+						},
+					],
+				},
+				"'OR' condition without any clauses",
+			],
+			[
+				{
+					rules: [
+						{
+							...BOOL_FLAG.rules[0],
 							conditions: [
 								{ attribute: "plan", operator: "invalid", value: "pro" },
 							] as never,
@@ -384,9 +398,17 @@ describe("flagship plugin", () => {
 		}
 		const fractional = await admin.putFlag({
 			...BOOL_FLAG,
-			rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.333333 } }],
+			rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.33 } }],
 		});
-		expect(fractional.rules[0].rollout?.percentage).toBe(33.333333);
+		expect(fractional.rules[0].rollout?.percentage).toBe(33.33);
+		expect(
+			await rejection(() =>
+				admin.putFlag({
+					...BOOL_FLAG,
+					rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.333 } }],
+				})
+			)
+		).toContain("rollout percentage");
 		const partialRollout = await admin.putFlag({
 			...BOOL_FLAG,
 			rules: [
@@ -513,6 +535,59 @@ describe("flagship plugin", () => {
 				plan: "pro",
 			})
 		).toBe(true);
+	});
+
+	test("patches flags stored before stricter rule validation", async ({
+		expect,
+	}) => {
+		const persistence = await useTmp();
+		const opts = { ...options(), resourcePersistencePath: persistence };
+		const first = new Miniflare(opts);
+		await (await getAdmin(first)).createFlag(ROLLOUT_FLAG);
+		await first.dispose();
+
+		const legacyRules = [
+			{
+				priority: 1,
+				conditions: [{ logical_operator: "OR", clauses: [] }],
+				serve_variation: "on",
+				rollout: { percentage: 33.333 },
+			},
+		];
+		for (const file of await readdir(persistence, { recursive: true })) {
+			if (!file.endsWith(".sqlite")) {
+				continue;
+			}
+			const db = new DatabaseSync(path.join(persistence, file));
+			const hasFlags = db
+				.prepare("SELECT 1 FROM sqlite_master WHERE name = 'flags'")
+				.get();
+			if (hasFlags === undefined) {
+				db.close();
+				continue;
+			}
+			for (const row of db
+				.prepare("SELECT key, definition FROM flags")
+				.all() as { key: string; definition: string }[]) {
+				db.prepare("UPDATE flags SET definition = ? WHERE key = ?").run(
+					JSON.stringify({ ...JSON.parse(row.definition), rules: legacyRules }),
+					row.key
+				);
+			}
+			db.close();
+		}
+
+		const second = new Miniflare(opts);
+		useDispose(second);
+		const admin = await getAdmin(second);
+		expect(
+			await admin.patchFlag(ROLLOUT_FLAG.key, { enabled: false })
+		).toMatchObject({ enabled: false, rules: legacyRules });
+		expect(
+			await rejection(() =>
+				admin.patchFlag(ROLLOUT_FLAG.key, { rules: legacyRules as never })
+			)
+		).toContain("without any clauses");
 	});
 
 	test("shares live persistent storage across instances", async ({
