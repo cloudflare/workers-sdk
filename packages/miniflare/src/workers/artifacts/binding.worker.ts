@@ -562,6 +562,11 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	}
 
 	saveRepos(repositories: RepositoryMap): Promise<void> {
+		for (const repository of Object.values(repositories)) {
+			repository.tokens = repository.tokens.filter(
+				(token) => !token.revokedAt && isActive(token)
+			);
+		}
 		return this.ctx.storage.put("repos", repositories);
 	}
 
