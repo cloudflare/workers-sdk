@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import dts from "vite-plugin-dts";
 import type { Plugin } from "vite";
 
 // See https://github.com/facebook/create-react-app/issues/11769
@@ -24,7 +23,7 @@ function addJsxRuntimeExtension(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-	plugins: [react(), dts(), addJsxRuntimeExtension()],
+	plugins: [react(), addJsxRuntimeExtension()],
 	build: {
 		chunkSizeWarningLimit: 1000,
 		lib: {
