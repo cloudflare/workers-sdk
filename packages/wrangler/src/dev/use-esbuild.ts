@@ -287,6 +287,7 @@ export function runBuild(
 		// if "noBundle" is true, then we need to manually watch all modules and
 		// trigger "builds" when any change
 		if (noBundle && watch) {
+			let pendingRebuild = Promise.resolve();
 			const watching = [path.resolve(entry.moduleRoot)];
 			const watcher = watchPaths(watching, {
 				persistent: true,
@@ -296,12 +297,22 @@ export function runBuild(
 				// chokidar v4 normalises paths to forward slashes before
 				// matching, so a regex on path segments works cross-platform.
 				ignored: /[/\\](\.git|node_modules|\.wrangler)([/\\]|$)/,
-			}).on("change", async (_event) => {
-				await refreshExports();
-				await updateBundle();
+			}).on("change", () => {
+				pendingRebuild = pendingRebuild
+					.then(async () => {
+						await refreshExports();
+						await updateBundle();
+					})
+					.catch(onErr);
 			});
 
-			stopWatching = () => watcher.close();
+			stopWatching = async () => {
+				await watcher.close();
+				// Closing chokidar doesn't wait for asynchronous change handlers.
+				// Drain them before callers remove the source and build directories.
+				await pendingRebuild;
+				await bundleResult?.stop?.();
+			};
 		}
 		const entrypointPath = realpathSync(
 			bundleResult?.resolvedEntryPointPath ?? entry.file
