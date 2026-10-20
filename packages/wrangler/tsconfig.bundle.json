@@ -1,0 +1,10 @@
+{
+	"extends": "./tsconfig.declarations.json",
+	"compilerOptions": {
+		"paths": {
+			"@cloudflare/workflows-shared/src/types": [
+				"./emitted-types/packages/workflows-shared/src/types.d.ts"
+			]
+		}
+	}
+}
