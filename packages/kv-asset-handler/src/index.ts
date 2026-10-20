@@ -1,10 +1,10 @@
 import * as mime from "mime";
 import {
-	CacheControl,
+	type CacheControl,
 	InternalError,
 	MethodNotAllowedError,
 	NotFoundError,
-	Options,
+	type Options,
 } from "./types";
 import type { AssetManifestType } from "./types";
 
@@ -345,8 +345,8 @@ const getAssetFromKV = async (
 
 export { getAssetFromKV, mapRequestToAsset, serveSinglePageApp };
 export {
-	Options,
-	CacheControl,
+	type Options,
+	type CacheControl,
 	MethodNotAllowedError,
 	NotFoundError,
 	InternalError,

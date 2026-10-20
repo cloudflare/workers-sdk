@@ -98,7 +98,7 @@ export function getCloudflarePreset({
 		meta: {
 			name: "unenv:cloudflare",
 			version,
-			url: __filename,
+			url: import.meta.url,
 		},
 		alias: {
 			// Alias each native module (and its `node:...` equivalent) to itself to ensure we override any polyfills from the base unenv presets.
