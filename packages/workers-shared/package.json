@@ -20,8 +20,8 @@
 		"directory": "packages/workers-shared"
 	},
 	"scripts": {
-		"check:type": "pnpm run check:type:tests && tsc",
-		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
+		"check:type": "pnpm run check:type:tests && tsrs",
+		"check:type:tests": "tsrs -p ./asset-worker/tests/tsconfig.json && tsrs -p ./router-worker/tests/tsconfig.json",
 		"deploy": "pnpm run generate-sourcemaps && pnpm run deploy:router-worker && pnpm run deploy:asset-worker && pnpm run upload-sourcemaps",
 		"deploy:asset-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload -c asset-worker/wrangler.jsonc --tag aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
 		"deploy:asset-worker-staging": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler deploy -c asset-worker/wrangler.jsonc -e staging",

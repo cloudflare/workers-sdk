@@ -9,7 +9,7 @@
 		"build:default": "vite build",
 		"build:dev-only-auxiliary": "vite build -c ./vite.config.dev-only-auxiliary.ts",
 		"build:no-config-file": "vite build -c ./vite.config.no-config-file.ts",
-		"check:type": "tsc --build",
+		"check:type": "tsrs --build",
 		"dev": "vite dev",
 		"dev:custom-build-app": "vite dev -c ./vite.config.custom-build-app.ts",
 		"dev:custom-output-directories": "vite dev -c ./vite.config.custom-output-directories.ts",

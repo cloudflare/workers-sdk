@@ -122,15 +122,17 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	};
 }
 
+interface VitestOptions {
+	flags?: string[];
+	maxBuffer?: number;
+}
+
 // eslint-disable-next-line jest/expect-expect, jest/no-disabled-tests -- base test fixture definition, not an actual test
 export const test = baseTest.extend<{
 	tmpPath: string;
 	seed: (files: Record<string, string>) => Promise<void>;
-	vitestRun: (options?: {
-		flags?: string[];
-		maxBuffer?: number;
-	}) => Promise<Process>;
-	vitestDev: (options?: { flags?: string[]; maxBuffer?: number }) => Process;
+	vitestRun: (options?: VitestOptions) => Promise<Process>;
+	vitestDev: (options?: VitestOptions) => Process;
 }>({
 	// Fixture for creating a temporary directory
 	// eslint-disable-next-line no-empty-pattern -- Vitest requires the 1st argument to use object destructuring
@@ -149,7 +151,7 @@ export const test = baseTest.extend<{
 	async vitestRun({ tmpPath }, use) {
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 
-		await use(async ({ flags = [], maxBuffer } = {}) => {
+		await use(async ({ flags = [], maxBuffer }: VitestOptions = {}) => {
 			// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- test helper
 			const proc = childProcess.exec(
 				`pnpm exec vitest run --root="${tmpPath}" ` + flags.join(" "),
@@ -182,7 +184,7 @@ export const test = baseTest.extend<{
 		};
 		process.on("exit", killAllProcesses);
 
-		await use(({ flags = [], maxBuffer } = {}) => {
+		await use(({ flags = [], maxBuffer }: VitestOptions = {}) => {
 			// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- test helper
 			const proc = childProcess.exec(
 				`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),

@@ -4,11 +4,11 @@
 	"sideEffects": false,
 	"main": "dist/worker.js",
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=bucket --port 8789",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
 		"is-odd": "^3.0.1"

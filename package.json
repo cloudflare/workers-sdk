@@ -55,6 +55,7 @@
 		"oxlint": "^1.56.0",
 		"oxlint-tsgolint": "^0.17.0",
 		"tree-kill": "catalog:default",
+		"tsrs": "0.18.0-ts7.1.0-dev.20260929",
 		"turbo": "^2.7.2",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

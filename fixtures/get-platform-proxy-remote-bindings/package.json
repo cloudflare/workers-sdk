@@ -4,7 +4,7 @@
 	"description": "A test for the getPlatformProxy utility used with remote bindings",
 	"scripts": {
 		"test:e2e": "vitest run --reporter=default",
-		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
+		"type:tests": "tsrs --noEmit -p tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

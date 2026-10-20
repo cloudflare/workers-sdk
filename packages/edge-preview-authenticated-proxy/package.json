@@ -3,11 +3,11 @@
 	"version": "0.3.4",
 	"private": true,
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-plugin": "workspace:*",

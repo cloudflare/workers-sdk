@@ -23,7 +23,7 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check:type": "tsc -p ./tsconfig.json",
+		"check:type": "tsrs -p ./tsconfig.json",
 		"dev": "tsup --watch",
 		"test": "vitest",
 		"test:ci": "vitest run"

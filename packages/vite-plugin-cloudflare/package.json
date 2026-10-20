@@ -41,7 +41,7 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check:type": "tsc --build",
+		"check:type": "tsrs --build",
 		"dev": "tsdown --watch",
 		"test": "vitest run",
 		"test:ci": "pnpm test",

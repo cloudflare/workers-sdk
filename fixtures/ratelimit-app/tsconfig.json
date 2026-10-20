@@ -7,7 +7,8 @@
 		"types": ["node"],
 		"skipLibCheck": true,
 		"moduleResolution": "bundler",
-		"noEmit": true
+		"noEmit": true,
+		"strict": false
 	},
 	"include": ["tests"]
 }

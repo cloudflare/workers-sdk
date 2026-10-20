@@ -2,11 +2,7 @@ import * as fs from "node:fs";
 import { getRuntimeHeader } from "@cloudflare/runtime-types";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import {
-	createProgram,
-	flattenDiagnosticMessageText,
-	getPreEmitDiagnostics,
-} from "typescript";
+import { API } from "tsrs/unstable/sync";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
 import { experimental_generateTypes } from "../api";
 import {
@@ -4158,14 +4154,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4214,14 +4203,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4261,14 +4243,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4308,14 +4283,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4363,14 +4331,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4411,14 +4372,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4476,14 +4430,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4535,14 +4482,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4587,14 +4527,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4671,14 +4604,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4726,14 +4652,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4774,14 +4693,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4891,14 +4803,7 @@ describe("generate types - API", () => {
 				"utf-8"
 			);
 
-			const diagnostics = getPreEmitDiagnostics(
-				createProgram(["./generated.d.ts", "./consumer.ts"], {
-					noEmit: true,
-					types: [],
-				})
-			).map((diagnostic) =>
-				flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-			);
+			const diagnostics = getGeneratedTypesDiagnostics();
 
 			expect(diagnostics).toEqual([]);
 		}
@@ -5604,3 +5509,20 @@ describe("pipeline schema type generation", () => {
 		`);
 	});
 });
+
+/** Check generated declarations together with their consumer, including library errors. */
+function getGeneratedTypesDiagnostics(): string[] {
+	using api = new API({ cwd: process.cwd() });
+	using program = api.createProgram(["./generated.d.ts", "./consumer.ts"], {
+		noEmit: true,
+		strict: false,
+		types: [],
+	});
+	return [
+		...program.getProgramDiagnostics(),
+		...program.getSyntacticDiagnostics(),
+		...program.getBindDiagnostics(),
+		...program.getGlobalDiagnostics(),
+		...program.getSemanticDiagnostics(),
+	].map((diagnostic) => diagnostic.text);
+}

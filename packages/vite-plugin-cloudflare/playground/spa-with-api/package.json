@@ -9,7 +9,7 @@
 		"build:https": "vite build -c ./vite.config.https.ts",
 		"build:run-worker-first": "vite build -c ./vite.config.run-worker-first.ts",
 		"build:static-routing": "vite build -c ./vite.config.static-routing.ts",
-		"check:type": "tsc --build",
+		"check:type": "tsrs --build",
 		"dev": "vite dev",
 		"dev:client-bundled-dev": "vite dev -c ./vite.config.client-bundled-dev.ts",
 		"dev:https": "vite dev -c ./vite.config.https.ts",

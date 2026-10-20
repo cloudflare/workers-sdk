@@ -1,10 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { parseTs } from "@cloudflare/shared-ast-primitives";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { globSync } from "tinyglobby";
 import { describe, it } from "vitest";
 import { migrateWranglerToCf } from "../../src";
-import { getSyntaxErrors } from "./test-helpers";
 import type { ExpectStatic } from "vitest";
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
@@ -31,7 +31,7 @@ async function assertGeneratedConfig(
 ): Promise<void> {
 	const source = await readFile(filePath, "utf8");
 
-	expect(getSyntaxErrors(source)).toEqual([]);
+	expect(() => parseTs(source)).not.toThrow();
 	expect(source).not.toContain("[object Object]");
 }
 

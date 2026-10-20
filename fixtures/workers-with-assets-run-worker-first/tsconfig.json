@@ -4,9 +4,10 @@
 		"module": "preserve",
 		"lib": ["ES2020"],
 		"types": ["@cloudflare/workers-types"],
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"noEmit": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"strict": false
 	},
 	"include": ["**/*.ts"],
 	"exclude": ["tests"]

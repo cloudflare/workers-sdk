@@ -5,10 +5,11 @@
 		"module": "preserve",
 		"lib": ["ES2020"],
 		"types": ["node", "@cloudflare/workers-types"],
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"noEmit": true,
 		"skipLibCheck": true,
-		"checkJs": true
+		"checkJs": true,
+		"strict": false
 	},
 	"include": [
 		"apps/workerjs-directory/_worker.js/index.js",

@@ -2,7 +2,7 @@
 	"name": "@fixture/node-env",
 	"private": true,
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "wrangler dev",
 		"test:ci": "vitest run",
 		"test:watch": "vitest"

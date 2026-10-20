@@ -6,7 +6,7 @@
 		"dev": "wrangler pages dev public",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

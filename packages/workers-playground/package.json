@@ -7,7 +7,7 @@
 		"build": "pnpm run check:type && vite build",
 		"check": "pnpm run check:default-hashes && pnpm run check:type",
 		"check:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts check",
-		"check:type": "cf workers types && tsc --build",
+		"check:type": "cf workers types && tsrs --build",
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 cf deploy",
 		"dev": "vite",
 		"generate:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts && pnpm exec oxfmt ./src/QuickEditor/defaultHashes.js"

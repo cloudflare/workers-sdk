@@ -37,7 +37,7 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check:type": "tsc -p ./tsconfig.json",
+		"check:type": "tsrs -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
 		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"test": "vitest",

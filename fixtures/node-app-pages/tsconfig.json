@@ -5,9 +5,10 @@
 		"module": "preserve",
 		"lib": ["ES2020"],
 		"types": ["@cloudflare/workers-types/experimental"],
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"skipLibCheck": true,
 		"esModuleInterop": true,
-		"noEmit": true
+		"noEmit": true,
+		"strict": false
 	}
 }

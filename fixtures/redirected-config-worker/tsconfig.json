@@ -6,8 +6,9 @@
 		"lib": ["ES2020"],
 		"types": ["node"],
 		"skipLibCheck": true,
-		"moduleResolution": "node",
-		"noEmit": true
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"strict": false
 	},
 	"include": ["tests"]
 }

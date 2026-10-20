@@ -420,5 +420,4 @@ interface CustomMatchers<R = unknown> {
 
 declare module "vitest" {
 	interface Matchers<R> extends CustomMatchers<R> {}
-	interface AsymmetricMatchersContaining extends CustomMatchers {}
 }

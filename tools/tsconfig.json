@@ -4,6 +4,7 @@
 	"include": ["**/*.ts", "**/*.js", "**/*.mts"],
 	"exclude": ["node_modules"],
 	"compilerOptions": {
+		"rootDir": "..",
 		"module": "preserve",
 		"allowJs": true,
 		"outDir": "dist",

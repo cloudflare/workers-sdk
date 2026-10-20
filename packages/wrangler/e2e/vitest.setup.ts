@@ -8,7 +8,6 @@ interface CustomMatchers<R = unknown> {
 declare module "vitest" {
 	/* eslint-disable @typescript-eslint/no-empty-object-type -- Required for vitest module augmentation with empty interfaces */
 	interface Matchers<R> extends CustomMatchers<R> {}
-	interface AsymmetricMatchersContaining extends CustomMatchers {}
 	/* eslint-enable @typescript-eslint/no-empty-object-type */
 }
 

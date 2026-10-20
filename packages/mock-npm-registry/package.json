@@ -13,8 +13,8 @@
 		}
 	},
 	"scripts": {
-		"build": "tsc",
-		"check:types": "tsc",
+		"build": "tsrs",
+		"check:types": "tsrs --noEmit",
 		"test": "vitest",
 		"test:ci": "vitest run"
 	},

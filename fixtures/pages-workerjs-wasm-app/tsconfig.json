@@ -5,9 +5,10 @@
 		"module": "preserve",
 		"lib": ["ES2020"],
 		"types": ["node"],
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"noEmit": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"strict": false
 	},
 	"include": ["tests"]
 }

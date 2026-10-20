@@ -8,7 +8,7 @@
 		"test:ci:default": "true",
 		"test:ci:nix": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tsconfig.json"
+		"type:tests": "tsrs -p ./tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-plugin": "workspace:*",

@@ -25,7 +25,7 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "tsdown --watch",
 		"test:ci": "vitest run --passWithNoTests",
 		"test:watch": "vitest"

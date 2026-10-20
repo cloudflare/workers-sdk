@@ -10,7 +10,7 @@
 		"start": "wrangler dev",
 		"start:registry": "wrangler dev -c ./wrangler.registry.jsonc",
 		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
