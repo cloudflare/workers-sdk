@@ -124,7 +124,7 @@
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",
-		"tsdown": "catalog:default",
+		"tsdown": "0.23.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"xdg-app-paths": "^8.3.0",

@@ -5,7 +5,8 @@
 	"exclude": ["node_modules"],
 	"compilerOptions": {
 		"module": "preserve",
-		"allowJs": false,
+		"allowJs": true,
+		"rootDir": "../..",
 		"outDir": "dist",
 		"types": ["node"],
 		"resolveJsonModule": true
