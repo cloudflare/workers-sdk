@@ -76,6 +76,7 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
+import { ArtifactsController } from "./plugins/artifacts/controller";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import { closeBrowserProcess } from "./plugins/browser-rendering/process";
@@ -872,6 +873,7 @@ export class Miniflare {
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
+	#artifactsController = new ArtifactsController(() => this.#log);
 	#containerPrivilegesCache = new ContainerPrivilegesCache();
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController();
@@ -2137,6 +2139,7 @@ export class Miniflare {
 				queueConsumers,
 				containerPrivilegesCache: this.#containerPrivilegesCache,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
+				artifactsController: this.#artifactsController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -2152,6 +2155,11 @@ export class Miniflare {
 					} else {
 						pluginServices = pluginServicesExtensions.services;
 						extensions.push(...pluginServicesExtensions.extensions);
+						for (const socket of pluginServicesExtensions.sockets ?? []) {
+							if (!sockets.some((existing) => existing.name === socket.name)) {
+								sockets.push(socket);
+							}
+						}
 					}
 
 					for (const service of pluginServices) {
@@ -2483,11 +2491,13 @@ export class Miniflare {
 
 	async #assembleAndUpdateConfig(reusePorts = false) {
 		this.#hyperdriveProxyController.beginUpdate();
+		this.#artifactsController.beginUpdate();
 		try {
 			await this.#assembleAndUpdateConfigInternal(reusePorts);
 		} finally {
-			// If assembly or runtime startup failed, keep the old listeners and
-			// close only the new candidates. A successful update already committed.
+			// A failed update retains listeners used by the previous runtime and
+			// closes only candidates started during this attempt.
+			await this.#artifactsController.abortUpdate();
 			this.#hyperdriveProxyController.abortUpdate();
 		}
 	}
@@ -2611,6 +2621,7 @@ export class Miniflare {
 			}
 		}
 		this.#hyperdriveProxyController.commitUpdate(activeExternalAddresses);
+		await this.#artifactsController.commitUpdate();
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
@@ -3699,6 +3710,14 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		try {
+			await this.#artifactsController.dispose();
+		} catch (error) {
+			if (!independentCleanupFailed) {
+				independentCleanupFailed = true;
+				independentCleanupError = error;
+			}
+		}
 		this.#devRegistry.unregisterWorkers();
 		// Close the undici Pool used for dispatching fetch requests to the
 		// runtime. This must happen after the runtime is disposed, so that
