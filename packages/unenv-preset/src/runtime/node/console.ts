@@ -39,7 +39,6 @@ export const {
 	context,
 	count,
 	countReset,
-	// @ts-expect-error undocumented public API
 	createTask,
 	debug,
 	dir,

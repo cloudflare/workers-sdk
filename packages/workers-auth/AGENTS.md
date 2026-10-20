@@ -177,6 +177,7 @@ Each CLI is a thin **descriptor + entrypoint**:
 ## BUILD
 
 - tsdown: shared core, Wrangler and cf entry points, plus test helpers
+- tsrs emits declarations from `tsconfig.declarations.json`; tsdown bundles them from `emitted-types/`
 - ESM-only output to `dist/`
 - Runtime dependencies (`@cloudflare/workers-utils` and `undici`), `msw`, and `vitest` are kept external
 
