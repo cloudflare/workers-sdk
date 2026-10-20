@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.74.2
+
+### Patch Changes
+
+- [#16259](https://github.com/cloudflare/workers-sdk/pull/16259) [`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31) Thanks [@NuroDev](https://github.com/NuroDev)! - Use Vitest 5 in newly generated Workers projects
+
+  Workers templates now install Vitest 5 and require @cloudflare/vitest-plugin 1.4.3 or newer, which supports Vitest's filesystem module cache.
+
 ## 2.74.1
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @cloudflare/workers-auth
 
+## 0.14.1
+
+### Patch Changes
+
+- [#16259](https://github.com/cloudflare/workers-sdk/pull/16259) [`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31) Thanks [@NuroDev](https://github.com/NuroDev)! - Support Vitest 5 in shared test helpers
+
+  The optional Vitest peer ranges now accept both Vitest 4 and 5, allowing consumers to upgrade without dropping compatibility with Vitest 4.
+
+- Updated dependencies [[`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31)]:
+  - @cloudflare/workers-utils@0.47.3
+
 ## 0.14.0
 
 ### Minor Changes
