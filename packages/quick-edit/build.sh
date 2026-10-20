@@ -10,7 +10,7 @@ mv ../vscode-web ../../packages/quick-edit/web/assets
 
 cd ../../packages/quick-edit
 
-pnpm esbuild editor-files/workbench.ts --outfile=web/assets/workbench.js
+node ../../tools/build/transform.mjs editor-files/workbench.ts web/assets/workbench.js
 
 cp editor-files/workbench.html web/assets
 

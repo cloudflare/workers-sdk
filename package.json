@@ -54,6 +54,7 @@
 		"oxfmt": "^0.68.0",
 		"oxlint": "^1.56.0",
 		"oxlint-tsgolint": "^0.17.0",
+		"rolldown": "1.2.3",
 		"tree-kill": "catalog:default",
 		"tsrs": "0.18.0-ts7.1.0-dev.20260929",
 		"turbo": "^2.7.2",
