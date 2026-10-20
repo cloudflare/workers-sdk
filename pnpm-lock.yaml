@@ -2153,8 +2153,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       tsdown:
-        specifier: catalog:default
-        version: 0.22.14(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
+        specifier: 0.23.1
+        version: 0.23.1(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 6.0.3
@@ -2703,8 +2703,8 @@ importers:
         specifier: 22.15.17
         version: 22.15.17
       tsdown:
-        specifier: catalog:default
-        version: 0.22.14(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
+        specifier: 0.23.1
+        version: 0.23.1(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 6.0.3
@@ -2863,8 +2863,8 @@ importers:
         specifier: catalog:default
         version: 0.28.2
       tsdown:
-        specifier: catalog:default
-        version: 0.22.14(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
+        specifier: 0.23.1
+        version: 0.23.1(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 6.0.3

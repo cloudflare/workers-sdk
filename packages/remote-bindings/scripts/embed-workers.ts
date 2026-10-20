@@ -1,10 +1,11 @@
 import path from "node:path";
-import { build } from "esbuild";
+import { bundleWorker } from "../../../tools/build/bundle-worker.mjs";
 
 const WORKER_PREFIX = "\0worker:";
 const templatesDir = path.resolve(import.meta.dirname, "../templates");
 
-export function embedWorkersPlugin() {
+/** Bundle Worker templates into source strings and track nested imports. */
+export function embedWorkersPlugin(templateRoot = templatesDir) {
 	return {
 		name: "embed-workers",
 		resolveId(id: string) {
@@ -13,27 +14,20 @@ export function embedWorkersPlugin() {
 			}
 			return `${WORKER_PREFIX}${id.slice("worker:".length)}`;
 		},
-		async load(id: string) {
+		async load(this: { addWatchFile: (id: string) => void }, id: string) {
 			if (!id.startsWith(WORKER_PREFIX)) {
 				return;
 			}
-			const result = await build({
-				entryPoints: [
-					path.resolve(templatesDir, `${id.slice(WORKER_PREFIX.length)}.ts`),
-				],
-				platform: "node",
-				conditions: ["workerd", "worker", "browser"],
-				format: "esm",
-				target: "esnext",
-				bundle: true,
-				write: false,
-				external: ["cloudflare:email", "cloudflare:workers"],
+			const result = await bundleWorker({
+				input: path.resolve(
+					templateRoot,
+					`${id.slice(WORKER_PREFIX.length)}.ts`
+				),
 			});
-			const source = result.outputFiles[0]?.text;
-			if (source === undefined) {
-				throw new Error(`Failed to bundle Worker ${id}`);
+			for (const file of result.watchFiles) {
+				this.addWatchFile(file);
 			}
-			return `export default ${JSON.stringify(source)};`;
+			return `export default ${JSON.stringify(result.code)};`;
 		},
 	};
 }
