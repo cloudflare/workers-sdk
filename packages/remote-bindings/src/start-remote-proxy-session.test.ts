@@ -57,6 +57,30 @@ function makeErrorEvent(cause: ErrorEvent["cause"]): ErrorEvent {
 }
 
 describe("startRemoteProxySession error handling", () => {
+	it("throws a UserError under Bun before starting the session", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		const originalBunVersion = process.versions.bun;
+		process.versions.bun = "1.4.4";
+		onTestFinished(() => {
+			process.versions.bun = originalBunVersion;
+		});
+
+		const thrown = await startRemoteProxySession(
+			{},
+			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+		).catch((error: unknown) => error);
+
+		expect(thrown).toBeInstanceOf(UserError);
+		expect(thrown).toMatchObject({
+			message: expect.stringContaining(
+				"https://github.com/oven-sh/bun/issues/39247"
+			),
+			telemetryMessage: "remote proxy session under bun",
+		});
+	});
+
 	// Regression: a `UserError` emitted asynchronously (e.g. the Miniflare
 	// user-error case in `DevEnv.handleErrorEvent`) used to fall through to being
 	// wrapped in a generic `Error`, which makes Wrangler treat it as an
