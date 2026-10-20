@@ -1713,7 +1713,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1738,7 +1738,7 @@ importers:
         version: link:../workers-utils
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1781,7 +1781,7 @@ importers:
         version: 6.0.2
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.9.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.9.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
 
   packages/codemods:
     devDependencies:
@@ -1808,7 +1808,7 @@ importers:
         version: 0.2.16
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1836,7 +1836,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1870,7 +1870,7 @@ importers:
         version: 8.5.13
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2002,7 +2002,7 @@ importers:
         version: 1.2.2
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2111,7 +2111,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2210,7 +2210,7 @@ importers:
         version: 3.0.0
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.9.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.9.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
@@ -2509,7 +2509,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2573,7 +2573,7 @@ importers:
         version: 22.15.17
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2607,7 +2607,7 @@ importers:
         version: 0.4.1
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2687,7 +2687,7 @@ importers:
         version: 5.20261019.1
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.9.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.9.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
 
   packages/remote-bindings:
     dependencies:
@@ -2733,7 +2733,7 @@ importers:
         version: 0.28.2
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2761,7 +2761,7 @@ importers:
         version: 22.15.17
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2791,7 +2791,7 @@ importers:
         version: 0.23.11
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@3.12.10)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@3.12.10)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       tsx:
         specifier: ^3.12.8
         version: 3.12.10
@@ -2837,7 +2837,7 @@ importers:
         version: '@types/node@22.15.17'
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2939,8 +2939,8 @@ importers:
         specifier: catalog:default
         version: 1.2.2
       tsdown:
-        specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        specifier: 0.23.1
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4171,8 +4171,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       tsdown:
-        specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        specifier: 0.23.1
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4218,7 +4218,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4490,7 +4490,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4533,7 +4533,7 @@ importers:
         version: 3.0.4
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4846,7 +4846,7 @@ importers:
         version: 1.5.0
       tsdown:
         specifier: 0.23.1
-        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12))
+        version: 0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -10000,10 +10000,6 @@ packages:
     resolution: {integrity: sha512-NfJ4UzBCcQGLDlQq7nHxH+tv3kyZ0hHQqF5BO6J7tNJeP5do1llPr8dZ8zHonfhAu0PHAdMkSo+8o0wxg9lZWw==}
     engines: {node: '>=0.8'}
 
-  ast-kit@2.2.0:
-    resolution: {integrity: sha512-m1Q/RaVOnTp9JxPX+F+Zn7IcLYMzM8kZofDImfsKZd8MbR+ikdOzTeztStWqfrqIxZnYWryyI9ePm3NGjnZgGw==}
-    engines: {node: '>=20.19.0'}
-
   ast-types@0.13.4:
     resolution: {integrity: sha512-x1FCFnFifvYDDzTaLII71vG5uvDwgtmDTEVWAxrgeiR8VjMONcCXJx7E+USjDtHlwFmt9MysbqgF9b9Vjr6w+w==}
     engines: {node: '>=4'}
@@ -10183,9 +10179,6 @@ packages:
 
   birpc@0.2.14:
     resolution: {integrity: sha512-37FHE8rqsYM5JEKCnXFyHpBCzvgHEExwVVTq+nUmloInU7l8ezD1TpOhKpS8oe1DTYFqEK27rFZVKG43oTqXRA==}
-
-  birpc@2.8.0:
-    resolution: {integrity: sha512-Bz2a4qD/5GRhiHSwj30c/8kC8QGj12nNDwz3D4ErQ4Xhy35dsSDvF+RA/tWpjyU0pdGtSDiEk6B5fBGE1qNVhw==}
 
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
@@ -10829,10 +10822,6 @@ packages:
     resolution: {integrity: sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ==}
     engines: {node: '>=0.3.1'}
 
-  diff@8.0.4:
-    resolution: {integrity: sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw==}
-    engines: {node: '>=0.3.1'}
-
   dir-glob@3.0.1:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
     engines: {node: '>=8'}
@@ -10992,15 +10981,6 @@ packages:
       sql.js:
         optional: true
       sqlite3:
-        optional: true
-
-  dts-resolver@2.1.3:
-    resolution: {integrity: sha512-bihc7jPC90VrosXNzK0LTE2cuLP6jr0Ro8jk+kMugHReJVLIpHz/xadeq3MhuwyO4TD4OA3L1Q8pBBFRc08Tsw==}
-    engines: {node: '>=20.19.0'}
-    peerDependencies:
-      oxc-resolver: '>=11.0.0'
-    peerDependenciesMeta:
-      oxc-resolver:
         optional: true
 
   dts-resolver@3.0.0:
@@ -11748,9 +11728,6 @@ packages:
   hono@4.7.10:
     resolution: {integrity: sha512-QkACju9MiN59CKSY5JsGZCYmPZkA6sIW6OFCUp7qDjZu6S6KHtJHhAc9Uy9mV9F8PJ1/HQ3ybZF2yjCa/73fvQ==}
     engines: {node: '>=16.9.0'}
-
-  hookable@5.5.3:
-    resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
 
   hookable@6.1.2:
     resolution: {integrity: sha512-+abwxtiEA52GCVIsQqut3S/uKTbUwYIp4Pe/vv+6py5XiXBCqMZHg6pA6Y5qhgLSEys0/cYuPbO0z1QFj5ZCmg==}
@@ -12957,14 +12934,6 @@ packages:
   obuf@1.1.2:
     resolution: {integrity: sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==}
 
-  obug@0.1.3:
-    resolution: {integrity: sha512-9fwkQ1jsVEqi3I3so5QA4yLPW2QVtekrIpiVUWyw8c/BApPHYj0gohWby3qzK30X58lyksSqcbfvO0vOwKFWqQ==}
-    peerDependencies:
-      ms: ^2.0.0
-    peerDependenciesMeta:
-      ms:
-        optional: true
-
   obug@3.0.0:
     resolution: {integrity: sha512-5vvB5+W7ePv+p3uqxi+RcW1XAzLW0/hxt3/4X4Lc4qHudzOhmBiBwOY6DRob4WnanAEGvNcLjF+KNOufrUoEQw==}
     engines: {node: '>=12.20.0'}
@@ -13806,25 +13775,6 @@ packages:
     resolution: {integrity: sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
 
-  rolldown-plugin-dts@0.17.6:
-    resolution: {integrity: sha512-yX7kDS7Pm9HyVdKKtgfLiRS4wwu+dA4c7KUmOTWKgheu3he4pcT6Wk0Ht59Xm+1pHuoWYv3DvFPqxeF1AyW82A==}
-    engines: {node: '>=20.18.0'}
-    peerDependencies:
-      '@ts-macro/tsc': ^0.3.6
-      '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
-      rolldown: ^1.0.0-beta.44
-      typescript: ^5.0.0
-      vue-tsc: ~3.1.0
-    peerDependenciesMeta:
-      '@ts-macro/tsc':
-        optional: true
-      '@typescript/native-preview':
-        optional: true
-      typescript:
-        optional: true
-      vue-tsc:
-        optional: true
-
   rolldown-plugin-dts@0.28.8:
     resolution: {integrity: sha512-FVhfqxorCWcc20BVT5eVRfRjzLLl6mgzjcMR4gSBf0K4oQMXT0qoHhhzfXy0L7y83fQy7Ug5ZDNk90xM3/LiCQ==}
     engines: {node: ^22.18.0 || ^24.11.0 || >=26.0.0}
@@ -14543,31 +14493,6 @@ packages:
 
   tsconfig@7.0.0:
     resolution: {integrity: sha512-vZXmzPrL+EmC4T/4rVlT2jNVMWCi/O4DIiSj3UHg1OE5kCKbk4mfrXc6dZksLgRM/TZlKnousKH9bbTazUWRRw==}
-
-  tsdown@0.16.3:
-    resolution: {integrity: sha512-uciWbZs71/Yj5Mr++gk+Ry3cp4c4PGluLscJ8dbGLHyKFjo1Hrtn+Ix/BIulIKsrnECwwvDge24WKHzdJmCCQg==}
-    engines: {node: '>=20.19.0'}
-    hasBin: true
-    peerDependencies:
-      '@arethetypeswrong/core': ^0.18.1
-      '@vitejs/devtools': ^0.0.0-alpha.17
-      publint: ^0.3.0
-      typescript: ^5.0.0
-      unplugin-lightningcss: ^0.4.0
-      unplugin-unused: ^0.5.0
-    peerDependenciesMeta:
-      '@arethetypeswrong/core':
-        optional: true
-      '@vitejs/devtools':
-        optional: true
-      publint:
-        optional: true
-      typescript:
-        optional: true
-      unplugin-lightningcss:
-        optional: true
-      unplugin-unused:
-        optional: true
 
   tsdown@0.23.1:
     resolution: {integrity: sha512-MSC2WSOts3in95J334/VIS7KPfor3eCSvndJ6KdoVj9Aak9Kh1aNfz9ws5owhdukuTNSXRdfkPEzA/ihpDD6SA==}
@@ -18224,7 +18149,8 @@ snapshots:
 
   '@opentelemetry/semantic-conventions@1.43.0': {}
 
-  '@oxc-project/runtime@0.96.0': {}
+  '@oxc-project/runtime@0.96.0':
+    optional: true
 
   '@oxc-project/types@0.139.0': {}
 
@@ -18232,7 +18158,8 @@ snapshots:
 
   '@oxc-project/types@0.154.0': {}
 
-  '@oxc-project/types@0.96.0': {}
+  '@oxc-project/types@0.96.0':
+    optional: true
 
   '@oxfmt/binding-android-arm-eabi@0.68.0':
     optional: true
@@ -18803,6 +18730,14 @@ snapshots:
   '@rolldown/binding-openharmony-arm64@1.2.3':
     optional: true
 
+  '@rolldown/binding-wasm32-wasi@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
+    dependencies:
+      '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+    optional: true
+
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)':
     dependencies:
       '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
@@ -18845,7 +18780,8 @@ snapshots:
   '@rolldown/binding-win32-x64-msvc@1.2.3':
     optional: true
 
-  '@rolldown/pluginutils@1.0.0-beta.49': {}
+  '@rolldown/pluginutils@1.0.0-beta.49':
+    optional: true
 
   '@rolldown/pluginutils@1.0.0-rc.3': {}
 
@@ -20302,7 +20238,7 @@ snapshots:
       pathe: 2.0.3
       sirv: 3.0.2
       tinyrainbow: 3.2.0
-      vitest: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      vitest: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.1.5(patch_hash=6ff029cd40c16544867ce7328a4a4830d20f15b04843483e3452e50844a840e3)(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -20615,11 +20551,6 @@ snapshots:
 
   assert-plus@1.0.0: {}
 
-  ast-kit@2.2.0:
-    dependencies:
-      '@babel/parser': 7.29.0
-      pathe: 2.0.3
-
   ast-types@0.13.4:
     dependencies:
       tslib: 2.8.1
@@ -20749,8 +20680,6 @@ snapshots:
 
   birpc@0.2.14: {}
 
-  birpc@2.8.0: {}
-
   bl@4.1.0:
     dependencies:
       buffer: 5.7.1
@@ -20878,7 +20807,8 @@ snapshots:
       pkg-types: 2.3.0
       rc9: 2.1.2
 
-  cac@6.7.14: {}
+  cac@6.7.14:
+    optional: true
 
   cac@7.1.0: {}
 
@@ -21362,8 +21292,6 @@ snapshots:
 
   diff@8.0.3: {}
 
-  diff@8.0.4: {}
-
   dir-glob@3.0.1:
     dependencies:
       path-type: 4.0.0
@@ -21437,8 +21365,6 @@ snapshots:
       pg: 8.16.3
       postgres: 3.4.7
       prisma: 7.0.1(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)
-
-  dts-resolver@2.1.3: {}
 
   dts-resolver@3.0.0: {}
 
@@ -22474,8 +22400,6 @@ snapshots:
   hono@4.12.5: {}
 
   hono@4.7.10: {}
-
-  hookable@5.5.3: {}
 
   hookable@6.1.2: {}
 
@@ -23574,10 +23498,6 @@ snapshots:
 
   obuf@1.1.2: {}
 
-  obug@0.1.3(ms@2.1.3):
-    optionalDependencies:
-      ms: 2.1.3
-
   obug@3.0.0: {}
 
   ohash@2.0.11: {}
@@ -24482,24 +24402,6 @@ snapshots:
 
   reusify@1.0.4: {}
 
-  rolldown-plugin-dts@0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.8.3):
-    dependencies:
-      '@babel/generator': 7.29.1
-      '@babel/parser': 7.29.0
-      '@babel/types': 7.29.0
-      ast-kit: 2.2.0
-      birpc: 2.8.0
-      dts-resolver: 2.1.3
-      get-tsconfig: 4.13.6
-      magic-string: 0.30.21
-      obug: 0.1.3(ms@2.1.3)
-      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
-    optionalDependencies:
-      typescript: 5.8.3
-    transitivePeerDependencies:
-      - ms
-      - oxc-resolver
-
   rolldown-plugin-dts@0.28.8(rolldown@1.2.14)(typescript@5.8.3):
     dependencies:
       dts-resolver: 3.0.0
@@ -24528,6 +24430,30 @@ snapshots:
     transitivePeerDependencies:
       - oxc-resolver
 
+  rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1):
+    dependencies:
+      '@oxc-project/types': 0.96.0
+      '@rolldown/pluginutils': 1.0.0-beta.49
+    optionalDependencies:
+      '@rolldown/binding-android-arm64': 1.0.0-beta.49
+      '@rolldown/binding-darwin-arm64': 1.0.0-beta.49
+      '@rolldown/binding-darwin-x64': 1.0.0-beta.49
+      '@rolldown/binding-freebsd-x64': 1.0.0-beta.49
+      '@rolldown/binding-linux-arm-gnueabihf': 1.0.0-beta.49
+      '@rolldown/binding-linux-arm64-gnu': 1.0.0-beta.49
+      '@rolldown/binding-linux-arm64-musl': 1.0.0-beta.49
+      '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.49
+      '@rolldown/binding-linux-x64-musl': 1.0.0-beta.49
+      '@rolldown/binding-openharmony-arm64': 1.0.0-beta.49
+      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.49
+      '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.49
+      '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.49
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+    optional: true
+
   rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3):
     dependencies:
       '@oxc-project/types': 0.96.0
@@ -24550,6 +24476,7 @@ snapshots:
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
+    optional: true
 
   rolldown@1.1.5:
     dependencies:
@@ -25412,36 +25339,7 @@ snapshots:
       strip-bom: 3.0.0
       strip-json-comments: 2.0.1
 
-  tsdown@0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3):
-    dependencies:
-      ansis: 4.3.1
-      cac: 6.7.14
-      chokidar: 4.0.3
-      diff: 8.0.4
-      empathic: 2.0.1
-      hookable: 5.5.3
-      obug: 0.1.3(ms@2.1.3)
-      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
-      rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.8.3)
-      semver: 7.8.5
-      tinyexec: 1.2.4
-      tinyglobby: 0.2.17
-      tree-kill: 1.2.2
-      unconfig-core: 7.5.0
-      unrun: 0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12)
-    optionalDependencies:
-      typescript: 5.8.3
-    transitivePeerDependencies:
-      - '@emnapi/core'
-      - '@emnapi/runtime'
-      - '@ts-macro/tsc'
-      - '@typescript/native-preview'
-      - ms
-      - oxc-resolver
-      - synckit
-      - vue-tsc
-
-  tsdown@0.23.1(tsx@3.12.10)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12)):
+  tsdown@0.23.1(tsx@3.12.10)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12)):
     dependencies:
       cac: 7.1.0
       defu: 6.1.7
@@ -25468,7 +25366,34 @@ snapshots:
       - oxc-resolver
       - vue-tsc
 
-  tsdown@0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(synckit@0.11.12)):
+  tsdown@0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(synckit@0.11.12)):
+    dependencies:
+      cac: 7.1.0
+      defu: 6.1.7
+      empathic: 2.1.0
+      hookable: 6.1.2
+      import-without-cache: 0.4.1
+      obug: 3.0.0
+      picomatch: 4.0.7
+      rolldown: 1.2.14
+      rolldown-plugin-dts: 0.28.8(rolldown@1.2.14)(typescript@5.8.3)
+      tinyexec: 1.3.1
+      tinyglobby: 0.2.17
+      tree-kill: 1.2.2
+      unconfig-core: 7.5.0
+      verkit: 0.5.0
+    optionalDependencies:
+      tsx: 4.21.0
+      typescript: 5.8.3
+      unrun: 0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(synckit@0.11.12)
+    transitivePeerDependencies:
+      - '@typescript/native-preview'
+      - '@volar/typescript'
+      - '@vue/language-core'
+      - oxc-resolver
+      - vue-tsc
+
+  tsdown@0.23.1(tsx@4.21.0)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12)):
     dependencies:
       cac: 7.1.0
       defu: 6.1.7
@@ -25495,7 +25420,7 @@ snapshots:
       - oxc-resolver
       - vue-tsc
 
-  tsdown@0.23.1(tsx@4.21.0)(typescript@5.9.3)(unrun@0.2.8(synckit@0.11.12)):
+  tsdown@0.23.1(tsx@4.21.0)(typescript@5.9.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12)):
     dependencies:
       cac: 7.1.0
       defu: 6.1.7
@@ -25758,6 +25683,17 @@ snapshots:
       picomatch: 4.0.7
       webpack-virtual-modules: 0.6.2
 
+  unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(synckit@0.11.12):
+    dependencies:
+      '@oxc-project/runtime': 0.96.0
+      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+    optionalDependencies:
+      synckit: 0.11.12
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+    optional: true
+
   unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12):
     dependencies:
       '@oxc-project/runtime': 0.96.0
@@ -25767,6 +25703,7 @@ snapshots:
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
+    optional: true
 
   until-async@3.0.2: {}
 

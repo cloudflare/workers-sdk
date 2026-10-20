@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { defineConfig } from "tsdown";
+import { emitDeclarations } from "../../tools/build/declarations.mjs";
 import { getBuiltinModules } from "./scripts/rtti/query.mjs";
 import type { UserConfig } from "tsdown";
 
@@ -47,32 +48,35 @@ const runtimeDepPatterns = runtimeDeps.flatMap((name) => [
 
 const commonOptions: UserConfig = {
 	platform: "node",
+	inputOptions: { resolve: { mainFields: ["module", "main"] } },
 	target: "esnext",
 	format: "esm",
 	unbundle: false,
-	noExternal: ["devalue"],
-	external: [
-		// Cloudflare/workerd built-ins
-		/^cloudflare:.*$/,
-		/^workerd:.*$/,
-		// Virtual/runtime modules
-		"__VITEST_POOL_WORKERS_DEFINES",
-		"__VITEST_POOL_WORKERS_USER_OBJECT",
-		// Runtime dependencies and peer dependencies (derived from package.json)
-		...runtimeDepPatterns,
-	],
+	deps: {
+		alwaysBundle: ["devalue"],
+		neverBundle: [
+			// Cloudflare/workerd built-ins
+			/^cloudflare:.*$/,
+			/^workerd:.*$/,
+			// Virtual/runtime modules
+			"__VITEST_POOL_WORKERS_DEFINES",
+			"__VITEST_POOL_WORKERS_USER_OBJECT",
+			// Runtime dependencies and peer dependencies (derived from package.json)
+			...runtimeDepPatterns,
+		],
+	},
 	sourcemap: true,
 	outDir: path.join(pkgRoot, "dist"),
 	ignoreWatch: ["dist"],
 };
-export default defineConfig(async () => {
+export default defineConfig(async (): Promise<UserConfig[]> => {
 	const builtinModules = await getBuiltinModules();
 	return [
 		{
 			...commonOptions,
 			entry: path.join(pkgRoot, "src", "pool", "index.ts"),
 			outDir: path.join(pkgRoot, "dist", "pool"),
-			dts: true,
+			dts: false,
 			define: {
 				VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES:
 					JSON.stringify(builtinModules),
@@ -90,6 +94,28 @@ export default defineConfig(async () => {
 				VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES:
 					JSON.stringify(builtinModules),
 			},
+		},
+		{
+			entry: {
+				index: "emitted-types/packages/vitest-plugin/src/pool/index.d.ts",
+			},
+			platform: "node",
+			format: "esm",
+			outDir: "dist/pool",
+			clean: false,
+			dts: {
+				dtsInput: true,
+				emitDtsOnly: true,
+				sourcemap: process.env.SOURCEMAPS !== "false",
+			},
+			outputOptions: {
+				entryFileNames: "[name].d.mts",
+				chunkFileNames: "[name]-[hash].d.mts",
+			},
+			tsconfig: "tsconfig.bundle.json",
+			sourcemap: process.env.SOURCEMAPS !== "false",
+			plugins: [emitDeclarations()],
+			deps: commonOptions.deps,
 		},
 	];
 });
