@@ -5,6 +5,7 @@ import {
 import { logger } from "../logger";
 import type { Binding, Logger } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
+import type { DotenvParseOutput } from "dotenv";
 
 export { getDefaultEnvFiles } from "@cloudflare/dev-helpers/dev-vars";
 
@@ -35,7 +36,7 @@ export function loadDotEnv(
 		silent: boolean;
 		logger?: Pick<Logger, "debug" | "log" | "warn" | "once">;
 	}
-) {
+): DotenvParseOutput {
 	return loadSharedDotEnv(envPaths, {
 		...options,
 		logger: options.logger ?? logger,

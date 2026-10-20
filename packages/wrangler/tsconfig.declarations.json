@@ -1,0 +1,25 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"rootDir": "../..",
+		"outDir": "emitted-types",
+		"declaration": true,
+		"declarationMap": true,
+		"emitDeclarationOnly": true,
+		"noEmit": false,
+		"noCheck": true,
+		"incremental": false
+	},
+	"files": [
+		"src/cli.ts",
+		"../workers-shared/index.ts",
+		"../workers-shared/utils/types.ts",
+		"../workers-utils/src/index.ts",
+		"../autoconfig/src/index.ts",
+		"../deploy-helpers/src/index.ts",
+		"../pages-functions/src/index.ts",
+		"../runtime-types/src/index.ts",
+		"../workflows-shared/src/types.ts"
+	],
+	"include": ["src/**/*.d.ts"]
+}
