@@ -70,7 +70,7 @@ export interface CliDescriptor {
 	 */
 	displayName: string;
 
-	/** Temporary-account flag spelling in user guidance. Defaults to `--temporary`. */
+	/** Temporary-account flag spelling in user guidance. Defaults to `--temporary-account`. */
 	temporaryAccountFlag?: string;
 
 	/** Commands surfaced in auth guidance. */

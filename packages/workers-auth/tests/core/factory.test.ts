@@ -196,12 +196,15 @@ describe("consumer auth guidance", () => {
 		vi.clearAllMocks();
 	});
 
-	it("uses cf's temporary-account flag in auth guidance", async ({
+	it("defaults to cf's temporary-account flag in auth guidance", async ({
 		expect,
 	}) => {
 		flow.isTemporaryAllowed.mockReturnValue(true);
 		flow.getAPIToken.mockReturnValue({ apiToken: "existing-token" });
-		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+		const auth = createCloudflareAuth(
+			{ ...CF_CLI, temporaryAccountFlag: undefined },
+			createTestContext()
+		);
 
 		await expect(auth.requireAuth(COMPLIANCE_CONFIG)).rejects.toThrow(
 			"Either remove `--temporary-account` to use your existing account"

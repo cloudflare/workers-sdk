@@ -17,7 +17,7 @@ import type {
 import type { PowSolution } from "./pow";
 
 /** Flag spelling used by consumers that don't specify their own. */
-export const DEFAULT_TEMPORARY_ACCOUNT_FLAG = "--temporary";
+export const DEFAULT_TEMPORARY_ACCOUNT_FLAG = "--temporary-account";
 
 export const TEMPORARY_TERMS_URLS = {
 	termsOfService: "https://www.cloudflare.com/terms/",
@@ -387,7 +387,7 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 	temporaryAccountLogger: TemporaryAccountLogger;
 	/** Consumer name used in temporary-account errors. */
 	cliDisplayName?: string;
-	/** Consumer temporary-account flag spelling. Defaults to `--temporary`. */
+	/** Consumer temporary-account flag spelling. Defaults to `--temporary-account`. */
 	temporaryAccountFlag?: string;
 	/** Consumer command used to clear a cached temporary account. */
 	logoutCommand?: string;
