@@ -16,11 +16,26 @@ import {
 	SERVICE_DEV_REGISTRY_PROXY,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
-import type { Service, ServiceDesignator } from "../../runtime";
+import type { Service, ServiceDesignator, Worker_Binding } from "../../runtime";
 import type { ParsedWorkerOptions, Plugin, WorkflowExporters } from "../shared";
 
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
 export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
+
+// Workflow names can't contain `:`, so these can't clash with a Workflow's services. The
+// namespace key differs from `getWorkflowNamespaceKey()`'s prefix for the same reason.
+export const WORKFLOWS_CONCURRENCY_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:concurrency`;
+const WORKFLOWS_CONCURRENCY_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:concurrency:storage`;
+const WORKFLOWS_CONCURRENCY_NAMESPACE_KEY =
+	"miniflare-workflow-concurrency-keys";
+
+export const WORKFLOWS_CONCURRENCY_KEYS_BINDING = {
+	name: "CONCURRENCY_KEYS",
+	durableObjectNamespace: {
+		className: "ConcurrencyKeys",
+		serviceName: WORKFLOWS_CONCURRENCY_SERVICE_NAME,
+	},
+} satisfies Worker_Binding;
 
 /** Service implementing the Workflow API for `env` and `ctx.exports`. */
 export function getWorkflowBindingServiceName(workflowName: string) {
@@ -225,6 +240,33 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 			],
 		};
 
+		// Every Worker with Workflows returns these, and Miniflare keeps the first service
+		// of each name, so they must not depend on the Worker that returns them.
+		const concurrencyServices: Service[] = [
+			{
+				name: WORKFLOWS_CONCURRENCY_STORAGE_SERVICE_NAME,
+				disk: { path: persistPath, writable: true },
+			},
+			{
+				name: WORKFLOWS_CONCURRENCY_SERVICE_NAME,
+				worker: {
+					...engineWorker,
+					compatibilityFlags: ["experimental"],
+					durableObjectNamespaces: [
+						{
+							className: "ConcurrencyKeys",
+							enableSql: true,
+							uniqueKey: WORKFLOWS_CONCURRENCY_NAMESPACE_KEY,
+							preventEviction: true,
+						},
+					],
+					durableObjectStorage: {
+						localDisk: WORKFLOWS_CONCURRENCY_STORAGE_SERVICE_NAME,
+					},
+				},
+			},
+		];
+
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = workflows.map<Service>(([bindingName, binding]) => {
 			const external = !workerNames.includes(binding.worker);
@@ -282,6 +324,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 						},
 						// Workflow deletion needs the Node.js host to remove its SQLite files.
 						WORKER_BINDING_SERVICE_LOOPBACK,
+						WORKFLOWS_CONCURRENCY_KEYS_BINDING,
 						...(stepLimit !== undefined
 							? [
 									{
@@ -298,7 +341,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		});
 
 		if (exportedWorkflows.length === 0) {
-			return [...storageServices, ...services];
+			return [...storageServices, ...concurrencyServices, ...services];
 		}
 
 		// workerd runs exported Workflows in the exporting Worker: it creates each
@@ -319,6 +362,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 				...getStreamingTails(config.name),
 				bindings: [
 					WORKER_BINDING_SERVICE_LOOPBACK,
+					WORKFLOWS_CONCURRENCY_KEYS_BINDING,
 					{ name: "STEP_LIMITS", json: JSON.stringify(stepLimits) },
 				],
 			},
@@ -343,6 +387,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 						{ name: "BINDING_NAME", json: JSON.stringify(className) },
 						{ name: "WORKFLOW_NAME", json: JSON.stringify(workflow.name) },
 						WORKER_BINDING_SERVICE_LOOPBACK,
+						WORKFLOWS_CONCURRENCY_KEYS_BINDING,
 					],
 				},
 			})
@@ -350,6 +395,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 
 		return [
 			...storageServices,
+			...concurrencyServices,
 			...services,
 			engineService,
 			...exportedBindingServices,

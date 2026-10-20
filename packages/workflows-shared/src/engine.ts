@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { CONCURRENCY_KEYS_OBJECT_NAME } from "./concurrency";
 import { Context, REDACTED_STEP_OUTPUT } from "./context";
 import {
 	INSTANCE_METADATA,
@@ -55,6 +56,7 @@ import type {
 	RestartFromStep,
 	WorkflowInstanceTerminateOptions,
 } from "./binding";
+import type { ConcurrencyKeys } from "./concurrency";
 import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type {
@@ -80,6 +82,7 @@ interface Env {
 	WORKFLOW_NAME?: string;
 	STEP_LIMIT?: string; // JSON-encoded number from miniflare binding
 	STEP_LIMITS?: Record<string, number>;
+	CONCURRENCY_KEYS?: DurableObjectNamespace<ConcurrencyKeys>;
 }
 
 /**
@@ -142,6 +145,8 @@ const ENGINE_STATUS_KEY = "ENGINE_STATUS";
 const WORKFLOW_OUTPUT_KEY = "WORKFLOW_OUTPUT";
 
 const EVENT_MAP_PREFIX = "EVENT_MAP";
+
+const CONCURRENCY_KEYS_USED_KEY = "CONCURRENCY_KEYS_USED";
 
 export const DEFAULT_STEP_LIMIT = 10_000;
 
@@ -438,6 +443,9 @@ async function buildWorkflowSubscriptionEvent(
 		case InstanceEvent.ROLLBACK_FAILED:
 			return { ...common, type: "rollback_errored" };
 		case InstanceEvent.__INTERNAL_PROD:
+		case InstanceEvent.WAITING_FOR_STEP_CONCURRENCY:
+		case InstanceEvent.TICKET_CLAIMED:
+		case InstanceEvent.TICKET_RELEASED:
 			return { ...common, type: "internal" };
 	}
 }
@@ -1220,8 +1228,43 @@ export class Engine extends DurableObject<Env, EngineProps> {
 		}
 	}
 
+	getConcurrencyKeys(): DurableObjectStub<ConcurrencyKeys> | undefined {
+		const namespace = this.env.CONCURRENCY_KEYS;
+		return namespace?.get(namespace.idFromName(CONCURRENCY_KEYS_OBJECT_NAME));
+	}
+
+	getConcurrencyWorkflowName(): string {
+		return this.ctx.props.workflowName ?? this.env.WORKFLOW_NAME ?? "";
+	}
+
+	async markConcurrencyKeysUsed(): Promise<void> {
+		await this.ctx.storage.put(CONCURRENCY_KEYS_USED_KEY, true);
+	}
+
+	// Aborting the Durable Object skips the `finally` that releases a step's keys, so every
+	// abort path releases the instance's slots first. Failing to reach the keys is not fatal.
+	async releaseConcurrencyKeys(instanceId?: string): Promise<void> {
+		if ((await this.ctx.storage.get(CONCURRENCY_KEYS_USED_KEY)) !== true) {
+			return;
+		}
+		const stub = this.getConcurrencyKeys();
+		const id =
+			instanceId ??
+			(await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA))
+				?.instance.id;
+		if (stub === undefined || id === undefined) {
+			return;
+		}
+		try {
+			await stub.releaseInstance(this.getConcurrencyWorkflowName(), id);
+		} catch (error) {
+			console.debug("Failed to release concurrency keys:", error);
+		}
+	}
+
 	async abort(reason: string) {
 		await this.ctx.storage.sync();
+		await this.releaseConcurrencyKeys();
 
 		// Clean up pending JS operations
 		this.timeoutHandler.dispose();
@@ -1234,6 +1277,7 @@ export class Engine extends DurableObject<Env, EngineProps> {
 	// TODO: Ideally this abort should be done by `abortAllDurableObjects` from worked called by vitest-plugin
 	async unsafeAbort(reason?: string) {
 		await this.ctx.storage.sync();
+		await this.releaseConcurrencyKeys();
 		await this.ctx.storage.deleteAll();
 
 		this.ctx.abort(reason);
@@ -1734,6 +1778,10 @@ export class Engine extends DurableObject<Env, EngineProps> {
 
 		// restore eventMap so that waitForEvent across lifetimes works correctly
 		await this.restoreEventMap();
+
+		// No step of this lifetime holds a key yet, so any slot still recorded for this
+		// instance belongs to a previous lifetime that died without releasing it.
+		await this.releaseConcurrencyKeys(instance.id);
 
 		const stubStep = new Context(this, this.ctx);
 

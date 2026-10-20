@@ -3,7 +3,10 @@ import {
 	getStepDisplayName,
 	getStepKey,
 } from "../../components/workflows/StepRow";
-import { getRestartFromStepParam } from "../../components/workflows/types";
+import {
+	getRestartFromStepParam,
+	isWaitingForConcurrency,
+} from "../../components/workflows/types";
 
 describe("getStepKey", () => {
 	test("produces key from type and name", ({ expect }) => {
@@ -104,5 +107,37 @@ describe("getRestartFromStepParam", () => {
 			name: "",
 			type: "do",
 		});
+	});
+});
+
+describe("isWaitingForConcurrency", () => {
+	test("is true for a keyed step that has not acquired its keys", ({
+		expect,
+	}) => {
+		expect(
+			isWaitingForConcurrency({
+				type: "step",
+				success: null,
+				attempts: [],
+				concurrency: { keys: ["k"], acquired_at: null },
+			})
+		).toBe(true);
+	});
+
+	test("is false once the step acquired its keys or ran an attempt", ({
+		expect,
+	}) => {
+		expect(
+			isWaitingForConcurrency({
+				concurrency: { keys: ["k"], acquired_at: "2026-01-01T00:00:00Z" },
+			})
+		).toBe(false);
+		expect(
+			isWaitingForConcurrency({
+				attempts: [{ start: "2026-01-01T00:00:00Z" }],
+				concurrency: { keys: ["missing"], acquired_at: null },
+			})
+		).toBe(false);
+		expect(isWaitingForConcurrency({ type: "step" })).toBe(false);
 	});
 });

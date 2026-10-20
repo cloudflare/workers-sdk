@@ -5604,3 +5604,299 @@ describe("pipeline schema type generation", () => {
 		`);
 	});
 });
+
+describe("concurrency key type generation", () => {
+	const std = mockConsoleMethods();
+	runInTempDir();
+	mockApiToken();
+	const ACCOUNT_ID = "023e105f4ecef8ad9ca31a8372d0c353";
+	let requests: URL[];
+
+	beforeEach(() => {
+		requests = [];
+		vi.spyOn(generateRuntime, "generateRuntimeTypes").mockImplementation(
+			async () => ({
+				runtimeHeader: "// Runtime types generated with workerd@",
+				runtimeTypes: "<runtime types go here>",
+			})
+		);
+		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+	});
+
+	function writeConfig(overrides: Record<string, unknown> = {}) {
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				name: "test-worker",
+				main: "./index.ts",
+				compatibility_date: "2024-01-01",
+				account_id: ACCOUNT_ID,
+				workflows: [
+					{ binding: "ORDERS", name: "orders", class_name: "OrderWorkflow" },
+				],
+				...overrides,
+			})
+		);
+	}
+
+	function serveKeys(respond: () => Response) {
+		msw.use(
+			http.get("*/accounts/:accountId/workflows/concurrency", ({ request }) => {
+				requests.push(new URL(request.url));
+				return respond();
+			})
+		);
+	}
+
+	function keys(names: string[]) {
+		return () =>
+			HttpResponse.json({
+				...createFetchResult(
+					names.map((name) => ({ id: name, name, limit: 1 }))
+				),
+				result_info: { total_count: names.length, total_pages: 1 },
+			});
+	}
+
+	function typesFile() {
+		return fs.readFileSync("./worker-configuration.d.ts", "utf8");
+	}
+
+	const SECTION = dedent`
+		// Begin concurrency keys (account 023e105f4ecef8ad9ca31a8372d0c353)
+		declare namespace Cloudflare {
+			interface GlobalProps {
+				concurrencyKeys:
+					| "payments-api"
+					| "warehouse-db";
+			}
+		}
+		declare namespace CloudflareWorkersModule {
+			export interface WorkflowStep {
+				do<T extends Rpc.Serializable<T>>(
+					name: string,
+					config: WorkflowStepConfig & {
+						concurrency:
+							| Cloudflare.GlobalProps["concurrencyKeys"]
+							| readonly Cloudflare.GlobalProps["concurrencyKeys"][];
+					},
+					callback: (ctx: WorkflowStepContext) => Promise<T>,
+					rollbackOptions?: WorkflowStepRollbackOptions<T>
+				): Promise<T>;
+			}
+		}
+		// End concurrency keys
+	`;
+
+	it("adds the pinned account's keys before the runtime types", async ({
+		expect,
+	}) => {
+		writeConfig();
+		serveKeys(keys(["warehouse-db", "payments-api"]));
+
+		await runWrangler("types");
+
+		expect(requests.map((url) => url.pathname)).toEqual([
+			`/client/v4/accounts/${ACCOUNT_ID}/workflows/concurrency`,
+		]);
+		const content = typesFile();
+		expect(content).toContain(`${SECTION}\n// Begin runtime types`);
+		expect(content.indexOf(SECTION)).toBeGreaterThan(
+			content.indexOf("interface Env extends")
+		);
+	});
+
+	it("does not treat key changes as out of date in --check", async ({
+		expect,
+	}) => {
+		writeConfig();
+		serveKeys(keys(["payments-api"]));
+		await runWrangler("types --include-runtime=false");
+		msw.resetHandlers();
+		serveKeys(keys(["payments-api", "warehouse-db"]));
+		requests = [];
+
+		await runWrangler("types --check");
+
+		expect(std.out).toContain("are up to date");
+		expect(requests).toEqual([]);
+	});
+
+	it.for([
+		{ name: "no account_id", overrides: { account_id: undefined } },
+		{
+			name: "a Workflow defined by another Worker",
+			overrides: {
+				workflows: [
+					{
+						binding: "ORDERS",
+						name: "orders",
+						class_name: "OrderWorkflow",
+						script_name: "other-worker",
+					},
+				],
+			},
+		},
+		{ name: "no Workflow", overrides: { workflows: [] } },
+	])("skips the lookup with $name", async ({ overrides }, { expect }) => {
+		writeConfig(overrides);
+		serveKeys(keys(["payments-api"]));
+
+		await runWrangler("types");
+
+		expect(requests).toEqual([]);
+		expect(typesFile()).not.toContain("concurrencyKeys");
+	});
+
+	it("ignores CLOUDFLARE_ACCOUNT_ID when the config pins no account", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", ACCOUNT_ID);
+		writeConfig({ account_id: undefined });
+		serveKeys(keys(["payments-api"]));
+
+		await runWrangler("types");
+
+		expect(requests).toEqual([]);
+	});
+
+	it("keeps the previous section when the lookup fails", async ({ expect }) => {
+		writeConfig();
+		serveKeys(keys(["payments-api", "warehouse-db"]));
+		await runWrangler("types");
+		msw.resetHandlers();
+		serveKeys(() =>
+			HttpResponse.json(
+				createFetchResult(null, false, [
+					{ code: 10800, message: "user.feature_disabled" },
+				]),
+				{ status: 403 }
+			)
+		);
+
+		await runWrangler("types");
+
+		expect(typesFile()).toContain(SECTION);
+		expect(std.warn).toContain("Could not list concurrency keys");
+	});
+
+	it("drops a previous section written for another account", async ({
+		expect,
+	}) => {
+		writeConfig();
+		serveKeys(keys(["payments-api", "warehouse-db"]));
+		await runWrangler("types");
+		msw.resetHandlers();
+		serveKeys(() => HttpResponse.json({}, { status: 500 }));
+		writeConfig({ account_id: "another-account" });
+
+		await runWrangler("types");
+
+		expect(typesFile()).not.toContain("concurrencyKeys");
+	});
+
+	it("omits the section with --concurrency-keys=false", async ({ expect }) => {
+		writeConfig();
+		serveKeys(keys(["payments-api"]));
+
+		await runWrangler("types --concurrency-keys=false");
+
+		expect(requests).toEqual([]);
+		expect(typesFile()).not.toContain("concurrencyKeys");
+		expect(typesFile()).toContain("wrangler types --concurrency-keys=false");
+	});
+
+	it("omits the section when the account has no keys", async ({ expect }) => {
+		writeConfig();
+		serveKeys(keys([]));
+
+		await runWrangler("types");
+
+		expect(typesFile()).not.toContain("concurrencyKeys");
+	});
+
+	it("keeps the section in the programmatic API without fetching", async ({
+		expect,
+	}) => {
+		writeConfig();
+		serveKeys(keys(["payments-api", "warehouse-db"]));
+		await runWrangler("types");
+		requests = [];
+
+		const result = await experimental_generateTypes({
+			config: "./wrangler.json",
+		});
+
+		expect(requests).toEqual([]);
+		expect(result.content).toContain(SECTION);
+	});
+});
+
+describe("concurrency key section in checkTypesDiff", () => {
+	mockConsoleMethods();
+	runInTempDir();
+
+	it("carries the section over when wrangler dev regenerates types", async ({
+		expect,
+	}) => {
+		vi.spyOn(generateRuntime, "generateRuntimeTypes").mockImplementation(
+			async () => ({
+				runtimeHeader: "// Runtime types generated with workerd@",
+				runtimeTypes: "<runtime types go here>",
+			})
+		);
+		const section = dedent`
+			// Begin concurrency keys (account some-account)
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					concurrencyKeys: "payments-api";
+				}
+			}
+			// End concurrency keys
+		`;
+		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+		fs.writeFileSync(
+			"./worker-configuration.d.ts",
+			[
+				"/* eslint-disable */",
+				`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types\` (hash: stale)`,
+				"// Runtime types generated with workerd@",
+				"interface Env {}",
+				section,
+				"// Begin runtime types",
+				"<runtime types go here>",
+			].join("\n")
+		);
+		const { checkTypesDiff } = await import("../type-generation/helpers");
+		const { readConfig } = await import("../config");
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				name: "test-worker",
+				main: "./index.ts",
+				compatibility_date: "2024-01-01",
+				account_id: "some-account",
+				workflows: [
+					{ binding: "ORDERS", name: "orders", class_name: "OrderWorkflow" },
+				],
+				vars: { CHANGED: "yes" },
+				dev: { generate_types: true },
+			})
+		);
+		const config = readConfig({ config: "./wrangler.json" });
+
+		const changed = await checkTypesDiff(config, {
+			file: `${process.cwd()}/index.ts`,
+			projectRoot: process.cwd(),
+			configPath: config.configPath,
+			format: "modules",
+			moduleRoot: process.cwd(),
+			exports: [],
+		});
+
+		expect(changed).toBe(true);
+		const content = fs.readFileSync("./worker-configuration.d.ts", "utf8");
+		expect(content).toContain("CHANGED");
+		expect(content).toContain(`${section}\n// Begin runtime types`);
+	});
+});

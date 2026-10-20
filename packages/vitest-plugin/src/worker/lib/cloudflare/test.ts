@@ -19,6 +19,7 @@ export {
 	getQueueResult,
 	applyD1Migrations,
 	adminSecretsStore,
+	adminWorkflowConcurrencyKeys,
 	createPagesEventContext,
 	introspectWorkflowInstance,
 	introspectWorkflow,

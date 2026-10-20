@@ -724,6 +724,53 @@ declare module "cloudflare:test" {
 		[Symbol.asyncDispose](): Promise<void>;
 	}
 
+	/** A local Workflow concurrency key. `usage` counts the steps holding it and the steps
+	 * waiting for one of its slots. */
+	export interface WorkflowConcurrencyKey {
+		id: string;
+		name: string;
+		limit: number;
+		created_on: string;
+		usage: { holding: number; waiting: number };
+	}
+
+	/** Slots of a concurrency key held by a test, from `WorkflowConcurrencyKeysAdmin.hold()`.
+	 * `release()` frees them so waiting steps can acquire them. */
+	export interface WorkflowConcurrencyKeyHold {
+		release(): Promise<void>;
+	}
+
+	/** Test API for the local Workflow concurrency keys, returned by
+	 * `adminWorkflowConcurrencyKeys()`. Keys are addressed by name or ID. */
+	export interface WorkflowConcurrencyKeysAdmin {
+		list(): Promise<WorkflowConcurrencyKey[]>;
+		get(name: string): Promise<WorkflowConcurrencyKey | null>;
+		/** Creates the key, or changes its limit if it exists. Steps waiting for the key see a
+		 * raised limit at once. */
+		set(name: string, limit: number): Promise<WorkflowConcurrencyKey>;
+		delete(name: string): Promise<void>;
+		/** Occupies `count` slots of the key, even past its limit, so steps that reference it
+		 * wait until the returned hold is released. */
+		hold(name: string, count?: number): Promise<WorkflowConcurrencyKeyHold>;
+		/** Resolves once at least `count` steps wait for the key, and rejects after
+		 * `options.timeout` milliseconds (5000 by default). */
+		waitForWaiters(
+			name: string,
+			count?: number,
+			options?: { timeout?: number }
+		): Promise<void>;
+		reset(): Promise<void>;
+		/** Releases the slots this API holds and its RPC stubs. Declare the result with `using`
+		 * so this runs at the end of the scope. */
+		[Symbol.dispose](): void;
+	}
+
+	/** Returns the test API for the local keys that `step.do()` references with `concurrency`.
+	 * Every Workflow in the session shares the keys, so any Workflow binding from `env` works. */
+	export function adminWorkflowConcurrencyKeys(
+		workflow: Workflow
+	): WorkflowConcurrencyKeysAdmin;
+
 	// Only require `params` and `data` to be specified if they're non-empty
 	interface EventContextInitBase {
 		request: Request<unknown, IncomingRequestCfProperties>;

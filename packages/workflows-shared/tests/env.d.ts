@@ -3,6 +3,9 @@
 declare namespace Cloudflare {
 	interface Env {
 		ENGINE: DurableObjectNamespace<import("../src/index").Engine>;
+		CONCURRENCY_KEYS?: DurableObjectNamespace<
+			import("../src/index").ConcurrencyKeys
+		>;
 		USER_WORKFLOW: import("cloudflare:workers").WorkflowEntrypoint;
 	}
 }

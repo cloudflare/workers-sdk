@@ -1,6 +1,10 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { ms } from "itty-time";
 import { z } from "zod";
+import {
+	CONCURRENCY_KEYS_OBJECT_NAME,
+	ConcurrencyKeysAdmin,
+} from "./concurrency";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
 	duplicateInstanceError,
@@ -16,6 +20,7 @@ import {
 	isValidWorkflowInstanceId,
 } from "./lib/validators";
 import { parseWorkflowSubscriptionOptions } from "./subscription";
+import type { ConcurrencyKeys } from "./concurrency";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -39,6 +44,7 @@ type Env = {
 	BINDING_NAME: string;
 	WORKFLOW_NAME: string;
 	MINIFLARE_LOOPBACK?: Fetcher;
+	CONCURRENCY_KEYS?: DurableObjectNamespace<ConcurrencyKeys>;
 };
 
 /** Waits for Miniflare to finish deleting an instance's persistence files. */
@@ -691,6 +697,18 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 				return error === undefined ? [] : [error];
 			}),
 		};
+	}
+
+	public async unsafeGetConcurrencyKeysAdmin(): Promise<ConcurrencyKeysAdmin> {
+		const namespace = this.env.CONCURRENCY_KEYS;
+		if (namespace === undefined) {
+			throw new Error(
+				"Local concurrency keys are not available for this Workflow binding."
+			);
+		}
+		return new ConcurrencyKeysAdmin(
+			namespace.get(namespace.idFromName(CONCURRENCY_KEYS_OBJECT_NAME))
+		);
 	}
 
 	public async unsafeGetBindingName(): Promise<string> {

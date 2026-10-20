@@ -609,7 +609,60 @@ export const zWorkflowsInstanceDetails = z.object({
 			message: z.string().optional(),
 		})
 		.optional(),
+	waiting_for: z
+		.array(
+			z.object({
+				type: z.enum(["concurrency_key"]),
+				step: z.string(),
+				key: z.string(),
+				keys: z.array(z.string()),
+				since: z.string(),
+			})
+		)
+		.optional(),
 });
+
+/**
+ * ID or name of a concurrency key.
+ */
+export const zWorkflowsConcurrencyKeyId = z.string();
+
+export const zWorkflowsConcurrencyKey = z.object({
+	id: z.string(),
+	name: z.string(),
+	limit: z.int().gte(1),
+	created_on: z.string(),
+	usage: z.object({
+		holding: z.number(),
+		waiting: z.number(),
+	}),
+});
+
+export const zWorkflowsConcurrencyKeyDetails = zWorkflowsConcurrencyKey.and(
+	z.object({
+		referencing_workflows: z.array(
+			z.object({
+				workflow_name: z.string().optional(),
+				version_id: z.string().optional(),
+			})
+		),
+	})
+);
+
+export const zWorkflowsConcurrencyKeyHolder = z.object({
+	workflow_name: z.string().nullable(),
+	instance_id: z.string().nullable(),
+	step: z.string().nullable(),
+	since: z.string(),
+});
+
+export const zWorkflowsConcurrencyKeyWaiter =
+	zWorkflowsConcurrencyKeyHolder.and(
+		z.object({
+			blocked_on: z.string(),
+			keys: z.array(z.string()),
+		})
+	);
 
 /**
  * Columns and rows for a read-only SQL query.
@@ -1734,6 +1787,151 @@ export const zWorkflowsSendInstanceEventData = z.object({
  * Send Event response.
  */
 export const zWorkflowsSendInstanceEventResponse = zWorkersApiResponseCommon;
+
+export const zWorkflowsListConcurrencyKeysData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z
+		.object({
+			page: z.number().gte(1).optional().default(1),
+			per_page: z.number().gte(1).lte(100).optional().default(25),
+		})
+		.optional(),
+});
+
+/**
+ * List Concurrency Keys response.
+ */
+export const zWorkflowsListConcurrencyKeysResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: z.array(zWorkflowsConcurrencyKey).optional(),
+			result_info: z
+				.object({
+					count: z.number().optional(),
+					page: z.number().optional(),
+					per_page: z.number().optional(),
+					total_count: z.number().optional(),
+					total_pages: z.number().optional(),
+				})
+				.optional(),
+		})
+	);
+
+export const zWorkflowsCreateConcurrencyKeyData = z.object({
+	body: z.object({
+		name: z.string().min(1).max(255),
+		limit: z.int().gte(1),
+	}),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * Create Concurrency Key response.
+ */
+export const zWorkflowsCreateConcurrencyKeyResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: zWorkflowsConcurrencyKey.optional(),
+		})
+	);
+
+export const zWorkflowsDeleteConcurrencyKeyData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		key_id: zWorkflowsConcurrencyKeyId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete Concurrency Key response.
+ */
+export const zWorkflowsDeleteConcurrencyKeyResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: z
+				.object({
+					status: z.string().optional(),
+				})
+				.optional(),
+		})
+	);
+
+export const zWorkflowsGetConcurrencyKeyData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		key_id: zWorkflowsConcurrencyKeyId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get Concurrency Key response.
+ */
+export const zWorkflowsGetConcurrencyKeyResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: zWorkflowsConcurrencyKeyDetails.optional(),
+		})
+	);
+
+export const zWorkflowsUpdateConcurrencyKeyData = z.object({
+	body: z.object({
+		limit: z.int().gte(1),
+	}),
+	path: z.object({
+		key_id: zWorkflowsConcurrencyKeyId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Update Concurrency Key response.
+ */
+export const zWorkflowsUpdateConcurrencyKeyResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: zWorkflowsConcurrencyKey.optional(),
+		})
+	);
+
+export const zWorkflowsListConcurrencyKeyHoldersData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		key_id: zWorkflowsConcurrencyKeyId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * List Concurrency Key Holders response.
+ */
+export const zWorkflowsListConcurrencyKeyHoldersResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: z.array(zWorkflowsConcurrencyKeyHolder).optional(),
+		})
+	);
+
+export const zWorkflowsListConcurrencyKeyWaitersData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		key_id: zWorkflowsConcurrencyKeyId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * List Concurrency Key Waiters response.
+ */
+export const zWorkflowsListConcurrencyKeyWaitersResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: z.array(zWorkflowsConcurrencyKeyWaiter).optional(),
+		})
+	);
 
 export const zObservabilityQueryData = z.object({
 	body: z.object({

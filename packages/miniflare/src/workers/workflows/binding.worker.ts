@@ -3,4 +3,5 @@
 export {
 	WorkflowBinding,
 	Engine,
+	ConcurrencyKeys,
 } from "@cloudflare/workflows-shared/src/local-binding-worker";

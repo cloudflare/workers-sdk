@@ -375,7 +375,10 @@ describe("Workflows on ctx.exports", () => {
 				await waitForStatus(restartedFetch, `id=${id}`, "complete")
 			).toMatchObject({ output: ["step-0"] });
 		}
-		expect(await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME))).toEqual([
+		expect(
+			(await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME))).sort()
+		).toEqual([
+			"miniflare-workflow-concurrency-keys",
 			"miniflare-workflows-my-workflow",
 		]);
 	});
