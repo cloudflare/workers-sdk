@@ -1,5 +1,23 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.3
+
+### Patch Changes
+
+- [#15846](https://github.com/cloudflare/workers-sdk/pull/15846) [`a88cac4`](https://github.com/cloudflare/workers-sdk/commit/a88cac4d880629a4ad68f7173b3353941bea6081) Thanks [@oddharsh](https://github.com/oddharsh)! - Fail with an error instead of hanging when local dev requests can't work under Bun
+
+  Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes requests through (oven-sh/bun#39247). Under Bun, `createTestHarness()`'s `server.fetch()` and `server.getWorker()`'s `fetch()`, `email()` and `scheduled()` now throw a `UserError`, requests to the dev server URL get a 503 naming the cause, and starting remote bindings throws a `UserError`. Each of these used to hang with no error. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.
+
+- [#16318](https://github.com/cloudflare/workers-sdk/pull/16318) [`ff1f971`](https://github.com/cloudflare/workers-sdk/commit/ff1f97121dbcb053a7eed1b7e1ef89605ed7d777) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Prevent legacy Wrangler configuration files from being silently ignored
+
+  The Vite plugin now stops with an actionable error when `wrangler.json`, `wrangler.jsonc`, or `wrangler.toml` is present without `cloudflare.config.ts`. Run `npx cf migrate --bundler vite` to migrate the project before building.
+
+- Updated dependencies [[`3464abc`](https://github.com/cloudflare/workers-sdk/commit/3464abcfeb42bbe7fc3b30a4981cf1ef4c3970ba)]:
+  - miniflare@5.20261019.1-beta
+  - @cloudflare/runtime-types@0.1.14
+  - @cloudflare/build-output-utils@0.9.3
+  - @cloudflare/config@0.27.0
+
 ## 2.0.0-beta.v.2
 
 ### Patch Changes
