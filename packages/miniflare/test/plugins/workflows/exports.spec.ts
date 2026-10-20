@@ -52,6 +52,12 @@ export default {
 					return Response.json(
 						await workflow.deleteBatch(url.searchParams.getAll("id"))
 					);
+				case "/delete-twice": {
+					const instance = await workflow.get(id);
+					await instance.delete();
+					await instance.delete();
+					return Response.json({ ok: true });
+				}
 				case "/status":
 					return Response.json(await (await workflow.get(id)).status());
 				case "/event": {
@@ -190,6 +196,28 @@ describe("Workflows on ctx.exports", () => {
 			expect(response.status).toBe(500);
 			expect(await response.text()).toContain("instance.not_found");
 		}
+	});
+
+	test("recreates an instance after a rejected repeated deletion", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [worker("exporter", { exports: MY_WORKFLOW_EXPORT })],
+		});
+		useDispose(mf);
+		const query = "id=repeated-delete";
+		const dispatchFetch: Fetch = (url) => mf.dispatchFetch(url);
+		await fetchJson(dispatchFetch, `/create?${query}`);
+		await waitForStatus(dispatchFetch, query, "complete");
+		const response = await mf.dispatchFetch(
+			`http://localhost/delete-twice?${query}`
+		);
+		expect(response.status).toBe(500);
+		expect(await response.text()).toContain("instance.not_found");
+		expect(await fetchJson(dispatchFetch, `/create?${query}`)).toEqual({
+			id: "repeated-delete",
+		});
+		await waitForStatus(dispatchFetch, query, "complete");
 	});
 
 	test("applies the step limits of exports and of the exporting Worker's own bindings", async ({
@@ -377,6 +405,79 @@ describe("Workflows on ctx.exports", () => {
 		}
 		expect(await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME))).toEqual([
 			"miniflare-workflows-my-workflow",
+		]);
+	});
+
+	test("isolates persisted instances and deletion across exported and bound Workflows", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const options = {
+			resourcePersistencePath: tmp,
+			workers: [
+				worker("exporter", {
+					exports: {
+						...MY_WORKFLOW_EXPORT,
+						OtherWorkflow: { type: "workflow", name: "other-workflow" },
+					},
+				}),
+				worker("bound", {
+					env: {
+						MY_WORKFLOW: {
+							type: "workflow",
+							name: "bound-workflow",
+							worker: "bound",
+							exportName: "MyWorkflow",
+						},
+					},
+				}),
+			],
+		};
+		const workflows = [
+			{ workerName: "exporter", query: "workflow=MyWorkflow" },
+			{ workerName: "exporter", query: "workflow=OtherWorkflow" },
+			{ workerName: "bound", query: "binding=MY_WORKFLOW" },
+		];
+		const original = new Miniflare(options);
+		useDispose(original);
+		for (const { workerName, query } of workflows) {
+			const worker = await original.getWorker(workerName);
+			const workerFetch: Fetch = (url) => worker.fetch(url);
+			await fetchJson(workerFetch, `/create?${query}&id=shared-id`);
+			await waitForStatus(workerFetch, `${query}&id=shared-id`, "complete");
+		}
+		await original.dispose();
+
+		const restarted = new Miniflare(options);
+		useDispose(restarted);
+		const exporter = await restarted.getWorker("exporter");
+		const exportedFetch: Fetch = (url) => exporter.fetch(url);
+		await fetchJson(exportedFetch, "/delete?id=shared-id");
+		const deleted = await exporter.fetch(
+			"http://localhost/status?id=shared-id"
+		);
+		expect(deleted.status).toBe(500);
+		expect(await deleted.text()).toContain("instance.not_found");
+		for (const { workerName, query } of workflows.slice(1)) {
+			const worker = await restarted.getWorker(workerName);
+			expect(
+				await waitForStatus(
+					(url) => worker.fetch(url),
+					`${query}&id=shared-id`,
+					"complete"
+				)
+			).toMatchObject({ output: ["step-0"] });
+		}
+		await fetchJson(exportedFetch, "/create?id=shared-id");
+		expect(
+			await waitForStatus(exportedFetch, "id=shared-id", "complete")
+		).toMatchObject({ output: ["step-0"] });
+		expect(
+			(await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME))).sort()
+		).toEqual([
+			"miniflare-workflows-bound-workflow",
+			"miniflare-workflows-my-workflow",
+			"miniflare-workflows-other-workflow",
 		]);
 	});
 
