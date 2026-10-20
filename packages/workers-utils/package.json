@@ -65,10 +65,10 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsrs -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"test": "vitest",
 		"test:ci": "vitest run",
 		"type:tests": "tsrs -p ./tests/tsconfig.json"
@@ -98,8 +98,7 @@
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",
-		"tsdown": "^0.15.9",
-		"tsup": "8.3.0",
+		"tsdown": "0.23.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"xdg-app-paths": "^8.3.0",
