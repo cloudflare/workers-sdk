@@ -280,3 +280,19 @@ describe("temporary event accounts", () => {
 		expect(String(error)).not.toContain(BACKEND_MESSAGE);
 	});
 });
+
+describe("consumer temporary flag guidance", () => {
+	it.for([undefined, "--temporary-account"])(
+		"uses %s in declined-terms errors",
+		async (temporaryAccountFlag, { expect }) => {
+			await expect(
+				getOrCreateTemporaryPreviewAccount({
+					storage: createStorage(),
+					prompt: async () => false,
+					temporaryAccountLogger: silentLogger,
+					temporaryAccountFlag,
+				})
+			).rejects.toThrow(`to use ${temporaryAccountFlag ?? "--temporary"}.`);
+		}
+	);
+});

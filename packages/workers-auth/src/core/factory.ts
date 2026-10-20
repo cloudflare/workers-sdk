@@ -32,6 +32,7 @@ import { createCredentialStorageContext } from "../credential-store";
 import { getAuthFromEnv } from "../credentials";
 import { getCloudflareAccountIdFromEnv as getAccountIdFromEnv } from "../env-vars";
 import { createOAuthFlow } from "../flow";
+import { AuthenticationError } from "./authentication-error";
 import { createFileStorage } from "./file-storage";
 import { createPreferences } from "./preferences";
 import { createTemporaryTermsPrompt } from "./temporary-terms";
@@ -267,6 +268,7 @@ export function createCloudflareAuth(
 			),
 			cliDisplayName: descriptor.displayName,
 			logoutCommand: descriptor.commands.logout,
+			temporaryAccountFlag: descriptor.temporaryAccountFlag,
 			prompt: createTemporaryTermsPrompt({
 				temporaryAccountLogger,
 				prompt: ctx.prompt,
@@ -428,9 +430,10 @@ export function createCloudflareAuth(
 		const { throwOnEmpty = true } = options;
 		const loginResult = await loginOrRefreshIfRequired(complianceConfig);
 		if (!loginResult.loggedIn) {
-			throw new UserError(
+			throw new AuthenticationError(
 				`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[loginResult.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
-				{ telemetryMessage: "cfetch auth login required" }
+				loginResult.reason,
+				"cfetch auth login required"
 			);
 		}
 		const credentials = requireApiToken();
@@ -603,7 +606,7 @@ ${accounts
 			// rather than silently provisioning a throwaway account alongside them.
 			if (getAPIToken()) {
 				throw new UserError(
-					"You're already authenticated with Cloudflare, so `--temporary` can't be used. Temporary preview accounts are only for unauthenticated use. Either remove `--temporary` to use your existing account, or log out (and unset CLOUDFLARE_API_TOKEN) first.",
+					`You're already authenticated with Cloudflare, so \`${descriptor.temporaryAccountFlag ?? "--temporary"}\` can't be used. Temporary preview accounts are only for unauthenticated use. Either remove \`${descriptor.temporaryAccountFlag ?? "--temporary"}\` to use your existing account, or log out (and unset CLOUDFLARE_API_TOKEN) first.`,
 					{
 						telemetryMessage: "user temporary account already authenticated",
 					}

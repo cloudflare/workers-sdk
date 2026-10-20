@@ -12,6 +12,9 @@ import {
 	readAuthConfigFile,
 	writeAuthConfigFile,
 } from "../../src/cf";
+import { createCloudflareAuth } from "../../src/core/factory";
+import { createFileStorage } from "../../src/core/file-storage";
+import { WRANGLER_CLI } from "../../src/wrangler";
 import type { AuthContext } from "../../src/cf";
 import type { UserAuthConfig } from "../../src/config-file/auth";
 
@@ -145,4 +148,58 @@ describe("cf auth layer", () => {
 		expect(store.configs.list()).toContain("work");
 		expect(store.configs.exists("work")).toBe(true);
 	});
+});
+
+describe("cached temporary-account activation", () => {
+	runInTempDir();
+
+	it.for([CF_CLI, WRANGLER_CLI])(
+		"requires explicit opt-in for $cliName on each invocation",
+		async (descriptor, { expect }) => {
+			vi.stubEnv("CI", "true");
+			for (const key of [
+				"CLOUDFLARE_API_TOKEN",
+				"CLOUDFLARE_API_KEY",
+				"CLOUDFLARE_EMAIL",
+				"CLOUDFLARE_ACCOUNT_ID",
+			]) {
+				vi.stubEnv(key, "");
+			}
+			const storage = createFileStorage(
+				descriptor.fileFormat,
+				descriptor.getTemporaryAccountConfigPath
+			);
+			storage.write({
+				account: {
+					id: "cached-preview-account",
+					name: "Preview",
+					apiToken: "cached-preview-token",
+					expiresAt: "2999-01-01T00:00:00Z",
+				},
+				claim: {
+					url: "https://claim.example",
+					expiresAt: "2999-01-01T00:00:00Z",
+				},
+			});
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			auth.setTemporaryAllowed(false);
+			await expect(auth.requireAuth({})).rejects.toThrow(
+				"non-interactive environment"
+			);
+			expect(auth.getAPIToken()).toBeUndefined();
+
+			auth.setTemporaryAllowed(true);
+			await expect(auth.requireAuth({})).resolves.toBe(
+				"cached-preview-account"
+			);
+			expect(auth.requireApiToken()).toEqual({
+				apiToken: "cached-preview-token",
+			});
+
+			auth.setTemporaryAllowed(false);
+			expect(auth.getAPIToken()).toBeUndefined();
+			expect(storage.read()).toBeDefined();
+		}
+	);
 });

@@ -24,8 +24,6 @@ export const TEMPORARY_TERMS_URLS = {
 export const TEMPORARY_TERMS_PROMPT = `You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) in order to continue. By typing "yes", you agree to these terms. Type "yes" to continue.`;
 export const TEMPORARY_TERMS_NOTICE = `Continuing means you accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}).`;
 
-const TEMPORARY_TERMS_ERROR = `You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) to use --temporary.`;
-
 type TemporaryAccountPayload = {
 	account?: {
 		id?: string;
@@ -386,6 +384,8 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 	temporaryAccountLogger: TemporaryAccountLogger;
 	/** Consumer name used in temporary-account errors. */
 	cliDisplayName?: string;
+	/** Consumer temporary-account flag spelling. Defaults to `--temporary`. */
+	temporaryAccountFlag?: string;
 	/** Consumer command used to clear a cached temporary account. */
 	logoutCommand?: string;
 	request?: TemporaryAccountRequest;
@@ -414,9 +414,10 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 	);
 
 	if (!termsAccepted) {
-		throw new UserError(TEMPORARY_TERMS_ERROR, {
-			telemetryMessage: "user temporary terms not accepted",
-		});
+		throw new UserError(
+			`You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) to use ${options.temporaryAccountFlag ?? "--temporary"}.`,
+			{ telemetryMessage: "user temporary terms not accepted" }
+		);
 	}
 
 	const temporaryPreviewAccount = await createTemporaryPreviewAccount(

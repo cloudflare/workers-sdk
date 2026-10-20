@@ -153,3 +153,5 @@ export function setKeyringPreference(
 }
 
 export type { KeyringPreferenceContext } from "../core/keyring-preference";
+
+export { AuthenticationError } from "../core/authentication-error";
