@@ -12,6 +12,10 @@ import {
 test.runIf(!isBuild)(
 	"serves requests and watches config after workerd crashes",
 	async ({ expect }) => {
+		if (!("restart" in viteServer)) {
+			throw new Error("Expected a Vite dev server");
+		}
+
 		await vi.waitFor(
 			async () =>
 				expect(await getTextResponse()).toContain(
