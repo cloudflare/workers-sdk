@@ -41,7 +41,7 @@
 		"upload-sourcemaps:router-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker router-worker --tag rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:default",
+		"@cloudflare/vitest-plugin": "catalog:default",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@sentry/cli": "^2.37.0",

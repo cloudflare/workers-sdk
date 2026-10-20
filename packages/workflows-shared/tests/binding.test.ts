@@ -881,6 +881,7 @@ describe("WorkflowBinding", () => {
 describe("WorkflowBinding", () => {
 	it("should not call dispose when sending an event to an instance", async ({
 		expect,
+		onTestFinished,
 	}) => {
 		const id = uniqueId();
 		const binding = createBinding();
@@ -903,13 +904,17 @@ describe("WorkflowBinding", () => {
 		const disposeSpy = vi.fn();
 
 		await runInDurableObject<Engine, void>(engineStub, (engine) => {
-			const originalReceiveEvent = engine.receiveEvent.bind(engine);
-			engine.receiveEvent = (event) => {
-				const result = originalReceiveEvent(event);
+			// RPC methods must remain on the prototype to be callable by workerd.
+			const enginePrototype = Object.getPrototypeOf(engine) as Engine;
+			const originalReceiveEvent = enginePrototype.receiveEvent;
+			const receiveEventSpy = vi.spyOn(enginePrototype, "receiveEvent");
+			onTestFinished(() => receiveEventSpy.mockRestore());
+			receiveEventSpy.mockImplementation(function (event) {
+				const result = originalReceiveEvent.call(this, event);
 				return Object.assign(result, {
 					[Symbol.dispose]: disposeSpy,
 				});
-			};
+			});
 		});
 
 		using _ = (await instance.sendEvent({

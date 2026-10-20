@@ -106,7 +106,7 @@
 		"zod": "catalog:default"
 	},
 	"peerDependencies": {
-		"vitest": "^4.1.0"
+		"vitest": "^4.1.0 || ^5.0.0"
 	},
 	"peerDependenciesMeta": {
 		"vitest": {
