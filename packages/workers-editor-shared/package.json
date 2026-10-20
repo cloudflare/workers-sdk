@@ -21,8 +21,9 @@
 	"type": "module",
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"scripts": {
-		"build": "tsrs && vite build",
+		"build": "tsrs && vite build && tsrs -p tsconfig.types.json",
 		"check:type": "tsrs && tsrs -p tsconfig.node.json --noEmit",
 		"dev": "vite"
 	},
@@ -34,12 +35,11 @@
 		"@cloudflare/style-container": "7.12.2",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/react": "^18.3.3",
-		"@vitejs/plugin-react": "^5.2.0",
+		"@vitejs/plugin-react": "6.0.1",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"vite-plugin-dts": "^4.0.1"
+		"vite": "catalog:default"
 	},
 	"peerDependencies": {
 		"@cloudflare/style-const": "^5.7.2",
