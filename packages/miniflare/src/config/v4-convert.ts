@@ -704,10 +704,13 @@ function addProductBindings(
 		env[name] = { type: "analytics-engine-dataset", name: binding.dataset };
 	}
 	for (const [name, value] of Object.entries(worker.hyperdrives ?? {})) {
+		const isRemoteEntry = typeof value === "object" && !(value instanceof URL);
 		env[name] = {
 			type: "hyperdrive",
-			id: name,
-			dev: { connectionString: String(value) },
+			id: isRemoteEntry && value.id ? value.id : name,
+			dev: isRemoteEntry
+				? { remote: isRemote(value.remoteProxyConnectionString) }
+				: { connectionString: String(value) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.ratelimits ?? {})) {

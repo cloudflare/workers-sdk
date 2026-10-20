@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -6,14 +7,21 @@ import {
 	runInTempDir,
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
+import * as chokidar from "chokidar";
 import * as esbuild from "esbuild";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
+import * as additionalModules from "../../../deployment-bundle/find-additional-modules";
 import { runCustomBuild } from "../../../deployment-bundle/run-custom-build";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
+
+vi.mock("chokidar", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("chokidar")>();
+	return { ...actual, watch: vi.fn(actual.watch) };
+});
 
 // Find the bundled result of a particular source file
 function findSourceFile(source: string, name: string): string {
@@ -284,6 +292,46 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				);
 			}
 		);
+
+		test("teardown waits for an in-flight unbundled module scan", async ({
+			expect,
+		}) => {
+			await seed({ "src/index.ts": "export class Api {}" });
+			const watch = vi.spyOn(chokidar, "watch");
+			const initialBuild = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults({ build: { bundle: false } }),
+			});
+			await initialBuild;
+			const watcher = watch.mock.results.at(-1)?.value;
+			assert(watcher);
+
+			const started = Promise.withResolvers<void>();
+			const resume = Promise.withResolvers<void>();
+			const findModules = additionalModules.findAdditionalModules;
+			const scan = vi
+				.spyOn(additionalModules, "findAdditionalModules")
+				.mockImplementationOnce(async (...args) => {
+					started.resolve();
+					await resume.promise;
+					return findModules(...args);
+				});
+			watcher.emit("change", path.resolve("src/index.ts"));
+			await started.promise;
+			const finished = vi.fn();
+			const teardown = controller.teardown().then(finished);
+			try {
+				await watcher.close();
+				await setTimeout(0);
+				expect(finished).not.toHaveBeenCalled();
+			} finally {
+				resume.resolve();
+				await teardown;
+				scan.mockRestore();
+				watch.mockRestore();
+			}
+		});
 
 		test("a watch-mode rebuild failure emits an error event and recovers", async ({
 			expect,

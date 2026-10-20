@@ -1435,6 +1435,11 @@ export interface EnvironmentNonInheritable {
 		id: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
+		/**
+		 * Connect to the deployed Hyperdrive configuration during local development
+		 * instead of a local database.
+		 */
+		remote?: boolean;
 	}[];
 
 	/**

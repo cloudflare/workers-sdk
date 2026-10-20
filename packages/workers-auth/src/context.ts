@@ -13,6 +13,8 @@ export interface OAuthFlowTemporaryContext {
 	storage: TemporaryAccountStorage;
 	/** Consumer name used in temporary-account errors. */
 	cliDisplayName?: string;
+	/** Consumer temporary-account flag spelling. Defaults to `--temporary-account`. */
+	temporaryAccountFlag?: string;
 	/** Consumer command used to clear a cached temporary account. */
 	logoutCommand?: string;
 	/**

@@ -743,6 +743,70 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				45_000
 			);
 		}
+
+		it("queries remote Hyperdrive before and after a Miniflare reload", async ({
+			expect,
+		}) => {
+			const { id } = await helper.hyperdrive(false, "mysql");
+			const session = await startRemoteProxySession({
+				HYPERDRIVE_BINDING: { type: "hyperdrive", id },
+			});
+			try {
+				await helper.seed({
+					"hyperdrive-query.jsonc": JSON.stringify({
+						name: "hyperdrive-query",
+						compatibility_date: "2026-09-01",
+						compatibility_flags: ["nodejs_compat"],
+						alias: { "mysql2/promise": require.resolve("mysql2/promise") },
+					}),
+				});
+				await helper.run(
+					"wrangler deploy hyperdrive-query.js --config hyperdrive-query.jsonc --dry-run --outdir hyperdrive-query-output"
+				);
+				const queryOptions: MiniflareOptions = {
+					workers: [
+						{
+							config: {
+								name: "hyperdrive-query",
+								compatibilityDate: "2026-09-01",
+								compatibilityFlags: ["nodejs_compat"],
+								manifest: createManifest(helper.tmpPath, [
+									"hyperdrive-query-output/hyperdrive-query.js",
+								]),
+								env: {
+									HYPERDRIVE_BINDING: {
+										type: "hyperdrive",
+										id,
+										dev: { remote: true },
+									},
+								},
+							},
+							dev: {
+								remoteProxyConnectionString:
+									session.remoteProxyConnectionString,
+							},
+						},
+					],
+				};
+				const queryMf = new Miniflare(queryOptions);
+				try {
+					for (const reload of [false, true]) {
+						if (reload) {
+							await queryMf.setOptions(queryOptions);
+						}
+						const response = await queryMf.dispatchFetch("http://localhost/");
+						expect(response.status).toBe(200);
+						expect(await response.json()).toEqual([
+							{ remote_hyperdrive_probe: 1 },
+						]);
+					}
+				} finally {
+					await queryMf.dispose();
+				}
+			} finally {
+				await session.dispose();
+			}
+		});
 	});
 
 	// Separate describe block for mTLS because it needs a custom remote-binding
