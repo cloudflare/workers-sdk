@@ -69,8 +69,8 @@ export const debugPlugin = createPlugin("debug", (ctx) => {
 			}
 
 			const workerNames = ctx.resolvedPluginConfig.workers.map((worker) => {
-				assert(worker.config.name, "Expected the Worker to have a name");
-				return worker.config.name;
+				assert(worker.name, "Expected the Worker to have a name");
+				return worker.name;
 			});
 
 			vitePreviewServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {

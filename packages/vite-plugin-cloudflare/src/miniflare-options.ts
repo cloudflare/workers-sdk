@@ -46,7 +46,6 @@ import {
 	satisfiesMinimumViteVersion,
 	withTrailingSlash,
 } from "./utils";
-import type { Bundle } from "./build-output-preview";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerOptionsByWorker } from "./containers";
 import type {
@@ -55,7 +54,6 @@ import type {
 	WorkersPluginContext,
 } from "./context";
 import type { PersistState } from "./plugin-config";
-import type { ModuleType } from "@cloudflare/config";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
@@ -63,7 +61,6 @@ import type {
 import type {
 	MiniflareOptions,
 	V4MiniflareOptions,
-	V4ModuleRuleType,
 	V4WorkerOptions,
 	WorkerdStructuredLog,
 	WorkerOptions,
@@ -371,7 +368,7 @@ export async function getDevMiniflareOptions(
 											preExistingRemoteProxySession ?? null,
 											undefined,
 											{
-												cliDisplayName: resolvedPluginConfig.cliDisplayName,
+												cliDisplayName: "Wrangler",
 												logger: createRemoteBindingsLogger(
 													viteDevServer.config.logger
 												),
@@ -684,72 +681,6 @@ function getPreviewModules(
 	} satisfies Pick<V4WorkerOptions, "rootPath" | "modules">;
 }
 
-/**
- * Translate a Build Output Specification module type to a Miniflare module type.
- */
-function toMiniflareModuleType(type: ModuleType): V4ModuleRuleType | null {
-	switch (type) {
-		case "esm":
-			return "ESModule";
-		case "cjs":
-			return "CommonJS";
-		case "wasm":
-			return "CompiledWasm";
-		case "text":
-			return "Text";
-		case "data":
-			return "Data";
-		case "json":
-			return "Data";
-		case "python":
-			return "PythonModule";
-		case "python-requirement":
-			return null;
-		case "sourcemap":
-			return null;
-	}
-}
-
-/**
- * Get Miniflare's module list directly from the `modules` manifest.
- *
- * Miniflare uses the first module in the list as the entry, so the
- * `mainModule` is hoisted to index 0 regardless of the manifest's
- * order.
- */
-export function getModulesFromManifest(bundle: Bundle) {
-	const { mainModule } = bundle;
-	const mainEntry = bundle.modules[mainModule];
-	assert(
-		mainEntry !== undefined,
-		`Build Output Specification: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
-	);
-
-	const ordered: Array<[string, { type: ModuleType }]> = [
-		[mainModule, mainEntry],
-	];
-	for (const [modulePath, value] of Object.entries(bundle.modules)) {
-		if (modulePath !== mainModule) {
-			ordered.push([modulePath, value]);
-		}
-	}
-
-	const modules = ordered
-		.map(([modulePath, { type }]) => {
-			const miniflareType = toMiniflareModuleType(type);
-			if (miniflareType === null) {
-				return null;
-			}
-			return { type: miniflareType, path: modulePath } as const;
-		})
-		.filter((m): m is NonNullable<typeof m> => m !== null);
-
-	return {
-		rootPath: bundle.rootPath,
-		modules,
-	} satisfies Pick<V4WorkerOptions, "rootPath" | "modules">;
-}
-
 export async function getPreviewMiniflareOptions(
 	ctx: PreviewPluginContext,
 	vitePreviewServer: vite.PreviewServer
@@ -767,8 +698,7 @@ export async function getPreviewMiniflareOptions(
 
 	const workers: Array<V4WorkerOptions> = (
 		await Promise.all(
-			resolvedPluginConfig.workers.map(async (previewWorker) => {
-				const workerConfig = previewWorker.config;
+			resolvedPluginConfig.workers.map(async (workerConfig) => {
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 						workerConfig
@@ -792,7 +722,7 @@ export async function getPreviewMiniflareOptions(
 							preExistingRemoteProxySessionData ?? null,
 							undefined,
 							{
-								cliDisplayName: resolvedPluginConfig.cliDisplayName,
+								cliDisplayName: "Wrangler",
 								logger: createRemoteBindingsLogger(
 									vitePreviewServer.config.logger
 								),
@@ -838,11 +768,6 @@ export async function getPreviewMiniflareOptions(
 					miniflareWorkerOptions.workerOptions;
 				const workerOptions = sourcelessWorkerOptions as V4WorkerOptions;
 
-				// Build Output Specification workers carry an explicit modules manifest
-				// that drives Miniflare's module loader directly, bypassing the
-				// extension-glob-based discovery in `getPreviewModules`. This
-				// preserves the exact module list (with its declared types)
-				// rather than rediscovering it by walking the filesystem.
 				return [
 					{
 						...workerOptions,
@@ -851,11 +776,9 @@ export async function getPreviewMiniflareOptions(
 								? workerOptions.name
 								: workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
-						...(previewWorker.source === "build-output" && previewWorker.bundle
-							? getModulesFromManifest(previewWorker.bundle)
-							: miniflareWorkerOptions.main
-								? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
-								: { modules: true, script: "" }),
+						...(miniflareWorkerOptions.main
+							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
+							: { modules: true, script: "" }),
 					},
 					...externalWorkers,
 				] satisfies Array<V4WorkerOptions>;
