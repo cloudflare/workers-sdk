@@ -69,7 +69,7 @@
 	"scripts": {
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
 		"build": "pnpm run clean && pnpm tsup && pnpm tsdown && pnpm run generate-json-schema",
-		"check:type": "tsc -p ./tsconfig.json && tsc -p ./templates/tsconfig.json",
+		"check:type": "tsrs -p ./tsconfig.json && tsrs -p ./templates/tsconfig.json",
 		"clean": "node -r esbuild-register ../../tools/clean/clean.ts wrangler-dist miniflare-dist emitted-types",
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src --watch ../containers-shared/src --watch ../cli\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"generate-json-schema": "node -r esbuild-register scripts/generate-json-schema.ts",
@@ -79,7 +79,7 @@
 		"test:debug": "pnpm run test --silent=false --verbose=true",
 		"test:e2e": "dotenv -- vitest run -c ./e2e/vitest.config.mts",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
-		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
+		"type:tests": "tsrs -p ./src/__tests__/tsconfig.json && tsrs -p ./e2e/tsconfig.json"
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",

@@ -36,11 +36,11 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check:type": "tsc -p ./tsconfig.json",
+		"check:type": "tsrs -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
 		"test": "vitest",
 		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./test/tsconfig.json"
+		"type:tests": "tsrs -p ./test/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",

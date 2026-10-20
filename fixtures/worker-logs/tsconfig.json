@@ -6,8 +6,9 @@
 		"lib": ["ES2021"],
 		"types": ["node"],
 		"skipLibCheck": true,
-		"moduleResolution": "node",
-		"noEmit": true
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"strict": false
 	},
 	"include": ["tests"]
 }

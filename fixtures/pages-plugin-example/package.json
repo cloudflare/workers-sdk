@@ -11,7 +11,7 @@
 	"types": "index.d.ts",
 	"scripts": {
 		"build": "wrangler pages functions build --plugin --outdir=dist --external=is-odd",
-		"check:type": "tsc"
+		"check:type": "tsrs"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default",

@@ -6,7 +6,6 @@ import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import { NonZeroExitError, x } from "tinyexec";
 import dedent from "ts-dedent";
-import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
 /* eslint-disable-next-line no-restricted-imports --
  * Uses expect in MSW handlers outside test callbacks
@@ -1468,9 +1467,6 @@ function checkFiles(folder: TestFolder, cwd = process.cwd()) {
 function parse(name: string, value: string): unknown {
 	if (name.endsWith(".toml")) {
 		return TOML.parse(value);
-	}
-	if (name.endsWith("tsconfig.json")) {
-		return parseConfigFileTextToJson(name, value);
 	}
 	if (name.endsWith(".json") || name.endsWith(".jsonc")) {
 		return JSON.parse(value);

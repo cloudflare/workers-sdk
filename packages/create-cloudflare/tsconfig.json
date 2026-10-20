@@ -12,6 +12,7 @@
 		"templates*"
 	],
 	"compilerOptions": {
+		"rootDir": "../..",
 		"target": "ESNext",
 		"module": "preserve",
 		"moduleResolution": "bundler",

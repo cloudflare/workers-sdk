@@ -7,6 +7,13 @@ const RemoteBindingDevSchema = z.strictObject({
 	remote: z.boolean().optional(),
 });
 
+// tsrs cannot compare Zod's recursive JSON schema internals. Preserve its exact
+// input and output types without exposing those internals to the binding union.
+const JsonValueSchema = z.json() as unknown as z.ZodType<
+	z.core.util.JSONType,
+	z.core.util.JSONType
+>;
+
 export const AssetsSchema = z.strictObject({
 	htmlHandling: z
 		.enum([
@@ -156,7 +163,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		type: z.literal("images"),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
-	z.strictObject({ type: z.literal("json"), value: z.json() }),
+	z.strictObject({ type: z.literal("json"), value: JsonValueSchema }),
 	KVBindingSchema,
 	z.strictObject({ type: z.literal("logfwdr"), destination: z.string() }),
 	z.strictObject({

@@ -3,11 +3,11 @@
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "wrangler pages dev",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

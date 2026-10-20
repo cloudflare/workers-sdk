@@ -5,7 +5,7 @@
 	"scripts": {
 		"build:cf-build-output": "vite build --app -c vite.config.cf-build-output.ts",
 		"build:default": "vite build --app",
-		"check:type": "tsc --build",
+		"check:type": "tsrs --build",
 		"dev": "vite dev",
 		"dev:cf-build-output": "vite dev -c vite.config.cf-build-output.ts",
 		"preview": "vite preview",

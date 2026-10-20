@@ -6,10 +6,10 @@
 	"author": "",
 	"main": "src/index.js",
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",

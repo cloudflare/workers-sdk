@@ -25,12 +25,12 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check:type": "tsc -p ./tsconfig.json && pnpm run type:tests",
+		"check:type": "tsrs -p ./tsconfig.json && pnpm run type:tests",
 		"deploy": "echo 'no deploy'",
 		"test": "vitest",
 		"test:ci": "pnpm run test run",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
 		"@cloudflare/build-output-utils": "workspace:*",

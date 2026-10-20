@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check:types": "tsc --build",
+		"check:types": "tsrs --build",
 		"test": "vitest",
 		"test:ci": "vitest run",
 		"vite": "vite dev",

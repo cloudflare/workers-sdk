@@ -32,7 +32,7 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"prepack": "npm run build",
 		"pretest": "npm run build",
 		"test": "vitest",

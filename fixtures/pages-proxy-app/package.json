@@ -5,12 +5,12 @@
 	"main": "server/index.js",
 	"scripts": {
 		"build": "esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "wrangler pages dev --compatibility-date=2024-01-17 --port 8790 --proxy 8791 -- pnpm run server",
 		"server": "node dist/index.js",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

@@ -25,13 +25,13 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"check:type": "tsc -p ./tsconfig.json",
+		"check:type": "tsrs -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
 		"dev": "tsx watch src/dev.ts",
 		"dev:once": "tsx src/dev.ts",
 		"test": "vitest",
 		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

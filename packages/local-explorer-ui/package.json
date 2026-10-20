@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "openapi-ts && vite build",
-		"check:type": "tsc --build",
+		"check:type": "tsrs --build",
 		"deploy": "echo 'no deploy'",
 		"predev": "pnpm -w build --filter wrangler",
 		"dev": "concurrently -n api,ui,worker -c green,blue,orange \"openapi-ts --watch\" \"vite\" \"pnpm --filter @fixture/worker-with-resources start\"",
